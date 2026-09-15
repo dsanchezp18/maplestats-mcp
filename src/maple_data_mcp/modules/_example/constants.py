@@ -1,0 +1,5 @@
+BASE_URL = "https://example.invalid/api/"
+RATE_LIMIT_SOURCE = "example"
+RATE_LIMIT_PER_SECOND = 5.0
+RATE_LIMIT_CAPACITY = 5.0
+CACHE_TTL_SECONDS = 300
