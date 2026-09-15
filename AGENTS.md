@@ -91,6 +91,36 @@ success to a client checking `isError`.
    (confirmed live: StatCan WDS's `surveyCode`/`subjectCode` on some
    cubes). Use `list_or_empty(obj, key)` for any list-typed field
    pulled from an external API, not a bare `.get(key, [])`.
+3. **`tzdata` as a pinned dependency.** Windows Python has no system
+   IANA timezone database — `zoneinfo.ZoneInfo("America/Toronto")`
+   raises `ZoneInfoNotFoundError` without it. Needed wherever a client
+   computes "today" in a source's own reference timezone rather than
+   the host machine's local time (see `wds/client.py`'s
+   `get_changed_cube_list`).
+
+## A lesson from auditing the StatCan module after it "worked"
+
+The initial build exercised only 2 of 32 StatCan tools against the
+real API before being called done (the rest were unit-tested against
+hand-written mock fixtures). A later pass that actually called all 32
+tools live found **9 more real bugs** the mocks had no way to catch,
+because the mocks were shaped by the same assumptions that were wrong:
+wrong field names for 4 of 10 `getCodeSets` categories, a footnote
+field assumed to be `list[str]` when it's really a list of objects,
+two WDS methods needing a request body shaped differently than every
+other WDS POST method, two methods with opposite date-parameter
+requirements from what was assumed, an RDaaS filters endpoint
+returning a list where a dict was assumed, and 404/406 responses
+propagating as raw `HTTPStatusError` instead of the typed errors they
+were supposed to become.
+
+**The rule this leaves behind:** before considering any client.py
+done, write a throwaway script that calls every function it exports
+against the real API with realistic arguments — not just the 1-2 a
+smoke test happens to cover — and read every failure. A clean
+`pytest` run against mocks you wrote yourself only proves the code
+does what you assumed the API does; it cannot catch a wrong
+assumption shared by the code and its tests.
 
 ## Adding a new source module
 
