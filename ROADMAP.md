@@ -11,8 +11,8 @@ Status values: `Not started` / `In progress` / `Shipped`.
 ## Federal
 
 Only these five — no other federal source is in scope (drug database,
-recalls, nutrient file, open parliament, and similar federal modules seen
-in the ReyemTech benchmark are explicitly excluded).
+recalls, nutrient file, open parliament, and similar federal modules
+seen in benchmark research are explicitly excluded).
 
 | Source | Status | Notes |
 |---|---|---|
@@ -84,7 +84,7 @@ CKAN/portal coverage — each needs its own adaptor design.
 | Agency / source | Status | Notes |
 |---|---|---|
 | Census (StatCan Census Program / Census Profile) | Not started | Distinct from generic StatCan table access — needs its own discovery layer (geography, profile variables, PUMFs). |
-| CMHC | Not started | Housing and rental-market data. No verified dedicated MCP exists yet for this — a genuine greenfield build. Investigate MountainMath's access patterns as a reference. |
+| CMHC | Not started | Housing and rental-market data. No verified dedicated MCP exists yet for this — a genuine greenfield build. Investigate existing community access patterns for CMHC data as a reference. |
 | CRTC | Not started | Telecommunications/broadcasting market data: plan prices, subscribers, revenues, broadband, competition indicators. |
 | CER (Canada Energy Regulator) | Not started | Oil, gas, NGL/LNG, pipeline, energy trade/export/price/infrastructure data. |
 | CRA (Canada Revenue Agency) | Not started | T1/T2 tax statistics, tax-filer aggregates, benefits, charities, other administrative tax datasets. |

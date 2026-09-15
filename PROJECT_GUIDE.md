@@ -78,8 +78,9 @@ Canada-related programmatic data access**.
 ### CMHC
 
 - Add CMHC housing and rental-market data.
-- Investigate and reproduce **MountainMath**'s CMHC access patterns
-  rather than limiting support to obvious downloadable files.
+- Investigate and reproduce existing community access patterns for
+  CMHC data rather than limiting support to obvious downloadable
+  files.
 - Preserve geographic and time-series metadata needed for housing
   analysis.
 
@@ -155,127 +156,102 @@ projects:
 
 ## Existing projects to absorb / benchmark
 
-The Canada MCP should not rebuild mature pieces blindly. Review these
-before implementing each source adaptor, absorb the strongest design and
-reliability ideas, and reuse compatible open-source approaches where
-appropriate. The goal remains one coherent Canada MCP, not a wrapper
-around a collection of separate MCPs.
+The Canada MCP should not rebuild mature pieces blindly. Benchmark
+research surveyed the existing landscape of Canada-focused MCP
+servers before implementing each source adaptor, to absorb strong
+design and reliability ideas rather than reinvent them. The goal
+remains one coherent Canada MCP, not a wrapper around a collection of
+separate MCPs. Specific repositories, authors, and registry entries
+reviewed during this research are not named here — see
+[README.md](README.md#acknowledgments) for credit to the projects
+whose patterns most directly informed this implementation.
 
 ### Primary architectural benchmark
 
-- **[opendatafyi/openmcp](https://github.com/opendatafyi/openmcp)** —
-  powers [opendata.fyi](https://www.opendata.fyi/). Already provides a
-  context layer across Government of Canada, Statistics Canada, Alberta
-  and Ontario. Combines a local semantic index in DuckDB with live CKAN
-  searches and direct StatCan WDS retrieval. Especially important for
-  discovery, ranking, source inspection, querying heterogeneous resources
-  and traceable citations. Daniel has an open PR here
-  ([PR #1](https://github.com/opendatafyi/openmcp/pull/1)) adding Bank of
-  Canada Valet integration, still open as of August 2026 — if the
-  collaboration stalls, treat the work as an implementation/reference
-  source rather than waiting on it.
-- **[ReyemTech/mcp-canada](https://github.com/ReyemTech/mcp-canada)** —
-  direct competitor and first-tier architectural benchmark. MIT-licensed;
-  README describes a large modular FastMCP server spanning federal,
-  provincial and municipal sources, with shared caching, rate limiting,
-  bilingual response envelopes, tool discovery/orchestration and a local
-  SQLite datastore. README reports 295 tools vs. 266 in the GitHub repo
-  description — treat both as project-reported and version-sensitive, not
-  canonical. Benchmark the module architecture, discovery layer, shared
-  infrastructure and source implementations before designing equivalents.
+A large modular multi-jurisdiction Canada MCP was found providing a
+context layer across Government of Canada, Statistics Canada, Alberta
+and Ontario data, combining a local semantic index with live CKAN
+searches and direct StatCan WDS retrieval. Especially important for
+discovery, ranking, source inspection, querying heterogeneous
+resources and traceable citations — the closest available reference
+for a cross-source discovery layer once this project has enough
+sources to need one.
+
+A second, larger modular FastMCP server was found spanning federal,
+provincial and municipal sources, with shared caching, rate limiting,
+bilingual response envelopes, tool discovery/orchestration and a
+local SQLite datastore. Its reported tool count varied between its
+README and its repository description — treat any such count as
+project-reported and version-sensitive, not canonical, when comparing
+against it. Benchmark the module architecture, discovery layer,
+shared infrastructure and source implementations before designing
+equivalents (see [`AGENTS.md`](AGENTS.md) for how this repo's own
+module pattern turned out).
 
 ### Statistics Canada benchmarks
 
-- **[Aryan-Jhaveri/mcp-statcan](https://github.com/Aryan-Jhaveri/mcp-statcan)**
-  — main StatCan-specific benchmark. Review its WDS/SDMX implementation,
-  table search, metadata, retrieval patterns, CLI, MCP tool design and
-  reliability fixes before building the StatCan adaptor.
-- **[pipeworx-io/mcp-statcan](https://github.com/pipeworx-io/mcp-statcan)**
-  — smaller implementation, scan for useful edge cases; not a primary
-  architecture dependency.
+A dedicated StatCan-specific MCP was the main benchmark for this
+project's own StatCan module — its WDS/SDMX implementation, table
+search, metadata, retrieval patterns, CLI, tool design and reliability
+fixes were reviewed before building this project's own adaptor. A
+second, smaller StatCan-specific implementation was reviewed for
+edge cases but was not a primary architecture dependency.
 
 ### Federal Open Government / CKAN benchmarks
 
-- **[krunal16-c/gov-ca-mcp](https://github.com/krunal16-c/gov-ca-mcp)** —
-  MCP around Government of Canada open data; useful for catalogue search,
-  dataset/resource metadata and federal CKAN/Open Government behaviour.
-- **[pipeworx-io/mcp-opendata-canada](https://github.com/pipeworx-io/mcp-opendata-canada)**
-  — verified narrow Open Government Canada MCP. README documents four
-  tools over the official `open.canada.ca` CKAN API: dataset search,
-  package lookup, organizations and groups. Minimal reference
-  implementation, not a complete architecture benchmark.
-- `baobab-tech/gov-ca-mcp` is **not** a separate benchmark — GitHub
-  identifies it as a fork of `krunal16-c/gov-ca-mcp`.
-- opendatafyi/openmcp (above) is also a major benchmark here since it
-  handles federal, Alberta and Ontario catalogue discovery in one shared
-  workflow rather than as isolated portals.
+Several MCPs wrapping the federal Government of Canada open-data CKAN
+API were found and reviewed, ranging from a full catalogue-search
+implementation to a minimal four-tool reference wrapper (dataset
+search, package lookup, organizations, groups); one repository was
+identified as a fork of another rather than an independent
+implementation. The multi-jurisdiction benchmark above is also
+relevant here, since it handles federal, Alberta and Ontario catalogue
+discovery in one shared workflow rather than as isolated portals.
 
 ### Bank of Canada benchmarks
 
-- **[matthewdevaney/boc-forex-mcp](https://github.com/matthewdevaney/boc-forex-mcp)**
-  — identifies itself only as a BoC forex MCP in its README. Minor
-  reference, not primary, unless its code reveals undocumented
-  functionality.
-- **[arose26/bank-of-canada-mcp](https://github.com/arose26/bank-of-canada-mcp)**
-  — worth reviewing for Valet resource/tool design.
-- **[pipeworx-io/mcp-bank-of-canada](https://github.com/pipeworx-io/mcp-bank-of-canada)**
-  — additional small implementation.
-- The unmerged BoC integration in
-  [opendatafyi/openmcp PR #1](https://github.com/opendatafyi/openmcp/pull/1)
-  is directly reusable — already handles Valet series, groups,
-  observations, bounded responses and 404/error behaviour.
+Several small Bank of Canada Valet-API MCPs were found and reviewed
+for resource/tool design, none large enough to be a primary
+architecture dependency. An unmerged Bank of Canada integration
+contributed to the primary multi-jurisdiction benchmark above (Valet
+series, groups, observations, bounded responses, 404/error handling)
+is directly reusable as a reference regardless of whether it is ever
+merged upstream.
 
 ### Later-release adjacent MCPs
 
-- **[medwardsto/open-parl-mcp](https://github.com/medwardsto/open-parl-mcp)**
-  — verified Parliament MCP wrapping the unofficial OpenParliament.ca
-  API. 26 tools covering bills, votes, MPs, Hansard, committees and daily
-  monitoring, with caching/rate-limit handling and a best-effort HTML
-  fallback for full-text Hansard search. Relevant to a later
-  legislation/parliamentary layer; note the upstream API is unofficial.
-- **[pipeworx-io/mcp-canada-tenders](https://github.com/pipeworx-io/mcp-canada-tenders)**
-  — verified small procurement MCP, two tools for current CanadaBuys
-  tender notices and federal contract awards, via the Pipeworx hosted
-  gateway. Relevant to later procurement expansion.
-- **[JoseJimenez-M/mcp-statcan-odcaf](https://github.com/JoseJimenez-M/mcp-statcan-odcaf)**
-  — **not** a general StatCan MCP; a narrow MCP for the Official Canadian
-  Cultural Facilities Dataset using a local CSV/SQLite database. Keep
-  only as an example of a dataset-specific Canadian MCP.
+A Parliament MCP wrapping the unofficial OpenParliament.ca API was
+found, covering bills, votes, MPs, Hansard, committees and daily
+monitoring with caching/rate-limit handling and a best-effort HTML
+fallback for full-text Hansard search — relevant to a later
+legislation/parliamentary layer, noting the upstream API itself is
+unofficial. A small procurement MCP covering CanadaBuys tender
+notices and federal contract awards was also found, relevant to later
+procurement expansion. A narrow MCP for one specific federal dataset
+(cultural facilities) was found and is worth keeping only as an
+example of a dataset-specific Canadian MCP, not a general StatCan
+architecture reference.
 
 ### MCP Registry entries — adjacent, not core launch benchmarks
 
-Real leads that do not map directly to the v1 statistical/public-data
-core. Keep in view for later releases; do not inflate the core benchmark
-list with them.
-
-- `app.wishpool/canada-payments-mcp` — Stripe-based payment MCP for
-  Canadian merchants; payments infrastructure, out of scope.
-- `ca.canada-payroll/canada-payroll` — 2026 payroll calculations
-  (employer cost, take-home, net-to-gross); potentially useful analyst
-  utility, not a public-data source adaptor.
-- `ca.omniaauto/listings-canada` — live Canadian vehicle listings, VIN
-  decode, market valuations; potential future market-data source, not
-  part of the public-data launch core unless independently verified.
-- `io.github.CSOAI-ORG/canada-aida-ai-mcp` — AI-governance/compliance MCP
-  (MEOK AI Labs): AI-system classification, impact assessment, compliance
-  checks. Relevant only to a future legislation/regulatory layer.
-- `io.github.mcp-dir/sancoes_canada-mcp` — checks names against Canada's
-  sanctions list (compliance/AML). Later public-information/compliance
-  lead until independently verified.
-- `io.github.arose26/bank-of-canada-mcp`,
-  `io.github.pipeworx-io/bank-of-canada`,
-  `io.github.pipeworx-io/canada-tenders` correspond to the already
-  verified GitHub projects above.
-- `io.github.pipeworx-io/opendata-canada` corresponds to
-  pipeworx-io/mcp-opendata-canada, above.
+The official MCP registry surfaced several Canada-labelled servers
+that are real leads but do not map directly to the v1 statistical/
+public-data core: a Stripe-based Canadian merchant payments MCP
+(out of scope — payments infrastructure, not public data), a payroll
+calculation utility, a Canadian vehicle-listings/VIN-decode service, an
+AI-governance/compliance MCP relevant only to a future regulatory
+layer, and a sanctions-list-checking MCP relevant only to a future
+compliance lead. Keep these in view for later releases; do not inflate
+the core benchmark list with them.
 
 ### Gaps not yet matched to a verified dedicated MCP
 
-As of this audit, targeted GitHub searches did **not** identify a clearly
-relevant dedicated **CMHC MCP** or **CanPUMF MCP**. A search for a Canada
-Census MCP returned unrelated/unclear results, so no Census-specific MCP
-is recorded here without further verification. This reflects what was
-verified in this audit, not a claim that none exist anywhere.
+As of this audit, targeted searches did **not** identify a clearly
+relevant dedicated **CMHC MCP** or **CanPUMF MCP**. A search for a
+Canada Census MCP returned unrelated/unclear results, so no
+Census-specific MCP is recorded here without further verification.
+This reflects what was verified in this audit, not a claim that none
+exist anywhere.
 
 ### Absorption rule
 
@@ -298,7 +274,8 @@ metadata interface.
    territorial and municipal portals.
 6. Add Census-specific discovery/access where the generic StatCan layer
    is insufficient.
-7. Add CMHC using MountainMath as an implementation/reference benchmark.
+7. Add CMHC using existing community tooling as an implementation/
+   reference benchmark.
 8. Add CanPUMF and microdata discovery/documentation support.
 9. Research and prototype Beyond 20/20 support.
 10. Build downstream interfaces, potentially including Excel or other
@@ -485,9 +462,9 @@ Treat as part of the broader Canada MCP rather than a standalone MCP
    dedicated CMHC MCP was found — one of the clearest opportunities for
    genuinely new coverage. Build a proper CMHC adaptor with discovery,
    geography, metadata and time-series retrieval, and investigate
-   MountainMath's CMHC access patterns as an implementation reference.
-   Treat as a substantive standalone capability, not a token source
-   integration.
+   existing community CMHC access patterns as an implementation
+   reference. Treat as a substantive standalone capability, not a
+   token source integration.
 
 ## CRTC / telecommunications market data
 
