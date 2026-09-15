@@ -56,6 +56,16 @@ class CubeDimension(BaseModel):
     members: list[DimensionMember]
 
 
+class Footnote(BaseModel):
+    """A table-level footnote. Real field names are `footnotesEn`/
+    `footnotesFr` (plural) — verified live; a plain string list was the
+    wrong shape."""
+
+    footnote_id: int
+    text_en: str
+    text_fr: str
+
+
 class CubeMetadata(BaseModel):
     product_id: int
     cansim_id: str | None = None
@@ -71,7 +81,7 @@ class CubeMetadata(BaseModel):
     archive_status_fr: str
     subject_codes: list[str] = Field(default_factory=list)
     survey_codes: list[str] = Field(default_factory=list)
-    footnotes: list[str] = Field(default_factory=list)
+    footnotes: list[Footnote] = Field(default_factory=list)
     dimensions: list[CubeDimension]
     provenance: Provenance
 
@@ -110,8 +120,10 @@ class VectorData(BaseModel):
 
 class CodeSetEntry(BaseModel):
     code: int
-    description_en: str
-    description_fr: str
+    # Nullable: uom code 0 ("no unit") legitimately has no description in
+    # either language — confirmed live, not a parsing failure.
+    description_en: str | None
+    description_fr: str | None
 
 
 class CodeSets(BaseModel):

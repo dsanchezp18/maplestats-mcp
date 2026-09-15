@@ -125,17 +125,23 @@ async def wds_get_data_from_cube_coord(
 
 @tool
 async def wds_get_bulk_vector_data_by_range(
-    vector_ids: list[int], start_release_date: str, end_release_date: str, lang: Lang = "en"
+    vector_ids: list[int],
+    start_release_datetime: str,
+    end_release_datetime: str,
+    lang: Lang = "en",
 ) -> list[VectorData]:
     """Get observations for multiple vectors released within a date range.
 
     Use for: bulk historical retrieval across several series at once,
     filtered by release date (not reference period).
+    `start_release_datetime`/`end_release_datetime` must be full
+    "YYYY-MM-DDTHH:MM" (e.g. "2024-01-01T08:30") — WDS rejects a bare
+    date with HTTP 406.
     Keywords: statcan, bulk, vectors, date range, release date, history,
     wds.
     """
     return await client.get_bulk_vector_data_by_range(
-        vector_ids, start_release_date, end_release_date
+        vector_ids, start_release_datetime, end_release_datetime
     )
 
 
@@ -145,8 +151,10 @@ async def wds_get_data_by_reference_period_range(
 ) -> list[VectorData]:
     """Get observations for vectors within a reference-period range.
 
-    Use for: retrieving a specific historical window (e.g. 2015-01 to
-    2020-12) rather than "latest N."
+    Use for: retrieving a specific historical window (e.g. 2015-01-01 to
+    2020-12-01) rather than "latest N." `start_ref_period`/`end_ref_period`
+    must be full "YYYY-MM-DD" — WDS rejects an abbreviated "YYYY-MM"
+    with HTTP 406.
     Keywords: statcan, reference period, range, history, vectors, wds,
     date range.
     """
@@ -156,17 +164,16 @@ async def wds_get_data_by_reference_period_range(
 
 
 @tool
-async def wds_get_changed_series_list(
-    date: str | None = None, lang: Lang = "en"
-) -> ChangedSeriesList:
-    """List StatCan series that changed (new release) on a given date.
+async def wds_get_changed_series_list(lang: Lang = "en") -> ChangedSeriesList:
+    """List StatCan series that changed (new release) today.
 
-    Use for: detecting updated series for a scheduled refresh; defaults
-    to today if `date` is omitted.
+    Use for: detecting updated series for a scheduled refresh. WDS
+    documents this method as always reflecting today's changes — it
+    does not accept a date parameter (unlike wds_get_changed_cube_list).
     Keywords: statcan, changed, updated, series, release, today, wds,
     refresh.
     """
-    return await client.get_changed_series_list(date)
+    return await client.get_changed_series_list()
 
 
 @tool

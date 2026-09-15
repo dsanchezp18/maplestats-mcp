@@ -21,6 +21,7 @@ dependencies = [
     "aiocache>=0.12.0",
     "tenacity>=8.0.0",
     "uvicorn>=0.30.0",
+    "tzdata>=2024.1",
 ]
 
 [project.scripts]

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from typing import Any, NoReturn
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -29,6 +30,7 @@ from maple_data_mcp.modules.statcan.wds.schemas import (
     CubeSummary,
     CubeSummaryList,
     DimensionMember,
+    Footnote,
     FullTableDownloadLink,
     ObservationRow,
     SeriesInfo,
@@ -36,7 +38,12 @@ from maple_data_mcp.modules.statcan.wds.schemas import (
 )
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
-from maple_data_mcp.shared.errors import DataLocked, InvalidInput, UpstreamError
+from maple_data_mcp.shared.errors import (
+    DataLocked,
+    InvalidInput,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maple_data_mcp.shared.http import api_get, api_post
 from maple_data_mcp.shared.json_utils import list_or_empty
 from maple_data_mcp.shared.rate_limiter import get_limiter
@@ -56,6 +63,13 @@ def _raise_if_locked(exc: httpx.HTTPStatusError, method: str) -> NoReturn:
             f"{method} is locked during StatCan's daily update window "
             "(12am-8:30am ET). Retry after 8:30am ET."
         ) from exc
+    if exc.response.status_code == 406:
+        # Confirmed live: WDS returns 406, not 404, for a well-formed
+        # but nonexistent/invalid identifier (e.g. an unknown productId).
+        raise InvalidInput(
+            f"{method} rejected the request (HTTP 406) — check that the "
+            "productId/vectorId/coordinate is valid."
+        ) from exc
     raise exc
 
 
@@ -66,6 +80,12 @@ async def _post(method: str, body: list[dict[str, Any]]) -> list[dict[str, Any]]
         return await api_post(url, json_body=body)
     except httpx.HTTPStatusError as exc:
         _raise_if_locked(exc, method)
+    except httpx.TimeoutException as exc:
+        raise UpstreamUnavailable(
+            f"{method} did not respond in time (already retried by "
+            "shared/http.py). This endpoint is known to be occasionally "
+            "slow; try again shortly."
+        ) from exc
 
 
 async def _get(method: str, path_suffix: str = "", params: dict[str, Any] | None = None) -> Any:
@@ -75,9 +95,22 @@ async def _get(method: str, path_suffix: str = "", params: dict[str, Any] | None
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
         _raise_if_locked(exc, method)
+    except httpx.TimeoutException as exc:
+        raise UpstreamUnavailable(
+            f"{method} did not respond in time (already retried by "
+            "shared/http.py). This endpoint is known to be occasionally "
+            "slow; try again shortly."
+        ) from exc
 
 
-def _unwrap_one(item: dict[str, Any], method: str) -> dict[str, Any]:
+def _unwrap_one(item: dict[str, Any], method: str) -> Any:
+    """Unwrap one `{"status": "SUCCESS", "object": ...}` envelope.
+
+    Return type is genuinely `Any`, not `dict` — WDS's `object` field is
+    a dict for most methods (e.g. getCubeMetadata) but a list for the
+    changed-list methods (getChangedCubeList/getChangedSeriesList),
+    confirmed live. Callers annotate the shape they expect.
+    """
     if item.get("status") != "SUCCESS":
         raise UpstreamError(
             f"{method} returned status={item.get('status')!r}: {item.get('object')!r}"
@@ -190,6 +223,15 @@ async def get_cube_metadata(product_id: int) -> CubeMetadata:
         for dim in obj.get("dimension", [])
     ]
 
+    footnotes = [
+        Footnote(
+            footnote_id=int(fn["footnoteId"]),
+            text_en=fn.get("footnotesEn", ""),
+            text_fr=fn.get("footnotesFr", ""),
+        )
+        for fn in list_or_empty(obj, "footnote")
+    ]
+
     return CubeMetadata(
         product_id=int(obj["productId"]),
         cansim_id=obj.get("cansimId") or None,
@@ -205,7 +247,7 @@ async def get_cube_metadata(product_id: int) -> CubeMetadata:
         archive_status_fr=obj.get("archiveStatusFr", ""),
         subject_codes=list_or_empty(obj, "subjectCode"),
         survey_codes=list_or_empty(obj, "surveyCode"),
-        footnotes=list_or_empty(obj, "footnote"),
+        footnotes=footnotes,
         dimensions=dimensions,
         provenance=make_provenance(
             source="statcan-wds",
@@ -317,17 +359,26 @@ async def get_data_from_cube_pid_coord_and_latest_n_periods(
 
 
 async def get_bulk_vector_data_by_range(
-    vector_ids: list[int], start_ref_period: str, end_ref_period: str
+    vector_ids: list[int], start_release_datetime: str, end_release_datetime: str
 ) -> list[VectorData]:
-    body = [
-        {
-            "vectorIds": [str(v) for v in vector_ids],
-            "startDataPointReleaseDate": start_ref_period,
-            "endDataPointReleaseDate": end_ref_period,
-        }
-    ]
-    items = await _post("getBulkVectorDataByRange", body)
-    url = f"{constants.BASE_URL}getBulkVectorDataByRange"
+    """`start_release_datetime`/`end_release_datetime` must be full
+    `YYYY-MM-DDTHH:MM` (WDS rejects a bare date with HTTP 406). Unlike
+    every other WDS POST method, this one's body is a single flat
+    object, not a one-item list — confirmed live; wrapping it in a list
+    also produces a 406.
+    """
+    method = "getBulkVectorDataByRange"
+    await _limiter().acquire()
+    body = {
+        "vectorIds": [str(v) for v in vector_ids],
+        "startDataPointReleaseDate": start_release_datetime,
+        "endDataPointReleaseDate": end_release_datetime,
+    }
+    try:
+        items = await api_post(f"{constants.BASE_URL}{method}", json_body=body)
+    except httpx.HTTPStatusError as exc:
+        _raise_if_locked(exc, method)
+    url = f"{constants.BASE_URL}{method}"
     return [
         _vector_data_from_json(
             _unwrap_one(item, "getBulkVectorDataByRange"), source_url=url, cached=False
@@ -339,6 +390,8 @@ async def get_bulk_vector_data_by_range(
 async def get_data_from_vector_by_reference_period_range(
     vector_ids: list[int], start_ref_period: str, end_ref_period: str
 ) -> list[VectorData]:
+    """`start_ref_period`/`end_ref_period` must be full `YYYY-MM-DD`
+    (WDS rejects an abbreviated `YYYY-MM` with HTTP 406)."""
     params = {
         "vectorIds": ",".join(str(v) for v in vector_ids),
         "startRefPeriod": start_ref_period,
@@ -356,10 +409,17 @@ async def get_data_from_vector_by_reference_period_range(
     ]
 
 
-async def get_changed_series_list(date_str: str | None = None) -> ChangedSeriesList:
+async def get_changed_series_list() -> ChangedSeriesList:
+    """Unlike getChangedCubeList, WDS documents this method as never
+    accepting a date parameter — it always reflects today's changes."""
     method = "getChangedSeriesList"
-    data = await _get(method, path_suffix=f"/{date_str}" if date_str else "")
-    items = data if isinstance(data, list) else [data]
+    data = await _get(method)
+    # Confirmed live: the response is ONE {"status", "object"} envelope
+    # whose "object" is the list of entries — not one envelope per
+    # entry, which is the shape getBulkVectorDataByRange etc. use.
+    entries_raw: list[dict[str, Any]] = (
+        _unwrap_one(data, method) if isinstance(data, dict) else data
+    )
     entries = [
         ChangedSeriesEntry(
             product_id=int(obj["productId"]),
@@ -367,7 +427,7 @@ async def get_changed_series_list(date_str: str | None = None) -> ChangedSeriesL
             vector_id=int(obj.get("vectorId", 0)),
             release_time=obj.get("releaseTime", ""),
         )
-        for obj in (_unwrap_one(i, method) if "status" in i else i for i in items)
+        for obj in entries_raw
     ]
     return ChangedSeriesList(
         series=entries,
@@ -381,12 +441,20 @@ async def get_changed_series_list(date_str: str | None = None) -> ChangedSeriesL
 
 
 async def get_changed_cube_list(date_str: str | None = None) -> ChangedCubeList:
+    """Unlike getChangedSeriesList, WDS requires an explicit date here —
+    a bare call with no date returns HTTP 404, not "today" by default.
+    Defaults to today's date in Eastern Time (WDS's own reference
+    timezone) client-side when none is given."""
     method = "getChangedCubeList"
-    data = await _get(method, path_suffix=f"/{date_str}" if date_str else "")
-    items = data if isinstance(data, list) else [data]
+    date_str = date_str or datetime.now(ZoneInfo("America/Toronto")).date().isoformat()
+    data = await _get(method, path_suffix=f"/{date_str}")
+    # Same envelope shape as getChangedSeriesList — see its comment above.
+    entries_raw: list[dict[str, Any]] = (
+        _unwrap_one(data, method) if isinstance(data, dict) else data
+    )
     entries = [
         ChangedCubeEntry(product_id=int(obj["productId"]), release_time=obj.get("releaseTime", ""))
-        for obj in (_unwrap_one(i, method) if "status" in i else i for i in items)
+        for obj in entries_raw
     ]
     return ChangedCubeList(
         cubes=entries,
@@ -467,29 +535,35 @@ async def get_code_sets() -> CodeSets:
     def entries(key: str, code_field: str, en_field: str, fr_field: str) -> list[CodeSetEntry]:
         return [
             CodeSetEntry(
-                code=int(e[code_field]), description_en=e[en_field], description_fr=e[fr_field]
+                code=int(e[code_field]),
+                description_en=e.get(en_field),
+                description_fr=e.get(fr_field),
             )
             for e in obj.get(key, [])
         ]
 
+    # Field names below are verified against a live getCodeSets response,
+    # not guessed — several differ from the pattern the other categories
+    # use (no "Desc" infix for survey/subject/classificationType; a
+    # completely different key set for terminated).
     return CodeSets(
         scalar=entries("scalar", "scalarFactorCode", "scalarFactorDescEn", "scalarFactorDescFr"),
         frequency=entries("frequency", "frequencyCode", "frequencyDescEn", "frequencyDescFr"),
         symbol=entries("symbol", "symbolCode", "symbolDescEn", "symbolDescFr"),
         status=entries("status", "statusCode", "statusDescEn", "statusDescFr"),
         uom=entries("uom", "memberUomCode", "memberUomEn", "memberUomFr"),
-        survey=entries("survey", "surveyCode", "surveyDescEn", "surveyDescFr"),
-        subject=entries("subject", "subjectCode", "subjectDescEn", "subjectDescFr"),
+        survey=entries("survey", "surveyCode", "surveyEn", "surveyFr"),
+        subject=entries("subject", "subjectCode", "subjectEn", "subjectFr"),
         classification_type=entries(
             "classificationType",
             "classificationTypeCode",
-            "classificationTypeDescEn",
-            "classificationTypeDescFr",
+            "classificationTypeEn",
+            "classificationTypeFr",
         ),
         security_level=entries(
             "securityLevel", "securityLevelCode", "securityLevelDescEn", "securityLevelDescFr"
         ),
-        terminated=entries("terminated", "terminatedCode", "terminatedDescEn", "terminatedDescFr"),
+        terminated=entries("terminated", "codeId", "codeTextEn", "codeTextFr"),
         provenance=make_provenance(
             source="statcan-wds",
             url=f"{constants.BASE_URL}getCodeSets",
