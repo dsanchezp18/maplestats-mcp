@@ -29,6 +29,7 @@ from maple_data_mcp.modules.statcan.rdaas.schemas import (
     ConcordanceDetail,
     ConcordanceSearchResult,
     ConcordanceSummary,
+    FilterOption,
     SearchFacets,
     SearchFilters,
     TermExclusion,
@@ -52,7 +53,16 @@ def _limiter():
 async def _get(path: str, *, params: dict[str, Any] | None = None) -> Any:
     await _limiter().acquire()
     url = f"{constants.BASE_URL}{path}"
-    return await api_get(url, params=params)
+    try:
+        return await api_get(url, params=params)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            # Confirmed live: a well-formed but nonexistent id raises here
+            # before any caller-side `if not obj.get("@id")` check ever
+            # runs — api_get already calls raise_for_status(). Translate
+            # once, centrally, rather than per detail-fetch function.
+            raise NotFound(f"No RDaaS resource found at {path!r}") from exc
+        raise
 
 
 def _resource_id(rdaas_url_or_id: str) -> str:
@@ -121,9 +131,9 @@ async def search_classifications(
 
 
 async def get_classification_search_filters() -> SearchFilters:
-    obj = await _get("/search/classifications/filters")
+    entries = await _get("/search/classifications/filters")
     return SearchFilters(
-        raw=obj,
+        filters=[FilterOption(parameter=e["parameter"], values=e["values"]) for e in entries],
         provenance=make_provenance(
             source="statcan-rdaas",
             url=f"{constants.BASE_URL}/search/classifications/filters",
@@ -389,9 +399,9 @@ async def search_concordances(
 
 
 async def get_concordance_search_filters() -> SearchFilters:
-    obj = await _get("/search/concordances/filters")
+    entries = await _get("/search/concordances/filters")
     return SearchFilters(
-        raw=obj,
+        filters=[FilterOption(parameter=e["parameter"], values=e["values"]) for e in entries],
         provenance=make_provenance(
             source="statcan-rdaas",
             url=f"{constants.BASE_URL}/search/concordances/filters",

@@ -211,3 +211,28 @@ async def test_get_term_exclusion_parses_source_and_target_fields(httpx_mock):
     assert result.source_code_value == "00010"
     assert result.target_code_value == "00011"
     assert result.term == "Commissioner - government services"
+
+
+async def test_get_classification_search_filters_parses_list_shape(httpx_mock):
+    """Real shape is a list of {parameter, values} objects, not a dict
+    keyed by parameter name — confirmed live."""
+    httpx_mock.add_response(
+        json=[
+            {"parameter": "status", "values": ["RELEASED", "RETIRED"]},
+            {"parameter": "audience", "values": ["STANDARDS", "SYSTEM"]},
+        ]
+    )
+    result = await client.get_classification_search_filters()
+    assert len(result.filters) == 2
+    status_filter = next(f for f in result.filters if f.parameter == "status")
+    assert "RELEASED" in status_filter.values
+
+
+async def test_get_classification_raises_not_found_on_real_404(httpx_mock):
+    """The empty-json-200 case above is one way a "not found" surfaces;
+    a genuine HTTP 404 (confirmed live for an unknown classification id)
+    must also translate to NotFound, not propagate as a raw
+    HTTPStatusError."""
+    httpx_mock.add_response(status_code=404)
+    with pytest.raises(NotFound):
+        await client.get_classification("does-not-exist-xyz")

@@ -134,10 +134,19 @@ class CodeMapList(BaseModel):
     provenance: Provenance
 
 
-class SearchFilters(BaseModel):
-    """Valid filter values for the `audience`/`status` search parameters."""
+class FilterOption(BaseModel):
+    parameter: str
+    values: list[str]
 
-    raw: dict[str, object]
+
+class SearchFilters(BaseModel):
+    """Valid filter values for the `audience`/`status` search parameters.
+
+    Real shape is a list of {parameter, values} objects — verified
+    live; not a dict keyed by parameter name as might be assumed.
+    """
+
+    filters: list[FilterOption]
     provenance: Provenance
 
 
