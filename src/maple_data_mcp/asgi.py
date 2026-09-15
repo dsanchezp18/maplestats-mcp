@@ -2,8 +2,7 @@
 
 `FastMCP.http_app()` (confirmed this session, fastmcp==4.0.3) returns a
 Starlette ASGI app exposing the MCP endpoint at /mcp — exactly the
-callable shared/security.py's middleware, ported from EcuDataMCP, was
-designed to wrap.
+callable shared/security.py's middleware was designed to wrap.
 """
 
 from __future__ import annotations

@@ -1,10 +1,8 @@
 """The base response contract every module's typed models build on.
 
-Field vocabulary merges ReyemTech's lightweight `_meta.source` envelope
-with EcuDataMCP's richer RESPONSE_CONTRACT.md fields (fuente, url,
-fecha de consulta, fecha de corte, frescura, cobertura, limites,
-esquema) — translated to English field names since MapleData's public
-surface is English/French, not Spanish.
+A lightweight source/url envelope combined with a richer provenance
+vocabulary (as-of date, freshness, coverage, limits, schema name),
+so every result documents where it came from and how complete it is.
 """
 
 from __future__ import annotations

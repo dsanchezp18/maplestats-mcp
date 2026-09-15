@@ -1,8 +1,6 @@
-"""ASGI middleware protecting a hosted MCP endpoint, ported near-verbatim
-from EcuDataMCP's helpers/http_security.py (MIT, same author). Adds:
-Bearer-token auth, a per-client sliding-window rate limit, and a
-concurrency-limiting semaphore — plus a /health endpoint that bypasses
-all of it.
+"""ASGI middleware protecting a hosted MCP endpoint. Adds: Bearer-token
+auth, a per-client sliding-window rate limit, and a concurrency-limiting
+semaphore — plus a /health endpoint that bypasses all of it.
 
 Dependency-free by design (stdlib asyncio/hmac/time only) so it has no
 opinion about which ASGI framework sits underneath — it wraps whatever

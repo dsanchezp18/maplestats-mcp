@@ -1,7 +1,7 @@
-"""Environment-variable configuration for hosting, ported from EcuDataMCP's
-helpers/env_config.py pattern. Renamed MAPLE_* (not MCP_*) so this server
-can run on the same host as another MCP server (including Daniel's own
-EcuDataMCP) without an env var collision.
+"""Environment-variable configuration for hosting.
+
+Namespaced MAPLE_* (not MCP_*) so this server can run on the same host
+as another MCP server without an env var collision.
 """
 
 from __future__ import annotations

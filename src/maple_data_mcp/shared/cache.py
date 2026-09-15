@@ -1,9 +1,9 @@
 """Process-local TTL cache shared by every module.
 
-In-memory only (aiocache.SimpleMemoryCache), like ReyemTech's version this
-is ported from. Not shared across worker processes — fine for a single
-uvicorn worker; note this explicitly if the hosted deployment ever scales
-to multiple workers, since a cache hit in one worker is a miss in another.
+In-memory only (aiocache.SimpleMemoryCache). Not shared across worker
+processes — fine for a single uvicorn worker; note this explicitly if
+the hosted deployment ever scales to multiple workers, since a cache
+hit in one worker is a miss in another.
 """
 
 from __future__ import annotations

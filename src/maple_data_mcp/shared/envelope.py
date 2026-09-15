@@ -10,8 +10,8 @@ required. Likewise, raising a plain exception from a tool propagates as
 an in-memory Client call. So this module's job is narrow: build the
 `Provenance` block every response model embeds, and raise the right
 typed error (see shared/errors.py) with a bilingual message instead of
-returning an error-shaped dict that looks like a success — the exact
-anti-pattern flagged in EcuDataMCP's own architecture review.
+returning an error-shaped dict that looks like a success — a
+recognized anti-pattern in MCP servers generally, not just here.
 """
 
 from __future__ import annotations
