@@ -1,0 +1,27 @@
+services:
+  mcp:
+    build: .
+    ports:
+      - "${MAPLE_PORT:-8000}:${MAPLE_PORT:-8000}"
+    environment:
+      MAPLE_HOST: "0.0.0.0"
+      MAPLE_PORT: "${MAPLE_PORT:-8000}"
+      MAPLE_PROFILE: "${MAPLE_PROFILE:-all}"
+      MAPLE_AUTH_TOKEN: "${MAPLE_AUTH_TOKEN:-}"
+      MAPLE_REQUIRE_AUTH: "${MAPLE_REQUIRE_AUTH:-1}"
+      MAPLE_MAX_CONCURRENT_REQUESTS: "${MAPLE_MAX_CONCURRENT_REQUESTS:-8}"
+      MAPLE_RATE_LIMIT_REQUESTS: "${MAPLE_RATE_LIMIT_REQUESTS:-120}"
+      MAPLE_RATE_LIMIT_WINDOW_SECONDS: "${MAPLE_RATE_LIMIT_WINDOW_SECONDS:-60}"
+      MAPLE_SSL_CERTFILE: "${MAPLE_SSL_CERTFILE:-}"
+      MAPLE_SSL_KEYFILE: "${MAPLE_SSL_KEYFILE:-}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${MAPLE_PORT:-8000}/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - maple_data:/app/data
+
+volumes:
+  maple_data:
