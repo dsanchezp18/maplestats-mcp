@@ -1,0 +1,78 @@
+"""Environment-variable configuration for hosting, ported from EcuDataMCP's
+helpers/env_config.py pattern. Renamed MAPLE_* (not MCP_*) so this server
+can run on the same host as another MCP server (including Daniel's own
+EcuDataMCP) without an env var collision.
+"""
+
+from __future__ import annotations
+
+import os
+
+
+def get_host() -> str:
+    return os.environ.get("MAPLE_HOST", "127.0.0.1")
+
+
+def get_port() -> int:
+    raw = os.environ.get("MAPLE_PORT", "8000")
+    try:
+        return int(raw)
+    except ValueError:
+        return 8000
+
+
+def get_transport() -> str:
+    raw = os.environ.get("MAPLE_TRANSPORT", "http").strip().lower()
+    return "stdio" if raw == "stdio" else "http"
+
+
+def get_profile() -> str:
+    raw = os.environ.get("MAPLE_PROFILE", "all").strip().lower()
+    return raw if raw in {"public", "maintenance"} else "all"
+
+
+def get_auth_token() -> str | None:
+    raw = os.environ.get("MAPLE_AUTH_TOKEN", "").strip()
+    return raw or None
+
+
+def get_require_auth() -> bool:
+    raw = os.environ.get("MAPLE_REQUIRE_AUTH", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def get_max_concurrent_requests() -> int:
+    raw = os.environ.get("MAPLE_MAX_CONCURRENT_REQUESTS", "8")
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 8
+    return min(256, max(1, value))
+
+
+def get_rate_limit_requests() -> int:
+    raw = os.environ.get("MAPLE_RATE_LIMIT_REQUESTS", "120")
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 120
+    return min(10_000, max(0, value))
+
+
+def get_rate_limit_window_seconds() -> float:
+    raw = os.environ.get("MAPLE_RATE_LIMIT_WINDOW_SECONDS", "60")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 60.0
+    return min(3600.0, max(1.0, value))
+
+
+def get_ssl_certfile() -> str | None:
+    raw = os.environ.get("MAPLE_SSL_CERTFILE", "").strip()
+    return raw or None
+
+
+def get_ssl_keyfile() -> str | None:
+    raw = os.environ.get("MAPLE_SSL_KEYFILE", "").strip()
+    return raw or None
