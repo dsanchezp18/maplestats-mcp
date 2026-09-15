@@ -1,0 +1,246 @@
+"""MCP tools for the StatCan Web Data Service (WDS).
+
+Every tool returns a typed Pydantic model (see schemas.py) — FastMCP
+derives outputSchema/structuredContent from the return-type annotation
+automatically. A raised exception (see shared/errors.py) becomes a real
+MCP isError:true result; tools never return an error-shaped dict.
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from fastmcp.tools import tool
+
+from maple_data_mcp.modules.statcan.wds import client
+from maple_data_mcp.modules.statcan.wds.schemas import (
+    ChangedCubeList,
+    ChangedSeriesList,
+    CodeSets,
+    CubeMetadata,
+    CubeSummaryList,
+    FullTableDownloadLink,
+    SeriesInfo,
+    VectorData,
+)
+
+Lang = Literal["en", "fr"]
+
+
+@tool
+async def wds_search_cubes(query: str, limit: int = 25, lang: Lang = "en") -> CubeSummaryList:
+    """Search Statistics Canada's ~8,000 data tables (cubes) by title keyword.
+
+    Use for: finding a StatCan table's productId when you only know a
+    topic, discovering which tables cover a subject before requesting
+    metadata or data.
+    Keywords: statcan, statistics canada, table, cube, search, productId,
+    discover, wds, catalogue, browse.
+    """
+    return await client.search_cubes(query, limit=limit)
+
+
+@tool
+async def wds_list_all_cubes(lite: bool = True, lang: Lang = "en") -> CubeSummaryList:
+    """List every StatCan data table (cube) currently available via WDS.
+
+    Use for: a full inventory scan, building a local index, checking
+    total table count. Prefer wds_search_cubes for a topic search.
+    Keywords: statcan, list, inventory, all cubes, catalogue, wds,
+    productId, full list, tables.
+    """
+    return await client.get_all_cubes_list(lite=lite)
+
+
+@tool
+async def wds_get_cube_metadata(product_id: int, lang: Lang = "en") -> CubeMetadata:
+    """Get full metadata for one StatCan table: dimensions, member trees,
+    frequency, date range, and footnotes.
+
+    Use for: understanding a table's structure before requesting data,
+    finding the coordinate/member IDs needed for a data query.
+    Keywords: statcan, metadata, dimensions, members, productId, cube,
+    structure, footnotes, wds.
+    """
+    return await client.get_cube_metadata(product_id)
+
+
+@tool
+async def wds_get_series_info_from_vector(vector_id: int, lang: Lang = "en") -> SeriesInfo:
+    """Resolve a StatCan vector ID to its productId and coordinate.
+
+    Use for: figuring out which table and dimension-position a known
+    vector belongs to.
+    Keywords: statcan, vector, resolve, productId, coordinate, series
+    info, wds.
+    """
+    return await client.get_series_info_from_vector(vector_id)
+
+
+@tool
+async def wds_get_series_info_from_cube_pid_coord(
+    product_id: int, coordinate: str, lang: Lang = "en"
+) -> SeriesInfo:
+    """Resolve a productId + coordinate to its stable vector ID.
+
+    Use for: converting a table/dimension-position pair (from
+    wds_get_cube_metadata) into a vector ID for later reuse.
+    Keywords: statcan, coordinate, vector, resolve, productId, series
+    info, wds.
+    """
+    return await client.get_series_info_from_cube_pid_coord(product_id, coordinate)
+
+
+@tool
+async def wds_get_data_from_vectors(
+    vector_ids: list[int], latest_n: int = 12, lang: Lang = "en"
+) -> list[VectorData]:
+    """Get the latest N observations for one or more StatCan vectors.
+
+    Use for: fetching recent values of one or more known time series.
+    Note: scalarFactorCode in each observation is NOT pre-applied to
+    value — see statcan.wds.apply_scalar_factor if a scaled figure is
+    needed.
+    Keywords: statcan, vector, observations, latest, data, time series,
+    wds, values.
+    """
+    return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
+
+
+@tool
+async def wds_get_data_from_cube_coord(
+    product_id: int, coordinate: str, latest_n: int = 12, lang: Lang = "en"
+) -> VectorData:
+    """Get the latest N observations for a table + coordinate pair.
+
+    Use for: fetching data when you have a productId/coordinate but not
+    yet the vector ID.
+    Keywords: statcan, coordinate, observations, latest, data, wds,
+    productId.
+    """
+    return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
+        product_id, coordinate, latest_n
+    )
+
+
+@tool
+async def wds_get_bulk_vector_data_by_range(
+    vector_ids: list[int], start_release_date: str, end_release_date: str, lang: Lang = "en"
+) -> list[VectorData]:
+    """Get observations for multiple vectors released within a date range.
+
+    Use for: bulk historical retrieval across several series at once,
+    filtered by release date (not reference period).
+    Keywords: statcan, bulk, vectors, date range, release date, history,
+    wds.
+    """
+    return await client.get_bulk_vector_data_by_range(
+        vector_ids, start_release_date, end_release_date
+    )
+
+
+@tool
+async def wds_get_data_by_reference_period_range(
+    vector_ids: list[int], start_ref_period: str, end_ref_period: str, lang: Lang = "en"
+) -> list[VectorData]:
+    """Get observations for vectors within a reference-period range.
+
+    Use for: retrieving a specific historical window (e.g. 2015-01 to
+    2020-12) rather than "latest N."
+    Keywords: statcan, reference period, range, history, vectors, wds,
+    date range.
+    """
+    return await client.get_data_from_vector_by_reference_period_range(
+        vector_ids, start_ref_period, end_ref_period
+    )
+
+
+@tool
+async def wds_get_changed_series_list(
+    date: str | None = None, lang: Lang = "en"
+) -> ChangedSeriesList:
+    """List StatCan series that changed (new release) on a given date.
+
+    Use for: detecting updated series for a scheduled refresh; defaults
+    to today if `date` is omitted.
+    Keywords: statcan, changed, updated, series, release, today, wds,
+    refresh.
+    """
+    return await client.get_changed_series_list(date)
+
+
+@tool
+async def wds_get_changed_cube_list(date: str | None = None, lang: Lang = "en") -> ChangedCubeList:
+    """List StatCan tables (cubes) that changed on a given date.
+
+    Use for: detecting which tables were updated, e.g. after the daily
+    8:30am ET release.
+    Keywords: statcan, changed, updated, cube, table, release, today,
+    wds.
+    """
+    return await client.get_changed_cube_list(date)
+
+
+@tool
+async def wds_get_changed_series_data_from_vector(vector_id: int, lang: Lang = "en") -> VectorData:
+    """Get just the newly-changed data points for a vector.
+
+    Use for: fetching only what changed rather than the full latest-N
+    window, after wds_get_changed_series_list flags a vector.
+    Keywords: statcan, changed, vector, delta, updated data, wds.
+    """
+    return await client.get_changed_series_data_from_vector(vector_id)
+
+
+@tool
+async def wds_get_changed_series_data_from_cube_coord(
+    product_id: int, coordinate: str, lang: Lang = "en"
+) -> VectorData:
+    """Get just the newly-changed data points for a table + coordinate.
+
+    Use for: fetching only what changed for a specific series identified
+    by productId/coordinate rather than vector ID.
+    Keywords: statcan, changed, coordinate, delta, updated data, wds.
+    """
+    return await client.get_changed_series_data_from_cube_pid_coord(product_id, coordinate)
+
+
+@tool
+async def wds_get_full_table_download_csv(
+    product_id: int, lang: Lang = "en"
+) -> FullTableDownloadLink:
+    """Get the download URL for a full StatCan table as CSV.
+
+    Use for: bulk/offline analysis of an entire table rather than
+    individual series — hands back a URL, does not fetch the file.
+    Keywords: statcan, csv, download, full table, bulk, export, wds.
+    """
+    return await client.get_full_table_download_csv(product_id, lang)
+
+
+@tool
+async def wds_get_full_table_download_sdmx(
+    product_id: int, lang: Lang = "en"
+) -> FullTableDownloadLink:
+    """Get the download URL for a full StatCan table as SDMX/XML.
+
+    Use for: bulk retrieval in SDMX format rather than CSV — hands back
+    a URL, does not fetch the file.
+    Keywords: statcan, sdmx, xml, download, full table, bulk, export,
+    wds.
+    """
+    return await client.get_full_table_download_sdmx(product_id)
+
+
+@tool
+async def wds_get_code_sets(lang: Lang = "en") -> CodeSets:
+    """Get StatCan's code-set descriptions: scalar factors, frequency,
+    symbol, status, unit of measure, survey, subject, classification
+    type, security level, and terminated codes.
+
+    Use for: decoding any numeric code returned by another WDS tool,
+    e.g. applying a scalarFactorCode multiplier to a raw value.
+    Keywords: statcan, code sets, decode, scalar factor, frequency,
+    symbol, status, uom, wds, lookup.
+    """
+    return await client.get_code_sets()
