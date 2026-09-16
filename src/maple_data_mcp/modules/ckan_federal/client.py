@@ -123,9 +123,18 @@ def _pick_translated(flat: str | None, translated: dict[str, str] | None, lang: 
 
 
 def _pick_translated_list(translated: dict[str, list[str]] | None, lang: str) -> list[str]:
+    """Pick `lang` out of a `<field>_translated` dict of lists.
+
+    Uses `lang in translated` rather than `translated.get(lang) or ...`
+    so a genuinely empty list for the requested language (e.g. a
+    dataset with no French keywords) is returned as-is instead of being
+    treated as missing and silently backfilled from English.
+    """
     if not translated:
         return []
-    return translated.get(lang) or translated.get("en") or []
+    if lang in translated:
+        return translated[lang]
+    return translated.get("en") or []
 
 
 def _pick_fra(base_value: str, fra_value: str | None, lang: str) -> str:
@@ -197,7 +206,7 @@ def _package_summary_from_json(obj: dict[str, Any], lang: str) -> PackageSummary
         num_resources=obj.get("num_resources", len(resources)),
         resource_formats=formats,
         metadata_modified=_parse_dt(obj.get("metadata_modified")),
-        landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}",
+        landing_page_url=f"{constants.DATASET_LANDING_URL.format(lang=lang)}{obj['id']}",
     )
 
 
@@ -216,7 +225,7 @@ def _package_detail_from_json(obj: dict[str, Any], lang: str, *, cached: bool) -
         metadata_modified=_parse_dt(obj.get("metadata_modified")),
         num_resources=obj.get("num_resources", len(resources)),
         resources=[_resource_from_json(r, lang) for r in resources],
-        landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}",
+        landing_page_url=f"{constants.DATASET_LANDING_URL.format(lang=lang)}{obj['id']}",
         provenance=make_provenance(
             source="ckan-federal",
             url=f"{constants.BASE_URL}package_show",
@@ -354,7 +363,7 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
         description=obj.get("description") or None,
         package_count=obj.get("package_count", 0),
         image_url=obj.get("image_url") or None,
-        landing_page_url=f"{constants.ORGANIZATION_LANDING_URL}{obj['name']}",
+        landing_page_url=f"{constants.ORGANIZATION_LANDING_URL.format(lang=lang)}{obj['name']}",
         provenance=make_provenance(
             source="ckan-federal",
             url=f"{constants.BASE_URL}organization_show?id={organization_id}",

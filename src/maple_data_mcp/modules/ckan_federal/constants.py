@@ -50,5 +50,8 @@ NOTES_EXCERPT_LENGTH = 300
 # Human-browsable dataset/organization landing pages, for provenance
 # and for handing an agent a link a person can actually open (the
 # Action API's own URLs are JSON endpoints, not useful to click).
-DATASET_LANDING_URL = "https://open.canada.ca/data/en/dataset/"
-ORGANIZATION_LANDING_URL = "https://open.canada.ca/data/en/organization/"
+# {lang} is "en"/"fr" - confirmed live that both
+# https://open.canada.ca/data/en/dataset/<id> and .../data/fr/dataset/<id>
+# 302-redirect to a working bilingual landing page for a real dataset id.
+DATASET_LANDING_URL = "https://open.canada.ca/data/{lang}/dataset/"
+ORGANIZATION_LANDING_URL = "https://open.canada.ca/data/{lang}/organization/"

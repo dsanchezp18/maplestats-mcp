@@ -195,6 +195,17 @@ async def test_get_dataset_picks_french_when_available(httpx_mock):
     result = await client.get_dataset(_PACKAGE_OBJ["id"], lang="fr")
     assert result.title == "Régions climatiques"
     assert result.keywords == ["climat", "météorologie"]
+    assert result.landing_page_url == f"https://open.canada.ca/data/fr/dataset/{_PACKAGE_OBJ['id']}"
+
+
+async def test_get_dataset_keeps_genuinely_empty_french_keywords(httpx_mock):
+    """A `fr` key present with an empty list is a real answer (no French
+    keywords for this dataset), not a missing translation -- must not be
+    backfilled from English the way a genuinely absent `fr` key is."""
+    obj = {**_PACKAGE_OBJ, "keywords": {"en": ["climate", "meteorology"], "fr": []}}
+    httpx_mock.add_response(json=_envelope(obj))
+    result = await client.get_dataset(_PACKAGE_OBJ["id"], lang="fr")
+    assert result.keywords == []
 
 
 async def test_get_dataset_resource_description_falls_back_to_none_when_empty(httpx_mock):
