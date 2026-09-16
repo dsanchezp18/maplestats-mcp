@@ -44,8 +44,8 @@ confirmed findings:
   a real null, confirmed live via resource_show -- see `_clean_str`.
   `datastore_active` is inconsistently typed across sibling resources
   of the same package (a real JSON boolean on some, the string "false"
-  on others) -- also confirmed live; left as a plain `bool` field since
-  Pydantic's lax validation coerces both without extra handling.
+  on others) -- also confirmed live; shared/ckan.py's to_bool() reads
+  the actual content instead of relying on Python truthiness.
 - CKAN's package_search hard cap of 1000 rows (confirmed live: rows=5000
   returns exactly 1000 results) matches ckan_federal exactly.
 - `package_show`/`organization_show` accept either the record's `id`
@@ -91,10 +91,10 @@ from maple_data_mcp.modules.ckan_bc.schemas import (
     TagList,
 )
 from maple_data_mcp.shared.cache import cached_fetch
-from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt
+from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt, to_bool
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput
-from maple_data_mcp.shared.json_utils import list_or_empty
+from maple_data_mcp.shared.json_utils import get_or, list_or_empty
 
 CONFIG = CkanConfig(
     source="ckan-bc",
@@ -133,10 +133,9 @@ def _resource_from_json(obj: dict[str, Any]) -> ResourceInfo:
         object_name=_clean_str(obj.get("object_name")),
         # NOT bool(...): Python's bool("false") is True for any non-empty
         # string, which would silently invert this portal's string-typed
-        # "false" values (see module docstring). Passing the raw value
-        # through lets Pydantic's own lax bool validator interpret the
+        # "false" values (see module docstring). to_bool() reads the
         # string's actual content instead of Python truthiness.
-        datastore_active=obj.get("datastore_active") or False,
+        datastore_active=to_bool(obj.get("datastore_active")),
         created=parse_dt(obj.get("created")),
         last_modified=parse_dt(obj.get("last_modified")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
@@ -145,14 +144,16 @@ def _resource_from_json(obj: dict[str, Any]) -> ResourceInfo:
 
 
 def _organization_ref_from_json(obj: dict[str, Any]) -> OrganizationRef:
-    return OrganizationRef(id=obj["id"], name=obj["name"], title=obj.get("title") or obj["name"])
+    return OrganizationRef(
+        id=obj["id"], name=obj["name"], title=_clean_str(obj.get("title")) or obj["name"]
+    )
 
 
 def _package_summary_from_json(obj: dict[str, Any]) -> PackageSummary:
     org = obj.get("organization") or {}
     notes = obj.get("notes") or ""
     resources = list_or_empty(obj, "resources")
-    formats = sorted({r["format"] for r in resources if r.get("format")})
+    formats = sorted({fmt for r in resources if (fmt := _clean_str(r.get("format")))})
     return PackageSummary(
         id=obj["id"],
         title=obj["title"],
@@ -161,7 +162,7 @@ def _package_summary_from_json(obj: dict[str, Any]) -> PackageSummary:
         notes_excerpt=excerpt(notes, constants.NOTES_EXCERPT_LENGTH),
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resource_formats=formats,
         metadata_modified=parse_dt(obj.get("metadata_modified")),
         landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}",
@@ -179,12 +180,12 @@ def _package_detail_from_json(obj: dict[str, Any], *, cached: bool) -> PackageDe
         organization=_organization_ref_from_json(obj["organization"]),
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
-        license_url=obj.get("license_url"),
+        license_url=_clean_str(obj.get("license_url")),
         tags=tags,
         groups=groups,
         metadata_created=parse_dt(obj.get("metadata_created")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resources=[_resource_from_json(r) for r in resources],
         landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}",
         provenance=make_provenance(
@@ -233,7 +234,7 @@ async def search_datasets(
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
 
     raw_results = list_or_empty(result, "results")
-    total_count = result.get("count", len(raw_results))
+    total_count = get_or(result, "count", len(raw_results))
     packages = [_package_summary_from_json(obj) for obj in raw_results]
     return PackageSearchResult(
         packages=packages,
@@ -344,9 +345,9 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
     return OrganizationDetail(
         id=obj["id"],
         name=obj["name"],
-        title=obj.get("title") or obj["name"],
+        title=_clean_str(obj.get("title")) or obj["name"],
         description=_clean_str(obj.get("description")),
-        package_count=obj.get("package_count", 0),
+        package_count=get_or(obj, "package_count", 0),
         # image_display_url, not the raw image_url (a bare filename
         # fragment on this portal, confirmed live) -- see module docstring.
         image_url=_clean_str(obj.get("image_display_url")),
@@ -404,9 +405,9 @@ async def list_licenses(lang: str = "en") -> LicenseList:
             title=lic["title"],
             url=_clean_str(lic.get("url")),
             status=lic.get("status", "unknown"),
-            is_open=bool(lic.get("is_open")),
-            is_okd_compliant=bool(lic.get("is_okd_compliant")),
-            is_osi_compliant=bool(lic.get("is_osi_compliant")),
+            is_open=to_bool(lic.get("is_open")),
+            is_okd_compliant=to_bool(lic.get("is_okd_compliant")),
+            is_osi_compliant=to_bool(lic.get("is_osi_compliant")),
         )
         for lic in licenses_raw
     ]
@@ -545,9 +546,9 @@ async def get_group(group_id: str, lang: str = "en") -> GroupDetail:
     return GroupDetail(
         id=obj["id"],
         name=obj["name"],
-        title=obj.get("title") or obj["name"],
+        title=_clean_str(obj.get("title")) or obj["name"],
         description=_clean_str(obj.get("description")),
-        package_count=obj.get("package_count", 0),
+        package_count=get_or(obj, "package_count", 0),
         # image_display_url, not the raw image_url (a bare filename
         # fragment on this portal, confirmed live) -- see module docstring.
         image_url=_clean_str(obj.get("image_display_url")),
