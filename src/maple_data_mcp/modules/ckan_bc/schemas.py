@@ -155,9 +155,20 @@ class PackageDetail(BaseModel):
 
 
 class OrganizationSummary(BaseModel):
-    """One row from organization_list(all_fields=True)."""
+    """One organization with its live dataset count.
 
-    id: str
+    Built from package_search's `organization` facet, not
+    organization_list(all_fields=True) -- confirmed live that, on this
+    deployment specifically, organization_list(all_fields=True) is
+    silently capped at 25 results regardless of a `limit`/`rows`
+    parameter (unlike ckan_federal's organization_list, which returns
+    its full ~350-organization roster uncapped). The facet path returns
+    every organization with at least one dataset (~164, confirmed live)
+    with no such cap. No `id` field: the facet gives only `name`, which
+    is also what fq="organization:<name>" and ckan_bc_get_organization
+    both key off, so nothing usable is lost.
+    """
+
     name: str
     title: str
     package_count: int

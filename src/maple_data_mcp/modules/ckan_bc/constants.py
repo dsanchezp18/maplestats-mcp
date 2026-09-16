@@ -71,17 +71,30 @@ TAG_LIST_MAX = 200
 # group_list(all_fields=True) requires an authenticated session on this
 # deployment -- confirmed live: an anonymous request returns HTTP 403
 # with {"success": false, "error": {"__type": "Authorization Error",
-# "message": "Access denied"}}. This is a real difference from
-# organization_list(all_fields=True), which is public on this same
-# portal. ckan_bc_list_groups uses package_search's `groups` facet
-# instead (confirmed live, public, unauthenticated) to get each group's
-# name/title/dataset count without touching group_list at all.
-# GROUP_FACET_LIMIT bounds how many facet values Solr returns; the
-# catalogue only has 26 groups total (confirmed live via the plain,
-# unauthenticated group_list, which returns bare names with no auth
-# wall), so this comfortably covers every one that has at least one
-# dataset (facets only surface groups with count > 0).
+# "message": "Access denied"}}. ckan_bc_list_groups uses
+# package_search's `groups` facet instead (confirmed live, public,
+# unauthenticated) to get each group's name/title/dataset count without
+# touching group_list at all. GROUP_FACET_LIMIT bounds how many facet
+# values Solr returns; the catalogue only has 26 groups total (confirmed
+# live via the plain, unauthenticated group_list, which returns bare
+# names with no auth wall), so this comfortably covers every one that
+# has at least one dataset (facets only surface groups with count > 0).
 GROUP_FACET_LIMIT = 200
+
+# organization_list(all_fields=True) is silently capped at exactly 25
+# results on this deployment, regardless of a `limit`/`rows` parameter
+# -- confirmed live by trying limit=300/rows=300/sort=package_count/
+# order_by=name, all still returning 25 of the portal's ~244
+# organizations. This differs from ckan_federal, where
+# organization_list(all_fields=True) returns its full roster uncapped.
+# ckan_bc_list_organizations works around this the same way
+# ckan_bc_list_groups works around group_list's auth wall: reading
+# package_search's `organization` facet instead (confirmed live,
+# uncapped, returned all 164 organizations that have at least one
+# dataset). ORGANIZATION_FACET_LIMIT bounds how many facet values Solr
+# returns; set comfortably above the ~164 organizations confirmed to
+# have at least one dataset.
+ORGANIZATION_FACET_LIMIT = 500
 
 # Human-browsable dataset/organization/group landing pages, for
 # provenance and for handing an agent a link a person can actually open

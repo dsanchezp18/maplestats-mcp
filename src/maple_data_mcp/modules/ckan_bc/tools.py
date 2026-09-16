@@ -83,8 +83,9 @@ async def ckan_bc_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDeta
 
 @tool
 async def ckan_bc_list_organizations(lang: Lang = "en") -> OrganizationList:
-    """List every organization publishing to the BC Data Catalogue
-    (~244 provincial ministries, agencies, and Crown corporations).
+    """List every organization that has published at least one dataset
+    to the BC Data Catalogue (~164 of ~244 registered provincial
+    ministries, agencies, and Crown corporations).
 
     Use for: browsing publishers before filtering
     ckan_bc_search_datasets with fq="organization:<name>", or resolving

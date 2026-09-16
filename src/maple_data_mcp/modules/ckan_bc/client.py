@@ -51,6 +51,20 @@ confirmed findings:
 - `package_show`/`organization_show` accept either the record's `id`
   (UUID) or its `name` (slug) interchangeably -- confirmed live, same
   as ckan_federal.
+- `organization_list(all_fields=True)` is silently capped at exactly 25
+  results on this deployment, regardless of a `limit`/`rows` parameter
+  -- confirmed live, unlike ckan_federal where it returns the full
+  roster uncapped. `group_list(all_fields=True)` needs authentication
+  (see above) -- a second, different restriction on the same style of
+  call. Both list_organizations() and list_groups() below route around
+  their respective restriction via package_search's facets instead.
+- Some long-text fields (confirmed live on at least one group's
+  `description`) contain the Unicode replacement character (U+FFFD)
+  in place of what reads like a curly quote, even though every
+  response's Content-Type header states `charset=utf-8` -- this is
+  corrupted source data on the portal's own end (most likely a
+  mis-encoded curly quote baked in upstream), not a decoding error in
+  `shared/http.py`; passed through as-is rather than guessed-and-fixed.
 """
 
 from __future__ import annotations
@@ -248,37 +262,53 @@ async def get_dataset(dataset_id: str, lang: str = "en") -> PackageDetail:
 
 
 async def list_organizations(lang: str = "en") -> OrganizationList:
-    """List every publishing organization via `organization_list(all_fields=True)`.
+    """List every organization with at least one published dataset, with
+    live dataset counts.
 
-    `lang` has no effect -- this portal is English-only (see schemas.py's
-    module docstring).
+    Built from `package_search`'s `organization` facet, not
+    `organization_list(all_fields=True)` -- confirmed live that, on this
+    deployment specifically, `organization_list(all_fields=True)` is
+    silently capped at exactly 25 results regardless of a `limit`/`rows`
+    parameter (see constants.py's ORGANIZATION_FACET_LIMIT comment for
+    what was tried). `lang` has no effect -- this portal is English-only
+    (see schemas.py's module docstring).
     """
     del lang
-    cache_key = "ckan-bc:organization_list:all_fields"
+    cache_key = "ckan-bc:package_search:organization_facet"
 
-    async def fetch() -> list[dict[str, Any]]:
-        return await action(CONFIG, "organization_list", params={"all_fields": "true"})
+    async def fetch() -> dict[str, Any]:
+        return await action(
+            CONFIG,
+            "package_search",
+            params={
+                "rows": 0,
+                "facet.field": '["organization"]',
+                "facet.limit": constants.ORGANIZATION_FACET_LIMIT,
+            },
+        )
 
-    orgs_raw, was_cached = await cached_fetch(
+    result, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_ORGANIZATION_LIST_SECONDS, fetch
     )
+    facet = (result.get("search_facets") or {}).get("organization") or {}
+    items = facet.get("items") or []
     organizations = [
         OrganizationSummary(
-            id=o["id"],
-            name=o["name"],
-            title=o.get("title") or o["name"],
-            package_count=o.get("package_count", 0),
+            name=item["name"],
+            title=item.get("display_name") or item["name"],
+            package_count=item.get("count", 0),
         )
-        for o in orgs_raw
+        for item in items
     ]
     return OrganizationList(
         organizations=organizations,
         total_count=len(organizations),
         provenance=make_provenance(
             source="ckan-bc",
-            url=f"{constants.BASE_URL}organization_list",
+            url=f"{constants.BASE_URL}package_search?rows=0&facet.field=%5B%22organization%22%5D",
             cached=was_cached,
             schema_name="ckan_bc.OrganizationList",
+            coverage="only organizations with at least one dataset attached are included",
             freshness="organization roster changes infrequently; cached 24h",
         ),
     )
