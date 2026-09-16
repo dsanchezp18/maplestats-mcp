@@ -50,7 +50,12 @@ there. Read docs://statcan/addressing and docs://statcan/gotchas
 before working with StatCan's productId/vectorId/coordinate system or
 its known API quirks. ckan_ tools also accept lang: "en"|"fr" and pick
 the requested language from each record's bilingual fields client-side
-(the federal CKAN API itself ignores a language parameter).
+(the federal CKAN API itself ignores a language parameter), except
+ckan_list_organizations, whose upstream endpoint never attaches
+per-language fields and so always returns its "English | French"
+combined title regardless of lang. boc_ tools accept lang for
+consistency with every other tool here, but it has no effect: the
+Bank of Canada Valet API has no language dimension at all.
 """.strip()
 
 
