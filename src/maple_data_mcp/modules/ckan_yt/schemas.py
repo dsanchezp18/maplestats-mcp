@@ -138,7 +138,7 @@ class PackageDetail(BaseModel):
     id: str
     title: str
     notes: str
-    organization: OrganizationRef
+    organization: OrganizationRef | None = None
     custodian: str | None = None
     update_frequency: str | None = None
     homepage_url: str | None = None
@@ -240,6 +240,7 @@ class GroupSummary(BaseModel):
     title: str
     description: str | None = None
     package_count: int
+    landing_page_url: str
 
 
 class GroupList(BaseModel):

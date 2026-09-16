@@ -268,7 +268,18 @@ async def test_get_dataset_parses_num_resources_and_resource_list(httpx_mock):
     assert result.num_resources == 1
     assert len(result.resources) == 1
     assert result.resources[0].size is None  # ArcGIS-hosted resource, no file size
+    assert result.organization is not None
     assert result.organization.name == "geomatics-yukon"
+
+
+async def test_get_dataset_handles_null_organization(httpx_mock):
+    """A package can outlive its organization (deleted/purged) - a null
+    "organization" must not crash the detail path the way a bare
+    obj["organization"] indexing would."""
+    obj = {**_PACKAGE_OBJ, "organization": None}
+    httpx_mock.add_response(json=_envelope(obj))
+    result = await client.get_dataset(_PACKAGE_OBJ["id"])
+    assert result.organization is None
 
 
 async def test_list_organizations_parses_all_fields(httpx_mock):

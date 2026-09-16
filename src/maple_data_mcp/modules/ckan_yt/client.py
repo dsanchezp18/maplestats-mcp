@@ -57,10 +57,10 @@ from maple_data_mcp.modules.ckan_yt.schemas import (
     TagList,
 )
 from maple_data_mcp.shared.cache import cached_fetch
-from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt
+from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt, to_bool
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput
-from maple_data_mcp.shared.json_utils import list_or_empty
+from maple_data_mcp.shared.json_utils import get_or, list_or_empty
 
 CONFIG = CkanConfig(
     source="ckan-yt",
@@ -76,9 +76,11 @@ def _tag_names(obj: dict[str, Any]) -> list[str]:
     Confirmed live: a package's `tags` array holds full objects
     (`{"id", "name", "display_name", "state", "vocabulary_id"}`), not
     bare strings -- unlike the federal portal, which never populates
-    this field at all.
+    this field at all. Guards against an unsampled bare-string entry
+    (an unconfirmed vocabulary/facet edge case) rather than assuming
+    every entry is a dict.
     """
-    return [t["name"] for t in list_or_empty(obj, "tags") if t.get("name")]
+    return [t["name"] for t in list_or_empty(obj, "tags") if isinstance(t, dict) and t.get("name")]
 
 
 def _group_names(obj: dict[str, Any]) -> list[str]:
@@ -86,9 +88,11 @@ def _group_names(obj: dict[str, Any]) -> list[str]:
 
     Same shape distinction as `_tag_names`: a package's `groups` array
     holds full objects, keyed by `name` (the short slug used in
-    group_show/fq filters), not `title`.
+    group_show/fq filters), not `title`. Same defensive shape guard.
     """
-    return [g["name"] for g in list_or_empty(obj, "groups") if g.get("name")]
+    return [
+        g["name"] for g in list_or_empty(obj, "groups") if isinstance(g, dict) and g.get("name")
+    ]
 
 
 def _resource_from_json(obj: dict[str, Any]) -> ResourceInfo:
@@ -127,7 +131,7 @@ def _package_summary_from_json(obj: dict[str, Any], lang: str) -> PackageSummary
         license_title=obj.get("license_title"),
         tags=_tag_names(obj),
         groups=_group_names(obj),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resource_formats=formats,
         metadata_modified=parse_dt(obj.get("metadata_modified")),
         landing_page_url=f"{constants.DATASET_LANDING_URL.format(lang=lang)}{obj['id']}",
@@ -140,11 +144,11 @@ def _package_detail_from_json(obj: dict[str, Any], lang: str, *, cached: bool) -
         id=obj["id"],
         title=obj["title"],
         notes=obj.get("notes") or "",
-        organization=_organization_ref_from_json(obj["organization"]),
+        organization=_organization_ref_from_json(org) if (org := obj.get("organization")) else None,
         custodian=obj.get("custodian") or None,
         update_frequency=obj.get("update_frequency") or None,
         homepage_url=obj.get("homepage_url") or None,
-        isopen=bool(obj.get("isopen")),
+        isopen=to_bool(obj.get("isopen")),
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
         license_url=obj.get("license_url"),
@@ -152,7 +156,7 @@ def _package_detail_from_json(obj: dict[str, Any], lang: str, *, cached: bool) -
         groups=_group_names(obj),
         metadata_created=parse_dt(obj.get("metadata_created")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resources=[_resource_from_json(r) for r in resources],
         landing_page_url=f"{constants.DATASET_LANDING_URL.format(lang=lang)}{obj['id']}",
         provenance=make_provenance(
@@ -201,7 +205,7 @@ async def search_datasets(
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
 
     raw_results = list_or_empty(result, "results")
-    total_count = result.get("count", len(raw_results))
+    total_count = get_or(result, "count", len(raw_results))
     packages = [_package_summary_from_json(obj, lang) for obj in raw_results]
     return PackageSearchResult(
         packages=packages,
@@ -253,7 +257,7 @@ async def list_organizations(lang: str = "en") -> OrganizationList:
             id=o["id"],
             name=o["name"],
             title=o.get("title") or o["name"],
-            package_count=o.get("package_count", 0),
+            package_count=get_or(o, "package_count", 0),
         )
         for o in orgs_raw
     ]
@@ -292,7 +296,7 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
         name=obj["name"],
         title=obj.get("title") or obj["name"],
         description=obj.get("description") or None,
-        package_count=obj.get("package_count", 0),
+        package_count=get_or(obj, "package_count", 0),
         image_url=obj.get("image_url") or None,
         landing_page_url=f"{constants.ORGANIZATION_LANDING_URL.format(lang=lang)}{obj['name']}",
         provenance=make_provenance(
@@ -347,9 +351,9 @@ async def list_licenses(lang: str = "en") -> LicenseList:
             status=lic.get("status", "unknown"),
             family=lic.get("family") or None,
             maintainer=lic.get("maintainer") or None,
-            domain_content=bool(lic.get("domain_content")),
-            domain_data=bool(lic.get("domain_data")),
-            domain_software=bool(lic.get("domain_software")),
+            domain_content=to_bool(lic.get("domain_content")),
+            domain_data=to_bool(lic.get("domain_data")),
+            domain_software=to_bool(lic.get("domain_software")),
             od_conformance=lic.get("od_conformance") or None,
             osd_conformance=lic.get("osd_conformance") or None,
         )
@@ -419,7 +423,8 @@ async def list_groups(lang: str = "en") -> GroupList:
             name=g["name"],
             title=g.get("title") or g["name"],
             description=g.get("description") or None,
-            package_count=g.get("package_count", 0),
+            package_count=get_or(g, "package_count", 0),
+            landing_page_url=f"{constants.GROUP_LANDING_URL.format(lang=lang)}{g['name']}",
         )
         for g in groups_raw
     ]
