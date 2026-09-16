@@ -6,7 +6,10 @@ any narrower or broader source list implied elsewhere. Every source below
 is currently **Not started**; none of this is built yet, fork or
 otherwise.
 
-Status values: `Not started` / `In progress` / `Shipped`.
+Status values: `Not started` / `In progress` / `Shipped` / `Blocked` (a
+real CKAN deployment was confirmed independently, but this environment's
+egress is currently rejected by the portal's own anti-abuse layer —
+see the Notes column for what was actually observed).
 
 ## Federal
 
@@ -26,23 +29,23 @@ seen in benchmark research are explicitly excluded).
 
 | Province | Status | Portal (reference) |
 |---|---|---|
-| Ontario | Not started | data.ontario.ca |
-| British Columbia | Not started | catalogue.data.gov.bc.ca + BC Geographic Warehouse (WFS) |
-| Quebec | Not started | donneesquebec.ca |
-| Alberta | Not started | open.alberta.ca |
-| Manitoba | Not started | geoportal.gov.mb.ca |
-| Saskatchewan | Not started | geohub.saskatchewan.ca |
-| Nova Scotia | Not started | data.novascotia.ca (Socrata) |
-| New Brunswick | Not started | gnb.socrata.com + GeoNB + federal CKAN subset |
-| Newfoundland and Labrador | Not started | opendata.gov.nl.ca |
-| Prince Edward Island | Not started | data.princeedwardisland.ca |
+| Ontario | Blocked | data.ontario.ca — real CKAN (widely documented), but every request from this build environment, including a bare `robots.txt` fetch with the project's normal HTTP client, hit an Azure Front Door WAF 429 ("this activity has been identified as suspicious") that did not clear after an 80s wait. Retry from a different network, or once unblocked. |
+| British Columbia | Shipped | catalogue.data.gov.bc.ca, CKAN Action API: `ckan_bc_*`, 9 tools (search, dataset/org/resource/license detail, tags, groups). English-only. BC Geographic Warehouse (WFS) is a separate, not-yet-built source. |
+| Quebec | Shipped | donneesquebec.ca (API at `/recherche/api/3/action/`), CKAN Action API: `ckan_qc_*`, 8 tools. French-only — `lang` is a documented no-op. |
+| Alberta | Blocked | open.alberta.ca — real CKAN (public `ckanext-open_alberta` extension, ~33K datasets per its own docs), but every request from this build environment, including the bare homepage and `robots.txt`, hit a site-wide Cloudflare Managed Challenge (JS challenge page), not a narrow rule. Retry from a different network, or once unblocked. |
+| Manitoba | Not CKAN | geoportal.gov.mb.ca — ArcGIS Hub ("Data MB"), not CKAN. Needs a separate ArcGIS Hub adaptor, out of scope for the CKAN adaptor. |
+| Saskatchewan | Not CKAN | geohub.saskatchewan.ca — ArcGIS Hub, not CKAN. |
+| Nova Scotia | Not CKAN | data.novascotia.ca — Socrata, not CKAN. |
+| New Brunswick | Not CKAN | gnb.socrata.com — Socrata, not CKAN. GeoNB and a federal-CKAN subset remain separate, not-yet-built sources. |
+| Newfoundland and Labrador | Not CKAN | opendata.gov.nl.ca — a custom platform (`?page-id=` URL scheme; both `site_read` and `package_list` 404), not CKAN. |
+| Prince Edward Island | Not CKAN | data.princeedwardisland.ca — ArcGIS Online/Hub, not CKAN. |
 
 ## Territorial (all 3)
 
 | Territory | Status | Portal (reference) |
 |---|---|---|
-| Northwest Territories | Not started | opendata.gov.nt.ca |
-| Yukon | Not started | open.yukon.ca |
+| Northwest Territories | Shipped | opendata.gov.nt.ca, CKAN Action API: `ckan_nt_*`, 8 tools. English-only. Small catalogue (341 datasets). |
+| Yukon | Shipped | open.yukon.ca, CKAN Action API: `ckan_yt_*`, 8 tools. English-only (site UI is bilingual-chrome only; dataset content is not). 3,841 datasets. |
 | Nunavut | Not started | TBD — no confirmed portal identified yet |
 
 ## Municipal (all that apply — established open-data portals)
@@ -53,24 +56,24 @@ portal is confirmed to exist and be reachable.
 
 | Municipality / region | Status | Portal (reference) |
 |---|---|---|
-| Toronto | Not started | open.toronto.ca |
-| Montreal | Not started | donnees.montreal.ca |
-| Vancouver | Not started | opendata.vancouver.ca |
-| Calgary | Not started | data.calgary.ca |
-| Edmonton | Not started | data.edmonton.ca |
-| Ottawa | Not started | open.ottawa.ca |
-| Winnipeg | Not started | data.winnipeg.ca |
-| Halifax | Not started | catalogue.open.halifax.ca |
-| Mississauga | Not started | data.mississauga.ca |
-| York Region | Not started | york.ca/open-data |
-| Markham | Not started | ArcGIS Hub (via York Region cluster) |
-| Newmarket | Not started | ArcGIS Hub (via York Region cluster) |
-| Aurora | Not started | ArcGIS Hub (via York Region cluster) |
-| Peel Region | Not started | data.peelregion.ca |
-| Durham Region | Not started | opendata.durham.ca |
-| Halton Region | Not started | opendata.halton.ca |
-| Waterloo Region | Not started | opendata.regionofwaterloo.ca |
-| Metro Vancouver | Not started | open.metrovancouver.org |
+| Toronto | Shipped | open.toronto.ca (UI) / `ckan0.cf.opendata.inter.prod-toronto.ca` (Action API host — the UI domain is not the API), CKAN Action API: `ckan_toronto_*`, 7 tools (no groups — confirmed unused). English-only. 557 datasets. |
+| Montreal | Shipped | donnees.montreal.ca, CKAN Action API: `ckan_montreal_*`, 8 tools. French-only — `lang` is a documented no-op. |
+| Vancouver | Not CKAN | opendata.vancouver.ca — Opendatasoft, not CKAN/Socrata/ArcGIS. |
+| Calgary | Not CKAN | data.calgary.ca — Socrata, not CKAN. |
+| Edmonton | Not CKAN | data.edmonton.ca — Socrata, not CKAN. |
+| Ottawa | Not CKAN | open.ottawa.ca — migrated off CKAN to ArcGIS Hub (per the city's own 2023/24 announcement). |
+| Winnipeg | Not CKAN | data.winnipeg.ca — Socrata, not CKAN. |
+| Halifax | Not CKAN | catalogue.open.halifax.ca does not resolve; the real portal (data-hrm.hub.arcgis.com) is ArcGIS Hub, not CKAN. |
+| Mississauga | Not CKAN | data.mississauga.ca — ArcGIS Hub, not CKAN. |
+| York Region | Not CKAN | york.ca/open-data — ArcGIS Hub, not CKAN. |
+| Markham | Not CKAN | ArcGIS Hub (via York Region cluster), confirmed. |
+| Newmarket | Not CKAN | ArcGIS Hub (via York Region cluster), confirmed. |
+| Aurora | Not CKAN | ArcGIS Hub (via York Region cluster), confirmed. |
+| Peel Region | Not CKAN | data.peelregion.ca — ArcGIS Hub, not CKAN. |
+| Durham Region | Not CKAN | opendata.durham.ca — ArcGIS Online/Hub, not CKAN. |
+| Halton Region | Unknown | opendata.halton.ca does not resolve; no live Halton Region portal was found (only a separate Conservation Halton ArcGIS Hub, a different body). |
+| Waterloo Region | Not CKAN | opendata.regionofwaterloo.ca — ArcGIS Hub, not CKAN. |
+| Metro Vancouver | Not CKAN | open.metrovancouver.org — ArcGIS Hub, not CKAN. |
 
 Open item: inventory remaining major cities not yet checked (e.g.
 Hamilton, London, Kitchener, Windsor, Regina, Saskatoon, Victoria,

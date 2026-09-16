@@ -37,9 +37,25 @@ Currently implemented:
   observations — exchange rates, interest rates, CPI/inflation, and
   commodity prices (tools prefixed boc_). Read
   docs://boc/well-known-series for verified series/group names.
-- Government of Canada Open Data (CKAN, open.canada.ca): dataset
-  search, dataset/organization/resource/license detail across the
-  federal catalogue (tools prefixed ckan_).
+- Canadian government CKAN open-data portals (dataset search, dataset/
+  organization/resource/license detail, and — where the portal
+  actually uses them — tags/groups): federal Government of Canada
+  (open.canada.ca, tools prefixed ckan_), British Columbia
+  (catalogue.data.gov.bc.ca, ckan_bc_), Northwest Territories
+  (opendata.gov.nt.ca, ckan_nt_), Quebec (donneesquebec.ca, ckan_qc_),
+  Yukon (open.yukon.ca, ckan_yt_), City of Montreal
+  (donnees.montreal.ca, ckan_montreal_), and City of Toronto
+  (open.toronto.ca, ckan_toronto_). Every portal runs the same CKAN
+  Action API software, but each deployment was independently verified
+  live and genuinely differs in whether it uses tags/groups and in its
+  language: BC, NWT, Yukon, and Toronto are English-only; Quebec and
+  Montreal are French-only; only the federal portal is bilingual (and
+  even there, ckan_list_organizations doesn't attach per-language
+  fields, always returning its "English | French" combined title).
+  Every ckan_ tool accepts lang: "en"|"fr" for interface consistency,
+  but on a monolingual portal it is a documented no-op — read that
+  portal's own module docstring before assuming a request will change
+  what comes back.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose
@@ -48,14 +64,9 @@ metadata/data tools already return both languages in one response
 (every field has an _en/_fr pair) — lang has no additional effect
 there. Read docs://statcan/addressing and docs://statcan/gotchas
 before working with StatCan's productId/vectorId/coordinate system or
-its known API quirks. ckan_ tools also accept lang: "en"|"fr" and pick
-the requested language from each record's bilingual fields client-side
-(the federal CKAN API itself ignores a language parameter), except
-ckan_list_organizations, whose upstream endpoint never attaches
-per-language fields and so always returns its "English | French"
-combined title regardless of lang. boc_ tools accept lang for
-consistency with every other tool here, but it has no effect: the
-Bank of Canada Valet API has no language dimension at all.
+its known API quirks. boc_ tools accept lang for consistency with
+every other tool here, but it has no effect: the Bank of Canada Valet
+API has no language dimension at all.
 """.strip()
 
 
