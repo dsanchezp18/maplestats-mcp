@@ -27,8 +27,11 @@ RATE_LIMIT_CAPACITY = 5.0
 
 CACHE_TTL_SEARCH_SECONDS = 10 * 60  # 10m: search results/catalogue change often
 CACHE_TTL_PACKAGE_SECONDS = 60 * 60  # 1h
+# An individual organization's title/description is at least as stable
+# as the roster it's drawn from, so organization_show shares the same
+# 24h TTL as organization_list rather than the shorter default below.
 CACHE_TTL_ORGANIZATION_LIST_SECONDS = 24 * 60 * 60  # 24h: org roster is stable
-CACHE_TTL_ORGANIZATION_SECONDS = 60 * 60  # 1h
+CACHE_TTL_ORGANIZATION_SECONDS = CACHE_TTL_ORGANIZATION_LIST_SECONDS
 CACHE_TTL_RESOURCE_SECONDS = 60 * 60  # 1h
 CACHE_TTL_LICENSE_LIST_SECONDS = 7 * 24 * 60 * 60  # 7d: licenses rarely change
 

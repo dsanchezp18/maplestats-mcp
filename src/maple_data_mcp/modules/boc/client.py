@@ -58,7 +58,8 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 
 from __future__ import annotations
 
-from typing import Any, NoReturn
+from collections.abc import Callable
+from typing import Any, NoReturn, Protocol
 from urllib.parse import quote
 
 import httpx
@@ -211,17 +212,54 @@ def _series_info_from_json(series_detail: dict[str, Any]) -> dict[str, SeriesInf
     }
 
 
+class _NamedEntry(Protocol):
+    """Structural shape shared by SeriesSummary and GroupSummary.
+
+    Lets list_series/list_groups and search_series/search_groups share
+    one cached-inventory-fetch and one substring-filter implementation
+    instead of two near-identical copies.
+    """
+
+    name: str
+    label: str
+    description: str
+
+
+async def _cached_inventory[Entry: _NamedEntry](
+    cache_key: str, path: str, container_key: str, item_type: Callable[..., Entry]
+) -> tuple[list[Entry], bool]:
+    """Fetch+parse `path` once per TTL window, caching the parsed models
+    themselves (not the raw JSON) - list_series/list_groups return
+    15k+/2.5k+ entries that would otherwise be re-validated on every
+    call, cache hit or not."""
+
+    async def fetch() -> list[Entry]:
+        obj = await _get(path)
+        return [
+            item_type(name=code, label=e.get("label", ""), description=e.get("description", ""))
+            for code, e in obj[container_key].items()
+        ]
+
+    return await cached_fetch(cache_key, constants.CACHE_TTL_LISTS_SECONDS, fetch)
+
+
+def _filter_inventory[Entry: _NamedEntry](
+    items: list[Entry], query: str, limit: int
+) -> list[Entry]:
+    needle = query.lower()
+    return [
+        item
+        for item in items
+        if needle in item.name.lower()
+        or needle in item.label.lower()
+        or needle in item.description.lower()
+    ][:limit]
+
+
 async def list_series() -> SeriesList:
-    cache_key = "boc:lists/series"
-
-    async def fetch() -> dict[str, Any]:
-        return await _get("lists/series/json")
-
-    obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LISTS_SECONDS, fetch)
-    series = [
-        SeriesSummary(name=code, label=e.get("label", ""), description=e.get("description", ""))
-        for code, e in obj["series"].items()
-    ]
+    series, was_cached = await _cached_inventory(
+        "boc:lists/series", "lists/series/json", "series", SeriesSummary
+    )
     return SeriesList(
         series=series,
         total_count=len(series),
@@ -237,12 +275,7 @@ async def list_series() -> SeriesList:
 async def search_series(query: str, *, limit: int = 25) -> SeriesList:
     """Client-side substring search over the cached series inventory."""
     all_series = await list_series()
-    needle = query.lower()
-    matches = [
-        s
-        for s in all_series.series
-        if needle in s.name.lower() or needle in s.label.lower() or needle in s.description.lower()
-    ][:limit]
+    matches = _filter_inventory(all_series.series, query, limit)
     return SeriesList(
         series=matches,
         total_count=len(matches),
@@ -257,16 +290,9 @@ async def search_series(query: str, *, limit: int = 25) -> SeriesList:
 
 
 async def list_groups() -> GroupList:
-    cache_key = "boc:lists/groups"
-
-    async def fetch() -> dict[str, Any]:
-        return await _get("lists/groups/json")
-
-    obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LISTS_SECONDS, fetch)
-    groups = [
-        GroupSummary(name=code, label=e.get("label", ""), description=e.get("description", ""))
-        for code, e in obj["groups"].items()
-    ]
+    groups, was_cached = await _cached_inventory(
+        "boc:lists/groups", "lists/groups/json", "groups", GroupSummary
+    )
     return GroupList(
         groups=groups,
         total_count=len(groups),
@@ -282,12 +308,7 @@ async def list_groups() -> GroupList:
 async def search_groups(query: str, *, limit: int = 25) -> GroupList:
     """Client-side substring search over the cached group inventory."""
     all_groups = await list_groups()
-    needle = query.lower()
-    matches = [
-        g
-        for g in all_groups.groups
-        if needle in g.name.lower() or needle in g.label.lower() or needle in g.description.lower()
-    ][:limit]
+    matches = _filter_inventory(all_groups.groups, query, limit)
     return GroupList(
         groups=matches,
         total_count=len(matches),
