@@ -380,7 +380,9 @@ async def list_tags(lang: str = "en") -> TagList:
     async def fetch() -> list[str]:
         return await action(CONFIG, "tag_list")
 
-    tags_raw, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_TAG_LIST_SECONDS, fetch)
+    tags_raw, was_cached = await cached_fetch(
+        cache_key, constants.CACHE_TTL_TAG_LIST_SECONDS, fetch
+    )
     return TagList(
         tags=tags_raw,
         total_count=len(tags_raw),
