@@ -68,7 +68,14 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
     detail = _error_detail(exc)
     if status == 404:
         raise NotFound(f"{context}: no match found ({detail}).") from exc
-    if status == 400:
+    if 400 <= status < 500:
+        # Every 4xx other than 404 is treated as a caller-input problem, not
+        # just a bare 400 - confirmed live that different CKAN deployments
+        # use different status codes for the same kind of mistake (federal
+        # returns 400 "Search Query Error" for a malformed fq/sort;
+        # ckan_montreal's own deployment returns 409 "Search Error" for the
+        # same class of mistake). Narrowing this to status == 400 silently
+        # misclassified the 409 case as an UpstreamError.
         raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
     raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
 
@@ -87,7 +94,7 @@ async def action(config: CkanConfig, method: str, params: dict[str, Any] | None 
         raise UpstreamUnavailable(
             f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
         ) from exc
-    if not isinstance(data, dict) or not data.get("success"):
+    if not isinstance(data, dict) or not data.get("success") or "result" not in data:
         raise UpstreamError(f"{context} returned an unsuccessful envelope: {data!r}")
     return data["result"]
 
@@ -97,11 +104,20 @@ def pick_translated(flat: str | None, translated: dict[str, str] | None, lang: s
     to English, then to the flat (English-default) field. Not every
     portal's multilingual extension is guaranteed to include every
     language key for every record — verify live per portal rather than
-    assuming this fallback path is never hit."""
+    assuming this fallback path is never hit.
+
+    Uses `lang in translated`/`"en" in translated` rather than
+    `translated.get(lang) or ...` so a genuinely empty string for the
+    requested language (a publisher deliberately left it blank) is
+    returned as-is instead of being treated as missing and backfilled
+    from English or the flat field — the same class of bug already
+    fixed once for `pick_translated_list`, applied here too.
+    """
     if translated:
-        picked = translated.get(lang) or translated.get("en")
-        if picked:
-            return picked
+        if lang in translated:
+            return translated[lang]
+        if "en" in translated:
+            return translated["en"]
     return flat or ""
 
 
@@ -124,8 +140,13 @@ def pick_translated_list(translated: dict[str, list[str]] | None, lang: str) -> 
 def pick_fra(base_value: str, fra_value: str | None, lang: str) -> str:
     """Pick between a flat field and its `_fra`-suffixed counterpart —
     an older CKAN bilingual naming convention some deployments (e.g.
-    license_list on the federal portal) use instead of `_translated`."""
-    if lang == "fr" and fra_value:
+    license_list on the federal portal) use instead of `_translated`.
+
+    Checks `fra_value is not None` rather than truthiness, so a
+    genuinely empty French field is returned as-is instead of being
+    treated as missing and silently replaced with the English value.
+    """
+    if lang == "fr" and fra_value is not None:
         return fra_value
     return base_value
 
@@ -141,6 +162,27 @@ def parse_dt(value: str | None) -> datetime | None:
 
 def excerpt(text: str, max_length: int) -> str:
     text = text.strip()
+    if max_length <= 0:
+        return ""
     if len(text) <= max_length:
         return text
     return text[:max_length].rstrip() + "…"
+
+
+def to_bool(value: object) -> bool:
+    """Coerce a CKAN boolean-shaped field to a real `bool`.
+
+    CKAN deployments are inconsistent about whether a boolean field
+    arrives as a real JSON boolean or as the literal string "true"/
+    "false" (confirmed live on several of this codebase's portal
+    modules — e.g. license_list flags, `isopen`, `datastore_active`).
+    `bool(value)` is wrong here: `bool("false")` is `True` in Python,
+    since any non-empty string is truthy — it silently inverts the
+    field whenever a portal sends the string form. Never use bare
+    `bool(...)` on a CKAN-sourced field; use this instead.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    return bool(value)

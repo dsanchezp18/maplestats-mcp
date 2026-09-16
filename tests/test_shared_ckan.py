@@ -11,6 +11,7 @@ from maple_data_mcp.shared.ckan import (
     pick_fra,
     pick_translated,
     pick_translated_list,
+    to_bool,
 )
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
@@ -62,6 +63,31 @@ async def test_action_raises_upstream_error_on_unsuccessful_envelope(httpx_mock)
         await action(_CONFIG, "site_read")
 
 
+async def test_action_raises_upstream_error_on_missing_result_key(httpx_mock):
+    """success: true with no "result" key at all (e.g. a misbehaving
+    intermediary CDN/WAF) must not leak a raw KeyError past the typed
+    error boundary."""
+    httpx_mock.add_response(
+        url="https://example.invalid/api/3/action/site_read",
+        json={"help": "h", "success": True},
+    )
+    with pytest.raises(UpstreamError):
+        await action(_CONFIG, "site_read")
+
+
+async def test_action_raises_invalid_input_on_409(httpx_mock):
+    """Confirmed live on ckan_montreal: some CKAN deployments return 409
+    (not 400) for a malformed fq -- still a caller-input problem, not an
+    upstream failure, so every non-404 4xx maps to InvalidInput."""
+    httpx_mock.add_response(
+        url="https://example.invalid/api/3/action/package_search?fq=bad",
+        status_code=409,
+        json={"success": False, "error": {"__type": "Search Error", "message": "bad fq"}},
+    )
+    with pytest.raises(InvalidInput, match="bad fq"):
+        await action(_CONFIG, "package_search", params={"fq": "bad"})
+
+
 async def test_action_raises_upstream_unavailable_on_timeout(httpx_mock):
     for _ in range(3):
         httpx_mock.add_exception(httpx.ConnectTimeout("timed out"))
@@ -76,6 +102,12 @@ def test_pick_translated_falls_back_to_english_then_flat():
     assert pick_translated(None, None, "fr") == ""
 
 
+def test_pick_translated_keeps_genuinely_empty_string():
+    """A publisher deliberately left the French field blank - that is a
+    real, present answer, not a missing translation to backfill."""
+    assert pick_translated("flat", {"en": "english", "fr": ""}, "fr") == ""
+
+
 def test_pick_translated_list_keeps_genuinely_empty_list():
     assert pick_translated_list({"en": ["a"], "fr": []}, "fr") == []
     assert pick_translated_list({"en": ["a"]}, "fr") == ["a"]
@@ -88,6 +120,10 @@ def test_pick_fra_only_applies_for_french():
     assert pick_fra("base", None, "fr") == "base"
 
 
+def test_pick_fra_keeps_genuinely_empty_string():
+    assert pick_fra("base", "", "fr") == ""
+
+
 def test_parse_dt_handles_missing_and_invalid():
     assert parse_dt(None) is None
     assert parse_dt("") is None
@@ -98,3 +134,17 @@ def test_parse_dt_handles_missing_and_invalid():
 def test_excerpt_truncates_with_ellipsis():
     assert excerpt("short", 10) == "short"
     assert excerpt("a very long string indeed", 10) == "a very lon…"
+
+
+def test_excerpt_handles_zero_max_length():
+    assert excerpt("anything", 0) == ""
+
+
+def test_to_bool_handles_real_bools_and_ckan_string_booleans():
+    assert to_bool(True) is True
+    assert to_bool(False) is False
+    assert to_bool("true") is True
+    assert to_bool("True") is True
+    assert to_bool("false") is False
+    assert to_bool("False") is False
+    assert to_bool(None) is False
