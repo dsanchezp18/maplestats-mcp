@@ -21,7 +21,7 @@ RATE_LIMIT_PER_SECOND = 10.0
 RATE_LIMIT_CAPACITY = 10.0
 
 # /lists/series/json and /lists/groups/json are large, mostly-static
-# inventories (13,067 series / ~2,400 groups measured live this
+# inventories (15,928 series / 2,538 groups measured live this
 # session) - Valet's own Cache-Control on these responses is only
 # max-age=30 (a CDN-level hint, not a signal the underlying inventory
 # changes that often), so a much longer client-side TTL is appropriate.
