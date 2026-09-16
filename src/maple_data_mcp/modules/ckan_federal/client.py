@@ -1,13 +1,13 @@
 """HTTP client for the Government of Canada Open Data (CKAN federal) API.
 
-Every function wraps `shared.http.api_get` through the ckan-federal rate
-limiter, unwraps CKAN's `{"help", "success", "result"}` envelope, and
-maps HTTP error responses to this repo's typed errors. Confirmed live
-this session:
+The HTTP/rate-limit/error/envelope plumbing lives in shared/ckan.py,
+reused by every modules/ckan_<portal>/ in this codebase since it is
+CKAN's own core behavior, not something this deployment customizes.
+What is deployment-specific, confirmed live this session:
 
 - `package_show`/`organization_show`/`resource_show` return HTTP 404
   with `{"success": false, "error": {"__type": "Not Found Error", ...}}`
-  for an unknown id -- mapped to NotFound.
+  for an unknown id -- mapped to NotFound by shared/ckan.py.
 - `package_search` returns HTTP 400 with
   `{"error": {"__type": "Search Query Error", ...}}` for a malformed
   `sort`/`fq` value (e.g. an unknown sort field) -- mapped to
@@ -20,7 +20,7 @@ this session:
   requires picking the requested language client-side from each
   record's `_translated` dict (or `_fra`-suffixed field, for
   license_list -- a different, older convention within the same API).
-  See `_pick_translated`/`_pick_translated_list`/`_pick_fra` below.
+  See shared/ckan.py's `pick_translated`/`pick_translated_list`/`pick_fra`.
 - `group_list` and `tag_list` both return `[]` live, and every sampled
   package's `tags`/`groups` arrays are empty too -- this portal does
   not use CKAN tags or groups at all (subject terms live in the
@@ -30,10 +30,7 @@ this session:
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, NoReturn
-
-import httpx
+from typing import Any
 
 from maple_data_mcp.modules.ckan_federal import constants
 from maple_data_mcp.modules.ckan_federal.schemas import (
@@ -50,138 +47,43 @@ from maple_data_mcp.modules.ckan_federal.schemas import (
     ResourceInfo,
 )
 from maple_data_mcp.shared.cache import cached_fetch
+from maple_data_mcp.shared.ckan import (
+    CkanConfig,
+    action,
+    excerpt,
+    parse_dt,
+    pick_fra,
+    pick_translated,
+    pick_translated_list,
+)
 from maple_data_mcp.shared.envelope import make_provenance
-from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maple_data_mcp.shared.http import api_get
+from maple_data_mcp.shared.errors import InvalidInput
 from maple_data_mcp.shared.json_utils import list_or_empty
-from maple_data_mcp.shared.rate_limiter import get_limiter
 
-
-def _limiter():
-    return get_limiter(
-        constants.RATE_LIMIT_SOURCE,
-        rate=constants.RATE_LIMIT_PER_SECOND,
-        capacity=constants.RATE_LIMIT_CAPACITY,
-    )
-
-
-def _error_detail(exc: httpx.HTTPStatusError) -> str:
-    try:
-        body = exc.response.json()
-    except ValueError:
-        return exc.response.text[:200]
-    err = body.get("error") if isinstance(body, dict) else None
-    if isinstance(err, dict):
-        detail = err.get("message") or err.get("__type")
-        if detail:
-            return str(detail)
-    return exc.response.text[:200]
-
-
-def _raise_for_status_error(exc: httpx.HTTPStatusError, method: str) -> NoReturn:
-    status = exc.response.status_code
-    detail = _error_detail(exc)
-    if status == 404:
-        raise NotFound(f"{method}: no match found ({detail}).") from exc
-    if status == 400:
-        raise InvalidInput(f"{method}: rejected the request ({detail}).") from exc
-    raise UpstreamError(f"{method} returned HTTP {status}: {detail}") from exc
-
-
-def _raise_unavailable(method: str, exc: httpx.HTTPError) -> NoReturn:
-    raise UpstreamUnavailable(
-        f"{method} did not respond in time (already retried by shared/http.py). Try again shortly."
-    ) from exc
-
-
-async def _get(method: str, params: dict[str, Any] | None = None) -> Any:
-    await _limiter().acquire()
-    url = f"{constants.BASE_URL}{method}"
-    try:
-        data = await api_get(url, params=params)
-    except httpx.HTTPStatusError as exc:
-        _raise_for_status_error(exc, method)
-    except httpx.HTTPError as exc:
-        _raise_unavailable(method, exc)
-    if not isinstance(data, dict) or not data.get("success"):
-        raise UpstreamError(f"{method} returned an unsuccessful envelope: {data!r}")
-    return data["result"]
-
-
-def _pick_translated(flat: str | None, translated: dict[str, str] | None, lang: str) -> str:
-    """Pick `lang` out of a CKAN `<field>_translated` dict.
-
-    Falls back to English, then to the flat (English-default) field --
-    confirmed live that `_translated` is occasionally missing the "fr"
-    key (~2% of a live 100-dataset sample) but never missing "en".
-    """
-    if translated:
-        picked = translated.get(lang) or translated.get("en")
-        if picked:
-            return picked
-    return flat or ""
-
-
-def _pick_translated_list(translated: dict[str, list[str]] | None, lang: str) -> list[str]:
-    """Pick `lang` out of a `<field>_translated` dict of lists.
-
-    Uses `lang in translated` rather than `translated.get(lang) or ...`
-    so a genuinely empty list for the requested language (e.g. a
-    dataset with no French keywords) is returned as-is instead of being
-    treated as missing and silently backfilled from English.
-    """
-    if not translated:
-        return []
-    if lang in translated:
-        return translated[lang]
-    return translated.get("en") or []
-
-
-def _pick_fra(base_value: str, fra_value: str | None, lang: str) -> str:
-    """Pick between a flat field and its `_fra`-suffixed counterpart.
-
-    license_list uses this older CKAN naming convention (`title_fra`,
-    `url_fra`) rather than the `_translated` dict package/resource
-    records use -- confirmed live, a second bilingual convention within
-    the same API.
-    """
-    if lang == "fr" and fra_value:
-        return fra_value
-    return base_value
-
-
-def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value)
-    except ValueError:
-        return None
-
-
-def _excerpt(text: str) -> str:
-    text = text.strip()
-    if len(text) <= constants.NOTES_EXCERPT_LENGTH:
-        return text
-    return text[: constants.NOTES_EXCERPT_LENGTH].rstrip() + "…"
+CONFIG = CkanConfig(
+    source="ckan-federal",
+    base_url=constants.BASE_URL,
+    rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
+    rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
+)
 
 
 def _resource_from_json(obj: dict[str, Any], lang: str) -> ResourceInfo:
     description = (
-        _pick_translated(obj.get("description"), obj.get("description_translated"), lang) or None
+        pick_translated(obj.get("description"), obj.get("description_translated"), lang) or None
     )
     return ResourceInfo(
         id=obj["id"],
         package_id=obj.get("package_id"),
-        name=_pick_translated(obj.get("name"), obj.get("name_translated"), lang),
+        name=pick_translated(obj.get("name"), obj.get("name_translated"), lang),
         description=description,
         format=obj.get("format") or None,
         url=obj["url"],
         size=obj.get("size"),
         language=list_or_empty(obj, "language"),
-        created=_parse_dt(obj.get("created")),
-        last_modified=_parse_dt(obj.get("last_modified")),
-        metadata_modified=_parse_dt(obj.get("metadata_modified")),
+        created=parse_dt(obj.get("created")),
+        last_modified=parse_dt(obj.get("last_modified")),
+        metadata_modified=parse_dt(obj.get("metadata_modified")),
         mimetype=obj.get("mimetype"),
     )
 
@@ -192,20 +94,20 @@ def _organization_ref_from_json(obj: dict[str, Any]) -> OrganizationRef:
 
 def _package_summary_from_json(obj: dict[str, Any], lang: str) -> PackageSummary:
     org = obj.get("organization") or {}
-    notes = _pick_translated(obj.get("notes"), obj.get("notes_translated"), lang)
+    notes = pick_translated(obj.get("notes"), obj.get("notes_translated"), lang)
     resources = list_or_empty(obj, "resources")
     formats = sorted({r["format"] for r in resources if r.get("format")})
     return PackageSummary(
         id=obj["id"],
-        title=_pick_translated(obj.get("title"), obj.get("title_translated"), lang),
+        title=pick_translated(obj.get("title"), obj.get("title_translated"), lang),
         organization_name=org.get("name"),
         organization_title=org.get("title"),
-        notes_excerpt=_excerpt(notes),
+        notes_excerpt=excerpt(notes, constants.NOTES_EXCERPT_LENGTH),
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
         num_resources=obj.get("num_resources", len(resources)),
         resource_formats=formats,
-        metadata_modified=_parse_dt(obj.get("metadata_modified")),
+        metadata_modified=parse_dt(obj.get("metadata_modified")),
         landing_page_url=f"{constants.DATASET_LANDING_URL.format(lang=lang)}{obj['id']}",
     )
 
@@ -214,15 +116,15 @@ def _package_detail_from_json(obj: dict[str, Any], lang: str, *, cached: bool) -
     resources = list_or_empty(obj, "resources")
     return PackageDetail(
         id=obj["id"],
-        title=_pick_translated(obj.get("title"), obj.get("title_translated"), lang),
-        notes=_pick_translated(obj.get("notes"), obj.get("notes_translated"), lang),
+        title=pick_translated(obj.get("title"), obj.get("title_translated"), lang),
+        notes=pick_translated(obj.get("notes"), obj.get("notes_translated"), lang),
         organization=_organization_ref_from_json(obj["organization"]),
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
         license_url=obj.get("license_url"),
-        keywords=_pick_translated_list(obj.get("keywords"), lang),
-        metadata_created=_parse_dt(obj.get("metadata_created")),
-        metadata_modified=_parse_dt(obj.get("metadata_modified")),
+        keywords=pick_translated_list(obj.get("keywords"), lang),
+        metadata_created=parse_dt(obj.get("metadata_created")),
+        metadata_modified=parse_dt(obj.get("metadata_modified")),
         num_resources=obj.get("num_resources", len(resources)),
         resources=[_resource_from_json(r, lang) for r in resources],
         landing_page_url=f"{constants.DATASET_LANDING_URL.format(lang=lang)}{obj['id']}",
@@ -264,7 +166,7 @@ async def search_datasets(
     cache_key = f"ckan:package_search:{query}:{fq}:{rows}:{start}:{sort}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get("package_search", params=params)
+        return await action(CONFIG, "package_search", params=params)
 
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
 
@@ -295,7 +197,7 @@ async def get_dataset(dataset_id: str, lang: str = "en") -> PackageDetail:
     cache_key = f"ckan:package_show:{dataset_id}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get("package_show", params={"id": dataset_id})
+        return await action(CONFIG, "package_show", params={"id": dataset_id})
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_PACKAGE_SECONDS, fetch)
     return _package_detail_from_json(obj, lang, cached=was_cached)
@@ -313,7 +215,7 @@ async def list_organizations(lang: str = "en") -> OrganizationList:
     cache_key = "ckan:organization_list:all_fields"
 
     async def fetch() -> list[dict[str, Any]]:
-        return await _get("organization_list", params={"all_fields": "true"})
+        return await action(CONFIG, "organization_list", params={"all_fields": "true"})
 
     orgs_raw, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_ORGANIZATION_LIST_SECONDS, fetch
@@ -351,15 +253,17 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
         # this stays compact even if a future CKAN upgrade changes that
         # default -- full dataset listing for an org goes through
         # search_datasets(fq="organization:<name>") instead.
-        return await _get(
-            "organization_show", params={"id": organization_id, "include_datasets": "false"}
+        return await action(
+            CONFIG,
+            "organization_show",
+            params={"id": organization_id, "include_datasets": "false"},
         )
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ORGANIZATION_SECONDS, fetch)
     return OrganizationDetail(
         id=obj["id"],
         name=obj["name"],
-        title=_pick_translated(obj.get("title"), obj.get("title_translated"), lang),
+        title=pick_translated(obj.get("title"), obj.get("title_translated"), lang),
         description=obj.get("description") or None,
         package_count=obj.get("package_count", 0),
         image_url=obj.get("image_url") or None,
@@ -379,7 +283,7 @@ async def get_resource(resource_id: str, lang: str = "en") -> ResourceDetail:
     cache_key = f"ckan:resource_show:{resource_id}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get("resource_show", params={"id": resource_id})
+        return await action(CONFIG, "resource_show", params={"id": resource_id})
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_RESOURCE_SECONDS, fetch)
     return ResourceDetail(
@@ -397,7 +301,7 @@ async def list_licenses(lang: str = "en") -> LicenseList:
     cache_key = "ckan:license_list"
 
     async def fetch() -> list[dict[str, Any]]:
-        return await _get("license_list")
+        return await action(CONFIG, "license_list")
 
     licenses_raw, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_LICENSE_LIST_SECONDS, fetch
@@ -405,8 +309,8 @@ async def list_licenses(lang: str = "en") -> LicenseList:
     licenses = [
         LicenseInfo(
             id=lic["id"],
-            title=_pick_fra(lic["title"], lic.get("title_fra"), lang),
-            url=_pick_fra(lic.get("url") or "", lic.get("url_fra"), lang) or None,
+            title=pick_fra(lic["title"], lic.get("title_fra"), lang),
+            url=pick_fra(lic.get("url") or "", lic.get("url_fra"), lang) or None,
             status=lic.get("status", "unknown"),
             is_okd_compliant=bool(lic.get("is_okd_compliant")),
             is_osi_compliant=bool(lic.get("is_osi_compliant")),
