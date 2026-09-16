@@ -58,10 +58,10 @@ from maple_data_mcp.modules.ckan_nt.schemas import (
     TagList,
 )
 from maple_data_mcp.shared.cache import cached_fetch
-from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt
+from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt, to_bool
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput
-from maple_data_mcp.shared.json_utils import list_or_empty
+from maple_data_mcp.shared.json_utils import get_or, list_or_empty
 
 CONFIG = CkanConfig(
     source="ckan-nt",
@@ -108,7 +108,7 @@ def _package_summary_from_json(obj: dict[str, Any]) -> PackageSummary:
         topic=obj.get("topic") or None,
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resource_formats=formats,
         metadata_modified=parse_dt(obj.get("metadata_modified")),
         landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}",
@@ -123,11 +123,11 @@ def _package_detail_from_json(obj: dict[str, Any], *, cached: bool) -> PackageDe
         id=obj["id"],
         title=obj["title"],
         notes=obj.get("notes") or "",
-        organization=_organization_ref_from_json(obj["organization"]),
+        organization=_organization_ref_from_json(org) if (org := obj.get("organization")) else None,
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
         license_url=obj.get("license_url"),
-        is_open=bool(obj.get("isopen")),
+        is_open=to_bool(obj.get("isopen")),
         tags=tags,
         groups=groups,
         topic=obj.get("topic") or None,
@@ -136,7 +136,7 @@ def _package_detail_from_json(obj: dict[str, Any], *, cached: bool) -> PackageDe
         geographic_range=obj.get("geographic_range") or None,
         metadata_created=parse_dt(obj.get("metadata_created")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resources=[_resource_from_json(r) for r in resources],
         landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}",
         provenance=make_provenance(
@@ -184,7 +184,7 @@ async def search_datasets(
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
 
     raw_results = list_or_empty(result, "results")
-    total_count = result.get("count", len(raw_results))
+    total_count = get_or(result, "count", len(raw_results))
     packages = [_package_summary_from_json(obj) for obj in raw_results]
     return PackageSearchResult(
         packages=packages,
@@ -231,7 +231,7 @@ async def list_organizations(lang: str = "en") -> OrganizationList:
             id=o["id"],
             name=o["name"],
             title=o.get("title") or o["name"],
-            package_count=o.get("package_count", 0),
+            package_count=get_or(o, "package_count", 0),
         )
         for o in orgs_raw
     ]
@@ -270,7 +270,7 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
         name=obj["name"],
         title=obj.get("title") or obj["name"],
         description=obj.get("description") or None,
-        package_count=obj.get("package_count", 0),
+        package_count=get_or(obj, "package_count", 0),
         # image_display_url, not image_url -- see module docstring.
         image_url=obj.get("image_display_url") or None,
         landing_page_url=f"{constants.ORGANIZATION_LANDING_URL}{obj['name']}",
@@ -304,7 +304,7 @@ async def list_groups(lang: str = "en") -> GroupList:
             name=g["name"],
             title=g.get("title") or g["name"],
             description=g.get("description") or None,
-            package_count=g.get("package_count", 0),
+            package_count=get_or(g, "package_count", 0),
             landing_page_url=f"{constants.GROUP_LANDING_URL}{g['name']}",
         )
         for g in groups_raw
@@ -389,8 +389,8 @@ async def list_licenses(lang: str = "en") -> LicenseList:
             title=lic["title"],
             url=lic.get("url") or None,
             status=lic.get("status", "unknown"),
-            is_okd_compliant=bool(lic.get("is_okd_compliant")),
-            is_osi_compliant=bool(lic.get("is_osi_compliant")),
+            is_okd_compliant=to_bool(lic.get("is_okd_compliant")),
+            is_osi_compliant=to_bool(lic.get("is_osi_compliant")),
         )
         for lic in licenses_raw
     ]

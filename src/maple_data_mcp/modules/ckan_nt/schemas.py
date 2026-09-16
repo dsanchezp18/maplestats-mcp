@@ -164,7 +164,7 @@ class PackageDetail(BaseModel):
     id: str
     title: str
     notes: str
-    organization: OrganizationRef
+    organization: OrganizationRef | None = None
     license_id: str | None = None
     license_title: str | None = None
     license_url: str | None = None
