@@ -59,10 +59,10 @@ from maple_data_mcp.modules.ckan_toronto.schemas import (
     TagList,
 )
 from maple_data_mcp.shared.cache import cached_fetch
-from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt
+from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt, to_bool
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput
-from maple_data_mcp.shared.json_utils import list_or_empty
+from maple_data_mcp.shared.json_utils import get_or, list_or_empty
 
 CONFIG = CkanConfig(
     source="ckan-toronto",
@@ -70,19 +70,6 @@ CONFIG = CkanConfig(
     rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
 )
-
-
-def _to_bool(value: object) -> bool:
-    """Coerce license_list's "True"/"False" JSON strings to bool.
-
-    Confirmed live: domain_content/domain_data/domain_software/
-    is_generic on this deployment's license_list are strings, not
-    JSON booleans, unlike everywhere else in this API that uses real
-    booleans (e.g. package `isopen`, resource `datastore_active`).
-    """
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() == "true"
 
 
 def _tag_names(tags: list[dict[str, Any]]) -> list[str]:
@@ -98,7 +85,7 @@ def _resource_from_json(obj: dict[str, Any]) -> ResourceInfo:
         format=obj.get("format") or None,
         url=obj["url"],
         size=obj.get("size"),
-        datastore_active=bool(obj.get("datastore_active")),
+        datastore_active=to_bool(obj.get("datastore_active")),
         record_count=obj.get("record_count"),
         created=parse_dt(obj.get("created")),
         last_modified=parse_dt(obj.get("last_modified")),
@@ -125,14 +112,14 @@ def _package_summary_from_json(obj: dict[str, Any]) -> PackageSummary:
         dataset_category=obj.get("dataset_category") or None,
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
-        is_retired=bool(obj.get("is_retired")),
-        num_resources=obj.get("num_resources", len(list_or_empty(obj, "resources"))),
+        is_retired=to_bool(obj.get("is_retired")),
+        num_resources=get_or(obj, "num_resources", len(list_or_empty(obj, "resources"))),
         formats=list_or_empty(obj, "formats"),
         tags=_tag_names(list_or_empty(obj, "tags")),
         topics=list_or_empty(obj, "topics"),
         refresh_rate=obj.get("refresh_rate") or None,
         metadata_modified=parse_dt(obj.get("metadata_modified")),
-        landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}/",
+        landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['name']}/",
     )
 
 
@@ -147,7 +134,7 @@ def _package_detail_from_json(obj: dict[str, Any], *, cached: bool) -> PackageDe
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
         dataset_category=obj.get("dataset_category") or None,
-        is_retired=bool(obj.get("is_retired")),
+        is_retired=to_bool(obj.get("is_retired")),
         information_url=obj.get("information_url") or None,
         limitations=obj.get("limitations") or None,
         civic_issues=list_or_empty(obj, "civic_issues"),
@@ -156,9 +143,9 @@ def _package_detail_from_json(obj: dict[str, Any], *, cached: bool) -> PackageDe
         refresh_rate=obj.get("refresh_rate") or None,
         metadata_created=parse_dt(obj.get("metadata_created")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resources=[_resource_from_json(r) for r in resources],
-        landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['id']}/",
+        landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['name']}/",
         provenance=make_provenance(
             source="ckan-toronto",
             url=f"{constants.BASE_URL}package_show",
@@ -205,7 +192,7 @@ async def search_datasets(
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
 
     raw_results = list_or_empty(result, "results")
-    total_count = result.get("count", len(raw_results))
+    total_count = get_or(result, "count", len(raw_results))
     packages = [_package_summary_from_json(obj) for obj in raw_results]
     return PackageSearchResult(
         packages=packages,
@@ -263,7 +250,7 @@ async def list_organizations(lang: str = "en") -> OrganizationList:
             id=o["id"],
             name=o["name"],
             title=o.get("title") or o["name"],
-            package_count=o.get("package_count", 0),
+            package_count=get_or(o, "package_count", 0),
         )
         for o in orgs_raw
     ]
@@ -303,7 +290,7 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
         name=obj["name"],
         title=obj.get("title") or obj["name"],
         description=obj.get("description") or None,
-        package_count=obj.get("package_count", 0),
+        package_count=get_or(obj, "package_count", 0),
         image_url=obj.get("image_url") or None,
         landing_page_url=f"{constants.ORGANIZATION_LANDING_URL}{obj['name']}",
         provenance=make_provenance(
@@ -353,10 +340,10 @@ async def list_licenses(lang: str = "en") -> LicenseList:
             url=lic.get("url") or None,
             status=lic.get("status", "unknown"),
             family=lic.get("family") or None,
-            domain_content=_to_bool(lic.get("domain_content")),
-            domain_data=_to_bool(lic.get("domain_data")),
-            domain_software=_to_bool(lic.get("domain_software")),
-            is_generic=_to_bool(lic.get("is_generic")),
+            domain_content=to_bool(lic.get("domain_content")),
+            domain_data=to_bool(lic.get("domain_data")),
+            domain_software=to_bool(lic.get("domain_software")),
+            is_generic=to_bool(lic.get("is_generic")),
             od_conformance=lic.get("od_conformance") or None,
             osd_conformance=lic.get("osd_conformance") or None,
         )

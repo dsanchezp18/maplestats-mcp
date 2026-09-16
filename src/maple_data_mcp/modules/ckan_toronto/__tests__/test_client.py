@@ -247,7 +247,7 @@ async def test_get_dataset_parses_num_resources_and_resource_list(httpx_mock):
     assert result.num_resources == 2
     assert len(result.resources) == 2
     assert result.organization.name == "city-of-toronto"
-    assert result.landing_page_url == f"https://open.toronto.ca/dataset/{_PACKAGE_OBJ['id']}/"
+    assert result.landing_page_url == f"https://open.toronto.ca/dataset/{_PACKAGE_OBJ['name']}/"
 
 
 async def test_list_organizations_returns_single_organization(httpx_mock):
