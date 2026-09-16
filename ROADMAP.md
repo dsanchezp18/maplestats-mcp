@@ -16,9 +16,9 @@ seen in benchmark research are explicitly excluded).
 
 | Source | Status | Notes |
 |---|---|---|
-| Statistics Canada (StatCan) | Not started | WDS + SDMX: table/cube discovery, metadata, series retrieval, change detection. |
-| Bank of Canada | Not started | Valet API: exchange rates, interest rates, commodity prices, CPI/inflation, series metadata. |
-| Federal Open Data (CKAN, open.canada.ca) | Not started | 80K+ dataset catalogue: search, dataset details, organizations, resources. |
+| Statistics Canada (StatCan) | Shipped | WDS + SDMX + RDaaS: table/cube discovery, metadata, series retrieval, change detection, classifications. |
+| Bank of Canada | Shipped | Valet API: exchange rates, interest rates, commodity prices, CPI/inflation, series metadata. |
+| Federal Open Data (CKAN, open.canada.ca) | Shipped | ~48K-dataset catalogue: search, dataset details, organizations, resources, licenses. |
 | IRCC Immigration | Not started | Permanent residents, study/work permits, Express Entry, asylum, citizenship, and related administrative series. |
 | Weather / Climate (Environment Canada MSC GeoMet) | Not started | Current conditions, forecasts, alerts, climate normals, air quality, hydrology, marine, severe weather, snow. |
 

@@ -25,22 +25,32 @@ MODULES_ROOT = Path(__file__).parent / "modules"
 SERVER_INSTRUCTIONS = """
 MapleData MCP — one MCP server for Canadian public data.
 
-Currently implemented: Statistics Canada, via two APIs:
-- Web Data Service (WDS): table/cube discovery, metadata, time series
-  (tools prefixed wds_).
-- SDMX REST API: filtered, server-side-sliced series queries (tools
-  prefixed sdmx_).
-- Reference Data as a Service (RDaaS): classifications, codesets, and
-  concordances such as NAICS (tools prefixed rdaas_).
+Currently implemented:
 
-Every tool accepts lang: "en"|"fr", but it only changes what comes back
-for RDaaS tools and wds_get_full_table_download_csv, whose upstream
-APIs are genuinely single-language per request. WDS and SDMX metadata/
-data tools already return both languages in one response (every field
-has an _en/_fr pair) — lang has no additional effect there. Read
-docs://statcan/addressing and docs://statcan/gotchas before working
-with StatCan's productId/vectorId/coordinate system or its known API
-quirks.
+- Statistics Canada, via three APIs: Web Data Service (WDS) for table/
+  cube discovery, metadata, and time series (tools prefixed wds_); the
+  SDMX REST API for filtered, server-side-sliced series queries (tools
+  prefixed sdmx_); and Reference Data as a Service (RDaaS) for
+  classifications, codesets, and concordances such as NAICS (tools
+  prefixed rdaas_).
+- Bank of Canada Valet API: series and group discovery, metadata, and
+  observations — exchange rates, interest rates, CPI/inflation, and
+  commodity prices (tools prefixed boc_). Read
+  docs://boc/well-known-series for verified series/group names.
+- Government of Canada Open Data (CKAN, open.canada.ca): dataset
+  search, dataset/organization/resource/license detail across the
+  federal catalogue (tools prefixed ckan_).
+
+Every StatCan tool accepts lang: "en"|"fr", but it only changes what
+comes back for RDaaS tools and wds_get_full_table_download_csv, whose
+upstream APIs are genuinely single-language per request. WDS and SDMX
+metadata/data tools already return both languages in one response
+(every field has an _en/_fr pair) — lang has no additional effect
+there. Read docs://statcan/addressing and docs://statcan/gotchas
+before working with StatCan's productId/vectorId/coordinate system or
+its known API quirks. ckan_ tools also accept lang: "en"|"fr" and pick
+the requested language from each record's bilingual fields client-side
+(the federal CKAN API itself ignores a language parameter).
 """.strip()
 
 
