@@ -131,7 +131,12 @@ def _resource_from_json(obj: dict[str, Any]) -> ResourceInfo:
         resource_type=_clean_str(obj.get("resource_type")),
         resource_storage_location=_clean_str(obj.get("resource_storage_location")),
         object_name=_clean_str(obj.get("object_name")),
-        datastore_active=bool(obj.get("datastore_active") or False),
+        # NOT bool(...): Python's bool("false") is True for any non-empty
+        # string, which would silently invert this portal's string-typed
+        # "false" values (see module docstring). Passing the raw value
+        # through lets Pydantic's own lax bool validator interpret the
+        # string's actual content instead of Python truthiness.
+        datastore_active=obj.get("datastore_active") or False,
         created=parse_dt(obj.get("created")),
         last_modified=parse_dt(obj.get("last_modified")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
