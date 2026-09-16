@@ -123,6 +123,7 @@ async def test_get_group_parses_group_series_without_description(httpx_mock):
     assert len(result.series) == 1
     assert result.series[0].name == "FXUSDCAD"
     assert result.series[0].label == "USD/CAD"
+    assert result.series[0].link == "https://www.bankofcanada.ca/valet/series/FXUSDCAD"
 
 
 async def test_get_observations_parses_string_value_to_float(httpx_mock):
@@ -176,6 +177,21 @@ async def test_get_observations_mixed_frequency_returns_unmerged_rows(httpx_mock
     result = await client.get_observations(["FXUSDCAD", "V41690973"], recent=2)
     assert len(result.observations) == 2
     assert all(len(row.values) == 1 for row in result.observations)
+
+
+async def test_get_observations_treats_null_observations_as_empty(httpx_mock):
+    """Valet can send "observations": null (not just an absent key) for
+    a range/recent request matching no rows - list_or_empty() must
+    coalesce this to [] rather than let None reach the row parser."""
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}observations/FXUSDCAD/json?recent=1",
+        json={
+            "seriesDetail": {"FXUSDCAD": {"label": "USD/CAD", "description": ""}},
+            "observations": None,
+        },
+    )
+    result = await client.get_observations(["FXUSDCAD"], recent=1)
+    assert result.observations == []
 
 
 async def test_get_observations_rejects_mixing_recent_and_date_range():

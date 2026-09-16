@@ -78,6 +78,7 @@ class GroupMemberSeries(BaseModel):
 
     name: str
     label: str
+    link: str | None = None
 
 
 class GroupDetail(BaseModel):

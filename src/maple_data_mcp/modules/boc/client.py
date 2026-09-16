@@ -59,6 +59,7 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 from __future__ import annotations
 
 from typing import Any, NoReturn
+from urllib.parse import quote
 
 import httpx
 
@@ -81,6 +82,7 @@ from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maple_data_mcp.shared.http import api_get
+from maple_data_mcp.shared.json_utils import list_or_empty
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 
@@ -139,6 +141,17 @@ def _require_name(name: str, kind: str) -> str:
     if not name:
         raise InvalidInput(f"{kind} name must not be empty.")
     return name
+
+
+def _path_segment(name: str) -> str:
+    """Percent-encode a name before splicing it into a URL path.
+
+    Query params are encoded automatically by httpx, but series/group
+    names go directly into the path (e.g. observations/{name}/json),
+    which is not — a name containing '/', '?', or '#' would otherwise
+    produce a malformed or unintended request instead of a clean 404.
+    """
+    return quote(name, safe="")
 
 
 def _observation_params(
@@ -293,7 +306,7 @@ async def get_series(name: str) -> SeriesDetail:
     cache_key = f"boc:series/{name}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"series/{name}/json")
+        return await _get(f"series/{_path_segment(name)}/json")
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
     detail = obj["seriesDetails"]
@@ -315,12 +328,12 @@ async def get_group(name: str) -> GroupDetail:
     cache_key = f"boc:group/{name}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"groups/{name}/json")
+        return await _get(f"groups/{_path_segment(name)}/json")
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
     detail = obj["groupDetails"]
     members = [
-        GroupMemberSeries(name=code, label=e.get("label", ""))
+        GroupMemberSeries(name=code, label=e.get("label", ""), link=e.get("link"))
         for code, e in detail.get("groupSeries", {}).items()
     ]
     return GroupDetail(
@@ -358,7 +371,7 @@ async def get_observations(
         recent_months=recent_months,
         recent_years=recent_years,
     )
-    joined = ",".join(names)
+    joined = ",".join(_path_segment(n) for n in names)
     path = f"observations/{joined}/json"
     cache_key = f"boc:{path}:{sorted(params.items())}"
 
@@ -367,8 +380,8 @@ async def get_observations(
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     return ObservationsResult(
-        series=_series_info_from_json(obj.get("seriesDetail", {})),
-        observations=_observations_from_json(obj.get("observations", [])),
+        series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
+        observations=_observations_from_json(list_or_empty(obj, "observations")),
         provenance=make_provenance(
             source="boc",
             url=f"{constants.BASE_URL}{path}",
@@ -397,14 +410,14 @@ async def get_group_observations(
         recent_months=recent_months,
         recent_years=recent_years,
     )
-    path = f"observations/group/{group_name}/json"
+    path = f"observations/group/{_path_segment(group_name)}/json"
     cache_key = f"boc:{path}:{sorted(params.items())}"
 
     async def fetch() -> dict[str, Any]:
         return await _get(path, params=params)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
-    group_detail = obj.get("groupDetail", {})
+    group_detail = obj.get("groupDetail", {}) or {}
     return GroupObservationsResult(
         # "groupDetail" (unlike GroupDetail's "groupDetails") has no
         # "name" field - see this module's docstring and schemas.py's.
@@ -414,8 +427,8 @@ async def get_group_observations(
             description=group_detail.get("description", ""),
             link=group_detail.get("link"),
         ),
-        series=_series_info_from_json(obj.get("seriesDetail", {})),
-        observations=_observations_from_json(obj.get("observations", [])),
+        series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
+        observations=_observations_from_json(list_or_empty(obj, "observations")),
         provenance=make_provenance(
             source="boc",
             url=f"{constants.BASE_URL}{path}",
