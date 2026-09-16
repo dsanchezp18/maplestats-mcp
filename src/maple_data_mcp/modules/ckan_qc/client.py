@@ -77,10 +77,10 @@ from maple_data_mcp.modules.ckan_qc.schemas import (
     TagList,
 )
 from maple_data_mcp.shared.cache import cached_fetch
-from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt
+from maple_data_mcp.shared.ckan import CkanConfig, action, excerpt, parse_dt, to_bool
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput
-from maple_data_mcp.shared.json_utils import list_or_empty
+from maple_data_mcp.shared.json_utils import get_or, list_or_empty
 
 CONFIG = CkanConfig(
     source="ckan-qc",
@@ -109,13 +109,13 @@ def _resource_from_json(obj: dict[str, Any]) -> ResourceInfo:
     return ResourceInfo(
         id=obj["id"],
         package_id=obj.get("package_id"),
-        name=obj["name"],
+        name=obj.get("name") or obj["id"],
         description=(obj.get("description") or None),
         format=obj.get("format") or None,
         url=obj["url"],
         size=obj.get("size"),
         resource_type=obj.get("resource_type") or None,
-        datastore_active=bool(obj.get("datastore_active")),
+        datastore_active=to_bool(obj.get("datastore_active")),
         created=parse_dt(obj.get("created")),
         last_modified=parse_dt(obj.get("last_modified")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
@@ -147,7 +147,7 @@ def _package_summary_from_json(obj: dict[str, Any]) -> PackageSummary:
         notes_excerpt=excerpt(notes, constants.NOTES_EXCERPT_LENGTH),
         license_id=obj.get("license_id"),
         license_title=obj.get("license_title"),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resource_formats=formats,
         tags=tags,
         group_names=group_names,
@@ -176,10 +176,10 @@ def _package_detail_from_json(obj: dict[str, Any], *, cached: bool) -> PackageDe
         has_spatial_data=_parse_oui_non(obj.get("spatial_data")),
         methodology=obj.get("methodologie") or None,
         temporal_coverage=obj.get("temporal") or None,
-        is_open=bool(obj.get("isopen")),
+        is_open=to_bool(obj.get("isopen")),
         metadata_created=parse_dt(obj.get("metadata_created")),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
-        num_resources=obj.get("num_resources", len(resources)),
+        num_resources=get_or(obj, "num_resources", len(resources)),
         resources=[_resource_from_json(r) for r in resources],
         landing_page_url=f"{constants.DATASET_LANDING_URL}{obj['name']}",
         provenance=make_provenance(
@@ -226,7 +226,7 @@ async def search_datasets(
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
 
     raw_results = list_or_empty(result, "results")
-    total_count = result.get("count", len(raw_results))
+    total_count = get_or(result, "count", len(raw_results))
     packages = [_package_summary_from_json(obj) for obj in raw_results]
     return PackageSearchResult(
         packages=packages,
@@ -280,7 +280,7 @@ async def list_organizations(lang: str = "en") -> OrganizationList:
             name=o["name"],
             title=o.get("title") or o["name"],
             description=o.get("description") or None,
-            package_count=o.get("package_count", 0),
+            package_count=get_or(o, "package_count", 0),
             image_url=o.get("image_display_url") or None,
         )
         for o in orgs_raw
@@ -319,7 +319,7 @@ async def get_organization(organization_id: str, lang: str = "en") -> Organizati
         name=obj["name"],
         title=obj.get("title") or obj["name"],
         description=obj.get("description") or None,
-        package_count=obj.get("package_count", 0),
+        package_count=get_or(obj, "package_count", 0),
         image_url=obj.get("image_display_url") or None,
         landing_page_url=f"{constants.ORGANIZATION_LANDING_URL}{obj['name']}",
         provenance=make_provenance(
@@ -413,7 +413,7 @@ async def list_groups(lang: str = "en") -> GroupList:
             name=g["name"],
             title=g.get("title") or g["name"],
             description=g.get("description") or None,
-            package_count=g.get("package_count", 0),
+            package_count=get_or(g, "package_count", 0),
             landing_page_url=f"{constants.GROUP_LANDING_URL}{g['name']}",
         )
         for g in groups_raw
