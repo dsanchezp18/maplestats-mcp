@@ -180,12 +180,12 @@ async def test_search_datasets_unrecognized_sort_does_not_raise(httpx_mock):
     assert result.total_count == 70
 
 
-async def test_search_datasets_malformed_fq_maps_409_to_upstream_error(httpx_mock):
+async def test_search_datasets_malformed_fq_maps_409_to_invalid_input(httpx_mock):
     """Confirmed live: a syntactically malformed `fq` returns HTTP 409
     with `{"error": {"__type": "Search Error", ...}}` on this deployment
     -- a different status/type than federal's HTTP 400 "Search Query
-    Error". shared/ckan.py's action() only special-cases 400/404, so 409
-    surfaces as UpstreamError."""
+    Error", but still a caller-input mistake. shared/ckan.py's action()
+    maps every non-404 4xx to InvalidInput for exactly this reason."""
     httpx_mock.add_response(
         status_code=409,
         json={
@@ -194,7 +194,7 @@ async def test_search_datasets_malformed_fq_maps_409_to_upstream_error(httpx_moc
             "success": False,
         },
     )
-    with pytest.raises(UpstreamError):
+    with pytest.raises(InvalidInput):
         await client.search_datasets("x", fq="(((")
 
 
@@ -276,7 +276,18 @@ async def test_get_dataset_parses_num_resources_and_resource_list(httpx_mock):
     result = await client.get_dataset(_PACKAGE_OBJ["id"])
     assert result.num_resources == 1
     assert len(result.resources) == 1
+    assert result.organization is not None
     assert result.organization.name == "ville-de-montreal"
+
+
+async def test_get_dataset_handles_null_organization(httpx_mock):
+    """A package can outlive its organization (deleted/purged) - a null
+    "organization" must not crash the detail path the way a bare
+    obj["organization"] indexing would."""
+    obj = {**_PACKAGE_OBJ, "organization": None}
+    httpx_mock.add_response(json=_envelope(obj))
+    result = await client.get_dataset(_PACKAGE_OBJ["id"])
+    assert result.organization is None
     assert result.is_open is True
     assert result.update_frequency == "monthly"
 
