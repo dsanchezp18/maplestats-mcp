@@ -20,6 +20,7 @@ def build_asgi_app():
         max_concurrent_requests=config.get_max_concurrent_requests(),
         rate_limit_requests=config.get_rate_limit_requests(),
         rate_limit_window_seconds=config.get_rate_limit_window_seconds(),
+        trust_proxy_headers=config.get_trust_proxy_headers(),
     )
     return with_health_endpoint(secured, version=__version__)
 

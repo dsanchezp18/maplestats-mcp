@@ -29,7 +29,22 @@ def _header(scope: dict, name: bytes) -> str | None:
     return None
 
 
-def _client_key(scope: dict) -> str:
+def _client_key(scope: dict, *, trust_proxy_headers: bool) -> str:
+    """Identify the caller for rate limiting.
+
+    `X-Forwarded-For` is only honored when `trust_proxy_headers` is
+    explicitly enabled — trusting it unconditionally would let any
+    direct caller spoof a different rate-limit bucket per request. Set
+    MAPLE_TRUST_PROXY_HEADERS only when this process sits behind a
+    reverse proxy/load balancer that itself sets (and cannot be told to
+    forward a spoofed) X-Forwarded-For; otherwise every request behind
+    such a proxy would key off the proxy's own address and the
+    per-client limit degrades into one shared global limit.
+    """
+    if trust_proxy_headers:
+        forwarded_for = _header(scope, b"x-forwarded-for")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
     client = scope.get("client")
     if isinstance(client, (tuple, list)) and client:
         return str(client[0])
@@ -61,6 +76,7 @@ def with_http_security(
     max_concurrent_requests: int = 8,
     rate_limit_requests: int = 120,
     rate_limit_window_seconds: float = 60.0,
+    trust_proxy_headers: bool = False,
 ) -> ASGIApp:
     """Protect MCP requests while leaving health checks and stdio untouched.
 
@@ -98,8 +114,17 @@ def with_http_security(
 
         if rate_limit_requests:
             now = time.monotonic()
-            client_key = _client_key(scope)
+            client_key = _client_key(scope, trust_proxy_headers=trust_proxy_headers)
             async with rate_lock:
+                # Opportunistically drop any other client's entry once its
+                # hits have all aged out of the window — otherwise every
+                # distinct client this process has ever seen accumulates
+                # a permanent dict entry, an unbounded-growth DoS surface
+                # on a long-running hosted instance.
+                for other_key in [k for k in rate_hits if k != client_key]:
+                    if all(now - hit >= rate_limit_window_seconds for hit in rate_hits[other_key]):
+                        del rate_hits[other_key]
+
                 hits = [
                     hit
                     for hit in rate_hits.get(client_key, [])

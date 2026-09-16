@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from maple_data_mcp.modules.statcan.rdaas import client
-from maple_data_mcp.shared.errors import NotFound
+from maple_data_mcp.shared.errors import InvalidInput, NotFound
 
 _SEARCH_RESPONSE = {
     "results": {
@@ -101,6 +101,26 @@ async def test_get_concordance_maps_parses_code_map_entries(httpx_mock):
 def test_resource_id_normalizes_full_url_to_bare_id():
     assert client._resource_id("https://api.statcan.gc.ca/rdaas/classification/ABC123") == "ABC123"
     assert client._resource_id("ABC123") == "ABC123"
+
+
+@pytest.mark.parametrize(
+    "malicious_id",
+    [
+        "ABC123?lang=fr&extra=1",
+        "ABC123#fragment",
+        "ABC 123",
+        "ABC:123",
+        "",
+    ],
+)
+def test_resource_id_rejects_ids_that_would_inject_into_the_request(malicious_id):
+    """A caller-supplied classification/concordance/term-exclusion id is
+    interpolated directly into the upstream URL path and the cache key —
+    it must not be able to smuggle a query string or fragment into either
+    (a "/"-containing value is already reduced to its final segment by the
+    URL-normalization above, so that class of traversal is not at risk)."""
+    with pytest.raises(InvalidInput):
+        client._resource_id(malicious_id)
 
 
 _CATEGORIES_RESPONSE = {

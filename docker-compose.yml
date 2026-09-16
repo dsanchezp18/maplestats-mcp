@@ -12,6 +12,11 @@ services:
       MAPLE_MAX_CONCURRENT_REQUESTS: "${MAPLE_MAX_CONCURRENT_REQUESTS:-8}"
       MAPLE_RATE_LIMIT_REQUESTS: "${MAPLE_RATE_LIMIT_REQUESTS:-120}"
       MAPLE_RATE_LIMIT_WINDOW_SECONDS: "${MAPLE_RATE_LIMIT_WINDOW_SECONDS:-60}"
+      # Only set to 1 when this container sits behind a reverse proxy that
+      # itself sets X-Forwarded-For — trusting it directly would let any
+      # caller spoof a different rate-limit bucket per request.
+      MAPLE_TRUST_PROXY_HEADERS: "${MAPLE_TRUST_PROXY_HEADERS:-0}"
+      MAPLE_CACHE_MAX_ENTRIES: "${MAPLE_CACHE_MAX_ENTRIES:-2000}"
       MAPLE_SSL_CERTFILE: "${MAPLE_SSL_CERTFILE:-}"
       MAPLE_SSL_KEYFILE: "${MAPLE_SSL_KEYFILE:-}"
     restart: unless-stopped

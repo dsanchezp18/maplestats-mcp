@@ -68,6 +68,28 @@ def get_rate_limit_window_seconds() -> float:
     return min(3600.0, max(1.0, value))
 
 
+def get_cache_max_entries() -> int:
+    """Max entries per TTL bucket in shared/cache.py's process-local cache.
+
+    Some cache keys encode an unbounded combination of caller input
+    (e.g. WDS's getDataFromVectorsAndLatestNPeriods keys off the full
+    list of vector IDs in one request) rather than a small, self-limiting
+    resource id — without a cap, a long-running hosted instance's cache
+    grows with usage diversity, not with time.
+    """
+    raw = os.environ.get("MAPLE_CACHE_MAX_ENTRIES", "2000")
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 2000
+    return max(1, value)
+
+
+def get_trust_proxy_headers() -> bool:
+    raw = os.environ.get("MAPLE_TRUST_PROXY_HEADERS", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def get_ssl_certfile() -> str | None:
     raw = os.environ.get("MAPLE_SSL_CERTFILE", "").strip()
     return raw or None

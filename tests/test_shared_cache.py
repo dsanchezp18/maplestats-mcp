@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from maple_data_mcp.shared import cache as cache_module
 from maple_data_mcp.shared.cache import cached_fetch
 
 
@@ -39,3 +40,22 @@ async def test_cached_fetch_does_not_cache_a_failed_fetch():
     assert data == "ok"
     assert was_cached is False
     assert calls == 2
+
+
+async def test_cache_bucket_is_bounded_by_max_entries(monkeypatch):
+    """Some cache keys (e.g. WDS's getDataFromVectorsAndLatestNPeriods,
+    keyed on an arbitrary list of vector ids) encode an effectively
+    unbounded combination of caller input rather than a small, reused
+    resource id — the per-ttl bucket must cap total entries rather than
+    growing forever as new combinations are queried."""
+    monkeypatch.setattr(cache_module.config, "get_cache_max_entries", lambda: 3)
+
+    async def fetcher():
+        return "value"
+
+    # A ttl unused by any other test/module, so this exercises a fresh bucket.
+    unique_ttl = 3600123
+    for i in range(10):
+        await cached_fetch(f"bounded-test-key-{i}", ttl=unique_ttl, fetcher=fetcher)
+
+    assert len(cache_module._caches[unique_ttl]) <= 3

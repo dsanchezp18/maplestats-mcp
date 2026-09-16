@@ -115,8 +115,9 @@ async def test_get_key_for_dimension_returns_only_leaf_codes(httpx_mock):
 
 def test_parse_data_extracts_series_key_attributes_and_observations():
     root = _parse(_DATA_XML)
-    series = client._parse_data(root, max_rows=500)
+    series, truncated = client._parse_data(root, max_rows=500)
     assert len(series) == 1
+    assert truncated is False
     s = series[0]
     assert s.series_key == {"Geography": "1"}
     assert s.vector_id == 41690973
@@ -129,8 +130,9 @@ def test_parse_data_extracts_series_key_attributes_and_observations():
 
 def test_parse_data_respects_max_rows_cap():
     root = _parse(_DATA_XML)
-    series = client._parse_data(root, max_rows=1)
+    series, truncated = client._parse_data(root, max_rows=1)
     assert len(series[0].observations) == 1
+    assert truncated is True
 
 
 async def test_get_data_rejects_last_n_with_start_period():

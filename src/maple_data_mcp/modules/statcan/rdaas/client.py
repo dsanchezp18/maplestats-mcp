@@ -8,6 +8,7 @@ what the spec's `{id}` path parameter expects.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx
@@ -36,7 +37,7 @@ from maple_data_mcp.modules.statcan.rdaas.schemas import (
 )
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
-from maple_data_mcp.shared.errors import NotFound
+from maple_data_mcp.shared.errors import InvalidInput, NotFound
 from maple_data_mcp.shared.http import api_get
 from maple_data_mcp.shared.json_utils import list_or_empty
 from maple_data_mcp.shared.rate_limiter import get_limiter
@@ -65,10 +66,25 @@ async def _get(path: str, *, params: dict[str, Any] | None = None) -> Any:
         raise
 
 
+_VALID_RESOURCE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
 def _resource_id(rdaas_url_or_id: str) -> str:
     """RDaaS accepts either a bare id or its full resource URL; normalize
-    to the bare id since that's what the path template expects."""
-    return rdaas_url_or_id.rsplit("/", 1)[-1]
+    to the bare id since that's what the path template expects.
+
+    The result is interpolated directly into both the request URL and
+    the cache key, so it is validated here rather than trusted — a
+    caller-supplied id containing "?", "#", ":", or whitespace must not
+    be able to smuggle a query string or fragment into the upstream
+    request or collide with an unrelated cache key. (A "/"-containing
+    value is already reduced to its final segment above, so directory
+    traversal is not a separate risk here.)
+    """
+    resource_id = rdaas_url_or_id.rsplit("/", 1)[-1]
+    if not _VALID_RESOURCE_ID.match(resource_id):
+        raise InvalidInput(f"{rdaas_url_or_id!r} is not a valid RDaaS resource id or URL.")
+    return resource_id
 
 
 def _facets_from_json(obj: dict[str, Any]) -> SearchFacets:
@@ -208,7 +224,7 @@ async def _get_or_empty(path: str, *, params: dict[str, Any] | None = None) -> d
 
 
 def _graph_entries(obj: dict[str, Any]) -> list[dict[str, Any]]:
-    return obj.get("@graph", obj if isinstance(obj, list) else [])
+    return obj.get("@graph", [])
 
 
 def _exclusion_from_json(e: dict[str, Any]) -> ClassificationExclusion:

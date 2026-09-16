@@ -33,9 +33,14 @@ Currently implemented: Statistics Canada, via two APIs:
 - Reference Data as a Service (RDaaS): classifications, codesets, and
   concordances such as NAICS (tools prefixed rdaas_).
 
-All tools accept lang: "en"|"fr". Read docs://statcan/addressing and
-docs://statcan/gotchas before working with StatCan's productId/vectorId/
-coordinate system or its known API quirks.
+Every tool accepts lang: "en"|"fr", but it only changes what comes back
+for RDaaS tools and wds_get_full_table_download_csv, whose upstream
+APIs are genuinely single-language per request. WDS and SDMX metadata/
+data tools already return both languages in one response (every field
+has an _en/_fr pair) — lang has no additional effect there. Read
+docs://statcan/addressing and docs://statcan/gotchas before working
+with StatCan's productId/vectorId/coordinate system or its known API
+quirks.
 """.strip()
 
 

@@ -51,17 +51,53 @@ async def test_observation_value_is_not_auto_scaled():
     assert apply_scalar_factor(obs.value, obs.scalar_factor_code) == 169900.0
 
 
+async def test_observation_handles_explicit_null_scalar_fields():
+    """WDS sends explicit JSON null (not an absent key) for these fields on
+    some cubes — `.get(key, 0)` alone doesn't catch that, since the
+    default only applies when the key is missing."""
+    obj = {
+        "productId": 18100004,
+        "coordinate": "2.2.0.0.0.0.0.0.0.0",
+        "vectorId": 41690973,
+        "vectorDataPoint": [
+            {
+                "refPer": "2026-07-01",
+                "value": None,
+                "decimals": None,
+                "scalarFactorCode": None,
+                "symbolCode": None,
+                "statusCode": None,
+                "securityLevelCode": None,
+            }
+        ],
+    }
+    result = client._vector_data_from_json(obj, source_url="https://example.invalid", cached=False)
+    obs = result.observations[0]
+    assert obs.value is None
+    assert obs.decimals == 0
+    assert obs.scalar_factor_code == 0
+    assert obs.symbol_code == 0
+    assert obs.status_code == 0
+    assert obs.security_level_code == 0
+
+
 def test_pad_coordinate_pads_short_coordinate_to_ten_positions():
     assert client._pad_coordinate("2.2") == "2.2.0.0.0.0.0.0.0.0"
 
 
-def test_pad_coordinate_truncates_long_coordinate_to_ten_positions():
-    assert client._pad_coordinate("1.2.3.4.5.6.7.8.9.10.11") == "1.2.3.4.5.6.7.8.9.10"
+def test_pad_coordinate_rejects_too_many_dimensions():
+    with pytest.raises(InvalidInput):
+        client._pad_coordinate("1.2.3.4.5.6.7.8.9.10.11")
 
 
 def test_pad_coordinate_rejects_non_numeric_part():
     with pytest.raises(InvalidInput):
         client._pad_coordinate("2.abc.0")
+
+
+def test_pad_coordinate_rejects_empty_part():
+    with pytest.raises(InvalidInput):
+        client._pad_coordinate("1..2")
 
 
 async def test_get_cube_metadata_parses_real_footnote_shape(httpx_mock):

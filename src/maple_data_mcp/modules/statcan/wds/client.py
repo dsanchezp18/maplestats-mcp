@@ -73,6 +73,17 @@ def _raise_if_locked(exc: httpx.HTTPStatusError, method: str) -> NoReturn:
     raise exc
 
 
+def _raise_unavailable(method: str, exc: httpx.HTTPError) -> NoReturn:
+    """Wrap any non-status httpx failure (timeout, connect error, etc.) as
+    the documented UpstreamUnavailable rather than letting a raw httpx
+    exception escape once shared/http.py's retry budget is exhausted."""
+    raise UpstreamUnavailable(
+        f"{method} did not respond in time (already retried by "
+        "shared/http.py). This endpoint is known to be occasionally "
+        "slow; try again shortly."
+    ) from exc
+
+
 async def _post(method: str, body: list[dict[str, Any]]) -> list[dict[str, Any]]:
     await _limiter().acquire()
     url = f"{constants.BASE_URL}{method}"
@@ -80,12 +91,8 @@ async def _post(method: str, body: list[dict[str, Any]]) -> list[dict[str, Any]]
         return await api_post(url, json_body=body)
     except httpx.HTTPStatusError as exc:
         _raise_if_locked(exc, method)
-    except httpx.TimeoutException as exc:
-        raise UpstreamUnavailable(
-            f"{method} did not respond in time (already retried by "
-            "shared/http.py). This endpoint is known to be occasionally "
-            "slow; try again shortly."
-        ) from exc
+    except httpx.HTTPError as exc:
+        _raise_unavailable(method, exc)
 
 
 async def _get(method: str, path_suffix: str = "", params: dict[str, Any] | None = None) -> Any:
@@ -95,12 +102,8 @@ async def _get(method: str, path_suffix: str = "", params: dict[str, Any] | None
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
         _raise_if_locked(exc, method)
-    except httpx.TimeoutException as exc:
-        raise UpstreamUnavailable(
-            f"{method} did not respond in time (already retried by "
-            "shared/http.py). This endpoint is known to be occasionally "
-            "slow; try again shortly."
-        ) from exc
+    except httpx.HTTPError as exc:
+        _raise_unavailable(method, exc)
 
 
 def _unwrap_one(item: dict[str, Any], method: str) -> Any:
@@ -120,10 +123,14 @@ def _unwrap_one(item: dict[str, Any], method: str) -> Any:
 
 def _pad_coordinate(coordinate: str) -> str:
     parts = coordinate.split(".")
+    if len(parts) > constants.COORDINATE_DIMENSIONS:
+        raise InvalidInput(
+            f"Coordinate {coordinate!r} has {len(parts)} dimensions; "
+            f"WDS coordinates have at most {constants.COORDINATE_DIMENSIONS}."
+        )
     for part in parts:
-        if part and not part.isdigit():
+        if not part.isdigit():
             raise InvalidInput(f"Coordinate part {part!r} is not numeric in {coordinate!r}")
-    parts = parts[: constants.COORDINATE_DIMENSIONS]
     while len(parts) < constants.COORDINATE_DIMENSIONS:
         parts.append("0")
     return ".".join(parts)
@@ -301,11 +308,16 @@ def _observation_from_json(dp: dict[str, Any]) -> ObservationRow:
     return ObservationRow(
         ref_period=date.fromisoformat(ref_period_raw),
         value=dp.get("value"),
-        decimals=int(dp.get("decimals", 0)),
-        scalar_factor_code=int(dp.get("scalarFactorCode", 0)),
-        symbol_code=int(dp.get("symbolCode", 0)),
-        status_code=int(dp.get("statusCode", 0)),
-        security_level_code=int(dp.get("securityLevelCode", 0)),
+        # `.get(key, 0)` only applies its default when the key is absent —
+        # WDS sends these as explicit JSON null on some cubes (the same
+        # quirk `terminated` below and json_utils.list_or_empty() guard
+        # against), so `or 0` is needed to catch the present-but-null case
+        # too; otherwise int(None) raises an unhandled TypeError.
+        decimals=int(dp.get("decimals", 0) or 0),
+        scalar_factor_code=int(dp.get("scalarFactorCode", 0) or 0),
+        symbol_code=int(dp.get("symbolCode", 0) or 0),
+        status_code=int(dp.get("statusCode", 0) or 0),
+        security_level_code=int(dp.get("securityLevelCode", 0) or 0),
         release_time=datetime.fromisoformat(release_time).replace(tzinfo=UTC)
         if release_time
         else None,
@@ -378,6 +390,8 @@ async def get_bulk_vector_data_by_range(
         items = await api_post(f"{constants.BASE_URL}{method}", json_body=body)
     except httpx.HTTPStatusError as exc:
         _raise_if_locked(exc, method)
+    except httpx.HTTPError as exc:
+        _raise_unavailable(method, exc)
     url = f"{constants.BASE_URL}{method}"
     return [
         _vector_data_from_json(
@@ -507,12 +521,16 @@ async def get_full_table_download_csv(product_id: int, lang: str = "en") -> Full
 
 
 async def get_full_table_download_sdmx(product_id: int) -> FullTableDownloadLink:
+    """Unlike getFullTableDownloadCSV, this method takes no lang segment —
+    the SDMX file it links to is bilingual (English/French in the same
+    document), so `language` below reflects that rather than a caller
+    choice."""
     method = "getFullTableDownloadSDMX"
     data = await _get(method, path_suffix=f"/{product_id}")
     return FullTableDownloadLink(
         product_id=product_id,
         format="sdmx",
-        language="en",
+        language="en+fr",
         download_url=data.get("object", data) if isinstance(data, dict) else str(data),
         provenance=make_provenance(
             source="statcan-wds",

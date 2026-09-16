@@ -10,7 +10,15 @@ constants.py for the confirmation note.
 from __future__ import annotations
 
 from typing import Any
-from xml.etree import ElementTree as ET
+from xml.etree.ElementTree import Element
+
+# defusedxml, not stdlib xml.etree, to guard against entity-expansion
+# ("billion laughs") DoS in the XML this module parses — StatCan is a
+# trusted host today, but there's no reason to carry that risk when a
+# drop-in replacement removes it for free. `Element` itself is just a
+# plain data structure (not a parser) and is safe to import from
+# stdlib for the type hints below.
+from defusedxml import ElementTree as defused_ET
 
 from maple_data_mcp.modules.statcan.sdmx import constants
 from maple_data_mcp.modules.statcan.sdmx.schemas import (
@@ -43,7 +51,7 @@ def _limiter():
     )
 
 
-async def _fetch_xml(url: str, *, params: dict[str, Any] | None = None) -> ET.Element:
+async def _fetch_xml(url: str, *, params: dict[str, Any] | None = None) -> Element:
     await _limiter().acquire()
     response = await get_raw(url, params=params)
     if response.status_code == 409:
@@ -53,17 +61,17 @@ async def _fetch_xml(url: str, *, params: dict[str, Any] | None = None) -> ET.El
             "StatCan's SDMX API rejected this combination of parameters "
             "(commonly: lastNObservations combined with startPeriod/endPeriod)."
         )
-    return ET.fromstring(response.content)
+    return defused_ET.fromstring(response.content)
 
 
-def _dataflow_id_from_structure(root: ET.Element) -> str:
+def _dataflow_id_from_structure(root: Element) -> str:
     dataflow = root.find(f".//{_qn('str', 'Dataflow')}")
     if dataflow is None:
         raise NotFound("No Dataflow found in SDMX structure response.")
     return dataflow.get("id", "")
 
 
-def _parse_structure(root: ET.Element) -> tuple[str, list[SdmxDimension]]:
+def _parse_structure(root: Element) -> tuple[str, list[SdmxDimension]]:
     dataflow_id = _dataflow_id_from_structure(root)
 
     codelists: dict[str, dict[str, SdmxCode]] = {}
@@ -157,8 +165,16 @@ async def get_key_for_dimension(product_id: int, dimension_position: int) -> Sdm
     )
 
 
-def _parse_data(root: ET.Element, *, max_rows: int) -> list[SdmxSeries]:
+def _parse_data(root: Element, *, max_rows: int) -> tuple[list[SdmxSeries], bool]:
+    """Return (series, any_series_truncated).
+
+    `any_series_truncated` reflects whether an individual series actually
+    hit the per-series `max_rows` cap — the caller must not infer
+    truncation from the *summed* row count across series, since several
+    untruncated series can sum past max_rows on their own.
+    """
     series_list: list[SdmxSeries] = []
+    any_series_truncated = False
     for series_el in root.findall(f".//{_qn('generic', 'Series')}"):
         series_key = {
             v.get("id", ""): v.get("value", "")
@@ -180,6 +196,7 @@ def _parse_data(root: ET.Element, *, max_rows: int) -> list[SdmxSeries]:
                 )
             )
             if len(observations) >= max_rows:
+                any_series_truncated = True
                 break
 
         vector_id = attrs.get("VECTOR_ID")
@@ -196,7 +213,7 @@ def _parse_data(root: ET.Element, *, max_rows: int) -> list[SdmxSeries]:
                 observations=observations,
             )
         )
-    return series_list
+    return series_list, any_series_truncated
 
 
 async def get_data(
@@ -225,7 +242,7 @@ async def get_data(
         params["lastNObservations"] = last_n_observations
 
     root = await _fetch_xml(url, params=params or None)
-    series = _parse_data(root, max_rows=constants.MAX_ROWS)
+    series, any_series_truncated = _parse_data(root, max_rows=constants.MAX_ROWS)
     row_count = sum(len(s.observations) for s in series)
 
     return SdmxData(
@@ -239,7 +256,7 @@ async def get_data(
             cached=False,
             schema_name="statcan.sdmx.SdmxData",
             limits=f"capped at {constants.MAX_ROWS} rows per series"
-            if row_count >= constants.MAX_ROWS
+            if any_series_truncated
             else None,
         ),
     )
