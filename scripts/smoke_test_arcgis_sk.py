@@ -24,7 +24,13 @@ async def _check(label: str, awaitable: Awaitable[Any]) -> Any:
 async def main() -> int:
     search = await _check("search_datasets(water)", client.search_datasets("water", limit=3))
     if not search.items:
-        print("FAIL: Saskatchewan returned no water search results")
+        # A catalogue's content is not guaranteed to include any given
+        # keyword -- confirmed live that some portals return zero
+        # "water" matches despite having plenty of other datasets.
+        print("(no 'water' matches; falling back to an unfiltered listing)")
+        search = await _check("search_datasets()", client.search_datasets(limit=3))
+    if not search.items:
+        print("FAIL: Saskatchewan returned no search results at all")
         return 1
 
     item = search.items[0]
@@ -57,7 +63,7 @@ async def main() -> int:
         print(f"FAIL: limit=0 raised {type(exc).__name__}: {exc}")
         return 1
 
-    print(f"Saskatchewan total matches for 'water': {search.total_count}")
+    print(f"Saskatchewan total matches for {search.query!r}: {search.total_count}")
     print("ARCGIS-SK SMOKE TEST PASSED")
     return 0
 

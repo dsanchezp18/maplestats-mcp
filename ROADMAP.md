@@ -8,8 +8,11 @@ Current implementation snapshot (2026-09-18): shipped modules cover
 Statistics Canada, the Bank of Canada, federal CKAN, Alberta, British
 Columbia, Ontario, Quebec, Nova Scotia, New Brunswick, Manitoba,
 Saskatchewan, Prince Edward Island, the Northwest Territories, Yukon,
-Montreal, and Toronto. The rows below are the source-of-truth for
-remaining work; each row has its own status.
+Montreal, Toronto, Regina, Hamilton, London, Kitchener, Windsor,
+Saskatoon, Victoria, and Surrey (Laval and Gatineau are covered
+through the existing Quebec CKAN module, not a dedicated one). The
+rows below are the source-of-truth for remaining work; each row has
+its own status.
 
 Status values: `Not started` / `In progress` / `Shipped` / `Blocked`.
 A source is marked `Shipped` only after its implemented functions and
@@ -82,6 +85,16 @@ portal is confirmed to exist and be reachable.
 |---|---|---|
 | Toronto | Shipped | open.toronto.ca (UI) / `ckan0.cf.opendata.inter.prod-toronto.ca` (Action API host — the UI domain is not the API), CKAN Action API: `ckan_toronto_*`, 7 tools (no groups — confirmed unused). English-only. 557 datasets. |
 | Montreal | Shipped | donnees.montreal.ca, CKAN Action API: `ckan_montreal_*`, 8 tools. French-only — `lang` is a documented no-op. |
+| Laval | Shipped (via `ckan_qc_*`) | No standalone portal — Laval publishes through the shared Données Québec CKAN instance (donneesquebec.ca) already covered by `ckan_qc_*`, confirmed live: `ville-de-laval` is a real organization there. No dedicated module needed. |
+| Gatineau | Shipped (via `ckan_qc_*`) | Same as Laval: Gatineau publishes through the shared Données Québec CKAN instance, confirmed live (`ville-de-gatineau` organization) — already covered by `ckan_qc_*`, no dedicated module needed. |
+| Regina | Shipped | openregina.ca, CKAN Action API: `ckan_regina_*`, 9 tools (search, dataset/organization/resource/license detail, tags, and curated thematic groups). English-only. 1,379 datasets. Unlike `ckan_bc`, `group_list` is public here — no authentication workaround needed. `open.regina.ca` (the city's own linked domain) did not resolve directly in this session; `openregina.ca` is the confirmed-live canonical host. |
+| Hamilton | Shipped | open.hamilton.ca (Open Hamilton), ArcGIS Hub: `arcgis_hamilton_*`, 3 tools, same shape as the provincial ArcGIS Hub modules (search, item detail with download links, direct FeatureServer/MapServer row queries). English-only. |
+| London | Shipped | opendata.london.ca (City of London Open Data), ArcGIS Hub: `arcgis_london_*`, 3 tools, same shape. English-only. |
+| Kitchener | Shipped | open-kitchenergis.opendata.arcgis.com (Kitchener GeoHub), ArcGIS Hub: `arcgis_kitchener_*`, 3 tools, same shape. English-only. |
+| Windsor | Shipped | open-data-portal-citywindsor.hub.arcgis.com (Windsor Open Data Portal), ArcGIS Hub: `arcgis_windsor_*`, 3 tools, same shape. English-only; confirmed live this catalogue has zero datasets matching "water" despite 177 total datasets — not every catalogue matches every test keyword. |
+| Saskatoon | Shipped | data-citysaskatoon.opendata.arcgis.com, ArcGIS Hub: `arcgis_saskatoon_*`, 3 tools, same shape. English-only; small catalogue (10 datasets confirmed live). |
+| Victoria | Shipped | opendata.victoria.ca (VicMap), ArcGIS Hub: `arcgis_victoria_*`, 3 tools, same shape. English-only. |
+| Surrey | Shipped | opendata-surrey.hub.arcgis.com (City of Surrey Open Data Catalog), ArcGIS Hub: `arcgis_surrey_*`, 3 tools, same shape. English-only. The city's older CKAN-era URL, `data.surrey.ca`, now 301-redirects here — confirmed live this is a full platform migration, not a parallel CKAN portal to also cover. |
 | Vancouver | Not CKAN | opendata.vancouver.ca — Opendatasoft, not CKAN/Socrata/ArcGIS. |
 | Calgary | Not CKAN | data.calgary.ca — Socrata, not CKAN. |
 | Edmonton | Not CKAN | data.edmonton.ca — Socrata, not CKAN. |
@@ -99,9 +112,23 @@ portal is confirmed to exist and be reachable.
 | Waterloo Region | Not CKAN | opendata.regionofwaterloo.ca — ArcGIS Hub, not CKAN. |
 | Metro Vancouver | Not CKAN | open.metrovancouver.org — ArcGIS Hub, not CKAN. |
 
-Open item: inventory remaining major cities not yet checked (e.g.
-Hamilton, London, Kitchener, Windsor, Regina, Saskatoon, Victoria,
-Surrey, Laval, Gatineau) and add each once a real portal is confirmed.
+Shipped 2026-09-18: Hamilton, London, Kitchener, Windsor, Saskatoon,
+Victoria, and Surrey (all ArcGIS Hub), Regina (CKAN), and Laval/
+Gatineau (already covered via the shared `ckan_qc_*` Données Québec
+module, no dedicated module needed) — the major-city inventory named
+below as an open item. Vancouver, Calgary, Edmonton, Ottawa, Winnipeg,
+and the smaller municipalities/regions below remain their own rows;
+Calgary, Edmonton, and Winnipeg are confirmed Socrata and would reuse
+the existing `shared/socrata.py` adaptor if a municipal Socrata phase
+is scoped in (see the provincial sequence table above).
+
+Open item: every city from the original example list (Hamilton,
+London, Kitchener, Windsor, Regina, Saskatoon, Victoria, Surrey,
+Laval, Gatineau) is now shipped or covered. Inventory further major
+cities not yet checked (e.g. Quebec City, Longueuil, Burnaby,
+Richmond, Vaughan, Kelowna, Sherbrooke, Trois-Rivières, St. John's,
+Barrie, Guelph, Kingston) and add each once a real portal is
+confirmed.
 
 ## Census and specialized federal agencies
 

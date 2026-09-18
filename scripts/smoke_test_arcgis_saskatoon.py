@@ -1,4 +1,4 @@
-"""Live smoke test for the Prince Edward Island ArcGIS Hub open-data client."""
+"""Live smoke test for the City of Saskatoon's ArcGIS Hub client."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from collections.abc import Awaitable
 from typing import Any
 
-from maple_data_mcp.modules.arcgis_pe import client
+from maple_data_mcp.modules.arcgis_saskatoon import client
 from maple_data_mcp.shared.errors import InvalidInput, NotFound
 
 
@@ -30,19 +30,19 @@ async def main() -> int:
         print("(no 'water' matches; falling back to an unfiltered listing)")
         search = await _check("search_datasets()", client.search_datasets(limit=3))
     if not search.items:
-        print("FAIL: Prince Edward Island returned no search results at all")
+        print("FAIL: Saskatoon returned no search results at all")
         return 1
 
     item = search.items[0]
     detail = await _check("get_dataset", client.get_dataset(item.id))
     if not detail.download_urls:
-        print("FAIL: Prince Edward Island item has no download links")
+        print("FAIL: Saskatoon item has no download links")
         return 1
 
     if detail.service_url:
         rows = await _check("query_feature_layer", client.query_feature_layer(item.id, limit=2))
         if not rows.rows:
-            print("FAIL: Prince Edward Island query_feature_layer returned no rows")
+            print("FAIL: Saskatoon query_feature_layer returned no rows")
             return 1
     else:
         print("OK (skip): item has no service_url to query")
@@ -63,8 +63,8 @@ async def main() -> int:
         print(f"FAIL: limit=0 raised {type(exc).__name__}: {exc}")
         return 1
 
-    print(f"Prince Edward Island total matches for {search.query!r}: {search.total_count}")
-    print("ARCGIS-PE SMOKE TEST PASSED")
+    print(f"Saskatoon total matches for {search.query!r}: {search.total_count}")
+    print("ARCGIS-SASKATOON SMOKE TEST PASSED")
     return 0
 
 

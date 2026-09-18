@@ -68,7 +68,15 @@ $liveSmokeScripts = @(
     "scripts/smoke_test_ckan_toronto.py",
     "scripts/smoke_test_arcgis_mb.py",
     "scripts/smoke_test_arcgis_sk.py",
-    "scripts/smoke_test_arcgis_pe.py"
+    "scripts/smoke_test_arcgis_pe.py",
+    "scripts/smoke_test_ckan_regina.py",
+    "scripts/smoke_test_arcgis_hamilton.py",
+    "scripts/smoke_test_arcgis_london.py",
+    "scripts/smoke_test_arcgis_kitchener.py",
+    "scripts/smoke_test_arcgis_windsor.py",
+    "scripts/smoke_test_arcgis_saskatoon.py",
+    "scripts/smoke_test_arcgis_victoria.py",
+    "scripts/smoke_test_arcgis_surrey.py"
 )
 foreach ($smokeScript in $liveSmokeScripts) {
     $null = Invoke-Checked "live smoke test: $smokeScript" "uv" @("run", "python", $smokeScript)

@@ -1,0 +1,18 @@
+"""Constants for the City of Windsor's ArcGIS Hub deployment."""
+
+DOMAIN = "open-data-portal-citywindsor.hub.arcgis.com"
+RATE_LIMIT_SOURCE = "arcgis-windsor"
+RATE_LIMIT_PER_SECOND = 2.0
+RATE_LIMIT_CAPACITY = 5.0
+
+CACHE_TTL_SEARCH_SECONDS = 10 * 60
+CACHE_TTL_ITEM_SECONDS = 60 * 60
+CACHE_TTL_ROWS_SECONDS = 5 * 60
+
+SEARCH_LIMIT_DEFAULT = 10
+SEARCH_LIMIT_MAX = 100
+ROWS_LIMIT_DEFAULT = 10
+ROWS_LIMIT_MAX = 1000
+DESCRIPTION_EXCERPT_LENGTH = 300
+
+LANDING_PAGE_URL = f"https://{DOMAIN}/datasets/"

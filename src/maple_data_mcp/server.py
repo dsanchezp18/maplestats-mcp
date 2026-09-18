@@ -57,17 +57,32 @@ Currently implemented:
   but on a monolingual portal it is a documented no-op — read that
   portal's own module docstring before assuming a request will change
   what comes back.
-- Canadian provincial ArcGIS Hub open-data portals: Manitoba (Data MB,
-  geoportal.gov.mb.ca, tools prefixed arcgis_mb_), Saskatchewan
-  (Saskatchewan GeoHub, geohub.saskatchewan.ca, arcgis_sk_), and Prince
-  Edward Island (data.princeedwardisland.ca, arcgis_pe_). Every
-  deployment runs the same ArcGIS Hub Search API v3 and classic
+- Canadian ArcGIS Hub open-data portals, provincial and municipal:
+  Manitoba (Data MB, geoportal.gov.mb.ca, arcgis_mb_), Saskatchewan
+  (Saskatchewan GeoHub, geohub.saskatchewan.ca, arcgis_sk_), Prince
+  Edward Island (data.princeedwardisland.ca, arcgis_pe_), Hamilton
+  (Open Hamilton, open.hamilton.ca, arcgis_hamilton_), London, Ontario
+  (opendata.london.ca, arcgis_london_), Kitchener (Kitchener GeoHub,
+  arcgis_kitchener_), Windsor (Windsor Open Data Portal,
+  arcgis_windsor_), Saskatoon (arcgis_saskatoon_), Victoria (VicMap,
+  opendata.victoria.ca, arcgis_victoria_), and Surrey (arcgis_surrey_).
+  Every deployment runs the same ArcGIS Hub Search API v3 and classic
   ArcGIS REST FeatureServer/MapServer query API, verified live against
-  all three, with dataset search/detail, direct row queries against a
+  all ten, with dataset search/detail, direct row queries against a
   FeatureServer/MapServer layer, and CSV/Shapefile/GeoJSON/KML download
   links. The *_query_feature_layer tools default layer_index to the
   service's own first reported layer or table id rather than assuming
-  0 — a hosted table (no geometry) can genuinely sit at a non-zero id.
+  0 — a hosted table (no geometry) can genuinely sit at a non-zero id,
+  and some cities' services live on a government domain rather than
+  an *.arcgis.com one. Dataset content on every one of these ten
+  portals was confirmed live to be English-only, except Manitoba,
+  Saskatchewan, and Prince Edward Island, whose content is bilingual
+  within a field rather than split by language.
+- City of Regina Open Data (openregina.ca), CKAN Action API: search,
+  dataset/organization/resource/license detail, tags, and curated
+  thematic groups (tools prefixed ckan_regina_). Unlike ckan_bc, this
+  deployment's group_list is public with no authentication workaround
+  needed. English-only.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose
