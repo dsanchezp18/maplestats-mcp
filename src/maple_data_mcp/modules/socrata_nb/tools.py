@@ -33,6 +33,9 @@ async def socrata_nb_search_datasets(
     Use for: finding New Brunswick datasets by topic, category, tag, or
     free-text query. Keywords: New Brunswick, open data, Socrata, dataset
     search, catalogue, government, province, category, tags, discovery.
+    Mots-clés: Nouveau-Brunswick, données ouvertes, Socrata, recherche
+    de jeux de données, catalogue, gouvernement, province, catégorie,
+    étiquettes, découverte.
     """
     return await client.search_datasets(
         query, category=category, tag=tag, limit=limit, offset=offset, lang=lang
@@ -46,6 +49,9 @@ async def socrata_nb_get_dataset(dataset_id: str, lang: Lang = "en") -> DatasetD
     Use for: inspecting a dataset found with socrata_nb_search_datasets
     before querying its rows. Keywords: New Brunswick, Socrata, dataset
     detail, columns, metadata, licence, publisher, download, CSV, views.
+    Mots-clés: Nouveau-Brunswick, Socrata, détail du jeu de données,
+    colonnes, métadonnées, licence, éditeur, téléchargement, CSV,
+    consultations.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -68,6 +74,8 @@ async def socrata_nb_query_dataset_rows(
     SoQL $where clause, sorting, or full-text search within the
     dataset. Keywords: New Brunswick, Socrata, SODA, SoQL, rows, query,
     filter, data, select, where, order, resource API.
+    Mots-clés: Nouveau-Brunswick, Socrata, SODA, SoQL, lignes, requête,
+    filtrer, données, sélection, tri, recherche dans les données, API.
     """
     return await client.query_dataset_rows(
         dataset_id,
@@ -88,6 +96,8 @@ async def socrata_nb_list_categories(lang: Lang = "en") -> CategoryList:
     Use for: discovering topic categories before filtering search.
     Keywords: New Brunswick, Socrata, categories, domain_category,
     catalogue, open data, topics, classification.
+    Mots-clés: Nouveau-Brunswick, Socrata, catégories, domaine, catalogue,
+    données ouvertes, sujets, classification, thèmes.
     """
     return await client.list_categories(lang)
 
@@ -99,5 +109,7 @@ async def socrata_nb_list_tags(lang: Lang = "en") -> TagList:
     Use for: discovering exact tag values for the search tag filter.
     Keywords: New Brunswick, Socrata, tags, domain_tags, keywords,
     vocabulary, catalogue, search, discover.
+    Mots-clés: Nouveau-Brunswick, Socrata, étiquettes, mots-clés,
+    vocabulaire, catalogue, recherche, découvrir, terminologie.
     """
     return await client.list_tags(lang)

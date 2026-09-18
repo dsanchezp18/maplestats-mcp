@@ -54,6 +54,9 @@ async def ckan_search_datasets(
     Keywords: ckan, open data, open.canada.ca, dataset search, catalogue,
     federal, government of canada, package_search, discover, browse,
     filter, organization, format.
+    Mots-clés: ckan, données ouvertes, open.canada.ca, recherche de jeux
+    de données, catalogue, fédéral, gouvernement du canada, découvrir,
+    parcourir, filtre, organisme, format.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -69,6 +72,9 @@ async def ckan_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDetail:
     dataset's id or name (identical on this portal, confirmed live).
     Keywords: ckan, open data, dataset detail, package_show, resources,
     open.canada.ca, federal, metadata, license, download.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, open.canada.ca, fédéral, métadonnées,
+    licence, téléchargement.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -84,6 +90,8 @@ async def ckan_list_organizations(lang: Lang = "en") -> OrganizationList:
     per-language title).
     Keywords: ckan, open data, organizations, publishers, departments,
     agencies, federal, list, open.canada.ca, catalogue.
+    Mots-clés: ckan, données ouvertes, organismes, éditeurs, ministères,
+    agences, fédéral, liste, open.canada.ca, catalogue.
     """
     return await client.list_organizations(lang)
 
@@ -98,6 +106,8 @@ async def ckan_get_organization(organization_id: str, lang: Lang = "en") -> Orga
     organization's id or short name (e.g. "statcan", "nrcan-rncan").
     Keywords: ckan, open data, organization detail, department, agency,
     publisher, federal, open.canada.ca, organization_show.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ministère,
+    agence, éditeur, fédéral, open.canada.ca, organization_show.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -112,6 +122,8 @@ async def ckan_get_resource(resource_id: str, lang: Lang = "en") -> ResourceDeta
     resource ids are found via ckan_get_dataset.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, federal, open.canada.ca.
+    Mots-clés: ckan, données ouvertes, ressource, fichier, téléchargement,
+    format, url, resource_show, fédéral, open.canada.ca.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -126,5 +138,8 @@ async def ckan_list_licenses(lang: Lang = "en") -> LicenseList:
     and open-data-compliance flags.
     Keywords: ckan, open data, license, licence, open government licence,
     terms, usage rights, federal, open.canada.ca, license_list.
+    Mots-clés: ckan, données ouvertes, licence, licence de gouvernement
+    ouvert, conditions d'utilisation, droits d'usage, fédéral,
+    open.canada.ca, license_list.
     """
     return await client.list_licenses(lang)

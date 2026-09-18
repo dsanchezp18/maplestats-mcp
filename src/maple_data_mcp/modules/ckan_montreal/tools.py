@@ -65,6 +65,9 @@ async def ckan_montreal_search_datasets(
     Keywords: ckan, open data, donnees montreal, montreal, dataset
     search, catalogue, municipal, city, package_search, discover,
     browse, filter, organization, format, tags.
+    Mots-clés: ckan, données ouvertes, données Montréal, Montréal,
+    recherche de jeux de données, catalogue, municipal, ville, découvrir,
+    parcourir, filtre, organisme, format, étiquettes.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -83,6 +86,9 @@ async def ckan_montreal_get_dataset(dataset_id: str, lang: Lang = "en") -> Packa
     Keywords: ckan, open data, dataset detail, package_show, resources,
     donnees montreal, montreal, municipal, metadata, license, download,
     tags, groups.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, données Montréal, Montréal, municipal,
+    métadonnées, licence, téléchargement, étiquettes, groupes.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -99,6 +105,8 @@ async def ckan_montreal_list_organizations(lang: Lang = "en") -> OrganizationLis
     "bixi", "societe-de-transport-de-montreal").
     Keywords: ckan, open data, organizations, publishers, departments,
     agencies, montreal, municipal, list, donnees montreal, catalogue.
+    Mots-clés: ckan, données ouvertes, organismes, éditeurs, services,
+    agences, Montréal, municipal, liste, données Montréal, catalogue.
     """
     return await client.list_organizations(lang)
 
@@ -116,6 +124,9 @@ async def ckan_montreal_get_organization(
     "bixi").
     Keywords: ckan, open data, organization detail, department, agency,
     publisher, montreal, municipal, donnees montreal, organization_show.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, service,
+    agence, éditeur, Montréal, municipal, données Montréal,
+    organization_show.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -130,6 +141,8 @@ async def ckan_montreal_get_resource(resource_id: str, lang: Lang = "en") -> Res
     resource ids are found via ckan_montreal_get_dataset.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, montreal, municipal, donnees montreal.
+    Mots-clés: ckan, données ouvertes, ressource, fichier, téléchargement,
+    format, url, resource_show, Montréal, municipal, données Montréal.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -145,6 +158,9 @@ async def ckan_montreal_list_licenses(lang: Lang = "en") -> LicenseList:
     Keywords: ckan, open data, license, licence, creative commons,
     terms, usage rights, montreal, municipal, donnees montreal,
     license_list.
+    Mots-clés: ckan, données ouvertes, licence, creative commons,
+    conditions d'utilisation, droits d'usage, Montréal, municipal,
+    données Montréal, license_list.
     """
     return await client.list_licenses(lang)
 
@@ -159,6 +175,8 @@ async def ckan_montreal_list_tags(lang: Lang = "en") -> TagList:
     federal portal, this catalogue genuinely uses CKAN tags.
     Keywords: ckan, open data, tags, mots-cles, keywords, subject,
     montreal, municipal, donnees montreal, tag_list, browse, discover.
+    Mots-clés: ckan, données ouvertes, étiquettes, mots-clés, sujet,
+    Montréal, municipal, données Montréal, tag_list, parcourir, découvrir.
     """
     return await client.list_tags(lang)
 
@@ -174,5 +192,8 @@ async def ckan_montreal_list_groups(lang: Lang = "en") -> GroupList:
     federal portal, this catalogue genuinely uses CKAN groups.
     Keywords: ckan, open data, groups, subject areas, themes, domaines,
     montreal, municipal, donnees montreal, group_list, browse, discover.
+    Mots-clés: ckan, données ouvertes, groupes, domaines, thèmes,
+    Montréal, municipal, données Montréal, group_list, parcourir,
+    découvrir.
     """
     return await client.list_groups(lang)

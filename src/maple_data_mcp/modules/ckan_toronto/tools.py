@@ -65,6 +65,10 @@ async def ckan_toronto_search_datasets(
     Keywords: ckan, open data, open.toronto.ca, toronto, municipal,
     city government, dataset search, catalogue, package_search,
     discover, browse, filter, tags, format.
+    Mots-clés: ckan, données ouvertes, open.toronto.ca, toronto,
+    municipal, administration municipale, recherche de jeux de
+    données, catalogue, package_search, découvrir, parcourir, filtrer,
+    étiquettes, format.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -84,6 +88,9 @@ async def ckan_toronto_get_dataset(dataset_id: str, lang: Lang = "en") -> Packag
     Keywords: ckan, open data, dataset detail, package_show, resources,
     open.toronto.ca, toronto, municipal, metadata, license, download,
     topics, limitations.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, open.toronto.ca, toronto, municipal,
+    métadonnées, licence, téléchargement, sujets, limites.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -101,6 +108,8 @@ async def ckan_toronto_list_organizations(lang: Lang = "en") -> OrganizationList
     have an agent assume it. `lang` has no effect.
     Keywords: ckan, open data, organizations, publisher, city of
     toronto, municipal, list, catalogue, open.toronto.ca.
+    Mots-clés: ckan, données ouvertes, organismes, éditeur, ville de
+    toronto, municipal, liste, catalogue, open.toronto.ca.
     """
     return await client.list_organizations(lang)
 
@@ -118,6 +127,8 @@ async def ckan_toronto_get_organization(
     effect.
     Keywords: ckan, open data, organization detail, city of toronto,
     municipal, publisher, organization_show, open.toronto.ca.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ville de
+    toronto, municipal, éditeur, organization_show, open.toronto.ca.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -134,6 +145,9 @@ async def ckan_toronto_get_resource(resource_id: str, lang: Lang = "en") -> Reso
     `lang` has no effect.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, datastore, toronto, open.toronto.ca.
+    Mots-clés: ckan, données ouvertes, ressource, fichier,
+    téléchargement, format, url, resource_show, entrepôt de données,
+    toronto, open.toronto.ca.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -150,6 +164,9 @@ async def ckan_toronto_list_licenses(lang: Lang = "en") -> LicenseList:
     Keywords: ckan, open data, license, licence, open government
     licence, terms, usage rights, toronto, open.toronto.ca,
     license_list.
+    Mots-clés: ckan, données ouvertes, licence, licence du gouvernement
+    ouvert, conditions d'utilisation, droits d'usage, toronto,
+    open.toronto.ca, license_list.
     """
     return await client.list_licenses(lang)
 
@@ -166,5 +183,8 @@ async def ckan_toronto_list_tags(lang: Lang = "en") -> TagList:
     effect.
     Keywords: ckan, open data, tags, tag_list, keywords, subject terms,
     toronto, municipal, open.toronto.ca, browse, filter.
+    Mots-clés: ckan, données ouvertes, étiquettes, tag_list, mots-clés,
+    termes sujets, toronto, municipal, open.toronto.ca, parcourir,
+    filtrer.
     """
     return await client.list_tags(lang)

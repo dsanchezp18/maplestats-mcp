@@ -35,6 +35,9 @@ async def arcgis_kitchener_search_datasets(
     free-text query. Keywords: Kitchener, Kitchener GeoHub, ArcGIS
     Hub, open data, dataset search, catalogue, government, municipal,
     GIS, geospatial.
+    Mots-clés : Kitchener, Kitchener GeoHub, centre ArcGIS Hub, données
+    ouvertes, recherche de jeux de données, catalogue, gouvernement,
+    municipal, SIG, géospatial.
     """
     return await client.search_datasets(
         query, tag=tag, item_type=item_type, limit=limit, offset=offset, lang=lang
@@ -49,6 +52,9 @@ async def arcgis_kitchener_get_dataset(item_id: str, lang: Lang = "en") -> ItemD
     before querying its rows or downloading it. Keywords: Kitchener,
     Kitchener GeoHub, ArcGIS Hub, dataset detail, FeatureServer, MapServer,
     metadata, licence, download, CSV, shapefile, GeoJSON, KML.
+    Mots-clés : Kitchener, Kitchener GeoHub, ArcGIS Hub, détail du jeu
+    de données, FeatureServer, MapServer, métadonnées, licence,
+    téléchargement, CSV, shapefile, GeoJSON, KML.
     """
     return await client.get_dataset(item_id, lang)
 
@@ -74,6 +80,9 @@ async def arcgis_kitchener_query_feature_layer(
     first layer or table id (not always 0). Keywords: Kitchener, Kitchener GeoHub,
     ArcGIS REST, FeatureServer, MapServer, query, rows, attributes,
     filter, where clause, geospatial, GIS.
+    Mots-clés : Kitchener, Kitchener GeoHub, ArcGIS REST, FeatureServer,
+    MapServer, requête, lignes, attributs, filtre, clause where,
+    géospatial, SIG.
     """
     return await client.query_feature_layer(
         item_id,

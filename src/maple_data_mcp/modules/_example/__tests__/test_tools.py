@@ -22,6 +22,10 @@ def test_docstring_has_use_for_and_keywords():
     doc = example_echo.__doc__ or ""
     assert "Use for:" in doc
     assert "Keywords:" in doc
-    keywords_line = doc.split("Keywords:")[1]
+    assert "Mots-clés:" in doc, "missing a French 'Mots-clés:' line for bilingual tool discovery"
+    keywords_line = doc.split("Keywords:")[1].split("Mots-clés:")[0]
     keywords = [k.strip() for k in keywords_line.replace(".", "").split(",") if k.strip()]
     assert len(keywords) >= 8
+    mots_cles_line = doc.split("Mots-clés:")[1]
+    mots_cles = [k.strip() for k in mots_cles_line.replace(".", "").split(",") if k.strip()]
+    assert len(mots_cles) >= 8

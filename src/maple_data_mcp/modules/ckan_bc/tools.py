@@ -59,6 +59,10 @@ async def ckan_bc_search_datasets(
     Keywords: ckan, open data, catalogue.data.gov.bc.ca, dataset search,
     catalogue, british columbia, bc government, province, package_search,
     discover, browse, filter, organization, format, tags, groups.
+    Mots-clés: ckan, données ouvertes, catalogue.data.gov.bc.ca, recherche
+    de jeux de données, catalogue, colombie-britannique, gouvernement
+    provincial, province, découvrir, parcourir, filtre, organisme, format,
+    étiquettes, groupes.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -77,6 +81,10 @@ async def ckan_bc_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDeta
     Keywords: ckan, open data, dataset detail, package_show, resources,
     catalogue.data.gov.bc.ca, british columbia, metadata, license,
     download, tags, groups, bcgw.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, catalogue.data.gov.bc.ca,
+    colombie-britannique, métadonnées, licence, téléchargement,
+    étiquettes, groupes.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -93,6 +101,8 @@ async def ckan_bc_list_organizations(lang: Lang = "en") -> OrganizationList:
     consistency but has no effect — this portal is English-only.
     Keywords: ckan, open data, organizations, publishers, ministries,
     agencies, british columbia, province, list, catalogue.data.gov.bc.ca.
+    Mots-clés: ckan, données ouvertes, organismes, éditeurs, ministères,
+    agences, colombie-britannique, province, liste, catalogue.
     """
     return await client.list_organizations(lang)
 
@@ -110,6 +120,8 @@ async def ckan_bc_get_organization(organization_id: str, lang: Lang = "en") -> O
     Keywords: ckan, open data, organization detail, ministry, agency,
     publisher, british columbia, catalogue.data.gov.bc.ca,
     organization_show.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ministère,
+    agence, éditeur, colombie-britannique, organization_show, catalogue.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -126,6 +138,8 @@ async def ckan_bc_get_resource(resource_id: str, lang: Lang = "en") -> ResourceD
     this portal is English-only.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, british columbia, catalogue.data.gov.bc.ca, bcgw.
+    Mots-clés: ckan, données ouvertes, ressource, fichier, téléchargement,
+    format, url, resource_show, colombie-britannique, catalogue.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -143,6 +157,9 @@ async def ckan_bc_list_licenses(lang: Lang = "en") -> LicenseList:
     Keywords: ckan, open data, license, licence, open government licence,
     terms, usage rights, british columbia, catalogue.data.gov.bc.ca,
     license_list.
+    Mots-clés: ckan, données ouvertes, licence, licence de gouvernement
+    ouvert, conditions d'utilisation, droits d'usage, colombie-britannique,
+    catalogue, license_list.
     """
     return await client.list_licenses(lang)
 
@@ -162,6 +179,9 @@ async def ckan_bc_list_tags(query: str | None = None, lang: Lang = "en") -> TagL
     effect — this portal is English-only.
     Keywords: ckan, open data, tags, tag_list, keywords, subject terms,
     british columbia, catalogue.data.gov.bc.ca, search, vocabulary.
+    Mots-clés: ckan, données ouvertes, étiquettes, tag_list, mots-clés,
+    termes de sujet, colombie-britannique, catalogue, recherche,
+    vocabulaire.
     """
     return await client.list_tags(query, lang)
 
@@ -179,6 +199,8 @@ async def ckan_bc_list_groups(lang: Lang = "en") -> GroupList:
     English-only.
     Keywords: ckan, open data, groups, group_list, themes, collections,
     british columbia, catalogue.data.gov.bc.ca, topics, curated.
+    Mots-clés: ckan, données ouvertes, groupes, group_list, thèmes,
+    collections, colombie-britannique, catalogue, sujets, sélection.
     """
     return await client.list_groups(lang)
 
@@ -195,5 +217,7 @@ async def ckan_bc_get_group(group_id: str, lang: Lang = "en") -> GroupDetail:
     but has no effect — this portal is English-only.
     Keywords: ckan, open data, group detail, theme, collection, topic,
     british columbia, catalogue.data.gov.bc.ca, group_show, curated.
+    Mots-clés: ckan, données ouvertes, détail du groupe, thème, collection,
+    sujet, colombie-britannique, catalogue, group_show, sélection.
     """
     return await client.get_group(group_id, lang)

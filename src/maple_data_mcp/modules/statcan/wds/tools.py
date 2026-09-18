@@ -36,6 +36,8 @@ async def wds_search_cubes(query: str, limit: int = 25, lang: Lang = "en") -> Cu
     metadata or data.
     Keywords: statcan, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse.
+    Mots-clés: statcan, statistique canada, tableau, cube, recherche,
+    productId, découverte, wds, catalogue, parcourir.
     """
     return await client.search_cubes(query, limit=limit)
 
@@ -48,6 +50,8 @@ async def wds_list_all_cubes(lite: bool = True, lang: Lang = "en") -> CubeSummar
     total table count. Prefer wds_search_cubes for a topic search.
     Keywords: statcan, list, inventory, all cubes, catalogue, wds,
     productId, full list, tables.
+    Mots-clés: statcan, liste, inventaire, tous les cubes, catalogue,
+    wds, productId, liste complète, tableaux.
     """
     return await client.get_all_cubes_list(lite=lite)
 
@@ -61,6 +65,8 @@ async def wds_get_cube_metadata(product_id: int, lang: Lang = "en") -> CubeMetad
     finding the coordinate/member IDs needed for a data query.
     Keywords: statcan, metadata, dimensions, members, productId, cube,
     structure, footnotes, wds.
+    Mots-clés: statcan, métadonnées, dimensions, membres, productId,
+    cube, structure, notes de bas de page, wds.
     """
     return await client.get_cube_metadata(product_id)
 
@@ -73,6 +79,8 @@ async def wds_get_series_info_from_vector(vector_id: int, lang: Lang = "en") -> 
     vector belongs to.
     Keywords: statcan, vector, resolve, productId, coordinate, series
     info, wds.
+    Mots-clés: statcan, vecteur, résoudre, conversion, productId,
+    coordonnée, information de série, identifiant, wds.
     """
     return await client.get_series_info_from_vector(vector_id)
 
@@ -87,6 +95,8 @@ async def wds_get_series_info_from_cube_pid_coord(
     wds_get_cube_metadata) into a vector ID for later reuse.
     Keywords: statcan, coordinate, vector, resolve, productId, series
     info, wds.
+    Mots-clés: statcan, coordonnée, vecteur, résoudre, conversion,
+    productId, information de série, identifiant, wds.
     """
     return await client.get_series_info_from_cube_pid_coord(product_id, coordinate)
 
@@ -103,6 +113,8 @@ async def wds_get_data_from_vectors(
     needed.
     Keywords: statcan, vector, observations, latest, data, time series,
     wds, values.
+    Mots-clés: statcan, vecteur, observations, dernières données,
+    données, série chronologique, wds, valeurs.
     """
     return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
 
@@ -117,6 +129,8 @@ async def wds_get_data_from_cube_coord(
     yet the vector ID.
     Keywords: statcan, coordinate, observations, latest, data, wds,
     productId.
+    Mots-clés: statcan, coordonnée, observations, dernières données,
+    données, wds, productId, tableau.
     """
     return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
         product_id, coordinate, latest_n
@@ -139,6 +153,8 @@ async def wds_get_bulk_vector_data_by_range(
     date with HTTP 406.
     Keywords: statcan, bulk, vectors, date range, release date, history,
     wds.
+    Mots-clés: statcan, en masse, vecteurs, vecteurs multiples, plage de
+    dates, date de diffusion, historique, wds.
     """
     return await client.get_bulk_vector_data_by_range(
         vector_ids, start_release_datetime, end_release_datetime
@@ -157,6 +173,8 @@ async def wds_get_data_by_reference_period_range(
     with HTTP 406.
     Keywords: statcan, reference period, range, history, vectors, wds,
     date range.
+    Mots-clés: statcan, période de référence, plage, plage de dates,
+    historique, vecteurs, données historiques, wds.
     """
     return await client.get_data_from_vector_by_reference_period_range(
         vector_ids, start_ref_period, end_ref_period
@@ -172,6 +190,8 @@ async def wds_get_changed_series_list(lang: Lang = "en") -> ChangedSeriesList:
     does not accept a date parameter (unlike wds_get_changed_cube_list).
     Keywords: statcan, changed, updated, series, release, today, wds,
     refresh.
+    Mots-clés: statcan, modifié, mis à jour, série, diffusion,
+    aujourd'hui, wds, actualisation.
     """
     return await client.get_changed_series_list()
 
@@ -184,6 +204,8 @@ async def wds_get_changed_cube_list(date: str | None = None, lang: Lang = "en") 
     8:30am ET release.
     Keywords: statcan, changed, updated, cube, table, release, today,
     wds.
+    Mots-clés: statcan, modifié, mis à jour, cube, tableau, diffusion,
+    aujourd'hui, wds.
     """
     return await client.get_changed_cube_list(date)
 
@@ -195,6 +217,8 @@ async def wds_get_changed_series_data_from_vector(vector_id: int, lang: Lang = "
     Use for: fetching only what changed rather than the full latest-N
     window, after wds_get_changed_series_list flags a vector.
     Keywords: statcan, changed, vector, delta, updated data, wds.
+    Mots-clés: statcan, modifié, vecteur, écart, données mises à jour,
+    série, changements, wds.
     """
     return await client.get_changed_series_data_from_vector(vector_id)
 
@@ -208,6 +232,8 @@ async def wds_get_changed_series_data_from_cube_coord(
     Use for: fetching only what changed for a specific series identified
     by productId/coordinate rather than vector ID.
     Keywords: statcan, changed, coordinate, delta, updated data, wds.
+    Mots-clés: statcan, modifié, coordonnée, écart, données mises à
+    jour, changements, tableau, wds.
     """
     return await client.get_changed_series_data_from_cube_pid_coord(product_id, coordinate)
 
@@ -221,6 +247,8 @@ async def wds_get_full_table_download_csv(
     Use for: bulk/offline analysis of an entire table rather than
     individual series — hands back a URL, does not fetch the file.
     Keywords: statcan, csv, download, full table, bulk, export, wds.
+    Mots-clés: statcan, csv, téléchargement, tableau complet, en masse,
+    exportation, wds, données complètes.
     """
     return await client.get_full_table_download_csv(product_id, lang)
 
@@ -235,6 +263,8 @@ async def wds_get_full_table_download_sdmx(
     a URL, does not fetch the file.
     Keywords: statcan, sdmx, xml, download, full table, bulk, export,
     wds.
+    Mots-clés: statcan, sdmx, xml, téléchargement, tableau complet, en
+    masse, exportation, wds.
     """
     return await client.get_full_table_download_sdmx(product_id)
 
@@ -249,5 +279,7 @@ async def wds_get_code_sets(lang: Lang = "en") -> CodeSets:
     e.g. applying a scalarFactorCode multiplier to a raw value.
     Keywords: statcan, code sets, decode, scalar factor, frequency,
     symbol, status, uom, wds, lookup.
+    Mots-clés: statcan, ensembles de codes, décoder, facteur d'échelle,
+    fréquence, symbole, statut, unité de mesure, wds, référence.
     """
     return await client.get_code_sets()

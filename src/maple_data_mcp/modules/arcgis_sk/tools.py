@@ -32,6 +32,9 @@ async def arcgis_sk_search_datasets(
     free-text query. Keywords: Saskatchewan, Saskatchewan GeoHub, geoportal, ArcGIS
     Hub, open data, dataset search, catalogue, government, province,
     GIS, geospatial.
+    Mots-clés : Saskatchewan, Saskatchewan GeoHub, géoportail, centre
+    ArcGIS Hub, données ouvertes, recherche de jeux de données,
+    catalogue, gouvernement, province, SIG, géospatial.
     """
     return await client.search_datasets(
         query, tag=tag, item_type=item_type, limit=limit, offset=offset, lang=lang
@@ -46,6 +49,9 @@ async def arcgis_sk_get_dataset(item_id: str, lang: Lang = "en") -> ItemDetail:
     before querying its rows or downloading it. Keywords: Saskatchewan,
     Saskatchewan GeoHub, ArcGIS Hub, dataset detail, FeatureServer, MapServer,
     metadata, licence, download, CSV, shapefile, GeoJSON, KML.
+    Mots-clés : Saskatchewan, Saskatchewan GeoHub, ArcGIS Hub, détail
+    du jeu de données, FeatureServer, MapServer, métadonnées, licence,
+    téléchargement, CSV, shapefile, GeoJSON, KML.
     """
     return await client.get_dataset(item_id, lang)
 
@@ -71,6 +77,9 @@ async def arcgis_sk_query_feature_layer(
     first layer or table id (not always 0). Keywords: Saskatchewan, Saskatchewan GeoHub,
     ArcGIS REST, FeatureServer, MapServer, query, rows, attributes,
     filter, where clause, geospatial, GIS.
+    Mots-clés : Saskatchewan, Saskatchewan GeoHub, ArcGIS REST,
+    FeatureServer, MapServer, requête, lignes, attributs, filtre,
+    clause where, géospatial, SIG.
     """
     return await client.query_feature_layer(
         item_id,

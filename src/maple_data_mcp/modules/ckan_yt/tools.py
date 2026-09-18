@@ -61,6 +61,9 @@ async def ckan_yt_search_datasets(
     Keywords: ckan, open data, open.yukon.ca, yukon, territorial,
     dataset search, catalogue, package_search, discover, browse,
     filter, organization, tag, group, format.
+    Mots-clés: ckan, données ouvertes, open.yukon.ca, yukon, territorial,
+    recherche de jeux de données, catalogue, package_search, découvrir,
+    parcourir, filtrer, organisme, étiquette, groupe, format.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -77,6 +80,10 @@ async def ckan_yt_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDeta
     Keywords: ckan, open data, dataset detail, package_show, resources,
     open.yukon.ca, yukon, territorial, metadata, license, custodian,
     download, tags, groups.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, open.yukon.ca, yukon, territorial,
+    métadonnées, licence, dépositaire, téléchargement, étiquettes,
+    groupes.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -92,6 +99,8 @@ async def ckan_yt_list_organizations(lang: Lang = "en") -> OrganizationList:
     portal has no bilingual organization fields).
     Keywords: ckan, open data, organizations, publishers, departments,
     agencies, yukon, territorial, list, open.yukon.ca, catalogue.
+    Mots-clés: ckan, données ouvertes, organismes, éditeurs, ministères,
+    agences, yukon, territorial, liste, open.yukon.ca, catalogue.
     """
     return await client.list_organizations(lang)
 
@@ -107,6 +116,9 @@ async def ckan_yt_get_organization(organization_id: str, lang: Lang = "en") -> O
     "atipp-office").
     Keywords: ckan, open data, organization detail, department, agency,
     publisher, yukon, territorial, open.yukon.ca, organization_show.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ministère,
+    agence, éditeur, yukon, territorial, open.yukon.ca,
+    organization_show.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -121,6 +133,9 @@ async def ckan_yt_get_resource(resource_id: str, lang: Lang = "en") -> ResourceD
     resource ids are found via ckan_yt_get_dataset.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, yukon, territorial, open.yukon.ca.
+    Mots-clés: ckan, données ouvertes, ressource, fichier,
+    téléchargement, format, url, resource_show, yukon, territorial,
+    open.yukon.ca.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -137,6 +152,9 @@ async def ckan_yt_list_licenses(lang: Lang = "en") -> LicenseList:
     Keywords: ckan, open data, license, licence, open government
     licence, terms, usage rights, yukon, territorial, open.yukon.ca,
     license_list.
+    Mots-clés: ckan, données ouvertes, licence, licence du gouvernement
+    ouvert, conditions d'utilisation, droits d'usage, yukon,
+    territorial, open.yukon.ca, license_list.
     """
     return await client.list_licenses(lang)
 
@@ -154,6 +172,9 @@ async def ckan_yt_list_tags(lang: Lang = "en") -> TagList:
     see how many datasets a given tag matches.
     Keywords: ckan, open data, tags, tag_list, keywords, subject terms,
     vocabulary, yukon, territorial, open.yukon.ca, browse, discover.
+    Mots-clés: ckan, données ouvertes, étiquettes, tag_list, mots-clés,
+    termes sujets, vocabulaire, yukon, territorial, open.yukon.ca,
+    parcourir, découvrir.
     """
     return await client.list_tags(lang)
 
@@ -172,5 +193,8 @@ async def ckan_yt_list_groups(lang: Lang = "en") -> GroupList:
     Keywords: ckan, open data, groups, group_list, subject categories,
     taxonomy, classification, yukon, territorial, open.yukon.ca,
     browse, discover.
+    Mots-clés: ckan, données ouvertes, groupes, group_list, catégories
+    de sujets, taxonomie, classification, yukon, territorial,
+    open.yukon.ca, parcourir, découvrir.
     """
     return await client.list_groups(lang)

@@ -65,6 +65,10 @@ async def ckan_qc_search_datasets(
     Keywords: ckan, open data, donneesquebec.ca, dataset search,
     catalogue, quebec, provincial, government of quebec, package_search,
     discover, browse, filter, organization, format, tags.
+    Mots-clés: ckan, données ouvertes, donneesquebec.ca, recherche de
+    jeux de données, catalogue, québec, provincial, gouvernement du
+    québec, package_search, découvrir, parcourir, filtrer, organisme,
+    format, étiquettes.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -82,6 +86,9 @@ async def ckan_qc_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDeta
     effect (this catalogue is effectively French-only).
     Keywords: ckan, open data, dataset detail, package_show, resources,
     donneesquebec.ca, quebec, metadata, license, download, tags, groups.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, donneesquebec.ca, québec, métadonnées,
+    licence, téléchargement, étiquettes, groupes.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -96,6 +103,8 @@ async def ckan_qc_list_organizations(lang: Lang = "en") -> OrganizationList:
     name and description. `lang` has no effect here.
     Keywords: ckan, open data, organizations, publishers, ministries,
     municipalities, quebec, list, donneesquebec.ca, catalogue.
+    Mots-clés: ckan, données ouvertes, organismes, éditeurs, ministères,
+    municipalités, québec, liste, donneesquebec.ca, catalogue.
     """
     return await client.list_organizations(lang)
 
@@ -111,6 +120,9 @@ async def ckan_qc_get_organization(organization_id: str, lang: Lang = "en") -> O
     Transports et de la Mobilite durable). `lang` has no effect here.
     Keywords: ckan, open data, organization detail, ministry, agency,
     municipality, publisher, quebec, donneesquebec.ca, organization_show.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ministère,
+    agence, municipalité, éditeur, québec, donneesquebec.ca,
+    organization_show.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -126,6 +138,9 @@ async def ckan_qc_get_resource(resource_id: str, lang: Lang = "en") -> ResourceD
     ckan_qc_get_dataset. `lang` has no effect here.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, quebec, donneesquebec.ca, datastore.
+    Mots-clés: ckan, données ouvertes, ressource, fichier, téléchargement,
+    format, url, resource_show, québec, donneesquebec.ca, entrepôt de
+    données.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -140,6 +155,9 @@ async def ckan_qc_list_licenses(lang: Lang = "en") -> LicenseList:
     URL, and open-data-compliance flags. `lang` has no effect here.
     Keywords: ckan, open data, license, licence, creative commons,
     terms, usage rights, quebec, donneesquebec.ca, license_list.
+    Mots-clés: ckan, données ouvertes, licence, creative commons,
+    conditions d'utilisation, droits d'usage, québec, donneesquebec.ca,
+    license_list.
     """
     return await client.list_licenses(lang)
 
@@ -157,6 +175,9 @@ async def ckan_qc_list_groups(lang: Lang = "en") -> GroupList:
     here.
     Keywords: ckan, open data, groups, categories, themes, subjects,
     quebec, donneesquebec.ca, group_list, browse, classification.
+    Mots-clés: ckan, données ouvertes, groupes, catégories, thèmes,
+    sujets, québec, donneesquebec.ca, group_list, parcourir,
+    classification.
     """
     return await client.list_groups(lang)
 
@@ -175,5 +196,8 @@ async def ckan_qc_list_tags(query: str | None = None, lang: Lang = "en") -> TagL
     module, this portal genuinely uses tags. `lang` has no effect here.
     Keywords: ckan, open data, tags, keywords, free-text, search,
     quebec, donneesquebec.ca, tag_list, browse, discover.
+    Mots-clés: ckan, données ouvertes, étiquettes, mots-clés, texte
+    libre, recherche, québec, donneesquebec.ca, tag_list, parcourir,
+    découvrir.
     """
     return await client.list_tags(query, lang)

@@ -10,8 +10,43 @@ client) structured, typed access to Canadian public data through a
 single server — covering Statistics Canada, the Bank of Canada, and
 verified federal, provincial, territorial, and municipal CKAN portals.
 
+*MapleData MCP donne aux agents IA (Claude, Cursor et tout client
+compatible MCP) un accès structuré et typé aux données publiques
+canadiennes par l'entremise d'un seul serveur — couvrant Statistique
+Canada, la Banque du Canada, ainsi que des portails CKAN fédéraux,
+provinciaux, territoriaux et municipaux vérifiés.*
+
 See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for the project vision and
 [`ROADMAP.md`](ROADMAP.md) for source coverage status.
+
+## Bilingual by design / Conçu pour être bilingue
+
+Every tool accepts `lang: "en"|"fr"`, several sources are French-first
+or French-only (Quebec's `ckan_qc_*` and Montreal's `ckan_montreal_*`),
+and tool discovery works in either language: every tool's docstring
+carries both a `Keywords:` line and a `Mots-clés:` line, so calling
+`search_tools` with a French-language query (e.g. *"recherche de
+jeux de données sur le climat"*) finds the same tools an equivalent
+English query would. Read `docs://catalogue` for a bilingual
+(EN/FR) one-line description of every module. Not every underlying
+government portal is itself bilingual — see each module's own
+docstring (or `docs://catalogue`) for where `lang` genuinely changes
+the response versus where it is a documented no-op on a monolingual
+source.
+
+*Chaque outil accepte `lang : "en"|"fr"`, plusieurs sources sont
+francophones ou exclusivement en français (le `ckan_qc_*` du Québec
+et le `ckan_montreal_*` de Montréal), et la découverte d'outils
+fonctionne dans les deux langues : chaque outil porte à la fois une
+ligne `Keywords:` et une ligne `Mots-clés:`, de sorte qu'un appel à
+`search_tools` avec une requête en français trouve les mêmes outils
+qu'une requête équivalente en anglais. Consultez `docs://catalogue`
+pour une description bilingue (EN/FR) de chaque module. Tous les
+portails gouvernementaux sous-jacents ne sont pas eux-mêmes
+bilingues — consultez la documentation de chaque module (ou
+`docs://catalogue`) pour savoir où `lang` change réellement la
+réponse et où il s'agit d'un no-op documenté sur une source
+unilingue.*
 
 ## Status
 

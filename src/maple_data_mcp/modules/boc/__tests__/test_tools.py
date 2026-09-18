@@ -1,7 +1,7 @@
 """Tests for the boc module's tools.py: docstring discoverability
-contract (Use for:/Keywords: lines, >=8 keywords) that BM25SearchTransform
-relies on, plus a thin pass-through check for each tool against a mocked
-client function."""
+contract (Use for:/Keywords:/Mots-clés: lines, >=8 keywords each) that
+BM25SearchTransform relies on, plus a thin pass-through check for each
+tool against a mocked client function."""
 
 from __future__ import annotations
 
@@ -31,9 +31,13 @@ def test_docstring_has_use_for_and_keywords(tool_fn):
     doc = tool_fn.__doc__ or ""
     assert "Use for:" in doc, f"{tool_fn.__name__} is missing a 'Use for:' line"
     assert "Keywords:" in doc, f"{tool_fn.__name__} is missing a 'Keywords:' line"
-    keywords_line = doc.split("Keywords:")[1]
+    assert "Mots-clés:" in doc, f"{tool_fn.__name__} is missing a 'Mots-clés:' line"
+    keywords_line = doc.split("Keywords:")[1].split("Mots-clés:")[0]
     keywords = [k.strip() for k in keywords_line.replace(".", "").split(",") if k.strip()]
     assert len(keywords) >= 8, f"{tool_fn.__name__} has only {len(keywords)} keywords"
+    mots_cles_line = doc.split("Mots-clés:")[1]
+    mots_cles = [k.strip() for k in mots_cles_line.replace(".", "").split(",") if k.strip()]
+    assert len(mots_cles) >= 8, f"{tool_fn.__name__} has only {len(mots_cles)} mots-clés"
 
 
 @pytest.mark.parametrize("tool_fn", ALL_TOOLS, ids=lambda f: f.__name__)

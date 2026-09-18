@@ -12,6 +12,7 @@ template new sources copy) never registers its demo tools live.
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
 from fastmcp import FastMCP
@@ -24,6 +25,10 @@ MODULES_ROOT = Path(__file__).parent / "modules"
 
 SERVER_INSTRUCTIONS = """
 MapleData MCP — one MCP server for Canadian public data.
+
+Read docs://catalogue for a bilingual (English/French) one-line
+description of every module below — useful for a French-language
+client deciding which source to query.
 
 Currently implemented:
 
@@ -97,6 +102,26 @@ API has no language dimension at all.
 """.strip()
 
 
+def _build_module_catalogue() -> str:
+    """Render every module's MODULE_DESCRIPTION/MODULE_DESCRIPTION_FR pair
+    as one bilingual reference doc — the only place those constants are
+    actually surfaced (each module's own __init__.py declares them, but
+    FileSystemProvider never reads them, so without this they'd be dead)."""
+    lines = ["# MapleData MCP — module catalogue / catalogue des modules", ""]
+    for module_dir in sorted(MODULES_ROOT.iterdir()):
+        if not module_dir.is_dir() or module_dir.name.startswith("_"):
+            continue
+        module = importlib.import_module(f"maple_data_mcp.modules.{module_dir.name}")
+        name = getattr(module, "MODULE_NAME", module_dir.name)
+        description_en = getattr(module, "MODULE_DESCRIPTION", "")
+        description_fr = getattr(module, "MODULE_DESCRIPTION_FR", "")
+        lines.append(f"## {name}")
+        lines.append(f"EN: {description_en}")
+        lines.append(f"FR: {description_fr}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def build_server() -> FastMCP:
     mcp = FastMCP("maple-data-mcp", version=__version__, instructions=SERVER_INSTRUCTIONS)
     for module_dir in sorted(MODULES_ROOT.iterdir()):
@@ -110,6 +135,14 @@ def build_server() -> FastMCP:
             call_tool_name="call_tool",
         )
     )
+
+    @mcp.resource("docs://catalogue")
+    def module_catalogue_doc() -> str:
+        """Bilingual (EN/FR) directory of every module this server exposes,
+        by name and description — use this to see what a source covers in
+        French before deciding which tools to call."""
+        return _build_module_catalogue()
+
     return mcp
 
 

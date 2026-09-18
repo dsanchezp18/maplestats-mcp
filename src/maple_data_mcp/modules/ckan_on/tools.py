@@ -36,6 +36,9 @@ async def ckan_on_search_datasets(
     Use for: finding Ontario datasets by topic, publisher, tag, format, or
     free-text query. Keywords: Ontario, open data, CKAN, dataset search,
     catalogue, package_search, government, province, organization, tags.
+    Mots-clés: Ontario, données ouvertes, CKAN, recherche de jeux de
+    données, catalogue, package_search, gouvernement, province, organisme,
+    étiquettes.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -47,6 +50,9 @@ async def ckan_on_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDeta
     Use for: inspecting a dataset found with ckan_on_search_datasets.
     Keywords: Ontario, CKAN, dataset detail, package_show, resources,
     downloads, metadata, licence, publisher, bilingual, open data.
+    Mots-clés: Ontario, CKAN, détail du jeu de données, package_show,
+    ressources, téléchargements, métadonnées, licence, éditeur, bilingue,
+    données ouvertes.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -58,6 +64,8 @@ async def ckan_on_list_organizations(lang: Lang = "en") -> OrganizationList:
     Use for: discovering ministries and agencies before filtering search.
     Keywords: Ontario, CKAN, organizations, publishers, ministries,
     agencies, departments, catalogue, open data, organization_list.
+    Mots-clés: Ontario, CKAN, organismes, éditeurs, ministères, agences,
+    directions, catalogue, données ouvertes, organization_list.
     """
     return await client.list_organizations(lang)
 
@@ -69,6 +77,8 @@ async def ckan_on_get_organization(organization_id: str, lang: Lang = "en") -> O
     Use for: resolving an organization name, description, or dataset count.
     Keywords: Ontario, CKAN, organization detail, publisher, ministry,
     agency, organization_show, catalogue, metadata, government.
+    Mots-clés: Ontario, CKAN, détail de l'organisme, éditeur, ministère,
+    agence, organization_show, catalogue, métadonnées, gouvernement.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -79,7 +89,9 @@ async def ckan_on_get_resource(resource_id: str, lang: Lang = "en") -> ResourceD
 
     Use for: checking a file's format, URL, date range, or datastore status.
     Keywords: Ontario, CKAN, resource, file, download, format, URL,
-    resource_show, datastore, data range.
+    resource_show, datastore, date range.
+    Mots-clés: Ontario, CKAN, ressource, fichier, téléchargement, format,
+    URL, resource_show, entrepôt de données, plage de dates.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -91,6 +103,9 @@ async def ckan_on_list_licenses(lang: Lang = "en") -> LicenseList:
     Use for: resolving license identifiers and bilingual usage terms.
     Keywords: Ontario, CKAN, license, licence, open government licence,
     terms, rights, reuse, attribution, license_list.
+    Mots-clés: Ontario, CKAN, licence, licence du gouvernement ouvert,
+    conditions d'utilisation, droits, réutilisation, attribution,
+    license_list.
     """
     return await client.list_licenses(lang)
 
@@ -102,6 +117,8 @@ async def ckan_on_list_tags(lang: Lang = "en") -> TagList:
     Use for: discovering exact tag values for the fq filter. Keywords:
     Ontario, CKAN, tags, tag_list, keywords, subjects, vocabulary,
     catalogue, search, discover.
+    Mots-clés: Ontario, CKAN, étiquettes, tag_list, mots-clés, sujets,
+    vocabulaire, catalogue, recherche, découvrir.
     """
     return await client.list_tags(lang)
 
@@ -113,5 +130,7 @@ async def ckan_on_list_groups(lang: Lang = "en") -> GroupList:
     Use for: browsing the catalogue's curated subject collections.
     Keywords: Ontario, CKAN, groups, group_list, subjects, collections,
     taxonomy, catalogue, browse, discover.
+    Mots-clés: Ontario, CKAN, groupes, group_list, sujets, collections,
+    taxonomie, catalogue, parcourir, découvrir.
     """
     return await client.list_groups(lang)

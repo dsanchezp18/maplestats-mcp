@@ -68,6 +68,10 @@ async def ckan_nt_search_datasets(
     catalogue, northwest territories, nwt, territorial, government,
     package_search, discover, browse, filter, organization, tag, group,
     format.
+    Mots-clés: ckan, données ouvertes, opendata.gov.nt.ca, recherche de
+    jeux de données, catalogue, territoires du nord-ouest, territorial,
+    gouvernement, découvrir, parcourir, filtre, organisme, étiquette,
+    groupe, format.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
@@ -85,6 +89,10 @@ async def ckan_nt_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDeta
     Keywords: ckan, open data, dataset detail, package_show, resources,
     opendata.gov.nt.ca, northwest territories, nwt, territorial, metadata,
     license, tags, groups, download.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, opendata.gov.nt.ca, territoires du
+    nord-ouest, territorial, métadonnées, licence, étiquettes, groupes,
+    téléchargement.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -100,6 +108,9 @@ async def ckan_nt_list_organizations(lang: Lang = "en") -> OrganizationList:
     Keywords: ckan, open data, organizations, publishers, departments,
     agencies, gnwt, northwest territories, nwt, territorial, list,
     opendata.gov.nt.ca, catalogue.
+    Mots-clés: ckan, données ouvertes, organismes, éditeurs, ministères,
+    agences, gtno, territoires du nord-ouest, territorial, liste,
+    catalogue.
     """
     return await client.list_organizations(lang)
 
@@ -116,6 +127,9 @@ async def ckan_nt_get_organization(organization_id: str, lang: Lang = "en") -> O
     Keywords: ckan, open data, organization detail, department, agency,
     publisher, gnwt, northwest territories, nwt, territorial,
     opendata.gov.nt.ca, organization_show.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ministère,
+    agence, éditeur, gtno, territoires du nord-ouest, territorial,
+    organization_show.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -132,6 +146,9 @@ async def ckan_nt_list_groups(lang: Lang = "en") -> GroupList:
     Keywords: ckan, open data, groups, topics, categories, subject areas,
     northwest territories, nwt, territorial, opendata.gov.nt.ca,
     group_list, browse.
+    Mots-clés: ckan, données ouvertes, groupes, sujets, catégories,
+    domaines, territoires du nord-ouest, territorial, group_list,
+    parcourir.
     """
     return await client.list_groups(lang)
 
@@ -147,6 +164,8 @@ async def ckan_nt_list_tags(lang: Lang = "en") -> TagList:
     this is real discovery value, not a stub.
     Keywords: ckan, open data, tags, keywords, vocabulary, northwest
     territories, nwt, territorial, opendata.gov.nt.ca, tag_list, browse.
+    Mots-clés: ckan, données ouvertes, étiquettes, mots-clés, vocabulaire,
+    territoires du nord-ouest, territorial, tag_list, parcourir.
     """
     return await client.list_tags(lang)
 
@@ -162,6 +181,8 @@ async def ckan_nt_get_resource(resource_id: str, lang: Lang = "en") -> ResourceD
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, northwest territories, nwt, territorial,
     opendata.gov.nt.ca.
+    Mots-clés: ckan, données ouvertes, ressource, fichier, téléchargement,
+    format, url, resource_show, territoires du nord-ouest, territorial.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -177,5 +198,8 @@ async def ckan_nt_list_licenses(lang: Lang = "en") -> LicenseList:
     Keywords: ckan, open data, license, licence, open government licence,
     terms, usage rights, northwest territories, nwt, territorial,
     opendata.gov.nt.ca, license_list.
+    Mots-clés: ckan, données ouvertes, licence, licence de gouvernement
+    ouvert, conditions d'utilisation, droits d'usage, territoires du
+    nord-ouest, territorial, license_list.
     """
     return await client.list_licenses(lang)

@@ -32,6 +32,9 @@ async def arcgis_windsor_search_datasets(
     free-text query. Keywords: Windsor, Windsor Open Data Portal, ArcGIS
     Hub, open data, dataset search, catalogue, government, municipal,
     GIS, geospatial.
+    Mots-clés : Windsor, Windsor Open Data Portal, centre ArcGIS Hub,
+    données ouvertes, recherche de jeux de données, catalogue,
+    gouvernement, municipal, SIG, géospatial.
     """
     return await client.search_datasets(
         query, tag=tag, item_type=item_type, limit=limit, offset=offset, lang=lang
@@ -46,6 +49,9 @@ async def arcgis_windsor_get_dataset(item_id: str, lang: Lang = "en") -> ItemDet
     before querying its rows or downloading it. Keywords: Windsor,
     Windsor Open Data Portal, ArcGIS Hub, dataset detail, FeatureServer, MapServer,
     metadata, licence, download, CSV, shapefile, GeoJSON, KML.
+    Mots-clés : Windsor, Windsor Open Data Portal, ArcGIS Hub, détail
+    du jeu de données, FeatureServer, MapServer, métadonnées, licence,
+    téléchargement, CSV, shapefile, GeoJSON, KML.
     """
     return await client.get_dataset(item_id, lang)
 
@@ -71,6 +77,9 @@ async def arcgis_windsor_query_feature_layer(
     first layer or table id (not always 0). Keywords: Windsor, Windsor Open Data Portal,
     ArcGIS REST, FeatureServer, MapServer, query, rows, attributes,
     filter, where clause, geospatial, GIS.
+    Mots-clés : Windsor, Windsor Open Data Portal, ArcGIS REST,
+    FeatureServer, MapServer, requête, lignes, attributs, filtre,
+    clause where, géospatial, SIG.
     """
     return await client.query_feature_layer(
         item_id,

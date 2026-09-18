@@ -58,13 +58,18 @@ async def ckan_regina_search_datasets(
     Keywords: ckan, open data, openregina.ca, regina, saskatchewan,
     municipal, city government, dataset search, catalogue,
     package_search, discover, browse, filter, tags, groups, format.
+    Mots-clés: ckan, données ouvertes, openregina.ca, regina,
+    saskatchewan, municipal, administration municipale, recherche de
+    jeux de données, catalogue, package_search, découvrir, parcourir,
+    filtrer, étiquettes, groupes, format.
     """
     return await client.search_datasets(query, fq=fq, rows=rows, start=start, sort=sort, lang=lang)
 
 
 @tool
 async def ckan_regina_get_dataset(dataset_id: str, lang: Lang = "en") -> PackageDetail:
-    """Get full detail for one Regina dataset (CKAN package), including its resources, tags, and groups.
+    """Get full detail for one Regina dataset (CKAN package), including its
+    resources, tags, and groups.
 
     Use for: inspecting a specific dataset once found via
     ckan_regina_search_datasets — resource URLs/formats, license,
@@ -73,6 +78,9 @@ async def ckan_regina_get_dataset(dataset_id: str, lang: Lang = "en") -> Package
     Keywords: ckan, open data, dataset detail, package_show, resources,
     openregina.ca, regina, municipal, metadata, license, download,
     tags, groups.
+    Mots-clés: ckan, données ouvertes, détail du jeu de données,
+    package_show, ressources, openregina.ca, regina, municipal,
+    métadonnées, licence, téléchargement, étiquettes, groupes.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -87,6 +95,8 @@ async def ckan_regina_list_organizations(lang: Lang = "en") -> OrganizationList:
     `lang` has no effect.
     Keywords: ckan, open data, organizations, publisher, city of
     regina, municipal, list, catalogue, openregina.ca.
+    Mots-clés: ckan, données ouvertes, organismes, éditeur, ville de
+    regina, municipal, liste, catalogue, openregina.ca.
     """
     return await client.list_organizations(lang)
 
@@ -95,7 +105,8 @@ async def ckan_regina_list_organizations(lang: Lang = "en") -> OrganizationList:
 async def ckan_regina_get_organization(
     organization_id: str, lang: Lang = "en"
 ) -> OrganizationDetail:
-    """Get detail for the City of Regina's publishing organization, including its published-dataset count.
+    """Get detail for the City of Regina's publishing organization,
+    including its published-dataset count.
 
     Use for: confirming the organization's identity/description before
     filtering ckan_regina_search_datasets by it. `organization_id` is
@@ -103,6 +114,8 @@ async def ckan_regina_get_organization(
     effect.
     Keywords: ckan, open data, organization detail, city of regina,
     municipal, publisher, organization_show, openregina.ca.
+    Mots-clés: ckan, données ouvertes, détail de l'organisme, ville de
+    regina, municipal, éditeur, organization_show, openregina.ca.
     """
     return await client.get_organization(organization_id, lang)
 
@@ -118,6 +131,9 @@ async def ckan_regina_get_resource(resource_id: str, lang: Lang = "en") -> Resou
     `lang` has no effect.
     Keywords: ckan, open data, resource, file, download, format, url,
     resource_show, regina, openregina.ca, datastore.
+    Mots-clés: ckan, données ouvertes, ressource, fichier,
+    téléchargement, format, url, resource_show, regina, openregina.ca,
+    entrepôt de données.
     """
     return await client.get_resource(resource_id, lang)
 
@@ -132,6 +148,9 @@ async def ckan_regina_list_licenses(lang: Lang = "en") -> LicenseList:
     effect.
     Keywords: ckan, open data, license, licence, open government
     licence, terms, usage rights, regina, openregina.ca, license_list.
+    Mots-clés: ckan, données ouvertes, licence, licence du gouvernement
+    ouvert, conditions d'utilisation, droits d'usage, regina,
+    openregina.ca, license_list.
     """
     return await client.list_licenses(lang)
 
@@ -145,6 +164,8 @@ async def ckan_regina_list_tags(lang: Lang = "en") -> TagList:
     effect.
     Keywords: ckan, open data, tags, tag_list, keywords, subject terms,
     regina, municipal, openregina.ca, browse, filter.
+    Mots-clés: ckan, données ouvertes, étiquettes, tag_list, mots-clés,
+    termes sujets, regina, municipal, openregina.ca, parcourir, filtrer.
     """
     return await client.list_tags(lang)
 
@@ -159,6 +180,8 @@ async def ckan_regina_list_groups(lang: Lang = "en") -> GroupList:
     accepted for consistency but has no effect.
     Keywords: ckan, open data, groups, group_list, themes, collections,
     topics, regina, openregina.ca, browse, filter.
+    Mots-clés: ckan, données ouvertes, groupes, group_list, thèmes,
+    collections, sujets, regina, openregina.ca, parcourir, filtrer.
     """
     return await client.list_groups(lang)
 
@@ -172,5 +195,7 @@ async def ckan_regina_get_group(group_id: str, lang: Lang = "en") -> GroupDetail
     short name, found via ckan_regina_list_groups. `lang` has no effect.
     Keywords: ckan, open data, group detail, theme, collection, topic,
     regina, openregina.ca, group_show, curated.
+    Mots-clés: ckan, données ouvertes, détail du groupe, thème,
+    collection, sujet, regina, openregina.ca, group_show, sélectionné.
     """
     return await client.get_group(group_id, lang)
