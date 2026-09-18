@@ -39,10 +39,14 @@ seen in benchmark research are explicitly excluded).
 The four CKAN provinces are now shipped. The next provincial work should be
 adaptor-first so one implementation unlocks several provinces:
 
+For this provincial phase, "coverage" means the official/main provincial
+portal. Municipal portals and secondary departmental or specialized portals
+are out of scope unless they are later promoted explicitly.
+
 | Sequence | Adaptor | Provincial coverage | Reason |
 |---|---|---|---|
-| 1 | Socrata | Nova Scotia, New Brunswick, Prince Edward Island | Three provincial catalogues share the Socrata platform, and the same adaptor would also unlock Calgary, Edmonton, and Winnipeg. Start with catalogue search, dataset metadata, resource downloads, and the Socrata query API. |
-| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan | Both provincial portals are GeoHub-style ArcGIS catalogues. Support catalogue discovery, item metadata, FeatureServer/MapServer layers, and direct downloads. This also creates a path for many municipal and specialized geographic portals. |
+| 1 | Socrata | Nova Scotia, New Brunswick, Prince Edward Island | Three official provincial catalogues share the Socrata platform, and the same adaptor would also unlock Calgary, Edmonton, and Winnipeg. Start with catalogue search, dataset metadata, resource downloads, and the Socrata query API. |
+| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan | Both official provincial portals are GeoHub-style ArcGIS catalogues. Support catalogue discovery, item metadata, FeatureServer/MapServer layers, and direct downloads without expanding to municipal or secondary portals. This also creates a path for many municipal and specialized geographic portals. |
 | 3 | Newfoundland and Labrador custom portal | Newfoundland and Labrador | The provincial open-data catalogue has its own page-based interface and downloadable tabular/spatial files. Map its live endpoints separately after the two reusable adaptors are working; do not force it into CKAN or Socrata. |
 
 This makes **Socrata the next provincial implementation**. It gives the

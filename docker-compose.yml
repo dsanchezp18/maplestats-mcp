@@ -6,6 +6,7 @@ services:
     environment:
       MAPLE_HOST: "0.0.0.0"
       MAPLE_PORT: "${MAPLE_PORT:-8000}"
+      MAPLE_TRANSPORT: "${MAPLE_TRANSPORT:-http}"
       MAPLE_PROFILE: "${MAPLE_PROFILE:-all}"
       MAPLE_AUTH_TOKEN: "${MAPLE_AUTH_TOKEN:-}"
       MAPLE_REQUIRE_AUTH: "${MAPLE_REQUIRE_AUTH:-1}"

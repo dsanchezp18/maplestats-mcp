@@ -22,7 +22,9 @@ def get_port() -> int:
 
 
 def get_transport() -> str:
-    raw = os.environ.get("MAPLE_TRANSPORT", "http").strip().lower()
+    # Local MCP clients launch the package as a stdio subprocess. Hosted
+    # deployments set MAPLE_TRANSPORT=http explicitly in their service config.
+    raw = os.environ.get("MAPLE_TRANSPORT", "stdio").strip().lower()
     return "stdio" if raw == "stdio" else "http"
 
 

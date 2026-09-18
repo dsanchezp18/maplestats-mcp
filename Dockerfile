@@ -19,5 +19,6 @@ EXPOSE 8000
 
 ENV MAPLE_HOST=0.0.0.0
 ENV MAPLE_PORT=8000
+ENV MAPLE_TRANSPORT=http
 
 CMD ["uv", "run", "python", "-m", "maple_data_mcp"]

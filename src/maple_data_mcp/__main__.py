@@ -1,6 +1,6 @@
-"""Entrypoint: `uv run maple-data-mcp` or `python -m maple_data_mcp`.
+"""Entrypoint: `maple-data-mcp` or `python -m maple_data_mcp`.
 
-Transport picked from MAPLE_TRANSPORT (default "http"). stdio bypasses
+Transport picked from MAPLE_TRANSPORT (default "stdio"). stdio bypasses
 the ASGI security layer entirely — it's a local-process transport with
 no network exposure to protect.
 """
