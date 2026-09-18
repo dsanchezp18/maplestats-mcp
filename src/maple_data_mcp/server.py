@@ -57,6 +57,17 @@ Currently implemented:
   but on a monolingual portal it is a documented no-op — read that
   portal's own module docstring before assuming a request will change
   what comes back.
+- Canadian provincial ArcGIS Hub open-data portals: Manitoba (Data MB,
+  geoportal.gov.mb.ca, tools prefixed arcgis_mb_), Saskatchewan
+  (Saskatchewan GeoHub, geohub.saskatchewan.ca, arcgis_sk_), and Prince
+  Edward Island (data.princeedwardisland.ca, arcgis_pe_). Every
+  deployment runs the same ArcGIS Hub Search API v3 and classic
+  ArcGIS REST FeatureServer/MapServer query API, verified live against
+  all three, with dataset search/detail, direct row queries against a
+  FeatureServer/MapServer layer, and CSV/Shapefile/GeoJSON/KML download
+  links. The *_query_feature_layer tools default layer_index to the
+  service's own first reported layer or table id rather than assuming
+  0 — a hosted table (no geometry) can genuinely sit at a non-zero id.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose

@@ -6,9 +6,10 @@ any narrower or broader source list implied elsewhere.
 
 Current implementation snapshot (2026-09-18): shipped modules cover
 Statistics Canada, the Bank of Canada, federal CKAN, Alberta, British
-Columbia, Ontario, Quebec, Nova Scotia, New Brunswick, the Northwest
-Territories, Yukon, Montreal, and Toronto. The rows below are the
-source-of-truth for remaining work; each row has its own status.
+Columbia, Ontario, Quebec, Nova Scotia, New Brunswick, Manitoba,
+Saskatchewan, Prince Edward Island, the Northwest Territories, Yukon,
+Montreal, and Toronto. The rows below are the source-of-truth for
+remaining work; each row has its own status.
 
 Status values: `Not started` / `In progress` / `Shipped` / `Blocked`.
 A source is marked `Shipped` only after its implemented functions and
@@ -36,9 +37,9 @@ seen in benchmark research are explicitly excluded).
 
 ### Next provincial sequence
 
-The four CKAN provinces and the Socrata pair are now shipped. The remaining
-provincial work should stay adaptor-first so one implementation unlocks
-several provinces:
+The four CKAN provinces, the Socrata pair, and the ArcGIS Hub trio are now
+shipped. The remaining provincial work should stay adaptor-first so one
+implementation unlocks several provinces:
 
 For this provincial phase, "coverage" means the official/main provincial
 portal. Municipal portals and secondary departmental or specialized portals
@@ -47,8 +48,8 @@ are out of scope unless they are later promoted explicitly.
 | Sequence | Adaptor | Provincial coverage | Reason |
 |---|---|---|---|
 | 1 | Socrata | Nova Scotia, New Brunswick | Shipped 2026-09-18: `socrata_ns_*`/`socrata_nb_*`, verified live against `api.us.socrata.com`'s catalog API, the per-domain Views API, and the SODA row-query API for both `data.novascotia.ca` and `gnb.socrata.com`. The same adaptor also unlocks Calgary, Edmonton, and Winnipeg (all confirmed Socrata) when a municipal phase is scoped in. |
-| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan, Prince Edward Island | All three official provincial portals are GeoHub-style ArcGIS catalogues (PEI confirmed live 2026-09-18: `data.princeedwardisland.ca` loads `hubcdn.arcgis.com`, not a Socrata domain — the catalog API returns "Domain not found" for it). Support catalogue discovery, item metadata, FeatureServer/MapServer layers, and direct downloads without expanding to municipal or secondary portals. This also creates a path for many municipal and specialized geographic portals. This is now the next provincial implementation. |
-| 3 | Newfoundland and Labrador custom portal | Newfoundland and Labrador | The provincial open-data catalogue has its own page-based interface and downloadable tabular/spatial files. Map its live endpoints separately after the two reusable adaptors are working; do not force it into CKAN or Socrata. |
+| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan, Prince Edward Island | Shipped 2026-09-18: `arcgis_mb_*`/`arcgis_sk_*`/`arcgis_pe_*`, verified live against all three portals' Hub Search API v3 (`/api/search/v1/collections/dataset/items`), the classic ArcGIS REST FeatureServer/MapServer query API, and the `/api/download/v1` export API. Two real quirks only found by calling every function against all three portals live (not caught by mocked tests alone): a catalogue item's `properties.url` is sometimes the bare service root and sometimes already a specific layer endpoint, and the default layer/table id to query is not always 0 — Saskatchewan services can live on a government domain (`gis.saskatchewan.ca`) rather than `*.arcgis.com`, and a PEI item's service reported its one queryable table at id 2 with an empty `layers` list. This adaptor also creates a path for many municipal and specialized geographic portals (see the Municipal section below). |
+| 3 | Newfoundland and Labrador custom portal | Newfoundland and Labrador | The provincial open-data catalogue has its own page-based interface and downloadable tabular/spatial files. Map its live endpoints separately after the two reusable adaptors are working; do not force it into CKAN or Socrata. This is now the next provincial implementation. |
 
 | Province | Status | Portal (reference) |
 |---|---|---|
@@ -56,12 +57,12 @@ are out of scope unless they are later promoted explicitly.
 | British Columbia | Shipped | catalogue.data.gov.bc.ca, CKAN Action API: `ckan_bc_*`, 9 tools (search, dataset/org/resource/license detail, tags, groups). English-only. BC Geographic Warehouse (WFS) is a separate, not-yet-built source. |
 | Quebec | Shipped | donneesquebec.ca (API at `/recherche/api/3/action/`), CKAN Action API: `ckan_qc_*`, 8 tools. French-only — `lang` is a documented no-op. |
 | Alberta | Shipped | open.alberta.ca, CKAN Action API: `ckan_ab_*`, 7 tools. Dataset, organization, resource, license, and tag responses were verified against live responses; the portal does not expose useful groups in the tested catalogue. |
-| Manitoba | Not CKAN | geoportal.gov.mb.ca — Data MB, an ArcGIS Hub-style catalogue. Needs the planned ArcGIS Hub / ArcGIS REST adaptor, not the CKAN adaptor. |
-| Saskatchewan | Not CKAN | geohub.saskatchewan.ca — Saskatchewan GeoHub, an ArcGIS Hub-style catalogue. Needs the planned ArcGIS Hub / ArcGIS REST adaptor, not the CKAN adaptor. |
+| Manitoba | Shipped | geoportal.gov.mb.ca (Data MB), ArcGIS Hub: `arcgis_mb_*`, 3 tools (dataset search, item detail with download links, direct FeatureServer/MapServer row queries). Content is bilingual within each field (not split by language) — `lang` is a documented no-op. Verified against live Hub Search API v3, ArcGIS REST query, and `/api/download/v1` responses. |
+| Saskatchewan | Shipped | geohub.saskatchewan.ca (Saskatchewan GeoHub), ArcGIS Hub: `arcgis_sk_*`, 3 tools, same shape as Manitoba's. Some items' FeatureServer/MapServer services live on a government domain (`gis.saskatchewan.ca`) rather than `*.arcgis.com` — the shared client checks for `/rest/services/` in the URL, not an `arcgis.com` domain, because of this. Verified against live responses. |
 | Nova Scotia | Shipped | data.novascotia.ca, Socrata (SODA): `socrata_ns_*`, 5 tools (catalogue search, dataset detail, categories, tags, direct SoQL row queries). English-only. Verified against live discovery/Views/SODA responses. |
 | New Brunswick | Shipped | gnb.socrata.com, Socrata (SODA): `socrata_nb_*`, 5 tools (catalogue search, dataset detail, categories, tags, direct SoQL row queries). Content is bilingual within each field (English/French together) rather than split fields — `lang` is a documented no-op. GeoNB map services remain a separate, not-yet-built spatial surface. Verified against live discovery/Views/SODA responses. |
 | Newfoundland and Labrador | Not CKAN | opendata.gov.nl.ca — a custom page-based catalogue, not CKAN. Verified 2026-09-17: tabular and spatial listings use `?page-id=datasets-tabular` / `?page-id=datasets-spatial`; dataset metadata uses `?id=<dataset-id>&page-id=datasetdetails`; files are binary downloads at `/public/opendata/filedownload/?file-id=<file-id>`. The catalogue exposes useful metadata (creator, publisher, geography, time coverage, dates, rights, topics, revision, format, size) and CSV/XLS/TXT/KMZ/shapefile files, but no documented JSON search/catalogue API; `site_read` and `package_list` are not valid CKAN routes. Build a focused HTML catalogue adaptor only after contract tests for these routes and pagination/search behavior. Keep the official GeoAtlas spatial surface separate: `https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas` is a reusable ArcGIS REST target with MapServer layer queries, KML generation, and a DataExtract GPServer. Portal content observed is English-only; preserve the Open Government Licence—Newfoundland and Labrador attribution and every source/detail/download URL. |
-| Prince Edward Island | Not CKAN | data.princeedwardisland.ca — ArcGIS Hub, not Socrata (confirmed live 2026-09-18: the page loads `hubcdn.arcgis.com`, and the Socrata catalog API returns "Domain not found" for this domain). Belongs with Manitoba/Saskatchewan in the planned ArcGIS Hub / ArcGIS REST adaptor phase. |
+| Prince Edward Island | Shipped | data.princeedwardisland.ca, ArcGIS Hub: `arcgis_pe_*`, 3 tools, same shape as Manitoba's. At least one item's underlying service reports an empty `layers` list with its one queryable table at a non-zero id (2) — the default-layer-index resolution this adaptor added because of that applies here too. Verified against live responses. |
 
 ## Territorial (all 3)
 
