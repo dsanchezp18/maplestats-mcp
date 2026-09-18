@@ -10,6 +10,13 @@ async def test_api_get_decodes_json(httpx_mock):
     httpx_mock.add_response(url="https://example.invalid/ok", json={"hello": "world"})
     result = await api_get("https://example.invalid/ok")
     assert result == {"hello": "world"}
+    assert httpx_mock.get_requests()[0].headers["user-agent"] == "maple-data-mcp/0.1"
+
+
+async def test_api_get_preserves_custom_headers(httpx_mock):
+    httpx_mock.add_response(url="https://example.invalid/headers", json={"ok": True})
+    await api_get("https://example.invalid/headers", headers={"User-Agent": "custom-client"})
+    assert httpx_mock.get_requests()[0].headers["user-agent"] == "custom-client"
 
 
 async def test_api_get_retries_on_500_then_succeeds(httpx_mock):

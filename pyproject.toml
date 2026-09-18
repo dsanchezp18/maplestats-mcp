@@ -1,7 +1,7 @@
 [project]
 name = "maple-data-mcp"
 version = "0.1.0"
-description = "One MCP server for Canadian public data — starting with Statistics Canada (WDS + RDaaS)."
+description = "One MCP server for Canadian public data — Statistics Canada, the Bank of Canada, and verified CKAN portals."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"
@@ -61,3 +61,5 @@ extend-select = ["I"]
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"

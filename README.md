@@ -7,22 +7,30 @@
 
 MapleData MCP gives AI agents (Claude, Cursor, and any MCP-compatible
 client) structured, typed access to Canadian public data through a
-single server — starting with Statistics Canada, expanding across
-federal, provincial, territorial, and municipal sources.
+single server — covering Statistics Canada, the Bank of Canada, and
+verified federal, provincial, territorial, and municipal CKAN portals.
 
 See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for the project vision and
 [`ROADMAP.md`](ROADMAP.md) for source coverage status.
 
 ## Status
 
-**Currently implemented: Statistics Canada**, across its three public
-APIs:
+**Currently implemented:** Statistics Canada, the Bank of Canada, and
+CKAN catalogues for the federal government, Alberta, British Columbia,
+Ontario, Quebec, the Northwest Territories, Yukon, Montreal, and
+Toronto.
 
 | Submodule | Tools | Covers |
 |---|---|---|
 | `wds` | 16 | Web Data Service — table/cube discovery, metadata, time series |
 | `sdmx` | 4 | SDMX REST — filtered, server-side-sliced series queries |
 | `rdaas` | 12 | Reference Data as a Service — classifications, codesets, concordances (e.g. NAICS) |
+
+The Bank of Canada module provides Valet series, group, metadata, and
+observation tools. The CKAN modules provide dataset search plus dataset,
+organization, resource, license, tag, and (where used by the portal)
+group details. Portal language behavior is documented in each module;
+`lang` is a no-op on monolingual catalogues.
 
 Every tool accepts `lang: "en"|"fr"` and returns a typed response with
 a `provenance` block (source, URL, query time, freshness, limits). See
@@ -93,9 +101,9 @@ HTTPS, not just mocks):
 .\scripts\verify.ps1
 ```
 
-runs the full gate above plus [`scripts/smoke_test.py`](scripts/smoke_test.py)
-against live endpoints, and (if Docker is installed) a build + `compose up`
-+ health check.
+runs the full gate above plus the live smoke tests for StatCan, the Bank of
+Canada, and every implemented CKAN portal. If Docker is installed, it also
+runs a build, `compose up`, and health check.
 
 See [`AGENTS.md`](AGENTS.md) for the full contributor guide, including
 how to add a new source module.

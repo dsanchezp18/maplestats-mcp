@@ -43,7 +43,8 @@ Currently implemented:
   (open.canada.ca, tools prefixed ckan_), British Columbia
   (catalogue.data.gov.bc.ca, ckan_bc_), Northwest Territories
   (opendata.gov.nt.ca, ckan_nt_), Quebec (donneesquebec.ca, ckan_qc_),
-  Yukon (open.yukon.ca, ckan_yt_), City of Montreal
+  Alberta (open.alberta.ca, ckan_ab_), Ontario (data.ontario.ca,
+  ckan_on_), Yukon (open.yukon.ca, ckan_yt_), City of Montreal
   (donnees.montreal.ca, ckan_montreal_), and City of Toronto
   (open.toronto.ca, ckan_toronto_). Every portal runs the same CKAN
   Action API software, but each deployment was independently verified

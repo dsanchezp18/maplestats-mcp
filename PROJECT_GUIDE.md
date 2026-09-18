@@ -9,20 +9,30 @@ update this file from Notion rather than editing Notion from memory.
 
 | Field | Value |
 |---|---|
-| Development Stage | Planned |
+| Development Stage | Local beta / pre-hosting |
 | Priority | High |
 | Project Type | Data product |
 | Repository | `maple-data-mcp` |
 | Required Skills | Python, APIs, AI, Data engineering |
 | Target Audience | Government, Researchers |
 | Problem | Canadian public data access is fragmented across Statistics Canada, the Bank of Canada, CMHC, federal/provincial/municipal open-data portals, Census products, PUMFs and legacy dissemination formats. Build one agent-friendly access layer across them. |
-| Next Action | Fork the strongest suitable existing Canada MCP implementation and turn it into Daniel's own maintained version. Keep the project name undecided for now (superseded — see naming decision below). Once the product is complete and stable, explore distributing or featuring it through SFU Economics. |
+| Next Action | Finish release hardening for the implemented modules, keep documentation and live verification current, then host and demonstrate the local beta. Add further sources only after the next release scope is explicit. |
+
+## Current implementation status
+
+As of 2026-09-17, the repository contains live-tested modules for
+Statistics Canada, the Bank of Canada, and CKAN catalogues operated by the
+federal government, Alberta, British Columbia, Ontario, Quebec, the
+Northwest Territories, Yukon, Montreal, and Toronto. The roadmap below and
+the source-specific rows in `ROADMAP.md` remain the authority for what is
+still planned, blocked, or outside the CKAN adaptor's scope.
 
 ## Current implementation decision
 
-- **Approach:** do not build the Canada MCP from scratch. Start from the
-  strongest suitable existing implementation by creating a fork/version,
-  then adapt, simplify, extend and maintain it.
+- **Approach:** the repository has moved from implementation selection into
+  active maintenance. Keep the current typed, source-per-module architecture
+  as the base, and add or adapt coverage only after checking the real source
+  API and its live response shapes.
 - **Naming:** decided 2026-09-14. Full name **MapleData MCP**; repository
   `maple-data-mcp`. Scope is pure Canadian data/statistical analysis (math
   and numbers) — legislation and parliamentary information are explicitly
@@ -31,10 +41,9 @@ update this file from Notion rather than editing Notion from memory.
   having it featured, shared or otherwise plugged through **SFU
   Economics** — a distribution/visibility route, not an assumption of
   formal institutional ownership or endorsement.
-- **Roadmap implication:** prioritize selecting the base repository,
-  understanding its license and architecture, establishing the fork, and
-  identifying the minimum changes needed for a credible maintained release
-  before adding new source coverage.
+- **Roadmap implication:** prioritize release hardening, live verification,
+  hosting, and a clear public demonstration before expanding into the next
+  source families.
 
 ## Vision
 

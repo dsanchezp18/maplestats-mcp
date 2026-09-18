@@ -31,6 +31,18 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 _client = httpx.AsyncClient(timeout=30.0, http2=True)
+_DEFAULT_HEADERS = {"User-Agent": "maple-data-mcp/0.1"}
+
+
+def _request_headers(headers: dict[str, str] | None) -> dict[str, str]:
+    """Identify this client while preserving source-specific overrides.
+
+    Montreal's CKAN edge returns 403 to requests with no User-Agent but
+    accepts the same request once the client identifies itself. Keeping this
+    in shared HTTP plumbing fixes that portal without changing StatCan's
+    required HTTP/2 transport or repeating the header in every source client.
+    """
+    return {**_DEFAULT_HEADERS, **(headers or {})}
 
 
 def is_retryable(exc: BaseException) -> bool:
@@ -61,7 +73,9 @@ async def api_get(
     headers: dict[str, str] | None = None,
     timeout: float = 30.0,
 ) -> Any:
-    response = await _client.get(url, params=params, headers=headers, timeout=timeout)
+    response = await _client.get(
+        url, params=params, headers=_request_headers(headers), timeout=timeout
+    )
     response.raise_for_status()
     return decode_json(response, url=url)
 
@@ -92,7 +106,9 @@ async def get_raw(
     is_retryable check still fires for genuinely transient statuses
     (429/500/502/503/504).
     """
-    response = await _client.get(url, params=params, headers=headers, timeout=timeout)
+    response = await _client.get(
+        url, params=params, headers=_request_headers(headers), timeout=timeout
+    )
     if response.status_code in _PASSTHROUGH_STATUSES:
         return response
     response.raise_for_status()
@@ -112,6 +128,8 @@ async def api_post(
     headers: dict[str, str] | None = None,
     timeout: float = 30.0,
 ) -> Any:
-    response = await _client.post(url, json=json_body, headers=headers, timeout=timeout)
+    response = await _client.post(
+        url, json=json_body, headers=_request_headers(headers), timeout=timeout
+    )
     response.raise_for_status()
     return decode_json(response, url=url)

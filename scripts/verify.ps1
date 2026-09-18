@@ -51,11 +51,25 @@ $null = Invoke-Checked "pyright" "uv" @("run", "pyright")
 # 3. Unit tests (all mocked - no network required)
 $null = Invoke-Checked "pytest" "uv" @("run", "pytest")
 
-# 4. Live smoke test - the one step that actually needs real network
-#    access to statcan.gc.ca. This is the step that failed inside the
-#    sandbox that built this project (TLS handshake issue specific to
-#    that environment) and needs confirming here instead.
-$null = Invoke-Checked "live smoke test against real StatCan APIs" "uv" @("run", "python", "scripts/smoke_test.py")
+# 4. Live smoke tests - these are intentionally separate from the mocked
+#    unit tests because portal deployments differ in fields, language, and
+#    anti-abuse behavior. Run every implemented source before release.
+$liveSmokeScripts = @(
+    "scripts/smoke_test.py",
+    "scripts/smoke_test_boc.py",
+    "scripts/smoke_test_ckan_federal.py",
+    "scripts/smoke_test_ckan_ab.py",
+    "scripts/smoke_test_ckan_bc.py",
+    "scripts/smoke_test_ckan_on.py",
+    "scripts/smoke_test_ckan_qc.py",
+    "scripts/smoke_test_ckan_nt.py",
+    "scripts/smoke_test_ckan_yt.py",
+    "scripts/smoke_test_ckan_montreal.py",
+    "scripts/smoke_test_ckan_toronto.py"
+)
+foreach ($smokeScript in $liveSmokeScripts) {
+    $null = Invoke-Checked "live smoke test: $smokeScript" "uv" @("run", "python", $smokeScript)
+}
 
 # 5 & 6. Docker build + compose up + health check (optional - skipped if
 #    Docker isn't installed; not tested in the sandbox that built this).

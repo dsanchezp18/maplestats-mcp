@@ -2,14 +2,18 @@
 
 Source coverage plan for MapleData MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
-any narrower or broader source list implied elsewhere. Every source below
-is currently **Not started**; none of this is built yet, fork or
-otherwise.
+any narrower or broader source list implied elsewhere.
 
-Status values: `Not started` / `In progress` / `Shipped` / `Blocked` (a
-real CKAN deployment was confirmed independently, but this environment's
-egress is currently rejected by the portal's own anti-abuse layer —
-see the Notes column for what was actually observed).
+Current implementation snapshot (2026-09-17): shipped modules cover
+Statistics Canada, the Bank of Canada, federal CKAN, Alberta, British
+Columbia, Ontario, Quebec, the Northwest Territories, Yukon, Montreal, and
+Toronto. The rows below are the source-of-truth for remaining work; each
+row has its own status.
+
+Status values: `Not started` / `In progress` / `Shipped` / `Blocked`.
+A source is marked `Shipped` only after its implemented functions and
+important portal-specific behavior have been checked against live responses;
+the Notes column records limits or remaining portal-specific work.
 
 ## Federal
 
@@ -29,10 +33,10 @@ seen in benchmark research are explicitly excluded).
 
 | Province | Status | Portal (reference) |
 |---|---|---|
-| Ontario | Blocked | data.ontario.ca — real CKAN (widely documented), but every request from this build environment, including a bare `robots.txt` fetch with the project's normal HTTP client, hit an Azure Front Door WAF 429 ("this activity has been identified as suspicious") that did not clear after an 80s wait. Retry from a different network, or once unblocked. |
+| Ontario | Shipped | data.ontario.ca, CKAN Action API: `ckan_on_*`, 8 tools. Bilingual dataset fields, tags, groups, organizations, and resources were verified against live responses. |
 | British Columbia | Shipped | catalogue.data.gov.bc.ca, CKAN Action API: `ckan_bc_*`, 9 tools (search, dataset/org/resource/license detail, tags, groups). English-only. BC Geographic Warehouse (WFS) is a separate, not-yet-built source. |
 | Quebec | Shipped | donneesquebec.ca (API at `/recherche/api/3/action/`), CKAN Action API: `ckan_qc_*`, 8 tools. French-only — `lang` is a documented no-op. |
-| Alberta | Blocked | open.alberta.ca — real CKAN (public `ckanext-open_alberta` extension, ~33K datasets per its own docs), but every request from this build environment, including the bare homepage and `robots.txt`, hit a site-wide Cloudflare Managed Challenge (JS challenge page), not a narrow rule. Retry from a different network, or once unblocked. |
+| Alberta | Shipped | open.alberta.ca, CKAN Action API: `ckan_ab_*`, 7 tools. Dataset, organization, resource, license, and tag responses were verified against live responses; the portal does not expose useful groups in the tested catalogue. |
 | Manitoba | Not CKAN | geoportal.gov.mb.ca — ArcGIS Hub ("Data MB"), not CKAN. Needs a separate ArcGIS Hub adaptor, out of scope for the CKAN adaptor. |
 | Saskatchewan | Not CKAN | geohub.saskatchewan.ca — ArcGIS Hub, not CKAN. |
 | Nova Scotia | Not CKAN | data.novascotia.ca — Socrata, not CKAN. |
