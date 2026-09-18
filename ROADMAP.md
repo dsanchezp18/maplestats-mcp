@@ -13,7 +13,10 @@ row has its own status.
 Status values: `Not started` / `In progress` / `Shipped` / `Blocked`.
 A source is marked `Shipped` only after its implemented functions and
 important portal-specific behavior have been checked against live responses;
-the Notes column records limits or remaining portal-specific work.
+the Notes column records limits or remaining portal-specific work. `Not CKAN`
+is retained only where it communicates an intentional platform boundary: the
+portal is identified, but it needs a different adaptor rather than the CKAN
+adaptor.
 
 ## Federal
 
@@ -31,18 +34,32 @@ seen in benchmark research are explicitly excluded).
 
 ## Provincial (all 10)
 
+### Next provincial sequence
+
+The four CKAN provinces are now shipped. The next provincial work should be
+adaptor-first so one implementation unlocks several provinces:
+
+| Sequence | Adaptor | Provincial coverage | Reason |
+|---|---|---|---|
+| 1 | Socrata | Nova Scotia, New Brunswick, Prince Edward Island | Three provincial catalogues share the Socrata platform, and the same adaptor would also unlock Calgary, Edmonton, and Winnipeg. Start with catalogue search, dataset metadata, resource downloads, and the Socrata query API. |
+| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan | Both provincial portals are GeoHub-style ArcGIS catalogues. Support catalogue discovery, item metadata, FeatureServer/MapServer layers, and direct downloads. This also creates a path for many municipal and specialized geographic portals. |
+| 3 | Newfoundland and Labrador custom portal | Newfoundland and Labrador | The provincial open-data catalogue has its own page-based interface and downloadable tabular/spatial files. Map its live endpoints separately after the two reusable adaptors are working; do not force it into CKAN or Socrata. |
+
+This makes **Socrata the next provincial implementation**. It gives the
+largest immediate provincial payoff for the smallest new adaptor surface.
+
 | Province | Status | Portal (reference) |
 |---|---|---|
 | Ontario | Shipped | data.ontario.ca, CKAN Action API: `ckan_on_*`, 8 tools. Bilingual dataset fields, tags, groups, organizations, and resources were verified against live responses. |
 | British Columbia | Shipped | catalogue.data.gov.bc.ca, CKAN Action API: `ckan_bc_*`, 9 tools (search, dataset/org/resource/license detail, tags, groups). English-only. BC Geographic Warehouse (WFS) is a separate, not-yet-built source. |
 | Quebec | Shipped | donneesquebec.ca (API at `/recherche/api/3/action/`), CKAN Action API: `ckan_qc_*`, 8 tools. French-only — `lang` is a documented no-op. |
 | Alberta | Shipped | open.alberta.ca, CKAN Action API: `ckan_ab_*`, 7 tools. Dataset, organization, resource, license, and tag responses were verified against live responses; the portal does not expose useful groups in the tested catalogue. |
-| Manitoba | Not CKAN | geoportal.gov.mb.ca — ArcGIS Hub ("Data MB"), not CKAN. Needs a separate ArcGIS Hub adaptor, out of scope for the CKAN adaptor. |
-| Saskatchewan | Not CKAN | geohub.saskatchewan.ca — ArcGIS Hub, not CKAN. |
-| Nova Scotia | Not CKAN | data.novascotia.ca — Socrata, not CKAN. |
-| New Brunswick | Not CKAN | gnb.socrata.com — Socrata, not CKAN. GeoNB and a federal-CKAN subset remain separate, not-yet-built sources. |
-| Newfoundland and Labrador | Not CKAN | opendata.gov.nl.ca — a custom platform (`?page-id=` URL scheme; both `site_read` and `package_list` 404), not CKAN. |
-| Prince Edward Island | Not CKAN | data.princeedwardisland.ca — ArcGIS Online/Hub, not CKAN. |
+| Manitoba | Not CKAN | geoportal.gov.mb.ca — Data MB, an ArcGIS Hub-style catalogue. Needs the planned ArcGIS Hub / ArcGIS REST adaptor, not the CKAN adaptor. |
+| Saskatchewan | Not CKAN | geohub.saskatchewan.ca — Saskatchewan GeoHub, an ArcGIS Hub-style catalogue. Needs the planned ArcGIS Hub / ArcGIS REST adaptor, not the CKAN adaptor. |
+| Nova Scotia | Not CKAN | data.novascotia.ca — Socrata catalogue with API/OData access. First target for the planned Socrata adaptor. |
+| New Brunswick | Not CKAN | gnb.socrata.com — Socrata catalogue with bilingual datasets. First-wave Socrata target; GeoNB map services and downloads remain a separate spatial surface. |
+| Newfoundland and Labrador | Not CKAN | opendata.gov.nl.ca — a custom page-based catalogue, not CKAN. Verified 2026-09-17: tabular and spatial listings use `?page-id=datasets-tabular` / `?page-id=datasets-spatial`; dataset metadata uses `?id=<dataset-id>&page-id=datasetdetails`; files are binary downloads at `/public/opendata/filedownload/?file-id=<file-id>`. The catalogue exposes useful metadata (creator, publisher, geography, time coverage, dates, rights, topics, revision, format, size) and CSV/XLS/TXT/KMZ/shapefile files, but no documented JSON search/catalogue API; `site_read` and `package_list` are not valid CKAN routes. Build a focused HTML catalogue adaptor only after contract tests for these routes and pagination/search behavior. Keep the official GeoAtlas spatial surface separate: `https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas` is a reusable ArcGIS REST target with MapServer layer queries, KML generation, and a DataExtract GPServer. Portal content observed is English-only; preserve the Open Government Licence—Newfoundland and Labrador attribution and every source/detail/download URL. |
+| Prince Edward Island | Not CKAN | data.princeedwardisland.ca — Socrata catalogue, not ArcGIS. First-wave Socrata target. |
 
 ## Territorial (all 3)
 
