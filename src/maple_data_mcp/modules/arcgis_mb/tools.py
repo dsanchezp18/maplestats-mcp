@@ -32,7 +32,7 @@ async def arcgis_mb_search_datasets(
     free-text query. Keywords: Manitoba, Data MB, geoportal, ArcGIS
     Hub, open data, dataset search, catalogue, government, province,
     GIS, geospatial.
-    Mots-clés : Manitoba, Data MB, géoportail, centre ArcGIS Hub,
+    Mots-clés : Manitoba, Data MB, géoportail, ArcGIS Hub,
     données ouvertes, recherche de jeux de données, catalogue,
     gouvernement, province, SIG, géospatial.
     """

@@ -33,7 +33,7 @@ async def arcgis_surrey_search_datasets(
     Hub, open data, dataset search, catalogue, government, municipal,
     GIS, geospatial.
     Mots-clés : Surrey, Colombie-Britannique, City of Surrey Open
-    Data Catalog, centre ArcGIS Hub, données ouvertes, recherche de
+    Data Catalog, ArcGIS Hub, données ouvertes, recherche de
     jeux de données, catalogue, gouvernement, municipal, SIG,
     géospatial.
     """

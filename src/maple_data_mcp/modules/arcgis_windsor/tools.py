@@ -32,7 +32,7 @@ async def arcgis_windsor_search_datasets(
     free-text query. Keywords: Windsor, Windsor Open Data Portal, ArcGIS
     Hub, open data, dataset search, catalogue, government, municipal,
     GIS, geospatial.
-    Mots-clés : Windsor, Windsor Open Data Portal, centre ArcGIS Hub,
+    Mots-clés : Windsor, Windsor Open Data Portal, ArcGIS Hub,
     données ouvertes, recherche de jeux de données, catalogue,
     gouvernement, municipal, SIG, géospatial.
     """

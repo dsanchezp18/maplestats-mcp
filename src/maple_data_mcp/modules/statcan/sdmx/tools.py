@@ -44,7 +44,7 @@ async def sdmx_get_key_for_dimension(
     this dimension's position before calling sdmx_get_data.
     Keywords: statcan, sdmx, wildcard, or key, large dimension, leaf
     codes, sparse sample, geography, occupation.
-    Mots-clés: statcan, sdmx, caractère générique, clé or, grande
+    Mots-clés: statcan, sdmx, caractère générique, clé OR, grande
     dimension, codes terminaux, échantillon partiel, géographie,
     profession.
     """

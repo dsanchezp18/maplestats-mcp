@@ -35,7 +35,7 @@ async def arcgis_kitchener_search_datasets(
     free-text query. Keywords: Kitchener, Kitchener GeoHub, ArcGIS
     Hub, open data, dataset search, catalogue, government, municipal,
     GIS, geospatial.
-    Mots-clés : Kitchener, Kitchener GeoHub, centre ArcGIS Hub, données
+    Mots-clés : Kitchener, Kitchener GeoHub, ArcGIS Hub, données
     ouvertes, recherche de jeux de données, catalogue, gouvernement,
     municipal, SIG, géospatial.
     """

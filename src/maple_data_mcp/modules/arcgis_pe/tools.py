@@ -33,7 +33,7 @@ async def arcgis_pe_search_datasets(
     Hub, open data, dataset search, catalogue, government, province,
     GIS, geospatial.
     Mots-clés : Île-du-Prince-Édouard, PEI Open Data Portal,
-    géoportail, centre ArcGIS Hub, données ouvertes, recherche de
+    géoportail, ArcGIS Hub, données ouvertes, recherche de
     jeux de données, catalogue, gouvernement, province, SIG,
     géospatial.
     """

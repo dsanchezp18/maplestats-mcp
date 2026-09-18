@@ -35,7 +35,7 @@ async def arcgis_hamilton_search_datasets(
     free-text query. Keywords: Hamilton, Open Hamilton, ArcGIS
     Hub, open data, dataset search, catalogue, government, municipal,
     GIS, geospatial.
-    Mots-clés : Hamilton, Open Hamilton, centre ArcGIS Hub, données
+    Mots-clés : Hamilton, Open Hamilton, ArcGIS Hub, données
     ouvertes, recherche de jeux de données, catalogue, gouvernement,
     municipal, SIG, géospatial.
     """

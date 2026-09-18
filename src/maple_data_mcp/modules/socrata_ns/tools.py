@@ -51,7 +51,7 @@ async def socrata_ns_get_dataset(dataset_id: str, lang: Lang = "en") -> DatasetD
     detail, columns, metadata, licence, publisher, download, CSV, views.
     Mots-clés: Nouvelle-Écosse, Socrata, détail du jeu de données,
     colonnes, métadonnées, licence, éditeur, téléchargement, CSV,
-    consultations.
+    vues.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -75,7 +75,8 @@ async def socrata_ns_query_dataset_rows(
     dataset. Keywords: Nova Scotia, Socrata, SODA, SoQL, rows, query,
     filter, data, select, where, order, resource API.
     Mots-clés: Nouvelle-Écosse, Socrata, SODA, SoQL, lignes, requête,
-    filtrer, données, sélection, tri, recherche dans les données, API.
+    filtrer, données, sélection, tri, recherche dans les données,
+    Resource API.
     """
     return await client.query_dataset_rows(
         dataset_id,
