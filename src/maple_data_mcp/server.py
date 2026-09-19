@@ -108,6 +108,30 @@ Currently implemented:
   ckan_search_datasets(fq="organization:ircc") on the federal CKAN
   module above.
 
+- Environment and Climate Change Canada / Meteorological Service of
+  Canada (MSC GeoMet-OGC-API, api.weather.gc.ca, tools prefixed
+  eccc_): weather alerts, current surface observations (SWOB), city
+  forecasts, air quality health index (AQHI), climate stations/daily/
+  hourly/monthly observations and 1981-2010 normals, hydrometric water
+  level/flow, marine forecasts, and long-term climate extremes. This
+  server publishes ~100 OGC API - Features collections with genuinely
+  different property schemas per collection (confirmed live); rather
+  than a bespoke tool per dataset, eccc_query_items works generically
+  against any collection_id, with eccc_search_collections/
+  eccc_get_collection for discovering one and its queryable property
+  names first. Two real quirks to know before calling it: an unknown
+  property filter is silently ignored upstream and returns zero rows
+  instead of an error (eccc_query_items checks filter/sortby/field
+  names against the collection's own queryables first and raises a
+  clear error instead), and datetime filtering support is genuinely
+  inconsistent per collection and not predictable from its metadata
+  (works on hydrometric-realtime, fails with HTTP 500 on
+  weather-alerts). Read docs://eccc/well-known-collections and
+  docs://eccc/gotchas before relying on either. eccc_ tools accept
+  lang for interface consistency, but it has no effect: MSC GeoMet has
+  no language query parameter at all — bilingual content is already
+  split into separate _en/_fr suffixed properties within one response.
+
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose
 upstream APIs are genuinely single-language per request. WDS and SDMX

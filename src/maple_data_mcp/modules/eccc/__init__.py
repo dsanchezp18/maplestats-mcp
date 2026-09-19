@@ -1,0 +1,25 @@
+MODULE_NAME = "eccc"
+MODULE_DESCRIPTION = (
+    "Environment and Climate Change Canada / Meteorological Service of "
+    "Canada, via the MSC GeoMet-OGC-API (api.weather.gc.ca): weather "
+    "alerts, current conditions and surface observations (SWOB), city "
+    "forecasts, air quality health index (AQHI), climate stations/daily/"
+    "hourly/monthly observations and 1981-2010 normals, hydrometric "
+    "(water level/flow) stations and real-time/historical data, marine "
+    "forecasts, and long-term climate extremes. One generic OGC API - "
+    "Features client covers all ~100 collections this server publishes "
+    "rather than a bespoke tool per dataset."
+)
+MODULE_DESCRIPTION_FR = (
+    "Environnement et Changement climatique Canada / Service "
+    "météorologique du Canada, via l'API GeoMet-OGC du SMC "
+    "(api.weather.gc.ca) : alertes météorologiques, conditions actuelles "
+    "et observations de surface (SWOB), prévisions par ville, cote air "
+    "santé (AQHI), stations climatiques et observations quotidiennes/"
+    "horaires/mensuelles et normales 1981-2010, stations hydrométriques "
+    "(niveau/débit d'eau) et données en temps réel/historiques, "
+    "prévisions maritimes, et extrêmes climatiques à long terme. Un "
+    "client générique de type API OGC - Entités couvre la centaine de "
+    "collections publiées par ce serveur plutôt qu'un outil distinct par "
+    "jeu de données."
+)

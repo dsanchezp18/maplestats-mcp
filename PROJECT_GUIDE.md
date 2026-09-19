@@ -20,12 +20,13 @@ update this file from Notion rather than editing Notion from memory.
 
 ## Current implementation status
 
-As of 2026-09-17, the repository contains live-tested modules for
-Statistics Canada, the Bank of Canada, and CKAN catalogues operated by the
-federal government, Alberta, British Columbia, Ontario, Quebec, the
-Northwest Territories, Yukon, Montreal, and Toronto. The roadmap below and
-the source-specific rows in `ROADMAP.md` remain the authority for what is
-still planned, blocked, or outside the CKAN adaptor's scope.
+As of 2026-09-19, the repository contains live-tested modules for
+Statistics Canada, the Bank of Canada, Environment and Climate Change
+Canada / MSC GeoMet, and CKAN/ArcGIS/Socrata/custom catalogues operated by
+the federal government and every province, the territories, and a growing
+list of municipalities. The roadmap below and the source-specific rows in
+`ROADMAP.md` remain the authority for what is still planned, blocked, or
+outside a given adaptor's scope.
 
 ## Current implementation decision
 
