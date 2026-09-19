@@ -170,7 +170,20 @@ Currently implemented:
   CMA/city-level discovery endpoint was found. Read
   docs://cmhc/well-known-categories and docs://cmhc/gotchas before
   relying on the suppressed-value markers ("**"/"++") or the
-  reliability-flag legend.
+  reliability-flag legend. A second, unrelated CMHC platform is also
+  covered: the "Data Tables" document catalogue (www.cmhc-schl.gc.ca,
+  a Sitecore site, tools prefixed cmhc_dt_) — official per-edition
+  Excel publications for Rental Market Survey and Household
+  Characteristics tables (Canadian Housing Survey tables are not yet
+  mapped). cmhc_dt_list_tables/cmhc_dt_get_table discover a category's
+  tables and their geography/edition options (Sitecore GUIDs, a
+  completely different id scheme from HMIP's small integers);
+  cmhc_dt_get_download_url resolves any of those combinations to a
+  direct download link through the site's own resolver API
+  (api/Sitecore/PubsAndReports/GetFileDetails, found via live network-
+  request inspection, not documentation) rather than guessing at a
+  filename pattern — confirmed live that guessing fails for at least
+  one older edition whose filename omits a suffix later editions have.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose

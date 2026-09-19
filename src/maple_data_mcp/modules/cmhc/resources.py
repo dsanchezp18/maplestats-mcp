@@ -71,8 +71,15 @@ cmhc_get_table_data.
 """
 
 _GOTCHAS_DOC = """\
-# Known CMHC HMIP quirks
+# Known CMHC quirks
 
+- **This module covers two unrelated CMHC platforms.** `cmhc_*` tools
+  query HMIP (www03.cmhc-schl.gc.ca) for live time-series/cross-tab
+  data; `cmhc_dt_*` tools query the separate "Data Tables" document
+  catalogue (www.cmhc-schl.gc.ca) for official per-edition Excel
+  publications. They have different geography/edition id schemes
+  (HMIP: small integers; Data Tables: Sitecore GUIDs like
+  `{9EE6E91C-...}`) and an id from one is never valid on the other.
 - **A category/geography/field combination that does not exist returns
   HTTP 500 with an ASP.NET error page**, not a clean 404 - confirmed
   live. cmhc_get_table_options and cmhc_get_table_data raise a typed
@@ -107,6 +114,17 @@ _GOTCHAS_DOC = """\
   around whatever was passed in, rather than the full set of valid
   options, so this module deliberately queries the bare category to get
   everything at once.
+- **`cmhc_dt_*` (Data Tables): the most recent edition is always the
+  first `<option>`, not one marked "selected"** - confirmed live, so
+  omitting `edition_id`/`geography_id` in cmhc_dt_get_download_url
+  picks the first entry from cmhc_dt_get_table's `editions`/
+  `geographies` lists. Older editions' filenames are not always
+  reliably guessable from the current pattern (a 2021 file omitted the
+  language suffix a 2022/2023 file had) - always resolve through
+  cmhc_dt_get_download_url rather than constructing a URL by hand.
+  `category="canadian-housing-survey-data-tables"` currently returns no
+  tables from cmhc_dt_list_tables - its tables live elsewhere on the
+  site and are not yet mapped.
 """
 
 
