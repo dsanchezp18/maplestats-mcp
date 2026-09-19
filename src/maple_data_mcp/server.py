@@ -88,6 +88,11 @@ Currently implemented:
   thematic groups (tools prefixed ckan_regina_). Unlike ckan_bc, this
   deployment's group_list is public with no authentication workaround
   needed. English-only.
+- Newfoundland and Labrador Open Data (opendata.gov.nl.ca), a custom
+  page-based catalogue rather than CKAN: local search/pagination over
+  tabular and spatial listings, topic tags, and dataset metadata with
+  official file download links (tools prefixed nl_opendata_). The portal
+  is English-only and has no documented JSON catalogue API.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose

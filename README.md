@@ -53,7 +53,7 @@ unilingue.*
 **Currently implemented:** Statistics Canada, the Bank of Canada, and
 CKAN catalogues for the federal government, Alberta, British Columbia,
 Ontario, Quebec, the Northwest Territories, Yukon, Montreal, and
-Toronto.
+Toronto, plus the custom HTML catalogue for Newfoundland and Labrador.
 
 | Submodule | Tools | Covers |
 |---|---|---|
@@ -65,7 +65,10 @@ The Bank of Canada module provides Valet series, group, metadata, and
 observation tools. The CKAN modules provide dataset search plus dataset,
 organization, resource, license, tag, and (where used by the portal)
 group details. Portal language behavior is documented in each module;
-`lang` is a no-op on monolingual catalogues.
+`lang` is a no-op on monolingual catalogues. The Newfoundland and Labrador
+module uses the portal's public HTML listing/detail pages because no
+documented JSON catalogue API is available; it returns official file links
+without downloading binary files into MCP responses.
 
 Every tool accepts `lang: "en"|"fr"` and returns a typed response with
 a `provenance` block (source, URL, query time, freshness, limits). See
