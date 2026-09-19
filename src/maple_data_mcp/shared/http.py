@@ -121,6 +121,32 @@ async def get_raw(
     wait=wait_exponential(multiplier=1, min=1, max=10),
     reraise=True,
 )
+async def post_form_raw(
+    url: str,
+    *,
+    data: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    timeout: float = 30.0,
+) -> httpx.Response:
+    """POST form-encoded data without JSON-decoding the response.
+
+    For an endpoint whose response is a non-JSON file download (e.g. a
+    CSV export) rather than a JSON API result — `api_post` always
+    JSON-decodes and always sends a JSON body, neither of which fits.
+    """
+    response = await _client.post(
+        url, data=data, headers=_request_headers(headers), timeout=timeout
+    )
+    response.raise_for_status()
+    return response
+
+
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    reraise=True,
+)
 async def api_post(
     url: str,
     *,

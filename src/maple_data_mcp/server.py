@@ -147,6 +147,31 @@ Currently implemented:
   no language query parameter at all — bilingual content is already
   split into separate _en/_fr suffixed properties within one response.
 
+- Canada Mortgage and Housing Corporation (CMHC), via the Housing
+  Market Information Portal (HMIP, www03.cmhc-schl.gc.ca/hmip-pimh,
+  tools prefixed cmhc_): Rental Market Survey vacancy rates and rents,
+  new housing construction (starts/completions), secondary rental
+  market, seniors' rental housing, and population/household/core-
+  housing-need indicators, for Canada and by province, as a historical
+  time series or a current cross-tabulation. This is a legacy ASP.NET
+  MVC/Kendo UI portal with no JSON API and no hardcoded table
+  catalogue here: cmhc_list_categories/cmhc_get_table_options discover
+  categories and their valid breakdowns live from HMIP's own
+  navigation, cmhc_get_table_data resolves those into a concrete
+  TableId from an embedded JSON blob and fetches the actual numbers
+  through HMIP's own official CSV export (confirmed live end-to-end,
+  including its cp1252/Windows-1252 encoding — not UTF-8 and not
+  strict latin-1, confirmed against a real em-dash byte). Unlike most
+  tools here, lang genuinely changes behaviour: category names are
+  different strings per language (confirmed: "Primary Rental Market"
+  vs "Marché locatif primaire"), not just surrounding prose, so a
+  category name from one language cannot be passed with the other.
+  Only Canada and province-level geography are covered — no live
+  CMA/city-level discovery endpoint was found. Read
+  docs://cmhc/well-known-categories and docs://cmhc/gotchas before
+  relying on the suppressed-value markers ("**"/"++") or the
+  reliability-flag legend.
+
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose
 upstream APIs are genuinely single-language per request. WDS and SDMX

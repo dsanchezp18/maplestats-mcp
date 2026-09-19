@@ -1,0 +1,28 @@
+MODULE_NAME = "cmhc"
+MODULE_DESCRIPTION = (
+    "Canada Mortgage and Housing Corporation (CMHC), via the Housing "
+    "Market Information Portal (HMIP, www03.cmhc-schl.gc.ca/hmip-pimh): "
+    "rental market survey vacancy rates and rents, new housing "
+    "construction (starts/completions), secondary rental market, "
+    "seniors' rental housing, and population/household/core-housing-"
+    "need indicators, for Canada and by province, as historical time "
+    "series or a current cross-tabulation. No hardcoded table catalogue "
+    "-- categories and their valid breakdowns are discovered live from "
+    "HMIP's own navigation, and each table's data is fetched through "
+    "its official CSV export."
+)
+MODULE_DESCRIPTION_FR = (
+    "Société canadienne d'hypothèques et de logement (SCHL), via le "
+    "Portail d'information sur le marché du logement (PIMH, "
+    "www03.cmhc-schl.gc.ca/hmip-pimh) : taux d'inoccupation et loyers de "
+    "l'Enquête sur les logements locatifs, mises en chantier et "
+    "achèvements de nouveaux logements, marché locatif secondaire, "
+    "logements locatifs pour personnes âgées, et indicateurs sur la "
+    "population, les ménages et les besoins impérieux en matière de "
+    "logement, pour le Canada et par province, sous forme de série "
+    "chronologique ou de tableau croisé actuel. Aucun catalogue de "
+    "tableaux codé en dur -- les catégories et leurs répartitions "
+    "valides sont découvertes en direct à partir de la navigation du "
+    "PIMH, et les données de chaque tableau sont récupérées via son "
+    "export CSV officiel."
+)

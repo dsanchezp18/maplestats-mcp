@@ -22,11 +22,11 @@ update this file from Notion rather than editing Notion from memory.
 
 As of 2026-09-19, the repository contains live-tested modules for
 Statistics Canada, the Bank of Canada, Environment and Climate Change
-Canada / MSC GeoMet, and CKAN/ArcGIS/Socrata/custom catalogues operated by
-the federal government and every province, the territories, and a growing
-list of municipalities. The roadmap below and the source-specific rows in
-`ROADMAP.md` remain the authority for what is still planned, blocked, or
-outside a given adaptor's scope.
+Canada / MSC GeoMet, CMHC, and CKAN/ArcGIS/Socrata/custom catalogues
+operated by the federal government and every province, the territories,
+and a growing list of municipalities. The roadmap below and the
+source-specific rows in `ROADMAP.md` remain the authority for what is
+still planned, blocked, or outside a given adaptor's scope.
 
 ## Current implementation decision
 

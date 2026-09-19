@@ -6,8 +6,8 @@ any narrower or broader source list implied elsewhere.
 
 Current implementation snapshot (2026-09-19): shipped modules cover
 Statistics Canada, the Bank of Canada, federal CKAN, IRCC Express Entry,
-Environment and Climate Change Canada / MSC GeoMet, Alberta, British
-Columbia, Ontario, Quebec, Nova Scotia, New Brunswick,
+Environment and Climate Change Canada / MSC GeoMet, CMHC, Alberta,
+British Columbia, Ontario, Quebec, Nova Scotia, New Brunswick,
 Manitoba, Saskatchewan, Prince Edward Island, Newfoundland and Labrador,
 the Northwest Territories, Yukon, Montreal, Toronto, Regina, Hamilton,
 London, Kitchener, Windsor, Saskatoon, Victoria, Surrey, Calgary,
@@ -138,7 +138,7 @@ CKAN/portal coverage — each needs its own adaptor design.
 | Agency / source | Status | Notes |
 |---|---|---|
 | Census (StatCan Census Program / Census Profile) | Not started | Distinct from generic StatCan table access — needs its own discovery layer (geography, profile variables, PUMFs). |
-| CMHC | Not started | Housing and rental-market data. No verified dedicated MCP exists yet for this — a genuine greenfield build. Investigate existing community access patterns for CMHC data as a reference. |
+| CMHC | Shipped | Housing Market Information Portal (HMIP, www03.cmhc-schl.gc.ca/hmip-pimh), a legacy ASP.NET MVC/Kendo UI portal with no JSON API: `cmhc_*`, 4 tools (list categories, get table options, list provinces, get table data) covering Rental Market Survey vacancy rates/rents, new housing starts/completions, secondary rental market, seniors' rental housing, and population/core-housing-need indicators, for Canada and by province, as a time series or current cross-tab. No hardcoded table catalogue — categories and their valid breakdowns are discovered live from HMIP's own navigation, and each table's `TableId` is resolved live from an embedded JSON blob rather than a hand-built lookup (an improvement over the reference `mountainMath/cmhc` R package, read as the "existing community access pattern" this row asked to investigate, which hardcodes its entire table registry by hand). Verified live 2026-09-19: an unresolvable category/geography/TableId returns HTTP 500 with an ASP.NET error page, not a clean 404; the CSV export is cp1252 (Windows-1252) encoded, not UTF-8 or strict latin-1 (confirmed against a real em-dash byte, correcting the reference package's own "latin1" comment); a cell can hold a suppressed ("**") or not-applicable ("++") marker instead of a number; `lang` genuinely changes category names (not just prose) since HMIP's `/en/`/`/fr/` categories are different strings per language; only Canada/province-level geography is covered — no live CMA/city-level discovery endpoint was found despite several attempts. The separate `www.cmhc-schl.gc.ca` "Data Tables" Sitecore document catalogue (static per-edition Excel publications) is a different system, out of scope here. |
 | CRTC | Not started | Telecommunications/broadcasting market data: plan prices, subscribers, revenues, broadband, competition indicators. |
 | CER (Canada Energy Regulator) | Not started | Oil, gas, NGL/LNG, pipeline, energy trade/export/price/infrastructure data. |
 | CRA (Canada Revenue Agency) | Not started | T1/T2 tax statistics, tax-filer aggregates, benefits, charities, other administrative tax datasets. |
