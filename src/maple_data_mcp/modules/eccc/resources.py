@@ -64,8 +64,11 @@ property list) or eccc_query_items (to fetch rows).
   coordinates (see docs://eccc/gotchas).
 - `climate-normals` - 1981-2010 climate normals by `STN_ID`/
   `CLIMATE_IDENTIFIER` and `MONTH` (1-12; look for `PERIOD == "NORM"`),
-  one row per normal element (`E_NORMAL_ELEMENT_NAME`, e.g. "Mean daily
-  temperature deg C") with its `VALUE`.
+  one row per normal element (`E_NORMAL_ELEMENT_NAME`/
+  `F_NORMAL_ELEMENT_NAME`, e.g. "Mean daily temperature deg C") with
+  its `VALUE`. The element name's English/French pair is the only
+  bilingual fields on this collection (confirmed live: the rest,
+  including `STATION_NAME`, are English-only).
 - `climate-daily`, `climate-hourly`, `climate-monthly` - historical
   station observations at each frequency, filterable by
   `CLIMATE_IDENTIFIER` or `STN_ID`. These are large collections -
@@ -74,6 +77,25 @@ property list) or eccc_query_items (to fetch rows).
 - `ltce-temperature`, `ltce-precipitation`, `ltce-snowfall`,
   `ltce-stations` - Long Term City Extremes: daily record highs/lows
   for major cities' "virtual" climate stations.
+
+## AHCCD (Adjusted and Homogenized Canadian Climate Data)
+
+Long-term, quality-adjusted climate records distinct from the raw
+`climate-*` collections above - confirmed live to use a genuinely
+different field-naming and missing-value convention from every other
+collection covered here (see docs://eccc/gotchas).
+
+- `ahccd-stations` - station inventory (`station_id__id_station`,
+  `station_name__nom_station`, `province__province`,
+  `measurement_type__type_mesure`: e.g. "snow", `start_date__date_debut`/
+  `end_date__date_fin`).
+- `ahccd-annual`, `ahccd-monthly`, `ahccd-seasonal` - homogenized
+  temperature/precipitation/pressure/wind series at each frequency, by
+  `station_id__id_station` and `year__annee` (monthly/seasonal also add
+  `date`/`period_value__valeur_periode`, e.g. "Sep"/"Fal").
+- `ahccd-trends` - precomputed long-term trend values
+  (`trend_value__valeur_tendance`) by station, period, and
+  `measurement_type__type_mesure`.
 
 ## Hydrology (water level / flow)
 
@@ -136,12 +158,29 @@ _GOTCHAS_DOC = """\
   confirmed live. The feature's own GeoJSON `geometry` field already
   carries correct decimal coordinates; prefer that over the raw
   properties for anything needing real lon/lat.
-- **No language query parameter exists.** Bilingual content is always
-  returned as separate `_en`/`_fr` suffixed properties within the same
-  response (e.g. `alert_text_en`/`alert_text_fr`), never toggled by a
-  request parameter - every eccc_ tool's `lang` argument is a
-  documented no-op kept for interface consistency with the rest of
-  this server.
+- **No language query parameter exists, and bilingual field naming is
+  NOT consistent across collections.** Every eccc_ tool's `lang`
+  argument is a documented no-op - bilingual content is always
+  returned as separate properties within the same response, never
+  toggled by a request parameter, but confirmed live to use at least
+  three different naming conventions depending on the collection:
+  `_en`/`_fr` suffixes (`weather-alerts`: `alert_text_en`/
+  `alert_text_fr`), `E_`/`F_` prefixes (`climate-normals`:
+  `E_NORMAL_ELEMENT_NAME`/`F_NORMAL_ELEMENT_NAME`), and a single field
+  per concept with an English and French name joined by a double
+  underscore (every `ahccd-*` collection: `station_name__nom_station`,
+  not two separate fields at all). Check a collection's own
+  `eccc_get_collection` queryables rather than assuming any one
+  pattern.
+- **`ahccd-*` collections use `-9999.9` as a missing-value sentinel for
+  at least pressure and temperature fields, inconsistently alongside a
+  genuine `null`.** Confirmed live in `ahccd-annual`: the same field
+  (`temp_mean__temp_moyenne`) held `null` for missing data in most rows
+  but `-9999.9` in at least one other row - both mean "no reading," but
+  only one is `null`-detectable. Treating `-9999.9` as a real reading
+  will silently corrupt any statistic (e.g. an average) computed over
+  an AHCCD series that includes missing periods - check for it
+  explicitly alongside `null` before using an AHCCD value.
 """
 
 
