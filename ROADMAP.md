@@ -10,10 +10,10 @@ Environment and Climate Change Canada / MSC GeoMet, Alberta, British
 Columbia, Ontario, Quebec, Nova Scotia, New Brunswick,
 Manitoba, Saskatchewan, Prince Edward Island, Newfoundland and Labrador,
 the Northwest Territories, Yukon, Montreal, Toronto, Regina, Hamilton,
-London, Kitchener, Windsor, Saskatoon, Victoria, and Surrey (Laval and
-Gatineau are covered through the existing Quebec CKAN module, not a
-dedicated one). The rows below are the source-of-truth for remaining
-work; each row has its own status.
+London, Kitchener, Windsor, Saskatoon, Victoria, Surrey, Calgary,
+Edmonton, and Winnipeg (Laval and Gatineau are covered through the
+existing Quebec CKAN module, not a dedicated one). The rows below are
+the source-of-truth for remaining work; each row has its own status.
 
 Status values: `Not started` / `In progress` / `Shipped` / `Blocked`.
 A source is marked `Shipped` only after its implemented functions and
@@ -51,7 +51,7 @@ are out of scope unless they are later promoted explicitly.
 
 | Sequence | Adaptor | Provincial coverage | Reason |
 |---|---|---|---|
-| 1 | Socrata | Nova Scotia, New Brunswick | Shipped 2026-09-18: `socrata_ns_*`/`socrata_nb_*`, verified live against `api.us.socrata.com`'s catalog API, the per-domain Views API, and the SODA row-query API for both `data.novascotia.ca` and `gnb.socrata.com`. The same adaptor also unlocks Calgary, Edmonton, and Winnipeg (all confirmed Socrata) when a municipal phase is scoped in. |
+| 1 | Socrata | Nova Scotia, New Brunswick | Shipped 2026-09-18: `socrata_ns_*`/`socrata_nb_*`, verified live against `api.us.socrata.com`'s catalog API, the per-domain Views API, and the SODA row-query API for both `data.novascotia.ca` and `gnb.socrata.com`. The same adaptor unlocked Calgary, Edmonton, and Winnipeg (all confirmed Socrata) once a municipal phase was scoped in — see the Municipal section below; shipped 2026-09-19. |
 | 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan, Prince Edward Island | Shipped 2026-09-18: `arcgis_mb_*`/`arcgis_sk_*`/`arcgis_pe_*`, verified live against all three portals' Hub Search API v3 (`/api/search/v1/collections/dataset/items`), the classic ArcGIS REST FeatureServer/MapServer query API, and the `/api/download/v1` export API. Two real quirks only found by calling every function against all three portals live (not caught by mocked tests alone): a catalogue item's `properties.url` is sometimes the bare service root and sometimes already a specific layer endpoint, and the default layer/table id to query is not always 0 — Saskatchewan services can live on a government domain (`gis.saskatchewan.ca`) rather than `*.arcgis.com`, and a PEI item's service reported its one queryable table at id 2 with an empty `layers` list. This adaptor also creates a path for many municipal and specialized geographic portals (see the Municipal section below). |
 | 3 | Newfoundland and Labrador custom portal | Newfoundland and Labrador | The provincial open-data catalogue has its own page-based interface and downloadable tabular/spatial files. Map its live endpoints separately after the two reusable adaptors are working; do not force it into CKAN or Socrata. This is now the next provincial implementation. |
 
@@ -97,10 +97,10 @@ portal is confirmed to exist and be reachable.
 | Victoria | Shipped | opendata.victoria.ca (VicMap), ArcGIS Hub: `arcgis_victoria_*`, 3 tools, same shape. English-only. |
 | Surrey | Shipped | opendata-surrey.hub.arcgis.com (City of Surrey Open Data Catalog), ArcGIS Hub: `arcgis_surrey_*`, 3 tools, same shape. English-only. The city's older CKAN-era URL, `data.surrey.ca`, now 301-redirects here — confirmed live this is a full platform migration, not a parallel CKAN portal to also cover. |
 | Vancouver | Not CKAN | opendata.vancouver.ca — Opendatasoft, not CKAN/Socrata/ArcGIS. |
-| Calgary | Not CKAN | data.calgary.ca — Socrata, not CKAN. |
-| Edmonton | Not CKAN | data.edmonton.ca — Socrata, not CKAN. |
+| Calgary | Shipped | data.calgary.ca, Socrata (SODA): `socrata_calgary_`, 5 tools, same shape as Nova Scotia/New Brunswick's. English-only. 413 datasets confirmed live. |
+| Edmonton | Shipped | data.edmonton.ca, Socrata (SODA): `socrata_edmonton_`, 5 tools, same shape. English-only. 1,421 datasets confirmed live — the largest Socrata catalogue this server covers. |
 | Ottawa | Not CKAN | open.ottawa.ca — migrated off CKAN to ArcGIS Hub (per the city's own 2023/24 announcement). |
-| Winnipeg | Not CKAN | data.winnipeg.ca — Socrata, not CKAN. |
+| Winnipeg | Shipped | data.winnipeg.ca, Socrata (SODA): `socrata_winnipeg_`, 5 tools, same shape. English-only. 235 datasets confirmed live. |
 | Halifax | Not CKAN | catalogue.open.halifax.ca does not resolve; the real portal (data-hrm.hub.arcgis.com) is ArcGIS Hub, not CKAN. |
 | Mississauga | Not CKAN | data.mississauga.ca — ArcGIS Hub, not CKAN. |
 | York Region | Not CKAN | york.ca/open-data — ArcGIS Hub, not CKAN. |
@@ -116,20 +116,19 @@ portal is confirmed to exist and be reachable.
 Shipped 2026-09-18: Hamilton, London, Kitchener, Windsor, Saskatoon,
 Victoria, and Surrey (all ArcGIS Hub), Regina (CKAN), and Laval/
 Gatineau (already covered via the shared `ckan_qc_*` Données Québec
-module, no dedicated module needed) — the major-city inventory named
-below as an open item. Vancouver, Calgary, Edmonton, Ottawa, Winnipeg,
-and the smaller municipalities/regions below remain their own rows;
-Calgary, Edmonton, and Winnipeg are confirmed Socrata and would reuse
-the existing `shared/socrata.py` adaptor if a municipal Socrata phase
-is scoped in (see the provincial sequence table above).
+module, no dedicated module needed). Shipped 2026-09-19: Calgary,
+Edmonton, and Winnipeg, reusing the existing `shared/socrata.py`
+adaptor built for Nova Scotia/New Brunswick — see their rows above.
+Vancouver, Ottawa, and the smaller municipalities/regions below remain
+their own rows, not yet shipped.
 
 Open item: every city from the original example list (Hamilton,
 London, Kitchener, Windsor, Regina, Saskatoon, Victoria, Surrey,
-Laval, Gatineau) is now shipped or covered. Inventory further major
-cities not yet checked (e.g. Quebec City, Longueuil, Burnaby,
-Richmond, Vaughan, Kelowna, Sherbrooke, Trois-Rivières, St. John's,
-Barrie, Guelph, Kingston) and add each once a real portal is
-confirmed.
+Laval, Gatineau, Calgary, Edmonton, Winnipeg) is now shipped or
+covered. Inventory further major cities not yet checked (e.g. Quebec
+City, Longueuil, Burnaby, Richmond, Vaughan, Kelowna, Sherbrooke,
+Trois-Rivières, St. John's, Barrie, Guelph, Kingston) and add each
+once a real portal is confirmed.
 
 ## Census and specialized federal agencies
 

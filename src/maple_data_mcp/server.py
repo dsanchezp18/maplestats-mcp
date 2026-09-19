@@ -83,6 +83,21 @@ Currently implemented:
   portals was confirmed live to be English-only, except Manitoba,
   Saskatchewan, and Prince Edward Island, whose content is bilingual
   within a field rather than split by language.
+- Canadian Socrata (SODA) open-data portals: Nova Scotia
+  (data.novascotia.ca, socrata_ns_), New Brunswick (gnb.socrata.com,
+  socrata_nb_), and the cities of Calgary (data.calgary.ca,
+  socrata_calgary_), Edmonton (data.edmonton.ca, socrata_edmonton_),
+  and Winnipeg (data.winnipeg.ca, socrata_winnipeg_). Every deployment
+  runs the same platform (cross-domain discovery API, per-domain Views
+  API, SODA row-query API), verified live for all five: dataset
+  search/detail, categories, tags, and — unlike this server's CKAN
+  portals, which only expose opaque downloadable resources — direct
+  SoQL row queries against a dataset's actual data. Nova Scotia,
+  Calgary, Edmonton, and Winnipeg are English-only at the dataset
+  level; New Brunswick's content is bilingual within each field
+  (English/French together) rather than split by language, so lang is
+  a documented no-op on every one of these tools, same as this
+  server's CKAN portals.
 - City of Regina Open Data (openregina.ca), CKAN Action API: search,
   dataset/organization/resource/license detail, tags, and curated
   thematic groups (tools prefixed ckan_regina_). Unlike ckan_bc, this
