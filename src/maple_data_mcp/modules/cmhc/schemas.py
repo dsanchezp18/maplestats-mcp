@@ -87,6 +87,19 @@ class TableDataRow(BaseModel):
     values: dict[str, TableCell]
 
 
+class FilterOption(BaseModel):
+    """One extra filter dimension a table can be narrowed by (e.g. season,
+    dwelling type) - confirmed live these change the actual returned
+    values, not just a display label (e.g. national rental vacancy rate
+    for "Row" dwellings differs from "Apartment"). `key` is what goes in
+    `get_table_data`'s `filters` dict; `values` are the only valid values
+    for that key."""
+
+    key: str
+    label: str | None = None
+    values: list[str]
+
+
 class TableDataResult(BaseModel):
     table_id: str
     table_name: str
@@ -101,4 +114,11 @@ class TableDataResult(BaseModel):
     notes: list[str] = Field(
         default_factory=list,
         description="CMHC's own reliability-code legend and source line from the CSV export.",
+    )
+    available_filters: list[FilterOption] = Field(
+        default_factory=list,
+        description="Extra filters this table supports - pass a subset as get_table_data's filters.",
+    )
+    applied_filters: dict[str, str] = Field(
+        default_factory=dict, description="The filters (if any) actually applied to this result."
     )

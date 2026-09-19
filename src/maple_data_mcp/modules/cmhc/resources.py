@@ -90,12 +90,26 @@ _GOTCHAS_DOC = """\
   number.** `"**"` means the value was suppressed for confidentiality
   or is not statistically reliable; `"++"` means a percent-change value
   was not statistically significant (only appears on "% Change of
-  Average Rent" tables). Both surface as `value: null` with the raw
-  marker preserved in `flag` - check for `null` before doing arithmetic
-  on a cell's value.
+  Average Rent" tables); `"n/a"` is a third, plainer not-applicable
+  marker. All three surface as `value: null` with the raw marker
+  preserved in `flag` - check for `null` before doing arithmetic on a
+  cell's value. **Separately, a bare `"-"` is a real, counted zero, not
+  a suppressed value** - it surfaces as `value: 0`, not `null`.
 - **The reliability flag legend**: `a` = Excellent, `b` = Very good,
-  `c` = Good, `d` = Poor (use with caution). Every non-suppressed value
-  carries one of these.
+  `c` = Good, `d` = Poor (use with caution). This flag is only present
+  on statistically-sampled survey tables (e.g. Rental Market Survey
+  vacancy rates/rents) - a census-style administrative table (e.g.
+  Starts and Completions Survey, which counts every issued permit
+  rather than sampling) has no flag column at all, and every cell's
+  `flag` is `null`.
+- **A table can support extra filter dimensions beyond `column_field`/
+  `row_field`** (e.g. `season`: April/October, `dwelling_type_desc_en`:
+  Row/Apartment for a Rental Market Survey table) - confirmed live
+  these genuinely change the returned values, not just relabel them.
+  Check `cmhc_get_table_data`'s own `available_filters` field (only
+  populated once you have resolved a specific table) and pass a subset
+  as `filters` on a follow-up call; an unrecognized filter key or value
+  raises a clear error instead of being silently ignored.
 - **`lang` genuinely changes category names, not just prose** - unlike
   most modules in this project (where `lang` only changes surrounding
   labels while codes/ids stay fixed), CMHC's `category_level_1`/

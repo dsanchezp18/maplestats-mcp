@@ -41,5 +41,16 @@ CACHE_TTL_TABLE_DATA_SECONDS = 6 * 60 * 60  # 6h
 # one community reference package's own code comment claims.
 CSV_ENCODING = "cp1252"
 
-# Confirmed live: value cells using these tokens are not numeric data.
-SUPPRESSED_VALUE_TOKENS = frozenset({"**", "++"})
+# Confirmed live: value cells using these tokens are not numeric data
+# (suppressed for confidentiality, not statistically reliable, or not
+# applicable) - "n/a" added after cross-checking the reference R
+# package's own parse_numeric() helper, which lists it alongside "**"/
+# "++".
+SUPPRESSED_VALUE_TOKENS = frozenset({"**", "++", "n/a"})
+
+# Confirmed live (and matching the reference R package's own
+# parse_numeric()): a bare "-" is CMHC's own notation for a real,
+# counted zero (e.g. zero housing starts in a small market that
+# period), not a missing/suppressed value - kept distinct from
+# SUPPRESSED_VALUE_TOKENS so it parses to 0.0, not None.
+NIL_VALUE_TOKENS = frozenset({"-"})

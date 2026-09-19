@@ -167,10 +167,17 @@ Currently implemented:
   vs "Marché locatif primaire"), not just surrounding prose, so a
   category name from one language cannot be passed with the other.
   Only Canada and province-level geography are covered — no live
-  CMA/city-level discovery endpoint was found. Read
+  CMA/city-level discovery endpoint was found. cmhc_get_table_data also
+  accepts an optional filters dict (e.g. {"dwelling_type_desc_en":
+  "Row"}, {"season": "April"}) for tables that support an extra
+  narrowing dimension beyond column_field/row_field — confirmed live
+  these genuinely change returned values, validated against the
+  table's own available_filters before being sent. Read
   docs://cmhc/well-known-categories and docs://cmhc/gotchas before
-  relying on the suppressed-value markers ("**"/"++") or the
-  reliability-flag legend. A second, unrelated CMHC platform is also
+  relying on the suppressed-value markers ("**"/"++"/"n/a"), the "-"
+  real-zero marker, or the reliability-flag legend (present only on
+  statistically-sampled tables, not census-style administrative ones).
+  A second, unrelated CMHC platform is also
   covered: the "Data Tables" document catalogue (www.cmhc-schl.gc.ca,
   a Sitecore site, tools prefixed cmhc_dt_) — official per-edition
   Excel publications for Rental Market Survey and Household

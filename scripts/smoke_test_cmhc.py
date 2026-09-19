@@ -73,6 +73,19 @@ async def main() -> int:
         )
         ok &= len(national.rows) > 10
         ok &= national.rows[0].period != ""
+        print(f"  available_filters: {[(f.key, f.values) for f in national.available_filters]}")
+        if national.available_filters:
+            filt = national.available_filters[0]
+            ok &= await _check(
+                f"get_table_data(filters={{{filt.key!r}: {filt.values[0]!r}}})",
+                client.get_table_data(
+                    "Primary Rental Market",
+                    "Vacancy Rate (%)",
+                    timeseries.column_field,
+                    timeseries.row_field,
+                    filters={filt.key: filt.values[0]},
+                ),
+            )
 
     if province_breakdown:
         ok &= await _check(
@@ -131,6 +144,25 @@ async def main() -> int:
     except Exception as exc:  # noqa: BLE001
         print(
             f"FAIL: list_categories(bad lang) raised {type(exc).__name__} instead of InvalidInput: {exc}"
+        )
+        ok = False
+
+    try:
+        await client.get_table_data(
+            "Primary Rental Market",
+            "Vacancy Rate (%)",
+            "2",
+            "TIMESERIES",
+            filters={"not_a_real_filter": "x"},
+        )
+        print("FAIL: get_table_data(unknown filter key) did not raise")
+        ok = False
+    except InvalidInput as exc:
+        print(f"OK: get_table_data(unknown filter key) raised InvalidInput: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"FAIL: get_table_data(unknown filter key) raised {type(exc).__name__} "
+            f"instead of InvalidInput: {exc}"
         )
         ok = False
 

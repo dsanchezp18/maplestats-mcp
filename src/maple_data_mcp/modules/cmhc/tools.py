@@ -117,6 +117,7 @@ async def cmhc_get_table_data(
     row_field: str,
     geography_type: str = "Country",
     geography_id: str = "1",
+    filters: dict[str, str] | None = None,
     lang: Lang = "en",
 ) -> TableDataResult:
     """Get CMHC housing data for a category as a table (time series or cross-tab).
@@ -130,19 +131,30 @@ async def cmhc_get_table_data(
     from cmhc_get_table_options for a current cross-tabulation (one row
     per province/centre). Each returned cell carries CMHC's own
     reliability flag (a/b/c/d = Excellent/Very good/Good/Poor) alongside
-    the value, or `value: null` with the raw marker in `flag` when data
-    was suppressed ("**") or not applicable ("++") - see
+    the value, `value: 0` for a real, counted zero (flagged "-" by
+    CMHC), or `value: null` with the raw marker in `flag` when data was
+    suppressed ("**"/"n/a") or not applicable ("++") - see
     docs://cmhc/gotchas for the full legend. `category_level_1`/
     `category_level_2`/`column_field`/`row_field` must come from
     cmhc_list_categories/cmhc_get_table_options first - an unrecognized
-    combination raises a clear error rather than guessing.
+    combination raises a clear error rather than guessing. The result's
+    `available_filters` lists extra narrowing dimensions this
+    particular table supports beyond column_field/row_field (e.g.
+    `season`: April/October, `dwelling_type_desc_en`: Row/Apartment for
+    a Rental Market Survey table) - these genuinely change the returned
+    values, not just a label; pass a subset as `filters` (e.g.
+    `{"dwelling_type_desc_en": "Row"}`) on a follow-up call to narrow
+    to just that slice. An unrecognized filter key/value raises a clear
+    error rather than being silently ignored.
     Keywords: cmhc, housing, hmip, rental market, vacancy rate, rent,
     average rent, housing starts, completions, time series, historical,
-    data, table, province, bedroom type, reliability flag.
+    data, table, province, bedroom type, reliability flag, filter,
+    dwelling type, season.
     Mots-clés: schl, logement, pimh, marché locatif, taux
     d'inoccupation, loyer, loyer moyen, mises en chantier, achèvements,
     série chronologique, historique, données, tableau, province, type
-    de chambre, indicateur de fiabilité.
+    de chambre, indicateur de fiabilité, filtre, type de logement,
+    saison.
     """
     return await client.get_table_data(
         category_level_1,
@@ -151,5 +163,6 @@ async def cmhc_get_table_data(
         row_field,
         geography_type=geography_type,
         geography_id=geography_id,
+        filters=filters,
         lang=lang,
     )

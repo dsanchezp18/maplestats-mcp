@@ -62,7 +62,25 @@ _TABLE_MATCHING_CRITERIA_HTML = (
     '<input type="hidden" id="serialized-model" data-table-model="{'
     "&quot;TableId&quot;:&quot;2.2.1&quot;,&quot;GeographyId&quot;:&quot;1&quot;,"
     "&quot;GeographyTypeId&quot;:1,&quot;TableName&quot;:&quot;Historical Vacancy "
-    "Rates by Bedroom Type&quot;,&quot;GeograghyName&quot;:&quot;Canada&quot;"
+    "Rates by Bedroom Type&quot;,&quot;GeograghyName&quot;:&quot;Canada&quot;,"
+    "&quot;AvailableFilters&quot;:[{&quot;Item1&quot;:&quot;dwelling_type_desc_en&quot;,"
+    "&quot;Item2&quot;:&quot;Dwelling Type&quot;,&quot;Item3&quot;:[&quot;Row&quot;,"
+    "&quot;Apartment&quot;]},{&quot;Item1&quot;:&quot;season&quot;,&quot;Item2&quot;:null,"
+    "&quot;Item3&quot;:[&quot;April&quot;,&quot;October&quot;]}]"
+    '}">'
+    "</body></html>"
+)
+
+# Confirmed live: a census-style administrative table (Starts and
+# Completions Survey) has NO paired quality/flag columns at all - unlike
+# the Rms vacancy-rate fixture above. Also exercises the thousands-comma
+# separator ("2,222") and the bare "-" nil-value marker.
+_TABLE_MATCHING_CRITERIA_HTML_SCSS = (
+    "<html><body>"
+    '<input type="hidden" id="serialized-model" data-table-model="{'
+    "&quot;TableId&quot;:&quot;1.1.1.3&quot;,&quot;GeographyId&quot;:&quot;1&quot;,"
+    "&quot;GeographyTypeId&quot;:1,&quot;TableName&quot;:&quot;Starts by Dwelling Type "
+    "by Centres&quot;,&quot;GeograghyName&quot;:&quot;Canada&quot;"
     '}">'
     "</body></html>"
 )
@@ -71,6 +89,16 @@ _TABLE_MATCHING_CRITERIA_HTML = (
 def _csv_bytes(text: str) -> bytes:
     return text.encode("cp1252")
 
+
+_EXPORT_CSV_SCSS = _csv_bytes(
+    "— Starts by Dwelling Type by Centres\n"
+    "August 2026\n"
+    ",Single,Row,All,\n"
+    'Calgary,715,264,"2,222",\n'
+    "Kamloops,3,-,3,\n"
+    "\n"
+    "Source,CMHC Starts and Completions Survey\n"
+)
 
 _EXPORT_CSV = _csv_bytes(
     "— Historical Vacancy Rates by Bedroom Type\n"
@@ -163,6 +191,115 @@ async def test_get_table_data_resolves_table_id_and_parses_csv(httpx_mock):
     assert row_1991.values["Studio"].value is None
     assert row_1991.values["Studio"].flag == "**"
     assert any("Source" in note for note in result.notes)
+    # Confirmed live: the resolved table model also carries extra filter
+    # dimensions (season, dwelling type) beyond column_field/row_field.
+    assert {f.key for f in result.available_filters} == {"dwelling_type_desc_en", "season"}
+    assert result.applied_filters == {}
+
+
+async def test_get_table_data_parses_unflagged_columns_and_special_values(httpx_mock):
+    """Confirmed live: a census-style administrative table (Starts and
+    Completions Survey, which counts every issued permit rather than
+    sampling) has NO paired quality/flag columns at all - unlike a
+    statistically-sampled Rental Market Survey table. Also exercises a
+    thousands-comma-separated value ("2,222") and CMHC's bare "-" nil-
+    value marker (a real, counted zero, not a suppressed value)."""
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1"
+            "&CategoryLevel1=New+Housing+Construction&CategoryLevel2=Starts+%28Actual%29"
+            "&ColumnField=1&RowField=25"
+        ),
+        text=_TABLE_MATCHING_CRITERIA_HTML_SCSS,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart/ExportTable",
+        method="POST",
+        content=_EXPORT_CSV_SCSS,
+        headers={"content-type": "text/csv"},
+    )
+    result = await client.get_table_data("New Housing Construction", "Starts (Actual)", "1", "25")
+    assert result.columns == ["Single", "Row", "All"]
+    calgary = next(r for r in result.rows if r.period == "Calgary")
+    assert calgary.values["Single"].value == 715.0
+    assert calgary.values["Single"].flag is None
+    assert calgary.values["All"].value == 2222.0  # thousands-comma stripped
+    kamloops = next(r for r in result.rows if r.period == "Kamloops")
+    assert kamloops.values["Row"].value == 0.0  # bare "-" is a real zero
+    assert kamloops.values["All"].value == 3.0
+    assert result.available_filters == []
+
+
+async def test_get_table_data_applies_and_validates_filters(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1"
+            "&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Vacancy+Rate+%28%25%29"
+            "&ColumnField=2&RowField=TIMESERIES"
+        ),
+        text=_TABLE_MATCHING_CRITERIA_HTML,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart/ExportTable",
+        method="POST",
+        match_content=(
+            b"TableId=2.2.1&GeographyId=1&GeographyTypeId=1&exportType=csv"
+            b"&AppliedFilters%5B0%5D.Key=dwelling_type_desc_en"
+            b"&AppliedFilters%5B0%5D.Value=Row"
+        ),
+        content=_EXPORT_CSV,
+        headers={"content-type": "text/csv"},
+    )
+    result = await client.get_table_data(
+        "Primary Rental Market",
+        "Vacancy Rate (%)",
+        "2",
+        "TIMESERIES",
+        filters={"dwelling_type_desc_en": "Row"},
+    )
+    assert result.applied_filters == {"dwelling_type_desc_en": "Row"}
+
+
+async def test_get_table_data_rejects_unknown_filter_key(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1"
+            "&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Vacancy+Rate+%28%25%29"
+            "&ColumnField=2&RowField=TIMESERIES"
+        ),
+        text=_TABLE_MATCHING_CRITERIA_HTML,
+    )
+    with pytest.raises(InvalidInput, match="not available"):
+        await client.get_table_data(
+            "Primary Rental Market",
+            "Vacancy Rate (%)",
+            "2",
+            "TIMESERIES",
+            filters={"not_a_real_filter": "x"},
+        )
+
+
+async def test_get_table_data_rejects_invalid_filter_value(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1"
+            "&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Vacancy+Rate+%28%25%29"
+            "&ColumnField=2&RowField=TIMESERIES"
+        ),
+        text=_TABLE_MATCHING_CRITERIA_HTML,
+    )
+    with pytest.raises(InvalidInput, match="not valid"):
+        await client.get_table_data(
+            "Primary Rental Market",
+            "Vacancy Rate (%)",
+            "2",
+            "TIMESERIES",
+            filters={"season": "Winter"},
+        )
 
 
 async def test_get_table_data_maps_ysod_500_to_not_found(httpx_mock):

@@ -40,9 +40,18 @@ access pattern" this project's PROJECT_GUIDE.md asks to investigate):
   `GeograghyName`. This is what lets `TableId`/`GeographyTypeId` be
   resolved live from category names with no hardcoded table catalogue -
   unlike the reference R package, which hardcodes its entire table
-  registry by hand because it never uses this discovery path.
+  registry by hand because it never uses this discovery path. The same
+  model also carries `AvailableFilters` (e.g. `season`: April/October,
+  `dwelling_type_desc_en`: Row/Apartment/Row-Apartment for a Rental
+  Market Survey table) - confirmed live these are extra filter
+  dimensions beyond the ColumnField/RowField axes, and confirmed to
+  genuinely change returned values (national vacancy rate for "Row"
+  dwellings differs from "Apartment" for the same period) rather than
+  just relabel the same numbers. `get_table_data`'s `filters` parameter
+  is validated against this before it is sent.
 - `POST /{lang}/TableMapChart/ExportTable`, form body
-  `{TableId, GeographyId, GeographyTypeId, exportType: "csv"}` -> `200
+  `{TableId, GeographyId, GeographyTypeId, exportType: "csv",
+  AppliedFilters[i].Key/.Value...}` -> `200
   OK`, `Content-Type: text/csv`. Confirmed live end-to-end for both a
   `RowField=TIMESERIES` table (national historical vacancy rates,
   1990-2025) and a `RowField=21` ("Provinces" breakdown) table - neither
@@ -54,16 +63,31 @@ access pattern" this project's PROJECT_GUIDE.md asks to investigate):
     unprintable C1 control character under true latin-1. (The reference
     package's own code comment claims "latin1"; this was checked
     directly against the raw bytes rather than trusted.)
-  * Shape: title line, subtitle line, a header row with **paired
-    (label, "") columns** - one label cell followed by one empty cell
-    per breakdown category - then one data row per period as **paired
-    (value, flag) columns**, then a blank line, then a "Notes" block
-    (reliability-code legend + source line).
+  * Shape: title line, subtitle line, a header row, one data row per
+    period, a blank line, then a "Notes" block (reliability-code legend
+    + source line where present). **Whether a column is followed by a
+    companion quality/flag column (an empty header cell after a label)
+    is NOT fixed across every table** - confirmed live: a statistically-
+    sampled survey table (Rental Market Survey vacancy rates/rents) has
+    one flag column per value column; a census-style administrative
+    table (Starts and Completions Survey, which counts every issued
+    permit rather than sampling) has none. Assuming every column is
+    doubled (`header[1::2]`) silently misaligned and corrupted values
+    for the latter shape - `_header_columns` below instead walks the
+    header and only pairs a column with a flag when the following cell
+    is genuinely empty.
+  * Confirmed live: a value of 1,000 or more uses a thousands-comma
+    separator inside its quoted CSV field (e.g. `"1,013"`) - stripped
+    before `float()`, which does not accept it.
   * A cell can hold `"**"` (suppressed for confidentiality / not
-    statistically reliable) or `"++"` (change not statistically
-    significant, % Change tables only) instead of a number - see
-    constants.py's SUPPRESSED_VALUE_TOKENS. Confirmed live in a real
+    statistically reliable), `"++"` (change not statistically
+    significant, % Change tables only), or `"n/a"` instead of a number -
+    see constants.py's SUPPRESSED_VALUE_TOKENS. Confirmed live in a real
     province-level row (Prince Edward Island's Studio vacancy rate).
+    Separately, a bare `"-"` is a real, counted zero, not a suppressed
+    value (constants.py's NIL_VALUE_TOKENS) - confirmed live cross-
+    checking the reference package's own parse_numeric() helper, which
+    treats it the same way.
 - `GET /{lang}/Navigation/ProvincesByCountry?countryId=1` -> province
   options as `<a data-type="Province" data-type-code="2" data-id="n">
   NAME</a>` anchors. Confirmed live in both `en` and `fr` - numeric
@@ -112,6 +136,7 @@ from maple_data_mcp.modules.cmhc import constants
 from maple_data_mcp.modules.cmhc.schemas import (
     CategoryList,
     CategoryOption,
+    FilterOption,
     ProvinceList,
     ProvinceOption,
     TableCell,
@@ -277,17 +302,58 @@ def _parse_value_cell(raw_value: str, raw_flag: str) -> TableCell:
     raw_flag = raw_flag.strip()
     if raw_value in constants.SUPPRESSED_VALUE_TOKENS:
         return TableCell(value=None, flag=raw_value)
+    if raw_value in constants.NIL_VALUE_TOKENS:
+        # Confirmed live (and matching the reference R package's own
+        # parse_numeric()): a bare "-" means a real, counted zero, not a
+        # suppressed/unavailable value - distinct from "**"/"++"/"n/a".
+        return TableCell(value=0.0, flag=raw_flag or None)
     if not raw_value:
         return TableCell(value=None, flag=raw_flag or None)
     try:
-        return TableCell(value=float(raw_value), flag=raw_flag or None)
+        # Confirmed live: values >= 1,000 use a thousands-comma
+        # separator inside the quoted CSV field (e.g. "1,013") - Python's
+        # float() does not accept that, unlike the value's own literal
+        # meaning, so it is stripped before parsing.
+        return TableCell(value=float(raw_value.replace(",", "")), flag=raw_flag or None)
     except ValueError:
         return TableCell(value=None, flag=raw_flag or raw_value)
 
 
+def _header_columns(header: list[str]) -> list[tuple[str, int, int | None]]:
+    """Pair each non-empty header cell with a following empty cell as its
+    quality/flag companion column, confirmed live to NOT be a fixed
+    doubled-column shape across every table: a statistically-sampled
+    survey table (e.g. Rental Market Survey vacancy rates/rents) pairs
+    every value column with an adjacent reliability-flag column, while an
+    administrative/census-style table (e.g. Starts and Completions Survey,
+    which counts every permit rather than sampling) has no flag columns
+    at all - `header[1::2]` (assuming every column is doubled) silently
+    misaligned and corrupted values for the latter shape, which is why
+    this walks the header sequentially and only pairs a column with a
+    flag when the following cell is genuinely empty, rather than assuming
+    every other cell is one.
+    """
+    columns: list[tuple[str, int, int | None]] = []
+    i = 0
+    n = len(header)
+    while i < n:
+        label = header[i].strip()
+        if not label:
+            i += 1
+            continue
+        if i + 1 < n and not header[i + 1].strip():
+            columns.append((label, i, i + 1))
+            i += 2
+        else:
+            columns.append((label, i, None))
+            i += 1
+    return columns
+
+
 def _parse_csv_export(text: str) -> tuple[list[str], list[TableDataRow], list[str]]:
-    """Parse HMIP's ExportTable CSV: title line, subtitle line, a paired
-    (label, "") header row, paired (value, flag) data rows per period,
+    """Parse HMIP's ExportTable CSV: title line, subtitle line, a header
+    row (columns sometimes, but not always, paired with a following empty
+    quality/flag column - see `_header_columns`), one data row per period,
     a blank line, then a Notes/legend block - see module docstring."""
     lines = text.splitlines()
     if len(lines) < 3:
@@ -299,8 +365,10 @@ def _parse_csv_export(text: str) -> tuple[list[str], list[TableDataRow], list[st
     if not body_rows:
         raise UpstreamError("HMIP's CSV export had no header row.")
 
-    header = body_rows[0]
-    columns = [cell for cell in header[1::2] if cell]
+    column_specs = _header_columns(body_rows[0])
+    if not column_specs:
+        raise UpstreamError("HMIP's CSV export header had no data columns.")
+    columns = [name for name, _, _ in column_specs]
 
     rows: list[TableDataRow] = []
     notes: list[str] = []
@@ -317,12 +385,10 @@ def _parse_csv_export(text: str) -> tuple[list[str], list[TableDataRow], list[st
 
         period = raw_row[0].strip()
         values: dict[str, TableCell] = {}
-        for i, column in enumerate(columns):
-            value_idx = 1 + 2 * i
-            flag_idx = value_idx + 1
+        for name, value_idx, flag_idx in column_specs:
             raw_value = raw_row[value_idx] if value_idx < len(raw_row) else ""
-            raw_flag = raw_row[flag_idx] if flag_idx < len(raw_row) else ""
-            values[column] = _parse_value_cell(raw_value, raw_flag)
+            raw_flag = raw_row[flag_idx] if flag_idx is not None and flag_idx < len(raw_row) else ""
+            values[name] = _parse_value_cell(raw_value, raw_flag)
         rows.append(TableDataRow(period=period, values=values))
 
     return columns, rows, notes
@@ -430,6 +496,47 @@ async def list_provinces(*, lang: str = "en") -> ProvinceList:
     )
 
 
+def _parse_available_filters(model: dict[str, Any]) -> list[FilterOption]:
+    """Parse the resolved table model's "AvailableFilters" entries.
+
+    Confirmed live: each entry is {"Item1": key, "Item2": label|null,
+    "Item3": [values...]} - e.g. {"Item1": "season", "Item2": null,
+    "Item3": ["April", "October"]} or {"Item1": "dwelling_type_desc_en",
+    "Item2": "Dwelling Type", "Item3": ["Row", "Apartment", "Row /
+    Apartment"]}. Confirmed live these genuinely change returned values
+    (e.g. national vacancy rate differs by dwelling type), not just a
+    display label - a capability the CategoryLevel1/2 + ColumnField/
+    RowField axes alone cannot reach for every table.
+    """
+    options: list[FilterOption] = []
+    for entry in model.get("AvailableFilters") or []:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("Item1")
+        values = entry.get("Item3")
+        if not key or not isinstance(values, list) or not values:
+            continue
+        options.append(
+            FilterOption(key=key, label=entry.get("Item2"), values=[str(v) for v in values])
+        )
+    return options
+
+
+def _validate_filters(filters: dict[str, str], available: list[FilterOption], context: str) -> None:
+    by_key = {f.key: f.values for f in available}
+    for key, value in filters.items():
+        if key not in by_key:
+            raise InvalidInput(
+                f"{context}: filter key {key!r} is not available for this table "
+                f"(available: {sorted(by_key)})."
+            )
+        if value not in by_key[key]:
+            raise InvalidInput(
+                f"{context}: filter value {value!r} is not valid for {key!r} "
+                f"(valid values: {by_key[key]})."
+            )
+
+
 async def get_table_data(
     category_level_1: str,
     category_level_2: str,
@@ -438,6 +545,7 @@ async def get_table_data(
     *,
     geography_type: str = "Country",
     geography_id: str = "1",
+    filters: dict[str, str] | None = None,
     lang: str = "en",
 ) -> TableDataResult:
     category_level_1 = _require(category_level_1, "category_level_1")
@@ -446,6 +554,7 @@ async def get_table_data(
     row_field = _require(row_field, "row_field")
     geography_type = _require(geography_type, "geography_type")
     geography_id = _require(geography_id, "geography_id")
+    filters = filters or {}
     base = _base_path(lang)
 
     match_params = {
@@ -458,7 +567,7 @@ async def get_table_data(
     }
     match_url = f"{base}/TableMapChart/TableMatchingCriteria"
     export_url = f"{base}/TableMapChart/ExportTable"
-    cache_key = f"cmhc:table_data:{lang}:{sorted(match_params.items())}"
+    cache_key = f"cmhc:table_data:{lang}:{sorted(match_params.items())}:{sorted(filters.items())}"
 
     async def fetch() -> dict[str, Any]:
         body = await _get_html(match_url, match_params)
@@ -471,12 +580,21 @@ async def get_table_data(
                 f"{category_level_2!r}) with column_field={column_field!r}, "
                 f"row_field={row_field!r}."
             )
-        export_params = {
+        available_filters = _parse_available_filters(model)
+        _validate_filters(
+            filters,
+            available_filters,
+            f"get_table_data({category_level_1!r}, {category_level_2!r})",
+        )
+        export_params: dict[str, Any] = {
             "TableId": str(table_id),
             "GeographyId": geography_id,
             "GeographyTypeId": str(geography_type_id),
             "exportType": "csv",
         }
+        for i, (key, value) in enumerate(filters.items()):
+            export_params[f"AppliedFilters[{i}].Key"] = key
+            export_params[f"AppliedFilters[{i}].Value"] = value
         raw_csv = await _post_csv(export_url, export_params)
         text = raw_csv.decode(constants.CSV_ENCODING)
         columns, rows, notes = _parse_csv_export(text)
@@ -488,6 +606,7 @@ async def get_table_data(
             "columns": columns,
             "rows": rows,
             "notes": notes,
+            "available_filters": available_filters,
         }
 
     parsed, was_cached = await cached_fetch(
@@ -504,6 +623,8 @@ async def get_table_data(
         columns=parsed["columns"],
         rows=parsed["rows"],
         notes=parsed["notes"],
+        available_filters=parsed["available_filters"],
+        applied_filters=filters,
         provenance=make_provenance(
             source="cmhc",
             url=export_url,
