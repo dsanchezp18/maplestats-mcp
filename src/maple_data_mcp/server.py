@@ -93,6 +93,20 @@ Currently implemented:
   tabular and spatial listings, topic tags, and dataset metadata with
   official file download links (tools prefixed nl_opendata_). The portal
   is English-only and has no documented JSON catalogue API.
+- IRCC (Immigration, Refugees and Citizenship Canada) Express Entry
+  rounds of invitations, from a static JSON feed IRCC publishes on
+  canada.ca (tools prefixed ircc_) -- not a CKAN dataset, confirmed live
+  to be a different platform from open.canada.ca: draw history, CRS
+  (Comprehensive Ranking System) cutoff scores, invitations issued, and
+  candidate-pool CRS score distribution. The French feed's bytes are
+  Windows-1252 despite an undeclared charset, and two 2018-05-30 rounds
+  share draw number 91 with letter suffixes ("91a"/"91b") instead of
+  sequential numbers -- both handled by this module. IRCC's other
+  administrative series (permanent residents, study/work permits,
+  asylum, citizenship) are ordinary open.canada.ca CKAN datasets
+  published by the "ircc" organization, already reachable via
+  ckan_search_datasets(fq="organization:ircc") on the federal CKAN
+  module above.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose

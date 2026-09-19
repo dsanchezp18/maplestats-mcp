@@ -50,10 +50,11 @@ unilingue.*
 
 ## Status
 
-**Currently implemented:** Statistics Canada, the Bank of Canada, and
-CKAN catalogues for the federal government, Alberta, British Columbia,
-Ontario, Quebec, the Northwest Territories, Yukon, Montreal, and
-Toronto, plus the custom HTML catalogue for Newfoundland and Labrador.
+**Currently implemented:** Statistics Canada, the Bank of Canada, IRCC
+Express Entry, and CKAN catalogues for the federal government, Alberta,
+British Columbia, Ontario, Quebec, the Northwest Territories, Yukon,
+Montreal, and Toronto, plus the custom HTML catalogue for Newfoundland
+and Labrador.
 
 | Submodule | Tools | Covers |
 |---|---|---|
@@ -68,7 +69,14 @@ group details. Portal language behavior is documented in each module;
 `lang` is a no-op on monolingual catalogues. The Newfoundland and Labrador
 module uses the portal's public HTML listing/detail pages because no
 documented JSON catalogue API is available; it returns official file links
-without downloading binary files into MCP responses.
+without downloading binary files into MCP responses. The IRCC module
+covers Express Entry rounds of invitations (draw history, CRS cutoffs,
+invitations issued, candidate-pool score distribution) from IRCC's
+canada.ca JSON feed — a different platform from CKAN. IRCC's other
+administrative series (permanent residents, study/work permits, asylum,
+citizenship) are ordinary open.canada.ca CKAN datasets, already reachable
+through `ckan_search_datasets(fq="organization:ircc")` on the federal
+module.
 
 Every tool accepts `lang: "en"|"fr"` and returns a typed response with
 a `provenance` block (source, URL, query time, freshness, limits). See

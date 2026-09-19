@@ -5,14 +5,14 @@ what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
 Current implementation snapshot (2026-09-18): shipped modules cover
-Statistics Canada, the Bank of Canada, federal CKAN, Alberta, British
-Columbia, Ontario, Quebec, Nova Scotia, New Brunswick, Manitoba,
-Saskatchewan, Prince Edward Island, Newfoundland and Labrador, the Northwest Territories, Yukon,
-Montreal, Toronto, Regina, Hamilton, London, Kitchener, Windsor,
-Saskatoon, Victoria, and Surrey (Laval and Gatineau are covered
-through the existing Quebec CKAN module, not a dedicated one). The
-rows below are the source-of-truth for remaining work; each row has
-its own status.
+Statistics Canada, the Bank of Canada, federal CKAN, IRCC Express Entry,
+Alberta, British Columbia, Ontario, Quebec, Nova Scotia, New Brunswick,
+Manitoba, Saskatchewan, Prince Edward Island, Newfoundland and Labrador,
+the Northwest Territories, Yukon, Montreal, Toronto, Regina, Hamilton,
+London, Kitchener, Windsor, Saskatoon, Victoria, and Surrey (Laval and
+Gatineau are covered through the existing Quebec CKAN module, not a
+dedicated one). The rows below are the source-of-truth for remaining
+work; each row has its own status.
 
 Status values: `Not started` / `In progress` / `Shipped` / `Blocked`.
 A source is marked `Shipped` only after its implemented functions and
@@ -33,7 +33,7 @@ seen in benchmark research are explicitly excluded).
 | Statistics Canada (StatCan) | Shipped | WDS + SDMX + RDaaS: table/cube discovery, metadata, series retrieval, change detection, classifications. |
 | Bank of Canada | Shipped | Valet API: exchange rates, interest rates, commodity prices, CPI/inflation, series metadata. |
 | Federal Open Data (CKAN, open.canada.ca) | Shipped | ~48K-dataset catalogue: search, dataset details, organizations, resources, licenses. |
-| IRCC Immigration | Not started | Permanent residents, study/work permits, Express Entry, asylum, citizenship, and related administrative series. |
+| IRCC Immigration | Shipped | Express Entry rounds of invitations (tools prefixed `ircc_`): draw history, CRS cutoffs, invitations issued, and candidate-pool CRS score distribution, from a static JSON feed at `canada.ca/content/dam/ircc/documents/json/ee_rounds_123_{en,fr}.json` -- confirmed live 2026-09-18 to be a different platform from CKAN, not an open.canada.ca dataset. Real quirks found and handled: the French feed's bytes are Windows-1252 despite a bare `application/json` content type with no charset (decoding as UTF-8 silently mangles accents instead of raising); numeric fields use a comma thousands separator in English vs. a literal space in French; and two rounds from 2018-05-30 are published as "91a"/"91b" instead of sequential numbers, so `draw_number` is a string, not an int. IRCC's other administrative series (permanent residents, study/work permits, asylum, citizenship) are ordinary CKAN datasets published by the `ircc` organization on open.canada.ca and are already reachable via the existing `ckan_search_datasets(fq="organization:ircc")` on the federal module -- no dedicated module needed for those. |
 | Weather / Climate (Environment Canada MSC GeoMet) | Not started | Current conditions, forecasts, alerts, climate normals, air quality, hydrology, marine, severe weather, snow. |
 
 ## Provincial (all 10)
