@@ -74,7 +74,7 @@ are out of scope unless they are later promoted explicitly.
 |---|---|---|
 | Northwest Territories | Shipped | opendata.gov.nt.ca, CKAN Action API: `ckan_nt_*`, 8 tools. English-only. Small catalogue (341 datasets). |
 | Yukon | Shipped | open.yukon.ca, CKAN Action API: `ckan_yt_*`, 8 tools. English-only (site UI is bilingual-chrome only; dataset content is not). 3,841 datasets. |
-| Nunavut | Not started | TBD — no confirmed portal identified yet |
+| Nunavut | Blocked | Investigated 2026-09-19: no dedicated open-data portal exists (`opendata.gov.nu.ca`/`data.gov.nu.ca` don't resolve). The Government of Nunavut's own site (`gov.nu.ca`), including its Nunavut Bureau of Statistics/economic-data pages, sits behind a bot-detection interstitial that did not clear even after 15s in a real rendered browser, and returns HTTP 403 to a plain HTTP client — genuinely blocking automated access, not just a slow load. Re-investigate only if a dedicated portal is later launched or the bot-check is confirmed to allow a properly-identified client through. |
 
 ## Municipal (all that apply — established open-data portals)
 
