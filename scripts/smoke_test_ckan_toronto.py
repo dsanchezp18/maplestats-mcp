@@ -129,6 +129,10 @@ async def main() -> int:
     ok &= tags.total_count > 100  # confirmed live: 909 tags
     print("  sample tags:", tags.tags[:10])
 
+    ds = await client.datastore_search("e9f77756-2baf-46ba-b2c6-4050e2fba755", limit=2)
+    print(f"OK: datastore_search -> {ds.total_count} total, {ds.returned_count} returned")
+    ok &= ds.returned_count > 0
+
     print("\nALL CHECKS PASSED" if ok else "\nSOME CHECKS FAILED")
     return 0 if ok else 1
 

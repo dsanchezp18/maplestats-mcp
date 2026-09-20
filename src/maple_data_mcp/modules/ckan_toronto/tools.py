@@ -26,8 +26,12 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.ckan_toronto import client
-from maple_data_mcp.modules.ckan_toronto.constants import SEARCH_ROWS_DEFAULT
+from maple_data_mcp.modules.ckan_toronto.constants import (
+    DATASTORE_ROWS_DEFAULT,
+    SEARCH_ROWS_DEFAULT,
+)
 from maple_data_mcp.modules.ckan_toronto.schemas import (
+    DatastoreSearchResult,
     LicenseList,
     OrganizationDetail,
     OrganizationList,
@@ -188,3 +192,41 @@ async def ckan_toronto_list_tags(lang: Lang = "en") -> TagList:
     filtrer.
     """
     return await client.list_tags(lang)
+
+
+@tool
+async def ckan_toronto_datastore_search(
+    resource_id: str,
+    filters: dict[str, str] | None = None,
+    query: str | None = None,
+    sort: str | None = None,
+    fields: str | None = None,
+    limit: int = DATASTORE_ROWS_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> DatastoreSearchResult:
+    """Query actual row data from one DataStore-active Toronto resource, not just its metadata.
+
+    Use for: filtering or paging through a resource's real rows without
+    downloading the whole file first. Most resources here are plain
+    files, not DataStore tables -- check `datastore_active` on the
+    resource (from ckan_toronto_get_dataset or ckan_toronto_get_resource) before
+    calling this; a resource_id that is not DataStore-active raises a
+    not-found error the same as an unknown one. `filters` is an
+    exact-match column/value dict; `query` instead runs a full-text
+    search across the resource.
+    Keywords: ckan, datastore, datastore_search, row query, filter,
+    Toronto, open data.
+    Mots-clés : ckan, datastore, datastore_search, requête de lignes,
+    filtre, Toronto, données ouvertes.
+    """
+    return await client.datastore_search(
+        resource_id,
+        filters=filters,
+        query=query,
+        sort=sort,
+        fields=fields,
+        limit=limit,
+        offset=offset,
+        lang=lang,
+    )

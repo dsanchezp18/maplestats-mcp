@@ -8,7 +8,7 @@ from collections.abc import Awaitable
 from typing import Any
 
 from maple_data_mcp.modules.ckan_ab import client
-from maple_data_mcp.shared.errors import InvalidInput, NotFound
+from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 
 async def _check(label: str, awaitable: Awaitable[Any]) -> Any:
@@ -52,6 +52,24 @@ async def main() -> int:
         print("OK: rows=0 raises InvalidInput")
     except Exception as exc:  # noqa: BLE001
         print(f"FAIL: rows=0 raised {type(exc).__name__}: {exc}")
+        return 1
+
+    # Confirmed live 2026-09-20: every DataStore-active resource tried on
+    # this deployment (datastore_active=True is set correctly) returns
+    # HTTP 500 "Internal Server Error" from datastore_search itself --
+    # a real, portal-side DataStore backend issue, not a client bug. This
+    # asserts the tool still surfaces that correctly as UpstreamError
+    # rather than silently swallowing it.
+    try:
+        await client.datastore_search("f660db62-5687-4614-8f53-327652856f80", limit=1)
+        print(
+            "FAIL: datastore_search unexpectedly succeeded -- re-check if AB's DataStore was fixed"
+        )
+        return 1
+    except UpstreamError as exc:
+        print(f"OK: datastore_search raises UpstreamError (known portal-side issue): {exc}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"FAIL: datastore_search raised {type(exc).__name__} instead of UpstreamError: {exc}")
         return 1
 
     print(f"Alberta organizations: {organizations.total_count}")

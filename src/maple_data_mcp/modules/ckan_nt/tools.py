@@ -29,8 +29,12 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.ckan_nt import client
-from maple_data_mcp.modules.ckan_nt.constants import SEARCH_ROWS_DEFAULT
+from maple_data_mcp.modules.ckan_nt.constants import (
+    DATASTORE_ROWS_DEFAULT,
+    SEARCH_ROWS_DEFAULT,
+)
 from maple_data_mcp.modules.ckan_nt.schemas import (
+    DatastoreSearchResult,
     GroupList,
     LicenseList,
     OrganizationDetail,
@@ -203,3 +207,41 @@ async def ckan_nt_list_licenses(lang: Lang = "en") -> LicenseList:
     nord-ouest, territorial, license_list.
     """
     return await client.list_licenses(lang)
+
+
+@tool
+async def ckan_nt_datastore_search(
+    resource_id: str,
+    filters: dict[str, str] | None = None,
+    query: str | None = None,
+    sort: str | None = None,
+    fields: str | None = None,
+    limit: int = DATASTORE_ROWS_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> DatastoreSearchResult:
+    """Query actual row data from one DataStore-active Northwest Territories resource, not just its metadata.
+
+    Use for: filtering or paging through a resource's real rows without
+    downloading the whole file first. Most resources here are plain
+    files, not DataStore tables -- check `datastore_active` on the
+    resource (from ckan_nt_get_dataset or ckan_nt_get_resource) before
+    calling this; a resource_id that is not DataStore-active raises a
+    not-found error the same as an unknown one. `filters` is an
+    exact-match column/value dict; `query` instead runs a full-text
+    search across the resource.
+    Keywords: ckan, datastore, datastore_search, row query, filter,
+    Northwest Territories, open data.
+    Mots-clés : ckan, datastore, datastore_search, requête de lignes,
+    filtre, Northwest Territories, données ouvertes.
+    """
+    return await client.datastore_search(
+        resource_id,
+        filters=filters,
+        query=query,
+        sort=sort,
+        fields=fields,
+        limit=limit,
+        offset=offset,
+        lang=lang,
+    )

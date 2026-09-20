@@ -180,6 +180,10 @@ async def main() -> int:
         print(f"FAIL: blank dataset_id raised {type(exc).__name__} instead of InvalidInput: {exc}")
         ok = False
 
+    ds = await client.datastore_search("539e9585-ed0e-410f-9dcc-fe6a9fdacbb0", limit=2)
+    print(f"OK: datastore_search -> {ds.total_count} total, {ds.returned_count} returned")
+    ok &= ds.returned_count > 0
+
     print()
     print("CKAN-NT SMOKE TEST PASSED" if ok else "CKAN-NT SMOKE TEST FAILED")
     return 0 if ok else 1

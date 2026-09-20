@@ -46,6 +46,15 @@ CACHE_TTL_GROUP_SECONDS = CACHE_TTL_GROUP_LIST_SECONDS
 # added by publishers; treat it as similarly stable to search results
 # rather than as volatile as an individual dataset's own metadata.
 CACHE_TTL_TAG_LIST_SECONDS = 60 * 60  # 1h
+CACHE_TTL_DATASTORE_SECONDS = 15 * 60  # 15m: DataStore-backed data can update daily
+
+# Mirrors ckan_federal's DATASTORE_ROWS_MAX reasoning: this deployment's
+# own datastore_search ceiling is far higher (confirmed live: limit=
+# 999999 against a 5,014-row resource returned every row, not an
+# error), so this stays capped well below that for agent-facing
+# compactness rather than exposing whatever the raw server allows.
+DATASTORE_ROWS_DEFAULT = 20
+DATASTORE_ROWS_MAX = 1000
 
 # CKAN's own package_search hard cap: a `rows` above this is silently
 # truncated to 1000 server-side (confirmed live: rows=5000 returned

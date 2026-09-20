@@ -150,6 +150,31 @@ async def main() -> int:
         "get_group(unknown)", client.get_group("not-a-real-group-xyz"), NotFound
     )
 
+    # --- datastore_search ---------------------------------------------------
+    # A confirmed-live DataStore-active resource: BC's Foundation Skills
+    # Assessment 2021/22-2025/26 district-level results. If this specific
+    # resource id is ever retired, replace it with a current one found via
+    # ckan_bc_search_datasets("foundation skills assessment") + a resource
+    # with datastore_active=True.
+    fsa_resource_id = "d9377320-2c9e-4a3a-ba4a-af84ae3e344c"
+    ds = await client.datastore_search(fsa_resource_id, limit=2)
+    print(f"OK: datastore_search -> {ds.total_count} total, {ds.returned_count} returned")
+    ok &= ds.returned_count > 0
+
+    filtered = await client.datastore_search(
+        fsa_resource_id,
+        filters={"DATA_LEVEL": "District Level", "FSA_SKILL_CODE": "Numeracy", "GRADE": "4"},
+        limit=2,
+    )
+    print(f"OK: datastore_search(filters) -> {filtered.total_count} total")
+    ok &= filtered.total_count > 0
+
+    ok &= await _expect_error(
+        "datastore_search(non-datastore resource)",
+        client.datastore_search("__maple_missing_resource__"),
+        NotFound,
+    )
+
     print()
     print("CKAN-BC SMOKE TEST PASSED" if ok else "CKAN-BC SMOKE TEST FAILED")
     return 0 if ok else 1

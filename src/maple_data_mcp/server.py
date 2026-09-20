@@ -61,20 +61,31 @@ Currently implemented:
   Every ckan_ tool accepts lang: "en"|"fr" for interface consistency,
   but on a monolingual portal it is a documented no-op — read that
   portal's own module docstring before assuming a request will change
-  what comes back. The federal module also has ckan_datastore_search,
-  which queries actual row data out of a DataStore-active resource
-  (check a resource's datastore_active flag first, from ckan_get_dataset
-  or ckan_get_resource) instead of only handing back a download URL for
-  the whole file. Confirmed live this unlocks real row-level querying
+  what comes back. Every ckan_ module here except Yukon also has a
+  ckan_<portal>_datastore_search tool, which queries actual row data
+  out of a DataStore-active resource (check a resource's
+  datastore_active flag first, from ckan_get_dataset or
+  ckan_get_resource) instead of only handing back a download URL for
+  the whole file — added across the whole family after discovering the
+  gap on the federal module, where it unlocks real row-level querying
   for CRA (e.g. filtering a registered charity's directors/officers by
-  business number, out of a 569,000+ row resource), OSFI (e.g. querying
-  a bank's M4 consolidated balance sheet line items directly rather than
-  downloading the full quarterly return file), and most of the ~220
-  federal Proactive Disclosure datasets (contracts, travel and
-  hospitality expenses, grants and contributions, briefing notes, and
-  more, each published per department) — exact-match `filters` work on
-  any resource size, but this deployment rejects full-text `q` search
-  with HTTP 409 for any resource over 100,000 rows.
+  business number, out of a 569,000+ row resource) and OSFI (e.g.
+  querying a bank's M4 consolidated balance sheet line items directly
+  rather than downloading the full quarterly return file); exact-match
+  `filters` work on any resource size there, but that deployment
+  rejects full-text `q` search with HTTP 409 for any resource over
+  100,000 rows. Also confirmed live and working: BC (Foundation Skills
+  Assessment district-level results, filterable by district/grade/
+  subject/year), Alberta, Ontario, Quebec, Northwest Territories,
+  Montreal, Toronto, and Regina. Yukon's deployment genuinely has no
+  DataStore extension installed at all (`datastore_search` answers
+  "Action name not known", confirmed live) — no tool is defined there
+  as a result. One real, portal-specific quirk found this way: every
+  DataStore-active resource tried on Alberta's deployment (the
+  datastore_active flag itself is set correctly) returns HTTP 500 from
+  datastore_search — a confirmed-live, portal-side backend issue, not
+  a client bug; the tool still exists there and correctly surfaces
+  that as an UpstreamError rather than silently failing.
 - Canadian ArcGIS Hub open-data portals, provincial and municipal:
   Manitoba (Data MB, geoportal.gov.mb.ca, arcgis_mb_), Saskatchewan
   (Saskatchewan GeoHub, geohub.saskatchewan.ca, arcgis_sk_), Prince
@@ -149,6 +160,20 @@ Currently implemented:
   opendatasoft_vancouver_query_records build that clause internally, so
   a caller never needs to write raw ODSQL just to do a keyword search.
   English-only.
+- Natural Resources Canada's National Burned Area Composite (NBAC,
+  tools prefixed nrcan_nbac_) — the only OGC WFS 2.0/GeoServer-platform
+  source in this codebase. nrcan_nbac_query_fires queries mapped fire
+  polygons/records (start/end dates, adjusted burned area in hectares,
+  cause, admin_area) for every fire event mapped in Canada since 1972,
+  filtered with a standard OGC CQL expression against the layer's own
+  field names (e.g. "admin_area = 'BC' AND year >= 2017 AND year <=
+  2024"). `include_geometry` defaults to false for a lightweight,
+  attribute-only query — NBAC's polygon geometry is large (the full
+  shapefile export is over 1GB) — and reprojects to plain lat/lon
+  (EPSG:4326) when a caller does ask for it. Confirmed live this
+  GeoServer deployment always answers an error (a malformed
+  `CQL_FILTER`, an unknown layer) as an OGC XML ExceptionReport, not
+  JSON, regardless of the requested outputFormat.
 - Canadian Socrata (SODA) open-data portals: Nova Scotia
   (data.novascotia.ca, socrata_ns_), New Brunswick (gnb.socrata.com,
   socrata_nb_), and the cities of Calgary (data.calgary.ca,
@@ -258,7 +283,7 @@ Currently implemented:
   filename pattern — confirmed live that guessing fails for at least
   one older edition whose filename omits a suffix later editions have.
 
-- Innovation, Science and Economic Development Canada (ISED), via two
+- Innovation, Science and Economic Development Canada (ISED), via three
   separate platforms. Corporations Canada's federal corporation lookup
   API (ised-isde.canada.ca, tools prefixed ised_corporations_):
   ised_corporations_get_corporation looks up one federal corporation by
@@ -279,7 +304,23 @@ Currently implemented:
   transmit/receive frequencies, tower location/height, antenna
   specs), refreshed monthly, reusing this server's existing generic
   ArcGIS FeatureServer query plumbing directly against one fixed known
-  service url rather than a Hub catalogue. ISED's own bulk statistical
+  service url rather than a Hub catalogue. The Canadian Trademarks
+  Database (CIPO)'s search API (ised-isde.canada.ca/cipo/trademark-search,
+  tools prefixed ised_cipo_): ised_cipo_search_trademarks searches over
+  2 million Canadian trademark records (registered, pending, expunged,
+  abandoned) by owner name, mark text, goods/services text,
+  application/registration number, Nice classification, or Vienna
+  design code. Confirmed live 2026-09-20: this endpoint is not
+  documented as a public API anywhere — it backs the search UI's own
+  XHR calls — but is a plain unauthenticated JSON POST, no session
+  cookie or CSRF token required, and stayed reachable outside the
+  browser. Two real quirks confirmed live: searchfield1 accepts only
+  the exact internal dropdown codes (any other value returns HTTP 500
+  with no detail, not a 400 — see constants.SEARCH_FIELD_TO_API); and
+  there is no pagination — start/startRow/offset/page/pageNum were all
+  tried live and silently ignored, so max_return only caps how many
+  top-ranked matches come back in one call, with no way to page past
+  that count. ISED's own bulk statistical
   datasets (Financial Performance Data, historical insolvency
   statistics, and a bulk CSV export of the same federal-corporations
   register) are ordinary CKAN datasets published by the "ic"

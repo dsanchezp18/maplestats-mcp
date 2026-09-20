@@ -162,6 +162,10 @@ async def main() -> int:
         print(f"  - {g.name}: {g.title} ({g.package_count} datasets)")
     ok &= groups.total_count > 5  # confirmed live count was 12
 
+    ds = await client.datastore_search("b7817317-55ca-4f23-98fe-30cf6c36d57c", limit=2)
+    print(f"OK: datastore_search -> {ds.total_count} total, {ds.returned_count} returned")
+    ok &= ds.returned_count > 0
+
     print()
     print("CKAN MONTREAL SMOKE TEST PASSED" if ok else "CKAN MONTREAL SMOKE TEST FAILED")
     return 0 if ok else 1

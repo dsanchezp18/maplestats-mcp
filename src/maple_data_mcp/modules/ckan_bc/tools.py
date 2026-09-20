@@ -19,8 +19,9 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.ckan_bc import client
-from maple_data_mcp.modules.ckan_bc.constants import SEARCH_ROWS_DEFAULT
+from maple_data_mcp.modules.ckan_bc.constants import DATASTORE_ROWS_DEFAULT, SEARCH_ROWS_DEFAULT
 from maple_data_mcp.modules.ckan_bc.schemas import (
+    DatastoreSearchResult,
     GroupDetail,
     GroupList,
     LicenseList,
@@ -221,3 +222,47 @@ async def ckan_bc_get_group(group_id: str, lang: Lang = "en") -> GroupDetail:
     sujet, colombie-britannique, catalogue, group_show, sélection.
     """
     return await client.get_group(group_id, lang)
+
+
+@tool
+async def ckan_bc_datastore_search(
+    resource_id: str,
+    filters: dict[str, str] | None = None,
+    query: str | None = None,
+    sort: str | None = None,
+    fields: str | None = None,
+    limit: int = DATASTORE_ROWS_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> DatastoreSearchResult:
+    """Query actual row data from one DataStore-active BC resource, not just its metadata.
+
+    Use for: filtering or paging through a resource's real rows without
+    downloading the whole file first — e.g. BC's Foundation Skills
+    Assessment results by school district, grade, subject, and school
+    year (DISTRICT_NAME, GRADE, FSA_SKILL_CODE, SCHOOL_YEAR, AVG_SCORE,
+    confirmed live). Most resources here are plain files, not DataStore
+    tables — check `datastore_active` on the resource (from
+    ckan_bc_get_dataset or ckan_bc_get_resource) before calling this; a
+    resource_id that is not DataStore-active raises a not-found error
+    the same as an unknown one. `filters` is an exact-match column/value
+    dict (e.g. {"DATA_LEVEL": "District Level", "FSA_SKILL_CODE":
+    "Numeracy", "GRADE": "4"}); `query` instead runs a full-text search
+    across the resource.
+    Keywords: ckan, datastore, datastore_search, row query, filter,
+    Foundation Skills Assessment, FSA, education, school district,
+    numeracy, literacy, British Columbia, catalogue.data.gov.bc.ca.
+    Mots-clés : ckan, datastore, datastore_search, requête de lignes,
+    filtre, évaluation des habiletés de base, éducation, district
+    scolaire, numératie, littératie, Colombie-Britannique.
+    """
+    return await client.datastore_search(
+        resource_id,
+        filters=filters,
+        query=query,
+        sort=sort,
+        fields=fields,
+        limit=limit,
+        offset=offset,
+        lang=lang,
+    )

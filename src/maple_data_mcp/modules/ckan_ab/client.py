@@ -8,10 +8,13 @@ organization, tag, and license responses.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from maple_data_mcp.modules.ckan_ab import constants
 from maple_data_mcp.modules.ckan_ab.schemas import (
+    DatastoreField,
+    DatastoreSearchResult,
     LicenseInfo,
     LicenseList,
     OrganizationDetail,
@@ -348,5 +351,74 @@ async def list_tags(lang: str = "en") -> TagList:
             cached=was_cached,
             schema_name="ckan_ab.TagList",
             limits=f"unfiltered tags capped at {constants.TAG_LIST_MAX} in the response",
+        ),
+    )
+
+
+async def datastore_search(
+    resource_id: str,
+    *,
+    filters: dict[str, str] | None = None,
+    query: str | None = None,
+    sort: str | None = None,
+    fields: str | None = None,
+    limit: int = constants.DATASTORE_ROWS_DEFAULT,
+    offset: int = 0,
+    lang: str = "en",
+) -> DatastoreSearchResult:
+    """Query rows from one DataStore-active resource; ``lang`` is accepted for consistency.
+
+    Most resources on this portal are plain files with no DataStore
+    table behind them -- check ``datastore_active`` on a ResourceInfo
+    (from ckan_ab_get_dataset/ckan_ab_get_resource) before calling this.
+    """
+    del lang
+    if not resource_id.strip():
+        raise InvalidInput("resource_id must not be empty.")
+    if limit < 1 or limit > constants.DATASTORE_ROWS_MAX:
+        raise InvalidInput(
+            f"limit must be between 1 and {constants.DATASTORE_ROWS_MAX}, got {limit}."
+        )
+    if offset < 0:
+        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+
+    params: dict[str, Any] = {"resource_id": resource_id, "limit": limit, "offset": offset}
+    if filters:
+        params["filters"] = json.dumps(filters)
+    if query:
+        params["q"] = query
+    if sort:
+        params["sort"] = sort
+    if fields:
+        params["fields"] = fields
+
+    cache_key = (
+        f"ckan-ab:datastore_search:{resource_id}:{filters}:{query}:{sort}:{fields}:{limit}:{offset}"
+    )
+
+    async def fetch() -> dict[str, Any]:
+        return await action(CONFIG, "datastore_search", params=params)
+
+    result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DATASTORE_SECONDS, fetch)
+    records = list_or_empty(result, "records")
+    return DatastoreSearchResult(
+        resource_id=resource_id,
+        records=records,
+        fields=[
+            DatastoreField(id=f["id"], type=f.get("type", "unknown"))
+            for f in list_or_empty(result, "fields")
+        ],
+        total_count=result.get("total", len(records)),
+        returned_count=len(records),
+        limit=limit,
+        offset=offset,
+        filters=filters,
+        query=query,
+        provenance=make_provenance(
+            source="ckan-ab",
+            url=f"{constants.BASE_URL}datastore_search",
+            cached=was_cached,
+            schema_name="ckan_ab.DatastoreSearchResult",
+            limits=f"rows capped at {constants.DATASTORE_ROWS_MAX} per request",
         ),
     )

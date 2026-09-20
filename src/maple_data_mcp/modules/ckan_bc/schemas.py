@@ -282,3 +282,26 @@ class GroupDetail(BaseModel):
     image_url: str | None = None
     landing_page_url: str
     provenance: Provenance
+
+
+class DatastoreField(BaseModel):
+    id: str
+    type: str
+
+
+class DatastoreSearchResult(BaseModel):
+    """Row-level query against one DataStore-active resource (see
+    ResourceInfo.datastore_active), as opposed to ckan_bc_get_resource's
+    metadata-only view. Not every resource on this portal supports this
+    -- most are plain files, not DataStore tables."""
+
+    resource_id: str
+    records: list[dict[str, object]]
+    fields: list[DatastoreField] = Field(default_factory=list)
+    total_count: int
+    returned_count: int
+    limit: int
+    offset: int
+    filters: dict[str, str] | None = None
+    query: str | None = None
+    provenance: Provenance

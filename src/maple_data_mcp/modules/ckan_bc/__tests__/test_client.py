@@ -483,6 +483,62 @@ async def test_unsuccessful_envelope_with_200_status_raises_upstream_error(httpx
         await client.list_licenses()
 
 
+async def test_datastore_search_parses_records_and_fields(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}datastore_search?resource_id=abc&limit=20&offset=0",
+        json={
+            "help": "help",
+            "success": True,
+            "result": {
+                "total": 5014,
+                "records": [
+                    {"DISTRICT_NAME": "Southeast Kootenay", "GRADE": 4, "AVG_SCORE": "435.2463"}
+                ],
+                "fields": [{"id": "DISTRICT_NAME", "type": "text"}, {"id": "GRADE", "type": "int"}],
+            },
+        },
+    )
+    result = await client.datastore_search("abc")
+    assert result.total_count == 5014
+    assert result.returned_count == 1
+    assert result.records[0]["DISTRICT_NAME"] == "Southeast Kootenay"
+    assert result.fields[0].id == "DISTRICT_NAME"
+
+
+async def test_datastore_search_encodes_filters_as_json(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}datastore_search?resource_id=abc&limit=20&offset=0"
+            "&filters=%7B%22GRADE%22%3A+%224%22%7D"
+        ),
+        json={"help": "help", "success": True, "result": {"total": 1, "records": [], "fields": []}},
+    )
+    result = await client.datastore_search("abc", filters={"GRADE": "4"})
+    assert result.filters == {"GRADE": "4"}
+
+
+async def test_datastore_search_unknown_resource_raises_not_found(httpx_mock):
+    httpx_mock.add_response(
+        status_code=404,
+        json={
+            "help": "help",
+            "success": False,
+            "error": {"__type": "Not Found Error", "message": 'Resource "x" was not found.'},
+        },
+    )
+    with pytest.raises(NotFound):
+        await client.datastore_search("x")
+
+
+async def test_datastore_search_invalid_input_rejects_bad_limit_and_offset():
+    with pytest.raises(InvalidInput):
+        await client.datastore_search("abc", limit=0)
+    with pytest.raises(InvalidInput):
+        await client.datastore_search("abc", offset=-1)
+    with pytest.raises(InvalidInput):
+        await client.datastore_search(" ")
+
+
 async def test_timeout_raises_upstream_unavailable(httpx_mock):
     for _ in range(3):
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))

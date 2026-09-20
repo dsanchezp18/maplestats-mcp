@@ -55,6 +55,14 @@ async def main() -> int:
         print(f"FAIL: rows=0 raised {type(exc).__name__}: {exc}")
         return 1
 
+    ds = await _check(
+        "datastore_search",
+        client.datastore_search("ea9dc29c-b4f1-4426-b1f2-974ce995aca1", limit=2),
+    )
+    if not ds.records:
+        print("FAIL: DataStore-active resource returned no rows")
+        return 1
+
     print(f"Ontario organizations: {organizations.total_count}")
     print("CKAN-ON SMOKE TEST PASSED")
     return 0
