@@ -53,6 +53,35 @@ async def main() -> int:
         print(f"FAIL: rows=0 raised {type(exc).__name__}: {exc}")
         return 1
 
+    # A confirmed-live DataStore-active resource: CRA's "2024 List of
+    # charities" directors/officers table (569k+ rows). If this specific
+    # resource id is ever retired, replace it with a current one found via
+    # ckan_search_datasets(fq="organization:cra-arc") + a resource with
+    # datastore_active=True.
+    charity_directors_resource_id = "3eb35dcd-9b0c-4ae9-a45c-e5e481567c23"
+    ds = await _check(
+        "datastore_search",
+        client.datastore_search(charity_directors_resource_id, limit=2),
+    )
+    if not ds.records:
+        print("FAIL: DataStore-active resource returned no rows")
+        return 1
+    filtered = await _check(
+        "datastore_search(filters)",
+        client.datastore_search(charity_directors_resource_id, filters={"BN": ds.records[0]["BN"]}),
+    )
+    if filtered.total_count < 1:
+        print("FAIL: filtered DataStore query returned no matches for its own sample row")
+        return 1
+
+    try:
+        await client.datastore_search("__maple_missing_resource__")
+    except NotFound:
+        print("OK: non-DataStore resource id raises NotFound")
+    except Exception as exc:  # noqa: BLE001
+        print(f"FAIL: unknown DataStore resource raised {type(exc).__name__}: {exc}")
+        return 1
+
     print(f"Federal organizations: {organizations.total_count}")
     print("CKAN-FEDERAL SMOKE TEST PASSED")
     return 0

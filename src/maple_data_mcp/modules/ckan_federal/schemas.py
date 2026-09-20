@@ -53,6 +53,13 @@ class ResourceInfo(BaseModel):
     last_modified: datetime | None = None
     metadata_modified: datetime | None = None
     mimetype: str | None = None
+    datastore_active: bool = Field(
+        default=False,
+        description=(
+            "Whether this resource's rows can be queried directly with "
+            "ckan_datastore_search instead of only downloaded whole from `url`."
+        ),
+    )
 
 
 class ResourceDetail(BaseModel):
@@ -199,4 +206,27 @@ class LicenseInfo(BaseModel):
 
 class LicenseList(BaseModel):
     licenses: list[LicenseInfo]
+    provenance: Provenance
+
+
+class DatastoreField(BaseModel):
+    id: str
+    type: str
+
+
+class DatastoreSearchResult(BaseModel):
+    """Row-level query against one DataStore-active resource (see
+    ResourceInfo.datastore_active), as opposed to ckan_get_resource's
+    metadata-only view. Not every resource supports this -- most
+    resources on this portal are plain files, not DataStore tables."""
+
+    resource_id: str
+    records: list[dict[str, object]]
+    fields: list[DatastoreField] = Field(default_factory=list)
+    total_count: int
+    returned_count: int
+    limit: int
+    offset: int
+    filters: dict[str, str] | None = None
+    query: str | None = None
     provenance: Provenance

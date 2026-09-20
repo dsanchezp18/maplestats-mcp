@@ -61,7 +61,20 @@ Currently implemented:
   Every ckan_ tool accepts lang: "en"|"fr" for interface consistency,
   but on a monolingual portal it is a documented no-op — read that
   portal's own module docstring before assuming a request will change
-  what comes back.
+  what comes back. The federal module also has ckan_datastore_search,
+  which queries actual row data out of a DataStore-active resource
+  (check a resource's datastore_active flag first, from ckan_get_dataset
+  or ckan_get_resource) instead of only handing back a download URL for
+  the whole file. Confirmed live this unlocks real row-level querying
+  for CRA (e.g. filtering a registered charity's directors/officers by
+  business number, out of a 569,000+ row resource), OSFI (e.g. querying
+  a bank's M4 consolidated balance sheet line items directly rather than
+  downloading the full quarterly return file), and most of the ~220
+  federal Proactive Disclosure datasets (contracts, travel and
+  hospitality expenses, grants and contributions, briefing notes, and
+  more, each published per department) — exact-match `filters` work on
+  any resource size, but this deployment rejects full-text `q` search
+  with HTTP 409 for any resource over 100,000 rows.
 - Canadian ArcGIS Hub open-data portals, provincial and municipal:
   Manitoba (Data MB, geoportal.gov.mb.ca, arcgis_mb_), Saskatchewan
   (Saskatchewan GeoHub, geohub.saskatchewan.ca, arcgis_sk_), Prince
@@ -70,19 +83,72 @@ Currently implemented:
   (opendata.london.ca, arcgis_london_), Kitchener (Kitchener GeoHub,
   arcgis_kitchener_), Windsor (Windsor Open Data Portal,
   arcgis_windsor_), Saskatoon (arcgis_saskatoon_), Victoria (VicMap,
-  opendata.victoria.ca, arcgis_victoria_), and Surrey (arcgis_surrey_).
+  opendata.victoria.ca, arcgis_victoria_), Surrey (arcgis_surrey_),
+  Ottawa (open.ottawa.ca, arcgis_ottawa_), Halifax Regional
+  Municipality (data-hrm.hub.arcgis.com, arcgis_halifax_), Mississauga
+  (data.mississauga.ca, arcgis_mississauga_), Peel Region
+  (data.peelregion.ca, arcgis_peel_), Durham Region
+  (opendata.durham.ca, arcgis_durham_), the Region of Waterloo
+  (rowopendata-rmw.opendata.arcgis.com, arcgis_waterloo_region_),
+  Metro Vancouver (open-data-portal-metrovancouver.hub.arcgis.com,
+  arcgis_metro_vancouver_), York Region
+  (insights-york.opendata.arcgis.com, arcgis_york_), Markham
+  (data-markham.opendata.arcgis.com, arcgis_markham_), Newmarket
+  (published as NavigateNewmarket, navigate-newmarket.hub.arcgis.com,
+  arcgis_newmarket_), Aurora, Ontario
+  (town-of-aurora-data-hub-aurora.hub.arcgis.com, arcgis_aurora_),
+  Medicine Hat (opendata.medicinehat.ca, arcgis_medicine_hat_), the
+  City of Grande Prairie (opendata-cityofgp.hub.arcgis.com,
+  arcgis_grande_prairie_), the County of Grande Prairie
+  (county-of-grande-prairie-open-data-cogp.hub.arcgis.com,
+  arcgis_grande_prairie_county_ — a separate government and catalogue
+  from the city), St. Albert (data.stalbert.ca, arcgis_st_albert_),
+  Lethbridge (opendata.lethbridge.ca, arcgis_lethbridge_), Airdrie
+  (data-airdrie.opendata.arcgis.com, arcgis_airdrie_), and Strathcona
+  County (opendata-strathconacounty.hub.arcgis.com,
+  arcgis_strathcona_county_).
   Every deployment runs the same ArcGIS Hub Search API v3 and classic
   ArcGIS REST FeatureServer/MapServer query API, verified live against
-  all ten, with dataset search/detail, direct row queries against a
-  FeatureServer/MapServer layer, and CSV/Shapefile/GeoJSON/KML download
-  links. The *_query_feature_layer tools default layer_index to the
-  service's own first reported layer or table id rather than assuming
-  0 — a hosted table (no geometry) can genuinely sit at a non-zero id,
-  and some cities' services live on a government domain rather than
-  an *.arcgis.com one. Dataset content on every one of these ten
-  portals was confirmed live to be English-only, except Manitoba,
-  Saskatchewan, and Prince Edward Island, whose content is bilingual
-  within a field rather than split by language.
+  all twenty-eight, with dataset search/detail, direct row queries
+  against a FeatureServer/MapServer layer, and CSV/Shapefile/GeoJSON/
+  KML download links. The *_query_feature_layer tools default
+  layer_index to the service's own first reported layer or table id
+  rather than assuming 0 — a hosted table (no geometry) can genuinely
+  sit at a non-zero id, some cities' services live on a government
+  domain rather than an *.arcgis.com one, and (confirmed live adding
+  Durham Region, then again adding Lethbridge and the County of Grande
+  Prairie) an item's url can already name a specific layer of a large
+  or self-hosted service — that trailing layer id, when present, is
+  used directly rather than re-listing the service root and picking
+  its first layer, which would otherwise silently return an unrelated
+  dataset. Dataset content on every one of these twenty-eight portals
+  was confirmed live to be English-only, except Manitoba, Saskatchewan,
+  and Prince Edward Island, whose content is bilingual within a field
+  rather than split by language. Two things worth knowing before
+  querying these: opendata-cityofaurora.hub.arcgis.com is a
+  similarly-named but different city (Aurora, Illinois) —
+  arcgis_aurora_ points at the real Aurora, Ontario deployment; and
+  the County of Grande Prairie's own catalogue has at least one item
+  (Fire Permit Zones) whose service url points at a broken
+  `/arcgisadmin/rest/services/...` path that returns HTTP 500 on any
+  request — a portal-side metadata issue on that one item, not a
+  client bug, confirmed by checking that every other item's
+  `/arcgis/rest/services/...` path works normally.
+- City of Vancouver Open Data Portal (opendata.vancouver.ca), an
+  Opendatasoft deployment (tools prefixed opendatasoft_vancouver_) —
+  the only Opendatasoft-platform source in this codebase (every other
+  source above is CKAN, Socrata, or ArcGIS Hub). Verified live against
+  the Explore API V2: dataset search/detail with fields and download
+  links (CSV/JSON/GeoJSON), and direct record queries with ODSQL
+  filtering (`where`), sorting (`order_by`), or a full-text `query`
+  match. Full-text search on this platform genuinely requires
+  Opendatasoft's own query language — confirmed live that a bare `q=`
+  parameter is silently ignored (returns the full, unfiltered
+  catalogue) while `where=search(*, '...')` correctly filters; both
+  opendatasoft_vancouver_search_datasets and
+  opendatasoft_vancouver_query_records build that clause internally, so
+  a caller never needs to write raw ODSQL just to do a keyword search.
+  English-only.
 - Canadian Socrata (SODA) open-data portals: Nova Scotia
   (data.novascotia.ca, socrata_ns_), New Brunswick (gnb.socrata.com,
   socrata_nb_), and the cities of Calgary (data.calgary.ca,
@@ -191,6 +257,57 @@ Currently implemented:
   request inspection, not documentation) rather than guessing at a
   filename pattern — confirmed live that guessing fails for at least
   one older edition whose filename omits a suffix later editions have.
+
+- Innovation, Science and Economic Development Canada (ISED), via two
+  separate platforms. Corporations Canada's federal corporation lookup
+  API (ised-isde.canada.ca, tools prefixed ised_corporations_):
+  ised_corporations_get_corporation looks up one federal corporation by
+  its numeric corporation id or 9-digit business number, returning
+  current status, names, addresses, director limits, annual-return
+  filing history, and incorporation/by-law activities. This is a
+  single-record lookup, not a name search — there is no documented
+  search-by-name endpoint. Two real quirks confirmed live: an
+  unmatched id/business number still answers HTTP 200, with the body
+  becoming a two-element list of plain error strings instead of the
+  usual record shape (handled internally, surfaced as a normal
+  not-found error); and the upstream address field is genuinely
+  spelled "adresses", not "addresses". The Spectrum Management
+  System's licence site data (a single Esri-hosted ArcGIS FeatureServer
+  with no Hub Search catalogue in front of it, tools prefixed
+  ised_spectrum_): ised_spectrum_query_licences queries ~840,000
+  wireless spectrum licence site records (licensee, service type,
+  transmit/receive frequencies, tower location/height, antenna
+  specs), refreshed monthly, reusing this server's existing generic
+  ArcGIS FeatureServer query plumbing directly against one fixed known
+  service url rather than a Hub catalogue. ISED's own bulk statistical
+  datasets (Financial Performance Data, historical insolvency
+  statistics, and a bulk CSV export of the same federal-corporations
+  register) are ordinary CKAN datasets published by the "ic"
+  organization on open.canada.ca, reachable via
+  ckan_search_datasets(fq="organization:ic") — none of these
+  particular resources are DataStore-active, so ckan_get_dataset's
+  bulk download link is the only access path for them, not
+  ckan_datastore_search. The Canada Revenue Agency's tax-filer
+  statistics (T1/T2, GST/HST, TFSA, Canada Child Benefits, lists of
+  registered charities) and the Office of the Superintendent of
+  Financial Institutions' regulated-entity data (banks, insurers,
+  trust and loan companies, and their financial return filings) are
+  likewise ordinary CKAN datasets, under the "cra-arc" and
+  "osfi-bsif" organizations respectively — but here several key
+  resources genuinely are DataStore-active and confirmed live
+  queryable with ckan_datastore_search: a CRA charity's directors/
+  officers table (569,000+ rows, filterable by business number) and
+  OSFI's bank regulatory returns (e.g. the M4 consolidated balance
+  sheet, filterable by institution/period/line item) both return real
+  row data this way, not just a CSV link. CRA's own Bankruptcy-
+  adjacent data note: the Office of the Superintendent of Bankruptcy's
+  *individual* debtor records search (ised-isde.canada.ca, part of
+  ISED) requires an account and charges a per-search fee — genuinely
+  paywalled and authentication-gated, not open data, so it is out of
+  scope; ISED's free, open *aggregate* insolvency statistics (monthly/
+  annual counts by NAICS industry or Forward Sortation Area) remain
+  reachable via ckan_search_datasets(fq="organization:ic") as bulk
+  downloads, with no DataStore-active resources found among them.
 
 Every StatCan tool accepts lang: "en"|"fr", but it only changes what
 comes back for RDaaS tools and wds_get_full_table_download_csv, whose

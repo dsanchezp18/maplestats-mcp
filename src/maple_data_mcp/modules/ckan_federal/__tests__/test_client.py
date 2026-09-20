@@ -339,6 +339,80 @@ async def test_unsuccessful_envelope_with_200_status_raises_upstream_error(httpx
         await client.list_licenses()
 
 
+async def test_datastore_search_parses_records_and_fields(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}datastore_search"
+            "?resource_id=3eb35dcd-9b0c-4ae9-a45c-e5e481567c23&limit=20&offset=0"
+        ),
+        json=_envelope(
+            {
+                "total": 5,
+                "records": [{"BN": "854491511RR0001", "Last Name": "Rabak"}],
+                "fields": [{"id": "BN", "type": "text"}, {"id": "Last Name", "type": "text"}],
+            }
+        ),
+    )
+    result = await client.datastore_search("3eb35dcd-9b0c-4ae9-a45c-e5e481567c23")
+    assert result.total_count == 5
+    assert result.returned_count == 1
+    assert result.records[0]["Last Name"] == "Rabak"
+    assert result.fields[0].id == "BN"
+
+
+async def test_datastore_search_encodes_filters_as_json(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}datastore_search"
+            "?resource_id=abc&limit=20&offset=0&filters=%7B%22BN%22%3A+%22854491511RR0001%22%7D"
+        ),
+        json=_envelope({"total": 1, "records": [], "fields": []}),
+    )
+    result = await client.datastore_search("abc", filters={"BN": "854491511RR0001"})
+    assert result.filters == {"BN": "854491511RR0001"}
+
+
+async def test_datastore_search_over_100k_rows_full_text_query_raises_invalid_input(httpx_mock):
+    """Confirmed live: this deployment rejects `q` full-text search with
+    HTTP 409 for a resource over 100,000 rows -- shared/ckan.py maps any
+    non-404 4xx (including this deployment's use of 409) to InvalidInput."""
+    httpx_mock.add_response(
+        status_code=409,
+        json={
+            "help": "help",
+            "success": False,
+            "error": {
+                "__type": "Validation Error",
+                "message": "Invalid request. Full text search is not supported for data with more than 100000 rows.",
+            },
+        },
+    )
+    with pytest.raises(InvalidInput):
+        await client.datastore_search("big-resource", query="something")
+
+
+async def test_datastore_search_unknown_resource_raises_not_found(httpx_mock):
+    httpx_mock.add_response(
+        status_code=404,
+        json={
+            "help": "help",
+            "success": False,
+            "error": {"__type": "Not Found Error", "message": 'Resource "x" was not found.'},
+        },
+    )
+    with pytest.raises(NotFound):
+        await client.datastore_search("x")
+
+
+async def test_datastore_search_invalid_input_rejects_bad_limit_and_offset():
+    with pytest.raises(InvalidInput):
+        await client.datastore_search("abc", limit=0)
+    with pytest.raises(InvalidInput):
+        await client.datastore_search("abc", offset=-1)
+    with pytest.raises(InvalidInput):
+        await client.datastore_search(" ")
+
+
 async def test_timeout_raises_upstream_unavailable(httpx_mock):
     for _ in range(3):
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))

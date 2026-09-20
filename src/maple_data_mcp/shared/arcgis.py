@@ -40,6 +40,17 @@ Two live-verified platform quirks this module encodes:
    and `default_layer_index` below exist because of these two, found
    only by calling every function here against all three portals live
    (see AGENTS.md's rule on why mocked tests alone cannot catch this).
+3. A later audit (2026-09-19, adding Durham Region) found a third
+   quirk `default_layer_index` did not yet handle: an item's
+   `properties.url` can point at a specific layer of one large shared
+   service (Durham's `Durham_OpenData/MapServer/129`, out of 200+
+   layers on that one MapServer) rather than at a single-purpose
+   service whose own first layer is the right default. Re-listing the
+   stripped root and picking `layers[0]` would have silently returned
+   a different, unrelated dataset (layer 0) instead of raising —
+   `default_layer_index` now returns a URL's own trailing numeric
+   layer id directly when present, before ever calling
+   `get_service_info`.
 """
 
 from __future__ import annotations
@@ -221,7 +232,22 @@ async def default_layer_index(config: ArcGISHubConfig, service_url: str) -> int:
     `tables`, and only default to 0 when a service reports neither —
     that should not happen for an item this Hub's dataset collection
     returned, but keeps this from raising on an unexpected shape.
+
+    When `service_url` already names a specific layer (its final path
+    segment is numeric), that digit is returned directly without
+    re-listing the service root. Confirmed live against Durham Region's
+    Durham_OpenData/MapServer, a single shared service exposing 200+
+    layers: an item's `properties.url` there is
+    `.../MapServer/129` (the one layer that item actually represents),
+    and stripping to the bare root then picking `layers[0]` would
+    silently return layer 0 ("ADDR_Durham") instead — a different,
+    unrelated dataset, not a missing-data error, so nothing downstream
+    would have caught it.
     """
+    trimmed = service_url.rstrip("/")
+    _, _, tail = trimmed.rpartition("/")
+    if tail.isdigit():
+        return int(tail)
     info = await get_service_info(config, service_url)
     layers = info.get("layers")
     if layers:

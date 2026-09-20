@@ -76,7 +76,28 @@ $liveSmokeScripts = @(
     "scripts/smoke_test_arcgis_windsor.py",
     "scripts/smoke_test_arcgis_saskatoon.py",
     "scripts/smoke_test_arcgis_victoria.py",
-    "scripts/smoke_test_arcgis_surrey.py"
+    "scripts/smoke_test_arcgis_surrey.py",
+    "scripts/smoke_test_arcgis_ottawa.py",
+    "scripts/smoke_test_arcgis_halifax.py",
+    "scripts/smoke_test_arcgis_mississauga.py",
+    "scripts/smoke_test_arcgis_peel.py",
+    "scripts/smoke_test_arcgis_durham.py",
+    "scripts/smoke_test_arcgis_waterloo_region.py",
+    "scripts/smoke_test_arcgis_metro_vancouver.py",
+    "scripts/smoke_test_arcgis_york.py",
+    "scripts/smoke_test_arcgis_markham.py",
+    "scripts/smoke_test_arcgis_newmarket.py",
+    "scripts/smoke_test_arcgis_aurora.py",
+    "scripts/smoke_test_arcgis_medicine_hat.py",
+    "scripts/smoke_test_arcgis_grande_prairie.py",
+    "scripts/smoke_test_arcgis_grande_prairie_county.py",
+    "scripts/smoke_test_arcgis_st_albert.py",
+    "scripts/smoke_test_arcgis_lethbridge.py",
+    "scripts/smoke_test_arcgis_airdrie.py",
+    "scripts/smoke_test_arcgis_strathcona_county.py",
+    "scripts/smoke_test_opendatasoft_vancouver.py",
+    "scripts/smoke_test_ised_corporations.py",
+    "scripts/smoke_test_ised_spectrum.py"
 )
 foreach ($smokeScript in $liveSmokeScripts) {
     $null = Invoke-Checked "live smoke test: $smokeScript" "uv" @("run", "python", $smokeScript)

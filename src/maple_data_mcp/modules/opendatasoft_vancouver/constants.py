@@ -1,0 +1,19 @@
+"""Constants for the City of Vancouver's Opendatasoft deployment."""
+
+DOMAIN = "opendata.vancouver.ca"
+RATE_LIMIT_SOURCE = "opendatasoft-vancouver"
+RATE_LIMIT_PER_SECOND = 2.0
+RATE_LIMIT_CAPACITY = 5.0
+
+CACHE_TTL_SEARCH_SECONDS = 10 * 60
+CACHE_TTL_DATASET_SECONDS = 60 * 60
+CACHE_TTL_RECORDS_SECONDS = 5 * 60
+
+SEARCH_LIMIT_DEFAULT = 10
+SEARCH_LIMIT_MAX = 100
+RECORDS_LIMIT_DEFAULT = 10
+RECORDS_LIMIT_MAX = 100
+DESCRIPTION_EXCERPT_LENGTH = 300
+
+DOWNLOAD_FORMATS = ("csv", "json", "geojson")
+DATASET_LANDING_URL = f"https://{DOMAIN}/explore/dataset/"

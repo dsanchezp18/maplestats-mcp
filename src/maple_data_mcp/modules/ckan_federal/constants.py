@@ -34,6 +34,14 @@ CACHE_TTL_ORGANIZATION_LIST_SECONDS = 24 * 60 * 60  # 24h: org roster is stable
 CACHE_TTL_ORGANIZATION_SECONDS = CACHE_TTL_ORGANIZATION_LIST_SECONDS
 CACHE_TTL_RESOURCE_SECONDS = 60 * 60  # 1h
 CACHE_TTL_LICENSE_LIST_SECONDS = 7 * 24 * 60 * 60  # 7d: licenses rarely change
+CACHE_TTL_DATASTORE_SECONDS = 15 * 60  # 15m: DataStore-backed data can update daily
+
+# datastore_search's own server-side cap is far higher (confirmed live:
+# limit=999999 against a 569,385-row resource silently returned exactly
+# 32,000 records, not an error) -- DATASTORE_ROWS_MAX stays far below
+# that for the same agent-facing-compactness reason as SEARCH_ROWS_MAX.
+DATASTORE_ROWS_DEFAULT = 20
+DATASTORE_ROWS_MAX = 1000
 
 # CKAN's own package_search hard cap: a `rows` above this is silently
 # truncated to 1000 server-side (confirmed live: rows=5000 returned
