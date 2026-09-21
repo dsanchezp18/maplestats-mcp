@@ -32,7 +32,7 @@ client deciding which source to query.
 
 Currently implemented:
 
-- Statistics Canada, via seven APIs. Web Data Service (WDS) for table/
+- Statistics Canada, via ten APIs. Web Data Service (WDS) for table/
   cube discovery, metadata, and time series (tools prefixed wds_); the
   SDMX REST API for filtered, server-side-sliced series queries (tools
   prefixed sdmx_); and Reference Data as a Service (RDaaS) for
@@ -107,7 +107,66 @@ Currently implemented:
   the whole page as one list of results silently returned 3x the
   requested count in testing. French uses a different path (plural
   "references") and a different query parameter name ("texte", not
-  "text").
+  "text"). The same tool family also covers StatCan's Analysis
+  catalogue (statcan_reference_search_analysis, 10,841+ analytical
+  articles, "Stats in brief", journals and periodicals) — the
+  identical Drupal engine, path shape, and quirks (`analysis`/
+  `analyses` in place of `reference`/`references`), confirmed live;
+  the same `_search()` implementation and warm-up cache (now keyed by
+  (catalogue, lang) rather than just lang) backs both tools.
+
+  Four more StatCan surfaces found via statcan.gc.ca/en/developers
+  (its own official, comprehensive API index — read directly rather
+  than assumed complete from prior investigation) and confirmed live
+  2026-09-21, closing real gaps: (1) The 2016 Census Profile Web Data
+  Service (tools prefixed statcan_census_profile_2016_) — a genuinely
+  separate, live, unauthenticated JSON REST API for 2016 census data
+  (CPR2016/CR2016Geo at www12.statcan.gc.ca/rest/census-recensement/),
+  not SDMX and not covered by statcan_census_profile_archive_* (which
+  only resolves 2016's bulk CSV/TAB download links, with no live
+  query). statcan_census_profile_2016_list_geographies finds a
+  geography's DGUID across 12 levels; statcan_census_profile_2016_get_data
+  fetches its full profile (optionally scoped to 1 of 14 topics) with
+  separate total/male/female values and suppression symbols, exactly
+  as documented and reproduced live. (2) StatCan's Delta File (tools
+  prefixed statcan_delta_) — a deterministic daily bulk-update archive
+  (`www150.statcan.gc.ca/delta/{YYYYMMDD}.zip`, StatCan's own
+  "preferred mechanism ... for large updates") containing every
+  table/vector data and metadata update released that business day;
+  statcan_delta_get_file_link resolves the URL for one date and
+  confirms it exists via a HEAD request (files only exist for business
+  days with a release — a weekend 404s cleanly, confirmed live) rather
+  than downloading the multi-megabyte file just to check. This module
+  keeps its own small httpx client with http2=True and
+  follow_redirects=True (the delta path 301s to a canonical `/n1/...`
+  URL, and www150.statcan.gc.ca needs HTTP/2 offered in the handshake
+  — see shared/http.py's own docstring). (3) StatCan's official
+  Indicators JSON feeds (tools prefixed statcan_indicators_) — the
+  same feeds that power My StatCan, statcan.gc.ca's own home page, and
+  The Daily's indicator widgets; statcan_indicators_get_indicators
+  returns current named-indicator values (population, CPI, GDP, trade,
+  unemployment, etc. — 2,362 confirmed live in the "all" dataset, plus
+  curated "economic" and "homepage" subsets) with a growth-rate
+  summary and a link back to the releasing Daily article, filterable
+  by keyword and/or geography code. Bilingual fields in this feed are
+  `{"en": ..., "fr": ...}` objects resolved to the requested lang
+  rather than exposed raw. (4) StatCan's 19 "Real-time data tables"
+  (revision-history vintages for key economic/social series, e.g. GDP,
+  CPI core-inflation measures, retail/wholesale trade) turned out to
+  need no new module at all — they are ordinary tables with their own
+  productIds (e.g. 12-10-0165 for real-time merchandise trade),
+  already fully reachable through the existing wds_/sdmx_ tools; only
+  worth knowing the productIds exist, not building anything new for
+  them. A fifth surface — the "Results and documentation of surveys
+  and statistical programs" A-Z directory
+  (www150.statcan.gc.ca/n1/en/type/surveys, ~900 surveys, each with
+  its own `n1/en/surveys/{id}` detail page combining a plain-text
+  description with the same Drupal search engine as Reference/
+  Analysis) — was identified and confirmed live but not built this
+  pass: its own listing page is a genuinely different alphabetical-
+  directory shape (no #ndm-results, confirmed live), so it doesn't
+  reuse the Reference/Analysis parsing as directly as the other finds
+  here did.
 - Bank of Canada Valet API: series and group discovery, metadata, and
   observations — exchange rates, interest rates, CPI/inflation, and
   commodity prices (tools prefixed boc_). Read
