@@ -100,6 +100,7 @@ $liveSmokeScripts = @(
     "scripts/smoke_test_ised_spectrum.py",
     "scripts/smoke_test_ised_cipo.py",
     "scripts/smoke_test_statcan_census_profile.py",
+    "scripts/smoke_test_statcan_census_profile_archive.py",
     "scripts/smoke_test_nrcan_nbac.py"
 )
 foreach ($smokeScript in $liveSmokeScripts) {

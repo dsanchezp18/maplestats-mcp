@@ -22,6 +22,7 @@ class GeographySearchResult(BaseModel):
 class CharacteristicMatch(BaseModel):
     code: str
     name: str
+    parent_code: str | None = None
 
 
 class CharacteristicSearchResult(BaseModel):

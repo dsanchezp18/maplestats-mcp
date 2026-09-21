@@ -32,12 +32,36 @@ client deciding which source to query.
 
 Currently implemented:
 
-- Statistics Canada, via three APIs: Web Data Service (WDS) for table/
+- Statistics Canada, via five APIs. Web Data Service (WDS) for table/
   cube discovery, metadata, and time series (tools prefixed wds_); the
   SDMX REST API for filtered, server-side-sliced series queries (tools
   prefixed sdmx_); and Reference Data as a Service (RDaaS) for
   classifications, codesets, and concordances such as NAICS (tools
-  prefixed rdaas_).
+  prefixed rdaas_). The 2021 Census Profile SDMX API (tools prefixed
+  statcan_census_profile_, a separate host from the two SDMX/WDS
+  services above): statcan_census_profile_search_geography finds a
+  geography's DGUID across all 14 published levels (province down to
+  dissemination area), statcan_census_profile_search_characteristic
+  finds a characteristic code among 2,631 (each carrying parent_code
+  when it's a sub-item of a broader one, e.g. an age-group breakdown),
+  and statcan_census_profile_get_data fetches counts/rates for any
+  geography x characteristic combination. Confirmed live 2026-09-20:
+  the public Census Profile search UI itself has no JSON API (a legacy
+  ColdFusion app, pure server-rendered HTML) — this goes through the
+  separate, documented Web Data Service instead; that service's
+  metadata endpoints need an Accept header rather than the documented
+  format= query param; its data endpoint is genuinely slow (45-48s for
+  a single query, confirmed via raw curl bypassing this client
+  entirely, hence an explicit 60s timeout); and French output needs an
+  Accept-Language header, not a query parameter (handled internally —
+  lang: en|fr still works normally). This SDMX service covers only the
+  2021 census — confirmed by listing every dataflow it serves — so
+  earlier censuses (2001, 2006, 2011, 2016) are covered separately by
+  statcan_census_profile_archive_list_geography_levels and
+  statcan_census_profile_archive_get_download_link, which resolve each
+  year's official bulk CSV/TAB download link (no live query API exists
+  for these years; 1996 has no equivalent bulk-download page under this
+  URL scheme and is not covered).
 - Bank of Canada Valet API: series and group discovery, metadata, and
   observations — exchange rates, interest rates, CPI/inflation, and
   commodity prices (tools prefixed boc_). Read

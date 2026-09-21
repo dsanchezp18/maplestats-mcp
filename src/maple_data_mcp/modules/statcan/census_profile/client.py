@@ -94,7 +94,7 @@ def _to_float(value: str | None) -> float | None:
         return None
 
 
-async def _fetch_codelist(codelist_id: str, lang: str = "en") -> list[dict[str, str]]:
+async def _fetch_codelist(codelist_id: str, lang: str = "en") -> list[dict[str, Any]]:
     url = f"{constants.BASE_URL}/codelist/{constants.AGENCY}/{codelist_id}/latest"
     api_lang = _LANG_TO_API.get(lang, "en")
     headers = {**_STRUCTURE_ACCEPT, "Accept-Language": api_lang}
@@ -123,7 +123,10 @@ async def _fetch_codelist(codelist_id: str, lang: str = "en") -> list[dict[str, 
             f"statcan_census_profile:_fetch_codelist: no codelist found for {codelist_id!r}."
         )
     codes = codelists[0].get("codes") or []
-    return [{"code": c["id"], "name": c.get("name") or c["id"]} for c in codes]
+    return [
+        {"code": c["id"], "name": c.get("name") or c["id"], "parent": c.get("parent")}
+        for c in codes
+    ]
 
 
 async def search_geography(
@@ -178,7 +181,10 @@ async def search_characteristic(
     query_lower = query.strip().lower()
     matched = [c for c in codes if query_lower in c["name"].lower()] if query_lower else codes
     return CharacteristicSearchResult(
-        matches=[CharacteristicMatch(code=c["code"], name=c["name"]) for c in matched[:limit]],
+        matches=[
+            CharacteristicMatch(code=c["code"], name=c["name"], parent_code=c.get("parent"))
+            for c in matched[:limit]
+        ],
         total_matched=len(matched),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,

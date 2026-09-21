@@ -40,6 +40,8 @@ _CHAR_CODELIST_RESPONSE = {
                 "codes": [
                     {"id": "1", "name": "Population, 2021"},
                     {"id": "4", "name": "Total private dwellings"},
+                    {"id": "8", "name": "Total - Age groups of the population - 100% data"},
+                    {"id": "9", "name": "0 to 14 years", "parent": "8"},
                 ],
             }
         ]
@@ -140,9 +142,18 @@ async def test_search_geography_invalid_limit_raises():
 
 async def test_search_characteristic_parses_matches(httpx_mock):
     httpx_mock.add_response(url=_CHAR_CODELIST_URL, json=_CHAR_CODELIST_RESPONSE)
-    result = await client.search_characteristic("population")
+    result = await client.search_characteristic("population, 2021")
     assert result.total_matched == 1
     assert result.matches[0].code == "1"
+    assert result.matches[0].parent_code is None
+
+
+async def test_search_characteristic_exposes_parent_hierarchy(httpx_mock):
+    httpx_mock.add_response(url=_CHAR_CODELIST_URL, json=_CHAR_CODELIST_RESPONSE)
+    result = await client.search_characteristic("0 to 14")
+    assert result.total_matched == 1
+    assert result.matches[0].code == "9"
+    assert result.matches[0].parent_code == "8"
 
 
 async def test_get_data_parses_values_and_attributes(httpx_mock):

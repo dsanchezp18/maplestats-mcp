@@ -69,7 +69,13 @@ async def statcan_census_profile_search_characteristic(
     Use for: finding a characteristic code (needed by
     statcan_census_profile_get_data) by keyword, e.g. "population",
     "median household income", "dwelling", "commute". An empty query
-    returns every characteristic. Keywords: census, characteristic,
+    returns every characteristic. Each match includes parent_code when
+    the characteristic is a sub-item of a broader one in the profile
+    table's own hierarchy (e.g. "0 to 4 years" is a child of "0 to 14
+    years", itself a child of "Total - Age groups of the population") --
+    use this to tell a summary row from its breakdown rows rather than
+    treating all 2,631 characteristics as a flat list. Keywords: census,
+    characteristic,
     variable, population, income, dwelling, age, language, education,
     housing, commuting.
     Mots-clés : recensement, caractéristique, variable, population,
