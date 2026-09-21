@@ -32,7 +32,7 @@ client deciding which source to query.
 
 Currently implemented:
 
-- Statistics Canada, via six APIs. Web Data Service (WDS) for table/
+- Statistics Canada, via seven APIs. Web Data Service (WDS) for table/
   cube discovery, metadata, and time series (tools prefixed wds_); the
   SDMX REST API for filtered, server-side-sliced series queries (tools
   prefixed sdmx_); and Reference Data as a Service (RDaaS) for
@@ -73,7 +73,41 @@ Currently implemented:
   hold inline markup (e.g. a `<span class="refper">` wrapping a
   reference period inside the title) — the client joins all text
   within the div rather than only its direct text, or that inline
-  text would be silently dropped.
+  text would be silently dropped. statcan_daily_search_archive covers
+  the full release history back to 2012-03-14 instead of the 100-day
+  window — found by reading the release-schedule calendar page's raw
+  HTML for an inline `eventsjson:` config pointing at the JSON file
+  its own client-side JS renders from (not from any documented API):
+  one 3.7 MB array, 18,222 entries confirmed live, no pagination.
+  Filter by a title/reference-period keyword and/or a start_date/
+  end_date range ("YYYY-MM-DD"); results come back most-recent-first.
+  StatCan's "Reference resources" catalogue (tools prefixed
+  statcan_reference_, a plain Drupal 10 faceted-search view, no JSON
+  API): statcan_reference_search_documents searches 2,031 definitions,
+  data-source, and methodology documents (technical reference guides,
+  survey documentation, geographic file specifications), each carrying
+  a catalogue number, category, description, and release date — the
+  "Definitions, data sources and methods" content this project's
+  AGENTS/ROADMAP docs refer to as DSDM. Confirmed live 2026-09-21: the
+  search view silently ignores its own text/texte query parameter
+  (rendering every one of the 2,031 documents, unfiltered) unless the
+  requesting session already visited the unparameterized base page and
+  carries the cookie it sets — reproduced with a bare curl and a
+  cookie jar (identical URL and query string, different result
+  depending only on whether the base page was fetched first in the
+  same session). This client keeps its own httpx client (not
+  shared/http.py's) with follow_redirects=True and warms up each
+  language's session with one request to the base page before its
+  first real search, tracked with a module-level flag so later calls
+  in the same process skip that extra round trip. The results page
+  also renders the same paginated list more than once — one combined
+  section holding the actual page of results, immediately followed by
+  several more sections that re-list the identical items grouped by
+  category — so parsing is scoped to only the first section; treating
+  the whole page as one list of results silently returned 3x the
+  requested count in testing. French uses a different path (plural
+  "references") and a different query parameter name ("texte", not
+  "text").
 - Bank of Canada Valet API: series and group discovery, metadata, and
   observations — exchange rates, interest rates, CPI/inflation, and
   commodity prices (tools prefixed boc_). Read
