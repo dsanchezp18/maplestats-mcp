@@ -32,7 +32,7 @@ client deciding which source to query.
 
 Currently implemented:
 
-- Statistics Canada, via five APIs. Web Data Service (WDS) for table/
+- Statistics Canada, via six APIs. Web Data Service (WDS) for table/
   cube discovery, metadata, and time series (tools prefixed wds_); the
   SDMX REST API for filtered, server-side-sliced series queries (tools
   prefixed sdmx_); and Reference Data as a Service (RDaaS) for
@@ -61,7 +61,19 @@ Currently implemented:
   statcan_census_profile_archive_get_download_link, which resolve each
   year's official bulk CSV/TAB download link (no live query API exists
   for these years; 1996 has no equivalent bulk-download page under this
-  URL scheme and is not covered).
+  URL scheme and is not covered). The Daily's official Atom feeds
+  (tools prefixed statcan_daily_): statcan_daily_get_releases returns
+  StatCan's official release bulletin (new/updated tables, survey
+  results, analytical products) for the last 100 days, across all
+  subjects or filtered to one of 30. Confirmed live 2026-09-20: The
+  Daily's own web pages (search, calendar) are plain server-rendered
+  HTML with no JSON API — this goes through StatCan's documented Atom
+  feed family instead (www150.statcan.gc.ca/eng/sc/rss), which needs
+  no API key. A feed entry's title/summary are XHTML divs that can
+  hold inline markup (e.g. a `<span class="refper">` wrapping a
+  reference period inside the title) — the client joins all text
+  within the div rather than only its direct text, or that inline
+  text would be silently dropped.
 - Bank of Canada Valet API: series and group discovery, metadata, and
   observations — exchange rates, interest rates, CPI/inflation, and
   commodity prices (tools prefixed boc_). Read
