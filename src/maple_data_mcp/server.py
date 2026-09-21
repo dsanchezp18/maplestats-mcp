@@ -114,6 +114,21 @@ Currently implemented:
   `analyses` in place of `reference`/`references`), confirmed live;
   the same `_search()` implementation and warm-up cache (now keyed by
   (catalogue, lang) rather than just lang) backs both tools.
+  statcan_reference_get_document_formats answers the natural next
+  question after a search result: given its catalogue number, what
+  can I actually download? A specific issue/article-level number
+  (e.g. "46-28-0001202600100004") returns `formats` — real HTML/PDF
+  links, confirmed live. A series-level number (e.g. "16-511-X") has
+  no formats of its own; confirmed live its page instead lists
+  `editions`, each with its own catalogue number to resolve in turn —
+  same row layout (link + date) as the formats table, distinguished
+  only by the table's own header text ("Format" vs "Titles"/
+  "Titres"), not by any structural difference a caller could
+  otherwise detect. Catalogue-number formatting is itself
+  inconsistent upstream (confirmed live: "16-511-X" resolves with its
+  dashes intact, "46-28-0001..." only resolves with dashes stripped)
+  — this tool tries the number exactly as given first, then stripped,
+  before raising NotFound.
 
   Four more StatCan surfaces found via statcan.gc.ca/en/developers
   (its own official, comprehensive API index — read directly rather
