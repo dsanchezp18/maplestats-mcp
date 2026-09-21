@@ -10,7 +10,7 @@ from maple_data_mcp.shared.errors import InvalidInput, UpstreamError
 @pytest.fixture(autouse=True)
 def _clear_state():
     cache_module._caches.clear()
-    client._warmed_langs.clear()
+    client._warmed.clear()
     yield
 
 
@@ -130,3 +130,29 @@ async def test_search_documents_upstream_5xx_becomes_upstream_error(httpx_mock):
     httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=housing", status_code=500)
     with pytest.raises(UpstreamError):
         await client.search_documents("housing")
+
+
+_ANALYSIS_BASE_URL_EN = constants.BASE_URL_TEMPLATE.format(lang="en", path="analysis")
+
+
+async def test_search_analysis_parses_entries_and_sets_catalogue(httpx_mock):
+    httpx_mock.add_response(url=_ANALYSIS_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(
+        url=f"{_ANALYSIS_BASE_URL_EN}?count=10&text=housing", html=_RESULTS_HTML
+    )
+    result = await client.search_analysis("housing")
+    assert result.catalogue == "analysis"
+    assert result.returned_count == 2
+
+
+async def test_search_documents_and_search_analysis_warm_up_independently(httpx_mock):
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(url=_ANALYSIS_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=a", html=_RESULTS_HTML)
+    httpx_mock.add_response(url=f"{_ANALYSIS_BASE_URL_EN}?count=10&text=a", html=_RESULTS_HTML)
+    await client.search_documents("a")
+    await client.search_analysis("a")
+    warmups = [
+        r for r in httpx_mock.get_requests() if str(r.url) in (_BASE_URL_EN, _ANALYSIS_BASE_URL_EN)
+    ]
+    assert len(warmups) == 2

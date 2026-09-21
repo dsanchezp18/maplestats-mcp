@@ -49,6 +49,18 @@ async def main() -> int:
     except InvalidInput:
         print("OK: bogus lang raises InvalidInput as expected")
 
+    analysis = await client.search_analysis("housing")
+    print(
+        f"OK: search_analysis('housing') -> {analysis.returned_count} of {analysis.total_matched}"
+    )
+    ok &= analysis.catalogue == "analysis"
+    ok &= analysis.total_matched > 0
+    print("  sample:", analysis.documents[0].model_dump())
+
+    analysis_fr = await client.search_analysis("logement", lang="fr", count=3)
+    print(f"OK: search_analysis('logement', lang=fr) -> {analysis_fr.total_matched}")
+    ok &= analysis_fr.total_matched > 0
+
     print("\nSTATCAN REFERENCE SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 

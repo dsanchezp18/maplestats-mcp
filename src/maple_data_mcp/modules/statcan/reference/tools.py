@@ -1,4 +1,4 @@
-"""MCP tools for StatCan's "Reference resources" catalogue search."""
+"""MCP tools for StatCan's Drupal-based catalogue searches (Reference resources and Analysis)."""
 
 from __future__ import annotations
 
@@ -36,3 +36,30 @@ async def statcan_reference_search_documents(
     d'enquête, numéro au catalogue.
     """
     return await client.search_documents(query, count=count, page=page, lang=lang)
+
+
+@tool
+async def statcan_reference_search_analysis(
+    query: str = "",
+    lang: Literal["en", "fr"] = "en",
+    count: int = constants.SEARCH_COUNT_DEFAULT,
+    page: int = 0,
+) -> ReferenceSearchResult:
+    """Search StatCan's Analysis catalogue: analytical articles, journals and periodicals.
+
+    Use for: finding analytical publications, "Stats in brief" (many
+    of these are also Daily articles republished with a catalogue
+    number), and journal/periodical series -- distinct from
+    statcan_reference_search_documents (methodology/definitions
+    catalogue), from actual data (WDS/SDMX/RDaaS), and from The
+    Daily's release bulletin (statcan_daily_*). Covers 10,841+
+    documents. Each result carries a catalogue number (e.g.
+    "46-28-0001"), a category (e.g. "Journals and periodicals"), a
+    description, and a release date. An empty query returns the full
+    unfiltered catalogue (paginate with page/count to browse it).
+    Keywords: StatCan, analysis, analytical article, stats in brief,
+    journal, periodical, working paper, insights.
+    Mots-clés : Statistique Canada, analyse, article analytique,
+    coup d'œil sur, revue, périodique, document de travail.
+    """
+    return await client.search_analysis(query, count=count, page=page, lang=lang)

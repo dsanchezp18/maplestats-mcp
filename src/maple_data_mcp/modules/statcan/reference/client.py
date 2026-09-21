@@ -1,9 +1,12 @@
-"""Client for StatCan's "Reference resources" catalogue search.
+"""Client for StatCan's Drupal-based catalogue searches (Reference
+resources and Analysis share one Drupal 10 search engine and one
+`_search` implementation here, differing only in path/query-param
+config -- see constants.py).
 
 Confirmed live 2026-09-21. This search view requires a real
 browser-shaped session before it will honour the `text`/`texte` query
-parameter -- a bare request to the search URL renders every one of
-the 2,031 documents, ignoring the keyword, unless that same client
+parameter -- a bare request to the search URL renders every document
+in the catalogue, ignoring the keyword, unless that same client
 already visited the unparameterized base page and carries the session
 cookie it set (reproduced with a raw `curl` and a cookie jar: identical
 URL and query string, different result depending only on whether the
@@ -12,8 +15,8 @@ base page was fetched first). This module keeps its own
 `follow_redirects=True` so the cookie handshake from an unrelated
 anti-scraping redirect on first contact resolves within one logical
 call, and "warms up" that session with one request to the base page
-before the first real search per language, tracked with a
-module-level flag so later calls skip the extra round trip.
+before the first real search per (catalogue, language) pair, tracked
+with a module-level set so later calls skip the extra round trip.
 
 The results page also renders the same paginated result set more than
 once: one combined `<details id="all">` (or `"tout"` in French)
@@ -48,28 +51,27 @@ _LIMITER = get_limiter(
 )
 
 _client = httpx.AsyncClient(timeout=30.0, http2=True, follow_redirects=True)
-_warmed_langs: set[str] = set()
+_warmed: set[tuple[str, str]] = set()
 
 
-def _base_url(lang: str) -> str:
-    config = constants.LANG_CONFIG[lang]
+def _base_url(catalogue: str, lang: str) -> str:
+    config = constants.CATALOGUE_CONFIG[(catalogue, lang)]
     return constants.BASE_URL_TEMPLATE.format(lang=lang, path=config["path"])
 
 
-async def _warm_up(lang: str) -> None:
-    if lang in _warmed_langs:
+async def _warm_up(catalogue: str, lang: str) -> None:
+    key = (catalogue, lang)
+    if key in _warmed:
         return
-    await _client.get(_base_url(lang), headers={"User-Agent": "maple-data-mcp/0.1"})
-    _warmed_langs.add(lang)
+    await _client.get(_base_url(catalogue, lang), headers={"User-Agent": "maple-data-mcp/0.1"})
+    _warmed.add(key)
 
 
-def _parse_results(html: str) -> tuple[list[ReferenceDocument], int]:
+def _parse_results(html: str, context: str) -> tuple[list[ReferenceDocument], int]:
     soup = BeautifulSoup(html, "html.parser")
     results_container = soup.find(id="ndm-results")
     if results_container is None:
-        raise UpstreamError(
-            "statcan_reference:search_documents: unexpected response shape (missing #ndm-results)."
-        )
+        raise UpstreamError(f"{context}: unexpected response shape (missing #ndm-results).")
 
     # The page renders the combined, paginated result set in the FIRST
     # <details> (id="all"/"tout"), immediately followed by several more
@@ -78,9 +80,7 @@ def _parse_results(html: str) -> tuple[list[ReferenceDocument], int]:
     # silently returning duplicates across every category grouping.
     first_details = results_container.find("details")
     if first_details is None:
-        raise UpstreamError(
-            "statcan_reference:search_documents: unexpected response shape (no <details> in #ndm-results)."
-        )
+        raise UpstreamError(f"{context}: unexpected response shape (no <details> in #ndm-results).")
 
     total_matched = 0
     summary = first_details.find("summary")
@@ -139,39 +139,37 @@ def _parse_results(html: str) -> tuple[list[ReferenceDocument], int]:
     return documents, total_matched
 
 
-async def search_documents(
-    query: str = "",
+async def _search(
+    catalogue: str,
+    tool_name: str,
+    query: str,
     *,
-    count: int = constants.SEARCH_COUNT_DEFAULT,
-    page: int = 0,
-    lang: str = "en",
+    count: int,
+    page: int,
+    lang: str,
 ) -> ReferenceSearchResult:
-    """Search StatCan's Reference resources catalogue (definitions, data sources, methods)."""
-    if lang not in constants.LANG_CONFIG:
-        raise InvalidInput(
-            f"statcan_reference:search_documents: lang must be one of "
-            f"{sorted(constants.LANG_CONFIG)}, got {lang!r}."
-        )
+    context = f"statcan_reference:{tool_name}"
+    if (catalogue, lang) not in constants.CATALOGUE_CONFIG:
+        raise InvalidInput(f"{context}: lang must be one of ('en', 'fr'), got {lang!r}.")
     if count < 1 or count > constants.SEARCH_COUNT_MAX:
         raise InvalidInput(
-            f"statcan_reference:search_documents: count must be between 1 and "
-            f"{constants.SEARCH_COUNT_MAX}, got {count}."
+            f"{context}: count must be between 1 and {constants.SEARCH_COUNT_MAX}, got {count}."
         )
     if page < 0:
-        raise InvalidInput(f"statcan_reference:search_documents: page must be >= 0, got {page}.")
+        raise InvalidInput(f"{context}: page must be >= 0, got {page}.")
 
-    config = constants.LANG_CONFIG[lang]
+    config = constants.CATALOGUE_CONFIG[(catalogue, lang)]
     params: dict[str, str] = {"count": str(count)}
     if query.strip():
         params[config["query_param"]] = query.strip()
     if page > 0:
         params["p"] = f"{page - 1}-All"
-    url = _base_url(lang)
+    url = _base_url(catalogue, lang)
 
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
-            await _warm_up(lang)
+            await _warm_up(catalogue, lang)
             response = await _client.get(
                 url, params=params, headers={"User-Agent": "maple-data-mcp/0.1"}
             )
@@ -179,19 +177,18 @@ async def search_documents(
             return response.text
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            raise UpstreamError(
-                f"statcan_reference:search_documents returned HTTP {status}."
-            ) from exc
+            raise UpstreamError(f"{context} returned HTTP {status}.") from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_reference:search_documents did not respond in time. Try again shortly."
+                f"{context} did not respond in time. Try again shortly."
             ) from exc
 
-    cache_key = f"statcan-reference:search:{lang}:{query.strip().lower()}:{count}:{page}"
+    cache_key = f"statcan-reference:{catalogue}:{lang}:{query.strip().lower()}:{count}:{page}"
     html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    documents, total_matched = _parse_results(html)
+    documents, total_matched = _parse_results(html, context)
 
     return ReferenceSearchResult(
+        catalogue=catalogue,
         query=query,
         documents=documents,
         returned_count=len(documents),
@@ -203,3 +200,25 @@ async def search_documents(
             schema_name="statcan_reference.ReferenceSearchResult",
         ),
     )
+
+
+async def search_documents(
+    query: str = "",
+    *,
+    count: int = constants.SEARCH_COUNT_DEFAULT,
+    page: int = 0,
+    lang: str = "en",
+) -> ReferenceSearchResult:
+    """Search StatCan's Reference resources catalogue (definitions, data sources, methods)."""
+    return await _search("reference", "search_documents", query, count=count, page=page, lang=lang)
+
+
+async def search_analysis(
+    query: str = "",
+    *,
+    count: int = constants.SEARCH_COUNT_DEFAULT,
+    page: int = 0,
+    lang: str = "en",
+) -> ReferenceSearchResult:
+    """Search StatCan's Analysis catalogue (analytical articles, journals and periodicals)."""
+    return await _search("analysis", "search_analysis", query, count=count, page=page, lang=lang)

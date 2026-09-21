@@ -1,4 +1,5 @@
-"""Typed responses for StatCan's "Reference resources" catalogue search."""
+"""Typed responses for StatCan's Drupal-based catalogue searches
+(Reference resources and Analysis share the same result shape)."""
 
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ class ReferenceDocument(BaseModel):
 
 
 class ReferenceSearchResult(BaseModel):
+    catalogue: str
     query: str
     documents: list[ReferenceDocument] = Field(default_factory=list)
     returned_count: int
