@@ -32,7 +32,7 @@ client deciding which source to query.
 
 Currently implemented:
 
-- Statistics Canada, via ten APIs. Web Data Service (WDS) for table/
+- Statistics Canada, via eleven APIs. Web Data Service (WDS) for table/
   cube discovery, metadata, and time series (tools prefixed wds_); the
   SDMX REST API for filtered, server-side-sliced series queries (tools
   prefixed sdmx_); and Reference Data as a Service (RDaaS) for
@@ -172,16 +172,32 @@ Currently implemented:
   productIds (e.g. 12-10-0165 for real-time merchandise trade),
   already fully reachable through the existing wds_/sdmx_ tools; only
   worth knowing the productIds exist, not building anything new for
-  them. A fifth surface — the "Results and documentation of surveys
-  and statistical programs" A-Z directory
-  (www150.statcan.gc.ca/n1/en/type/surveys, ~900 surveys, each with
-  its own `n1/en/surveys/{id}` detail page combining a plain-text
-  description with the same Drupal search engine as Reference/
-  Analysis) — was identified and confirmed live but not built this
-  pass: its own listing page is a genuinely different alphabetical-
-  directory shape (no #ndm-results, confirmed live), so it doesn't
-  reuse the Reference/Analysis parsing as directly as the other finds
-  here did.
+  them. A fifth surface, initially deferred as a genuinely different
+  page shape, was closed in a follow-up pass: the "Results and
+  documentation of surveys and statistical programs" A-Z directory
+  (www150.statcan.gc.ca/n1/en/type/surveys, `/n1/fr/type/enquetes`,
+  ~899 surveys confirmed live, active and inactive) needs the same
+  session-cookie warm-up as Reference/Analysis but a different parser
+  (a single `ul.ndm-surveys-az` listing, not the faceted
+  `#ndm-results` search view) — tools prefixed statcan_surveys_.
+  statcan_surveys_search_surveys finds a survey's numeric ID;
+  statcan_surveys_get_survey_metadata resolves that same ID against
+  IMDB (Integrated Metadata Base, `www23.statcan.gc.ca/imdb/`,
+  `p2SV.pl` for English / `p2SV_f.pl` for French — a `lang=fr` query
+  parameter has no effect, confirmed live) — a genuinely separate,
+  older Perl-CGI system holding the actual "Definitions, data sources
+  and methods" content: status, frequency, description, and subjects,
+  confirmed live that the directory's numeric ID is exactly IMDB's own
+  "Record number" for the same survey. Its full methodology sections
+  (target population, sampling, data sources, data accuracy) are
+  linked via detail_url rather than parsed, since they're long prose
+  better read directly. One real quirk handled: an unknown survey ID
+  redirects through StatCan's own dedicated error page
+  (.../error-erreur/stc_srvmsg404.html), which itself answers HTTP 500
+  due to a broken redirect chain on their end (302 → 301 → 500,
+  reproduced identically with a raw curl) — this is IMDB's
+  deterministic "no such survey" signal, not a generic failure, and is
+  surfaced as a normal NotFound rather than an UpstreamError.
 - Bank of Canada Valet API: series and group discovery, metadata, and
   observations — exchange rates, interest rates, CPI/inflation, and
   commodity prices (tools prefixed boc_). Read
