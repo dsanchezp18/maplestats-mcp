@@ -66,6 +66,38 @@ async def statcan_reference_search_analysis(
 
 
 @tool
+async def statcan_reference_search_data(
+    query: str = "",
+    lang: Literal["en", "fr"] = "en",
+    count: int = constants.SEARCH_COUNT_DEFAULT,
+    page: int = 0,
+) -> ReferenceSearchResult:
+    """Search StatCan's Data catalogue: tables plus PUMFs, geographic and other bulk files.
+
+    Use for: finding a data product's catalogue number, especially one
+    with no WDS/SDMX discovery path of its own -- most notably Public
+    Use Microdata Files (PUMFs; category "Public use microdata", e.g.
+    catalogue number 71M0001X for the Labour Force Survey PUMF,
+    98M0001X for the Census). Most other results here are ordinary
+    table PIDs also reachable via statcan_wds_*/statcan_sdmx_*, so
+    prefer those tools for routine table search -- use this one when
+    the product itself (a PUMF, a boundary file, a bulk archive) is
+    the target, not a table's time series. Covers 13,342+ items. Pass
+    a result's catalogue_number to statcan_reference_get_document_formats
+    to resolve its HTML page, then follow that page's own link to the
+    actual bulk download (a bespoke per-product static page, not
+    something this catalogue's search results parse directly). An
+    empty query returns the full unfiltered catalogue (paginate with
+    page/count to browse it). Keywords: StatCan, PUMF, public use
+    microdata file, geographic boundary file, bulk data, data product.
+    Mots-clés : Statistique Canada, FMGD, fichier de microdonnées à
+    grande diffusion, fichier de limites géographiques, données en
+    bloc, produit de données.
+    """
+    return await client.search_data(query, count=count, page=page, lang=lang)
+
+
+@tool
 async def statcan_reference_get_document_formats(
     catalogue_number: str, lang: Literal["en", "fr"] = "en"
 ) -> DocumentFormats:

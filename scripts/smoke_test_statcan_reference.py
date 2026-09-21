@@ -61,6 +61,18 @@ async def main() -> int:
     print(f"OK: search_analysis('logement', lang=fr) -> {analysis_fr.total_matched}")
     ok &= analysis_fr.total_matched > 0
 
+    data = await client.search_data("Public Use Microdata Files")
+    print(
+        f"OK: search_data('Public Use Microdata Files') -> {data.returned_count} of {data.total_matched}"
+    )
+    ok &= data.catalogue == "data"
+    ok &= data.total_matched > 50  # confirmed live: 144
+    print("  sample:", data.documents[0].model_dump())
+
+    data_fr = await client.search_data("logement", lang="fr", count=3)
+    print(f"OK: search_data('logement', lang=fr) -> {data_fr.total_matched}")
+    ok &= data_fr.total_matched > 0
+
     # Series-level catalogue number, works with dashes as given. This
     # page lists editions (each with its own catalogue number), not
     # formats -- confirmed live the table header reads "Titles", not

@@ -158,6 +158,26 @@ async def test_search_documents_and_search_analysis_warm_up_independently(httpx_
     assert len(warmups) == 2
 
 
+_DATA_BASE_URL_EN = constants.BASE_URL_TEMPLATE.format(lang="en", path="data")
+_DATA_BASE_URL_FR = constants.BASE_URL_TEMPLATE.format(lang="fr", path="donnees")
+
+
+async def test_search_data_parses_entries_and_sets_catalogue(httpx_mock):
+    httpx_mock.add_response(url=_DATA_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(url=f"{_DATA_BASE_URL_EN}?count=10&text=microdata", html=_RESULTS_HTML)
+    result = await client.search_data("microdata")
+    assert result.catalogue == "data"
+    assert result.returned_count == 2
+
+
+async def test_search_data_fr_uses_texte_param_and_donnees_path(httpx_mock):
+    httpx_mock.add_response(url=_DATA_BASE_URL_FR, html="<html></html>")
+    httpx_mock.add_response(
+        url=f"{_DATA_BASE_URL_FR}?count=10&texte=microdonnees", html=_RESULTS_HTML
+    )
+    await client.search_data("microdonnees", lang="fr")
+
+
 _DOCUMENT_FORMATS_HTML = """
 <html><body>
 <h1 property="name" id="wb-cont">Analysis of residential properties and homeowners in high flood hazard areas</h1>

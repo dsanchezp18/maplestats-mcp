@@ -227,6 +227,17 @@ async def search_analysis(
     return await _search("analysis", "search_analysis", query, count=count, page=page, lang=lang)
 
 
+async def search_data(
+    query: str = "",
+    *,
+    count: int = constants.SEARCH_COUNT_DEFAULT,
+    page: int = 0,
+    lang: str = "en",
+) -> ReferenceSearchResult:
+    """Search StatCan's Data catalogue (tables plus PUMFs, geographic and other bulk files)."""
+    return await _search("data", "search_data", query, count=count, page=page, lang=lang)
+
+
 def _parse_document_formats(
     html: str, catalogue_number: str, page_url: str, was_cached: bool
 ) -> DocumentFormats:
