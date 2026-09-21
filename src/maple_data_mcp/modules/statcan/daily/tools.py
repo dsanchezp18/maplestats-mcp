@@ -7,7 +7,7 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.statcan.daily import client, constants
-from maple_data_mcp.modules.statcan.daily.schemas import DailyReleaseList
+from maple_data_mcp.modules.statcan.daily.schemas import DailyArchiveSearchResult, DailyReleaseList
 
 Subject = Literal[
     "all",
@@ -66,3 +66,31 @@ async def statcan_daily_get_releases(
     diffusions récentes, quoi de neuf, annonce de Statistique Canada.
     """
     return await client.get_releases(subject, lang=lang, limit=limit)
+
+
+@tool
+async def statcan_daily_search_archive(
+    query: str = "",
+    lang: Literal["en", "fr"] = "en",
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = constants.ARCHIVE_SEARCH_LIMIT_DEFAULT,
+) -> DailyArchiveSearchResult:
+    """Search The Daily's full release archive (2012-03-14 onward), not just the last 100 days.
+
+    Use for: finding when StatCan first or last released something on
+    a topic, or listing every historical release matching a keyword,
+    going back to 2012 -- statcan_daily_get_releases only covers the
+    last 100 days via the official Atom feeds. query matches against
+    the release title and reference period (e.g. "second quarter
+    2020"); leave it empty to browse by date range alone. start_date
+    and end_date are "YYYY-MM-DD" and filter to releases on or between
+    those dates (inclusive); omit either to leave that side open.
+    Results are returned most-recent-first. Keywords: The Daily,
+    historical, archive, past releases, release history, when was.
+    Mots-clés : Le Quotidien, historique, archive, diffusions passées,
+    historique des diffusions, quand.
+    """
+    return await client.search_archive(
+        query, lang=lang, start_date=start_date, end_date=end_date, limit=limit
+    )

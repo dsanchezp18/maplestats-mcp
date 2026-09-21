@@ -45,6 +45,27 @@ async def main() -> int:
     except InvalidInput:
         print("OK: bogus subject raises InvalidInput as expected")
 
+    archive = await client.search_archive("labour force survey", start_date="2012-01-01")
+    print(f"OK: search_archive('labour force survey') -> {archive.total_matched} matches")
+    ok &= archive.total_matched > 50  # confirmed live: released monthly since well before 2012
+    print(f"  most recent in page: {archive.entries[0].release_date if archive.entries else None}")
+    ok &= all(
+        e.release_date >= e2.release_date
+        for e, e2 in zip(archive.entries, archive.entries[1:], strict=False)
+    )
+
+    ranged = await client.search_archive("", start_date="2012-03-01", end_date="2012-03-31")
+    print(f"OK: search_archive('', 2012-03) -> {ranged.total_matched} matches")
+    ok &= ranged.total_matched > 0
+    ok &= all(e.release_date.month == 3 and e.release_date.year == 2012 for e in ranged.entries)
+
+    try:
+        await client.search_archive("", start_date="not-a-date")
+        print("FAIL: expected InvalidInput for a bogus start_date")
+        ok = False
+    except InvalidInput:
+        print("OK: bogus start_date raises InvalidInput as expected")
+
     print("\nSTATCAN DAILY SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 

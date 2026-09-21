@@ -9,9 +9,26 @@ subject (30 subjects) plus an "all" feed covering every subject in one
 call, each carrying the last 100 days of releases (title, canonical
 URL, publication timestamp, plain-text summary). No API key or session
 required.
+
+The Atom feeds only cover 100 days. The release-schedule calendar page
+(`n1/dai-quo/cal3-eng.htm`) renders a much deeper history client-side
+from a single JSON file its own inline script points at
+(`eventsjson:`) -- found by fetching the calendar page's raw HTML
+(not its browser-rendered DOM) and reading that script config
+directly, since the file is loaded by client-side JS rather than
+linked as a normal href. That file
+(`FULL_ARCHIVE_URL` below) is the complete Daily release archive:
+18,222 entries confirmed live, from 2012-03-14 (StatCan's own calendar
+UI separately claims "since April 2012" -- the JSON's actual earliest
+entry is about three weeks earlier) through several weeks of scheduled
+upcoming releases past the current date. One 3.7 MB JSON array, no
+pagination, no API key.
 """
 
 BASE_URL = "https://www150.statcan.gc.ca/n1/rss/dai-quo"
+FULL_ARCHIVE_URL = (
+    "https://www150.statcan.gc.ca/n1/dai-quo/ssi/homepage/schedule-previous_releases-{suffix}.json"
+)
 
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom", "xhtml": "http://www.w3.org/1999/xhtml"}
 
@@ -24,6 +41,12 @@ CACHE_TTL_SECONDS = 30 * 60
 
 RELEASES_LIMIT_DEFAULT = 20
 RELEASES_LIMIT_MAX = 300  # confirmed live: "all" feed carries ~270 entries
+
+# The archive file is large (3.7 MB) and only grows by a handful of
+# entries per business day -- cached longer than the 100-day feeds.
+CACHE_TTL_ARCHIVE_SECONDS = 6 * 60 * 60
+ARCHIVE_SEARCH_LIMIT_DEFAULT = 20
+ARCHIVE_SEARCH_LIMIT_MAX = 200
 
 # subject key -> feed numeric code, confirmed live from
 # www150.statcan.gc.ca/eng/sc/rss

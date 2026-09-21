@@ -107,3 +107,86 @@ async def test_get_releases_invalid_xml_becomes_upstream_error(httpx_mock):
     httpx_mock.add_response(url=url, content=b"not xml at all")
     with pytest.raises(UpstreamError):
         await client.get_releases("housing")
+
+
+_ARCHIVE_BODY = [
+    {
+        "rid": "3309",
+        "date": "2012-03-14 00:00:01",
+        "type": "meeting",
+        "title": "Industrial capacity utilization rates",
+        "description": "Fourth quarter 2011",
+        "url": "/daily-quotidien/120314/dq120314a-eng.htm",
+    },
+    {
+        "rid": "3341",
+        "date": "2015-01-06 00:00:01",
+        "type": "meeting",
+        "title": "Industrial product and raw materials price indexes",
+        "description": "November 2014",
+        "url": "/daily-quotidien/150106/dq150106a-eng.htm",
+    },
+    {
+        "rid": "9999",
+        "date": "2020-06-01 00:00:01",
+        "type": "meeting",
+        "title": "Labour Force Survey",
+        "description": "May 2020",
+        "url": "/daily-quotidien/200601/dq200601a-eng.htm",
+    },
+]
+
+_ARCHIVE_URL = constants.FULL_ARCHIVE_URL.format(suffix="eng")
+
+
+async def test_search_archive_filters_by_query(httpx_mock):
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=_ARCHIVE_BODY)
+    result = await client.search_archive("industrial")
+    assert result.total_matched == 2
+    assert all("industrial" in e.title.lower() for e in result.entries)
+
+
+async def test_search_archive_sorts_most_recent_first(httpx_mock):
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=_ARCHIVE_BODY)
+    result = await client.search_archive("")
+    assert result.total_matched == 3
+    dates = [e.release_date for e in result.entries]
+    assert dates == sorted(dates, reverse=True)
+
+
+async def test_search_archive_filters_by_date_range(httpx_mock):
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=_ARCHIVE_BODY)
+    result = await client.search_archive("", start_date="2015-01-01", end_date="2015-12-31")
+    assert result.total_matched == 1
+    assert result.entries[0].title == "Industrial product and raw materials price indexes"
+
+
+async def test_search_archive_resolves_relative_url(httpx_mock):
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=_ARCHIVE_BODY)
+    result = await client.search_archive("industrial capacity")
+    assert result.entries[0].url == (
+        "https://www150.statcan.gc.ca/daily-quotidien/120314/dq120314a-eng.htm"
+    )
+
+
+async def test_search_archive_invalid_date_raises():
+    with pytest.raises(InvalidInput):
+        await client.search_archive("", start_date="not-a-date")
+
+
+async def test_search_archive_invalid_limit_raises():
+    with pytest.raises(InvalidInput):
+        await client.search_archive("", limit=0)
+
+
+async def test_search_archive_fr_uses_fra_url(httpx_mock):
+    url = constants.FULL_ARCHIVE_URL.format(suffix="fra")
+    httpx_mock.add_response(url=url, json=_ARCHIVE_BODY)
+    await client.search_archive("", lang="fr")
+
+
+async def test_search_archive_upstream_5xx_becomes_upstream_error(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_response(url=_ARCHIVE_URL, status_code=500)
+    with pytest.raises(UpstreamError):
+        await client.search_archive("")
