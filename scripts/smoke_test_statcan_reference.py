@@ -14,7 +14,7 @@ import asyncio
 import sys
 
 from maple_data_mcp.modules.statcan.reference import client
-from maple_data_mcp.shared.errors import InvalidInput
+from maple_data_mcp.shared.errors import InvalidInput, NotFound
 
 
 async def main() -> int:
@@ -60,6 +60,33 @@ async def main() -> int:
     analysis_fr = await client.search_analysis("logement", lang="fr", count=3)
     print(f"OK: search_analysis('logement', lang=fr) -> {analysis_fr.total_matched}")
     ok &= analysis_fr.total_matched > 0
+
+    # Series-level catalogue number, works with dashes as given. This
+    # page lists editions (each with its own catalogue number), not
+    # formats -- confirmed live the table header reads "Titles", not
+    # "Format".
+    series = await client.get_document_formats("16-511-X")
+    print(f"OK: get_document_formats('16-511-X') -> {len(series.editions)} edition(s)")
+    ok &= bool(series.title)
+    ok &= series.formats == []
+    ok &= len(series.editions) > 0
+
+    # Issue-level catalogue number, confirmed live to need dashes
+    # stripped -- this exercises the fallback-on-404 path for real.
+    formats_issue = await client.get_document_formats("46-28-0001202600100004")
+    print(
+        f"OK: get_document_formats('46-28-0001202600100004') -> "
+        f"{[f.format for f in formats_issue.formats]}"
+    )
+    ok &= any(f.format == "PDF" and f.url.endswith(".pdf") for f in formats_issue.formats)
+    ok &= formats_issue.catalogue_number == "46-28-0001202600100004"
+
+    try:
+        await client.get_document_formats("not-a-real-catalogue-number-00000")
+        print("FAIL: expected NotFound for a bogus catalogue number")
+        ok = False
+    except NotFound:
+        print("OK: bogus catalogue number raises NotFound as expected")
 
     print("\nSTATCAN REFERENCE SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1

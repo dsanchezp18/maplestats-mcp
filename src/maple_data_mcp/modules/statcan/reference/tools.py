@@ -7,7 +7,7 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.statcan.reference import client, constants
-from maple_data_mcp.modules.statcan.reference.schemas import ReferenceSearchResult
+from maple_data_mcp.modules.statcan.reference.schemas import DocumentFormats, ReferenceSearchResult
 
 
 @tool
@@ -63,3 +63,28 @@ async def statcan_reference_search_analysis(
     coup d'œil sur, revue, périodique, document de travail.
     """
     return await client.search_analysis(query, count=count, page=page, lang=lang)
+
+
+@tool
+async def statcan_reference_get_document_formats(
+    catalogue_number: str, lang: Literal["en", "fr"] = "en"
+) -> DocumentFormats:
+    """Resolve a StatCan catalogue number to its format download links, or its editions.
+
+    Use for: getting the actual downloadable file(s) -- HTML article,
+    PDF, or other format -- for one document or edition already found
+    via statcan_reference_search_documents, statcan_reference_search_analysis,
+    statcan_daily_get_releases/search_archive, or any other tool that
+    surfaces a catalogue number. A specific issue/article-level number
+    (e.g. "46-28-0001202600100004") returns `formats`, its real HTML/
+    PDF links. A series-level number (e.g. "16-511-X") has no formats
+    of its own -- it returns `editions` instead, each with its own
+    catalogue number to call this same tool with. Catalogue-number
+    formatting is genuinely inconsistent upstream -- this tries the
+    number exactly as given first, then with dashes/spaces stripped,
+    before giving up. Keywords: StatCan, catalogue number, PDF,
+    download, format, HTML, edition.
+    Mots-clés : Statistique Canada, numéro au catalogue, PDF,
+    téléchargement, format, HTML, édition.
+    """
+    return await client.get_document_formats(catalogue_number, lang=lang)
