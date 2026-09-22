@@ -32,7 +32,7 @@ client deciding which source to query.
 
 Currently implemented:
 
-- Statistics Canada, via eleven APIs. Web Data Service (WDS) for table/
+- Statistics Canada, via twelve APIs. Web Data Service (WDS) for table/
   cube discovery, metadata, and time series (tools prefixed wds_); the
   SDMX REST API for filtered, server-side-sliced series queries (tools
   prefixed sdmx_); and Reference Data as a Service (RDaaS) for
