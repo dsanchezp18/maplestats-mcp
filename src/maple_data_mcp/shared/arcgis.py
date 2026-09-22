@@ -51,6 +51,18 @@ Two live-verified platform quirks this module encodes:
    `default_layer_index` now returns a URL's own trailing numeric
    layer id directly when present, before ever calling
    `get_service_info`.
+
+`get_json` (2026-09-21, added for StatCan's `modules/statcan/geo`) is
+a thin, generic escape hatch for a plain ArcGIS *Server* deployment
+(no Hub Search API in front of it -- a raw folder/service/layer tree
+browsed directly, confirmed live for geo.statcan.gc.ca) that still
+needs this module's shared error handling: the same embedded
+`{"error": ...}` shape from quirk 2 above is confirmed live on every
+resource this kind of deployment serves, not only `query_layer`'s
+endpoint. `query_layer`'s own `output_format`/`out_sr` parameters
+(also added then) are backward compatible -- every existing caller
+keeps getting plain esri JSON with no reprojection, since both
+default to the prior behavior.
 """
 
 from __future__ import annotations
@@ -199,6 +211,13 @@ def _raise_if_embedded_error(source: str, context: str, body: Any) -> None:
     code = error.get("code") if isinstance(error, dict) else None
     if code == 400:
         raise InvalidInput(f"{source}:{context}: rejected the request ({detail}).")
+    # Confirmed live against a plain ArcGIS Server deployment (StatCan's
+    # geo.statcan.gc.ca): an unknown folder/service/layer answers this
+    # same embedded shape with code 404 ("Folder not found"/"Service
+    # not found"/"Layer not found") -- map it the same way a real HTTP
+    # 404 status is mapped elsewhere in this codebase.
+    if code == 404:
+        raise NotFound(f"{source}:{context}: {detail or 'not found'}.")
     raise UpstreamError(f"{source}:{context} returned an error: {detail}")
 
 
@@ -208,6 +227,22 @@ def _require_arcgis_rest_url(config: ArcGISHubConfig, context: str, service_url:
             f"{config.source}:{context}: service_url must be an https ArcGIS REST "
             f"service endpoint (containing /rest/services/), got {service_url!r}."
         )
+
+
+async def get_json(
+    config: ArcGISHubConfig, context: str, url: str, *, params: dict[str, Any] | None = None
+) -> Any:
+    """GET one arbitrary ArcGIS REST resource -- a folder listing, a
+    specific layer's own field/schema document, or anything else this
+    module doesn't already have a dedicated function for -- raising for
+    both a non-2xx status and the platform's embedded `{"error": ...}`
+    shape (see module docstring, quirk 2). Unlike `get_service_info`,
+    this does not strip a trailing numeric path segment first; pass the
+    exact resource URL wanted.
+    """
+    body = await _get(config, f"{config.source}:{context}", url, {"f": "json", **(params or {})})
+    _raise_if_embedded_error(config.source, context, body)
+    return body
 
 
 async def get_service_info(config: ArcGISHubConfig, service_url: str) -> dict[str, Any]:
@@ -269,6 +304,8 @@ async def query_layer(
     return_geometry: bool = False,
     limit: int = 10,
     offset: int = 0,
+    output_format: str = "json",
+    out_sr: int | None = None,
 ) -> dict[str, Any]:
     """Query one FeatureServer/MapServer layer's rows via the ArcGIS REST API.
 
@@ -291,18 +328,30 @@ async def query_layer(
     `.../FeatureServer/0/0/query` on a portal like Saskatchewan's. Pass
     a `layer_index` resolved by `default_layer_index` rather than a
     bare `0` unless the caller already knows the right id.
+
+    `output_format` (confirmed live equally supported by every ArcGIS
+    REST deployment in this codebase so far) defaults to plain esri
+    JSON, matching every caller before this parameter existed; pass
+    `"geojson"` for a standard `FeatureCollection` shape instead.
+    `out_sr` reprojects returned geometry (e.g. `4326` for WGS84 lat/
+    lon) — only meaningful together with `return_geometry=True`, and
+    omitted from the request entirely when left `None` so a service's
+    own native spatial reference is returned unchanged, the same
+    default every existing caller already relies on.
     """
     _require_arcgis_rest_url(config, "query_layer", service_url)
     params: dict[str, Any] = {
         "where": where,
         "outFields": out_fields,
-        "f": "json",
+        "f": output_format,
         "resultRecordCount": limit,
         "resultOffset": offset,
         "returnGeometry": str(return_geometry).lower(),
     }
     if order_by:
         params["orderByFields"] = order_by
+    if out_sr is not None:
+        params["outSR"] = out_sr
     url = f"{_service_root(service_url)}/{layer_index}/query"
     body = await _get(config, f"{config.source}:query_layer:{layer_index}", url, params)
     _raise_if_embedded_error(config.source, "query_layer", body)
