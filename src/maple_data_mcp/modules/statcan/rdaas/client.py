@@ -207,15 +207,24 @@ async def get_classification(classification_id: str, *, lang: str = "en") -> Cla
 async def _get_or_empty(path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
     """GET, treating a 200-with-empty-body response as "no data" (`{}`).
 
-    Verified live this session: `/classification/{id}/categories/detailed`
-    and `/classification/{id}/exclusions` return HTTP 200 with a
-    zero-byte body for NAICS specifically (MJRdRiFsfmJAprtT), while the
-    same two endpoints return full, correctly-shaped data for other
-    classifications (a 3-code list, an 840-code NOC variant). This is
-    a real, classification-specific RDaaS quirk, not a client bug — a
-    plain `response.json()` on an empty body raises a JSON decode
-    error, so this wrapper treats that specific failure as "empty"
-    rather than letting it propagate as an unrelated parsing exception.
+    Verified live: `/classification/{id}/categories/detailed` returns
+    HTTP 200 with a zero-byte body for the CURRENT released NAICS
+    classification specifically (2022.1.0, id MJRdRiFsfmJAprtT) — this
+    is not true of NAICS in general: every retired NAICS version tried
+    (e.g. 2017.3.0, id S049Pjk4RIUgw6j2, ~434KB) and the NAICS Trade
+    Variant (id oufGyF9pTCpcm8OJ, ~381KB) return full category data,
+    and NAICS 2022.1.0's own `/indexes` endpoint separately returns
+    ~8MB of data — so this is an upstream gap specific to this one
+    classification id's `/categories/detailed` (and `/exclusions`)
+    response, not a general "NAICS has no data" situation. A caller
+    who needs the current NAICS 2022 code list despite this gap can
+    get it indirectly via the "NAICS Canada 2017.3.0 to 2022.1.0"
+    concordance (rdaas_search_concordances) — its `target_code`/
+    `target_descriptor` fields are real current-NAICS codes and
+    descriptions, confirmed live. A plain `response.json()` on an
+    empty body raises a JSON decode error, so this wrapper treats
+    that specific failure as "empty" rather than letting it propagate
+    as an unrelated parsing exception.
     """
     try:
         return await _get(path, params=params)
@@ -281,7 +290,15 @@ async def get_classification_categories_detailed(
             url=f"{constants.BASE_URL}/classification/{resource_id}/categories/detailed",
             cached=False,
             schema_name="statcan.rdaas.ClassificationCategoriesDetailed",
-            coverage="empty for classifications where RDaaS itself returns no data (verified for NAICS)"
+            coverage=(
+                "empty: RDaaS itself returns no category data for this classification id "
+                "(confirmed for the current released NAICS 2022.1.0 specifically -- retired "
+                "NAICS versions and the NAICS Trade Variant return full data, so this is not "
+                "true of NAICS in general). If this is the current NAICS and you need its code "
+                "list, try rdaas_get_concordance_maps on the 'NAICS Canada 2017.3.0 to "
+                "2022.1.0' concordance instead -- its target_code/target_descriptor fields are "
+                "the same current-NAICS codes and descriptions."
+            )
             if not entries
             else None,
         ),
@@ -303,7 +320,12 @@ async def get_classification_exclusions(
             url=f"{constants.BASE_URL}/classification/{resource_id}/exclusions",
             cached=False,
             schema_name="statcan.rdaas.ClassificationExclusions",
-            coverage="empty for classifications where RDaaS itself returns no data (verified for NAICS)"
+            coverage=(
+                "empty: RDaaS itself returns no exclusions data for this classification id "
+                "(confirmed live for both the current NAICS 2022.1.0 and a retired NAICS "
+                "version, so this one genuinely appears to have no exclusions data in RDaaS "
+                "across versions, unlike categories/detailed above)"
+            )
             if not entries
             else None,
         ),

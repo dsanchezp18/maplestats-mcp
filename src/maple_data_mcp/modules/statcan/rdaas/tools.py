@@ -88,7 +88,14 @@ async def rdaas_get_classification_categories_detailed(
     """Get the detailed category tree for one classification.
 
     Use for: listing every code/category within a classification (e.g.
-    all NAICS sectors and subsectors).
+    all NAICS sectors and subsectors). Confirmed live: RDaaS itself
+    returns no category data for the CURRENT released NAICS
+    (2022.1.0) specifically -- retired NAICS versions and the NAICS
+    Trade Variant return full data, so this is not a NAICS-wide gap.
+    If you hit this empty case on current NAICS, use
+    rdaas_get_concordance_maps on the "NAICS Canada 2017.3.0 to
+    2022.1.0" concordance instead -- its target_code/target_descriptor
+    fields are the same current-NAICS codes and descriptions.
     Keywords: statcan, classification, categories, codes, naics, rdaas,
     tree, detailed.
     Mots-clés: statcan, classification, catégories, codes, naics,
