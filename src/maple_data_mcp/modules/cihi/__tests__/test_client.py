@@ -40,7 +40,8 @@ def _page(file_url: str, name: str) -> str:
 
 def _workbook(header: list[str], rows: list[list[object]]) -> bytes:
     book = Workbook()
-    book.active.title = "Instructions"
+    book.create_sheet("Instructions", 0)
+    book.remove(book.worksheets[1])
     sheet = book.create_sheet("Table 1")
     sheet.append(["Table 1 30-Day Stroke In-Hospital Mortality"])
     sheet.append([*header, None])
