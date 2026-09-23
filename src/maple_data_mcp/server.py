@@ -61,7 +61,8 @@ Sources, by tool-name prefix:
   household/commercial/industrial energy surveys): nrcan_energy_use_.
   Canada Energy Regulator (pipeline throughput, energy exports, tolls):
   cer_. GC InfoBase federal spending and results (Estimates, Public
-  Accounts, program spending and FTEs): gc_infobase_.
+  Accounts, program spending and FTEs): gc_infobase_. CIHI health-system
+  indicators (Indicator Library): cihi_.
 - CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
