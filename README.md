@@ -60,8 +60,9 @@ bilingual one-line description of each module):
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal tables; Excel data tables |
 | ECCC / MSC | `eccc_` | Weather, climate, hydrometric, air quality (OGC API) |
 | ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
+| Legislation and oceans | `justice_laws_`, `dfo_iwls_` | Consolidated federal Acts and regulations (search, outline, section text, EN/FR); DFO tide stations, tide times, predicted and observed water levels |
 | Other federal | `ircc_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |
-| Provincial agencies | `aer_`, `bcgw_` | Alberta Energy Regulator; BC Geographic Warehouse |
+| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_` | Alberta Energy Regulator; BC Geographic Warehouse; Alberta Economic Dashboard (~260 curated economic tables) |
 | CKAN catalogues | `ckan_` + `portal` | Federal (open.canada.ca), Ontario, BC, Alberta, Quebec, NWT, Yukon, Montreal, Toronto, Regina (`ckan_list_portals`): dataset search/detail and DataStore row queries |
 | ArcGIS Hub portals | `arcgis_hub_` + `portal` | 33 provinces, cities, regions, and agencies (`arcgis_hub_list_portals`) |
 | Socrata portals | `socrata_` + `portal` | Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg (`socrata_list_portals`) |
