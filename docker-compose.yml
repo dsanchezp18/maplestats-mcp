@@ -7,7 +7,6 @@ services:
       MAPLE_HOST: "0.0.0.0"
       MAPLE_PORT: "${MAPLE_PORT:-8000}"
       MAPLE_TRANSPORT: "${MAPLE_TRANSPORT:-http}"
-      MAPLE_PROFILE: "${MAPLE_PROFILE:-all}"
       MAPLE_AUTH_TOKEN: "${MAPLE_AUTH_TOKEN:-}"
       MAPLE_REQUIRE_AUTH: "${MAPLE_REQUIRE_AUTH:-1}"
       MAPLE_MAX_CONCURRENT_REQUESTS: "${MAPLE_MAX_CONCURRENT_REQUESTS:-8}"
@@ -20,14 +19,6 @@ services:
       MAPLE_CACHE_MAX_ENTRIES: "${MAPLE_CACHE_MAX_ENTRIES:-2000}"
       MAPLE_SSL_CERTFILE: "${MAPLE_SSL_CERTFILE:-}"
       MAPLE_SSL_KEYFILE: "${MAPLE_SSL_KEYFILE:-}"
+    # Health check is defined in the Dockerfile (it picks http/https from
+    # MAPLE_SSL_CERTFILE). No volume: the server keeps no on-disk state.
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${MAPLE_PORT:-8000}/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    volumes:
-      - maple_data:/app/data
-
-volumes:
-  maple_data:

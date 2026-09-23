@@ -91,6 +91,7 @@ from maple_data_mcp.modules.elections_financial_returns.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maple_data_mcp.shared.http import new_client
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -99,7 +100,7 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = httpx.AsyncClient(timeout=30.0, follow_redirects=False)
+_client = new_client(http2=False)
 _warmed: set[str] = set()
 
 _HEADERS = {"User-Agent": "maple-data-mcp/0.1"}
@@ -120,16 +121,36 @@ def _search_url(act_code: str, election_id: str, report_code: str, status_code: 
     )
 
 
-async def _warm_up(url: str) -> None:
-    if url in _warmed:
+async def _warm_up(url: str, *, force: bool = False) -> None:
+    if url in _warmed and not force:
         return
     try:
-        await _client.get(url, headers=_HEADERS)
+        response = await _client.get(url, headers=_HEADERS)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise UpstreamError(
+            "elections_financial_returns returned HTTP "
+            f"{exc.response.status_code} during session warm-up."
+        ) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
             "elections_financial_returns did not respond in time during session warm-up."
         ) from exc
     _warmed.add(url)
+
+
+def _has_search_results(html: str) -> bool:
+    """Whether a candidate-search POST was honoured.
+
+    Confirmed live 2026-09-22: a genuine zero-match search still renders
+    `<span id="foundcnt">0</span>`, while a POST the server ignores
+    because the ASP.NET session is missing or expired renders only the
+    empty search form with no `#foundcnt` at all. The process-level
+    `_warmed` flag cannot see a server-side session expiry, so without
+    this check an expired session would be returned (and cached) as a
+    successful search with zero candidates.
+    """
+    return BeautifulSoup(html, "html.parser").find(id="foundcnt") is not None
 
 
 def _parse_select_options(soup: BeautifulSoup, select_id: str) -> list[FilterOption]:
@@ -293,9 +314,7 @@ async def search_candidates(
     }
     cache_key = f"elections-financial-returns:search:{url}:{sorted(form.items())}"
 
-    async def fetch() -> str:
-        await _LIMITER.acquire()
-        await _warm_up(url)
+    async def post_search() -> str:
         try:
             response = await _client.post(url, data=form, headers=_HEADERS)
             response.raise_for_status()
@@ -309,6 +328,24 @@ async def search_candidates(
                 "elections_financial_returns:search_candidates did not respond in time."
             ) from exc
         return response.text
+
+    async def fetch() -> str:
+        await _LIMITER.acquire()
+        await _warm_up(url)
+        html = await post_search()
+        if _has_search_results(html):
+            return html
+
+        await _warm_up(url, force=True)
+        html = await post_search()
+        if not _has_search_results(html):
+            _warmed.discard(url)
+            raise UpstreamError(
+                "elections_financial_returns:search_candidates: the portal returned its empty "
+                "search form even after refreshing the session, so no results can be trusted. "
+                "Try again shortly."
+            )
+        return html
 
     html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     candidates, total_found, parties, provinces = _parse_candidates(html)
@@ -384,14 +421,25 @@ async def get_financial_return_part(
             "SelectedClientIds": candidate_client_id,
             "SearchSelected": "Search Selected",
         }
-        try:
-            select_response = await _client.post(search_url, data=select_form, headers=_HEADERS)
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "elections_financial_returns:get_financial_return_part did not respond "
-                "in time while selecting the candidate."
-            ) from exc
+
+        async def select_candidate() -> httpx.Response:
+            try:
+                return await _client.post(search_url, data=select_form, headers=_HEADERS)
+            except httpx.HTTPError as exc:
+                raise UpstreamUnavailable(
+                    "elections_financial_returns:get_financial_return_part did not respond "
+                    "in time while selecting the candidate."
+                ) from exc
+
+        # A selection POST on an expired session re-renders the form (HTTP
+        # 200) instead of redirecting -- re-warm once before treating a
+        # missing redirect as an upstream failure.
+        select_response = await select_candidate()
         if select_response.status_code != 302:
+            await _warm_up(search_url, force=True)
+            select_response = await select_candidate()
+        if select_response.status_code != 302:
+            _warmed.discard(search_url)
             raise UpstreamError(
                 "elections_financial_returns:get_financial_return_part: expected a "
                 f"redirect after candidate selection, got HTTP {select_response.status_code}."

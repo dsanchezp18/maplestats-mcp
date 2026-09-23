@@ -19,7 +19,13 @@ from datetime import UTC, datetime
 
 ASGIApp = Callable[[dict, Callable, Callable], Awaitable[None]]
 _MCP_PATHS = {"/mcp", "/mcp/"}
-_QUEUE_TIMEOUT_SECONDS = 0.05
+
+# How long a request may wait for a free concurrency slot before a 503.
+# Long enough to absorb an ordinary burst of parallel tool calls (the
+# previous 50 ms turned a 9th simultaneous call into an error), short
+# enough that a saturated server still sheds load instead of queueing
+# without bound.
+_QUEUE_TIMEOUT_SECONDS = 5.0
 
 
 def _header(scope: dict, name: bytes) -> str | None:
@@ -102,7 +108,13 @@ def with_http_security(
         if auth_token:
             authorization = _header(scope, b"authorization") or ""
             scheme, _, token = authorization.partition(" ")
-            valid = scheme.lower() == "bearer" and hmac.compare_digest(token, auth_token)
+            # Compare bytes, not str: hmac.compare_digest raises TypeError on
+            # non-ASCII str input, which would surface as a 500 instead of a
+            # 401. Header values were decoded as latin-1, so re-encoding that
+            # way recovers the raw bytes the client sent.
+            valid = scheme.lower() == "bearer" and hmac.compare_digest(
+                token.encode("latin-1"), auth_token.encode("utf-8")
+            )
             if not valid:
                 await _json_response(
                     send,
@@ -142,6 +154,16 @@ def with_http_security(
                     return
                 hits.append(now)
                 rate_hits[client_key] = hits
+
+        # A GET on /mcp is the Streamable HTTP transport's long-lived
+        # server-to-client SSE stream, held open for the whole session.
+        # Counting it against the concurrency cap would let a handful of
+        # connected clients occupy every slot indefinitely and lock
+        # everyone else out, so only request-carrying methods (POST,
+        # DELETE) take a slot; GET is still authenticated and rate-limited.
+        if scope.get("method") == "GET":
+            await inner_app(scope, receive, send)
+            return
 
         try:
             await asyncio.wait_for(slots.acquire(), timeout=_QUEUE_TIMEOUT_SECONDS)

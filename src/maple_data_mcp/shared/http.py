@@ -30,8 +30,28 @@ import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
-_client = httpx.AsyncClient(timeout=30.0, http2=True)
 _DEFAULT_HEADERS = {"User-Agent": "maple-data-mcp/0.1"}
+_client = httpx.AsyncClient(timeout=30.0, http2=True)
+
+
+def new_client(
+    *, timeout: float = 30.0, http2: bool = True, follow_redirects: bool = False
+) -> httpx.AsyncClient:
+    """A module-owned client, for the few sources the shared singleton cannot serve.
+
+    Use this instead of a bare `httpx.AsyncClient(...)` when a source
+    needs its own cookie jar (a session warm-up the shared client must
+    not leak into other sources), redirect following, or `http2=False`
+    (CRA's registry page, see its client.py). It keeps the project's
+    identifying User-Agent and the `http2=True` default that StatCan's
+    network path requires (see this module's docstring).
+    """
+    return httpx.AsyncClient(
+        timeout=timeout,
+        http2=http2,
+        follow_redirects=follow_redirects,
+        headers=_DEFAULT_HEADERS,
+    )
 
 
 def _request_headers(headers: dict[str, str] | None) -> dict[str, str]:
@@ -48,7 +68,11 @@ def _request_headers(headers: dict[str, str] | None) -> dict[str, str]:
 def is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in _RETRYABLE_STATUSES
-    return isinstance(exc, (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout))
+    # TimeoutException covers connect/read/write/pool timeouts; NetworkError
+    # covers connect/read/write/close failures; RemoteProtocolError is a
+    # server dropping the connection mid-response -- all transient on a
+    # flaky government server, unlike a malformed request.
+    return isinstance(exc, (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError))
 
 
 def decode_json(response: httpx.Response, url: str = "") -> Any:

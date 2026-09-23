@@ -193,10 +193,44 @@ async def test_get_financial_return_part_invalid_part_raises():
 
 
 async def test_get_financial_return_part_no_redirect_after_select_raises(httpx_mock):
-    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
-    httpx_mock.add_response(url=_SEARCH_URL, method="POST", status_code=200, html="<html></html>")
+    # One warm-up, a non-redirecting POST, a forced re-warm, and a second
+    # non-redirecting POST before giving up.
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>", is_reusable=True)
+    httpx_mock.add_response(
+        url=_SEARCH_URL, method="POST", status_code=200, html="<html></html>", is_reusable=True
+    )
     with pytest.raises(UpstreamError):
         await client.get_financial_return_part("999999", "1", election_id="62")
+    assert _SEARCH_URL not in client._warmed
+
+
+async def test_search_candidates_expired_session_rewarms_and_retries(httpx_mock):
+    client._warmed.add(_SEARCH_URL)  # warmed earlier; server-side session since expired
+    httpx_mock.add_response(url=_SEARCH_URL, method="POST", html="<html><form></form></html>")
+    httpx_mock.add_response(url=_SEARCH_URL, method="GET", html="<html></html>")
+    httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
+    result = await client.search_candidates("62")
+    assert result.total_found == 19
+
+
+async def test_search_candidates_empty_form_is_an_error_not_zero_results(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH_URL, method="GET", html="<html></html>", is_reusable=True)
+    httpx_mock.add_response(
+        url=_SEARCH_URL, method="POST", html="<html><form></form></html>", is_reusable=True
+    )
+    with pytest.raises(UpstreamError):
+        await client.search_candidates("62")
+
+
+async def test_search_candidates_genuine_zero_matches_is_not_an_error(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH_URL, method="GET", html="<html></html>")
+    httpx_mock.add_response(
+        url=_SEARCH_URL,
+        method="POST",
+        html='<html><span id="foundcnt">0</span><select id="SelectedClientIds"></select></html>',
+    )
+    result = await client.search_candidates("62", last_name="Zzqxqzz")
+    assert result.total_found == 0
 
 
 async def test_get_financial_return_part_expired_session_raises_not_found(httpx_mock):

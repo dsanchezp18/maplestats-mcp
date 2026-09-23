@@ -44,7 +44,9 @@ MODULE_DESCRIPTION = (
     "the standard CKAN Action API. Covers the Yukon territorial "
     "open-data catalogue (~3,841 datasets). All tools accept lang: "
     "en|fr, though this portal's dataset content is English-only -- lang "
-    "only changes which landing-page chrome variant is linked."
+    "only changes which landing-page chrome variant is linked. No "
+    "row-level DataStore querying: this deployment has no DataStore "
+    "extension (datastore_search answers 'Action name not known')."
 )
 MODULE_DESCRIPTION_FR = (
     "Portail de données ouvertes du Yukon (open.yukon.ca) : recherche de "
@@ -55,5 +57,6 @@ MODULE_DESCRIPTION_FR = (
     "Yukon (environ 3 841 jeux de données). Tous les outils acceptent "
     "lang : en|fr, mais le contenu des jeux de données de ce portail est "
     "uniquement en anglais -- lang ne change que la variante d'habillage "
-    "de la page d'accueil liée."
+    "de la page d'accueil liée. Aucune requête DataStore au niveau des "
+    "lignes : ce déploiement n'a pas l'extension DataStore."
 )

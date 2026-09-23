@@ -47,13 +47,7 @@ def main() -> None:
         raise RuntimeError("MAPLE_SSL_CERTFILE and MAPLE_SSL_KEYFILE must both be set, or neither.")
 
     scheme = "https" if certfile else "http"
-    logger.info(
-        "Starting MapleData MCP v%s on %s:%d (profile=%s)",
-        __version__,
-        host,
-        port,
-        config.get_profile(),
-    )
+    logger.info("Starting MapleData MCP v%s on %s:%d", __version__, host, port)
     logger.info("MCP endpoint: %s://%s:%d/mcp", scheme, host, port)
     logger.info("Health check: %s://%s:%d/health", scheme, host, port)
 

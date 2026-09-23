@@ -45,6 +45,7 @@ from maple_data_mcp.modules.cra_digital_economy_registry.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maple_data_mcp.shared.http import new_client
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -56,7 +57,7 @@ _LIMITER = get_limiter(
 # See module docstring: canada.ca resets an HTTP/2 stream for this
 # specific large page, confirmed reproducible -- this client
 # deliberately does NOT use shared/http.py's http2=True singleton.
-_client = httpx.AsyncClient(timeout=45.0, http2=False)
+_client = new_client(timeout=45.0, http2=False)
 _HEADERS = {"User-Agent": "maple-data-mcp/0.1"}
 
 

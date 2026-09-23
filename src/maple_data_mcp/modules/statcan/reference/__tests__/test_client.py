@@ -16,6 +16,7 @@ def _clear_state():
 
 _RESULTS_HTML = """
 <html><body>
+<form><input name="text" value="housing"><input name="texte" value="logement"></form>
 <div id="ndm-results">
 <details id="all"><summary>All&nbsp;(2,031)</summary>
 <ul data-offset="0">
@@ -281,3 +282,32 @@ async def test_get_document_formats_provenance_url_is_the_page_not_a_row_link(ht
     assert result.provenance.url == (
         "https://www150.statcan.gc.ca/n1/en/catalogue/46280001202600100004"
     )
+
+
+# What the view renders when its session cookie is missing or expired:
+# the keyword is silently dropped (empty search box) and every document
+# in the catalogue comes back -- confirmed live 2026-09-22.
+_IGNORED_QUERY_HTML = _RESULTS_HTML.replace('value="housing"', 'value=""').replace(
+    'value="logement"', 'value=""'
+)
+
+
+async def test_expired_session_rewarms_and_retries(httpx_mock):
+    client._warmed.add(("reference", "en"))  # warmed earlier in the process
+    httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=housing", html=_IGNORED_QUERY_HTML)
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")  # forced re-warm
+    httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=housing", html=_RESULTS_HTML)
+    result = await client.search_documents("housing")
+    assert result.returned_count == 2
+    warmups = [r for r in httpx_mock.get_requests() if str(r.url) == _BASE_URL_EN]
+    assert len(warmups) == 1
+
+
+async def test_ignored_query_after_rewarm_raises_instead_of_returning_everything(httpx_mock):
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>", is_reusable=True)
+    httpx_mock.add_response(
+        url=f"{_BASE_URL_EN}?count=10&text=housing", html=_IGNORED_QUERY_HTML, is_reusable=True
+    )
+    with pytest.raises(UpstreamError):
+        await client.search_documents("housing")
+    assert ("reference", "en") not in client._warmed

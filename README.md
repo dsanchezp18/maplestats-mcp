@@ -21,7 +21,7 @@ See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for the project vision and
 
 ## Bilingual by design / Conçu pour être bilingue
 
-Every tool accepts `lang: "en"|"fr"`, several sources are French-first
+Tools accept `lang: "en"|"fr"`, several sources are French-first
 or French-only (Quebec's `ckan_qc_*` and Montreal's `ckan_montreal_*`),
 and tool discovery works in either language: every tool's docstring
 carries both a `Keywords:` line and a `Mots-clés:` line, so calling
@@ -50,36 +50,30 @@ unilingue.*
 
 ## Status
 
-**Currently implemented:** Statistics Canada, the Bank of Canada, IRCC
-Express Entry, and CKAN catalogues for the federal government, Alberta,
-British Columbia, Ontario, Quebec, the Northwest Territories, Yukon,
-Montreal, and Toronto, plus the custom HTML catalogue for Newfoundland
-and Labrador.
+About 200 tools across these sources (run `docs://catalogue` for a
+bilingual one-line description of each module):
 
-| Submodule | Tools | Covers |
+| Area | Tool prefixes | Covers |
 |---|---|---|
-| `wds` | 16 | Web Data Service — table/cube discovery, metadata, time series |
-| `sdmx` | 4 | SDMX REST — filtered, server-side-sliced series queries |
-| `rdaas` | 12 | Reference Data as a Service — classifications, codesets, concordances (e.g. NAICS) |
+| Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Tables and series, classifications (e.g. NAICS), 2001–2021 Census Profiles, The Daily, indicators, daily bulk-update files, definitions/methods and analysis catalogues, survey directory and IMDB metadata, census geography, SDG hub |
+| Bank of Canada | `boc_` | Valet series, groups, observations |
+| CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal tables; Excel data tables |
+| ECCC / MSC | `eccc_` | Weather, climate, hydrometric, air quality (OGC API) |
+| ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
+| Other federal | `ircc_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_` | Express Entry draws, candidate financial returns, digital platform operators, burned areas |
+| Provincial agencies | `aer_`, `bcgw_` | Alberta Energy Regulator; BC Geographic Warehouse |
+| CKAN catalogues | `ckan_` (federal), `ckan_ab_`, `ckan_bc_`, `ckan_on_`, `ckan_qc_`, `ckan_nt_`, `ckan_yt_`, `ckan_montreal_`, `ckan_toronto_`, `ckan_regina_` | Dataset search/detail and, on most portals, DataStore row queries |
+| ArcGIS Hub portals | `arcgis_hub_` + `portal` | 28 provinces, cities, and regions (`arcgis_hub_list_portals`) |
+| Socrata portals | `socrata_` + `portal` | Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg (`socrata_list_portals`) |
+| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_` | Vancouver (Opendatasoft); Newfoundland and Labrador (HTML catalogue) |
 
-The Bank of Canada module provides Valet series, group, metadata, and
-observation tools. The CKAN modules provide dataset search plus dataset,
-organization, resource, license, tag, and (where used by the portal)
-group details. Portal language behavior is documented in each module;
-`lang` is a no-op on monolingual catalogues. The Newfoundland and Labrador
-module uses the portal's public HTML listing/detail pages because no
-documented JSON catalogue API is available; it returns official file links
-without downloading binary files into MCP responses. The IRCC module
-covers Express Entry rounds of invitations (draw history, CRS cutoffs,
-invitations issued, candidate-pool score distribution) from IRCC's
-canada.ca JSON feed — a different platform from CKAN. IRCC's other
-administrative series (permanent residents, study/work permits, asylum,
-citizenship) are ordinary open.canada.ca CKAN datasets, already reachable
-through `ckan_search_datasets(fq="organization:ircc")` on the federal
-module.
+Many federal administrative series (IRCC permits, CRA statistics and
+charities, OSFI returns, ISED insolvency data) are ordinary open.canada.ca
+datasets, reachable through `ckan_search_datasets(fq="organization:<org>")`.
 
-Every tool accepts `lang: "en"|"fr"` and returns a typed response with
-a `provenance` block (source, URL, query time, freshness, limits). See
+Most tools accept `lang: "en"|"fr"` (a documented no-op on single-language
+sources), and every tool returns a typed response with a `provenance`
+block (source, URL, query time, freshness, limits). See
 [`AGENTS.md`](AGENTS.md) for the full architecture and response
 contract.
 
@@ -195,8 +189,8 @@ HTTPS, not just mocks):
 .\scripts\verify.ps1
 ```
 
-runs the full gate above plus the live smoke tests for StatCan, the Bank of
-Canada, and every implemented CKAN portal. If Docker is installed, it also
+runs the full gate above plus every `scripts/smoke_test*.py` live smoke
+test. If Docker is installed, it also
 runs a build, `compose up`, and health check.
 
 See [`AGENTS.md`](AGENTS.md) for the full contributor guide, including
@@ -211,8 +205,10 @@ how to add a new source module.
 | `MAPLE_AUTH_TOKEN` | unset | Bearer token required on `/mcp` if set |
 | `MAPLE_REQUIRE_AUTH` | `0` | Refuse to start without a token if `1` |
 | `MAPLE_RATE_LIMIT_REQUESTS` / `MAPLE_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Per-client sliding-window rate limit |
-| `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | Concurrency cap |
+| `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | Cap on in-flight MCP requests (POST/DELETE); excess requests wait up to 5 s, then get 503. Long-lived GET event streams are not counted |
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS termination in-process |
+| `MAPLE_TRUST_PROXY_HEADERS` | `0` | Key rate limits on `X-Forwarded-For`; enable only behind a proxy that sets it |
+| `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Max entries per TTL bucket in the in-memory response cache |
 
 ```bash
 MAPLE_TRANSPORT=http MAPLE_REQUIRE_AUTH=0 docker compose up --build

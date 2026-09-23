@@ -116,3 +116,21 @@ async def test_get_survey_metadata_genuine_500_becomes_upstream_error(httpx_mock
 async def test_get_survey_metadata_invalid_lang_raises():
     with pytest.raises(InvalidInput):
         await client.get_survey_metadata(5108, lang="de")
+
+
+async def test_search_surveys_expired_session_rewarms_and_retries(httpx_mock):
+    client._warmed_list_langs.add("en")  # warmed earlier in the process
+    httpx_mock.add_response(url=constants.SURVEY_LIST_URL_EN, html="<html></html>")  # expired
+    httpx_mock.add_response(url=constants.SURVEY_LIST_URL_EN, html="<html></html>")  # re-warm
+    httpx_mock.add_response(url=constants.SURVEY_LIST_URL_EN, html=_LIST_HTML)
+    result = await client.search_surveys()
+    assert result.returned_count > 0
+
+
+async def test_search_surveys_empty_directory_after_rewarm_raises(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.SURVEY_LIST_URL_EN, html="<html></html>", is_reusable=True
+    )
+    with pytest.raises(UpstreamError):
+        await client.search_surveys()
+    assert "en" not in client._warmed_list_langs

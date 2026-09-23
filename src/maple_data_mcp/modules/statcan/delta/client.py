@@ -19,6 +19,7 @@ from maple_data_mcp.modules.statcan.delta import constants
 from maple_data_mcp.modules.statcan.delta.schemas import DeltaFileLink
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, UpstreamUnavailable
+from maple_data_mcp.shared.http import new_client
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -27,7 +28,7 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = httpx.AsyncClient(timeout=15.0, http2=True, follow_redirects=True)
+_client = new_client(timeout=15.0, follow_redirects=True)
 
 
 async def get_file_link(date: str) -> DeltaFileLink:

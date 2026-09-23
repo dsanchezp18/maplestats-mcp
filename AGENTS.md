@@ -32,6 +32,15 @@ instead, each with its own `constants.py`/`schemas.py`/`client.py`/
 The top-level `statcan/__init__.py`, `resources.py`, and `prompts.py`
 stay shared across the sub-APIs.
 
+A new portal on a platform this server already covers (ArcGIS Hub,
+Socrata) is **not** a new module: add one entry to that family's
+`constants.PORTALS` (and its `PortalKey` literal in `schemas.py` — a
+unit test keeps the two in sync). `modules/arcgis_hub/` and
+`modules/socrata/` replaced 28 and 5 copy-pasted per-portal modules
+whose code differed only in the domain; one tool family with a
+`portal` argument also keeps `search_tools` from returning several
+indistinguishable per-city tools.
+
 `modules/_example/` is the literal template — copy it, don't reinvent
 the pattern. It is underscore-prefixed on purpose: `server.py` adds
 one `FileSystemProvider` per `modules/*` directory and explicitly
@@ -73,7 +82,7 @@ Use the typed exceptions in `shared/errors.py` (`InvalidInput`,
 an error** (`{"error": "..."}`) from a tool — that looks like a
 success to a client checking `isError`.
 
-## Two things that look removable and are not
+## Three things that look removable and are not
 
 1. **`http2=True` in `shared/http.py`'s client.** Diagnosed live
    against `statcan.gc.ca`: a plain `httpx`/`httpcore` client's
@@ -134,7 +143,9 @@ assumption shared by the code and its tests.
 3. Write typed Pydantic models in `schemas.py` for every distinct
    response shape, each embedding `provenance: Provenance`.
 4. Write `client.py`: use `shared/http.py`'s `api_get`/`api_post`/
-   `get_raw` (never a bare `httpx` call), `shared/rate_limiter.py`'s
+   `get_raw` (never a bare `httpx` call; when a source genuinely needs
+   its own cookie jar, redirect following, or `http2=False`, create its
+   client with `shared/http.py::new_client()`, not `httpx.AsyncClient`), `shared/rate_limiter.py`'s
    `get_limiter(source, rate, capacity)` for the source's documented
    rate limit, and `shared/cache.py`'s `cached_fetch` for anything
    cacheable. Raise typed errors; never return error-shaped dicts.
@@ -163,6 +174,11 @@ uv run pyright                   # type check — must be 0 errors
 uv run pytest                    # unit tests, all mocked, no network
 ```
 
+The root `conftest.py` removes tenacity's retry backoff and the
+per-source rate-limit waits in tests (retry counts and rules are
+unchanged), which keeps the mocked suite at seconds rather than
+minutes. Don't add real `sleep`s to tests to compensate.
+
 **Before merging a change touching a client.py**, also run the live
 smoke test — mocked tests cannot catch a real API's actual quirks
 (they proved this twice already: the ALPN/TLS issue and the
@@ -189,9 +205,19 @@ uv run python scripts/smoke_test.py
   from or verified against a live API response; state what was
   confirmed and how, so a future edit doesn't silently regress a
   fix for a real quirk.
-- No cross-source discovery/ranking layer yet — only one source
-  (StatCan) exists. Don't build it prematurely; revisit once 2-3
-  sources exist and there's a real multi-source query to route.
+- `SERVER_INSTRUCTIONS` in `server.py` is sent to every client on
+  every session: keep it a short routing index (add the new prefix to
+  it), and put per-source detail in tool docstrings, the module's
+  `MODULE_DESCRIPTION` (surfaced by the generated `docs://catalogue`),
+  or a `docs://` resource.
+- A source that needs a session warm-up (a cookie set by an earlier
+  request) must also detect a *lost* session on every response, not
+  only warm up once per process: server-side sessions expire, and
+  these portals answer an expired session with a normal-looking page
+  (an empty form, an unfiltered listing), not an error. Re-warm once
+  and retry, then raise — never return or cache that page as a result.
+  See `statcan/reference`, `statcan/surveys`, and
+  `elections_financial_returns` for the pattern.
 - No CLI companion yet (deferred by design, see `PROJECT_GUIDE.md`).
 
 ## Acknowledgments

@@ -28,11 +28,6 @@ def get_transport() -> str:
     return "stdio" if raw == "stdio" else "http"
 
 
-def get_profile() -> str:
-    raw = os.environ.get("MAPLE_PROFILE", "all").strip().lower()
-    return raw if raw in {"public", "maintenance"} else "all"
-
-
 def get_auth_token() -> str | None:
     raw = os.environ.get("MAPLE_AUTH_TOKEN", "").strip()
     return raw or None

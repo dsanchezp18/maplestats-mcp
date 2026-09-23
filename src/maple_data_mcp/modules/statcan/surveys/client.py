@@ -29,6 +29,7 @@ from maple_data_mcp.modules.statcan.surveys.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maple_data_mcp.shared.http import new_client
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -37,7 +38,7 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = httpx.AsyncClient(timeout=30.0, http2=True, follow_redirects=True)
+_client = new_client(follow_redirects=True)
 _warmed_list_langs: set[str] = set()
 
 
@@ -49,11 +50,16 @@ def _imdb_url(lang: str) -> str:
     return constants.IMDB_BASE_URL_FR if lang == "fr" else constants.IMDB_BASE_URL_EN
 
 
-async def _warm_up_list(lang: str) -> None:
-    if lang in _warmed_list_langs:
+async def _warm_up_list(lang: str, *, force: bool = False) -> None:
+    if lang in _warmed_list_langs and not force:
         return
-    await _client.get(_list_url(lang), headers={"User-Agent": "maple-data-mcp/0.1"})
+    response = await _client.get(_list_url(lang), headers={"User-Agent": "maple-data-mcp/0.1"})
+    response.raise_for_status()
     _warmed_list_langs.add(lang)
+
+
+def _has_survey_links(html: str) -> bool:
+    return bool(BeautifulSoup(html, "html.parser").select("ul.ndm-surveys-az li a"))
 
 
 async def search_surveys(
@@ -77,6 +83,21 @@ async def search_surveys(
             await _warm_up_list(lang)
             response = await _client.get(url, headers={"User-Agent": "maple-data-mcp/0.1"})
             response.raise_for_status()
+            if _has_survey_links(response.text):
+                return response.text
+
+            # An empty directory means the session cookie expired (the page
+            # renders no links without one): re-warm once rather than cache
+            # "no surveys" for the whole TTL.
+            await _warm_up_list(lang, force=True)
+            response = await _client.get(url, headers={"User-Agent": "maple-data-mcp/0.1"})
+            response.raise_for_status()
+            if not _has_survey_links(response.text):
+                _warmed_list_langs.discard(lang)
+                raise UpstreamError(
+                    "statcan_surveys:search_surveys: the directory rendered no surveys even "
+                    "after refreshing its session. Try again shortly."
+                )
             return response.text
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code

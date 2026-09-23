@@ -45,6 +45,7 @@ from maple_data_mcp.modules.statcan.reference.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maple_data_mcp.shared.http import new_client
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -53,7 +54,7 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = httpx.AsyncClient(timeout=30.0, http2=True, follow_redirects=True)
+_client = new_client(follow_redirects=True)
 _warmed: set[tuple[str, str]] = set()
 
 
@@ -62,12 +63,33 @@ def _base_url(catalogue: str, lang: str) -> str:
     return constants.BASE_URL_TEMPLATE.format(lang=lang, path=config["path"])
 
 
-async def _warm_up(catalogue: str, lang: str) -> None:
+async def _warm_up(catalogue: str, lang: str, *, force: bool = False) -> None:
     key = (catalogue, lang)
-    if key in _warmed:
+    if key in _warmed and not force:
         return
-    await _client.get(_base_url(catalogue, lang), headers={"User-Agent": "maple-data-mcp/0.1"})
+    response = await _client.get(
+        _base_url(catalogue, lang), headers={"User-Agent": "maple-data-mcp/0.1"}
+    )
+    response.raise_for_status()
     _warmed.add(key)
+
+
+def _query_ignored(html: str, query_param: str) -> bool:
+    """Whether the page's own search box came back empty despite a keyword.
+
+    Confirmed live 2026-09-22: when the session cookie is missing or has
+    expired, the view silently ignores the keyword and renders all 2,031
+    documents with an empty search box (`<input name="text" value="">`);
+    when the keyword is honoured, that same input carries it back. A
+    process-level "already warmed" flag cannot know the server-side
+    session expired, so this check is what keeps an unfiltered listing
+    from being returned (and cached) as if it matched the query.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    fields = soup.find_all("input", attrs={"name": query_param})
+    # No search box at all is a different page shape, left for
+    # _parse_results to reject; only an *empty* box signals a lost session.
+    return bool(fields) and not any(str(field.get("value") or "").strip() for field in fields)
 
 
 def _parse_results(html: str, context: str) -> tuple[list[ReferenceDocument], int]:
@@ -177,6 +199,25 @@ async def _search(
                 url, params=params, headers={"User-Agent": "maple-data-mcp/0.1"}
             )
             response.raise_for_status()
+            if config["query_param"] not in params or not _query_ignored(
+                response.text, config["query_param"]
+            ):
+                return response.text
+
+            # The keyword was ignored, so the session has expired: re-warm
+            # once and retry before giving up rather than return every
+            # document in the catalogue as a "match".
+            await _warm_up(catalogue, lang, force=True)
+            response = await _client.get(
+                url, params=params, headers={"User-Agent": "maple-data-mcp/0.1"}
+            )
+            response.raise_for_status()
+            if _query_ignored(response.text, config["query_param"]):
+                _warmed.discard((catalogue, lang))
+                raise UpstreamError(
+                    f"{context}: the catalogue ignored the search keyword even after "
+                    "refreshing its session, so results would be unfiltered. Try again shortly."
+                )
             return response.text
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code

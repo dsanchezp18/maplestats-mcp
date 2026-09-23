@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from maple_data_mcp.shared.http import api_get, get_raw
+from maple_data_mcp.shared.http import api_get, get_raw, is_retryable, new_client
 
 
 async def test_api_get_decodes_json(httpx_mock):
@@ -54,3 +54,32 @@ async def test_get_raw_still_raises_on_404(httpx_mock):
     httpx_mock.add_response(url="https://example.invalid/notfound", status_code=404)
     with pytest.raises(httpx.HTTPStatusError):
         await get_raw("https://example.invalid/notfound")
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        httpx.ReadError("reset"),
+        httpx.RemoteProtocolError("server disconnected"),
+        httpx.PoolTimeout("pool exhausted"),
+        httpx.WriteTimeout("slow write"),
+        httpx.ConnectError("refused"),
+    ],
+)
+def test_transient_transport_errors_are_retryable(exc):
+    assert is_retryable(exc)
+
+
+def test_non_transient_errors_are_not_retryable():
+    assert not is_retryable(httpx.UnsupportedProtocol("ftp://"))
+    assert not is_retryable(ValueError("bad"))
+
+
+async def test_new_client_sends_project_user_agent(httpx_mock):
+    httpx_mock.add_response(url="https://example.test/x", text="ok")
+    client = new_client(http2=False, follow_redirects=True)
+    try:
+        await client.get("https://example.test/x")
+    finally:
+        await client.aclose()
+    assert httpx_mock.get_requests()[0].headers["User-Agent"] == "maple-data-mcp/0.1"

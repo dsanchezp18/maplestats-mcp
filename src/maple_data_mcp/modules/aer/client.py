@@ -21,6 +21,7 @@ from maple_data_mcp.modules.aer.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, UpstreamUnavailable
+from maple_data_mcp.shared.http import new_client
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -32,7 +33,7 @@ _LIMITER = get_limiter(
 # follow_redirects=True: needed for the real HTTP 303s on ST3 .xlsx and
 # ST1 .zip links (see module docstring) -- the ST1 .TXT files instead
 # bypass www.aer.ca entirely rather than relying on this.
-_client = httpx.AsyncClient(timeout=30.0, follow_redirects=True)
+_client = new_client(http2=False, follow_redirects=True)
 _HEADERS = {"User-Agent": "maple-data-mcp/0.1"}
 
 _DATE_LINE_RE = re.compile(r"DATE:\s+(\d{1,2}\s+\w+\s+\d{4})")
