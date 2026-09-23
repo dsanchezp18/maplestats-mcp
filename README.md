@@ -60,6 +60,7 @@ bilingual one-line description of each module):
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal tables; Excel data tables |
 | ECCC / MSC | `eccc_` | Weather, climate, hydrometric, air quality (OGC API) |
 | ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
+| Energy regulation | `cer_` | Canada Energy Regulator CSVs: pipeline throughput and capacity, oil/gas/LNG/NGL exports, tolls, incidents (EN/FR) |
 | Energy use | `nrcan_energy_use_` | NRCan Comprehensive Energy Use Database and energy surveys (SHEU, SCIEU, ICE, ...), EN/FR tables |
 | Oceans | `dfo_iwls_` | DFO tide stations, tide times, predicted and observed water levels |
 | Other federal | `ircc_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |

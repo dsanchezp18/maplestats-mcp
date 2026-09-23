@@ -31,6 +31,7 @@ CASES = [
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
     ("données économiques Alberta taux de chômage", "ab_economic_get_data"),
+    ("débit des pipelines Régie de l'énergie", "cer_query_file"),
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),
 ]
 
