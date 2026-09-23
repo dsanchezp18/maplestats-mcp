@@ -166,6 +166,34 @@ PORTALS: dict[str, Portal] = {
         "Strathcona County Open Data",
         "Données ouvertes du comté de Strathcona",
     ),
+    "parkland_county": Portal(
+        "opendata.parklandcounty.com",
+        "Parkland County Open Data",
+        "Données ouvertes du comté de Parkland",
+    ),
+    "sturgeon_county": Portal(
+        "data-sturgeoncounty.opendata.arcgis.com",
+        "Sturgeon County Atlas",
+        "Atlas du comté de Sturgeon",
+    ),
+    "emrb": Portal(
+        "emrgis.emrb.ca",
+        "Edmonton Metropolitan Region Board GIS (EMRGIS)",
+        "SIG de la Commission de la région métropolitaine d'Edmonton (EMRGIS)",
+        note=(
+            "Regional growth-plan layers for the 13 member municipalities. Also "
+            "served at gis-capitalregion.opendata.arcgis.com (same 85 datasets)."
+        ),
+    ),
+    "alberta_geological_survey": Portal(
+        "geology-ags-aer.opendata.arcgis.com",
+        "Alberta Geological Survey Open Data",
+        "Données ouvertes de la Commission géologique de l'Alberta",
+        note=(
+            "Run by the Alberta Energy Regulator, like the aer_* statistical "
+            "reports, but a separate platform (ArcGIS Hub, not www.aer.ca)."
+        ),
+    ),
 }
 
 RATE_LIMIT_PER_SECOND = 2.0

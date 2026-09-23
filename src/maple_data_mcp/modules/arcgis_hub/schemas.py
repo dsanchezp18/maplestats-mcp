@@ -40,6 +40,10 @@ PortalKey = Literal[
     "lethbridge",
     "airdrie",
     "strathcona_county",
+    "parkland_county",
+    "sturgeon_county",
+    "emrb",
+    "alberta_geological_survey",
 ]
 
 

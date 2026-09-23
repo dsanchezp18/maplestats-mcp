@@ -232,7 +232,7 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
 
 def test_portal_key_literal_matches_registry():
     assert set(get_args(PortalKey)) == set(constants.PORTALS)
-    assert len(constants.PORTALS) == 28
+    assert len(constants.PORTALS) == 32
 
 
 async def test_unknown_portal_raises_invalid_input():
