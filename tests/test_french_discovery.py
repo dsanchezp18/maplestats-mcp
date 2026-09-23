@@ -36,6 +36,6 @@ CASES = [
 async def test_french_query_finds_tool(query: str, expected: str):
     async with Client(mcp) as client:
         result = await client.call_tool("search_tools", {"query": query})
-    text = result.content[0].text if result.content else str(result.structured_content)
+    text = " ".join(getattr(block, "text", "") for block in result.content)
     names = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
     assert expected in names, f"{query!r} -> {names}"
