@@ -38,6 +38,10 @@ from maple_data_mcp.modules.canadabuys import constants
 from maple_data_mcp.modules.canadabuys.schemas import (
     AwardNotice,
     AwardSearchResult,
+    BulkFile,
+    BulkFileList,
+    ContractRecord,
+    ContractSearchResult,
     NoticeDetail,
     TenderNotice,
     TenderSearchResult,
@@ -80,7 +84,12 @@ async def _get(url: str) -> httpx.Response:
     return response
 
 
-async def _load_rows(url: str) -> tuple[list[dict[str, str]], bool]:
+async def _load_rows(
+    url: str,
+    *,
+    columns: tuple[str, ...] | None = None,
+    ttl: int = constants.CACHE_TTL_SECONDS,
+) -> tuple[list[dict[str, str]], bool]:
     async def fetch() -> list[dict[str, str]]:
         await _LIMITER.acquire()
         try:
@@ -100,9 +109,13 @@ async def _load_rows(url: str) -> tuple[list[dict[str, str]], bool]:
                 "canadabuys: expected CSV columns not found "
                 "(missing referenceNumber-numeroReference)."
             )
-        return list(reader)
+        if columns is None:
+            return list(reader)
+        # Contract-history files carry 91 columns and run up to 113MB;
+        # keeping only the columns a tool reads keeps the cached copy small.
+        return [{column: row.get(column) or "" for column in columns} for row in reader]
 
-    return await cached_fetch(f"canadabuys:{url}", constants.CACHE_TTL_SECONDS, fetch)
+    return await cached_fetch(f"canadabuys:{url}", ttl, fetch)
 
 
 def _value(row: dict[str, str], column: str) -> str | None:
@@ -421,4 +434,203 @@ async def get_notice(
     raise NotFound(
         f"canadabuys: reference number {reference!r} is not an open tender or an award "
         f"notice in {', '.join(years)}. Pass fiscal_year to search an older award year."
+    )
+
+
+_CONTRACT_STEMS = (
+    "title-titre",
+    "supplierLegalName-nomLegalFournisseur",
+    "supplierStandardizedName-nomNormaliseFournisseur",
+    "supplierAddressProvince-fournisseurAdresseProvince",
+    "supplierAddressCountry-fournisseurAdressePays",
+    "contractingEntityName-nomEntitContractante",
+    "endUserEntitiesName-nomEntitesUtilisateurFinal",
+    "contractStatus-statutContrat",
+    "procurementMethod-methodeApprovisionnement",
+    "limitedTenderingReason-raisonAppelOffresLimite",
+    "unspscDescription",
+    "gsinDescription-nibsDescription",
+)
+_CONTRACT_COLUMNS = (
+    "referenceNumber-numeroReference",
+    "solicitationNumber-numeroSollicitation",
+    "contractNumber-numeroContrat",
+    "amendmentNumber-numeroModification",
+    "contractAwardDate-dateAttributionContrat",
+    "amendmentDate-dateModification",
+    "contractStartDate-contratDateDebut",
+    "contractEndDate-dateFinContrat",
+    "contractAmount-montantContrat",
+    "totalContractValue-valeurTotaleContrat",
+    "contractCurrency-contratMonnaie",
+    "procurementCategory-categorieApprovisionnement",
+    *(f"{stem}-{suffix}" for stem in _CONTRACT_STEMS for suffix in ("eng", "fra")),
+)
+
+
+def _check_contract_year(fiscal_year: str) -> str:
+    if fiscal_year == constants.CONTRACTS_PARTIAL_2009_KEY:
+        return fiscal_year
+    match = _FISCAL_YEAR_RE.match(fiscal_year)
+    current_start = int(current_fiscal_year()[:4])
+    if (
+        match is None
+        or int(match.group(2)) != int(match.group(1)) + 1
+        or not constants.FIRST_CONTRACT_FISCAL_YEAR <= int(match.group(1)) <= current_start
+    ):
+        raise InvalidInput(
+            f"fiscal_year must look like '2015-2016' and fall between "
+            f"{constants.FIRST_CONTRACT_FISCAL_YEAR}-{constants.FIRST_CONTRACT_FISCAL_YEAR + 1} "
+            f"and {current_fiscal_year()} (or '{constants.CONTRACTS_PARTIAL_2009_KEY}' for "
+            f"January-March 2009), got {fiscal_year!r}."
+        )
+    return fiscal_year
+
+
+def _contract(rows: list[dict[str, str]], lang: str) -> ContractRecord:
+    # One contract appears once per amendment (confirmed live: 97 rows for
+    # one 2020-2021 contract). The original row (000) holds the awarded
+    # amount; the highest-numbered row holds the latest status and total.
+    ordered = sorted(rows, key=lambda row: row["amendmentNumber-numeroModification"])
+    original, latest = ordered[0], ordered[-1]
+    return ContractRecord(
+        reference_number=latest["referenceNumber-numeroReference"],
+        contract_number=_value(latest, "contractNumber-numeroContrat"),
+        title=_localized(latest, "title-titre", lang) or "",
+        status=_localized(latest, "contractStatus-statutContrat", lang),
+        award_date=_value(original, "contractAwardDate-dateAttributionContrat"),
+        contract_start_date=_value(original, "contractStartDate-contratDateDebut"),
+        contract_end_date=_value(latest, "contractEndDate-dateFinContrat"),
+        original_amount=_amount(_value(original, "contractAmount-montantContrat")),
+        total_contract_value=_amount(_value(latest, "totalContractValue-valeurTotaleContrat")),
+        currency=_value(latest, "contractCurrency-contratMonnaie"),
+        amendment_count=len(ordered) - 1,
+        latest_amendment_date=_value(latest, "amendmentDate-dateModification"),
+        supplier_name=_localized(latest, "supplierLegalName-nomLegalFournisseur", lang),
+        supplier_standardized_name=_localized(
+            latest, "supplierStandardizedName-nomNormaliseFournisseur", lang
+        ),
+        supplier_province=_localized(
+            latest, "supplierAddressProvince-fournisseurAdresseProvince", lang
+        ),
+        supplier_country=_localized(latest, "supplierAddressCountry-fournisseurAdressePays", lang),
+        contracting_entity=_localized(latest, "contractingEntityName-nomEntitContractante", lang),
+        end_user_entity=_localized(latest, "endUserEntitiesName-nomEntitesUtilisateurFinal", lang),
+        procurement_categories=_list(
+            _value(latest, "procurementCategory-categorieApprovisionnement")
+        ),
+        procurement_method=_localized(latest, "procurementMethod-methodeApprovisionnement", lang),
+        limited_tendering_reason=_localized(
+            latest, "limitedTenderingReason-raisonAppelOffresLimite", lang
+        ),
+        commodity=_list(
+            _localized(latest, "unspscDescription", lang)
+            or _localized(latest, "gsinDescription-nibsDescription", lang)
+        ),
+    )
+
+
+async def search_contracts(
+    query: str = "",
+    *,
+    supplier: str | None = None,
+    buyer: str | None = None,
+    category: str | None = None,
+    min_value: float | None = None,
+    fiscal_year: str | None = None,
+    limit: int = constants.SEARCH_RESULTS_DEFAULT,
+    lang: str = "en",
+) -> ContractSearchResult:
+    _check_lang(lang)
+    _check_limit(limit)
+    code = _category_code(category)
+    year = _check_contract_year(fiscal_year) if fiscal_year else current_fiscal_year()
+    url = constants.CONTRACTS_URL_TEMPLATE.format(fiscal_year=year)
+    ttl = (
+        constants.CACHE_TTL_SECONDS
+        if year == current_fiscal_year()
+        else constants.PAST_YEAR_CACHE_TTL_SECONDS
+    )
+    rows, was_cached = await _load_rows(url, columns=_CONTRACT_COLUMNS, ttl=ttl)
+
+    grouped: dict[str, list[dict[str, str]]] = {}
+    for row in rows:
+        grouped.setdefault(row["referenceNumber-numeroReference"], []).append(row)
+
+    supplier_needle = (supplier or "").strip().lower()
+    matched: list[ContractRecord] = []
+    for group in grouped.values():
+        if not _matches_terms(_haystack(group[-1], _CONTRACT_STEMS, lang), query):
+            continue
+        contract = _contract(group, lang)
+        names = (contract.supplier_name, contract.supplier_standardized_name)
+        if (
+            (code is None or code in contract.procurement_categories)
+            and (not supplier_needle or any(supplier_needle in (n or "").lower() for n in names))
+            and _contains(contract.contracting_entity, buyer)
+            and (min_value is None or (contract.total_contract_value or 0) >= min_value)
+        ):
+            matched.append(contract)
+
+    matched.sort(key=lambda contract: contract.total_contract_value or 0, reverse=True)
+    returned = matched[:limit]
+    coverage = f"contracts awarded or amended in fiscal year {year}"
+    if len(matched) > len(returned):
+        coverage += f"; first {len(returned)} of {len(matched)} matches -- narrow the query"
+
+    return ContractSearchResult(
+        query=query,
+        fiscal_year=year,
+        contracts=returned,
+        returned_count=len(returned),
+        total_matched=len(matched),
+        total_contracts=len(grouped),
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=url,
+            cached=was_cached,
+            schema_name="canadabuys.ContractSearchResult",
+            coverage=coverage,
+            limits="one record per contract, amendments merged; amendments made in other "
+            "fiscal years are in those years' files",
+        ),
+    )
+
+
+async def list_bulk_files() -> BulkFileList:
+    async def fetch() -> list[BulkFile]:
+        files: list[BulkFile] = []
+        for key, (title, name) in constants.BULK_FILES.items():
+            url = f"{constants.BASE_URL}/{name}"
+            await _LIMITER.acquire()
+            try:
+                response = await _client.head(url)
+            except httpx.HTTPError as exc:
+                raise UpstreamUnavailable(f"canadabuys did not respond for {url}.") from exc
+            if response.status_code != 200:
+                raise UpstreamError(f"canadabuys returned HTTP {response.status_code} for {url}.")
+            length = response.headers.get("content-length")
+            files.append(
+                BulkFile(
+                    key=key,
+                    title=title,
+                    url=url,
+                    size_bytes=int(length) if length and length.isdigit() else None,
+                    last_modified=response.headers.get("last-modified"),
+                )
+            )
+        return files
+
+    files, was_cached = await cached_fetch(
+        "canadabuys:bulk-files", constants.PAST_YEAR_CACHE_TTL_SECONDS, fetch
+    )
+    return BulkFileList(
+        files=files,
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=constants.BASE_URL,
+            cached=was_cached,
+            schema_name="canadabuys.BulkFileList",
+            limits="links only: these files are too large to query through this server",
+        ),
     )
