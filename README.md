@@ -63,7 +63,7 @@ bilingual one-line description of each module):
 | Other federal | `ircc_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |
 | Provincial agencies | `aer_`, `bcgw_` | Alberta Energy Regulator; BC Geographic Warehouse |
 | CKAN catalogues | `ckan_` (federal), `ckan_ab_`, `ckan_bc_`, `ckan_on_`, `ckan_qc_`, `ckan_nt_`, `ckan_yt_`, `ckan_montreal_`, `ckan_toronto_`, `ckan_regina_` | Dataset search/detail and, on most portals, DataStore row queries |
-| ArcGIS Hub portals | `arcgis_hub_` + `portal` | 32 provinces, cities, regions, and agencies (`arcgis_hub_list_portals`) |
+| ArcGIS Hub portals | `arcgis_hub_` + `portal` | 33 provinces, cities, regions, and agencies (`arcgis_hub_list_portals`) |
 | Socrata portals | `socrata_` + `portal` | Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg (`socrata_list_portals`) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver (Opendatasoft); Newfoundland and Labrador (HTML catalogue); Edmonton police occurrences, real-time transit (GTFS-RT), and EPCOR water quality |
 

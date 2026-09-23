@@ -44,6 +44,7 @@ PortalKey = Literal[
     "sturgeon_county",
     "emrb",
     "alberta_geological_survey",
+    "red_deer",
 ]
 
 

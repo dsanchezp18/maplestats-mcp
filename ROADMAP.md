@@ -173,7 +173,7 @@ portal is confirmed to exist and be reachable.
 | Edmonton-metro gaps | Not shipped | Re-checked 2026-09-22 through ArcGIS Online group search: Leduc's Hub (data.leduc.ca) holds only a Terms of Use page; Spruce Grove's open-data group is empty; Fort Saskatchewan has none. The public "City of Beaumont Open Data" feature services on services3.arcgis.com belong to Beaumont, **California** (FEMA flood zones, neighbouring Banning/Calimesa) -- not shipped; Beaumont, Alberta's own group is empty. Provincially published datasets for these municipalities remain reachable via `ckan_ab_*`. |
 | Cochrane | Blocked | `data-cochranegis.opendata.arcgis.com` renders its public pages fine (HTTP 200) but its Hub Search API and DCAT feed both reject anonymous access (`GWM_0003: You do not have permissions...`, HTTP 401/404) — confirmed live with multiple user agents. The org's API access appears to require authentication this server does not have; re-investigate only if that changes. |
 | Okotoks | Blocked | `okotoksmaps-okotoks.hub.arcgis.com` has the identical failure mode as Cochrane above — public pages load, API calls are rejected with the same `GWM_0003` error. Same re-investigation condition. |
-| Red Deer | Not ArcGIS/CKAN/Socrata | `data.reddeer.ca` is a bespoke ASP.NET portal (its own HTML catalogue, no `/api/search/v1/...` or CKAN/SODA endpoints found) — would need its own adaptor, the same way Newfoundland and Labrador's custom portal did. Not attempted as part of this ArcGIS Hub batch. |
+| Red Deer | Shipped | reddeer.opendata.arcgis.com (City of Red Deer AGOL org `8EWx42uKeMSu9Wcl`), ArcGIS Hub: `arcgis_hub_*` (`portal="red_deer"`), config-only. ~170 items confirmed live 2026-09-22; smoke test passed (search "trail", item detail, feature queries on both an AGOL-hosted layer and a self-hosted `arcgis.reddeer.ca` FeatureServer). Quirks: the city's curated `data.reddeer.ca` is a bespoke ASP.NET catalogue (~22 datasets, no API) and stays uncovered; `data-reddeer.opendata.arcgis.com` returns 401 (private org id); the Hub mixes in orthophoto Image Services, duplicate-titled layers, and many Survey123 `_form`/`_results` layers, so filter by `item_type` or keyword. |
 
 Shipped 2026-09-18: Hamilton, London, Kitchener, Windsor, Saskatoon,
 Victoria, and Surrey (all ArcGIS Hub), Regina (CKAN), and Laval/
@@ -192,8 +192,8 @@ Prairie, the County of Grande Prairie, St. Albert, Lethbridge,
 Airdrie, and Strathcona County — seven more, same adaptor, same zero
 portal-specific code pattern. Cochrane and Okotoks were investigated
 and found genuinely blocked (their Hub Search API rejects anonymous
-access even though the public site renders); Red Deer runs a bespoke
-non-ArcGIS/CKAN/Socrata portal and was not attempted. See the rows
+access even though the public site renders); Red Deer's bespoke data.reddeer.ca was skipped then; its ArcGIS Hub
+site was added later (see the Red Deer row). See the rows
 above for what each shipment found, including two real bugs fixed in
 the shared adaptor (Durham, generalized further by Lethbridge and the
 County of Grande Prairie) and one wrong-city domain caught before

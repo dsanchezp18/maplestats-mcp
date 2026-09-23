@@ -194,6 +194,17 @@ PORTALS: dict[str, Portal] = {
             "reports, but a separate platform (ArcGIS Hub, not www.aer.ca)."
         ),
     ),
+    "red_deer": Portal(
+        "reddeer.opendata.arcgis.com",
+        "City of Red Deer ArcGIS Hub",
+        "Hub ArcGIS de la Ville de Red Deer",
+        note=(
+            "City of Red Deer AGOL org (8EWx42uKeMSu9Wcl), ~170 items: "
+            "orthophotos, trails, parks, plus many Survey123 form layers. The "
+            "city's curated catalogue at data.reddeer.ca is a custom ASP.NET "
+            "site (no API); data-reddeer.opendata.arcgis.com returns 401."
+        ),
+    ),
 }
 
 RATE_LIMIT_PER_SECOND = 2.0
