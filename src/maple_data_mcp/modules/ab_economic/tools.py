@@ -13,6 +13,7 @@ from fastmcp.tools import tool
 from maple_data_mcp.modules.ab_economic import client, constants
 from maple_data_mcp.modules.ab_economic.schemas import (
     IndicatorList,
+    IndicatorSeries,
     TableData,
     TableFields,
     TableList,
@@ -27,8 +28,8 @@ async def ab_economic_list_indicators(lang: Lang = "en") -> IndicatorList:
 
     Use for: seeing what Alberta's government tracks (agriculture,
     consumer spending, construction, energy, jobs, business, exports,
-    productivity, population, GDP) and what was updated recently. Find
-    the matching data table with ab_economic_list_tables.
+    productivity, population, GDP) and what was updated recently. Then
+    get an indicator's published series with ab_economic_get_indicator_series.
     Keywords: Alberta, economic dashboard, key indicators, economy,
     latest data, Government of Alberta, snapshot, updates.
     Mots-clés : Alberta, tableau de bord économique, indicateurs clés,
@@ -36,6 +37,24 @@ async def ab_economic_list_indicators(lang: Lang = "en") -> IndicatorList:
     """
     del lang
     return await client.list_indicators()
+
+
+@tool
+async def ab_economic_get_indicator_series(indicator: str, lang: Lang = "en") -> IndicatorSeries:
+    """Get the official API series published on one Alberta Economic Dashboard indicator page.
+
+    Use for: the recommended route to Alberta data. Each indicator page
+    (e.g. "Unemployment Rate", "Housing Starts", "Farm Cash Receipts")
+    publishes named API links such as "Unemployment rate in Alberta" or
+    "... by Industry"; each comes back as a table plus filters to pass
+    straight to ab_economic_get_data.
+    Keywords: Alberta, economic dashboard, indicator, API, series,
+    official data link, unemployment, housing starts, CPI.
+    Mots-clés : Alberta, tableau de bord économique, indicateur, API,
+    série, lien de données officiel, chômage, mises en chantier.
+    """
+    del lang
+    return await client.get_indicator_series(indicator)
 
 
 @tool
@@ -83,8 +102,9 @@ async def ab_economic_get_data(
     """Get time-series rows from an Alberta Economic Dashboard table.
 
     Use for: Alberta unemployment, employment, wages, CPI, GDP, exports,
-    energy production, housing and population series. Filter to one
-    series with column values from ab_economic_get_table_fields, e.g.
+    energy production, housing and population series. Pass a `table`
+    and `filters` from ab_economic_get_indicator_series (preferred), or
+    column values from ab_economic_get_table_fields, e.g.
     table="UnemploymentRates_14100287", filters={"GeoName": "Alberta",
     "Sex": "Both sexes", "Age": "15 years and over"}. Dates are
     inclusive ISO dates; the most recent `limit` rows (max 2000) come

@@ -117,3 +117,36 @@ async def test_list_indicators_flattens_topics(httpx_mock):
     assert result.topics == ["Agriculture", "Jobs"]
     assert result.indicators[0].topic == "Agriculture"
     assert result.indicators[1].updated_at is None
+
+
+_PAGE = """<html><body><h2>API Keys</h2>
+<a href="https://api.economicdata.alberta.ca/data?table=UnemploymentRates_14100287&amp;geoname=alberta&amp;sex=both%20sexes">Unemployment rate in Alberta</a>
+<a href="https://api.economicdata.alberta.ca/data?table=UnemploymentRatesIndustry_14100022&amp;geoname=alberta">Unemployment rate by Industry</a>
+<a href="https://api.economicdata.alberta.ca/data?table=UnemploymentRates_14100287&amp;geoname=alberta&amp;sex=both%20sexes">duplicate</a>
+<a href="https://www.alberta.ca/jobs">Jobs</a>
+</body></html>"""
+_CATALOGUE = {
+    "data": [{"name": "Jobs", "indicators": [{"name": "Unemployment Rate", "updatedAt": None}]}]
+}
+
+
+async def test_indicator_series_parses_published_api_links(httpx_mock):
+    httpx_mock.add_response(url=re.compile(r".*/api/tile-data/dashboard/.*"), json=_CATALOGUE)
+    httpx_mock.add_response(
+        url="https://economicdashboard.alberta.ca/dashboard/unemployment-rate/", text=_PAGE
+    )
+    result = await client.get_indicator_series("unemployment rate")
+    assert result.indicator == "Unemployment Rate"
+    assert [s.name for s in result.series] == [
+        "Unemployment rate in Alberta",
+        "Unemployment rate by Industry",
+    ]
+    assert result.series[0].table == "UnemploymentRates_14100287"
+    assert result.series[0].filters == {"geoname": "alberta", "sex": "both sexes"}
+
+
+async def test_indicator_page_without_links_is_not_found(httpx_mock):
+    httpx_mock.add_response(url=re.compile(r".*/api/tile-data/dashboard/.*"), json=_CATALOGUE)
+    httpx_mock.add_response(text="<html><body>no links</body></html>")
+    with pytest.raises(NotFound, match="no API links"):
+        await client.get_indicator_series("Unemployment Rate")

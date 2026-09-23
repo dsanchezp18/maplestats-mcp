@@ -57,6 +57,21 @@ class Indicator(BaseModel):
     name: str
     topic: str
     updated_at: datetime | None = None
+    page_url: str
+
+
+class PublishedSeries(BaseModel):
+    name: str = Field(description="Chart title from the page's API Keys section.")
+    table: str
+    filters: dict[str, str] = Field(description="Pass to ab_economic_get_data as-is.")
+    api_url: str
+
+
+class IndicatorSeries(BaseModel):
+    indicator: str
+    page_url: str
+    series: list[PublishedSeries]
+    provenance: Provenance
 
 
 class IndicatorList(BaseModel):

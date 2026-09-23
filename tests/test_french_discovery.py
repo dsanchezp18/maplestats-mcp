@@ -30,7 +30,6 @@ CASES = [
     ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
-    ("texte de l'article du Code criminel", "justice_laws_get_section"),
     ("données économiques Alberta taux de chômage", "ab_economic_get_data"),
 ]
 

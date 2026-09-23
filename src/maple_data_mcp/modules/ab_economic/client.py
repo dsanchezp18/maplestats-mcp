@@ -10,14 +10,18 @@ from __future__ import annotations
 import re
 from datetime import date, datetime
 from typing import Any, NoReturn
+from urllib.parse import parse_qsl, urlparse
 
 import httpx
+from bs4 import BeautifulSoup
 
 from maple_data_mcp.modules.ab_economic import constants
 from maple_data_mcp.modules.ab_economic.schemas import (
     ColumnInfo,
     Indicator,
     IndicatorList,
+    IndicatorSeries,
+    PublishedSeries,
     TableData,
     TableFields,
     TableInfo,
@@ -26,7 +30,7 @@ from maple_data_mcp.modules.ab_economic.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maple_data_mcp.shared.http import api_get
+from maple_data_mcp.shared.http import api_get, get_raw
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -228,6 +232,92 @@ async def get_data(
     )
 
 
+def _slug(name: str) -> str:
+    override = constants.SLUG_OVERRIDES.get(name)
+    return override or re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def _page_url(name: str) -> str:
+    return constants.INDICATOR_PAGE_URL.format(slug=_slug(name))
+
+
+def _parse_api_links(html: str) -> list[PublishedSeries]:
+    """Every `data?table=...` link on an indicator page, deduplicated."""
+    soup = BeautifulSoup(html, "html.parser")
+    series: list[PublishedSeries] = []
+    seen: set[str] = set()
+    for link in soup.find_all("a", href=True):
+        href = str(link["href"])
+        parsed = urlparse(href)
+        if parsed.netloc != urlparse(constants.BASE_URL).netloc or parsed.path != "/data":
+            continue
+        params = dict(parse_qsl(parsed.query))
+        table = params.pop("table", None)
+        if not table or href in seen:
+            continue
+        seen.add(href)
+        series.append(
+            PublishedSeries(
+                name=" ".join(link.get_text().split()) or table,
+                table=table,
+                filters=params,
+                api_url=href,
+            )
+        )
+    return series
+
+
+async def get_indicator_series(indicator: str) -> IndicatorSeries:
+    """The published API links behind one Key Indicators page."""
+    catalogue = await list_indicators()
+    wanted = indicator.strip().lower()
+    match = next(
+        (i for i in catalogue.indicators if wanted in (i.name.lower(), _slug(i.name))),
+        None,
+    )
+    name = match.name if match else indicator.strip()
+    url = match.page_url if match else _page_url(name)
+    if not name:
+        raise InvalidInput("indicator must not be empty.")
+
+    async def fetch() -> str:
+        await _LIMITER.acquire()
+        try:
+            response = await get_raw(url, timeout=60.0)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise NotFound(
+                    f"No Alberta Economic Dashboard page for {indicator!r}. "
+                    "Use ab_economic_list_indicators."
+                ) from exc
+            raise UpstreamError(
+                f"ab_economic: {url} returned HTTP {exc.response.status_code}."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailable(f"ab_economic: {url} did not respond in time.") from exc
+        return response.text
+
+    html, cached = await cached_fetch(
+        f"ab-economic:page:{url}", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch
+    )
+    series = _parse_api_links(html)
+    if not series:
+        raise NotFound(
+            f"The {name!r} page publishes no API links; use ab_economic_list_tables instead."
+        )
+    return IndicatorSeries(
+        indicator=name,
+        page_url=url,
+        series=series,
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=url,
+            cached=cached,
+            schema_name="ab_economic.IndicatorSeries",
+        ),
+    )
+
+
 async def list_indicators() -> IndicatorList:
     async def fetch() -> Any:
         return await _get(f"api/tile-data/dashboard/{constants.KEY_INDICATORS_CODE}")
@@ -241,6 +331,7 @@ async def list_indicators() -> IndicatorList:
             name=ind["name"],
             topic=topic["name"],
             updated_at=datetime.fromisoformat(ind["updatedAt"]) if ind.get("updatedAt") else None,
+            page_url=_page_url(ind["name"]),
         )
         for topic in topics
         for ind in topic.get("indicators") or []
