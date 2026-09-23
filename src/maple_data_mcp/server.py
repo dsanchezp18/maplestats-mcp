@@ -57,7 +57,8 @@ Sources, by tool-name prefix:
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
   nrcan_nbac_. CanadaBuys federal tenders and contract awards: canadabuys_.
   DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
-  ab_economic_.
+  ab_economic_. NRCan energy use (Comprehensive Energy Use Database,
+  household/commercial/industrial energy surveys): nrcan_energy_use_.
 - CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
