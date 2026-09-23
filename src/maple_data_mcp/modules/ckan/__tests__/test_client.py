@@ -277,9 +277,10 @@ async def test_federal_has_no_tags_or_groups():
         await client.get_group("toronto", "x")
 
 
-async def test_yukon_has_no_datastore():
+@pytest.mark.parametrize("portal", ["yt", "ab"])
+async def test_portals_without_working_datastore_fail_fast(portal):
     with pytest.raises(InvalidInput, match="DataStore"):
-        await client.datastore_search("yt", "res1")
+        await client.datastore_search(portal, "res1")
 
 
 async def test_unfiltered_tags_are_truncated_and_filtered_are_not(httpx_mock):

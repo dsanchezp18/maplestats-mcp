@@ -8,15 +8,15 @@ from collections.abc import Awaitable
 from typing import Any
 
 from maple_data_mcp.modules.ckan import client, constants
-from maple_data_mcp.shared.errors import NotFound, UpstreamError
+from maple_data_mcp.shared.errors import NotFound
 
 # One DataStore-active resource per portal, confirmed live when each
-# portal was added. Alberta's DataStore returns HTTP 500 portal-side.
+# portal was added. Alberta's DataStore is disabled: it returns HTTP 500
+# for every resource (re-test with f660db62-5687-4614-8f53-327652856f80).
 DATASTORE_RESOURCES = {
     "federal": "3eb35dcd-9b0c-4ae9-a45c-e5e481567c23",
     "on": "ea9dc29c-b4f1-4426-b1f2-974ce995aca1",
     "bc": "d9377320-2c9e-4a3a-ba4a-af84ae3e344c",
-    "ab": "f660db62-5687-4614-8f53-327652856f80",
     "qc": "9136d84a-8273-4777-ad68-9ab05d270322",
     "nt": "539e9585-ed0e-410f-9dcc-fe6a9fdacbb0",
     "montreal": "b7817317-55ca-4f23-98fe-30cf6c36d57c",
@@ -60,13 +60,7 @@ async def check_portal(portal: str) -> int:
         if groups.groups:
             await _check("get_group", client.get_group(portal, groups.groups[0].name))
 
-    if portal == "ab":
-        try:
-            await client.datastore_search(portal, DATASTORE_RESOURCES[portal], limit=1)
-            print("FAIL: AB datastore_search succeeded -- re-check whether it was fixed")
-        except UpstreamError:
-            print("OK: AB datastore_search raises UpstreamError (known portal-side 500)")
-    elif info.has_datastore:
+    if info.has_datastore:
         rows = await _check(
             "datastore_search",
             client.datastore_search(portal, DATASTORE_RESOURCES[portal], limit=2),

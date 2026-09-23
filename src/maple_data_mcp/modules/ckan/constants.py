@@ -20,7 +20,8 @@ recorded here as data rather than as ten copies of the client:
   name differ; 404 bodies are HTML, not a CKAN envelope.
 - yt: English-only content under bilingual site chrome; no DataStore
   extension (`datastore_search` answers "Action name not known").
-- ab: English-only; its DataStore answers HTTP 500 portal-side.
+- ab: English-only; its DataStore answers HTTP 500 for every resource,
+  so row queries are disabled.
 - nt, regina: English-only, standard CKAN.
 
 Each portal keeps its own rate-limit bucket (`ckan-<key>`) so a burst
@@ -132,6 +133,7 @@ PORTALS: dict[str, Portal] = {
         dataset_url="https://open.alberta.ca/dataset/{id}",
         organization_url="https://open.alberta.ca/organization/{id}",
         groups="none",
+        has_datastore=False,
         extra_fields=(
             "creator",
             "contact",
@@ -149,12 +151,15 @@ PORTALS: dict[str, Portal] = {
             "subject6",
         ),
         note=(
-            "datastore_search returns HTTP 500 portal-side (confirmed live "
-            "2026-09); download resource URLs instead."
+            "DataStore is broken portal-side: datastore_search and datastore_info "
+            "return HTTP 500 for every resource sampled (15 of 15, rechecked "
+            "2026-09-23), so row queries are disabled; download resource URLs instead."
         ),
         note_fr=(
-            "datastore_search renvoie une erreur HTTP 500 du côté du portail "
-            "(confirmé en septembre 2026); téléchargez plutôt les ressources."
+            "Le DataStore est défaillant du côté du portail : datastore_search et "
+            "datastore_info renvoient une erreur HTTP 500 pour chaque ressource "
+            "vérifiée (15 sur 15, en septembre 2026); les requêtes de lignes sont "
+            "donc désactivées. Téléchargez plutôt les ressources."
         ),
     ),
     "qc": Portal(

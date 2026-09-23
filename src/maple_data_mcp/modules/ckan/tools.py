@@ -208,7 +208,8 @@ async def ckan_datastore_search(
     """Query rows from a DataStore-backed CKAN resource (tabular data, not just metadata).
 
     Use for: reading actual records from a table on any CKAN portal
-    except Yukon (no DataStore). Only resources with
+    except Yukon (no DataStore) and Alberta (DataStore broken
+    portal-side). Only resources with
     `datastore_active: true` work. `filters` is exact-match per column,
     e.g. {"Year": "2024"}; `query` is full-text (rejected on federal
     resources over 100,000 rows — use `filters`). `sort` e.g.
