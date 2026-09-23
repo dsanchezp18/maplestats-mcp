@@ -44,7 +44,7 @@ async def boc_search_series(query: str, limit: int = 25, lang: Lang = "en") -> S
     Keywords: bank of canada, boc, valet, series, search, find, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, discover.
-    Mots-clés: banque du canada, valet, série, recherche, trouver, taux
+    Mots-clés : banque du canada, valet, série, recherche, trouver, taux
     de change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, découvrir.
     """
@@ -60,7 +60,7 @@ async def boc_list_series(lang: Lang = "en") -> SeriesList:
     catalogue.
     Keywords: bank of canada, boc, valet, list, inventory, all series,
     catalogue, full list.
-    Mots-clés: banque du canada, valet, liste, inventaire, toutes les
+    Mots-clés : banque du canada, valet, liste, inventaire, toutes les
     séries, catalogue, liste complète, parcourir.
     """
     return await client.list_series()
@@ -76,7 +76,7 @@ async def boc_search_groups(query: str, limit: int = 25, lang: Lang = "en") -> G
     related series at once rather than one series name.
     Keywords: bank of canada, boc, valet, group, series group, search,
     find, cpi, exchange rates, commodity prices, discover.
-    Mots-clés: banque du canada, valet, groupe, groupe de séries,
+    Mots-clés : banque du canada, valet, groupe, groupe de séries,
     recherche, trouver, IPC, taux de change, prix des produits de base,
     découvrir.
     """
@@ -92,7 +92,7 @@ async def boc_list_groups(lang: Lang = "en") -> GroupList:
     catalogue.
     Keywords: bank of canada, boc, valet, list, groups, inventory,
     catalogue, full list.
-    Mots-clés: banque du canada, valet, liste, groupes, inventaire,
+    Mots-clés : banque du canada, valet, liste, groupes, inventaire,
     catalogue, liste complète, parcourir.
     """
     return await client.list_groups()
@@ -108,7 +108,7 @@ async def boc_get_series(name: str, lang: Lang = "en") -> SeriesDetail:
     V80691311 (prime rate), V41690973 (Total CPI).
     Keywords: bank of canada, boc, valet, series, detail, metadata,
     description, label, lookup.
-    Mots-clés: banque du canada, valet, série, détail, métadonnées,
+    Mots-clés : banque du canada, valet, série, détail, métadonnées,
     description, étiquette, recherche par code, consulter.
     """
     return await client.get_series(name)
@@ -124,7 +124,7 @@ async def boc_get_group(name: str, lang: Lang = "en") -> GroupDetail:
     core-inflation measures such as CPI-trim, CPI-median, CPI-common).
     Keywords: bank of canada, boc, valet, group, detail, member series,
     cpi, exchange rates, commodity prices, metadata.
-    Mots-clés: banque du canada, valet, groupe, détail, séries membres,
+    Mots-clés : banque du canada, valet, groupe, détail, séries membres,
     IPC, taux de change, prix des produits de base, métadonnées.
     """
     return await client.get_group(name)
@@ -158,7 +158,7 @@ async def boc_get_observations(
     Keywords: bank of canada, boc, valet, observations, data, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, time series, history, recent, date range.
-    Mots-clés: banque du canada, valet, observations, données, taux de
+    Mots-clés : banque du canada, valet, observations, données, taux de
     change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, série chronologique,
     historique, plage de dates.
@@ -196,7 +196,7 @@ async def boc_get_group_observations(
     Keywords: bank of canada, boc, valet, group, observations, data,
     exchange rates, cpi, inflation, commodity prices, time series,
     history, recent, date range.
-    Mots-clés: banque du canada, valet, groupe, observations, données,
+    Mots-clés : banque du canada, valet, groupe, observations, données,
     taux de change, IPC, inflation, prix des produits de base, série
     chronologique, historique, plage de dates.
     """

@@ -152,11 +152,11 @@ assumption shared by the code and its tests.
    cacheable. Raise typed errors; never return error-shaped dicts.
 5. Write `tools.py`: one `@tool` per client function, each with a
    `lang: Literal["en", "fr"] = "en"` parameter and a docstring
-   containing `Use for:`, `Keywords:` (8+ keywords), and `Mots-clés:`
+   containing `Use for:`, `Keywords:` (8+ keywords), and `Mots-clés :`
    (a French equivalent set of 8+ terms, not a literal word-for-word
    translation — real French search terms a francophone user would
    type) lines — this is what `BM25SearchTransform` indexes on for
-   discovery, and `Mots-clés:` is what lets a French-language query
+   discovery, and `Mots-clés :` is what lets a French-language query
    find the tool at all.
 6. Add `__tests__/test_client.py` using `pytest-httpx`'s `httpx_mock`
    fixture (it mocks httpx at the transport level, including
@@ -201,7 +201,7 @@ uv run python scripts/smoke_test.py
 - `snake_case` everywhere; module-prefixed tool names (`wds_*`,
   `sdmx_*`, `rdaas_*`).
 - Docstrings on tools always have `Use for:`, `Keywords:`, and
-  `Mots-clés:` lines.
+  `Mots-clés :` lines.
 - Comments explain *why*, not *what* — especially for anything ported
   from or verified against a live API response; state what was
   confirmed and how, so a future edit doesn't silently regress a

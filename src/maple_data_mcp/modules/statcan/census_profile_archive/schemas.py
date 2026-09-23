@@ -18,5 +18,6 @@ class DownloadLink(BaseModel):
     year: int
     level: str
     file_format: str
+    language: str = "en"
     url: str
     provenance: Provenance

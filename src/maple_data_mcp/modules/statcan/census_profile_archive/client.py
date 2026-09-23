@@ -41,8 +41,14 @@ async def list_geography_levels(year: int) -> GeographyLevelList:
     )
 
 
-async def get_download_link(year: int, level: str, file_format: str) -> DownloadLink:
-    """Resolve the direct bulk-download URL for one archived census year/level/format."""
+async def get_download_link(
+    year: int, level: str, file_format: str, lang: str = "en"
+) -> DownloadLink:
+    """Resolve the direct bulk-download URL for one archived census year/level/format.
+
+    `lang="fr"` returns the French-language file (translated headers and
+    characteristic names), not just a French landing page.
+    """
     config = constants.YEAR_CONFIG.get(year)
     if config is None:
         raise InvalidInput(
@@ -63,14 +69,17 @@ async def get_download_link(year: int, level: str, file_format: str) -> Download
         )
 
     if config["style"] == "geono":
-        url = f"{config['base_url']}?Lang=E&FILETYPE={file_format}&GEONO={level_code}"
+        lang_code = "F" if lang == "fr" else "E"
+        url = f"{config['base_url']}?Lang={lang_code}&FILETYPE={file_format}&GEONO={level_code}"
     else:
-        url = f"{config['base_url']}?CTLG={config['catalogue']}&FMT={file_format}{level_code}"
+        catalogue = config["catalogue_fr"] if lang == "fr" else config["catalogue"]
+        url = f"{config['base_url']}?CTLG={catalogue}&FMT={file_format}{level_code}"
 
     return DownloadLink(
         year=year,
         level=level,
         file_format=file_format,
+        language=lang,
         url=url,
         provenance=make_provenance(
             source="statcan-census-profile-archive",

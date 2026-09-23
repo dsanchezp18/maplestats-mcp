@@ -36,7 +36,7 @@ async def epcor_get_daily_water_quality(
     Keywords: Edmonton, EPCOR, drinking water, water quality, hardness,
     pH, chlorine, chloramine, conductivity, alkalinity, treatment plant,
     Rossdale, E.L. Smith.
-    Mots-clés: Edmonton, EPCOR, eau potable, qualité de l'eau, dureté,
+    Mots-clés : Edmonton, EPCOR, eau potable, qualité de l'eau, dureté,
     pH, chlore, chloramine, conductivité, alcalinité, usine de
     traitement, Rossdale.
     """
@@ -64,7 +64,7 @@ async def epcor_list_water_quality_reports(
     Keywords: Edmonton, EPCOR, water quality report, monthly summary,
     bacteriological, wastewater, Gold Bar, annual report, compliance,
     drinking water, PDF.
-    Mots-clés: Edmonton, EPCOR, rapport sur la qualité de l'eau, sommaire
+    Mots-clés : Edmonton, EPCOR, rapport sur la qualité de l'eau, sommaire
     mensuel, bactériologique, eaux usées, rapport annuel, conformité,
     eau potable.
     """

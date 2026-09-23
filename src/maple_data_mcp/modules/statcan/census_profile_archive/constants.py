@@ -38,7 +38,10 @@ _2016_BASE_URL = (
     "download-telecharger/comp/GetFile.cfm"
 )
 
-# year -> {"style": "geono" | "ctlg", "base_url", "catalogue" (ctlg style only),
+# French files: 2016 takes Lang=F; the older years swap the catalogue
+# number's language letter (XWE -> XWF, XE -> XF, XIE -> XIF). Both
+# confirmed live 2026-09-23 to return a distinct French ZIP/CSV.
+# year -> {"style": "geono" | "ctlg", "base_url", "catalogue"/"catalogue_fr" (ctlg only),
 #          "formats", "levels": {level_key: level_code}}
 YEAR_CONFIG: dict[int, dict] = {
     2016: {
@@ -86,6 +89,7 @@ YEAR_CONFIG: dict[int, dict] = {
         "style": "ctlg",
         "base_url": _LEGACY_BASE_URL,
         "catalogue": "98-316-XWE2011001",
+        "catalogue_fr": "98-316-XWF2011001",
         "formats": ["CSV", "TAB"],
         "levels": {
             "canada_provinces_territories": "101",
@@ -108,6 +112,7 @@ YEAR_CONFIG: dict[int, dict] = {
         "style": "ctlg",
         "base_url": _LEGACY_BASE_URL,
         "catalogue": "92-591-XE",
+        "catalogue_fr": "92-591-XF",
         "formats": ["CSV", "TAB"],
         "levels": {
             "canada_provinces_territories": "101",
@@ -121,6 +126,7 @@ YEAR_CONFIG: dict[int, dict] = {
         "style": "ctlg",
         "base_url": _LEGACY_BASE_URL,
         "catalogue": "93F0053XIE",
+        "catalogue_fr": "93F0053XIF",
         "formats": ["CSV", "TAB"],
         "levels": {
             "canada_provinces_territories": "101",

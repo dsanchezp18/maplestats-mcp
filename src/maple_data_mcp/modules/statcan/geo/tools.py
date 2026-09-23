@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.statcan.geo import client, constants
@@ -11,9 +13,11 @@ from maple_data_mcp.modules.statcan.geo.schemas import (
     GeoServiceList,
 )
 
+Lang = Literal["en", "fr"]
+
 
 @tool
-async def statcan_geo_list_services(year: str) -> GeoServiceList:
+async def statcan_geo_list_services(year: str, lang: Lang = "en") -> GeoServiceList:
     """List StatCan's census-geography boundary services for one year.
 
     Use for: discovering what geography boundary products exist for a
@@ -26,18 +30,22 @@ async def statcan_geo_list_services(year: str) -> GeoServiceList:
     year and is discovered live, not hardcoded. Years 2019-2025
     confirmed live; nothing older is served here (use
     statcan_census_profile_archive_* for older bulk boundary/data
-    downloads instead).
+    downloads instead). Only the `lang` edition of each product is
+    listed: French services (e.g. "Fichiers_des_limites_cartographiques")
+    carry French layer names and field aliases.
     Keywords: statcan, geography, boundary files, geospatial, arcgis,
     census geography, cartographic, digital boundary file.
-    Mots-clés: statcan, géographie, fichiers de limites, géospatial,
+    Mots-clés : statcan, géographie, fichiers de limites, géospatial,
     arcgis, géographie du recensement, limites cartographiques,
     fichier numérique des limites.
     """
-    return await client.list_services(year)
+    return await client.list_services(year, lang)
 
 
 @tool
-async def statcan_geo_get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDetail:
+async def statcan_geo_get_layer_detail(
+    year: str, service: str, layer_id: int, lang: Lang = "en"
+) -> GeoLayerDetail:
     """Get one geography layer's field schema, geometry type, and record cap.
 
     Use for: inspecting a layer's queryable fields (e.g. CSDUID, DGUID,
@@ -47,12 +55,14 @@ async def statcan_geo_get_layer_detail(year: str, service: str, layer_id: int) -
     `layer_id` a small integer identifying one geography level within
     that service (e.g. layer 9 = CSD, layer 12 = DA for 2021's
     Cartographic boundary files -- layer numbering is not fixed across
-    years/services and should be discovered, not assumed).
+    years/services and should be discovered, not assumed). The language
+    comes from `service` itself, so `lang` has no effect here.
     Keywords: statcan, geography, layer, schema, fields, arcgis,
     boundary file, geometry type.
-    Mots-clés: statcan, géographie, couche, schéma, champs, arcgis,
+    Mots-clés : statcan, géographie, couche, schéma, champs, arcgis,
     fichier de limites, type de géométrie.
     """
+    del lang
     return await client.get_layer_detail(year, service, layer_id)
 
 
@@ -67,6 +77,7 @@ async def statcan_geo_query_layer(
     out_sr: int = constants.DEFAULT_OUT_SR,
     result_offset: int = 0,
     result_record_count: int = constants.QUERY_RECORD_COUNT_DEFAULT,
+    lang: Lang = "en",
 ) -> GeoQueryResult:
     """Query one geography layer's features by attribute, optionally with geometry.
 
@@ -90,12 +101,14 @@ async def statcan_geo_query_layer(
     (roughly one in three to five calls, a load-balanced backend with
     some unhealthy nodes) -- already mitigated by this client's normal
     retry behavior, so a rare persisting failure is a genuine outage,
-    not a malformed request.
+    not a malformed request. The language comes from `service`, so
+    `lang` has no effect here.
     Keywords: statcan, geography, query, boundary, dguid, csd, da,
     fsa, cma, arcgis, geospatial, polygon, geojson.
-    Mots-clés: statcan, géographie, requête, limites, dguid, sdr, ad,
+    Mots-clés : statcan, géographie, requête, limites, dguid, sdr, ad,
     rta, rmr, arcgis, géospatial, polygone, geojson.
     """
+    del lang
     return await client.query_layer_features(
         year,
         service,

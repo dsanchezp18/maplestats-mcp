@@ -50,3 +50,18 @@ async def test_get_download_link_invalid_level_raises():
 async def test_get_download_link_invalid_format_raises():
     with pytest.raises(InvalidInput):
         await client.get_download_link(2016, "canada_provinces_territories", "IVT2000")
+
+
+async def test_get_download_link_french_2016_uses_lang_f():
+    result = await client.get_download_link(2016, "canada_provinces_territories", "csv", "fr")
+    assert "Lang=F" in result.url
+    assert result.language == "fr"
+
+
+@pytest.mark.parametrize(
+    ("year", "catalogue"),
+    [(2011, "98-316-XWF2011001"), (2006, "92-591-XF"), (2001, "93F0053XIF")],
+)
+async def test_get_download_link_french_legacy_uses_french_catalogue(year, catalogue):
+    result = await client.get_download_link(year, "census_divisions", "csv", "fr")
+    assert f"CTLG={catalogue}&" in result.url

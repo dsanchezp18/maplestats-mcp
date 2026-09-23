@@ -22,7 +22,7 @@ LABELS: dict[str, dict[str, str]] = {
     },
     "error.upstream_error": {
         "en": "The upstream source returned something unexpected: {detail}",
-        "fr": "La source amont a retourné une réponse inattendue : {detail}",
+        "fr": "La source amont a renvoyé une réponse inattendue : {detail}",
     },
     "error.upstream_unavailable": {
         "en": "The upstream source is temporarily unreachable: {detail}",
@@ -30,7 +30,7 @@ LABELS: dict[str, dict[str, str]] = {
     },
     "error.data_locked": {
         "en": "StatCan data is locked for its daily update (data returns at 8:30am ET): {detail}",
-        "fr": "Les données de StatCan sont verrouillées pour leur mise à jour quotidienne (retour à 8h30 HE) : {detail}",
+        "fr": "Les données de StatCan sont verrouillées pour leur mise à jour quotidienne (retour à 8 h 30, HE) : {detail}",
     },
 }
 

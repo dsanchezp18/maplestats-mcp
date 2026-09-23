@@ -154,7 +154,7 @@ PORTALS: dict[str, Portal] = {
         ),
         note_fr=(
             "datastore_search renvoie une erreur HTTP 500 du côté du portail "
-            "(confirmé en 2026-09); téléchargez plutôt les ressources."
+            "(confirmé en septembre 2026); téléchargez plutôt les ressources."
         ),
     ),
     "qc": Portal(

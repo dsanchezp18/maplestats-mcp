@@ -256,3 +256,10 @@ async def test_get_classification_raises_not_found_on_real_404(httpx_mock):
     httpx_mock.add_response(status_code=404)
     with pytest.raises(NotFound):
         await client.get_classification("does-not-exist-xyz")
+
+
+async def test_classification_indexes_send_accept_language(httpx_mock):
+    """Index routes ignore ?lang= and only honour Accept-Language (confirmed live)."""
+    httpx_mock.add_response(json={"@graph": [_INDEX_ENTRY_JSON]})
+    await client.get_classification_indexes("MJRdRiFsfmJAprtT", lang="fr")
+    assert httpx_mock.get_request().headers["Accept-Language"] == "fr"

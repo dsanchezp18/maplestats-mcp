@@ -25,7 +25,7 @@ async def sdmx_get_structure(product_id: int, lang: Lang = "en") -> SdmxStructur
     query key, or before calling sdmx_get_key_for_dimension on a large
     dimension.
     Keywords: statcan, sdmx, structure, dimensions, codelist, dsd, keys.
-    Mots-clés: statcan, sdmx, structure, dimensions, liste de codes,
+    Mots-clés : statcan, sdmx, structure, dimensions, liste de codes,
     dsd, clés, classification.
     """
     return await client.get_structure(product_id)
@@ -44,7 +44,7 @@ async def sdmx_get_key_for_dimension(
     this dimension's position before calling sdmx_get_data.
     Keywords: statcan, sdmx, wildcard, or key, large dimension, leaf
     codes, sparse sample, geography, occupation.
-    Mots-clés: statcan, sdmx, caractère générique, clé OR, grande
+    Mots-clés : statcan, sdmx, caractère générique, clé OR, grande
     dimension, codes terminaux, échantillon partiel, géographie,
     profession.
     """
@@ -71,7 +71,7 @@ async def sdmx_get_data(
     combination.
     Keywords: statcan, sdmx, data, filtered, key, dimensions, query,
     observations, slice.
-    Mots-clés: statcan, sdmx, données, filtré, clé, dimensions, requête,
+    Mots-clés : statcan, sdmx, données, filtré, clé, dimensions, requête,
     observations, découpage.
     """
     return await client.get_data(
@@ -97,7 +97,7 @@ async def sdmx_get_vector_data(
     have its vector ID (resolves the vector to a productId/coordinate
     internally, then builds the matching SDMX key).
     Keywords: statcan, sdmx, vector, data, observations, series, query.
-    Mots-clés: statcan, sdmx, vecteur, données, observations, série,
+    Mots-clés : statcan, sdmx, vecteur, données, observations, série,
     requête, identifiant de vecteur.
     """
     return await client.get_vector_data(

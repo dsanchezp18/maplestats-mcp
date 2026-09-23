@@ -24,7 +24,7 @@ See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for the project vision and
 Tools accept `lang: "en"|"fr"`, several sources are French-first
 or French-only (Quebec's and Montreal's CKAN catalogues, `ckan_*` with `portal="qc"`/`"montreal"`),
 and tool discovery works in either language: every tool's docstring
-carries both a `Keywords:` line and a `Mots-clés:` line, so calling
+carries both a `Keywords:` line and a `Mots-clés :` line, so calling
 `search_tools` with a French-language query (e.g. *"recherche de
 jeux de données sur le climat"*) finds the same tools an equivalent
 English query would. Read `docs://catalogue` for a bilingual
@@ -38,7 +38,7 @@ source.
 francophones ou exclusivement en français (les catalogues CKAN du Québec
 et de Montréal, `ckan_*` avec `portal="qc"`/`"montreal"`), et la découverte d'outils
 fonctionne dans les deux langues : chaque outil porte à la fois une
-ligne `Keywords:` et une ligne `Mots-clés:`, de sorte qu'un appel à
+ligne `Keywords:` et une ligne `Mots-clés :`, de sorte qu'un appel à
 `search_tools` avec une requête en français trouve les mêmes outils
 qu'une requête équivalente en anglais. Consultez `docs://catalogue`
 pour une description bilingue (EN/FR) de chaque module. Tous les

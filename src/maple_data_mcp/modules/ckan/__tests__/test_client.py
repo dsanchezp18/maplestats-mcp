@@ -316,6 +316,7 @@ async def test_licenses_use_fra_fields_and_optional_flags(httpx_mock):
     result = await client.list_licenses("federal", lang="fr")
     lic = result.licenses[0]
     assert lic.title == "Licence du gouvernement ouvert - Canada"
+    assert lic.url is not None
     assert lic.url.startswith("https://ouvert.canada.ca/fr/")
     assert lic.is_okd_compliant is True
     assert lic.domain_data is True

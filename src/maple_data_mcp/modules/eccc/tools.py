@@ -37,7 +37,7 @@ async def eccc_search_collections(query: str, limit: int = 25, lang: Lang = "en"
     filters for each.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     collection, search, find, discover, dataset, catalogue.
-    Mots-clés: environnement canada, smc, geomet, météo, climat,
+    Mots-clés : environnement canada, smc, geomet, météo, climat,
     collection, recherche, trouver, découvrir, jeu de données,
     catalogue.
     """
@@ -55,7 +55,7 @@ async def eccc_list_collections(lang: Lang = "en") -> CollectionList:
     most callers will not need.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     list, inventory, all collections, catalogue, full list.
-    Mots-clés: environnement canada, smc, geomet, météo, climat, liste,
+    Mots-clés : environnement canada, smc, geomet, météo, climat, liste,
     inventaire, toutes les collections, catalogue, liste complète.
     """
     return await client.list_collections()
@@ -73,7 +73,7 @@ async def eccc_get_collection(collection_id: str, lang: Lang = "en") -> Collecti
     rather than an error, so checking here first avoids that trap.
     Keywords: environment canada, eccc, msc, geomet, collection, detail,
     metadata, queryables, properties, schema, extent, bbox.
-    Mots-clés: environnement canada, smc, geomet, collection, détail,
+    Mots-clés : environnement canada, smc, geomet, collection, détail,
     métadonnées, propriétés interrogeables, schéma, étendue.
     """
     return await client.get_collection(collection_id)
@@ -119,7 +119,7 @@ async def eccc_query_items(
     current conditions, swob, observation, aqhi, air quality, climate
     normal, hydrometric, water level, flow, marine forecast, query,
     data, filter, bbox, station.
-    Mots-clés: environnement canada, smc, geomet, alerte météo,
+    Mots-clés : environnement canada, smc, geomet, alerte météo,
     conditions actuelles, observation, cote air santé, qualité de
     l'air, normale climatique, hydrométrique, niveau d'eau, débit,
     prévision maritime, requête, données, filtre, station.

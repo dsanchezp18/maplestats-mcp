@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.statcan.delta import client
 from maple_data_mcp.modules.statcan.delta.schemas import DeltaFileLink
 
+Lang = Literal["en", "fr"]
+
 
 @tool
-async def statcan_delta_get_file_link(date: str) -> DeltaFileLink:
+async def statcan_delta_get_file_link(date: str, lang: Lang = "en") -> DeltaFileLink:
     """Get the Delta File download link for one date, confirming it exists.
 
     Use for: bulk-downloading every table/vector data and metadata
@@ -19,9 +23,12 @@ async def statcan_delta_get_file_link(date: str) -> DeltaFileLink:
     time. date is "YYYY-MM-DD". A Delta File only exists for business
     days that had a release (weekends and holidays will report
     exists=False); check exists before treating the url as
-    downloadable. Keywords: StatCan, delta file, bulk update, daily
-    update, all tables, full refresh.
+    downloadable. The ZIP carries both English and French metadata, so
+    `lang` has no effect. Keywords: StatCan, delta file, bulk update,
+    daily update, all tables, full refresh.
     Mots-clés : Statistique Canada, fichier delta, mise à jour en
-    bloc, mise à jour quotidienne, toutes les tables.
+    bloc, mise à jour quotidienne, tous les tableaux, actualisation
+    complète.
     """
+    del lang
     return await client.get_file_link(date)

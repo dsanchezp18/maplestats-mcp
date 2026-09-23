@@ -50,7 +50,7 @@ async def cmhc_list_categories(
     Keywords: cmhc, housing, hmip, category, discover, rental market,
     vacancy rate, rent, housing starts, completions, seniors housing,
     core housing need, mortgage, corporation.
-    Mots-clés: schl, logement, pimh, catégorie, découvrir, marché
+    Mots-clés : schl, logement, pimh, catégorie, découvrir, marché
     locatif, taux d'inoccupation, loyer, mises en chantier,
     achèvements, logements pour personnes âgées, besoins impérieux,
     hypothèque, société.
@@ -79,7 +79,7 @@ async def cmhc_get_table_options(
     Keywords: cmhc, housing, hmip, table options, column field, row
     field, breakdown, bedroom type, time series, historical, provinces,
     discover.
-    Mots-clés: schl, logement, pimh, options de tableau, champ colonne,
+    Mots-clés : schl, logement, pimh, options de tableau, champ colonne,
     champ ligne, répartition, type de chambre, série chronologique,
     historique, provinces, découvrir.
     """
@@ -103,7 +103,7 @@ async def cmhc_list_provinces(lang: Lang = "en") -> ProvinceList:
     this module - only Canada and provinces.
     Keywords: cmhc, housing, hmip, province, territory, geography,
     geography id, list, canada.
-    Mots-clés: schl, logement, pimh, province, territoire, géographie,
+    Mots-clés : schl, logement, pimh, province, territoire, géographie,
     identifiant géographique, liste, canada.
     """
     return await client.list_provinces(lang=lang)
@@ -150,7 +150,7 @@ async def cmhc_get_table_data(
     average rent, housing starts, completions, time series, historical,
     data, table, province, bedroom type, reliability flag, filter,
     dwelling type, season.
-    Mots-clés: schl, logement, pimh, marché locatif, taux
+    Mots-clés : schl, logement, pimh, marché locatif, taux
     d'inoccupation, loyer, loyer moyen, mises en chantier, achèvements,
     série chronologique, historique, données, tableau, province, type
     de chambre, indicateur de fiabilité, filtre, type de logement,

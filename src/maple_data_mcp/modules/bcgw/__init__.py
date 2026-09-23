@@ -33,6 +33,6 @@ MODULE_DESCRIPTION_FR = (
     "géospatial public de la C.-B. (openmaps.gov.bc.ca), via OGC WFS 2.0 "
     "standard : périmètres et statut des feux de forêt actuels, titres "
     "miniers (claims minéraux/placers) par propriétaire ou superficie, et "
-    "un outil générique d'interrogation atteignant n'importe quelle des "
+    "un outil générique d'interrogation atteignant n'importe laquelle des "
     'milliers de couches du BCGW par type_name (découvrable via ckan_* avec portal="bc").'
 )

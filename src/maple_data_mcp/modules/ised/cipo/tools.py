@@ -9,6 +9,8 @@ from fastmcp.tools import tool
 from maple_data_mcp.modules.ised.cipo import client, constants
 from maple_data_mcp.modules.ised.cipo.schemas import TrademarkSearchResult
 
+Lang = Literal["en", "fr"]
+
 SearchField = Literal[
     "all",
     "trademark",
@@ -31,7 +33,10 @@ SearchField = Literal[
 
 @tool
 async def ised_cipo_search_trademarks(
-    search_field: SearchField, criteria: str = "", max_return: int = constants.MAX_RETURN_DEFAULT
+    search_field: SearchField,
+    criteria: str = "",
+    max_return: int = constants.MAX_RETURN_DEFAULT,
+    lang: Lang = "en",
 ) -> TrademarkSearchResult:
     """Search the Canadian Trademarks Database (CIPO) by one field.
 
@@ -43,11 +48,15 @@ async def ised_cipo_search_trademarks(
     empty criteria is a deliberate match-all against the entire register
     (over 2 million records). Results are ranked by the upstream API and
     max_return only caps how many top-ranked matches come back in one
-    call -- there is no way to page past that count. Keywords: CIPO,
+    call -- there is no way to page past that count. The search API
+    answers in English only (status and mark-type labels), confirmed
+    live 2026-09-23, so `lang` has no effect. Keywords: CIPO,
     ISED, trademark, brand, mark, owner, applicant, Nice classification,
     Vienna code, trademark status, registered, abandoned, expunged.
-    Mots-clés : OPIC, ISDE, marque de commerce, marque, propriétaire,
+    Mots-clés : OPIC, ISDE, recherche de marques de commerce, marque de
+    commerce, marque, propriétaire,
     demandeur, classification de Nice, code de Vienne, statut de la
     marque, enregistrée, abandonnée, radiée.
     """
+    del lang
     return await client.search_trademarks(search_field, criteria, max_return=max_return)

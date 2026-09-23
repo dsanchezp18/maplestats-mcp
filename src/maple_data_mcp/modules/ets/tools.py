@@ -32,7 +32,7 @@ async def ets_get_vehicle_positions(
     Keywords: Edmonton, ETS, transit, bus, LRT, real-time, GTFS-RT,
     vehicle positions, live location, where is my bus, public
     transportation.
-    Mots-clés: Edmonton, ETS, transport en commun, autobus, SLR, temps
+    Mots-clés : Edmonton, ETS, transport en commun, autobus, SLR, temps
     réel, GTFS-RT, position des véhicules, localisation en direct,
     transport public.
     """
@@ -60,7 +60,7 @@ async def ets_get_stop_predictions(
     Keywords: Edmonton, ETS, next bus, arrival times, departures,
     delays, on-time performance, real-time, GTFS-RT, trip updates, bus
     stop, transit.
-    Mots-clés: Edmonton, ETS, prochain autobus, heures d'arrivée,
+    Mots-clés : Edmonton, ETS, prochain autobus, heures d'arrivée,
     départs, retards, ponctualité, temps réel, GTFS-RT, arrêt
     d'autobus, transport en commun.
     """
@@ -86,7 +86,7 @@ async def ets_get_service_alerts(
     on Edmonton transit.
     Keywords: Edmonton, ETS, service alerts, detours, stop closures,
     disruptions, construction, transit, bus, LRT, GTFS-RT.
-    Mots-clés: Edmonton, ETS, avis de service, détours, fermetures
+    Mots-clés : Edmonton, ETS, avis de service, détours, fermetures
     d'arrêts, perturbations, travaux, transport en commun, autobus, SLR.
     """
     return await client.get_service_alerts(route_id, stop_id, limit=limit, lang=lang)

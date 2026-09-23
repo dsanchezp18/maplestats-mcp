@@ -12,6 +12,7 @@ from maple_data_mcp.shared.models import Provenance
 class GeoServiceSummary(BaseModel):
     name: str
     service_type: str
+    language: str = Field(description="'en' or 'fr': every product is published in both.")
 
 
 class GeoServiceList(BaseModel):

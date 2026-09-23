@@ -39,7 +39,7 @@ async def bcgw_get_active_wildfires(
     Keywords: British Columbia, BC, wildfire, forest fire, fire
     perimeter, fire status, fire centre, hectares burned, BC Wildfire
     Service, active fire, out of control, being held.
-    Mots-clés: Colombie-Britannique, feu de forêt, incendie, périmètre
+    Mots-clés : Colombie-Britannique, feu de forêt, incendie, périmètre
     d'incendie, statut du feu, hectares brûlés, service des incendies de
     forêt, feu actif, hors de contrôle, maîtrisé.
     """
@@ -75,7 +75,7 @@ async def bcgw_get_mining_tenure(
     Keywords: British Columbia, BC, mining, mineral tenure, placer
     claim, mining claim, prospecting, mining rights, owner, hectares,
     tenure number, resource extraction.
-    Mots-clés: Colombie-Britannique, exploitation minière, titre
+    Mots-clés : Colombie-Britannique, exploitation minière, titre
     minier, claim de placer, droits miniers, propriétaire, hectares,
     numéro de titre, prospection, extraction de ressources.
     """
@@ -113,7 +113,7 @@ async def bcgw_query_layer(
     Keywords: British Columbia, BC, BCGW, BC Geographic Warehouse,
     WFS, geospatial, layer, feature, CQL filter, data catalogue,
     generic query, openmaps.
-    Mots-clés: Colombie-Britannique, entrepôt géographique, WFS,
+    Mots-clés : Colombie-Britannique, entrepôt géographique, WFS,
     géospatial, couche, entité, filtre CQL, catalogue de données,
     requête générique.
     """

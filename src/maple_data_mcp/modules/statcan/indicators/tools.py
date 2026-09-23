@@ -36,6 +36,8 @@ async def statcan_indicators_get_indicators(
     dataset). Keywords: StatCan, indicator, current value, latest
     statistics, growth rate, population, CPI, GDP, unemployment.
     Mots-clés : Statistique Canada, indicateur, valeur actuelle,
-    dernières statistiques, taux de croissance, population, IPC, PIB.
+    dernières statistiques, taux de croissance, population, IPC, PIB,
+    taux de chômage, emploi, inflation, indice des prix à la
+    consommation.
     """
     return await client.get_indicators(dataset, query, geo_code=geo_code, lang=lang, limit=limit)

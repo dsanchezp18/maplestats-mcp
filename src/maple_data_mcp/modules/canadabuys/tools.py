@@ -38,7 +38,7 @@ async def canadabuys_search_tenders(
     department is currently buying; checking closing dates for a tender.
     Keywords: CanadaBuys, tender, bid opportunity, RFP, RFQ, solicitation,
     procurement, government contract, PSPC, open tenders, closing date.
-    Mots-clés: AchatsCanada, appel d'offres, occasion de soumission,
+    Mots-clés : AchatsCanada, appel d'offres, occasion de soumission,
     demande de propositions, sollicitation, approvisionnement, marché
     public, SPAC, appels d'offres ouverts, date de clôture.
     """
@@ -74,7 +74,7 @@ async def canadabuys_search_awards(
     been awarded; how much a department spent on a procurement.
     Keywords: CanadaBuys, contract award, award notice, supplier, vendor,
     winning bidder, contract value, federal spending, procurement, PSPC.
-    Mots-clés: AchatsCanada, attribution de contrat, avis d'attribution,
+    Mots-clés : AchatsCanada, attribution de contrat, avis d'attribution,
     fournisseur, soumissionnaire retenu, valeur du contrat, dépenses
     fédérales, approvisionnement, marché public, SPAC.
     """
@@ -103,7 +103,7 @@ async def canadabuys_get_notice(
     Use for: reading the full text of a tender or award found by a search.
     Keywords: CanadaBuys, notice detail, tender detail, award detail,
     reference number, solicitation, full description, procurement notice.
-    Mots-clés: AchatsCanada, détail de l'avis, appel d'offres, avis
+    Mots-clés : AchatsCanada, détail de l'avis, appel d'offres, avis
     d'attribution, numéro de référence, sollicitation, description
     complète, avis d'approvisionnement.
     """
@@ -135,7 +135,7 @@ async def canadabuys_search_contracts(
     Keywords: CanadaBuys, contract history, contracts awarded, federal
     contracts, supplier, vendor, sole source, non-competitive, amendment,
     contract value, government spending, PSPC.
-    Mots-clés: AchatsCanada, historique des contrats, contrats octroyés,
+    Mots-clés : AchatsCanada, historique des contrats, contrats octroyés,
     marchés fédéraux, fournisseur, fournisseur unique, non concurrentiel,
     modification, valeur du contrat, dépenses gouvernementales, SPAC.
     """
@@ -163,7 +163,7 @@ async def canadabuys_list_bulk_files(lang: Literal["en", "fr"] = "en") -> BulkFi
     Sell) procurement history for research or bulk analysis.
     Keywords: CanadaBuys, bulk download, legacy, Buy and Sell, historical
     tenders, historical awards, contract history, full dataset, CSV.
-    Mots-clés: AchatsCanada, téléchargement en bloc, Achatsetventes,
+    Mots-clés : AchatsCanada, téléchargement en bloc, Achatsetventes,
     appels d'offres historiques, attributions historiques, historique des
     contrats, jeu de données complet, fichier CSV.
     """

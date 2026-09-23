@@ -51,11 +51,13 @@ def _limiter():
     )
 
 
-async def _get(path: str, *, params: dict[str, Any] | None = None) -> Any:
+async def _get(
+    path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None
+) -> Any:
     await _limiter().acquire()
     url = f"{constants.BASE_URL}{path}"
     try:
-        return await api_get(url, params=params)
+        return await api_get(url, params=params, headers=headers)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
             # Confirmed live: a well-formed but nonexistent id raises here
@@ -332,9 +334,15 @@ async def get_classification_exclusions(
     )
 
 
-async def get_classification_indexes(classification_id: str) -> ClassificationIndexes:
+async def get_classification_indexes(
+    classification_id: str, *, lang: str = "en"
+) -> ClassificationIndexes:
     resource_id = _resource_id(classification_id)
-    obj = await _get(f"/classification/{resource_id}/indexes")
+
+    # Index endpoints ignore the `lang` query parameter every other RDaaS
+    # route honours; confirmed live 2026-09-23 that only Accept-Language
+    # switches primaryTerm/indexCodeDescriptor to French.
+    obj = await _get(f"/classification/{resource_id}/indexes", headers={"Accept-Language": lang})
     entries = _graph_entries(obj)
     index_entries = [_index_entry_from_json(e) for e in entries]
     return ClassificationIndexes(
@@ -350,10 +358,13 @@ async def get_classification_indexes(classification_id: str) -> ClassificationIn
 
 
 async def get_classification_index_entry(
-    classification_id: str, index_id: int
+    classification_id: str, index_id: int, *, lang: str = "en"
 ) -> ClassificationIndexEntry:
     resource_id = _resource_id(classification_id)
-    obj = await _get(f"/classification/{resource_id}/indexes/entry/{index_id}")
+    obj = await _get(
+        f"/classification/{resource_id}/indexes/entry/{index_id}",
+        headers={"Accept-Language": lang},
+    )
     if not obj.get("@id"):
         raise NotFound(f"No index entry {index_id!r} for classification {resource_id!r}")
     return _index_entry_from_json(obj)

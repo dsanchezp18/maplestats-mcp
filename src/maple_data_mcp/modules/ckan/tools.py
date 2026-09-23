@@ -203,6 +203,7 @@ async def ckan_datastore_search(
     fields: str | None = None,
     limit: int = DATASTORE_ROWS_DEFAULT,
     offset: int = 0,
+    lang: Lang = "en",
 ) -> DatastoreSearchResult:
     """Query rows from a DataStore-backed CKAN resource (tabular data, not just metadata).
 
@@ -212,10 +213,12 @@ async def ckan_datastore_search(
     e.g. {"Year": "2024"}; `query` is full-text (rejected on federal
     resources over 100,000 rows — use `filters`). `sort` e.g.
     "Year desc"; `fields` a comma-separated column list; `limit` ≤ 1000.
+    Rows are returned as published, so `lang` has no effect.
     Keywords: CKAN, datastore, rows, records, table, query, filter, data.
     Mots-clés : CKAN, magasin de données, lignes, enregistrements,
     tableau, requête, filtre, données.
     """
+    del lang
     return await client.datastore_search(
         portal,
         resource_id,

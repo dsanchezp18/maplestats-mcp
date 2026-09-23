@@ -47,7 +47,7 @@ async def eps_list_occurrences(
     Keywords: Edmonton, police, EPS, crime, occurrences, incidents,
     assault, theft, break and enter, property crime, community safety,
     crime map, intersection.
-    Mots-clés: Edmonton, police, SPE, criminalité, incidents,
+    Mots-clés : Edmonton, police, SPE, criminalité, incidents,
     infractions, voies de fait, vol, introduction par effraction,
     sécurité communautaire, carte de la criminalité, intersection.
     """
@@ -92,7 +92,7 @@ async def eps_summarize_occurrences(
     Keywords: Edmonton, police, EPS, crime statistics, crime trends,
     monthly crime, offence types, hotspots, counts, community safety,
     violent crime, property crime.
-    Mots-clés: Edmonton, police, SPE, statistiques de criminalité,
+    Mots-clés : Edmonton, police, SPE, statistiques de criminalité,
     tendances, criminalité mensuelle, types d'infractions, points chauds,
     dénombrement, sécurité communautaire, crimes violents, crimes contre
     les biens.
@@ -119,7 +119,7 @@ async def eps_get_last_load_date(lang: Lang = "en") -> LoadDate:
     Use for: checking how current EPS crime data is before analysing it.
     Keywords: Edmonton, police, EPS, data freshness, last updated,
     refresh date, community safety, crime data, load date.
-    Mots-clés: Edmonton, police, SPE, fraîcheur des données, dernière
+    Mots-clés : Edmonton, police, SPE, fraîcheur des données, dernière
     mise à jour, date d'actualisation, sécurité communautaire, données
     sur la criminalité.
     """

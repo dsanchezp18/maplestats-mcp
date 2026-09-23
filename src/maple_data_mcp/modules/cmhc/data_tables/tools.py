@@ -43,7 +43,7 @@ async def cmhc_dt_list_tables(category: str, lang: Lang = "en") -> TableList:
     Keywords: cmhc, housing, data tables, publications, excel,
     download, rental market, household characteristics, canadian
     housing survey, catalogue, list.
-    Mots-clés: schl, logement, tableaux de données, publications,
+    Mots-clés : schl, logement, tableaux de données, publications,
     excel, téléchargement, marché locatif, caractéristiques des
     ménages, enquête canadienne sur le logement, catalogue, liste.
     """
@@ -60,7 +60,7 @@ async def cmhc_dt_get_table(category: str, slug: str, lang: Lang = "en") -> Tabl
     `slug` comes from cmhc_dt_list_tables.
     Keywords: cmhc, housing, data table, detail, description,
     geography, edition, publication date, document type, metadata.
-    Mots-clés: schl, logement, tableau de données, détail,
+    Mots-clés : schl, logement, tableau de données, détail,
     description, géographie, édition, date de publication, type de
     document, métadonnées.
     """
@@ -86,7 +86,7 @@ async def cmhc_dt_get_download_url(
     rather than silently returning nothing.
     Keywords: cmhc, housing, download link, excel file, data table,
     historical edition, geography, publication, direct link, xlsx.
-    Mots-clés: schl, logement, lien de téléchargement, fichier excel,
+    Mots-clés : schl, logement, lien de téléchargement, fichier excel,
     tableau de données, édition historique, géographie, publication,
     lien direct.
     """

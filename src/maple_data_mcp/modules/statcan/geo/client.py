@@ -47,7 +47,18 @@ def _validate_path_segment(value: str, label: str) -> str:
     return value
 
 
-async def list_services(year: str) -> GeoServiceList:
+def _service_language(name: str) -> str:
+    """Every boundary product is published twice, once per language.
+
+    Confirmed live: 2021 names French services "Fichier(s)_..." and
+    intercensal years suffix codes with "_e"/"_f" (e.g. lcsd000a19r_e,
+    lsdr000a19r_f).
+    """
+    base = name.rsplit("/", 1)[-1].lower()
+    return "fr" if base.startswith("fichier") or base.endswith("_f") else "en"
+
+
+async def list_services(year: str, lang: str | None = None) -> GeoServiceList:
     year = _validate_path_segment(year, "year")
     cache_key = f"statcan-geo:services:{year}"
 
@@ -56,8 +67,13 @@ async def list_services(year: str) -> GeoServiceList:
 
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SERVICES_SECONDS, fetch)
     services = [
-        GeoServiceSummary(name=s["name"], service_type=s["type"]) for s in body.get("services", [])
+        GeoServiceSummary(
+            name=s["name"], service_type=s["type"], language=_service_language(s["name"])
+        )
+        for s in body.get("services", [])
     ]
+    if lang:
+        services = [s for s in services if s.language == lang]
     return GeoServiceList(
         year=year,
         services=services,

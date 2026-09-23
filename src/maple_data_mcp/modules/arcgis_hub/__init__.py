@@ -13,14 +13,14 @@ a documented no-op on every portal.
 MODULE_NAME = "arcgis_hub"
 MODULE_DESCRIPTION = (
     "Provincial and municipal ArcGIS Hub open-data portals (Manitoba, Saskatchewan, PEI, "
-    "Ottawa, Halifax, Hamilton, Durham, York, Peel, Metro Vancouver, and 18 more): dataset "
+    "Ottawa, Halifax, Hamilton, Durham, York, Peel, Metro Vancouver, and 23 more): dataset "
     "search and detail, direct FeatureServer/MapServer row queries, and CSV/Shapefile/"
     "GeoJSON/KML download links. Call arcgis_hub_list_portals for every portal key."
 )
 MODULE_DESCRIPTION_FR = (
     "Portails de données ouvertes ArcGIS Hub provinciaux et municipaux (Manitoba, "
     "Saskatchewan, Î.-P.-É., Ottawa, Halifax, Hamilton, Durham, York, Peel, Metro Vancouver "
-    "et 18 autres) : recherche et détail des jeux de données, requêtes directes sur les "
+    "et 23 autres) : recherche et détail des jeux de données, requêtes directes sur les "
     "couches FeatureServer/MapServer, et liens de téléchargement CSV/Shapefile/GeoJSON/KML. "
     "Appelez arcgis_hub_list_portals pour la liste des clés de portail."
 )

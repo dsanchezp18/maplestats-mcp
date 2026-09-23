@@ -180,3 +180,22 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
         httpx_mock.add_response(status_code=500)
     with pytest.raises(UpstreamError):
         await client.list_services("2021")
+
+
+async def test_list_services_filters_by_language(httpx_mock):
+    services = {
+        "services": [
+            {"name": "2021/Cartographic_boundary_files", "type": "MapServer"},
+            {"name": "2021/Fichiers_des_limites_cartographiques", "type": "MapServer"},
+            {"name": "2019/lcsd000a19r_e", "type": "MapServer"},
+            {"name": "2019/lsdr000a19r_f", "type": "MapServer"},
+        ]
+    }
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=services)
+    french = await client.list_services("2021", "fr")
+    assert [s.name for s in french.services] == [
+        "2021/Fichiers_des_limites_cartographiques",
+        "2019/lsdr000a19r_f",
+    ]
+    everything = await client.list_services("2021")
+    assert [s.language for s in everything.services] == ["en", "fr", "en", "fr"]

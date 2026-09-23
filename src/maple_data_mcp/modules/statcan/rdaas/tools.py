@@ -44,7 +44,7 @@ async def rdaas_search_classifications(
     its full detail, categories, or concordances.
     Keywords: statcan, naics, classification, search, rdaas, standard,
     geographical, occupational, codes.
-    Mots-clés: statcan, naics, classification, recherche, rdaas, norme,
+    Mots-clés : statcan, scian, classification, recherche, rdaas, norme,
     géographique, professionnelle, codes.
     """
     return await client.search_classifications(query, start=start, limit=limit, lang=lang)
@@ -58,7 +58,7 @@ async def rdaas_get_classification_search_filters(lang: Lang = "en") -> SearchFi
     filtering a search.
     Keywords: statcan, rdaas, filters, search, audience, status,
     classification.
-    Mots-clés: statcan, rdaas, filtres, recherche, audience, statut,
+    Mots-clés : statcan, rdaas, filtres, recherche, public cible, statut,
     classification, valeurs valides.
     """
     return await client.get_classification_search_filters()
@@ -75,7 +75,7 @@ async def rdaas_get_classification(
     into its categories.
     Keywords: statcan, classification, detail, naics, rdaas, levels,
     version, background.
-    Mots-clés: statcan, classification, détail, naics, rdaas, niveaux,
+    Mots-clés : statcan, classification, détail, scian, rdaas, niveaux,
     version, contexte.
     """
     return await client.get_classification(classification_id, lang=lang)
@@ -98,7 +98,7 @@ async def rdaas_get_classification_categories_detailed(
     fields are the same current-NAICS codes and descriptions.
     Keywords: statcan, classification, categories, codes, naics, rdaas,
     tree, detailed.
-    Mots-clés: statcan, classification, catégories, codes, naics,
+    Mots-clés : statcan, classification, catégories, codes, scian,
     rdaas, arborescence, détaillé.
     """
     return await client.get_classification_categories_detailed(classification_id, lang=lang)
@@ -114,28 +114,30 @@ async def rdaas_get_classification_exclusions(
     classification rather than simply missing.
     Keywords: statcan, exclusions, classification, rdaas, excluded,
     terms, naics.
-    Mots-clés: statcan, exclusions, classification, rdaas, exclu,
-    termes, naics, non couvert.
+    Mots-clés : statcan, exclusions, classification, rdaas, exclu,
+    termes, scian, non couvert.
     """
     return await client.get_classification_exclusions(classification_id, lang=lang)
 
 
 @tool
-async def rdaas_get_classification_indexes(classification_id: str) -> ClassificationIndexes:
+async def rdaas_get_classification_indexes(
+    classification_id: str, lang: Lang = "en"
+) -> ClassificationIndexes:
     """List all index entries (alternate terms mapped to a code) for one classification.
 
     Use for: finding which code a plain-language term maps to.
     Keywords: statcan, index, classification, rdaas, terms, alternate
     names, naics.
-    Mots-clés: statcan, index, classification, rdaas, termes, noms
-    alternatifs, naics, correspondance de termes.
+    Mots-clés : statcan, index, classification, rdaas, termes, noms
+    alternatifs, scian, correspondance de termes.
     """
-    return await client.get_classification_indexes(classification_id)
+    return await client.get_classification_indexes(classification_id, lang=lang)
 
 
 @tool
 async def rdaas_get_classification_index_entry(
-    classification_id: str, index_id: int
+    classification_id: str, index_id: int, lang: Lang = "en"
 ) -> ClassificationIndexEntry:
     """Get one specific index entry by its small integer index_id (not
     its @id URL — use the indexId field from rdaas_get_classification_indexes).
@@ -143,10 +145,10 @@ async def rdaas_get_classification_index_entry(
     Use for: retrieving a single term-to-code mapping already identified
     via rdaas_get_classification_indexes.
     Keywords: statcan, index entry, classification, rdaas, term, code.
-    Mots-clés: statcan, entrée d'index, classification, rdaas, terme,
+    Mots-clés : statcan, entrée d'index, classification, rdaas, terme,
     code, correspondance, identifiant.
     """
-    return await client.get_classification_index_entry(classification_id, index_id)
+    return await client.get_classification_index_entry(classification_id, index_id, lang=lang)
 
 
 @tool
@@ -157,7 +159,7 @@ async def rdaas_get_term_exclusion(term_exclusion_id: str, lang: Lang = "en") ->
     elsewhere.
     Keywords: statcan, term exclusion, rdaas, excluded, definition,
     lookup, classification, reference data.
-    Mots-clés: statcan, exclusion de terme, rdaas, terme exclu,
+    Mots-clés : statcan, exclusion de terme, rdaas, terme exclu,
     définition, recherche, classification, données de référence.
     """
     return await client.get_term_exclusion(term_exclusion_id, lang=lang)
@@ -176,7 +178,7 @@ async def rdaas_search_concordances(
     Use for: finding a concordance id before requesting its code maps.
     Keywords: statcan, concordance, correspondence, rdaas, naics,
     version, mapping.
-    Mots-clés: statcan, concordance, correspondance, rdaas, naics,
+    Mots-clés : statcan, concordance, correspondance, rdaas, scian,
     version, conversion, recherche.
     """
     return await client.search_concordances(query, start=start, limit=limit, lang=lang)
@@ -190,8 +192,8 @@ async def rdaas_get_concordance_search_filters(lang: Lang = "en") -> SearchFilte
     filtering a concordance search.
     Keywords: statcan, rdaas, filters, search, concordance, audience,
     status.
-    Mots-clés: statcan, rdaas, filtres, recherche, concordance,
-    audience, statut, valeurs valides.
+    Mots-clés : statcan, rdaas, filtres, recherche, concordance,
+    public cible, statut, valeurs valides.
     """
     return await client.get_concordance_search_filters()
 
@@ -204,7 +206,7 @@ async def rdaas_get_concordance(concordance_id: str, lang: Lang = "en") -> Conco
     connects before requesting its code maps.
     Keywords: statcan, concordance, detail, rdaas, source, target,
     classification.
-    Mots-clés: statcan, concordance, détail, rdaas, source, cible,
+    Mots-clés : statcan, concordance, détail, rdaas, source, cible,
     classification, connexion.
     """
     return await client.get_concordance(concordance_id, lang=lang)
@@ -218,7 +220,7 @@ async def rdaas_get_concordance_maps(concordance_id: str, lang: Lang = "en") -> 
     equivalent(s) in another version.
     Keywords: statcan, code map, concordance, rdaas, mapping, convert,
     naics.
-    Mots-clés: statcan, correspondance de codes, concordance, rdaas,
-    conversion, naics, table de conversion, codes.
+    Mots-clés : statcan, correspondance de codes, concordance, rdaas,
+    conversion, scian, table de conversion, codes.
     """
     return await client.get_concordance_maps(concordance_id, lang=lang)

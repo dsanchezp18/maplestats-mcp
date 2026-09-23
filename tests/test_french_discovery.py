@@ -1,0 +1,41 @@
+"""French queries must find the same tools through search_tools as English ones.
+
+Every tool carries a `Mots-clés :` line for BM25SearchTransform to index;
+these pairs pin down the domain terms a francophone user actually types,
+so a docstring edit that drops one fails here rather than silently.
+"""
+
+from __future__ import annotations
+
+import re
+
+import pytest
+from fastmcp import Client
+
+from maple_data_mcp.server import mcp
+
+TOP_N = 3
+
+CASES = [
+    ("taux de chômage", "statcan_indicators_get_indicators"),
+    ("indice des prix à la consommation", "statcan_indicators_get_indicators"),
+    ("PIB par industrie", "wds_search_cubes"),
+    ("classification des industries SCIAN", "rdaas_get_classification"),
+    ("mises en chantier", "cmhc_list_categories"),
+    ("taux directeur", "boc_search_series"),
+    ("recherche de marques de commerce", "ised_cipo_search_trademarks"),
+    ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
+    ("appels d'offres du gouvernement fédéral", "canadabuys_search_tenders"),
+    ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),
+    ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
+    ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
+]
+
+
+@pytest.mark.parametrize(("query", "expected"), CASES)
+async def test_french_query_finds_tool(query: str, expected: str):
+    async with Client(mcp) as client:
+        result = await client.call_tool("search_tools", {"query": query})
+    text = result.content[0].text if result.content else str(result.structured_content)
+    names = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+    assert expected in names, f"{query!r} -> {names}"
