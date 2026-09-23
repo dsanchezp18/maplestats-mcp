@@ -55,7 +55,7 @@ Sources, by tool-name prefix:
   returns: elections_financial_returns_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
-  nrcan_nbac_.
+  nrcan_nbac_. CanadaBuys federal tenders and contract awards: canadabuys_.
 - CKAN catalogues: ckan_ (federal open.canada.ca), ckan_ab_, ckan_bc_,
   ckan_on_, ckan_qc_, ckan_nt_, ckan_yt_, ckan_montreal_, ckan_toronto_,
   ckan_regina_. Most have *_datastore_search for row-level queries on
