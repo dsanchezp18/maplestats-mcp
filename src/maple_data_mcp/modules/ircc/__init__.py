@@ -4,8 +4,8 @@ Scope note: IRCC's administrative series datasets (permanent residents,
 study/work permits, asylum claimants, citizenship) are ordinary CKAN
 packages published by the "ircc" organization on open.canada.ca, already
 reachable through the existing federal module with e.g.
-ckan_search_datasets(query="permanent residents", fq="organization:ircc")
--- see modules/ckan_federal/. Building a second, duplicate CKAN client for
+ckan_search_datasets(portal="federal", query="permanent residents", fq="organization:ircc")
+-- see modules/ckan/. Building a second, duplicate CKAN client for
 the same portal would not add capability.
 
 What genuinely needed its own adaptor, confirmed live 2026-09-18, is the

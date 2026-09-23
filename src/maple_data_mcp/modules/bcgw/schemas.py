@@ -78,7 +78,7 @@ class MiningTenureQueryResult(BaseModel):
 class LayerQueryResult(BaseModel):
     """Generic result for any BCGW layer -- rows kept as loosely-typed
     dicts since field names/types vary by layer (same idiom as
-    ckan_federal's DatastoreSearchResult.records)."""
+    ckan's DatastoreSearchResult.records)."""
 
     type_name: str
     records: list[dict[str, object]]

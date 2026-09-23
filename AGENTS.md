@@ -33,11 +33,12 @@ The top-level `statcan/__init__.py`, `resources.py`, and `prompts.py`
 stay shared across the sub-APIs.
 
 A new portal on a platform this server already covers (ArcGIS Hub,
-Socrata) is **not** a new module: add one entry to that family's
+Socrata, CKAN) is **not** a new module: add one entry to that family's
 `constants.PORTALS` (and its `PortalKey` literal in `schemas.py` — a
-unit test keeps the two in sync). `modules/arcgis_hub/` and
-`modules/socrata/` replaced 28 and 5 copy-pasted per-portal modules
-whose code differed only in the domain; one tool family with a
+unit test keeps the two in sync). `modules/arcgis_hub/`,
+`modules/socrata/`, and `modules/ckan/` replaced 28, 5, and 10
+copy-pasted per-portal modules whose code differed only in
+configuration; one tool family with a
 `portal` argument also keeps `search_tools` from returning several
 indistinguishable per-city tools.
 

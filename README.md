@@ -22,7 +22,7 @@ See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for the project vision and
 ## Bilingual by design / Conçu pour être bilingue
 
 Tools accept `lang: "en"|"fr"`, several sources are French-first
-or French-only (Quebec's `ckan_qc_*` and Montreal's `ckan_montreal_*`),
+or French-only (Quebec's and Montreal's CKAN catalogues, `ckan_*` with `portal="qc"`/`"montreal"`),
 and tool discovery works in either language: every tool's docstring
 carries both a `Keywords:` line and a `Mots-clés:` line, so calling
 `search_tools` with a French-language query (e.g. *"recherche de
@@ -35,8 +35,8 @@ the response versus where it is a documented no-op on a monolingual
 source.
 
 *Chaque outil accepte `lang : "en"|"fr"`, plusieurs sources sont
-francophones ou exclusivement en français (le `ckan_qc_*` du Québec
-et le `ckan_montreal_*` de Montréal), et la découverte d'outils
+francophones ou exclusivement en français (les catalogues CKAN du Québec
+et de Montréal, `ckan_*` avec `portal="qc"`/`"montreal"`), et la découverte d'outils
 fonctionne dans les deux langues : chaque outil porte à la fois une
 ligne `Keywords:` et une ligne `Mots-clés:`, de sorte qu'un appel à
 `search_tools` avec une requête en français trouve les mêmes outils
@@ -62,14 +62,14 @@ bilingual one-line description of each module):
 | ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
 | Other federal | `ircc_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |
 | Provincial agencies | `aer_`, `bcgw_` | Alberta Energy Regulator; BC Geographic Warehouse |
-| CKAN catalogues | `ckan_` (federal), `ckan_ab_`, `ckan_bc_`, `ckan_on_`, `ckan_qc_`, `ckan_nt_`, `ckan_yt_`, `ckan_montreal_`, `ckan_toronto_`, `ckan_regina_` | Dataset search/detail and, on most portals, DataStore row queries |
+| CKAN catalogues | `ckan_` + `portal` | Federal (open.canada.ca), Ontario, BC, Alberta, Quebec, NWT, Yukon, Montreal, Toronto, Regina (`ckan_list_portals`): dataset search/detail and DataStore row queries |
 | ArcGIS Hub portals | `arcgis_hub_` + `portal` | 33 provinces, cities, regions, and agencies (`arcgis_hub_list_portals`) |
 | Socrata portals | `socrata_` + `portal` | Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg (`socrata_list_portals`) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver (Opendatasoft); Newfoundland and Labrador (HTML catalogue); Edmonton police occurrences, real-time transit (GTFS-RT), and EPCOR water quality |
 
 Many federal administrative series (IRCC permits, CRA statistics and
 charities, OSFI returns, ISED insolvency data) are ordinary open.canada.ca
-datasets, reachable through `ckan_search_datasets(fq="organization:<org>")`.
+datasets, reachable through `ckan_search_datasets(portal="federal", fq="organization:<org>")`.
 
 Most tools accept `lang: "en"|"fr"` (a documented no-op on single-language
 sources), and every tool returns a typed response with a `provenance`

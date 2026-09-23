@@ -1,6 +1,6 @@
 """Alberta Energy Regulator (AER) statistical reports (www.aer.ca), a
 different platform from open.alberta.ca's CKAN catalogue already
-covered by `ckan_ab_*`.
+covered by `ckan_*` (portal="ab").
 
 Confirmed live 2026-09-22: two real, undocumented quirks in how AER
 serves these files, both handled here.
@@ -43,7 +43,7 @@ MODULE_DESCRIPTION = (
     "links, and ST3 monthly production-volume/price XLSX download links "
     "(butane, ethane, gas, NGL, oil, propane, sulphur, oil prices). "
     "Distinct from open.alberta.ca's CKAN catalogue already covered by "
-    "ckan_ab_*."
+    'ckan_* (portal="ab").'
 )
 MODULE_DESCRIPTION_FR = (
     "Rapports statistiques de l'Alberta Energy Regulator (AER, www.aer.ca) : "
@@ -51,5 +51,5 @@ MODULE_DESCRIPTION_FR = (
     "d'archives mensuelles/annuelles, ainsi que liens de téléchargement "
     "XLSX ST3 des volumes de production mensuels et des prix (butane, "
     "éthane, gaz, LGN, pétrole, propane, soufre, prix du pétrole). Distinct "
-    "du catalogue CKAN d'open.alberta.ca déjà couvert par ckan_ab_*."
+    'du catalogue CKAN d\'open.alberta.ca déjà couvert par ckan_* (portal="ab").'
 )

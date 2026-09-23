@@ -105,8 +105,8 @@ async def bcgw_query_layer(
     type_name (e.g. "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_RESTRICTED_AREAS_SP"),
     for any dataset not covered by a curated bcgw_* tool.
 
-    Discover a layer's type_name via ckan_bc_search_datasets/
-    ckan_bc_get_dataset -- a WFS/WMS-queryable BC dataset's package
+    Discover a layer's type_name via ckan_search_datasets/
+    ckan_get_dataset (portal="bc") -- a WFS/WMS-queryable BC dataset's package
     carries a resource whose URL embeds the type_name right after
     "openmaps.gov.bc.ca/geo/pub/". Filter with a standard OGC CQL
     expression against that layer's own field names.

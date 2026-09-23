@@ -261,7 +261,7 @@ async def query_layer(
     """Query any BCGW layer by its type_name (e.g.
     "WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW").
 
-    Discover a layer's type_name via ckan_bc_* -- a WFS/WMS-queryable
+    Discover a layer's type_name via ckan_* (portal="bc") -- a WFS/WMS-queryable
     dataset's package carries a resource whose URL embeds it right after
     "openmaps.gov.bc.ca/geo/pub/". `property_names` is a comma-separated
     field list; when omitted (and `include_geometry` is false), no

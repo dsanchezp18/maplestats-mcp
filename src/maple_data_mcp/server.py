@@ -56,10 +56,10 @@ Sources, by tool-name prefix:
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
   nrcan_nbac_. CanadaBuys federal tenders and contract awards: canadabuys_.
-- CKAN catalogues: ckan_ (federal open.canada.ca), ckan_ab_, ckan_bc_,
-  ckan_on_, ckan_qc_, ckan_nt_, ckan_yt_, ckan_montreal_, ckan_toronto_,
-  ckan_regina_. Most have *_datastore_search for row-level queries on
-  DataStore-active resources.
+- CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
+  NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
+  argument -- ckan_list_portals lists the keys. ckan_datastore_search
+  runs row-level queries on DataStore-active resources.
 - ArcGIS Hub portals (33 provinces, cities, regions): arcgis_hub_, with a
   `portal` argument -- arcgis_hub_list_portals lists the keys.
 - Socrata portals (Nova Scotia, New Brunswick, Calgary, Edmonton,
@@ -71,7 +71,7 @@ Sources, by tool-name prefix:
 Routing hints: many federal administrative series (IRCC permits, CRA
 tax statistics and charities, OSFI bank returns, ISED insolvency data)
 are ordinary open.canada.ca datasets -- use ckan_search_datasets with
-fq="organization:<org>" (ircc, cra-arc, osfi-bsif, ic).
+portal="federal" and fq="organization:<org>" (ircc, cra-arc, osfi-bsif, ic).
 
 Language: most tools accept lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's

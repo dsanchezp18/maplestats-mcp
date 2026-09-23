@@ -7,8 +7,9 @@ own core behavior, not a per-deployment customization, confirmed against
 the federal open.canada.ca instance and reused as-is rather than
 reimplemented once per portal. What genuinely differs per portal (base
 URL, rate limit, cache TTLs, whether tags/groups/bilingual fields are
-actually used, dataset field quirks) stays in each modules/ckan_<portal>/
-package, verified live against that specific instance per AGENTS.md.
+actually used, dataset field quirks) is recorded in
+modules/ckan/constants.PORTALS, verified live against that specific
+instance per AGENTS.md.
 
 `CkanConfig` carries the per-portal values `action()` needs; a module's
 own client.py calls `action(config, "package_search", params=...)` the
@@ -73,7 +74,7 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
         # just a bare 400 - confirmed live that different CKAN deployments
         # use different status codes for the same kind of mistake (federal
         # returns 400 "Search Query Error" for a malformed fq/sort;
-        # ckan_montreal's own deployment returns 409 "Search Error" for the
+        # Montreal's own deployment returns 409 "Search Error" for the
         # same class of mistake). Narrowing this to status == 400 silently
         # misclassified the 409 case as an UpstreamError.
         raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc

@@ -6,7 +6,7 @@ This is a separate, distinct platform from the ordinary CKAN datasets
 already published under the `elections` organization on open.canada.ca
 (poll-by-poll voting results, turnout, electoral boundary files, and
 donor-level contribution bulk exports -- all already reachable through
-the existing `ckan_federal` module's `ckan_search_datasets`/
+the existing `ckan` module's (portal="federal") `ckan_search_datasets`/
 `ckan_get_dataset`/`ckan_datastore_search`, several with DataStore-active
 resources confirmed live 2026-09-21, e.g. "44th General Election:
 Official Voting Results" Table 11 "Voting results by electoral
@@ -44,7 +44,7 @@ MODULE_DESCRIPTION = (
     "(declaration, contributions received, loans, expenses, transfers, bank "
     "reconciliation) as structured line-item data. Covers the Candidates "
     "political entity only; distinct from the bulk poll-by-poll results and "
-    "donor-contribution CKAN datasets already reachable via ckan_federal."
+    'donor-contribution CKAN datasets already reachable via ckan_* (portal="federal").'
 )
 MODULE_DESCRIPTION_FR = (
     "Financement politique d'Élections Canada (elections.ca/WPAPPS/WPF) : "
@@ -54,5 +54,5 @@ MODULE_DESCRIPTION_FR = (
     "prêts, dépenses, transferts, rapprochement bancaire) sous forme de "
     "données structurées. Couvre uniquement l'entité politique Candidats; "
     "distinct des jeux de données CKAN de résultats par bureau de scrutin et "
-    "de contributions déjà accessibles via ckan_federal."
+    'de contributions déjà accessibles via ckan_* (portal="federal").'
 )
