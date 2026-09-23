@@ -8,21 +8,15 @@ encoding and error-page quirks confirmed live.
 
 from __future__ import annotations
 
-import csv
-import io
 from datetime import date
 from typing import Any
-from urllib.parse import urlparse
-
-import httpx
 
 from maple_data_mcp.modules.cer import constants
 from maple_data_mcp.modules.cer.schemas import CerDataset, CerDatasetList, CerFile, CerRows
 from maple_data_mcp.modules.ckan import client as ckan
-from maple_data_mcp.shared.cache import cached_fetch
+from maple_data_mcp.shared import csv_files
 from maple_data_mcp.shared.envelope import make_provenance
-from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maple_data_mcp.shared.http import get_raw
+from maple_data_mcp.shared.errors import InvalidInput
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -68,43 +62,11 @@ async def list_datasets(query: str = "", *, limit: int = 10, lang: str = "en") -
     )
 
 
-def _decode(body: bytes) -> str:
-    try:
-        return body.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        return body.decode("cp1252")
-
-
 async def _download(url: str) -> list[dict[str, str]]:
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname not in constants.ALLOWED_HOSTS:
-        raise InvalidInput("url must be an https CER file URL from cer_list_datasets.")
-    if not parsed.path.lower().endswith(".csv"):
-        raise InvalidInput("url must point to a .csv file.")
-
-    async def fetch() -> list[dict[str, str]]:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=120.0)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"cer: no file at {url}.") from exc
-            raise UpstreamError(f"cer: {url} returned HTTP {exc.response.status_code}.") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"cer: {url} did not respond in time.") from exc
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"cer: {url} is larger than this tool reads.")
-        text = _decode(response.content)
-        if text.lstrip().lower().startswith(("<!doctype", "<html")):
-            raise NotFound(f"cer: {url} returned a web page, not a CSV file.")
-        # Some headers carry trailing spaces ("Période "); strip them.
-        return [
-            {(k or "").strip(): (v or "") for k, v in row.items()}
-            for row in csv.DictReader(io.StringIO(text))
-        ]
-
-    rows, _ = await cached_fetch(f"cer:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
-    return rows
+    csv_files.check_url(url, constants.ALLOWED_HOSTS, "cer")
+    return await csv_files.fetch_rows(
+        url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="cer"
+    )
 
 
 def _row_date(value: str) -> date | None:
@@ -145,24 +107,11 @@ async def query_file(
     start_date = _parse_bound(start, "start")
     end_date = _parse_bound(end, "end")
     rows = await _download(url)
-    header = list(rows[0].keys()) if rows else []
-    by_lower = {c.lower(): c for c in header}
-
-    def column(name: str) -> str:
-        match = by_lower.get(name.strip().lower())
-        if match is None:
-            raise InvalidInput(f"Unknown column {name!r}; columns are {header}.")
-        return match
-
-    wanted = {column(k): v.strip().lower() for k, v in (filters or {}).items()}
-    selected = [column(c) for c in columns] if columns else header
-    date_column = next(
-        (by_lower[c.lower()] for c in constants.DATE_COLUMNS if c.lower() in by_lower), None
-    )
+    columns_lookup = csv_files.Columns(rows)
+    filtered = csv_files.exact_filter(rows, columns_lookup, filters)
+    date_column = columns_lookup.first_of(constants.DATE_COLUMNS)
 
     def keep(row: dict[str, Any]) -> bool:
-        if any((row.get(c) or "").strip().lower() != v for c, v in wanted.items()):
-            return False
         if date_column and (start_date or end_date):
             when = _row_date(row.get(date_column) or "")
             if when is None:
@@ -173,16 +122,17 @@ async def query_file(
                 return False
         return True
 
-    matching = [r for r in rows if keep(r)]
+    matching = [r for r in filtered if keep(r)]
     if date_column:
         matching.sort(key=lambda r: _row_date(r.get(date_column) or "") or date.min)
         kept = matching[-limit:]
     else:
         kept = matching[:limit]
+    selected, selected_rows = csv_files.select(kept, columns_lookup, columns)
     return CerRows(
         url=url,
         columns=selected,
-        rows=[{c: r.get(c) or "" for c in selected} for r in kept],
+        rows=selected_rows,
         total_rows=len(rows),
         matching_rows=len(matching),
         returned_count=len(kept),
