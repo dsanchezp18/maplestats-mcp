@@ -61,9 +61,9 @@ bilingual one-line description of each module):
 | ECCC / MSC | `eccc_` | Weather, climate, hydrometric, air quality (OGC API) |
 | ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
 | Canada Gazette | `gazette_` | Part I notices and proposed regulations, Part II registered regulations: issues, notice lists, notice text (EN/FR) |
-| Canada Gazette | `gazette_` | Part I notices and proposed regulations, Part II registered regulations: issues, notice lists, notice text (EN/FR) |
 | Vehicle recalls | `tc_recalls_` | Transport Canada motor vehicle safety recalls by make, model and year, with bilingual details |
 | Geocoding and place names | `nrcan_geo_` | NRCan Geolocator (places, addresses, postal codes) and Canadian Geographical Names Database (EN/FR) |
+| Parliament | `parliament_` | House of Commons bills, recorded votes with party and MP ballots, MPs, Hansard and committee speeches (via unofficial OpenParliament.ca, EN/FR) |
 | Earthquakes | `earthquakes_` | Earthquakes Canada (NRCan) event catalogue by date, magnitude, point radius or bbox |
 | Health system | `cihi_` | CIHI Indicator Library: ~200 indicators (hospital mortality, readmissions, wait times, spending), data by place and year (EN/FR) |
 | Federal spending | `gc_infobase_` | GC InfoBase open datasets: Estimates, Public Accounts, program spending/FTEs, results (EN/FR) |

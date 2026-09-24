@@ -65,7 +65,8 @@ Sources, by tool-name prefix:
   indicators (Indicator Library): cihi_. NRCan geocoding and official
   place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
   Canada Gazette notices and regulations: gazette_.
-  Earthquakes Canada event catalogue: earthquakes_.
+  Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,
+  votes, MPs and Hansard (unofficial OpenParliament.ca): parliament_.
 - CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
