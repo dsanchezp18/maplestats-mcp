@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastmcp.tools import tool
 
 from maple_data_mcp.modules.earthquakes import client, constants
@@ -21,6 +23,7 @@ async def earthquakes_search(
     bbox: list[float] | None = None,
     event_id: str | None = None,
     limit: int = constants.LIMIT_DEFAULT,
+    lang: Literal["en", "fr"] = "en",
 ) -> EarthquakeSearchResult:
     """Search Earthquakes Canada (NRCan) for earthquakes in and near Canada.
 
@@ -48,4 +51,5 @@ async def earthquakes_search(
         bbox=(bbox[0], bbox[1], bbox[2], bbox[3]) if bbox else None,
         event_id=event_id,
         limit=limit,
+        lang=lang,
     )

@@ -1,9 +1,8 @@
 """Earthquakes Canada (NRCan) event catalogue via its FDSN web service.
 
 earthquakescanada.nrcan.gc.ca/fdsnws/event/1/query follows the FDSN
-event web-service standard. Built from that standard on 2026-09-24
-without live access (the host was blocked from the build environment);
-confirm with scripts/smoke_test.py before relying on edge cases.
+event web-service standard. Built from that standard, then
+verified live 2026-09-24 (see constants.py for the quirks found).
 """
 
 MODULE_NAME = "earthquakes"

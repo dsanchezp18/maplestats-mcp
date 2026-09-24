@@ -6,8 +6,9 @@ name, so a reordered or extended column set still reads correctly.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
@@ -25,6 +26,7 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _KM_PER_DEGREE = 111.19
+_EVENT_ID = re.compile(r"^\d{8}\.\d{4}(\d{3})?$")
 
 
 async def _fetch(params: dict[str, Any]) -> tuple[str, bool]:
@@ -35,7 +37,7 @@ async def _fetch(params: dict[str, Any]) -> tuple[str, bool]:
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 return ""
-            if exc.response.status_code == 400:
+            if exc.response.status_code in (400, 422):
                 raise InvalidInput(
                     f"earthquakes: the service rejected the query: {exc.response.text[:200]}"
                 ) from exc
@@ -70,7 +72,17 @@ def _time(value: str | None) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
-def parse_text(text: str) -> list[Earthquake]:
+def _location(value: str | None, lang: Literal["en", "fr"]) -> str | None:
+    if not value:
+        return None
+    # "62 km WSW of X, YT/62 km OSO de X, YT"; place names hold no "/".
+    parts = value.split("/")
+    if len(parts) != 2:
+        return value
+    return (parts[1] if lang == "fr" else parts[0]).strip()
+
+
+def parse_text(text: str, lang: Literal["en", "fr"] = "en") -> list[Earthquake]:
     lines = [line for line in text.splitlines() if line.strip()]
     if not lines:
         return []
@@ -91,7 +103,7 @@ def parse_text(text: str) -> list[Earthquake]:
                 depth_km=_float(row.get("depth/km")),
                 magnitude=_float(row.get("magnitude")),
                 magnitude_type=row.get("magtype") or None,
-                location=row.get("eventlocationname") or None,
+                location=_location(row.get("eventlocationname"), lang),
             )
         )
     quakes.sort(key=lambda q: q.time or datetime.min.replace(tzinfo=UTC), reverse=True)
@@ -119,14 +131,19 @@ async def search(
     bbox: tuple[float, float, float, float] | None = None,
     event_id: str | None = None,
     limit: int = constants.LIMIT_DEFAULT,
+    lang: Literal["en", "fr"] = "en",
 ) -> EarthquakeSearchResult:
     if limit < 1 or limit > constants.LIMIT_MAX:
         raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
     params: dict[str, Any] = {"format": "text"}
     if event_id:
-        if not event_id.strip().isalnum():
-            raise InvalidInput(f"event_id must be letters and digits, got {event_id!r}.")
-        params["eventid"] = event_id.strip()
+        event_id = event_id.strip()
+        if not _EVENT_ID.match(event_id):
+            raise InvalidInput(
+                f"event_id must look like 20260924.1414001 or 20260924.1414, got {event_id!r}."
+            )
+        # The service looks up by minute only; narrow to the exact event after.
+        params["eventid"] = event_id[:13]
     else:
         end_date = _date(end, "end") or datetime.now(UTC).date()
         start_date = _date(start, "start") or end_date - timedelta(days=constants.DAYS_DEFAULT)
@@ -161,7 +178,9 @@ async def search(
                 minlatitude=south, maxlatitude=north, minlongitude=west, maxlongitude=east
             )
     text, cached = await _fetch(params)
-    quakes = parse_text(text)
+    quakes = parse_text(text, lang)
+    if event_id and len(event_id) > 13:
+        quakes = [q for q in quakes if q.event_id == event_id]
     if event_id and not quakes:
         raise NotFound(f"No Earthquakes Canada event {event_id!r}.")
     kept = quakes[:limit]

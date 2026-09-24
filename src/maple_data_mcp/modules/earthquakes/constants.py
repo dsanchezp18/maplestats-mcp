@@ -1,13 +1,15 @@
 """Constants for the Earthquakes Canada FDSN event service.
 
-Per the FDSN event standard: `format=text` answers a pipe-separated
-table whose header is
-#EventID|Time|Latitude|Longitude|Depth/km|Author|Catalog|Contributor|
-ContributorID|MagType|Magnitude|MagAuthor|EventLocationName, and no
-match is HTTP 204 (or 404 on servers that ignore `nodata`).
+Confirmed live 2026-09-24: the host is www.earthquakescanada (the bare
+host 301-redirects); `format=text` answers a pipe-separated table with
+header #EventID|Time|Latitude|Longitude|Depth/km|MagType|Magnitude|
+EventLocationName, whose location is "English/French" in one field; no
+match is HTTP 204; bad parameters are HTTP 422 with a JSON `errors`
+list. Event IDs come back as YYYYMMDD.HHmmNNN but `eventid=` accepts
+only YYYYMMDD.HHmm.
 """
 
-BASE_URL = "https://earthquakescanada.nrcan.gc.ca/fdsnws/event/1/query"
+BASE_URL = "https://www.earthquakescanada.nrcan.gc.ca/fdsnws/event/1/query"
 
 RATE_LIMIT_SOURCE = "earthquakes-canada"
 RATE_LIMIT_PER_SECOND = 2.0
