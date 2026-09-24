@@ -24,6 +24,7 @@ from fastmcp.server.providers.filesystem_discovery import (
 from fastmcp.server.transforms.search import BM25SearchTransform
 
 from maple_data_mcp import __version__, config
+from maple_data_mcp.shared import search
 from maple_data_mcp.shared.timeouts import ToolTimeoutMiddleware
 
 MODULES_ROOT = Path(__file__).parent / "modules"
@@ -155,6 +156,7 @@ def _build_module_catalogue() -> str:
 
 
 def build_server() -> FastMCP:
+    search.install()
     mcp = FastMCP("maple-data-mcp", version=__version__, instructions=SERVER_INSTRUCTIONS)
     for module_dir in sorted(MODULES_ROOT.iterdir()):
         if module_dir.is_dir() and not module_dir.name.startswith("_"):

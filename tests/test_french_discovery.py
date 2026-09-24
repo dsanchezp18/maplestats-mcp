@@ -35,6 +35,12 @@ CASES = [
     ("projet de loi Chambre des communes état", "parliament_search_bills"),
     ("interventions au hansard période des questions", "parliament_search_speeches"),
     ("vote au Sénat sénateurs projet de loi", "senate_list_votes"),
+    # Plurals and missing accents, fixed by shared/search.py (2026-09-24).
+    ("loyers", "cmhc_get_table_data"),
+    ("hôpitaux", "cihi_search_indicators"),
+    ("hopital", "cihi_search_indicators"),
+    ("tremblements de terre", "earthquakes_search"),
+    ("entreprises fédérales", "ised_corporations_get_corporation"),
     ("rappel de véhicule Transports Canada", "tc_recalls_search"),
     ("séisme tremblement de terre magnitude", "earthquakes_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),
