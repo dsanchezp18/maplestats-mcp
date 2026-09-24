@@ -153,8 +153,11 @@ while exported files do not.
    with DuckDB, from CSV or fixed-width members. It keeps a disk cache
    (`MAPLE_PUMF_CACHE_DIR`; a Docker volume in docker-compose).
    Verified live on LFS and EICS.
-4. **Next:** replicate and bootstrap standard errors, one survey at a
-   time, following each user guide's variance method: Census `WT1`-`WT16`
-   first, then the SHS, EICS and CSWC bootstrap files.
+4. **Done for the 2021 Census:** standard errors and CVs, using the user
+   guide's dependent-random-groups method (`WT1`-`WT16`, divisor 35). They
+   reproduce the guide's Examples 1 and 2 exactly (33,865, SE 1,173.47;
+   24.34%, SE 0.1014%). **Next:** SHS, EICS and CSWC. Their bootstrap
+   weights are in separate files, which need a join on the record id,
+   and each guide's method has to be checked first.
 5. **Next:** SAS `PROC FORMAT` codebooks (SHS, CSWC).
 6. **Only if demand appears:** the IVT port (option C).

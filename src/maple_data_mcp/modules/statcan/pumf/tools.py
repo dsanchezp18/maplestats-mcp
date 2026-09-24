@@ -108,8 +108,10 @@ async def statcan_pumf_tabulate(
     listed codes (e.g. {"PROV": ["48"]}); share gives percentages within
     each group of all but the last row variable. Uses the survey weight
     (default: the codebook's main weight) and returns unweighted counts,
-    flagging small cells. The first call downloads the file (may take a
-    minute; retry if it times out). No standard errors yet.
+    flagging small cells. Standard errors and CVs come from the survey's
+    documented replicate weights where verified (2021 Census individuals).
+    The first call downloads the file (may take a minute or two; retry
+    if it times out).
     Keywords: weighted estimate, tabulation, crosstab, microdata
     analysis, survey weight, population estimate, PUMF, LFS.
     Mots-clés : estimation pondérée, totalisation, tableau croisé,

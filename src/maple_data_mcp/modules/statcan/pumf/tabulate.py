@@ -19,9 +19,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import math
 import re
 import shutil
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -148,11 +150,18 @@ def _run_query(
     fixed_width: bool,
     columns: dict[str, PumfVariable],
     group_by: list[str],
-    weight: str,
+    weights: list[str],
     statistic: Statistic,
     value_variable: str | None,
     filters: dict[str, list[str]],
 ) -> tuple[list[tuple[Any, ...]], int, float]:
+    """Rows of (group codes..., n, then numerator and denominator per weight).
+
+    The numerator is SUM(w) for totals and shares, SUM(w * x) for means;
+    the denominator is SUM(w) (used by means). weights[0] is the main
+    weight; the rest are replicates for the variance.
+    """
+
     def column(name: str) -> str:
         if fixed_width:
             var = columns[name]
@@ -178,17 +187,20 @@ def _run_query(
         else:
             where.append(f"{column(name)} IN ({placeholders})")
             params.extend(c.strip() for c in codes)
-    weight_expr = f"TRY_CAST({column(weight)} AS DOUBLE)"
     groups = [f"{column(name)} AS g{i}" for i, name in enumerate(group_by)]
+    value_expr = None
     if statistic == "mean" and value_variable:
         value_expr = f"TRY_CAST({column(value_variable)} AS DOUBLE)"
         where.append(f"{value_expr} IS NOT NULL")
-        estimate = f"SUM({weight_expr} * {value_expr}) / NULLIF(SUM({weight_expr}), 0)"
-    else:
-        estimate = f"SUM({weight_expr})"
+    sums: list[str] = []
+    for weight in weights:
+        weight_expr = f"TRY_CAST({column(weight)} AS DOUBLE)"
+        sums.append(f"SUM({weight_expr} * {value_expr})" if value_expr else f"SUM({weight_expr})")
+        sums.append(f"SUM({weight_expr})")
+    weight_expr = f"TRY_CAST({column(weights[0])} AS DOUBLE)"
     group_list = ", ".join(f"g{i}" for i in range(len(group_by)))
     sql = (
-        f"SELECT {', '.join(groups + [estimate + ' AS estimate', 'COUNT(*) AS n'])} "
+        f"SELECT {', '.join([*groups, 'COUNT(*) AS n', *sums])} "
         f"FROM {source} "
         + (f"WHERE {' AND '.join(where)} " if where else "")
         + (f"GROUP BY {group_list} ORDER BY {group_list}" if group_by else "")
@@ -200,6 +212,86 @@ def _run_query(
         rows = connection.execute(sql, params).fetchall()
         total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
     return rows, int(total_n or 0), float(total_weight or 0.0)
+
+
+@dataclass(frozen=True)
+class VarianceMethod:
+    """A survey's documented replicate-weight variance formula."""
+
+    url_marker: str
+    main_weight: str
+    replicates: tuple[str, ...]
+    divisor: float
+    description: str
+
+    def standard_error(self, replicate_estimates: list[float | None]) -> float | None:
+        values = [v for v in replicate_estimates if v is not None]
+        if len(values) != len(self.replicates):
+            return None
+        centre = sum(values) / len(values)
+        return math.sqrt(sum((v - centre) ** 2 for v in values) / self.divisor)
+
+
+# Each entry is copied from the survey's own user guide; add a PUMF only
+# after checking its guide, never by analogy with another survey.
+VARIANCE_METHODS: tuple[VarianceMethod, ...] = (
+    VarianceMethod(
+        url_marker="cen21_ind_",
+        main_weight="WEIGHT",
+        replicates=tuple(f"WT{i}" for i in range(1, 17)),
+        # "Divide the number obtained in (3) by 35": (240/35) * (1/240), a
+        # Fay adjustment over 16 groups x 15 (2021 Census Individuals PUMF
+        # User Guide, chapter 3, section C.2, checked 2026-09-24).
+        divisor=35.0,
+        description=(
+            "dependent random groups with Fay adjustment (2021 Census Individuals PUMF User "
+            "Guide, ch. 3, C.2): the estimate under each of WT1-WT16, then "
+            "sqrt(sum of squared deviations from their mean / 35). StatCan notes it "
+            "overestimates the error for small estimates."
+        ),
+    ),
+)
+
+
+def variance_method(url: str) -> VarianceMethod | None:
+    return next((m for m in VARIANCE_METHODS if m.url_marker in url), None)
+
+
+def _estimates(
+    row: tuple[Any, ...], width: int, weight_count: int, statistic: Statistic
+) -> list[float | None]:
+    """One estimate per weight: totals and share numerators, or ratio means."""
+    values: list[float | None] = []
+    for i in range(weight_count):
+        numerator, denominator = row[width + 1 + 2 * i], row[width + 2 + 2 * i]
+        if numerator is None:
+            values.append(None)
+        elif statistic == "mean":
+            values.append(float(numerator) / float(denominator) if denominator else None)
+        else:
+            values.append(float(numerator))
+    return values
+
+
+def _to_shares(
+    rows: list[tuple[Any, ...]], estimates: list[list[float | None]], width: int
+) -> list[list[float | None]]:
+    """Percent within each combination of all but the last grouping variable, per weight."""
+    parents: dict[tuple[Any, ...], list[float]] = {}
+    for row, values in zip(rows, estimates, strict=True):
+        totals = parents.setdefault(tuple(row[: width - 1]), [0.0] * len(values))
+        for i, value in enumerate(values):
+            totals[i] += value or 0.0
+    shares: list[list[float | None]] = []
+    for row, values in zip(rows, estimates, strict=True):
+        totals = parents[tuple(row[: width - 1])]
+        shares.append(
+            [
+                100 * v / t if v is not None and t else None
+                for v, t in zip(values, totals, strict=True)
+            ]
+        )
+    return shares
 
 
 async def tabulate(
@@ -242,31 +334,37 @@ async def tabulate(
             raise UpstreamError(f"The codebook gives no column positions for {missing}.")
     path = await local_data_file(url, member)
 
+    method = variance_method(url) if not weight or weight.upper() == chosen_weight else None
+    if method and chosen_weight != method.main_weight:
+        method = None
+    all_weights = [chosen_weight, *(method.replicates if method else [])]
+    missing_replicates = [w for w in all_weights if w not in by_name]
+    if missing_replicates:
+        raise UpstreamError(f"Replicate weights {missing_replicates} are not in the codebook.")
+
     result_rows, total_n, total_weight = await asyncio.to_thread(
         _run_query,
         path,
         fixed_width,
         by_name,
         upper_rows,
-        chosen_weight,
+        all_weights,
         statistic,
         value_variable.upper() if value_variable else None,
         upper_filters,
     )
+    width = len(upper_rows)
     labels = {name: _labels(by_name[name]) for name in upper_rows}
-    cells: list[TableCell] = []
-    # Shares are within each combination of all but the last grouping variable.
-    parent_totals: dict[tuple[Any, ...], float] = {}
+    estimates = [_estimates(row, width, len(all_weights), statistic) for row in result_rows]
     if statistic == "share":
-        for row in result_rows:
-            key = tuple(row[: len(upper_rows) - 1])
-            parent_totals[key] = parent_totals.get(key, 0.0) + float(row[-2] or 0.0)
-    for row in result_rows[: constants.TABLE_ROWS_MAX]:
-        codes = [str(c) if c is not None else "" for c in row[: len(upper_rows)]]
-        estimate = float(row[-2]) if row[-2] is not None else None
-        if statistic == "share" and estimate is not None:
-            denominator = parent_totals.get(tuple(row[: len(upper_rows) - 1]), 0.0)
-            estimate = 100 * estimate / denominator if denominator else None
+        estimates = _to_shares(result_rows, estimates, width)
+    cells: list[TableCell] = []
+    for row, per_weight in list(zip(result_rows, estimates, strict=True))[
+        : constants.TABLE_ROWS_MAX
+    ]:
+        codes = [str(c) if c is not None else "" for c in row[:width]]
+        estimate = per_weight[0]
+        standard_error = method.standard_error(per_weight[1:]) if method else None
         cells.append(
             TableCell(
                 groups=[
@@ -274,11 +372,25 @@ async def tabulate(
                     for name, code in zip(upper_rows, codes, strict=True)
                 ],
                 estimate=estimate,
-                unweighted_n=int(row[-1]),
-                low_count=int(row[-1]) < min_count,
+                standard_error=standard_error,
+                cv=(
+                    abs(standard_error / estimate)
+                    if standard_error is not None and estimate
+                    else None
+                ),
+                unweighted_n=int(row[width]),
+                low_count=int(row[width]) < min_count,
             )
         )
     replicates = [w for w in weights if w != chosen_weight]
+    variance_note = (
+        f"Standard errors: {method.description}"
+        if method
+        else "Standard errors are not computed for this PUMF yet: use its replicate/bootstrap "
+        "weights and the variance method in its user guide"
+        + (f" (replicate weights here: {', '.join(replicates[:5])}...)" if replicates else "")
+        + "."
+    )
     return WeightedTable(
         url=url,
         data_file=member.name,
@@ -290,11 +402,9 @@ async def tabulate(
         truncated=len(result_rows) > constants.TABLE_ROWS_MAX,
         unweighted_n=total_n,
         weighted_total=total_weight,
+        variance_method=method.description if method else None,
         notes=[
-            "Standard errors are not computed yet: use the survey's replicate/bootstrap "
-            "weights and the variance method in its user guide"
-            + (f" (replicate weights here: {', '.join(replicates[:5])}...)" if replicates else "")
-            + ".",
+            variance_note,
             (
                 f"Cells with fewer than {min_count} respondents are flagged low_count; StatCan "
                 "guidelines usually suppress or qualify them."

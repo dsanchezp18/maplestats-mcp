@@ -88,6 +88,10 @@ class TableCell(BaseModel):
     estimate: float | None = Field(
         description="Weighted total, weighted mean, or percent share, per `statistic`."
     )
+    standard_error: float | None = Field(
+        default=None, description="From the survey's documented replicate-weight method, if any."
+    )
+    cv: float | None = Field(default=None, description="Coefficient of variation (SE / estimate).")
     unweighted_n: int = Field(description="Respondents in the cell (sample, not population).")
     low_count: bool
 
@@ -103,5 +107,6 @@ class WeightedTable(BaseModel):
     truncated: bool
     unweighted_n: int
     weighted_total: float
+    variance_method: str | None = None
     notes: list[str]
     provenance: Provenance
