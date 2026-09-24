@@ -285,6 +285,19 @@ STEPS: list[Step] = [
         _non_empty("downloads"),
     ),
     Step("statcan", "statcan_census_tables_search", {"query": "language", "release": "2006"}),
+    # Reproduction code (argument-based and provenance-based)
+    Step(
+        "reproduce",
+        "reproduce_code",
+        {"tool_name": "boc_get_observations", "arguments": {"series_names": ["FXUSDCAD"]}},
+        _non_empty("code"),
+    ),
+    Step(
+        "reproduce",
+        "reproduce_code",
+        {"tool_name": "cer_list_datasets", "arguments": {"query": "keystone"}, "language": "stata"},
+        _non_empty("code"),
+    ),
     # Transport Canada vehicle recalls
     Step(
         "tc_recalls",

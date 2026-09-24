@@ -71,7 +71,9 @@ MapleData MCP -- one server for Canadian public data.
 How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
-plain-language query (English or French). Then call_tool with the name. Read docs://catalogue
+plain-language query (English or French). Then call_tool with the name.
+To move a result into an R, Python, Stata or Julia script, call
+reproduce_code with the tool name and arguments. Read docs://catalogue
 for a bilingual one-line description of every module.
 
 Sources, by tool-name prefix:

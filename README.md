@@ -55,6 +55,7 @@ bilingual one-line description of each module):
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
+| Reproduction code | `reproduce_code` | R, Python, Stata or Julia code that fetches the same data from the source (cansim, canivt, polars, TidierFiles, import delimited) |
 | Query planner | `plan_query` | Always visible: turns a question into an ordered, multi-source plan with caveats on combining sources |
 | Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Public use microdata files (find, list downloads, read codebooks and weights without downloading the ZIP), 2006-2016 census data tables (CSV, SDMX, Beyond 20/20 with a canivt route), tables and series, classifications (e.g. NAICS), 2001–2021 Census Profiles, The Daily, indicators, daily bulk-update files, definitions/methods and analysis catalogues, survey directory and IMDB metadata, census geography, SDG hub |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
