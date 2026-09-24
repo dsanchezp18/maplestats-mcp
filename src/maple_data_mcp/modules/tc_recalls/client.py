@@ -66,7 +66,7 @@ def _values(row: list[dict[str, Any]]) -> list[Any]:
 
 
 def _named(row: list[dict[str, Any]]) -> dict[str, Any]:
-    return {field.get("Name"): (field.get("Value") or {}).get("Literal") for field in row}
+    return {str(field.get("Name")): (field.get("Value") or {}).get("Literal") for field in row}
 
 
 def _date(value: Any) -> date | None:
