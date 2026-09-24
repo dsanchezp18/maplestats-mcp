@@ -32,8 +32,10 @@ MODULES_ROOT = Path(__file__).parent / "modules"
 SERVER_INSTRUCTIONS = """
 MapleData MCP -- one server for Canadian public data.
 
-How to use it: call search_tools with a plain-language query (English or
-French), then call_tool with a tool name it returns. Read docs://catalogue
+How to use it: for a question that may need several sources, call
+plan_query first; it returns the tools to call across agencies, in order,
+with caveats on combining them. To find one tool, call search_tools with a
+plain-language query (English or French). Then call_tool with the name. Read docs://catalogue
 for a bilingual one-line description of every module.
 
 Sources, by tool-name prefix:
@@ -125,7 +127,7 @@ def build_server() -> FastMCP:
     mcp.add_transform(
         BM25SearchTransform(
             max_results=5,
-            always_visible=["search_tools"],
+            always_visible=["search_tools", "plan_query"],
             search_tool_name="search_tools",
             call_tool_name="call_tool",
         )

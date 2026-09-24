@@ -247,6 +247,13 @@ STEPS: list[Step] = [
         _non_empty("ballots"),
     ),
     Step("senate", "senate_list_votes", {"session": "44-1", "bill": "C-69", "lang": "fr"}),
+    # Query planner (no network; checks registration through the server)
+    Step(
+        "planner",
+        "plan_query",
+        {"question": "How have rents and mortgage rates changed in Calgary?"},
+        _non_empty("topics"),
+    ),
     # Transport Canada vehicle recalls
     Step(
         "tc_recalls",

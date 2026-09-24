@@ -55,6 +55,7 @@ bilingual one-line description of each module):
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
+| Query planner | `plan_query` | Always visible: turns a question into an ordered, multi-source plan with caveats on combining sources |
 | Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Tables and series, classifications (e.g. NAICS), 2001–2021 Census Profiles, The Daily, indicators, daily bulk-update files, definitions/methods and analysis catalogues, survey directory and IMDB metadata, census geography, SDG hub |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal tables; Excel data tables |
