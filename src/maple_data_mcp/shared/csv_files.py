@@ -70,8 +70,8 @@ async def _get_following_redirects(url: str, context: str) -> httpx.Response:
 
 async def fetch_rows(
     url: str, *, limiter: TokenBucket, ttl: int, context: str
-) -> list[dict[str, str]]:
-    """Every row of a CSV file as a dict, cached for `ttl` seconds."""
+) -> tuple[list[dict[str, str]], bool]:
+    """Every row of a CSV file as a dict, cached for `ttl` seconds, plus was_cached."""
 
     async def fetch() -> list[dict[str, str]]:
         await limiter.acquire()
@@ -86,8 +86,7 @@ async def fetch_rows(
             for row in csv.DictReader(io.StringIO(text))
         ]
 
-    rows, _ = await cached_fetch(f"csv:{url}", ttl, fetch)
-    return rows
+    return await cached_fetch(f"csv:{url}", ttl, fetch)
 
 
 class Columns:

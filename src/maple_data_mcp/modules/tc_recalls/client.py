@@ -40,7 +40,7 @@ def _root(lang: str) -> str:
     return constants.BASE_URL.format(lang="fra" if lang == "fr" else "eng")
 
 
-async def _get(url: str, params: dict[str, Any] | None = None) -> list[list[Any]]:
+async def _get(url: str, params: dict[str, Any] | None = None) -> tuple[list[list[Any]], bool]:
     async def fetch() -> Any:
         await _LIMITER.acquire()
         try:
@@ -50,15 +50,15 @@ async def _get(url: str, params: dict[str, Any] | None = None) -> list[list[Any]
                 f"tc_recalls: {url} returned HTTP {exc.response.status_code}."
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"tc_recalls: {url} did not respond in time.") from exc
+            raise UpstreamUnavailable(f"tc_recalls: {url} could not be reached.") from exc
 
-    body, _ = await cached_fetch(
+    body, cached = await cached_fetch(
         f"tc-recalls:{url}:{sorted((params or {}).items())}", constants.CACHE_TTL_SECONDS, fetch
     )
     rows = body.get("ResultSet") if isinstance(body, dict) else None
     if not isinstance(rows, list):
         raise UpstreamError("tc_recalls: response has no ResultSet.")
-    return rows
+    return rows, cached
 
 
 def _values(row: list[dict[str, Any]]) -> list[Any]:
@@ -120,7 +120,7 @@ async def search(
             raise InvalidInput(f"Invalid model-year range {year_from}-{year_to}.")
         path += f"/year-range/{start}-{end}"
     url = _root(lang) + path
-    rows = await _get(url, {"limit": limit, "page": page})
+    rows, cached = await _get(url, {"limit": limit, "page": page})
     recalls = []
     for row in rows:
         values = _values(row) + [None] * 6
@@ -142,7 +142,7 @@ async def search(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="tc_recalls.RecallSearchResult",
             limits="results are oldest first; narrow with a model-year range or page",
         ),
@@ -154,7 +154,8 @@ async def get_recall(recall_number: str, lang: str = "en") -> RecallDetail:
     if not number.isdigit():
         raise InvalidInput(f"recall_number must be digits like '2021001', got {recall_number!r}.")
     url = _root(lang) + f"recall-summary/recall-number/{number}"
-    rows = [_named(r) for r in await _get(url)]
+    raw, cached = await _get(url)
+    rows = [_named(r) for r in raw]
     if not rows:
         raise NotFound(f"No Transport Canada recall {number}.")
     first = rows[0]
@@ -178,7 +179,7 @@ async def get_recall(recall_number: str, lang: str = "en") -> RecallDetail:
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="tc_recalls.RecallDetail",
         ),
     )

@@ -34,6 +34,7 @@ CASES = [
     ("avis de la Gazette du Canada projets de règlement", "gazette_get_issue"),
     ("avis de la Gazette du Canada projets de règlement", "gazette_get_issue"),
     ("rappel de véhicule Transports Canada", "tc_recalls_search"),
+    ("séisme tremblement de terre magnitude", "earthquakes_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),
     ("taux de réadmission à l'hôpital ICIS", "cihi_get_indicator_data"),
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),
