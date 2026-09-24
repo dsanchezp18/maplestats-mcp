@@ -67,7 +67,7 @@ _TENDERS = _csv(
             "title-titre-eng": "Snow and Ice Control Services CFB North Bay",
             "title-titre-fra": "Services de déneigement BFC North Bay",
             "referenceNumber-numeroReference": "WS1",
-            "tenderClosingDate-appelOffresDateCloture": "2026-10-30T14:00:00",
+            "tenderClosingDate-appelOffresDateCloture": "2099-10-30T14:00:00",
             "tenderStatus-appelOffresStatut-eng": "Open",
             "procurementCategory-categorieApprovisionnement": "*SRV",
             "regionsOfDelivery-regionsLivraison-eng": "*Ontario (except NCR)",
@@ -77,7 +77,7 @@ _TENDERS = _csv(
         {
             "title-titre-eng": "Welding Shop Ventilation, Halifax",
             "referenceNumber-numeroReference": "MX-2",
-            "tenderClosingDate-appelOffresDateCloture": "2026-10-01T14:00:00",
+            "tenderClosingDate-appelOffresDateCloture": "2099-10-01T14:00:00",
             "procurementCategory-categorieApprovisionnement": "*CNST\n*SRV",
             "regionsOfDelivery-regionsLivraison-eng": "*Nova Scotia",
             "contractingEntityName-nomEntitContractante-eng": "Defence Construction Canada",
@@ -133,6 +133,27 @@ async def test_search_tenders_parses_and_sorts_soonest_closing_first(httpx_mock)
     assert result.total_notices == 2
     assert [t.reference_number for t in result.tenders] == ["MX-2", "WS1"]
     assert result.tenders[0].procurement_categories == ["CNST", "SRV"]
+
+
+async def test_open_tenders_leave_out_notices_past_closing(httpx_mock):
+    stale = _csv(
+        _TENDER_COLUMNS,
+        [
+            {
+                "referenceNumber-numeroReference": "OLD",
+                "tenderClosingDate-appelOffresDateCloture": "2023-07-12T10:00:00",
+            },
+            {
+                "referenceNumber-numeroReference": "NEW",
+                "tenderClosingDate-appelOffresDateCloture": "2099-01-01T10:00:00",
+            },
+            {"referenceNumber-numeroReference": "UNDATED"},
+        ],
+    )
+    httpx_mock.add_response(url=constants.OPEN_TENDERS_URL, content=stale)
+    result = await client.search_tenders()
+    assert [t.reference_number for t in result.tenders] == ["NEW", "UNDATED"]
+    assert "1 notices past their closing date" in (result.provenance.limits or "")
 
 
 async def test_search_tenders_cleans_html_description(httpx_mock):

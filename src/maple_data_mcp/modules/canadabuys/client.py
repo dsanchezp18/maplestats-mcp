@@ -280,6 +280,17 @@ async def search_tenders(
         raise InvalidInput(f"notice_set must be 'open' or 'new', got {notice_set!r}.")
     url = constants.OPEN_TENDERS_URL if notice_set == "open" else constants.NEW_TENDERS_URL
     rows, was_cached = await _load_rows(url)
+    # Checked live 2026-09-24: the "open" file still lists 54 of its first
+    # 100 soonest-closing notices whose closing date has passed (one from
+    # 2023). Closing times are Ottawa local time, like FISCAL_YEAR_TIMEZONE.
+    now = datetime.now(ZoneInfo(constants.FISCAL_YEAR_TIMEZONE)).strftime("%Y-%m-%dT%H:%M:%S")
+    expired = 0
+    if notice_set == "open":
+        live = [
+            r for r in rows if (r.get("tenderClosingDate-appelOffresDateCloture") or "9999") >= now
+        ]
+        expired = len(rows) - len(live)
+        rows = live
 
     stems = ("title-titre", "tenderDescription-descriptionAppelOffres", "unspscDescription")
     matched = [
@@ -315,7 +326,8 @@ async def search_tenders(
             freshness="regenerated daily by CanadaBuys",
             coverage=coverage,
             limits=f"descriptions truncated to {constants.SUMMARY_DESCRIPTION_CHARS} characters; "
-            "use canadabuys_get_notice for the full text",
+            "use canadabuys_get_notice for the full text"
+            + (f"; {expired} notices past their closing date were left out" if expired else ""),
         ),
     )
 

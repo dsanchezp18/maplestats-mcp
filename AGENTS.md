@@ -163,7 +163,12 @@ assumption shared by the code and its tests.
    module-level singleton clients — confirmed working here). Cover
    real-world quirks the live API actually has, not just the happy
    path.
-7. Run the full gate below before considering it done.
+7. Add live steps for every tool to `scripts/smoke_test_modules.py`
+   (or write a dedicated `scripts/smoke_test_<module>.py`), and run
+   them. `tests/test_live_coverage.py` fails for a module with
+   neither: the Earthquakes Canada module passed all its mocked tests
+   while every live call failed.
+8. Run the full gate below before considering it done.
 
 ## Development commands
 
