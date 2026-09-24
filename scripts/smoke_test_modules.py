@@ -254,6 +254,23 @@ STEPS: list[Step] = [
         {"question": "How have rents and mortgage rates changed in Calgary?"},
         _non_empty("topics"),
     ),
+    # StatCan PUMFs (range reads inside the ZIPs)
+    Step("statcan", "statcan_pumf_search", {"query": "labour"}, _non_empty("products")),
+    Step(
+        "statcan", "statcan_pumf_list_files", {"catalogue_number": "98M0001X"}, _non_empty("files")
+    ),
+    Step(
+        "statcan",
+        "statcan_pumf_list_zip",
+        lambda ctx: {"url": ctx["statcan_pumf_list_files"]["files"][0]["url"]},
+        _non_empty("codebook_files"),
+    ),
+    Step(
+        "statcan",
+        "statcan_pumf_get_codebook",
+        lambda ctx: {"url": ctx["statcan_pumf_list_files"]["files"][0]["url"], "query": "tenure"},
+        _non_empty("weight_variables"),
+    ),
     # Transport Canada vehicle recalls
     Step(
         "tc_recalls",

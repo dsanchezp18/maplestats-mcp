@@ -486,6 +486,33 @@ TOPICS: tuple[Topic, ...] = (
     ),
 )
 
+MICRODATA = Topic(
+    "microdata",
+    "Survey microdata (PUMFs)",
+    (
+        "microdata",
+        "pumf",
+        "public use",
+        "respondent",
+        "record-level",
+        "microdonnees",
+        "fmgd",
+        "donnees d'enquete",
+    ),
+    (
+        PlanStep("statcan_pumf_search", "find the PUMF for the survey or topic"),
+        PlanStep("statcan_pumf_list_files", "the free ZIP downloads by year"),
+        PlanStep("statcan_pumf_get_codebook", "variables, value codes and weights"),
+    ),
+    (
+        (
+            "Estimates from a PUMF must use its weight variable; unweighted counts describe the "
+            "sample, not the population."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, MICRODATA)
+
 # StatCan's own name for its tables, used when nothing else matches.
 FALLBACK_STEPS: tuple[PlanStep, ...] = (
     PlanStep("statcan_reference_search_data", "StatCan data products on the topic"),
