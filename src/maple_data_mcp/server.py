@@ -83,7 +83,9 @@ Sources, by tool-name prefix:
   statcan_reference_ (definitions/methods, analysis), statcan_surveys_
   (survey directory + IMDB metadata), statcan_geo_ (census geography),
   statcan_sdg_ (Sustainable Development Goals hub), statcan_pumf_ (public
-  use microdata files: find, list downloads, read codebooks).
+  use microdata files: find, list downloads, read codebooks),
+  statcan_census_tables_ (2006-2016 census cross-tabulations: CSV, SDMX,
+  Beyond 20/20 IVT).
 - Bank of Canada Valet: boc_ (rates, FX, CPI, commodity prices).
 - CMHC housing: cmhc_ (HMIP rental/starts tables), cmhc_dt_ (Excel data
   tables).

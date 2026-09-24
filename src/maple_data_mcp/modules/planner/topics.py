@@ -200,6 +200,7 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("statcan_census_profile_search_characteristic", "find the characteristic"),
             PlanStep("statcan_census_profile_get_data", "2021 values for the area"),
             PlanStep("statcan_census_profile_2016_get_data", "2016 values, to compare over time"),
+            PlanStep("statcan_census_tables_search", "2006-2016 cross-tabulations (2021: wds_)"),
             PlanStep("wds_search_cubes", "annual population estimates between censuses"),
         ),
         (

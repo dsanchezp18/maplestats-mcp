@@ -271,6 +271,20 @@ STEPS: list[Step] = [
         lambda ctx: {"url": ctx["statcan_pumf_list_files"]["files"][0]["url"], "query": "tenure"},
         _non_empty("weight_variables"),
     ),
+    # Census data tables 2006-2016
+    Step(
+        "statcan",
+        "statcan_census_tables_search",
+        {"query": "income household", "release": "2016"},
+        _non_empty("tables"),
+    ),
+    Step(
+        "statcan",
+        "statcan_census_tables_get_downloads",
+        lambda ctx: {"pid": ctx["statcan_census_tables_search"]["tables"][0]["pid"]},
+        _non_empty("downloads"),
+    ),
+    Step("statcan", "statcan_census_tables_search", {"query": "language", "release": "2006"}),
     # Transport Canada vehicle recalls
     Step(
         "tc_recalls",
