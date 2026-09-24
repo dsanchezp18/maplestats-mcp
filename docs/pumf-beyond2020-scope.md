@@ -1,123 +1,148 @@
-# PUMFs and Beyond 20/20: scope
+# PUMFs, Beyond 20/20 and cross-language compatibility: scope
 
-Scoped 2026-09-24. Every finding below was checked against the live
-StatCan site that day unless marked otherwise.
+First scoped 2026-09-24. Revised the same day, after PUMF phase 1 shipped
+and after looking at mountainMath's `canivt`. Findings were checked
+against the live sources that day unless marked otherwise.
 
-## What exists today
+## 1. PUMFs
 
-### PUMFs (public use microdata files)
+### Shipped: phase 1 (discovery and codebooks)
 
-- **Discovery already works.** `statcan_reference_search_data` returns
-  StatCan data products tagged with the category "Public use microdata".
-  The query "public use microdata file" matched 144 products. Examples
-  include the Labour Force Survey (`71M0001X`), Census (`98M0001X`),
-  Canadian Community Health Survey (`82M0013X`), Survey of Household
-  Spending (`62M0004X`) and General Social Survey (`45-25-0001`).
-- **Several PUMFs are free direct downloads.**
-  - Labour Force Survey: one zip per year (`2021001/hist/2025-CSV.zip`,
-    about 30 MB) holding 12 monthly CSVs of about 12 MB each. A fixed-width
-    PRN twin is also offered. The current year is published month by month
-    (`2021001/2026-05-CSV.zip`).
-  - Census: individuals and hierarchical files for 1991 to 2021 are listed
-    on one page (`98m0001x/index-eng.htm`). The 2021 individuals zip is
-    182 MB.
-- **The codebooks can be read by machine.** The LFS zip includes
-  `Documents/LFS_PUMF_EPA_FGMD_codebook.csv`. Each variable has a row with
-  its field number, position, length, name, EN/FR label, EN/FR universe and
-  EN/FR notes. Rows for its value codes follow. There is also a
-  record-layout CSV and bilingual user-guide PDFs. Other surveys have not
-  been checked for the same structure.
-- **Not verified:** the download formats for CCHS, GSS, SHS and the other
-  PUMFs. Some may be distributed only through the Data Liberation
-  Initiative or ODESI, which require an academic login. A per-survey
-  inventory is part of phase 1.
+There are four `statcan_pumf_` tools, verified live on LFS, Census,
+CCHS, SHS and EICS:
 
-### Beyond 20/20
+- `statcan_pumf_search`: StatCan data products categorized as public use
+  microdata. There are 144 in the catalogue.
+- `statcan_pumf_list_files`: the free ZIP downloads, found by going from
+  the catalogue page to its `/n1/pub/` pages. All seven PUMFs sampled
+  have direct, unauthenticated downloads.
+- `statcan_pumf_list_zip` and `statcan_pumf_get_codebook`: these read
+  inside a ZIP with HTTP range requests (`shared/remote_zip.py`).
+  Listing the 182 MB Census 2021 file takes 12 KB. The codebook tool
+  parses whichever format the ZIP carries:
+  - an LFS-style codebook CSV;
+  - Stata `.dct` and `.do` files;
+  - SPSS `_vare`/`_vale` label files, with `_varf`/`_valf` in French.
 
-- **At StatCan, every IVT file checked has an open-format twin.** Census
-  data tables offer CSV, TAB and SDMX XML downloads alongside the IVT
-  (Beyond 20/20) file for the same table. This was checked on one table
-  per census year: 2016 (PID 110192: CSV 0.75 MB, IVT 1.26 MB, SDMX
-  1.45 MB) and 2006 (PID 89060). So the StatCan census tables checked here
-  never require reading an IVT.
-- **IVT is a proprietary binary format.** StatCan's own download page says
-  it needs the Beyond 20/20 Table Browser, a Windows application. I don't
-  know of a published specification or an open-source parser, but I have
-  not verified that.
-- **Coverage gap.** The existing census tools cover Census Profiles, not
-  the census data tables (cross-tabulations) where these downloads live.
+  It returns variables, labels, value codes, fixed-width positions and
+  weight variables, in English or French.
 
-## Proposed approach
+**Still open.** SHS and CSWC also ship SAS-only label files, and the SAS
+`PROC FORMAT` syntax is not parsed. SHS has Stata and SPSS files too, so
+it still works.
 
-### PUMFs: three phases
+### Phase 2: weighted tables
 
-**Phase 1: discovery and metadata. Small, no new dependencies.**
-Add a `statcan_pumf` module:
+Add `statcan_pumf_tabulate(url, member, rows, columns, filters,
+statistic)`: weighted counts, means and shares, computed server-side.
 
-- `pumf_search(query)`: search StatCan data products and keep only those
-  categorized as public use microdata. For each product, return the
-  catalogue number and its editions.
-- `pumf_get_product(catalogue_number)`: read the product page and return
-  its editions, download links, formats and sizes (sizes from HEAD
-  requests), plus whether the files are a direct download or need
-  DLI/ODESI access.
-- `pumf_get_codebook(catalogue_number, edition, variable_query)`: download
-  the zip once, cache it on disk, and parse the codebook CSV into
-  variables with EN/FR labels, universes and value labels. Search it by
-  keyword.
+- **Reading.** Stream the data member out of the ZIP. Deflate supports
+  streaming, so the whole archive never sits in memory. Read CSV where
+  the ZIP has it (LFS, Census `_v2.csv`). Otherwise read the fixed-width
+  file, using positions from the codebook.
+- **Engine.** Add `duckdb` or `polars`; both scan CSV lazily. I'd pick
+  DuckDB, because a SQL `GROUP BY` over a named weight maps directly to
+  the tool's arguments.
+- **Standard errors are feasible for several PUMFs.** The Census PUMF
+  ships 16 replicate weights (`WT1`...`WT16`), and SHS, EICS and CSWC ship
+  bootstrap weight files (`*_BSW*`). For those, return standard errors and
+  CVs using the survey's documented variance method. LFS has no replicate
+  weights, so return the point estimate plus a note pointing to the CV
+  tables in the user guide. Never invent a standard error.
+- **Guards.** Report the unweighted cell count next to every estimate,
+  and flag cells below a minimum. Return no raw rows beyond a small
+  sample.
+- **Storage.** Streaming avoids keeping ZIPs on disk, but every table
+  then pays for a full download: 30 MB for a year of LFS, 182 MB for the
+  Census. A persistent cache volume on the hosted server avoids that
+  repeat cost. **Decision needed.**
+- **Effort.** 2-3 days for LFS plus the Census, then about half a day
+  per extra survey (its weight names and variance method).
 
-This phase answers "which survey has variable X, and what do its codes
-mean?" without anyone opening a PDF.
+## 2. Beyond 20/20 (IVT)
 
-**Phase 2: weighted tabulation. Medium effort, adds a dependency.**
-Add `pumf_tabulate(catalogue_number, edition, file, rows, columns, filters,
-statistic)`. It computes weighted counts, means or shares directly from
-the cached CSV inside the zip, using `polars` or `duckdb` lazy scans so a
-182 MB file never has to fit in memory.
+### What changed
 
-- A small per-survey configuration names the weight variable (for example
-  LFS `FINALWT`), the period columns and the geography columns.
-- Start with LFS and the 2021 Census individuals file, then add CCHS, SHS
-  and GSS through configuration only.
-- Return the unweighted cell count next to every estimate, and flag any
-  cell below a minimum-count threshold instead of reporting it silently.
-- Never return raw microdata rows beyond a small sample.
+The first draft said to skip IVT because the tables checked have CSV
+twins. That holds for the recent census data tables: the 2016 and 2006
+download pages checked offer CSV, TAB and SDMX next to IVT. It doesn't
+hold everywhere. mountainMath's [canivt](https://github.com/mountainMath/canivt)
+(MIT, v0.5.0, July 2026) shows that some data exists only as IVT:
 
-**Phase 3: variance. Deferred.**
-The LFS PUMF has no bootstrap weights, so standard errors cannot be
-computed directly. Until a survey publishes replicate weights, return the
-point estimate with a note pointing to the CV (coefficient of variation)
-tables in that survey's user guide. Do not invent a standard error.
+- custom census tabulations, many hosted on the Borealis dataverse;
+- older census releases that predate the SDMX and CSV products.
 
-### Beyond 20/20
+canivt reverse-engineered the format and ships its notes in
+`inst/notes/`, including an 88 KB `ivt-format.md`, a marker catalogue and
+a coverage list. It downloads IVT files by StatCan catalogue number or
+Borealis id and returns tidy data, Parquet or CSV with dimension
+metadata, DGUIDs and footnotes. The author reports that some files still
+warn or fail to parse.
 
-1. **Do not build an IVT parser.** The format is proprietary, and StatCan
-   publishes the same tables as CSV and SDMX.
-2. **Add census data tables instead.** Build a tool that lists the census
-   data tables for each census year (2006, 2011, 2016, 2021) and returns
-   the CSV or SDMX download link, reusing the existing census-geography
-   tools. This removes StatCan's need for Beyond 20/20.
-3. **Inventory the IVT-only publishers.** Survey provincial statistics
-   bureaus, archived StatCan E-STAT and CANSIM II products, and other
-   agencies. Give each IVT-only source its own ROADMAP row, marked Blocked
-   with a conversion note, unless it also publishes an open format.
+### Options
 
-## Decisions needed
+| Option | How | Pros | Cons |
+|---|---|---|---|
+| A. Route | Find IVT tables (StatCan catalogue, Borealis) and return the CSV/SDMX twin where one exists; otherwise return the IVT link with a ready canivt snippet | Small; no parsing risk | IVT-only tables are not readable in the MCP itself |
+| B. Call canivt | Run `Rscript` with canivt on the server | Reuses a maintained parser | Adds R to the Docker image; slow start per call; a second runtime to secure |
+| C. Port to Python | Reimplement the parser from canivt's spec, tested against canivt's output | Native, fast, no R on the server | Large: about 700 KB of R and still-evolving format knowledge; MIT allows it, credit required |
 
-- **Where the microdata cache lives when hosted.** Phase 1 caches zips up
-  to about 200 MB each on disk. The hosted server needs a persistent
-  volume, or it has to accept re-downloading after each restart.
-- **Which analysis engine to add for phase 2:** `polars` or `duckdb`.
-  Both can scan a CSV inside a zip without loading all of it. DuckDB can
-  also run SQL-style group-bys.
-- **Which PUMFs come first.** The suggested order is LFS, then the 2021
-  Census, CCHS and SHS.
+**Recommendation: A now, C only if IVT-only demand proves real.** A
+delivers most of the value in 1-2 days, and it pairs naturally with the
+cross-language snippets in section 3. If ported later, contacting Jens
+von Bergmann first makes sense: canivt's notes are the spec, and
+coordinating avoids a divergent second parser.
 
-## Rough effort
+Also still to do: census data tables (cross-tabulations) are not covered
+by the existing Census Profile tools. Adding them is the main piece of
+option A (1-2 days).
 
-| Piece | Effort | Notes |
-|---|---|---|
-| PUMF phase 1 (discovery, product pages, codebooks) | 1-2 days | Per-survey page quirks drive the time |
-| PUMF phase 2 (weighted tabulation, LFS + Census) | 2-3 days | Plus 0.5 day per extra survey config |
-| Census data tables (Beyond 20/20 replacement) | 1-2 days | Legacy ColdFusion pages, like the Census Profile module |
-| IVT-only publisher inventory | 0.5-1 day | Research only |
+## 3. Discovery compatibility with R, Stata, Julia and Python
+
+The MCP finds data and returns it with provenance. Analysts then need
+the same data in their own scripts, reproducibly. The gap is the step
+from "the agent found it" to "my script fetches it".
+
+### Proposal: `reproduce` snippets
+
+Add one tool, `get_reproduction_code(tool, arguments, language)`, and
+mention it in each result's provenance. It returns idiomatic code in R,
+Stata, Julia or Python that fetches the same data from the same source
+URL, following the user's conventions. The mapping is per source:
+
+| Source | R | Python | Stata | Julia |
+|---|---|---|---|---|
+| StatCan tables (WDS) | `cansim::get_cansim("18-10-0004-01")` | full-table CSV via `polars.read_csv` | `import delimited` on the full-table CSV | `TidierFiles.read_csv` on the CSV URL |
+| Census Profile | `cancensus::get_census()` | CSV download + `polars` | `import delimited` | `read_csv` |
+| PUMF | `download.file` + `unzip` + `haven::read_dta` or `readr::read_csv` | ZIP + `polars` (CSV) | the ZIP's own `.do`/`.dct` files, which StatCan already ships | `read_csv` |
+| IVT tables | `canivt` | none yet (option C) | none | none |
+| CKAN / Socrata / ArcGIS portals | `ckanr`, `RSocrata`, or `httr2` on the resource URL | `httpx` + `polars` on the resource URL | `import delimited` on the resource URL | `read_csv` on the URL |
+| Bank of Canada Valet | Valet JSON via `httr2`/`jsonlite` | `httpx` + JSON | `import delimited` on Valet's CSV output | `HTTP.jl` + `JSON3` |
+
+- **Why a tool rather than a field in every response.** It keeps every
+  response small, and one tool can be tested per source.
+- **Scripts follow the house style.** Snippets use the conventions in the
+  user's coding standards:
+  - Python: `polars` first;
+  - R: `cansim`/`cancensus`, native pipe, `janitor::clean_names()`;
+  - Stata: `import delimited` with no `cd`;
+  - Julia: TidierFiles.
+
+  Each snippet also caches its download to `data/raw/`.
+- **Tests.** A test per source renders each language's snippet. A
+  scheduled live job runs the R and Python snippets.
+- **Effort.** 2-3 days for StatCan, the Census, PUMFs and CKAN in all
+  four languages; the rest follow the same pattern.
+
+Adjacent idea for later: export helpers that write a result's rows
+directly as Parquet or `.dta` for handoff. These are lower priority than
+snippets, because snippets keep the analyst's pipeline reproducible,
+while exported files do not.
+
+## 4. Suggested order
+
+1. Census data tables + IVT routing (option A): 1-2 days.
+2. `get_reproduction_code` for StatCan, Census, PUMF and CKAN: 2-3 days.
+3. PUMF phase 2, weighted tables with replicate-weight SEs: 2-3 days,
+   once the cache-storage decision is made.
+4. IVT port (option C): only if demand appears.
