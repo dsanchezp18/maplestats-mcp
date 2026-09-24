@@ -17,11 +17,46 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 from fastmcp.server.providers import FileSystemProvider
+from fastmcp.server.providers.filesystem_discovery import (
+    extract_components,
+    import_module_from_file,
+)
 from fastmcp.server.transforms.search import BM25SearchTransform
 
-from maple_data_mcp import __version__
+from maple_data_mcp import __version__, config
+from maple_data_mcp.shared.timeouts import ToolTimeoutMiddleware
 
 MODULES_ROOT = Path(__file__).parent / "modules"
+_COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
+
+
+class ModuleProvider(FileSystemProvider):
+    """FileSystemProvider limited to tools.py, resources.py and prompts.py.
+
+    The stock provider imports every .py file under its root, including
+    each module's __tests__/ (which pulls in pytest) and client helpers:
+    250 files and about 6 s of startup on 2026-09-24, long enough for MCP
+    clients to time out while launching the server. The stock provider
+    also only logs a warning when a file fails to import, so a broken
+    module silently disappeared; here the failure is raised.
+    """
+
+    def _load_components(self) -> None:
+        if self._loaded:
+            self._components.clear()
+        files = sorted(
+            path
+            for path in self._root.rglob("*.py")
+            if path.name in _COMPONENT_FILES
+            and "__pycache__" not in path.parts
+            and "__tests__" not in path.parts
+        )
+        for file_path in files:
+            module = import_module_from_file(file_path, provider_root=self._root)
+            for component in extract_components(module):
+                self._register_component(component)
+        self._loaded = True
+
 
 # Sent to every client on initialize, so it stays a short routing index
 # (it used to be ~32 KB of per-source detail, re-read by the model on
@@ -123,7 +158,8 @@ def build_server() -> FastMCP:
     mcp = FastMCP("maple-data-mcp", version=__version__, instructions=SERVER_INSTRUCTIONS)
     for module_dir in sorted(MODULES_ROOT.iterdir()):
         if module_dir.is_dir() and not module_dir.name.startswith("_"):
-            mcp.add_provider(FileSystemProvider(root=module_dir))
+            mcp.add_provider(ModuleProvider(root=module_dir))
+    mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
     mcp.add_transform(
         BM25SearchTransform(
             max_results=5,

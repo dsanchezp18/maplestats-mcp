@@ -7,6 +7,7 @@ French pages and files are reached through each page's hreflang link.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import re
 from typing import Any
@@ -210,7 +211,9 @@ async def _tables(url: str) -> tuple[dict[str, tuple[str, list[str], list[list[s
         if len(response.content) > constants.MAX_FILE_BYTES:
             raise UpstreamError(f"cihi: {url} is larger than this tool reads.")
         try:
-            return _parse_workbook(response.content)
+            # Parsing a ~2 MB workbook held the event loop for ~1.8 s (measured
+            # 2026-09-24), stalling every other request on the server meanwhile.
+            return await asyncio.to_thread(_parse_workbook, response.content)
         except Exception as exc:  # openpyxl raises several unrelated types
             raise UpstreamError(f"cihi: {url} is not a readable XLSX file.") from exc
 

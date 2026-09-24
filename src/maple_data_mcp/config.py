@@ -82,6 +82,21 @@ def get_cache_max_entries() -> int:
     return max(1, value)
 
 
+def get_tool_timeout_seconds() -> float:
+    """Longest a single tool call may run before it fails with a clear error.
+
+    Retries in shared/http.py can stack three 60-second attempts; a call
+    that never answers leaves some MCP clients waiting on a dead request
+    and eventually dropping the connection.
+    """
+    raw = os.environ.get("MAPLE_TOOL_TIMEOUT_SECONDS", "120")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 120.0
+    return min(1800.0, max(5.0, value))
+
+
 def get_trust_proxy_headers() -> bool:
     raw = os.environ.get("MAPLE_TRUST_PROXY_HEADERS", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
