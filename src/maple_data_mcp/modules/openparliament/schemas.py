@@ -130,6 +130,28 @@ class Speech(BaseModel):
     url: str
 
 
+class HansardHit(BaseModel):
+    date: dt.date | None = None
+    document_type: str | None = Field(
+        default=None, description="'House debate' or 'Committee meeting'."
+    )
+    topic: str | None = None
+    excerpt: str = Field(description="Matching passage, plain text.")
+    speaker: str | None = None
+    politician: str | None = Field(default=None, description="MP slug, when the speaker is an MP.")
+    party: str | None = None
+    url: str
+
+
+class HansardSearchResult(BaseModel):
+    query: str
+    hits: list[HansardHit]
+    total_matches: int | None = None
+    page: int
+    has_more: bool
+    provenance: Provenance
+
+
 class SpeechSearchResult(BaseModel):
     speeches: list[Speech]
     returned_count: int

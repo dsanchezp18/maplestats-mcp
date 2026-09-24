@@ -34,6 +34,7 @@ CASES = [
     ("avis de la Gazette du Canada projets de règlement", "gazette_get_issue"),
     ("projet de loi Chambre des communes état", "parliament_search_bills"),
     ("interventions au hansard période des questions", "parliament_search_speeches"),
+    ("vote au Sénat sénateurs projet de loi", "senate_list_votes"),
     ("rappel de véhicule Transports Canada", "tc_recalls_search"),
     ("séisme tremblement de terre magnitude", "earthquakes_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),

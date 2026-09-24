@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 import httpx
+from bs4 import BeautifulSoup
 
 from maple_data_mcp.modules.openparliament import constants
 from maple_data_mcp.modules.openparliament.schemas import (
@@ -21,6 +22,8 @@ from maple_data_mcp.modules.openparliament.schemas import (
     Bill,
     BillSearchResult,
     BillSummary,
+    HansardHit,
+    HansardSearchResult,
     Membership,
     PartyVote,
     Politician,
@@ -35,7 +38,7 @@ from maple_data_mcp.modules.openparliament.schemas import (
 from maple_data_mcp.shared.cache import cached_fetch
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maple_data_mcp.shared.http import api_get
+from maple_data_mcp.shared.http import api_get, get_raw
 from maple_data_mcp.shared.models import Provenance
 from maple_data_mcp.shared.rate_limiter import get_limiter
 
@@ -389,6 +392,109 @@ async def get_politician(slug: str, *, lang: Lang = "en") -> Politician:
         links=[link["url"] for link in row.get("links") or [] if link.get("url")],
         url=f"{constants.SITE_URL}{path}",
         provenance=_provenance(path, {}, cached, "Politician"),
+    )
+
+
+_ORDINAL = re.compile(r"(\d+)(st|nd|rd|th)\b")
+
+
+def parse_search_page(page_html: str) -> tuple[list[HansardHit], int | None, bool]:
+    """Parse openparliament.ca/search results (15 per page, confirmed live 2026-09-24)."""
+    soup = BeautifulSoup(page_html, "html.parser")
+    hits = []
+    for row in soup.select("div.row.result"):
+        main = row.select_one(".search-main-col")
+        context = row.select_one(".search-context-col")
+        topic = row.select_one("a.statement_topic")
+        topic_text = " ".join(topic.get_text(" ").split()) if topic else None
+        excerpt = " ".join(main.get_text().split()) if main else ""
+        if topic_text and excerpt.startswith(topic_text):
+            excerpt = excerpt[len(topic_text) :].strip()
+        day = doc_type = None
+        first = context.find("p") if context else None
+        if first is not None:
+            parts = [p.strip() for p in first.get_text("|").split("|") if p.strip()]
+            if parts:
+                try:
+                    day = (
+                        datetime.strptime(_ORDINAL.sub(r"\1", parts[0]), "%B %d, %Y")
+                        .replace(tzinfo=UTC)
+                        .date()
+                    )
+                except ValueError:
+                    day = None
+                doc_type = parts[1] if len(parts) > 1 else None
+        speaker_link = context.select_one("a.pol_name") if context else None
+        party_tag = context.select_one("span.tag") if context else None
+        hits.append(
+            HansardHit(
+                date=day,
+                document_type=doc_type,
+                topic=topic_text,
+                excerpt=excerpt,
+                speaker=speaker_link.get_text(strip=True) if speaker_link else None,
+                politician=_slug(str(speaker_link["href"])) if speaker_link else None,
+                party=party_tag.get_text(strip=True) if party_tag else None,
+                url=f"{constants.SITE_URL}{row.get('data-url', '')}",
+            )
+        )
+    summary = soup.select_one(".result_summary")
+    numbers = re.findall(r"\d[\d,]*", summary.get_text(" ") if summary else "")
+    total = int(numbers[-1].replace(",", "")) if len(numbers) >= 3 else (0 if not hits else None)
+    has_more = soup.find("a", href=re.compile(r"[?&]page=\d+"), string=re.compile(r"Next|›|»"))
+    last_shown = int(numbers[1].replace(",", "")) if len(numbers) >= 3 else len(hits)
+    return hits, total, bool(has_more) or (total is not None and last_shown < total)
+
+
+async def search_hansard(
+    query: str, *, sort: Literal["relevance", "newest", "oldest"] = "relevance", page: int = 1
+) -> HansardSearchResult:
+    """Full-text search of House debates and committee evidence.
+
+    The JSON API has no keyword search (`q` on /speeches/ is ignored,
+    confirmed live), so this reads openparliament.ca's own search page.
+    """
+    if not query.strip():
+        raise InvalidInput("query must not be empty.")
+    if page < 1 or page > 100:
+        raise InvalidInput(f"page must be between 1 and 100, got {page}.")
+    params: dict[str, Any] = {"q": query.strip(), "page": page}
+    if sort != "relevance":
+        params["sort"] = "date desc" if sort == "newest" else "date asc"
+    url = f"{constants.SITE_URL}/search/"
+
+    async def fetch() -> str:
+        await _LIMITER.acquire()
+        try:
+            response = await get_raw(url, params=params, timeout=60.0)
+        except httpx.HTTPStatusError as exc:
+            raise UpstreamError(
+                f"openparliament: search returned HTTP {exc.response.status_code}."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailable("openparliament: search could not be reached.") from exc
+        return response.text
+
+    page_html, cached = await cached_fetch(
+        f"openparliament:search:{sorted(params.items())}", constants.CACHE_TTL_SECONDS, fetch
+    )
+    if "search-main-col" not in page_html and "No results" not in page_html:
+        raise UpstreamError("openparliament: search page layout was not recognised.")
+    hits, total, has_more = parse_search_page(page_html)
+    return HansardSearchResult(
+        query=query,
+        hits=hits,
+        total_matches=total,
+        page=page,
+        has_more=has_more,
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=str(httpx.URL(url, params=params)),
+            cached=cached,
+            schema_name="openparliament.HansardSearchResult",
+            freshness=_FRESHNESS,
+            limits=f"15 hits per page, English excerpts. {_NOTE}",
+        ),
     )
 
 

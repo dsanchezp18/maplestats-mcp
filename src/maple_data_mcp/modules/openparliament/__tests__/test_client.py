@@ -176,6 +176,47 @@ async def test_speeches_strip_html_and_build_debate_path(httpx_mock):
     assert query["document"] == ["/debates/2026/9/3/"]
 
 
+_SEARCH = """
+<div class="columns small-12 medium-4 result_summary">Results <strong>1</strong>-<strong>15</strong>
+ of <strong>3,614</strong></div>
+<div class="row result" data-url="/debates/2026/6/16/jenny-kwan-1/">
+  <div class="search-main-col"><p><a href="/debates/2026/6/16/jenny-kwan-1/#hl"
+   class="statement_topic">Budget Bill</a> &nbsp;A family facing eviction is in a
+   <em>housing crisis</em>.</p></div>
+  <div class="search-context-col">
+    <p>June 16th, 2026<span class="br slash"></span>House debate</p>
+    <p><a href="/politicians/jenny-kwan/" class="pol_name">Jenny Kwan</a>
+     <span class="tag partytag_ndp">NDP</span></p>
+  </div>
+</div>
+"""
+
+
+async def test_search_hansard_parses_hits(httpx_mock):
+    httpx_mock.add_response(text=_SEARCH)
+    result = await client.search_hansard('"housing crisis"', sort="newest")
+    hit = result.hits[0]
+    assert (hit.date, hit.document_type, hit.topic) == (
+        date(2026, 6, 16),
+        "House debate",
+        "Budget Bill",
+    )
+    assert hit.excerpt == "A family facing eviction is in a housing crisis."
+    assert (hit.politician, hit.party) == ("jenny-kwan", "NDP")
+    assert result.total_matches == 3614 and result.has_more
+    query = parse_qs(urlparse(str(httpx_mock.get_request().url)).query)
+    assert query["sort"] == ["date desc"]
+
+
+async def test_search_hansard_no_results_and_layout_change(httpx_mock):
+    httpx_mock.add_response(text="<p>No results found</p>")
+    result = await client.search_hansard("zzqq")
+    assert (result.hits, result.total_matches, result.has_more) == ([], 0, False)
+    httpx_mock.add_response(text="<html>captcha</html>")
+    with pytest.raises(UpstreamError):
+        await client.search_hansard("other")
+
+
 async def test_validation():
     with pytest.raises(InvalidInput):
         await client.get_bill("45", "C-2")

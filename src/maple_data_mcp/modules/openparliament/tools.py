@@ -10,6 +10,7 @@ from maple_data_mcp.modules.openparliament import client, constants
 from maple_data_mcp.modules.openparliament.schemas import (
     Bill,
     BillSearchResult,
+    HansardSearchResult,
     Politician,
     PoliticianSearchResult,
     SpeechSearchResult,
@@ -152,6 +153,27 @@ async def parliament_get_politician(slug: str, lang: Literal["en", "fr"] = "en")
     historique, parti, mandat.
     """
     return await client.get_politician(slug, lang=lang)
+
+
+@tool
+async def parliament_search_hansard(
+    query: str,
+    sort: Literal["relevance", "newest", "oldest"] = "relevance",
+    page: int = 1,
+) -> HansardSearchResult:
+    """Full-text search of House of Commons debates and committee evidence.
+
+    Use for: who said what about a topic in Parliament, e.g. "pharmacare"
+    or an exact phrase in quotes ("housing crisis"), since 1994. Returns
+    15 hits per page with date, speaker (MP slug), party and excerpt,
+    by relevance or date. Read a full sitting with
+    parliament_search_speeches.
+    Keywords: Hansard search, debate transcript, what did MPs say,
+    parliamentary debate, committee testimony, quote, speech, mention.
+    Mots-clés : recherche hansard, débats parlementaires, transcription,
+    ce qu'ont dit les députés, témoignages en comité, citation, mention.
+    """
+    return await client.search_hansard(query, sort=sort, page=page)
 
 
 @tool

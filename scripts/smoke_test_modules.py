@@ -229,6 +229,24 @@ STEPS: list[Step] = [
             "limit": 3,
         },
     ),
+    Step(
+        "openparliament",
+        "parliament_search_hansard",
+        {"query": "pharmacare", "sort": "newest"},
+        _non_empty("hits"),
+    ),
+    # Senate of Canada votes
+    Step("senate", "senate_list_votes", {"limit": 3}, _non_empty("votes")),
+    Step(
+        "senate",
+        "senate_get_vote",
+        lambda ctx: {
+            "vote_id": ctx["senate_list_votes"]["votes"][0]["vote_id"],
+            "session": ctx["senate_list_votes"]["session"],
+        },
+        _non_empty("ballots"),
+    ),
+    Step("senate", "senate_list_votes", {"session": "44-1", "bill": "C-69", "lang": "fr"}),
     # Transport Canada vehicle recalls
     Step(
         "tc_recalls",
