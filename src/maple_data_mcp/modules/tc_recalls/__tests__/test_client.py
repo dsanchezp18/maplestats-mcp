@@ -83,3 +83,10 @@ async def test_empty_result_set_and_validation(httpx_mock):
         await client.search(make="../etc")
     with pytest.raises(InvalidInput):
         await client.search(year_from=2020, year_to=2010)
+
+
+async def test_provenance_reports_cache_hits(httpx_mock):
+    httpx_mock.add_response(json={"ResultSet": [_SEARCH_ROW]})
+    first = await client.search(make="Honda", year_from=2019, year_to=2019)
+    second = await client.search(make="Honda", year_from=2019, year_to=2019)
+    assert (first.provenance.cached, second.provenance.cached) == (False, True)

@@ -62,7 +62,7 @@ async def list_datasets(query: str = "", *, limit: int = 10, lang: str = "en") -
     )
 
 
-async def _download(url: str) -> list[dict[str, str]]:
+async def _download(url: str) -> tuple[list[dict[str, str]], bool]:
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "cer")
     return await csv_files.fetch_rows(
         url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="cer"
@@ -106,7 +106,7 @@ async def query_file(
         raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
     start_date = _parse_bound(start, "start")
     end_date = _parse_bound(end, "end")
-    rows = await _download(url)
+    rows, cached = await _download(url)
     columns_lookup = csv_files.Columns(rows)
     filtered = csv_files.exact_filter(rows, columns_lookup, filters)
     date_column = columns_lookup.first_of(constants.DATE_COLUMNS)
@@ -140,7 +140,7 @@ async def query_file(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="cer.CerRows",
             coverage=f"{len(kept)} of {len(matching)} matching rows",
         ),

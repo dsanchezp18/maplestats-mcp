@@ -94,7 +94,7 @@ def _to_float(value: str | None) -> float | None:
         return None
 
 
-async def _fetch_codelist(codelist_id: str, lang: str = "en") -> list[dict[str, Any]]:
+async def _fetch_codelist(codelist_id: str, lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     url = f"{constants.BASE_URL}/codelist/{constants.AGENCY}/{codelist_id}/latest"
     api_lang = _LANG_TO_API.get(lang, "en")
     headers = {**_STRUCTURE_ACCEPT, "Accept-Language": api_lang}
@@ -116,7 +116,7 @@ async def _fetch_codelist(codelist_id: str, lang: str = "en") -> list[dict[str, 
             ) from exc
 
     cache_key = f"statcan-census-profile:codelist:{codelist_id}:{api_lang}"
-    payload, _ = await cached_fetch(cache_key, constants.CACHE_TTL_CODELIST_SECONDS, fetch)
+    payload, cached = await cached_fetch(cache_key, constants.CACHE_TTL_CODELIST_SECONDS, fetch)
     codelists = ((payload or {}).get("data") or {}).get("codelists") or []
     if not codelists:
         raise UpstreamError(
@@ -126,7 +126,7 @@ async def _fetch_codelist(codelist_id: str, lang: str = "en") -> list[dict[str, 
     return [
         {"code": c["id"], "name": c.get("name") or c["id"], "parent": c.get("parent")}
         for c in codes
-    ]
+    ], cached
 
 
 async def search_geography(
@@ -149,7 +149,7 @@ async def search_geography(
             f"{constants.GEOGRAPHY_SEARCH_LIMIT_MAX}, got {limit}."
         )
     _, codelist_id = dataflow
-    codes = await _fetch_codelist(codelist_id, lang)
+    codes, cached = await _fetch_codelist(codelist_id, lang)
     query_lower = query.strip().lower()
     matched = [c for c in codes if query_lower in c["name"].lower()] if query_lower else codes
     return GeographySearchResult(
@@ -159,7 +159,7 @@ async def search_geography(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=f"{constants.BASE_URL}/codelist/{constants.AGENCY}/{codelist_id}/latest",
-            cached=False,
+            cached=cached,
             schema_name="statcan_census_profile.GeographySearchResult",
         ),
     )
@@ -177,7 +177,7 @@ async def search_characteristic(
             f"statcan_census_profile:search_characteristic: limit must be between 1 and "
             f"{constants.CHARACTERISTIC_SEARCH_LIMIT_MAX}, got {limit}."
         )
-    codes = await _fetch_codelist(constants.CHARACTERISTIC_CODELIST, lang)
+    codes, cached = await _fetch_codelist(constants.CHARACTERISTIC_CODELIST, lang)
     query_lower = query.strip().lower()
     matched = [c for c in codes if query_lower in c["name"].lower()] if query_lower else codes
     return CharacteristicSearchResult(
@@ -189,7 +189,7 @@ async def search_characteristic(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=f"{constants.BASE_URL}/codelist/{constants.AGENCY}/{constants.CHARACTERISTIC_CODELIST}/latest",
-            cached=False,
+            cached=cached,
             schema_name="statcan_census_profile.CharacteristicSearchResult",
         ),
     )

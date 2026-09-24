@@ -50,12 +50,11 @@ async def _get(url: str) -> httpx.Response:
         raise UpstreamUnavailable(f"cihi: {url} did not respond in time.") from exc
 
 
-async def _page(url: str) -> str:
+async def _page(url: str) -> tuple[str, bool]:
     async def fetch() -> str:
         return (await _get(url)).text
 
-    html, _ = await cached_fetch(f"cihi:page:{url}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
-    return html
+    return await cached_fetch(f"cihi:page:{url}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
 
 
 def _clean(text: str) -> str:
@@ -76,7 +75,7 @@ def _parse_library(html: str) -> list[IndicatorRef]:
     return refs
 
 
-async def _library() -> list[IndicatorRef]:
+async def _library() -> tuple[list[IndicatorRef], bool]:
     async def fetch() -> list[IndicatorRef]:
         seen: dict[str, IndicatorRef] = {}
         for page in range(constants.LIBRARY_MAX_PAGES):
@@ -88,12 +87,11 @@ async def _library() -> list[IndicatorRef]:
             seen.update({r.slug: r for r in new})
         return list(seen.values())
 
-    refs, _ = await cached_fetch("cihi:library", constants.CACHE_TTL_LIBRARY_SECONDS, fetch)
-    return refs
+    return await cached_fetch("cihi:library", constants.CACHE_TTL_LIBRARY_SECONDS, fetch)
 
 
 async def search_indicators(query: str = "") -> IndicatorSearchResult:
-    refs = await _library()
+    refs, cached = await _library()
     words = query.lower().split()
     matches = [r for r in refs if all(w in r.name.lower() for w in words)]
     return IndicatorSearchResult(
@@ -102,7 +100,7 @@ async def search_indicators(query: str = "") -> IndicatorSearchResult:
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=constants.LIBRARY_URL,
-            cached=False,
+            cached=cached,
             schema_name="cihi.IndicatorSearchResult",
             freshness="indicator list cached 7 days",
         ),
@@ -124,7 +122,8 @@ async def _page_url(slug: str, lang: str) -> str:
     english = f"{constants.BASE_URL}{constants.INDICATOR_PATH}{slug}"
     if lang != "fr":
         return english
-    soup = BeautifulSoup(await _page(english), "html.parser")
+    html, _ = await _page(english)
+    soup = BeautifulSoup(html, "html.parser")
     alternate = soup.find("link", hreflang="fr")
     if not isinstance(alternate, Tag) or not alternate.get("href"):
         raise NotFound(f"cihi: no French page for {slug!r}.")
@@ -142,7 +141,8 @@ def _data_file(soup: BeautifulSoup) -> str | None:
 async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
     slug = _slug(indicator)
     url = await _page_url(slug, lang)
-    soup = BeautifulSoup(await _page(url), "html.parser")
+    html, cached = await _page(url)
+    soup = BeautifulSoup(html, "html.parser")
     heading = soup.find("h1")
     summary = soup.find(class_="view-metadata-summary")
     description = None
@@ -167,7 +167,7 @@ async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="cihi.IndicatorDetail",
         ),
     )
@@ -201,7 +201,7 @@ def _parse_workbook(body: bytes) -> dict[str, tuple[str, list[str], list[list[st
     return tables
 
 
-async def _tables(url: str) -> dict[str, tuple[str, list[str], list[list[str]]]]:
+async def _tables(url: str) -> tuple[dict[str, tuple[str, list[str], list[list[str]]]], bool]:
     if urlparse(url).hostname not in constants.ALLOWED_HOSTS:
         raise UpstreamError(f"cihi: unexpected data file host in {url}.")
 
@@ -214,8 +214,7 @@ async def _tables(url: str) -> dict[str, tuple[str, list[str], list[list[str]]]]
         except Exception as exc:  # openpyxl raises several unrelated types
             raise UpstreamError(f"cihi: {url} is not a readable XLSX file.") from exc
 
-    tables, _ = await cached_fetch(f"cihi:data:{url}", constants.CACHE_TTL_DATA_SECONDS, fetch)
-    return tables
+    return await cached_fetch(f"cihi:data:{url}", constants.CACHE_TTL_DATA_SECONDS, fetch)
 
 
 async def get_indicator_data(
@@ -233,7 +232,7 @@ async def get_indicator_data(
     detail = await get_indicator(indicator, lang)
     if not detail.data_file_url:
         raise NotFound(f"cihi: {detail.name!r} has no downloadable data table.")
-    tables = await _tables(detail.data_file_url)
+    tables, tables_cached = await _tables(detail.data_file_url)
     if not tables:
         raise UpstreamError(f"cihi: {detail.data_file_url} has no data table sheets.")
     sheet = table or next(iter(tables))
@@ -282,7 +281,7 @@ async def get_indicator_data(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=detail.data_file_url,
-            cached=False,
+            cached=detail.provenance.cached and tables_cached,
             schema_name="cihi.IndicatorData",
             coverage=f"last {len(kept)} of {len(matching)} matching rows",
         ),

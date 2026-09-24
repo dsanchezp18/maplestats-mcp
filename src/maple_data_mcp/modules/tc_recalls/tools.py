@@ -46,10 +46,12 @@ async def tc_recalls_search(
 
 @tool
 async def tc_recalls_get(recall_number: str, lang: Lang = "en") -> RecallDetail:
-    """Get one Transport Canada vehicle recall: issue, safety risk, fix, units, and vehicles.
+    """Get one Transport Canada vehicle recall: its description, units, and vehicles.
 
     Use for: the details behind a recall number from tc_recalls_search
     (e.g. "2021001"), including the affected makes, models and years.
+    `description` is Transport Canada's single text covering the issue,
+    the safety risk and the corrective action.
     `lang="fr"` returns the French category, system and description.
     Keywords: recall details, safety risk, corrective action, units
     affected, Transport Canada, vehicle defect, notification.

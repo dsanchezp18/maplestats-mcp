@@ -91,7 +91,7 @@ async def query(
         raise NotFound(f"No GC InfoBase file {resource_id!r}. Use gc_infobase_list_files.")
     url = resource.url or ""
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "gc_infobase")
-    rows = await csv_files.fetch_rows(
+    rows, cached = await csv_files.fetch_rows(
         url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="gc_infobase"
     )
     lookup = csv_files.Columns(rows)
@@ -122,7 +122,7 @@ async def query(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="gc_infobase.InfoBaseRows",
             coverage=f"{len(kept)} of {len(matching)} matching rows",
             freshness="files refreshed with each Estimates and Public Accounts release",
