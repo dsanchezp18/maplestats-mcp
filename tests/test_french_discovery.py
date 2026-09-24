@@ -31,6 +31,7 @@ CASES = [
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
     ("données économiques Alberta taux de chômage", "ab_economic_get_data"),
+    ("rappel de véhicule Transports Canada", "tc_recalls_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),
     ("taux de réadmission à l'hôpital ICIS", "cihi_get_indicator_data"),
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),

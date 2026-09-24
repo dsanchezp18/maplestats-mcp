@@ -63,7 +63,7 @@ Sources, by tool-name prefix:
   cer_. GC InfoBase federal spending and results (Estimates, Public
   Accounts, program spending and FTEs): gc_infobase_. CIHI health-system
   indicators (Indicator Library): cihi_. NRCan geocoding and official
-  place names: nrcan_geo_.
+  place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
 - CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
