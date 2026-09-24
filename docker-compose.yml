@@ -17,8 +17,17 @@ services:
       # caller spoof a different rate-limit bucket per request.
       MAPLE_TRUST_PROXY_HEADERS: "${MAPLE_TRUST_PROXY_HEADERS:-0}"
       MAPLE_CACHE_MAX_ENTRIES: "${MAPLE_CACHE_MAX_ENTRIES:-2000}"
+      MAPLE_TOOL_TIMEOUT_SECONDS: "${MAPLE_TOOL_TIMEOUT_SECONDS:-120}"
+      MAPLE_PUMF_CACHE_DIR: "/data/pumf"
+      MAPLE_PUMF_CACHE_MAX_GB: "${MAPLE_PUMF_CACHE_MAX_GB:-5}"
       MAPLE_SSL_CERTFILE: "${MAPLE_SSL_CERTFILE:-}"
       MAPLE_SSL_KEYFILE: "${MAPLE_SSL_KEYFILE:-}"
     # Health check is defined in the Dockerfile (it picks http/https from
-    # MAPLE_SSL_CERTFILE). No volume: the server keeps no on-disk state.
+    # MAPLE_SSL_CERTFILE). The pumf volume keeps downloaded PUMF microdata
+    # across restarts; everything else is in memory.
+    volumes:
+      - pumf-cache:/data/pumf
     restart: unless-stopped
+
+volumes:
+  pumf-cache:

@@ -7,6 +7,8 @@ as another MCP server without an env var collision.
 from __future__ import annotations
 
 import os
+import tempfile
+from pathlib import Path
 
 
 def get_host() -> str:
@@ -95,6 +97,27 @@ def get_tool_timeout_seconds() -> float:
     except ValueError:
         value = 120.0
     return min(1800.0, max(5.0, value))
+
+
+def get_pumf_cache_dir() -> Path:
+    """Where PUMF data files are downloaded and extracted for tabulation.
+
+    Defaults to the system temp folder. A hosted deployment should point it
+    at a persistent volume, or every restart re-downloads the files (the
+    Census 2021 individuals ZIP alone is 182 MB).
+    """
+    raw = os.environ.get("MAPLE_PUMF_CACHE_DIR", "").strip()
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maple-data-mcp" / "pumf"
+
+
+def get_pumf_cache_max_bytes() -> int:
+    """Cap on the PUMF cache; the least recently used files are removed past it."""
+    raw = os.environ.get("MAPLE_PUMF_CACHE_MAX_GB", "5")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 5.0
+    return int(max(0.5, value) * 1024**3)
 
 
 def get_trust_proxy_headers() -> bool:

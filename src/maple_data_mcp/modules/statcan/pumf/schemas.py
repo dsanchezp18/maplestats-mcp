@@ -75,3 +75,33 @@ class Codebook(BaseModel):
         "PUMF counts are not population estimates."
     )
     provenance: Provenance
+
+
+class TableGroup(BaseModel):
+    variable: str
+    code: str
+    label: str | None = None
+
+
+class TableCell(BaseModel):
+    groups: list[TableGroup]
+    estimate: float | None = Field(
+        description="Weighted total, weighted mean, or percent share, per `statistic`."
+    )
+    unweighted_n: int = Field(description="Respondents in the cell (sample, not population).")
+    low_count: bool
+
+
+class WeightedTable(BaseModel):
+    url: str
+    data_file: str
+    statistic: str
+    weight: str
+    value_variable: str | None = None
+    filters: dict[str, list[str]]
+    cells: list[TableCell]
+    truncated: bool
+    unweighted_n: int
+    weighted_total: float
+    notes: list[str]
+    provenance: Provenance

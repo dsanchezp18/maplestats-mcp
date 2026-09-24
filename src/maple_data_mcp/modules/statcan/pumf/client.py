@@ -14,6 +14,7 @@ from maple_data_mcp.modules.statcan.pumf.schemas import (
     PumfFileList,
     PumfProduct,
     PumfSearchResult,
+    PumfVariable,
     ZipContents,
     ZipEntry,
 )
@@ -187,15 +188,8 @@ async def list_zip(url: str) -> ZipContents:
     )
 
 
-async def get_codebook(
-    url: str,
-    *,
-    query: str | None = None,
-    lang: str = "en",
-    limit: int = constants.VARIABLES_DEFAULT,
-) -> Codebook:
-    if limit < 1 or limit > constants.VARIABLES_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.VARIABLES_MAX}, got {limit}.")
+async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable], list[str], bool]:
+    """Every variable in a PUMF ZIP's codebook, the files read, and whether cached."""
     members, _, cached = await _members(_check_url(url))
     by_name = {m.name: m for m in members}
     chosen = _for_language([m.name for m in members if _is_codebook(m.name)], lang)
@@ -238,6 +232,29 @@ async def get_codebook(
     everything = sorted(
         variables.values(), key=lambda v: (v.position is None, v.position or 0, v.name)
     )
+    return everything, chosen, cached
+
+
+def weight_names(variables: list[PumfVariable]) -> list[str]:
+    return [
+        v.name
+        for v in variables
+        if _WEIGHT_NAME.search(v.name) or _WEIGHT_LABEL.search(v.label or "")
+    ]
+
+
+async def get_codebook(
+    url: str,
+    *,
+    query: str | None = None,
+    lang: str = "en",
+    limit: int = constants.VARIABLES_DEFAULT,
+) -> Codebook:
+    if limit < 1 or limit > constants.VARIABLES_MAX:
+        raise InvalidInput(f"limit must be between 1 and {constants.VARIABLES_MAX}, got {limit}.")
+    loaded, chosen, cached = await load_codebook(url, lang)
+    # Copies: the loaded list is cached per ZIP, and values are truncated below.
+    everything = [v.model_copy(deep=True) for v in loaded]
     needle = (query or "").strip().lower()
     matched = [
         v
@@ -258,11 +275,7 @@ async def get_codebook(
         variables=kept,
         total_variables=len(everything),
         matched_variables=len(matched),
-        weight_variables=[
-            v.name
-            for v in everything
-            if _WEIGHT_NAME.search(v.name) or _WEIGHT_LABEL.search(v.label or "")
-        ],
+        weight_variables=weight_names(everything),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,

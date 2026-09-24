@@ -57,7 +57,7 @@ bilingual one-line description of each module):
 |---|---|---|
 | Reproduction code | `reproduce_code` | R, Python, Stata or Julia code that fetches the same data from the source (cansim, canivt, polars, TidierFiles, import delimited) |
 | Query planner | `plan_query` | Always visible: turns a question into an ordered, multi-source plan with caveats on combining sources |
-| Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Public use microdata files (find, list downloads, read codebooks and weights without downloading the ZIP), 2006-2016 census data tables (CSV, SDMX, Beyond 20/20 with a canivt route), tables and series, classifications (e.g. NAICS), 2001–2021 Census Profiles, The Daily, indicators, daily bulk-update files, definitions/methods and analysis catalogues, survey directory and IMDB metadata, census geography, SDG hub |
+| Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Public use microdata files (find, list downloads, read codebooks and weights without downloading the ZIP, weighted tables with DuckDB), 2006-2016 census data tables (CSV, SDMX, Beyond 20/20 with a canivt route), tables and series, classifications (e.g. NAICS), 2001–2021 Census Profiles, The Daily, indicators, daily bulk-update files, definitions/methods and analysis catalogues, survey directory and IMDB metadata, census geography, SDG hub |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal tables; Excel data tables |
 | ECCC / MSC | `eccc_` | Weather, climate, hydrometric, air quality (OGC API) |
@@ -222,6 +222,9 @@ how to add a new source module.
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS termination in-process |
 | `MAPLE_TRUST_PROXY_HEADERS` | `0` | Key rate limits on `X-Forwarded-For`; enable only behind a proxy that sets it |
 | `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Max entries per TTL bucket in the in-memory response cache |
+| `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run before it fails with a named error |
+| `MAPLE_PUMF_CACHE_DIR` | system temp | Where `statcan_pumf_tabulate` keeps downloaded microdata; use a persistent volume when hosted |
+| `MAPLE_PUMF_CACHE_MAX_GB` | `5` | Size cap on that cache (least recently used files removed first) |
 
 ```bash
 MAPLE_TRANSPORT=http MAPLE_REQUIRE_AUTH=0 docker compose up --build

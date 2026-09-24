@@ -13,6 +13,9 @@ COPY src/ src/
 # rather than silently resolving different versions than were tested.
 RUN uv sync --locked --no-dev
 
+# PUMF microdata cache; a named volume mounted here inherits this owner.
+RUN mkdir -p /data/pumf && chown appuser:appuser /data/pumf
+
 USER appuser
 
 EXPOSE 8000

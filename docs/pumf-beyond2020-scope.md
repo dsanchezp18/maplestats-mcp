@@ -139,10 +139,22 @@ directly as Parquet or `.dta` for handoff. These are lower priority than
 snippets, because snippets keep the analyst's pipeline reproducible,
 while exported files do not.
 
-## 4. Suggested order
+## 4. Status (2026-09-24)
 
-1. Census data tables + IVT routing (option A): 1-2 days.
-2. `get_reproduction_code` for StatCan, Census, PUMF and CKAN: 2-3 days.
-3. PUMF phase 2, weighted tables with replicate-weight SEs: 2-3 days,
-   once the cache-storage decision is made.
-4. IVT port (option C): only if demand appears.
+1. **Done:** census data tables plus IVT routing (option A).
+   `statcan_census_tables_search` and `_get_downloads` cover 869 tables
+   across 2006, 2011, the 2011 NHS and 2016. A table that exists only as
+   IVT gets a canivt snippet.
+2. **Done:** reproduction code. `reproduce_code` covers R, Python, Stata
+   and Julia. Generated R and Python snippets were run against the live
+   sources.
+3. **Done, without standard errors:** PUMF phase 2.
+   `statcan_pumf_tabulate` computes weighted totals, shares and means
+   with DuckDB, from CSV or fixed-width members. It keeps a disk cache
+   (`MAPLE_PUMF_CACHE_DIR`; a Docker volume in docker-compose).
+   Verified live on LFS and EICS.
+4. **Next:** replicate and bootstrap standard errors, one survey at a
+   time, following each user guide's variance method: Census `WT1`-`WT16`
+   first, then the SHS, EICS and CSWC bootstrap files.
+5. **Next:** SAS `PROC FORMAT` codebooks (SHS, CSWC).
+6. **Only if demand appears:** the IVT port (option C).

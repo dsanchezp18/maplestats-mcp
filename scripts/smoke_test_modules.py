@@ -271,6 +271,15 @@ STEPS: list[Step] = [
         lambda ctx: {"url": ctx["statcan_pumf_list_files"]["files"][0]["url"], "query": "tenure"},
         _non_empty("weight_variables"),
     ),
+    Step(
+        "statcan",
+        "statcan_pumf_tabulate",
+        {
+            "url": "https://www150.statcan.gc.ca/n1/pub/89m0025x/2022001/2024.zip",
+            "rows": ["GENDER"],
+        },
+        _non_empty("cells"),
+    ),
     # Census data tables 2006-2016
     Step(
         "statcan",

@@ -56,9 +56,11 @@ def parse_stata_dct(text: str) -> Variables:
         variable = _var(found, name)
         variable.position, variable.width = int(start), int(width)
         variable.label = variable.label or label.strip() or None
-    # CCHS: [str] NAME 31 - 32
+    # CCHS, EICS: [type] NAME 31 - 32, where type may be str, byte, double...
     for name, start, end in re.findall(
-        r"^\s*(?:str\w*\s+)?(\w+)\s+(\d+)\s*-\s*(\d+)\s*$", text, re.MULTILINE
+        r"^\s*(?:(?:str\w*|byte|int|long|float|double)\s+)?(\w+)\s+(\d+)\s*-\s*(\d+)\s*$",
+        text,
+        re.MULTILINE,
     ):
         variable = _var(found, name)
         variable.position, variable.width = int(start), int(end) - int(start) + 1

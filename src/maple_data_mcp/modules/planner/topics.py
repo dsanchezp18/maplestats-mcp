@@ -504,6 +504,7 @@ MICRODATA = Topic(
         PlanStep("statcan_pumf_search", "find the PUMF for the survey or topic"),
         PlanStep("statcan_pumf_list_files", "the free ZIP downloads by year"),
         PlanStep("statcan_pumf_get_codebook", "variables, value codes and weights"),
+        PlanStep("statcan_pumf_tabulate", "weighted totals, shares or means"),
     ),
     (
         (
