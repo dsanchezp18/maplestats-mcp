@@ -313,7 +313,7 @@ async def tabulate(
     variables, _, _ = await client.load_codebook(url, lang)
     by_name = {v.name: v for v in variables}
     weights = client.weight_names(variables)
-    chosen_weight = (weight or next((w for w in weights if not re.search(r"\d$", w)), "")).upper()
+    chosen_weight = (weight or client.main_weight(variables) or "").upper()
     if not chosen_weight:
         raise InvalidInput(f"No weight variable found; pass weight (candidates: {weights}).")
     wanted = [*rows, chosen_weight, *(filters or {}), *([value_variable] if value_variable else [])]

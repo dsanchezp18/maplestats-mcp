@@ -34,9 +34,23 @@ _LIMITER = get_limiter(
 _CATALOGUE = re.compile(r"^[0-9A-Za-z-]{6,14}$")
 _WEIGHT_NAME = re.compile(r"^(WT|WGT|BSW|FWGT)|WEIGHT|FINALWT|PERSWT|HHWT")
 _WEIGHT_LABEL = re.compile(r"(?i)weight|poids|pond[eé]ration")
+_NOT_WEIGHT_LABEL = re.compile(r"(?i)inclusion|flag|percei|perception|height|taille|overweight")
+_REPLICATE = re.compile(r"(?i)replicate|bootstrap|r[ée]plique")
+_MAIN_WEIGHT_LABEL = re.compile(
+    r"(?i)survey weight|final weight|weighting factor|weights? - master|sample weight|"
+    r"^weight\b|poids d.enqu|poids final|poids [ée]chantillon"
+)
 _OTHER_LANGUAGE = {
-    "en": ("fran", "/fr/", "_fr", "lbf", "varf", "valf", " fr"),
-    "fr": ("english", "/en/", "_en", "lbe", "vare", "vale", " en."),
+    "en": ("fran", "/fr/", "_fr", "lbf", "varf", "valf", "pff", " fr"),
+    "fr": ("english", "/en/", "_en", "lbe", "vare", "vale", "pfe", " en."),
+}
+_SAS_ROLES = {
+    "_i.sas": "input",
+    "_lbe.sas": "labels",
+    "_lbf.sas": "labels",
+    "_fmt.sas": "formats",
+    "_pfe.sas": "values",
+    "_pff.sas": "values",
 }
 
 
@@ -196,12 +210,24 @@ async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable],
     # One format is enough; the CSV codebook is the most complete when present.
     csvs = [n for n in chosen if n.lower().endswith(".csv")]
     chosen = csvs or [n for n in chosen if not n.lower().endswith("_infmt.do")]
+    sas_roles: dict[str, str] = {}
     if not chosen:
-        sas = [m.name for m in members if m.name.lower().endswith(".sas")]
-        raise NotFound(
-            "No codebook this tool can read in the ZIP"
-            + (f"; it has SAS label files only: {', '.join(sas[:5])}." if sas else ".")
+        # SAS-only PUMFs (CSWC): input positions, labels, formats, PROC FORMAT values.
+        sas_files = _for_language(
+            [
+                m.name
+                for m in members
+                if m.name.lower().endswith(".sas") and "bsw" not in m.name.lower()
+            ],
+            lang,
         )
+        for name in sas_files:
+            for suffix, role in _SAS_ROLES.items():
+                if name.lower().endswith(suffix):
+                    sas_roles[name] = role
+        chosen = list(sas_roles)
+    if not chosen:
+        raise NotFound("No codebook this tool can read in the ZIP.")
 
     texts: dict[str, str] = {}
     for name in chosen:
@@ -228,6 +254,10 @@ async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable],
             codebooks.merge(variables, codebooks.parse_stata_dct(text))
         elif lower.endswith(".sps"):
             codebooks.merge(variables, codebooks.parse_spss(text))
+    if sas_roles:
+        codebooks.merge(
+            variables, codebooks.parse_sas({role: texts[name] for name, role in sas_roles.items()})
+        )
 
     everything = sorted(
         variables.values(), key=lambda v: (v.position is None, v.position or 0, v.name)
@@ -236,11 +266,37 @@ async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable],
 
 
 def weight_names(variables: list[PumfVariable]) -> list[str]:
-    return [
-        v.name
+    """Likely weights, main weight first.
+
+    Names alone mislead (checked 2026-09-24): CSWC's WTQ_05 is "Working
+    time - Works at night" and CCHS's DOHWT is "Height and weight -
+    Inclusion Flag". Real weights are wide numeric fields (5 to 16
+    columns), so a known width under 4 rules a variable out.
+    """
+    candidates = [
+        v
         for v in variables
-        if _WEIGHT_NAME.search(v.name) or _WEIGHT_LABEL.search(v.label or "")
+        if (_WEIGHT_NAME.search(v.name) or _WEIGHT_LABEL.search(v.label or ""))
+        and not _NOT_WEIGHT_LABEL.search(v.label or "")
+        and (v.width is None or v.width >= 4)
     ]
+
+    def rank(v: PumfVariable) -> tuple[int, int]:
+        label = v.label or ""
+        replicate = bool(_REPLICATE.search(label) or re.search(r"\d$", v.name))
+        return (1 if replicate else 0, 0 if _MAIN_WEIGHT_LABEL.search(label) else 1)
+
+    return [v.name for v in sorted(candidates, key=rank)]
+
+
+def main_weight(variables: list[PumfVariable]) -> str | None:
+    names = weight_names(variables)
+    by_name = {v.name: v for v in variables}
+    for name in names:
+        label = by_name[name].label or ""
+        if not _REPLICATE.search(label) and not re.search(r"\d$", name):
+            return name
+    return None
 
 
 async def get_codebook(

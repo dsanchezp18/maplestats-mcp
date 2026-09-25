@@ -86,3 +86,20 @@ def test_spss_labels():
     assert found["GENDER"].label == "Gender of respondent"
     assert [(v.code, v.label) for v in found["GENDER"].values] == [("1", "Men+"), ("2", "Women+")]
     assert found["AF_05"].values[0].label == "You"
+
+
+SAS = {
+    "input": "INPUT\n    @         6     GENDER    1.\n    @        8     REGION6  $  2.\n",
+    "labels": 'label\n    GENDER = "Gender of respondent"\n    REGION6 = "Region"\n;',
+    "formats": "format\n    GENDER    D00003F.\n    REGION6  $D00012F.\n;",
+    "values": 'proc format;\n    VALUE     D00003F\n        1 = "Male +"\n        2 = "Female +"\n        ;\n'
+    '    VALUE    $D00012F\n       10 = "Atlantic"\n        ;\n',
+}
+
+
+def test_sas_command_files():
+    found = codebooks.parse_sas(SAS)
+    assert (found["GENDER"].position, found["GENDER"].width) == (6, 1)
+    assert found["GENDER"].label == "Gender of respondent"
+    assert [v.label for v in found["GENDER"].values] == ["Male +", "Female +"]
+    assert (found["REGION6"].width, found["REGION6"].values[0].code) == (2, "10")

@@ -111,6 +111,37 @@ def parse_spss(text: str) -> Variables:
     return found
 
 
+def parse_sas(texts: dict[str, str]) -> Variables:
+    """SAS command files, keyed by role: input, labels, formats, values.
+
+    CSWC ships only these (checked 2026-09-24): _i.SAS (INPUT @pos NAME
+    [$] width.), _lbe/_lbf.SAS (NAME = "label"), _fmt.SAS (NAME FORMATF.)
+    and _pfe/_pff.SAS (PROC FORMAT: VALUE FORMATF code = "label" ... ;).
+    """
+    found: Variables = {}
+    for start, name, width in re.findall(
+        r"@\s*(\d+)\s+(\w+)\s+(?:\$\s*)?(\d+)\.", texts.get("input", "")
+    ):
+        variable = _var(found, name)
+        variable.position, variable.width = int(start), int(width)
+    for name, label in re.findall(
+        r"^\s*(\w+)\s*=\s*" + _QUOTED, texts.get("labels", ""), re.MULTILINE
+    ):
+        _var(found, name).label = label.strip() or None
+    value_sets: dict[str, list[ValueLabel]] = {}
+    for block in re.finditer(
+        r"VALUE\s+\$?(\w+)(.*?);", texts.get("values", ""), re.DOTALL | re.IGNORECASE
+    ):
+        pairs = re.findall(r'^\s*"?([\w.-]+)"?\s*=\s*"([^"]*)"', block.group(2), re.MULTILINE)
+        value_sets[block.group(1).upper()] = [ValueLabel(code=c, label=v.strip()) for c, v in pairs]
+    for name, fmt in re.findall(
+        r"^\s*(\w+)\s+\$?(\w+?)\.\s*$", texts.get("formats", ""), re.MULTILINE
+    ):
+        if fmt.upper() in value_sets and name.lower() != "format":
+            _var(found, name).values = value_sets[fmt.upper()]
+    return found
+
+
 def merge(target: Variables, extra: Variables) -> None:
     for key, variable in extra.items():
         base = target.setdefault(key, variable)
