@@ -251,6 +251,8 @@ how to add a new source module.
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run before it fails with a named error |
 | `MAPLE_PUMF_CACHE_DIR` | system temp | Where `statcan_pumf_tabulate` keeps downloaded microdata; use a persistent volume when hosted |
 | `MAPLE_PUMF_CACHE_MAX_GB` | `5` | Size cap on that cache (least recently used files removed first) |
+| `MAPLE_IP_HORIZONS_CACHE_DIR` | system temp | Where the CIPO patent lookup and search tools keep downloaded tables as Parquet; filled only on first use |
+| `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | `3` | Size cap on that cache (least recently used files removed first) |
 
 ```bash
 MAPLE_TRANSPORT=http MAPLE_REQUIRE_AUTH=0 docker compose up --build

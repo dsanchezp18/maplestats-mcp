@@ -54,3 +54,58 @@ class IpHorizonsDictionary(BaseModel):
         default_factory=list, description="Coverage, delimiter and encoding notes."
     )
     provenance: Provenance
+
+
+class PatentSummary(BaseModel):
+    patent_number: int
+    title_en: str | None = None
+    title_fr: str | None = None
+    filing_date: str | None = None
+    grant_date: str | None = None
+    status_code: str | None = None
+    application_type: str | None = Field(default=None, description="PCT or NON-PCT.")
+    document_kind: str | None = None
+    filing_country: str | None = None
+    filing_language: str | None = None
+    pct_application_number: str | None = None
+    pct_publication_number: str | None = None
+    parent_application_number: str | None = None
+
+
+class PatentParty(BaseModel):
+    party_type: str | None = Field(default=None, description="Owner, Inventor, Applicant or Agent.")
+    name: str | None = None
+    city: str | None = None
+    province: str | None = None
+    country: str | None = None
+    owner_from: str | None = None
+    owner_to: str | None = None
+
+
+class PatentClassification(BaseModel):
+    sequence: int | None = None
+    symbol: str = Field(description="IPC symbol, e.g. 'H03K 19/20'.")
+    section: str | None = None
+    class_title: str | None = None
+    subclass_title: str | None = None
+    group_title: str | None = None
+    subgroup_title: str | None = None
+    version_date: str | None = None
+
+
+class PatentRecord(BaseModel):
+    patent: PatentSummary
+    parties: list[PatentParty] = Field(default_factory=list)
+    classifications: list[PatentClassification] = Field(default_factory=list)
+    classifications_included: bool
+    release_date: date | None = None
+    provenance: Provenance
+
+
+class PatentSearchResult(BaseModel):
+    patents: list[PatentSummary] = Field(default_factory=list)
+    returned_count: int
+    total_matched: int
+    filters: dict[str, str] = Field(default_factory=dict)
+    release_date: date | None = None
+    provenance: Provenance

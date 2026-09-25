@@ -3,14 +3,20 @@ real open.canada.ca CKAN API and downloads the real CIPO data
 dictionaries (not mocks), per AGENTS.md's "lesson from auditing the
 StatCan module".
 
+The patent lookup and search steps download the main and party tables
+(~240 MB) into MAPLE_IP_HORIZONS_CACHE_DIR on the first run; pass --ipc
+to also test IPC search, which downloads ~740 MB and unzips ~2.6 GB of
+CSV while converting.
+
 Usage:
-    uv run python scripts/smoke_test_ised_ip_horizons.py
+    uv run python scripts/smoke_test_ised_ip_horizons.py [--ipc]
 """
 
 from __future__ import annotations
 
 import asyncio
 import sys
+from datetime import date
 
 from maplestats_mcp.modules.ised.ip_horizons import client
 from maplestats_mcp.shared.errors import InvalidInput
@@ -61,6 +67,32 @@ async def main() -> int:
         ok = False
     except InvalidInput:
         print("OK: trademark dictionary raises InvalidInput as expected")
+
+    record = await client.get_patent(2000001)
+    print(f"OK: get_patent(2000001) -> {record.patent.title_en}, {len(record.parties)} parties")
+    # confirmed live 2026-09-25: filed 1989-10-02, owner PANAMETRICS, INC.
+    ok &= record.patent.filing_date == "1989-10-02"
+    ok &= any(p.name == "PANAMETRICS, INC." for p in record.parties)
+
+    old = await client.get_patent(1000000)
+    print(f"OK: get_patent(1000000) -> {old.patent.title_en}, filed {old.patent.filing_date}")
+
+    owners = await client.search_patents(party_name="ballard power", party_type="owner", limit=5)
+    print(f"OK: search_patents(owner 'ballard power') -> {owners.total_matched} matches")
+    ok &= owners.total_matched > 50
+
+    recent = await client.search_patents(title="hydrogen", filed_from=date(2020, 1, 1), limit=3)
+    print(f"OK: search_patents(title hydrogen, 2020+) -> {recent.total_matched} matches")
+    ok &= recent.total_matched > 0
+    ok &= all((p.filing_date or "") >= "2020-01-01" for p in recent.patents)
+
+    if "--ipc" in sys.argv:
+        classed = await client.get_patent(2000001, include_classifications=True)
+        print(f"OK: get_patent classes -> {[c.symbol for c in classed.classifications]}")
+        ok &= bool(classed.classifications)
+        fuel = await client.search_patents(ipc="H01M 8", filed_from=date(2015, 1, 1), limit=3)
+        print(f"OK: search_patents(ipc H01M 8, 2015+) -> {fuel.total_matched} matches")
+        ok &= fuel.total_matched > 100
 
     print("\nISED IP HORIZONS SMOKE TEST PASSED" if ok else "\nISED IP HORIZONS SMOKE TEST FAILED")
     return 0 if ok else 1

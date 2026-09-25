@@ -527,6 +527,8 @@ INTELLECTUAL_PROPERTY = Topic(
     ),
     (
         PlanStep("ised_cipo_search_trademarks", "search trademark records"),
+        PlanStep("ised_ip_horizons_search_patents", "patents by owner, inventor, IPC or title"),
+        PlanStep("ised_ip_horizons_get_patent", "one patent's parties and IPC classes"),
         PlanStep("ised_ip_horizons_list_files", "IP Horizons bulk patent/design/trademark files"),
         PlanStep("ised_ip_horizons_get_dictionary", "column meanings for those files"),
     ),

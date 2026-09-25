@@ -120,6 +120,27 @@ def get_pumf_cache_max_bytes() -> int:
     return int(max(0.5, value) * 1024**3)
 
 
+def get_ip_horizons_cache_dir() -> Path:
+    """Where CIPO IP Horizons patent tables are kept as Parquet for queries.
+
+    Files are fetched only when a patent lookup or search needs them. A
+    hosted deployment should point this at a persistent volume, or every
+    restart downloads them again (the patent IPC table alone is 740 MB).
+    """
+    raw = os.environ.get("MAPLE_IP_HORIZONS_CACHE_DIR", "").strip()
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "ip_horizons"
+
+
+def get_ip_horizons_cache_max_bytes() -> int:
+    """Cap on the IP Horizons cache; the least recently used files are removed past it."""
+    raw = os.environ.get("MAPLE_IP_HORIZONS_CACHE_MAX_GB", "3")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 3.0
+    return int(max(0.5, value) * 1024**3)
+
+
 def get_trust_proxy_headers() -> bool:
     raw = os.environ.get("MAPLE_TRUST_PROXY_HEADERS", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}

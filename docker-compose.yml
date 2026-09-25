@@ -20,14 +20,19 @@ services:
       MAPLE_TOOL_TIMEOUT_SECONDS: "${MAPLE_TOOL_TIMEOUT_SECONDS:-120}"
       MAPLE_PUMF_CACHE_DIR: "/data/pumf"
       MAPLE_PUMF_CACHE_MAX_GB: "${MAPLE_PUMF_CACHE_MAX_GB:-5}"
+      MAPLE_IP_HORIZONS_CACHE_DIR: "/data/ip_horizons"
+      MAPLE_IP_HORIZONS_CACHE_MAX_GB: "${MAPLE_IP_HORIZONS_CACHE_MAX_GB:-3}"
       MAPLE_SSL_CERTFILE: "${MAPLE_SSL_CERTFILE:-}"
       MAPLE_SSL_KEYFILE: "${MAPLE_SSL_KEYFILE:-}"
     # Health check is defined in the Dockerfile (it picks http/https from
-    # MAPLE_SSL_CERTFILE). The pumf volume keeps downloaded PUMF microdata
-    # across restarts; everything else is in memory.
+    # MAPLE_SSL_CERTFILE). The pumf and ip-horizons volumes keep downloaded
+    # PUMF microdata and CIPO patent tables across restarts; everything
+    # else is in memory.
     volumes:
       - pumf-cache:/data/pumf
+      - ip-horizons-cache:/data/ip_horizons
     restart: unless-stopped
 
 volumes:
   pumf-cache:
+  ip-horizons-cache:

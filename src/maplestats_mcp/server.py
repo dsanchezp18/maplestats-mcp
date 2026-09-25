@@ -95,7 +95,7 @@ Sources, by tool-name prefix:
 - ECCC weather/climate/hydrometric: eccc_.
 - ISED: ised_corporations_ (federal corporations), ised_spectrum_
   (spectrum licences), ised_cipo_ (trademarks), ised_ip_horizons_
-  (CIPO bulk patent/design/trademark files and data dictionaries).
+  (CIPO patent lookup and search, bulk IP files and data dictionaries).
 - IRCC Express Entry draws: ircc_. Elections Canada candidate financial
   returns: elections_financial_returns_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy

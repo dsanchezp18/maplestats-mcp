@@ -22,12 +22,16 @@ live 2026-09-25:
    public intermediate is bundled next to this file and trusted on top
    of certifi's roots, for this host only. It expires 2027-11-02.
 5. The data files are large (the patent main table is two ~77 MB ZIPs of
-   ~315 MB pipe-delimited UTF-8 each), so this client lists and
-   describes them rather than downloading them.
+   ~315 MB pipe-delimited UTF-8 each). Listing and dictionaries never
+   download them; get_patent and search_patents fetch only the tables
+   and number ranges they need, once, into store.py's Parquet cache.
+6. Every trademark file link in the catalogue, and a few old patent
+   text chunks, answer 404 with CIPO's HTML page (checked 2026-09-25).
 """
 
 from __future__ import annotations
 
+import asyncio
 import io
 import re
 import ssl
@@ -40,17 +44,22 @@ import certifi
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-from maplestats_mcp.modules.ised.ip_horizons import constants
+from maplestats_mcp.modules.ised.ip_horizons import constants, store
 from maplestats_mcp.modules.ised.ip_horizons.schemas import (
     DictionaryField,
     IpHorizonsCatalogue,
     IpHorizonsDictionary,
     IpHorizonsFile,
     IpType,
+    PatentClassification,
+    PatentParty,
+    PatentRecord,
+    PatentSearchResult,
+    PatentSummary,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, is_retryable, new_client
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -71,7 +80,14 @@ _HEADER_CELLS = ("variable name", "attribute name")
 
 _TLS = ssl.create_default_context(cafile=certifi.where())
 _TLS.load_verify_locations(Path(__file__).with_name("rapidssl_tls_rsa_ca_g1.pem"))
-_CIPO_CLIENT = new_client(timeout=60.0, verify=_TLS)
+# HTTP/1.1: over HTTP/2 a 160 MB patent download broke off mid-stream
+# (httpx.ReadError, 2026-09-25) where curl's HTTP/1.1 finished it.
+_CIPO_CLIENT = new_client(timeout=60.0, http2=False, verify=_TLS)
+
+
+def cipo_client() -> httpx.AsyncClient:
+    """The client that trusts opic-cipo.ca's missing intermediate (see item 4)."""
+    return _CIPO_CLIENT
 
 
 @retry(
@@ -297,5 +313,298 @@ async def get_dictionary(ip_type: IpType, *, table: str | None = None) -> IpHori
             url=url,
             cached=was_cached,
             schema_name="ised_ip_horizons.IpHorizonsDictionary",
+        ),
+    )
+
+
+_PARTY_TYPES = {
+    "owner": "Owner",
+    "inventor": "Inventor",
+    "applicant": "Applicant",
+    "agent": "Agent",
+}
+_IPC = re.compile(r"^([A-H])(\d{2})([A-Z])(?:\s*(\d{1,4})(?:/(\d{1,6}))?)?$")
+_MAX_LIMIT = 100
+
+
+async def _patent_files(table: str) -> list[IpHorizonsFile]:
+    catalogue = await list_files("patent", table=table)
+    files = [f for f in catalogue.files if not f.text_format]
+    # The IPC release lists one unsplit ZIP (twice) next to its two split
+    # parts holding the same rows; prefer the parts.
+    if any(f.number_from for f in files):
+        files = [f for f in files if f.number_from]
+    return list({f.url: f for f in files}.values())
+
+
+def _covering(files: list[IpHorizonsFile], number: int) -> IpHorizonsFile | None:
+    for item in files:
+        if item.number_from is None or item.number_from <= number <= (item.number_to or 0):
+            return item
+    return None
+
+
+# Old records use -1 and -2 for unknown or not-applicable codes and
+# dates, and "Unknown" for provinces (checked 2026-09-25: patent 1000000
+# has filing date "-1"); return those as null.
+_UNKNOWN = frozenset({"-1", "-2", "Unknown"})
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _clean(value: Any) -> Any:
+    return None if value in _UNKNOWN else value
+
+
+def _date(value: Any) -> str | None:
+    return value if isinstance(value, str) and _ISO_DATE.match(value) else None
+
+
+def _summary(row: dict[str, Any]) -> PatentSummary:
+    row = {key: _clean(value) for key, value in row.items()}
+    return PatentSummary(
+        patent_number=row["patent_number"],
+        title_en=row.get("application_patent_title_english"),
+        title_fr=row.get("application_patent_title_french"),
+        filing_date=_date(row.get("filing_date")),
+        grant_date=_date(row.get("grant_date")),
+        status_code=row.get("application_status_code"),
+        application_type=row.get("application_type_code"),
+        document_kind=row.get("document_kind_type"),
+        filing_country=row.get("filing_country_code"),
+        filing_language=row.get("language_of_filing_code"),
+        pct_application_number=row.get("pct_application_number"),
+        pct_publication_number=row.get("pct_publication_number"),
+        parent_application_number=row.get("parent_application_number"),
+    )
+
+
+def ipc_symbol(row: dict[str, Any]) -> str:
+    head = "".join(
+        row.get(k) or "" for k in ("ipc_section_code", "ipc_class_code", "ipc_subclass_code")
+    )
+    group = (row.get("ipc_main_group_code") or "").lstrip("0") or "0"
+    # IPC notation keeps the subgroup's leading zero ("H03K 19/01"); the
+    # files store it that way (checked 2026-09-25: "00", "01", "0525").
+    subgroup = row.get("ipc_subgroup_code") or "00"
+    return f"{head} {group}/{subgroup}"
+
+
+def _classification(row: dict[str, Any]) -> PatentClassification:
+    sequence = row.get("ipc_classification_sequence_number") or ""
+    return PatentClassification(
+        sequence=int(sequence) if sequence.isdigit() else None,
+        symbol=ipc_symbol(row),
+        section=row.get("ipc_section"),
+        class_title=row.get("ipc_class"),
+        subclass_title=row.get("ipc_subclass"),
+        group_title=row.get("ipc_group"),
+        subgroup_title=row.get("ipc_subgroup"),
+        version_date=row.get("ipc_version_date"),
+    )
+
+
+def _party(row: dict[str, Any]) -> PatentParty:
+    row = {key: _clean(value) for key, value in row.items()}
+    return PatentParty(
+        party_type=row.get("interested_party_type"),
+        name=row.get("party_name"),
+        city=row.get("party_city"),
+        province=row.get("party_province"),
+        country=row.get("party_country"),
+        owner_from=_date(row.get("owner_enable_date")),
+        owner_to=_date(row.get("ownership_end_date")),
+    )
+
+
+def _query(sql: str, params: list[Any]) -> list[dict[str, Any]]:
+    # Imported on first use: duckdb takes ~0.5 s to import.
+    import duckdb
+
+    with duckdb.connect() as connection:
+        cursor = connection.execute(sql, params)
+        names = [d[0] for d in cursor.description or []]
+        return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
+
+
+def _parquet(paths: list[Path]) -> str:
+    quoted = ", ".join("'" + str(p).replace("'", "''") + "'" for p in paths)
+    return f"read_parquet([{quoted}])"
+
+
+def _release(files: list[IpHorizonsFile]) -> date | None:
+    dates = [f.release_date for f in files if f.release_date]
+    return max(dates) if dates else None
+
+
+async def get_patent(number: int, *, include_classifications: bool = False) -> PatentRecord:
+    """One Canadian patent with its parties, and optionally its IPC classes."""
+    context = "ised_ip_horizons:get_patent"
+    if number < 1:
+        raise InvalidInput(f"{context}: patent_number must be positive, got {number}.")
+    main_file = _covering(await _patent_files("main"), number)
+    party_file = _covering(await _patent_files("interested_party"), number)
+    if main_file is None or party_file is None:
+        raise NotFound(f"{context}: no IP Horizons file covers patent {number}.")
+    used = [main_file, party_file]
+    if include_classifications:
+        ipc_file = _covering(await _patent_files("ipc_classification"), number)
+        if ipc_file is not None:
+            used.append(ipc_file)
+    # Downloads start together; see search_patents.
+    local = await asyncio.gather(*(store.local_table(f) for f in used))
+    main_path, party_path = local[0], local[1]
+    ipc_path: Path | None = local[2] if len(local) > 2 else None
+
+    def run() -> tuple[list[dict[str, Any]], ...]:
+        where = "WHERE patent_number = ?"
+        main = _query(f"SELECT * FROM {_parquet([main_path])} {where}", [number])
+        parties = _query(f"SELECT * FROM {_parquet([party_path])} {where}", [number])
+        classes: list[dict[str, Any]] = []
+        if ipc_path is not None:
+            classes = _query(
+                f"SELECT * FROM {_parquet([ipc_path])} {where} "
+                "ORDER BY TRY_CAST(ipc_classification_sequence_number AS INTEGER)",
+                [number],
+            )
+        return main, parties, classes
+
+    main, parties, classes = await asyncio.to_thread(run)
+    if not main:
+        raise NotFound(f"{context}: patent {number} is not in the IP Horizons data.")
+    return PatentRecord(
+        patent=_summary(main[0]),
+        parties=[_party(row) for row in parties],
+        classifications=[_classification(row) for row in classes],
+        classifications_included=ipc_path is not None,
+        release_date=_release(used),
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=main_file.url,
+            cached=False,
+            schema_name="ised_ip_horizons.PatentRecord",
+            freshness="quarterly bulk releases",
+            limits="Owners, status and classes are as of the release date, not today.",
+        ),
+    )
+
+
+async def search_patents(
+    *,
+    party_name: str | None = None,
+    party_type: str | None = None,
+    ipc: str | None = None,
+    title: str | None = None,
+    filed_from: date | None = None,
+    filed_to: date | None = None,
+    limit: int = 25,
+) -> PatentSearchResult:
+    """Canadian patents matching party, IPC class, title and filing-date filters."""
+    context = "ised_ip_horizons:search_patents"
+    party_name = (party_name or "").strip() or None
+    title = (title or "").strip() or None
+    ipc_text = " ".join((ipc or "").upper().split()) or None
+    if not any([party_name, ipc_text, title, filed_from, filed_to]):
+        raise InvalidInput(f"{context}: give at least one of party_name, ipc, title or a date.")
+    if limit < 1 or limit > _MAX_LIMIT:
+        raise InvalidInput(f"{context}: limit must be between 1 and {_MAX_LIMIT}, got {limit}.")
+    party_key = party_type.lower() if party_type else None
+    if party_key and party_key not in _PARTY_TYPES:
+        raise InvalidInput(f"{context}: party_type must be one of {sorted(_PARTY_TYPES)}.")
+    if party_key and not party_name:
+        raise InvalidInput(f"{context}: party_type needs a party_name.")
+    ipc_match = _IPC.match(ipc_text) if ipc_text else None
+    if ipc_text and ipc_match is None:
+        raise InvalidInput(f"{context}: ipc must look like 'H01M', 'H01M 10' or 'H01M 10/0525'.")
+
+    main_files = await _patent_files("main")
+    party_files = await _patent_files("interested_party") if party_name else []
+    ipc_files = await _patent_files("ipc_classification") if ipc_match else []
+    used = [*main_files, *party_files, *ipc_files]
+    # Start every needed download together, so a first call that times out
+    # leaves all of them running rather than only the first.
+    paths = dict(
+        zip(
+            [f.url for f in used],
+            await asyncio.gather(*(store.local_table(f) for f in used)),
+            strict=True,
+        )
+    )
+    main_paths = [paths[f.url] for f in main_files]
+
+    filters: dict[str, str] = {}
+    where: list[str] = []
+    params: list[Any] = []
+    if title:
+        filters["title"] = title
+        where.append(
+            "(application_patent_title_english ILIKE ? OR application_patent_title_french ILIKE ?)"
+        )
+        params += [f"%{title}%", f"%{title}%"]
+    # Dates are ISO text in the files, so string comparison orders them;
+    # the LIKE keeps "-1" (unknown) out of a filed_to range.
+    if filed_from or filed_to:
+        where.append("filing_date LIKE '____-__-__'")
+    if filed_from:
+        filters["filed_from"] = filed_from.isoformat()
+        where.append("filing_date >= ?")
+        params.append(filed_from.isoformat())
+    if filed_to:
+        filters["filed_to"] = filed_to.isoformat()
+        where.append("filing_date <= ?")
+        params.append(filed_to.isoformat())
+    if party_name:
+        party_paths = [paths[f.url] for f in party_files]
+        filters["party_name"] = party_name
+        clause = "party_name ILIKE ?"
+        params.append(f"%{party_name}%")
+        if party_key:
+            filters["party_type"] = party_key
+            clause += " AND interested_party_type = ?"
+            params.append(_PARTY_TYPES[party_key])
+        where.append(
+            f"patent_number IN (SELECT patent_number FROM {_parquet(party_paths)} WHERE {clause})"
+        )
+    if ipc_match and ipc_text:
+        ipc_paths = [paths[f.url] for f in ipc_files]
+        filters["ipc"] = ipc_text
+        section, klass, subclass, group, subgroup = ipc_match.groups()
+        clause = "ipc_section_code = ? AND ipc_class_code = ? AND ipc_subclass_code = ?"
+        params += [section, klass, subclass]
+        if group:
+            clause += " AND TRY_CAST(ipc_main_group_code AS INTEGER) = ?"
+            params.append(int(group))
+        if subgroup:
+            clause += " AND ltrim(ipc_subgroup_code, '0') = ?"
+            params.append(subgroup.lstrip("0"))
+        where.append(
+            f"patent_number IN (SELECT patent_number FROM {_parquet(ipc_paths)} WHERE {clause})"
+        )
+
+    base = f"FROM {_parquet(main_paths)} WHERE {' AND '.join(where)}"
+
+    def run() -> tuple[int, list[dict[str, Any]]]:
+        total = _query(f"SELECT count(*) AS n {base}", params)[0]["n"]
+        rows = _query(
+            f"SELECT * {base} ORDER BY filing_date DESC NULLS LAST, patent_number DESC "
+            f"LIMIT {limit}",
+            params,
+        )
+        return total, rows
+
+    total, rows = await asyncio.to_thread(run)
+    return PatentSearchResult(
+        patents=[_summary(row) for row in rows],
+        returned_count=len(rows),
+        total_matched=total,
+        filters=filters,
+        release_date=_release(used),
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=constants.DATASET_PAGE_URL.format(id=constants.PACKAGE_IDS["patent"]),
+            cached=False,
+            schema_name="ised_ip_horizons.PatentSearchResult",
+            freshness="quarterly bulk releases",
+            coverage=f"newest {len(rows)} by filing date of {total} matches",
+            limits="Name and title filters are case-insensitive substring matches.",
         ),
     )
