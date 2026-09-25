@@ -182,18 +182,26 @@ async def search(
     )
 
 
-async def _head(url: str) -> tuple[bool, int | None]:
+async def _head(url: str) -> tuple[bool, int | None, bool]:
+    """(available, size, service offline) for one download link."""
     await _LIMITER.acquire()
     try:
         response = await _HEAD_CLIENT.head(url)
+    except httpx.TooManyRedirects:
+        return False, None, True
     except httpx.HTTPError:
-        return False, None
+        return False, None, False
+    # Seen 2026-09-24 evening: every download link, including ones that had
+    # worked hours earlier, redirected in a loop or to srvmsg404.html ("the
+    # page is temporarily offline for updating"). That is an outage, not a
+    # missing table.
+    offline = "/srvmsg/" in str(response.url)
     # CSV/SDMX come back as ZIPs; the IVT link serves the raw .ivt file as
     # application/x-beyond2020 and reports Content-Length 0 to HEAD.
     content_type = response.headers.get("content-type", "")
     ok = response.status_code == 200 and ("zip" in content_type or "beyond2020" in content_type)
     length = int(response.headers.get("content-length") or 0)
-    return ok, (length or None) if ok else None
+    return ok, (length or None) if ok else None, offline
 
 
 async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownloads:
@@ -208,9 +216,14 @@ async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownlo
     checks = await asyncio.gather(*(_head(u) for u in urls.values()))
     downloads = [
         Download(format=fmt, url=url, available=ok, size_bytes=size)
-        for (fmt, url), (ok, size) in zip(urls.items(), checks, strict=True)
+        for (fmt, url), (ok, size, _) in zip(urls.items(), checks, strict=True)
     ]
     if not any(d.available for d in downloads):
+        if any(offline for _, _, offline in checks):
+            raise UpstreamUnavailable(
+                "StatCan's census download service is temporarily offline (it redirects to its "
+                "'temporarily offline for updating' page). Try again later."
+            )
         raise NotFound(f"No downloads found for PID {pid} in the {release} release.")
     by_format = {d.format: d.available for d in downloads}
     ivt_only = by_format["ivt"] and not (by_format["csv"] or by_format["sdmx"])

@@ -6,6 +6,7 @@ import pytest
 
 from maple_data_mcp.modules.statcan.census_tables import client
 from maple_data_mcp.shared import cache as cache_module
+from maple_data_mcp.shared.errors import UpstreamUnavailable
 
 BASE = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/dt-td/"
 
@@ -81,3 +82,16 @@ async def test_ivt_only_table_gets_canivt_note(httpx_mock):
     assert result.ivt_only
     assert result.ivt_note is not None and "canivt::read_ivt" in result.ivt_note
     assert [d.size_bytes for d in result.downloads] == [None, None, None]
+
+
+async def test_service_outage_is_unavailable_not_missing(httpx_mock):
+    offline = "https://www12.statcan.gc.ca/census-recensement/srvmsg/srvmsg404.html"
+    for url in (
+        BASE + "CompDataDownload.cfm?LANG=E&PID=7&OFT=CSV",
+        BASE + "OpenDataDownload.cfm?PID=7",
+        BASE + "Download.cfm?PID=7",
+    ):
+        httpx_mock.add_response(url=url, status_code=302, headers={"location": offline})
+    httpx_mock.add_response(url=offline, headers={"content-type": "text/html"}, is_reusable=True)
+    with pytest.raises(UpstreamUnavailable, match="temporarily offline"):
+        await client.get_downloads("7")
