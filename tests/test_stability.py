@@ -36,3 +36,17 @@ def test_startup_does_not_import_module_tests():
         [sys.executable, "-c", probe], capture_output=True, text=True, check=True, timeout=120
     ).stdout.strip()
     assert output == "[]", f"server startup imported test code: {output[:300]}"
+
+
+def test_tabulation_prints_nothing_to_stdout(tmp_path, capfd):
+    # Over stdio, any stdout write corrupts the MCP stream.
+    from maple_data_mcp.modules.statcan.pumf import tabulate
+    from maple_data_mcp.modules.statcan.pumf.schemas import PumfVariable
+
+    data = tmp_path / "data.csv"
+    data.write_text("PROV,WT\n" + "48,1\n" * 200_000)
+    columns = {n: PumfVariable(name=n, values=[]) for n in ("PROV", "WT")}
+    tabulate._run_query(
+        tabulate.DataSource(data, False, columns), ["PROV"], ["WT"], "total", None, {}
+    )
+    assert capfd.readouterr().out == ""

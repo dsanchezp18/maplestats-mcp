@@ -28,8 +28,9 @@ def _vars() -> dict[str, PumfVariable]:
 def test_weighted_totals_with_numeric_filter(tmp_path, content, fixed):
     path = tmp_path / ("data.csv" if not fixed else "data.txt")
     path.write_text(content)
+    source = tabulate.DataSource(path, fixed, _vars())
     rows, n, total = tabulate._run_query(
-        path, fixed, _vars(), ["LFSSTAT"], ["FINALWT"], "total", None, {"PROV": ["048"]}
+        source, ["LFSSTAT"], ["FINALWT"], "total", None, {"PROV": ["048"]}
     )
     assert rows == [("1", 1, 100.0, 100.0), ("3", 1, 50.0, 50.0)]
     assert (n, total) == (2, 150.0)
@@ -38,9 +39,8 @@ def test_weighted_totals_with_numeric_filter(tmp_path, content, fixed):
 def test_weighted_mean_skips_missing_values(tmp_path):
     path = tmp_path / "data.csv"
     path.write_text(CSV)
-    rows, _, _ = tabulate._run_query(
-        path, False, _vars(), ["PROV"], ["FINALWT"], "mean", "HRLYEARN", {}
-    )
+    source = tabulate.DataSource(path, False, _vars())
+    rows, _, _ = tabulate._run_query(source, ["PROV"], ["FINALWT"], "mean", "HRLYEARN", {})
     by_prov = {r[0]: tabulate._estimates(r, 1, 1, "mean")[0] for r in rows}
     assert by_prov["48"] == pytest.approx(3000.0)  # the blank value is excluded
     assert by_prov["35"] == pytest.approx((200 * 4000 + 100 * 2000) / 300)
@@ -83,8 +83,9 @@ def test_census_2021_standard_error_matches_the_user_guide_example():
         35406,
         34049,
     ]
-    assert method.standard_error([float(g) for g in groups]) == pytest.approx(1173.47, abs=0.5)
-    assert method.standard_error([1.0] * 15) is None  # a missing replicate: no SE
+    se = method.standard_error(33865.0, [float(g) for g in groups])
+    assert se == pytest.approx(1173.47, abs=0.5)
+    assert method.standard_error(33865.0, [1.0] * 15) is None  # a missing replicate: no SE
 
 
 def test_shares_are_computed_per_replicate():
@@ -92,3 +93,45 @@ def test_shares_are_computed_per_replicate():
     estimates = [tabulate._estimates(r, 2, 2, "share") for r in rows]
     shares = tabulate._to_shares(rows, estimates, 2)
     assert shares == [[30.0, 40.0], [70.0, 60.0]]
+
+
+def test_bootstrap_centres_on_the_full_sample_estimate():
+    # EICS/CSWC guides, eq. (1): sum((X*(b) - X)^2) / 1000, X the full-sample estimate.
+    method = tabulate.variance_method("https://x/n1/pub/89m0025x/2022001/2024.zip")
+    assert method is not None and method.centre == "estimate"
+    replicates = [101.0] * 500 + [99.0] * 500
+    assert method.standard_error(100.0, replicates) == pytest.approx(1.0)
+    assert method.standard_error(90.0, replicates) == pytest.approx(10.0499, abs=1e-3)
+
+
+def test_replicate_weights_are_joined_from_a_separate_file(tmp_path):
+    main_file = tmp_path / "main.txt"
+    main_file.write_text("0000148  100\n0000235  200\n")  # PUMFID 1-5, PROV 6-7, WT 8-12
+    bsw_file = tmp_path / "bsw.txt"
+    bsw_file.write_text("00001  110   90\n00002  210  190\n")  # PUMFID, BSW1 6-10, BSW2 11-15
+    main = tabulate.DataSource(
+        main_file,
+        True,
+        {
+            "PUMFID": PumfVariable(name="PUMFID", position=1, width=5, values=[]),
+            "PROV": PumfVariable(name="PROV", position=6, width=2, values=[]),
+            "WT": PumfVariable(name="WT", position=8, width=5, values=[]),
+        },
+    )
+    bsw = tabulate.DataSource(
+        bsw_file,
+        True,
+        {
+            "PUMFID": PumfVariable(name="PUMFID", position=1, width=5, values=[]),
+            "BSW1": PumfVariable(name="BSW1", position=6, width=5, values=[]),
+            "BSW2": PumfVariable(name="BSW2", position=11, width=5, values=[]),
+        },
+    )
+    rows, n, total = tabulate._run_query(
+        main, ["PROV"], ["WT", "BSW1", "BSW2"], "total", None, {}, bsw, "PUMFID"
+    )
+    assert rows == [
+        ("35", 1, 200.0, 200.0, 210.0, 210.0, 190.0, 190.0),
+        ("48", 1, 100.0, 100.0, 110.0, 110.0, 90.0, 90.0),
+    ]
+    assert (n, total) == (2, 300.0)

@@ -23,6 +23,7 @@ import math
 import re
 import shutil
 import zipfile
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -30,7 +31,7 @@ from typing import Any, Literal
 import duckdb
 
 from maple_data_mcp import config
-from maple_data_mcp.modules.statcan.pumf import client, constants
+from maple_data_mcp.modules.statcan.pumf import client, codebooks, constants
 from maple_data_mcp.modules.statcan.pumf.schemas import (
     PumfVariable,
     TableCell,
@@ -145,70 +146,104 @@ def _labels(variable: PumfVariable) -> dict[str, str]:
     return labels
 
 
+@dataclass(frozen=True)
+class DataSource:
+    """One file to read: a CSV with a header, or fixed-width lines."""
+
+    path: Path
+    fixed_width: bool
+    columns: dict[str, PumfVariable]
+
+    def relation(self) -> str:
+        literal = "'" + str(self.path).replace("'", "''") + "'"
+        if self.fixed_width:
+            # One VARCHAR column per line: \x01 never occurs in StatCan's text files.
+            return (
+                f"read_csv({literal}, header = false, columns = {{'line': 'VARCHAR'}}, "
+                "delim = '\x01', quote = '', escape = '', auto_detect = false)"
+            )
+        return f"read_csv({literal}, header = true, all_varchar = true, sample_size = -1)"
+
+    def column(self, name: str) -> str:
+        if self.fixed_width:
+            var = self.columns[name]
+            return f"TRIM(SUBSTR(line, {int(var.position or 0)}, {int(var.width or 0)}))"
+        return f'TRIM("{name}")'
+
+    def select(self, names: list[str]) -> str:
+        columns = ", ".join(f'{self.column(n)} AS "{n}"' for n in names)
+        return f"SELECT {columns} FROM {self.relation()}"
+
+
 def _run_query(
-    path: Path,
-    fixed_width: bool,
-    columns: dict[str, PumfVariable],
+    main: DataSource,
     group_by: list[str],
     weights: list[str],
     statistic: Statistic,
     value_variable: str | None,
     filters: dict[str, list[str]],
+    replicates: DataSource | None = None,
+    id_variable: str | None = None,
 ) -> tuple[list[tuple[Any, ...]], int, float]:
     """Rows of (group codes..., n, then numerator and denominator per weight).
 
     The numerator is SUM(w) for totals and shares, SUM(w * x) for means;
     the denominator is SUM(w) (used by means). weights[0] is the main
-    weight; the rest are replicates for the variance.
+    weight; the rest are replicates, read from `replicates` (a separate
+    bootstrap file joined on id_variable) when they are not in `main`.
     """
-
-    def column(name: str) -> str:
-        if fixed_width:
-            var = columns[name]
-            return f"TRIM(SUBSTR(line, {int(var.position or 0)}, {int(var.width or 0)}))"
-        return f'TRIM("{name}")'
-
-    literal = "'" + str(path).replace("'", "''") + "'"
-    source = (
-        # One VARCHAR column per line: \x01 never occurs in StatCan's text files.
-        f"read_csv({literal}, header = false, columns = {{'line': 'VARCHAR'}}, "
-        "delim = '\x01', quote = '', escape = '', auto_detect = false)"
-        if fixed_width
-        else f"read_csv({literal}, header = true, all_varchar = true, sample_size = -1)"
+    from_main = [w for w in weights if w in main.columns or not replicates]
+    from_replicates = [w for w in weights if w not in from_main]
+    needed = list(
+        dict.fromkeys(
+            [*group_by, *filters, *([value_variable] if value_variable else []), *from_main]
+        )
     )
+    relation = (
+        f"({main.select(needed + ([id_variable] if from_replicates and id_variable else []))}) AS m"
+    )
+    if from_replicates and replicates is not None and id_variable:
+        relation += (
+            f" JOIN ({replicates.select([id_variable, *from_replicates])}) AS r "
+            f'ON m."{id_variable}" = r."{id_variable}"'
+        )
+
+    def col(name: str) -> str:
+        return f'"{name}"' if name not in (id_variable,) else f'm."{name}"'
+
     where: list[str] = []
     params: list[Any] = []
     for name, codes in filters.items():
         numeric = all(re.fullmatch(r"-?\d+(\.\d+)?", c.strip()) for c in codes)
         placeholders = ", ".join("?" for _ in codes)
         if numeric:
-            where.append(f"TRY_CAST({column(name)} AS DOUBLE) IN ({placeholders})")
+            where.append(f"TRY_CAST({col(name)} AS DOUBLE) IN ({placeholders})")
             params.extend(float(c) for c in codes)
         else:
-            where.append(f"{column(name)} IN ({placeholders})")
+            where.append(f"{col(name)} IN ({placeholders})")
             params.extend(c.strip() for c in codes)
-    groups = [f"{column(name)} AS g{i}" for i, name in enumerate(group_by)]
+    groups = [f"{col(name)} AS g{i}" for i, name in enumerate(group_by)]
     value_expr = None
     if statistic == "mean" and value_variable:
-        value_expr = f"TRY_CAST({column(value_variable)} AS DOUBLE)"
+        value_expr = f"TRY_CAST({col(value_variable)} AS DOUBLE)"
         where.append(f"{value_expr} IS NOT NULL")
     sums: list[str] = []
     for weight in weights:
-        weight_expr = f"TRY_CAST({column(weight)} AS DOUBLE)"
+        weight_expr = f"TRY_CAST({col(weight)} AS DOUBLE)"
         sums.append(f"SUM({weight_expr} * {value_expr})" if value_expr else f"SUM({weight_expr})")
         sums.append(f"SUM({weight_expr})")
-    weight_expr = f"TRY_CAST({column(weights[0])} AS DOUBLE)"
+    weight_expr = f"TRY_CAST({col(weights[0])} AS DOUBLE)"
     group_list = ", ".join(f"g{i}" for i in range(len(group_by)))
-    sql = (
-        f"SELECT {', '.join([*groups, 'COUNT(*) AS n', *sums])} "
-        f"FROM {source} "
-        + (f"WHERE {' AND '.join(where)} " if where else "")
-        + (f"GROUP BY {group_list} ORDER BY {group_list}" if group_by else "")
+    condition = f"WHERE {' AND '.join(where)} " if where else ""
+    sql = f"SELECT {', '.join([*groups, 'COUNT(*) AS n', *sums])} FROM {relation} {condition}" + (
+        f"GROUP BY {group_list} ORDER BY {group_list}" if group_by else ""
     )
-    totals_sql = f"SELECT COUNT(*), SUM({weight_expr}) FROM {source}" + (
-        f" WHERE {' AND '.join(where)}" if where else ""
-    )
+    totals_sql = f"SELECT COUNT(*), SUM({weight_expr}) FROM {relation} {condition}"
+    # DuckDB draws a terminal progress bar on long queries, on by default
+    # (seen 2026-09-24 on the 1,000-replicate joins); over the stdio transport
+    # anything printed to stdout corrupts the MCP stream and drops the client.
     with duckdb.connect() as connection:
+        connection.execute("SET enable_progress_bar = false")
         rows = connection.execute(sql, params).fetchall()
         total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
     return rows, int(total_n or 0), float(total_weight or 0.0)
@@ -222,15 +257,27 @@ class VarianceMethod:
     main_weight: str
     replicates: tuple[str, ...]
     divisor: float
+    # "mean": deviations from the replicates' mean (Census random groups);
+    # "estimate": from the full-sample estimate (StatCan bootstrap guides).
+    centre: Literal["mean", "estimate"]
     description: str
+    replicate_file: str | None = None  # substring of the separate bootstrap file's name
+    id_variable: str | None = None
 
-    def standard_error(self, replicate_estimates: list[float | None]) -> float | None:
+    def standard_error(
+        self, estimate: float | None, replicate_estimates: Sequence[float | None]
+    ) -> float | None:
         values = [v for v in replicate_estimates if v is not None]
-        if len(values) != len(self.replicates):
+        if len(values) != len(self.replicates) or estimate is None:
             return None
-        centre = sum(values) / len(values)
+        centre = sum(values) / len(values) if self.centre == "mean" else estimate
         return math.sqrt(sum((v - centre) ** 2 for v in values) / self.divisor)
 
+
+_BOOTSTRAP_NOTE = (
+    "The PUMF bootstrap weights are perturbed for confidentiality, so the standard error "
+    "is comparable to, not the same as, StatCan's official one."
+)
 
 # Each entry is copied from the survey's own user guide; add a PUMF only
 # after checking its guide, never by analogy with another survey.
@@ -243,6 +290,7 @@ VARIANCE_METHODS: tuple[VarianceMethod, ...] = (
         # Fay adjustment over 16 groups x 15 (2021 Census Individuals PUMF
         # User Guide, chapter 3, section C.2, checked 2026-09-24).
         divisor=35.0,
+        centre="mean",
         description=(
             "dependent random groups with Fay adjustment (2021 Census Individuals PUMF User "
             "Guide, ch. 3, C.2): the estimate under each of WT1-WT16, then "
@@ -250,7 +298,55 @@ VARIANCE_METHODS: tuple[VarianceMethod, ...] = (
             "overestimates the error for small estimates."
         ),
     ),
+    VarianceMethod(
+        # EICS 2024 User Guide, section 10.1, equation (1), checked 2026-09-24.
+        url_marker="/89m0025x/2022001/2024.zip",
+        main_weight="WTPM",
+        replicates=tuple(f"WRPM{i}" for i in range(1, 1001)),
+        divisor=1000.0,
+        centre="estimate",
+        description=(
+            "bootstrap (EICS 2024 User Guide, s. 10.1, eq. 1): the estimate under each of "
+            "WRPM1-WRPM1000, then sqrt(sum of squared deviations from the full-sample "
+            f"estimate / 1000). {_BOOTSTRAP_NOTE}"
+        ),
+        replicate_file="pumf_bsw.txt",
+        id_variable="PUMFID",
+    ),
+    VarianceMethod(
+        # CSWC 2024-2025 User Guide, section 10.1, equation (1), checked 2026-09-24.
+        url_marker="/14-25-0001/2026001/2024-2025.zip",
+        main_weight="CSWCWT",
+        replicates=tuple(f"BSW{i}" for i in range(1, 1001)),
+        divisor=1000.0,
+        centre="estimate",
+        description=(
+            "bootstrap (CSWC 2024-2025 User Guide, s. 10.1, eq. 1): the estimate under each "
+            "of BSW1-BSW1000, then sqrt(sum of squared deviations from the full-sample "
+            f"estimate / 1000). {_BOOTSTRAP_NOTE}"
+        ),
+        replicate_file="pumf_bsw.txt",
+        id_variable="PUMFID",
+    ),
 )
+
+
+async def _replicate_source(
+    url: str, members: list[remote_zip.ZipMember], file_marker: str
+) -> DataSource:
+    """The separate bootstrap-weight file, with its layout from its own .dct."""
+    data = next((m for m in members if m.name.lower().endswith(file_marker)), None)
+    layout = next(
+        (m for m in members if "bsw" in m.name.lower() and m.name.lower().endswith(".dct")), None
+    )
+    if data is None or layout is None:
+        raise NotFound(
+            f"The bootstrap weight file ({file_marker}) or its layout is not in the ZIP."
+        )
+    dct = await remote_zip.read_member(url, layout)
+    columns = codebooks.parse_stata_dct(dct.decode("cp1252", errors="replace"))
+    path = await local_data_file(url, data)
+    return DataSource(path, fixed_width=True, columns=columns)
 
 
 def variance_method(url: str) -> VarianceMethod | None:
@@ -334,24 +430,28 @@ async def tabulate(
             raise UpstreamError(f"The codebook gives no column positions for {missing}.")
     path = await local_data_file(url, member)
 
-    method = variance_method(url) if not weight or weight.upper() == chosen_weight else None
+    method = variance_method(url)
     if method and chosen_weight != method.main_weight:
         method = None
     all_weights = [chosen_weight, *(method.replicates if method else [])]
-    missing_replicates = [w for w in all_weights if w not in by_name]
+    replicate_source = None
+    if method and method.replicate_file:
+        replicate_source = await _replicate_source(url, members, method.replicate_file)
+    known = {**by_name, **(replicate_source.columns if replicate_source else {})}
+    missing_replicates = [w for w in all_weights if w not in known]
     if missing_replicates:
-        raise UpstreamError(f"Replicate weights {missing_replicates} are not in the codebook.")
+        raise UpstreamError(f"Replicate weights {missing_replicates[:3]} are not in the codebook.")
 
     result_rows, total_n, total_weight = await asyncio.to_thread(
         _run_query,
-        path,
-        fixed_width,
-        by_name,
+        DataSource(path, fixed_width, by_name),
         upper_rows,
         all_weights,
         statistic,
         value_variable.upper() if value_variable else None,
         upper_filters,
+        replicate_source,
+        method.id_variable if method else None,
     )
     width = len(upper_rows)
     labels = {name: _labels(by_name[name]) for name in upper_rows}
@@ -364,7 +464,7 @@ async def tabulate(
     ]:
         codes = [str(c) if c is not None else "" for c in row[:width]]
         estimate = per_weight[0]
-        standard_error = method.standard_error(per_weight[1:]) if method else None
+        standard_error = method.standard_error(estimate, per_weight[1:]) if method else None
         cells.append(
             TableCell(
                 groups=[
