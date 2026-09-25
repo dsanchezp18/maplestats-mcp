@@ -483,12 +483,24 @@ async def tabulate(
             )
         )
     replicates = [w for w in weights if w != chosen_weight]
+    bootstrap_files = [
+        m.name
+        for m in members
+        if "bsw" in m.name.lower()
+        and m.name.lower().endswith(".txt")
+        and "layout" not in m.name.lower()
+    ]
     variance_note = (
         f"Standard errors: {method.description}"
         if method
-        else "Standard errors are not computed for this PUMF yet: use its replicate/bootstrap "
-        "weights and the variance method in its user guide"
-        + (f" (replicate weights here: {', '.join(replicates[:5])}...)" if replicates else "")
+        else "Standard errors are not computed for this PUMF: its variance method has not been "
+        "verified from its user guide"
+        + (f"; replicate weights: {', '.join(replicates[:5])}..." if replicates else "")
+        + (
+            f"; bootstrap weights ship in {bootstrap_files[0]} (joined on the record id)"
+            if bootstrap_files
+            else ""
+        )
         + "."
     )
     return WeightedTable(
