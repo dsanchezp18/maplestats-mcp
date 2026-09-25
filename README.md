@@ -277,3 +277,17 @@ open-source work building MCP servers for government and public data
 and **DweskZ's `EcuDataMCP`** for the hosting middleware, alongside
 the StatCan-specific benchmarks reviewed while researching this
 project. Thank you to their authors for building in the open.
+
+Much of the Canadian data work here stands on **Jens von Bergmann's
+([mountainMath](https://github.com/mountainMath)) R packages** and their
+co-authors:
+
+- [`cmhc`](https://github.com/mountainMath/cmhc): the CMHC module was
+  audited against its reverse-engineering of CMHC's Housing Market
+  Information Portal.
+- [`cansim`](https://github.com/mountainMath/cansim): the R code that
+  `reproduce_code` generates for Statistics Canada tables and vectors uses it.
+- [`cancensus`](https://github.com/mountainMath/cancensus): a model for
+  census data access in R.
+- [`canivt`](https://github.com/mountainMath/canivt): reads Beyond 20/20
+  IVT files; census tables that exist only in that format are routed to it.
