@@ -487,6 +487,56 @@ TOPICS: tuple[Topic, ...] = (
     ),
 )
 
+CLEANTECH = Topic(
+    "cleantech",
+    "Clean technology and the environmental economy",
+    (
+        "clean technology",
+        "cleantech",
+        "clean tech",
+        "environmental goods",
+        "green economy",
+        "clean energy jobs",
+        "technologies propres",
+        "economie verte",
+    ),
+    (
+        # Clean Technology Data Strategy (NRCan, ISED, StatCan): its statistics
+        # are the ECTPEA tables (checked 2026-09-24: 36-10-0366, -0372, -0411...).
+        PlanStep(
+            "wds_search_cubes", "Environmental and Clean Technology Products Economic Account"
+        ),
+        PlanStep("ckan_search_datasets", "clean technology use and adoption: portal='federal'"),
+        PlanStep("nrcan_energy_use_list_products", "energy use by sector, for context"),
+    ),
+    ("ECTPEA figures are StatCan satellite-account estimates, revised with each release.",),
+)
+INTELLECTUAL_PROPERTY = Topic(
+    "ip",
+    "Patents, trademarks and industrial designs",
+    (
+        "patent",
+        "trademark",
+        "industrial design",
+        "intellectual property",
+        "cipo",
+        "ip horizons",
+        "brevet",
+        "marque de commerce",
+        "propriete intellectuelle",
+    ),
+    (
+        PlanStep("ised_cipo_search_trademarks", "search trademark records"),
+        # IP Horizons researcher datasets are published on open.canada.ca.
+        PlanStep(
+            "ckan_search_datasets",
+            "IP Horizons patent/design data: portal='federal', query='Patent data'",
+        ),
+    ),
+    ("IP Horizons researcher datasets are quarterly bulk files (CSV/TXT).",),
+)
+TOPICS = (*TOPICS, CLEANTECH, INTELLECTUAL_PROPERTY)
+
 MICRODATA = Topic(
     "microdata",
     "Survey microdata (PUMFs)",

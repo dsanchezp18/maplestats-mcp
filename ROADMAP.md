@@ -274,15 +274,14 @@ Audited 2026-09-19 against the reference `mountainMath/cmhc` R package's own sou
 | Agriculture and Agri-Food Canada (AAFC) | Not started | From Notion: commodity prices, livestock, crops, agricultural trade, geospatial data. Check what `ckan_*` (portal="federal") already reaches before a dedicated adaptor. |
 | Financial Consumer Agency of Canada (FCAC) | Not started | From Notion: consumer financial products, banking fees, mortgages, financial wellbeing research. |
 | Canadian Dairy Commission and provincial marketing boards | Not started | From Notion: regulated agricultural prices, quotas, production. A family of small adaptors rather than one dataset. |
-| CIPO patents (dedicated adaptor) | Not started | From Notion: search by patent/application number, title, applicant, inventor, dates and classification, with legal status and citations. Today only the bulk "Patent data" exports are reachable through `ckan_*`; `ised_cipo_` covers trademarks. |
+| CIPO patents via IP Horizons | Partly covered | Checked 2026-09-24: IP Horizons (CIPO's quarterly researcher datasets for patents, trademarks and industrial designs, CSV/TXT; weekly XML) is published on open.canada.ca as "Patent data", "Trademark Data" and "Industrial Design Data", so `ckan_*` (portal="federal") already finds and downloads it, and `plan_query` routes IP questions there. Open: a dedicated adaptor for queries by applicant, inventor, classification or date over those files. IP Horizons does not cover PMPRB or Business Number validation (separate rows). |
 | ISED Business Number (BN) validation | Not started | From Notion: check whether the BN Web Validation Look-Up Tool has a public or programmatic endpoint, its authentication, permitted uses and fields. Corporations Canada search already ships as `ised_corporations_`. |
 | OpenParliament committees | Not started | From Notion's legislation section: committees and legislative history beyond the shipped bills, votes and Hansard tools. Note the scope question below. |
+| Clean Technology Data Strategy (NRCan, ISED, StatCan; Clean Growth Hub) | Partly covered | Checked 2026-09-24: its statistics are StatCan's Environmental and Clean Technology Products Economic Account (tables 36-10-0366, -0370, -0371, -0372, -0411, -0627 and more, via `wds_`) plus open.canada.ca datasets on clean-technology use and adoption (via `ckan_*`); `plan_query` has a clean-technology topic. Open: the federal clean-technology investment data (2016-2024, 57 programs across 22 organizations, Clean Growth Hub) and NRCan's Cleantech Industry Survey results; confirm whether either is machine-readable before building an adaptor. |
 
-**Scope question to settle:** the Notion page's naming decision (2026-09-14)
-puts legislation and parliamentary information out of scope for MapleData,
-while its later "Legislation and parliamentary information" section and this
-repo (`gazette_`, `parliament_`, `senate_`, shipped 2026-09-23/24) treat them
-as in scope. Justice Laws statute text is out of scope here (2026-09-23).
+**Scope (decided 2026-09-24):** parliamentary and regulatory data stay in
+MapleData (`gazette_`, `parliament_`, `senate_`); full statute text (Justice
+Laws) stays out of scope. The Notion naming decision has been updated to match.
 
 ## Launch and distribution
 
