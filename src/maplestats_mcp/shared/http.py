@@ -24,6 +24,7 @@ this project's primary data source silently timing out.
 
 from __future__ import annotations
 
+import ssl
 from typing import Any
 
 import httpx
@@ -35,14 +36,20 @@ _client = httpx.AsyncClient(timeout=30.0, http2=True)
 
 
 def new_client(
-    *, timeout: float = 30.0, http2: bool = True, follow_redirects: bool = False
+    *,
+    timeout: float = 30.0,
+    http2: bool = True,
+    follow_redirects: bool = False,
+    verify: ssl.SSLContext | bool = True,
 ) -> httpx.AsyncClient:
     """A module-owned client, for the few sources the shared singleton cannot serve.
 
     Use this instead of a bare `httpx.AsyncClient(...)` when a source
     needs its own cookie jar (a session warm-up the shared client must
     not leak into other sources), redirect following, or `http2=False`
-    (CRA's registry page, see its client.py). It keeps the project's
+    (CRA's registry page, see its client.py), or a `verify` context that
+    adds an intermediate certificate a server fails to send (CIPO's
+    opic-cipo.ca, see ised/ip_horizons/client.py). It keeps the project's
     identifying User-Agent and the `http2=True` default that StatCan's
     network path requires (see this module's docstring).
     """
@@ -50,6 +57,7 @@ def new_client(
         timeout=timeout,
         http2=http2,
         follow_redirects=follow_redirects,
+        verify=verify,
         headers=_DEFAULT_HEADERS,
     )
 

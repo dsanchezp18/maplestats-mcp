@@ -527,13 +527,10 @@ INTELLECTUAL_PROPERTY = Topic(
     ),
     (
         PlanStep("ised_cipo_search_trademarks", "search trademark records"),
-        # IP Horizons researcher datasets are published on open.canada.ca.
-        PlanStep(
-            "ckan_search_datasets",
-            "IP Horizons patent/design data: portal='federal', query='Patent data'",
-        ),
+        PlanStep("ised_ip_horizons_list_files", "IP Horizons bulk patent/design/trademark files"),
+        PlanStep("ised_ip_horizons_get_dictionary", "column meanings for those files"),
     ),
-    ("IP Horizons researcher datasets are quarterly bulk files (CSV/TXT).",),
+    ("IP Horizons researcher datasets are quarterly bulk ZIPs of pipe-delimited CSV.",),
 )
 TOPICS = (*TOPICS, CLEANTECH, INTELLECTUAL_PROPERTY)
 
