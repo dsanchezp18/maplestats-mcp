@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from maple_data_mcp.modules.reproduce import client
-from maple_data_mcp.shared.errors import InvalidInput
+from maplestats_mcp.modules.reproduce import client
+from maplestats_mcp.shared.errors import InvalidInput
 
 
 def _by_language(result) -> dict[str, str]:

@@ -1,6 +1,6 @@
-# MapleData MCP — Project Guide
+# MapleStats MCP — Project Guide
 
-Source of truth: Notion page "MapleData MCP" (Programming Hub / Software
+Source of truth: Notion page "MapleStats MCP" (Programming Hub / Software
 Projects & Ideas), last edited 2026-09-14. This guide is a working copy of
 that page for local reference during development. When the two diverge,
 update this file from Notion rather than editing Notion from memory.
@@ -12,7 +12,7 @@ update this file from Notion rather than editing Notion from memory.
 | Development Stage | Local beta / pre-hosting |
 | Priority | High |
 | Project Type | Data product |
-| Repository | `maple-data-mcp` |
+| Repository | `maplestats-mcp` |
 | Required Skills | Python, APIs, AI, Data engineering |
 | Target Audience | Government, Researchers |
 | Problem | Canadian public data access is fragmented across Statistics Canada, the Bank of Canada, CMHC, federal/provincial/municipal open-data portals, Census products, PUMFs and legacy dissemination formats. Build one agent-friendly access layer across them. |
@@ -34,8 +34,8 @@ still planned, blocked, or outside a given adaptor's scope.
   active maintenance. Keep the current typed, source-per-module architecture
   as the base, and add or adapt coverage only after checking the real source
   API and its live response shapes.
-- **Naming:** decided 2026-09-14. Full name **MapleData MCP**; repository
-  `maple-data-mcp`. Scope is pure Canadian data/statistical analysis (math
+- **Naming:** decided 2026-09-14. Full name **MapleStats MCP**; repository
+  `maplestats-mcp`. Scope is pure Canadian data/statistical analysis (math
   and numbers) — legislation and parliamentary information are explicitly
   out of scope for this project and belong to a separate MCP.
 - **Distribution path:** once complete, stable and presentable, explore

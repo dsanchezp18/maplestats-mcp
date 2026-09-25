@@ -1,4 +1,4 @@
-from maple_data_mcp import config
+from maplestats_mcp import config
 
 
 def test_transport_defaults_to_stdio_for_local_mcp_clients(monkeypatch):

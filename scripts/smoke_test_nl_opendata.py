@@ -12,8 +12,8 @@ import sys
 from collections.abc import Awaitable
 from typing import Any
 
-from maple_data_mcp.modules.nl_opendata import client
-from maple_data_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.modules.nl_opendata import client
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 
 async def _check(label: str, awaitable: Awaitable[Any]) -> Any:

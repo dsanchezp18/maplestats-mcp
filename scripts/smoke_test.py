@@ -19,7 +19,7 @@ from fastmcp import Client
 from fastmcp.client.client import CallToolResult
 from mcp.types import TextContent
 
-from maple_data_mcp.server import mcp
+from maplestats_mcp.server import mcp
 
 
 def _text_of(result: CallToolResult) -> str:

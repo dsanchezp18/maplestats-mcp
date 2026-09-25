@@ -15,8 +15,8 @@ import sys
 
 import httpx
 
-from maple_data_mcp.modules.statcan.census_profile_archive import client
-from maple_data_mcp.shared.errors import InvalidInput
+from maplestats_mcp.modules.statcan.census_profile_archive import client
+from maplestats_mcp.shared.errors import InvalidInput
 
 
 async def _check_url_serves_a_file(url: str) -> bool:

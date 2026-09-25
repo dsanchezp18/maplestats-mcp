@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from maple_data_mcp.shared import cache as cache_module
-from maple_data_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared import cache as cache_module
+from maplestats_mcp.shared.cache import cached_fetch
 
 
 async def test_cached_fetch_calls_fetcher_once_on_repeat_calls():

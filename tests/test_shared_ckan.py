@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from maple_data_mcp.shared.ckan import (
+from maplestats_mcp.shared.ckan import (
     CkanConfig,
     action,
     excerpt,
@@ -13,7 +13,7 @@ from maple_data_mcp.shared.ckan import (
     pick_translated_list,
     to_bool,
 )
-from maple_data_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 _CONFIG = CkanConfig(
     source="ckan-test",

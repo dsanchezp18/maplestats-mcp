@@ -27,7 +27,7 @@ from typing import Any
 from fastmcp import Client
 from mcp.types import TextContent
 
-from maple_data_mcp.server import mcp
+from maplestats_mcp.server import mcp
 
 Context = dict[str, Any]
 Args = dict[str, Any] | Callable[[Context], dict[str, Any]]

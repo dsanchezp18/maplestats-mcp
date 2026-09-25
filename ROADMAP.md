@@ -1,6 +1,6 @@
 # Roadmap
 
-Source coverage plan for MapleData MCP. This is the authoritative list of
+Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
@@ -280,7 +280,7 @@ Audited 2026-09-19 against the reference `mountainMath/cmhc` R package's own sou
 | Clean Technology Data Strategy (NRCan, ISED, StatCan; Clean Growth Hub) | Partly covered | Checked 2026-09-24: its statistics are StatCan's Environmental and Clean Technology Products Economic Account (tables 36-10-0366, -0370, -0371, -0372, -0411, -0627 and more, via `wds_`) plus open.canada.ca datasets on clean-technology use and adoption (via `ckan_*`); `plan_query` has a clean-technology topic. Open: the federal clean-technology investment data (2016-2024, 57 programs across 22 organizations, Clean Growth Hub) and NRCan's Cleantech Industry Survey results; confirm whether either is machine-readable before building an adaptor. |
 
 **Scope (decided 2026-09-24):** parliamentary and regulatory data stay in
-MapleData (`gazette_`, `parliament_`, `senate_`); full statute text (Justice
+MapleStats (`gazette_`, `parliament_`, `senate_`); full statute text (Justice
 Laws) stays out of scope. The Notion naming decision has been updated to match.
 
 ## Launch and distribution

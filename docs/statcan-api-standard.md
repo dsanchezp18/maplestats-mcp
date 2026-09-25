@@ -4,7 +4,7 @@ Investigated 2026-09-14. Covers the official StatCan API surface itself,
 plus what the two dedicated StatCan-specific MCP benchmarks named in the
 [project guide](../PROJECT_GUIDE.md) (`Aryan-Jhaveri/mcp-statcan`,
 `pipeworx-io/mcp-statcan`) actually implement against it — so the gap
-analysis for MapleData's StatCan module is grounded in code, not just the
+analysis for MapleStats's StatCan module is grounded in code, not just the
 official docs.
 
 ## There are two separate StatCan APIs
@@ -61,7 +61,7 @@ official docs.
 - Purpose per StatCan: facilitate data harmonization across departments
   and external partners via standardized reference data through an open
   API.
-- This maps directly onto the MapleData project guide's ambition to make
+- This maps directly onto the MapleStats project guide's ambition to make
   "StatCan documentation pages a first-class agent-accessible source" —
   RDaaS delivers concepts/classifications/methodology as a structured
   REST/JSON API, not something that requires scraping PDFs or HTML
@@ -113,7 +113,7 @@ Both repos were cloned and inspected directly (not just their READMEs).
   a real design tradeoff of building on someone else's gateway rather
   than a standalone server.
 
-## Implication for MapleData's StatCan module
+## Implication for MapleStats's StatCan module
 
 - **RDaaS is a genuine, confirmed gap** across every benchmark reviewed
   (ReyemTech, Aryan's, pipeworx-io's). Building it is real new coverage,
@@ -127,12 +127,12 @@ Both repos were cloned and inspected directly (not just their READMEs).
   sampling on wildcarded large dimensions) that a naive implementation
   would rediscover the hard way.
 - **Aryan's hosted/local tool-split and CLI-plus-MCP dual surface** are
-  both worth adopting as general MapleData architecture patterns (see
+  both worth adopting as general MapleStats architecture patterns (see
   the [architecture decision page](https://app.notion.com/p/3db4d10b4945813aa4d2cd0217038de1) in Notion), not just for the StatCan
   module specifically.
 - The response-payload gotchas (`scalarFactorCode` not auto-applied,
   the 12am-8:30am ET lock window, `securityLevelCode` suppression) must
-  be handled explicitly in MapleData's `statcan/client.py` — none of
+  be handled explicitly in MapleStats's `statcan/client.py` — none of
   this is optional correctness work, since silently returning an
   unscaled value or a stale locked-window response would be a real data
   error, not a style issue.

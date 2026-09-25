@@ -1,0 +1,38 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.dsanchezp18/maplestats-mcp",
+  "title": "MapleStats MCP",
+  "description": "Canadian public data: StatCan, Census, PUMFs, Bank of Canada, CMHC and open-data portals (EN/FR).",
+  "repository": {
+    "url": "https://github.com/dsanchezp18/maplestats-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/dsanchezp18/maplestats-mcp",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "maplestats-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MAPLE_TOOL_TIMEOUT_SECONDS",
+          "description": "Longest a tool call may run before it fails (default 120).",
+          "isRequired": false,
+          "format": "number"
+        },
+        {
+          "name": "MAPLE_PUMF_CACHE_DIR",
+          "description": "Folder for downloaded PUMF microdata (default: system temp).",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

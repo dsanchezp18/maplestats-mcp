@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from maple_data_mcp.shared.rate_limiter import TokenBucket, get_limiter
+from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
 
 async def test_token_bucket_allows_burst_up_to_capacity():

@@ -8,7 +8,7 @@ import sys
 
 from fastmcp import Client, FastMCP
 
-from maple_data_mcp.shared.timeouts import ToolTimeoutMiddleware
+from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 
 
 async def test_slow_tool_fails_with_named_error_instead_of_hanging():
@@ -29,7 +29,7 @@ async def test_slow_tool_fails_with_named_error_instead_of_hanging():
 def test_startup_does_not_import_module_tests():
     # A fresh interpreter: pytest itself has already imported the test modules here.
     probe = (
-        "import sys, maple_data_mcp.server; "
+        "import sys, maplestats_mcp.server; "
         "print(sorted(n for n in sys.modules if '__tests__' in n or n == 'pytest'))"
     )
     output = subprocess.run(
@@ -40,8 +40,8 @@ def test_startup_does_not_import_module_tests():
 
 def test_tabulation_prints_nothing_to_stdout(tmp_path, capfd):
     # Over stdio, any stdout write corrupts the MCP stream.
-    from maple_data_mcp.modules.statcan.pumf import tabulate
-    from maple_data_mcp.modules.statcan.pumf.schemas import PumfVariable
+    from maplestats_mcp.modules.statcan.pumf import tabulate
+    from maplestats_mcp.modules.statcan.pumf.schemas import PumfVariable
 
     data = tmp_path / "data.csv"
     data.write_text("PROV,WT\n" + "48,1\n" * 200_000)

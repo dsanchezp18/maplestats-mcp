@@ -9,8 +9,8 @@ import zipfile
 import httpx
 import pytest
 
-from maple_data_mcp.shared import remote_zip
-from maple_data_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared import remote_zip
+from maplestats_mcp.shared.errors import UpstreamError
 
 URL = "https://www150.statcan.gc.ca/n1/pub/x/file.zip"
 

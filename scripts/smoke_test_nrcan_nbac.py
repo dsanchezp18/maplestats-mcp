@@ -7,8 +7,8 @@ import sys
 from collections.abc import Awaitable
 from typing import Any
 
-from maple_data_mcp.modules.nrcan_nbac import client
-from maple_data_mcp.shared.errors import InvalidInput
+from maplestats_mcp.modules.nrcan_nbac import client
+from maplestats_mcp.shared.errors import InvalidInput
 
 
 async def _check(label: str, awaitable: Awaitable[Any]) -> Any:

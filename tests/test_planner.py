@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import pytest
 
-from maple_data_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
-from maple_data_mcp.modules.ckan.constants import PORTALS as CKAN_PORTALS
-from maple_data_mcp.modules.planner import client
-from maple_data_mcp.modules.planner.places import CITIES, PROVINCES
-from maple_data_mcp.modules.planner.topics import FALLBACK_STEPS, TOPICS
-from maple_data_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
-from maple_data_mcp.server import mcp
-from maple_data_mcp.shared.errors import InvalidInput
+from maplestats_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
+from maplestats_mcp.modules.ckan.constants import PORTALS as CKAN_PORTALS
+from maplestats_mcp.modules.planner import client
+from maplestats_mcp.modules.planner.places import CITIES, PROVINCES
+from maplestats_mcp.modules.planner.topics import FALLBACK_STEPS, TOPICS
+from maplestats_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
+from maplestats_mcp.server import mcp
+from maplestats_mcp.shared.errors import InvalidInput
 
 
 def _all_steps():

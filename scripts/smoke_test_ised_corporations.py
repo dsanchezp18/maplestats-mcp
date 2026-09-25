@@ -7,8 +7,8 @@ import sys
 from collections.abc import Awaitable
 from typing import Any
 
-from maple_data_mcp.modules.ised.corporations import client
-from maple_data_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.modules.ised.corporations import client
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 # A long-standing, real federal corporation (Abbotsford Chamber of Commerce),
 # used only because its id is stable enough to check against repeatedly.

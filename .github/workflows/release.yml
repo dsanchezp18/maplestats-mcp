@@ -1,0 +1,56 @@
+name: Release
+
+# Push a tag like v0.1.0 whose version matches pyproject.toml and server.json
+# (tests/test_release.py checks that they agree).
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run pytest -q
+      - name: Tag matches the package version
+        run: test "${GITHUB_REF_NAME#v}" = "$(uv run python -c 'import maplestats_mcp; print(maplestats_mcp.__version__)')"
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # PyPI trusted publishing: no token stored in the repo
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  mcp-registry:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # GitHub OIDC login to the MCP Registry
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mcp-publisher
+        run: |
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+      # PyPI can take a minute to serve a new release's README, which the
+      # registry reads to verify ownership (the mcp-name comment).
+      - run: sleep 60
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

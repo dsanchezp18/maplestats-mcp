@@ -12,7 +12,7 @@ import re
 import pytest
 from fastmcp import Client
 
-from maple_data_mcp.server import mcp
+from maplestats_mcp.server import mcp
 
 TOP_N = 3
 

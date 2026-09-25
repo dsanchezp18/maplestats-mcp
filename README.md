@@ -1,23 +1,27 @@
 <p align="center">
-  <h1 align="center">🍁 MapleData MCP</h1>
+  <h1 align="center">🍁 MapleStats MCP</h1>
   <p align="center">
     <strong>One MCP server for Canadian public data.</strong>
   </p>
 </p>
 
-MapleData MCP gives AI agents (Claude, Cursor, and any MCP-compatible
-client) structured, typed access to Canadian public data through a
-single server — covering Statistics Canada, the Bank of Canada, and
-verified federal, provincial, territorial, and municipal CKAN portals.
+<!-- mcp-name: io.github.dsanchezp18/maplestats-mcp -->
 
-*MapleData MCP donne aux agents IA (Claude, Cursor et tout client
+MapleStats MCP gives AI agents (Claude, Cursor, and any MCP-compatible
+client) structured, typed access to Canadian public data through a
+single server — covering Statistics Canada (tables, Census and public use
+microdata), the Bank of Canada, CMHC, federal agencies, and federal,
+provincial, territorial and municipal open-data portals, in English and
+French.
+
+*MapleStats MCP donne aux agents IA (Claude, Cursor et tout client
 compatible MCP) un accès structuré et typé aux données publiques
 canadiennes par l'entremise d'un seul serveur — couvrant Statistique
 Canada, la Banque du Canada, ainsi que des portails CKAN fédéraux,
 provinciaux, territoriaux et municipaux vérifiés.*
 
-See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for the project vision and
-[`ROADMAP.md`](ROADMAP.md) for source coverage status.
+See [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/PROJECT_GUIDE.md) for the project vision and
+[`ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/ROADMAP.md) for source coverage status.
 
 ## Bilingual by design / Conçu pour être bilingue
 
@@ -87,21 +91,39 @@ datasets, reachable through `ckan_search_datasets(portal="federal", fq="organiza
 Most tools accept `lang: "en"|"fr"` (a documented no-op on single-language
 sources), and every tool returns a typed response with a `provenance`
 block (source, URL, query time, freshness, limits). See
-[`AGENTS.md`](AGENTS.md) for the full architecture and response
+[`AGENTS.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/AGENTS.md) for the full architecture and response
 contract.
 
 ## Install locally (no Docker required)
 
-Install the command directly from GitHub with [uv](https://docs.astral.sh/uv/):
+MapleStats MCP is published on PyPI as `maplestats-mcp`. With
+[uv](https://docs.astral.sh/uv/), MCP clients can run it without a separate
+install step:
 
 ```bash
-uv tool install git+https://github.com/dsanchezp18/maple-data-mcp.git
+uvx maplestats-mcp
 ```
 
-The command is now available on your `PATH`:
+Or install the command once:
 
 ```bash
-maple-data-mcp
+uv tool install maplestats-mcp
+```
+
+```bash
+pip install maplestats-mcp
+```
+
+The development version installs straight from GitHub:
+
+```bash
+uv tool install git+https://github.com/dsanchezp18/maplestats-mcp.git
+```
+
+Once installed, the command is on your `PATH`:
+
+```bash
+maplestats-mcp
 ```
 
 It speaks MCP over **stdio** by default, which is the format local MCP
@@ -111,14 +133,14 @@ do not run Docker.
 To update an existing installation:
 
 ```bash
-uv tool upgrade maple-data-mcp
+uv tool upgrade maplestats-mcp
 ```
 
 If you are working from a clone instead:
 
 ```bash
 uv sync
-uv run maple-data-mcp
+uv run maplestats-mcp
 ```
 
 ### MCP client configuration
@@ -128,8 +150,9 @@ For clients that accept a standard `mcpServers` JSON configuration, add:
 ```json
 {
   "mcpServers": {
-    "maple-data": {
-      "command": "maple-data-mcp"
+    "maplestats": {
+      "command": "uvx",
+      "args": ["maplestats-mcp"]
     }
   }
 }
@@ -138,8 +161,11 @@ For clients that accept a standard `mcpServers` JSON configuration, add:
 For Claude Code:
 
 ```bash
-claude mcp add maple-data -- maple-data-mcp
+claude mcp add maplestats -- uvx maplestats-mcp
 ```
+
+If you installed the command with `uv tool install` or `pip`, use
+`"command": "maplestats-mcp"` instead of `uvx`.
 
 On Windows, make sure the directory where `uv` installs tools is on `PATH`,
 then restart the MCP client after installation.
@@ -153,13 +179,13 @@ uv sync
 **Run directly from a checkout (stdio, for local MCP clients):**
 
 ```bash
-uv run maple-data-mcp
+uv run maplestats-mcp
 ```
 
 **Run as a hosted HTTP server:**
 
 ```bash
-MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 uv run maple-data-mcp
+MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 uv run maplestats-mcp
 ```
 
 See [Hosting](#hosting) below for the full environment-variable
@@ -206,7 +232,7 @@ runs the full gate above plus every `scripts/smoke_test*.py` live smoke
 test. If Docker is installed, it also
 runs a build, `compose up`, and health check.
 
-See [`AGENTS.md`](AGENTS.md) for the full contributor guide, including
+See [`AGENTS.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/AGENTS.md) for the full contributor guide, including
 how to add a new source module.
 
 ## Hosting

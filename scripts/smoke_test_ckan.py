@@ -7,8 +7,8 @@ import sys
 from collections.abc import Awaitable
 from typing import Any
 
-from maple_data_mcp.modules.ckan import client, constants
-from maple_data_mcp.shared.errors import NotFound
+from maplestats_mcp.modules.ckan import client, constants
+from maplestats_mcp.shared.errors import NotFound
 
 # One DataStore-active resource per portal, confirmed live when each
 # portal was added. Alberta's DataStore is disabled: it returns HTTP 500

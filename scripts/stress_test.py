@@ -1,6 +1,6 @@
 """Stress the server as a separate process, the way an MCP client does.
 
-Starts `python -m maple_data_mcp` over stdio (and, with --http, over
+Starts `python -m maplestats_mcp` over stdio (and, with --http, over
 streamable HTTP on a local port), then sends bursts of concurrent calls:
 quick local ones, slow live ones, and calls that fail on purpose. It
 reports every transport-level failure (a dropped connection, a closed
@@ -83,7 +83,7 @@ async def _run(label: str, client: Client, rounds: int) -> bool:
 async def main() -> int:
     rounds = 3
     env = {**os.environ, "MAPLE_TRANSPORT": "stdio"}
-    stdio = Client(StdioTransport(sys.executable, ["-m", "maple_data_mcp"], env=env))
+    stdio = Client(StdioTransport(sys.executable, ["-m", "maplestats_mcp"], env=env))
     passed = await _run("stdio", stdio, rounds)
 
     if "--http" in sys.argv:
@@ -95,7 +95,7 @@ async def main() -> int:
             "MAPLE_PORT": port,
         }
         server = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "maple_data_mcp", env=env
+            sys.executable, "-m", "maplestats_mcp", env=env
         )
         try:
             await asyncio.sleep(30)

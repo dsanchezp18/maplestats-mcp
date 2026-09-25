@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from maple_data_mcp.modules.epcor import client
+from maplestats_mcp.modules.epcor import client
 
 
 async def main() -> int:

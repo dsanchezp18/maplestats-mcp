@@ -3,14 +3,14 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from maple_data_mcp.shared.http import api_get, get_raw, is_retryable, new_client
+from maplestats_mcp.shared.http import api_get, get_raw, is_retryable, new_client
 
 
 async def test_api_get_decodes_json(httpx_mock):
     httpx_mock.add_response(url="https://example.invalid/ok", json={"hello": "world"})
     result = await api_get("https://example.invalid/ok")
     assert result == {"hello": "world"}
-    assert httpx_mock.get_requests()[0].headers["user-agent"] == "maple-data-mcp/0.1"
+    assert httpx_mock.get_requests()[0].headers["user-agent"] == "maplestats-mcp/0.1"
 
 
 async def test_api_get_preserves_custom_headers(httpx_mock):
@@ -82,4 +82,4 @@ async def test_new_client_sends_project_user_agent(httpx_mock):
         await client.get("https://example.test/x")
     finally:
         await client.aclose()
-    assert httpx_mock.get_requests()[0].headers["User-Agent"] == "maple-data-mcp/0.1"
+    assert httpx_mock.get_requests()[0].headers["User-Agent"] == "maplestats-mcp/0.1"

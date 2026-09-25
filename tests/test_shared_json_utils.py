@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from maple_data_mcp.shared.json_utils import get_or, list_or_empty
+from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 
 
 def test_list_or_empty_coalesces_absent_and_null_keys():

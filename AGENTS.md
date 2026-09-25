@@ -1,7 +1,7 @@
 # AGENTS.md — working guide for this repository
 
 This is the canonical guide for any agent (or human) contributing code
-to MapleData MCP. `CLAUDE.md` in this repo intentionally carries no
+to MapleStats MCP. `CLAUDE.md` in this repo intentionally carries no
 independent content — it points here.
 
 Read [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) and [`ROADMAP.md`](ROADMAP.md)
@@ -12,7 +12,7 @@ to build things here, not *what* to build.
 
 ### Module layout
 
-Every data source is a folder under `src/maple_data_mcp/modules/`:
+Every data source is a folder under `src/maplestats_mcp/modules/`:
 
 ```
 modules/<source>/

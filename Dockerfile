@@ -32,4 +32,4 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD python -c "import os, s
 
 # Run the synced virtualenv directly: `uv run` would re-check (and could
 # try to re-sync) the environment on every container start.
-CMD [".venv/bin/python", "-m", "maple_data_mcp"]
+CMD [".venv/bin/python", "-m", "maplestats_mcp"]

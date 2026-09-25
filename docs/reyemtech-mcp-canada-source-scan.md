@@ -3,9 +3,9 @@
 Scan date: 2026-09-14. Source: shallow clone of
 [ReyemTech/mcp-canada](https://github.com/ReyemTech/mcp-canada) at the
 `main` branch tip (v0.12.0, released 2026-08-24). This is a working
-reference for the MapleData MCP fork decision — it records exactly what
+reference for the MapleStats MCP fork decision — it records exactly what
 the benchmark project covers today, so gap analysis against the
-[MapleData MCP vision](../PROJECT_GUIDE.md) doesn't rely on memory or the
+[MapleStats MCP vision](../PROJECT_GUIDE.md) doesn't rely on memory or the
 README's marketing copy.
 
 ## Project health
@@ -106,5 +106,5 @@ remaining provinces/territories: **Newfoundland and Labrador**, **Prince
 Edward Island**, **Northwest Territories**, **Yukon**, **Nunavut**.
 
 These gaps line up closely with the "high-priority additions" and
-"deferred to v1.x/v2" sections of the MapleData MCP project guide — see
+"deferred to v1.x/v2" sections of the MapleStats MCP project guide — see
 that document for the fuller source backlog and sequencing.

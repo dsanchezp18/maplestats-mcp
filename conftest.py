@@ -7,7 +7,7 @@ import sys
 import pytest
 from tenacity import BaseRetrying, wait_none
 
-from maple_data_mcp.shared.rate_limiter import TokenBucket
+from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,7 @@ def _no_retry_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
     shared `BaseRetrying` each call copies its settings from).
     """
     for name, module in list(sys.modules.items()):
-        if not name.startswith("maple_data_mcp") or module is None:
+        if not name.startswith("maplestats_mcp") or module is None:
             continue
         for attr in vars(module).values():
             retrying = getattr(attr, "retry", None)

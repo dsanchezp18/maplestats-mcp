@@ -14,8 +14,8 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from maple_data_mcp.modules.statcan.geo import client
-from maple_data_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.modules.statcan.geo import client
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 
 async def main() -> int:

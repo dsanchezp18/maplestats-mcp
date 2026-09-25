@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastmcp.server.transforms.search import bm25
 
-from maple_data_mcp import server  # noqa: F401 - installs the tokenizer
-from maple_data_mcp.shared.search import tokenize
+from maplestats_mcp import server  # noqa: F401 - installs the tokenizer
+from maplestats_mcp.shared.search import tokenize
 
 
 def test_tokenizer_is_installed_in_fastmcp_bm25():

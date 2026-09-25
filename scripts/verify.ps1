@@ -1,4 +1,4 @@
-# Verification script for MapleData MCP - run this OUTSIDE the sandbox
+# Verification script for MapleStats MCP - run this OUTSIDE the sandbox
 # that built the project, on a machine with normal outbound HTTPS access.
 #
 # Usage (from anywhere):
@@ -68,7 +68,7 @@ foreach ($smokeScript in $liveSmokeScripts) {
 #    Docker isn't installed; not tested in the sandbox that built this).
 $dockerAvailable = Get-Command docker -ErrorAction SilentlyContinue
 if ($dockerAvailable) {
-    $buildOk = Invoke-Checked "docker build" "docker" @("build", "-t", "maple-data-mcp:verify", ".")
+    $buildOk = Invoke-Checked "docker build" "docker" @("build", "-t", "maplestats-mcp:verify", ".")
 
     if ($buildOk) {
         Write-Step "docker compose up + health check"

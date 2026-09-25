@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
-from maple_data_mcp.shared import security
-from maple_data_mcp.shared.security import with_health_endpoint, with_http_security
+from maplestats_mcp.shared import security
+from maplestats_mcp.shared.security import with_health_endpoint, with_http_security
 
 
 def _scope(method: str = "POST", path: str = "/mcp", headers=None, client=("1.2.3.4", 1)):

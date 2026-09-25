@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from maple_data_mcp.shared.envelope import make_provenance, raise_error
-from maple_data_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.envelope import make_provenance, raise_error
+from maplestats_mcp.shared.errors import InvalidInput
 
 
 def test_make_provenance_stamps_required_fields():
