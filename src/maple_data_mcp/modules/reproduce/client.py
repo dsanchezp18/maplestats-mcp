@@ -19,7 +19,13 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 from urllib.parse import urlencode
 
-from maple_data_mcp.modules.reproduce.schemas import Language, ReproductionCode
+from maple_data_mcp.modules.reproduce import cleaning
+from maple_data_mcp.modules.reproduce.schemas import (
+    Language,
+    LanguageChoice,
+    ReproductionCode,
+    Script,
+)
 from maple_data_mcp.shared.envelope import make_provenance
 from maple_data_mcp.shared.errors import InvalidInput, NotFound
 
@@ -42,6 +48,9 @@ class Spec:
     native_packages: dict[str, list[str]] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
     post_json: Any = None
+    source: str = ""  # key into cleaning.SPECIFIC
+    # StatCan's French full-table CSVs use ";" (checked 2026-09-24 on 18100004-fra).
+    delimiter: str = ","
 
 
 def _table_spec(product_id: Any, lang: str) -> Spec:
@@ -60,12 +69,15 @@ def _table_spec(product_id: Any, lang: str) -> Spec:
         native={
             "r": (
                 "library(cansim)\nlibrary(dplyr)\n\n"
-                f'table_{pid} <- get_cansim("{dashed}"{', language = "fr"' if lang == "fr" else ""}) |>\n'
+                f'data <- get_cansim("{dashed}"{', language = "fr"' if lang == "fr" else ""}) |>\n'
                 "  janitor::clean_names()\n"
             )
         },
         native_packages={"r": ["cansim", "dplyr", "janitor"]},
         notes=["The full table is downloaded; filter it to the rows the tool returned."],
+        # French tables name their columns in French (VALEUR, IDENTIFICATEUR SCALAIRE).
+        source="statcan_table" if lang == "en" else "statcan_table_fr",
+        delimiter="," if lang == "en" else ";",
     )
 
 
@@ -82,12 +94,13 @@ def _vector_spec(vector_ids: list[Any], latest_n: int) -> Spec:
         post_json=[{"vectorId": i, "latestN": latest_n} for i in ids],
         native={
             "r": (
-                "library(cansim)\n\n"
-                f"vectors <- get_cansim_vector(c({r_ids})) |>\n  janitor::clean_names()\n"
+                "library(cansim)\nlibrary(dplyr)\n\n"
+                f"data <- get_cansim_vector(c({r_ids})) |>\n  janitor::clean_names()\n"
             )
         },
         native_packages={"r": ["cansim", "janitor"]},
         notes=["WDS returns one object per vector; values are under vectorDataPoint."],
+        source="statcan_vectors",
     )
 
 
@@ -160,6 +173,7 @@ def _boc_spec(args: dict[str, Any]) -> Spec:
         file_name="valet_observations.json",
         method="exact: Valet request rebuilt from the tool's arguments",
         records_path=["observations"],
+        source="valet",
         notes=["Each observation holds one {'v': value} object per series, keyed by series name."],
     )
 
@@ -192,7 +206,7 @@ def _census_table_spec(pid: str, release: str) -> Spec:
     canivt = (
         '# remotes::install_github("mountainMath/canivt")\nlibrary(canivt)\n\n'
         f'download.file("{ivt_url}", "data/raw/table_{pid}.ivt", mode = "wb")\n'
-        f'table_{pid} <- read_ivt("data/raw/table_{pid}.ivt") |>\n  ivt_tidy()\n'
+        f'data <- read_ivt("data/raw/table_{pid}.ivt") |>\n  ivt_tidy()\n'
     )
     if release == "2016":
         return Spec(
@@ -287,28 +301,33 @@ def _spec_from_provenance(url: str) -> Spec:
 
 def _r(spec: Spec) -> tuple[str, list[str]]:
     path = f"data/raw/{spec.file_name}"
+    read = (
+        "read_csv(" if spec.delimiter == "," else f'read_delim(delim = "{spec.delimiter}", file = '
+    )
     if spec.kind == "csv":
         return (
             (
                 "library(readr)\n\n"
                 f'download.file("{spec.url}", "{path}", mode = "wb")\n\n'
-                f'data <- read_csv("{path}") |>\n  janitor::clean_names()\n'
+                f'data <- {read}"{path}") |>\n  janitor::clean_names()\n'
             ),
             ["readr", "janitor"],
         )
     if spec.kind in ("zip", "zip_csv"):
+        folder = f"data/raw/{spec.file_name.removesuffix('.zip')}"
         return (
             (
-                "library(readr)\n\n"
+                "library(readr)\nlibrary(stringr)\n\n"
                 f'download.file("{spec.url}", "{path}", mode = "wb")\n'
-                f'unzip("{path}", exdir = "data/raw/{spec.file_name.removesuffix(".zip")}")\n'
+                f'unzip("{path}", exdir = "{folder}")\n'
                 f'file.remove("{path}")\n\n'
-                "# Pick the data file among the extracted ones before reading it.\n\n"
-                f'data_files <- list.files("data/raw/{spec.file_name.removesuffix(".zip")}", '
-                'pattern = "[.]csv$", full.names = TRUE, recursive = TRUE)\n'
-                "data <- read_csv(data_files[1]) |>\n  janitor::clean_names()\n"
+                "# The ZIP may also hold a metadata CSV; read the data file.\n\n"
+                f'data_files <- list.files("{folder}", pattern = "[.]csv$", full.names = TRUE, '
+                "recursive = TRUE)\n"
+                'data_files <- data_files[!str_detect(str_to_lower(data_files), "metadata")]\n'
+                f"data <- {read}data_files[1]) |>\n  janitor::clean_names()\n"
             ),
-            ["readr", "janitor"],
+            ["readr", "stringr", "janitor"],
         )
     if spec.kind == "json":
         records = "".join(f'[["{key}"]]' for key in spec.records_path)
@@ -361,9 +380,13 @@ def _python(spec: Spec) -> tuple[str, list[str]]:
     fetch = f"{_python_fetch(spec, 'response')}\n"
     save = "response.raise_for_status()\nraw_path.write_bytes(response.content)\n\n"
     packages = ["httpx[http2]", "polars"]
+    separator = "" if spec.delimiter == "," else f', separator="{spec.delimiter}"'
     if spec.kind == "csv":
         return (
-            head + fetch + save + "data = pl.read_csv(raw_path, infer_schema_length=100_000)\n",
+            head
+            + fetch
+            + save
+            + f"data = pl.read_csv(raw_path, infer_schema_length=100_000{separator})\n",
             packages,
         )
     if spec.kind in ("zip", "zip_csv"):
@@ -371,10 +394,15 @@ def _python(spec: Spec) -> tuple[str, list[str]]:
             head.replace("import httpx\n", "import zipfile\n\nimport httpx\n")
             + fetch
             + save
+            + "# The ZIP may also hold a metadata CSV; read the data file.\n\n"
             + "with zipfile.ZipFile(raw_path) as archive:\n"
-            + '    data_name = next(n for n in archive.namelist() if n.lower().endswith(".csv"))\n'
+            + "    data_name = next(\n"
+            + "        n\n"
+            + "        for n in archive.namelist()\n"
+            + '        if n.lower().endswith(".csv") and "metadata" not in n.lower()\n'
+            + "    )\n"
             + "    archive.extract(data_name, RAW_DIR)\n\n"
-            + "data = pl.read_csv(RAW_DIR / data_name, infer_schema_length=100_000)\n",
+            + f"data = pl.read_csv(RAW_DIR / data_name, infer_schema_length=100_000{separator})\n",
             packages,
         )
     if spec.kind == "json":
@@ -392,9 +420,13 @@ def _python(spec: Spec) -> tuple[str, list[str]]:
 
 def _stata(spec: Spec) -> tuple[str, list[str]]:
     path = f"data/raw/{spec.file_name}"
+    delimiters = "" if spec.delimiter == "," else f' delimiters("{spec.delimiter}")'
     if spec.kind == "csv":
         return (
-            f'copy "{spec.url}" "{path}", replace\nimport delimited "{path}", clear varnames(1)\n',
+            (
+                f'copy "{spec.url}" "{path}", replace\n'
+                f'import delimited "{path}", clear varnames(1){delimiters}\n'
+            ),
             [],
         )
     if spec.kind in ("zip", "zip_csv"):
@@ -407,9 +439,14 @@ def _stata(spec: Spec) -> tuple[str, list[str]]:
                 "* unzipfile extracts into the working directory; tar (Windows 10+, macOS,\n"
                 "* Linux) extracts into the folder without a cd.\n\n"
                 f'shell tar -xf "{path}" -C "`folder\'"\n'
+                "* The ZIP may also hold a metadata CSV; read the data file.\n\n"
                 'local csv_files : dir "`folder\'" files "*.csv"\n'
-                "local first_csv : word 1 of `csv_files'\n"
-                "import delimited \"`folder'/`first_csv'\", clear varnames(1)\n"
+                "foreach file of local csv_files {\n"
+                '    if strpos(lower("`file\'"), "metadata") == 0 {\n'
+                "        local data_csv `file'\n"
+                "    }\n"
+                "}\n"
+                f"import delimited \"`folder'/`data_csv'\", clear varnames(1){delimiters}\n"
             ),
             [],
         )
@@ -434,19 +471,26 @@ def _stata(spec: Spec) -> tuple[str, list[str]]:
 def _julia(spec: Spec) -> tuple[str, list[str]]:
     path = f"data/raw/{spec.file_name}"
     head = "using Downloads\nusing TidierFiles\n\n"
+    delim = "" if spec.delimiter == "," else f', delim = "{spec.delimiter}"'
     if spec.kind == "csv":
-        return head + f'Downloads.download("{spec.url}", "{path}")\ndata = read_csv("{path}")\n', [
-            "TidierFiles"
-        ]
+        return (
+            head
+            + f'Downloads.download("{spec.url}", "{path}")\ndata = read_csv("{path}"{delim})\n',
+            ["TidierFiles"],
+        )
     if spec.kind in ("zip", "zip_csv"):
         return (
             (
                 "using Downloads\nusing TidierFiles\nusing ZipFile\n\n"
                 f'Downloads.download("{spec.url}", "{path}")\n'
-                f'archive = ZipFile.Reader("{path}")\n'
-                'data_file = first(f for f in archive.files if endswith(lowercase(f.name), ".csv"))\n'
+                f'archive = ZipFile.Reader("{path}")\n\n'
+                "# The ZIP may also hold a metadata CSV; read the data file.\n\n"
+                "data_file = first(\n"
+                "    f for f in archive.files\n"
+                '    if endswith(lowercase(f.name), ".csv") && !occursin("metadata", lowercase(f.name))\n'
+                ")\n"
                 'write("data/raw/table.csv", read(data_file))\nclose(archive)\n'
-                'data = read_csv("data/raw/table.csv")\n'
+                f'data = read_csv("data/raw/table.csv"{delim})\n'
             ),
             ["TidierFiles", "ZipFile"],
         )
@@ -509,9 +553,32 @@ async def _provenance_url(tool: str, args: dict[str, Any]) -> str:
     return str(url)
 
 
-async def reproduce(tool: str, arguments: dict[str, Any], language: Language) -> ReproductionCode:
-    if language not in _RENDERERS:
-        raise InvalidInput(f"language must be one of {sorted(_RENDERERS)}, got {language!r}.")
+def _script(spec: Spec, language: Language) -> Script | None:
+    """Retrieval plus cleaning in one language, or None when it cannot read the source."""
+    if spec.kind == "html":
+        return None
+    if spec.kind == "ivt" and language != "r":
+        return None  # only canivt (R) reads Beyond 20/20 files
+    if language in spec.native:
+        code, packages = spec.native[language], list(spec.native_packages.get(language, []))
+    else:
+        code, packages = _RENDERERS[language](spec)
+    if spec.kind in ("csv", "json", "zip_csv") or language in spec.native:
+        code = f"{code}\n{cleaning.cleaning(language, spec.source)}"
+        packages += cleaning.PACKAGES[language]
+    return Script(language=language, code=code, packages=sorted(set(packages)))
+
+
+async def reproduce(
+    tool: str, arguments: dict[str, Any], language: LanguageChoice = "all"
+) -> ReproductionCode:
+    languages: list[Language] = (
+        ["r", "python", "stata", "julia"] if language == "all" else [language]  # type: ignore[list-item]
+    )
+    if any(lang not in _RENDERERS for lang in languages):
+        raise InvalidInput(
+            f"language must be 'all' or one of {sorted(_RENDERERS)}, got {language!r}."
+        )
     if tool in ("reproduce_code", "plan_query", "search_tools", "call_tool"):
         raise InvalidInput(f"{tool} does not fetch data, so there is nothing to reproduce.")
     try:
@@ -521,21 +588,22 @@ async def reproduce(tool: str, arguments: dict[str, Any], language: Language) ->
     if spec is None:
         spec = _spec_from_provenance(await _provenance_url(tool, arguments))
 
-    if language in spec.native:
-        code, packages = spec.native[language], spec.native_packages.get(language, [])
-    else:
-        code, packages = _RENDERERS[language](spec)
-    if spec.kind == "ivt" and language != "r":
+    scripts = [s for s in (_script(spec, lang) for lang in languages) if s is not None]
+    skipped = [lang for lang in languages if lang not in {s.language for s in scripts}]
+    if skipped and spec.kind == "ivt":
         spec.notes.append(
-            "Beyond 20/20 IVT files can be read in R with canivt; use the SDMX file otherwise."
+            f"No {', '.join(skipped)} script: Beyond 20/20 IVT files are read only by canivt "
+            "(R); use the SDMX file in other languages."
+        )
+    if spec.kind == "zip":
+        spec.notes.append(
+            "Cleaning is not applied to ZIP contents automatically: pick the data file first."
         )
     return ReproductionCode(
         tool=tool,
-        language=language,
-        code=code,
+        scripts=scripts,
         source_url=spec.url,
         method=spec.method,
-        packages=packages,
         notes=spec.notes,
         provenance=make_provenance(
             source="maple-data-reproduce",

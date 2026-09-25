@@ -44,6 +44,13 @@ class Provenance(BaseModel):
     schema_name: str = Field(
         description="Name of this result's schema, e.g. 'statcan.CubeSummary'."
     )
+    reproduce: str = Field(
+        default=(
+            "For R, Python, Stata and Julia scripts that fetch and clean this data, call "
+            "reproduce_code with this tool's name and arguments."
+        ),
+        description="How to get retrieval and cleaning code for this result.",
+    )
 
 
 class ErrorPayload(BaseModel):
