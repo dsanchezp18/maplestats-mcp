@@ -299,13 +299,13 @@ STEPS: list[Step] = [
         "reproduce",
         "reproduce_code",
         {"tool_name": "boc_get_observations", "arguments": {"series_names": ["FXUSDCAD"]}},
-        _non_empty("code"),
+        _non_empty("scripts"),
     ),
     Step(
         "reproduce",
         "reproduce_code",
         {"tool_name": "cer_list_datasets", "arguments": {"query": "keystone"}, "language": "stata"},
-        _non_empty("code"),
+        _non_empty("scripts"),
     ),
     # Transport Canada vehicle recalls
     Step(
