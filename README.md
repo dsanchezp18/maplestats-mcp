@@ -235,6 +235,14 @@ runs a build, `compose up`, and health check.
 See [`AGENTS.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/AGENTS.md) for the full contributor guide, including
 how to add a new source module.
 
+**Website:** `site/` holds the project website, generated from the tool
+registry by `scripts/build_site.py`:
+
+```bash
+uv run python scripts/build_site.py              # writes build/site/
+uv run python -m http.server --directory build/site 8080
+```
+
 ## Hosting
 
 | Env var | Default | Purpose |

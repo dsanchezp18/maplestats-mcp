@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Connect{fr}Connexion{/} · MapleStats MCP</title>
+<meta name="description" content="{en}Add MapleStats MCP to Claude, Cursor, VS Code, Codex or Gemini CLI, or host it over HTTP.{fr}Ajoutez MapleStats MCP à Claude, Cursor, VS Code, Codex ou Gemini CLI, ou hébergez-le en HTTP.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Connect{fr}Connexion{/}</p>
+  <h1>{en}Connect MapleStats to your agent{fr}Connecter MapleStats à votre agent{/}</h1>
+  <p class="lede">{en}MapleStats is a Python package that speaks MCP over stdio. Your client starts it when a conversation needs it and stops it afterwards. Setup takes two steps and needs no account.{fr}MapleStats est un paquet Python qui communique en MCP par stdio. Votre client le lance quand une conversation en a besoin, puis l'arrête. L'installation se fait en deux étapes, sans compte.{/}</p>
+</section>
+
+<section class="wrap guide">
+  <div class="guide-step">
+    <div class="step-text">
+      <p class="step-n">01</p>
+      <h2>{en}Install uv{fr}Installer uv{/}</h2>
+      <p>{en}<a href="https://docs.astral.sh/uv/">uv</a> runs Python tools without a separate install step. Skip this if <code>uv --version</code> already works.{fr}<a href="https://docs.astral.sh/uv/">uv</a> exécute des outils Python sans étape d'installation distincte. Passez cette étape si <code>uv --version</code> fonctionne déjà.{/}</p>
+    </div>
+    <div class="guide-body">
+      <figure class="panel snippet">
+        <figcaption class="panel-bar"><span>macOS, Linux</span><button type="button" class="copy" data-copy-target="uv-unix">{en}Copy{fr}Copier{/}</button></figcaption>
+        <pre><code id="uv-unix">curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
+      </figure>
+      <figure class="panel snippet">
+        <figcaption class="panel-bar"><span>Windows PowerShell</span><button type="button" class="copy" data-copy-target="uv-win">{en}Copy{fr}Copier{/}</button></figcaption>
+        <pre><code id="uv-win">powershell -ExecutionPolicy ByPass -c <span class="s-str">"irm https://astral.sh/uv/install.ps1 | iex"</span></code></pre>
+      </figure>
+    </div>
+  </div>
+
+  <div class="guide-step">
+    <div class="step-text">
+      <p class="step-n">02</p>
+      <h2>{en}Add the server to your client{fr}Ajouter le serveur à votre client{/}</h2>
+      <p>{en}Pick your client. Each entry runs <code>uvx maplestats-mcp</code>, which fetches the latest release the first time and reuses it afterwards.{fr}Choisissez votre client. Chaque entrée exécute <code>uvx maplestats-mcp</code>, qui télécharge la dernière version la première fois, puis la réutilise.{/}</p>
+    </div>
+    <div class="guide-body">
+      <p class="notice">{en}<b>Before the first PyPI release</b>, the package is only on GitHub. Replace <code>uvx maplestats-mcp</code> with <code>uvx --from git+{{repo}} maplestats-mcp</code> (in JSON, <code>"args": ["--from", "git+{{repo}}", "maplestats-mcp"]</code>).{fr}<b>Avant la première version sur PyPI</b>, le paquet n'est offert que sur GitHub. Remplacez <code>uvx maplestats-mcp</code> par <code>uvx --from git+{{repo}} maplestats-mcp</code> (en JSON : <code>"args": ["--from", "git+{{repo}}", "maplestats-mcp"]</code>).{/}</p>
+      {{> clients}}
+    </div>
+  </div>
+
+  <div class="guide-step">
+    <div class="step-text">
+      <p class="step-n">03</p>
+      <h2>{en}Ask a question{fr}Poser une question{/}</h2>
+      <p>{en}Restart the client if it was open, then ask for data. Naming the source is optional; asking for citations makes the agent quote each provenance block.{fr}Redémarrez le client s'il était ouvert, puis demandez des données. Nommer la source est facultatif; demander des citations amène l'agent à citer chaque bloc de provenance.{/}</p>
+    </div>
+    <div class="guide-body">
+      <ul class="prompts">
+        <li>{en}What was the year-over-year change in Canada's consumer price index last month? Cite the table.{fr}Quelle a été la variation sur 12 mois de l'indice des prix à la consommation le mois dernier? Citez le tableau.{/}</li>
+        <li>{en}Compare the average rent of a two-bedroom apartment in Calgary and Edmonton since 2020, using CMHC data.{fr}Comparez le loyer moyen d'un appartement de deux chambres à Calgary et à Edmonton depuis 2020, avec les données de la SCHL.{/}</li>
+        <li>{en}Using the Labour Force Survey public use microdata, estimate the employment rate by province, with its survey weights.{fr}Avec les microdonnées à grande diffusion de l'Enquête sur la population active, estimez le taux d'emploi par province, avec les poids d'enquête.{/}</li>
+        <li lang="{en}fr{fr}en{/}">{en}Quel est le taux directeur de la Banque du Canada, et depuis quand est-il à ce niveau?{fr}What is the Bank of Canada's policy rate, and how long has it been at that level?{/}</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="install">
+  <div class="wrap guide">
+    <div class="guide-step">
+      <div class="step-text">
+        <p class="label">{en}Other ways to install{fr}Autres façons d'installer{/}</p>
+        <h2>{en}Install the command once{fr}Installer la commande une fois{/}</h2>
+        <p>{en}If you prefer a fixed install to <code>uvx</code>, install the command and point your client at <code>maplestats-mcp</code> directly.{fr}Si vous préférez une installation fixe à <code>uvx</code>, installez la commande et indiquez directement <code>maplestats-mcp</code> à votre client.{/}</p>
+      </div>
+      <div class="guide-body">
+        <figure class="panel snippet">
+          <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="inst-1">{en}Copy{fr}Copier{/}</button></figcaption>
+          <pre><code id="inst-1"><span class="s-com"># {en}with uv (upgrade later with: uv tool upgrade maplestats-mcp){fr}avec uv (mise à jour : uv tool upgrade maplestats-mcp){/}</span>
+uv tool install maplestats-mcp
+
+<span class="s-com"># {en}or with pip{fr}ou avec pip{/}</span>
+pip install maplestats-mcp
+
+<span class="s-com"># {en}or the development version, from GitHub{fr}ou la version de développement, depuis GitHub{/}</span>
+uv tool install git+{{repo}}.git</code></pre>
+        </figure>
+      </div>
+    </div>
+
+    <div class="guide-step">
+      <div class="step-text">
+        <p class="label">{en}Hosting{fr}Hébergement{/}</p>
+        <h2>{en}Run it as an HTTP server{fr}L'exécuter comme serveur HTTP{/}</h2>
+        <p>{en}For a shared deployment, set the transport to HTTP. If the server is reachable beyond your machine, set a bearer token and require it. <code>GET /health</code> reports uptime and version and skips authentication.{fr}Pour un déploiement partagé, passez le transport en HTTP. Si le serveur est accessible au-delà de votre machine, définissez un jeton porteur et exigez-le. <code>GET /health</code> indique la durée de fonctionnement et la version, sans authentification.{/}</p>
+      </div>
+      <div class="guide-body">
+        <figure class="panel snippet">
+          <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="host-1">{en}Copy{fr}Copier{/}</button></figcaption>
+          <pre><code id="host-1">MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 \
+MAPLE_AUTH_TOKEN=<span class="s-str">"$(openssl rand -hex 32)"</span> MAPLE_REQUIRE_AUTH=1 \
+uvx maplestats-mcp</code></pre>
+        </figure>
+        <div class="table-wrap">
+          <table class="params env">
+            <thead><tr><th>{en}Variable{fr}Variable{/}</th><th>{en}Default{fr}Défaut{/}</th><th>{en}Purpose{fr}Rôle{/}</th></tr></thead>
+            <tbody>
+              <tr><td><code>MAPLE_TRANSPORT</code></td><td><code>stdio</code></td><td>{en}<code>stdio</code> for local clients, <code>http</code> for hosting{fr}<code>stdio</code> pour les clients locaux, <code>http</code> pour l'hébergement{/}</td></tr>
+              <tr><td><code>MAPLE_HOST</code>, <code>MAPLE_PORT</code></td><td><code>127.0.0.1</code>, <code>8000</code></td><td>{en}HTTP bind address{fr}Adresse d'écoute HTTP{/}</td></tr>
+              <tr><td><code>MAPLE_AUTH_TOKEN</code></td><td>{en}unset{fr}non défini{/}</td><td>{en}Bearer token required on <code>/mcp</code> when set{fr}Jeton porteur exigé sur <code>/mcp</code> s'il est défini{/}</td></tr>
+              <tr><td><code>MAPLE_REQUIRE_AUTH</code></td><td><code>0</code></td><td>{en}Refuse to start without a token when <code>1</code>{fr}Refuse de démarrer sans jeton si <code>1</code>{/}</td></tr>
+              <tr><td><code>MAPLE_RATE_LIMIT_REQUESTS</code>, <code>MAPLE_RATE_LIMIT_WINDOW_SECONDS</code></td><td><code>120</code>, <code>60</code></td><td>{en}Per-client sliding-window rate limit{fr}Limite de débit par client, sur fenêtre glissante{/}</td></tr>
+              <tr><td><code>MAPLE_MAX_CONCURRENT_REQUESTS</code></td><td><code>8</code></td><td>{en}In-flight MCP requests; extra requests wait up to 5 s, then get HTTP 503{fr}Requêtes MCP simultanées; les suivantes attendent jusqu'à 5 s, puis reçoivent HTTP 503{/}</td></tr>
+              <tr><td><code>MAPLE_TOOL_TIMEOUT_SECONDS</code></td><td><code>120</code></td><td>{en}Longest a tool call may run before it fails with a named error{fr}Durée maximale d'un appel d'outil avant une erreur nommée{/}</td></tr>
+              <tr><td><code>MAPLE_CACHE_MAX_ENTRIES</code></td><td><code>2000</code></td><td>{en}Entries per cache bucket in memory{fr}Entrées par compartiment du cache en mémoire{/}</td></tr>
+              <tr><td><code>MAPLE_PUMF_CACHE_DIR</code>, <code>MAPLE_PUMF_CACHE_MAX_GB</code></td><td>{en}system temp, <code>5</code>{fr}dossier temporaire, <code>5</code>{/}</td><td>{en}Where downloaded microdata is kept, and its size cap{fr}Emplacement des microdonnées téléchargées et taille maximale{/}</td></tr>
+              <tr><td><code>MAPLE_IP_HORIZONS_CACHE_DIR</code>, <code>MAPLE_IP_HORIZONS_CACHE_MAX_GB</code></td><td>{en}system temp, <code>3</code>{fr}dossier temporaire, <code>3</code>{/}</td><td>{en}Where CIPO patent tables are kept as Parquet, and the size cap{fr}Emplacement des tableaux de brevets de l'OPIC en Parquet et taille maximale{/}</td></tr>
+              <tr><td><code>MAPLE_SSL_CERTFILE</code>, <code>MAPLE_SSL_KEYFILE</code></td><td>{en}unset{fr}non défini{/}</td><td>{en}Terminate TLS in the server process{fr}Terminaison TLS dans le processus du serveur{/}</td></tr>
+              <tr><td><code>MAPLE_TRUST_PROXY_HEADERS</code></td><td><code>0</code></td><td>{en}Key rate limits on <code>X-Forwarded-For</code>; enable only behind a proxy that sets it{fr}Limites de débit selon <code>X-Forwarded-For</code>; à activer seulement derrière un mandataire qui le définit{/}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="guide-step">
+      <div class="step-text">
+        <p class="label">{en}Troubleshooting{fr}Dépannage{/}</p>
+        <h2>{en}When something does not connect{fr}Quand la connexion échoue{/}</h2>
+      </div>
+      <div class="guide-body">
+        <dl class="faq">
+          <div><dt>{en}The client cannot find <code>uvx</code>{fr}Le client ne trouve pas <code>uvx</code>{/}</dt><dd>{en}Desktop apps do not always read your shell's <code>PATH</code>. Use the full path from <code>which uvx</code> (macOS, Linux) or <code>where uvx</code> (Windows) as the command, then restart the client.{fr}Les applications de bureau ne lisent pas toujours le <code>PATH</code> de votre terminal. Utilisez le chemin complet donné par <code>which uvx</code> (macOS, Linux) ou <code>where uvx</code> (Windows) comme commande, puis redémarrez le client.{/}</dd></div>
+          <div><dt>{en}A microdata or patent call times out{fr}Un appel de microdonnées ou de brevets expire{/}</dt><dd>{en}The first <code>statcan_pumf_tabulate</code> call on a file downloads it, which can take a minute or two; later calls use the cache. Raise <code>MAPLE_TOOL_TIMEOUT_SECONDS</code> if your connection is slow.{fr}Le premier appel de <code>statcan_pumf_tabulate</code> sur un fichier le télécharge, ce qui peut prendre une minute ou deux; les appels suivants utilisent le cache. Augmentez <code>MAPLE_TOOL_TIMEOUT_SECONDS</code> si votre connexion est lente.{/}</dd></div>
+          <div><dt>{en}The agent does not use the tools{fr}L'agent n'utilise pas les outils{/}</dt><dd>{en}Check that the client lists three MapleStats tools: plan_query, search_tools and call_tool. The rest are found through search, so they do not appear in the client's tool list.{fr}Vérifiez que le client affiche trois outils MapleStats : plan_query, search_tools et call_tool. Les autres sont trouvés par la recherche; ils n'apparaissent donc pas dans la liste d'outils du client.{/}</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>
