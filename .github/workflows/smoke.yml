@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       scripts: ${{ steps.list.outputs.scripts }}
+      blocked: ${{ steps.list.outputs.blocked }}
     steps:
       - uses: actions/checkout@v4
       # Same glob as scripts/verify.ps1, so a new smoke_test_*.py is picked
@@ -32,6 +33,10 @@ jobs:
           scripts=$(ls scripts/smoke_test*.py | xargs -n1 basename | sed 's/\.py$//' | jq -R . | jq -s -c .)
           echo "scripts=$scripts" >> "$GITHUB_OUTPUT"
           echo "$scripts"
+          # Known geoblocked sources: see the header of that file.
+          blocked=$(grep -vE '^\s*(#|$)' scripts/smoke_known_blocked.txt | awk '{print $1}' | jq -R . | jq -s -c .)
+          echo "blocked=$blocked" >> "$GITHUB_OUTPUT"
+          echo "known blocked: $blocked"
 
   smoke:
     needs: discover
@@ -39,6 +44,8 @@ jobs:
     # smoke_test_modules.py chains many live calls with retries; the rest
     # finish in a minute or two.
     timeout-minutes: 25
+    # A known geoblocked source may fail without failing the run.
+    continue-on-error: ${{ contains(fromJSON(needs.discover.outputs.blocked), matrix.script) }}
     strategy:
       # One broken upstream must not cancel or hide the others.
       fail-fast: false
@@ -65,3 +72,43 @@ jobs:
             tail -n 40 smoke.log 2>/dev/null || echo "(no log captured)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Opens one issue per breakage instead of relying on GitHub's default
+  # email, which only reaches whoever last edited the cron line. Later
+  # failing runs comment on the open issue rather than opening new ones.
+  alert:
+    needs: [discover, smoke]
+    if: ${{ always() && needs.smoke.result == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BLOCKED: ${{ needs.discover.outputs.blocked }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Open or update the smoke-failure issue
+        run: |
+          # Failed matrix jobs are named after their script; drop the known
+          # geoblocked ones, whose failures are expected.
+          failed=$(gh api --paginate "repos/$GH_REPO/actions/runs/${{ github.run_id }}/jobs" \
+            --jq '.jobs[] | select(.conclusion == "failure") | .name' \
+            | grep -vxF -f <(echo "$BLOCKED" | jq -r '.[]') | sort -u || true)
+          if [ -z "$failed" ]; then
+            echo "Only known geoblocked sources failed; no alert."
+            exit 0
+          fi
+          body=$(printf 'Live smoke run failed: %s\n\nFailing scripts:\n%s\n\nEach job summary shows the last 40 log lines. If a source is geoblocked rather than broken, add it to scripts/smoke_known_blocked.txt.\n' \
+            "$RUN_URL" "$(echo "$failed" | sed 's/^/- `/; s/$/`/')")
+          gh label create smoke-failure --color B60205 \
+            --description "Scheduled live smoke test found a broken upstream" 2>/dev/null || true
+          issue=$(gh issue list --label smoke-failure --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --label smoke-failure \
+              --title "Live smoke tests failing ($(date -u +%Y-%m-%d))" --body "$body"
+          fi
