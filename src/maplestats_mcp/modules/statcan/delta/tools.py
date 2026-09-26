@@ -24,11 +24,11 @@ async def statcan_delta_get_file_link(date: str, lang: Lang = "en") -> DeltaFile
     days that had a release (weekends and holidays will report
     exists=False); check exists before treating the url as
     downloadable. The ZIP carries both English and French metadata, so
-    `lang` has no effect. Keywords: StatCan, delta file, bulk update,
-    daily update, all tables, full refresh.
-    Mots-clés : Statistique Canada, fichier delta, mise à jour en
-    bloc, mise à jour quotidienne, tous les tableaux, actualisation
-    complète.
+    `lang` has no effect. Keywords: StatCan, delta file, bulk update, daily
+    update, all tables, full refresh, changed data, download.
+    Mots-clés : Statistique Canada, fichier delta, mise à jour en bloc, mise
+    à jour quotidienne, tous les tableaux, actualisation complète, données
+    modifiées, téléchargement.
     """
     del lang
     return await client.get_file_link(date)

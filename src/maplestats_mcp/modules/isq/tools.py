@@ -60,9 +60,10 @@ async def isq_get_table(
     table's notes and sources. Static tables return `cells` as published
     and an Excel link. Page through long tables with offset and max_rows.
     Keywords: Quebec table data, ISQ values, time series, regional
-    statistics, survey estimates, confidence interval, MRC data.
+    statistics, survey estimates, confidence interval, MRC data, Quebec
+    statistics.
     Mots-clés : données du tableau, ISQ, valeurs, série chronologique,
-    statistiques régionales, estimations d'enquête, intervalle de
-    confiance, MRC.
+    statistiques régionales, estimations d'enquête, intervalle de confiance,
+    MRC.
     """
     return await client.get_table(table, offset=offset, max_rows=max_rows, lang=lang)

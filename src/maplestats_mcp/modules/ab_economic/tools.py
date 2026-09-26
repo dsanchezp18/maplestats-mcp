@@ -30,10 +30,11 @@ async def ab_economic_list_indicators(lang: Lang = "en") -> IndicatorList:
     consumer spending, construction, energy, jobs, business, exports,
     productivity, population, GDP) and what was updated recently. Then
     get an indicator's published series with ab_economic_get_indicator_series.
-    Keywords: Alberta, economic dashboard, key indicators, economy,
-    latest data, Government of Alberta, snapshot, updates.
+    Keywords: Alberta, economic dashboard, key indicators, economy, latest
+    data, Government of Alberta, snapshot, updates.
     Mots-clés : Alberta, tableau de bord économique, indicateurs clés,
-    économie, données récentes, gouvernement de l'Alberta, mises à jour.
+    économie, données récentes, gouvernement de l'Alberta, mises à jour,
+    indicateurs économiques.
     """
     del lang
     return await client.list_indicators()
@@ -82,9 +83,9 @@ async def ab_economic_get_table_fields(table: str, lang: Lang = "en") -> TableFi
     and values to pass as `filters` to ab_economic_get_data, plus the
     indicator's name and frequency.
     Keywords: Alberta, economic dashboard, table schema, columns,
-    dimensions, filter values, metadata.
-    Mots-clés : Alberta, tableau de bord économique, structure du
-    tableau, colonnes, dimensions, valeurs de filtre, métadonnées.
+    dimensions, filter values, metadata, field names.
+    Mots-clés : Alberta, tableau de bord économique, structure du tableau,
+    colonnes, dimensions, valeurs de filtre, métadonnées, noms de champs.
     """
     del lang
     return await client.get_table_fields(table)

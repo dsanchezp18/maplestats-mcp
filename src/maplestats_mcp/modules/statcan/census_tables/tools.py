@@ -34,10 +34,10 @@ async def statcan_census_tables_search(
     consistency.
     Keywords: census data tables, cross-tabulation, 2016 census, 2011
     National Household Survey, 2006 census, Beyond 20/20, topic-based
-    tabulations.
-    Mots-clés : tableaux de données du recensement, totalisations
-    croisées, recensement de 2016, Enquête nationale auprès des ménages,
-    recensement de 2006, Beyond 20/20.
+    tabulations, census.
+    Mots-clés : tableaux de données du recensement, totalisations croisées,
+    recensement de 2016, Enquête nationale auprès des ménages, recensement
+    de 2006, Beyond 20/20, tableaux thématiques, recensement.
     """
     return await client.search(query, release=release, limit=limit)
 
@@ -52,9 +52,9 @@ async def statcan_census_tables_get_downloads(
     (by pid). Checks which formats exist and their sizes. When only the
     IVT exists, returns an R snippet using mountainMath's canivt to read
     it. Some SDMX files are very large; check size_bytes first.
-    Keywords: census table download, CSV, SDMX, IVT, Beyond 20/20,
-    canivt, full table.
+    Keywords: census table download, CSV, SDMX, IVT, Beyond 20/20, canivt,
+    full table, census.
     Mots-clés : téléchargement, tableau du recensement, CSV, SDMX, IVT,
-    Beyond 20/20, tableau complet.
+    Beyond 20/20, tableau complet, recensement.
     """
     return await client.get_downloads(pid, release=release)

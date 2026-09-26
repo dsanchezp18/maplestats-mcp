@@ -78,9 +78,10 @@ async def statcan_census_profile_2016_list_geographies(
     district, population centre, designated place). Optionally filter
     to one province/territory. Each result also carries global
     non-response rates and a data-quality flag. Keywords: census 2016,
-    geography, DGUID, place name, municipality.
+    geography, DGUID, place name, municipality, census subdivision, CMA,
+    geographic code.
     Mots-clés : recensement 2016, géographie, DGUID, nom de lieu,
-    municipalité.
+    municipalité, subdivision de recensement, RMR, code géographique.
     """
     return await client.list_geographies(level, province_territory=province_territory, lang=lang)
 
@@ -106,10 +107,10 @@ async def statcan_census_profile_2016_get_data(
     not drop a flagged value silently. Set include_notes=True for the
     full explanatory footnote text. This is distinct from
     statcan_census_profile_* (2021) and covers only the 2016 census.
-    Keywords: census 2016, population, dwelling, income, age,
-    demographics, statistics Canada.
+    Keywords: census 2016, population, dwelling, income, age, demographics,
+    statistics Canada, census profile.
     Mots-clés : recensement 2016, population, logement, revenu, âge,
-    démographie, Statistique Canada.
+    démographie, Statistique Canada, profil du recensement.
     """
     return await client.get_data(
         dguid, topic=topic, statistic=statistic, include_notes=include_notes, lang=lang

@@ -53,7 +53,8 @@ async def dfo_iwls_get_station(station_code: str, lang: Lang = "en") -> StationD
     Keywords: DFO, tide station, chart datum, CGVD2013, geodetic datum,
     station metadata, hydrographic, reference port.
     Mots-clés : MPO, station marégraphique, zéro des cartes, CGVD2013,
-    niveau de référence géodésique, métadonnées, port de référence.
+    niveau de référence géodésique, métadonnées, port de référence, niveau
+    d'eau.
     """
     return await client.get_station(station_code, lang)
 

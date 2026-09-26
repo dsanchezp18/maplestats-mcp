@@ -22,7 +22,7 @@ async def plan_query(question: str, lang: Literal["en", "fr"] = "en") -> QueryPl
     consistency; the plan text is English.
     Keywords: plan, which data source, where to find, combine sources,
     cross-source, question, research, Canada data.
-    Mots-clés : planifier, quelle source de données, où trouver,
-    combiner des sources, question, recherche, données canadiennes.
+    Mots-clés : planifier, quelle source de données, où trouver, combiner
+    des sources, question, recherche, données canadiennes, statistiques.
     """
     return client.plan(question)
