@@ -51,6 +51,7 @@ dependencies = [
     "gtfs-realtime-bindings>=3.0.0",
     "openpyxl>=3.1.5",
     "duckdb>=1.5.5",
+    "pyyaml>=6.0.3",
 ]
 
 [project.urls]
@@ -78,6 +79,7 @@ dev = [
     "pytest-cov",
     "ruff>=0.14.0",
     "pyright",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.pytest.ini_options]

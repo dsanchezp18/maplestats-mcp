@@ -1441,39 +1441,51 @@ across editions.
 
 ## Parliamentary Budget Officer
 
-**Status:** Candidate module.
+**Status:** Shipped.
 
-Checked 2026-09-25 and again 2026-09-26. There is no data portal or API
-(`/en/data` is 404), and the report PDFs are documents, not data. Two
-machine-readable paths exist:
+Checked 2026-09-25 and 2026-09-26; shipped 2026-09-26 as `modules/pbo/`
+(`pbo_search_publications`, `pbo_get_publication`).
 
-- **PBOML documents.** Every publication page
-  (`/en/publications/<id>--<slug>`) is server-rendered and embeds the
-  publication record as JSON: bilingual title and abstract, release
-  date, type (report, note, cost estimate), authors, PDF links, and a
-  `pboml_document` holding the publication as base64-encoded YAML
-  (PBO's own markup, `pboml: version: 1.0.0`). Its `slices` have types
-  `heading`, `markdown`, `svg` and `table`; table slices carry
-  bilingual labels, sources, notes and the cells as rows of named
-  values. Of 12 recent publications, cost estimates and notes held
-  their tables there (M-24 tax brackets, Supplementary Estimates (A)
-  2026-27, medical cannabis savings, automatic federal benefits), while
-  long reports held only their summary and SVG charts, which carry no
-  data.
-- **Tool JSON.** The interactive tools under
-  `/en/research--recherches/tools--outils/` (Federal Employment
-  Tracking Tool, Personnel Expenditure Analysis Tool, Ready Reckoner,
-  public debt charges calculator and others) load static JSON built
-  with the page, e.g. the employment tool's quarterly federal public
-  service counts by tenure. File names carry a build hash
-  (`overview-C2Ik2Xa2.json`), so a client has to find them through the
-  tool's own script rather than a fixed URL.
+There is no data portal (`/en/data` is 404), but the website reads a
+public JSON API at `https://99bank.pbo-dpb.ca/distribution/1/` (also
+served as `rest-393962616e6b.pbo-dpb.ca`), found in the site's scripts:
 
-If built: `pbo_search_publications` over the publications listing,
-`pbo_get_publication` returning the record with its tables parsed from
-PBOML, and one tool per data-backed interactive tool, starting with the
-federal employment tracker. Costings of bills and motions are the
-distinctive content; nobody else publishes them.
+- `/publications`: 863 publications, newest first, a fixed 15 per page
+  (`per_page` and `limit` are ignored), Laravel `meta` with `total` and
+  `last_page`. `types=ES,NT` filters by type code, `tags=<id>` by tag.
+  Types seen: RP report, NT note, LEG legislative costing note (185),
+  ES cost estimate, OA additional analysis, LIBARC archived (2008-2021).
+- `/publications/<id>`: the full record, with bilingual titles and
+  abstract, the website link, the PDF (`artifacts.main.<lang>.public`)
+  and `pboml_document`, a base64 YAML data URL in PBO's own markup
+  (PBOML 1.0.0).
+- `/search?query=`: a list of `{type, score, payload}` across content
+  types; the module keeps `Publication` ones.
+- `/tags` (153 series and topics), `/news-releases` (93) and
+  `/information-requests` (1,121 requests PBO sent to departments, with
+  dates, status and summaries; not exposed yet).
+
+PBOML slices are `heading`, `markdown`, `svg` (charts, no data), `table`
+(`variables` maps column ids to bilingual labels; `content` rows hold
+numbers or `{en, fr}` text), `html` (a table per language, used by the
+Economic and Fiscal Outlook) and `kvlist` (key/value lists; `print_only`
+ones are author credits and are skipped). Of 42 sampled publications, 21
+had tables: legislative costing notes since 2021 and most reports since
+2025. Archived and pre-2021 reports have no PBOML and return only their
+PDF link.
+
+Checked values: RP-2627-002-S (Economic and Fiscal Outlook 2026) gives
+real GDP growth of 1.7% for 2025 and 1.1% for 2026 in its first table;
+ES-2627-002-M (motion M-24) gives the proposed bracket rates of 34%,
+35% and 36% above $500,000.
+
+Terms: PBO materials may be used and reproduced for personal and
+non-commercial use without permission, unaltered and with attribution;
+commercial use needs permission. The tools pass tables through as
+published and say so in their provenance.
+
+The interactive tools (Federal Employment Tracking Tool and others) load
+static JSON with build-hashed names; they are not covered.
 
 ## StatCan terms: SDMX, CORD, NDM
 

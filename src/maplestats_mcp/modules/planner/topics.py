@@ -348,6 +348,7 @@ TOPICS: tuple[Topic, ...] = (
             "contrat",
         ),
         (
+            PlanStep("pbo_search_publications", "PBO costings and fiscal analysis"),
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
             PlanStep("canadabuys_search_contracts", "federal contracts by supplier or buyer"),
