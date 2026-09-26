@@ -1124,8 +1124,8 @@ fetched over HTTP/1.1 because a large HTTP/2 download broke off mid-stream.
 Every trademark link open.canada.ca lists answered 404 on 2026-09-25, but
 CIPO's server holds a newer, unlisted 2024-11-20 release with all 19
 trademark tables; `ised_ip_horizons_list_files` adds it
-(`constants.UNLISTED_RELEASES`). A note to
-cipoipdata-opicdonneespi@ised-isde.gc.ca could get the package updated.
+(`constants.UNLISTED_RELEASES`). We will not contact CIPO; the module
+reads the unlisted release as long as CIPO serves it.
 Catalogue tools: `ised_ip_horizons_list_files` (every bulk file of the three
 packages, with table, patent-number range and release read from the download
 URL, since CKAN names and formats are wrong for several files; newest
@@ -1168,5 +1168,4 @@ NRCan's cleantech-companies page is one small HTML table (2,470 companies by
 industry and province, June 2025) plus Power BI, and the 2025 Cleantech
 Industry Survey is a PDF plus Power BI.
 
-Program-level investment data would have to be requested from
-cleantech.data@nrcan-rncan.gc.ca.
+Program-level investment data is not published; we will not request it.
