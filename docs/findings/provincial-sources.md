@@ -36,6 +36,11 @@ reported its one queryable table at id 2 with an empty `layers` list.
 This adaptor also creates a path for many municipal and specialized
 geographic portals (see the Municipal section below).
 
+Shipped 2026-09-18: `arcgis_hub_*` (`portal="mb"`)/`arcgis_hub_*`
+(`portal="sk"`)/`arcgis_hub_*` (`portal="pe"`), verified live against all
+three portals' Hub Search API v3
+(`/api/search/v1/collections/dataset/items`), the classic ArcGIS …
+
 ## British Columbia
 
 **Status:** Shipped.
@@ -80,6 +85,11 @@ from the NBAC precedent:
 for, confirmed live and harmless here since every parser reads named fields
 and ignores the rest. `bcgw_get_active_wildfires` confirmed live against 2
 real "Out of Control" BC fires burning as of 2026-09-22.
+
+catalogue.data.gov.bc.ca, CKAN Action API: `ckan_*` (`portal="bc"`), 10
+tools (search, dataset/org/resource/license detail, tags, groups, and --
+added 2026-09-20 -- `ckan_datastore_search` for row-level queries against a
+DataStore-active …
 
 ## Quebec
 
@@ -219,3 +229,22 @@ metadata/file table, and typed not-found behavior. The official GeoAtlas
 spatial surface remains separate. Portal content is English-only; the module
 preserves the Open Government Licence—Newfoundland and Labrador attribution
 and every source/detail/download URL.
+
+## Sequence 3: Newfoundland and Labrador custom portal
+
+Adaptor for Newfoundland and Labrador.
+
+The provincial open-data catalogue has its own page-based interface and
+downloadable tabular/spatial files. Map its live endpoints separately after
+the two reusable adaptors are working; do not force it into CKAN or Socrata.
+This is now the next provincial implementation.
+
+## Prince Edward Island
+
+**Status:** Shipped.
+
+data.princeedwardisland.ca, ArcGIS Hub: `arcgis_hub_*` (`portal="pe"`), 3
+tools, same shape as Manitoba's. At least one item's underlying service
+reports an empty `layers` list with its one queryable table at a non-zero id
+(2) — the default-layer-index resolution this adaptor added because of that
+applies here too.

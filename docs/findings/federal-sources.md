@@ -46,3 +46,28 @@ server enforces no upper bound on `limit` even though some collections
 exceed 400K rows (hydrometric-realtime); `climate-stations`'
 LATITUDE/LONGITUDE properties are integers scaled by 1e7, not decimal
 degrees.
+
+api.weather.gc.ca, MSC GeoMet-OGC-API (OGC API - Features): `eccc_*`, 4
+generic tools (search/list/get collection, query items) covering all ~100
+published collections — weather alerts, current surface observations (SWOB),
+city forecasts …
+
+Audited 2026-09-19: spot-checked the AHCCD
+(`ahccd-stations`/`-annual`/`-monthly`/`-seasonal`/`-trends`) and
+`climate-normals` collections specifically, since neither had been queried
+live beyond a one-off check at build time. No functional bug (the generic
+client handles both correctly), but found the module's own gotchas doc had
+overgeneralized its bilingual-field-naming claim — confirmed live that
+bilingual fields use at least three different conventions depending on the
+collection, not one: `_en`/`_fr` suffixes (`weather-alerts`), `E_`/`F_`
+prefixes (`climate-normals`), and a single double-underscore-joined field
+per concept (every `ahccd-*` collection, e.g.
+
+`station_name__nom_station` — not two separate fields at all). Also found
+and documented a real missing-value trap: AHCCD uses `-9999.9` as a sentinel
+for missing pressure/temperature readings, inconsistently alongside a
+genuine `null` for the same "no data" case within the same field — confirmed
+live in `ahccd-annual`. The generic pass-through client does not (and should
+not) auto-correct this, since it has no per-field semantic knowledge, but
+`docs://eccc/gotchas` now warns explicitly rather than leaving it to be
+discovered the hard way. |

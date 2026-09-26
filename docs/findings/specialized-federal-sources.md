@@ -105,6 +105,11 @@ PUMFs (Public Use Microdata Files) were not pursued in this pass -- they are
 individual-record microdata files distributed separately from Census Profile
 aggregates and would need their own investigation.
 
+The public Census Profile search tool
+(www12.statcan.gc.ca/census-recensement/...) is a legacy server-rendered
+ColdFusion (.cfm) app with no JSON API of its own -- confirmed live via
+network-request …
+
 ## StatCan catalogues, The Daily, Indicators, Delta File, and other documentation
 
 **Status:** Shipped.
@@ -262,6 +267,13 @@ survey" signal, not a generic failure, and had to be special-cased (matched
 on the final redirected URL) to surface as NotFound rather than
 UpstreamError.
 
+2026-09-25: `statcan_reference_get_document_formats` (a catalogue number's
+HTML/PDF links) was removed, since the server serves data, not documents;
+PUMF downloads come from `statcan_pumf_list_files`. The Daily (StatCan's
+official release bulletin, www150.statcan.gc.ca/n1/dai-quo/) has no JSON API
+behind its own search/calendar pages -- confirmed live, plain
+server-rendered HTML -- but …
+
 ## NRCan National Burned Area Composite (NBAC)
 
 **Status:** Shipped.
@@ -301,6 +313,11 @@ charges a minimum $8 per search, confirmed via its own documentation --
 paywalled and authentication-gated, not open data, and this project will not
 automate account creation or payment. See the ISED row above for the free,
 open, aggregate insolvency statistics that remain available instead.
+
+Investigated 2026-09-20 per a direct request: the OSB's Bankruptcy and
+Insolvency Records Search (ised-isde.canada.ca) requires an account and
+charges a minimum $8 per search, confirmed via its own documentation --
+paywalled and …
 
 ## Health Canada (public health CKAN data)
 
@@ -390,6 +407,36 @@ confirmed live this was necessary: guessing a filename from the current
 pattern works for recent editions but fails for at least one older one whose
 filename omits a suffix later editions have.
 
+Audited 2026-09-19 against the reference `mountainMath/cmhc` R package's own
+source (not just its docs) and found/fixed a **critical CSV-parsing bug**:
+the earlier parser assumed every table's CSV export doubles each value
+column with a trailing quality-flag column (`header[1::2]`) — true for
+statistically-sampled Rental Market Survey tables, but a census-style
+administrative table (Starts and Completions Survey, which counts every
+issued permit rather than sampling) has no flag columns at all, and the
+blind pairing silently misaligned and corrupted every value from the second
+column onward (confirmed live against a real Starts-by-CMA table: Barrie's
+"Row" starts read as 0 with flag "60" instead of the correct 60 with no
+flag).
+
+Replaced with a per-column header walk that only pairs a value column with a
+flag when the following header cell is genuinely empty. Also fixed two
+related parsing gaps found the same way: values ≥1,000 use a thousands-comma
+inside a quoted CSV field (`"1,013"`) which `float()` rejects unless
+stripped, and a bare `"-"` is CMHC's own notation for a real, counted zero,
+not a suppressed value — both confirmed against the reference package's own
+`parse_numeric()` helper and re-verified live.
+
+Also added `"n/a"` to the suppressed-value tokens (`"**"`/`"++"`) on the
+same cross-check. Added a genuine capability gap the audit surfaced:
+`cmhc_get_table_data` now accepts an optional `filters` dict (e.g.
+`{"dwelling_type_desc_en": "Row"}`, `{"season": "April"}`), validated
+against and passed through to HMIP's own `AppliedFilters[i].Key`/`.Value`
+POST params — confirmed live these genuinely change returned values
+(national rental vacancy rate for "Row" dwellings differs from "Apartment"
+for the same period), a capability the reference R package exposes but this
+module previously did not. |
+
 ## CRTC
 
 **Status:** Shipped (via `ckan_*`).
@@ -430,6 +477,11 @@ automated access" category as gov.nu.ca (see the Nunavut row above), not a
 source a deployed client could hit reliably.
 
 Not pursued further for that reason.
+
+Investigated 2026-09-19: CRTC's Communications Monitoring Report data
+(telecom/broadcasting sector revenue and subscriber counts, wholesale/retail
+pricing, mobile and broadband availability) is not a separate platform -- it
+is already …
 
 ## CER (Canada Energy Regulator)
 
@@ -545,6 +597,11 @@ credit, T2 Corporate, Trust statistics, hard-to-reach-populations
 participation) is entirely published on CKAN under `cra-arc`, spot-checked
 live for "T2 Corporate Statistics" specifically.
 
+Investigated 2026-09-20, then investigated again in more depth after an
+initial pass under-scoped this row: CRA's tax-filer statistics (333 datasets
+under the `cra-arc` organization -- T1/T2 filing compliance, GST/HST
+statistics, Canada …
+
 ## Proactive Disclosure (government-wide)
 
 **Status:** Shipped (via `ckan_*` + `ckan_datastore_search`).
@@ -571,6 +628,10 @@ Annual Travel/Hospitality Expenditures -- confirmed live across 11 of the
 first 15 matches), so the new `ckan_datastore_search` tool (see the CRA row
 above) already covers filtering these by department, vendor, amount, date,
 or any other real column, not just downloading a per-department CSV.
+
+Government of Canada proactive-disclosure publications (contracts over
+$10,000, travel and hospitality expenses, grants and contributions, position
+reclassifications, departmental audit committees, briefing …
 
 ## ISED (Innovation, Science and Economic Development Canada)
 
@@ -668,6 +729,11 @@ StatCan's own developers page documents -- so even setting the
 account-creation exclusion aside, there is currently no live host to reach
 for this capability regardless.
 
+Three modules, split like CMHC's dual-platform pattern
+(`modules/ised/{corporations,spectrum,cipo}/`): (1) Corporations Canada's
+federal corporation lookup API (`ised_corporations_*`, 1 tool) -- a
+single-record lookup by numeric …
+
 ## Government of Canada `open-data` GitHub org / `ckanext-canada` / `ckanext-recombinant`
 
 **Status:** Investigated, no capability change.
@@ -751,6 +817,11 @@ forthcoming **Regulatory Data Hub (RDH)**, stated to go live "late fall
 2026" (after this re-check) -- noted here as a future watch item, not yet a
 live source to investigate.
 
+Investigated 2026-09-20, then investigated again in more depth alongside
+CRA: OSFI's regulated-entity data (36 datasets under the `osfi-bsif`
+organization -- "Banks", "Trust companies", "Loan companies", "Foreign bank
+branches", "Life …
+
 ## Transport Canada + CTA (Canadian Transportation Agency)
 
 **Status:** Shipped (recalls).
@@ -766,6 +837,11 @@ read by position; no match is an empty ResultSet, not a 404.
 Transport Canada's other data (NCDB collisions, aviation, rail) and the
 CTA's are ordinary open.canada.ca datasets reachable through `ckan_*`
 (portal="federal").
+
+Shipped 2026-09-23: `modules/tc_recalls/` (2 tools) on Transport Canada's
+Motor Vehicle Safety Recalls Database API
+(data.tc.gc.ca/v1.3/api/{eng,fra}/vehicle-recall-database): search by make,
+model and model-year range, and a bilingual …
 
 ## Elections Canada
 
@@ -850,6 +926,10 @@ Four real quirks handled:
    2026-04-13 by-election was already listed as upcoming when this was
    built).
 
+Elections Canada publishes 54 datasets under the `elections` organization
+(`organization_autocomplete` confirmed the real org slug is `elections`, not
+`elections-canada`) on the existing federal CKAN …
+
 ## CanadaBuys (PSPC procurement)
 
 **Status:** Shipped.
@@ -881,6 +961,11 @@ Legacy (pre-2023) contract rows carry titles shaped "SUPPLIER
 different fiscal year sit in that year's file, so an original amount can be
 missing.
 
+`modules/canadabuys/` (3 tools): `canadabuys_search_tenders` (open or
+today's new tender notices, filter by keyword, category, region, buyer),
+`canadabuys_search_awards` (award notices per fiscal year 2022-2023 onward,
+filter by supplier …
+
 ## House of Commons (OpenParliament.ca)
 
 **Status:** Shipped.
@@ -899,6 +984,11 @@ Every response notes the source is unofficial. Added 2026-09-24:
 evidence, read from openparliament.ca/search (HTML, 15 hits per page)
 because the JSON API ignores `q` on /speeches/.
 
+Shipped 2026-09-24: `modules/openparliament/` (7 `parliament_` tools) over
+api.openparliament.ca, an unofficial JSON API by OpenParliament.ca/Open
+North that re-publishes LEGISinfo, House votes, Hansard and committee
+evidence (no official …
+
 ## Senate of Canada votes
 
 **Status:** Shipped.
@@ -910,6 +1000,11 @@ FR pages) and `senate_get_vote` (each senator's group, province and
 Yea/Nay/Abstention, read from the column marked `data-order="aaa"`).
 Per-vote totals are counted from the senator table and matched the list
 page's totals when checked live.
+
+Shipped 2026-09-24: `modules/senate/` (2 tools) parsing sencanada.ca's vote
+pages, since the Senate publishes no votes API: `senate_list_votes` (a
+session's votes from 42-1 on, with totals, related bill and result; EN and
+FR pages) and …
 
 ## GC InfoBase (Treasury Board, government spending and results)
 
@@ -929,6 +1024,11 @@ is disabled and its URL embeds the deployment hash. Downloads 302-redirect
 to signed Azure blob URLs; `shared/csv_files.py` (now shared with `cer`)
 follows https redirects.
 
+Shipped 2026-09-23: `modules/gc_infobase/` (2 tools) over the official "GC
+InfoBase - Open Datasets" package on open.canada.ca (52 bilingual CSVs:
+Estimates, Public Accounts by vote/standard object/transfer payment, planned
+and actual …
+
 ## Canada Gazette (regulatory notices)
 
 **Status:** Shipped.
@@ -942,6 +1042,10 @@ to the next anchored heading on Part I section pages, or the whole
 instrument page for Part II.
 
 English and French use the same paths with `-eng`/`-fra`.
+
+Issues come from the official RSS feeds (`/rss/p1-eng.xml`, 435 issues;
+`/rss/p2-eng.xml`, 232; no Part III feed); `gazette_get_issue` parses an
+issue's index page into notices with …
 
 ## CIHI (Canadian Institute for Health Information)
 
@@ -961,6 +1065,10 @@ and exact column filters).
 The all-indicators XLSX (~98 MB, at Excel's row limit) is not used. Adds the
 `openpyxl` dependency.
 
+CIHI retired Your Health System and the Health Indicators Interactive Tool
+(the old URLs now redirect to a "Modernizing how we deliver data" page) in
+favour of the Indicator Library, whose …
+
 ## NRCan energy use (Office of Energy Efficiency, National Energy Use Database)
 
 **Status:** Shipped.
@@ -977,6 +1085,11 @@ roots).
 Quirks: HTML parsers decode `&sect` in `&sector=` to `§`; survey tables
 follow each value with an A/M/U quality letter, captured with the legend in
 `notes`.
+
+Shipped 2026-09-23: `modules/nrcan_energy_use/` (3 tools) over
+oee.nrcan.gc.ca, which has no JSON API: product list (11 survey editions:
+SHEU 2019/2015 and by CMA, multi-unit residential 2018, SCIEU
+2019/2014/2009, arenas 2014, ICE …
 
 ## NRCan geospatial (geo.ca geolocation, CanVec, geospatial catalogue)
 
@@ -1009,6 +1122,11 @@ empty.
 
 Still to confirm live: that NRCan honours `format=text`, the exact header,
 and its no-data status.
+
+Shipped 2026-09-24: `modules/earthquakes/` (1 tool, `earthquakes_search`) on
+the FDSN event web service
+(earthquakescanada.nrcan.gc.ca/fdsnws/event/1/query, `format=text`): date
+range (default last 30 days, up to ~5 years), magnitude …
 
 ## DFO (Fisheries and Oceans Canada) tides and water levels
 
@@ -1082,6 +1200,10 @@ files, any CSV twin in the same dataset, and a canivt R snippet.
 
 Open: Python IVT port only if demand appears.
 
+Checked 2026-09-25: StatCan has retired the 2011 Census tabulations (index
+and downloads redirect to its page-not-found notice; 2011 NHS, 2006 and 2016
+still work), so the tools point to the Borealis copies (27 datasets …
+
 ## Cross-source planning and reproducible code
 
 **Status:** Shipped.
@@ -1145,6 +1267,10 @@ design records are listed but not queryable.
 IP Horizons does not cover PMPRB or Business Number validation (separate
 rows).
 
+Record queries: `ised_ip_horizons_get_patent` (one patent with owners,
+inventors, applicants, agents, optionally IPC classes) and
+`ised_ip_horizons_search_patents` (party name and …
+
 ## Clean Technology Data Strategy (NRCan, ISED, StatCan; Clean Growth Hub)
 
 **Status:** Partly covered.
@@ -1169,3 +1295,239 @@ industry and province, June 2025) plus Power BI, and the 2025 Cleantech
 Industry Survey is a PDF plus Power BI.
 
 Program-level investment data is not published; we will not request it.
+
+Checked 2026-09-24: its statistics are StatCan's Environmental and Clean
+Technology Products Economic Account (tables 36-10-0366, -0370, -0371,
+-0372, -0411, -0627 and more, via `wds_`) plus open.canada.ca datasets on
+clean-technology use …
+
+## Competition Bureau Canada
+
+**Status:** Shipped.
+
+Shipped 2026-09-25: `modules/competition_bureau/`
+(`competition_bureau_search_mergers`) over both merger-review reports (2,554
+reviews). Checked 2026-09-25: the merger-review reports are full HTML tables
+(about 830 reviews since Nov 2023, weekly; about 1,725 from 2015-2023) with
+parties, dates, NAICS and outcome; the Tribunal's decisions site refuses
+automated requests, and enforcement and market studies are PDFs.
+[Details](docs/findings/competition-bureau.md)
+
+## CAPP Statistics Handbook (Canadian Association of Petroleum Producers)
+
+**Status:** Investigated, deferred.
+
+Checked 2026-09-25: 76 Excel tables (reserves, production by field, value of
+producer sales from 1947, expenditures, demand), updated each December;
+industry copyright, use allowed with attribution. See
+`docs/findings/capp-statistics-handbook.md`.
+
+## StatCan terms: SDMX, CORD, NDM
+
+**Status:** Reference note.
+
+Also clarified per a direct question ("SDMX, CORD, NDM") what three
+recurring terms actually refer to, since all three appear throughout this
+project's StatCan work without ever being named directly: SDMX (Statistical
+Data and Metadata eXchange) is the ISO standard protocol already fully
+covered by both `modules/statcan/sdmx` (generic tables, XML) and
+`modules/statcan/census_profile` (2021 census, JSON) -- no separate coverage
+needed. CODR (Common Output Data Repository, confirmed via the DGUID
+reference document's own text) is StatCan's internal name for the data
+warehouse behind ordinary tables -- WDS/SDMX are already the public
+interface to it, not a separate API. "NDM" is the CSS/module namespace
+(`ndm-results`, `ndm-item`, `block-ndm-plugins`, `ndm-surveys-az`) seen
+across every Reference/Analysis/Data/surveys page built against this pass.
+
+Investigated further per a follow-up request ("NDM, investigate more"):
+StatCan's own public consultation pages from 2013-2014 use the URL slug
+pattern `ndm-nmd-*` (French `nmd-ndm-*`), explicitly titled "New
+Dissemination Model" (e.g.
+`statcan.gc.ca/en/consultation/2013/ndm-nmd-nt-eng` "New Dissemination Model
+– Navigation and Tables"), and the methodology publication "Statistics:
+Power from Data!" (catalogue 11-634-X, chapter 4.1, "Disseminating data
+through the website") independently corroborates this in prose, describing a
+2012-2015 initiative to build "a new, single, mandatory output database ...
+that provides a common and consistent interface for all data products" and
+to modernize website navigation, taxonomy, and table structure -- exactly
+the surface (catalogue/navigation pages, not the data warehouse itself)
+where the `ndm-*` CSS classes appear.
+
+This is a credible, StatCan-sourced expansion (New Dissemination Model) for
+the namespace, though not a direct confirmation that today's Drupal 10
+classes are literally named after that specific 2012-era project rather than
+reusing its name by convention. A separate, weaker usage exists in
+third-party packages (`cansim`, `statcanR`), which informally gloss "NDM" as
+"New Data Model" when referring to the post-2018 CANSIM-replacement
+table-numbering scheme (e.g.
+
+`17-10-0016-01`) -- a StatCan-unconfirmed community inference about the
+table-ID system, distinct from the website CSS namespace, and not conflated
+with it here. Investigated a fifth time per a direct question ("catalogues,
+PDFs, articles, documentation, all that?"): confirmed every
+Reference/Analysis search result's catalogue number resolves to a real,
+plain (no session-cookie quirk needed) detail page at
+`n1/en/catalogue/{number}` listing that document's actual downloadable files
+-- HTML and PDF, each a direct link, confirmed live.
+
+Added `statcan_reference_get_document_formats` to the same module. One real
+quirk found and handled: a series-level catalogue number's page (e.g.
+"16-511-X") has no formats of its own -- it instead lists that series'
+editions, each with its own catalogue number -- and the two page shapes are
+structurally identical (same link+date row layout), distinguished only by
+the table's own header text ("Format" vs "Titles"/"Titres"); an earlier
+version of this parser that assumed every such table was a formats table
+silently mislabelled 8 edition titles as "formats" for "16-511-X" before
+this was caught via the live smoke test and fixed.
+
+A second quirk: catalogue-number normalization is itself inconsistent --
+"16-511-X" resolves with its dashes intact, but "46-28-0001202600100004"
+only resolves with dashes/spaces stripped (confirmed live, both directions)
+-- so the tool tries the number exactly as given first, then stripped,
+before raising NotFound. Investigated a sixth time per a direct request to
+check for PUMF (Public Use Microdata Files) access. Confirmed live that PUMF
+data files themselves are directly downloadable with no authentication at
+all: a real Census PUMF ZIP
+(`n1/pub/98m0001x/2023001/cen21_ind_98m0001x_part_rec21.zip`, ~173 MB)
+answers HTTP 200 with `Content-Type: application/zip` on a bare
+unauthenticated request.
+
+The open question was discoverability, not access. Reference resources only
+indexes PUMF *user-guide* documentation (category "Surveys and statistical
+programs – Documentation"), not the PUMF products themselves; the actual
+product listings (category "Public use microdata") turned out to live in a
+third catalogue on the same Drupal engine, "Data" (`n1/en/type/data`, French
+`n1/fr/type/donnees`, both confirmed live, 13,342+ items) -- identical
+structure and quirks to Reference/Analysis, so `CATALOGUE_CONFIG` was
+extended with a third entry and a `statcan_reference_search_data` tool added
+at effectively zero new parsing code, the same generalization pattern used
+for Analysis.
+
+Confirmed live: searching "Public Use Microdata Files" there returns 144
+results, including real PUMF catalogue numbers (71M0001X for the Labour
+Force Survey, 98M0001X for the Census) alongside ordinary table PIDs already
+reachable via WDS/SDMX. A PUMF's own catalogue-number page (via the existing
+`get_document_formats`) resolves one HTML link, which itself leads one hop
+further to a bespoke, per-product static page (e.g.
+`n1/pub/98m0001x/index-eng.htm`, listing every Census PUMF edition from
+1991-2021) that is a genuinely different page shape from the Drupal engine
+-- not parsed generically here, left as a link for the caller to follow, the
+same design choice already used for the editions case.
+
+Investigated a seventh time with a final "leave nothing out" exhaustiveness
+pass: re-checked StatCan's GitHub org (205 repos, internal platform tooling,
+nothing exposing a new public API), Trade Data Online (confirmed an ISED
+product built on StatCan source data, not StatCan's own; StatCan's own
+equivalent, Canadian International Merchandise Trade, has no live API
+either), the Postal Code Conversion File (confirmed licensed/restricted, no
+free programmatic access), My StatCan (confirmed a pure email-subscription
+layer over The Daily, no separate API), the Business Register (confirmed
+confidential under the Statistics Act, aggregate-only), and Research Data
+Centres/Real Time Remote Access (confirmed security-screened microdata-lab
+access, no API) -- all correctly out of scope, nothing new.
+
+One genuine new surface was found: `geo.statcan.gc.ca/geo_wa/rest/services`,
+a live Esri ArcGIS REST (Map/Feature Service) census-geography API -- the
+first genuinely queryable (attribute- and spatially-filterable) StatCan
+geography service in this codebase, distinct from every static bulk
+boundary-file download already covered. Confirmed live: top-level folders
+are years 2019-2025 (nothing older is served here); a census year (2021
+confirmed) publishes a full suite of ~10 services (Cartographic/Digital
+boundary files, Agricultural/Population ecumene boundary files, Road Network
+File, each in English and French), each service one MapServer with one layer
+per geography level (15 layers confirmed for 2021's Cartographic boundary
+files: PR/CD/CSD/CMA/ER/FED/CCS/PC/DPL/ADA/CT/DA/DB/FSA/CAR); an intercensal
+year publishes a much smaller set (CSD-level updates and the Road Network
+File only, confirmed for 2019-2020, 2022-2025) -- this genuinely varies year
+to year and is not hardcoded.
+
+New module `modules/statcan/geo/` (3 tools: list_services, get_layer_detail,
+query_layer) and a new shared adaptor `shared/arcgis.py` (this is the first
+ArcGIS REST-platform source in this codebase; `shared/wfs.py` covers OGC WFS
+2.0 instead, a different protocol used by NRCan's NBAC). Two real quirks
+handled, both confirmed live:
+
+1. every error -- an unknown year/service/layer, a malformed `where` clause
+   -- comes back as HTTP 200 with a JSON `{"error": {"code", "message"}}`
+   body, not a non-2xx status, so `shared/arcgis.py` inspects the decoded
+   body on every call rather than relying on `raise_for_status()`;
+2. this specific host is intermittently unreliable at the node level --
+   roughly one in three to five otherwise-identical requests to the exact
+   same URL returns a genuine transient HTTP 500 ("Application Error" or
+   "This web adaptor is not configured with an ArcGIS Enterprise
+   component"), reproduced repeatedly by simply retrying the same URL
+   seconds later, consistent with a load-balanced backend where some nodes
+   are unhealthy -- `shared/http.py`'s existing 3-attempt
+   exponential-backoff retry (already used by every module) is sufficient
+   mitigation and no second retry layer was added.
+
+`query_layer` reprojects geometry from the service's native EPSG:3347
+(Statistics Canada Lambert) to WGS84 lat/lon (EPSG:4326) by default when
+geometry is requested (off by default -- polygon boundaries can be large),
+and surfaces each layer's own `maxRecordCount` cap (6000 confirmed for
+2021's Cartographic boundary layers) via an `exceeded_transfer_limit` flag
+so a caller knows to page with `result_offset` rather than assuming a query
+returned everything.
+
+Investigated an eighth and final time per an explicit "last round" request,
+closing the exhaustive multi-pass StatCan audit. Checked and confirmed
+correctly out of scope: GeoSearch's National Address Register API is dead
+(StatCan's own developers page states the GC API Store it depended on
+"closed permanently at 12:00 EDT on September 29th, 2023," leaving NAR as a
+static per-province PUMF CSV, catalogue 46-26-0002, not a live
+address-to-DGUID lookup); StatCan's website chatbot is an in-house 2026
+Census FAQ tool with no data API; legacy CANSIM table/vector IDs are already
+fully covered by WDS's own `cansimId` field on cube metadata (the static
+concordance CSV at `statcan.gc.ca/en/developers/concordance` is a one-time
+June 2018 snapshot of the same mapping, not a new capability); a final
+developers-hub and Departmental Plan sweep surfaced nothing not already
+shipped.
+
+One genuine new surface was found and shipped: StatCan's own SDG Data Hub
+(`www144.statcan.gc.ca/sdg-odd/`) links to two separate "Open SDG" platform
+sites -- the Canadian Indicator Framework (86 indicators) and the Global
+Indicator Framework (251 indicators, Canada's reporting against the UN's own
+indicator set) -- each a static site hosted on GitHub Pages, not a
+StatCan-run API host. Confirmed live that both sites embed their real data
+API base URL directly in their own page JavaScript
+(`opensdg.remoteDataBaseUrl`) rather than publishing it as documentation,
+resolving to a shared third GitHub Pages host
+(`sdg-data-canada-odd-donnees.github.io`) under two different repo-path
+prefixes; a discovery index at `{base}/{lang}/meta/all.json` lists every
+indicator's metadata, `{base}/{lang}/meta/{code}.json` and
+`{base}/{lang}/data/{code}.json` resolve one indicator's metadata and
+observations respectively, all free and unauthenticated.
+
+New module `modules/statcan/sdg/` (3 tools: search_indicators,
+get_indicator_metadata, get_indicator_data). One real quirk handled: the two
+frameworks use genuinely different metadata field names for the same
+concepts, confirmed live -- the Canadian framework's
+`sdg_goal`/`national_indicator_description`/`published` versus the Global
+framework's `SDG_GOAL`/`STAT_CONC_DEF` with no `published` field at all --
+normalized to the fields both frameworks share (`goal_number`,
+`target_number`, `indicator_name`, `reporting_status`) plus a description
+that tries the Canadian field name first, then the Global one.
+
+Errors here are standard HTTP 404s (a plain static-file host), unlike every
+other quirky embedded-error StatCan API in this module. With this addition,
+StatCan's public programmatic surface is considered exhaustively covered by
+this project. Investigated a ninth time, specifically to check whether other
+StatCan thematic "hub" microsites follow the same pattern the SDG Data Hub
+turned out to (a presentation layer over a genuinely separate,
+freely-accessible backing data API): checked the Quality of Life
+Hub/Framework, the Gender, Diversity and Inclusion Statistics Hub, the CPI
+Inflation/Personal Inflation Calculator, and several housing dashboards
+(Census Program Data Viewer, Rural Canada Housing Profiles, New Housing
+Price Index dashboard).
+
+All of these embed either a Power BI report (`dv-vd.cloud.statcan.ca`,
+requiring a session-scoped Azure AD token issued server-side, not something
+an external client can legitimately call) or an R Shiny application
+(`dv-vd.shinyapps.io`, a stateful websocket-driven reactive session,
+confirmed live via its shiny-server-client/sockjs assets) -- StatCan's
+standard internal presentation layer over WDS-sourced tables (the Inflation
+Calculator's math almost certainly runs against CPI table 18-10-0004-01,
+already covered), not a new data-access route.
+
+Unlike the SDG hub's Open SDG GitHub Pages platform, none of these expose a
+discoverable public REST/JSON surface -- confirmed no new capability. |

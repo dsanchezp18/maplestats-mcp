@@ -99,6 +99,11 @@ every other ArcGIS Hub module already shipped, with no behavior change
 confirmed for any of them (their fixtures/live services have no such
 trailing digit). English-only. 229 datasets confirmed live.
 
+opendata.durham.ca, ArcGIS Hub: `arcgis_hub_*` (`portal="durham"`), 3 tools,
+same shape. **Found and fixed a real bug in the shared `default_layer_index`
+helper (`shared/arcgis.py`) while shipping this row**: Durham's catalogue
+items point …
+
 ## Waterloo Region
 
 **Status:** Shipped.
@@ -126,6 +131,11 @@ uses a working `/arcgis/rest/services/...` path on the same domain, so this
 is one mis-published item's metadata, not a client bug or a broken portal.
 
 English-only. 25 datasets confirmed live.
+
+county-of-grande-prairie-open-data-cogp.hub.arcgis.com, ArcGIS Hub:
+`arcgis_hub_*` (`portal="grande_prairie_county"`), 3 tools, same shape,
+self-hosted service domain (`opendataservices.countygp.ab.ca`) rather than
+`*.arcgis.com`. **Real …
 
 ## Lethbridge
 
@@ -177,6 +187,13 @@ year-less date labels), found 2026-09-22 by inspecting the page in a browser
 PDF links from the live Water Quality Reports page because file names change
 convention mid-2025 and include a typo.
 
+2026-09-25: the report-PDF listing tool was removed (the server serves data,
+not documents); `epcor_get_daily_water_quality` remains. New module
+`modules/epcor/` (`epcor_*`, originally 2 tools). Daily treated-water
+readings come from the per-plant iframe
+`apps.epcor.ca/DailyWaterQuality/Default.aspx?zone=ELS|Rossdale` (7 days,
+year-less date labels), found 2026-09-22 by inspecting …
+
 ## Edmonton-metro gaps
 
 **Status:** Not shipped.
@@ -215,3 +232,53 @@ stays uncovered; `data-reddeer.opendata.arcgis.com` returns 401 (private org
 id); the Hub mixes in orthophoto Image Services, duplicate-titled layers,
 and many Survey123 `_form`/`_results` layers, so filter by `item_type` or
 keyword.
+
+## Surrey
+
+**Status:** Shipped.
+
+opendata-surrey.hub.arcgis.com (City of Surrey Open Data Catalog), ArcGIS
+Hub: `arcgis_hub_*` (`portal="surrey"`), 3 tools, same shape. The city's
+older CKAN-era URL, `data.surrey.ca`, now 301-redirects here — confirmed
+live this is a full platform migration, not a parallel CKAN portal to also
+cover.
+
+## Halton Region
+
+**Status:** Unknown.
+
+`opendata.halton.ca` does not resolve; no live Halton Region government
+portal was found. Only a separate Conservation Halton ArcGIS Hub
+(`conservationhalton-camaps.opendata.arcgis.com`) exists — confirmed live
+this is a different body (a conservation authority, not the regional
+government) and was not adopted as a substitute.
+
+## Grande Prairie (City)
+
+**Status:** Shipped.
+
+opendata-cityofgp.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*`
+(`portal="grande_prairie"`), 3 tools, same shape. Distinct government and
+catalogue from the County of Grande Prairie below — confirmed live these are
+two separate portals, not a split of one. English-only. 41 datasets
+confirmed live.
+
+## St. Albert
+
+**Status:** Shipped.
+
+data.stalbert.ca (City of St. Albert Open Data Portal), ArcGIS Hub:
+`arcgis_hub_*` (`portal="st_albert"`), 3 tools, same shape.
+`prd-stalbert.opendata.arcgis.com` is the same site under its raw Hub
+subdomain — `data.stalbert.ca` is the confirmed-live canonical public alias,
+used as `DOMAIN`. English-only. 34 datasets confirmed live.
+
+## Edmonton Metropolitan Region Board
+
+**Status:** Shipped.
+
+emrgis.emrb.ca (EMRGIS, also served at
+gis-capitalregion.opendata.arcgis.com), ArcGIS Hub: `arcgis_hub_*`
+(`portal="emrb"`), config-only. 85 regional growth-plan datasets confirmed
+live 2026-09-22; smoke test passed. An earlier check of emrb.ca's home page
+found no data links -- the Hub lives on its own subdomain.
