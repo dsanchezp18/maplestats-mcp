@@ -114,7 +114,9 @@ Sources, by tool-name prefix:
   Canada Energy Regulator (pipeline throughput, energy exports, tolls):
   cer_. GC InfoBase federal spending and results (Estimates, Public
   Accounts, program spending and FTEs): gc_infobase_. CIHI health-system
-  indicators (Indicator Library): cihi_. NRCan geocoding and official
+  indicators (Indicator Library): cihi_. PHAC Health Infobase surveillance
+  files (FluWatch+, wastewater, opioid harms, measles, TB): phac_infobase_.
+  NRCan geocoding and official
   place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
   Canada Gazette notices and regulations: gazette_.
   Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,

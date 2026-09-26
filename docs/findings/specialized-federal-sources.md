@@ -343,6 +343,108 @@ scope regardless) -- not a reason to treat the rest of `hc-sc`'s CKAN
 catalogue as unavailable. PHAC (`phac-aspc`, 761 datasets) is reachable the
 same way and was not investigated further in this pass.
 
+## PHAC Health Infobase
+
+**Status:** Shipped.
+
+Checked and shipped 2026-09-26 as `modules/phac_infobase/`
+(`phac_infobase_list_datasets`, `phac_infobase_describe_dataset`,
+`phac_infobase_query`).
+
+The site lists its 211 products in `/src/json/articles.json`. Each of
+the 130 non-blog product pages and its local scripts was fetched and
+searched for `.csv`, `.json` and `.zip` references (mostly `d3.csv(...)`
+calls and "Download data" links). The module reads a curated catalogue
+of 55 files with stable names, 9 of them also in French: respiratory
+viruses (RVDSS laboratory detections, FluWatch+ outbreaks, FluWatchers,
+severe outcomes, SPRINT-KIDS, CNISP sentinel hospitals), wastewater
+(weekly, daily, latest trends), opioid and stimulant harms, supervised
+consumption sites, CSUS, CPADS and CSADS survey indicators, tobacco
+sales, measles, mpox, tuberculosis, emerging respiratory pathogens,
+enteric outbreaks, notifiable diseases 1924-2016, hepatitis C treatment,
+vaccine adverse events, cancer statistics, Health of People in Canada,
+the risk factor atlas, the 2018 CCDI, PASS and congenital anomalies
+snapshots, positive mental health, and archived COVID-19 cases, testing,
+hospital capacity and vaccination (last updated 2023-2024).
+
+Overlap with `ckan_*`: open.canada.ca lists 68 resources on
+health-infobase.canada.ca. Of the catalogued files, only the COVID-19
+download, hospital capacity and vaccination coverage files, the COVID-19
+wastewater archive, the 2018 snapshots, the opioid ZIPs and the
+notifiable disease extract are there. The current respiratory,
+wastewater, measles, mpox, tuberculosis, CNISP, vaccine safety and
+substance use survey files are not.
+
+Quirks, all covered by mocked tests:
+
+- A missing file answers HTTP 302 to `/404.html` (HTTP 200 HTML), never 404.
+- Encodings: UTF-8 with and without a BOM; Windows-1252 for the French
+  opioid ZIP, the 2018 snapshots and the enteric outbreak list; DOS code
+  page 850 for the French congenital anomalies file.
+- Suppression and missing markers: `Suppr.` and `n/a` (opioid harms),
+  `n.d.` (its French file), `X` (vaccine safety), `N/A`, `-` and `>=99`
+  (COVID-19). They are returned as published and listed with their meaning.
+- French 2018 snapshots use decimal commas (`12,2`); other French files
+  use points.
+- Headers: an empty first column of R row numbers (tuberculosis),
+  hundreds of empty trailing columns (the French positive mental health
+  file is 16 MB because of them), a misspelled `Mesure_Spéficique` in
+  the French opioid file, accents in ZIP member names
+  (`DonnéesMéfaitsSubstances.csv`) and `Copy of HoPiC 2025_...` member
+  names in the Health of People in Canada ZIP.
+- Periods: week-ending dates, `2026 Q1`, `2026 (Jan to Mar)`,
+  `2015-2018`, school and survey years (`2024-2025`).
+- Dashboards publish one-line "update date" files; the HTTP
+  Last-Modified header carries the same information and is used instead.
+
+The site also has a documented API (`/api/`, quick-start page in beta)
+over four databases: `opioids`, `cnisp-vri`, `wastewater` and `CYPC`.
+`/api/<db>` returns the table list and `updatedAt`, and
+`/api/<db>/table/<table>` returns a whole table as JSON (nulls for empty
+cells). Only the small CNISP viral respiratory infection tables are read
+this way. The CYPC cancer tables are 140-230 MB and the opioid table 36
+MB (the 178 KB ZIPs carry the dashboard's data in English and French),
+so they are not used. The API
+also exposes a free-form SQL route and a cache-reset route; the module
+uses neither.
+
+Dashboards with no downloadable data:
+
+- Canadian Chronic Disease Surveillance System data tool: ASP.NET
+  WebForms postbacks rendered with JSCharting; open.canada.ca has only
+  its case definitions (XLSX).
+- The current CCDI, perinatal health indicators, positive mental health,
+  suicide surveillance indicator framework, health inequalities and
+  congenital anomalies data tools: the same platform. CCDI, PASS,
+  positive mental health and congenital anomalies have 2018-2019
+  snapshots under `/open/` (catalogued).
+- STBBI surveillance dashboard: HTML tables only.
+- Notifiable Diseases Online (diseases.canada.ca/notifiable): data to
+  2023 is embedded in its page scripts (`ndc_ppd_en.min.js`, about 490
+  KB) and the CSV is built in the browser. The 1924-2016 CNDSS extract on
+  health.canada.ca is the latest file (catalogued).
+- Drug Analysis Service and CIPARS: date-stamped file names
+  (`YearlyCounts_20260105.csv`, `Figure_1_CIPARS_R_Combine_12_02_2025.csv`)
+  that change with each update; not catalogued. CIPARS ZIP downloads were
+  not checked.
+- `/oral-health/` answered HTTP 403.
+
+Three catalogued files carry a year in their name and will move with the
+next release (`TB_incidence_by_PT_2015-2024.csv`,
+`reformatted_data_2025.csv`, `HoPiC-data-2026.zip`); the live smoke test
+reports them as NotFound when that happens. Many other interactive
+reports load small figure CSVs (perinatal trends, cold injuries, PTSD,
+AMR) that could be added as catalogue entries.
+
+Checked values: apparent opioid toxicity deaths in Canada in 2023 are
+8,083 in the 2026-09-22 file; tuberculosis incidence in Nunavut in 2024
+is 87.5 per 100,000 (36 cases); the measles file of 2026-09-21 counts 311
+cases in Alberta this year.
+
+Terms: Health Infobase pages link the Canada.ca terms and conditions;
+the files also listed on open.canada.ca carry the Open Government
+Licence - Canada.
+
 ## ESDC (Employment and Social Development Canada)
 
 **Status:** Shipped (via `ckan_*`).

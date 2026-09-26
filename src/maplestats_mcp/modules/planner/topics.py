@@ -264,6 +264,43 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "public_health",
+        "Public health surveillance: respiratory viruses, overdoses, infectious disease",
+        (
+            "influenza",
+            "flu",
+            "covid",
+            "rsv",
+            "wastewater",
+            "opioid",
+            "overdose",
+            "measles",
+            "mpox",
+            "tuberculosis",
+            "vaccin",
+            "outbreak",
+            "notifiable",
+            "grippe",
+            "rougeole",
+            "surdose",
+            "opioide",
+            "eaux usees",
+            "tuberculose",
+            "eclosion",
+        ),
+        (
+            PlanStep("phac_infobase_list_datasets", "PHAC Health Infobase dashboard data files"),
+            PlanStep("phac_infobase_query", "filter by province, date range and column values"),
+            PlanStep("ckan_search_datasets", "other PHAC open data: portal='federal'"),
+        ),
+        (
+            (
+                "Surveillance counts are provisional and revised weekly or quarterly; suppressed "
+                "cells ('Suppr.', 'X') are not zeros, and provinces report on different schedules."
+            ),
+        ),
+    ),
+    Topic(
         "energy",
         "Energy production, pipelines and use",
         (

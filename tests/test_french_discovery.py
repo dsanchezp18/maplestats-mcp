@@ -52,6 +52,8 @@ CASES = [
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),
     ("débit des pipelines Régie de l'énergie", "cer_query_file"),
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),
+    ("surdoses d'opioïdes décès par province", "phac_infobase_query"),
+    ("charge virale eaux usées", "phac_infobase_list_datasets"),
 ]
 
 
