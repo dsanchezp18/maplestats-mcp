@@ -44,7 +44,7 @@ async def get_file_link(date: str) -> DeltaFileLink:
 
     await _LIMITER.acquire()
     try:
-        response = await _client.head(url, headers={"User-Agent": "maplestats-mcp/0.1"})
+        response = await _client.head(url)
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
             "statcan_delta:get_file_link did not respond in time. Try again shortly."

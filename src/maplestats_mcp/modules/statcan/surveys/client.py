@@ -53,7 +53,7 @@ def _imdb_url(lang: str) -> str:
 async def _warm_up_list(lang: str, *, force: bool = False) -> None:
     if lang in _warmed_list_langs and not force:
         return
-    response = await _client.get(_list_url(lang), headers={"User-Agent": "maplestats-mcp/0.1"})
+    response = await _client.get(_list_url(lang))
     response.raise_for_status()
     _warmed_list_langs.add(lang)
 
@@ -81,7 +81,7 @@ async def search_surveys(
         await _LIMITER.acquire()
         try:
             await _warm_up_list(lang)
-            response = await _client.get(url, headers={"User-Agent": "maplestats-mcp/0.1"})
+            response = await _client.get(url)
             response.raise_for_status()
             if _has_survey_links(response.text):
                 return response.text
@@ -90,7 +90,7 @@ async def search_surveys(
             # renders no links without one): re-warm once rather than cache
             # "no surveys" for the whole TTL.
             await _warm_up_list(lang, force=True)
-            response = await _client.get(url, headers={"User-Agent": "maplestats-mcp/0.1"})
+            response = await _client.get(url)
             response.raise_for_status()
             if not _has_survey_links(response.text):
                 _warmed_list_langs.discard(lang)
@@ -206,7 +206,7 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            return await _client.get(url, headers={"User-Agent": "maplestats-mcp/0.1"})
+            return await _client.get(url)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "statcan_surveys:get_survey_metadata did not respond in time. Try again shortly."

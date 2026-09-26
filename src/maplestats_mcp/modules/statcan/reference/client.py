@@ -64,9 +64,7 @@ async def _warm_up(catalogue: str, lang: str, *, force: bool = False) -> None:
     key = (catalogue, lang)
     if key in _warmed and not force:
         return
-    response = await _client.get(
-        _base_url(catalogue, lang), headers={"User-Agent": "maplestats-mcp/0.1"}
-    )
+    response = await _client.get(_base_url(catalogue, lang))
     response.raise_for_status()
     _warmed.add(key)
 
@@ -192,9 +190,7 @@ async def _search(
         await _LIMITER.acquire()
         try:
             await _warm_up(catalogue, lang)
-            response = await _client.get(
-                url, params=params, headers={"User-Agent": "maplestats-mcp/0.1"}
-            )
+            response = await _client.get(url, params=params)
             response.raise_for_status()
             if config["query_param"] not in params or not _query_ignored(
                 response.text, config["query_param"]
@@ -205,9 +201,7 @@ async def _search(
             # once and retry before giving up rather than return every
             # document in the catalogue as a "match".
             await _warm_up(catalogue, lang, force=True)
-            response = await _client.get(
-                url, params=params, headers={"User-Agent": "maplestats-mcp/0.1"}
-            )
+            response = await _client.get(url, params=params)
             response.raise_for_status()
             if _query_ignored(response.text, config["query_param"]):
                 _warmed.discard((catalogue, lang))

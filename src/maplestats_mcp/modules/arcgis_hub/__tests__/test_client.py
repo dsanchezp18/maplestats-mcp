@@ -7,6 +7,7 @@ import pytest
 from maplestats_mcp.modules.arcgis_hub import client, constants
 from maplestats_mcp.modules.arcgis_hub.schemas import PortalKey
 from maplestats_mcp.shared import cache as cache_module
+from maplestats_mcp.shared.arcgis import LayerNotQueryable
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 
@@ -153,6 +154,44 @@ async def test_feature_service_embedded_error_becomes_invalid_input(httpx_mock):
         await client.query_feature_layer(
             PORTAL, "14cca5b087f74d2d9eadc018c261d1b3", where="garbage=="
         )
+
+
+async def test_token_required_service_is_not_queryable(httpx_mock):
+    # Hub lists some secured layers publicly; their service root answers an
+    # embedded 499 (Red Deer, live 2026-09-26).
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/14cca5b087f74d2d9eadc018c261d1b3",
+        json=_ITEM_DETAIL_FEATURE,
+    )
+    service_url = "https://services.arcgis.com/G6F8XLCl5KtAlZ2G/arcgis/rest/services/2025_Contracts_Awarded_greater_than_25000_Jan_-_Jun/FeatureServer"
+    httpx_mock.add_response(
+        url=f"{service_url}?f=json",
+        json={"error": {"code": 499, "message": "Token Required", "details": []}},
+    )
+    with pytest.raises(LayerNotQueryable, match="needs an ArcGIS login"):
+        await client.query_feature_layer(PORTAL, "14cca5b087f74d2d9eadc018c261d1b3")
+
+
+async def test_submit_only_layer_is_not_queryable_not_invalid_input(httpx_mock):
+    # A Survey123 form layer (capabilities "Create,Editing") answers any query
+    # with this 400 (Red Deer, live 2026-09-26): the request was fine.
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/14cca5b087f74d2d9eadc018c261d1b3",
+        json=_ITEM_DETAIL_FEATURE,
+    )
+    service_url = "https://services.arcgis.com/G6F8XLCl5KtAlZ2G/arcgis/rest/services/2025_Contracts_Awarded_greater_than_25000_Jan_-_Jun/FeatureServer"
+    httpx_mock.add_response(url=f"{service_url}?f=json", json={"layers": [{"id": 0}], "tables": []})
+    httpx_mock.add_response(
+        url=(
+            f"{service_url}/0/query?where=1%3D1&outFields=%2A&f=json"
+            "&resultRecordCount=10&resultOffset=0&returnGeometry=false"
+        ),
+        json={
+            "error": {"code": 400, "message": "", "details": ["This operation is not supported."]}
+        },
+    )
+    with pytest.raises(LayerNotQueryable, match="does not allow queries"):
+        await client.query_feature_layer(PORTAL, "14cca5b087f74d2d9eadc018c261d1b3")
 
 
 async def test_default_layer_index_falls_back_to_table_id(httpx_mock):

@@ -43,6 +43,8 @@ class CkanConfig:
     base_url: str
     rate_limit_per_second: float
     rate_limit_capacity: float
+    # Per request attempt; shared/http.py retries up to three times.
+    timeout: float = 30.0
 
 
 def _limiter(config: CkanConfig):
@@ -88,7 +90,7 @@ async def action(config: CkanConfig, method: str, params: dict[str, Any] | None 
     await _limiter(config).acquire()
     url = f"{config.base_url}{method}"
     try:
-        data = await api_get(url, params=params)
+        data = await api_get(url, params=params, timeout=config.timeout)
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:

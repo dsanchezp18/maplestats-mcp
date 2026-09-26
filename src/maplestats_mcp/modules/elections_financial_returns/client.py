@@ -103,8 +103,6 @@ _LIMITER = get_limiter(
 _client = new_client(http2=False)
 _warmed: set[str] = set()
 
-_HEADERS = {"User-Agent": "maplestats-mcp/0.1"}
-
 
 def _resolve(mapping: dict[str, str], value: str, name: str) -> str:
     try:
@@ -125,7 +123,7 @@ async def _warm_up(url: str, *, force: bool = False) -> None:
     if url in _warmed and not force:
         return
     try:
-        response = await _client.get(url, headers=_HEADERS)
+        response = await _client.get(url)
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
         raise UpstreamError(
@@ -229,7 +227,7 @@ async def list_elections(*, act: str = "after_2019") -> ElectionList:
     async def fetch() -> list[ElectionOption]:
         await _LIMITER.acquire()
         try:
-            response = await _client.get(url, headers=_HEADERS)
+            response = await _client.get(url)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             raise UpstreamError(
@@ -316,7 +314,7 @@ async def search_candidates(
 
     async def post_search() -> str:
         try:
-            response = await _client.post(url, data=form, headers=_HEADERS)
+            response = await _client.post(url, data=form)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             raise UpstreamError(
@@ -424,7 +422,7 @@ async def get_financial_return_part(
 
         async def select_candidate() -> httpx.Response:
             try:
-                return await _client.post(search_url, data=select_form, headers=_HEADERS)
+                return await _client.post(search_url, data=select_form)
             except httpx.HTTPError as exc:
                 raise UpstreamUnavailable(
                     "elections_financial_returns:get_financial_return_part did not respond "
@@ -457,7 +455,7 @@ async def get_financial_return_part(
         try:
             # Required once per queryId before Download will serve any part
             # -- see module docstring.
-            await _client.get(detail_url, headers=_HEADERS)
+            await _client.get(detail_url)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "elections_financial_returns:get_financial_return_part did not respond "
@@ -472,7 +470,7 @@ async def get_financial_return_part(
             f"&downloadFormat={constants.DOWNLOAD_FORMAT_JSON}&current200Page=0&total200Pages=0"
         )
         try:
-            download_response = await _client.get(download_url, headers=_HEADERS)
+            download_response = await _client.get(download_url)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "elections_financial_returns:get_financial_return_part did not respond "
