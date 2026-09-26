@@ -52,6 +52,7 @@ _DOCUMENTS = (
     "gazette_get_notice",
     "parliament_search_hansard",
     "parliament_search_speeches",
+    "parliament_get_committee_meeting",
 )
 _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents")
 

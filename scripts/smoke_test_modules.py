@@ -235,6 +235,43 @@ STEPS: list[Step] = [
         {"query": "pharmacare", "sort": "newest"},
         _non_empty("hits"),
     ),
+    Step(
+        "openparliament",
+        "parliament_list_committees",
+        {"keyword": "finance"},
+        _non_empty("committees"),
+    ),
+    Step(
+        "openparliament",
+        "parliament_get_committee",
+        lambda ctx: {"committee": ctx["parliament_list_committees"]["committees"][0]["slug"]},
+        _non_empty("sessions"),
+    ),
+    Step(
+        "openparliament",
+        "parliament_search_committee_meetings",
+        lambda ctx: {
+            "committee": ctx["parliament_list_committees"]["committees"][0]["slug"],
+            "in_camera": False,
+            "date_to": _TODAY.isoformat(),
+            "limit": 20,
+        },
+        _non_empty("meetings"),
+    ),
+    Step(
+        "openparliament",
+        "parliament_get_committee_meeting",
+        lambda ctx: {
+            **next(
+                {"committee": m["committee"], "session": m["session"], "number": m["number"]}
+                for m in ctx["parliament_search_committee_meetings"]["meetings"]
+                if m["has_evidence"]
+            ),
+            "limit": 5,
+            "lang": "fr",
+        },
+        _non_empty("speeches"),
+    ),
     # Senate of Canada votes
     Step("senate", "senate_list_votes", {"limit": 3}, _non_empty("votes")),
     Step(

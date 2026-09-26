@@ -22,6 +22,13 @@ from maplestats_mcp.modules.openparliament.schemas import (
     Bill,
     BillSearchResult,
     BillSummary,
+    Committee,
+    CommitteeListResult,
+    CommitteeMeeting,
+    CommitteeMeetingSearchResult,
+    CommitteeMeetingSummary,
+    CommitteeSession,
+    CommitteeSummary,
     HansardHit,
     HansardSearchResult,
     Membership,
@@ -34,11 +41,13 @@ from maplestats_mcp.modules.openparliament.schemas import (
     Vote,
     VoteSearchResult,
     VoteSummary,
+    Witness,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
+from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -155,13 +164,16 @@ def _date_param(value: str, name: str) -> str:
     return parsed.isoformat()
 
 
-def _provenance(path: str, params: dict[str, Any], cached: bool, schema: str) -> Provenance:
+def _provenance(
+    path: str, params: dict[str, Any], cached: bool, schema: str, coverage: str | None = None
+) -> Provenance:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=str(httpx.URL(f"{constants.BASE_URL}{path}", params=params)),
         cached=cached,
         schema_name=f"openparliament.{schema}",
         freshness=_FRESHNESS,
+        coverage=coverage,
         limits=_NOTE,
     )
 
@@ -498,6 +510,18 @@ async def search_hansard(
     )
 
 
+def _speech(row: dict[str, Any], lang: Lang) -> Speech:
+    return Speech(
+        time=row.get("time"),
+        speaker=_text(row.get("attribution"), lang),
+        politician=_slug(row.get("politician_url")),
+        text=_plain(_text(row.get("content"), lang)),
+        procedural=row.get("procedural"),
+        document=row.get("document_url"),
+        url=f"{constants.SITE_URL}{row['url']}",
+    )
+
+
 async def search_speeches(
     *,
     politician: str | None = None,
@@ -524,21 +548,230 @@ async def search_speeches(
     if not params:
         raise InvalidInput("Give politician, debate_date, or a date range.")
     page, cached = await _get("/speeches/", {**params, "limit": limit})
-    speeches = [
-        Speech(
-            time=row.get("time"),
-            speaker=_text(row.get("attribution"), lang),
-            politician=_slug(row.get("politician_url")),
-            text=_plain(_text(row.get("content"), lang)),
-            procedural=row.get("procedural"),
-            document=row.get("document_url"),
-            url=f"{constants.SITE_URL}{row['url']}",
-        )
-        for row in page.get("objects") or []
-    ]
+    speeches = [_speech(row, lang) for row in page.get("objects") or []]
     return SpeechSearchResult(
         speeches=speeches,
         returned_count=len(speeches),
         has_more=bool((page.get("pagination") or {}).get("next_url")),
         provenance=_provenance("/speeches/", params, cached, "SpeechSearchResult"),
+    )
+
+
+# --- Committees -----------------------------------------------------------
+#
+# Verified live 2026-09-26. /committees/ answers the current session's
+# top-level committees by default and takes `session`; an unknown or
+# pre-39-1 session answers an empty list, not 404. Subcommittees never
+# appear in that list, only in a committee's `subcommittees`.
+# /committees/meetings/ filters on `committee` (slug), `session`, `date`,
+# `date__gte`, `date__lte` and `in_camera`, always newest first; it
+# silently ignores `has_evidence` and `ordering`, and an unknown committee
+# answers an empty list. Meetings on notice appear before they happen
+# (dates after today, `has_evidence` false). A meeting's transcript is
+# /speeches/?document=<meeting path>, in spoken order; a document path the
+# API does not know answers HTTP 400 "Invalid meeting URL" (text/plain).
+# Studies (openparliament.ca/committees/activities/<id>/) exist only as
+# HTML pages, with no JSON form, so they are not exposed here.
+
+_COMMITTEE_COVERAGE = "House of Commons committees from session 39-1 (2006) on"
+_WITNESS = re.compile(r"^(?P<name>[^(]+?)\s*\((?P<role>.+)\)\s*$")
+
+
+def _check_committee(slug: str) -> str:
+    cleaned = slug.strip().strip("/").rsplit("/", 1)[-1].lower()
+    if not _SLUG.match(cleaned):
+        raise InvalidInput(
+            f"committee must be a slug like 'finance' (see parliament_list_committees), "
+            f"got {slug!r}."
+        )
+    return cleaned
+
+
+def _committee_summary(row: dict[str, Any], lang: Lang) -> CommitteeSummary:
+    return CommitteeSummary(
+        slug=row.get("slug") or _slug(row.get("url")) or "",
+        name=_text(row.get("name"), lang) or "",
+        short_name=_text(row.get("short_name"), lang),
+        parent=_slug(row.get("parent_url")),
+        url=f"{constants.SITE_URL}{row['url']}",
+    )
+
+
+def _meeting_summary(row: dict[str, Any]) -> CommitteeMeetingSummary:
+    # List rows carry no `session`; it is the second-to-last path part of
+    # the meeting URL (/committees/finance/45-1/50/), confirmed live.
+    parts = row["url"].strip("/").split("/")
+    return CommitteeMeetingSummary(
+        committee=_slug(row.get("committee_url")) or parts[1],
+        session=row.get("session") or parts[-2],
+        number=int(row["number"]),
+        date=_date(row.get("date")),
+        in_camera=row.get("in_camera"),
+        has_evidence=row.get("has_evidence"),
+        url=f"{constants.SITE_URL}{row['url']}",
+    )
+
+
+def _witnesses(rows: list[dict[str, Any]], lang: Lang) -> list[Witness]:
+    """Non-MP speakers introduced as 'Name (Title, Organization)'.
+
+    Live transcripts give a witness's title and organization only on the
+    first attribution and the bare name afterwards; officers of the House
+    ("The Clerk of the Committee (...)", "Some hon. members") have no
+    politician_url either, so English attributions starting with "The "
+    or naming an hon. member are skipped.
+    """
+    found: dict[str, Witness] = {}
+    for row in rows:
+        if row.get("politician_url"):
+            continue
+        attribution = row.get("attribution")
+        english = _text(attribution, "en") or ""
+        if english.startswith("The ") or "hon. member" in english:
+            continue
+        match = _WITNESS.match(_text(attribution, lang) or "")
+        if match is None:
+            continue
+        name = match["name"].strip()
+        if name not in found:
+            found[name] = Witness(name=name, role=match["role"].strip())
+    return list(found.values())
+
+
+async def list_committees(
+    *, session: str | None = None, keyword: str | None = None, lang: Lang = "en"
+) -> CommitteeListResult:
+    params: dict[str, Any] = {}
+    if session:
+        params["session"] = _check_session(session)
+    rows, cached = await _get_all("/committees/", params, constants.COMMITTEE_TTL_SECONDS)
+    if session and not rows:
+        raise NotFound(
+            f"openparliament: no committees recorded for session {params['session']}; "
+            "committee data starts with session 39-1 (2006)."
+        )
+    needle = (keyword or "").strip().lower()
+    committees = [
+        _committee_summary(row, lang)
+        for row in rows
+        if not needle
+        or needle in (row.get("slug") or "")
+        or any(
+            needle in (value or "").lower()
+            for field in ("name", "short_name")
+            for value in (row.get(field) or {}).values()
+        )
+    ]
+    return CommitteeListResult(
+        session=params.get("session"),
+        committees=committees,
+        returned_count=len(committees),
+        provenance=_provenance(
+            "/committees/", params, cached, "CommitteeListResult", _COMMITTEE_COVERAGE
+        ),
+    )
+
+
+async def get_committee(committee: str, *, lang: Lang = "en") -> Committee:
+    slug = _check_committee(committee)
+    path = f"/committees/{slug}/"
+    row, cached = await _get(path, ttl=constants.COMMITTEE_TTL_SECONDS)
+    meetings, _ = await _get(
+        "/committees/meetings/", {"committee": slug, "limit": constants.RECENT_MEETINGS}
+    )
+    return Committee(
+        slug=row.get("slug") or slug,
+        name=_text(row.get("name"), lang) or "",
+        short_name=_text(row.get("short_name"), lang),
+        parent=_slug(row.get("parent_url")),
+        subcommittees=[_slug(url) or "" for url in list_or_empty(row, "subcommittees")],
+        sessions=[
+            CommitteeSession(
+                session=s.get("session", ""),
+                acronym=s.get("acronym"),
+                source_url=s.get("source_url"),
+            )
+            for s in list_or_empty(row, "sessions")
+        ],
+        recent_meetings=[_meeting_summary(m) for m in list_or_empty(meetings, "objects")],
+        url=f"{constants.SITE_URL}{path}",
+        provenance=_provenance(path, {}, cached, "Committee", _COMMITTEE_COVERAGE),
+    )
+
+
+async def search_committee_meetings(
+    *,
+    committee: str | None = None,
+    session: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    in_camera: bool | None = None,
+    limit: int = constants.LIMIT_DEFAULT,
+) -> CommitteeMeetingSearchResult:
+    _check_limit(limit)
+    params: dict[str, Any] = {}
+    if committee:
+        params["committee"] = _check_committee(committee)
+    if session:
+        params["session"] = _check_session(session)
+    if date_from:
+        params["date__gte"] = _date_param(date_from, "date_from")
+    if date_to:
+        params["date__lte"] = _date_param(date_to, "date_to")
+    if in_camera is not None:
+        params["in_camera"] = "true" if in_camera else "false"
+    page, cached = await _get("/committees/meetings/", {**params, "limit": limit})
+    rows = list_or_empty(page, "objects")
+    if committee and not rows:
+        # An unknown committee answers an empty list, not 404; the detail
+        # endpoint tells a typo apart from a committee with no matches.
+        await _get(f"/committees/{params['committee']}/", ttl=constants.COMMITTEE_TTL_SECONDS)
+    return CommitteeMeetingSearchResult(
+        meetings=[_meeting_summary(row) for row in rows],
+        returned_count=len(rows),
+        has_more=bool((page.get("pagination") or {}).get("next_url")),
+        provenance=_provenance(
+            "/committees/meetings/",
+            params,
+            cached,
+            "CommitteeMeetingSearchResult",
+            _COMMITTEE_COVERAGE,
+        ),
+    )
+
+
+async def get_committee_meeting(
+    committee: str,
+    session: str,
+    number: int,
+    *,
+    limit: int = constants.LIMIT_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> CommitteeMeeting:
+    if number < 1:
+        raise InvalidInput(f"meeting number must be positive, got {number}.")
+    if limit < 0 or limit > constants.LIMIT_MAX:
+        raise InvalidInput(f"limit must be between 0 and {constants.LIMIT_MAX}, got {limit}.")
+    if offset < 0:
+        raise InvalidInput(f"offset must not be negative, got {offset}.")
+    path = f"/committees/{_check_committee(committee)}/{_check_session(session)}/{number}/"
+    row, cached = await _get(path)
+    # The whole transcript (typically 50 to 300 speeches, one request at
+    # 500 per page) is read so the witness list covers every speaker.
+    rows, _ = await _get_all("/speeches/", {"document": path})
+    kept = rows[offset : offset + limit]
+    return CommitteeMeeting(
+        meeting=_meeting_summary(row),
+        start_time=row.get("start_time"),
+        end_time=row.get("end_time"),
+        minutes_url=row.get("minutes_url"),
+        notice_url=row.get("notice_url"),
+        webcast_url=row.get("webcast_url"),
+        witnesses=_witnesses(rows, lang),
+        total_speeches=len(rows),
+        speeches=[_speech(r, lang) for r in kept],
+        offset=offset,
+        has_more=offset + len(kept) < len(rows),
+        provenance=_provenance(path, {}, cached, "CommitteeMeeting", _COMMITTEE_COVERAGE),
     )

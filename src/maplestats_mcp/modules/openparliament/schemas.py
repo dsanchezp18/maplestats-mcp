@@ -157,3 +157,81 @@ class SpeechSearchResult(BaseModel):
     returned_count: int
     has_more: bool
     provenance: Provenance
+
+
+class CommitteeSummary(BaseModel):
+    slug: str = Field(description="Committee slug for other parliament_ committee tools.")
+    name: str
+    short_name: str | None = None
+    parent: str | None = Field(default=None, description="Parent committee slug, if any.")
+    url: str
+
+
+class CommitteeListResult(BaseModel):
+    session: str | None = Field(
+        default=None, description="Session asked for; None means the current session."
+    )
+    committees: list[CommitteeSummary]
+    returned_count: int
+    provenance: Provenance
+
+
+class CommitteeSession(BaseModel):
+    session: str = Field(description="Parliament-session, e.g. '45-1'.")
+    acronym: str | None = Field(default=None, description="House of Commons acronym, e.g. 'FINA'.")
+    source_url: str | None = Field(default=None, description="Committee page on ourcommons.ca.")
+
+
+class CommitteeMeetingSummary(BaseModel):
+    committee: str = Field(description="Committee slug.")
+    session: str
+    number: int
+    date: dt.date | None = None
+    in_camera: bool | None = Field(default=None, description="Held in private (no transcript).")
+    has_evidence: bool | None = Field(
+        default=None, description="A transcript (evidence) is available."
+    )
+    url: str
+
+
+class Committee(BaseModel):
+    slug: str
+    name: str
+    short_name: str | None = None
+    parent: str | None = Field(default=None, description="Parent committee slug, if any.")
+    subcommittees: list[str] = Field(description="Subcommittee slugs.")
+    sessions: list[CommitteeSession] = Field(description="Sessions it sat in, most recent first.")
+    recent_meetings: list[CommitteeMeetingSummary] = Field(description="Most recent first.")
+    url: str
+    provenance: Provenance
+
+
+class CommitteeMeetingSearchResult(BaseModel):
+    meetings: list[CommitteeMeetingSummary] = Field(description="Most recent first.")
+    returned_count: int
+    has_more: bool
+    provenance: Provenance
+
+
+class Witness(BaseModel):
+    name: str
+    role: str | None = Field(
+        default=None, description="Title and organization as given in the transcript."
+    )
+
+
+class CommitteeMeeting(BaseModel):
+    meeting: CommitteeMeetingSummary
+    start_time: str | None = None
+    end_time: str | None = None
+    minutes_url: str | None = None
+    notice_url: str | None = None
+    webcast_url: str | None = None
+    witnesses: list[Witness] = Field(
+        description="Non-MP witnesses who spoke, in order of first appearance."
+    )
+    total_speeches: int
+    speeches: list[Speech] = Field(description="Transcript slice from offset, in spoken order.")
+    offset: int
+    has_more: bool
+    provenance: Provenance

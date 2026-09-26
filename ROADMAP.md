@@ -257,7 +257,7 @@ CKAN/portal coverage — each needs its own adaptor design.
 | PHAC Health Infobase | Not started | Not checked yet: CSV and JSON behind the health-infobase.canada.ca dashboards (respiratory virus surveillance, opioid and stimulant harms, chronic disease indicators). PHAC's 761 CKAN datasets are already reachable via `ckan_*`. |
 | CFIA (Canadian Food Inspection Agency) | Not started | Not checked yet: animal disease and inspection datasets; check first whether federal CKAN already covers them. |
 | SEDAR+ (securities filings) | Out of scope | Not built: SEDAR+ terms prohibit automated access and bulk use. |
-| OpenParliament committees | Not started | From Notion's legislation section: committees and legislative history beyond the shipped bills, votes and Hansard tools. Note the scope question below. |
+| OpenParliament committees | Shipped | Shipped 2026-09-26 in `modules/openparliament/`: `parliament_list_committees`, `parliament_get_committee`, `parliament_search_committee_meetings`, `parliament_get_committee_meeting` (House committees from 39-1, meetings, witnesses, minutes and webcast links, transcripts). Studies are HTML-only and not exposed. [Details](docs/findings/specialized-federal-sources.md#openparliament-committees) |
 | Clean Technology Data Strategy (NRCan, ISED, StatCan; Clean Growth Hub) | Partly covered | Checked 2026-09-24: its statistics are StatCan's Environmental and Clean Technology Products Economic Account (tables 36-10-0366, -0370, -0371, -0372, -0411, -0627 and more, via `wds_`) plus … [Details](docs/findings/specialized-federal-sources.md#clean-technology-data-strategy-nrcan-ised-statcan-clean-growth-hub) |
 
 **Scope (decided 2026-09-24):** parliamentary and regulatory data stay in

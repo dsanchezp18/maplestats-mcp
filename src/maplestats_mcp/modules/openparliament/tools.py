@@ -10,6 +10,10 @@ from maplestats_mcp.modules.openparliament import client, constants
 from maplestats_mcp.modules.openparliament.schemas import (
     Bill,
     BillSearchResult,
+    Committee,
+    CommitteeListResult,
+    CommitteeMeeting,
+    CommitteeMeetingSearchResult,
     HansardSearchResult,
     Politician,
     PoliticianSearchResult,
@@ -202,4 +206,107 @@ async def parliament_search_speeches(
         date_to=date_to,
         lang=lang,
         limit=limit,
+    )
+
+
+@tool
+async def parliament_list_committees(
+    session: str | None = None,
+    keyword: str | None = None,
+    lang: Literal["en", "fr"] = "en",
+) -> CommitteeListResult:
+    """List House of Commons standing and special committees in a session.
+
+    Use for: which committees exist (e.g. Finance, Health, Public
+    Accounts) and the slug the other committee tools take. session like
+    '44-1' (default: the current session; data from 39-1, 2006); keyword
+    filters on the English or French name, e.g. "santé" or "ethics".
+    Subcommittees are listed by parliament_get_committee.
+    Keywords: committee, standing committee, special committee, House of
+    Commons committee, parliamentary committee, FINA, Parliament, committee
+    list.
+    Mots-clés : comité, comité permanent, comité spécial, comités de la
+    Chambre des communes, comité parlementaire, liste des comités,
+    Parlement, commission parlementaire.
+    """
+    return await client.list_committees(session=session, keyword=keyword, lang=lang)
+
+
+@tool
+async def parliament_get_committee(committee: str, lang: Literal["en", "fr"] = "en") -> Committee:
+    """Get one House of Commons committee: sessions, acronyms, subcommittees, recent meetings.
+
+    Use for: a committee's full name, its acronym in each session (e.g.
+    FINA, ETHI) with the ourcommons.ca page, its subcommittees, and its 10
+    most recent meetings. committee is a slug from
+    parliament_list_committees, e.g. 'finance' or 'public-accounts'.
+    Keywords: committee profile, committee acronym, subcommittee,
+    committee meetings, standing committee, House of Commons, ourcommons,
+    committee history.
+    Mots-clés : profil du comité, sigle du comité, sous-comité, réunions
+    du comité, comité permanent, Chambre des communes, historique du
+    comité, travaux du comité.
+    """
+    return await client.get_committee(committee, lang=lang)
+
+
+@tool
+async def parliament_search_committee_meetings(
+    committee: str | None = None,
+    session: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    in_camera: bool | None = None,
+    limit: int = constants.LIMIT_DEFAULT,
+    lang: Literal["en", "fr"] = "en",
+) -> CommitteeMeetingSearchResult:
+    """List House of Commons committee meetings, newest first.
+
+    Use for: a committee's meetings (committee slug), all committee
+    meetings in a session or date range (YYYY-MM-DD), or only public or
+    only in camera (private) meetings. Shows whether a transcript exists;
+    upcoming meetings on notice appear with future dates. Read one with
+    parliament_get_committee_meeting. Results carry no text, so `lang`
+    has no effect.
+    Keywords: committee meeting, hearing, committee schedule, in camera,
+    committee evidence, sitting, House of Commons committee, testimony.
+    Mots-clés : réunion de comité, séance du comité, audience, à huis
+    clos, témoignages, calendrier des comités, comité de la Chambre des
+    communes, comparution.
+    """
+    del lang
+    return await client.search_committee_meetings(
+        committee=committee,
+        session=session,
+        date_from=date_from,
+        date_to=date_to,
+        in_camera=in_camera,
+        limit=limit,
+    )
+
+
+@tool
+async def parliament_get_committee_meeting(
+    committee: str,
+    session: str,
+    number: int,
+    limit: int = constants.LIMIT_DEFAULT,
+    offset: int = 0,
+    lang: Literal["en", "fr"] = "en",
+) -> CommitteeMeeting:
+    """Get one committee meeting's witnesses, times, links and transcript (evidence).
+
+    Use for: who testified before a committee (witness name, title and
+    organization), what MPs and witnesses said, and links to the minutes,
+    notice and webcast. committee slug, session like '45-1' and meeting
+    number come from parliament_search_committee_meetings. Page through
+    the transcript with offset; limit=0 returns witnesses only. Text is
+    plain, in English or French.
+    Keywords: committee testimony, witness, evidence, committee
+    transcript, hearing, minutes, webcast, what was said in committee.
+    Mots-clés : témoignages, témoin, comparution, transcription de la
+    réunion, procès-verbal, webdiffusion, délibérations du comité, audience.
+    """
+    return await client.get_committee_meeting(
+        committee, session, number, limit=limit, offset=offset, lang=lang
     )
