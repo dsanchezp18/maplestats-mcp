@@ -80,6 +80,19 @@ from maplestats_mcp.shared.rate_limiter import get_limiter
 DOWNLOAD_FORMATS = ("csv", "shapefile", "geojson", "kml")
 
 
+class LayerNotQueryable(UpstreamError):
+    """A catalogue item whose layer cannot be read by an anonymous query.
+
+    Hub catalogues list such items as ordinary datasets anyway. Confirmed
+    live 2026-09-26 on Red Deer's portal: "WAT_BulkWaterStation_PUBLIC"
+    answers its service root with code 499 "Token Required" (secured), and a
+    Survey123 form layer with capabilities "Create,Editing" answers a query
+    with code 400 "This operation is not supported." (submit-only). Subclasses
+    UpstreamError so existing handling is unchanged, but lets callers tell
+    "cannot be read" apart from "broken" or "bad request".
+    """
+
+
 @dataclass(frozen=True)
 class ArcGISHubConfig:
     """Per-portal configuration for the shared ArcGIS Hub client."""
@@ -209,6 +222,13 @@ def _raise_if_embedded_error(source: str, context: str, body: Any) -> None:
     detail = _feature_service_error_detail(body)
     error = body.get("error")
     code = error.get("code") if isinstance(error, dict) else None
+    # ArcGIS's fixed text for a layer without the Query capability; the
+    # request itself was fine, so this is not the caller's InvalidInput.
+    if code == 400 and "operation is not supported" in detail.lower():
+        raise LayerNotQueryable(
+            f"{source}:{context}: this layer does not allow queries (it is likely a "
+            "submit-only form); use the item's download_urls if it has any, or another item."
+        )
     if code == 400:
         raise InvalidInput(f"{source}:{context}: rejected the request ({detail}).")
     # Confirmed live against a plain ArcGIS Server deployment (StatCan's
@@ -218,6 +238,13 @@ def _raise_if_embedded_error(source: str, context: str, body: Any) -> None:
     # 404 status is mapped elsewhere in this codebase.
     if code == 404:
         raise NotFound(f"{source}:{context}: {detail or 'not found'}.")
+    # 499 "Token Required" / 498 "Invalid Token": the service is secured.
+    if code in (498, 499):
+        raise LayerNotQueryable(
+            f"{source}:{context}: this layer is secured and needs an ArcGIS login "
+            f"({detail or 'Token Required'}), so it cannot be queried here; use the "
+            "item's download_urls if it has any, or another item."
+        )
     raise UpstreamError(f"{source}:{context} returned an error: {detail}")
 
 
