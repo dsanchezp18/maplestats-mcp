@@ -78,7 +78,7 @@ bilingual one-line description of each module):
 | Energy use | `nrcan_energy_use_` | NRCan Comprehensive Energy Use Database and energy surveys (SHEU, SCIEU, ICE, ...), EN/FR tables |
 | Oceans | `dfo_iwls_` | DFO tide stations, tide times, predicted and observed water levels |
 | Other federal | `ircc_`, `ircc_monthly_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, IRCC monthly immigration tables (permanent residents, permits, asylum), candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |
-| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_` | Alberta Energy Regulator; BC Geographic Warehouse; Alberta Economic Dashboard (~260 curated economic tables) |
+| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_` | Alberta Energy Regulator; BC Geographic Warehouse; Alberta Economic Dashboard (~260 curated economic tables); Institut de la statistique du Québec (~7,000 detailed tables) |
 | CKAN catalogues | `ckan_` + `portal` | Federal (open.canada.ca), Ontario, BC, Alberta, Quebec, NWT, Yukon, Montreal, Toronto, Regina (`ckan_list_portals`): dataset search/detail and DataStore row queries |
 | ArcGIS Hub portals | `arcgis_hub_` + `portal` | 33 provinces, cities, regions, and agencies (`arcgis_hub_list_portals`) |
 | Socrata portals | `socrata_` + `portal` | Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg (`socrata_list_portals`) |

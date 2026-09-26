@@ -40,7 +40,13 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
             PlanStep("aer_get_well_licences_daily", "Alberta Energy Regulator reports"),
         ),
     ),
-    "quebec": ("Quebec", (_ckan("qc"),)),
+    "quebec": (
+        "Quebec",
+        (
+            _ckan("qc"),
+            PlanStep("isq_search_tables", "Institut de la statistique du Quebec tables"),
+        ),
+    ),
     "manitoba": ("Manitoba", (_arcgis("mb"),)),
     "saskatchewan": ("Saskatchewan", (_arcgis("sk"),)),
     "prince edward island": ("Prince Edward Island", (_arcgis("pe"),)),

@@ -107,7 +107,7 @@ Sources, by tool-name prefix:
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
   nrcan_nbac_. CanadaBuys federal tenders and contract awards: canadabuys_.
   DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
-  ab_economic_. NRCan energy use (Comprehensive Energy Use Database,
+  ab_economic_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
   household/commercial/industrial energy surveys): nrcan_energy_use_.
   Canada Energy Regulator (pipeline throughput, energy exports, tolls):
   cer_. GC InfoBase federal spending and results (Estimates, Public

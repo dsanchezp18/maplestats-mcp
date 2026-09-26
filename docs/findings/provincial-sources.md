@@ -251,39 +251,42 @@ applies here too.
 
 ## Institut de la statistique du Québec (ISQ)
 
-**Status:** Candidate module.
+**Status:** Shipped.
 
-Checked 2026-09-26. Données Québec carries only 7 ISQ datasets
-(organization `isq`), all geography: the Québec geographic code, a
-postal-code geolocation table, harmonized 2016 and 2021 census
-geography, and land cover. ISQ's statistics are on
-statistique.quebec.ca, a Next.js site whose pages embed their data in
-`__NEXT_DATA__`.
+Checked 2026-09-26 and shipped the same day as `modules/isq/`
+(`isq_search_tables`, `isq_get_table`).
 
-- **Catalogue.** `sitemap.xml` lists 25,857 URLs: 7,078 detailed tables
-  (`/produit/tableau/`, 3,538 in English), 12,489 files (`/fichier/`),
-  1,238 publications and 2,864 subject documents. Each table page's
-  JSON gives its name, subjects, update date and type.
+Données Québec carries only 7 ISQ datasets (organization `isq`), all
+geography. ISQ's statistics are on statistique.quebec.ca, a Next.js site
+whose pages embed their record in `__NEXT_DATA__`. The BDSO data bank
+(bdso.gouv.qc.ca) closed on 2025-12-18 and ISQ's own tables moved to that
+site.
+
+- **Catalogue.** `sitemap.xml` lists 7,078 detailed-table pages
+  (`/fr|en/produit/tableau/<slug>`, 3,538 English), plus 12,489 files,
+  1,238 publications and 2,864 subject documents. Slugs are the titles,
+  so search matches their words. The site's own search is Google CSE.
 - **Static tables** (7 of 12 sampled): the page JSON holds the table as
-  HTML (`html`) and the name of an Excel copy (`excel`, served at
-  `/en/fichier/<name>.xlsx`), e.g. population projections by age group
-  2016-2041 by region.
-- **Dynamic tables** (5 of 12 sampled) come from the BDSO data bank
-  (`/pls/ken/`), which `robots.txt` disallows, so it is out of bounds.
-  Some dynamic tables also have a full extract at
-  `/docs-ken/multimedia/fichier_complet_<no>.xlsx` (and `_eng.xlsx`):
-  table 815, real GDP by industry monthly 1997-2026, has one; tables
-  2444, 2736 and 3871 do not.
-- The Excel files are presentation layouts (title rows, multi-row
-  headers with NAICS codes, then periods such as `199701`) that differ
-  by table, so a reader must locate the header and period rows in each
-  file.
-- `/api/<lang>/lov/...` is the site's own API for lists of values; no
-  public data API was found.
-
-If built: search over the sitemap's tables (cached), a get-table tool
-reading static tables from their embedded HTML, plus the `fichier` Excel
-copies or `fichier_complet` extracts when present, and reporting
-BDSO-only tables as not retrievable. Terms of use still need checking
-before building.
-
+  HTML (`html`) and an Excel file name (`excel`, served under
+  `/<lang>/fichier/`).
+- **Dynamic tables** (5 of 12 sampled): the page script reads them from
+  the engine that powered BDSO, now under
+  `statistique.quebec.ca/pls/ken/ken411_data_explt_v2.*`, by table number:
+  `p_retrn_titre`, `p_retrn_header` (JSON column tree and field list),
+  `p_retrn_data` (all rows as `;`-separated CSV; 26 of 26 sampled tables
+  returned everything in one response in 0.3 to 1.3 s, largest 1.4 MB),
+  `p_retrn_note_html` (notes and sources) and `p_retrn_signe` (the legend
+  of conventional signs). `robots.txt` disallows `/pls/ken/`; the project
+  owner decided to read it anyway, on demand, one table per request, at
+  one request per second, never crawled.
+- **Values** are French-formatted (`1 015,1` with a normal, no-break or
+  narrow no-break space); flags sit in a paired `_sign` column (r, p, e,
+  x, F, and survey precision marks like `a`, `*`, `(+)`). Some cells hold
+  HTML. Column headers nest (`Moins de 1 verre / (%)`); untitled label
+  columns are `de_coln`, `de_detl`, `de_group` and `mesr`.
+- **Uniqueness.** Of 26 sampled dynamic tables, about 18 are ISQ's own
+  sources (Québec youth health survey, care experience survey, the
+  culture and communications observatory, Conseil des arts et des
+  lettres, ISQ investment and R&D surveys, disposable income by MRC),
+  most others are ISQ tabulations of StatCan microdata for Québec, and 2
+  (population estimates, CPI) duplicate StatCan tables.
