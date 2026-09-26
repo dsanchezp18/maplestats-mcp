@@ -5,6 +5,11 @@ column-oriented shape: `{"COLUMNS": [...], "DATA": [[...], ...]}`
 (row values in the same order as COLUMNS, not an array of objects) --
 this client zips each row against COLUMNS into a dict before mapping
 named fields, rather than assuming a fixed column order.
+
+The `.json` in the URL does not pick the format: confirmed live
+2026-09-26, both endpoints negotiate on `Accept` and answer XML to
+httpx's default `*/*`, JSON only to `Accept: application/json`. Every
+request sends `_JSON_ACCEPT` for that reason.
 """
 
 from __future__ import annotations
@@ -25,6 +30,8 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
+
+_JSON_ACCEPT = {"Accept": "application/json"}
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -72,11 +79,17 @@ async def list_geographies(
     async def fetch() -> Any:
         await _LIMITER.acquire()
         try:
-            return await api_get(url, params=params)
+            return await api_get(url, params=params, headers=_JSON_ACCEPT)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             raise UpstreamError(
                 f"statcan_census_profile_2016:list_geographies returned HTTP {status}."
+            ) from exc
+        except httpx.DecodingError as exc:
+            # A 200 whose body is not JSON (e.g. the XML this service sends
+            # without the Accept header) is a shape problem, not an outage.
+            raise UpstreamError(
+                f"statcan_census_profile_2016:list_geographies returned a non-JSON response: {exc}"
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
@@ -151,11 +164,17 @@ async def get_data(
     async def fetch() -> Any:
         await _LIMITER.acquire()
         try:
-            return await api_get(url, params=params)
+            return await api_get(url, params=params, headers=_JSON_ACCEPT)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             raise UpstreamError(
                 f"statcan_census_profile_2016:get_data returned HTTP {status}."
+            ) from exc
+        except httpx.DecodingError as exc:
+            # A 200 whose body is not JSON (e.g. the XML this service sends
+            # without the Accept header) is a shape problem, not an outage.
+            raise UpstreamError(
+                f"statcan_census_profile_2016:get_data returned a non-JSON response: {exc}"
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
