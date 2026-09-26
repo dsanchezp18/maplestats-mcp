@@ -179,7 +179,9 @@ class CommitteeListResult(BaseModel):
 class CommitteeSession(BaseModel):
     session: str = Field(description="Parliament-session, e.g. '45-1'.")
     acronym: str | None = Field(default=None, description="House of Commons acronym, e.g. 'FINA'.")
-    source_url: str | None = Field(default=None, description="Committee page on ourcommons.ca.")
+    source_url: str | None = Field(
+        default=None, description="Committee page on ourcommons.ca (noscommunes.ca for lang='fr')."
+    )
 
 
 class CommitteeMeetingSummary(BaseModel):
@@ -224,9 +226,13 @@ class CommitteeMeeting(BaseModel):
     meeting: CommitteeMeetingSummary
     start_time: str | None = None
     end_time: str | None = None
-    minutes_url: str | None = None
-    notice_url: str | None = None
-    webcast_url: str | None = None
+    minutes_url: str | None = Field(
+        default=None, description="ourcommons.ca minutes (noscommunes.ca for lang='fr')."
+    )
+    notice_url: str | None = Field(
+        default=None, description="ourcommons.ca notice (noscommunes.ca for lang='fr')."
+    )
+    webcast_url: str | None = Field(default=None, description="Webcast link as the API gives it.")
     witnesses: list[Witness] = Field(
         description="Non-MP witnesses who spoke, in order of first appearance."
     )

@@ -209,6 +209,71 @@ async def test_french_dump_folds_accents_and_class_names(httpx_mock):
     assert [r.recall_id for r in classe.recalls] == [82667]
 
 
+def _fr(nid, title, category, *, issue=None, cls=""):
+    return {
+        "NID": nid,
+        "Titre": title,
+        "URL": f"https://recalls-rappels.canada.ca/fr/avis-rappel/{nid}",
+        "Organization": "ACIA",
+        "Produit": None,
+        "Problème": issue,
+        "Ce que vous devriez faire": "",
+        "Catégorie": category,
+        "Classe de rappel": cls,
+        "Dernière mise à jour": "2026-09-01",
+        "Archivé": "0",
+    }
+
+
+async def test_french_query_plurals_stopwords_and_apostrophes(httpx_mock):
+    # Titles and categories as the live French dump spells them, with both
+    # apostrophe styles (checked 2026-09-26).
+    rows = [
+        _fr(
+            "81001",
+            "Rappel de biscuit de marque Red Tea Room en raison de la présence non déclarée "
+            "d'arachides",
+            "Bonbons, confiseries, collations et édulcorants",
+            issue="Arachides",
+        ),
+        _fr(
+            "81002",
+            "Rappel de gâteries pour animaux de compagnie en raison de la salmonelle",
+            "Aliments et produits de soins pour animaux de compagnie",
+        ),
+        _fr(
+            "81003",
+            "Désinfectant de haut niveau",
+            "Produits d\u2019usage personnel et d\u2019usage hospitalier général",
+        ),
+        _fr("81004", "Rappel d\u2019un siège", "Siège d'auto pour enfant"),
+        _fr("81005", "Rappel d'un jouet en forme d'animal", "Jouets et jeux"),
+    ]
+    _dump(httpx_mock, rows, FR_URL)
+
+    async def ids(**kwargs):
+        result = await client.search(lang="fr", **kwargs)
+        return [r.recall_id for r in result.recalls]
+
+    # "aux" and the plural "biscuits" appear in no matching title.
+    assert await ids(query="biscuits aux arachides") == [81001]
+    assert await ids(query="l\u2019arachide") == [81001]
+    # The -aux plural stem finds the plural and the singular.
+    assert await ids(query="animaux") == [81005, 81002]
+    assert await ids(query="jouets") == [81005]
+    # Categories match whichever apostrophe the caller types.
+    assert await ids(category="Produits d'usage personnel") == [81003]
+    assert await ids(category="siège d\u2019auto") == [81004]
+
+
+def test_query_words():
+    assert client._query_words("Biscuits aux ARACHIDES") == ["biscuit", "arachide"]
+    assert client._query_words("E. coli") == ["coli"]
+    assert client._query_words("glass lens bus") == ["glass", "len", "bus"]
+    assert client._query_words("cheveux") == ["cheveu"]
+    assert client._query_words("de la") == ["de", "la"]
+
+
 async def test_summarize_groups(httpx_mock):
     _dump(httpx_mock)
     years = await client.summarize("year")

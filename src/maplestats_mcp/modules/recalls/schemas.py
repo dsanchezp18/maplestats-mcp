@@ -20,7 +20,10 @@ class RecallSummary(BaseModel):
     )
     recall_class: str | None = Field(
         default=None,
-        description="CFIA food 'Class 1-3' or Health Canada 'Type I-III'; empty for most others.",
+        description=(
+            "CFIA food 'Class 1-3' ('Classe 1-3' in French) or Health Canada 'Type I-III'; "
+            "empty for most others."
+        ),
     )
     organization: str = Field(description="Publishing unit as the dump names it, in `lang`.")
     agency: str = Field(description="health_canada, cfia, transport_canada, or other.")
@@ -32,7 +35,9 @@ class RecallSummary(BaseModel):
     tc_recall_number: str | None = Field(
         default=None, description="Transport Canada recall number, for tc_recalls_get."
     )
-    url: str
+    url: str = Field(
+        description="Notice page in `lang`; a few untranslated notices link to their English page."
+    )
 
 
 class RecallSearchResult(BaseModel):

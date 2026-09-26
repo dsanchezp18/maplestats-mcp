@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import re
+import unicodedata
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
@@ -575,6 +576,41 @@ async def search_speeches(
 
 _COMMITTEE_COVERAGE = "House of Commons committees from session 39-1 (2006) on"
 _WITNESS = re.compile(r"^(?P<name>[^(]+?)\s*\((?P<role>.+)\)\s*$")
+# The API gives only English ourcommons.ca links. Their French pages,
+# checked live 2026-09-26 back to session 39-1, are on noscommunes.ca with
+# French path words: Committees/en/FINA?parl=45&session=1 becomes
+# Committees/fr/FINA?..., and DocumentViewer/en/45-1/FINA/meeting-47/minutes
+# becomes DocumentViewer/fr/45-1/FINA/reunion-47/proces-verbal ("notice" is
+# "avis-convocation"). Swapping only "en" for "fr" in a DocumentViewer link
+# lands on an error page. Webcast links have no French form and stay as is.
+_OURCOMMONS_COMMITTEE = re.compile(r"^https?://www\.ourcommons\.ca/Committees/en/(?P<rest>.+)$")
+_OURCOMMONS_DOCUMENT = re.compile(
+    r"^https?://www\.ourcommons\.ca/DocumentViewer/en/(?P<session>[^/]+)/(?P<acronym>[^/]+)"
+    r"/meeting-(?P<number>\d+)/(?P<kind>minutes|notice)$"
+)
+_FRENCH_DOCUMENT = {"minutes": "proces-verbal", "notice": "avis-convocation"}
+
+
+def _fold(text: str) -> str:
+    """Lowercase without accents and with one apostrophe, so 'sante' finds 'Santé'."""
+    decomposed = unicodedata.normalize("NFKD", text.replace("\u2019", "'"))
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).casefold()
+
+
+def _ourcommons(url: str | None, lang: Lang) -> str | None:
+    """An ourcommons.ca link, turned into its French noscommunes.ca page for lang='fr'."""
+    if not url or lang != "fr":
+        return url
+    match = _OURCOMMONS_COMMITTEE.match(url)
+    if match:
+        return f"https://www.noscommunes.ca/Committees/fr/{match['rest']}"
+    match = _OURCOMMONS_DOCUMENT.match(url)
+    if match:
+        return (
+            f"https://www.noscommunes.ca/DocumentViewer/fr/{match['session']}/"
+            f"{match['acronym']}/reunion-{match['number']}/{_FRENCH_DOCUMENT[match['kind']]}"
+        )
+    return url
 
 
 def _check_committee(slug: str) -> str:
@@ -650,14 +686,14 @@ async def list_committees(
             f"openparliament: no committees recorded for session {params['session']}; "
             "committee data starts with session 39-1 (2006)."
         )
-    needle = (keyword or "").strip().lower()
+    needle = _fold((keyword or "").strip())
     committees = [
         _committee_summary(row, lang)
         for row in rows
         if not needle
         or needle in (row.get("slug") or "")
         or any(
-            needle in (value or "").lower()
+            needle in _fold(value or "")
             for field in ("name", "short_name")
             for value in (row.get(field) or {}).values()
         )
@@ -689,7 +725,7 @@ async def get_committee(committee: str, *, lang: Lang = "en") -> Committee:
             CommitteeSession(
                 session=s.get("session", ""),
                 acronym=s.get("acronym"),
-                source_url=s.get("source_url"),
+                source_url=_ourcommons(s.get("source_url"), lang),
             )
             for s in list_or_empty(row, "sessions")
         ],
@@ -765,8 +801,8 @@ async def get_committee_meeting(
         meeting=_meeting_summary(row),
         start_time=row.get("start_time"),
         end_time=row.get("end_time"),
-        minutes_url=row.get("minutes_url"),
-        notice_url=row.get("notice_url"),
+        minutes_url=_ourcommons(row.get("minutes_url"), lang),
+        notice_url=_ourcommons(row.get("notice_url"), lang),
         webcast_url=row.get("webcast_url"),
         witnesses=_witnesses(rows, lang),
         total_speeches=len(rows),
