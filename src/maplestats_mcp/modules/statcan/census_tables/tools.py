@@ -28,7 +28,9 @@ async def statcan_census_tables_search(
     "income household type" or "language dissemination areas", with the
     catalogue number and PID of each table. Every word must appear in
     the title. 2021 census tables are StatCan tables: use
-    wds_search_cubes. Titles are in English; lang is accepted for
+    wds_search_cubes. StatCan retired the 2011 Census tabulations
+    (the 2011 NHS ones remain); copies are on Borealis, see
+    borealis_search_ivt. Titles are in English; lang is accepted for
     consistency.
     Keywords: census data tables, cross-tabulation, 2016 census, 2011
     National Household Survey, 2006 census, Beyond 20/20, topic-based

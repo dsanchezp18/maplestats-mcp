@@ -67,3 +67,9 @@ async def cached_fetch(
     data = await fetcher()
     cache[key] = data
     return data, False
+
+
+def forget(key: str) -> None:
+    """Drop `key` from every TTL bucket, e.g. a result found to be partial."""
+    for cache in _caches.values():
+        cache.pop(key, None)

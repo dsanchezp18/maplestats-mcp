@@ -80,7 +80,8 @@ async def test_french_table_uses_semicolons_and_french_columns():
     code = _by_language(result)
     assert result.source_url.endswith("18100004-fra.zip")
     assert "separator=';'" in code["python"] and 'pl.col("VALEUR")' in code["python"]
-    assert 'delimiters(";")' in code["stata"]
+    # Stata's copy offers only HTTP/1.1, which StatCan drops, so it goes via Python.
+    assert "separator=';'" in code["stata"] and "python:" in code["stata"]
     assert 'delim = ";"' in code["julia"]
     assert 'language = "fr"' in code["r"]
 
@@ -258,6 +259,10 @@ def test_find_records_locates_rows():
         "records_path": ["result", "results"]
     }
     assert probe.find_records({"id": 1, "name": "x"}) == {"single_object": True}
+    # SDG data files: one list per column.
+    assert probe.find_records({"Year": [2015, 2016], "Value": [1.0, 2.0]}) == {"columnar": True}
+    recalls = {"ResultSet": [[{"Name": "Recall number", "Value": {"Literal": "2023191"}}]]}
+    assert probe.find_records(recalls) == {"records_path": ["ResultSet"], "name_value": True}
     wds = [{"status": "SUCCESS", "object": {"vectorDataPoint": [{"value": 1}]}}]
     assert probe.find_records(wds) == {
         "records_path": ["object", "vectorDataPoint"],

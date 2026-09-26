@@ -120,14 +120,17 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
         return fetch_packages, download
     if spec.kind in ("zip", "zip_csv"):
         folder = f"data/raw/{spec.file_name.removesuffix('.zip')}"
+        # zip::unzip, namespaced because base R's utils::unzip shares the name,
+        # reads the non-UTF-8 member names in StatCan PUMF ZIPs that base R
+        # rejects ("invalid multibyte string", 2026-09-25).
         code = (
             f"{download}"
-            f'unzip("{path}", exdir = "{folder}")\n'
+            f'zip::unzip("{path}", exdir = "{folder}")\n'
             f'file.remove("{path}")\n\n'
             f'data_files <- list.files("{folder}", full.names = TRUE, recursive = TRUE)\n'
         )
         if spec.kind == "zip":
-            return [], code
+            return ["zip", *fetch_packages], code
         if spec.member_pattern:
             pick = (
                 "data_files <- data_files[\n"
@@ -141,7 +144,7 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
                 'data_files <- data_files[!str_detect(str_to_lower(data_files), "metadata")]\n'
             )
         read = f"data <- read_delim(data_files[1], {read_args})\n"
-        return ["readr", "stringr", *fetch_packages], f"{code}{pick}{read}"
+        return ["readr", "stringr", "zip", *fetch_packages], f"{code}{pick}{read}"
     if spec.kind == "xlsx":
         sheet = f", sheet = {_quote(spec.sheet)}" if spec.sheet else ""
         start = f", start_row = {spec.skip_rows + 1}" if spec.skip_rows else ""
@@ -159,11 +162,33 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
         save = f'\nwriteLines(resp_body_string(response), "{path}")\n\n'
         packages = ["httr2", "jsonlite", "tibble"]
         if spec.single_object:
-            packages.append("purrr")
             body = (
-                "# One record: keep its single-value fields as one row.\n\n"
+                "# One record: nested fields become dotted column names in one row.\n\n"
                 f'payload <- fromJSON("{path}")\n'
-                "data <- as_tibble(keep(payload, \\(x) is.atomic(x) && length(x) == 1))\n"
+                "data <- as_tibble(as.list(unlist(payload)))\n"
+            )
+        elif spec.columnar:
+            body = f'payload <- fromJSON("{path}")\ndata <- as_tibble(payload)\n'
+        elif spec.records_dict:
+            packages.append("dplyr")
+            walk = "".join(f"[[{_quote(k)}]]" for k in spec.records_path)
+            body = (
+                "# Records keyed by name: one row each, the name in `key`.\n\n"
+                f'payload <- fromJSON("{path}", flatten = TRUE)\n'
+                f'data <- bind_rows(payload{walk}, .id = "key")\n'
+            )
+        elif spec.name_value:
+            packages += ["dplyr", "purrr"]
+            walk = "".join(f"[[{_quote(k)}]]" for k in spec.records_path)
+            body = (
+                "# Each row is a list of {Name, Value: {Literal}} cells.\n\n"
+                f'payload <- fromJSON("{path}", simplifyVector = FALSE)\n'
+                f"data <- payload{walk} |>\n"
+                "  map(\\(row) set_names(\n"
+                "    map(row, \\(cell) cell$Value$Literal %||% NA),\n"
+                '    map_chr(row, "Name")\n'
+                "  )) |>\n"
+                "  bind_rows()\n"
             )
         elif spec.each_item:
             packages.append("dplyr")
@@ -240,7 +265,8 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
             prepare.append(specific.body)
         packages += cleaning.GENERIC["r"].imports
         prepare.append(cleaning.GENERIC["r"].body)
-    libraries = "".join(f"library({p})\n" for p in sorted(set(packages)))
+    # zip is called as zip::unzip, not attached, so it does not mask utils::unzip.
+    libraries = "".join(f"library({p})\n" for p in sorted(set(packages)) if p != "zip")
     setup = _join(
         "# 0. Setup ----\n",
         libraries,
@@ -347,13 +373,22 @@ def py_read(spec: Spec) -> tuple[list[str], str]:
         walk = "".join(f"[{k!r}]" for k in spec.records_path)
         if spec.single_object:
             records = (
-                "# One record: keep its single-value fields as one row.\n\n"
+                "# One record: nested fields become dotted column names in one row.\n\n"
+                "records = [payload]\n"
+            )
+        elif spec.records_dict:
+            records = (
+                "# Records keyed by name: one row each, the name in `key`.\n\n"
+                f'records = [{{"key": key, **value}} for key, value in payload{walk}.items()]\n'
+            )
+        elif spec.columnar:
+            return imports, f"{fetch}\n{payload}data = pl.DataFrame(payload, strict=False)\n"
+        elif spec.name_value:
+            records = (
+                "# Each row is a list of {Name, Value: {Literal}} cells.\n\n"
                 "records = [\n"
-                "    {\n"
-                "        key: value\n"
-                "        for key, value in payload.items()\n"
-                "        if not isinstance(value, (dict, list))\n"
-                "    }\n"
+                '    {cell["Name"]: (cell.get("Value") or {}).get("Literal") for cell in row}\n'
+                f"    for row in payload{walk}\n"
                 "]\n"
             )
         elif spec.each_item:
@@ -362,7 +397,9 @@ def py_read(spec: Spec) -> tuple[list[str], str]:
             records = f"records = [row[{spec.record_field!r}] for row in payload{walk}]\n"
         else:
             records = f"records = payload{walk}\n"
-        return imports, f"{fetch}\n{payload}{records}data = pl.json_normalize(records)\n"
+        # Some sources mix types within a field (census profile values).
+        normalize = "data = pl.json_normalize(records, strict=False)\n"
+        return imports, f"{fetch}\n{payload}{records}{normalize}"
     if spec.kind == "html_table":
         imports += ["import io", "import pandas as pd"]
         return imports, (
@@ -428,7 +465,7 @@ def py_packages(imports: list[str], spec: Spec) -> list[str]:
     names = {"httpx": "httpx[http2]", "polars": "polars", "pandas": "pandas", "certifi": "certifi"}
     packages = {names[line.split()[1]] for line in imports if line.split()[1] in names}
     if "pandas" in packages:
-        packages.add("lxml")
+        packages |= {"lxml", "pyarrow"}
     if spec.kind == "xlsx":
         packages.add("fastexcel")  # polars' Excel reader
     return sorted(packages)
@@ -521,12 +558,34 @@ def stata_statements(code: str) -> str:
 def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
     imports, read = _py_loaded(spec)
     packages = py_packages(imports, spec)
+    # CSV has no nested values: lists and records go to Stata as JSON text.
+    flatten = (
+        "nested = [name for name, dtype in data.schema.items() if dtype.is_nested()]\n"
+        "data = data.with_columns(\n"
+        "    pl.col(name).map_elements(\n"
+        "        lambda value: json.dumps(\n"
+        "            value.to_list() if isinstance(value, pl.Series) else value, default=str\n"
+        "        ),\n"
+        "        return_dtype=pl.Utf8,\n"
+        "    )\n"
+        "    for name in nested\n"
+        ")\n"
+    )
+    table = (
+        []
+        if spec.kind in ("zip", "file")
+        else [
+            *py_prepare(spec),
+            flatten,
+            f'data.write_csv(RAW_DIR / "{csv_name}")\n',
+        ]
+    )
     body = _join(
-        _py_imports(imports),
-        f'RAW_DIR = Path("data/raw")\nraw_path = RAW_DIR / "{spec.file_name}"\n',
+        _py_imports([*imports, "import json"]),
+        f'RAW_DIR = Path("data/raw")\nRAW_DIR.mkdir(parents=True, exist_ok=True)\n'
+        f'raw_path = RAW_DIR / "{spec.file_name}"\n',
         read,
-        *py_prepare(spec),
-        f'data.write_csv(RAW_DIR / "{csv_name}")\n',
+        *table,
     )
     return f"python:\n{stata_statements(body)}end\n", packages
 
@@ -540,6 +599,7 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
         or spec.na_values
         or spec.sort_by
         or _needs_request(spec)
+        or "statcan.gc.ca" in spec.url
     )
     packages: list[str] = []
     if spec.kind == "csv" and simple:
@@ -583,14 +643,19 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
             f'import excel "{path}",{sheet}{cells} firstrow clear\n'
         )
     else:
-        csv_name = f"{spec.file_name.rsplit('.', 1)[0]}_prepared.csv"
+        # Short: Stata cannot open paths past Windows' 260-character limit.
+        csv_name = f"{spec.file_name.rsplit('.', 1)[0][:24]}_prepared.csv"
         block, python_packages = _stata_python_block(spec, csv_name)
         read = (
             "* Stata reads no JSON or HTML and truncates long column names, so its\n"
             "* built-in Python (Stata 16+) fetches, filters and writes a CSV. Point\n"
             "* Stata at a Python with these packages first: python set exec <path>.\n\n"
             + block
-            + f'\nimport delimited "data/raw/{csv_name}", clear varnames(1) encoding("utf-8")\n'
+            + (
+                ""
+                if spec.kind in ("zip", "file")
+                else f'\nimport delimited "data/raw/{csv_name}", clear varnames(1) encoding("utf-8")\n'
+            )
         )
         packages.append("python: " + ", ".join(python_packages))
     prepare: list[str] = []
@@ -604,7 +669,7 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
         "* 0. Setup\n",
         'capture mkdir "logs"\n'
         "capture log close\n"
-        f'log using "logs/reproduce_{tool}.log", replace\n'
+        f'log using "logs/{tool[:32]}.log", replace\n'
         'capture mkdir "data"\n'
         'capture mkdir "data/raw"\n',
     )
@@ -698,7 +763,22 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
         fetch = download
         walk = "".join(f"[{json.dumps(k)}]" for k in spec.records_path)
         payload = f'payload = JSON3.read(read("{path}", String))\n'
-        if spec.single_object:
+        if spec.columnar:
+            return ["DataFrames", "Downloads", "JSON3"], (
+                fetch
+                + payload
+                + "data = DataFrame(Dict(String(k) => collect(v) for (k, v) in payload))\n"
+            )
+        if spec.name_value:
+            records = (
+                "records = [\n"
+                '    Dict(c["Name"] => get(c["Value"], "Literal", missing) for c in row)\n'
+                f"    for row in payload{walk}\n"
+                "]\n"
+            )
+        elif spec.records_dict:
+            records = f'records = [merge(Dict("key" => String(k)), Dict(v)) for (k, v) in payload{walk}]\n'
+        elif spec.single_object:
             records = (
                 "records = [\n"
                 "    Dict(k => v for (k, v) in payload if !(v isa JSON3.Object || v isa JSON3.Array)),\n"

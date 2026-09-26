@@ -26,3 +26,40 @@ DICTIONARY_URLS = {
     "industrial_design": "https://opic-cipo.ca/cipo/client_downloads/IP_Horizon_Resources/ID_Data_Dictionary.zip",
 }
 MAX_DICTIONARY_BYTES = 5 * 1024 * 1024
+
+# Releases on CIPO's server that open.canada.ca does not list. Checked
+# 2026-09-25: every trademark link the package lists (TM_CSV_2024_08_20 and
+# older) answers 404, while all 19 tables of the 2024-11-20 release answer;
+# probing the 20th of each month through 2026-09 found no later one.
+UNLISTED_RELEASES = {
+    "trademark": [
+        (
+            "https://opic-cipo.ca/cipo/client_downloads/TM_CSV_2024_11_20/TM_{table}_2024-11-20.zip",
+            (
+                "applicant_classification",
+                "application_disclaimer",
+                "application_main",
+                "application_text",
+                "cancellation_case",
+                "cancellation_case_action",
+                "cipo_classification",
+                "claim",
+                "event",
+                "footnote",
+                "footnote_formatted",
+                "heading",
+                "interested_party",
+                "mark_description",
+                "opposition_case",
+                "opposition_case_action",
+                "priority_claim",
+                "representation",
+                "transliteration",
+            ),
+        )
+    ]
+}
+UNLISTED_NOTE = (
+    "Trademark files come from the 2024-11-20 release on CIPO's server; "
+    "open.canada.ca still lists only older, now-removed files."
+)

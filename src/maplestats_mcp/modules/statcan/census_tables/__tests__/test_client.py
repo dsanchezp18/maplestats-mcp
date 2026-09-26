@@ -6,7 +6,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.census_tables import client
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import UpstreamUnavailable
+from maplestats_mcp.shared.errors import NotFound, UpstreamUnavailable
 
 BASE = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/dt-td/"
 
@@ -95,3 +95,23 @@ async def test_service_outage_is_unavailable_not_missing(httpx_mock):
     httpx_mock.add_response(url=offline, headers={"content-type": "text/html"}, is_reusable=True)
     with pytest.raises(UpstreamUnavailable, match="temporarily offline"):
         await client.get_downloads("7")
+
+
+async def test_retired_release_points_to_borealis(httpx_mock):
+    # The 2011 Census index answers 302 to "page not found" (checked 2026-09-25).
+    base_2011 = "https://www12.statcan.gc.ca/census-recensement/2011/dp-pd/tbt-tt/"
+    offline = "https://www12.statcan.gc.ca/census-recensement/srvmsg/srvmsg404.html"
+    httpx_mock.add_response(
+        url=base_2011 + "index-eng.cfm", status_code=302, headers={"location": offline}
+    )
+    with pytest.raises(NotFound, match="borealis_search_ivt"):
+        await client.search("language", release="2011")
+
+
+async def test_a_theme_that_never_answers_is_skipped_not_fatal(httpx_mock):
+    import httpx
+
+    httpx_mock.add_response(url=BASE + "index-eng.cfm", text=INDEX_2016)
+    httpx_mock.add_exception(httpx.ConnectTimeout("slow"), is_reusable=True)
+    with pytest.raises(UpstreamUnavailable, match="no 2016 Census theme page answered"):
+        await client.search("income")

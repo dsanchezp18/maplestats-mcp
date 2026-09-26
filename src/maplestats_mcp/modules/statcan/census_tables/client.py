@@ -17,6 +17,7 @@ from maplestats_mcp.modules.statcan.census_tables.schemas import (
     CensusTableSearch,
     Download,
 )
+from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -31,6 +32,11 @@ _LIMITER = get_limiter(
 # Download links 302-redirect to the ZIP; HEAD needs redirects followed.
 _HEAD_CLIENT = new_client(timeout=60.0, follow_redirects=True)
 _PID = re.compile(r"PID=(\d+)")
+# Theme pages fetched at once. Crawling every theme in parallel made
+# www12 drop connections (2026-09-25: a 2006 search failed while each
+# page answered alone in under a second).
+_CRAWL = asyncio.Semaphore(4)
+_PAGE_ATTEMPTS = 2
 
 
 def _release(key: str) -> constants.Release:
@@ -44,12 +50,34 @@ async def _page(url: str) -> str:
     try:
         response = await get_raw(url, timeout=60.0)
     except httpx.HTTPStatusError as exc:
+        # StatCan answers retired pages with a 302 to its "page not found"
+        # notice (the 2011 Census tabulations since 2026-09, checked 2026-09-25).
+        if "srvmsg404" in exc.response.headers.get("location", ""):
+            raise NotFound(
+                f"census tables: StatCan answers {url} with its 'page not found' notice. "
+                "The 2011 Census tabulations have been retired this way (2011 NHS tables "
+                "remain); for other releases it may be a short outage, so retry later. "
+                "Copies of retired tables are on Borealis: use borealis_search_ivt "
+                "(e.g. 'census 2011 language')."
+            ) from exc
         raise UpstreamError(
             f"census tables: {url} returned HTTP {exc.response.status_code}."
         ) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(f"census tables: {url} could not be reached.") from exc
     return response.text
+
+
+async def _crawl_page(url: str) -> str:
+    """A theme page, retried once, a few at a time."""
+    async with _CRAWL:
+        for attempt in range(1, _PAGE_ATTEMPTS + 1):
+            try:
+                return await _page(url)
+            except UpstreamUnavailable:
+                if attempt == _PAGE_ATTEMPTS:
+                    raise
+        raise AssertionError("unreachable")
 
 
 def theme_urls(index_html: str, base: str) -> dict[str, str]:
@@ -121,34 +149,49 @@ def parse_list_page(
     return tables, next_url
 
 
-async def _catalogue(key: str) -> tuple[list[CensusTable], bool]:
+async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
     release = _release(key)
     base = f"{constants.HOST}{release.path}"
 
-    async def crawl() -> list[CensusTable]:
+    async def crawl() -> tuple[list[CensusTable], list[str]]:
         themes = theme_urls(await _page(f"{base}index-eng.cfm"), base)
         if not themes:
             raise UpstreamError(
                 f"census tables: no themes found for {release.label}; layout changed?"
             )
 
-        async def one_theme(name: str, url: str) -> list[CensusTable]:
+        async def one_theme(name: str, url: str) -> list[CensusTable] | None:
             found: list[CensusTable] = []
             next_url: str | None = url
-            for _ in range(constants.MAX_PAGES_PER_THEME):
-                if next_url is None:
-                    break
-                rows, next_url = parse_list_page(await _page(next_url), key, name, next_url)
-                found.extend(rows)
+            try:
+                for _ in range(constants.MAX_PAGES_PER_THEME):
+                    if next_url is None:
+                        break
+                    rows, next_url = parse_list_page(
+                        await _crawl_page(next_url), key, name, next_url
+                    )
+                    found.extend(rows)
+            except UpstreamUnavailable:
+                return None  # reported as a skipped theme, not a failed search
             return found
 
         results = await asyncio.gather(*(one_theme(n, u) for n, u in themes.items()))
+        skipped = [name for name, batch in zip(themes, results, strict=True) if batch is None]
+        if len(skipped) == len(themes):
+            raise UpstreamUnavailable(f"census tables: no {release.label} theme page answered.")
         unique: dict[str, CensusTable] = {}
-        for table in (t for batch in results for t in batch):
+        for table in (t for batch in results if batch for t in batch):
             unique.setdefault(table.pid, table)
-        return list(unique.values())
+        return list(unique.values()), skipped
 
-    return await cached_fetch(f"census_tables:{key}", constants.CATALOGUE_TTL_SECONDS, crawl)
+    cache_key = f"census_tables:{key}"
+    (tables, skipped), cached = await cached_fetch(
+        cache_key, constants.CATALOGUE_TTL_SECONDS, crawl
+    )
+    if skipped:
+        # A partial crawl is not kept, so the next call retries the gaps.
+        cache_module.forget(cache_key)
+    return tables, skipped, cached
 
 
 async def search(
@@ -158,7 +201,7 @@ async def search(
         raise InvalidInput(
             f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
         )
-    tables, cached = await _catalogue(release)
+    tables, skipped, cached = await _catalogue(release)
     words = query.lower().split()
     matched = [
         t
@@ -178,6 +221,11 @@ async def search(
             schema_name="census_tables.CensusTableSearch",
             freshness="archived census releases; table list cached 7 days",
             limits="English titles; 2021 census tables are NDM tables, use wds_search_cubes",
+            coverage=(
+                f"themes that did not answer and were skipped: {', '.join(skipped)}"
+                if skipped
+                else None
+            ),
         ),
     )
 
@@ -219,6 +267,13 @@ async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownlo
         for (fmt, url), (ok, size, _) in zip(urls.items(), checks, strict=True)
     ]
     if not any(d.available for d in downloads):
+        # The 2011 Census tabulations answer this way for good (checked
+        # 2026-09-25 while 2006, 2011 NHS and 2016 downloads worked).
+        if release == "2011" and any(offline for _, _, offline in checks):
+            raise NotFound(
+                f"StatCan has retired the 2011 Census tabulations, including PID {pid}. "
+                "Copies are on Borealis: use borealis_search_ivt (e.g. 'census 2011 language')."
+            )
         if any(offline for _, _, offline in checks):
             raise UpstreamUnavailable(
                 "StatCan's census download service is temporarily offline (it redirects to its "

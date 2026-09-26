@@ -70,6 +70,12 @@ class Spec:
     each_item: bool = False
     record_field: str = ""
     single_object: bool = False
+    # {"col": [...], ...}: one list per column (StatCan's SDG data files).
+    columnar: bool = False
+    # [[{"Name": col, "Value": {"Literal": v}}, ...], ...] (Transport Canada).
+    name_value: bool = False
+    # {"FXUSDCAD": {...}, "V39079": {...}}: records keyed by name (Valet lists).
+    records_dict: bool = False
     post_json: Any = None
     post_form: dict[str, str] | None = None
     headers: dict[str, str] = field(default_factory=dict)

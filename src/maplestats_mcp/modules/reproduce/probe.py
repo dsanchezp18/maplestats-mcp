@@ -86,6 +86,20 @@ def find_records(payload: Any) -> dict[str, Any]:
         return {"unreadable": "a JSON array of non-objects"}
     if not isinstance(payload, dict):
         return {"unreadable": "a JSON value that is not an object or array"}
+    lists = [v for v in payload.values() if isinstance(v, list)]
+    columns_of_values = (
+        len(lists) >= 2
+        and len(lists) == len(payload)
+        and len({len(v) for v in lists}) == 1
+        and not any(isinstance(cell, dict | list) for column in lists for cell in column[:5])
+    )
+    if columns_of_values:
+        return {"columnar": True}  # SDG data files: one list per column
+    for key, value in payload.items():
+        rows = value if isinstance(value, list) else []
+        first = rows[0] if rows and isinstance(rows[0], list) and rows[0] else None
+        if first and isinstance(first[0], dict) and {"Name", "Value"} <= set(first[0]):
+            return {"records_path": [key], "name_value": True}  # Transport Canada
     features = payload.get("features")
     if isinstance(features, list) and features and isinstance(features[0], dict):
         # ArcGIS REST puts fields under "attributes", GeoJSON under "properties".
@@ -93,6 +107,7 @@ def find_records(payload: Any) -> dict[str, Any]:
             if isinstance(features[0].get(key), dict):
                 return {"records_path": ["features"], "record_field": key}
     best: tuple[int, list[str]] | None = None
+    keyed: tuple[int, list[str]] | None = None
     frontier: list[tuple[list[str], Any]] = [([], payload)]
     for _ in range(3):
         next_frontier: list[tuple[list[str], Any]] = []
@@ -104,10 +119,16 @@ def find_records(payload: Any) -> dict[str, Any]:
                     if best is None or len(value) > best[0]:
                         best = (len(value), [*path, key])
                 elif isinstance(value, dict):
+                    inner = list(value.values())
+                    records_by_name = len(inner) >= 2 and all(isinstance(v, dict) for v in inner)
+                    if records_by_name and (keyed is None or len(inner) > keyed[0]):
+                        keyed = (len(inner), [*path, key])
                     next_frontier.append(([*path, key], value))
         frontier = next_frontier
-    if best is not None:
+    if best is not None and (keyed is None or best[0] >= keyed[0]):
         return {"records_path": best[1]}
+    if keyed is not None:
+        return {"records_path": keyed[1], "records_dict": True}
     return {"single_object": True}
 
 
@@ -184,12 +205,20 @@ async def spec_from_request(request: RecordedRequest, pages: int) -> Spec:
     try:
         content_type, body, truncated = await _fetch(request)
     except httpx.HTTPError as exc:
+        # A slow source (cihi.ca timed out once on 2026-09-25, then answered
+        # in 4 s) is worth a retry; an HTTP error means the request itself
+        # cannot be replayed outside the tool.
+        reason = (
+            "the source did not answer in time; call reproduce_code again"
+            if isinstance(exc, httpx.TimeoutException)
+            else f"the source refused it ({exc!r}); it may need a browser session"
+        )
         return Spec(
             kind="none",
             url=request.url,
             file_name="",
             method=method,
-            notes=[f"Replaying the request failed ({exc!r}); the source may need a session."],
+            notes=[f"Replaying the request failed: {reason}."],
         )
     lower = content_type.lower()
     path = urlparse(request.url).path.lower()

@@ -181,6 +181,17 @@ async def list_files(
         for res in list_or_empty(package, "resources")
     ]
     files = [item for item in parsed if item is not None]
+    for template, tables in constants.UNLISTED_RELEASES.get(ip_type, []):
+        for name in tables:
+            url = template.format(table=name)
+            extra = parse_file_url(ip_type, url, url.rsplit("/", 1)[-1].removesuffix(".zip"))
+            if extra is not None and all(f.url != url for f in files):
+                files.append(extra)
+        # Listed files older than the unlisted release were removed upstream.
+        newest = max((f.release_date for f in files if f.release_date), default=None)
+        files = [
+            f for f in files if f.release_date is None or f.release_date >= (newest or date.min)
+        ]
     all_tables = sorted({item.table for item in files})
     if latest_only:
         files = _latest_only(files)
@@ -211,7 +222,8 @@ async def list_files(
                 if latest_only and release_dates
                 else "every release folder the package lists"
             ),
-            limits="Lists download links only; files are ZIPs of pipe-delimited UTF-8 CSV.",
+            limits="Lists download links only; files are ZIPs of pipe-delimited UTF-8 CSV."
+            + (f" {constants.UNLISTED_NOTE}" if ip_type in constants.UNLISTED_RELEASES else ""),
         ),
     )
 

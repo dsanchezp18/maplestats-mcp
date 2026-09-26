@@ -105,7 +105,8 @@ async def test_list_files_unknown_table_raises(httpx_mock):
 async def test_list_files_null_resources(httpx_mock):
     httpx_mock.add_response(url=_CKAN, json={"result": {"resources": None}})
     result = await client.list_files("trademark")
-    assert result.files == []
+    # Only the unlisted 2024-11-20 release remains (see UNLISTED_RELEASES).
+    assert len(result.files) == 19
 
 
 async def test_list_files_missing_result_raises(httpx_mock):
@@ -173,3 +174,14 @@ async def test_get_dictionary_html_404_page_raises(httpx_mock):
 async def test_get_dictionary_trademark_has_none():
     with pytest.raises(InvalidInput):
         await client.get_dictionary("trademark")
+
+
+async def test_unlisted_trademark_release_is_added(httpx_mock):
+    # open.canada.ca lists only removed trademark files; CIPO's server has 2024-11-20.
+    listed = [{"name": "TM_claim", "url": f"{_BASE}/TM_CSV_2024_08_20/TM_claim_2024-08-20.zip"}]
+    httpx_mock.add_response(url=_CKAN, json={"result": {"resources": listed}})
+    result = await client.list_files("trademark", table="claim")
+    assert [f.release_date for f in result.files] == [date(2024, 11, 20)]
+    assert result.files[0].url.endswith("TM_CSV_2024_11_20/TM_claim_2024-11-20.zip")
+    assert "application_main" in result.tables
+    assert "2024-11-20" in (result.provenance.limits or "")

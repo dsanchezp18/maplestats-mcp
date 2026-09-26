@@ -80,6 +80,21 @@ async def _spec(tool: str, args: dict[str, Any]) -> Spec:
     if builder is not None:
         return await builder(args, payload)
     chosen, pages = probe.choose(requests, str(payload.get("provenance", {}).get("url") or ""))
+    if chosen is None and requests and all(r.method == "HEAD" for r in requests):
+        # canadabuys_list_bulk_files only checks that each file exists
+        # (HEAD); its base URL is a directory that answers 404.
+        return Spec(
+            kind="none",
+            url=str(payload.get("provenance", {}).get("url") or ""),
+            file_name="",
+            method="none",
+            notes=[
+                (
+                    "This tool only lists download links (it checks each file with HEAD). "
+                    "Reproduce the tool that reads the file you pick, or download its URL."
+                )
+            ],
+        )
     if chosen is None:
         url = str(payload.get("provenance", {}).get("url") or "")
         if not url.startswith("http"):
