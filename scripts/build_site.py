@@ -1044,7 +1044,7 @@ def coverage_counts() -> dict[str, int]:
 
 
 def _shade(count: int) -> int:
-    """Golden (1), Amber (2), Dark (3-5), Very dark (6+): Canada's syrup grades."""
+    """Four shades: 1, 2, 3 to 5, 6 or more sources."""
     return 0 if count == 0 else 1 if count == 1 else 2 if count == 2 else 3 if count <= 5 else 4
 
 
