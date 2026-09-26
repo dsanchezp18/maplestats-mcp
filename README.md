@@ -74,6 +74,7 @@ bilingual one-line description of each module):
 | Senate votes | `senate_` | Senate of Canada recorded votes by session or bill, with each senator's vote (sencanada.ca, EN/FR) |
 | Earthquakes | `earthquakes_` | Earthquakes Canada (NRCan) event catalogue by date, magnitude, point radius or bbox |
 | Health system | `cihi_` | CIHI Indicator Library: ~200 indicators (hospital mortality, readmissions, wait times, spending), data by place and year (EN/FR) |
+| Public health surveillance | `phac_infobase_` | PHAC Health Infobase dashboard files: respiratory viruses and FluWatch+, wastewater, opioid and stimulant harms, measles, mpox, TB, vaccine safety, archived COVID-19 (EN/FR) |
 | Federal spending | `gc_infobase_` | GC InfoBase open datasets: Estimates, Public Accounts, program spending/FTEs, results (EN/FR) |
 | Energy regulation | `cer_` | Canada Energy Regulator CSVs: pipeline throughput and capacity, oil/gas/LNG/NGL exports, tolls, incidents (EN/FR) |
 | Energy use | `nrcan_energy_use_` | NRCan Comprehensive Energy Use Database and energy surveys (SHEU, SCIEU, ICE, ...), EN/FR tables |
