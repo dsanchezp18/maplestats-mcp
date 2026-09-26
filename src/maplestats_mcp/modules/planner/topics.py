@@ -587,6 +587,34 @@ MICRODATA = Topic(
 )
 TOPICS = (*TOPICS, MICRODATA)
 
+RECALLS = Topic(
+    "recalls",
+    "Recalls and safety alerts: food, health products, consumer products",
+    (
+        "recall",
+        "food recall",
+        "drug recall",
+        "safety alert",
+        "allergen",
+        "listeria",
+        "salmonella",
+        "product safety",
+        "rappel",
+        "rappel d'aliment",
+        "allergene",
+        "avis de securite",
+        "securite des produits",
+    ),
+    (
+        PlanStep("recalls_search", "Health Canada, CFIA and Transport Canada notices"),
+        PlanStep("recalls_get", "affected products, lots and what to do for one notice"),
+        PlanStep("recalls_summarize", "counts by year, agency, category or issue"),
+        PlanStep("tc_recalls_search", "vehicle recalls by make, model and model year"),
+    ),
+    ("Recall dates in search and counts are last-updated dates, as on the site.",),
+)
+TOPICS = (*TOPICS, RECALLS)
+
 # StatCan's own name for its tables, used when nothing else matches.
 FALLBACK_STEPS: tuple[PlanStep, ...] = (
     PlanStep("statcan_reference_search_data", "StatCan data products on the topic"),
