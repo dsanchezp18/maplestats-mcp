@@ -51,6 +51,8 @@ class Portal:
     landing_uses_name: bool = False
     rate_per_second: float = 2.0
     rate_capacity: float = 5.0
+    # Seconds per request attempt; raise it only for a portal measured slow.
+    timeout_seconds: float = 30.0
     organizations: OrganizationSource = "all_fields"
     groups: GroupSource = "all_fields"
     has_tags: bool = True
@@ -173,6 +175,10 @@ PORTALS: dict[str, Portal] = {
         landing_uses_name=True,
         rate_per_second=1.0,
         rate_capacity=3.0,
+        # organization_list takes 15-21 s for a 3 KB answer (measured
+        # 2026-09-26, every attempt); at 30 s all three attempts timed out
+        # in a live smoke run, so this portal gets twice the default.
+        timeout_seconds=60.0,
         extra_fields=("language", "update_frequency", "spatial_data", "methodologie", "temporal"),
         note="Provincial and municipal Quebec datasets; content is in French.",
         note_fr="Jeux de données provinciaux et municipaux du Québec, en français.",
