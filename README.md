@@ -292,4 +292,6 @@ co-authors:
 - [`cancensus`](https://github.com/mountainMath/cancensus): a model for
   census data access in R.
 - [`canivt`](https://github.com/mountainMath/canivt): reads Beyond 20/20
-  IVT files; census tables that exist only in that format are routed to it.
+  IVT files; census tables and Borealis deposits that exist only in that
+  format are routed to it, and its sampling notes pointed to Borealis as
+  the main IVT holder outside StatCan.

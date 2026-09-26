@@ -89,6 +89,8 @@ Sources, by tool-name prefix:
   use microdata files: find, list downloads, read codebooks),
   statcan_census_tables_ (2006-2016 census cross-tabulations: CSV, SDMX,
   Beyond 20/20 IVT).
+- Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 IVT tables from
+  university libraries: historical censuses, Business Patterns, LFS review).
 - Bank of Canada Valet: boc_ (rates, FX, CPI, commodity prices).
 - CMHC housing: cmhc_ (HMIP rental/starts tables), cmhc_dt_ (Excel data
   tables).
