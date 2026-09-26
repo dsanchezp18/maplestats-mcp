@@ -137,6 +137,9 @@ async def test_canadabuys_script_repeats_the_tools_filters():
 async def test_bad_requests():
     with pytest.raises(InvalidInput):
         await client.reproduce("plan_query", {})
+    # Documents and text, not data: no script (checked without any network call).
+    with pytest.raises(InvalidInput, match="not data"):
+        await client.reproduce("gazette_get_notice", {"url": "https://gazette.gc.ca/x"})
     with pytest.raises(InvalidInput):
         await client.reproduce("wds_get_cube_metadata", {"product_id": 12})
     with pytest.raises(InvalidInput):

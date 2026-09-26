@@ -40,6 +40,19 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.http import RecordedRequest, recording
 
 _NOT_DATA = ("reproduce_code", "plan_query", "search_tools", "call_tool")
+# Tools that return documents or text (articles, release notices,
+# regulations, debates), not data: no script is written for them.
+_DOCUMENTS = (
+    "statcan_reference_search_documents",
+    "statcan_reference_search_analysis",
+    "statcan_daily_get_releases",
+    "statcan_daily_search_archive",
+    "gazette_list_issues",
+    "gazette_get_issue",
+    "gazette_get_notice",
+    "parliament_search_hansard",
+    "parliament_search_speeches",
+)
 _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents")
 
 
@@ -135,6 +148,11 @@ async def reproduce(
         )
     if tool in _NOT_DATA:
         raise InvalidInput(f"{tool} does not fetch data, so there is nothing to reproduce.")
+    if tool in _DOCUMENTS:
+        raise InvalidInput(
+            f"{tool} returns documents or text, not data, so reproduce_code writes no "
+            "script for it; cite the links it returns instead."
+        )
     try:
         spec = await _spec(tool, arguments)
     except KeyError as exc:

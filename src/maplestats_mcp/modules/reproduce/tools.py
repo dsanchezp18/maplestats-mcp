@@ -16,9 +16,11 @@ async def reproduce_code(
 ) -> ReproductionCode:
     """Get R, Python, Stata and Julia scripts that fetch and clean the same data.
 
-    Use for: moving any tool's result into an analysis script reproducibly.
-    Pass the tool name and the arguments you called it with; the server
-    writes the scripts, ready to run. It rebuilds the exact request: from
+    Use for: moving any data tool's result into an analysis script
+    reproducibly. Pass the tool name and the arguments you called it
+    with; the server writes the scripts, ready to run. Tools that return
+    documents or text (StatCan articles and Daily releases, Gazette
+    notices, Hansard) get no script. It rebuilds the exact request: from
     the arguments (StatCan tables via cansim, Beyond 20/20 via canivt,
     Valet, Socrata, CKAN), or by recording the upstream request the tool
     makes (every query parameter, POST body and header). Where the tool
