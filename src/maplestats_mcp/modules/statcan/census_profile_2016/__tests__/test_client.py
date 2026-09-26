@@ -142,3 +142,24 @@ async def test_get_data_upstream_5xx_becomes_upstream_error(httpx_mock):
         )
     with pytest.raises(UpstreamError):
         await client.get_data("2016A000011124")
+
+
+async def test_requests_ask_for_json(httpx_mock):
+    # Without Accept: application/json the service answers XML (live 2026-09-26).
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/CR2016Geo.json?lang=E&geos=PR&cpt=00",
+        match_headers={"Accept": "application/json"},
+        json=_GEO_RESPONSE,
+    )
+    result = await client.list_geographies("canada_provinces_territories")
+    assert result.returned_count == 2
+
+
+async def test_xml_body_is_upstream_error_not_outage(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/CR2016Geo.json?lang=E&geos=PR&cpt=00",
+        text='<QUERY ID="1"><COLUMNNAMES/></QUERY>',
+        headers={"content-type": "application/xml"},
+    )
+    with pytest.raises(UpstreamError, match="non-JSON"):
+        await client.list_geographies("canada_provinces_territories")
