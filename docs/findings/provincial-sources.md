@@ -248,3 +248,42 @@ tools, same shape as Manitoba's. At least one item's underlying service
 reports an empty `layers` list with its one queryable table at a non-zero id
 (2) — the default-layer-index resolution this adaptor added because of that
 applies here too.
+
+## Institut de la statistique du Québec (ISQ)
+
+**Status:** Candidate module.
+
+Checked 2026-09-26. Données Québec carries only 7 ISQ datasets
+(organization `isq`), all geography: the Québec geographic code, a
+postal-code geolocation table, harmonized 2016 and 2021 census
+geography, and land cover. ISQ's statistics are on
+statistique.quebec.ca, a Next.js site whose pages embed their data in
+`__NEXT_DATA__`.
+
+- **Catalogue.** `sitemap.xml` lists 25,857 URLs: 7,078 detailed tables
+  (`/produit/tableau/`, 3,538 in English), 12,489 files (`/fichier/`),
+  1,238 publications and 2,864 subject documents. Each table page's
+  JSON gives its name, subjects, update date and type.
+- **Static tables** (7 of 12 sampled): the page JSON holds the table as
+  HTML (`html`) and the name of an Excel copy (`excel`, served at
+  `/en/fichier/<name>.xlsx`), e.g. population projections by age group
+  2016-2041 by region.
+- **Dynamic tables** (5 of 12 sampled) come from the BDSO data bank
+  (`/pls/ken/`), which `robots.txt` disallows, so it is out of bounds.
+  Some dynamic tables also have a full extract at
+  `/docs-ken/multimedia/fichier_complet_<no>.xlsx` (and `_eng.xlsx`):
+  table 815, real GDP by industry monthly 1997-2026, has one; tables
+  2444, 2736 and 3871 do not.
+- The Excel files are presentation layouts (title rows, multi-row
+  headers with NAICS codes, then periods such as `199701`) that differ
+  by table, so a reader must locate the header and period rows in each
+  file.
+- `/api/<lang>/lov/...` is the site's own API for lists of values; no
+  public data API was found.
+
+If built: search over the sitemap's tables (cached), a get-table tool
+reading static tables from their embedded HTML, plus the `fichier` Excel
+copies or `fichier_complet` extracts when present, and reporting
+BDSO-only tables as not retrievable. Terms of use still need checking
+before building.
+

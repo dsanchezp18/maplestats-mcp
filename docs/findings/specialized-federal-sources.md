@@ -1366,36 +1366,62 @@ DataStore-active month, so none was built.
 
 ## IRCC monthly updates (permanent and temporary residents, asylum)
 
-**Status:** Candidate module.
+**Status:** Shipped.
 
-Checked 2026-09-25. IRCC publishes 12 "Monthly IRCC Updates" datasets on
-the federal CKAN catalogue (`cic`), 8 of them current: permanent
-residents, Express Entry permanent residents and invited candidates,
-study permit holders, TFWP and International Mobility Program work permit
-holders, transitions from temporary to permanent residence, asylum
-claimants, and operational processing. None is DataStore-active.
+Checked 2026-09-25 and shipped 2026-09-26 as `modules/ircc/monthly/`
+(`ircc_monthly_list_tables`, `ircc_monthly_describe_table`,
+`ircc_monthly_query`).
 
-The CSV resources are served from
-`www.ircc.canada.ca/opendata-donneesouvertes/data/ODP-*.csv` and download
-without a challenge. Despite the extension they are tab-separated, in long
-format, one row per month and breakdown, January 2015 to the latest month
-(July 2026 on the day checked). Columns carry both languages side by side
-(`EN_YEAR`, `EN_MONTH`, `EN_PROVINCE_TERRITORY`, `FR_...`, `TOTAL`).
-Examples: `ODP-PR-PT_IMMCAT` (province by immigration category, group and
-component; 20,610 rows, 4.4 MB) and `ODP-PR-Citz` (country of citizenship;
-23,197 rows). Other permanent-resident files break down by census
-metropolitan area, census subdivision, occupation (NOC), gender, age group
-and official language.
+IRCC publishes 12 "Monthly IRCC Updates" datasets on the federal CKAN
+catalogue. Their organization is `cic`, not `ircc`: `organization:ircc`
+matches nothing, and the server's routing hints said `ircc` until this
+check. The 12 datasets list 96 CSV resources, 67 of them in current
+(non-archived) datasets: permanent residents, French-speaking permanent
+residents, Express Entry admissions and invited candidates, study
+permit holders (including by designated learning institution), TFWP,
+IMP and post-graduation work permit holders, temporary-to-permanent
+transitions, asylum claimants, and the archived Syrian, Afghan and
+resettled refugee series. None is DataStore-active.
 
-Counts are rounded to multiples of 5 and marked "not for calculations";
-values between 0 and 5 appear as `--`. The XLSX versions are pivot tables
-and not worth parsing.
+The files are served from
+`www.ircc.canada.ca/opendata-donneesouvertes/data/ODP-*.csv` without a
+challenge. What all 96 turned out to need:
 
-If built: one catalogue tool listing the `ODP-*` files per dataset, and one
-query tool that filters a file by year, month and breakdown value and
-returns tidy rows, keeping `--` as suppressed (not zero) and stating the
-rounding. This is the monthly, sub-provincial immigration series that
-StatCan's quarterly demographic estimates do not give.
+- 94 are tab-separated despite the extension; two archived files
+  (`ODP-Afghan-AgeGroup`, `ODP-Syrian_Refugees-Admissions-SkillLevel`)
+  are comma-separated and repeat every column as `Copy of <name>`.
+- Long format: time columns (`EN_YEAR`, `EN_QUARTER`, `EN_MONTH` as
+  `Jan`...`Dec`), then dimensions as English/French column pairs, then
+  `TOTAL`. Express Entry candidate tables and secondary-migration
+  asylum data are yearly only; the archived refugee tables have no time
+  at all; asylum by office type has a month but no quarter. In the
+  study permit DLI files `TOTAL` comes right after the time columns and
+  the institution-name column has no French pair (one header spells it
+  `INSTITUION`).
+- Monthly coverage is January 2015 to July 2026 on the day checked.
+  Rows are not in time order.
+- Counts are rounded to multiples of 5; `--` marks a suppressed count
+  (1 to 4). No file has an aggregate "Total" row, so summing does not
+  double count.
+- `ODP-PR-FRE_SP_IMMCAT.csv` has no header row at all; the tool reports
+  it as unreadable instead of guessing column names.
+- The largest files are about 30 MB (`ODP-PR-PT_NOC4`, 181,340 rows;
+  `ODP-TR-Work-IMP-PT_NOC4`, 159,335 rows).
+
+Reconciliation: summing `ODP-PR-PT_IMMCAT` over all provinces and
+categories gives 470,745 permanent residents for 2023 and 482,570 for
+2024, against IRCC's published 471,771 and 483,640 (within 0.3%; the
+gap is rounding and suppression). The live smoke test checks the 2024
+figure.
+
+What was built: a catalogue read live from open.canada.ca (cached a
+day), a describe tool listing each table's dimension keys, values and
+first and last period, and a query tool that filters by dimension
+(English or French values), bounds years, and sums to month, quarter or
+year over the dimensions kept in `group_by`, reporting how many
+suppressed cells each total contains. `reproduce_code` rebuilds the
+file download and filters and notes that the tool's summing is not
+repeated in the script.
 
 ## CRA individual tax statistics and benefit statistics
 
@@ -1415,13 +1441,39 @@ across editions.
 
 ## Parliamentary Budget Officer
 
-**Status:** Investigated, not usable.
+**Status:** Candidate module.
 
-Checked 2026-09-25. pbo-dpb.ca has no data or API page (`/en/data` is
-404). Its "Tools" page and publications are rendered by a Vue app from
-`cms.pbo-dpb.ca`; the analysis is published as reports, with supporting
-spreadsheets attached to individual publications. There is no series to
-query.
+Checked 2026-09-25 and again 2026-09-26. There is no data portal or API
+(`/en/data` is 404), and the report PDFs are documents, not data. Two
+machine-readable paths exist:
+
+- **PBOML documents.** Every publication page
+  (`/en/publications/<id>--<slug>`) is server-rendered and embeds the
+  publication record as JSON: bilingual title and abstract, release
+  date, type (report, note, cost estimate), authors, PDF links, and a
+  `pboml_document` holding the publication as base64-encoded YAML
+  (PBO's own markup, `pboml: version: 1.0.0`). Its `slices` have types
+  `heading`, `markdown`, `svg` and `table`; table slices carry
+  bilingual labels, sources, notes and the cells as rows of named
+  values. Of 12 recent publications, cost estimates and notes held
+  their tables there (M-24 tax brackets, Supplementary Estimates (A)
+  2026-27, medical cannabis savings, automatic federal benefits), while
+  long reports held only their summary and SVG charts, which carry no
+  data.
+- **Tool JSON.** The interactive tools under
+  `/en/research--recherches/tools--outils/` (Federal Employment
+  Tracking Tool, Personnel Expenditure Analysis Tool, Ready Reckoner,
+  public debt charges calculator and others) load static JSON built
+  with the page, e.g. the employment tool's quarterly federal public
+  service counts by tenure. File names carry a build hash
+  (`overview-C2Ik2Xa2.json`), so a client has to find them through the
+  tool's own script rather than a fixed URL.
+
+If built: `pbo_search_publications` over the publications listing,
+`pbo_get_publication` returning the record with its tables parsed from
+PBOML, and one tool per data-backed interactive tool, starting with the
+federal employment tracker. Costings of bills and motions are the
+distinctive content; nobody else publishes them.
 
 ## StatCan terms: SDMX, CORD, NDM
 
