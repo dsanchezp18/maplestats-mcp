@@ -69,7 +69,7 @@ bilingual one-line description of each module):
 | Canada Gazette | `gazette_` | Part I notices and proposed regulations, Part II registered regulations: issues, notice lists, notice text (EN/FR) |
 | Vehicle recalls | `tc_recalls_` | Transport Canada motor vehicle safety recalls by make, model and year, with bilingual details |
 | Geocoding and place names | `nrcan_geo_` | NRCan Geolocator (places, addresses, postal codes) and Canadian Geographical Names Database (EN/FR) |
-| Parliament | `parliament_` | House of Commons bills, recorded votes with party and MP ballots, MPs, Hansard and committee speeches and full-text Hansard search (via unofficial OpenParliament.ca, EN/FR) |
+| Parliament | `parliament_` | House of Commons bills, recorded votes with party and MP ballots, MPs, Hansard and committee speeches, full-text Hansard search, and committees with their meetings, witnesses and transcripts (via unofficial OpenParliament.ca, EN/FR) |
 | Senate votes | `senate_` | Senate of Canada recorded votes by session or bill, with each senator's vote (sencanada.ca, EN/FR) |
 | Earthquakes | `earthquakes_` | Earthquakes Canada (NRCan) event catalogue by date, magnitude, point radius or bbox |
 | Health system | `cihi_` | CIHI Indicator Library: ~200 indicators (hospital mortality, readmissions, wait times, spending), data by place and year (EN/FR) |

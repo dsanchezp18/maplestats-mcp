@@ -989,6 +989,55 @@ api.openparliament.ca, an unofficial JSON API by OpenParliament.ca/Open
 North that re-publishes LEGISinfo, House votes, Hansard and committee
 evidence (no official …
 
+## OpenParliament committees
+
+**Status:** Shipped.
+
+Shipped 2026-09-26 in the existing `modules/openparliament/` (no new
+module): `parliament_list_committees`, `parliament_get_committee`,
+`parliament_search_committee_meetings` and
+`parliament_get_committee_meeting`, over the same api.openparliament.ca
+JSON API, headers (`Accept: application/json`, `API-Version: v1`) and rate
+limiter as the other `parliament_` tools.
+
+Verified live 2026-09-26:
+
+- `/committees/` returns the current session's 30 top-level committees
+  by default (20 per page unless `limit` is set) and takes `session`.
+  Subcommittees never appear in it, only in a committee's
+  `subcommittees`. Committee data starts with session 39-1 (2006); an
+  earlier or unknown session returns an empty list rather than 404, so
+  the tool raises NotFound for it.
+- `/committees/<slug>/` gives bilingual `name` and `short_name`,
+  `parent_url`, `subcommittees` (paths) and `sessions` (session,
+  House acronym such as FINA, ourcommons.ca `source_url`).
+- `/committees/meetings/` filters on `committee` (slug or path),
+  `session`, `date`, `date__gte`, `date__lte` and `in_camera`, newest
+  first. It silently ignores `has_evidence` and `ordering`, and an
+  unknown committee returns an empty list, so the tool checks the
+  committee's detail page when a committee filter matches nothing. List
+  rows carry no `session`; it is read from the meeting URL. Meetings on
+  notice appear with future dates and `has_evidence` false.
+- `/committees/<slug>/<session>/<number>/` adds start and end times and
+  ourcommons.ca minutes, notice and webcast links (`webcast_url` null
+  for in camera meetings). An unknown meeting returns 404 (HTML).
+- A meeting's transcript is `/speeches/?document=<meeting path>`, in
+  spoken order, typically 50 to 300 speeches; in camera meetings return
+  none. An unknown document path returns HTTP 400 "Invalid meeting URL"
+  as text/plain. `/speeches/` ignores `committee=`, and
+  `document__startswith` returns 400, so there is no committee-wide
+  speech search in the JSON API (full-text search over committee
+  evidence stays with `parliament_search_hansard`).
+- Witnesses have no `politician_url`. Their first attribution is
+  "Name (Title, Organization)", later ones the bare name; the English
+  form sometimes puts an honorific in the name ("National Chief ...")
+  where the French form puts it in the role. House officers ("The Clerk
+  of the Committee (...)", "Some hon. members") also lack
+  `politician_url` and are excluded from the witness list.
+- Committee studies exist only as HTML pages on openparliament.ca
+  (`/committees/activities/<id>/`, 404 on the API host), so they are
+  not exposed.
+
 ## Senate of Canada votes
 
 **Status:** Shipped.

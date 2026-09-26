@@ -9,11 +9,13 @@ MODULE_NAME = "openparliament"
 MODULE_DESCRIPTION = (
     "House of Commons data from OpenParliament.ca (unofficial, not a government "
     "site): bills and their status, recorded votes with party and individual "
-    "ballots, current and former MPs, and Hansard and committee speeches."
+    "ballots, current and former MPs, Hansard and committee speeches, and House "
+    "committees with their meetings, witnesses and evidence."
 )
 MODULE_DESCRIPTION_FR = (
     "Données de la Chambre des communes provenant d'OpenParliament.ca (site non "
     "officiel) : projets de loi et leur état, votes par appel nominal avec votes "
-    "des partis et des députés, députés actuels et anciens, et interventions au "
-    "hansard et en comité."
+    "des partis et des députés, députés actuels et anciens, interventions au "
+    "hansard et en comité, et comités de la Chambre avec leurs réunions, témoins "
+    "et témoignages."
 )
