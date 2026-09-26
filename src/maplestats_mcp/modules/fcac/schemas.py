@@ -151,7 +151,10 @@ class AccountDetail(BaseModel):
     included_transactions: list[DetailItem] = Field(default_factory=list)
     interest_rates: list[str] = Field(
         default_factory=list,
-        description="Each rate tier as shown, e.g. '0.0050% $10,000.00 - $24,999.99', or 'None'.",
+        description=(
+            "Each rate tier as shown, e.g. '0.0050% $10,000.00 - $24,999.99' or 'None' "
+            "('0,0050 % 10 000,00 $ - 24 999,99 $' or 'Aucun' in French)."
+        ),
     )
     nsf_fee: float | None = Field(
         default=None, description="Non-sufficient funds fee, dollars (chequing accounts)."

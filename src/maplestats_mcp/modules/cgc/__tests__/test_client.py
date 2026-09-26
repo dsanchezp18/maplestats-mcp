@@ -80,6 +80,11 @@ EXPORTS_FR = (
     "Annee,Mois,Grain,Grade,Ktonnes,Silo_a_grains,Secteur,Region_du_Monde,Destination\r\n"
     "2025,février,Blé,AUTRE,52.5,Silos Terminaux,Vancouver,Asie,Japon\r\n"
     "2025,août,Blé,AUTRE,7.5,Silos Terminaux,Vancouver,Asie,Japon\r\n"
+    # The live French file names some countries two ways (2026-09-26).
+    "2013,mars,Blé,AUTRE,4,Silos Terminaux,Vancouver,Asie,Viet-Nam\r\n"
+    "2024,mars,Blé,AUTRE,6,Silos Terminaux,Vancouver,Asie,Vietnam\r\n"
+    "2024,mai,Canola,AUTRE,9,Silos Terminaux,Vancouver,Asie,R.P. de Chine\r\n"
+    "2024,mai,Blé,AUTRE,1,Silos Terminaux,Saint-Laurent,Afrique,Côte d'Ivoire\r\n"
 ).encode("cp1252")
 
 
@@ -355,6 +360,24 @@ async def test_french_exports(httpx_mock):
         ("2025-26", "Blé", 7.5),
     ]
     assert result.rows[0].months == 1
+
+
+async def test_french_spellings_hyphens_apostrophes_and_suggestions(httpx_mock):
+    httpx_mock.add_response(url=constants.EXPORTS_URL_FR, content=EXPORTS_FR)
+    vietnam = await client.query_exports(lang="fr", destination="Vietnam")
+    assert sorted(r.destination or "" for r in vietnam.rows) == ["Viet-Nam", "Vietnam"]
+    assert vietnam.total_ktonnes == 10.0
+    ivory = await client.query_exports(
+        lang="fr", destination="cote d\u2019ivoire", region="Saint Laurent"
+    )
+    assert [r.ktonnes for r in ivory.rows] == [1.0]
+    with pytest.raises(InvalidInput, match=r"did you mean 'R\.P\. de Chine'"):
+        await client.query_exports(lang="fr", destination="Chine")
+    httpx_mock.add_response(url=_weekly(2025, "fr"), content=FRENCH)
+    weekly = await client.query_weekly(
+        "Silos-Primaires", crop_year="2025-26", lang="fr", region="Colombie-Britannique"
+    )
+    assert [(r.region, r.ktonnes) for r in weekly.rows] == [("Colombie britannique", 0.5)]
 
 
 def test_keep_latest_drops_oldest_periods_first():

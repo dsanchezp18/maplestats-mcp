@@ -384,8 +384,9 @@ Quirks, all covered by mocked tests:
   opioid ZIP, the 2018 snapshots and the enteric outbreak list; DOS code
   page 850 for the French congenital anomalies file.
 - Suppression and missing markers: `Suppr.` and `n/a` (opioid harms),
-  `n.d.` (its French file), `X` (vaccine safety), `N/A`, `-` and `>=99`
-  (COVID-19). They are returned as published and listed with their meaning.
+  `Mas.` (masqué, 4,543 cells) and `n.d.` (its French file), `X` (vaccine
+  safety), `N/A`, `-` and `>=99` (COVID-19). They are returned as
+  published and listed with their meaning.
 - French 2018 snapshots use decimal commas (`12,2`); other French files
   use points.
 - Headers: an empty first column of R row numbers (tuberculosis),
@@ -394,8 +395,15 @@ Quirks, all covered by mocked tests:
   the French opioid file, accents in ZIP member names
   (`DonnéesMéfaitsSubstances.csv`) and `Copy of HoPiC 2025_...` member
   names in the Health of People in Canada ZIP.
-- Periods: week-ending dates, `2026 Q1`, `2026 (Jan to Mar)`,
-  `2015-2018`, school and survey years (`2024-2025`).
+- Periods: week-ending dates, `2026 Q1` (`2026 T1` in the French opioid
+  file), `2026 (Jan to Mar)`, `2015-2018`, school and survey years
+  (`2024-2025`).
+- The French opioid file mixes apostrophes within a column (`Visites au
+  service d’urgence`, `Services médicaux d'urgence (SMU)`) and writes
+  `Terre-Neuve et Labrador`; filters ignore apostrophe style and province
+  names ignore hyphens and spaces. Rechecked 2026-09-26 with `lang="fr"`:
+  before these fixes, quarter bounds, `geography="NL"` and a filter typed
+  with a straight apostrophe all returned no rows.
 - Dashboards publish one-line "update date" files; the HTTP
   Last-Modified header carries the same information and is used instead.
 
@@ -1751,7 +1759,14 @@ two-digit crop years) are Windows-1252 with French headers and labels
 "Activit"); the 2014-15 file writes dates as `10AUG2014`. Row counts
 differ slightly from the English file (2025-26: 218,434 French rows,
 218,374 English), and the French Summary worksheet has a "La semaine
-précédente" period the English one lacks.
+précédente" period the English one lacks. French names are not spelled
+consistently: the weekly files write "Colombie britannique" and "Saint
+Laurent", the exports file "Saint-Laurent", and the French exports file
+splits Vietnam across "Viet-Nam" (2013) and "Vietnam" and Côte d'Ivoire
+across "Cote-d'Ivoire" and "Côte d'Ivoire"; China is "R.P. de Chine".
+Filters therefore ignore hyphens, spaces and apostrophe style, and an
+unknown value lists the names that contain it ("Chine" suggests "R.P. de
+Chine").
 
 Checked values: week 7 of 2026-27 (ending 2026-09-20) gives canola
 deliveries to primary elevators of 55.1, 217.7, 91.8 and 2.6 thousand
@@ -1773,7 +1788,8 @@ tonnes.
 
 **What was built.** Describe tools list the weeks, worksheets and their
 metrics, periods, grains, regions and grades (or the export dimensions);
-query tools filter (case- and accent-insensitive, one value or a list),
+query tools filter (ignoring case, accents, hyphens, spaces and
+apostrophe style; one value or a list),
 bound weeks or years, and either return published rows or sum per week
 (or per month, calendar year or crop year for exports) over the columns
 not kept in `group_by`. Summing weekly rows refuses to mix metrics or
@@ -2052,7 +2068,9 @@ prefix `cdc_`). Live smoke test: `scripts/smoke_test_cdc.py`.
 - **Butter support price** (node 720): one HTML table, 2010-2026, labels
   like `2024 (May)` and `2022 (Sept.)`; a plain year takes effect
   February 1. The French page writes `10, 5662`; values are read from the
-  English page. The CDC stopped buying skim milk powder in 2017, so there
+  English page, and with `lang="fr"` the row labels (`2024 (mai)`,
+  `2023 (fév.)`) come from the French page when its rows, dates and prices
+  line up with the English ones (they did on 2026-09-26). The CDC stopped buying skim milk powder in 2017, so there
   is no powder support price. `cdc_get_butter_support_prices`.
 - **National milk production target (total quota)**: one HTML page per
   year, 2017-2026, linked from node 653 (earlier years by email request).
@@ -2062,7 +2080,9 @@ prefix `cdc_`). Live smoke test: `scripts/smoke_test_cdc.py`.
   split into "Total quota before August 2018" and "since August 2018" and
   has no December; the 2023 page gives March as `34,889,4085` (kept as
   text, value None). Tables carry the placeholder caption "Caption text".
-  `cdc_get_national_quota`.
+  Figures are read from the English pages; with `lang="fr"` the French
+  index (node 653 in French lists the same years) supplies the French
+  page linked for each year. `cdc_get_national_quota`.
 - **Harmonized Milk Classification System** (node 717): five HTML tables,
   31 classes and subclasses, with a rowspan for 4(a)'s six product lines
   and footnote links in `<sup>`. `cdc_get_milk_classes`.

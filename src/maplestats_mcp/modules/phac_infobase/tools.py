@@ -31,16 +31,20 @@ async def phac_infobase_list_datasets(
     disease and cancer indicators, archived COVID-19 cases and vaccination.
     `topic` is one of respiratory, covid19, wastewater, vaccination,
     substance_use, infectious_disease, chronic_disease, health_status;
-    `query` matches words in English or French titles. Returns dataset
-    ids for phac_infobase_describe_dataset and phac_infobase_query. The
-    Chronic Disease Surveillance System (CCDSS) data tool has no
-    downloadable file.
+    `query` matches words in English or French titles, ignoring case and
+    accents. `lang="fr"` returns French titles and descriptions for every
+    dataset; `languages` shows which ones also have a French data file
+    (9 of them), the others are read from the English file. Returns
+    dataset ids for phac_infobase_describe_dataset and
+    phac_infobase_query. The Chronic Disease Surveillance System (CCDSS)
+    data tool has no downloadable file.
     Keywords: PHAC, Health Infobase, public health surveillance, FluWatch,
     influenza, COVID-19, RSV, opioid overdose, wastewater, measles,
     tuberculosis, notifiable diseases.
     Mots-clés : ASPC, Santé Infobase, surveillance de la santé publique,
-    ÉpiGrippe, grippe, COVID-19, VRS, surdoses d'opioïdes, eaux usées,
-    rougeole, tuberculose, maladies à déclaration obligatoire.
+    ÉpiGrippe, grippe, influenza, COVID-19, VRS, virus respiratoires,
+    surdoses d'opioïdes, eaux usées, rougeole, tuberculose, maladies à
+    déclaration obligatoire, vaccination.
     """
     return client.list_datasets(topic, query, lang)
 
@@ -52,9 +56,11 @@ async def phac_infobase_describe_dataset(dataset_id: str, lang: Lang = "en") -> 
     Use for: before querying, learning a surveillance file's columns and
     their most common values (for exact filters), its date range, the
     provinces or places it covers, when PHAC last updated it, and which
-    suppression markers it uses ("Suppr.", "X", "n/a"). `dataset_id`
-    comes from phac_infobase_list_datasets; `lang="fr"` reads the French
-    file when PHAC publishes one (French column names and labels).
+    suppression markers it uses ("Suppr.", "X", "n/a"; "Mas." and "n.d."
+    in French files). `dataset_id` comes from phac_infobase_list_datasets;
+    `lang="fr"` reads the French file when PHAC publishes one (French
+    column names and labels, sometimes decimal commas) and otherwise the
+    English file; `file_language` says which.
     Keywords: PHAC, Health Infobase, data dictionary, columns, coverage,
     last updated, surveillance data, suppressed values, metadata.
     Mots-clés : ASPC, Santé Infobase, dictionnaire de données, colonnes,
@@ -86,15 +92,22 @@ async def phac_infobase_query(
     "Overall numbers", "Unit": "Number", "Time_Period": "By year"};
     `geography` accepts a province or territory name (English or
     French), abbreviation (ON, QC) or PRUID code; `start`/`end` are
-    YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn on the dataset's date column.
+    YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn (or Tn) on the dataset's date
+    column.
     The most recent `limit` matching rows come back, oldest first.
     Values are returned as published; suppression markers are listed.
+    `lang="fr"` reads the French file where one exists, whose column
+    names and values are French (e.g. {"Source": "Mortalité", "Unité":
+    "Nombre", "Période_Temps": "Par année"}; quarters "2025 T3"), so take
+    filter names and values from phac_infobase_describe_dataset called
+    with the same `lang`. Filters also ignore accents and apostrophe style.
     Keywords: PHAC, Health Infobase, surveillance time series, weekly
     cases, percent positivity, overdose deaths, province, wastewater,
     rates per 100,000.
     Mots-clés : ASPC, Santé Infobase, séries chronologiques de
-    surveillance, cas hebdomadaires, pourcentage de positivité, décès par
-    surdose, province, eaux usées, taux pour 100 000.
+    surveillance, cas hebdomadaires, pourcentage de positivité, taux de
+    positivité, décès par surdose, province, eaux usées, taux pour
+    100 000.
     """
     return await client.query(
         dataset_id,

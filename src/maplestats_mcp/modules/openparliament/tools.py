@@ -35,8 +35,9 @@ async def parliament_search_bills(
 ) -> BillSearchResult:
     """Search House of Commons and Senate bills in one parliamentary session.
 
-    Use for: finding bills by a word in the title or by number (e.g.
-    "housing", "C-2"), bills sponsored by an MP (sponsor slug from
+    Use for: finding bills by a word in the English or French title or
+    by number (e.g. "housing", "logement", "C-2"; case, accents and
+    apostrophe style are ignored), bills sponsored by an MP (sponsor slug from
     parliament_search_politicians), private members' bills, or bills
     introduced since a date. session is like '45-1' (default: the
     current session). Newest first. Source is OpenParliament.ca

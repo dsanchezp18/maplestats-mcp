@@ -27,7 +27,10 @@ class CgcWorksheet(BaseModel):
     metrics: list[str] = Field(default_factory=list)
     periods: list[str] = Field(
         default_factory=list,
-        description="'Current Week' (that week alone) and/or 'Crop Year' (to date).",
+        description=(
+            "'Current Week' (that week alone) and/or 'Crop Year' (to date); 'Semaine en cours' "
+            "and 'Campagne agricole' in French."
+        ),
     )
     grains: list[str] = Field(default_factory=list)
     regions: list[str] = Field(

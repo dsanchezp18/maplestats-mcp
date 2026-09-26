@@ -73,7 +73,14 @@ async def main() -> int:
     ok &= may_2024.effective_date == date(2024, 5, 1) and may_2024.butter_per_kg == 10.3505
 
     support_fr = await client.get_butter_support_prices(lang="fr")
-    ok &= support_fr.source_page.endswith("/fr/node/720") and support_fr.rows == support.rows
+    ok &= support_fr.source_page.endswith("/fr/node/720")
+    # Same dates and prices; labels from the French page ("2024 (mai)").
+    ok &= [(r.effective_date, r.butter_per_kg) for r in support_fr.rows] == [
+        (r.effective_date, r.butter_per_kg) for r in support.rows
+    ]
+    labels_fr = [r.effective_label for r in support_fr.rows]
+    print(f"OK: support prices fr labels -> {labels_fr[:5]}")
+    ok &= "2024 (mai)" in labels_fr
 
     quota = await client.get_national_quota()
     print(
@@ -98,6 +105,8 @@ async def main() -> int:
     )
     ok &= any("2018-12" in note for note in span.notes)
     ok &= span.row_count == 7 * 12 - 1
+    # lang="fr" links the French year pages.
+    ok &= len(span.source_pages) == 7 and all("/fr/" in page for page in span.source_pages)
 
     try:
         await client.get_national_quota(2010, 2010)

@@ -15,3 +15,8 @@ def test_tokenizer_is_installed_in_fastmcp_bm25():
 def test_folds_accents_and_plurals():
     assert tokenize("Hôpitaux loyers séismes rates") == ["hopital", "loyer", "seisme", "rate"]
     assert tokenize("taux census status") == ["taux", "census", "status"]
+
+
+def test_folds_ligatures():
+    assert tokenize("Producteurs d'œufs, Œuvre") == ["producteur", "oeuf", "oeuvre"]
+    assert tokenize("oeufs") == ["oeuf"]

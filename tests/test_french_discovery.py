@@ -70,6 +70,27 @@ CASES = [
     ("prix des composants du lait classes spéciales", "cdc_get_component_prices"),
     ("quota total cible nationale de production laitière", "cdc_get_national_quota"),
     ("prix de soutien du beurre", "cdc_get_butter_support_prices"),
+    # French review of phac_infobase, cgc, fcac and cdc (2026-09-26), with
+    # Quebec usage ("influenza", "forfait bancaire", "chèque sans provision").
+    ("surveillance de l'influenza au Québec", "phac_infobase_list_datasets"),
+    ("dictionnaire de données santé infobase", "phac_infobase_describe_dataset"),
+    ("taux de positivité COVID par province", "phac_infobase_query"),
+    ("statistiques hebdomadaires sur le grain", "cgc_weekly_describe"),
+    ("stocks de blé dans les silos terminaux", "cgc_weekly_query"),
+    ("pays de destination des exportations de grain", "cgc_exports_describe"),
+    ("exportations de céréales vers la Chine", "cgc_exports_query"),
+    ("comparer les cartes de crédit", "fcac_search_credit_cards"),
+    ("carte de crédit remise en argent sans frais annuels", "fcac_search_credit_cards"),
+    ("assurance voyage carte de crédit", "fcac_get_credit_card"),
+    ("compte chèque sans frais", "fcac_search_bank_accounts"),
+    ("forfait bancaire caisse populaire", "fcac_search_bank_accounts"),
+    ("frais pour chèque sans provision", "fcac_get_bank_account"),
+    ("frais d'insuffisance de fonds compte-chèques", "fcac_get_bank_account"),
+    ("offices de commercialisation du lait", "cdc_list_datasets"),
+    ("producteurs d'œufs gestion de l'offre", "cdc_list_datasets"),
+    ("classification harmonisée du lait", "cdc_get_milk_classes"),
+    ("production de lait par province", "cdc_query_market_data"),
+    ("nombre de fermes laitières", "cdc_query_market_data"),
 ]
 
 

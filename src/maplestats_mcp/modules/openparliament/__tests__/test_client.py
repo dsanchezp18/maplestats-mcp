@@ -65,6 +65,38 @@ async def test_search_bills_defaults_to_current_session_and_filters_locally(http
     assert httpx_mock.get_requests()[-1].headers["API-Version"] == "v1"
 
 
+async def test_bill_keyword_ignores_accents_case_and_apostrophe_style(httpx_mock):
+    bills = [
+        {
+            "session": "45-1",
+            "introduced": "2026-02-10",
+            "name": {
+                "en": "An Act respecting access to information",
+                "fr": "Loi concernant l’accès à l'information et la santé",
+            },
+            "number": "C-31",
+            "url": "/bills/45-1/C-31/",
+        },
+        {
+            "session": "45-1",
+            "introduced": "2025-06-03",
+            "name": {"en": "Strong borders", "fr": "Frontières"},
+            "number": "C-2",
+            "url": "/bills/45-1/C-2/",
+        },
+    ]
+    httpx_mock.add_response(json={"objects": bills, "pagination": _NO_MORE}, is_reusable=True)
+    for keyword, numbers in [
+        ("sante", ["C-31"]),
+        ("L'ACCES", ["C-31"]),
+        ("l’information", ["C-31"]),
+        ("frontieres", ["C-2"]),
+        ("c-2", ["C-2"]),
+    ]:
+        result = await client.search_bills(session="45-1", keyword=keyword, lang="fr")
+        assert [b.number for b in result.bills] == numbers, keyword
+
+
 async def test_bill_list_follows_pagination(httpx_mock):
     row = {"session": "44-1", "name": {"en": "x"}, "number": "C-1", "url": "/bills/44-1/C-1/"}
     httpx_mock.add_response(

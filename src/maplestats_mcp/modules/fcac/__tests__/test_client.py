@@ -159,6 +159,15 @@ def test_french_account_rows_flag_low_cost_accounts():
     assert any(not r.low_cost_no_cost for r in rows)
 
 
+def test_matching_ignores_apostrophe_style_and_soft_hyphens():
+    # French names as listed live for Quebec on 2026-09-26.
+    assert client._matches("compte d'epargne", "Compte d’épargne cyberAvantage", "TD")
+    assert client._matches("d’épargne élevé", "Compte d'épargne à intérêt élevé RBC")
+    assert client._matches("intermediaire", "Compte courant - Forfait L'Inter\xadmédiaire")
+    soup = BeautifulSoup("<strong>Forfait L'Inter\xadmédiaire</strong>", "html.parser")
+    assert client._text(soup.strong) == "Forfait L'Intermédiaire"
+
+
 # ---------------------------------------------------------------- searches
 
 

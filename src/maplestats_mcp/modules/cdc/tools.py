@@ -33,13 +33,15 @@ async def cdc_list_datasets(lang: Lang = "en") -> CdcCatalogue:
     Alberta Milk, BC Milk Marketing Board) and the national egg,
     chicken, turkey and hatching egg agencies have no tool (PDF only,
     captcha, or terms), with StatCan tables to use instead. No upstream
-    call is made. `lang="fr"` returns French titles and notes.
+    call is made. `lang="fr"` returns French titles, notes and names
+    (organizations without an official French name keep their own).
     Keywords: Canadian Dairy Commission, CDC, dairy, supply management,
     marketing board, milk, quota, egg farmers, chicken farmers, turkey,
     catalogue.
     Mots-clés : Commission canadienne du lait, CCL, produits laitiers,
     gestion de l'offre, office de commercialisation, lait, quota,
-    producteurs d'oeufs, producteurs de poulet, dindon, catalogue.
+    Producteurs de lait du Québec, producteurs d'œufs, producteurs de
+    poulet, dindon, volaille, catalogue.
     """
     return client.catalogue(lang)
 
@@ -81,10 +83,11 @@ async def cdc_get_butter_support_prices(lang: Lang = "en") -> SupportPriceResult
     Use for: the price at which the CDC buys and sells butter, set each
     year (usually effective February 1, sometimes mid-year such as May
     2024 or September 2022) after its cost of production study and
-    consultations. Each row keeps the published label ("2024 (May)")
-    and an effective date. The CDC has not bought skim milk powder
-    since 2017, so there is no powder support price. `lang` switches
-    notes and the linked page; values are identical in both languages.
+    consultations. Each row keeps the published label ("2024 (May)",
+    "2024 (mai)" with `lang="fr"`) and an effective date. The CDC has
+    not bought skim milk powder since 2017, so there is no powder
+    support price. `lang` switches labels, notes and the linked page;
+    values are identical in both languages.
     Keywords: butter support price, support price, butter price,
     Canadian Dairy Commission, CDC, dairy policy, farm gate milk price,
     supply management.
@@ -109,7 +112,7 @@ async def cdc_get_national_quota(
     year earlier. Notes flag months the pages omit (December 2018) and
     figures that are not valid numbers (March 2023). For actual farm
     production by province use cdc_query_market_data(dataset=
-    "production"). `lang` switches notes and the linked page.
+    "production"). `lang` switches notes and the linked pages.
     Keywords: national milk production target, total quota, milk
     quota, butterfat, dairy production, supply management, CMSMC,
     Canadian Dairy Commission.
@@ -134,8 +137,8 @@ async def cdc_get_milk_classes(milk_class: str | None = None, lang: Lang = "en")
     classes, class 1 fluid milk, cheese class, butter, yogurt, Canadian
     Dairy Commission.
     Mots-clés : classe de lait, classification harmonisée du lait,
-    classes de produits laitiers, lait de consommation, fromage, beurre,
-    yogourt, Commission canadienne du lait.
+    classes de produits laitiers, lait de consommation, crème, fromage,
+    beurre, yogourt, Commission canadienne du lait.
     """
     return await client.get_milk_classes(milk_class, lang)
 
@@ -164,13 +167,14 @@ async def cdc_query_market_data(
     code), `milk_class` ("4", "4A", "3(b)"), dates as YYYY, YYYY-MM or
     YYYY-MM-DD. Newest rows first, up to `limit` (max 5000). Revenue
     divided by kg sold gives an average price per kg. `lang="fr"`
-    returns French labels.
+    returns French labels (region "Est"/"Ouest" is accepted too).
     Keywords: milk production, dairy sales, milk class sales, butterfat
     sales, dairy farms, P10, milk pool, Canadian Dairy Commission,
     provincial milk production.
-    Mots-clés : production de lait, ventes de produits laitiers, ventes
-    par classe, ventes de matière grasse, fermes laitières, P10, mise en
-    commun du lait, Commission canadienne du lait.
+    Mots-clés : production de lait, production laitière par province,
+    ventes de produits laitiers, ventes par classe, ventes de matière
+    grasse, fermes laitières, producteurs de lait, P10, mise en commun du
+    lait, Commission canadienne du lait.
     """
     return await client.query_market_data(
         dataset,

@@ -50,13 +50,14 @@ _LIMITER = get_limiter(
 )
 _SOURCE = "phac-infobase"
 _REDIRECTS = frozenset({301, 302, 303, 307, 308})
-_QUARTER = re.compile(r"^(\d{4})\s*-?\s*Q([1-4])\b", re.IGNORECASE)
+# French files write quarters "2025 T3" (trimestre); English ones "2025 Q3".
+_QUARTER = re.compile(r"^(\d{4})\s*-?\s*[QT]([1-4])\b", re.IGNORECASE)
 _DAY_FIRST = re.compile(r"^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$")
 _YEAR_MONTH = re.compile(r"^(\d{4})-(\d{1,2})$")
 _YEAR = re.compile(r"^(\d{4})(?!\d)")
 _NUMBER = re.compile(r"^[-+]?\d+(?:[.,]\d+)?(?:[eE][-+]?\d+)?%?$")
 _DECIMAL_COMMA = re.compile(r"^-?\d+,\d+$")
-_BOUND = re.compile(r"\d{4}(?:-(?:0[1-9]|1[0-2])(?:-\d{2})?)?|\d{4}\s*Q[1-4]", re.IGNORECASE)
+_BOUND = re.compile(r"\d{4}(?:-(?:0[1-9]|1[0-2])(?:-\d{2})?)?|\d{4}\s*[QT][1-4]", re.IGNORECASE)
 
 
 @dataclass
@@ -71,7 +72,14 @@ class Table:
 
 
 def _fold(text: str) -> str:
-    """Lower-case, accent-free, single-spaced text for matching."""
+    """Lower-case, accent-free, single-spaced text for matching.
+
+    The French opioid file mixes apostrophes within one column (live
+    2026-09-26: "Visites au service d’urgence" next to "Services médicaux
+    d'urgence"), so the typographic one becomes "'"; otherwise a filter
+    typed with either misses half the values.
+    """
+    text = text.replace("\u2019", "'").replace("\u2018", "'")
     decomposed = unicodedata.normalize("NFKD", text)
     stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     return " ".join(stripped.lower().split())
@@ -313,7 +321,9 @@ def _bound(value: str | None, name: str, *, end: bool) -> date | None:
         except ValueError:
             start = None
     if start is None:
-        raise InvalidInput(f"{name} must be YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn, got {value!r}.")
+        raise InvalidInput(
+            f"{name} must be YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn (or Tn), got {value!r}."
+        )
     if not end:
         return start
     if re.fullmatch(r"\d{4}", text):
@@ -332,12 +342,22 @@ def _month_end(year: int, month: int) -> date:
     return date.fromordinal(date(year, month + 1, 1).toordinal() - 1)
 
 
+def _place(text: str) -> str:
+    """A place name folded for comparison, ignoring periods, hyphens and spaces.
+
+    The French opioid file writes "Terre-Neuve et Labrador" where the
+    official name is "Terre-Neuve-et-Labrador" (live 2026-09-26), so
+    hyphens and spaces must not count.
+    """
+    return re.sub(r"[.\s-]", "", _fold(text))
+
+
 def _province(query: str) -> str | None:
     """PRUID for a province or territory named, abbreviated or coded."""
-    wanted = _fold(query).replace(".", "")
+    wanted = _place(query)
     for pruid, (english, french, abbreviations) in constants.PROVINCES.items():
-        names = {pruid, _fold(english), _fold(french)}
-        names |= {_fold(a).replace(".", "") for a in abbreviations}
+        names = {pruid, _place(english), _place(french)}
+        names |= {_place(a) for a in abbreviations}
         if wanted in names:
             return pruid
     return None
@@ -351,9 +371,9 @@ def geo_matcher(query: str) -> Callable[[str], bool]:
         needle = _fold(query)
         return lambda cell: needle in _fold(cell)
     english, french, abbreviations = constants.PROVINCES[pruid]
-    accepted = {pruid, _fold(english), _fold(french)}
-    accepted |= {_fold(a).replace(".", "") for a in abbreviations}
-    return lambda cell: _fold(cell).replace(".", "") in accepted
+    accepted = {pruid, _place(english), _place(french)}
+    accepted |= {_place(a) for a in abbreviations}
+    return lambda cell: _place(cell) in accepted
 
 
 def _resolve(columns: list[str], name: str) -> str:
@@ -421,13 +441,30 @@ def _summary(dataset: Dataset, lang: str) -> DatasetSummary:
     )
 
 
+def _query_word(word: str) -> str:
+    """A query word as a substring that finds its singular and plural forms.
+
+    An elided article is dropped ("d'opioides" -> "opioides") and a plural
+    cut to the stem its singular shares ("surdoses" -> "surdose",
+    "animaux" -> "anima"), as recalls._query_word does.
+    """
+    word = re.sub(r"^(?:[cdjlmnst]|qu)'", "", word)
+    if len(word) > 4 and word.endswith("aux"):
+        return word[:-2]
+    if len(word) > 4 and word.endswith(("eux", "oux")):
+        return word[:-1]
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return word[:-1]
+    return word
+
+
 def list_datasets(
     topic: str | None = None, query: str | None = None, lang: str = "en"
 ) -> DatasetList:
     wanted_topic = (topic or "").strip().lower()
     if wanted_topic and wanted_topic not in TOPICS:
         raise InvalidInput(f"Unknown topic {topic!r}; topics are {sorted(TOPICS)}.")
-    words = _fold(query or "").split()
+    words = [w for w in (_query_word(w) for w in _fold(query or "").split()) if w]
     matches = []
     for dataset in DATASETS:
         if wanted_topic and dataset.topic != wanted_topic:

@@ -51,13 +51,18 @@ async def fcac_search_credit_cards(
     is FCAC's (annual fee, low to high). Pass a product_id with the same
     province and options to fcac_get_credit_card for cash advance and
     balance transfer rates, foreign conversion fee, minimum income and
-    insurance. Read live; lang sets names and labels.
+    insurance. Read live; lang="fr" returns FCAC's French names, labels
+    and reward categories (numbers are the same), and `query` and
+    `institution` then match the French names, ignoring case, accents
+    and apostrophe style.
     Keywords: credit card, interest rate, annual fee, APR, rewards card,
     cash back, travel rewards, low interest card, FCAC, compare cards,
     bank fees, consumer finance.
-    Mots-clés : carte de crédit, taux d'intérêt, frais annuels,
-    récompenses, remise en argent, carte à faible taux, ACFC, comparer
-    les cartes, frais bancaires, consommation financière.
+    Mots-clés : carte de crédit, comparer les cartes de crédit, taux
+    d'intérêt, frais annuels, carte sans frais annuels, récompenses,
+    remise en argent, points de récompense, carte à faible taux, carte
+    étudiante, carte de crédit garantie, ACFC, Agence de la consommation
+    en matière financière, frais bancaires.
     """
     return await client.search_credit_cards(
         province,
@@ -100,7 +105,8 @@ async def fcac_get_credit_card(
     annual fee, FCAC, card benefits, rewards program.
     Mots-clés : détails de carte de crédit, taux d'avance de fonds,
     taux de transfert de solde, frais de conversion de devises, revenu
-    minimum, assurance carte, frais annuels, ACFC, avantages.
+    minimum, assurance voyage, assurance carte, frais annuels, ACFC,
+    avantages.
     """
     return await client.get_credit_card(
         product_id,
@@ -139,13 +145,16 @@ async def fcac_search_bank_accounts(
     institution, maximum monthly fee (dollars) or low_cost_only. Default
     order is FCAC's (most included transactions first). Pass a product_id
     with the same options to fcac_get_bank_account for every fee. Read
-    live; lang sets names and labels.
+    live; lang="fr" returns FCAC's French names and labels (numbers are
+    the same), and `query` and `institution` then match the French
+    names, ignoring case, accents and apostrophe style.
     Keywords: bank account, chequing account, savings account, monthly
     fee, bank fees, low-cost account, no-fee account, interest rate,
     FCAC, compare accounts, credit union, transactions.
-    Mots-clés : compte bancaire, compte-chèques, compte d'épargne, frais
-    mensuels, frais bancaires, compte à frais modiques, compte sans
-    frais, taux d'intérêt, ACFC, coopérative de crédit.
+    Mots-clés : compte bancaire, compte-chèques, compte chèque, compte
+    d'épargne, forfait bancaire, frais mensuels, frais bancaires, compte
+    à frais modiques, compte sans frais, taux d'intérêt, ACFC,
+    coopérative de crédit, caisse populaire.
     """
     return await client.search_bank_accounts(
         province,
@@ -186,8 +195,9 @@ async def fcac_get_bank_account(
     e-Transfer fee, monthly fee waiver, minimum balance, savings
     interest rate, FCAC, chequing account.
     Mots-clés : frais de compte bancaire, frais d'insuffisance de fonds,
-    frais de découvert, frais de guichet, virement Interac, solde
-    minimum, taux d'intérêt épargne, ACFC, compte-chèques.
+    chèque sans provision, frais de découvert, frais de guichet, frais de
+    retrait, virement Interac, forfait bancaire, solde minimum, taux
+    d'intérêt épargne, ACFC, compte-chèques.
     """
     return await client.get_bank_account(
         product_id,

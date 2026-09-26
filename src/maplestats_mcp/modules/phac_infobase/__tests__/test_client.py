@@ -107,6 +107,45 @@ async def test_french_zip_member_with_accents_in_cp1252(httpx_mock):
     assert result.title.startswith("Décès")
 
 
+async def test_french_harms_quarters_apostrophes_places_and_mas(httpx_mock):
+    # Values as the live French file writes them (2026-09-26): quarters
+    # "2025 T3", both apostrophes in Source, "Terre-Neuve et Labrador"
+    # without its second hyphen, and "Mas." for suppressed cells.
+    body = (
+        "Substance,Source,Mesure_Spéficique,Région,PRUID,Période_Temps,Année_Trimestre,"
+        "Aggrégateur,Désaggrégateur,Unité,Valeur\n"
+        "Opioïdes,Visites au service d’urgence,Nombres totaux,Terre-Neuve et Labrador,10,"
+        "Par trimestre,2025 T2,,,Nombre,Mas.\n"
+        "Opioïdes,Visites au service d’urgence,Nombres totaux,Terre-Neuve et Labrador,10,"
+        "Par trimestre,2025 T3,,,Nombre,12\n"
+        "Opioïdes,Services médicaux d'urgence (SMU),Nombres totaux,Canada,1,"
+        "Par trimestre,2025 T4,,,Nombre,9801\n"
+        "Opioïdes,Visites au service d’urgence,Nombres totaux,Canada,1,"
+        "Par année,2025,,,Nombre,30210\n"
+    ).encode("cp1252")
+    httpx_mock.add_response(
+        url=_url(_HARMS_EN.url_fr or ""), content=_zip("DonnéesMéfaitsSubstances.csv", body)
+    )
+    quarters = await client.query(
+        "opioid_stimulant_harms", lang="fr", start="2025 T3", end="2025 Q4"
+    )
+    assert [r["Année_Trimestre"] for r in quarters.rows] == ["2025 T3", "2025 T4"]
+    straight = await client.query(
+        "opioid_stimulant_harms",
+        lang="fr",
+        filters={"Source": "visites au service d'urgence", "Periode_Temps": "par trimestre"},
+    )
+    assert [r["Valeur"] for r in straight.rows] == ["Mas.", "12"]
+    assert straight.markers[0].value == "Mas." and "masqué" in straight.markers[0].meaning
+    typographic = await client.query(
+        "opioid_stimulant_harms", lang="fr", filters={"Source": "Services médicaux d’urgence (SMU)"}
+    )
+    assert typographic.matching_rows == 1
+    for place in ("NL", "Terre-Neuve-et-Labrador", "T.-N.-L."):
+        result = await client.query("opioid_stimulant_harms", lang="fr", geography=place)
+        assert result.matching_rows == 2, place
+
+
 async def test_describe_reports_columns_coverage_and_markers(httpx_mock):
     _mock_harms(httpx_mock)
     described = await client.describe_dataset("opioid_stimulant_harms")
@@ -295,6 +334,9 @@ def test_list_datasets_topics_and_french_query():
     fr = client.list_datasets(query="rougeole", lang="fr")
     assert fr.datasets and all(d.topic == "infectious_disease" for d in fr.datasets)
     assert fr.datasets[0].topic_label.startswith("Rougeole")
+    # Elided articles and either apostrophe still match "opioïdes".
+    elided = client.list_datasets(query="surdoses d’opioïdes", lang="fr")
+    assert any(d.id == "opioid_stimulant_harms" for d in elided.datasets)
     accentless = client.list_datasets(query="opioides stimulants")
     assert any(d.id == "opioid_stimulant_harms" for d in accentless.datasets)
     harms = next(d for d in accentless.datasets if d.id == "opioid_stimulant_harms")
@@ -323,6 +365,7 @@ def test_catalogue_is_consistent():
         ("2026-09-04 13:32:50", date(2026, 9, 4)),
         ("2026 Q1", date(2026, 1, 1)),
         ("2025 Q4", date(2025, 10, 1)),
+        ("2025 T3", date(2025, 7, 1)),
         ("2026 (Jan to Mar)", date(2026, 1, 1)),
         ("2024-10", date(2024, 10, 1)),
         ("2024-2025", date(2024, 1, 1)),

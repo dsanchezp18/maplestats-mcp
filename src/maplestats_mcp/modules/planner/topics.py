@@ -287,6 +287,9 @@ TOPICS: tuple[Topic, ...] = (
             "eaux usees",
             "tuberculose",
             "eclosion",
+            "vrs",
+            "virus respiratoire",
+            "declaration obligatoire",
         ),
         (
             PlanStep("phac_infobase_list_datasets", "PHAC Health Infobase dashboard data files"),
@@ -296,7 +299,8 @@ TOPICS: tuple[Topic, ...] = (
         (
             (
                 "Surveillance counts are provisional and revised weekly or quarterly; suppressed "
-                "cells ('Suppr.', 'X') are not zeros, and provinces report on different schedules."
+                "cells ('Suppr.', 'X', 'Mas.' in French files) are not zeros, and provinces "
+                "report on different schedules."
             ),
         ),
     ),
@@ -679,6 +683,10 @@ AGRICULTURE = Topic(
         "food inspection",
         "ble",
         "cereale",
+        "orge",
+        "lentille",
+        "legumineuse",
+        "silo",
         "recolte",
         "betail",
         "abattage",
@@ -732,10 +740,18 @@ BANKING = Topic(
         "overdraft",
         "fcac",
         "carte de credit",
+        "cartes de credit",
         "compte bancaire",
-        "compte-cheques",
+        "comptes bancaires",
+        "compte-cheque",
+        "compte cheque",
         "compte d'epargne",
-        "frais bancaires",
+        "comptes d'epargne",
+        "frais bancaire",
+        "forfait bancaire",
+        "caisse populaire",
+        "insuffisance de fonds",
+        "cheque sans provision",
         "acfc",
     ),
     (
@@ -779,6 +795,8 @@ DAIRY = Topic(
         "fromage",
         "gestion de l'offre",
         "matiere grasse",
+        "commission canadienne du lait",
+        "ccl",
     ),
     (
         PlanStep(
@@ -809,3 +827,43 @@ DAIRY = Topic(
     ),
 )
 TOPICS = (*TOPICS, DAIRY)
+
+
+COMMITTEES = Topic(
+    "committees",
+    "House of Commons committees: meetings, witnesses and testimony",
+    (
+        "committee",
+        "committee meeting",
+        "standing committee",
+        "witness",
+        "testimony",
+        "testified",
+        "in camera",
+        "comite",
+        "comite permanent",
+        "temoin",
+        "temoign",
+        "comparution",
+        "huis clos",
+    ),
+    (
+        PlanStep("parliament_list_committees", "find the committee and its slug"),
+        PlanStep("parliament_get_committee", "acronym, subcommittees and recent meetings"),
+        PlanStep(
+            "parliament_search_committee_meetings",
+            "meetings by committee, session or date range, and which were in camera",
+        ),
+        PlanStep(
+            "parliament_get_committee_meeting",
+            "one meeting's witnesses, transcript, minutes and notice",
+        ),
+    ),
+    (
+        (
+            "Committee data starts with session 39-1 (2006) and comes from OpenParliament.ca, "
+            "which is unofficial; in camera meetings have no transcript."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, COMMITTEES)
