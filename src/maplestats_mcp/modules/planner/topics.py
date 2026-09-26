@@ -680,6 +680,13 @@ AGRICULTURE = Topic(
         "egg",
         "animal disease",
         "avian influenza",
+        "bird flu",
+        "hpai",
+        "reportable disease",
+        "chronic wasting",
+        "scrapie",
+        "bovine tuberculosis",
+        "bse",
         "food inspection",
         "ble",
         "cereale",
@@ -694,6 +701,14 @@ AGRICULTURE = Topic(
         "volaille",
         "oeuf",
         "grippe aviaire",
+        "influenza aviaire",
+        "maladie a declaration obligatoire",
+        "maladies a declaration obligatoire",
+        "maladie animale",
+        "maladies animales",
+        "maladie debilitante chronique",
+        "tremblante",
+        "tuberculose bovine",
         "inspection des aliments",
     ),
     (
@@ -706,8 +721,20 @@ AGRICULTURE = Topic(
             "portal='federal', fq='organization:aafc-aac'",
         ),
         PlanStep(
+            "cfia_reportable_diseases",
+            "CFIA yearly counts of federally reportable animal diseases, 2011 to now",
+        ),
+        PlanStep(
+            "cfia_disease_detections",
+            "CFIA detections by date, province and species (CWD, scrapie, bovine TB, BSE)",
+        ),
+        PlanStep(
+            "cfia_avian_influenza",
+            "CFIA avian influenza infected premises and status by province since 2021",
+        ),
+        PlanStep(
             "ckan_search_datasets",
-            "CFIA animal disease, rabies and food testing data: "
+            "CFIA rabies, aquatic animal disease and food testing data: "
             "portal='federal', fq='organization:cfia-acia'",
         ),
     ),
@@ -719,6 +746,10 @@ AGRICULTURE = Topic(
         (
             "AAFC market files on open.canada.ca are bulk CSVs refreshed nightly; their "
             "DataStore copies are mostly gone or stale, so read the file URLs."
+        ),
+        (
+            "CFIA yearly disease counts are herds or flocks; avian influenza premises are "
+            "counted separately and can differ by one or two a year."
         ),
     ),
 )

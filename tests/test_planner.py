@@ -99,6 +99,24 @@ def test_agriculture_routes_to_grain_and_agency_catalogues():
     assert "agriculture" in {t.topic for t in french.topics}
 
 
+def test_animal_disease_questions_reach_the_cfia_tools():
+    for question in (
+        "How many farms had avian influenza in British Columbia this year?",
+        "chronic wasting disease detections in Saskatchewan elk herds",
+        "maladies à déclaration obligatoire chez les animaux terrestres",
+        "cas de grippe aviaire au Québec",
+        "influenza aviaire dans les élevages de volailles",
+    ):
+        result = client.plan(question)
+        topic = next((t for t in result.topics if t.topic == "agriculture"), None)
+        assert topic is not None, question
+        tools = [s.tool for s in topic.steps]
+        assert {"cfia_reportable_diseases", "cfia_avian_influenza"} <= set(tools), question
+        # CKAN stays for rabies, aquatic diseases and food testing.
+        ckan = [s for s in topic.steps if s.tool == "ckan_search_datasets"]
+        assert "cfia-acia" in ckan[-1].purpose and "rabies" in ckan[-1].purpose
+
+
 def test_committee_questions_route_to_committee_tools():
     english = client.plan("Which witnesses appeared at the finance committee meeting last week?")
     assert english.topics[0].topic == "committees"

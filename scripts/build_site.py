@@ -158,6 +158,14 @@ SOURCES: dict[str, Source] = {
         "Régie de l'énergie",
         domain="energy",
     ),
+    "cfia": Source(
+        "Canadian Food Inspection Agency",
+        "Agence canadienne d'inspection des aliments",
+        "national",
+        "CFIA",
+        "ACIA",
+        domain="agriculture",
+    ),
     "cgc": Source(
         "Canadian Grain Commission",
         "Commission canadienne des grains",

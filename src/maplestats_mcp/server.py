@@ -123,7 +123,9 @@ Sources, by tool-name prefix:
   NRCan geocoding and official place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
   Recalls and safety alerts (Health Canada, CFIA food, all agencies): recalls_.
   Canadian Dairy Commission (milk component and butter support prices,
-  total quota, milk production and class sales): cdc_.
+  total quota, milk production and class sales): cdc_. CFIA reportable
+  animal diseases (yearly counts, detections, avian influenza infected
+  premises): cfia_.
   Canada Gazette notices and regulations: gazette_.
   Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,
   votes, MPs and Hansard (unofficial OpenParliament.ca): parliament_.
@@ -145,7 +147,8 @@ tax statistics and charities, OSFI bank returns, ISED insolvency data)
 (beyond ircc_monthly_) are ordinary open.canada.ca datasets -- use ckan_search_datasets with
 portal="federal" and fq="organization:<org>" (cic for IRCC, cra-arc, osfi-bsif, ic).
 AAFC market data (red meat, poultry and eggs, dairy, horticulture prices) and
-CFIA animal disease and food testing data are there too: aafc-aac, cfia-acia.
+CFIA rabies, aquatic animal disease and food testing data are there too:
+aafc-aac, cfia-acia (terrestrial reportable diseases and avian influenza: cfia_).
 
 Language: most tools accept lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's

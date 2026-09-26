@@ -1850,7 +1850,10 @@ has a separate roadmap row.
 
 ## CFIA (Canadian Food Inspection Agency)
 
-**Status:** Partly covered (via `ckan_*`).
+**Status:** Shipped 2026-09-26: `modules/cfia/` (3 tools) for the
+inspection.canada.ca animal disease tables; the rest through `ckan_*`.
+
+### CKAN (`cfia-acia`)
 
 Checked 2026-09-26. `organization_autocomplete?q=inspection` gives
 `cfia-acia`: 267 datasets, mostly food testing results:
@@ -1870,27 +1873,106 @@ Checked 2026-09-26. `organization_autocomplete?q=inspection` gives
   borer and others to 2020), Class I recalls with public warnings
   (2018-2021), many DataStore-active.
 
-On inspection.canada.ca, the current animal disease figures are HTML
-only:
+Recalls are a separate roadmap row (Government of Canada Recalls and
+Safety Alerts).
 
-- "Federally reportable diseases for terrestrial animals in Canada"
-  (`/en/animal-health/terrestrial-animals/diseases/reportable/canada`)
-  has one table per year from 2011 to 2026 (16 tables) with a monthly
-  breakdown, updated on the 10th of each month (current as of 2026-08-31: avian
-  influenza 19, chronic wasting disease 7, equine infectious anemia 7 in
-  2026). The yearly URLs used before (`...-canada-2025`) now answer HTTP
-  410.
-- "Status of ongoing avian influenza response by province" has a table
-  of current and released infected premises and birds affected since
-  December 2021 (updated 2026-09-04: 12 current, 650 released, 17,561,900
-  birds).
+### inspection.canada.ca tables (`cfia_`)
 
-No JSON or CSV behind either page was found. Recalls are a separate
-roadmap row (Government of Canada Recalls and Safety Alerts). A small
-scraper for the two tables would cover the 2022-2026 gap in terrestrial
-disease counts and the avian influenza status; it was not
-built in this pass because the rest of CFIA's data is reachable through
-`ckan_*` and the gap is two HTML tables.
+Verified live on 2026-09-26 in English and French.
+
+Access and terms: robots.txt answers HTTP 200 with an empty body (no
+disallowed paths, no crawl delay). The pages link the Canada.ca terms,
+which allow non-commercial reproduction with the title, author and a
+note that it copies the version at the source URL; every result carries
+the page URL and its "Date modified" in its provenance. Retired URLs
+answer HTTP 410 (the yearly `...-canada-2025` pages and the old CFIA
+terms page), which the module reports as a layout change. The client
+sends at most one request per second. None of the tables has a JSON or
+CSV file behind it: the pages load only the WET toolkit, Adobe
+analytics and Font Awesome, and the premises table is sorted and
+filtered client-side by wet-boew attributes over the inline HTML. The
+HPAI dashboards page embeds Power BI, which was not used.
+
+Pages used (French equivalents under `/fr/sante-animaux/animaux-terrestres/maladies/declaration-obligatoire/`):
+
+- `/en/animal-health/terrestrial-animals/diseases/reportable/canada`
+  ("Federally reportable diseases for terrestrial animals in Canada").
+  Sixteen Disease/Total tables, one per year from 2011 to 2026, under an
+  `<h2>` holding the year. They are **yearly totals**, not monthly
+  counts: each total links to a per-disease "data by month" page. The
+  page states "Current as of: 2026-08-31" and was modified 2026-09-10.
+  Spot values: 2026 avian influenza 19, chronic wasting disease 7,
+  equine infectious anemia 7; 2022 avian influenza 279; 2013 equine
+  infectious anemia 36. The French page lists diseases in French
+  alphabetical order and spells scrapie "Tremblante du mouton" in 2019
+  and "Tremblante" elsewhere; avian influenza is "Notifiable avian
+  influenza" for 2014-2016. Keyed by disease, the French counts equal
+  the English ones for every year. Anaplasmosis (2011, 2013) and anthrax
+  (2011, 2012) carry table notes: anaplasmosis left the list on April 1,
+  2014, and the CFIA no longer reports anthrax detections.
+- The per-disease pages with one row per confirmation (Year, Date
+  confirmed, Location, Animal type infected; BSE adds Age of animal):
+  chronic wasting disease (`cwd/herds-infected`, 101 rows 2011-2026,
+  modified 2026-09-10, plus a separate 1996-2010 yearly table that is not
+  read), scrapie (48 rows 2011-2019, three marked atypical), bovine
+  tuberculosis (6), cysticercosis (5), BSE (3), trichinellosis (1) and
+  avian influenza before 2021 (17 flocks 2014-2016). Some rows stand for
+  several herds ("Elk (3 herds)", "Wapiti (3 troupeaux)"); counting
+  those, the detection rows add up exactly to the yearly totals for all
+  42 disease-year pairs. One bovine TB row's location is "Alberta and
+  Saskatchewan". Equine infectious anemia's page is one table per
+  province and year, stops at 2019 and was modified 2023-09-18, so only
+  its yearly totals are served; Newcastle disease links to a control
+  zone map.
+- `.../avian-influenza/latest-bird-flu-situation/investigations-and-orders`:
+  one row per infected premises since December 2021 (662 rows: Date
+  detected with a `data-order="YYYYMMDD"` sort key, premises id and
+  municipality, province, premises type, WOAH classification, primary
+  control zone, status of the order). A current premises has a hidden
+  "quarantine" span, a released one a "*" table-note link. On
+  2026-09-26: 12 current (Manitoba 6, Alberta 3, Saskatchewan 3) and 650
+  released, which matches the status-by-province table province by
+  province; by year of detection 1 (2021), 280 (2022), 132 (2023), 102
+  (2024), 121 (2025), 26 (2026). The newest was AB-IP116, County of
+  Vermilion River, detected 2026-09-26 in PCZ-337.
+- `.../latest-bird-flu-situation/status-province`: current and released
+  premises and estimated birds impacted by province (modified
+  2026-09-25; birds column "Updated: 2026-09-04"; totals 12, 650 and
+  17,561,900 birds; New Brunswick "Under 100").
+
+Quirks handled (each covered by a fixture test):
+
+- The French pages hold data errors the English ones do not: the French
+  scrapie page dates a 2019 flock "21 huin", the French avian influenza
+  page writes "9 décembre" for a flock the English page dates December
+  19, 2014, and the French premises table gives six premises another
+  detection date (AB-IP116 on September 25 against 26, ON-IP58 on
+  February 12 against 21, BC-IP196 to 199 on November 16 against 17) and
+  malformed sort keys to twelve more ("202411222", "2022061er"). Dates,
+  counts and statuses always come from the English page; `lang="fr"`
+  takes the labels (municipality, animal type, control zone "ZCP-...",
+  published date text) from the French page, joined by premises id, or
+  by row for detection pages only when every row's year lines up.
+- Premises ids hide a sort padding digit (`BC-IP<span class="wb-inv">0</span>99`
+  displays as BC-IP99). The released marker is usually inside `<sup>`
+  but not on QC-IP65, and on AB-IP84 the English page uses the French
+  label "Note de bas de page". On the French page AB-IP104's location
+  sits inside the `<sup>`.
+- Cell spellings: "Non-commercial", "captive wild" (untranslated on the
+  French page too), "non- commerciale"; "N/A - LPAI" (sometimes with a
+  no-break space) for four 2024 low pathogenic premises; N/A written
+  "s.o.", "S.O", "o.s."; two orders in one cell ("Revoked" then "PCZ-239
+  Revoked"); "Released" or "Zone libérée" for 2022 premises without a
+  zone. The French status table writes "`0" for British Columbia's
+  current premises and groups thousands with spaces; the French premises
+  table spells Prince Edward Island "Île-Prince-Édouard".
+- A missing table, renamed column, table outside a year heading or
+  unreadable count raises `UpstreamError` instead of returning partial
+  figures.
+
+Yearly totals and premises counts are maintained separately and differ
+slightly for avian influenza (2022: 279 flocks against 280 premises;
+2025: 119 against 121); both are returned as published, with a note.
 
 ## Job Bank labour market information (ESDC)
 

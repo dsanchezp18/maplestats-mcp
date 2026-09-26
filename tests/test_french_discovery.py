@@ -91,6 +91,15 @@ CASES = [
     ("classification harmonisée du lait", "cdc_get_milk_classes"),
     ("production de lait par province", "cdc_query_market_data"),
     ("nombre de fermes laitières", "cdc_query_market_data"),
+    # CFIA animal disease tables (2026-09-26).
+    ("maladies à déclaration obligatoire animaux terrestres", "cfia_reportable_diseases"),
+    ("nombre annuel de cas de maladies animales ACIA", "cfia_reportable_diseases"),
+    ("maladie débilitante chronique chez les cerfs et wapitis", "cfia_disease_detections"),
+    ("tuberculose bovine détections", "cfia_disease_detections"),
+    ("vache folle ESB cas confirmés", "cfia_disease_detections"),
+    ("grippe aviaire lieux infectés", "cfia_avian_influenza"),
+    ("influenza aviaire hautement pathogène par province", "cfia_avian_influenza"),
+    ("éclosion de grippe aviaire dans les élevages de volailles", "cfia_avian_influenza"),
 ]
 
 
