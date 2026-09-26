@@ -16,6 +16,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked
+      # Same gate as ci.yml, so a tag on a commit that failed CI cannot publish.
+      - run: uv run ruff check src tests scripts
+      - run: uv run ruff format --check src tests scripts
+      - run: uv run pyright
       - run: uv run pytest -q
       - name: Tag matches the package version
         run: test "${GITHUB_REF_NAME#v}" = "$(uv run python -c 'import maplestats_mcp; print(maplestats_mcp.__version__)')"
@@ -46,9 +50,19 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      # Pinned and checksummed: this job holds an OIDC token, so an unverified
+      # "latest" binary could publish anything under our name. To bump, set
+      # both values from the release's registry_<version>_checksums.txt.
       - name: Install mcp-publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.1
+          # TODO: placeholder, replace with the real SHA-256 of
+          # mcp-publisher_linux_amd64.tar.gz for the version above.
+          MCP_PUBLISHER_SHA256: "0000000000000000000000000000000000000000000000000000000000000000"
         run: |
-          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          curl -fsSL -o mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
       # PyPI can take a minute to serve a new release's README, which the
       # registry reads to verify ownership (the mcp-name comment).
       - run: sleep 60
