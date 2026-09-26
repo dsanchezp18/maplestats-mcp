@@ -228,7 +228,8 @@ async def parliament_list_committees(
     Use for: which committees exist (e.g. Finance, Health, Public
     Accounts) and the slug the other committee tools take. session like
     '44-1' (default: the current session; data from 39-1, 2006); keyword
-    filters on the English or French name, e.g. "santé" or "ethics".
+    filters on the English or French name, ignoring case and accents,
+    e.g. "santé", "sante" or "ethics". lang="fr" returns French names.
     Subcommittees are listed by parliament_get_committee.
     Keywords: committee, standing committee, special committee, House of
     Commons committee, parliamentary committee, FINA, Parliament, committee
@@ -248,6 +249,7 @@ async def parliament_get_committee(committee: str, lang: Literal["en", "fr"] = "
     FINA, ETHI) with the ourcommons.ca page, its subcommittees, and its 10
     most recent meetings. committee is a slug from
     parliament_list_committees, e.g. 'finance' or 'public-accounts'.
+    lang="fr" returns the French name and French noscommunes.ca pages.
     Keywords: committee profile, committee acronym, subcommittee,
     committee meetings, standing committee, House of Commons, ourcommons,
     committee history.
@@ -309,11 +311,13 @@ async def parliament_get_committee_meeting(
     notice and webcast. committee slug, session like '45-1' and meeting
     number come from parliament_search_committee_meetings. Page through
     the transcript with offset; limit=0 returns witnesses only. Text is
-    plain, in English or French.
+    plain; lang="fr" returns the French transcript, witness titles and
+    French minutes and notice pages (noscommunes.ca).
     Keywords: committee testimony, witness, evidence, committee
     transcript, hearing, minutes, webcast, what was said in committee.
-    Mots-clés : témoignages, témoin, comparution, transcription de la
-    réunion, procès-verbal, webdiffusion, délibérations du comité, audience.
+    Mots-clés : témoignages, témoin, liste des témoins, qui a témoigné,
+    comparution, transcription de la réunion, procès-verbal, webdiffusion,
+    délibérations du comité, audience.
     """
     return await client.get_committee_meeting(
         committee, session, number, limit=limit, offset=offset, lang=lang

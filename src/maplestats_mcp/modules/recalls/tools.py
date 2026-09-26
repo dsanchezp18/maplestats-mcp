@@ -42,23 +42,27 @@ async def recalls_search(
     consumer product recalls (toys, cribs, electronics, cannabis) and
     vehicle recall notices on recalls-rappels.canada.ca. `query` matches
     every word in the title, product, issue, category and organization,
-    ignoring case and accents (e.g. "peanut cookies", "Listeria cheese").
+    ignoring case, accents, plurals and words such as "aux" or "the"
+    (e.g. "peanut cookies", "biscuits aux arachides").
     `agency` and `product_type` narrow the source; `category` is a text
     match on the category (e.g. "Toys", "Dairy"); `recall_class` is
-    "Class 1" to "Class 3" (CFIA food) or "Type I" to "Type III" (Health
-    Canada health products). Dates (YYYY-MM-DD) filter on the notice's
-    last-updated date, the same date the site's search uses. Newest
-    first; archived notices are excluded unless include_archived=True.
-    Pass recall_id to recalls_get for affected lots, UPCs and what to do.
-    For vehicle recalls by make, model and year use tc_recalls_search.
-    `lang="fr"` searches and returns the French titles and categories.
+    "Class 1" to "Class 3" (CFIA food; "Classe 1" also works) or "Type I"
+    to "Type III" (Health Canada health products). Dates (YYYY-MM-DD)
+    filter on the notice's last-updated date, the same date the site's
+    search uses. Newest first; archived notices are excluded unless
+    include_archived=True. Pass recall_id to recalls_get for affected
+    lots, UPCs and what to do. For vehicle recalls by make, model and
+    year use tc_recalls_search. `lang="fr"` searches and returns the
+    French text, so with it `query` and `category` must be French (e.g.
+    "jouets", "Produits laitiers"); untranslated notices keep an English
+    title and URL.
     Keywords: recall, safety alert, food recall, allergen, health
     product recall, drug recall, medical device, consumer product,
     Health Canada, CFIA, advisory, product safety.
-    Mots-clés : rappel, avis de rappel, rappel d'aliments, allergène,
-    rappel de médicament, instrument médical, produit de consommation,
-    Santé Canada, ACIA, avis de sécurité, mise en garde, sécurité des
-    produits.
+    Mots-clés : rappel, avis de rappel, rappel alimentaire, rappel
+    d'aliments, allergène, rappel de médicament, instrument médical,
+    produit de consommation, rappel de jouets, Santé Canada, ACIA, avis
+    de sécurité, mise en garde, sécurité des produits, retrait du marché.
     """
     return await client.search(
         query,
@@ -123,7 +127,9 @@ async def recalls_summarize(
     Unlike recalls_search, archived notices are included by default, so
     counts cover the full history back to the 1990s; pass
     include_archived=False to match the site's search. `lang="fr"`
-    returns French organization, category and issue labels.
+    returns French organization, category, issue and class labels (and
+    then takes French `query` and `category` text); agency and
+    product_type keys and the "(none)" and "unknown" keys stay as codes.
     Keywords: recall statistics, recalls per year, count, trend, food
     recalls, allergen, Health Canada, CFIA, product safety, summary.
     Mots-clés : statistiques de rappels, rappels par année, nombre,

@@ -1181,6 +1181,12 @@ Verified live 2026-09-26:
 - `/committees/<slug>/<session>/<number>/` adds start and end times and
   ourcommons.ca minutes, notice and webcast links (`webcast_url` null
   for in camera meetings). An unknown meeting returns 404 (HTML).
+- All ourcommons.ca links are English. Their French pages are on
+  noscommunes.ca with French path words (`Committees/fr/FINA?...`,
+  `DocumentViewer/fr/45-1/FINA/reunion-47/proces-verbal` and
+  `.../avis-convocation`; checked back to 39-1); only swapping `en` for
+  `fr` in a DocumentViewer link lands on an error page. With `lang="fr"`
+  the tools return those French links.
 - A meeting's transcript is `/speeches/?document=<meeting path>`, in
   spoken order, typically 50 to 300 speeches; in camera meetings return
   none. An unknown document path returns HTTP 400 "Invalid meeting URL"

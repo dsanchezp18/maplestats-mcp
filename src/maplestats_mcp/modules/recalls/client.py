@@ -106,10 +106,53 @@ class _Dump:
 
 
 def _fold(text: str) -> str:
-    """Lowercase without accents, so 'bœuf' matches 'boeuf' and 'Santé' 'sante'."""
+    """Lowercase without accents, so 'bœuf' matches 'boeuf' and 'Santé' 'sante'.
+
+    The French dump mixes typographic and straight apostrophes across
+    fields ("Produits d’usage personnel", "Siège d'auto pour enfant"), so
+    both become "'"; otherwise a category typed with either one misses.
+    """
     text = text.replace("œ", "oe").replace("Œ", "oe").replace("æ", "ae")
+    text = text.replace("\u2019", "'").replace("\u2018", "'")
     decomposed = unicodedata.normalize("NFKD", text)
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).casefold()
+
+
+# Words a query need not contain. Every query word must appear in a
+# notice, and live on 2026-09-26 "biscuits aux arachides" found nothing
+# because no matching title holds "aux". One-letter words (elided l', d',
+# qu' split off by the tokenizer, and "à") are dropped too.
+_STOPWORDS = frozenset(
+    {
+        "au", "aux", "avec", "dans", "de", "des", "du", "en", "et", "la", "le", "les", "ou",
+        "par", "pour", "sans", "sur", "un", "une", "and", "for", "in", "of", "on", "or",
+        "the", "with",
+    }
+)  # fmt: skip
+
+
+def _query_word(word: str) -> str:
+    """A plural query word cut to the stem its singular shares, e.g. 'arachides' -> 'arachide'.
+
+    Words match as substrings, so the stem finds both numbers: live,
+    "arachides" matched 211 French notices and "arachide" 237, "jouets"
+    758 and "jouet" 770. An -aux word keeps its "a" ("animaux" becomes
+    "anima", which also finds "animal"); -eux and -oux drop the x.
+    """
+    if len(word) > 4 and word.endswith("aux"):
+        return word[:-2]
+    if len(word) > 4 and word.endswith(("eux", "oux")):
+        return word[:-1]
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return word[:-1]
+    return word
+
+
+def _query_words(query: str | None) -> list[str]:
+    words = re.findall(r"\w+", _fold(query or ""))
+    kept = [w for w in words if len(w) > 1 and w not in _STOPWORDS]
+    # A query made only of such words still filters on them.
+    return [_query_word(w) for w in (kept or words)]
 
 
 def _clean(value: Any) -> str | None:
@@ -268,7 +311,7 @@ def _filter(
     end = _date_arg(updated_to, "updated_to")
     if start and end and start > end:
         raise InvalidInput(f"updated_from {start} is after updated_to {end}.")
-    words = re.findall(r"\w+", _fold(query or ""))
+    words = _query_words(query)
     category_folded = _fold(category.strip()) if category and category.strip() else None
     wanted_class = _class_parts(recall_class) if recall_class and recall_class.strip() else None
 

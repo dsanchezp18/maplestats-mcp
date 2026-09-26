@@ -290,6 +290,19 @@ async def test_list_committees_current_session_and_bilingual_keyword(httpx_mock)
     assert "session" not in query and query["limit"] == ["500"]
 
 
+async def test_list_committee_keyword_ignores_accents_and_apostrophe_style(httpx_mock):
+    # Francophones often type without accents, and with either apostrophe.
+    httpx_mock.add_response(json={"objects": [_ETHICS, _HEALTH], "pagination": _NO_MORE})
+    for keyword, slug in [
+        ("sante", "health"),
+        ("ETHIQUE", "ethics"),
+        ("acces a l\u2019information", "ethics"),
+        ("privacy", "ethics"),
+    ]:
+        result = await client.list_committees(keyword=keyword, lang="fr")
+        assert [c.slug for c in result.committees] == [slug], keyword
+
+
 async def test_list_committees_empty_session_is_not_found(httpx_mock):
     # Live, a pre-39-1 or unknown session answers 200 with an empty list.
     httpx_mock.add_response(json={"objects": [], "pagination": _NO_MORE})
@@ -453,3 +466,54 @@ async def test_committee_validation():
         await client.get_committee_meeting("finance", "45-1", 1, offset=-1)
     with pytest.raises(InvalidInput):
         await client.search_committee_meetings(date_from="June 1")
+
+
+async def test_french_ourcommons_links(httpx_mock):
+    # French pages checked live 2026-09-26: noscommunes.ca, with French
+    # path words in DocumentViewer links; webcast links stay as given.
+    en_page = "https://www.ourcommons.ca/Committees/en/FINA?parl=45&session=1"
+    httpx_mock.add_response(
+        url="https://api.openparliament.ca/committees/finance/",
+        json={
+            "name": {"en": "Finance", "fr": "Finances"},
+            "short_name": {"en": "Finance", "fr": "Finances"},
+            "slug": "finance",
+            "parent_url": None,
+            "sessions": [{"session": "45-1", "acronym": "FINA", "source_url": en_page}],
+            "subcommittees": [],
+        },
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url="https://api.openparliament.ca/committees/meetings/?committee=finance&limit=10",
+        json={"objects": [], "pagination": _NO_MORE},
+        is_reusable=True,
+    )
+    french = await client.get_committee("finance", lang="fr")
+    assert french.name == "Finances"
+    assert french.sessions[0].source_url == (
+        "https://www.noscommunes.ca/Committees/fr/FINA?parl=45&session=1"
+    )
+    assert (await client.get_committee("finance")).sessions[0].source_url == en_page
+
+    viewer = "https://www.ourcommons.ca/DocumentViewer/en/45-1/FINA/meeting-47/"
+    httpx_mock.add_response(
+        url="https://api.openparliament.ca/committees/finance/45-1/47/",
+        json={
+            **_meeting_row("finance", 47),
+            "session": "45-1",
+            "minutes_url": viewer + "minutes",
+            "notice_url": viewer + "notice",
+            "webcast_url": "https://www.ourcommons.ca/webcast/45-1/FINA/47",
+        },
+    )
+    httpx_mock.add_response(json={"objects": [], "pagination": _NO_MORE})
+    meeting = await client.get_committee_meeting("finance", "45-1", 47, lang="fr")
+    french_viewer = "https://www.noscommunes.ca/DocumentViewer/fr/45-1/FINA/reunion-47/"
+    assert meeting.minutes_url == french_viewer + "proces-verbal"
+    assert meeting.notice_url == french_viewer + "avis-convocation"
+    assert meeting.webcast_url == "https://www.ourcommons.ca/webcast/45-1/FINA/47"
+    english = await client.get_committee_meeting("finance", "45-1", 47)  # cached
+    assert english.minutes_url == viewer + "minutes"
+    # A link of another shape is kept rather than guessed at.
+    assert client._ourcommons("https://example.org/x", "fr") == "https://example.org/x"
