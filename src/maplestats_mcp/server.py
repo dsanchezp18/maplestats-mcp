@@ -122,6 +122,8 @@ Sources, by tool-name prefix:
   files (FluWatch+, wastewater, opioid harms, measles, TB): phac_infobase_.
   NRCan geocoding and official place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
   Recalls and safety alerts (Health Canada, CFIA food, all agencies): recalls_.
+  Canadian Dairy Commission (milk component and butter support prices,
+  total quota, milk production and class sales): cdc_.
   Canada Gazette notices and regulations: gazette_.
   Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,
   votes, MPs and Hansard (unofficial OpenParliament.ca): parliament_.

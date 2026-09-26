@@ -72,6 +72,14 @@ def test_short_terms_do_not_match_inside_words():
     assert "transport" not in {t.topic for t in result.topics}
 
 
+def test_dairy_questions_in_both_languages():
+    english = client.plan("butterfat price and milk quota")
+    assert english.topics[0].topic == "dairy"
+    assert english.topics[0].steps[0].tool == "cdc_query_market_data"
+    french = client.plan("prix du beurre et gestion de l'offre")
+    assert "dairy" in {t.topic for t in french.topics}
+
+
 def test_no_topic_falls_back():
     result = client.plan("zebra migration")
     assert not result.topics and result.fallback_steps

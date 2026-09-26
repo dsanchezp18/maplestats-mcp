@@ -67,6 +67,9 @@ CASES = [
     ("charge virale eaux usées", "phac_infobase_list_datasets"),
     ("livraisons de canola aux silos primaires", "cgc_weekly_query"),
     ("exportations de blé par pays de destination", "cgc_exports_query"),
+    ("prix des composants du lait classes spéciales", "cdc_get_component_prices"),
+    ("quota total cible nationale de production laitière", "cdc_get_national_quota"),
+    ("prix de soutien du beurre", "cdc_get_butter_support_prices"),
 ]
 
 
