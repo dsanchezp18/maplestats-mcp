@@ -2183,3 +2183,15 @@ mark {
   line-height: 1.12;
   letter-spacing: -0.02em;
 }
+
+/* The headline is one line wherever it fits; French runs longer, so smaller. */
+@media (min-width: 761px) {
+  .hero h1 {
+    font-size: min(5.1vw, 4.9rem);
+    white-space: nowrap;
+  }
+
+  html[lang="fr"] .hero h1 {
+    font-size: min(4.05vw, 3.9rem);
+  }
+}
