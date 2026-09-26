@@ -538,7 +538,25 @@ INTELLECTUAL_PROPERTY = Topic(
     ),
     ("IP Horizons researcher datasets are quarterly bulk ZIPs of pipe-delimited CSV.",),
 )
-TOPICS = (*TOPICS, CLEANTECH, INTELLECTUAL_PROPERTY)
+COMPETITION = Topic(
+    "competition",
+    "Mergers, acquisitions and competition",
+    (
+        "merger",
+        "acquisition",
+        "competition bureau",
+        "antitrust",
+        "takeover",
+        "fusion",
+        "concurrence",
+    ),
+    (
+        PlanStep("competition_bureau_search_mergers", "merger reviews and their outcomes"),
+        PlanStep("rdaas_search_classifications", "NAICS codes for the industry filter"),
+    ),
+    ("Merger reports omit May-October 2023 and transactions parties asked to keep private.",),
+)
+TOPICS = (*TOPICS, CLEANTECH, INTELLECTUAL_PROPERTY, COMPETITION)
 
 MICRODATA = Topic(
     "microdata",

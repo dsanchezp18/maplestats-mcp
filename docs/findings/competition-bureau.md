@@ -1,6 +1,7 @@
 # Competition Bureau Canada
 
-Checked 2026-09-25. Status: investigated, worth building (merger reviews).
+Checked 2026-09-25. Status: shipped as `modules/competition_bureau/`
+(`competition_bureau_search_mergers`).
 
 ## What is on open.canada.ca
 
@@ -54,7 +55,7 @@ not covered by either page.
 - **Enforcement actions, market studies and guidance** are news releases
   and PDF reports, not data.
 
-## If built
+## What was built
 
 One tool, `competition_bureau_search_mergers`, over both tables: search
 by party name, NAICS prefix (e.g. `2111` for oil and gas extraction),
@@ -62,5 +63,6 @@ outcome and date range, with the outcome legend in the result. The
 tables are small (under 0.5 MB together), so the tool reads both pages
 and filters in memory; a cache of a few hours matches the weekly update.
 NAICS codes can be joined to StatCan industry data through `rdaas_*`.
-`reproduce_code` already reads HTML tables, and needs a builder only to
-repeat the tool's filters.
+`reproduce_code` rebuilds the weekly report's HTML table in each
+language; its notes list the filters the tool applied, which the script
+does not repeat.
