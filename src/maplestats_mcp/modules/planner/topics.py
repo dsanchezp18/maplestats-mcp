@@ -507,6 +507,9 @@ CLEANTECH = Topic(
         PlanStep(
             "wds_search_cubes", "Environmental and Clean Technology Products Economic Account"
         ),
+        PlanStep(
+            "ised_clean_growth_get_federal_investment", "federal cleantech investment 2016-2024"
+        ),
         PlanStep("ckan_search_datasets", "clean technology use and adoption: portal='federal'"),
         PlanStep("nrcan_energy_use_list_products", "energy use by sector, for context"),
     ),
