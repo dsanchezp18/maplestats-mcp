@@ -34,7 +34,6 @@ _LIMITER = get_limiter(
 # ST1 .zip links (see module docstring) -- the ST1 .TXT files instead
 # bypass www.aer.ca entirely rather than relying on this.
 _client = new_client(http2=False, follow_redirects=True)
-_HEADERS = {"User-Agent": "maplestats-mcp/0.1"}
 
 _DATE_LINE_RE = re.compile(r"DATE:\s+(\d{1,2}\s+\w+\s+\d{4})")
 
@@ -72,7 +71,7 @@ async def get_well_licences_daily(
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
-            response = await _client.get(url, headers=_HEADERS)
+            response = await _client.get(url)
             response.raise_for_status()
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
@@ -121,7 +120,7 @@ async def get_well_licence_archive_link(
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            return await _client.head(url, headers=_HEADERS)
+            return await _client.head(url)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "aer:get_well_licence_archive_link did not respond in time."
@@ -166,7 +165,7 @@ async def get_production_volumes_link(product: str, *, lang: str = "en") -> Prod
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            return await _client.head(url, headers=_HEADERS)
+            return await _client.head(url)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "aer:get_production_volumes_link did not respond in time."

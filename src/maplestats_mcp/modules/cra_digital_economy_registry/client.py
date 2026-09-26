@@ -58,7 +58,6 @@ _LIMITER = get_limiter(
 # specific large page, confirmed reproducible -- this client
 # deliberately does NOT use shared/http.py's http2=True singleton.
 _client = new_client(timeout=45.0, http2=False)
-_HEADERS = {"User-Agent": "maplestats-mcp/0.1"}
 
 
 @retry(
@@ -77,7 +76,7 @@ async def _get(url: str) -> httpx.Response:
     # exponential-backoff retry shared/http.py applies to every other
     # module's requests, which this module's dedicated client otherwise
     # bypasses.
-    response = await _client.get(url, headers=_HEADERS)
+    response = await _client.get(url)
     response.raise_for_status()
     return response
 
