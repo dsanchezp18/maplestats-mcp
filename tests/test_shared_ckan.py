@@ -32,6 +32,23 @@ async def test_action_unwraps_successful_envelope(httpx_mock):
     assert result is True
 
 
+async def test_action_uses_the_portal_timeout(httpx_mock):
+    # Quebec's organization_list needs more than the 30 s default (2026-09-26).
+    slow = CkanConfig(
+        source="ckan-test-slow",
+        base_url="https://example.invalid/api/3/action/",
+        rate_limit_per_second=100.0,
+        rate_limit_capacity=100.0,
+        timeout=60.0,
+    )
+    httpx_mock.add_response(
+        url="https://example.invalid/api/3/action/organization_list",
+        json={"help": "h", "success": True, "result": []},
+    )
+    await action(slow, "organization_list")
+    assert httpx_mock.get_request().extensions["timeout"]["read"] == 60.0
+
+
 async def test_action_raises_not_found_on_404(httpx_mock):
     httpx_mock.add_response(
         url="https://example.invalid/api/3/action/package_show?id=missing",

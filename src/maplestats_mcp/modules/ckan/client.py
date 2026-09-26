@@ -74,6 +74,7 @@ def _config(key: str, portal: Portal) -> CkanConfig:
         base_url=portal.base_url,
         rate_limit_per_second=portal.rate_per_second,
         rate_limit_capacity=portal.rate_capacity,
+        timeout=portal.timeout_seconds,
     )
 
 
