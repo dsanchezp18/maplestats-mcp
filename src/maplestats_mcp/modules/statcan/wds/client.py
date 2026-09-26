@@ -224,10 +224,10 @@ async def get_cube_metadata(product_id: int) -> CubeMetadata:
                     geo_level=m.get("geoLevel"),
                     terminated=bool(int(m.get("terminated", 0) or 0)),
                 )
-                for m in dim.get("member", [])
+                for m in list_or_empty(dim, "member")
             ],
         )
-        for dim in obj.get("dimension", [])
+        for dim in list_or_empty(obj, "dimension")
     ]
 
     footnotes = [
@@ -557,7 +557,7 @@ async def get_code_sets() -> CodeSets:
                 description_en=e.get(en_field),
                 description_fr=e.get(fr_field),
             )
-            for e in obj.get(key, [])
+            for e in list_or_empty(obj, key)
         ]
 
     # Field names below are verified against a live getCodeSets response,

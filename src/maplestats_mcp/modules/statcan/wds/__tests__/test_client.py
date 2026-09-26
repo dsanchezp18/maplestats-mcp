@@ -131,6 +131,42 @@ async def test_get_cube_metadata_parses_real_footnote_shape(httpx_mock):
     assert result.footnotes[0].text_fr == "note fr"
 
 
+async def test_get_cube_metadata_tolerates_null_dimension_and_member_lists(httpx_mock):
+    """WDS sends some list fields as explicit `null` rather than omitting
+    them (see AGENTS.md on list_or_empty); a null `member` list or a null
+    `dimension` list must parse as empty, not raise TypeError."""
+    httpx_mock.add_response(
+        json=[
+            {
+                "status": "SUCCESS",
+                "object": {
+                    "productId": 18100005,
+                    "cubeTitleEn": "CPI",
+                    "cubeTitleFr": "IPC",
+                    "cubeStartDate": "1914-01-01",
+                    "cubeEndDate": "2026-08-01",
+                    "frequencyCode": 6,
+                    "nbSeriesCube": 1,
+                    "nbDatapointsCube": 1,
+                    "releaseTime": "2026-09-14T08:30",
+                    "footnote": [],
+                    "dimension": [
+                        {
+                            "dimensionPositionId": 1,
+                            "dimensionNameEn": "Geography",
+                            "dimensionNameFr": "Geographie",
+                            "member": None,
+                        }
+                    ],
+                },
+            }
+        ]
+    )
+    result = await client.get_cube_metadata(18100005)
+    assert len(result.dimensions) == 1
+    assert result.dimensions[0].members == []
+
+
 async def test_get_code_sets_parses_all_real_field_name_variants(httpx_mock):
     """survey/subject/classificationType have no "Desc" infix and
     terminated uses an entirely different key set (codeId/codeTextEn/Fr)

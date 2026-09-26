@@ -38,6 +38,7 @@ import httpx
 
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 CATALOG_BASE_URL = "https://api.us.socrata.com/api/catalog/v1"
@@ -130,7 +131,7 @@ async def facet_categories(config: SocrataConfig) -> list[dict[str, Any]]:
         f"{CATALOG_BASE_URL}/domain_categories",
         {"domains": config.domain},
     )
-    return data.get("results", []) if isinstance(data, dict) else []
+    return list_or_empty(data, "results") if isinstance(data, dict) else []
 
 
 async def facet_tags(config: SocrataConfig) -> list[dict[str, Any]]:
@@ -141,7 +142,7 @@ async def facet_tags(config: SocrataConfig) -> list[dict[str, Any]]:
         f"{CATALOG_BASE_URL}/domain_tags",
         {"domains": config.domain},
     )
-    return data.get("results", []) if isinstance(data, dict) else []
+    return list_or_empty(data, "results") if isinstance(data, dict) else []
 
 
 async def get_view(config: SocrataConfig, dataset_id: str) -> dict[str, Any]:

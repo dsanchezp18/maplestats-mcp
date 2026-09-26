@@ -132,7 +132,7 @@ async def search_classifications(
 
     obj = await _get("/search/classifications", params=params)
     results_obj = obj.get("results", obj)
-    entries = results_obj.get("@graph", [])
+    entries = list_or_empty(results_obj, "@graph")
     return ClassificationSearchResult(
         results=[_classification_summary(e) for e in entries],
         found=obj.get("found", len(entries)),
@@ -179,7 +179,7 @@ async def get_classification(classification_id: str, *, lang: str = "en") -> Cla
             name=lvl.get("name", ""),
             code_count=lvl.get("codeCount", 0),
         )
-        for lvl in obj.get("levels", [])
+        for lvl in list_or_empty(obj, "levels")
     ]
     return ClassificationDetail(
         id=obj.get("@id", ""),
@@ -235,7 +235,7 @@ async def _get_or_empty(path: str, *, params: dict[str, Any] | None = None) -> d
 
 
 def _graph_entries(obj: dict[str, Any]) -> list[dict[str, Any]]:
-    return obj.get("@graph", [])
+    return list_or_empty(obj, "@graph")
 
 
 def _exclusion_from_json(e: dict[str, Any]) -> ClassificationExclusion:
@@ -431,7 +431,7 @@ async def search_concordances(
 
     obj = await _get("/search/concordances", params=params)
     results_obj = obj.get("results", obj)
-    entries = results_obj.get("@graph", [])
+    entries = list_or_empty(results_obj, "@graph")
     return ConcordanceSearchResult(
         results=[_concordance_summary(e) for e in entries],
         found=obj.get("found", len(entries)),
@@ -493,7 +493,7 @@ async def get_concordance(concordance_id: str, *, lang: str = "en") -> Concordan
 async def get_concordance_maps(concordance_id: str, *, lang: str = "en") -> CodeMapList:
     resource_id = _resource_id(concordance_id)
     obj = await _get(f"/concordance/{resource_id}/maps", params={"lang": lang})
-    entries = obj.get("@graph", [])
+    entries = list_or_empty(obj, "@graph")
     maps = [
         CodeMapEntry(
             id=e.get("@id", ""),

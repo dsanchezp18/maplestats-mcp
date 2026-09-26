@@ -27,6 +27,7 @@ from maplestats_mcp.shared.arcgis import ArcGISHubConfig, get_json, query_layer
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.json_utils import list_or_empty
 
 CONFIG = ArcGISHubConfig(
     source=constants.RATE_LIMIT_SOURCE,
@@ -70,7 +71,7 @@ async def list_services(year: str, lang: str | None = None) -> GeoServiceList:
         GeoServiceSummary(
             name=s["name"], service_type=s["type"], language=_service_language(s["name"])
         )
-        for s in body.get("services", [])
+        for s in list_or_empty(body, "services")
     ]
     if lang:
         services = [s for s in services if s.language == lang]
@@ -103,7 +104,7 @@ async def get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDe
     )
     fields = [
         GeoLayerField(name=f["name"], field_type=f["type"], alias=f.get("alias"))
-        for f in body.get("fields", [])
+        for f in list_or_empty(body, "fields")
     ]
     spatial_ref = body.get("spatialReference") or body.get("extent", {}).get("spatialReference", {})
     return GeoLayerDetail(
@@ -175,7 +176,7 @@ async def query_layer_features(
 
     features = [
         GeoFeature(attributes=f.get("properties", {}), geometry=f.get("geometry"))
-        for f in body.get("features", [])
+        for f in list_or_empty(body, "features")
     ]
     exceeded = bool(body.get("exceededTransferLimit"))
     return GeoQueryResult(
