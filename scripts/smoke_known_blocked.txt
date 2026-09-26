@@ -1,5 +1,0 @@
-# Smoke scripts whose upstream geoblocks the network the runs come from,
-# so they fail every run for reasons no code change can fix. They still
-# run (a lifted block shows up as a pass), but a failure here does not
-# fail the workflow or open an alert issue. One script stem per line,
-# e.g. smoke_test_epcor, with a comment saying what blocks it.
