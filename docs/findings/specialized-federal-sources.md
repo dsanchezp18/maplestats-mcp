@@ -1322,6 +1322,48 @@ producer sales from 1947, expenditures, demand), updated each December;
 industry copyright, use allowed with attribution. See
 `docs/findings/capp-statistics-handbook.md`.
 
+## Office of the Commissioner of Lobbying (Registry of Lobbyists)
+
+**Status:** Blocked.
+
+Checked 2026-09-25. Two datasets under `ocl-cal` on the federal CKAN
+catalogue, both updated weekly (licence `ca-odla-aldg`, the
+Commissioner's own open data licence agreement, not the OGL): "Lobbying
+Registrations" and "Monthly Communication Reports". Each is one bilingual
+zip of CSVs plus an XLSX data dictionary. Neither is DataStore-active.
+
+The zips live on lobbycanada.gc.ca, which answers HTTP 403 with a
+Cloudflare challenge page to automated requests (with or without a browser
+user agent), and so does the guest search of the registry. The catalogue
+metadata is reachable through `ckan_*`, but the data files are not.
+Revisit if the files move to open.canada.ca storage or the challenge is
+lifted.
+
+## Job Bank labour market information (ESDC)
+
+**Status:** Covered (via `ckan_*`).
+
+Checked 2026-09-25. Three ESDC datasets on the federal CKAN catalogue:
+
+- **Wages** (`adad580f-...`): one CSV per year, 2018 to 2025, all
+  DataStore-active. The 2025 file has 44,376 rows: NOC 2021 occupation by
+  province and economic region, with low, quartile, median, average and
+  high wages, data source, reference period, annual-wage flag and share
+  of employees with non-wage benefits. Wages are strings in the
+  DataStore.
+- **Job Postings Advertised on Canada's National Job Bank Website**
+  (`ea639e28-...`): monthly CSVs (English and French), 88 resources;
+  English months are DataStore-active only sometimes (August and June
+  2026 yes, July and May no). August 2026 has 53,799 postings with NOC,
+  NAICS, location, vacancy count, salary range, hours and benefit flags.
+- **3-Year Employment Outlooks** (`b0e112e9-...`): 28 CSV/XLSX files, from
+  2013-2015 to 2025-2027 (NOC 2021), none DataStore-active.
+
+`ckan_datastore_search` already queries Wages and the active posting
+months; the rest are bulk downloads via `ckan_get_dataset`. A dedicated
+module would add little beyond typed wage columns and picking the
+DataStore-active month, so none was built.
+
 ## StatCan terms: SDMX, CORD, NDM
 
 **Status:** Reference note.
