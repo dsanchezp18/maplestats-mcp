@@ -95,6 +95,17 @@ def test_parse_comma_file_ignores_copy_columns():
     assert parsed.rows[0].value == 20
 
 
+def test_lumped_english_label_keeps_rows_and_falls_back_in_french():
+    body = (
+        b"EN_CENSUS_METROPOLITAN_AREA\tFR_REGION\tTOTAL\n"
+        b"Other - Ontario\tWeak metropolitan influenced zone (Ontario)\t5200\n"
+        b"Other - Ontario\tModerate metropolitan influenced zone (Ontario)\t4185\n"
+    )
+    parsed = client.parse_table(body)
+    assert [r.value for r in parsed.rows] == [5200, 4185]
+    assert parsed.dimensions[0].fr["Other - Ontario"] == "Other - Ontario"
+
+
 def test_headerless_file_is_reported():
     with pytest.raises(UpstreamError, match="header"):
         client.parse_table((_HERE / "headerless.tsv").read_bytes())

@@ -18,6 +18,11 @@ Checked live 2026-09-25 against all 96 CSV resources of the 12 datasets:
 5. ODP-PR-FRE_SP_IMMCAT.csv has no header row at all, so its columns
    cannot be named; it is reported as unreadable rather than guessed.
 6. Rows are not in time order, so results are sorted here.
+7. In the archived refugee settlement-by-CMA files, the English column
+   lumps several rural zones under one label ('Other - Ontario') while the
+   French column still names each zone, so one English value has several
+   French ones. Those rows are distinct counts and are summed; their French
+   label falls back to the English one rather than naming a single zone.
 """
 
 from __future__ import annotations
@@ -250,8 +255,10 @@ def parse_table(body: bytes) -> ParsedTable:
             label = cell(en_i)
             label = interned.setdefault(label, label)
             labels.append(label)
-            if fr_i is not None and label not in dim.fr:
-                dim.fr[label] = cell(fr_i)
+            french = cell(fr_i) if fr_i is not None else ""
+            if french and dim.fr.setdefault(label, french) != french:
+                # One English label, several French ones: fall back to English.
+                dim.fr[label] = label
         year_text = cell(time_index.get("year"))
         month = constants.MONTHS.get(cell(time_index.get("month"))[:3].title())
         quarter_text = cell(time_index.get("quarter"))

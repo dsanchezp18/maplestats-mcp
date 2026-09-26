@@ -95,7 +95,11 @@ async def ircc_monthly_query(
     'value_desc' ranks the largest groups (top countries); 'period' keeps
     the most recent `limit` rows in time order. Counts are rounded to 5
     and 1-4 are suppressed ('--'), counted as 0 and reported per row in
-    suppressed_cells, so sums are approximate.
+    suppressed_cells, so sums are approximate. Tables overlap: the
+    permanent resident tables are the same people cut by province,
+    citizenship, age, gender, CMA or occupation, and Express Entry and
+    French-speaking admissions are subsets of them, so total within one
+    table and never add tables together.
     Keywords: immigrants per month, permanent resident admissions by
     province, new permanent residents, international students by
     country, work permits by province, asylum claims, immigration trend,
