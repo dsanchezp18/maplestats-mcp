@@ -69,6 +69,7 @@ bilingual one-line description of each module):
 | Canada Gazette | `gazette_` | Part I notices and proposed regulations, Part II registered regulations: issues, notice lists, notice text (EN/FR) |
 | Vehicle recalls | `tc_recalls_` | Transport Canada motor vehicle safety recalls by make, model and year, with bilingual details |
 | Recalls and safety alerts | `recalls_` | Health Canada, CFIA and Transport Canada recalls and alerts (recalls-rappels.canada.ca): search, counts by year or category, affected products and lots (EN/FR) |
+| Consumer banking products | `fcac_` | FCAC comparison tools: credit cards (annual fees, purchase, cash advance and balance transfer rates, rewards, insurance) and chequing and savings accounts (monthly fees, transactions, interest tiers, NSF and other fees) by province, read live (EN/FR) |
 | Geocoding and place names | `nrcan_geo_` | NRCan Geolocator (places, addresses, postal codes) and Canadian Geographical Names Database (EN/FR) |
 | Parliament | `parliament_` | House of Commons bills, recorded votes with party and MP ballots, MPs, Hansard and committee speeches, full-text Hansard search, and committees with their meetings, witnesses and transcripts (via unofficial OpenParliament.ca, EN/FR) |
 | Senate votes | `senate_` | Senate of Canada recorded votes by session or bill, with each senator's vote (sencanada.ca, EN/FR) |
