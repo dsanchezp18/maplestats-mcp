@@ -1,0 +1,67 @@
+name: Live smoke tests
+
+# Mocked unit tests cannot see upstream API changes, so the live smoke
+# scripts run on a schedule instead. Deliberately not on push or
+# pull_request: an upstream outage must never block a merge.
+on:
+  schedule:
+    # Mondays 06:17 UTC; an off-the-hour minute avoids the :00 queue spike.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-smoke
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      scripts: ${{ steps.list.outputs.scripts }}
+    steps:
+      - uses: actions/checkout@v4
+      # Same glob as scripts/verify.ps1, so a new smoke_test_*.py is picked
+      # up without editing this file. stress_test.py does not match: it is a
+      # transport load test, not an upstream check.
+      - id: list
+        run: |
+          scripts=$(ls scripts/smoke_test*.py | xargs -n1 basename | sed 's/\.py$//' | jq -R . | jq -s -c .)
+          echo "scripts=$scripts" >> "$GITHUB_OUTPUT"
+          echo "$scripts"
+
+  smoke:
+    needs: discover
+    runs-on: ubuntu-latest
+    # smoke_test_modules.py chains many live calls with retries; the rest
+    # finish in a minute or two.
+    timeout-minutes: 25
+    strategy:
+      # One broken upstream must not cancel or hide the others.
+      fail-fast: false
+      # Keep the load on shared government hosts (several StatCan scripts) polite.
+      max-parallel: 8
+      matrix:
+        script: ${{ fromJSON(needs.discover.outputs.scripts) }}
+    name: ${{ matrix.script }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Run ${{ matrix.script }}
+        run: uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log
+        shell: bash -o pipefail {0}
+      - name: Summarize failure
+        if: failure()
+        run: |
+          {
+            echo "### FAIL: \`${{ matrix.script }}\`"
+            echo '```'
+            tail -n 40 smoke.log 2>/dev/null || echo "(no log captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
