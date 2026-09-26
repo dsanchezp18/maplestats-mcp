@@ -1,128 +1,129 @@
 /* MapleStats MCP website. Tokens first; every colour below comes from them.
-   Palette: birch-white ground, boreal ink, spruce accent, syrup ambers for
-   highlights and the coverage scale. */
+   Direction A, "red grid": white ground, black ink and 2px rules, one
+   Canadian red; Archivo (wide for display) with IBM Plex Mono. */
 
 :root {
   color-scheme: light;
-  --ground: #f1f4f1;
-  --ground-2: #e6ece7;
+  --ground: #ffffff;
+  --ground-2: #f3f3f1;
   --surface: #ffffff;
-  --ink: #0f1d18;
-  --ink-2: #41514a;
-  --ink-3: #55655e;
-  --rule: #d3dcd6;
-  --rule-2: #aebcb4;
-  --accent: #0b5e4a;
-  --accent-hover: #07463a;
-  --accent-soft: #dcebe3;
+  --ink: #111111;
+  --ink-2: #3d3d3d;
+  --ink-3: #5e5e5e;
+  --rule: #d9d9d6;
+  --rule-2: #111111;
+  --accent: #c8221a;
+  --accent-hover: #93150f;
+  --accent-soft: #fbe4e1;
   --on-accent: #ffffff;
-  --amber: #9a560b;
-  --mark: #f5dfb0;
-  --mark-ink: #3a2405;
-  --panel: #10201a;
-  --panel-2: #162a22;
-  --panel-ink: #dde8e2;
-  --panel-mute: #93aa9f;
-  --panel-rule: #274036;
-  --panel-link: #9fd9c1;
-  --s-key: #9fd9c1;
-  --s-str: #f1c177;
-  --s-num: #f6d7a4;
-  --s-lit: #e9a78d;
-  --s-com: #849c90;
-  --code-key: #0b5e4a;
-  --code-str: #8a4b06;
-  --code-num: #7a3e05;
-  --code-lit: #8f3a24;
-  --c1: #f6e7c6;
-  --c1-ink: #3a2405;
-  --c2: #e7bf74;
-  --c2-ink: #2e1c04;
-  --c3: #bf7f2a;
-  --c3-ink: #1c1003;
-  --c4: #6a3a12;
-  --c4-ink: #fff4e2;
-  --shadow: 0 1px 0 rgba(15, 29, 24, 0.04), 0 22px 44px -30px rgba(15, 29, 24, 0.45);
+  --amber: #c8221a;
+  --mark: #ffddd8;
+  --mark-ink: #5c0d08;
+  --panel: #111111;
+  --panel-2: #1c1c1c;
+  --panel-ink: #f2f2f2;
+  --panel-mute: #a6a6a6;
+  --panel-rule: #2e2e2e;
+  --panel-link: #ff8f85;
+  --s-key: #ffffff;
+  --s-str: #ff9d94;
+  --s-num: #ffc7a8;
+  --s-lit: #ff9d94;
+  --s-com: #8c8c8c;
+  --code-key: #111111;
+  --code-str: #b01e16;
+  --code-num: #b01e16;
+  --code-lit: #5e5e5e;
+  --c1: #fde2df;
+  --c1-ink: #5c0d08;
+  --c2: #f5a39a;
+  --c2-ink: #3d0805;
+  --c3: #df4436;
+  --c3-ink: #ffffff;
+  --c4: #9c160f;
+  --c4-ink: #ffffff;
+  --prov: rgba(255, 143, 133, 0.1);
+  --shadow: none;
 
-  --font-display: "Radio Canada Big", "Radio Canada", ui-sans-serif, system-ui, sans-serif;
-  --font-text: "Radio Canada", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-text: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --gutter: clamp(16px, 4vw, 48px);
-  --max: 1200px;
-  --radius: 3px;
-  --top-h: 60px;
+  --gutter: clamp(16px, 4vw, 64px);
+  --max: 1312px;
+  --radius: 0;
+  --top-h: 72px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground: #0c1411;
-    --ground-2: #111c17;
-    --surface: #141f1a;
-    --ink: #e2ebe6;
-    --ink-2: #aab9b1;
-    --ink-3: #8f9f97;
-    --rule: #233029;
-    --rule-2: #3a4c44;
-    --accent: #6fcfac;
-    --accent-hover: #98e0c4;
-    --accent-soft: #143328;
-    --on-accent: #06110d;
-    --amber: #f0b456;
-    --mark: #57401a;
-    --mark-ink: #fdebc8;
-    --panel: #08100d;
-    --panel-2: #0e1814;
-    --panel-rule: #1e2d27;
-    --code-key: #8fdcbc;
-    --code-str: #f1c177;
-    --code-num: #f6d7a4;
-    --code-lit: #e9a78d;
-    --c1: #3a2b12;
-    --c1-ink: #f6e1b8;
-    --c2: #6b4a17;
-    --c2-ink: #fde9c2;
-    --c3: #b27a26;
-    --c3-ink: #1a0f03;
-    --c4: #f0c77e;
-    --c4-ink: #1a0f03;
-    --shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 22px 44px -30px rgba(0, 0, 0, 0.9);
+    --ground: #0f0f0f;
+    --ground-2: #181818;
+    --surface: #161616;
+    --ink: #f2f2f2;
+    --ink-2: #c4c4c4;
+    --ink-3: #9d9d9d;
+    --rule: #2b2b2b;
+    --rule-2: #f2f2f2;
+    --accent: #ff5a4d;
+    --accent-hover: #ff8f85;
+    --accent-soft: #3a1310;
+    --on-accent: #0f0f0f;
+    --amber: #ff6b5e;
+    --mark: #5c1a14;
+    --mark-ink: #ffe0db;
+    --panel: #000000;
+    --panel-2: #121212;
+    --panel-rule: #2b2b2b;
+    --code-key: #f2f2f2;
+    --code-str: #ff8f85;
+    --code-num: #ff8f85;
+    --code-lit: #9d9d9d;
+    --c1: #3a1512;
+    --c1-ink: #ffd6d1;
+    --c2: #7a241c;
+    --c2-ink: #ffe7e4;
+    --c3: #d83a2d;
+    --c3-ink: #ffffff;
+    --c4: #ff8a7e;
+    --c4-ink: #1a0503;
+    --shadow: none;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground: #0c1411;
-  --ground-2: #111c17;
-  --surface: #141f1a;
-  --ink: #e2ebe6;
-  --ink-2: #aab9b1;
-  --ink-3: #8f9f97;
-  --rule: #233029;
-  --rule-2: #3a4c44;
-  --accent: #6fcfac;
-  --accent-hover: #98e0c4;
-  --accent-soft: #143328;
-  --on-accent: #06110d;
-  --amber: #f0b456;
-  --mark: #57401a;
-  --mark-ink: #fdebc8;
-  --panel: #08100d;
-  --panel-2: #0e1814;
-  --panel-rule: #1e2d27;
-  --code-key: #8fdcbc;
-  --code-str: #f1c177;
-  --code-num: #f6d7a4;
-  --code-lit: #e9a78d;
-  --c1: #3a2b12;
-  --c1-ink: #f6e1b8;
-  --c2: #6b4a17;
-  --c2-ink: #fde9c2;
-  --c3: #b27a26;
-  --c3-ink: #1a0f03;
-  --c4: #f0c77e;
-  --c4-ink: #1a0f03;
-  --shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 22px 44px -30px rgba(0, 0, 0, 0.9);
+  --ground: #0f0f0f;
+  --ground-2: #181818;
+  --surface: #161616;
+  --ink: #f2f2f2;
+  --ink-2: #c4c4c4;
+  --ink-3: #9d9d9d;
+  --rule: #2b2b2b;
+  --rule-2: #f2f2f2;
+  --accent: #ff5a4d;
+  --accent-hover: #ff8f85;
+  --accent-soft: #3a1310;
+  --on-accent: #0f0f0f;
+  --amber: #ff6b5e;
+  --mark: #5c1a14;
+  --mark-ink: #ffe0db;
+  --panel: #000000;
+  --panel-2: #121212;
+  --panel-rule: #2b2b2b;
+  --code-key: #f2f2f2;
+  --code-str: #ff8f85;
+  --code-num: #ff8f85;
+  --code-lit: #9d9d9d;
+  --c1: #3a1512;
+  --c1-ink: #ffd6d1;
+  --c2: #7a241c;
+  --c2-ink: #ffe7e4;
+  --c3: #d83a2d;
+  --c3-ink: #ffffff;
+  --c4: #ff8a7e;
+  --c4-ink: #1a0503;
+  --shadow: none;
 }
 
 /* ---------- Base ---------- */
@@ -174,7 +175,7 @@ a:hover {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 h1,
@@ -284,7 +285,7 @@ mark {
   top: env(safe-area-inset-top, 0px);
   z-index: 30;
   background: var(--ground);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 2px solid var(--ink);
 }
 
 .top-row {
@@ -301,7 +302,8 @@ mark {
   color: var(--ink);
   text-decoration: none;
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
+  font-stretch: 112%;
   font-size: 1.1875rem;
   letter-spacing: -0.012em;
   white-space: nowrap;
@@ -312,36 +314,40 @@ mark {
 }
 
 .brand svg {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex: none;
 }
 
-.mark .wing {
+.mark .tile {
   fill: var(--accent);
 }
 
-.mark .seed {
-  fill: var(--amber);
+.mark .cell {
+  fill: #ffffff;
+}
+
+.mark .grid {
+  stroke: var(--accent);
 }
 
 .brand-tag {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.05em;
-  padding: 1px 5px 2px;
-  border: 1px solid var(--rule-2);
-  border-radius: 2px;
-  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
   margin-left: auto;
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 .nav a,
@@ -357,8 +363,8 @@ mark {
 }
 
 .nav a[aria-current="page"] {
-  color: var(--ink);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 -3px 0 var(--accent);
   padding-block: 4px;
 }
 
@@ -373,7 +379,7 @@ mark {
   font-size: 0.875rem;
   padding: 3px 9px;
   border: 1px solid var(--rule-2);
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .top-end .lang:hover {
@@ -382,7 +388,7 @@ mark {
 
 @media (max-width: 760px) {
   :root {
-    --top-h: 96px;
+    --top-h: 104px;
   }
 
   .top-row {
@@ -410,10 +416,19 @@ mark {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
-  gap: clamp(36px, 5vw, 76px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: clamp(28px, 3vw, 40px) clamp(24px, 2.5vw, 32px);
   align-items: start;
-  padding-block: clamp(40px, 6.5vw, 92px) clamp(48px, 5.5vw, 80px);
+  padding-block: clamp(36px, 4.5vw, 56px) clamp(48px, 5.5vw, 80px);
+}
+
+.hero h1 {
+  grid-column: 1 / -1;
+}
+
+.hero-copy {
+  padding-top: 20px;
+  border-top: 2px solid var(--ink);
 }
 
 @media (max-width: 980px) {
@@ -424,10 +439,11 @@ mark {
 
 .hero h1 {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(2.45rem, 1.3rem + 3.9vw, 4.55rem);
-  line-height: 1.02;
-  letter-spacing: -0.024em;
+  font-weight: 800;
+  font-stretch: 115%;
+  font-size: clamp(2.6rem, 0.9rem + 6.2vw, 5.9rem);
+  line-height: 0.92;
+  letter-spacing: -0.025em;
 }
 
 .hero h1 .alt {
@@ -443,7 +459,7 @@ mark {
 }
 
 .lede {
-  margin-top: 26px;
+  margin-top: 0;
   max-width: 56ch;
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
   line-height: 1.58;
@@ -463,7 +479,7 @@ mark {
   display: inline-flex;
   align-items: stretch;
   max-width: 100%;
-  border: 1px solid var(--ink);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   background: var(--surface);
 }
@@ -510,7 +526,7 @@ mark {
 
 .probe {
   background: var(--surface);
-  border: 1px solid var(--rule-2);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   min-width: 0;
@@ -522,10 +538,21 @@ mark {
   align-items: baseline;
   justify-content: space-between;
   gap: 4px 14px;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.8125rem;
-  color: var(--ink-3);
+  padding: 12px 18px;
+  background: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-stretch: 90%;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+}
+
+.probe-head .fn {
+  color: var(--on-accent);
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .fn {
@@ -675,7 +702,7 @@ mark {
 
 .section {
   padding-block: clamp(56px, 6.5vw, 92px);
-  border-top: 1px solid var(--rule);
+  border-top: 2px solid var(--ink);
 }
 
 .section-head {
@@ -687,7 +714,8 @@ mark {
 
 .section-head h2 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
+  font-stretch: 112%;
   font-size: clamp(1.95rem, 1.35rem + 1.9vw, 2.95rem);
   line-height: 1.04;
   letter-spacing: -0.022em;
@@ -764,7 +792,8 @@ mark {
 
 .step h3 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
+  font-stretch: 112%;
   font-size: 1.625rem;
   line-height: 1.1;
   letter-spacing: -0.015em;
@@ -850,7 +879,7 @@ mark {
   display: block;
   margin-inline: -16px;
   padding-inline: 14px 16px;
-  background: rgba(241, 193, 119, 0.08);
+  background: var(--prov);
   box-shadow: inset 2px 0 0 var(--s-str);
 }
 
@@ -1143,7 +1172,7 @@ mark {
   padding: 0 4px;
   text-align: center;
   font: 500 0.875rem/1 var(--font-mono);
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .matrix tbody td.c0 {
@@ -1200,7 +1229,7 @@ mark {
 .legend .sw i {
   width: 14px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .legend .sw i.c0 {
@@ -1363,7 +1392,7 @@ mark {
 .snippet .copy {
   padding: 4px 9px;
   border: 1px solid var(--panel-rule);
-  border-radius: 2px;
+  border-radius: 0;
   background: transparent;
   color: var(--panel-ink);
   font-size: 0.75rem;
@@ -1415,11 +1444,22 @@ mark {
 /* ---------- Footer ---------- */
 
 .foot {
-  border-top: 1px solid var(--rule);
-  background: var(--ground-2);
+  background: var(--panel);
   padding-block: 48px 64px;
   font-size: 0.875rem;
-  color: var(--ink-2);
+  color: var(--panel-mute);
+}
+
+.foot a {
+  color: var(--panel-ink);
+}
+
+.foot a:hover {
+  color: var(--panel-link);
+}
+
+.foot .label {
+  color: var(--panel-mute);
 }
 
 .foot-grid {
@@ -1441,8 +1481,8 @@ mark {
 }
 
 .foot b {
-  color: var(--ink);
-  font-weight: 600;
+  color: var(--panel-ink);
+  font-weight: 800;
 }
 
 .foot ul {
@@ -1463,7 +1503,8 @@ mark {
 
 .page-head h1 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
+  font-stretch: 112%;
   font-size: clamp(2.2rem, 1.5rem + 2.6vw, 3.6rem);
   line-height: 1.02;
   letter-spacing: -0.028em;
@@ -1562,7 +1603,7 @@ mark {
   gap: 6px;
   padding: 5px 10px;
   border: 1px solid var(--rule-2);
-  border-radius: 2px;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-2);
   font: 500 0.8125rem/1.3 var(--font-text);
@@ -1666,7 +1707,8 @@ mark {
 
 .mod-head h2 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
+  font-stretch: 112%;
   font-size: 1.75rem;
   line-height: 1.12;
   letter-spacing: -0.015em;
@@ -1682,7 +1724,7 @@ mark {
   font-size: 0.75rem;
   padding: 1px 6px;
   border: 1px solid var(--rule-2);
-  border-radius: 2px;
+  border-radius: 0;
   color: var(--ink-2);
 }
 
@@ -1932,7 +1974,8 @@ mark {
 .connect-note h2,
 .guide h2 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
+  font-stretch: 112%;
   font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2.25rem);
   line-height: 1.08;
   letter-spacing: -0.018em;

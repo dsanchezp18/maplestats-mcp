@@ -11,8 +11,8 @@
 <main id="main">
 
 <section class="wrap hero">
+  <h1>{en}Canadian public data,<br>without knowing<br>where it lives.{fr}Les données publiques canadiennes,<br>sans savoir où<br>elles se trouvent.{/}</h1>
   <div class="hero-copy">
-    <h1>{en}Canadian public data, without knowing where it lives.{fr}Les données publiques canadiennes, sans savoir où elles se trouvent.{/}<span class="alt" lang="{en}fr{fr}en{/}">{en}Les données publiques canadiennes, sans savoir où elles se trouvent.{fr}Canadian public data, without knowing where it lives.{/}</span></h1>
     <p class="lede">{en}MapleStats MCP is one server for Statistics Canada, the Bank of Canada, CMHC, {{other_national_count}} other federal sources and {{local_catalogue_count}} provincial, territorial and city open-data catalogues. An AI agent describes the data it needs, in English or French, and gets back typed results that name their source.{fr}MapleStats MCP est un seul serveur pour Statistique Canada, la Banque du Canada, la SCHL, {{other_national_count}} autres sources fédérales et {{local_catalogue_count}} catalogues de données ouvertes provinciaux, territoriaux et municipaux. Un agent IA décrit les données dont il a besoin, en français ou en anglais, et reçoit des résultats typés qui nomment leur source.{/}</p>
     <div class="actions">
       <div class="cmd"><code id="cmd-hero">uvx maplestats-mcp</code><button type="button" data-copy-target="cmd-hero">{en}Copy{fr}Copier{/}</button></div>
@@ -118,11 +118,11 @@
       <p>{en}Columns follow the Standard Geographical Classification. Hover a cell for the sources it counts. The federal catalogue, open.canada.ca, covers every column and is not counted here.{fr}Les colonnes suivent la Classification géographique type. Survolez une cellule pour voir les sources qu'elle compte. Le catalogue fédéral, ouvert.canada.ca, couvre toutes les colonnes et n'est pas compté ici.{/}</p>
       {{coverage_matrix}}
       <p class="legend">
-        <span class="sw"><i class="c1"></i>{en}Golden, 1{fr}Doré, 1{/}</span>
-        <span class="sw"><i class="c2"></i>{en}Amber, 2{fr}Ambré, 2{/}</span>
-        <span class="sw"><i class="c3"></i>{en}Dark, 3 to 5{fr}Foncé, 3 à 5{/}</span>
-        <span class="sw"><i class="c4"></i>{en}Very dark, 6 or more{fr}Très foncé, 6 ou plus{/}</span>
-        <span>{en}Shades follow Canada's maple syrup grades.{fr}Les teintes suivent les catégories du sirop d'érable canadien.{/}</span>
+        <span class="sw"><i class="c1"></i>1</span>
+        <span class="sw"><i class="c2"></i>2</span>
+        <span class="sw"><i class="c3"></i>{en}3 to 5{fr}3 à 5{/}</span>
+        <span class="sw"><i class="c4"></i>{en}6 or more{fr}6 ou plus{/}</span>
+        <span>{en}sources per cell{fr}sources par cellule{/}</span>
       </p>
       <details class="local-list">
         <summary>{en}List every local source{fr}Voir toutes les sources locales{/}</summary>
