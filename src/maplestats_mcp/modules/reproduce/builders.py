@@ -455,6 +455,40 @@ async def _cihi(args: dict[str, Any], result: dict[str, Any]) -> Spec:
     )
 
 
+async def _ircc_monthly(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.ircc.monthly import client as ircc_monthly
+
+    table = await ircc_monthly._find(str(args["table_id"]), "en")
+    parsed, _ = await ircc_monthly._load(table)
+    filters = [
+        Filter("is", [column], value)
+        for column, value in (result.get("applied_filters") or {}).items()
+    ]
+    if args.get("year_from") is not None:
+        filters.append(Filter("ge", ["EN_YEAR"], int(args["year_from"])))
+    if args.get("year_to") is not None:
+        filters.append(Filter("le", ["EN_YEAR"], int(args["year_to"])))
+    notes = [
+        "Counts are rounded to 5; '--' marks a suppressed count of 1 to 4.",
+    ]
+    if args.get("group_by") is not None or args.get("period"):
+        notes.append(
+            f"The tool then summed these rows to period={result.get('period')} "
+            f"and group_by={result.get('group_by')}; the script returns the rows."
+        )
+    return Spec(
+        kind="csv",
+        url=table.csv_url,
+        file_name=table.csv_url.rsplit("/", 1)[-1],
+        method=_FILTERED,
+        title=f"IRCC monthly update: {table.title}",
+        delimiter=parsed.delimiter,
+        na_values=["--"],
+        filters=filters,
+        notes=notes,
+    )
+
+
 async def _ircc_rounds(args: dict[str, Any], result: dict[str, Any]) -> Spec:
     url = str(result.get("provenance", {}).get("url") or "")
     filters = []
@@ -509,6 +543,7 @@ BUILDERS: dict[str, Builder] = {
     "gc_infobase_query": _gc_infobase,
     "cihi_get_indicator_data": _cihi,
     "ircc_list_express_entry_rounds": _ircc_rounds,
+    "ircc_monthly_query": _ircc_monthly,
     "statcan_indicators_get_indicators": _statcan_indicators,
 }
 

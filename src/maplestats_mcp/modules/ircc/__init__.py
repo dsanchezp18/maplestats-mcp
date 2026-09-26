@@ -1,39 +1,43 @@
-"""Immigration, Refugees and Citizenship Canada (IRCC) - Express Entry rounds.
+"""Immigration, Refugees and Citizenship Canada (IRCC).
 
-Scope note: IRCC's administrative series datasets (permanent residents,
-study/work permits, asylum claimants, citizenship) are ordinary CKAN
-packages published by the "ircc" organization on open.canada.ca, already
-reachable through the existing federal module with e.g.
-ckan_search_datasets(portal="federal", query="permanent residents", fq="organization:ircc")
--- see modules/ckan/. Building a second, duplicate CKAN client for
-the same portal would not add capability.
+Two sub-sources:
 
-What genuinely needed its own adaptor, confirmed live 2026-09-18, is the
-Express Entry rounds-of-invitations history: it is not a CKAN dataset at
-all, but a static JSON feed served from canada.ca's content-delivery path
-(https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json)
-that powers the public rounds-invitations page. This module covers that
-feed only.
+- Express Entry rounds of invitations (this folder's client.py/tools.py):
+  a static JSON feed on canada.ca that powers the rounds-invitations page,
+  confirmed live 2026-09-18. It is not a CKAN dataset.
+- Monthly IRCC Updates (monthly/): the 96 tab-separated ODP-*.csv tables
+  behind the 12 "Monthly IRCC Updates" datasets on open.canada.ca
+  (organization "cic"), checked live 2026-09-25. CKAN only lists them and
+  none is DataStore-active, so the tables are read and summed here.
+
+Other IRCC datasets (citizenship, ad hoc specialized datasets) stay
+reachable through ckan_search_datasets(portal="federal",
+fq="organization:cic").
 """
 
 MODULE_NAME = "ircc"
 MODULE_DESCRIPTION = (
-    "Immigration, Refugees and Citizenship Canada (IRCC) Express Entry "
-    "rounds of invitations: draw history, CRS score cutoffs, invitations "
-    "issued, and candidate-pool CRS score distribution, from IRCC's "
-    "canada.ca JSON feed (tools prefixed ircc_). Other IRCC administrative "
-    "series (permanent residents, study/work permits, asylum, citizenship) "
-    "are ordinary open.canada.ca CKAN datasets already reachable through "
-    "the federal ckan_ tools filtered to organization:ircc."
+    "Immigration, Refugees and Citizenship Canada (IRCC). ircc_: Express "
+    "Entry rounds of invitations (draw history, CRS cutoffs, invitations, "
+    "pool distribution). ircc_monthly_: the Monthly IRCC Updates tables, "
+    "January 2015 to the latest month: permanent residents by province, "
+    "CMA, census subdivision, citizenship, category, occupation, age and "
+    "gender; study and work permit holders; temporary-to-permanent "
+    "transitions; Express Entry admissions and invitations; asylum "
+    "claimants. Counts are rounded to 5 and 1-4 suppressed. Other IRCC "
+    "datasets are reachable through the federal ckan_ tools filtered to "
+    "organization:cic."
 )
 MODULE_DESCRIPTION_FR = (
-    "Immigration, Réfugiés et Citoyenneté Canada (IRCC), rondes "
-    "d'invitations Entrée express : historique des rondes, seuils du SCG, "
-    "invitations émises et répartition des scores SCG du bassin de "
-    "candidats, à partir du flux JSON canada.ca d'IRCC (outils préfixés "
-    "ircc_). Les autres séries administratives d'IRCC (résidents "
-    "permanents, permis d'études et de travail, asile, citoyenneté) sont "
-    "des jeux de données CKAN ordinaires d'open.canada.ca déjà "
-    "accessibles via les outils fédéraux ckan_ filtrés sur "
-    "organization:ircc."
+    "Immigration, Réfugiés et Citoyenneté Canada (IRCC). ircc_ : rondes "
+    "d'invitations Entrée express (historique, seuils du SCG, invitations, "
+    "répartition du bassin). ircc_monthly_ : les tableaux des mises à jour "
+    "mensuelles d'IRCC, de janvier 2015 au dernier mois : résidents "
+    "permanents par province, RMR, subdivision de recensement, "
+    "citoyenneté, catégorie, profession, âge et genre; titulaires de "
+    "permis d'études et de travail; passages de résident temporaire à "
+    "permanent; admissions et invitations Entrée express; demandeurs "
+    "d'asile. Les nombres sont arrondis à 5 et ceux de 1 à 4 supprimés. "
+    "Les autres jeux de données d'IRCC sont accessibles via les outils "
+    "fédéraux ckan_ filtrés sur organization:cic."
 )

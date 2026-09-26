@@ -228,11 +228,11 @@ TOPICS: tuple[Topic, ...] = (
             "entree express",
         ),
         (
-            PlanStep("ircc_list_express_entry_rounds", "Express Entry draws and CRS cutoffs"),
             PlanStep(
-                "ckan_search_datasets",
-                "IRCC admissions and permits: portal='federal', fq='organization:ircc'",
+                "ircc_monthly_query",
+                "monthly permanent residents, study and work permits, asylum claims",
             ),
+            PlanStep("ircc_list_express_entry_rounds", "Express Entry draws and CRS cutoffs"),
             PlanStep("wds_search_cubes", "StatCan population estimates of immigrants and NPRs"),
         ),
     ),

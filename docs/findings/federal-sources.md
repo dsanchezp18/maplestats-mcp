@@ -24,7 +24,7 @@ instead of sequential numbers, so `draw_number` is a string, not an int.
 IRCC's other administrative series (permanent residents, study/work permits,
 asylum, citizenship) are ordinary CKAN datasets published by the `ircc`
 organization on open.canada.ca and are already reachable via the existing
-`ckan_search_datasets(fq="organization:ircc")` on the federal module -- no
+`ckan_search_datasets(fq="organization:cic")` on the federal module -- no
 dedicated module needed for those.
 
 ## Weather / Climate (Environment Canada MSC GeoMet)

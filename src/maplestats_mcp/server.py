@@ -100,7 +100,8 @@ Sources, by tool-name prefix:
   (CIPO patent lookup and search, bulk IP files and data dictionaries),
   ised_clean_growth_ (federal cleantech investment 2016-2024).
 - Competition Bureau merger reviews: competition_bureau_.
-- IRCC Express Entry draws: ircc_. Elections Canada candidate financial
+- IRCC: ircc_ (Express Entry draws), ircc_monthly_ (monthly permanent and
+  temporary residents, permits, asylum claims). Elections Canada candidate financial
   returns: elections_financial_returns_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
@@ -131,8 +132,8 @@ Sources, by tool-name prefix:
 
 Routing hints: many federal administrative series (IRCC permits, CRA
 tax statistics and charities, OSFI bank returns, ISED insolvency data)
-are ordinary open.canada.ca datasets -- use ckan_search_datasets with
-portal="federal" and fq="organization:<org>" (ircc, cra-arc, osfi-bsif, ic).
+(beyond ircc_monthly_) are ordinary open.canada.ca datasets -- use ckan_search_datasets with
+portal="federal" and fq="organization:<org>" (cic for IRCC, cra-arc, osfi-bsif, ic).
 
 Language: most tools accept lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's
