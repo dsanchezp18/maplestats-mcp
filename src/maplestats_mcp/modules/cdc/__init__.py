@@ -26,6 +26,6 @@ MODULE_DESCRIPTION_FR = (
     "dollars pour les dix provinces et les régions Est et Ouest depuis juillet 2020, "
     "fermes expédiant du lait). cdc_list_datasets indique aussi les offices de "
     "commercialisation provinciaux et les agences nationales de la volaille et des "
-    "oeufs vérifiés le 2026-09-26, dont les données sont en PDF, bloquées ou limitées "
+    "œufs vérifiés le 2026-09-26, dont les données sont en PDF, bloquées ou limitées "
     "par leurs conditions, avec les tableaux de StatCan (wds_) comme solution de rechange."
 )

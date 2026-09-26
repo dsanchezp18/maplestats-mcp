@@ -35,6 +35,10 @@ _GUIDANCE = (
 
 
 def _normalize(text: str) -> str:
+    # Map the characters the ASCII step would drop: a typographic apostrophe
+    # ("compte d’épargne") must read as "'", and "œufs" as "oeufs".
+    for char, plain in (("\u2019", "'"), ("\u2018", "'"), ("œ", "oe"), ("Œ", "oe"), ("æ", "ae")):
+        text = text.replace(char, plain)
     stripped = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     return " ".join(re.sub(r"[^a-z0-9'\- ]", " ", stripped.lower()).split())
 
@@ -58,6 +62,8 @@ def plan(question: str) -> QueryPlan:
         raise InvalidInput("question must not be empty.")
     text = _normalize(question)
     words = set(text.replace("-", " ").split()) | set(text.split())
+    # "d'oeufs" and "l'influenza" must meet the one-word terms "oeuf" and "influenza".
+    words |= {re.sub(r"^(?:[cdjlmnst]|qu)'", "", word) for word in words}
 
     scored = []
     for topic in TOPICS:

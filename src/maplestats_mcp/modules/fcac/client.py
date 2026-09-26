@@ -188,7 +188,9 @@ def _text(node: Any) -> str:
     if node is None:
         return ""
     raw = node.get_text(" ") if isinstance(node, Tag) else str(node)
-    return " ".join(raw.replace(" ", " ").split())
+    # Soft hyphens are invisible but break word matching: live on
+    # 2026-09-26 a Quebec account was named "Forfait L'Inter\xadmédiaire".
+    return " ".join(raw.replace("\xa0", " ").replace("\xad", "").split())
 
 
 def _numbers(text: str, lang: str) -> list[float]:
@@ -574,6 +576,13 @@ def _check_limit(limit: int) -> None:
 
 
 def _fold(text: str) -> str:
+    """Lowercase without accents or soft hyphens and with one apostrophe.
+
+    French product names mix both apostrophes (live 2026-09-26: "Compte
+    d’épargne cyberAvantage" next to "Compte d'épargne à intérêt élevé
+    RBC"), so a query typed with either one must match both.
+    """
+    text = text.replace("\u2019", "'").replace("\u2018", "'").replace("\xad", "")
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 

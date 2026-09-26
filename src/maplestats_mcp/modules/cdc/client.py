@@ -24,7 +24,8 @@ Quirks confirmed live and handled here:
 2. Effective dates carry a time ("2025-01-01 00:00:00").
 3. The French support price page writes decimals as "10, 5662"; the
    figures are identical in both languages, so values are read from the
-   English page and `lang` picks labels, notes and the linked page.
+   English page. With lang="fr" the row labels come from the French page
+   ("2024 (mai)"), used only when its rows line up with the English ones.
 4. Total quota pages changed layout over time: 2017-2019 label months
    "December 2019" (2019 has a French "Mars 2019" on the English page),
    2020 onward write only the month; 2018 is split into two tables
@@ -334,7 +335,7 @@ _RELATED: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "Egg Farmers of Canada",
+        "name": {"en": "Egg Farmers of Canada", "fr": "Producteurs d'œufs du Canada"},
         "url": "https://www.eggfarmers.ca/market-information-tables/",
         "status": "blocked_terms",
         "detail": {
@@ -343,13 +344,16 @@ _RELATED: list[dict[str, Any]] = [
             "prohibit retransmission or republication without written permission.",
             "fr": "Les prix, la production et les importations hebdomadaires sont des vues "
             "Tableau Public exportables en CSV, mais les conditions du site limitent "
-            "l'usage au personnel non commercial et interdisent la retransmission sans "
-            "permission écrite.",
+            "l'utilisation à un usage personnel et non commercial et interdisent la "
+            "retransmission sans permission écrite.",
         },
-        "alternative": "wds_ tables 32-10-0121-01 and 32-10-0119-01 (StatCan egg production)",
+        "alternative": {
+            "en": "wds_ tables 32-10-0121-01 and 32-10-0119-01 (StatCan egg production)",
+            "fr": "tableaux wds_ 32-10-0121-01 et 32-10-0119-01 (production d'œufs, StatCan)",
+        },
     },
     {
-        "name": "Chicken Farmers of Canada",
+        "name": {"en": "Chicken Farmers of Canada", "fr": "Producteurs de poulet du Canada"},
         "url": "https://www.chickenfarmers.ca/market-update/",
         "status": "pdf_only",
         "detail": {
@@ -357,20 +361,29 @@ _RELATED: list[dict[str, Any]] = [
             "fr": "La mise à jour mensuelle du marché est un PDF (robots.txt demande un "
             "délai de 60 secondes).",
         },
-        "alternative": "wds_ table 32-10-0117-01 (StatCan poultry meat production)",
+        "alternative": {
+            "en": "wds_ table 32-10-0117-01 (StatCan poultry meat production)",
+            "fr": "tableau wds_ 32-10-0117-01 (production de viande de volaille, StatCan)",
+        },
     },
     {
-        "name": "Turkey Farmers of Canada",
+        "name": {"en": "Turkey Farmers of Canada", "fr": "Éleveurs de dindon du Canada"},
         "url": "https://www.turkeyfarmersofcanada.ca/industry-information/industry-facts-stats/",
         "status": "pdf_only",
         "detail": {
             "en": "A yearly snapshot on the page and a 1974-2025 statistics e-book (PDF).",
             "fr": "Un portrait annuel sur la page et un recueil statistique 1974-2025 (PDF).",
         },
-        "alternative": "wds_ tables 32-10-0117-01 and 32-10-0120-01 (StatCan)",
+        "alternative": {
+            "en": "wds_ tables 32-10-0117-01 and 32-10-0120-01 (StatCan)",
+            "fr": "tableaux wds_ 32-10-0117-01 et 32-10-0120-01 (StatCan)",
+        },
     },
     {
-        "name": "Canadian Hatching Egg Producers",
+        "name": {
+            "en": "Canadian Hatching Egg Producers",
+            "fr": "Producteurs d'œufs d'incubation du Canada",
+        },
         "url": "https://www.chep-poic.ca/",
         "status": "blocked_access",
         "detail": {
@@ -379,10 +392,16 @@ _RELATED: list[dict[str, Any]] = [
             "fr": "Le site échoue à la vérification TLS (chaîne de certificats incomplète) "
             "et HTTP simple répond 403.",
         },
-        "alternative": "wds_ table 32-10-0120-01 (StatCan chick placements)",
+        "alternative": {
+            "en": "wds_ table 32-10-0120-01 (StatCan chick placements)",
+            "fr": "tableau wds_ 32-10-0120-01 (mises en place de poussins, StatCan)",
+        },
     },
     {
-        "name": "Farm Products Council of Canada",
+        "name": {
+            "en": "Farm Products Council of Canada",
+            "fr": "Conseil des produits agricoles du Canada",
+        },
         "url": "https://www.fpcc-cpac.gc.ca/",
         "status": "no_data",
         "detail": {
@@ -393,8 +412,14 @@ _RELATED: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "Global Affairs Canada tariff rate quota holders",
-        "url": "https://open.canada.ca/data/en/dataset?organization=dfatd-maecd",
+        "name": {
+            "en": "Global Affairs Canada tariff rate quota holders",
+            "fr": "Détenteurs de contingents tarifaires (Affaires mondiales Canada)",
+        },
+        "url": {
+            "en": "https://open.canada.ca/data/en/dataset?organization=dfatd-maecd",
+            "fr": "https://open.canada.ca/data/fr/dataset?organization=dfatd-maecd",
+        },
         "status": "use_other_tool",
         "detail": {
             "en": "Import quota holder lists for dairy, chicken, eggs and turkey (WTO, "
@@ -405,8 +430,14 @@ _RELATED: list[dict[str, Any]] = [
         "alternative": "ckan_search_datasets(portal='federal', fq='organization:dfatd-maecd')",
     },
     {
-        "name": "Statistics Canada dairy tables",
-        "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210011301",
+        "name": {
+            "en": "Statistics Canada dairy tables",
+            "fr": "Tableaux de Statistique Canada sur les produits laitiers",
+        },
+        "url": {
+            "en": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210011301",
+            "fr": "https://www150.statcan.gc.ca/t1/tbl1/fr/tv.action?pid=3210011301",
+        },
         "status": "use_other_tool",
         "detail": {
             "en": "Milk production and utilization (32-10-0113-01), dairy product "
@@ -415,9 +446,18 @@ _RELATED: list[dict[str, Any]] = [
             "produits laitiers (32-10-0112-01) et ventes de lait et de crème "
             "(32-10-0114-01).",
         },
-        "alternative": "wds_ tools",
+        "alternative": {"en": "wds_ tools", "fr": "outils wds_"},
     },
 ]
+
+
+def _pick(value: Any, lang: str) -> Any:
+    """A per-language value from {"en": ..., "fr": ...}, or the value itself.
+
+    Names without an official French form (Dairy Farmers of Ontario, BC
+    Milk Marketing Board) stay a plain string.
+    """
+    return value[lang] if isinstance(value, dict) else value
 
 
 def catalogue(lang: str = "en") -> CdcCatalogue:
@@ -437,11 +477,11 @@ def catalogue(lang: str = "en") -> CdcCatalogue:
     ]
     related = [
         RelatedSource(
-            name=r["name"],
-            url=r["url"],
+            name=_pick(r["name"], lang),
+            url=_pick(r["url"], lang),
             status=r["status"],
             detail=r["detail"][lang],
-            alternative=r.get("alternative"),
+            alternative=_pick(r.get("alternative"), lang),
         )
         for r in _RELATED
     ]
@@ -661,11 +701,36 @@ def parse_support_prices(page: str) -> list[SupportPrice]:
     return rows
 
 
+async def _french_support_labels(rows: list[SupportPrice]) -> list[SupportPrice]:
+    """The French page's row labels ("2024 (mai)", "2023 (fév.)") on the English rows.
+
+    Used only when the French table has the same rows, dates and prices
+    (it did on 2026-09-26); otherwise, or if the page fails, the English
+    labels are kept rather than risk pairing a label with the wrong price.
+    """
+    try:
+        page, _ = await _page(constants.SUPPORT_PRICES_PAGE["fr"])
+        french = parse_support_prices(page)
+    except (NotFound, UpstreamError, UpstreamUnavailable):
+        return rows
+    if len(french) != len(rows) or any(
+        (f.effective_date, f.butter_per_kg) != (r.effective_date, r.butter_per_kg)
+        for f, r in zip(french, rows, strict=True)
+    ):
+        return rows
+    return [
+        r.model_copy(update={"effective_label": f.effective_label})
+        for f, r in zip(french, rows, strict=True)
+    ]
+
+
 async def get_butter_support_prices(lang: str = "en") -> SupportPriceResult:
     lang = _lang(lang)
     url = constants.SUPPORT_PRICES_PAGE["en"]
     page, cached = await _page(url)
     rows = parse_support_prices(page)
+    if lang == "fr":
+        rows = await _french_support_labels(rows)
     notes = {
         "en": [
             (
@@ -757,6 +822,16 @@ def parse_quota_page(page: str, year: int) -> list[QuotaMonth]:
     return sorted(months.values(), key=lambda m: m.period)
 
 
+async def _french_quota_pages(english: dict[int, str]) -> dict[int, str]:
+    """Year -> French page, from the French index (node 653 lists every year in both)."""
+    index_url = constants.NATIONAL_QUOTA_INDEX["fr"]
+    try:
+        page, _ = await _page(index_url)
+    except (NotFound, UpstreamError, UpstreamUnavailable):
+        return english
+    return {**english, **parse_quota_index(page, index_url)}
+
+
 async def get_national_quota(
     year_from: int | None = None, year_to: int | None = None, lang: str = "en"
 ) -> QuotaResult:
@@ -779,13 +854,16 @@ async def get_national_quota(
             f"cdc: no national quota page for {missing}; the CDC publishes {min(years)}-"
             f"{latest} (earlier years by email request)."
         )
+    # Figures are read from the English pages (the layouts parse_quota_page
+    # knows); with lang="fr" the French page of each year is linked instead.
+    linked = await _french_quota_pages(years) if lang == "fr" else years
     rows: list[QuotaMonth] = []
     pages: list[str] = []
     all_cached = index_cached
     for year in range(year_from, year_to + 1):
         page, cached = await _page(years[year])
         all_cached &= cached
-        pages.append(years[year])
+        pages.append(linked.get(year, years[year]))
         year_rows = parse_quota_page(page, year)
         if not year_rows:
             raise UpstreamError(f"cdc: the {year} national quota page has no monthly figures.")

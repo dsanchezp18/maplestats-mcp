@@ -2,7 +2,7 @@
 
 `lang` picks the file: "fr" reads the CGC's French CSV, so labels (and the
 values filters must match) are French ("Blé", "Livraisons"). Filters ignore
-case and accents.
+case, accents, hyphens, spaces and apostrophe style.
 """
 
 from __future__ import annotations
@@ -43,13 +43,16 @@ async def cgc_weekly_describe(
     Distribution, Feed Grains, Feed Grains Shipment Distribution, Producer
     Cars, Imported Grains, Summary (stocks by elevator type). `crop_year`
     is e.g. '2025-26' (August to July), from 2013-14; default: the latest.
-    Values are thousands of tonnes.
+    Values are thousands of tonnes. `lang="fr"` reads the French file:
+    worksheet, metric, period, grain and region names are then French
+    ('Silos primaires', 'Terminaux - exportations', 'Semaine en cours').
     Keywords: Canadian Grain Commission, CGC, grain statistics weekly,
     GSW, crop year, grain handling, primary elevators, terminal
     elevators, grain stocks, canola, wheat.
     Mots-clés : Commission canadienne des grains, CCG, statistiques
     hebdomadaires sur le grain, campagne agricole, manutention du grain,
-    silos primaires, silos terminaux, stocks de grain, canola, blé.
+    silos primaires, silos terminaux, silos-élévateurs, stocks de grain,
+    céréales, canola, blé.
     """
     return await client.describe_weekly(crop_year, lang=lang)
 
@@ -85,12 +88,17 @@ async def cgc_weekly_query(
     `latest_week_only` keeps the newest week. Rows come in week order; past
     `limit` the latest are kept. Thousands of tonnes; rows without a region
     are national totals. From crop year 2013-14; updated each Thursday.
+    With `lang="fr"` every name is French, e.g. worksheet 'Silos
+    primaires', metric 'Livraisons', period 'Semaine en cours' or
+    'Campagne agricole', grain 'Blé', region 'Saskatchewan'; filters
+    ignore case, accents, hyphens and spaces.
     Keywords: grain deliveries, grain exports, grain stocks, primary
     elevator, terminal elevator, port of Vancouver, canola deliveries,
     wheat exports, crop year to date, thousand tonnes.
-    Mots-clés : livraisons de grain, exportations de grain, stocks de
-    grain, silo primaire, silo terminal, port de Vancouver, livraisons de
-    canola, exportations de blé, campagne agricole, milliers de tonnes.
+    Mots-clés : livraisons de grain, livraisons des producteurs,
+    exportations de grain, stocks de grain, silo primaire, silo terminal,
+    silo-élévateur, port de Vancouver, livraisons de canola, exportations
+    de blé, céréales, orge, campagne agricole, milliers de tonnes.
     """
     return await client.query_weekly(
         worksheet,
@@ -117,13 +125,14 @@ async def cgc_exports_describe(lang: Lang = "en") -> CgcExportsDescription:
     including imported and 'US' grains, grades, elevator types PRIMARY,
     TERMINALS and CONTAINER, port regions, world regions, about 150
     destination countries) and the months covered (January 2013 to the
-    latest month, usually a few weeks behind).
+    latest month, usually a few weeks behind). `lang="fr"` lists the
+    French names ('R.P. de Chine', 'Silos Terminaux', 'Conteneurs').
     Keywords: grain exports, destination countries, export markets,
     Canadian Grain Commission, licensed facilities, container exports,
     ports, wheat, canola.
     Mots-clés : exportations de grain, pays de destination, marchés
     d'exportation, Commission canadienne des grains, installations
-    agréées, conteneurs, ports, blé, canola.
+    agréées, conteneurs, ports, céréales, blé, canola.
     """
     return await client.describe_exports(lang=lang)
 
@@ -156,14 +165,18 @@ async def cgc_exports_query(
     in `group_by` (e.g. frequency='crop_year', group_by=['destination']),
     and `months` shows partial periods. Rows come in period order, largest
     first within a period; past `limit` the oldest periods are dropped.
-    `total_ktonnes` sums every match. Thousands of tonnes.
+    `total_ktonnes` sums every match. Thousands of tonnes. With
+    `lang="fr"` names are French: elevator 'Silos des Prairies', 'Silos
+    Terminaux' or 'Conteneurs', destination 'R.P. de Chine', 'Japon',
+    'États-Unis'; filters ignore case, accents, hyphens and spaces, and an
+    unknown name lists the ones containing it.
     Keywords: grain exports by country, canola exports to China, wheat
     exports, export destinations, monthly exports, crop year exports,
     Canadian Grain Commission, pulse exports, lentil exports, trade.
     Mots-clés : exportations de grain par pays, exportations de canola
     vers la Chine, exportations de blé, destinations d'exportation,
     exportations mensuelles, campagne agricole, Commission canadienne des
-    grains, légumineuses, lentilles, commerce.
+    grains, céréales, légumineuses, lentilles, commerce.
     """
     return await client.query_exports(
         lang=lang,

@@ -654,7 +654,7 @@ DATASETS: tuple[Dataset, ...] = (
             "substance type and manner of death, since 2016: numbers, crude rates and percents."
         ),
         description_fr=(
-            "Décès apparemment liés à une intoxication aux opioïdes et aux stimulants, "
+            "Décès apparemment liés à une intoxication (surdose) aux opioïdes et aux stimulants, "
             "hospitalisations, visites aux urgences et interventions des SMU par province, année "
             "ou trimestre, sexe, groupe d'âge, type de substance et type de décès, depuis 2016 : "
             "nombres, taux bruts et pourcentages."
@@ -675,8 +675,9 @@ DATASETS: tuple[Dataset, ...] = (
             "'n/a' not available."
         ),
         notes_fr=(
-            "Filtrer Source, Mesure_Spéficique (orthographe du fichier), Unité et Période_Temps. "
-            "« Suppr. » est supprimé, « n.d. » non disponible."
+            "Filtrer Source, Mesure_Spéficique (orthographe du fichier), Unité et Période_Temps "
+            "(Par année, Par trimestre; trimestres notés « 2025 T3 »). « Mas. » est masqué, "
+            "« n.d. » non disponible."
         ),
     ),
     Dataset(

@@ -66,6 +66,12 @@ MARKERS: dict[str, tuple[str, str]] = {
         "suppressed to protect privacy (small counts)",
         "supprimé pour protéger la confidentialité (petits nombres)",
     ),
+    # The French opioid and stimulant harms file writes "Mas." (masqué) where
+    # the English one writes "Suppr." (4,543 cells on 2026-09-26).
+    "Mas.": (
+        "suppressed to protect privacy (French files)",
+        "masqué pour protéger la confidentialité (petits nombres)",
+    ),
     "X": ("suppressed (small counts)", "supprimé (petits nombres)"),
     "x": ("suppressed (small counts)", "supprimé (petits nombres)"),
     "n/a": ("not available or not applicable", "non disponible ou sans objet"),

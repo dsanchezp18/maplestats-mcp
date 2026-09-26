@@ -165,6 +165,29 @@ def fold(text: str) -> str:
     return " ".join(stripped.casefold().split())
 
 
+def label_key(text: str) -> str:
+    """The key filters and labels are compared on: fold() minus hyphens, spaces, apostrophe style.
+
+    French labels are not spelled consistently (live 2026-09-26): the
+    weekly files write "Colombie britannique" and "Saint Laurent" where the
+    exports file and standard French write "Colombie-Britannique" and
+    "Saint-Laurent", and the French exports file splits Vietnam and Côte
+    d'Ivoire across "Viet-Nam"/"Vietnam" and "Cote-d'Ivoire"/"Côte
+    d'Ivoire". Ignoring hyphens and spaces makes each spelling find all of
+    them, and a typographic apostrophe matches a straight one.
+    """
+    return re.sub(r"[\s-]+", "", fold(text.replace("\u2019", "'").replace("\u2018", "'")))
+
+
+def _suggest(value: str, labels: Iterable[str]) -> str:
+    """'Did you mean' text for labels containing the requested one, e.g. 'Chine'."""
+    wanted = label_key(value)
+    close = sorted({label for label in labels if label and wanted and wanted in label_key(label)})
+    if not close:
+        return ""
+    return "; did you mean " + ", ".join(repr(v) for v in close[:10]) + "?"
+
+
 def _header_key(header: str) -> str:
     return fold(header.strip().strip('"')).replace(" ", "_")
 
@@ -472,13 +495,15 @@ def _resolve(table: WeeklyTable, dim: str, wanted: list[str], among: set[int]) -
     labels = table.labels[dim]
     folded: dict[str, list[int]] = {}
     for code in among:
-        folded.setdefault(fold(labels[code]), []).append(code)
+        folded.setdefault(label_key(labels[code]), []).append(code)
     chosen: set[int] = set()
     for value in wanted:
-        hits = folded.get(fold(value))
+        hits = folded.get(label_key(value))
         if not hits:
             raise InvalidInput(
-                f"cgc: no {dim} {value!r} here; values are: "
+                f"cgc: no {dim} {value!r} here"
+                + _suggest(value, (labels[c] for c in among))
+                + "; values are: "
                 + _values_hint(labels[c] for c in among)
                 + ". Call cgc_weekly_describe for the full lists."
             )
@@ -852,13 +877,15 @@ def query_exports_table(
         present: dict[str, set[str]] = {}
         for record in table.records:
             label = getattr(record, dim)
-            present.setdefault(fold(label), set()).add(label)
+            present.setdefault(label_key(label), set()).add(label)
         chosen: set[str] = set()
         for value in requested:
-            hits = present.get(fold(value))
+            hits = present.get(label_key(value))
             if not hits:
                 raise InvalidInput(
-                    f"cgc: no {dim} {value!r} in the exports file; values are: "
+                    f"cgc: no {dim} {value!r} in the exports file"
+                    + _suggest(value, (label for labels in present.values() for label in labels))
+                    + "; values are: "
                     + _values_hint(label for labels in present.values() for label in labels)
                     + ". Call cgc_exports_describe for the full lists."
                 )

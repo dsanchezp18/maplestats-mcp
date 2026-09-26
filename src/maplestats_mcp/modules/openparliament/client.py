@@ -209,7 +209,9 @@ async def search_bills(
     if introduced_from:
         params["introduced__gte"] = _date_param(introduced_from, "introduced_from")
     rows, cached = await _get_all("/bills/", params)
-    needle = (keyword or "").strip().lower()
+    # Accent- and apostrophe-insensitive, as for committee names: a French
+    # keyword typed "sante" or with ’ must find "santé" or "l'accès".
+    needle = _fold((keyword or "").strip())
     bills = [
         BillSummary(
             session=row["session"],
@@ -220,8 +222,8 @@ async def search_bills(
         )
         for row in rows
         if not needle
-        or needle in row.get("number", "").lower()
-        or any(needle in (v or "").lower() for v in (row.get("name") or {}).values())
+        or needle in _fold(row.get("number") or "")
+        or any(needle in _fold(v or "") for v in (row.get("name") or {}).values())
     ]
     bills.sort(key=lambda b: b.introduced or date.min, reverse=True)
     kept = bills[:limit]

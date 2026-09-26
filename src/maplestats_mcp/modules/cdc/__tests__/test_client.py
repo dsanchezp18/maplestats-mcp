@@ -194,10 +194,27 @@ def test_french_support_page_decimal_commas_give_the_same_numbers():
 
 async def test_support_prices_read_the_english_page_in_both_languages(httpx_mock):
     httpx_mock.add_response(url=constants.SUPPORT_PRICES_PAGE["en"], text=_text("support_en.html"))
+    httpx_mock.add_response(url=constants.SUPPORT_PRICES_PAGE["fr"], text=_text("support_fr.html"))
     result = await client.get_butter_support_prices(lang="fr")
     assert result.source_page == constants.SUPPORT_PRICES_PAGE["fr"]
     assert result.provenance.url == constants.SUPPORT_PRICES_PAGE["en"]
     assert result.notes[0].startswith("La CCL")
+    # Labels come from the French page; values and dates stay the English ones.
+    by_date = {r.effective_date: r for r in result.rows}
+    assert by_date[date(2024, 5, 1)].effective_label == "2024 (mai)"
+    assert by_date[date(2023, 2, 1)].effective_label == "2023 (fév.)"
+    assert by_date[date(2023, 2, 1)].butter_per_kg == 10.218
+    english = await client.get_butter_support_prices()  # both pages cached
+    assert english.rows[2].effective_label == "2024 (May)"
+
+
+async def test_support_prices_keep_english_labels_when_french_rows_differ(httpx_mock):
+    httpx_mock.add_response(url=constants.SUPPORT_PRICES_PAGE["en"], text=_text("support_en.html"))
+    shifted = _text("support_fr.html").replace("10, 5662", "10, 9999", 1)
+    httpx_mock.add_response(url=constants.SUPPORT_PRICES_PAGE["fr"], text=shifted)
+    result = await client.get_butter_support_prices(lang="fr")
+    assert result.rows[2].effective_label == "2024 (May)"
+    assert result.rows[0].butter_per_kg == 10.5662
 
 
 # --- national quota --------------------------------------------------------
@@ -267,8 +284,18 @@ async def test_national_quota_defaults_to_latest_year_and_flags_bad_figures(http
     assert len(latest.notes) == 1  # a partial latest year is not a gap
 
     httpx_mock.add_response(url=_QUOTA_PAGES[2023], text=_text("quota_2023.html"))
+    # The French index links each year's French page (checked live 2026-09-26).
+    french_2023 = (
+        "https://cdc-ccl.ca/fr/cible-nationale-production-laitiere-au-canada-pour-annee-2023"
+    )
+    httpx_mock.add_response(
+        url=constants.NATIONAL_QUOTA_INDEX["fr"],
+        text=f'<main><a href="{french_2023[len("https://cdc-ccl.ca") :]}">2023</a></main>',
+    )
     y2023 = await client.get_national_quota(2023, 2023, lang="fr")
     assert any("2023-03" in note for note in y2023.notes)
+    assert y2023.source_pages == [french_2023] and y2023.provenance.url == french_2023
+    assert y2023.rows[3].total_quota_kg_butterfat == 32_255_543
 
 
 async def test_national_quota_years_not_published(httpx_mock):
@@ -394,7 +421,13 @@ def test_catalogue_is_bilingual():
     french = client.catalogue("fr")
     assert [d.tool for d in english.datasets] == [d.tool for d in french.datasets]
     assert all(d.tool.startswith("cdc_") for d in english.datasets)
-    egg = next(r for r in french.related_sources if r.name == "Egg Farmers of Canada")
+    egg = next(r for r in french.related_sources if r.name == "Producteurs d'œufs du Canada")
     assert egg.status == "blocked_terms" and "permission" in egg.detail
+    assert egg.alternative and egg.alternative.startswith("tableaux wds_")
+    assert [r.url for r in english.related_sources][:8] == [r.url for r in french.related_sources][
+        :8
+    ]
+    assert "Egg Farmers of Canada" in {r.name for r in english.related_sources}
+    assert "Dairy Farmers of Ontario" in {r.name for r in french.related_sources}
     with pytest.raises(InvalidInput):
         client.catalogue("es")
