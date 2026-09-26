@@ -11,6 +11,7 @@
 <main id="main">
 
 <section class="wrap hero">
+  <p class="kicker">{en}One MCP to rule them all{fr}Un MCP pour les gouverner tous{/}</p>
   <h1>{en}Canadian public data,<br>without knowing<br>where it lives.{fr}Les données publiques canadiennes,<br>sans savoir où<br>elles se trouvent.{/}</h1>
   <div class="hero-copy">
     <p class="lede">{en}MapleStats MCP is one server for Statistics Canada, the Bank of Canada, CMHC, {{other_national_count}} other federal sources and {{local_catalogue_count}} provincial, territorial and city open-data catalogues. An AI agent describes the data it needs, in English or French, and gets back typed results that name their source.{fr}MapleStats MCP est un seul serveur pour Statistique Canada, la Banque du Canada, la SCHL, {{other_national_count}} autres sources fédérales et {{local_catalogue_count}} catalogues de données ouvertes provinciaux, territoriaux et municipaux. Un agent IA décrit les données dont il a besoin, en français ou en anglais, et reçoit des résultats typés qui nomment leur source.{/}</p>
@@ -31,6 +32,21 @@
     </ol>
     <p class="probe-status" data-status>{en}Top {{search_top}} of {{searchable_count}} tools, ranked by the same BM25 index search_tools uses.{fr}Les {{search_top}} premiers sur {{searchable_count}} outils, classés par le même index BM25 que search_tools.{/}</p>
     <p class="probe-try"><span>{en}Try{fr}Essayez{/}</span> {{hero_suggestions}}</p>
+  </div>
+</section>
+
+<section class="section thesis" id="why">
+  <div class="wrap">
+    <p class="verse">{en}Three MCPs for the statisticians under the sky, seven for the data portals in their halls of stone…{fr}Trois MCP pour les statisticiens sous le ciel, sept pour les portails de données dans leurs demeures de pierre…{/}<span>{en}Okay, perhaps not quite.{fr}Bon, peut-être pas tout à fait.{/}</span></p>
+    <div class="thesis-body">
+      <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
+      <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian public data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données publiques canadiennes.{/}</p>
+    </div>
+    <div class="claims">
+      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
+      <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
+      <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
+    </div>
   </div>
 </section>
 
@@ -172,10 +188,9 @@
 
 <section class="section">
   <div class="wrap note">
-    <p class="label">{en}Why it exists{fr}Pourquoi ce projet{/}</p>
+    <p class="label">{en}The short version{fr}En bref{/}</p>
     <blockquote>
-      <p>{en}Canadian public data is rich but scattered: Statistics Canada tables, Bank of Canada series, CMHC housing data, census profiles, microdata files and dozens of provincial and city portals, each with its own interface. I built MapleStats so that an agent, and the researcher using it, can start from the question instead of the portal.{fr}Les données publiques canadiennes sont riches, mais dispersées : tableaux de Statistique Canada, séries de la Banque du Canada, données sur le logement de la SCHL, profils du recensement, fichiers de microdonnées et des dizaines de portails provinciaux et municipaux, chacun avec son interface. J'ai conçu MapleStats pour qu'un agent, et la personne qui l'utilise, puissent partir de la question plutôt que du portail.{/}</p>
-      <p>{en}The server does not copy the data. It calls each source directly and says where every number came from.{fr}Le serveur ne copie pas les données. Il interroge chaque source directement et indique d'où vient chaque chiffre.{/}</p>
+      <p class="closing">{en}One MCP. Canadian public data. As much of it as I can reasonably connect.{fr}Un seul MCP. Les données publiques canadiennes. Autant que je peux raisonnablement en connecter.{/}</p>
       <cite>Daniel Sánchez Pazmiño</cite>
     </blockquote>
   </div>

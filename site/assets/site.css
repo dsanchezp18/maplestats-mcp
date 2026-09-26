@@ -2085,3 +2085,101 @@ mark {
   max-width: 70ch;
   color: var(--ink-2);
 }
+
+/* ---------- One MCP to rule them all ---------- */
+
+.kicker {
+  grid-column: 1 / -1;
+  margin-bottom: -8px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  font-stretch: 110%;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.thesis .wrap {
+  display: grid;
+  gap: clamp(28px, 3.5vw, 48px);
+}
+
+.verse {
+  max-width: 34ch;
+  font-size: clamp(1.35rem, 1rem + 1.4vw, 2.1rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+.verse span {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.55em;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.thesis-body {
+  display: grid;
+  gap: 16px;
+  max-width: 780px;
+}
+
+.thesis-body h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: clamp(1.95rem, 1.35rem + 1.9vw, 2.95rem);
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+}
+
+.thesis-body p {
+  max-width: 66ch;
+  color: var(--ink-2);
+}
+
+.claims {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+}
+
+@media (max-width: 860px) {
+  .claims {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+
+.claims > div {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding-top: 16px;
+  border-top: 2px solid var(--ink);
+}
+
+.claims h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-stretch: 108%;
+  line-height: 1.2;
+}
+
+.claims p {
+  color: var(--ink-2);
+}
+
+.note .closing {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.6rem);
+  font-weight: 800;
+  font-stretch: 112%;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
