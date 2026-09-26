@@ -1408,6 +1408,46 @@ Technology Products Economic Account (tables 36-10-0366, -0370, -0371,
 -0372, -0411, -0627 and more, via `wds_`) plus open.canada.ca datasets on
 clean-technology use …
 
+## PMPRB (Patented Medicine Prices Review Board)
+
+**Status:** Investigated, deferred.
+
+Checked 2026-09-26. Nothing machine-readable is published on a regular
+schedule, so no module was built.
+
+- **Federal CKAN:** the organization is `pmprb-cepmb`
+  (`organization_autocomplete?q=patent`). Its 16 records are departmental
+  plans, results reports, sustainability strategies, annual reports 2022
+  to 2024, accessibility plans and a transition binder: HTML links or
+  PDFs, none DataStore-active. A full-text search for "NPDUIS" finds
+  nothing.
+- **Annual reports** (canada.ca/en/patented-medicine-prices-review/
+  services/annual-reports.html): 2018 to 2024 as HTML and PDF. The 2024
+  page has 42 HTML tables (sales, price trends, international price
+  comparisons, R&D ratios), mostly without captions, so each would need
+  its own parser, once a year.
+- **List of patented medicines:** HTML for 2020 and 2021 (the 2021 page
+  has 103 tables, one per company), PDF for 2015 to 2019, and no list
+  after 2021.
+- **NPDUIS studies** (CompassRx, Meds Entry Watch, Meds Pipeline Monitor,
+  market intelligence reports, chartbooks): HTML pages with tables and
+  PDFs. The only spreadsheet found is the CompassRx 10th edition "data
+  companion file" (`Datacompanion-CompassRx10thEdition.xlsx`, 88 KB):
+  an overview sheet and five top-50 tables (top-selling medicines,
+  patented medicines, multi-source generics, single-source non-patented
+  medicines and manufacturers by drug cost, public plans 2022/23). The
+  9th edition, Meds Entry Watch 9th edition and the 2026 Meds Pipeline
+  Monitor pages link no data files.
+- The old site (`www.pmprb-cepmb.gc.ca`), which older editions still
+  link to, could not be checked: this session's egress allowlist refused
+  the host. Its content has moved to canada.ca.
+- The underlying NPDUIS database is CIHI's (prescription claims from
+  public drug plans); CIHI's own releases are covered by `cihi_`.
+
+Revisit if PMPRB publishes the annual report tables or NPDUIS data as
+files, or if a user needs the annual report tables badly enough to parse
+each year's HTML.
+
 ## Competition Bureau Canada
 
 **Status:** Shipped.
@@ -1419,6 +1459,92 @@ reviews). Checked 2026-09-25: the merger-review reports are full HTML tables
 parties, dates, NAICS and outcome; the Tribunal's decisions site refuses
 automated requests, and enforcement and market studies are PDFs.
 [Details](docs/findings/competition-bureau.md)
+
+## Financial Consumer Agency of Canada (FCAC)
+
+**Status:** Shipped.
+
+Checked and shipped 2026-09-26 as `modules/fcac/`
+(`fcac_search_credit_cards`, `fcac_get_credit_card`,
+`fcac_search_bank_accounts`, `fcac_get_bank_account`).
+
+What FCAC publishes:
+
+- **Federal CKAN:** the organization is `fcac-acfc`. Its 36 records are
+  annual reports, fees reports, access to information and privacy
+  reports, accessibility plans and committee briefing books, all HTML
+  links, none DataStore-active. Full-text searches for bank fees, credit
+  card comparison and financial literacy find nothing from FCAC.
+- **Research and Data Exchange** (fcac-research-recherche-acfc.canada.ca,
+  a Power Pages site): a catalogue of three survey datasets (Monthly
+  Financial Well-being Monitor, 63,412 responses from August 2020 to
+  December 2025; Canadian Financial Capability Survey; 2018 Financial
+  Well-being Survey). Each is released only through a data-sharing
+  request form. The well-being dashboard is a Power BI "publish to web"
+  embed, not an API.
+- **Complaints and compliance:** the 2024-2025 annual report is one HTML
+  page (9 tables, complaints discussed in the text). Commissioner's
+  decisions and summaries of proceedings (penalties since 2012, e.g. a
+  $4.25M penalty paid by RBC in April 2026) are prose on one HTML page.
+  No data files.
+- **Comparison tools** (itools-ioutils.fcac-acfc.gc.ca): the Credit Card
+  Comparison Tool (`/CCCT-OCCC/`) and the Account Comparison Tool
+  (`/ACT-OCC/`). Financial institutions supply and update the products.
+  This is the one regularly updated, product-level data FCAC publishes,
+  and it exists nowhere else, so the module reads it.
+
+How the tools work (confirmed with plain HTTP requests, English and
+French):
+
+- They are ASP.NET WebForms pages with no JSON and no export (the "Print
+  or save as PDF" button prints the page). A search is a GET of
+  `SearchFilter-{eng|fra}.aspx` for the session cookie and view state,
+  then a POST of the filters, answered by a 302 to
+  `SearchResult-{lang}.aspx`. Results are ten per page behind
+  `__doPostBack` pager links, including "..." links to the next block of
+  five pages. A product's detail page opens only by posting its "View
+  details" button from the result page it is on; product ids (GUIDs in a
+  hidden field, the same in both languages) have no URL of their own. A
+  fresh-session GET of the detail page redirects to
+  `SessionExpired-eng.aspx`.
+- Form values: provinces are numeric and differ between the two tools
+  (Ontario is 7 for cards and 16 for accounts; posting "ON" redirects to
+  `Error.aspx`). Currencies are CAD, USD and other. The card form hides
+  "student" and "secured card" behind a "Show more optional filters"
+  postback; student adds 6 student cards to Ontario's 95, secured returns
+  the 25 secured cards. "Carry a balance" left the Ontario list at 95.
+  The account form takes chequing or savings and nine customer groups
+  (senior, GIS recipient, RDSP beneficiary, youth, student, newcomer,
+  Indigenous, social assistance, Disability Tax Credit); a group adds its
+  accounts (Ontario chequing: 61, 69 with senior, 72 with student).
+- Counts seen: credit cards 95 in Ontario, 84 in Quebec, 119 in British
+  Columbia, 5 in USD (Ontario), none in "other" currency; accounts 61
+  chequing and 38 savings in Ontario, 42 savings in British Columbia, 6
+  USD savings in Alberta. Walking the 10 pages of Ontario cards takes
+  about 2 seconds.
+- Card rows give name, institution, annual fee, purchase rate (sometimes
+  a range, e.g. 21.90% to 29.90%), currency and reward categories.
+  Chequing rows give the monthly fee, included transactions and the
+  low-cost/no-cost flag; savings rows give an interest rate instead and
+  name their button `btnViewItemDetailSavings`.
+- Detail pages are grey title blocks whose element ids name the section
+  (`lblAnnualFeeTitle`, `lblInteresrRateTitle` with the site's typo,
+  `lblNSFFeesTitle`, `Label1` for account history), with labelled items
+  as `<strong>Label: </strong>value`. The module keys sections by those
+  ids, so keys are the same in both languages. Savings interest rates
+  come as balance tiers.
+- French pages write "30,95 $", "6 000,00 $" (non-breaking spaces) and
+  "10,9000 %", and French result order can differ from English for equal
+  fees. No-fee wording varies: "No annual fee", "No fee", "None",
+  "Aucun frais annuel", "Sans frais", "Aucun".
+
+The module walks the full result list once per province and option set
+(cached six hours), filters, sorts and limits locally, and checks the
+number of products read against the page's own count, so a short walk
+raises instead of being cached. Each call runs in its own cookie jar; a
+session-expired or error page is retried once in a new session. Terms:
+Canada.ca terms apply. The tools state that the information is provided
+by financial institutions and that additional fees may apply.
 
 ## CAPP Statistics Handbook (Canadian Association of Petroleum Producers)
 

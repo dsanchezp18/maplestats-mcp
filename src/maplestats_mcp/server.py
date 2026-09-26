@@ -100,6 +100,8 @@ Sources, by tool-name prefix:
   (CIPO patent lookup and search, bulk IP files and data dictionaries),
   ised_clean_growth_ (federal cleantech investment 2016-2024).
 - Competition Bureau merger reviews: competition_bureau_.
+- FCAC credit card and bank account comparison tools (fees, interest
+  rates, rewards, low-cost accounts): fcac_.
 - Parliamentary Budget Officer publications and their tables (costings of
   bills and measures, economic and fiscal outlooks): pbo_.
 - IRCC: ircc_ (Express Entry draws), ircc_monthly_ (monthly permanent and

@@ -615,6 +615,43 @@ RECALLS = Topic(
 )
 TOPICS = (*TOPICS, RECALLS)
 
+BANKING = Topic(
+    "banking",
+    "Consumer banking: credit cards, bank accounts and their fees",
+    (
+        "credit card",
+        "bank account",
+        "chequing",
+        "checking account",
+        "savings account",
+        "bank fee",
+        "banking fee",
+        "nsf",
+        "overdraft",
+        "fcac",
+        "carte de credit",
+        "compte bancaire",
+        "compte-cheques",
+        "compte d'epargne",
+        "frais bancaires",
+        "acfc",
+    ),
+    (
+        PlanStep("fcac_search_credit_cards", "cards in a province: annual fee, purchase rate"),
+        PlanStep("fcac_get_credit_card", "one card's other rates, income and insurance"),
+        PlanStep("fcac_search_bank_accounts", "chequing or savings accounts and monthly fees"),
+        PlanStep("fcac_get_bank_account", "one account's transaction, NSF and overdraft fees"),
+        PlanStep("boc_search_series", "Bank of Canada prime and policy rates for context"),
+    ),
+    (
+        (
+            "FCAC lists only the products institutions submit to its tools, at posted rates; "
+            "it is a snapshot of today's offers, with no history."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, BANKING)
+
 # StatCan's own name for its tables, used when nothing else matches.
 FALLBACK_STEPS: tuple[PlanStep, ...] = (
     PlanStep("statcan_reference_search_data", "StatCan data products on the topic"),
