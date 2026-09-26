@@ -80,3 +80,12 @@ def test_no_topic_falls_back():
 def test_empty_question():
     with pytest.raises(InvalidInput):
         client.plan("  ")
+
+
+def test_agriculture_routes_to_grain_and_agency_catalogues():
+    result = client.plan("How much canola did Saskatchewan farmers deliver this crop year?")
+    top = result.topics[0]
+    assert top.topic == "agriculture"
+    assert top.steps[0].tool == "cgc_weekly_query"
+    french = client.plan("exportations de blé vers la Chine")
+    assert "agriculture" in {t.topic for t in french.topics}

@@ -112,8 +112,10 @@ Sources, by tool-name prefix:
   ab_economic_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
   household/commercial/industrial energy surveys): nrcan_energy_use_.
   Canada Energy Regulator (pipeline throughput, energy exports, tolls):
-  cer_. GC InfoBase federal spending and results (Estimates, Public
-  Accounts, program spending and FTEs): gc_infobase_. CIHI health-system
+  cer_. Canadian Grain Commission (weekly grain deliveries, stocks and
+  terminal exports; monthly grain exports by destination): cgc_. GC
+  InfoBase federal spending and results (Estimates, Public Accounts,
+  program spending and FTEs): gc_infobase_. CIHI health-system
   indicators (Indicator Library): cihi_. PHAC Health Infobase surveillance
   files (FluWatch+, wastewater, opioid harms, measles, TB): phac_infobase_.
   NRCan geocoding and official place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
@@ -138,6 +140,8 @@ Routing hints: many federal administrative series (IRCC permits, CRA
 tax statistics and charities, OSFI bank returns, ISED insolvency data)
 (beyond ircc_monthly_) are ordinary open.canada.ca datasets -- use ckan_search_datasets with
 portal="federal" and fq="organization:<org>" (cic for IRCC, cra-arc, osfi-bsif, ic).
+AAFC market data (red meat, poultry and eggs, dairy, horticulture prices) and
+CFIA animal disease and food testing data are there too: aafc-aac, cfia-acia.
 
 Language: most tools accept lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's

@@ -652,6 +652,70 @@ RECALLS = Topic(
 )
 TOPICS = (*TOPICS, RECALLS)
 
+
+AGRICULTURE = Topic(
+    "agriculture",
+    "Agriculture, grain, livestock and food inspection",
+    (
+        "agricultur",
+        "grain",
+        "wheat",
+        "canola",
+        "barley",
+        "durum",
+        "lentil",
+        "crop",
+        "harvest",
+        "farm",
+        "livestock",
+        "cattle",
+        "hog",
+        "slaughter",
+        "dairy",
+        "poultry",
+        "egg",
+        "animal disease",
+        "avian influenza",
+        "food inspection",
+        "ble",
+        "cereale",
+        "recolte",
+        "betail",
+        "abattage",
+        "laitier",
+        "volaille",
+        "oeuf",
+        "grippe aviaire",
+        "inspection des aliments",
+    ),
+    (
+        PlanStep("cgc_weekly_query", "CGC weekly grain deliveries, stocks and terminal exports"),
+        PlanStep("cgc_exports_query", "CGC monthly grain exports by destination country"),
+        PlanStep("wds_search_cubes", "StatCan field crop area and production, farm income"),
+        PlanStep(
+            "ckan_search_datasets",
+            "AAFC red meat, poultry, egg, dairy and horticulture market files: "
+            "portal='federal', fq='organization:aafc-aac'",
+        ),
+        PlanStep(
+            "ckan_search_datasets",
+            "CFIA animal disease, rabies and food testing data: "
+            "portal='federal', fq='organization:cfia-acia'",
+        ),
+    ),
+    (
+        (
+            "CGC figures are thousands of tonnes by crop year (August to July); StatCan "
+            "production and stocks estimates are surveys and will not equal CGC handlings."
+        ),
+        (
+            "AAFC market files on open.canada.ca are bulk CSVs refreshed nightly; their "
+            "DataStore copies are mostly gone or stale, so read the file URLs."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, AGRICULTURE)
+
 # StatCan's own name for its tables, used when nothing else matches.
 FALLBACK_STEPS: tuple[PlanStep, ...] = (
     PlanStep("statcan_reference_search_data", "StatCan data products on the topic"),

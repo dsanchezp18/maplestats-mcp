@@ -56,6 +56,8 @@ CASES = [
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),
     ("surdoses d'opioïdes décès par province", "phac_infobase_query"),
     ("charge virale eaux usées", "phac_infobase_list_datasets"),
+    ("livraisons de canola aux silos primaires", "cgc_weekly_query"),
+    ("exportations de blé par pays de destination", "cgc_exports_query"),
 ]
 
 
