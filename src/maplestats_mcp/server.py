@@ -116,6 +116,7 @@ Sources, by tool-name prefix:
   Accounts, program spending and FTEs): gc_infobase_. CIHI health-system
   indicators (Indicator Library): cihi_. NRCan geocoding and official
   place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
+  Recalls and safety alerts (Health Canada, CFIA food, all agencies): recalls_.
   Canada Gazette notices and regulations: gazette_.
   Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,
   votes, MPs and Hansard (unofficial OpenParliament.ca): parliament_.

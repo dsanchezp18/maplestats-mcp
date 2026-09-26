@@ -341,7 +341,9 @@ lookup tool, and the nutrient file are record-lookup-shaped products outside
 CKAN's dataset model (and, per the original 2026-09-14 scoping call, out of
 scope regardless) -- not a reason to treat the rest of `hc-sc`'s CKAN
 catalogue as unavailable. PHAC (`phac-aspc`, 761 datasets) is reachable the
-same way and was not investigated further in this pass.
+same way and was not investigated further in this pass. (The
+recalls/safety-alerts site was later shipped as `recalls_*` on 2026-09-26;
+see [its section](#government-of-canada-recalls-and-safety-alerts).)
 
 ## ESDC (Employment and Social Development Canada)
 
@@ -842,6 +844,62 @@ Shipped 2026-09-23: `modules/tc_recalls/` (2 tools) on Transport Canada's
 Motor Vehicle Safety Recalls Database API
 (data.tc.gc.ca/v1.3/api/{eng,fra}/vehicle-recall-database): search by make,
 model and model-year range, and a bilingual …
+
+## Government of Canada Recalls and Safety Alerts
+
+**Status:** Shipped.
+
+Shipped 2026-09-26: `modules/recalls/` with `recalls_search`,
+`recalls_summarize` and `recalls_get`, covering recalls-rappels.canada.ca
+(Health Canada drugs, natural health products, medical devices, consumer
+products and cannabis; CFIA food; Transport Canada vehicle notices).
+Health Canada's Drug Product Database stays out of scope.
+
+Access paths checked live 2026-09-26:
+
+- **Open-data dump (chosen).** The federal CKAN dataset "Recalls and
+  Safety Alerts" (d38de914-c94c-429b-8ab1-8776c31643e3, `hc-sc`) links one
+  JSON and one CSV file per language under
+  recalls-rappels.canada.ca/sites/default/files/opendata-donneesouvertes/:
+  `HCRSAMOpenData.json` (about 15.7 MB) and `SCRSAMDonneesOuvertes.json`
+  (about 20.8 MB), not gzip-compressed, regenerated daily (Last-Modified
+  around 02:19 UTC). Each holds the same 34,131 NIDs, 1991 to date,
+  14,444 of them archived. English keys: NID, Title, URL, Organization,
+  Product, Issue, "What you should do", Category, "Recall class",
+  "Last updated", Archived; the French file uses Titre, Produit,
+  Problème, "Ce que vous devriez faire", Catégorie, "Classe de rappel",
+  "Dernière mise à jour", Archivé.
+- **Recall pages.** `/{lang}/node/{nid}` answers 302 to the notice's page,
+  404 for an unknown id. Current pages expose Drupal fields with the same
+  class names in both languages (product, issue type, full category path,
+  hazard type, recall date, distribution, companies, agency id such as
+  the Transport Canada recall number, affected products table). Notices
+  migrated from the old site use a legacy layout: a `<dl>` header and free
+  HTML. A notice untranslated into French is served at /fr/ in English.
+- **Not used.** The site's search (`/en/search/site`) is HTML and shows
+  only non-archived notices: its total (19,690) and per-year facets match
+  the dump's non-archived rows by "Last updated" year, so the dump is a
+  superset. The old healthycanadians.gc.ca `recall-alert-rappel-avis/api/`
+  JSON API still answers but stops at October 2021. The RSS feeds carry
+  only the last few notices per feed. Older CFIA-only CKAN datasets
+  (Class I recalls 2018-2021) are narrower and remain reachable through
+  `ckan_*`.
+
+Quirks handled: over 22,000 titles have leading or trailing spaces;
+Product is null on 18,762 rows; Last updated is null on 2,717 Transport
+Canada rows; "What you should do" is flattened HTML with `&nbsp;` and run-on
+paragraphs; zero-width spaces in some titles; recall class is "" or "--"
+when absent and can be a range ("Type I - Type II"); a few URLs point to
+the other language's page. The dump's Organization is a publishing unit
+(nine values, such as "Medical devices" or "Communications and Public
+Affairs Branch"), so agency is derived from it. The dump has no top-level
+product type, so `product_types` is derived from the unit and category
+leaves; for non-archived notices it matched the site's facet counts
+within 1% (vehicle 9,895 vs 9,889, health products 6,283 vs 6,285,
+consumer products 2,256 vs 2,244, food 1,263 vs 1,272). Cannabis counts
+as a consumer product, as on the site. Dates in search and counts are
+last-updated dates; recall and first-published dates exist only on the
+page.
 
 ## Elections Canada
 

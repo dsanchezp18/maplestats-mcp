@@ -46,6 +46,8 @@ CASES = [
     ("tremblements de terre", "earthquakes_search"),
     ("entreprises fédérales", "ised_corporations_get_corporation"),
     ("rappel de véhicule Transports Canada", "tc_recalls_search"),
+    ("rappel d'aliments allergène ACIA", "recalls_search"),
+    ("statistiques de rappels par année", "recalls_summarize"),
     ("séisme tremblement de terre magnitude", "earthquakes_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),
     ("taux de réadmission à l'hôpital ICIS", "cihi_get_indicator_data"),
