@@ -615,6 +615,54 @@ RECALLS = Topic(
 )
 TOPICS = (*TOPICS, RECALLS)
 
+DAIRY = Topic(
+    "dairy",
+    "Dairy supply management: milk prices, quota, production and sales",
+    (
+        "dairy",
+        "milk",
+        "butter",
+        "cheese",
+        "supply management",
+        "milk quota",
+        "marketing board",
+        "lait",
+        "laitier",
+        "beurre",
+        "fromage",
+        "gestion de l'offre",
+        "matiere grasse",
+    ),
+    (
+        PlanStep(
+            "cdc_query_market_data",
+            "CDC farm milk production by province and milk class sales (litres, kg, $)",
+        ),
+        PlanStep("cdc_get_component_prices", "CDC special milk class component prices ($/kg)"),
+        PlanStep("cdc_get_butter_support_prices", "CDC butter support price"),
+        PlanStep("cdc_get_national_quota", "national milk production target (total quota)"),
+        PlanStep(
+            "wds_search_cubes",
+            "StatCan milk production and utilization (32-10-0113-01), dairy products",
+        ),
+        PlanStep(
+            "cdc_list_datasets", "provincial marketing boards checked and where to go instead"
+        ),
+    ),
+    (
+        (
+            "Total quota is a production target in kg of butterfat, not actual production; CDC "
+            "production is in litres and StatCan's milk tables in kilolitres, so convert before "
+            "comparing."
+        ),
+        (
+            "CDC component prices cover the special classes (3(d), 4(a), 4(m), 5); farm-gate "
+            "blend prices are set by provincial boards and are published only as PDFs."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, DAIRY)
+
 # StatCan's own name for its tables, used when nothing else matches.
 FALLBACK_STEPS: tuple[PlanStep, ...] = (
     PlanStep("statcan_reference_search_data", "StatCan data products on the topic"),

@@ -1594,6 +1594,144 @@ published and say so in their provenance.
 The interactive tools (Federal Employment Tracking Tool and others) load
 static JSON with build-hashed names; they are not covered.
 
+## Canadian Dairy Commission and provincial marketing boards
+
+**Status:** Shipped (CDC); provincial boards not built.
+
+Checked 2026-09-26; shipped the same day as `modules/cdc/` (6 tools,
+prefix `cdc_`). Live smoke test: `scripts/smoke_test_cdc.py`.
+
+### What the CDC publishes in machine-readable form
+
+- **Special milk class component prices**: one static CSV per calendar
+  year, `cdc-ccl.ca/sites/default/files/pricing/pricing_history_<year>.csv`,
+  2002 to the current year (2001 and next year answer 404 with an HTML
+  page). The "History of Special Milk Class Prices" form on
+  `/en/pricing/history` is a Drupal POST that only sets a `file_link`
+  cookie pointing at that file, so the file is read directly. Columns:
+  `Milk Class`, `Effective Date` (with a time, `2025-01-01 00:00:00`),
+  `Butterfat($/kg)`, `Proteins($/kg)`, `Other solids($/kg)`. Classes:
+  4A, 5A, 5B, 5C from 2002; 3D from April 2013; 4M from June 2020. Rows
+  are unsorted. A price the CDC does not set is `0` or blank: 4(m)
+  butterfat, 4(a) butterfat before 2024, 4(a) solids-non-fat for recent
+  months (posted around the 5th of the next month), and months not yet
+  announced (the 2026 file already has November and December rows for
+  3(d) and 4(a) butterfat). The tool returns None for these. October
+  2026 5(a) is 4.6287 / 8.6652 / 1.2415 in both the CSV and the
+  "Component Pricing" page. `cdc_get_component_prices`.
+- **Butter support price** (node 720): one HTML table, 2010-2026, labels
+  like `2024 (May)` and `2022 (Sept.)`; a plain year takes effect
+  February 1. The French page writes `10, 5662`; values are read from the
+  English page. The CDC stopped buying skim milk powder in 2017, so there
+  is no powder support price. `cdc_get_butter_support_prices`.
+- **National milk production target (total quota)**: one HTML page per
+  year, 2017-2026, linked from node 653 (earlier years by email request).
+  Layouts differ: 2017-2019 label rows `December 2019` (the English 2019
+  page has `Mars 2019`), 2020 onward only the month; 2017 and January to
+  July 2018 add a "% change from same month 1 year ago" column; 2018 is
+  split into "Total quota before August 2018" and "since August 2018" and
+  has no December; the 2023 page gives March as `34,889,4085` (kept as
+  text, value None). Tables carry the placeholder caption "Caption text".
+  `cdc_get_national_quota`.
+- **Harmonized Milk Classification System** (node 717): five HTML tables,
+  31 classes and subclasses, with a rowspan for 4(a)'s six product lines
+  and footnote links in `<sup>`. `cdc_get_milk_classes`.
+- **CDC market data**: `od-do.agr.gc.ca/CDC_CCL.csv` (also XML and JSON),
+  the resources of the open.canada.ca dataset "Dairy statistics and market
+  information" (`308a7041-413a-47a0-9604-ae1c55676693`, organization
+  aafc-aac, Open Government Licence - Canada, not DataStore-active). One
+  bilingual 4 MB file of 22,321 rows, regenerated daily (Last-Modified
+  2026-09-26), with four datasets: Total Production - CDC (litres by
+  province, January 2016 to July 2026), Provincial Sales P10 - CDC and
+  Sales by Region - CDC (East/West; litres, kg and dollars of butterfat,
+  protein and other solids by class and subclass, July 2020 to July 2026),
+  and Farms with milk shipments (count on August 1, 2016-2025). The data
+  dictionary lists which confidential classes are folded into others.
+  `cdc_query_market_data`. This file is AAFC-hosted but is the CDC's own
+  data; AAFC's broader dairy portal (Canadian Dairy Information Centre)
+  is left to the AAFC work.
+
+Not machine-readable: the monthly Market Updates are Articulate Rise
+presentations (`share.articulate.com`), cost of production studies and
+annual reports are PDFs, and butter and skim milk powder stocks are not
+published by the CDC. The CDC organization `cdc-ccl` on open.canada.ca
+has no datasets.
+
+Terms: the site links the Government of Canada terms (canada.ca
+transparency/terms); robots.txt disallows only admin, search and user
+paths and sets no crawl delay. The module requests at most 2 per second
+and caches past years for 7 days.
+
+### Provincial boards and national agencies
+
+| Source | Decision | Evidence (2026-09-26) |
+|---|---|---|
+| Dairy Farmers of Ontario (milk.org) | PDF only | Quota exchange archive: monthly `MMS-Exchange-Summary-<Month>-<Year>.pdf`; annual reports PDF; prices behind the industry login. robots.txt allows all. |
+| Les Producteurs de lait du Québec (lait.org) | PDF only | The statistics selector posts `action=get_statistics` to `admin-ajax.php` (allowed by robots.txt, crawl delay 5) and returns links such as `fichiers/stats/2025/202506PF.pdf`: one PDF per month and statistic (farm prices, quota prices and transactions, sales by class, production). |
+| Alberta Milk | PDF only | Monthly `quota-summary` PDFs; the quota page shows 14 months of average prices, components and quality as text only. |
+| BC Milk Marketing Board (bcmilk.com) | Blocked | Every request, robots.txt included, gets HTTP 202 with `sg-captcha: challenge`. |
+| Egg Farmers of Canada | Blocked (terms) | Weekly producer prices, cost of production, production, imports and industrial product declarations are Tableau Public views (workbook `ESPMarketInformationDataExternalv2`, profile `mis.eggs`); `<view>.csv?:showVizHome=no` exports CSV, but only the current fiscal year's default filter (3,344 producer price rows, weeks 202601-202638). The site's terms allow use "only for your own personal non-commercial purposes" and prohibit "reproduction, retransmission, distribution ... republication" without written permission. robots.txt crawl delay 10; Cloudflare answered its "Sorry, you have been blocked" page to a request made seconds after two others. |
+| Chicken Farmers of Canada | PDF only | Monthly `Market-Update-<Month>-<Year>.pdf`; robots.txt crawl delay 60. |
+| Turkey Farmers of Canada | PDF only | Yearly facts page and `turkey-stats-1974_2025.pdf` e-book. |
+| Canadian Hatching Egg Producers (chep-poic.ca) | Blocked | TLS verification fails (unable to get local issuer certificate); plain HTTP answers 403. |
+| Farm Products Council of Canada | No data | Organization `fpcc-cpac` has 0 datasets on open.canada.ca; its site reset connections. |
+
+Alternatives, named in `cdc_list_datasets`: StatCan tables through `wds_`
+(milk production and utilization 32-10-0113-01, dairy products
+32-10-0112-01, milk and cream sales 32-10-0114-01, poultry meat
+32-10-0117-01, eggs 32-10-0121-01 and 32-10-0119-01, chick and poult
+placements 32-10-0120-01, all checked through getCubeMetadata), and Global
+Affairs Canada's tariff rate quota holder lists for dairy, chicken, eggs
+and turkey through `ckan_search_datasets(portal="federal",
+fq="organization:dfatd-maecd")`.
+
+## ISED Business Number (BN) validation
+
+**Status:** Blocked.
+
+Checked 2026-09-26. No tool built; `ised_corporations_get_corporation`
+already accepts and returns business numbers for federal corporations.
+
+- **BN Web Validation Look-Up Tool**: the Treasury Board "Data Reference
+  Standard on the Business Number" (effective May 7, 2024) lists it as
+  "accessible only via login". Its link goes to ISED's Keycloak sign-in
+  (`sso.ised-isde.canada.ca/auth/realms/individual`, client
+  `bnsearch`); the application, `ised-isde.canada.ca/app/scr/isedbnapi/
+  web/searchBn-chercherNe`, answers 302 to
+  `oauth2/authorization/keycloak` without a session. CRA's privacy impact
+  assessment summary for the Web Validation Service says it "is only
+  available to government departments who have adopted the use of the BN
+  under the Terms of Use (ToU) or in the case of Provincial users a
+  Memorandum of Understanding", disclosure rests on ITA 241(4)(l) and ETA
+  295(5)(j) for program administration, and participants may not disclose
+  the results further. No public endpoint, fields or rate limits exist.
+- **CRA GST/HST Registry**: confirms one GST/HST number given the business
+  name; its terms say it "is not intended to be a search engine", may be
+  used "only to validate the GST/HST number of a business", and "any
+  commercial reproduction of the registry results is strictly
+  prohibited". It validates GST/HST accounts, not BNs in general. Not built.
+- **Canada's Business Registries** (`ised-isde.canada.ca/cbr-rec/`): a
+  public JSON API behind the search page
+  (`/cbr/srch/api/v3/search?fq=keyword:{...}`) answers without a key and
+  finds businesses by name or BN across federal and provincial registries
+  (a search for 847871746 returns Shopify Inc., BN `847871746RC0001`,
+  with its Alberta, Ontario and Quebec extra-provincial records). Its
+  terms, shown before first use and in the FAQ, say "We don't allow the
+  use of automated tools to collect data" and "You are not allowed to use
+  automated tools to copy, search or scrape data". Not built.
+- **ISED API Store** (`api.ised-isde.canada.ca`): the Federal Corporation
+  API (`/v1/corporations/{corporation_bn9}.json`, `/v2/corporations/
+  {number}/directors`) needs a `user-key` header from a plan that
+  requires login (Public Plan, 60 hits per minute). The unauthenticated
+  legacy endpoint the corporations submodule already uses covers the same
+  lookup.
+
+Confirmed live: `ised_corporations_get_corporation("4261607")` and
+`("847871746")` both return Shopify Inc. with business number 847871746.
+This covers federal corporations only; provincial corporations, sole
+proprietorships and partnerships have no public BN lookup that permits
+automated use.
+
 ## StatCan terms: SDMX, CORD, NDM
 
 **Status:** Reference note.

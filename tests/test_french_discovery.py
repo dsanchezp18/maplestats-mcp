@@ -54,6 +54,9 @@ CASES = [
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),
     ("débit des pipelines Régie de l'énergie", "cer_query_file"),
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),
+    ("prix des composants du lait classes spéciales", "cdc_get_component_prices"),
+    ("quota total cible nationale de production laitière", "cdc_get_national_quota"),
+    ("prix de soutien du beurre", "cdc_get_butter_support_prices"),
 ]
 
 

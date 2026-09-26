@@ -68,6 +68,7 @@ bilingual one-line description of each module):
 | ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
 | Canada Gazette | `gazette_` | Part I notices and proposed regulations, Part II registered regulations: issues, notice lists, notice text (EN/FR) |
 | Vehicle recalls | `tc_recalls_` | Transport Canada motor vehicle safety recalls by make, model and year, with bilingual details |
+| Dairy supply management | `cdc_` | Canadian Dairy Commission: special milk class component prices since 2002, butter support price, national total quota, Harmonized Milk Classification System, milk production by province and milk class sales (EN/FR); provincial marketing boards checked and routed to StatCan tables |
 | Recalls and safety alerts | `recalls_` | Health Canada, CFIA and Transport Canada recalls and alerts (recalls-rappels.canada.ca): search, counts by year or category, affected products and lots (EN/FR) |
 | Geocoding and place names | `nrcan_geo_` | NRCan Geolocator (places, addresses, postal codes) and Canadian Geographical Names Database (EN/FR) |
 | Parliament | `parliament_` | House of Commons bills, recorded votes with party and MP ballots, MPs, Hansard and committee speeches, full-text Hansard search, and committees with their meetings, witnesses and transcripts (via unofficial OpenParliament.ca, EN/FR) |
