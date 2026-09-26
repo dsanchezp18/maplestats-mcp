@@ -1,0 +1,116 @@
+<div class="tabs clients" data-tabs="client">
+  <div class="tablist" role="tablist" aria-label="{en}MCP client{fr}Client MCP{/}">
+    <button type="button" role="tab" id="cl-tab-code" data-key="code" aria-controls="cl-code" aria-selected="true" tabindex="0">Claude Code</button>
+    <button type="button" role="tab" id="cl-tab-desktop" data-key="desktop" aria-controls="cl-desktop" aria-selected="false" tabindex="-1">Claude Desktop</button>
+    <button type="button" role="tab" id="cl-tab-cursor" data-key="cursor" aria-controls="cl-cursor" aria-selected="false" tabindex="-1">Cursor</button>
+    <button type="button" role="tab" id="cl-tab-vscode" data-key="vscode" aria-controls="cl-vscode" aria-selected="false" tabindex="-1">VS Code</button>
+    <button type="button" role="tab" id="cl-tab-codex" data-key="codex" aria-controls="cl-codex" aria-selected="false" tabindex="-1">Codex CLI</button>
+    <button type="button" role="tab" id="cl-tab-gemini" data-key="gemini" aria-controls="cl-gemini" aria-selected="false" tabindex="-1">Gemini CLI</button>
+    <button type="button" role="tab" id="cl-tab-other" data-key="other" aria-controls="cl-other" aria-selected="false" tabindex="-1">{en}Other clients{fr}Autres clients{/}</button>
+  </div>
+
+  <div role="tabpanel" id="cl-code" aria-labelledby="cl-tab-code">
+    <p>{en}Run this once in a terminal. <code>--scope user</code> makes the server available in every project; leave it out to add it to the current project only.{fr}Exécutez cette commande une fois dans un terminal. <code>--scope user</code> rend le serveur accessible dans tous les projets; sans cette option, il n'est ajouté qu'au projet courant.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="cl-code-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-code-1">claude mcp add --scope user maplestats -- uvx maplestats-mcp</code></pre>
+    </figure>
+  </div>
+
+  <div role="tabpanel" id="cl-desktop" aria-labelledby="cl-tab-desktop" hidden>
+    <p>{en}In Claude Desktop, open Settings, then Developer, then Edit Config. Add the server to the file that opens, save it and restart Claude.{fr}Dans Claude Desktop, ouvrez Réglages, puis Développeur, puis Modifier la configuration. Ajoutez le serveur au fichier qui s'ouvre, enregistrez et redémarrez Claude.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span class="path">claude_desktop_config.json</span><button type="button" class="copy" data-copy-target="cl-desktop-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-desktop-1">{
+  <span class="s-key">"mcpServers"</span>: {
+    <span class="s-key">"maplestats"</span>: {
+      <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
+      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+    }
+  }
+}</code></pre>
+    </figure>
+    <p>{en}The file lives at <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> on macOS and <code>%APPDATA%\Claude\claude_desktop_config.json</code> on Windows.{fr}Le fichier se trouve dans <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> sous macOS et dans <code>%APPDATA%\Claude\claude_desktop_config.json</code> sous Windows.{/}</p>
+  </div>
+
+  <div role="tabpanel" id="cl-cursor" aria-labelledby="cl-tab-cursor" hidden>
+    <p class="install-links"><a href="cursor://anysphere.cursor-deeplink/mcp/install?name=maplestats&amp;config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJtYXBsZXN0YXRzLW1jcCJdfQ==">{en}Add to Cursor{fr}Ajouter à Cursor{/}</a></p>
+    <p>{en}The link opens Cursor with the entry filled in. To add it by hand, put it in <code>~/.cursor/mcp.json</code> for every project, or in <code>.cursor/mcp.json</code> for one project.{fr}Le lien ouvre Cursor avec l'entrée déjà remplie. Pour l'ajouter à la main, placez-la dans <code>~/.cursor/mcp.json</code> pour tous les projets, ou dans <code>.cursor/mcp.json</code> pour un seul projet.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span class="path">~/.cursor/mcp.json</span><button type="button" class="copy" data-copy-target="cl-cursor-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-cursor-1">{
+  <span class="s-key">"mcpServers"</span>: {
+    <span class="s-key">"maplestats"</span>: {
+      <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
+      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+    }
+  }
+}</code></pre>
+    </figure>
+  </div>
+
+  <div role="tabpanel" id="cl-vscode" aria-labelledby="cl-tab-vscode" hidden>
+    <p class="install-links"><a href="vscode:mcp/install?%7B%22name%22%3A%22maplestats%22%2C%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22maplestats-mcp%22%5D%7D">{en}Install in VS Code{fr}Installer dans VS Code{/}</a></p>
+    <p>{en}To add it by hand, note that VS Code uses a <code>servers</code> key, not <code>mcpServers</code>. Put this in <code>.vscode/mcp.json</code> in a workspace, or run MCP: Open User Configuration from the Command Palette to add it for every workspace.{fr}Pour l'ajouter à la main, notez que VS Code utilise la clé <code>servers</code>, et non <code>mcpServers</code>. Placez ceci dans <code>.vscode/mcp.json</code> d'un espace de travail, ou lancez MCP: Open User Configuration dans la palette de commandes pour l'ajouter à tous vos espaces de travail.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span class="path">.vscode/mcp.json</span><button type="button" class="copy" data-copy-target="cl-vscode-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-vscode-1">{
+  <span class="s-key">"servers"</span>: {
+    <span class="s-key">"maplestats"</span>: {
+      <span class="s-key">"type"</span>: <span class="s-str">"stdio"</span>,
+      <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
+      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+    }
+  }
+}</code></pre>
+    </figure>
+  </div>
+
+  <div role="tabpanel" id="cl-codex" aria-labelledby="cl-tab-codex" hidden>
+    <p>{en}Add it from the terminal, or write the same entry into <code>~/.codex/config.toml</code> yourself.{fr}Ajoutez-le depuis le terminal, ou écrivez vous-même la même entrée dans <code>~/.codex/config.toml</code>.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="cl-codex-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-codex-1">codex mcp add maplestats -- uvx maplestats-mcp</code></pre>
+    </figure>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span class="path">~/.codex/config.toml</span><button type="button" class="copy" data-copy-target="cl-codex-2">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-codex-2">[mcp_servers.maplestats]
+command = <span class="s-str">"uvx"</span>
+args = [<span class="s-str">"maplestats-mcp"</span>]</code></pre>
+    </figure>
+  </div>
+
+  <div role="tabpanel" id="cl-gemini" aria-labelledby="cl-tab-gemini" hidden>
+    <p>{en}Add it from the terminal (<code>-s user</code> for every project), or write the entry into <code>~/.gemini/settings.json</code> next to any settings already there.{fr}Ajoutez-le depuis le terminal (<code>-s user</code> pour tous les projets), ou écrivez l'entrée dans <code>~/.gemini/settings.json</code>, à côté des réglages qui s'y trouvent déjà.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="cl-gemini-0">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-gemini-0">gemini mcp add -s user maplestats uvx maplestats-mcp</code></pre>
+    </figure>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span class="path">~/.gemini/settings.json</span><button type="button" class="copy" data-copy-target="cl-gemini-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-gemini-1">{
+  <span class="s-key">"mcpServers"</span>: {
+    <span class="s-key">"maplestats"</span>: {
+      <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
+      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+    }
+  }
+}</code></pre>
+    </figure>
+  </div>
+
+  <div role="tabpanel" id="cl-other" aria-labelledby="cl-tab-other" hidden>
+    <p>{en}Most MCP clients accept this <code>mcpServers</code> entry. If you installed the command with <code>uv tool install</code> or <code>pip</code>, use <code>"command": "maplestats-mcp"</code> and drop <code>args</code>.{fr}La plupart des clients MCP acceptent cette entrée <code>mcpServers</code>. Si vous avez installé la commande avec <code>uv tool install</code> ou <code>pip</code>, utilisez <code>"command": "maplestats-mcp"</code> et retirez <code>args</code>.{/}</p>
+    <figure class="panel snippet">
+      <figcaption class="panel-bar"><span>JSON</span><button type="button" class="copy" data-copy-target="cl-other-1">{en}Copy{fr}Copier{/}</button></figcaption>
+      <pre><code id="cl-other-1">{
+  <span class="s-key">"mcpServers"</span>: {
+    <span class="s-key">"maplestats"</span>: {
+      <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
+      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+    }
+  }
+}</code></pre>
+    </figure>
+  </div>
+</div>

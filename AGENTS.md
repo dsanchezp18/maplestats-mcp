@@ -168,7 +168,14 @@ assumption shared by the code and its tests.
    them. `tests/test_live_coverage.py` fails for a module with
    neither: the Earthquakes Canada module passed all its mocked tests
    while every live call failed.
-8. Run the full gate below before considering it done.
+8. Add the module to `SOURCES` in `scripts/build_site.py` (display
+   name in English and French, level, provinces), and a `FAMILIES`
+   title for each sub-API folder. The website's tool atlas is generated
+   from the registry, but these labels are not in it;
+   `tests/test_site.py` fails when one is missing. A new portal in the
+   CKAN, ArcGIS Hub or Socrata families needs its province in
+   `PORTAL_PLACES` there too.
+9. Run the full gate below before considering it done.
 
 ## Development commands
 
@@ -199,6 +206,25 @@ or directly:
 
 ```bash
 uv run python scripts/smoke_test.py
+```
+
+## Website
+
+`site/` holds the website's templates and assets;
+`scripts/build_site.py` renders them into `build/site/` (gitignored),
+English at the root and French under `fr/`, and
+`.github/workflows/pages.yml` publishes that on every push to `main`
+that touches `site/`, `src/` or the script. The tool atlas, the counts,
+the worked examples and the search index come from the running server,
+so there is nothing to update by hand when a tool changes. The search
+in the page is the server's own BM25 index shipped as JSON, with the
+query tokenizer ported to `site/assets/site.js`; if you change
+`shared/search.py`, change `tokenize()` there to match
+(`tests/test_site.py` checks the Python side against `search_tools`).
+
+```bash
+uv run python scripts/build_site.py
+uv run python -m http.server --directory build/site 8080
 ```
 
 ## Style

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Tool atlas{fr}Répertoire des outils{/} · MapleStats MCP</title>
+<meta name="description" content="{en}All {{tool_count}} MapleStats MCP tools with their parameters and keywords, searchable the way search_tools ranks them.{fr}Les {{tool_count}} outils de MapleStats MCP, avec leurs paramètres et leurs mots-clés, classés comme le fait search_tools.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+</head>
+<body>
+{{> header}}
+<main id="main" data-atlas>
+
+<section class="wrap page-head">
+  <p class="label">{en}Tool atlas{fr}Répertoire des outils{/}</p>
+  <h1>{en}Every tool the server exposes{fr}Tous les outils du serveur{/}</h1>
+  <p class="lede">{en}{{tool_count}} tools in {{module_count}} modules, read from the server's code when this page was built. Search ranks them the way search_tools does. Open a tool for its parameters, its keywords and a call you can adapt.{fr}{{tool_count}} outils répartis dans {{module_count}} modules, lus dans le code du serveur lors de la construction de cette page. La recherche les classe comme search_tools. Ouvrez un outil pour voir ses paramètres, ses mots-clés et un appel à adapter. Les descriptions sont en anglais, comme dans le serveur; les mots-clés français servent à la recherche.{/}</p>
+  <div class="pinned-tools">
+    <p class="label">{en}Always visible to the agent{fr}Toujours visibles pour l'agent{/}</p>
+    <dl>
+      <div><dt><code>plan_query</code></dt><dd>{en}Turns a question into an ordered plan across agencies, with caveats on combining them.{fr}Transforme une question en plan ordonné entre organismes, avec les précautions pour combiner les résultats.{/}</dd></div>
+      <div><dt><code>search_tools</code></dt><dd>{en}Ranks the other {{searchable_count}} tools against a plain-language query and returns the top {{search_top}}.{fr}Classe les {{searchable_count}} autres outils selon une requête en langage courant et renvoie les {{search_top}} premiers.{/}</dd></div>
+      <div><dt><code>call_tool</code></dt><dd>{en}Runs a tool that search_tools found, by name, with its arguments.{fr}Exécute un outil trouvé par search_tools, par son nom, avec ses arguments.{/}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<div class="atlas-controls">
+  <div class="wrap">
+    <div class="atlas-search">
+      <label class="sr" for="atlas-q">{en}Search the tools{fr}Chercher dans les outils{/}</label>
+      <input id="atlas-q" type="search" autocomplete="off" spellcheck="false" placeholder="{en}Search in English or French: rents, taux directeur, PUMF…{fr}Cherchez en français ou en anglais : loyers, policy rate, FMGD…{/}">
+      <span class="atlas-status" data-atlas-status aria-live="polite">{en}{{tool_count}} tools{fr}{{tool_count}} outils{/}</span>
+    </div>
+    <div class="chips" role="group" aria-label="{en}Filter by level{fr}Filtrer par niveau{/}">{{level_filters}}</div>
+  </div>
+</div>
+
+<div class="wrap atlas-body">
+  <nav class="atlas-index" aria-label="{en}Modules{fr}Modules{/}">{{atlas_index}}</nav>
+  <div>
+    <div class="atlas-results" data-atlas-results hidden></div>
+    <div data-atlas-groups>
+{{atlas}}
+    </div>
+  </div>
+</div>
+
+</main>
+{{> footer}}
+</body>
+</html>
