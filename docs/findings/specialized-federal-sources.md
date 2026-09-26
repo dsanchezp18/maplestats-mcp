@@ -1364,6 +1364,65 @@ months; the rest are bulk downloads via `ckan_get_dataset`. A dedicated
 module would add little beyond typed wage columns and picking the
 DataStore-active month, so none was built.
 
+## IRCC monthly updates (permanent and temporary residents, asylum)
+
+**Status:** Candidate module.
+
+Checked 2026-09-25. IRCC publishes 12 "Monthly IRCC Updates" datasets on
+the federal CKAN catalogue (`cic`), 8 of them current: permanent
+residents, Express Entry permanent residents and invited candidates,
+study permit holders, TFWP and International Mobility Program work permit
+holders, transitions from temporary to permanent residence, asylum
+claimants, and operational processing. None is DataStore-active.
+
+The CSV resources are served from
+`www.ircc.canada.ca/opendata-donneesouvertes/data/ODP-*.csv` and download
+without a challenge. Despite the extension they are tab-separated, in long
+format, one row per month and breakdown, January 2015 to the latest month
+(July 2026 on the day checked). Columns carry both languages side by side
+(`EN_YEAR`, `EN_MONTH`, `EN_PROVINCE_TERRITORY`, `FR_...`, `TOTAL`).
+Examples: `ODP-PR-PT_IMMCAT` (province by immigration category, group and
+component; 20,610 rows, 4.4 MB) and `ODP-PR-Citz` (country of citizenship;
+23,197 rows). Other permanent-resident files break down by census
+metropolitan area, census subdivision, occupation (NOC), gender, age group
+and official language.
+
+Counts are rounded to multiples of 5 and marked "not for calculations";
+values between 0 and 5 appear as `--`. The XLSX versions are pivot tables
+and not worth parsing.
+
+If built: one catalogue tool listing the `ODP-*` files per dataset, and one
+query tool that filters a file by year, month and breakdown value and
+returns tidy rows, keeping `--` as suppressed (not zero) and stating the
+rounding. This is the monthly, sub-provincial immigration series that
+StatCan's quarterly demographic estimates do not give.
+
+## CRA individual tax statistics and benefit statistics
+
+**Status:** Covered (via `ckan_*`).
+
+Checked 2026-09-25. Individual Income Tax Return Statistics (formerly T1
+Final Statistics) appear as one dataset per tax year, 2011 to 2022, each
+with 7 to 143 resources: per-table CSVs (general statement by province,
+returns by income class, age and sex) plus PDFs and explanatory notes.
+File names and table numbering change between editions (`t01ca.csv`,
+`table1.csv`, `tbl1_ac.csv`), so a cross-year series needs a lookup table
+per edition. CRA also publishes benefit statistics by forward sortation
+area (Canada Child Benefit by benefit year, Canada Carbon Rebate
+recipients). None is DataStore-active; `ckan_get_dataset` gives the
+files. A dedicated module would only be worth it to harmonize T1 tables
+across editions.
+
+## Parliamentary Budget Officer
+
+**Status:** Investigated, not usable.
+
+Checked 2026-09-25. pbo-dpb.ca has no data or API page (`/en/data` is
+404). Its "Tools" page and publications are rendered by a Vue app from
+`cms.pbo-dpb.ca`; the analysis is published as reports, with supporting
+spreadsheets attached to individual publications. There is no series to
+query.
+
 ## StatCan terms: SDMX, CORD, NDM
 
 **Status:** Reference note.
