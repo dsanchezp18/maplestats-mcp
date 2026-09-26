@@ -77,6 +77,7 @@ bilingual one-line description of each module):
 | Energy regulation | `cer_` | Canada Energy Regulator CSVs: pipeline throughput and capacity, oil/gas/LNG/NGL exports, tolls, incidents (EN/FR) |
 | Energy use | `nrcan_energy_use_` | NRCan Comprehensive Energy Use Database and energy surveys (SHEU, SCIEU, ICE, ...), EN/FR tables |
 | Oceans | `dfo_iwls_` | DFO tide stations, tide times, predicted and observed water levels |
+| Grain | `cgc_` | Canadian Grain Commission: Grain Statistics Weekly from 2013-14 (deliveries, shipments, stocks, terminal receipts and exports by province, port and grade) and monthly grain exports by destination country since 2013 (EN/FR) |
 | Other federal | `ircc_`, `ircc_monthly_`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, IRCC monthly immigration tables (permanent residents, permits, asylum), Parliamentary Budget Officer costings and outlooks, candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |
 | Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_` | Alberta Energy Regulator; BC Geographic Warehouse; Alberta Economic Dashboard (~260 curated economic tables); Institut de la statistique du Québec (~7,000 detailed tables) |
 | CKAN catalogues | `ckan_` + `portal` | Federal (open.canada.ca), Ontario, BC, Alberta, Quebec, NWT, Yukon, Montreal, Toronto, Regina (`ckan_list_portals`): dataset search/detail and DataStore row queries |

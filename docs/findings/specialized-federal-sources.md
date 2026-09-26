@@ -1339,6 +1339,202 @@ metadata is reachable through `ckan_*`, but the data files are not.
 Revisit if the files move to open.canada.ca storage or the challenge is
 lifted.
 
+## Canadian Grain Commission
+
+**Status:** Shipped.
+
+Checked and shipped 2026-09-26 as `modules/cgc/` (`cgc_weekly_describe`,
+`cgc_weekly_query`, `cgc_exports_describe`, `cgc_exports_query`).
+
+**Federal CKAN.** `organization_autocomplete?q=grain` gives the slug
+`cgc-ccg`: 13 datasets, none with a DataStore resource. The useful ones
+(Grain Statistics Weekly, Canadian grain exports, Grain deliveries at
+prairie points, Producer cars statistics) list per-crop-year CSVs on
+grainscanada.gc.ca, but the records were last updated in October 2024 and
+stop at crop year 2024-25; 2025-26 and the current 2026-27 are not listed.
+"Exports of Canadian grain and wheat flour" points to
+`/exports-grain-wheat-flour/csv/exports.csv`, which now answers HTTP 200
+with the site's "Error 404" page. So `ckan_*` does not reach current CGC
+data, which is why a module was built.
+
+**Reaching grainscanada.gc.ca.** A plain `curl` from the sandbox fails in
+the TLS handshake with `SSL_ERROR_SYSCALL`, as reported, but not every
+time and not because of ALPN: curl offers `h2,http/1.1` in every case, and
+the same URL succeeded with `--http2` and mostly with `--http1.1` in the
+same minute. With httpx and fresh connections to the bare host, 3 of 15
+failed with `http2=False` and 2 of 5 (on the 25 MB file) with
+`http2=True`; the `www.` host passed 30 of 30 in one run and failed once
+in a later curl run. The failures are intermittent handshake drops on the
+server side, unlike StatCan's fixed ALPN block. The module uses
+`www.grainscanada.gc.ca` (the site's own links do) through the shared
+client (`http2=True`) and retries connection failures up to 9 times in
+all (3 passes over the shared client's 3 attempts). No failure reached
+the tools in the live runs.
+
+**Grain Statistics Weekly.** The landing page links the current crop
+year's CSV (`/en/grain-research/statistics/grain-statistics-weekly/2026-27/gsw-shg-en.csv`,
+2.7 MB and 24,507 rows after 7 weeks; the page still says "15.0 mb")
+plus one Excel file per week; an archive page lists 2017-18 to 2025-26
+and the CKAN record adds 2013-14 to 2016-17. All 14 English files were
+downloaded and parsed:
+
+- Long format: crop year, grain week, week-ending date, worksheet,
+  metric, period (`Current Week` or `Crop Year` to date), grain, grade,
+  region, Ktonnes (thousands of tonnes). The same 12 worksheets every
+  year: Primary, Process, Primary Shipment Distribution, Producer Cars,
+  Feed Grains, Feed Grains Shipment Distribution, Terminal Receipts,
+  Terminal Exports, Terminal Stocks, Terminal Disposition, Imported
+  Grains, Summary.
+- A full crop year is 131,000 to 219,000 rows and 12 to 25 MB (2024-25:
+  219,182 rows, 24.7 MB).
+- The header changes: `crop_year,grain_week,...` to 2016-17,
+  `grain_week,crop_year,...` from 2017-18 to 2023-24, and quoted Title
+  Case (`"Crop Year","Grain Week",...`) from 2024-25. English files up to
+  2017-18 sit in a `csv/` subfolder.
+- Week-ending dates are day/month/year, zero-padded or not
+  (`09/08/2026`, `11/8/2013`). Week 52 can end on July 31 rather than a
+  Sunday. Some years skip a week number (2018-19 starts at week 2).
+- Values carry thousands separators to 2023-24 (`1,191.10`), negative
+  adjustments in brackets (`(0.4)`), and blank cells as `""` or `.`.
+- Rows with no region are national totals (Process worksheet).
+- The 2025-26 file does not keep week order (its first rows are
+  `Crop Year` rows of week 1).
+- `All grades combined` is used for grains not reported by grade (peas):
+  in the 2026-27 file it never overlaps per-grade rows, so summing over
+  grades does not double count.
+
+French files (`/fr/recherche-donnees/statistiques/statistique-hebdomadaire/26-27/gsw-shg-fr.csv`,
+two-digit crop years) are Windows-1252 with French headers and labels
+("Silos primaires", "Livraisons", "Blé", "Semaine en cours"). Since
+2025-26 the accented letters are missing from the header ("Silo Agr",
+"Activit"); the 2014-15 file writes dates as `10AUG2014`. Row counts
+differ slightly from the English file (2025-26: 218,434 French rows,
+218,374 English), and the French Summary worksheet has a "La semaine
+précédente" period the English one lacks.
+
+Checked values: week 7 of 2026-27 (ending 2026-09-20) gives canola
+deliveries to primary elevators of 55.1, 217.7, 91.8 and 2.6 thousand
+tonnes in Manitoba, Saskatchewan, Alberta and British Columbia, 367.2 in
+total, the same as the CGC's week 7 Excel report. The file for that week
+has Last-Modified Thursday 2026-09-24.
+
+**Monthly exports.** "Exports of grain from licensed facilities"
+(`/en/grain-research/statistics/exports-grain-licensed-facilities/csv/exports.csv`,
+French `/fr/recherche-donnees/statistiques/exportations/csv/exportation.csv`):
+50,397 rows, January 2013 to July 2026 (Last-Modified 2026-08-24), with
+year, month name, grain (42 names, including imported and "US" grains),
+grade (`--` when ungraded), Ktonnes, elevator type (PRIMARY, TERMINALS,
+CONTAINER), port region, world region (blank for "Not Specified") and
+destination (156 countries). The English file is Windows-1252
+("Türkiye"). The CSV lags the monthly Excel files by about a month.
+Canola exports to China P.R. in calendar 2025 sum to 2,125.7 thousand
+tonnes.
+
+**What was built.** Describe tools list the weeks, worksheets and their
+metrics, periods, grains, regions and grades (or the export dimensions);
+query tools filter (case- and accent-insensitive, one value or a list),
+bound weeks or years, and either return published rows or sum per week
+(or per month, calendar year or crop year for exports) over the columns
+not kept in `group_by`. Summing weekly rows refuses to mix metrics or
+periods. Weekly tables are held column-wise so a full crop year costs a
+few MB of memory. `lang="fr"` reads the French files.
+
+Not covered: grain deliveries at prairie points (annual), producer car
+allocations (a separate weekly CSV; the weekly file's Producer Cars
+worksheet has the shipments), elevator charge summaries, varieties by
+acreage insured, grain quality data, and the Excel-only weekly reports.
+
+## Agriculture and Agri-Food Canada (AAFC)
+
+**Status:** Covered (via `ckan_*`).
+
+Checked 2026-09-26. `organization_autocomplete?q=agriculture` gives
+`aafc-aac`: 399 datasets, all under the Open Government Licence. Most are
+geospatial (Annual Crop Inventory, soil surveys and Soil Landscapes of
+Canada, agroclimate indicators, Canadian Drought Monitor, crop spatial
+density, grain elevator locations), served as GeoTIFF, file geodatabase,
+GeoJSON and ESRI REST.
+
+The market information is a set of bulk files on `od-do.agr.gc.ca`, each
+a CSV, JSON and XML with bilingual columns and an HTML data dictionary:
+
+| Dataset | File | Latest data on 2026-09-26 |
+|---|---|---|
+| Weekly Red Meat Slaughter | `WeeklyRedMeatSlaughter_AbattageAnimauxViandeRougeHebdomadaire.csv` | week ending 2026-09-19 |
+| Monthly Red Meat Slaughter | `MonthlyRedMeatSlaughter_AbattageAnimauxViandeRougeMensuelle.csv` | 2026-09-26 (month to date) |
+| Weekly Poultry Slaughter | `WeeklyPoultrySlaughter_AbattageVolailleHebdomadaire.csv` | 2026-09-19 |
+| Imports and exports of poultry and red meat | `MeatImportExport_ImportationExportationViande.csv` | 2026-09-19 |
+| Imports and exports of eggs and egg products | `Egg_ImEx_ImEx_Oeufs.csv` | 2026-09-26 |
+| Poultry and egg products in storage | `PoultryEggStorage_StockageVolaillesOeufs.csv` | 2026-09-01 |
+| Dairy statistics and market information (Canadian Dairy Commission data) | `CDC_CCL.csv` | 2026-07-31 |
+| Daily Wholesale Prices Report (last 55 weeks, 42 MB; archives by 5-year zip) | `DailyWholesalePrices_PrixDeGrossistesQuotidiens.csv` | 2026-09-23 |
+| Weekly Wholesale Prices (last 55 weeks) | `WeeklyWholesalePrices_PrixDeGrossistesHebdomadaires55.csv` | regenerated nightly |
+| Horticulture Monthly Storage Reports | `MonthlyStorageReports_RapportsMensuelsEntreposage.csv` | timed out once; not read |
+| Weekly FOB Market prices | `WeeklyFOBMarketPrices_PrixDeMarcheFABHebdomadaire.csv` | 2014-05-23 (discontinued) |
+
+Every file had Last-Modified 2026-09-26 02:57 GMT: they are regenerated
+nightly, even though the CKAN records were last edited in 2023-2025.
+Their DataStore copies are not usable: twelve market resources are
+flagged `datastore_active`, but `datastore_search` answers "Resource not
+found" for eleven of them (Meat Imports Exports, both FOB price files,
+Horticulture storage, the seven Daily Wholesale Prices archive zips), and
+the one that answers (Daily Wholesale Prices, 55 weeks, 197,291 rows)
+stops at 2025-12-05.
+`ckan_get_dataset` returns the current file URLs; `ckan_datastore_search`
+should not be used for AAFC market data.
+
+AAFC's own site (agriculture.canada.ca) has no separate data portal or
+JSON API: the red meat and livestock market information pages link to
+these open.canada.ca records and to AIMIS (`aimis-simia.agr.gc.ca`), an
+interactive report generator built from HTML forms. A module would add
+typed columns and filters over files that are already current and
+reachable, so none was built. The Canadian Dairy Commission's own data
+has a separate roadmap row.
+
+## CFIA (Canadian Food Inspection Agency)
+
+**Status:** Partly covered (via `ckan_*`).
+
+Checked 2026-09-26. `organization_autocomplete?q=inspection` gives
+`cfia-acia`: 267 datasets, mostly food testing results:
+
+- Animal Rabies Cases in Canada: 2011-2013, 2014-2018, 2019-2021, 2022
+  and 2023 as separate datasets, all DataStore-active (monthly counts by
+  province and species; 156 to 780 rows each).
+- Federally Reportable Aquatic Animal Diseases in Canada 2010-2025: two
+  DataStore-active CSVs (295 and 157 rows, including blank rows).
+- Federally Reportable Diseases for Terrestrial Animals in Canada
+  (2010-2021): one bulk CSV, not DataStore-active, not updated since
+  2021.
+- CFIA National Microbiological Monitoring Program data by fiscal year
+  (2015/2016 to 2024/2025), Food Safety Action Plan targeted surveys,
+  chemical residue monitoring, authenticity surveys (honey, oils, fish
+  and meat species substitution), plant pest surveillance (emerald ash
+  borer and others to 2020), Class I recalls with public warnings
+  (2018-2021), many DataStore-active.
+
+On inspection.canada.ca, the current animal disease figures are HTML
+only:
+
+- "Federally reportable diseases for terrestrial animals in Canada"
+  (`/en/animal-health/terrestrial-animals/diseases/reportable/canada`)
+  has one table per year from 2011 to 2026 (16 tables) with a monthly
+  breakdown, updated on the 10th of each month (current as of 2026-08-31: avian
+  influenza 19, chronic wasting disease 7, equine infectious anemia 7 in
+  2026). The yearly URLs used before (`...-canada-2025`) now answer HTTP
+  410.
+- "Status of ongoing avian influenza response by province" has a table
+  of current and released infected premises and birds affected since
+  December 2021 (updated 2026-09-04: 12 current, 650 released, 17,561,900
+  birds).
+
+No JSON or CSV behind either page was found. Recalls are a separate
+roadmap row (Government of Canada Recalls and Safety Alerts). A small
+scraper for the two tables would cover the 2022-2026 gap in terrestrial
+disease counts and the avian influenza status; it was not
+built in this pass because the rest of CFIA's data is reachable through
+`ckan_*` and the gap is two HTML tables.
+
 ## Job Bank labour market information (ESDC)
 
 **Status:** Covered (via `ckan_*`).

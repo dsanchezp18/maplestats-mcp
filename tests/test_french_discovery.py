@@ -52,6 +52,8 @@ CASES = [
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),
     ("débit des pipelines Régie de l'énergie", "cer_query_file"),
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),
+    ("livraisons de canola aux silos primaires", "cgc_weekly_query"),
+    ("exportations de blé par pays de destination", "cgc_exports_query"),
 ]
 
 
