@@ -1,9 +1,5 @@
 SOURCE = "epcor"
 DAILY_URL = "https://apps.epcor.ca/DailyWaterQuality/Default.aspx"
-REPORTS_PAGE_URL = (
-    "https://www.epcor.com/ca/en/ab/edmonton/safety/water-quality/water-quality-reports.html"
-)
-REPORTS_BASE_URL = "https://www.epcor.com"
 TIMEZONE = "America/Edmonton"
 
 # Plant key -> the `zone` query value the iframe uses (confirmed live).
@@ -25,4 +21,3 @@ RATE_LIMIT_PER_SECOND = 1.0
 RATE_LIMIT_CAPACITY = 3.0
 
 CACHE_TTL_DAILY_SECONDS = 60 * 60
-CACHE_TTL_REPORTS_SECONDS = 12 * 60 * 60

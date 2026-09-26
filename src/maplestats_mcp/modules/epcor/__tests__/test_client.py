@@ -24,16 +24,6 @@ _DAILY_PAGE = """
 </table>
 """
 
-_BASE = "/content/dam/epcor/documents/water-quality-reports/"
-_REPORTS_PAGE = f"""
-<a href="{_BASE}2024-09_edmonton_water-quality_monthly-summary.pdf">Sep</a>
-<a href="{_BASE}2025-03_edmonton_water-quality_monthly-report..pdf">Mar</a>
-<a href="{_BASE}2026-07-edmonton-water-quality-monthly-bacteriological-summary.pdf">Jul</a>
-<a href="{_BASE}2026-07-edmonton-wastewater-quality-monthly-summary.pdf">Jul ww</a>
-<a href="{_BASE}2025-edmonton-water-quality-annual-report.pdf">2025</a>
-<a href="{_BASE}2025-edmonton-water-quality-annual-report.pdf">duplicate</a>
-"""
-
 
 @pytest.fixture(autouse=True)
 def _reset_cache():
@@ -72,33 +62,3 @@ async def test_get_daily_water_quality(httpx_mock):
 async def test_unknown_plant_raises():
     with pytest.raises(InvalidInput):
         await client.get_daily_water_quality("gold_bar")  # type: ignore[arg-type]
-
-
-def test_parse_report_links_normalizes_both_namings():
-    reports = client.parse_report_links(_REPORTS_PAGE)
-    by_name = {r.file_name: r for r in reports}
-    assert len(reports) == 5
-    old = by_name["2024-09_edmonton_water-quality_monthly-summary.pdf"]
-    assert (old.year, old.month, old.system, old.kind) == (2024, 9, "water", "monthly-summary")
-    typo = by_name["2025-03_edmonton_water-quality_monthly-report..pdf"]
-    assert typo.kind == "monthly-report"
-    new = by_name["2026-07-edmonton-wastewater-quality-monthly-summary.pdf"]
-    assert (new.system, new.kind) == ("wastewater", "monthly-summary")
-    annual = by_name["2025-edmonton-water-quality-annual-report.pdf"]
-    assert (annual.year, annual.month) == (2025, None)
-    assert annual.url.startswith("https://www.epcor.com/content/dam/")
-
-
-async def test_list_reports_filters_and_sorts(httpx_mock):
-    httpx_mock.add_response(url=constants.REPORTS_PAGE_URL, text=_REPORTS_PAGE)
-    result = await client.list_water_quality_reports(system="water")
-    assert result.total_matches == 4
-    assert result.reports[0].year == 2026
-    assert "monthly-bacteriological-summary" in result.kinds_available
-    july = await client.list_water_quality_reports(year=2026, month=7)
-    assert {r.system for r in july.reports} == {"water", "wastewater"}
-
-
-async def test_list_reports_bad_month_raises():
-    with pytest.raises(InvalidInput):
-        await client.list_water_quality_reports(month=13)

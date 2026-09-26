@@ -36,15 +36,12 @@ from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.statcan.reference import constants
 from maplestats_mcp.modules.statcan.reference.schemas import (
-    DocumentEdition,
-    DocumentFormatLink,
-    DocumentFormats,
     ReferenceDocument,
     ReferenceSearchResult,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -277,150 +274,3 @@ async def search_data(
 ) -> ReferenceSearchResult:
     """Search StatCan's Data catalogue (tables plus PUMFs, geographic and other bulk files)."""
     return await _search("data", "search_data", query, count=count, page=page, lang=lang)
-
-
-def _parse_document_formats(
-    html: str, catalogue_number: str, page_url: str, was_cached: bool
-) -> DocumentFormats:
-    soup = BeautifulSoup(html, "html.parser")
-    heading = soup.find(id="wb-cont")
-    title = heading.get_text(strip=True) if heading is not None else ""
-
-    category = None
-    resolved_number = catalogue_number
-    conttype = soup.select_one(".block-ndm-conttype")
-    if conttype is not None:
-        spans = conttype.find_all("span")
-        if len(spans) >= 2:
-            category = spans[0].get_text(strip=True).rstrip(":") or None
-            resolved_number = spans[1].get_text(strip=True) or catalogue_number
-
-    description = None
-    product_block = soup.select_one(".block-ndm-product-block")
-    if product_block is not None:
-        heading_span = product_block.find("span")
-        full_text = product_block.get_text(" ", strip=True)
-        if heading_span is not None:
-            full_text = full_text.replace(heading_span.get_text(strip=True), "", 1).strip()
-        description = full_text or None
-
-    # A specific issue/article's own page lists its file formats (one
-    # row per HTML/PDF link, header "Format"); a series-level catalogue
-    # number's page instead lists its editions (one row per edition,
-    # header "Titles"/"Titres", confirmed live) -- same row shape
-    # (link + date), different meaning, so the header decides which
-    # list a row belongs in rather than assuming one shape always
-    # applies.
-    formats: list[DocumentFormatLink] = []
-    editions: list[DocumentEdition] = []
-    for table in soup.find_all("table"):
-        header_cells = [th.get_text(strip=True).lower() for th in table.select("thead th")]
-        is_format_table = header_cells and "format" in header_cells[0]
-        for row in table.select("tbody tr"):
-            cells = row.find_all("td")
-            if len(cells) < 2:
-                continue
-            link = cells[0].find("a")
-            if link is None:
-                continue
-            href_attr = link.get("href")
-            row_url = href_attr if isinstance(href_attr, str) else ""
-            if not row_url:
-                continue
-            release_date = cells[1].get_text(strip=True) or None
-            if is_format_table:
-                formats.append(
-                    DocumentFormatLink(
-                        format=link.get_text(strip=True), url=row_url, release_date=release_date
-                    )
-                )
-            else:
-                title_attr = link.get("title")
-                edition_title = (
-                    title_attr if isinstance(title_attr, str) and title_attr else None
-                ) or link.get_text(strip=True)
-                editions.append(
-                    DocumentEdition(title=edition_title, url=row_url, release_date=release_date)
-                )
-
-    return DocumentFormats(
-        catalogue_number=resolved_number,
-        title=title,
-        category=category,
-        description=description,
-        formats=formats,
-        editions=editions,
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=page_url,
-            cached=was_cached,
-            schema_name="statcan_reference.DocumentFormats",
-        ),
-    )
-
-
-async def get_document_formats(catalogue_number: str, *, lang: str = "en") -> DocumentFormats:
-    """Resolve a StatCan catalogue number to its format download links or its editions.
-
-    An issue/article-level catalogue number (e.g.
-    "46-28-0001202600100004") returns `formats` -- its actual HTML/PDF
-    download links. A series-level catalogue number (e.g. "16-511-X")
-    has no formats of its own; its page instead lists `editions`, each
-    with its own catalogue number to pass back into this same function
-    for that edition's formats -- confirmed live these are two
-    genuinely different page shapes with the same row layout (link +
-    date), distinguished here only by the table's own header text
-    ("Format" vs "Titles"/"Titres").
-
-    Confirmed live 2026-09-21: catalogue-number normalization is also
-    genuinely inconsistent -- some numbers resolve as given (e.g.
-    "16-511-X"), others only resolve with dashes/spaces stripped (e.g.
-    "46-28-0001" 404s, "46280001" works) -- so this tries the number as
-    given first and only strips punctuation on a 404, rather than
-    guessing a single normalization rule that would break the other
-    case.
-    """
-    number = catalogue_number.strip()
-    if not number:
-        raise InvalidInput(
-            "statcan_reference:get_document_formats: catalogue_number must not be empty."
-        )
-    if lang not in ("en", "fr"):
-        raise InvalidInput(
-            f"statcan_reference:get_document_formats: lang must be one of ('en', 'fr'), got {lang!r}."
-        )
-    suffix = lang
-    candidates = [number]
-    stripped = re.sub(r"[^0-9A-Za-z]", "", number)
-    if stripped and stripped != number:
-        candidates.append(stripped)
-
-    last_status: int | None = None
-    for candidate in candidates:
-        url = f"https://www150.statcan.gc.ca/n1/{suffix}/catalogue/{candidate}"
-
-        async def fetch(url: str = url) -> httpx.Response:
-            await _LIMITER.acquire()
-            try:
-                return await _client.get(url, headers={"User-Agent": "maplestats-mcp/0.1"})
-            except httpx.HTTPError as exc:
-                raise UpstreamUnavailable(
-                    "statcan_reference:get_document_formats did not respond in time. "
-                    "Try again shortly."
-                ) from exc
-
-        cache_key = f"statcan-reference:catalogue:{suffix}:{candidate}"
-        response, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-        if response.status_code == 200:
-            return _parse_document_formats(response.text, candidate, url, was_cached)
-        last_status = response.status_code
-
-    if last_status == 404:
-        raise NotFound(
-            f"statcan_reference:get_document_formats: no catalogue entry found for "
-            f"{catalogue_number!r}."
-        )
-    raise UpstreamError(
-        f"statcan_reference:get_document_formats returned HTTP {last_status} for "
-        f"{catalogue_number!r}."
-    )

@@ -7,7 +7,7 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maplestats_mcp.modules.statcan.reference import client, constants
-from maplestats_mcp.modules.statcan.reference.schemas import DocumentFormats, ReferenceSearchResult
+from maplestats_mcp.modules.statcan.reference.schemas import ReferenceSearchResult
 
 
 @tool
@@ -82,12 +82,9 @@ async def statcan_reference_search_data(
     table PIDs also reachable via statcan_wds_*/statcan_sdmx_*, so
     prefer those tools for routine table search -- use this one when
     the product itself (a PUMF, a boundary file, a bulk archive) is
-    the target, not a table's time series. Covers 13,342+ items. Pass
-    a result's catalogue_number to statcan_reference_get_document_formats
-    to resolve its HTML page, then follow that page's own link to the
-    actual bulk download (a bespoke per-product static page, not
-    something this catalogue's search results parse directly). An
-    empty query returns the full unfiltered catalogue (paginate with
+    the target, not a table's time series. Covers 13,342+ items. For a
+    PUMF, pass its catalogue_number to statcan_pumf_list_files for the
+    download ZIPs. An empty query returns the full unfiltered catalogue (paginate with
     page/count to browse it). Keywords: StatCan, PUMF, public use
     microdata file, geographic boundary file, bulk data, data product.
     Mots-clés : Statistique Canada, FMGD, fichier de microdonnées à
@@ -95,28 +92,3 @@ async def statcan_reference_search_data(
     bloc, produit de données.
     """
     return await client.search_data(query, count=count, page=page, lang=lang)
-
-
-@tool
-async def statcan_reference_get_document_formats(
-    catalogue_number: str, lang: Literal["en", "fr"] = "en"
-) -> DocumentFormats:
-    """Resolve a StatCan catalogue number to its format download links, or its editions.
-
-    Use for: getting the actual downloadable file(s) -- HTML article,
-    PDF, or other format -- for one document or edition already found
-    via statcan_reference_search_documents, statcan_reference_search_analysis,
-    statcan_daily_get_releases/search_archive, or any other tool that
-    surfaces a catalogue number. A specific issue/article-level number
-    (e.g. "46-28-0001202600100004") returns `formats`, its real HTML/
-    PDF links. A series-level number (e.g. "16-511-X") has no formats
-    of its own -- it returns `editions` instead, each with its own
-    catalogue number to call this same tool with. Catalogue-number
-    formatting is genuinely inconsistent upstream -- this tries the
-    number exactly as given first, then with dashes/spaces stripped,
-    before giving up. Keywords: StatCan, catalogue number, PDF,
-    download, format, HTML, edition.
-    Mots-clés : Statistique Canada, numéro au catalogue, PDF,
-    téléchargement, format, HTML, édition.
-    """
-    return await client.get_document_formats(catalogue_number, lang=lang)

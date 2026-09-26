@@ -4,7 +4,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.reference import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
 
 @pytest.fixture(autouse=True)
@@ -179,114 +179,6 @@ async def test_search_data_fr_uses_texte_param_and_donnees_path(httpx_mock):
     await client.search_data("microdonnees", lang="fr")
 
 
-_DOCUMENT_FORMATS_HTML = """
-<html><body>
-<h1 property="name" id="wb-cont">Analysis of residential properties and homeowners in high flood hazard areas</h1>
-<section class="block block-ndm-plugins clearfix block-ndm-conttype"><span class="ndm-product-title">Articles and reports: </span><span>46-28-0001202600100004</span></section>
-<section class="block block-ndm-plugins clearfix block-ndm-product-block"><span class="ndm-product-title">Description: </span>This study presents an analysis of residential properties.</section>
-<table>
-<thead><tr><th>Format</th><th>Release date</th><th>More information</th></tr></thead>
-<tbody>
-<tr class="odd"><td><a href="https://www150.statcan.gc.ca/n1/pub/46-28-0001/2026001/article/00004-eng.htm">HTML</a></td><td>September 3, 2026</td><td></td></tr>
-<tr class="even"><td><a href="https://www150.statcan.gc.ca/n1/pub/46-28-0001/2026001/article/00004-eng.pdf">PDF</a></td><td>September 3, 2026</td><td></td></tr>
-</tbody>
-</table>
-</body></html>
-"""
-
-
-async def test_get_document_formats_parses_title_description_and_links(httpx_mock):
-    httpx_mock.add_response(
-        url="https://www150.statcan.gc.ca/n1/en/catalogue/46280001202600100004",
-        html=_DOCUMENT_FORMATS_HTML,
-    )
-    result = await client.get_document_formats("46280001202600100004")
-    assert (
-        result.title
-        == "Analysis of residential properties and homeowners in high flood hazard areas"
-    )
-    assert result.catalogue_number == "46-28-0001202600100004"
-    assert result.category == "Articles and reports"
-    assert result.description == "This study presents an analysis of residential properties."
-    assert len(result.formats) == 2
-    assert result.formats[0].format == "HTML"
-    assert result.formats[1].format == "PDF"
-    assert result.formats[1].url.endswith(".pdf")
-    assert result.formats[1].release_date == "September 3, 2026"
-
-
-async def test_get_document_formats_falls_back_to_stripped_number_on_404(httpx_mock):
-    httpx_mock.add_response(
-        url="https://www150.statcan.gc.ca/n1/en/catalogue/46-28-0001202600100004",
-        status_code=404,
-    )
-    httpx_mock.add_response(
-        url="https://www150.statcan.gc.ca/n1/en/catalogue/46280001202600100004",
-        html=_DOCUMENT_FORMATS_HTML,
-    )
-    result = await client.get_document_formats("46-28-0001202600100004")
-    assert len(result.formats) == 2
-
-
-async def test_get_document_formats_not_found_raises(httpx_mock):
-    httpx_mock.add_response(
-        url="https://www150.statcan.gc.ca/n1/en/catalogue/00000000",
-        status_code=404,
-    )
-    with pytest.raises(NotFound):
-        await client.get_document_formats("00000000")
-
-
-async def test_get_document_formats_empty_catalogue_number_raises():
-    with pytest.raises(InvalidInput):
-        await client.get_document_formats("")
-
-
-async def test_get_document_formats_invalid_lang_raises():
-    with pytest.raises(InvalidInput):
-        await client.get_document_formats("16-511-X", lang="de")
-
-
-_SERIES_EDITIONS_HTML = """
-<html><body>
-<h1 property="name" id="wb-cont">Clean technologies and the Survey of Environmental Goods and Services</h1>
-<section class="block block-ndm-plugins clearfix block-ndm-conttype"><span class="ndm-product-title">Surveys and statistical programs – Documentation: </span><span>16-511-X</span></section>
-<table>
-<thead><tr><th>Titles</th><th>Release date</th><th>More Information</th></tr></thead>
-<tbody>
-<tr class="odd"><td><a href="https://www150.statcan.gc.ca/n1/pub/16-511-x/16-511-x2026001-eng.htm" title="...2024 edition">2024 edition</a></td><td>2026-08-19</td><td></td></tr>
-</tbody>
-</table>
-</body></html>
-"""
-
-
-async def test_get_document_formats_series_level_returns_editions_not_formats(httpx_mock):
-    httpx_mock.add_response(
-        url="https://www150.statcan.gc.ca/n1/en/catalogue/16-511-X",
-        html=_SERIES_EDITIONS_HTML,
-    )
-    result = await client.get_document_formats("16-511-X")
-    assert result.formats == []
-    assert len(result.editions) == 1
-    assert result.editions[0].title == "...2024 edition"
-    assert result.editions[0].url.endswith("16-511-x2026001-eng.htm")
-
-
-async def test_get_document_formats_provenance_url_is_the_page_not_a_row_link(httpx_mock):
-    httpx_mock.add_response(
-        url="https://www150.statcan.gc.ca/n1/en/catalogue/46280001202600100004",
-        html=_DOCUMENT_FORMATS_HTML,
-    )
-    result = await client.get_document_formats("46280001202600100004")
-    assert result.provenance.url == (
-        "https://www150.statcan.gc.ca/n1/en/catalogue/46280001202600100004"
-    )
-
-
-# What the view renders when its session cookie is missing or expired:
-# the keyword is silently dropped (empty search box) and every document
-# in the catalogue comes back -- confirmed live 2026-09-22.
 _IGNORED_QUERY_HTML = _RESULTS_HTML.replace('value="housing"', 'value=""').replace(
     'value="logement"', 'value=""'
 )

@@ -16,9 +16,6 @@ from maplestats_mcp.modules.epcor.schemas import (
     DailyReading,
     DailyWaterQuality,
     Plant,
-    System,
-    WaterQualityReport,
-    WaterQualityReportList,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
@@ -39,13 +36,6 @@ _MONTHS = {
         start=1,
     )
 }
-_REPORT_LINK_RE = re.compile(r'/content/dam/epcor/documents/water-quality-reports/[^"&\s]+?\.pdf')
-# Accepts both the underscore (to mid-2025) and hyphen (after) naming,
-# and the doubled dot in at least one real file name.
-_REPORT_NAME_RE = re.compile(
-    r"^(?:(?P<year>\d{4})(?:-(?P<month>\d{2}))?|(?P<bare_month>\d{2}))[-_]edmonton[-_]"
-    r"(?P<system>wastewater|water)[-_]quality[-_](?P<kind>.+?)\.+pdf$"
-)
 
 
 async def _get_text(url: str, context: str, params: dict[str, str] | None = None) -> str:
@@ -129,73 +119,5 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
             schema_name="epcor.DailyWaterQuality",
             freshness="daily averages, last 7 days; unvalidated monitoring data",
             limits="values leave the treatment plant; tap values can differ",
-        ),
-    )
-
-
-def parse_report_links(page: str) -> list[WaterQualityReport]:
-    reports: list[WaterQualityReport] = []
-    for path in sorted(set(_REPORT_LINK_RE.findall(page))):
-        file_name = path.rsplit("/", 1)[1]
-        match = _REPORT_NAME_RE.match(file_name)
-        if not match:
-            continue
-        year = match.group("year")
-        month = match.group("month") or match.group("bare_month")
-        system: System = "wastewater" if match.group("system") == "wastewater" else "water"
-        reports.append(
-            WaterQualityReport(
-                year=int(year) if year else None,
-                month=int(month) if month else None,
-                system=system,
-                kind=match.group("kind").replace("_", "-"),
-                file_name=file_name,
-                url=f"{constants.REPORTS_BASE_URL}{path}",
-            )
-        )
-    return reports
-
-
-async def list_water_quality_reports(
-    year: int | None = None,
-    month: int | None = None,
-    system: System | None = None,
-    kind: str | None = None,
-    *,
-    lang: str = "en",
-) -> WaterQualityReportList:
-    """List EPCOR Edmonton water-quality report PDFs, newest first."""
-    del lang
-    if month is not None and not 1 <= month <= 12:
-        raise InvalidInput(f"month must be between 1 and 12, got {month}.")
-
-    async def fetch() -> str:
-        return await _get_text(constants.REPORTS_PAGE_URL, "water_quality_reports")
-
-    page, was_cached = await cached_fetch(
-        "epcor:reports", constants.CACHE_TTL_REPORTS_SECONDS, fetch
-    )
-    all_reports = parse_report_links(page)
-    if not all_reports:
-        raise UpstreamError("epcor:water_quality_reports page no longer lists report PDFs.")
-    matches = [
-        report
-        for report in all_reports
-        if (year is None or report.year == year)
-        and (month is None or report.month == month)
-        and (system is None or report.system == system)
-        and (kind is None or report.kind == kind)
-    ]
-    matches.sort(key=lambda r: (r.year or 0, r.month or 0, r.system, r.kind), reverse=True)
-    return WaterQualityReportList(
-        total_matches=len(matches),
-        kinds_available=sorted({report.kind for report in all_reports}),
-        reports=matches,
-        provenance=make_provenance(
-            source=constants.SOURCE,
-            url=constants.REPORTS_PAGE_URL,
-            cached=was_cached,
-            schema_name="epcor.WaterQualityReportList",
-            limits="links only; the reports themselves are PDFs",
         ),
     )

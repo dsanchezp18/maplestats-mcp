@@ -18,9 +18,8 @@ path for at all -- notably Public Use Microdata Files (PUMFs, category
 "Public use microdata"; confirmed live: searching "Public Use
 Microdata Files" here returns 144 results, e.g. catalogue number
 71M0001X for the Labour Force Survey PUMF, 98M0001X for the Census).
-A PUMF's own catalogue-number page (via
-statcan_reference_get_document_formats) links to a series index page
-with the real bulk download -- confirmed live for 98M0001X: a direct,
+A PUMF's own catalogue-number page links to a series index page
+with the real bulk download (statcan_pumf_list_files lists it) -- confirmed live for 98M0001X: a direct,
 unauthenticated ~173 MB ZIP download
 (n1/pub/98m0001x/2023001/cen21_ind_98m0001x_part_rec21.zip, HTTP 200,
 Content-Type: application/zip, no login or account required). That

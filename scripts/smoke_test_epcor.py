@@ -17,15 +17,6 @@ async def main() -> int:
         failures += len(daily.readings) != 7 or latest is None or latest.date is None
         failures += latest is not None and latest.ph is None
 
-    reports = await client.list_water_quality_reports()
-    print(f"OK: reports total={reports.total_matches} kinds={reports.kinds_available}")
-    print(f"    newest={reports.reports[0] if reports.reports else None}")
-    failures += reports.total_matches < 200
-
-    typo = await client.list_water_quality_reports(year=2025, month=3, kind="monthly-report")
-    print(f"OK: 2025-03 monthly-report -> {[r.file_name for r in typo.reports]}")
-    failures += typo.total_matches != 1
-
     print("EPCOR SMOKE TEST " + ("PASSED" if not failures else f"FAILED ({failures})"))
     return 1 if failures else 0
 

@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from maplestats_mcp.shared.models import Provenance
 
 Plant = Literal["els", "rossdale"]
-System = Literal["water", "wastewater"]
 
 
 class DailyReading(BaseModel):
@@ -28,20 +27,4 @@ class DailyWaterQuality(BaseModel):
     plant_name: str
     units: dict[str, str]
     readings: list[DailyReading]
-    provenance: Provenance
-
-
-class WaterQualityReport(BaseModel):
-    year: int | None
-    month: int | None
-    system: System
-    kind: str
-    file_name: str
-    url: str
-
-
-class WaterQualityReportList(BaseModel):
-    total_matches: int
-    kinds_available: list[str]
-    reports: list[WaterQualityReport]
     provenance: Provenance
