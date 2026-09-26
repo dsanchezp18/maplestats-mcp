@@ -14,7 +14,10 @@ LanguageChoice = Literal["all", "r", "python", "stata", "julia"]
 
 class Script(BaseModel):
     language: Language
-    code: str = Field(description="Retrieval, then source-specific and standard cleaning.")
+    code: str = Field(
+        description="A complete script: header, setup, retrieval, checks, the tool's "
+        "filters, then source-specific and standard cleaning."
+    )
     packages: list[str] = Field(description="Packages the code needs.")
 
 
@@ -23,8 +26,8 @@ class ReproductionCode(BaseModel):
     scripts: list[Script] = Field(description="One script per language that can fetch this source.")
     source_url: str = Field(description="The URL the scripts fetch.")
     method: str = Field(
-        description="How the request was rebuilt: from the tool's arguments (exact) or from "
-        "the result's provenance URL (may omit filters)."
+        description="How the request was rebuilt: from the tool's arguments, from the "
+        "request the tool made (recorded while it ran), or 'none' when no script can fetch it."
     )
     notes: list[str]
     provenance: Provenance

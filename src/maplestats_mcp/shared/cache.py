@@ -32,6 +32,7 @@ from typing import Any
 from cachetools import TTLCache
 
 from maplestats_mcp import config
+from maplestats_mcp.shared.http import is_recording
 
 _caches: dict[int, TTLCache] = {}
 
@@ -55,10 +56,13 @@ async def cached_fetch(
     should not poison the cache for the TTL window.
     """
     cache = _cache_for_ttl(ttl)
-    try:
-        return cache[key], True
-    except KeyError:
-        pass
+    # While reproduce_code records a tool's requests, a cache hit would hide
+    # them, so read through to the source.
+    if not is_recording():
+        try:
+            return cache[key], True
+        except KeyError:
+            pass
 
     data = await fetcher()
     cache[key] = data

@@ -16,19 +16,23 @@ async def reproduce_code(
 ) -> ReproductionCode:
     """Get R, Python, Stata and Julia scripts that fetch and clean the same data.
 
-    Use for: moving a result into an analysis script reproducibly. Pass
-    the tool name and arguments you called it with. StatCan tables use
-    cansim in R, Beyond 20/20 tables use canivt, and the Bank of Canada,
-    Socrata and CKAN queries are rebuilt exactly; other tools use the
-    result's source URL (method says which). Python code uses polars,
-    Julia TidierFiles, Stata import delimited. Downloads go to data/raw/.
-    By default all languages that can read the source are returned, each
-    with retrieval plus basic cleaning (consistent names, trimmed text,
-    missing values, numeric types, and source steps such as StatCan's
-    scalar factor); language picks just one.
+    Use for: moving any tool's result into an analysis script reproducibly.
+    Pass the tool name and the arguments you called it with; the server
+    writes the scripts, ready to run. It rebuilds the exact request: from
+    the arguments (StatCan tables via cansim, Beyond 20/20 via canivt,
+    Valet, Socrata, CKAN), or by recording the upstream request the tool
+    makes (every query parameter, POST body and header). Where the tool
+    filters a downloaded file itself (CanadaBuys, CER, GC InfoBase, CIHI,
+    IRCC, IP Horizons patents), the script repeats those filters. Scripts
+    follow a header plus numbered sections (setup, read, check, prepare),
+    save downloads under data/raw/, and clean names, text and numbers;
+    Python uses polars, Julia TidierFiles, Stata import delimited (JSON
+    and filtered files go through Stata's built-in Python). notes say what
+    a script cannot repeat and why a language is missing; language picks
+    one.
     Keywords: reproducible, R code, Python code, Stata do-file, Julia,
-    script, cansim, download data, replication.
+    script, cansim, download data, replication, code generation.
     Mots-clés : reproductible, code R, code Python, Stata, Julia,
-    script, télécharger les données, réplication.
+    script, télécharger les données, réplication, génération de code.
     """
     return await client.reproduce(tool_name, arguments, language)

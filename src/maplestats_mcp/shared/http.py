@@ -25,6 +25,10 @@ this project's primary data source silently timing out.
 from __future__ import annotations
 
 import ssl
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -32,7 +36,81 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 _DEFAULT_HEADERS = {"User-Agent": "maplestats-mcp/0.1"}
-_client = httpx.AsyncClient(timeout=30.0, http2=True)
+
+
+@dataclass
+class RecordedRequest:
+    """One upstream request made while recording (see `recording`)."""
+
+    method: str
+    url: str
+    body: bytes
+    content_type: str
+    accept: str = ""
+    status: int | None = None
+    response_type: str = ""
+
+
+# reproduce_code runs a tool inside `recording()` to learn the exact
+# upstream requests (URL with every query parameter, POST body) instead
+# of guessing them from the result's provenance URL, which often omits
+# filters. Hooks on every client this module creates feed the list.
+_recorded: ContextVar[list[RecordedRequest] | None] = ContextVar(
+    "maplestats_recorded", default=None
+)
+_pending: dict[int, RecordedRequest] = {}
+
+
+async def _record_request(request: httpx.Request) -> None:
+    requests = _recorded.get()
+    if requests is None:
+        return
+    # A streamed request has no readable body (AER's streamed downloads raised
+    # RequestNotRead here, 2026-09-25); every body worth replaying is small.
+    try:
+        body = request.content
+    except httpx.RequestNotRead:
+        body = b""
+    entry = RecordedRequest(
+        method=request.method,
+        url=str(request.url),
+        body=body,
+        content_type=request.headers.get("content-type", ""),
+        accept=request.headers.get("accept", ""),
+    )
+    requests.append(entry)
+    _pending[id(request)] = entry
+
+
+async def _record_response(response: httpx.Response) -> None:
+    entry = _pending.pop(id(response.request), None)
+    if entry is not None:
+        entry.status = response.status_code
+        entry.response_type = response.headers.get("content-type", "")
+
+
+_HOOKS = {"request": [_record_request], "response": [_record_response]}
+
+
+@contextmanager
+def recording() -> Iterator[list[RecordedRequest]]:
+    """Collect every upstream request made in this context."""
+    requests: list[RecordedRequest] = []
+    token = _recorded.set(requests)
+    try:
+        yield requests
+    finally:
+        _recorded.reset(token)
+        # Requests that never got a response (errors) must not linger.
+        for key in [k for k, v in _pending.items() if v in requests]:
+            _pending.pop(key, None)
+
+
+def is_recording() -> bool:
+    return _recorded.get() is not None
+
+
+_client = httpx.AsyncClient(timeout=30.0, http2=True, event_hooks=_HOOKS)
 
 
 def new_client(
@@ -59,6 +137,7 @@ def new_client(
         follow_redirects=follow_redirects,
         verify=verify,
         headers=_DEFAULT_HEADERS,
+        event_hooks=_HOOKS,
     )
 
 

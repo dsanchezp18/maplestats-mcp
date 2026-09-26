@@ -307,6 +307,28 @@ STEPS: list[Step] = [
         {"tool_name": "cer_list_datasets", "arguments": {"query": "keystone"}, "language": "stata"},
         _non_empty("scripts"),
     ),
+    # Recorded request: the station filter must reach the script.
+    Step(
+        "reproduce",
+        "reproduce_code",
+        {
+            "tool_name": "eccc_query_items",
+            "arguments": {
+                "collection_id": "climate-daily",
+                "filters": {"CLIMATE_IDENTIFIER": "3031093"},
+                "limit": 5,
+            },
+            "language": "python",
+        },
+        lambda data: "CLIMATE_IDENTIFIER=3031093" in data["scripts"][0]["code"],
+    ),
+    # File filtered by the tool itself: the script repeats the filters.
+    Step(
+        "reproduce",
+        "reproduce_code",
+        {"tool_name": "canadabuys_search_awards", "arguments": {"query": "snow removal"}},
+        lambda data: len(data["scripts"]) == 4 and "snow" in data["scripts"][1]["code"],
+    ),
     # Transport Canada vehicle recalls
     Step(
         "tc_recalls",
