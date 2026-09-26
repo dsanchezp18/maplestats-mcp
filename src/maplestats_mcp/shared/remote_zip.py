@@ -49,6 +49,14 @@ async def _range(url: str, start: int, end: int) -> bytes:
         raise UpstreamUnavailable(f"{url} could not be reached.") from exc
     if response.status_code != 206:
         raise UpstreamError(f"{url} does not support range requests (HTTP {response.status_code}).")
+    # A 206 can still be short (a truncated transfer, or a server that
+    # clamps the range); slicing ZIP structures out of a short body would
+    # misread them silently, so the length is checked, not assumed.
+    expected = end - start + 1
+    if len(response.content) != expected:
+        raise UpstreamError(
+            f"{url} returned {len(response.content):,} bytes for a {expected:,}-byte range."
+        )
     return response.content
 
 
@@ -104,6 +112,11 @@ async def list_members(url: str) -> tuple[list[ZipMember], int]:
 
 
 async def read_member(url: str, member: ZipMember, *, max_bytes: int = 20_000_000) -> bytes:
+    """One member's contents, at most `max_bytes` both compressed and
+    decompressed. The callers read codebooks and layout files (tens of KB
+    to a few MB), so 20 MB is generous for them while still stopping a
+    deflate bomb, whose tiny compressed size the first check alone passes.
+    """
     if member.compressed_size > max_bytes:
         raise UpstreamError(
             f"{member.name} is {member.compressed_size:,} bytes compressed, over this reader's "
@@ -121,4 +134,25 @@ async def read_member(url: str, member: ZipMember, *, max_bytes: int = 20_000_00
         if member.compressed_size
         else b""
     )
-    return data if member.method == 0 else zlib.decompress(data, -15)
+    return data if member.method == 0 else _inflate(data, member.name, max_bytes)
+
+
+def _inflate(data: bytes, name: str, max_bytes: int) -> bytes:
+    # The central directory's `size` is whatever the archive claims, so the
+    # bound is enforced on the actual output: ask for one byte past the
+    # limit, and anything left over means the member is too large.
+    inflater = zlib.decompressobj(-15)
+    try:
+        out = inflater.decompress(data, max_bytes + 1)
+        if len(out) > max_bytes or inflater.unconsumed_tail:
+            raise UpstreamError(
+                f"{name} decompresses to over this reader's {max_bytes:,}-byte limit."
+            )
+        out += inflater.flush()
+    except zlib.error as exc:
+        raise UpstreamError(f"{name} is not valid deflate data: {exc}.") from exc
+    if len(out) > max_bytes:
+        raise UpstreamError(f"{name} decompresses to over this reader's {max_bytes:,}-byte limit.")
+    if not inflater.eof:
+        raise UpstreamError(f"{name}: deflate stream is truncated.")
+    return out

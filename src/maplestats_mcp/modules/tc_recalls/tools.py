@@ -54,8 +54,9 @@ async def tc_recalls_get(recall_number: str, lang: Lang = "en") -> RecallDetail:
     the safety risk and the corrective action.
     `lang="fr"` returns the French category, system and description.
     Keywords: recall details, safety risk, corrective action, units
-    affected, Transport Canada, vehicle defect, notification.
+    affected, Transport Canada, vehicle defect, notification, recall.
     Mots-clés : détails du rappel, risque pour la sécurité, mesure
-    corrective, unités touchées, Transports Canada, défaut du véhicule.
+    corrective, unités touchées, Transports Canada, défaut du véhicule,
+    rappel, véhicule.
     """
     return await client.get_recall(recall_number, lang)

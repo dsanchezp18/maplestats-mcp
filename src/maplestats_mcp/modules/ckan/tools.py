@@ -93,8 +93,8 @@ async def ckan_get_dataset(portal: PortalKey, dataset_id: str, lang: Lang = "en"
     querying rows with ckan_datastore_search.
     Keywords: CKAN, dataset detail, package_show, resources, download,
     metadata, license, open data.
-    Mots-clés : CKAN, détail du jeu de données, ressources,
-    téléchargement, métadonnées, licence, données ouvertes.
+    Mots-clés : CKAN, détail du jeu de données, ressources, téléchargement,
+    métadonnées, licence, données ouvertes, jeu de données.
     """
     return await client.get_dataset(portal, dataset_id, lang)
 
@@ -107,9 +107,9 @@ async def ckan_list_organizations(portal: PortalKey, lang: Lang = "en") -> Organ
     with fq="organization:<name>". Federal lists ~350 departments and
     agencies; Toronto and Regina each have one city organization.
     Keywords: CKAN, organizations, publishers, departments, agencies,
-    ministries, open data.
+    ministries, open data, catalogue.
     Mots-clés : CKAN, organisations, éditeurs, ministères, organismes,
-    données ouvertes.
+    données ouvertes, catalogue, producteurs de données.
     """
     return await client.list_organizations(portal, lang)
 
@@ -123,9 +123,10 @@ async def ckan_get_organization(
     Use for: confirming a department's or agency's identity before
     filtering searches by it. `organization_id` is the id or short name
     (e.g. "statcan", "nrcan-rncan" on the federal portal).
-    Keywords: CKAN, organization detail, department, agency, publisher.
+    Keywords: CKAN, organization detail, department, agency, publisher,
+    ministry, open data, datasets.
     Mots-clés : CKAN, détail de l'organisation, ministère, organisme,
-    éditeur.
+    éditeur, ministères et organismes, données ouvertes, jeux de données.
     """
     return await client.get_organization(portal, organization_id, lang)
 
@@ -138,8 +139,10 @@ async def ckan_get_resource(
 
     Use for: a resource's download URL, format, size, dates, and whether
     it has a queryable DataStore table (`datastore_active`).
-    Keywords: CKAN, resource, file, download URL, format, datastore.
-    Mots-clés : CKAN, ressource, fichier, URL de téléchargement, format.
+    Keywords: CKAN, resource, file, download URL, format, datastore, data
+    file, CSV.
+    Mots-clés : CKAN, ressource, fichier, URL de téléchargement, format,
+    fichier de données, CSV, magasin de données.
     """
     return await client.get_resource(portal, resource_id, lang)
 
@@ -149,9 +152,11 @@ async def ckan_list_licenses(portal: PortalKey, lang: Lang = "en") -> LicenseLis
     """List the licenses one CKAN portal publishes datasets under (e.g. Open Government Licence).
 
     Use for: explaining what a dataset's `license_id` permits.
-    Keywords: CKAN, license, licence, open government licence, terms of use.
-    Mots-clés : CKAN, licence, licence du gouvernement ouvert,
-    conditions d'utilisation.
+    Keywords: CKAN, license, licence, open government licence, terms of use,
+    open data, reuse, copyright.
+    Mots-clés : CKAN, licence, licence du gouvernement ouvert, conditions
+    d'utilisation, données ouvertes, réutilisation, droit d'auteur, licence
+    ouverte.
     """
     return await client.list_licenses(portal, lang)
 
@@ -164,8 +169,10 @@ async def ckan_list_tags(portal: PortalKey, query: str | None = None, lang: Lang
     (fq="tags:<tag>"). Unfiltered lists are capped at 200; pass `query`
     for a substring match. The federal portal has no tags (use its
     `keywords` via ckan_get_dataset instead).
-    Keywords: CKAN, tags, keywords, vocabulary, subjects.
-    Mots-clés : CKAN, mots-clés, étiquettes, vocabulaire, sujets.
+    Keywords: CKAN, tags, keywords, vocabulary, subjects, open data, browse,
+    topics.
+    Mots-clés : CKAN, mots-clés, étiquettes, vocabulaire, sujets, données
+    ouvertes, parcourir, thèmes.
     """
     return await client.list_tags(portal, query, lang)
 
@@ -177,8 +184,10 @@ async def ckan_list_groups(portal: PortalKey, lang: Lang = "en") -> GroupList:
     Use for: browsing a catalogue by theme, then filtering searches with
     fq="groups:<name>". Not available on federal, Alberta, or Toronto,
     which do not use CKAN groups.
-    Keywords: CKAN, groups, themes, topics, categories.
-    Mots-clés : CKAN, groupes, thèmes, sujets, catégories.
+    Keywords: CKAN, groups, themes, topics, categories, open data, browse,
+    catalogue.
+    Mots-clés : CKAN, groupes, thèmes, sujets, catégories, données ouvertes,
+    parcourir, catalogue.
     """
     return await client.list_groups(portal, lang)
 
@@ -187,8 +196,13 @@ async def ckan_list_groups(portal: PortalKey, lang: Lang = "en") -> GroupList:
 async def ckan_get_group(portal: PortalKey, group_id: str, lang: Lang = "en") -> GroupDetail:
     """Get one CKAN thematic group's description and dataset count.
 
-    Keywords: CKAN, group detail, theme, topic, category.
-    Mots-clés : CKAN, détail du groupe, thème, sujet, catégorie.
+    Use for: checking what a group from ckan_list_groups covers and how
+    many datasets it holds before filtering ckan_search_datasets with
+    fq="groups:<name>".
+    Keywords: CKAN, group detail, theme, topic, category, open data,
+    catalogue, subject area, dataset count.
+    Mots-clés : CKAN, détail du groupe, thème, sujet, catégorie,
+    données ouvertes, catalogue, domaine, nombre de jeux de données.
     """
     return await client.get_group(portal, group_id, lang)
 

@@ -112,9 +112,10 @@ async def parliament_get_vote(
     every MP voted (MP slugs). session like '45-1', number is the vote
     number from parliament_search_votes.
     Keywords: vote breakdown, party vote, ballot, how did MPs vote,
-    division, House of Commons, dissent.
-    Mots-clés : résultat du vote, vote des partis, vote des députés,
-    appel nominal, Chambre des communes, dissidence.
+    division, House of Commons, dissent, recorded vote.
+    Mots-clés : résultat du vote, vote des partis, vote des députés, appel
+    nominal, Chambre des communes, dissidence, vote par appel nominal,
+    Parlement.
     """
     return await client.get_vote(session, number, include_ballots=include_ballots, lang=lang)
 
@@ -126,16 +127,19 @@ async def parliament_search_politicians(
     party: str | None = None,
     include_former: bool = False,
     limit: int = constants.LIMIT_DEFAULT,
+    lang: Literal["en", "fr"] = "en",
 ) -> PoliticianSearchResult:
     """Find Members of Parliament by name, province (e.g. 'AB') or party.
 
     Use for: current MPs, their party and riding, and the slug other
     parliament_ tools take. include_former adds past MPs (name only).
+    Party and riding names come back in English, so `lang` has no effect.
     Keywords: MP, member of Parliament, riding, constituency, House of
     Commons, party, caucus, politician.
     Mots-clés : député, députée, circonscription, Chambre des communes,
     parti, caucus, élu, parlementaire.
     """
+    del lang
     return await client.search_politicians(
         name=name, province=province, party=party, include_former=include_former, limit=limit
     )
@@ -148,9 +152,9 @@ async def parliament_get_politician(slug: str, lang: Literal["en", "fr"] = "en")
     Use for: an MP's email, phone, ourcommons.ca page and every term
     (party, riding, dates). slug like 'ziad-aboultaif'.
     Keywords: MP profile, contact, email, riding history, party history,
-    member of Parliament, term.
+    member of Parliament, term, MP.
     Mots-clés : profil du député, coordonnées, courriel, circonscription,
-    historique, parti, mandat.
+    historique, parti, mandat, député.
     """
     return await client.get_politician(slug, lang=lang)
 
@@ -160,6 +164,7 @@ async def parliament_search_hansard(
     query: str,
     sort: Literal["relevance", "newest", "oldest"] = "relevance",
     page: int = 1,
+    lang: Literal["en", "fr"] = "en",
 ) -> HansardSearchResult:
     """Full-text search of House of Commons debates and committee evidence.
 
@@ -167,12 +172,15 @@ async def parliament_search_hansard(
     or an exact phrase in quotes ("housing crisis"), since 1994. Returns
     15 hits per page with date, speaker (MP slug), party and excerpt,
     by relevance or date. Read a full sitting with
-    parliament_search_speeches.
+    parliament_search_speeches. Hits come from openparliament.ca's
+    English-only search page, so `lang` has no effect.
     Keywords: Hansard search, debate transcript, what did MPs say,
     parliamentary debate, committee testimony, quote, speech, mention.
-    Mots-clés : recherche hansard, débats parlementaires, transcription,
-    ce qu'ont dit les députés, témoignages en comité, citation, mention.
+    Mots-clés : recherche hansard, débats parlementaires, transcription, ce
+    qu'ont dit les députés, témoignages en comité, citation, mention,
+    discours.
     """
+    del lang
     return await client.search_hansard(query, sort=sort, page=page)
 
 
@@ -190,10 +198,10 @@ async def parliament_search_speeches(
     Use for: what an MP said in the House or in committee (politician
     slug), the full debate of one sitting (debate_date, YYYY-MM-DD), or
     speeches between dates. Text is plain, in English or French.
-    Keywords: Hansard, debate, speech, question period, committee
-    evidence, transcript, House of Commons, said.
+    Keywords: Hansard, debate, speech, question period, committee evidence,
+    transcript, House of Commons, said.
     Mots-clés : hansard, débats, intervention, période des questions,
-    témoignages en comité, transcription, Chambre des communes.
+    témoignages en comité, transcription, Chambre des communes, discours.
     """
     return await client.search_speeches(
         politician=politician,

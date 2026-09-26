@@ -24,8 +24,9 @@ async def gc_infobase_list_files(query: str | None = None, lang: Lang = "en") ->
     files.
     Keywords: GC InfoBase, federal spending, Public Accounts, Main
     Estimates, departmental results, FTE, programs, Treasury Board.
-    Mots-clés : InfoBase du GC, dépenses fédérales, Comptes publics,
-    Budget principal des dépenses, résultats ministériels, ETP, programmes.
+    Mots-clés : InfoBase du GC, dépenses fédérales, Comptes publics, Budget
+    principal des dépenses, résultats ministériels, ETP, programmes, budget
+    fédéral.
     """
     return await client.list_files(query, lang)
 
@@ -52,7 +53,8 @@ async def gc_infobase_query(
     Keywords: federal spending, department budget, expenditures,
     authorities, transfer payments, program spending, FTE, public accounts.
     Mots-clés : dépenses fédérales, budget ministériel, autorisations,
-    paiements de transfert, dépenses de programme, ETP, comptes publics.
+    paiements de transfert, dépenses de programme, ETP, comptes publics,
+    InfoBase du GC.
     """
     return await client.query(
         resource_id,

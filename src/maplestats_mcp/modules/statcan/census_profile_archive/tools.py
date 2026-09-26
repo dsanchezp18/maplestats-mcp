@@ -31,10 +31,11 @@ async def statcan_census_profile_archive_list_geography_levels(
     34 geography groupings, 2011 has 14, 2006 and 2001 each have 5.
     Level keys are the same in both languages, so `lang` does not change
     this list; pass it to the download-link tool for French files.
-    Keywords: census, archive, historical, 2001, 2006, 2011, 2016,
-    bulk download, comprehensive download file.
-    Mots-clés : recensement, archive, historique, téléchargement en
-    bloc, fichier de téléchargement global.
+    Keywords: census, archive, historical, 2001, 2006, 2011, 2016, bulk
+    download, comprehensive download file.
+    Mots-clés : recensement, archive, historique, téléchargement en bloc,
+    fichier de téléchargement global, niveau géographique, format de
+    fichier, profil du recensement.
     """
     del lang
     return await client.list_geography_levels(year)
@@ -55,9 +56,9 @@ async def statcan_census_profile_archive_get_download_link(
     (a proprietary Beyond 20/20 format) uses a different, separate
     resolver not implemented here. `lang="fr"` returns StatCan's
     French-language file for every year. Keywords: census, archive,
-    historical, download, CSV, TAB, comprehensive download file.
-    Mots-clés : recensement, archive, historique, téléchargement,
-    fichier de téléchargement global, profil du recensement, fichier en
-    français.
+    historical, download, CSV, TAB, comprehensive download file, census
+    profile.
+    Mots-clés : recensement, archive, historique, téléchargement, fichier de
+    téléchargement global, profil du recensement, fichier en français, CSV.
     """
     return await client.get_download_link(year, level, file_format, lang)

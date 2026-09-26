@@ -23,9 +23,11 @@ async def statcan_surveys_search_surveys(
     (documents about surveys) and from statcan_daily_* (release
     bulletin) -- this is the master list of the surveys/programs
     themselves. An empty query returns the full directory. Keywords:
-    StatCan, survey, statistical program, survey directory, survey ID.
+    StatCan, survey, statistical program, survey directory, survey ID,
+    Statistics Canada, data source, survey list.
     Mots-clés : Statistique Canada, enquête, programme statistique,
-    répertoire des enquêtes.
+    répertoire des enquêtes, numéro d'enquête, source de données, liste des
+    enquêtes, enquêtes statistiques.
     """
     return await client.search_surveys(query, lang=lang, limit=limit)
 
@@ -49,6 +51,7 @@ async def statcan_surveys_get_survey_metadata(
     Keywords: StatCan, IMDB, survey metadata, methodology, target
     population, data quality, survey status, survey frequency.
     Mots-clés : Statistique Canada, BMDI, métadonnées d'enquête,
-    méthodologie, population cible, statut de l'enquête.
+    méthodologie, population cible, statut de l'enquête, fréquence,
+    description de l'enquête.
     """
     return await client.get_survey_metadata(survey_id, lang=lang)

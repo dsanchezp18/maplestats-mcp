@@ -27,6 +27,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -212,8 +213,8 @@ async def get_indicator_data(framework: str, code: str, *, lang: str = "en") -> 
         return await _get_json(f"statcan_sdg:get_indicator_data:{framework}", url)
 
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DATA_SECONDS, fetch)
-    years = body.get("Year", [])
-    values = body.get("Value", [])
+    years = list_or_empty(body, "Year")
+    values = list_or_empty(body, "Value")
     disaggregation_columns = [c for c in body if c not in ("Year", "Value")]
     observations = [
         SdgObservation(

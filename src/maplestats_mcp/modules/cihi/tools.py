@@ -41,9 +41,10 @@ async def cihi_get_indicator(indicator: str, lang: Lang = "en") -> IndicatorDeta
     and places it covers before reading its data. `indicator` is a slug
     from cihi_search_indicators; `lang="fr"` returns the French page.
     Keywords: CIHI, indicator definition, methodology, data availability,
-    update frequency, health system.
+    update frequency, health system, health indicator, definition.
     Mots-clés : ICIS, définition de l'indicateur, méthodologie,
-    disponibilité des données, fréquence de mise à jour.
+    disponibilité des données, fréquence de mise à jour, système de santé,
+    indicateur de santé, définition.
     """
     return await client.get_indicator(indicator, lang)
 

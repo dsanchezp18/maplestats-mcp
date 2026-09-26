@@ -24,7 +24,8 @@ async def nrcan_energy_use_list_products(lang: Lang = "en") -> ProductList:
     Keywords: NRCan, energy use, energy consumption, household energy
     survey, SHEU, GHG emissions, energy efficiency, residential, buildings.
     Mots-clés : RNCan, consommation d'énergie, utilisation de l'énergie,
-    enquête sur les ménages, émissions de GES, efficacité énergétique.
+    enquête sur les ménages, émissions de GES, efficacité énergétique, base
+    de données, énergie.
     """
     return await client.list_products(lang)
 

@@ -76,8 +76,9 @@ async def statcan_sdg_get_indicator_data(
     -- these vary per indicator and are not fixed across the framework,
     confirmed live.
     Keywords: statcan, SDG, indicator data, time series, sustainable
-    development goals, observations.
+    development goals, observations, Statistics Canada, indicator values.
     Mots-clés : statcan, ODD, données d'indicateur, série chronologique,
-    objectifs de développement durable, observations.
+    objectifs de développement durable, observations, Statistique Canada,
+    valeurs de l'indicateur.
     """
     return await client.get_indicator_data(framework, code, lang=lang)

@@ -24,9 +24,9 @@ async def gazette_list_issues(
     and proposed regulations; Part II (every second Wednesday) carries
     registered regulations (SOR) and statutory instruments (SI).
     Keywords: Canada Gazette, government notices, proposed regulations,
-    regulations, SOR, orders in council, official publication.
+    regulations, SOR, orders in council, official publication, Part I.
     Mots-clés : Gazette du Canada, avis du gouvernement, projets de
-    règlement, règlements, DORS, décrets, publication officielle.
+    règlement, règlements, DORS, décrets, publication officielle, Partie I.
     """
     return await client.list_issues(part, limit=limit, lang=lang)
 
@@ -58,9 +58,9 @@ async def gazette_get_notice(url: str, lang: Lang = "en") -> NoticeText:
     Regulatory Impact Analysis Statement) or registered regulation.
     `url` comes from gazette_get_issue; the language follows the URL
     (open the French issue for French text).
-    Keywords: Canada Gazette notice text, regulation text, RIAS,
-    regulatory impact, proposed regulation, order.
-    Mots-clés : texte de l'avis, texte du règlement, REIR, résumé de
-    l'étude d'impact, projet de règlement, décret.
+    Keywords: Canada Gazette notice text, regulation text, RIAS, regulatory
+    impact, proposed regulation, order, Canada Gazette, notice.
+    Mots-clés : texte de l'avis, texte du règlement, REIR, résumé de l'étude
+    d'impact, projet de règlement, décret, Gazette du Canada, avis.
     """
     return await client.get_notice(url, lang)

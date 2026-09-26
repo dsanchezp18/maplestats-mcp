@@ -24,9 +24,10 @@ async def sdmx_get_structure(product_id: int, lang: Lang = "en") -> SdmxStructur
     Use for: understanding a table's dimensions before building an SDMX
     query key, or before calling sdmx_get_key_for_dimension on a large
     dimension.
-    Keywords: statcan, sdmx, structure, dimensions, codelist, dsd, keys.
-    Mots-clés : statcan, sdmx, structure, dimensions, liste de codes,
-    dsd, clés, classification.
+    Keywords: statcan, sdmx, structure, dimensions, codelist, dsd, keys,
+    Statistics Canada.
+    Mots-clés : statcan, sdmx, structure, dimensions, liste de codes, dsd,
+    clés, classification.
     """
     return await client.get_structure(product_id)
 
@@ -96,7 +97,8 @@ async def sdmx_get_vector_data(
     Use for: fetching one specific series via SDMX when you already
     have its vector ID (resolves the vector to a productId/coordinate
     internally, then builds the matching SDMX key).
-    Keywords: statcan, sdmx, vector, data, observations, series, query.
+    Keywords: statcan, sdmx, vector, data, observations, series, query,
+    Statistics Canada.
     Mots-clés : statcan, sdmx, vecteur, données, observations, série,
     requête, identifiant de vecteur.
     """

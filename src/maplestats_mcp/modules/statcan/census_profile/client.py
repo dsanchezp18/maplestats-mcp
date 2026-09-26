@@ -51,6 +51,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -275,8 +276,9 @@ async def get_data(
         )
 
     dims = structures[0]["dimensions"]["series"]
-    series_attr_defs = structures[0].get("attributes", {}).get("series", [])
-    obs_attr_defs = structures[0].get("attributes", {}).get("observation", [])
+    attr_defs = structures[0].get("attributes") or {}
+    series_attr_defs = list_or_empty(attr_defs, "series")
+    obs_attr_defs = list_or_empty(attr_defs, "observation")
 
     release_date: str | None = None
     values: list[CensusProfileValue] = []

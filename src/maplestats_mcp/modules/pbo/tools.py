@@ -56,9 +56,10 @@ async def pbo_get_publication(publication_id: str, lang: Lang = "en") -> PboPubl
     Charts are images without data. Reuse is personal and non-commercial,
     unaltered, crediting PBO.
     Keywords: PBO tables, cost estimate figures, costing results, fiscal
-    impact, revenue projection, spending projection, economic projection.
-    Mots-clés : tableaux du DPB, estimation des coûts, incidence
-    financière, projection des revenus, projection des dépenses,
-    projection économique.
+    impact, revenue projection, spending projection, economic projection,
+    Parliamentary Budget Officer.
+    Mots-clés : tableaux du DPB, estimation des coûts, incidence financière,
+    projection des revenus, projection des dépenses, projection économique,
+    directeur parlementaire du budget, résultats de l'évaluation.
     """
     return await client.get_publication(publication_id, lang=lang)

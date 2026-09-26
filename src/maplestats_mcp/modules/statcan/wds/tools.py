@@ -82,8 +82,8 @@ async def wds_get_series_info_from_vector(vector_id: int, lang: Lang = "en") -> 
 
     Use for: figuring out which table and dimension-position a known
     vector belongs to.
-    Keywords: statcan, vector, resolve, productId, coordinate, series
-    info, wds.
+    Keywords: statcan, vector, resolve, productId, coordinate, series info,
+    wds, Statistics Canada.
     Mots-clés : statcan, vecteur, résoudre, conversion, productId,
     coordonnée, information de série, identifiant, wds.
     """
@@ -98,8 +98,8 @@ async def wds_get_series_info_from_cube_pid_coord(
 
     Use for: converting a table/dimension-position pair (from
     wds_get_cube_metadata) into a vector ID for later reuse.
-    Keywords: statcan, coordinate, vector, resolve, productId, series
-    info, wds.
+    Keywords: statcan, coordinate, vector, resolve, productId, series info,
+    wds, Statistics Canada.
     Mots-clés : statcan, coordonnée, vecteur, résoudre, conversion,
     productId, information de série, identifiant, wds.
     """
@@ -133,7 +133,7 @@ async def wds_get_data_from_cube_coord(
     Use for: fetching data when you have a productId/coordinate but not
     yet the vector ID.
     Keywords: statcan, coordinate, observations, latest, data, wds,
-    productId.
+    productId, Statistics Canada.
     Mots-clés : statcan, coordonnée, observations, dernières données,
     données, wds, productId, tableau.
     """
@@ -157,7 +157,7 @@ async def wds_get_bulk_vector_data_by_range(
     "YYYY-MM-DDTHH:MM" (e.g. "2024-01-01T08:30") — WDS rejects a bare
     date with HTTP 406.
     Keywords: statcan, bulk, vectors, date range, release date, history,
-    wds.
+    wds, Statistics Canada.
     Mots-clés : statcan, en masse, vecteurs, vecteurs multiples, plage de
     dates, date de diffusion, historique, wds.
     """
@@ -176,8 +176,8 @@ async def wds_get_data_by_reference_period_range(
     2020-12-01) rather than "latest N." `start_ref_period`/`end_ref_period`
     must be full "YYYY-MM-DD" — WDS rejects an abbreviated "YYYY-MM"
     with HTTP 406.
-    Keywords: statcan, reference period, range, history, vectors, wds,
-    date range.
+    Keywords: statcan, reference period, range, history, vectors, wds, date
+    range, Statistics Canada.
     Mots-clés : statcan, période de référence, plage, plage de dates,
     historique, vecteurs, données historiques, wds.
     """
@@ -221,7 +221,8 @@ async def wds_get_changed_series_data_from_vector(vector_id: int, lang: Lang = "
 
     Use for: fetching only what changed rather than the full latest-N
     window, after wds_get_changed_series_list flags a vector.
-    Keywords: statcan, changed, vector, delta, updated data, wds.
+    Keywords: statcan, changed, vector, delta, updated data, wds, Statistics
+    Canada, revisions.
     Mots-clés : statcan, modifié, vecteur, écart, données mises à jour,
     série, changements, wds.
     """
@@ -236,9 +237,10 @@ async def wds_get_changed_series_data_from_cube_coord(
 
     Use for: fetching only what changed for a specific series identified
     by productId/coordinate rather than vector ID.
-    Keywords: statcan, changed, coordinate, delta, updated data, wds.
-    Mots-clés : statcan, modifié, coordonnée, écart, données mises à
-    jour, changements, tableau, wds.
+    Keywords: statcan, changed, coordinate, delta, updated data, wds,
+    Statistics Canada, revisions.
+    Mots-clés : statcan, modifié, coordonnée, écart, données mises à jour,
+    changements, tableau, wds.
     """
     return await client.get_changed_series_data_from_cube_pid_coord(product_id, coordinate)
 
@@ -251,7 +253,8 @@ async def wds_get_full_table_download_csv(
 
     Use for: bulk/offline analysis of an entire table rather than
     individual series — hands back a URL, does not fetch the file.
-    Keywords: statcan, csv, download, full table, bulk, export, wds.
+    Keywords: statcan, csv, download, full table, bulk, export, wds,
+    Statistics Canada.
     Mots-clés : statcan, csv, téléchargement, tableau complet, en masse,
     exportation, wds, données complètes.
     """

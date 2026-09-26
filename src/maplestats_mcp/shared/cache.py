@@ -22,10 +22,18 @@ TTLCache is created per distinct ttl value seen, each independently
 bounded to MAPLE_CACHE_MAX_ENTRIES. The number of distinct ttl values
 is small and fixed by the constants each module defines, so this stays
 a handful of buckets in practice, not one per key.
+
+Concurrent misses on the same (ttl, key) share one fetch ("single
+flight"): without it, N identical requests arriving before the first
+finished each hit the upstream, which for a slow, rate-limited source
+turns one call into N and can trip its limit. Callers get the stored
+object itself, not a copy (results can be large), so a caller must not
+mutate what cached_fetch returns.
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -35,6 +43,7 @@ from maplestats_mcp import config
 from maplestats_mcp.shared.http import is_recording
 
 _caches: dict[int, TTLCache] = {}
+_inflight: dict[tuple[int, str], asyncio.Future[Any]] = {}
 
 
 def _cache_for_ttl(ttl: int) -> TTLCache:
@@ -56,17 +65,50 @@ async def cached_fetch(
     should not poison the cache for the TTL window.
     """
     cache = _cache_for_ttl(ttl)
-    # While reproduce_code records a tool's requests, a cache hit would hide
-    # them, so read through to the source.
-    if not is_recording():
+    # While reproduce_code records a tool's requests, a cache hit (or a
+    # joined in-flight fetch) would hide them, so read through to the source.
+    if is_recording():
+        data = await fetcher()
+        cache[key] = data
+        return data, False
+
+    flight_key = (ttl, key)
+    while True:
         try:
             return cache[key], True
         except KeyError:
             pass
+        pending = _inflight.get(flight_key)
+        if pending is None:
+            break
+        # shield: a waiter being cancelled must not cancel the fetch the
+        # other waiters share. A fetch cancelled with its owner leaves no
+        # result, so loop and either find one cached or start a new fetch.
+        try:
+            return await asyncio.shield(pending), False
+        except asyncio.CancelledError:
+            if not pending.cancelled():
+                raise
 
-    data = await fetcher()
-    cache[key] = data
-    return data, False
+    future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+    _inflight[flight_key] = future
+    try:
+        data = await fetcher()
+    except asyncio.CancelledError:
+        future.cancel()
+        raise
+    except BaseException as exc:
+        future.set_exception(exc)
+        # Mark it retrieved so asyncio doesn't log "exception never
+        # retrieved" when no other caller was waiting; the owner re-raises.
+        future.exception()
+        raise
+    else:
+        cache[key] = data
+        future.set_result(data)
+        return data, False
+    finally:
+        _inflight.pop(flight_key, None)
 
 
 def forget(key: str) -> None:

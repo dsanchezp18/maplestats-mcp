@@ -122,10 +122,10 @@ async def socrata_list_categories(portal: PortalKey, lang: Lang = "en") -> Categ
     """List one Socrata portal's dataset categories and how many datasets each has.
 
     Use for: discovering topic categories before filtering search.
-    Keywords: Socrata, categories, domain_category, catalogue, open
-    data, topics, classification.
-    Mots-clés : Socrata, catégories, domaine, catalogue, données
-    ouvertes, sujets, classification, thèmes.
+    Keywords: Socrata, categories, domain_category, catalogue, open data,
+    topics, classification, themes.
+    Mots-clés : Socrata, catégories, domaine, catalogue, données ouvertes,
+    sujets, classification, thèmes.
     """
     return await client.list_categories(portal, lang)
 

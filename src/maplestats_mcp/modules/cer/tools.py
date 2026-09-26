@@ -50,8 +50,9 @@ async def cer_query_file(
     The file's own language decides the column names.
     Keywords: CER, pipeline throughput, capacity utilization, exports,
     volumes, tolls, time series, CSV, oil, natural gas.
-    Mots-clés : Régie de l'énergie, débit des pipelines, taux
-    d'utilisation, exportations, volumes, droits, séries chronologiques.
+    Mots-clés : Régie de l'énergie, débit des pipelines, taux d'utilisation,
+    exportations, volumes, droits, séries chronologiques, pipelines, gaz
+    naturel.
     """
     del lang
     return await client.query_file(url, filters, columns=columns, start=start, end=end, limit=limit)

@@ -110,6 +110,8 @@ async def bcgw_query_layer(
     carries a resource whose URL embeds the type_name right after
     "openmaps.gov.bc.ca/geo/pub/". Filter with a standard OGC CQL
     expression against that layer's own field names.
+    Use for: pulling features from any BC government map layer (parks,
+    land status, forestry, environment and more) with a CQL filter.
     Keywords: British Columbia, BC, BCGW, BC Geographic Warehouse,
     WFS, geospatial, layer, feature, CQL filter, data catalogue,
     generic query, openmaps.

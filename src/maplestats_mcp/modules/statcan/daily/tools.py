@@ -60,10 +60,12 @@ async def statcan_daily_get_releases(
     Covers the last 100 days. Each release has a title, a canonical
     URL (either a Daily article or a catalogue-number product page),
     a publication timestamp, and a plain-text summary. Use "all" for
-    every subject in one call. Keywords: The Daily, release bulletin,
-    new data, recent releases, what's new, StatCan announcement.
+    every subject in one call. Keywords: The Daily, release bulletin, new
+    data, recent releases, what's new, StatCan announcement, Statistics
+    Canada, latest statistics.
     Mots-clés : Le Quotidien, bulletin de diffusion, nouvelles données,
-    diffusions récentes, quoi de neuf, annonce de Statistique Canada.
+    diffusions récentes, quoi de neuf, annonce de Statistique Canada,
+    Statistique Canada, dernières statistiques.
     """
     return await client.get_releases(subject, lang=lang, limit=limit)
 
@@ -86,10 +88,11 @@ async def statcan_daily_search_archive(
     2020"); leave it empty to browse by date range alone. start_date
     and end_date are "YYYY-MM-DD" and filter to releases on or between
     those dates (inclusive); omit either to leave that side open.
-    Results are returned most-recent-first. Keywords: The Daily,
-    historical, archive, past releases, release history, when was.
+    Results are returned most-recent-first. Keywords: The Daily, historical,
+    archive, past releases, release history, when was, Statistics Canada,
+    release date.
     Mots-clés : Le Quotidien, historique, archive, diffusions passées,
-    historique des diffusions, quand.
+    historique des diffusions, quand, Statistique Canada, date de diffusion.
     """
     return await client.search_archive(
         query, lang=lang, start_date=start_date, end_date=end_date, limit=limit

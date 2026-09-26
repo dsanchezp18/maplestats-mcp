@@ -28,6 +28,8 @@ async def aer_get_well_licences_daily(
     Alberta (America/Edmonton) time. Returns the report as raw text --
     each licence record spans 5 fixed-width lines with no column
     boundary confirmed safe to split on generically.
+    Use for: which new oil and gas wells AER licensed on a given day
+    this week, and who the licensee is.
     Keywords: Alberta, AER, Alberta Energy Regulator, ST1, well
     licence, well licences issued, oil and gas, drilling, licensee,
     daily report, mineral rights, field.
@@ -49,6 +51,8 @@ async def aer_get_well_licence_archive_link(
     publishes monthly ZIPs for that year and one combined yearly ZIP
     for every prior year. Discovery-only: returns the URL and size, not
     parsed contents (these are large fixed-width archives).
+    Use for: finding the download for historical Alberta well licences
+    by year or month, for bulk analysis outside this server.
     Keywords: Alberta, AER, well licence archive, ST1, historical well
     licences, ZIP, oil and gas history, monthly archive, yearly
     archive.
@@ -67,6 +71,8 @@ async def aer_get_production_volumes_link(product: str, lang: Lang = "en") -> Pr
     "propane", "sulphur", "oil_prices". ST3 is released monthly, one
     month in arrears. Discovery-only: returns the URL, size, and
     last-modified date, not parsed spreadsheet rows.
+    Use for: getting the latest monthly Alberta oil, gas, NGL or
+    sulphur production spreadsheet, or AER's oil price workbook.
     Keywords: Alberta, AER, ST3, production volumes, oil, gas, NGL,
     butane, ethane, propane, sulphur, oil prices, monthly statistics,
     energy resource industry.

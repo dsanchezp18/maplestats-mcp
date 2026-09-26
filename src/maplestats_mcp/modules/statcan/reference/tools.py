@@ -28,12 +28,12 @@ async def statcan_reference_search_documents(
     (e.g. "Surveys and statistical programs – Documentation",
     "Geographic files and documentation"), a description, and a
     release date. An empty query returns the full unfiltered catalogue
-    (paginate with page/count to browse it). Keywords: StatCan,
-    definitions, data sources and methods, DSDM, methodology, technical
-    reference guide, survey documentation, catalogue number.
+    (paginate with page/count to browse it). Keywords: StatCan, definitions,
+    data sources and methods, DSDM, methodology, technical reference guide,
+    survey documentation, catalogue number.
     Mots-clés : Statistique Canada, définitions, sources de données et
     méthodes, méthodologie, guide de référence technique, documentation
-    d'enquête, numéro au catalogue.
+    d'enquête, numéro au catalogue, publications techniques.
     """
     return await client.search_documents(query, count=count, page=page, lang=lang)
 
@@ -59,8 +59,8 @@ async def statcan_reference_search_analysis(
     unfiltered catalogue (paginate with page/count to browse it).
     Keywords: StatCan, analysis, analytical article, stats in brief,
     journal, periodical, working paper, insights.
-    Mots-clés : Statistique Canada, analyse, article analytique,
-    coup d'œil sur, revue, périodique, document de travail.
+    Mots-clés : Statistique Canada, analyse, article analytique, coup d'œil
+    sur, revue, périodique, document de travail, études.
     """
     return await client.search_analysis(query, count=count, page=page, lang=lang)
 
@@ -85,10 +85,11 @@ async def statcan_reference_search_data(
     the target, not a table's time series. Covers 13,342+ items. For a
     PUMF, pass its catalogue_number to statcan_pumf_list_files for the
     download ZIPs. An empty query returns the full unfiltered catalogue (paginate with
-    page/count to browse it). Keywords: StatCan, PUMF, public use
-    microdata file, geographic boundary file, bulk data, data product.
-    Mots-clés : Statistique Canada, FMGD, fichier de microdonnées à
-    grande diffusion, fichier de limites géographiques, données en
-    bloc, produit de données.
+    page/count to browse it). Keywords: StatCan, PUMF, public use microdata
+    file, geographic boundary file, bulk data, data product, Statistics
+    Canada, download.
+    Mots-clés : Statistique Canada, FMGD, fichier de microdonnées à grande
+    diffusion, fichier de limites géographiques, données en bloc, produit de
+    données, téléchargement, cartes géographiques.
     """
     return await client.search_data(query, count=count, page=page, lang=lang)

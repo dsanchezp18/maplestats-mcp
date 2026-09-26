@@ -34,8 +34,12 @@ from typing import Any
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from maplestats_mcp import __version__
+
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
-_DEFAULT_HEADERS = {"User-Agent": "maplestats-mcp/0.1"}
+# Built from the package version so the User-Agent upstreams see (and can
+# contact us about) never goes stale after a release.
+_DEFAULT_HEADERS = {"User-Agent": f"maplestats-mcp/{__version__}"}
 
 
 @dataclass

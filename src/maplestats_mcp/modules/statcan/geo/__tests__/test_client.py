@@ -74,6 +74,19 @@ async def test_get_layer_detail_parses_fields(httpx_mock):
     assert result.fields[0].name == "CSDUID"
 
 
+async def test_get_layer_detail_tolerates_null_fields(httpx_mock):
+    # A present-but-null list must coalesce to [] (AGENTS.md, list_or_empty).
+    httpx_mock.add_response(url=f"{_BASE}/9?f=json", json={**_LAYER_JSON, "fields": None})
+    result = await client.get_layer_detail("2021", "Cartographic_boundary_files", 9)
+    assert result.fields == []
+
+
+async def test_query_layer_features_tolerates_null_features(httpx_mock):
+    httpx_mock.add_response(json={**_QUERY_GEOJSON, "features": None})
+    result = await client.query_layer_features("2021", "Cartographic_boundary_files", 9)
+    assert result.features == []
+
+
 async def test_get_layer_detail_rejects_negative_layer_id():
     with pytest.raises(InvalidInput):
         await client.get_layer_detail("2021", "Cartographic_boundary_files", -1)

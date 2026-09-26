@@ -26,10 +26,11 @@ async def statcan_pumf_search(
     (e.g. "health", "labour", "spending"), with catalogue numbers such as
     71M0001X (Labour Force Survey) or 98M0001X (Census). Next:
     statcan_pumf_list_files for the downloads.
-    Keywords: PUMF, microdata, public use microdata file, survey
-    microdata, respondent records, Labour Force Survey, CCHS, census.
+    Keywords: PUMF, microdata, public use microdata file, survey microdata,
+    respondent records, Labour Force Survey, CCHS, census.
     Mots-clés : FMGD, microdonnées, fichier de microdonnées à grande
-    diffusion, données d'enquête, EPA, ESCC, recensement.
+    diffusion, données d'enquête, EPA, ESCC, recensement, Statistique
+    Canada.
     """
     return await client.search(query, lang=lang, limit=limit)
 
@@ -44,25 +45,28 @@ async def statcan_pumf_list_files(
     LFS files by year) or 98M0001X (Census individuals and hierarchical
     files, 1991-2021). Next: statcan_pumf_get_codebook with a ZIP url.
     Keywords: PUMF download, microdata file, ZIP, survey year, edition,
-    catalogue number, Statistics Canada.
-    Mots-clés : téléchargement FMGD, fichier de microdonnées, ZIP,
-    année d'enquête, numéro de catalogue.
+    catalogue number, Statistics Canada, year.
+    Mots-clés : téléchargement FMGD, fichier de microdonnées, ZIP, année
+    d'enquête, numéro de catalogue, édition, Statistique Canada, année.
     """
     return await client.list_files(catalogue_number, lang=lang)
 
 
 @tool
-async def statcan_pumf_list_zip(url: str) -> ZipContents:
+async def statcan_pumf_list_zip(url: str, lang: Literal["en", "fr"] = "en") -> ZipContents:
     """List what is inside a PUMF ZIP without downloading it.
 
     Use for: seeing the data files, user guides and codebook files in a
     StatCan PUMF ZIP (read with HTTP range requests, a few KB), and
-    their uncompressed sizes. lang does not apply.
-    Keywords: ZIP contents, PUMF files, user guide, record layout,
-    codebook, data file size.
+    their uncompressed sizes. File names are listed as stored in the
+    ZIP, so `lang` has no effect.
+    Keywords: ZIP contents, PUMF files, user guide, record layout, codebook,
+    data file size, data file, archive.
     Mots-clés : contenu du ZIP, fichiers FMGD, guide de l'utilisateur,
-    dictionnaire de données, taille.
+    dictionnaire de données, taille, disposition des enregistrements,
+    fichier de données, archive ZIP.
     """
+    del lang
     return await client.list_zip(url)
 
 
@@ -82,8 +86,8 @@ async def statcan_pumf_get_codebook(
     inside the ZIP. url comes from statcan_pumf_list_files.
     Keywords: codebook, data dictionary, variables, value labels, survey
     weights, bootstrap weights, record layout, PUMF.
-    Mots-clés : dictionnaire de données, variables, étiquettes de
-    valeurs, poids d'enquête, poids bootstrap, FMGD, disposition.
+    Mots-clés : dictionnaire de données, variables, étiquettes de valeurs,
+    poids d'enquête, poids bootstrap, FMGD, disposition, Statistique Canada.
     """
     return await client.get_codebook(url, query=query, lang=lang, limit=limit)
 
@@ -112,10 +116,11 @@ async def statcan_pumf_tabulate(
     documented replicate weights where verified (2021 Census individuals).
     The first call downloads the file (may take a minute or two; retry
     if it times out).
-    Keywords: weighted estimate, tabulation, crosstab, microdata
-    analysis, survey weight, population estimate, PUMF, LFS.
+    Keywords: weighted estimate, tabulation, crosstab, microdata analysis,
+    survey weight, population estimate, PUMF, LFS.
     Mots-clés : estimation pondérée, totalisation, tableau croisé,
-    microdonnées, poids d'enquête, estimation de population, FMGD.
+    microdonnées, poids d'enquête, estimation de population, FMGD,
+    Statistique Canada.
     """
     return await tabulate.tabulate(
         url,

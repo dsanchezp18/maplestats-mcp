@@ -57,7 +57,7 @@ async def rdaas_get_classification_search_filters(lang: Lang = "en") -> SearchFi
     Use for: discovering what values `audience`/`status` accept before
     filtering a search.
     Keywords: statcan, rdaas, filters, search, audience, status,
-    classification.
+    classification, Statistics Canada.
     Mots-clés : statcan, rdaas, filtres, recherche, public cible, statut,
     classification, valeurs valides.
     """
@@ -112,10 +112,10 @@ async def rdaas_get_classification_exclusions(
 
     Use for: checking whether a term is deliberately excluded from a
     classification rather than simply missing.
-    Keywords: statcan, exclusions, classification, rdaas, excluded,
-    terms, naics.
-    Mots-clés : statcan, exclusions, classification, rdaas, exclu,
-    termes, scian, non couvert.
+    Keywords: statcan, exclusions, classification, rdaas, excluded, terms,
+    naics, Statistics Canada.
+    Mots-clés : statcan, exclusions, classification, rdaas, exclu, termes,
+    scian, non couvert.
     """
     return await client.get_classification_exclusions(classification_id, lang=lang)
 
@@ -127,8 +127,8 @@ async def rdaas_get_classification_indexes(
     """List all index entries (alternate terms mapped to a code) for one classification.
 
     Use for: finding which code a plain-language term maps to.
-    Keywords: statcan, index, classification, rdaas, terms, alternate
-    names, naics.
+    Keywords: statcan, index, classification, rdaas, terms, alternate names,
+    naics, Statistics Canada.
     Mots-clés : statcan, index, classification, rdaas, termes, noms
     alternatifs, scian, correspondance de termes.
     """
@@ -144,9 +144,10 @@ async def rdaas_get_classification_index_entry(
 
     Use for: retrieving a single term-to-code mapping already identified
     via rdaas_get_classification_indexes.
-    Keywords: statcan, index entry, classification, rdaas, term, code.
-    Mots-clés : statcan, entrée d'index, classification, rdaas, terme,
-    code, correspondance, identifiant.
+    Keywords: statcan, index entry, classification, rdaas, term, code,
+    Statistics Canada, NAICS.
+    Mots-clés : statcan, entrée d'index, classification, rdaas, terme, code,
+    correspondance, identifiant.
     """
     return await client.get_classification_index_entry(classification_id, index_id, lang=lang)
 
@@ -176,10 +177,10 @@ async def rdaas_search_concordances(
     classification versions (e.g. NAICS 2012 to NAICS 2017).
 
     Use for: finding a concordance id before requesting its code maps.
-    Keywords: statcan, concordance, correspondence, rdaas, naics,
-    version, mapping.
-    Mots-clés : statcan, concordance, correspondance, rdaas, scian,
-    version, conversion, recherche.
+    Keywords: statcan, concordance, correspondence, rdaas, naics, version,
+    mapping, Statistics Canada.
+    Mots-clés : statcan, concordance, correspondance, rdaas, scian, version,
+    conversion, recherche.
     """
     return await client.search_concordances(query, start=start, limit=limit, lang=lang)
 
@@ -191,9 +192,9 @@ async def rdaas_get_concordance_search_filters(lang: Lang = "en") -> SearchFilte
     Use for: discovering what values `audience`/`status` accept before
     filtering a concordance search.
     Keywords: statcan, rdaas, filters, search, concordance, audience,
-    status.
-    Mots-clés : statcan, rdaas, filtres, recherche, concordance,
-    public cible, statut, valeurs valides.
+    status, Statistics Canada.
+    Mots-clés : statcan, rdaas, filtres, recherche, concordance, public
+    cible, statut, valeurs valides.
     """
     return await client.get_concordance_search_filters()
 
@@ -205,7 +206,7 @@ async def rdaas_get_concordance(concordance_id: str, lang: Lang = "en") -> Conco
     Use for: confirming which two classification versions a concordance
     connects before requesting its code maps.
     Keywords: statcan, concordance, detail, rdaas, source, target,
-    classification.
+    classification, Statistics Canada.
     Mots-clés : statcan, concordance, détail, rdaas, source, cible,
     classification, connexion.
     """
@@ -219,7 +220,7 @@ async def rdaas_get_concordance_maps(concordance_id: str, lang: Lang = "en") -> 
     Use for: converting a code from one classification version to its
     equivalent(s) in another version.
     Keywords: statcan, code map, concordance, rdaas, mapping, convert,
-    naics.
+    naics, Statistics Canada.
     Mots-clés : statcan, correspondance de codes, concordance, rdaas,
     conversion, scian, table de conversion, codes.
     """

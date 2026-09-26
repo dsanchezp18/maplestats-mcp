@@ -98,6 +98,21 @@ async def test_get_concordance_maps_parses_code_map_entries(httpx_mock):
     assert result.maps[0].source_code == "5621"
 
 
+async def test_search_classifications_tolerates_null_graph(httpx_mock):
+    # A present-but-null list must coalesce to [] (AGENTS.md, list_or_empty).
+    httpx_mock.add_response(json={**_SEARCH_RESPONSE, "results": {"@graph": None}, "found": 0})
+    result = await client.search_classifications("nothing-matches")
+    assert result.results == []
+
+
+async def test_get_classification_tolerates_null_levels(httpx_mock):
+    httpx_mock.add_response(json={**_DETAIL_RESPONSE, "levels": None})
+    # A distinct id: get_classification caches by id, and another test here
+    # already caches MJRdRiFsfmJAprtT with its levels.
+    result = await client.get_classification("NullLevels00001")
+    assert result.levels == []
+
+
 def test_resource_id_normalizes_full_url_to_bare_id():
     assert client._resource_id("https://api.statcan.gc.ca/rdaas/classification/ABC123") == "ABC123"
     assert client._resource_id("ABC123") == "ABC123"
