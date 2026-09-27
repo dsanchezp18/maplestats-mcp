@@ -96,15 +96,15 @@
 <section class="wrap stanza" id="macroeconomists">
   <div class="stanza-text">
     <div class="stanza-verse">
-      <p class="verse-count">{{count_tables}}</p>
-      <p class="verse-line">{en}Statistics Canada tables for the macroeconomists, forecasting what's next,{fr}tableaux de Statistique Canada pour les macroéconomistes, qui prévoient la suite,{/}</p>
+      <p class="verse-count">{{count_curve}}</p>
+      <p class="verse-line">{en}days of bond yields for the macroeconomists, reading the curve before the turn,{fr}jours de rendements obligataires pour les macroéconomistes, qui lisent la courbe avant le virage,{/}</p>
     </div>
-    <h2>{en}Inflation, and the band it is meant to stay in{fr}L'inflation, et la fourchette où elle devrait rester{/}</h2>
-    <p>{en}The 12-month change in the Consumer Price Index, all-items, not seasonally adjusted (table 18-10-0004), against the Bank of Canada's 1% to 3% target range. It peaked at {{macro_peak}} in {{macro_peak_month}} and was {{macro_last}} in {{macro_last_month}}; {{macro_inside}} of the last {{macro_months}} months were inside the range.{fr}La variation sur 12 mois de l'Indice des prix à la consommation, ensemble, non désaisonnalisé (tableau 18-10-0004), par rapport à la fourchette cible de 1 % à 3 % de la Banque du Canada. Elle a culminé à {{macro_peak}} en {{macro_peak_month}} et s'établissait à {{macro_last}} en {{macro_last_month}}; {{macro_inside}} des {{macro_months}} derniers mois étaient dans la fourchette.{/}</p>
+    <h2>{en}When the yield curve turns upside down{fr}Quand la courbe des taux s'inverse{/}</h2>
+    <p>{en}The gap between the 10-year and the 2-year Government of Canada benchmark bond yields, every business day since {{curve_first_year}}, from the Bank of Canada's Valet API, drawn as a monthly average. When the 2-year pays more than the 10-year, the curve is inverted: markets expect rates to fall, usually because they expect the economy to slow. It inverted in {{curve_spells}}. The deepest month was {{curve_deepest}}, in {{curve_deepest_month}}; in {{curve_last_month}} it averaged {{curve_last}}.{fr}L'écart entre les rendements des obligations de référence du gouvernement du Canada à 10 ans et à 2 ans, chaque jour ouvrable depuis {{curve_first_year}}, d'après l'API Valet de la Banque du Canada, tracé en moyenne mensuelle. Quand le 2 ans rapporte plus que le 10 ans, la courbe est inversée : les marchés s'attendent à une baisse des taux, le plus souvent parce qu'ils prévoient un ralentissement. Elle s'est inversée en {{curve_spells}}. Le mois le plus creux a été {{curve_deepest_month}}, à {{curve_deepest}}; en {{curve_last_month}}, il était en moyenne de {{curve_last}}.{/}</p>
   </div>
   <div class="stanza-body">
-    <figure class="chart-wrap">{{chart_macro}}<figcaption>{{source_macro}}</figcaption></figure>
-    {{how_macro}}
+    <figure class="chart-wrap">{{chart_curve}}<figcaption>{{source_curve}}</figcaption></figure>
+    {{how_curve}}
   </div>
 </section>
 
@@ -141,7 +141,7 @@
 <section class="finale" id="one-mcp">
   <div class="wrap finale-grid">
     <p class="verse-finale">{en}One MCP for the Agent to help them all.{fr}Un MCP pour que l'Agent les aide tous.{/}</p>
-    <figure class="finale-ring">{{chart_ring}}<figcaption>{en}Around the outside, the {{ring_federal}} federal publishers; inside, the provinces and cities with local sources. The arcs group the {{ring_data_tools}} data tools by subject; the other {{ring_own_tools}} plan the query and write the script. Hover an arc for what it holds.{fr}À l'extérieur, les {{ring_federal}} éditeurs fédéraux; à l'intérieur, les provinces et les villes dotées de sources locales. Les arcs regroupent les {{ring_data_tools}} outils de données par sujet; les {{ring_own_tools}} autres planifient la requête et écrivent le script. Survolez un arc pour voir ce qu'il contient.{/}</figcaption></figure>
+    <figure class="finale-ring">{{chart_ring}}</figure>
     <div class="finale-body">
       <p class="finale-lead">{en}Data access and discovery are no longer the bottleneck.{fr}L'accès aux données et leur découverte ne sont plus le goulot d'étranglement.{/}</p>
       <div class="finale-cols">

@@ -3987,3 +3987,32 @@ h2.sub {
   }
 }
 
+/* ---------- Home: the ring, smaller, to close the page ---------- */
+
+.home-ring .wrap {
+  display: grid;
+  justify-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.home-ring .verse-finale {
+  font-size: clamp(1.8rem, 1.1rem + 2.6vw, 3.2rem);
+}
+
+.home-ring-fig {
+  width: 100%;
+  max-width: 480px;
+  margin: 0;
+}
+
+.home-ring-fig .chart {
+  width: 100%;
+  height: auto;
+}
+
+.home-ring .source-links {
+  justify-content: center;
+  margin-top: 0;
+}
+

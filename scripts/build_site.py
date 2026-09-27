@@ -1416,7 +1416,7 @@ _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 # --------------------------------------------------------------------------
 
 CASES_DIR = SITE / "_data" / "cases"
-CASE_KEYS = ("pumf", "ircc", "housing", "micro", "cards", "macro", "patents", "boc")
+CASE_KEYS = ("pumf", "ircc", "housing", "micro", "cards", "curve", "patents", "boc")
 
 
 def _load_charts() -> Any:
@@ -1745,39 +1745,65 @@ def month_name(iso: str, lang: Lang) -> str:
     return f"{months[int(iso[5:7]) - 1]} {iso[:4]}"
 
 
-def macro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+def curve_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     response = case["calls"][0]["response"]
-    levels = [(o["ref_period"][:10], float(o["value"])) for o in response[0]["observations"]]
-    # 12-month inflation: each month against the same month a year earlier.
-    points = [
-        (iso, (value / levels[n - 12][1] - 1) * 100)
-        for n, (iso, value) in enumerate(levels)
-        if n >= 12
+    two, ten = "BD.CDN.2YR.DQ.YLD", "BD.CDN.10YR.DQ.YLD"
+    days = [
+        (o["ref_date"], o["values"][ten] - o["values"][two])
+        for o in response["observations"]
+        if o["values"].get(two) is not None and o["values"].get(ten) is not None
     ]
-    peak_iso, peak = max(points, key=lambda p: p[1])
-    last_iso, last = points[-1]
-    inside = sum(1 for _, v in points if 1 <= v <= 3)
+    # A monthly average of the daily gap keeps the line readable over 25
+    # years; the text quotes the last day as it was published.
+    months: dict[str, list[float]] = {}
+    for iso, gap in days:
+        months.setdefault(iso[:7], []).append(gap)
+    points = [(f"{m}-01", sum(v) / len(v)) for m, v in sorted(months.items())]
+    # Spells of inverted months: runs below zero, joined when fewer than six
+    # months apart, named by year ("2006 to 2007").
+    runs: list[list[int]] = []
+    for n, (_, gap) in enumerate(points):
+        if gap < 0:
+            if runs and n - runs[-1][1] < 6:
+                runs[-1][1] = n
+            else:
+                runs.append([n, n])
+    spells = [(points[a][0][:4], points[b][0][:4]) for a, b in runs]
+    to = "to" if lang == "en" else "à"
+    names = [a if a == b else f"{a} {to} {b}" for a, b in spells]
+    deepest_iso, deepest = min(points, key=lambda p: p[1])
     label = (
-        "Consumer Price Index, Canada, all-items: 12-month change, with the Bank of Canada's 1% to 3% target range"
+        "The yield curve: 10-year minus 2-year Government of Canada benchmark bond yields, monthly average of daily values, with inverted months shaded"
         if lang == "en"
-        else "Indice des prix à la consommation, Canada, ensemble : variation sur 12 mois, avec la fourchette cible de 1 % à 3 % de la Banque du Canada"
+        else "La courbe des taux : rendement des obligations de référence du gouvernement du Canada à 10 ans moins celui à 2 ans, moyenne mensuelle des valeurs quotidiennes, mois inversés ombrés"
     )
-    band = (1.0, 3.0, "Target range" if lang == "en" else "Fourchette cible")
+    low = min(p[1] for p in points)
+    band = (low, 0.0, "Inverted" if lang == "en" else "Inversée")
+    bp = "bp" if lang == "en" else "pb"
+    points = [(iso, v * 100) for iso, v in points]
+    band = (band[0] * 100, 0.0, band[2])
     return {
-        "chart_macro": charts.line_chart(
+        "chart_curve": charts.line_chart(
             points,
             label=label,
-            value_format=lambda v: percent(v, lang),
-            x_tick_format=year_ticks,
+            value_format=lambda v: f"{number(v, lang)} {bp}",
+            x_tick_format=lambda iso: (
+                iso[:4] if iso[5:7] == "01" and int(iso[:4]) % 5 == 0 else None
+            ),
             band=band,
         ),
-        "macro_peak": esc(percent(peak, lang)),
-        "macro_peak_month": esc(month_name(peak_iso, lang)),
-        "macro_last": esc(percent(last, lang)),
-        "macro_last_month": esc(month_name(last_iso, lang)),
-        "macro_inside": str(inside),
-        "macro_months": str(len(points)),
-        "source_macro": call_source(response, lang),
+        "count_curve": number(len(days), lang),
+        "curve_first_year": days[0][0][:4],
+        "curve_spells": esc(
+            join_names(names, lang)
+            if len(names) <= 2
+            else ", ".join(names[:-1]) + (" and " if lang == "en" else " et ") + names[-1]
+        ),
+        "curve_deepest": esc(f"{number(deepest * 100, lang)} {bp}"),
+        "curve_deepest_month": esc(month_name(deepest_iso, lang)),
+        "curve_last": esc(f"{number(points[-1][1], lang)} {bp}"),
+        "curve_last_month": esc(month_name(points[-1][0], lang)),
+        "source_curve": call_source(response, lang),
     }
 
 
@@ -1940,9 +1966,8 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         listed = ", ".join(m[0].lower() + m[1:] for m in members)
         arcs.append((short, f"{short}: {listed}", count))
     arcs.sort(key=lambda arc: -arc[2])
-    data_tools = sum(n for _, _, n in arcs)
     # Every tool is either in an arc or is one of MapleStats' own (the
-    # planner and the script writer), which the caption names.
+    # planner and the script writer), counted only in the centre figure.
     grouped = {k for _, _, keys in RING_GROUPS for k in keys}
     assert set(by_subject) - grouped <= {"utility"}, set(by_subject) - grouped
     label = (
@@ -1997,8 +2022,6 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             label=label,
         ),
         "ring_federal": str(len(outer)),
-        "ring_data_tools": str(data_tools),
-        "ring_own_tools": str(tools - data_tools),
         "counters": counter_list(items, lang),
     }
 
@@ -2011,7 +2034,7 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
         "housing": housing_context,
         "micro": micro_context,
         "cards": cards_context,
-        "macro": macro_context,
+        "curve": curve_context,
         "patents": patents_context,
         "boc": boc_context,
     }
