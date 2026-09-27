@@ -550,6 +550,11 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "sturgeon_county": ("AB", _M),
         "emrb": ("AB", _M),
         "red_deer": ("AB", _M),
+        "cochrane": ("AB", _M),
+        "okotoks": ("AB", _M),
+        "oakville": ("ON", _M),
+        "burlington": ("ON", _M),
+        "milton": ("ON", _M),
     },
     "socrata": {
         "ns": ("NS", _P),

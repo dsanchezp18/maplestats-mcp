@@ -19,6 +19,14 @@ class Portal:
     name_fr: str
     bilingual_content: bool = False
     note: str | None = None
+    # See shared/arcgis.py's ArcGISHubConfig.collection. A site whose only
+    # collection is "all" also lists Hub pages and apps, so its searches
+    # default to `default_item_type`.
+    collection: str = "dataset"
+    default_item_type: str | None = None
+    # False when the site's download API is broken for every item, so
+    # get_dataset does not hand out dead links (rows stay queryable).
+    downloads: bool = True
 
 
 PORTALS: dict[str, Portal] = {
@@ -194,6 +202,46 @@ PORTALS: dict[str, Portal] = {
             "reports, but a separate platform (ArcGIS Hub, not www.aer.ca)."
         ),
     ),
+    "cochrane": Portal(
+        "geohub.cochrane.ca",
+        "Cochrane GeoHub",
+        "GeoHub de Cochrane",
+        note=(
+            "Town of Cochrane, Alberta. Moved from data-cochranegis.opendata.arcgis.com, "
+            "whose API now refuses anonymous access (GWM_0003); the new domain answers "
+            "(checked 2026-09-27)."
+        ),
+    ),
+    "okotoks": Portal(
+        "maps-okotoks.hub.arcgis.com",
+        "Okotoks Open Data",
+        "Données ouvertes d'Okotoks",
+        note=(
+            "Town of Okotoks, Alberta. Replaces okotoksmaps-okotoks.hub.arcgis.com, "
+            "whose API refuses anonymous access (GWM_0003). The new site has only the "
+            "'all' collection, so searches default to Feature Service (checked 2026-09-27)."
+        ),
+        collection="all",
+        default_item_type="Feature Service",
+    ),
+    "oakville": Portal(
+        "portal-exploreoakville.opendata.arcgis.com",
+        "Town of Oakville Open Data Portal",
+        "Portail de données ouvertes de la Ville d'Oakville",
+        note="Halton Region, Ontario (the region itself has no open-data portal).",
+    ),
+    "burlington": Portal(
+        "navburl-burlington.opendata.arcgis.com",
+        "City of Burlington Open Data (Navigate Burlington)",
+        "Données ouvertes de la Ville de Burlington (Navigate Burlington)",
+        note="Halton Region, Ontario (the region itself has no open-data portal).",
+    ),
+    "milton": Portal(
+        "discover-milton.hub.arcgis.com",
+        "Town of Milton Open Data (Discover the Town of Milton)",
+        "Données ouvertes de la Ville de Milton (Discover Milton)",
+        note="Halton Region, Ontario (the region itself has no open-data portal).",
+    ),
     "red_deer": Portal(
         "reddeer.opendata.arcgis.com",
         "City of Red Deer ArcGIS Hub",
@@ -202,8 +250,11 @@ PORTALS: dict[str, Portal] = {
             "City of Red Deer AGOL org (8EWx42uKeMSu9Wcl), ~170 items: "
             "orthophotos, trails, parks, plus many Survey123 form layers. The "
             "city's curated catalogue at data.reddeer.ca is a custom ASP.NET "
-            "site (no API); data-reddeer.opendata.arcgis.com returns 401."
+            "site (no API); data-reddeer.opendata.arcgis.com returns 401. Its download "
+            "API answers HTTP 500 'domain record not found' for every item (checked "
+            "2026-09-27), so items carry no download links; query rows instead."
         ),
+        downloads=False,
     ),
 }
 

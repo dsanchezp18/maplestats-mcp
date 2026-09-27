@@ -173,7 +173,7 @@ Sources, by tool-name prefix:
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
   runs row-level queries on DataStore-active resources.
-- ArcGIS Hub portals (33 provinces, cities, regions): arcgis_hub_, with a
+- ArcGIS Hub portals (38 provinces, cities, regions): arcgis_hub_, with a
   `portal` argument -- arcgis_hub_list_portals lists the keys.
 - Socrata portals (Nova Scotia, New Brunswick, Calgary, Edmonton,
   Winnipeg): socrata_, with a `portal` argument -- socrata_list_portals.

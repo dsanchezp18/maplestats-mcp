@@ -45,6 +45,11 @@ PortalKey = Literal[
     "emrb",
     "alberta_geological_survey",
     "red_deer",
+    "cochrane",
+    "okotoks",
+    "oakville",
+    "burlington",
+    "milton",
 ]
 
 

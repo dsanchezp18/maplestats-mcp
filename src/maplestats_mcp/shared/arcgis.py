@@ -73,6 +73,7 @@ from typing import Any, NoReturn
 
 import httpx
 
+from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -106,6 +107,10 @@ class ArcGISHubConfig:
     # fails, every retry on the reused connection fails with it (see the
     # statcan/geo config for the live case).
     fresh_connection_per_request: bool = False
+    # The Hub Search API collection holding the site's datasets. Almost every
+    # site has "dataset"; Okotoks's current site (maps-okotoks.hub.arcgis.com,
+    # checked 2026-09-27) has only "all", which also lists Hub pages.
+    collection: str = "dataset"
 
 
 def _limiter(config: ArcGISHubConfig):
@@ -154,8 +159,8 @@ async def _get(config: ArcGISHubConfig, context: str, url: str, params: dict[str
         ) from exc
 
 
-def _collection_url(config: ArcGISHubConfig) -> str:
-    return f"https://{config.domain}/api/search/v1/collections/dataset"
+def collection_url(config: ArcGISHubConfig) -> str:
+    return f"https://{config.domain}/api/search/v1/collections/{config.collection}"
 
 
 async def search_items(
@@ -183,18 +188,23 @@ async def search_items(
     if item_type:
         params["type"] = item_type
     return await _get(
-        config, f"{config.source}:search_items", f"{_collection_url(config)}/items", params
+        config, f"{config.source}:search_items", f"{collection_url(config)}/items", params
     )
 
 
 async def get_item(config: ArcGISHubConfig, item_id: str) -> dict[str, Any]:
     """Fetch one dataset item's full Hub Search API metadata."""
-    url = f"{_collection_url(config)}/items/{item_id}"
+    url = f"{collection_url(config)}/items/{item_id}"
     return await _get(config, f"{config.source}:get_item:{item_id}", url, {})
 
 
 def download_url(config: ArcGISHubConfig, item_id: str, fmt: str, *, layer_index: int = 0) -> str:
     """Build a direct export-download link for one item.
+
+    `layer_index` must be the layer's own id in its service, not 0 by
+    default: checked live 2026-09-27, Cochrane's "Parks" (layer 18) and
+    Okotoks's "Floodway" (layer 35) answer `layers=0` with HTTP 404 and
+    their real id with the 302 below.
 
     Confirmed live: `https://<domain>/api/download/v1/items/<id>/<fmt>
     ?layers=<n>` 302-redirects to a hub.arcgis.com-hosted download —
@@ -316,7 +326,15 @@ async def default_layer_index(config: ArcGISHubConfig, service_url: str) -> int:
     _, _, tail = trimmed.rpartition("/")
     if tail.isdigit():
         return int(tail)
-    info = await get_service_info(config, service_url)
+
+    async def fetch() -> dict[str, Any]:
+        return await get_service_info(config, service_url)
+
+    # Cached: an item's detail (for its download links) and a query of the
+    # same item both need it.
+    info, _ = await cached_fetch(
+        f"{config.source}:service_info:{_service_root(service_url)}", 60 * 60, fetch
+    )
     layers = info.get("layers")
     if layers:
         return layers[0].get("id") or 0
