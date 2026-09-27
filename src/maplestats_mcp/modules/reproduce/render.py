@@ -18,7 +18,18 @@ from urllib.parse import urlencode
 from maplestats_mcp.modules.reproduce import cleaning
 from maplestats_mcp.modules.reproduce.spec import Filter, Spec
 
-_STDLIB = {"io", "json", "pathlib", "re", "ssl", "unicodedata", "xml", "zipfile"}
+_STDLIB = {
+    "csv",
+    "datetime",
+    "io",
+    "json",
+    "pathlib",
+    "re",
+    "ssl",
+    "unicodedata",
+    "xml",
+    "zipfile",
+}
 
 
 def _header(prefix: str, spec: Spec, tool: str) -> str:
@@ -27,12 +38,14 @@ def _header(prefix: str, spec: Spec, tool: str) -> str:
         "zip": "the unzipped files",
         "file": "the downloaded file",
     }.get(spec.kind, "the prepared table as `data`")
+    details = "".join(f"{prefix} {line}\n" for line in spec.details)
     return (
         f"{rule}\n"
         f"{prefix} {spec.title or 'Reproduce ' + tool}\n"
         f"{prefix} Purpose: Fetch the data behind MapleStats MCP's {tool}\n"
         f"{prefix}          ({spec.method})\n"
         f"{prefix} Inputs:  {spec.url}\n"
+        f"{details}"
         f"{prefix} Outputs: data/raw/{spec.file_name}; {output}\n"
         f"{rule}\n"
     )
@@ -252,6 +265,9 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data <- data |>\n  filter(\n    {conditions}\n  )\n"
         )
+    if "r" in spec.prepare:
+        packages += spec.prepare["r"].imports
+        prepare.append(spec.prepare["r"].body)
     if spec.sort_by:
         packages.append("dplyr")
         order = f"desc(`{spec.sort_by}`)" if spec.sort_descending else f"`{spec.sort_by}`"
@@ -447,6 +463,8 @@ def py_prepare(spec: Spec) -> list[str]:
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data = data.filter(\n    {conditions},\n)\n"
         )
+    if "python" in spec.prepare:
+        blocks.append(spec.prepare["python"].body)
     if spec.sort_by:
         blocks.append(
             f"data = data.sort({spec.sort_by!r}, descending={spec.sort_descending}, nulls_last=True)\n"
@@ -478,6 +496,7 @@ def _py_loaded(spec: Spec) -> tuple[list[str], str]:
 
 def render_python(spec: Spec, tool: str) -> tuple[str, list[str]]:
     imports, read = _py_loaded(spec)
+    imports += spec.prepare["python"].imports if "python" in spec.prepare else []
     packages = py_packages(imports, spec)
     prepare = py_prepare(spec)
     if spec.kind not in ("zip", "file"):
@@ -557,6 +576,7 @@ def stata_statements(code: str) -> str:
 
 def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
     imports, read = _py_loaded(spec)
+    imports += spec.prepare["python"].imports if "python" in spec.prepare else []
     packages = py_packages(imports, spec)
     # CSV has no nested values: lists and records go to Stata as JSON text.
     flatten = (
@@ -596,6 +616,7 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
     simple = not (
         spec.filters
         or "python" in spec.native
+        or "python" in spec.prepare
         or spec.na_values
         or spec.sort_by
         or _needs_request(spec)
@@ -659,6 +680,8 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
         )
         packages.append("python: " + ", ".join(python_packages))
     prepare: list[str] = []
+    if "stata" in spec.prepare and spec.kind not in ("zip", "file"):
+        prepare.append(spec.prepare["stata"].body)
     if spec.kind not in ("zip", "file"):
         specific = cleaning.specific("stata", spec.source)
         if specific:
@@ -814,6 +837,9 @@ def render_julia(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data = filter(row -> begin\n        {conditions}\n    end, data)\n"
         )
+    if "julia" in spec.prepare:
+        packages += spec.prepare["julia"].imports
+        prepare.append(spec.prepare["julia"].body)
     if spec.sort_by:
         rev = str(spec.sort_descending).lower()
         prepare.append(f"sort!(data, {json.dumps(spec.sort_by)}; rev = {rev})\n")

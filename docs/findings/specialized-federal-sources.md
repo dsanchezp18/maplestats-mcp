@@ -407,6 +407,27 @@ Quirks, all covered by mocked tests:
 - Dashboards publish one-line "update date" files; the HTTP
   Last-Modified header carries the same information and is used instead.
 
+`reproduce_code` (added 2026-09-27) writes scripts that reapply what
+`phac_infobase_query` does, instead of only downloading the file: the
+same catalogue file (EN or FR, the ZIP member, or the CNISP JSON route),
+decoded with the encoding the tool used, read as text with the same header
+and blank-row rules, then the same exact-value filters (folded for case,
+accents and apostrophes), province match, date bounds, most-recent-rows
+limit and column choice. Markers stay as published and are listed with
+their meaning; numbers are converted afterwards, with decimal commas for
+the French 2018 snapshots. `phac_infobase_describe_dataset` gets the whole
+file and its summary; `phac_infobase_list_datasets` gets no script (it
+reads the catalogue) and lists the file URLs. Checked live on 12 calls
+(English and French CSVs, both opioid ZIPs, a CNISP table, Windows-1252,
+code page 850, decimal commas, `2025 T2` bounds, rows without dates, the
+16,384-column French file): the Python script, Stata's Python block run
+line by line, R 4.3 and Julia 1.11 each returned the tool's rows, value
+for value. Two fixes came from those runs: R reads the ZIP through
+`unz()` and writes non-ASCII names as `\u` escapes, because under a
+non-UTF-8 locale it could not find the French member or its accented
+columns; Julia uses ZipArchives because ZipFile rejects the French
+archive's non-UTF-8 member name. Stata itself was not run.
+
 The site also has a documented API (`/api/`, quick-start page in beta)
 over four databases: `opioids`, `cnisp-vri`, `wastewater` and `CYPC`.
 `/api/<db>` returns the table list and `updatedAt`, and
@@ -1449,6 +1470,10 @@ one-line statements because Stata 18 compiles `python:` blocks line by line.
 Generated scripts were executed in R 4.5, Python and Stata 18; Julia is
 generated but not run here. No script is returned, with the reason, for
 browser-session forms (Elections Canada) and prose pages.
+
+Added 2026-09-27: the three `phac_infobase_` tools get dedicated scripts
+(`reproduce/phac_infobase.py`); see
+[PHAC Health Infobase](#phac-health-infobase).
 
 ## CIPO patents via IP Horizons
 
