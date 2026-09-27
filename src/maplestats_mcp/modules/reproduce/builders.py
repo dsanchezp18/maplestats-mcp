@@ -5,7 +5,8 @@ Every other tool is reproduced from the requests recorded while it ran
 (probe.py). A builder here is needed when that recording is not enough:
 the tool downloads a whole file and filters it itself (CanadaBuys, CER,
 GC InfoBase, CIHI, IRCC, StatCan indicators, PHAC Health Infobase in
-phac_infobase.py, IP Horizons), or a better
+phac_infobase.py, IP Horizons), the tool parses HTML tables itself (CFIA
+in cfia.py), or a better
 native path exists (cansim for StatCan tables, canivt for Beyond 20/20).
 
 Each builder takes the tool's arguments and its result payload (the tool
@@ -547,6 +548,24 @@ async def _phac_list(args: dict[str, Any], result: dict[str, Any]) -> Spec:
     return await phac_infobase.list_datasets(args, result)
 
 
+async def _cfia_reportable(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce import cfia
+
+    return await cfia.reportable(args, result)
+
+
+async def _cfia_detections(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce import cfia
+
+    return await cfia.detections(args, result)
+
+
+async def _cfia_avian_influenza(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce import cfia
+
+    return await cfia.avian_influenza(args, result)
+
+
 BUILDERS: dict[str, Builder] = {
     "wds_get_data_from_vectors": _vectors,
     "sdmx_get_vector_data": _sdmx_vector,
@@ -567,6 +586,9 @@ BUILDERS: dict[str, Builder] = {
     "phac_infobase_query": _phac_query,
     "phac_infobase_describe_dataset": _phac_describe,
     "phac_infobase_list_datasets": _phac_list,
+    "cfia_reportable_diseases": _cfia_reportable,
+    "cfia_disease_detections": _cfia_detections,
+    "cfia_avian_influenza": _cfia_avian_influenza,
 }
 
 # Tools rebuilt from arguments alone, without running the tool first.
@@ -585,6 +607,11 @@ ARGUMENT_ONLY = {
     "phac_infobase_query",
     "phac_infobase_describe_dataset",
     "phac_infobase_list_datasets",
+    # The CFIA builders run the tool's own client (its cache holds the parsed
+    # pages) to validate the arguments and read each page's title and date.
+    "cfia_reportable_diseases",
+    "cfia_disease_detections",
+    "cfia_avian_influenza",
 }
 
 

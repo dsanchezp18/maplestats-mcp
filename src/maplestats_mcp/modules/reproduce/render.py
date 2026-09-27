@@ -28,6 +28,7 @@ _STDLIB = {
     "pathlib",
     "re",
     "ssl",
+    "time",
     "unicodedata",
     "xml",
     "zipfile",
@@ -547,7 +548,13 @@ def _py_imports(lines: list[str]) -> str:
 
 
 def py_packages(imports: list[str], spec: Spec) -> list[str]:
-    names = {"httpx": "httpx[http2]", "polars": "polars", "pandas": "pandas", "certifi": "certifi"}
+    names = {
+        "httpx": "httpx[http2]",
+        "polars": "polars",
+        "pandas": "pandas",
+        "certifi": "certifi",
+        "bs4": "beautifulsoup4",
+    }
     packages = {names[line.split()[1]] for line in imports if line.split()[1] in names}
     if "pandas" in packages:
         packages |= {"lxml", "pyarrow"}

@@ -8,7 +8,8 @@ Three routes, most exact first:
    tables), or the tool downloads a whole file and filters it itself, so
    the script repeats those filters (CanadaBuys, CER, GC InfoBase, CIHI,
    IRCC, StatCan indicators, PHAC Health Infobase in phac_infobase.py).
-   IP Horizons patents join bulk files (ip_horizons.py).
+   IP Horizons patents join bulk files (ip_horizons.py); the CFIA tools
+   parse HTML tables, which cfia.py's scripts parse the same way.
 2. Every other tool runs once while shared/http.py records its upstream
    requests; the data request (URL with every parameter, POST body,
    Accept header) is replayed once to confirm the format and find the

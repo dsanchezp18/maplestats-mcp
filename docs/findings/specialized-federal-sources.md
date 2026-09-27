@@ -1474,6 +1474,8 @@ browser-session forms (Elections Canada) and prose pages.
 Added 2026-09-27: the three `phac_infobase_` tools get dedicated scripts
 (`reproduce/phac_infobase.py`); see
 [PHAC Health Infobase](#phac-health-infobase).
+The three `cfia_` tools get dedicated scripts (`reproduce/cfia.py`); see
+[CFIA](#cfia-canadian-food-inspection-agency).
 
 ## CIPO patents via IP Horizons
 
@@ -1998,6 +2000,27 @@ Quirks handled (each covered by a fixture test):
 Yearly totals and premises counts are maintained separately and differ
 slightly for avian influenza (2022: 279 flocks against 280 premises;
 2025: 119 against 121); both are returned as published, with a note.
+
+`reproduce_code` (added 2026-09-27) used to fall back to the generic HTML
+path for these tools, which read one table (the 2011 one for the yearly
+counts) and none of the tool's steps. `reproduce/cfia.py` now writes
+scripts that parse the pages as `cfia/client.py` does (BeautifulSoup in
+Python and in Stata's Python block, rvest/xml2 in R, Gumbo/Cascadia in
+Julia) and repeat each tool's steps: every year table, the year range,
+the disease match with its aliases and the totals; the detection rows
+with herd counts, dates, provinces and BSE ages, the filters (English or
+French animal names) and the counts; the premises with their markers,
+labels, filters, counts and limit, plus the status-by-province table.
+With `lang="fr"` the scripts read data from the English pages and labels
+from the French ones, joined as the tool joins them. They stop, as the
+tool raises `UpstreamError`, when a page loses the structure the client
+checks for. Header names, vocabularies, patterns, URLs and province and
+disease names come from `cfia/constants.py` and the client, and each
+script's header names the pages, the query, each page's "Date modified"
+and the credit line the Canada.ca terms ask for. Checked live on
+2026-09-27 on 10 calls (all three tools, English and French): the R,
+Python and Julia scripts and the Stata script's Python block, run line
+by line, returned the tool's rows and totals or counts in every case.
 
 ## Job Bank labour market information (ESDC)
 

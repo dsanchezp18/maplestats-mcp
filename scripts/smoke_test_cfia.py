@@ -1,7 +1,7 @@
 """Live smoke test for the CFIA module, per AGENTS.md.
 
 Covers every cfia_ tool in both languages, with values checked against
-inspection.canada.ca on 2026-09-26. Counts that grow as new detections
+inspection.canada.ca on 2026-09-26, and reproduce_code for one of them. Counts that grow as new detections
 are confirmed are checked as lower bounds; closed years are exact.
 
 Usage:
@@ -12,10 +12,20 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import re
 import sys
+import tempfile
+import time
+import unicodedata
 from datetime import date
+from pathlib import Path
+
+import httpx
+from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.cfia import constants, tools
+from maplestats_mcp.modules.reproduce import cfia as reproduce_cfia
+from maplestats_mcp.modules.reproduce import client as reproduce
 from maplestats_mcp.shared.errors import InvalidInput
 
 
@@ -165,6 +175,37 @@ async def main() -> int:
         print("FAIL: unknown province did not raise")
     except InvalidInput as exc:
         print("OK: unknown province ->", type(exc).__name__)
+
+    # --- reproduce_code ---------------------------------------------------------
+    # The scripts parse the pages themselves; run the Python script's own
+    # parser on the live CWD page and check it finds the tool's 2025 rows.
+    args = {"disease": "CWD", "year_from": 2025, "year_to": 2025}
+    reproduced = await reproduce.reproduce("cfia_disease_detections", args)
+    languages = sorted(script.language for script in reproduced.scripts)
+    spec = await reproduce_cfia.detections(args, {})
+    parser = spec.native["python"].body.split("\nSCHEMA = {")[0]
+    with tempfile.TemporaryDirectory() as folder:
+        namespace = {
+            "re": re,
+            "time": time,
+            "unicodedata": unicodedata,
+            "date": date,
+            "httpx": httpx,
+            "BeautifulSoup": BeautifulSoup,
+            "RAW_DIR": Path(folder),
+        }
+        exec(compile(parser, "<cfia-script>", "exec"), namespace)  # noqa: S102 - generated here
+        parsed = [
+            row
+            for row in namespace["detections_for"](*namespace["PAGES"][0])
+            if row["year"] == 2025
+        ]
+    print(
+        f"OK: reproduce_code CWD 2025 -> {languages}; the Python script parses "
+        f"{len(parsed)} rows, {sum(r['herds'] for r in parsed)} herds"
+    )
+    ok &= languages == ["julia", "python", "r", "stata"]
+    ok &= (len(parsed), sum(r["herds"] for r in parsed)) == (cwd.row_count, cwd.herd_count)
 
     print("\nCFIA SMOKE TEST PASSED" if ok else "\nCFIA SMOKE TEST FAILED")
     return 0 if ok else 1

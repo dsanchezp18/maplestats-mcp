@@ -25,8 +25,8 @@ async def reproduce_code(
     Valet, Socrata, CKAN), or by recording the upstream request the tool
     makes (every query parameter, POST body and header). Where the tool
     filters a downloaded file itself (CanadaBuys, CER, GC InfoBase, CIHI,
-    IRCC, PHAC Health Infobase, IP Horizons patents), the script repeats
-    those filters. Scripts
+    IRCC, PHAC Health Infobase, IP Horizons patents) or parses HTML tables
+    (CFIA), the script repeats those steps. Scripts
     follow a header plus numbered sections (setup, read, check, prepare),
     save downloads under data/raw/, and clean names, text and numbers;
     Python uses polars, Julia TidierFiles, Stata import delimited (JSON
