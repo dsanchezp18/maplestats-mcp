@@ -42,7 +42,34 @@
     Array.prototype.forEach.call(target.querySelectorAll("[data-count]"), countUp);
   }
 
+  // The ring's inscriptions: the build can only estimate text widths, so
+  // the browser measures each one and sets the font size that fills its
+  // circle with normal letter spacing. textLength then closes the last
+  // fraction of a pixel. Without JavaScript the build's estimate stands.
+  function fitInscriptions() {
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".ring text.ring-script, .ring text.ring-script-2"),
+      function (text) {
+        var tp = text.querySelector("textPath");
+        var path = tp && document.getElementById((tp.getAttribute("href") || "").slice(1));
+        if (!path || !path.getTotalLength) return;
+        var target = path.getTotalLength();
+        tp.removeAttribute("textLength");
+        var size = parseFloat(window.getComputedStyle(text).fontSize);
+        var natural = text.getComputedTextLength();
+        if (!natural || !size) return;
+        text.style.fontSize = (size * target / natural).toFixed(2) + "px";
+        tp.setAttribute("textLength", target.toFixed(1));
+      }
+    );
+  }
+
   function start() {
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fitInscriptions);
+    } else {
+      fitInscriptions();
+    }
     var targets = Array.prototype.slice.call(
       document.querySelectorAll("[data-chart], [data-counters]")
     );
