@@ -377,6 +377,13 @@ def test_catalogue_is_consistent():
         ("max_cases", None),
         ("", None),
         ("202535", None),
+        # Only YYYY-MM-DD is a day: date.fromisoformat's other forms (basic
+        # 20250107, ISO week 2025-W02-1) are read as the R and Julia scripts
+        # read them.
+        ("20250107", None),
+        ("2025-W02-1", date(2025, 1, 1)),
+        ("2025-02-30", date(2025, 1, 1)),
+        ("0000-01-01", None),
     ],
 )
 def test_parse_period(value, expected):
@@ -392,3 +399,14 @@ def test_geo_matcher():
     assert nwt("NT") and nwt("Northwest Territories")
     city = client.geo_matcher("winnipeg")
     assert city("Winnipeg, Manitoba") and not city("Manitoba")
+
+
+def test_resolve_prefers_the_exact_header():
+    # CSUS files hold Indicator (the label) and indicator (a code), live 2026-09-27.
+    columns = ["Topic", "Indicator", "Cycle", "indicator"]
+    assert client._resolve(columns, "Indicator") == "Indicator"
+    assert client._resolve(columns, "indicator") == "indicator"
+    assert client._resolve(columns, "topic") == "Topic"
+    assert client._first_present(columns, ("Indicator",)) == "Indicator"
+    assert client._first_present(columns, ("cycle", "Indicator")) == "Cycle"
+    assert client._first_present(columns, ("nope",)) is None

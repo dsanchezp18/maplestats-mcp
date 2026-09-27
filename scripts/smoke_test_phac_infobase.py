@@ -142,6 +142,25 @@ async def main() -> int:
     print("OK: AEFI markers ->", [(m.value, m.count) for m in aefi.markers])
     ok &= any(m.value == "X" for m in aefi.markers)
 
+    # reproduce_code: scripts that repeat the tool's filters on the same file
+    # (the generated scripts were run live against the tool's rows on 2026-09-27).
+    from maplestats_mcp.modules.reproduce import client as reproduce
+
+    fr_args = {
+        "dataset_id": "opioid_stimulant_harms",
+        "lang": "fr",
+        "filters": {"Source": "Visites au service d'urgence", "Unité": "Nombre"},
+        "geography": "NL",
+        "start": "2024 T1",
+        "end": "2025 T2",
+    }
+    scripts = await reproduce.reproduce("phac_infobase_query", fr_args)
+    languages = [s.language for s in scripts.scripts]
+    python = next((s.code for s in scripts.scripts if s.language == "python"), "")
+    print(f"OK: reproduce_code fr harms -> {languages}, {scripts.notes[0][:60]}")
+    ok &= languages == ["r", "python", "stata", "julia"]
+    ok &= "date(2025, 6, 30)" in python and ".decode('cp1252')" in python
+
     for bad in (
         lambda: client.query("no_such_dataset"),
         lambda: client.query("measles_cases_by_province", start="2024"),

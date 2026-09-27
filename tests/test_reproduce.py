@@ -8,6 +8,7 @@ scripts/smoke_test_modules.py's reproduce steps.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 
@@ -383,3 +384,528 @@ async def test_recording_captures_requests_and_bypasses_the_cache(httpx_mock):
     with recording() as none_outside:
         pass
     assert none_outside == []
+
+
+# PHAC Health Infobase ------------------------------------------------------------------
+
+
+def _phac_table(dataset, lang: str):
+    """A small table shaped like the catalogue entry's file (no network)."""
+    from maplestats_mcp.modules.phac_infobase.client import Table
+
+    french = lang == "fr" and dataset.url_fr is not None
+    date_column = dataset.date_columns[-1 if french else 0] if dataset.date_columns else None
+    geo_column = dataset.geo_columns[-1 if french else 0] if dataset.geo_columns else None
+    columns = [c for c in (date_column, geo_column) if c] + [
+        "Source",
+        "Valeur" if french else "Value",
+    ]
+    values = [
+        ("2024 T1" if french else "2024 Q1", "Terre-Neuve et Labrador", "Mortalité", "Mas."),
+        ("2024 T2" if french else "2024 Q2", "Ontario", "Visites au service d’urgence", "12,5"),
+        ("2025 T1" if french else "2025 Q1", "Canada", "Mortalité", "3,4"),
+    ]
+    rows = [
+        dict(zip(columns, (v for v, keep in zip(row, (date_column, geo_column, 1, 1)) if keep)))
+        for row in values
+    ]
+    if dataset.kind == "api":
+        encoding = "json"
+    elif french:
+        encoding = dataset.encoding_fr or "cp1252"
+    else:
+        encoding = dataset.encoding_en or "utf-8-sig"
+    return Table(columns, rows, encoding, "Tue, 22 Sep 2026 13:25:27 GMT")
+
+
+@pytest.fixture
+def phac_files(monkeypatch):
+    from maplestats_mcp.modules.phac_infobase import client as phac_client
+
+    async def fake_load(dataset, lang):
+        url, _, _, file_lang = phac_client._source(dataset, lang)
+        return _phac_table(dataset, lang), False, url, file_lang
+
+    monkeypatch.setattr(phac_client, "load", fake_load)
+
+
+def _stata_python_lines_compile(code: str) -> None:
+    # Stata 18 compiles a python: block one physical line at a time.
+    block = code.split("\npython:\n", 1)[1].split("\nend\n", 1)[0]
+    for line in block.splitlines():
+        compile(line, "<stata-python>", "exec")
+
+
+async def test_phac_query_repeats_every_step_in_every_language(phac_files):
+    result = await client.reproduce(
+        "phac_infobase_query",
+        {
+            "dataset_id": "opioid_stimulant_harms",
+            "lang": "fr",
+            "filters": {"source": "Visites au service d'urgence"},
+            "geography": "NL",
+            "start": "2024 T1",
+            "end": "2025 T2",
+            "columns": ["Année_Trimestre", "valeur"],
+            "limit": 5,
+        },
+    )
+    code = _by_language(result)
+    assert set(code) == {"r", "python", "stata", "julia"}
+    assert result.source_url.endswith("/SanteInfobase-DonneesMefaitsSubstances.zip")
+    py, r, jl, do = code["python"], code["r"], code["julia"], code["stata"]
+    # Provenance header: dataset id and the query.
+    for text in code.values():
+        assert "Dataset: opioid_stimulant_harms" in text
+        assert '"geography": "NL"' in text and '"start": "2024 T1"' in text
+    # ZIP member, matched ignoring accents (the French name has them).
+    assert "fold('DonneesMefaitsSubstances.csv') in fold(name)" in py
+    assert "unz(" in r and 'fixed("donneesmefaitssubstances.csv")' in r
+    assert "ZipReader(" in jl and "zip_readentry(archive, member)" in jl
+    # Encoding the tool used (Windows-1252 for this file).
+    assert ".decode('cp1252')" in py
+    assert 'locale(encoding = "WINDOWS-1252")' in r
+    assert 'decode(bytes, "WINDOWS-1252")' in jl and "using StringEncodings" in jl
+    # Filters: exact values compared as the tool folds them; the typed
+    # apostrophe matches the typographic one in the file.
+    assert 'map_elements(fold, return_dtype=pl.Utf8) == "visites au service d\'urgence"' in py
+    assert 'fold(.data[["Source"]]) == "visites au service d\'urgence"' in r
+    assert 'fold(row["Source"]) == "visites au service d\'urgence"' in jl
+    # Geography: PRUID and names from constants.PROVINCES, compared by place().
+    assert "'10'" in py and "'nl'" in py and "'terreneuveetlabrador'" in py
+    assert 'place(.data[["R\\u00e9gion"]]) %in% c(' in r
+    assert 'place(row["Région"]) in [' in jl
+    # Quarter bounds, French "Tn": 2024 T1 starts 2024-01-01, 2025 T2 ends 2025-06-30.
+    assert 'pl.col("_period") >= date(2024, 1, 1)' in py
+    assert 'pl.col("_period") <= date(2025, 6, 30)' in py
+    assert '.period <= as.Date("2025-06-30")' in r
+    assert "Date(2025, 6, 30)" in jl
+    # The most recent rows, oldest first, then the chosen columns.
+    assert "fill_null(date.min), maintain_order=True).tail(5)" in py
+    assert "slice_tail(n = 5)" in r and "last(data, 5)" in jl
+    assert "data.select(['Année_Trimestre', 'Valeur'])" in py
+    assert 'select(all_of(c("Ann\\u00e9e_Trimestre", "Valeur")))' in r
+    # Markers left as published, listed with their meaning.
+    assert "Mas." in py and "masqué pour protéger la confidentialité" in py
+    assert "Mas." in do and "(1 cell)" in do
+    # Stata runs the same Python steps in its built-in Python.
+    assert "python:" in do and "map_elements(place" in do
+    _stata_python_lines_compile(do)
+    ast.parse(py)
+    assert any(re.search(r"returned \d+ of \d+ matching rows", note) for note in result.notes)
+
+
+async def test_phac_decimal_comma_code_page_850_and_api_route(phac_files):
+    ccdi = _by_language(
+        await client.reproduce(
+            "phac_infobase_query", {"dataset_id": "ccdi_indicators_2018", "lang": "fr"}
+        )
+    )
+    # Decimal commas: numbers are converted only after the tool's steps.
+    assert "str.replace_all(',', '.')" in ccdi["python"]
+    assert 'str_replace(na_if(x, ""), ",", ".")' in ccdi["r"]
+    assert '"," => "."' in ccdi["julia"]
+    assert "decimal commas" in ccdi["python"]
+    # No date column: the first rows, as the tool keeps them.
+    assert "data.head(100)" in ccdi["python"] and "slice_head(n = 100)" in ccdi["r"]
+
+    anomalies = _by_language(
+        await client.reproduce(
+            "phac_infobase_query",
+            {"dataset_id": "congenital_anomalies", "lang": "fr", "start": "2005", "end": "2005"},
+        )
+    )
+    assert ".decode('cp850')" in anomalies["python"]  # the catalogue's encoding_fr
+    assert 'locale(encoding = "CP850")' in anomalies["r"]
+    assert 'decode(bytes, "CP850")' in anomalies["julia"]
+    assert "date(2005, 12, 31)" in anomalies["python"]
+
+    cnisp = await client.reproduce(
+        "phac_infobase_query",
+        {"dataset_id": "cnisp_vri_incidence", "filters": {"Source": "mortalité"}, "limit": 3},
+    )
+    code = _by_language(cnisp)
+    assert cnisp.source_url == "https://health-infobase.canada.ca/api/cnisp-vri/table/vri_rates"
+    assert "json.loads(raw_path.read_text" in code["python"]
+    assert "fromJSON(" in code["r"] and "JSON3.read(" in code["julia"]
+    assert "vri_rates.json" in code["python"]
+    _stata_python_lines_compile(code["stata"])
+
+
+async def test_phac_describe_and_list(phac_files):
+    described = _by_language(
+        await client.reproduce("phac_infobase_describe_dataset", {"dataset_id": "wastewater_daily"})
+    )
+    assert "summarizes the whole file" in described["python"]
+    assert "data.filter(" not in described["python"]
+    assert ".decode('utf-8-sig')" in described["python"]
+    listing = await client.reproduce(
+        "phac_infobase_list_datasets", {"topic": "wastewater"}, "python"
+    )
+    assert listing.scripts == [] and listing.method == "none"
+    assert any("wastewater_daily: https://" in note for note in listing.notes)
+
+
+async def test_phac_invalid_arguments_raise_like_the_tool(phac_files):
+    with pytest.raises(InvalidInput):
+        await client.reproduce(
+            "phac_infobase_query", {"dataset_id": "wastewater_daily", "filters": {"nope": "x"}}
+        )
+    with pytest.raises(InvalidInput):
+        await client.reproduce(
+            "phac_infobase_query", {"dataset_id": "wastewater_daily", "start": "last week"}
+        )
+
+
+def test_phac_python_helpers_match_the_client():
+    from maplestats_mcp.modules.phac_infobase import client as phac_client
+    from maplestats_mcp.modules.reproduce import phac_infobase
+
+    helpers = phac_infobase._py_helpers(fold=True, periods=True)
+    namespace: dict = {}
+    # The generated helpers are this repository's own code, run to compare them.
+    exec("import re\nimport unicodedata\nfrom datetime import date\n" + helpers, namespace)  # noqa: S102
+    periods = [
+        "2025-08-30",
+        "2025-02-30",
+        "2025 Q3",
+        "2025 t4",
+        "2025-Q1",
+        "1799 Q1",
+        "2024-10",
+        "2024-25",
+        "30-08-2025",
+        "31-02-2025",
+        "2026 (Jan to Mar)",
+        "2015-2018",
+        "2101",
+        "All",
+        "",
+        "  2023  ",
+    ]
+    for value in periods:
+        assert namespace["parse_period"](value) == phac_client.parse_period(value), value
+    texts = [
+        "Visites au service d’urgence",
+        "  Île-du-Prince-Édouard ",
+        "T.N.-O.",
+        "Terre-Neuve et Labrador",
+    ]
+    for text in texts:
+        assert namespace["fold"](text) == phac_client._fold(text)
+        assert namespace["place"](text) == phac_client._place(text)
+
+
+async def test_every_phac_catalogue_entry_gets_scripts(phac_files):
+    from maplestats_mcp.modules.phac_infobase.catalogue import DATASETS
+
+    for dataset in DATASETS:
+        for lang in ("en", "fr") if dataset.url_fr else ("en",):
+            args: dict = {"dataset_id": dataset.id, "lang": lang, "limit": 2}
+            if dataset.geo_columns:
+                args["geography"] = "ON"
+            if dataset.date_columns:
+                args["start"] = "2024"
+            for tool, arguments in (
+                ("phac_infobase_query", args),
+                ("phac_infobase_describe_dataset", {"dataset_id": dataset.id, "lang": lang}),
+            ):
+                result = await client.reproduce(tool, arguments)
+                code = _by_language(result)
+                assert set(code) == {"r", "python", "stata", "julia"}, (dataset.id, lang)
+                ast.parse(code["python"])
+                _stata_python_lines_compile(code["stata"])
+
+
+async def test_phac_limit_zero_raises_like_the_tool(phac_files):
+    # The tool rejects limit=0; the builder must not quietly use the default.
+    for limit in (0, -5):
+        with pytest.raises(InvalidInput):
+            await client.reproduce(
+                "phac_infobase_query", {"dataset_id": "wastewater_daily", "limit": limit}
+            )
+    # A missing limit is the tool's default.
+    code = _by_language(
+        await client.reproduce("phac_infobase_query", {"dataset_id": "wastewater_daily"})
+    )
+    assert ".tail(100)" in code["python"]
+
+
+async def test_phac_julia_matches_zip_member_names_as_the_tool_does(phac_files):
+    code = _by_language(
+        await client.reproduce(
+            "phac_infobase_query", {"dataset_id": "opioid_stimulant_harms", "lang": "fr"}
+        )
+    )
+    jl = code["julia"]
+    # Names decoded as Python's zipfile decodes them (UTF-8 flag, else code page
+    # 437), then folded: dropping non-ASCII letters turned DonnéesMéfaits into
+    # "donnesmfaits", which never held the folded member name.
+    assert "zip_general_purpose_bit_flag(archive, i) & 0x0800 != 0" in jl
+    assert 'decode(Vector{UInt8}(codeunits(zip_name(archive, i))), "CP437")' in jl
+    assert 'occursin("donneesmefaitssubstances.csv", fold(member_names[i]))' in jl
+    assert "ascii_name" not in jl
+    assert "using StringEncodings" in jl
+
+
+async def test_phac_repeated_column_is_selected_once(phac_files):
+    code = _by_language(
+        await client.reproduce(
+            "phac_infobase_query",
+            {"dataset_id": "wastewater_daily", "columns": ["Value", "VALUE", "Source"]},
+        )
+    )
+    assert "data.select(['Value', 'Source'])" in code["python"]
+    assert 'select(all_of(c("Value", "Source")))' in code["r"]
+    assert 'select!(data, ["Value", "Source"])' in code["julia"]
+
+
+# Cleaning and injection safety ----------------------------------------------------------
+
+
+class _FakeFrame:
+    """Just enough of a polars DataFrame to run the generic Python cleaning."""
+
+    def __init__(self, columns):
+        self.columns = list(columns)
+
+    def rename(self, mapping):
+        return _FakeFrame([mapping.get(c, c) for c in self.columns])
+
+    def with_columns(self, *args):
+        return self
+
+
+def test_python_cleaning_numbers_names_that_clean_alike():
+    from unittest.mock import MagicMock
+
+    from maplestats_mcp.modules.reproduce import cleaning
+
+    code = "import re\nimport unicodedata\n" + cleaning.GENERIC["python"].body
+    columns = ["Indicator", "x", "indicator", "INDICATOR", "indicator_2", "Été", "refNumber"]
+    namespace = {"data": _FakeFrame(columns), "pl": MagicMock()}
+    exec(code, namespace)  # noqa: S102 - this repository's own generated code
+    # The names janitor::make_clean_names gives (checked with janitor 2.2.1).
+    assert namespace["data"].columns == [
+        "indicator",
+        "x",
+        "indicator_2",
+        "indicator_3",
+        "indicator_2_2",
+        "ete",
+        "ref_number",
+    ]
+
+
+def test_stata_cleaning_numbers_names_instead_of_rename_lower():
+    from maplestats_mcp.modules.reproduce import cleaning
+
+    body = cleaning.GENERIC["stata"].body
+    assert "\nrename *, lower\n" not in body
+    assert "local dups : list dups names" in body
+    assert "rename (`old_names') (`new_names')" in body
+
+
+_STATA_ACTIVE = re.compile(r"\$|`|/\*|\*/|(?<!:)//")
+_PAYLOAD = "zq $HOME `x' /* a */ b // c https://ok"
+
+
+def _stata_block_strings(do: str) -> list[str]:
+    """Every string literal's value in a Stata script's python: block."""
+    import io
+    import tokenize
+
+    block = do.split("\npython:\n", 1)[1].split("\nend\n", 1)[0]
+    values: list[str] = []
+
+    def collect(code: str) -> None:
+        for token in tokenize.generate_tokens(io.StringIO(code).readline):
+            if token.type == tokenize.STRING:
+                value = ast.literal_eval(token.string)
+                if isinstance(value, str):
+                    values.append(value)
+                    if token.line.lstrip().startswith("exec("):
+                        collect(value)
+
+    for line in block.splitlines():
+        compile(line, "<stata-python>", "exec")
+        collect(line)
+    return values
+
+
+def _assert_stata_inert(do: str, marker: str = "zq") -> None:
+    for line in do.splitlines():
+        if marker in line:
+            # The header's own "`data`" is fixed text, not user input.
+            text = line.removesuffix("; the prepared table as `data`")
+            assert not _STATA_ACTIVE.search(text), line
+    assert not any(line.lstrip().startswith("shell") for line in do.splitlines())
+
+
+def test_stata_python_block_escapes_user_text_but_decodes_to_it():
+    spec = Spec(
+        kind="csv",
+        url="https://example.ca/data/file.csv",
+        file_name="file.csv",
+        method="m",
+        title=f"Title {_PAYLOAD}\nshell touch pwned",
+        filters=[
+            Filter("contains", ["Name"], _PAYLOAD),
+            Filter("is", ["Other"], "zq\nshell touch pwned"),
+        ],
+    )
+    do, _ = RENDERERS["stata"](spec, "tool")
+    _assert_stata_inert(do)
+    strings = _stata_block_strings(do)
+    assert _PAYLOAD.lower() in strings and "zq\nshell touch pwned" in strings
+    # Without any of those characters the block is as before.
+    from maplestats_mcp.modules.reproduce.render import _stata_literals
+
+    plain = "x = 'abc'\nurl = 'https://example.ca/a?b=1'\ny = 7 // 2\n"
+    assert _stata_literals(plain) == plain
+
+
+async def test_argument_ids_cannot_leave_their_string_or_comment():
+    evil = 'abcd-1234.csv"\nimport os; os.system("echo zq PWNED")\nx = ("$(exit(3))'
+    code = _by_language(
+        await client.reproduce(
+            "socrata_query_dataset_rows", {"portal": "calgary", "dataset_id": evil}
+        )
+    )
+    for language, text in code.items():
+        for line in text.splitlines():
+            assert not line.startswith(("import os", "x = (")), (language, line)
+    ast.parse(code["python"])
+    assert "abcd-1234.csv%22%0Aimport%20os%3B" not in code["python"]  # ";" is URL-safe
+    assert "abcd-1234.csv%22%0Aimport%20os;%20os.system" in code["python"]
+    julia_code = [line for line in code["julia"].splitlines() if not line.startswith("#")]
+    assert "%24(exit(3))" in code["julia"] and not any("$(exit" in line for line in julia_code)
+    assert (
+        'raw_path = RAW_DIR / "abcd-1234.csv_import_os_os.system_echo_zq_PWNED_x_exit_3_.csv"'
+        in (code["python"])
+    )
+    _assert_stata_inert(code["stata"])
+
+
+def test_julia_filters_do_not_interpolate_user_text():
+    spec = Spec(
+        kind="csv",
+        url="https://example.ca/data/file.csv",
+        file_name="file.csv",
+        method="m",
+        filters=[Filter("contains", ["Name"], "$(exit(3))"), Filter("is", ["Other"], "a$b")],
+    )
+    rendered = RENDERERS["julia"](spec, "tool")
+    assert rendered is not None
+    jl = rendered[0]
+    assert 'occursin("\\$(exit(3))"' in jl and '== "a\\$b"' in jl
+    assert "$(exit" not in jl.replace("\\$(exit", "")
+
+
+async def test_phac_user_text_is_inert_in_stata_and_comments(phac_files, monkeypatch):
+    from maplestats_mcp.modules.phac_infobase import client as phac_client
+    from maplestats_mcp.modules.phac_infobase.client import Table
+
+    header_with_break = "Note\nshell touch pwned"
+    columns = ["Date", "pruid", "Indicator", "indicator", header_with_break]
+    rows = [
+        dict(zip(columns, ("2024-01-01", "35", "Label", "code", _PAYLOAD.lower()))),
+        dict(zip(columns, ("2024-02-01", "24", "Label", "code", "other"))),
+    ]
+
+    async def fake_load(dataset, lang):
+        url, _, _, file_lang = phac_client._source(dataset, lang)
+        return Table(columns, rows, "utf-8", None), False, url, file_lang
+
+    monkeypatch.setattr(phac_client, "load", fake_load)
+    result = await client.reproduce(
+        "phac_infobase_query",
+        {
+            "dataset_id": "wastewater_daily",
+            "filters": {header_with_break: _PAYLOAD},
+            "columns": ["Indicator", header_with_break],
+        },
+    )
+    code = _by_language(result)
+    for text in code.values():
+        assert not any(line.startswith("shell touch") for line in text.splitlines())
+    _assert_stata_inert(code["stata"])
+    assert _PAYLOAD.lower() in _stata_block_strings(code["stata"])
+    # The exact header wins over one that only folds alike.
+    assert "data.select(['Indicator', 'Note\\nshell touch pwned'])" in code["python"]
+    assert "- the columns Indicator, Note\\nshell touch pwned." in code["python"]
+
+
+_PERIODS = [
+    "2025-08-30",
+    "2025-08-30T10:00",
+    "2025-02-30",
+    "0000-01-01",
+    "20250107",
+    "2025-W02-1",
+    "2025 Q3",
+    "2025 t4",
+    "2025-Q1",
+    "1799 Q1",
+    "2024-10",
+    "2024-25",
+    "30-08-2025",
+    "31-02-2025",
+    "2026 (Jan to Mar)",
+    "2015-2018",
+    "2101",
+    "All",
+    "",
+    "  2023  ",
+]
+
+
+@pytest.mark.parametrize("language", ["r", "julia"])
+def test_generated_period_helpers_match_the_client(language, tmp_path):
+    """Runs the R or Julia parse_period() where that language is installed (not in CI)."""
+    import shutil
+    import subprocess
+    from types import SimpleNamespace
+
+    from maplestats_mcp.modules.phac_infobase import client as phac_client
+    from maplestats_mcp.modules.reproduce import phac_infobase
+
+    binary = shutil.which("Rscript" if language == "r" else "julia")
+    if binary is None:
+        pytest.skip(f"{language} is not installed")
+    # GitHub's ubuntu runner ships a bare julia with no packages, so the
+    # binary alone is not enough: probe the packages the script loads.
+    probe = (
+        "suppressMessages({library(dplyr); library(stringr); library(jsonlite)})"
+        if language == "r"
+        else "using Dates, JSON3"
+    )
+    checked = subprocess.run(
+        [binary, "-e", probe], capture_output=True, text=True, timeout=600, check=False
+    )
+    if checked.returncode != 0:
+        pytest.skip(f"{language} packages for this test are not installed")
+    plan = SimpleNamespace(needs_fold=False, needs_periods=True)
+    values = json.dumps(_PERIODS)
+    if language == "r":
+        script = (
+            "suppressMessages({library(dplyr); library(stringr)})\n"
+            + phac_infobase._r_helpers(plan)  # type: ignore[arg-type]
+            + f"values <- jsonlite::fromJSON({json.dumps(values)})\n"
+            + 'cat(format(parse_period(values)), sep = "\\n")\n'
+        )
+    else:
+        script = (
+            "using Dates, JSON3\n"
+            + phac_infobase._jl_helpers(plan)  # type: ignore[arg-type]
+            + f"values = JSON3.read({phac_infobase._jl_str(values)}, Vector{{String}})\n"
+            + 'for v in values println(coalesce(parse_period(v), "NA")) end\n'
+        )
+    path = tmp_path / ("periods.R" if language == "r" else "periods.jl")
+    path.write_text(script)
+    out = subprocess.run(
+        [binary, str(path)], capture_output=True, text=True, timeout=600, check=False
+    )
+    assert out.returncode == 0, out.stderr
+    expected = [str(phac_client.parse_period(v) or "NA") for v in _PERIODS]
+    assert out.stdout.split("\n")[: len(_PERIODS)] == expected
