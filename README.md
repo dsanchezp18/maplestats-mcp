@@ -6,6 +6,9 @@
   <p align="center">
     <strong>One MCP server for Canadian open data.</strong>
   </p>
+  <p align="center">
+    <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
+  </p>
 </p>
 
 <!-- mcp-name: io.github.dsanchezp18/maplestats-mcp -->
