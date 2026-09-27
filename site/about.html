@@ -3,7 +3,7 @@
 <head>
 {{> head}}
 <title>{en}About{fr}À propos{/} · MapleStats MCP</title>
-<meta name="description" content="{en}What MapleStats MCP is, how it works, and who builds it.{fr}Ce qu'est MapleStats MCP, comment il fonctionne et qui le réalise.{/}">
+<meta name="description" content="{en}What MapleStats MCP is, how it works, who builds it, and the alternatives.{fr}Ce qu'est MapleStats MCP, comment il fonctionne, qui le réalise et les autres options.{/}">
 <link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
 </head>
 <body>
@@ -34,6 +34,139 @@
     <h2>{en}Who builds it{fr}Qui le réalise{/}</h2>
     <div class="about-text">
       <p>{en}I'm Daniel Sánchez Pazmiño, an economist and data specialist in Edmonton. I work at the Government of Alberta's Office of Statistics and Information. I'm interested in applied microeconomics, official statistics and agentic programming. MapleStats is an independent personal project, not affiliated with or endorsed by my employer. More at <a href="https://danielstats.io">danielstats.io</a>.{fr}Je suis Daniel Sánchez Pazmiño, économiste et spécialiste des données à Edmonton. Je travaille au Bureau de la statistique et de l'information du gouvernement de l'Alberta. Je m'intéresse à la microéconomie appliquée, à la statistique officielle et à la programmation agentique. MapleStats est un projet personnel indépendant, qui n'est ni affilié à mon employeur ni approuvé par lui. Pour en savoir plus : <a href="https://danielstats.io">danielstats.io</a>.{/}</p>
+    </div>
+  </div>
+  <div class="about-row" id="alternatives">
+    <h2>{en}Alternatives{fr}Autres options{/}</h2>
+    <div class="about-text">
+      <p>{en}MapleStats is one way into Canadian data, not the only one, and for some jobs it is not the best one. These are the other options I know of, checked in September 2026. Most are free and open source; the last group is not.{fr}MapleStats est une façon d'accéder aux données canadiennes, pas la seule, et pour certaines tâches ce n'est pas la meilleure. Voici les autres options que je connais, vérifiées en septembre 2026. La plupart sont gratuites et libres; le dernier groupe ne l'est pas.{/}</p>
+
+      <div class="alt-group">
+        <h3>{en}Other MCP servers for Canadian data{fr}Autres serveurs MCP de données canadiennes{/}</h3>
+        <p class="alt-note">{en}These do what MapleStats does, for some or all of the same sources. A narrower server is simpler to set up and gives the agent fewer tools to choose from, which can be the better trade.{fr}Ils font ce que fait MapleStats, pour une partie ou la totalité des mêmes sources. Un serveur plus étroit est plus simple à installer et offre moins d'outils à l'agent, ce qui peut être le meilleur compromis.{/}</p>
+        <ul class="alt-list">
+          <li>
+            <span class="alt-name"><a href="https://github.com/ReyemTech/mcp-canada"><code>mcp-canada</code></a><span class="alt-meta">ReyemTech · Python</span></span>
+            <span>{en}The closest to MapleStats in scope: bilingual tools for federal, provincial and municipal APIs, with a local SQLite store. It covers some sources MapleStats does not, such as Health Canada's drug database, and its module pattern shaped this project.{fr}Le plus proche de MapleStats par sa portée : des outils bilingues pour des API fédérales, provinciales et municipales, avec un stockage SQLite local. Il couvre des sources que MapleStats n'a pas, comme la base de données sur les produits pharmaceutiques de Santé Canada, et son modèle de modules a inspiré ce projet.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/Aryan-Jhaveri/mcp-statcan"><code>mcp-statcan</code></a><span class="alt-meta">Aryan-Jhaveri · Python</span></span>
+            <span>{en}Statistics Canada only, through both its Web Data Service and its SDMX API, with a hosted endpoint, a command-line tool and SQLite storage. A good choice if StatCan tables are all you need.{fr}Statistique Canada seulement, par son Service de données Web et son API SDMX, avec un point d'accès hébergé, un outil en ligne de commande et un stockage SQLite. Un bon choix si vous n'avez besoin que des tableaux de StatCan.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/arose26/statcan-mcp"><code>statcan-mcp</code></a><a href="https://github.com/arose26/bank-of-canada-mcp"><code>bank-of-canada-mcp</code></a><span class="alt-meta">arose26 · TypeScript</span></span>
+            <span>{en}Two small servers, one for StatCan tables and one for Bank of Canada series, each run with npx and no key.{fr}Deux petits serveurs, l'un pour les tableaux de StatCan, l'autre pour les séries de la Banque du Canada, lancés chacun avec npx, sans clé.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/pipeworx-io/mcp-statcan"><code>mcp-statcan</code></a><a href="https://github.com/pipeworx-io/mcp-bank-of-canada"><code>mcp-bank-of-canada</code></a><a href="https://github.com/pipeworx-io/mcp-opendata-canada"><code>mcp-opendata-canada</code></a><span class="alt-meta">pipeworx-io · TypeScript</span></span>
+            <span>{en}One small server each for StatCan, the Bank of Canada and open.canada.ca, run locally or through the hosted Pipeworx gateway, which also reaches many sources outside Canada.{fr}Un petit serveur chacun pour StatCan, la Banque du Canada et ouvert.canada.ca, à lancer localement ou par la passerelle hébergée de Pipeworx, qui donne aussi accès à de nombreuses sources hors du Canada.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/krunal16-c/gov-ca-mcp"><code>gov-ca-mcp</code></a><span class="alt-meta">krunal16-c · Python</span></span>
+            <span>{en}Two servers: one searches the federal open-data catalogue and several provincial portals, the other queries transport infrastructure such as bridges, airports and railways.{fr}Deux serveurs : l'un cherche dans le catalogue fédéral de données ouvertes et dans plusieurs portails provinciaux, l'autre interroge les infrastructures de transport comme les ponts, les aéroports et les chemins de fer.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/ondata/ckan-mcp-server"><code>ckan-mcp-server</code></a><span class="alt-meta">ondata · TypeScript</span></span>
+            <span>{en}A general server for any CKAN portal, open.canada.ca among them, with a hosted endpoint. It is not built for Canada, so it does not reach StatCan tables or Bank of Canada series.{fr}Un serveur général pour tout portail CKAN, dont ouvert.canada.ca, avec un point d'accès hébergé. Il n'est pas conçu pour le Canada et n'atteint donc ni les tableaux de StatCan ni les séries de la Banque du Canada.{/}</span>
+          </li>
+        </ul>
+        <p class="alt-note">{en}The <a href="https://registry.modelcontextprotocol.io/">official MCP Registry</a>, <a href="https://glama.ai/mcp/servers">Glama</a> and <a href="https://www.pulsemcp.com/servers">PulseMCP</a> list more servers for single topics, such as elections, case law or procurement.{fr}Le <a href="https://registry.modelcontextprotocol.io/">registre MCP officiel</a>, <a href="https://glama.ai/mcp/servers">Glama</a> et <a href="https://www.pulsemcp.com/servers">PulseMCP</a> recensent d'autres serveurs consacrés à un seul sujet, comme les élections, la jurisprudence ou les marchés publics.{/}</p>
+      </div>
+
+      <div class="alt-group">
+        <h3>{en}R and Python packages{fr}Paquets R et Python{/}</h3>
+        <p class="alt-note">{en}Libraries, not MCP servers: you write the code and get data frames back, with no agent in between. For reproducible analysis they are often the better tool. Most of the R packages are by Jens von Bergmann (mountainMath) and co-authors.{fr}Des bibliothèques, pas des serveurs MCP : vous écrivez le code et obtenez des tableaux de données, sans agent entre les deux. Pour une analyse reproductible, ce sont souvent de meilleurs outils. La plupart des paquets R sont de Jens von Bergmann (mountainMath) et de ses coauteurs.{/}</p>
+        <ul class="alt-list">
+          <li>
+            <span class="alt-name"><a href="https://github.com/mountainMath/cansim"><code>cansim</code></a><span class="alt-meta">mountainMath · R</span></span>
+            <span>{en}StatCan tables and vectors as tidy data frames, with metadata and local caching. If you work in R and only need StatCan tables, it is the most direct route; the R code MapleStats writes uses it.{fr}Les tableaux et vecteurs de StatCan sous forme de tableaux de données ordonnés, avec métadonnées et cache local. Si vous travaillez en R et n'avez besoin que des tableaux de StatCan, c'est la voie la plus directe; le code R qu'écrit MapleStats l'utilise.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/mountainMath/cancensus"><code>cancensus</code></a><span class="alt-meta">mountainMath · R</span></span>
+            <span>{en}Census data and boundaries through the CensusMapper API, ready for maps. It needs a free API key. For census mapping in R it does more than MapleStats.{fr}Les données et les limites du recensement par l'API de CensusMapper, prêtes pour la cartographie. Il demande une clé d'API gratuite. Pour cartographier le recensement en R, il en fait plus que MapleStats.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/mountainMath/tongfen"><code>tongfen</code></a><span class="alt-meta">mountainMath · R</span></span>
+            <span>{en}Makes data on different geographies comparable, such as census tracts whose boundaries changed between censuses. MapleStats has nothing like it.{fr}Rend comparables des données sur des géographies différentes, comme des secteurs de recensement dont les limites ont changé d'un recensement à l'autre. MapleStats n'offre rien de tel.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/mountainMath/cmhc"><code>cmhc</code></a><span class="alt-meta">mountainMath · R</span></span>
+            <span>{en}Data from CMHC's Housing Market Information Portal, such as starts, rents and vacancy rates. MapleStats's CMHC module was checked against it.{fr}Les données du Portail de l'information sur le marché de l'habitation de la SCHL, comme les mises en chantier, les loyers et les taux d'inoccupation. Le module SCHL de MapleStats a été vérifié par rapport à lui.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/mountainMath/canpumf"><code>canpumf</code></a><span class="alt-meta">mountainMath · R</span></span>
+            <span>{en}Downloads StatCan's public use microdata files and labels them, in a DuckDB database.{fr}Télécharge les fichiers de microdonnées à grande diffusion de StatCan et les étiquette, dans une base DuckDB.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/mountainMath/canbank"><code>canbank</code></a><span class="alt-meta">mountainMath · R</span></span>
+            <span>{en}Bank of Canada Valet series and groups in R. It installs from GitHub, not CRAN.{fr}Les séries et groupes Valet de la Banque du Canada en R. Il s'installe depuis GitHub, pas depuis CRAN.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/warint/statcanR"><code>statcanR</code></a><span class="alt-meta">warint · R</span></span>
+            <span>{en}Another R client for the StatCan Web Data Service, returning whole tables in English or French.{fr}Un autre client R du Service de données Web de StatCan, qui renvoie des tableaux complets en français ou en anglais.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/ianepreston/stats_can"><code>stats_can</code></a><span class="alt-meta">ianepreston · Python</span></span>
+            <span>{en}StatCan tables and vectors in pandas: the closest Python counterpart to cansim.{fr}Les tableaux et vecteurs de StatCan dans pandas : l'équivalent Python le plus proche de cansim.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://github.com/dshkol/pycancensus"><code>pycancensus</code></a><span class="alt-meta">dshkol · Python</span></span>
+            <span>{en}A Python port of cancensus, with the same CensusMapper data and the same free key.{fr}Un portage Python de cancensus, avec les mêmes données CensusMapper et la même clé gratuite.{/}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="alt-group">
+        <h3>{en}The official sources{fr}Les sources officielles{/}</h3>
+        <p class="alt-note">{en}MapleStats calls these directly and keeps no copy, so you can always go to the source yourself. None of them needs a key, and their documentation is the final word on what the data means.{fr}MapleStats les appelle directement et ne garde aucune copie : vous pouvez donc toujours aller vous-même à la source. Aucune ne demande de clé, et leur documentation fait foi sur le sens des données.{/}</p>
+        <ul class="alt-list">
+          <li>
+            <span class="alt-name"><a href="{en}https://www.statcan.gc.ca/en/developers/wds{fr}https://www.statcan.gc.ca/fr/developpeurs/sdw{/}">{en}Web Data Service{fr}Service de données Web{/}</a><span class="alt-meta">{en}Statistics Canada{fr}Statistique Canada{/}</span></span>
+            <span>{en}A REST API for every StatCan table and vector, updated each business day.{fr}Une API REST pour chaque tableau et vecteur de StatCan, mise à jour chaque jour ouvrable.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="{en}https://www.bankofcanada.ca/valet/docs{fr}https://www.banqueducanada.ca/valet/docs{/}">{en}Valet API{fr}API Valet{/}</a><span class="alt-meta">{en}Bank of Canada{fr}Banque du Canada{/}</span></span>
+            <span>{en}The Bank's series and groups, from exchange rates to bond yields, in JSON, CSV or XML.{fr}Les séries et groupes de la Banque, des taux de change aux rendements obligataires, en JSON, CSV ou XML.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="{en}https://www03.cmhc-schl.gc.ca/hmip-pimh/en{fr}https://www03.cmhc-schl.gc.ca/hmip-pimh/fr{/}">{en}Housing Market Information Portal{fr}Portail de l'information sur le marché de l'habitation{/}</a><span class="alt-meta">{en}CMHC{fr}SCHL{/}</span></span>
+            <span>{en}CMHC's tables and charts on starts, rents and vacancy rates, with CSV downloads.{fr}Les tableaux et graphiques de la SCHL sur les mises en chantier, les loyers et les taux d'inoccupation, téléchargeables en CSV.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="{en}https://open.canada.ca/en{fr}https://ouvert.canada.ca/fr{/}">{en}Open Government Portal{fr}Portail du gouvernement ouvert{/}</a><span class="alt-meta">{en}Government of Canada{fr}Gouvernement du Canada{/}</span></span>
+            <span>{en}The federal open-data catalogue, including IRCC's immigration statistics.{fr}Le catalogue fédéral de données ouvertes, y compris les statistiques d'immigration d'IRCC.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://docs.ckan.org/en/latest/api/">{en}CKAN API{fr}API CKAN{/}</a><span class="alt-meta">{en}Federal, provincial and city portals{fr}Portails fédéral, provinciaux et municipaux{/}</span></span>
+            <span>{en}The catalogue API behind open.canada.ca and many provincial and city portals, so the same calls work across them. The federal portal has its own <a href="https://open.canada.ca/en/access-our-application-programming-interface-api">API guide</a>.{fr}L'API de catalogue derrière ouvert.canada.ca et bien des portails provinciaux et municipaux : les mêmes appels fonctionnent partout. Le portail fédéral a son propre <a href="https://ouvert.canada.ca/fr/accedez-notre-interface-de-programmation-dapplications-ipa">guide de l'API</a>.{/}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="alt-group">
+        <h3>{en}Paid terminals and data services{fr}Terminaux et services de données payants{/}</h3>
+        <p class="alt-note">{en}Commercial services cover far more countries than MapleStats and come with support staff. If you have a licence and need international comparisons, they will serve you better.{fr}Les services commerciaux couvrent bien plus de pays que MapleStats et offrent du soutien. Si vous avez une licence et devez faire des comparaisons internationales, ils vous serviront mieux.{/}</p>
+        <ul class="alt-list">
+          <li>
+            <span class="alt-name"><a href="https://www.haver.com/">Haver Analytics</a><span class="alt-meta">{en}Subscription{fr}Abonnement{/}</span></span>
+            <span>{en}More than 290 databases of economic and financial time series from some 2,500 government and private sources, with Excel and API access.{fr}Plus de 290 bases de séries chronologiques économiques et financières tirées d'environ 2&nbsp;500 sources publiques et privées, avec accès par Excel et par API.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://professional.bloomberg.com/products/bloomberg-terminal/">Bloomberg Terminal</a><span class="alt-meta">{en}Subscription{fr}Abonnement{/}</span></span>
+            <span>{en}Market, company and economic data across all asset classes, with news, analytics and trading tools.{fr}Des données de marché, d'entreprises et économiques pour toutes les catégories d'actifs, avec des nouvelles, des analyses et des outils de négociation.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://www.macrobond.com/">Macrobond</a><span class="alt-meta">{en}Subscription{fr}Abonnement{/}</span></span>
+            <span>{en}More than 300 million macroeconomic and financial time series with revision history, linked to Excel and PowerPoint.{fr}Plus de 300 millions de séries chronologiques macroéconomiques et financières avec leur historique de révisions, reliées à Excel et à PowerPoint.{/}</span>
+          </li>
+          <li>
+            <span class="alt-name"><a href="https://www.ceicdata.com/en">CEIC</a><span class="alt-meta">{en}Subscription{fr}Abonnement{/}</span></span>
+            <span>{en}Economic, sector, trade and financial data for more than 200 countries and regions, with depth on emerging markets.{fr}Des données économiques, sectorielles, commerciales et financières pour plus de 200 pays et régions, avec une couverture poussée des marchés émergents.{/}</span>
+          </li>
+        </ul>
+      </div>
+
+      <p>{en}If I have missed a tool or described one unfairly, please <a href="{{repo}}/issues">open an issue</a>.{fr}Si j'ai oublié un outil ou en ai mal décrit un, n'hésitez pas à <a href="{{repo}}/issues">ouvrir un ticket</a>.{/}</p>
     </div>
   </div>
 </section>

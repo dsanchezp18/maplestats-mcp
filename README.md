@@ -354,3 +354,11 @@ co-authors:
   IVT files; census tables and Borealis deposits that exist only in that
   format are routed to it, and its sampling notes pointed to Borealis as
   the main IVT holder outside StatCan.
+
+### Alternatives
+
+MapleStats is not the only way to reach this data. The website's About
+page lists the
+[alternatives](https://dsanchezp18.github.io/maplestats-mcp/about.html#alternatives):
+other MCP servers for Canadian data, R and Python packages, the
+official APIs MapleStats calls, and paid data services.
