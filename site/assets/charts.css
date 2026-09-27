@@ -1,0 +1,376 @@
+/* Inline-SVG charts drawn by scripts/site_charts.py.
+ *
+ * The markup carries classes only, so these rules (and the theme's custom
+ * properties from site.css) decide every colour. Sizes are in viewBox units:
+ * each chart is 640 units wide and scales with its container.
+ *
+ * Motion runs only when the page's inline script has set <html class="js">
+ * and assets/charts.js adds "play" to a chart scrolled into view; without
+ * JavaScript, or with reduced motion, every chart shows its final state. */
+
+/* Series colours, checked with the dataviz palette validator for
+   colour-blind separation and contrast on each theme's surface. */
+:root {
+  --chart-1: #c8221a;
+  --chart-2: #3b6fb6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --chart-1: #f0503f;
+    --chart-2: #5e8fdc;
+  }
+}
+
+:root[data-theme="dark"] {
+  --chart-1: #f0503f;
+  --chart-2: #5e8fdc;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.c-grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.c-base {
+  stroke: var(--ink-3);
+}
+
+.c-axis {
+  fill: var(--ink-3);
+}
+
+.chart .c-label {
+  fill: var(--ink-2);
+  font-family: var(--font-text);
+  font-size: 12.5px;
+}
+
+.c-value {
+  fill: var(--ink);
+  font-weight: 600;
+}
+
+.c-legend {
+  fill: var(--ink-2);
+}
+
+.c-bar,
+.c-key {
+  fill: var(--chart-1);
+}
+
+.c-bar-2,
+.c-key-2 {
+  fill: var(--chart-2);
+}
+
+.c-bar-3,
+.c-key-3 {
+  fill: var(--ink-3);
+}
+
+.c-line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.c-ci {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.c-dot {
+  fill: var(--chart-1);
+  stroke: var(--ground);
+  stroke-width: 2;
+}
+
+/* The ring behind the last point of a line; seen only while it pulses. */
+.c-ring {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 1.5;
+  opacity: 0;
+}
+
+.c-band {
+  fill: var(--chart-1);
+  opacity: 0.1;
+}
+
+.chart .c-band-label {
+  fill: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.c-pt {
+  fill: var(--chart-1);
+  fill-opacity: 0.78;
+  stroke: var(--ground);
+  stroke-width: 1.5;
+}
+
+.c-pt-2 {
+  fill: var(--chart-2);
+  fill-opacity: 0.85;
+  stroke: var(--ground);
+  stroke-width: 1.5;
+}
+
+.c-hbar {
+  fill: var(--chart-1);
+}
+
+/* Invisible, larger-than-the-mark hover targets that carry the tooltips. */
+.c-hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.c-hit:hover + .c-dot,
+.c-bar:hover,
+.c-bar-2:hover {
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .chart .c-bar,
+  .js .chart .c-bar-2,
+  .js .chart .c-bar-3 {
+    transform-box: fill-box;
+    transform-origin: bottom;
+    transition: transform 700ms cubic-bezier(0.22, 0.8, 0.26, 1);
+    transition-delay: calc(var(--i, 0) * 45ms);
+  }
+
+  .js .chart:not(.play) .c-bar,
+  .js .chart:not(.play) .c-bar-2,
+  .js .chart:not(.play) .c-bar-3 {
+    transform: scaleY(0);
+  }
+
+  .js .chart .c-hbar {
+    transform-box: fill-box;
+    transform-origin: left;
+    transition: transform 900ms cubic-bezier(0.22, 0.8, 0.26, 1);
+    transition-delay: calc(var(--i, 0) * 90ms);
+  }
+
+  .js .chart:not(.play) .c-hbar {
+    transform: scaleX(0);
+  }
+
+  .js .chart .c-pt,
+  .js .chart .c-pt-2 {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      transform 500ms cubic-bezier(0.34, 1.4, 0.64, 1),
+      opacity 300ms ease-out;
+    transition-delay: calc(var(--i, 0) * 14ms);
+  }
+
+  .js .chart:not(.play) .c-pt,
+  .js .chart:not(.play) .c-pt-2 {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  /* Intervals open outwards from their centre, one row after another. */
+  .js .chart .c-ci {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 650ms cubic-bezier(0.22, 0.8, 0.26, 1);
+    transition-delay: calc(var(--i, 0) * 70ms);
+  }
+
+  .js .chart:not(.play) .c-ci {
+    transform: scaleX(0);
+  }
+
+  .js .chart .c-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1.6s cubic-bezier(0.45, 0.05, 0.25, 1);
+  }
+
+  .js .chart:not(.play) .c-line {
+    stroke-dashoffset: 1;
+  }
+
+  .js .chart .c-dot {
+    transition: opacity 350ms ease-out;
+    transition-delay: calc(var(--i, 0) * 70ms + 300ms);
+  }
+
+  /* The last point of a line appears as the line reaches it. */
+  .js .chart .c-end {
+    transition: opacity 400ms ease-out 1.5s;
+  }
+
+  .js .chart:not(.play) .c-dot,
+  .js .chart:not(.play) .c-end {
+    opacity: 0;
+  }
+
+  .js .chart.play .c-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: c-pulse 2.4s ease-out 2s infinite;
+  }
+
+  @keyframes c-pulse {
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(3);
+    }
+  }
+}
+
+/* ---------- The ring (case-study finale) ----------
+ * It follows the page theme: the outer letters in the accent, the inner
+ * ones quieter, arcs in the first series colour. Arc labels are white on
+ * the light theme's darker red and dark ink on the dark theme's brighter
+ * one, so both keep their contrast. */
+.ring {
+  --ring-fire: var(--accent);
+  --ring-arc: var(--chart-1);
+  --ring-arc-ink: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ring {
+    --ring-arc-ink: #1a0604;
+  }
+}
+
+:root[data-theme="dark"] .ring {
+  --ring-arc-ink: #1a0604;
+}
+
+.ring .ring-rule {
+  fill: none;
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+/* The inscriptions are set in the text sans, upright and lightly tracked,
+   so they read as a quiet list around the ring rather than as lettering. */
+.ring text.ring-script,
+.ring text.ring-script-2 {
+  font-family: var(--font-text);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.ring text.ring-script {
+  fill: var(--ring-fire);
+  fill-opacity: 0.85;
+}
+
+.ring text.ring-script-2 {
+  fill: var(--ink-3);
+  fill-opacity: 0.8;
+}
+
+.ring .ring-arc {
+  fill: none;
+  stroke: var(--ring-arc);
+}
+
+.ring .ring-arc:hover {
+  stroke: var(--ring-fire);
+}
+
+.ring text.ring-arc-label {
+  fill: var(--ring-arc-ink);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.ring text.ring-n {
+  fill: var(--ink);
+  font-family: var(--font-display);
+  font-size: 92px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ring text.ring-sub {
+  fill: var(--ink-3);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The arcs draw in one after another, then the inscriptions fade in and
+     turn, the outer one clockwise and the inner one the other way. */
+  .js .ring .ring-arc {
+    stroke-dasharray: 1 1;
+    transition: stroke-dashoffset 900ms cubic-bezier(0.3, 0.7, 0.2, 1);
+    transition-delay: calc(var(--i, 0) * 70ms);
+  }
+
+  .js .ring:not(.play) .ring-arc {
+    stroke-dashoffset: 1;
+  }
+
+  .js .ring .ring-arc-label {
+    transition: opacity 400ms ease-out;
+    transition-delay: calc(var(--i, 0) * 70ms + 700ms);
+  }
+
+  .js .ring:not(.play) .ring-arc-label,
+  .js .ring:not(.play) .ring-spin,
+  .js .ring:not(.play) .ring-spin-2 {
+    opacity: 0;
+  }
+
+  .js .ring .ring-spin,
+  .js .ring .ring-spin-2 {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    transition: opacity 1.4s ease-out 600ms;
+  }
+
+  .js .ring.play .ring-spin {
+    animation: ring-turn 240s linear infinite;
+  }
+
+  .js .ring.play .ring-spin-2 {
+    animation: ring-turn 320s linear infinite reverse;
+  }
+
+  @keyframes ring-turn {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

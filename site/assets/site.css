@@ -460,7 +460,7 @@ mark {
   padding-top: 22px;
   max-width: 34em;
   border-top: 2px solid var(--ink);
-  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.5rem);
   line-height: 1.4;
   color: var(--ink);
 }
@@ -491,9 +491,13 @@ mark {
 
 /* Between the stacked layout and full width, the text steps down a size so
    it stays as tall as the logo column is wide. */
-@media (min-width: 1181px) and (max-width: 1360px) {
+@media (min-width: 1241px) and (max-width: 1360px) {
   .hero .lede {
     font-size: 1.375rem;
+  }
+
+  html[lang="fr"] .hero .lede {
+    font-size: 1.3rem;
   }
 
   .points p {
@@ -541,7 +545,64 @@ mark {
   content: none;
 }
 
-@media (max-width: 1180px) {
+.setup-steps {
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  list-style: none;
+  counter-reset: setup;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.setup-steps li {
+  counter-increment: setup;
+}
+
+.setup-steps li::before {
+  content: counter(setup);
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  margin-right: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+.setup-links {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  font-weight: 500;
+}
+
+/* The setup prompt beside the Connect page's headline: a column, so the
+   prompt wraps inside its box and the three steps stack. */
+.page-aside {
+  align-self: start;
+}
+
+.page-aside .cmd.prompt code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.page-aside .setup-steps {
+  flex-direction: column;
+}
+
+.by-hand-head {
+  padding-top: clamp(16px, 2vw, 28px);
+}
+
+@media (max-width: 1240px) {
   .hero-logo,
   .hero-text {
     grid-column: 1 / -1;
@@ -646,182 +707,6 @@ mark {
   color: var(--ink-3);
 }
 
-/* The live search panel. */
-
-.probe {
-  background: var(--surface);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  min-width: 0;
-}
-
-.probe-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 4px 14px;
-  padding: 12px 18px;
-  background: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 700;
-  font-stretch: 90%;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--on-accent);
-}
-
-.probe-head .fn {
-  color: var(--on-accent);
-  font-size: 0.9375rem;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.fn {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 0.8125rem;
-  color: var(--ink);
-}
-
-.probe-input {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.probe-input:focus-within {
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
-
-.probe-input .prompt {
-  font-family: var(--font-mono);
-  color: var(--accent);
-  font-weight: 500;
-}
-
-.probe-input input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--ink);
-  font: 400 1rem/1.4 var(--font-mono);
-}
-
-.probe-input input::-webkit-search-cancel-button {
-  filter: grayscale(1);
-}
-
-.results {
-  list-style: none;
-  margin: 0;
-  padding: 6px 0;
-  min-height: 120px;
-}
-
-.results a {
-  display: grid;
-  grid-template-columns: 1.6ch minmax(0, 1fr) auto;
-  column-gap: 12px;
-  row-gap: 1px;
-  padding: 9px 16px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.results a:hover {
-  background: var(--ground);
-}
-
-.results a:hover .r-name {
-  color: var(--accent);
-}
-
-.r-rank {
-  grid-row: 1 / span 2;
-  padding-top: 1px;
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.r-name {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-
-.r-src {
-  justify-self: end;
-  align-self: center;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  font-stretch: 87.5%;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--amber);
-  white-space: nowrap;
-}
-
-.r-sum {
-  grid-column: 2 / span 2;
-  font-size: 0.875rem;
-  line-height: 1.45;
-  color: var(--ink-2);
-}
-
-.results .empty {
-  padding: 16px;
-  font-size: 0.9375rem;
-  color: var(--ink-2);
-}
-
-.probe-status,
-.probe-try {
-  padding: 11px 16px;
-  border-top: 1px solid var(--rule);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--ink-3);
-}
-
-.probe-try {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  align-items: baseline;
-}
-
-.probe-try span {
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
-.probe-try button {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: 400 0.8125rem/1.5 var(--font-mono);
-  color: var(--accent);
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.probe-try button:hover {
-  color: var(--accent-hover);
-  text-decoration-style: solid;
-}
-
 /* ---------- Sections ---------- */
 
 .section {
@@ -847,6 +732,59 @@ mark {
 .section-head p:not(.label) {
   max-width: 64ch;
   color: var(--ink-2);
+}
+
+/* Page and section heads split on wide screens: the label and headline on
+   the left half, the lede on the right half, starting at the same line as
+   the twelve-column grids below (column 7). Anything else in the head, such
+   as the Tools page's pinned tools, runs across both halves underneath. */
+@media (min-width: 1000px) {
+  .page-head,
+  .section-head {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 2.5vw, 32px);
+    align-items: start;
+  }
+
+  .section-head {
+    max-width: none;
+  }
+
+  .page-head > *,
+  .section-head > * {
+    grid-column: 1 / -1;
+  }
+
+  .page-head > .label,
+  .page-head > h1,
+  .section-head > .label,
+  .section-head > h2 {
+    grid-column: 1;
+  }
+
+  .page-head > .lede,
+  .section-head > p:not(.label) {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0.35em;
+  }
+
+  /* A head with an aside (the setup prompt on the Connect page): the
+     label, headline and lede stack on the left, the aside on the right. */
+  .page-head.has-aside {
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .page-head.has-aside > .lede {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 4px;
+  }
+
+  .page-head.has-aside > .page-aside {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
 }
 
 .sub {
@@ -935,13 +873,497 @@ mark {
   color: var(--ink-2);
 }
 
-/* Dark request/response panels. */
+/* The example beside each step: one frame for all four, the input in a
+   tinted strip at the top, the output below it in plain labels. */
+
+.ex {
+  min-width: 0;
+  background: var(--surface);
+  border: 2px solid var(--rule-2);
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+}
+
+.ex > * + * {
+  border-top: 1px solid var(--rule);
+}
+
+.ex-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 16px;
+  padding: 10px 18px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.ex-head code {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.ex-part {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.ex-ask {
+  background: var(--ground-2);
+}
+
+.ex-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-stretch: 87.5%;
+  letter-spacing: 0.09em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.ex-question {
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.ex-json {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.ex-json code,
+.ex-code code {
+  font-size: inherit;
+}
+
+.ex .s-key {
+  color: var(--code-key);
+}
+
+.ex .s-str {
+  color: var(--code-str);
+}
+
+.ex .s-num {
+  color: var(--code-num);
+}
+
+.ex .s-lit {
+  color: var(--code-lit);
+}
+
+.ex .s-com {
+  color: var(--ink-3);
+}
+
+.ex a {
+  color: var(--accent);
+}
+
+/* Step 1: the plan, one short list per topic or place. */
+
+.plan {
+  columns: 2 280px;
+  column-gap: 36px;
+  /* Each group's own bottom padding ends the list. */
+  margin-bottom: -16px;
+}
+
+.plan-group {
+  break-inside: avoid;
+  padding-bottom: 16px;
+}
+
+.plan-group h4 {
+  margin: 0 0 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.plan-group ol {
+  margin: 0;
+  padding: 0 0 0 1.7em;
+  display: grid;
+  gap: 8px;
+}
+
+.plan-group li::marker {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.plan-group li a {
+  display: block;
+  text-decoration: none;
+}
+
+.plan-group li code {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.plan-group li a:hover code {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.plan-group li span {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.plan-note {
+  margin-top: 12px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.plan-note b {
+  margin-right: 4px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Step 2: the live search. */
+
+.probe-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--ink-3);
+}
+
+.probe-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.probe-input .prompt {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.probe-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 400 1rem/1.4 var(--font-mono);
+}
+
+.probe-input input::-webkit-search-cancel-button {
+  filter: grayscale(1);
+}
+
+.probe-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.probe-try span {
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.probe-try button {
+  padding: 3px 9px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  font: 400 0.8125rem/1.4 var(--font-text);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.probe-try button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  min-height: 120px;
+}
+
+.results a {
+  display: grid;
+  grid-template-columns: 1.6ch minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 9px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.results a:hover {
+  background: var(--ground-2);
+}
+
+.results a:hover .r-name {
+  color: var(--accent);
+}
+
+.r-rank {
+  grid-row: 1 / span 2;
+  padding-top: 1px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.r-name {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.r-src {
+  justify-self: end;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.r-sum {
+  grid-column: 2 / span 2;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.results .empty {
+  padding: 16px 18px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.probe-status {
+  padding: 10px 18px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+/* Step 3: the recorded values beside where they came from. The 1px gap
+   over a rule-coloured ground draws the line between them, side by side
+   or stacked. */
+
+.ex-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1px;
+  background: var(--rule);
+}
+
+.ex-split > * {
+  background: var(--surface);
+}
+
+.ex-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ex-table caption {
+  padding-bottom: 8px;
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.ex-table caption code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.ex-table th {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule-2);
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.ex-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+
+.ex-table :is(th, td):last-child {
+  text-align: right;
+}
+
+.ex-table td:last-child {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+/* The provenance, marked as the step's text says. */
+.ex-prov {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.ex-prov .ex-label {
+  color: var(--accent);
+}
+
+.ex-prov dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.ex-prov dt {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.ex-prov dd {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ex-prov dd code {
+  font-size: 0.8125rem;
+}
+
+.ex-raw summary {
+  padding: 11px 18px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.ex-raw summary:hover {
+  color: var(--accent-hover);
+}
+
+.ex-raw[open] summary {
+  border-bottom: 1px solid var(--rule);
+}
+
+.ex-code {
+  margin: 0;
+  padding: 14px 18px;
+  overflow-x: auto;
+  background: var(--ground-2);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  tab-size: 2;
+  color: var(--ink);
+}
+
+.ex-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The provenance lines inside the full JSON response. */
+.prov {
+  display: block;
+  margin-inline: -18px;
+  padding-inline: 15px 18px;
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Step 4: the scripts, cut to their first lines until asked. */
+
+.ex .tablist {
+  padding-inline: 8px;
+}
+
+.ex-more[data-collapsed] .ex-code {
+  max-height: 19rem;
+  overflow-y: hidden;
+}
+
+.ex-toggle {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 11px 18px;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+  font: 600 0.875rem/1.4 var(--font-text);
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ex-toggle:hover {
+  color: var(--accent-hover);
+}
+
+/* A fade over the last visible lines says the script goes on. */
+.ex-more[data-collapsed] .ex-toggle::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 64px;
+  background: linear-gradient(to bottom, transparent, var(--ground-2));
+  pointer-events: none;
+}
+
+/* Code panels: the same frame as the "How it works" examples, so every
+   code box on the site reads alike. A quiet label bar, then the code on the
+   light tint, with the theme's code colours. */
 
 .panel {
   min-width: 0;
-  background: var(--panel);
-  color: var(--panel-ink);
-  border: 1px solid var(--panel-rule);
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--rule-2);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -952,19 +1374,18 @@ mark {
   justify-content: space-between;
   gap: 4px 14px;
   padding: 8px 16px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--rule);
   font-size: 0.6875rem;
   font-weight: 600;
   font-stretch: 87.5%;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--panel-mute);
+  color: var(--ink-3);
 }
 
 .panel-bar + pre,
 .panel-body {
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .panel > :last-child {
@@ -976,9 +1397,11 @@ mark {
   margin: 0;
   padding: 14px 16px;
   overflow-x: auto;
+  background: var(--ground-2);
   font-size: 0.8125rem;
   line-height: 1.62;
   tab-size: 2;
+  color: var(--ink);
 }
 
 .panel pre code,
@@ -991,20 +1414,6 @@ mark {
   overflow: auto;
 }
 
-.panel .code.wrap-lines {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-/* The provenance lines of a response, marked for the reader. */
-.prov {
-  display: block;
-  margin-inline: -16px;
-  padding-inline: 14px 16px;
-  background: var(--prov);
-  box-shadow: inset 2px 0 0 var(--s-str);
-}
-
 .panel-bar code {
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -1012,31 +1421,32 @@ mark {
   font-stretch: normal;
   letter-spacing: 0;
   text-transform: none;
+  color: var(--accent);
 }
 
 .s-key {
-  color: var(--s-key);
+  color: var(--code-key);
 }
 
 .s-str {
-  color: var(--s-str);
+  color: var(--code-str);
 }
 
 .s-num {
-  color: var(--s-num);
+  color: var(--code-num);
 }
 
 .s-lit {
-  color: var(--s-lit);
+  color: var(--code-lit);
 }
 
 .s-com {
-  color: var(--s-com);
+  color: var(--ink-3);
   font-style: italic;
 }
 
 .s-fn {
-  color: var(--panel-ink);
+  color: var(--ink);
   font-weight: 500;
 }
 
@@ -1045,104 +1455,7 @@ mark {
 }
 
 .panel a {
-  color: var(--panel-link);
-}
-
-.panel .results a:hover {
-  background: var(--panel-2);
-}
-
-.panel .r-name,
-.panel .results a:hover .r-name {
-  color: var(--panel-ink);
-}
-
-.panel .r-rank,
-.panel .r-sum {
-  color: var(--panel-mute);
-}
-
-.panel .r-src {
-  color: var(--s-str);
-}
-
-.panel .results {
-  min-height: 0;
-}
-
-.plan {
-  display: grid;
-  gap: 4px;
-  padding: 8px 0;
-  font-size: 0.875rem;
-}
-
-.p-topic {
-  padding: 8px 16px 10px;
-}
-
-.p-topic + .p-topic {
-  border-top: 1px dashed var(--panel-rule);
-}
-
-.p-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 12px;
-  align-items: baseline;
-  margin-bottom: 6px;
-}
-
-.p-head b {
-  font-weight: 600;
-  color: var(--panel-ink);
-}
-
-.p-head span {
-  font-size: 0.8125rem;
-  color: var(--s-str);
-}
-
-.p-topic ol {
-  margin: 0;
-  padding: 0 0 0 1.9em;
-  display: grid;
-  gap: 3px;
-}
-
-.p-topic li {
-  padding-left: 4px;
-  color: var(--panel-mute);
-}
-
-.p-topic li::marker {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--panel-mute);
-}
-
-.p-topic li a {
-  margin-right: 10px;
-  text-decoration: none;
-}
-
-.p-topic li a:hover code {
-  text-decoration: underline;
-}
-
-.p-topic code {
-  font-size: 0.8125rem;
-  color: var(--s-key);
-}
-
-.caveat {
-  margin-top: 8px;
-  padding-left: 12px;
-  border-left: 2px solid var(--s-str);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--panel-ink);
-  max-width: 70ch;
+  color: var(--accent);
 }
 
 /* Tabs, used by the script and client pickers. */
@@ -1175,24 +1488,23 @@ mark {
 }
 
 .panel .tablist {
-  background: var(--panel-2);
-  border-bottom-color: var(--panel-rule);
   padding-inline: 6px;
+  border-bottom-color: var(--rule);
 }
 
 .panel [role="tab"] {
   font-size: 0.8125rem;
   padding: 8px 10px 7px;
-  color: var(--panel-mute);
+  color: var(--ink-3);
 }
 
 .panel [role="tab"]:hover,
 .panel [role="tab"][aria-selected="true"] {
-  color: var(--panel-ink);
+  color: var(--ink);
 }
 
 .panel [role="tab"][aria-selected="true"] {
-  border-bottom-color: var(--s-key);
+  border-bottom-color: var(--accent);
 }
 
 /* ---------- Sources ---------- */
@@ -1246,15 +1558,37 @@ mark {
   margin-left: auto;
 }
 
+/* The coverage table sits centred on the page, with its heading, note,
+   legend and list toggle centred above and below it. */
 .local {
   margin-top: clamp(56px, 7vw, 88px);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
   gap: 18px;
+  text-align: center;
 }
 
 .local > p {
   max-width: 66ch;
   color: var(--ink-2);
+}
+
+.local .table-wrap {
+  width: max-content;
+  margin-top: 8px;
+}
+
+.local .legend {
+  justify-content: center;
+}
+
+.local-list {
+  justify-self: stretch;
+}
+
+.local-list[open] .local-cols {
+  text-align: left;
 }
 
 .matrix {
@@ -1289,12 +1623,20 @@ mark {
 }
 
 .matrix td {
-  min-width: 42px;
-  height: 40px;
+  min-width: 54px;
+  height: 48px;
   padding: 0 4px;
   text-align: center;
-  font: 500 0.875rem/1 var(--font-mono);
+  font: 500 0.9375rem/1 var(--font-mono);
   border-radius: 0;
+}
+
+@media (max-width: 900px) {
+  .matrix td {
+    min-width: 42px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
 }
 
 .matrix tbody td.c0 {
@@ -1323,7 +1665,7 @@ mark {
 
 .matrix tfoot td,
 .matrix tfoot th {
-  height: 34px;
+  height: 40px;
   border-top: 1px solid var(--rule-2);
 }
 
@@ -1387,76 +1729,8 @@ mark {
   padding: 2px 0;
 }
 
-.gaps {
-  margin-top: 36px;
-  max-width: 72ch;
-  padding-top: 18px;
-  border-top: 1px solid var(--rule);
-  font-size: 0.9375rem;
-  color: var(--ink-2);
-}
-
 /* ---------- Rules ---------- */
 
-.rules {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.rules thead th {
-  padding: 0 24px 10px 0;
-  text-align: left;
-}
-
-.rules td {
-  padding: 18px 24px 18px 0;
-  border-top: 1px solid var(--rule);
-  vertical-align: top;
-}
-
-.rules td:first-child {
-  max-width: 64ch;
-  font-size: 1.0625rem;
-  line-height: 1.5;
-}
-
-.rules td:last-child {
-  width: 30%;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.rules td:last-child a {
-  font-family: var(--font-mono);
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
-}
-
-.rules td:last-child a:hover {
-  color: var(--accent);
-}
-
-@media (max-width: 700px) {
-  .rules thead {
-    display: none;
-  }
-
-  .rules tr,
-  .rules td {
-    display: block;
-    width: auto;
-  }
-
-  .rules td:first-child {
-    padding-bottom: 6px;
-  }
-
-  .rules td:last-child {
-    border-top: 0;
-    padding-top: 0;
-    width: auto;
-  }
-}
 
 /* ---------- Connect ---------- */
 
@@ -1513,17 +1787,18 @@ mark {
 
 .snippet .copy {
   padding: 4px 9px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--rule);
   border-radius: 0;
-  background: transparent;
-  color: var(--panel-ink);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 0.75rem;
   letter-spacing: 0;
   text-transform: none;
 }
 
 .snippet .copy:hover {
-  border-color: var(--panel-mute);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .path {
@@ -1536,10 +1811,13 @@ mark {
 
 /* ---------- Note from the author ---------- */
 
+/* Two balanced columns: the label and the thanks on the left, the list of
+   packages and the closing lines on the right. */
 .note {
   display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
-  gap: clamp(20px, 3.4vw, 52px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px clamp(24px, 2.5vw, 32px);
+  align-items: start;
 }
 
 @media (max-width: 900px) {
@@ -1553,8 +1831,13 @@ mark {
 .thanks-body {
   display: grid;
   gap: 16px;
+  align-content: start;
   max-width: 68ch;
   color: var(--ink-2);
+}
+
+.thanks-body > .label {
+  margin-bottom: 4px;
 }
 
 .thanks-list {
@@ -1594,7 +1877,9 @@ mark {
   border-top: 2px solid var(--ink);
 }
 
-.about-row h2 {
+.about-row h2,
+.about-block h2,
+.about-split h2 {
   font-family: var(--font-display);
   font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
   font-weight: 700;
@@ -1617,6 +1902,363 @@ mark {
 @media (max-width: 800px) {
   .about-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Short sections as blocks in two columns, each with its heading on top,
+   so a paragraph runs the width of a half (about 65 characters) instead
+   of sitting in the right two thirds with the last third empty. A tall
+   block spans two rows beside two short ones. */
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(24px, 2.5vw, 32px);
+  align-items: start;
+}
+
+.about-block {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding-block: 24px 32px;
+  border-top: 2px solid var(--ink);
+}
+
+.about-block-tall {
+  grid-row: span 2;
+}
+
+/* A long section: its heading on the left half and its introduction on the
+   right half, like the section heads, with the rest below at full width. */
+.about-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px clamp(24px, 2.5vw, 32px);
+  padding-block: 24px 8px;
+  border-top: 2px solid var(--ink);
+}
+
+@media (max-width: 800px) {
+  .about-grid,
+  .about-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-block-tall {
+    grid-row: auto;
+  }
+}
+
+.about-block .cmd.prompt code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Case studies ---------- */
+
+/* Each stanza: the count and its verse line on the left, under the hero's
+   logo column, with the case's headline and story below them; the chart,
+   its source and the calls behind it on the right, at full chart width. */
+.stanza {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px clamp(24px, 2.5vw, 32px);
+  align-items: start;
+  padding-block: clamp(44px, 5.5vw, 72px);
+  border-top: 2px solid var(--ink);
+}
+
+.stanza-text {
+  grid-column: 1 / span 4;
+  position: sticky;
+  top: calc(var(--top-h) + 24px);
+  display: grid;
+  gap: 14px;
+}
+
+.stanza-verse {
+  margin-bottom: 10px;
+}
+
+.stanza-body {
+  grid-column: 5 / -1;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.verse-count {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 2rem + 3.6vw, 5.5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  font-variant-numeric: lining-nums;
+}
+
+.verse-line {
+  margin-top: 10px;
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+.stanza-text h2 {
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.2rem + 0.7vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.stanza-text > p {
+  max-width: 68ch;
+  color: var(--ink-2);
+}
+
+.chart-wrap {
+  margin: 0;
+}
+
+.chart-wrap .chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* On a phone the chart keeps a readable width and scrolls inside its frame,
+   rather than shrinking its labels to a few pixels. */
+@media (max-width: 640px) {
+  .chart-wrap {
+    overflow-x: auto;
+  }
+
+  .chart-wrap .chart {
+    min-width: 560px;
+  }
+}
+
+.chart-wrap figcaption {
+  margin-top: 10px;
+}
+
+.chart-wrap .case-source {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.how summary {
+  width: max-content;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.how-body {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+/* The finale: a tinted band in the page's own theme, the ring as the
+   centrepiece, the argument under it, and what one connection reaches. */
+.finale {
+  background: var(--ground-2);
+  color: var(--ink);
+  border-top: 2px solid var(--rule-2);
+}
+
+.finale-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(28px, 3.5vw, 48px) clamp(24px, 2.5vw, 32px);
+  align-items: center;
+  padding-block: clamp(64px, 8vw, 112px);
+}
+
+.verse-finale {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 1.2rem + 4vw, 4.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+/* The ring is the centrepiece: centred and as wide as the inscription needs
+   to stay legible, with the argument in two columns underneath. */
+.finale-ring {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.finale-ring .chart {
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.finale-ring figcaption {
+  max-width: 60ch;
+  margin: 18px auto 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.finale-body {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 22px;
+  justify-items: center;
+  text-align: center;
+}
+
+.finale-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px clamp(28px, 4vw, 64px);
+  max-width: 1080px;
+  text-align: left;
+}
+
+@media (max-width: 860px) {
+  .finale-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.finale-body p {
+  max-width: 62ch;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.finale-body .finale-lead {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 1.2rem + 1.3vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.finale-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 28px;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.finale-links a {
+  color: var(--accent);
+}
+
+.finale-reach {
+  grid-column: 1 / -1;
+  padding-top: 28px;
+  border-top: 1px solid var(--rule);
+  text-align: center;
+}
+
+.finale-reach .label {
+  color: var(--accent);
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px clamp(24px, 2.5vw, 32px);
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counters li {
+  display: grid;
+  gap: 4px;
+}
+
+.counter-n {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.4rem + 2vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--ink);
+}
+
+.counter-l {
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.how-more {
+  padding: 10px 16px 14px;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.how-note {
+  max-width: 68ch;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+@media (max-width: 1240px) {
+  .stanza-text,
+  .stanza-body {
+    grid-column: 1 / -1;
+  }
+
+  .stanza-text {
+    position: static;
+  }
+
+  /* Stacked, the chart sits under the story again, on the rule that used
+     to separate them. */
+  .chart-wrap {
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+/* Between phone and full width, the verse sits beside the headline and
+   story instead of above them. */
+@media (min-width: 861px) and (max-width: 1240px) {
+  .stanza-text {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    column-gap: clamp(24px, 2.5vw, 32px);
+  }
+
+  .stanza-verse {
+    grid-row: 1 / span 2;
+    margin-bottom: 0;
+  }
+
+  .stanza-text h2 {
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1678,6 +2320,7 @@ mark {
   padding-block: clamp(40px, 5vw, 72px) clamp(28px, 3vw, 40px);
   display: grid;
   gap: 16px;
+  align-content: start;
 }
 
 .page-head h1 {
@@ -2011,11 +2654,70 @@ mark {
   }
 }
 
+/* An open tool: what it is for and its keywords, then its parameters and
+   an example call. In a narrow row these stack in that order (the two
+   wrappers step aside); where the row is wide, they are two columns, so
+   the text keeps a readable measure and the right half is not left empty.
+   The row, not the viewport, decides: the atlas column is narrower than
+   the page beside its index. */
+.tool {
+  container-type: inline-size;
+}
+
 .t-body {
   display: grid;
   gap: 14px;
   max-width: 900px;
   padding: 2px 0 22px;
+}
+
+.t-main,
+.t-side {
+  display: contents;
+}
+
+.t-side .table-wrap {
+  order: 1;
+}
+
+.t-kw {
+  order: 2;
+}
+
+.t-side .call {
+  order: 3;
+}
+
+@container (min-width: 860px) {
+  .t-body {
+    max-width: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 2.5vw, 36px);
+    align-items: start;
+  }
+
+  .t-main,
+  .t-side {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    min-width: 0;
+  }
+
+  .t-main > *,
+  .t-side > * {
+    order: 0;
+  }
+
+  .t-use {
+    max-width: 72ch;
+  }
+
+  /* A long call wraps in its half rather than scrolling sideways. */
+  .t-side .call {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 }
 
 .t-use {
@@ -2161,7 +2863,8 @@ mark {
 /* ---------- Connect page ---------- */
 
 .connect-note h2,
-.guide h2 {
+.guide h2,
+.guide-grid h2 {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2.25rem);
@@ -2274,6 +2977,20 @@ mark {
   color: var(--ink-2);
 }
 
+/* Wide enough, each question sits beside its answer, so the list fills the
+   column instead of leaving its right third empty. */
+@media (min-width: 1100px) {
+  .faq > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 6px clamp(20px, 2vw, 28px);
+  }
+
+  .faq dd {
+    margin-top: 0;
+  }
+}
+
 /* ---------- One MCP to rule them all ---------- */
 
 .kicker {
@@ -2287,33 +3004,94 @@ mark {
   color: var(--accent);
 }
 
+/* Same columns as the hero: the verse under the logo, the argument under
+   the hero text, with the paragraph and the three claims side by side
+   below the headline, so the block is about as tall as the verse. */
 .thesis .wrap {
   display: grid;
-  gap: clamp(28px, 3.5vw, 48px);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(28px, 3.5vw, 48px) clamp(24px, 2.5vw, 32px);
+  align-items: start;
 }
 
-.verse {
-  max-width: 34ch;
-  font-size: clamp(1.35rem, 1rem + 1.4vw, 2.1rem);
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--ink-2);
+.thesis .verse {
+  grid-column: 1 / span 4;
 }
 
-.verse span {
-  display: block;
-  margin-top: 10px;
-  font-size: 0.55em;
-  font-style: normal;
+.thesis-body {
+  grid-column: 5 / -1;
+}
+
+@media (max-width: 1240px) {
+  .thesis .verse,
+  .thesis-body {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The home page's verse uses the case-study stanzas' count and line
+   styles, smaller, so the three counts stack in the logo column. */
+.verse .verse-count {
+  font-size: clamp(2.4rem, 1.8rem + 2vw, 3.5rem);
+}
+
+.verse .verse-count:not(:first-child) {
+  margin-top: 18px;
+}
+
+.verse .verse-line {
+  margin-top: 6px;
+  font-size: clamp(1.15rem, 1rem + 0.5vw, 1.375rem);
+}
+
+/* Stacked above the argument, the three counts run across in a row. */
+@media (min-width: 861px) and (max-width: 1240px) {
+  .thesis .verse {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto auto;
+    grid-auto-flow: column;
+    column-gap: clamp(24px, 2.5vw, 32px);
+  }
+
+  .verse .verse-count:not(:first-child) {
+    margin-top: 0;
+  }
+
+  .thesis .verse-aside {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+.verse-aside {
+  margin-top: 18px;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--accent);
 }
 
 .thesis-body {
   display: grid;
-  gap: 16px;
-  max-width: 780px;
+  gap: 22px;
+}
+
+.thesis-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 24px clamp(24px, 2.5vw, 32px);
+  align-items: start;
+}
+
+.thesis .claims {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+@media (max-width: 860px) {
+  .thesis-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .thesis-body h2 {
@@ -2365,7 +3143,7 @@ mark {
 /* The headline is one line beside the logo; French runs longer, so smaller.
    Measured in Source Serif 4 at 700: the English line is 10.2 em wide, the
    French 13.1 em; both fit the eight-column text block. */
-@media (min-width: 1181px) {
+@media (min-width: 1241px) {
   .hero {
     --h1-size: min(5.5vw, 5.1rem);
   }
@@ -2427,5 +3205,669 @@ mark {
 @media (max-width: 560px) {
   .theme [data-theme-label] {
     display: none;
+  }
+}
+
+/* ---------- Contributing ---------- */
+
+.contrib-h {
+  margin-bottom: 24px;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 1.3rem + 1vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.contrib-ways {
+  padding-bottom: clamp(40px, 5vw, 64px);
+}
+
+.contrib-ways .claims p + p {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.contrib-note {
+  margin-top: 28px;
+  max-width: 72ch;
+  color: var(--ink-2);
+}
+
+.contrib-more .cmd.prompt {
+  margin-top: 14px;
+}
+
+/* The process for code: the seven steps in two balanced columns, read
+   down the first and then the second (the numbers keep the order), each
+   with its terminal panel, if any, under its text. Columns rather than
+   rows, so a short step next to a long one leaves no hole. */
+.guide-grid {
+  display: grid;
+  gap: clamp(28px, 3vw, 40px);
+}
+
+.guide-grid > .contrib-h {
+  margin-bottom: 0;
+}
+
+.step-grid {
+  columns: 2;
+  column-gap: clamp(32px, 4vw, 64px);
+}
+
+.step-grid .guide-step {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  break-inside: avoid;
+  padding-bottom: clamp(32px, 3.5vw, 48px);
+}
+
+.step-grid .guide-step h2 {
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.875rem);
+}
+
+.step-grid .step-text {
+  position: static;
+}
+
+.step-grid .step-text p {
+  max-width: 66ch;
+}
+
+@media (max-width: 900px) {
+  .step-grid {
+    columns: 1;
+  }
+}
+
+.contrib-rules {
+  margin: 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
+/* ---------- Home: the Statistics Canada feature link ---------- */
+
+.sources-feature {
+  margin-top: 28px;
+}
+
+/* Across the full width: the title on the left half, the description on
+   the right half, on the same line as the section heads above. */
+.sources-feature a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px clamp(24px, 2.5vw, 32px);
+  align-items: baseline;
+  padding: 18px 22px;
+  border: 2px solid var(--ink);
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.sources-feature a:hover {
+  border-color: var(--accent);
+}
+
+.sources-feature strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--accent);
+}
+
+
+@media (max-width: 900px) {
+  .sources-feature a {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- About: alternatives ---------- */
+
+/* Other ways to reach Canadian data, grouped by kind. Each group is a row:
+   its heading and note on the left five columns, its list on the right
+   seven. Each list row is a name column (links, then owner and language)
+   and one line of description, ruled like .thanks-list; the columns stack
+   on phones. */
+.alt-groups {
+  padding-bottom: 8px;
+}
+
+.alt-group {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.alt-head {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+@media (min-width: 1000px) {
+  .alt-group {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 12px clamp(24px, 2.5vw, 32px);
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-2);
+  }
+
+  .alt-head {
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: calc(var(--top-h) + 24px);
+  }
+
+  .alt-group .alt-list {
+    border-top: 0;
+  }
+
+  .alt-group .alt-list li:first-child {
+    padding-top: 2px;
+  }
+
+  .alt-groups > p:last-child {
+    margin-top: 28px;
+  }
+}
+
+.alt-group h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.about-text .alt-note {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.alt-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.alt-list li {
+  display: grid;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+  gap: 20px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.alt-name {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  min-width: 0;
+}
+
+.alt-name a {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.alt-meta {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .alt-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  /* The home page links here. On phones the wrapped header is about 158px
+     tall (measured at 390px), more than html's scroll-padding-top allows,
+     so without this the jump lands with the heading under the header. */
+  #alternatives {
+    scroll-margin-top: 48px;
+  }
+}
+
+/* ---------- Statistics Canada page ---------- */
+
+/* Four figures under the page head, on the same 2px rule as the sections. */
+.sc-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px clamp(20px, 3vw, 40px);
+  margin: 0 0 clamp(48px, 6vw, 80px);
+  padding-top: 20px;
+  border-top: 2px solid var(--ink);
+}
+
+.sc-figures dt {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 1.7rem + 2.2vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  font-variant-numeric: lining-nums;
+}
+
+.sc-figures dd {
+  margin-top: 8px;
+  max-width: 28ch;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+@media (max-width: 900px) {
+  .sc-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sc-more {
+  margin-top: clamp(28px, 3vw, 40px);
+  max-width: 70ch;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.sc-task code,
+.sc-split code,
+.sc-quirks code,
+.sc-more code {
+  overflow-wrap: anywhere;
+}
+
+/* Coverage: each group is a row, its heading on the left like the About page. */
+.sc-group {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
+  gap: 16px clamp(20px, 3.4vw, 52px);
+  padding-block: 22px 30px;
+  border-top: 1px solid var(--rule-2);
+}
+
+.sc-group-head {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.sc-group-head h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.sc-group-head .count {
+  font-size: 0.8125rem;
+}
+
+.sc-fams {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 24px 36px;
+}
+
+.sc-fams li {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.sc-fams h4 {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sc-fams h4 a {
+  color: var(--ink);
+  text-decoration-color: var(--rule);
+}
+
+.sc-fams h4 a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+.sc-fams h4 .count {
+  margin-left: 4px;
+  font-size: 0.8125rem;
+}
+
+.sc-prefix code {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+.sc-fams p:not(.sc-prefix) {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+@media (max-width: 800px) {
+  .sc-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Workflows: a short text and the tools in the order an agent calls them. */
+.sc-tasks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(36px, 4vw, 52px) clamp(28px, 4vw, 56px);
+}
+
+.sc-task {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule-2);
+}
+
+.sc-task h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+}
+
+.sc-task > p {
+  max-width: 62ch;
+  font-size: 0.9875rem;
+  color: var(--ink-2);
+}
+
+.sc-chain {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: sc-step;
+}
+
+.sc-chain li {
+  counter-increment: sc-step;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: baseline;
+  padding-block: 7px;
+  border-top: 1px solid var(--rule);
+}
+
+.sc-chain li:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.sc-chain li::before {
+  content: counter(sc-step, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-chain a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sc-chain a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.sc-chain code {
+  font-size: 0.8438rem;
+}
+
+@media (max-width: 800px) {
+  .sc-tasks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Two columns: heading and intro on the left, the detail on the right. */
+.sc-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
+  gap: 28px clamp(20px, 3.4vw, 52px);
+  align-items: start;
+}
+
+.sc-split-head {
+  display: grid;
+  gap: 14px;
+}
+
+.sc-split-head h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 1.3rem + 1.5vw, 2.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.sc-split-head p:not(.label) {
+  max-width: 44ch;
+  color: var(--ink-2);
+}
+
+.sc-split-body {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .sc-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-split-head p:not(.label) {
+    max-width: 64ch;
+  }
+}
+
+.sc-points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--rule);
+}
+
+.sc-points li {
+  padding-block: 14px;
+  border-top: 1px solid var(--rule);
+  max-width: 72ch;
+  color: var(--ink-2);
+}
+
+.sc-points b {
+  color: var(--ink);
+}
+
+.sc-small {
+  max-width: 72ch;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+/* Prose tables: larger text than the tool atlas's parameter tables. */
+.sc-variance,
+.sc-scripts {
+  font-size: 0.9375rem;
+}
+
+.sc-variance td,
+.sc-scripts td {
+  line-height: 1.5;
+}
+
+.sc-variance td:first-child,
+.sc-scripts td:first-child {
+  white-space: normal;
+}
+
+.sc-variance td:nth-child(2),
+.sc-variance td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.sc-scripts td:first-child {
+  width: 36%;
+}
+
+.sc-variance .count {
+  margin-left: 2px;
+}
+
+/* On a phone the prose tables stack: one block per row, header cells hidden
+   and, in the variance table, named by each cell's data-label. */
+@media (max-width: 640px) {
+  .sc-variance thead,
+  .sc-scripts thead {
+    display: none;
+  }
+
+  .sc-variance tr,
+  .sc-variance td,
+  .sc-scripts tr,
+  .sc-scripts td {
+    display: block;
+    width: auto;
+  }
+
+  .sc-variance tr,
+  .sc-scripts tr {
+    padding-block: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .sc-variance td,
+  .sc-scripts td {
+    padding: 0;
+    border: 0;
+  }
+
+  .sc-variance td:first-child,
+  .sc-scripts td:first-child {
+    width: auto;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .sc-variance td:nth-child(2),
+  .sc-variance td:nth-child(3) {
+    white-space: normal;
+  }
+
+  .sc-variance td[data-label]::before {
+    content: attr(data-label) " ";
+    margin-right: 6px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+}
+
+/* Quirks: two columns of short entries, each tagged with its service. */
+.sc-quirks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 30px clamp(28px, 4vw, 56px);
+}
+
+.sc-quirks > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule-2);
+}
+
+.sc-quirks .label {
+  color: var(--accent);
+}
+
+.sc-quirks dt {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sc-quirks dd {
+  max-width: 64ch;
+  font-size: 0.9875rem;
+  color: var(--ink-2);
+}
+
+@media (max-width: 800px) {
+  .sc-quirks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sc-audit {
+  margin-top: clamp(36px, 4vw, 52px);
+  max-width: 88ch;
+  line-height: 1.55;
+}
+
+/* Where to go next. */
+.sc-next {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px clamp(24px, 3.4vw, 48px);
+}
+
+.sc-next li {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.sc-next a {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+}
+
+.sc-next li > p:not(.label) {
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+@media (max-width: 800px) {
+  .sc-next {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

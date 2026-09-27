@@ -14,34 +14,48 @@
   <div class="hero-logo">{{> logo}}</div>
   <div class="hero-text">
     <h1>{en}One MCP to rule them all.{fr}Un MCP pour les gouverner tous.{/}</h1>
-    <p class="lede">{en}MapleStats is one server for publicly available Canadian data. Use it with your AI agent to get precise, well-sourced statistics and reports from more than {{sources_over}} sources, including Statistics Canada, the Bank of Canada and CMHC.{fr}MapleStats est un seul serveur pour les données canadiennes accessibles au public. Utilisez-le avec votre agent IA pour obtenir des statistiques et des rapports précis et bien sourcés, tirés de plus de {{sources_over}} sources, dont Statistique Canada, la Banque du Canada et la SCHL.{/}</p>
+    <p class="lede">{en}MapleStats is one server for publicly available Canadian data. Connect it to your AI agent to retrieve precise, well-sourced statistics and reports from more than {{sources_over}} sources, including Statistics Canada, the Bank of Canada and CMHC. Never worry about Canadian data retrieval again: focus on what actually matters to you.{fr}MapleStats est un seul serveur pour les données canadiennes accessibles au public. Connectez-le à votre agent IA pour obtenir des statistiques et des rapports précis et bien sourcés, tirés de plus de {{sources_over}} sources, dont Statistique Canada, la Banque du Canada et la SCHL. Ne vous souciez plus de trouver des données canadiennes : concentrez-vous sur ce qui compte vraiment pour vous.{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MCP is the standard way to plug data into AI agents. MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}Le MCP est la façon standard de brancher des données sur un agent IA. MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
       <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Any data call can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}Tout appel de données peut revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
     </div>
   </div>
   <div class="setup">
-    <p class="setup-lead"><strong>{en}Set it up{fr}Installation{/}</strong> {en}Paste this into Claude Code, Codex, Cursor or any agent that can run commands. The repository tells it the rest.{fr}Collez ceci dans Claude Code, Codex, Cursor ou un autre agent. Le dépôt lui explique le reste.{/}</p>
+    <p class="setup-lead"><strong>{en}The easiest way: ask your agent{fr}Le plus simple : demandez à votre agent{/}</strong> {en}One prompt installs MapleStats and connects it. The agent reads the setup steps from the repository and does the rest.{fr}Une seule requête installe MapleStats et le connecte. L'agent lit les étapes d'installation dans le dépôt et s'occupe du reste.{/}</p>
     <div class="setup-row">
-      <div class="cmd prompt"><code id="setup-prompt">{en}Set up the MapleStats MCP server for me: {{repo}}{fr}Installe le serveur MCP MapleStats pour moi : {{repo}}{/}</code><button type="button" data-copy-target="setup-prompt">{en}Copy{fr}Copier{/}</button></div>
-      <a href="{{root}}connect.html">{en}Or connect it by hand{fr}Ou connectez-le vous-même{/}</a>
-      <a href="{{root}}tools.html">{en}Browse the {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a>
+      <div class="cmd prompt"><code id="setup-prompt">{{agent_prompt}}</code><button type="button" data-copy-target="setup-prompt">{en}Copy{fr}Copier{/}</button></div>
     </div>
+    <ol class="setup-steps">
+      <li>{en}Copy the prompt.{fr}Copiez la requête.{/}</li>
+      <li>{en}Paste it into Claude Code, Codex, Cursor or any agent that can run commands on your computer.{fr}Collez-la dans Claude Code, Codex, Cursor ou tout agent qui peut exécuter des commandes sur votre ordinateur.{/}</li>
+      <li>{en}Restart the agent when it says so, then ask for data.{fr}Redémarrez l'agent quand il vous le dit, puis demandez des données.{/}</li>
+    </ol>
+    <p class="setup-links"><a href="{{root}}connect.html#by-hand">{en}Or set it up by hand{fr}Ou installez-le vous-même{/}</a><a href="{{root}}tools.html">{en}Browse the {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a></p>
     <p class="fineprint">{en}Version {{version}}, beta. Runs on your machine over stdio, with no account or API key.{fr}Version {{version}}, bêta. S'exécute sur votre machine par stdio, sans compte ni clé d'API.{/}</p>
   </div>
 </section>
 
 <section class="section thesis" id="why">
   <div class="wrap">
-    <p class="verse">{en}Three MCPs for the statisticians under the sky, seven for the data portals in their halls of stone…{fr}Trois MCP pour les statisticiens sous le ciel, sept pour les portails de données dans leurs demeures de pierre…{/}<span>{en}Okay, perhaps not quite.{fr}Bon, peut-être pas tout à fait.{/}</span></p>
+    <div class="verse">
+      <p class="verse-count">3</p>
+      <p class="verse-line">{en}MCPs for the statisticians, keepers of the weights and the margins,{fr}MCP pour les statisticiens, gardiens des poids et des marges,{/}</p>
+      <p class="verse-count">7</p>
+      <p class="verse-line">{en}for the demographers, counting who comes to stay,{fr}pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
+      <p class="verse-count">9</p>
+      <p class="verse-line">{en}for the analysts, doomed to explain the rate…{fr}pour les analystes, condamnés à expliquer le taux…{/}</p>
+      <p class="verse-aside">{en}Okay, perhaps not quite.{fr}Bon, peut-être pas tout à fait.{/}</p>
+    </div>
     <div class="thesis-body">
       <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
-      <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
-    </div>
-    <div class="claims">
-      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
-      <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
-      <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
+      <div class="thesis-split">
+        <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
+        <div class="claims">
+          <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
+          <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
+          <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -61,11 +75,16 @@
           <h3>{en}Plan{fr}Planifier{/}<code>plan_query</code></h3>
           <p>{en}The planner reads the question and lists the agencies to ask, in order, with the caveats on combining them. Places it recognizes add their local portals.{fr}Le planificateur lit la question et énumère les organismes à interroger, dans l'ordre, avec les précautions à prendre pour combiner leurs résultats. Les lieux qu'il reconnaît ajoutent leurs portails locaux.{/}</p>
         </div>
-        <figure class="panel">
-          <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>plan_query</code></figcaption>
-          <pre><code>{{plan_request}}</code></pre>
-          <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><code>planner.QueryPlan</code></div>
-          <div class="panel-body plan">{{plan_panel}}</div>
+        <figure class="ex">
+          <figcaption class="ex-head"><code>plan_query</code><span>{en}Run when this page was built{fr}Exécuté à la construction de la page{/}</span></figcaption>
+          <div class="ex-part ex-ask">
+            <p class="ex-label">{en}Question{fr}Question{/}</p>
+            <p class="ex-question">{{plan_question}}</p>
+          </div>
+          <div class="ex-part">
+            <p class="ex-label">{en}Plan{fr}Plan{/}</p>
+            <div class="plan">{{plan_panel}}</div>
+          </div>
         </figure>
       </li>
 
@@ -75,15 +94,17 @@
           <h3>{en}Find{fr}Trouver{/}<code>search_tools</code></h3>
           <p>{en}Search ranks the catalogue against a plain-language query and returns the top {{search_top}}. French works because every tool carries French keywords. The panel runs the server's own index in your browser, so type your own query.{fr}La recherche classe le catalogue selon une requête en langage courant et renvoie les {{search_top}} premiers outils. Le français fonctionne, car chaque outil porte des mots-clés français. Le panneau exécute l'index du serveur dans votre navigateur : essayez votre propre requête.{/}</p>
         </div>
-        <div class="probe" data-live-search>
-          <div class="probe-head"><span class="fn">search_tools</span><span>{en}The server's own ranking, run in your browser{fr}Le classement du serveur, exécuté dans votre navigateur{/}</span></div>
-          <label class="sr" for="search-q">{en}Describe the data you need{fr}Décrivez les données recherchées{/}</label>
-          <div class="probe-input"><span class="prompt" aria-hidden="true">&gt;</span><input id="search-q" type="search" value="{{search_query}}" autocomplete="off" spellcheck="false" placeholder="{en}Describe the data, in English or French{fr}Décrivez les données, en français ou en anglais{/}"></div>
+        <div class="ex probe" data-live-search>
+          <p class="ex-head"><code>search_tools</code><span>{en}Runs in your browser{fr}S'exécute dans votre navigateur{/}</span></p>
+          <div class="ex-part ex-ask">
+            <label class="ex-label" for="search-q">{en}Describe the data you need{fr}Décrivez les données recherchées{/}</label>
+            <div class="probe-input"><span class="prompt" aria-hidden="true">&gt;</span><input id="search-q" type="search" value="{{search_query}}" autocomplete="off" spellcheck="false" placeholder="{en}Describe the data, in English or French{fr}Décrivez les données, en français ou en anglais{/}"></div>
+            <p class="probe-try"><span>{en}Try{fr}Essayez{/}</span> {{search_suggestions}}</p>
+          </div>
           <ol class="results" data-results aria-live="polite">
       {{search_results}}
           </ol>
           <p class="probe-status" data-status>{en}Top {{search_top}} of {{searchable_count}} tools, ranked by the same BM25 index search_tools uses.{fr}Les {{search_top}} premiers sur {{searchable_count}} outils, classés par le même index BM25 que search_tools.{/}</p>
-          <p class="probe-try"><span>{en}Try{fr}Essayez{/}</span> {{search_suggestions}}</p>
         </div>
       </li>
 
@@ -93,11 +114,17 @@
           <h3>{en}Fetch{fr}Récupérer{/}<code>call_tool</code></h3>
           <p>{en}The agent calls the tool by name. The result is a typed object, and its provenance block, marked here, gives the exact upstream URL and the time of the query.{fr}L'agent appelle l'outil par son nom. Le résultat est un objet typé, et son bloc de provenance, mis en évidence ici, donne l'URL exacte de la source et l'heure de la requête.{/}</p>
         </div>
-        <figure class="panel">
-          <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
-          <pre><code>{{call_request}}</code></pre>
-          <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span><code>boc.ObservationsResult</code> {en}recorded {{captured_on}}{fr}enregistré le {{captured_on}}{/}</span></div>
-          <pre class="code wrap-lines"><code>{{call_response}}</code></pre>
+        <figure class="ex">
+          <figcaption class="ex-head"><code>call_tool</code><span>{en}Recorded {{captured_on}}{fr}Enregistré le {{captured_on}}{/}</span></figcaption>
+          <div class="ex-part ex-ask">
+            <p class="ex-label">{en}Request{fr}Requête{/}</p>
+            <pre class="ex-json"><code>{{call_request}}</code></pre>
+          </div>
+          <div class="ex-split">{{call_result}}</div>
+          <details class="ex-raw">
+            <summary>{en}Show the full response as JSON{fr}Afficher la réponse complète en JSON{/}</summary>
+            <pre class="ex-code ex-wrap"><code>{{call_response}}</code></pre>
+          </details>
         </figure>
       </li>
 
@@ -107,10 +134,12 @@
           <h3>{en}Reproduce{fr}Reproduire{/}<code>reproduce_code</code></h3>
           <p>{en}The same call becomes an R, Python, Stata or Julia script that downloads, checks and cleans the data, so the analysis does not depend on the agent.{fr}Le même appel devient un script R, Python, Stata ou Julia qui télécharge, vérifie et nettoie les données, pour que l'analyse ne dépende pas de l'agent.{/}</p>
         </div>
-        <figure class="panel">
-          <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>reproduce_code</code></figcaption>
-          <pre><code>{{reproduce_request}}</code></pre>
-          <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><code>reproduce.ReproductionCode</code></div>
+        <figure class="ex">
+          <figcaption class="ex-head"><code>reproduce_code</code><span>{en}Run when this page was built{fr}Exécuté à la construction de la page{/}</span></figcaption>
+          <div class="ex-part ex-ask">
+            <p class="ex-label">{en}Request{fr}Requête{/}</p>
+            <pre class="ex-json"><code>{{reproduce_request}}</code></pre>
+          </div>
           {{reproduce_tabs}}
         </figure>
       </li>
@@ -128,6 +157,7 @@
 
     <h3 class="sub">{en}Federal and national{fr}Fédéral et national{/} <span class="count">{{national_count}}</span></h3>
     <div class="domains">{{national_sources}}</div>
+    <p class="sources-feature"><a href="{{root}}statcan.html"><strong>{en}Statistics Canada, in depth{fr}Statistique Canada en détail{/}</strong> <span>{en}Every table, series and microdata file an agent can reach, and the hard parts MapleStats handles for you.{fr}Chaque tableau, série et fichier de microdonnées qu'un agent peut atteindre, et les difficultés que MapleStats règle pour vous.{/} <span aria-hidden="true">→</span></span></a></p>
 
     <div class="local">
       <h3 class="sub">{en}Provinces, territories and cities{fr}Provinces, territoires et villes{/} <span class="count">{{local_source_count}}</span></h3>
@@ -146,31 +176,6 @@
       </details>
     </div>
 
-    <p class="gaps">{en}Not covered: Nunavut has no open-data portal to connect to (checked 19 September 2026). The Registry of Lobbyists blocks automated downloads, and individual bankruptcy records cost $8 a search. The <a href="{{repo}}/blob/main/ROADMAP.md">roadmap</a> tracks every source checked so far.{fr}Non couvert : le Nunavut n'a aucun portail de données ouvertes (vérifié le 19 septembre 2026). Le Registre des lobbyistes bloque les téléchargements automatisés, et les dossiers de faillite individuels coûtent 8 $ par recherche. La <a href="{{repo}}/blob/main/ROADMAP.md">feuille de route</a> recense chaque source examinée.{/}</p>
-  </div>
-</section>
-
-<section class="section" id="rules">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="label">{en}Design rules{fr}Règles de conception{/}</p>
-      <h2>{en}Built for work you have to cite{fr}Conçu pour un travail qu'il faut citer{/}</h2>
-      <p>{en}Each rule is checked by the code or by CI. The right column says where.{fr}Chaque règle est vérifiée par le code ou par l'intégration continue. La colonne de droite indique où.{/}</p>
-    </div>
-    <div class="table-wrap">
-      <table class="rules">
-        <thead><tr><th class="label" scope="col">{en}Rule{fr}Règle{/}</th><th class="label" scope="col">{en}Enforced in{fr}Vérifiée dans{/}</th></tr></thead>
-        <tbody>
-          <tr><td>{en}Every result is a typed object with a provenance block: the source, the exact URL, the time of the query and, where they apply, freshness and row limits.{fr}Chaque résultat est un objet typé avec un bloc de provenance : la source, l'URL exacte, l'heure de la requête et, s'il y a lieu, la fraîcheur des données et les limites de lignes.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/shared/models.py">shared/models.py</a></td></tr>
-          <tr><td>{en}A failed upstream call returns an MCP error that names the cause. It never comes back as an empty result that looks like an answer.{fr}Un appel qui échoue renvoie une erreur MCP qui en nomme la cause. Il ne revient jamais sous forme de résultat vide qui ressemble à une réponse.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/shared/errors.py">shared/errors.py</a></td></tr>
-          <tr><td>{en}Every tool has a Use for line and at least eight search keywords in English and in French.{fr}Chaque outil a une ligne Use for et au moins huit mots-clés de recherche en anglais et en français.{/}</td><td><a href="{{repo}}/blob/main/tests/test_tool_docstrings.py">tests/test_tool_docstrings.py</a></td></tr>
-          <tr><td>{en}French queries find the same tools as their English equivalents.{fr}Les requêtes en français trouvent les mêmes outils que leurs équivalents anglais.{/}</td><td><a href="{{repo}}/blob/main/tests/test_french_discovery.py">tests/test_french_discovery.py</a></td></tr>
-          <tr><td>{en}Every module is called against its live source each Monday, and a failure opens a GitHub issue.{fr}Chaque module est appelé contre sa source réelle tous les lundis, et un échec ouvre un ticket GitHub.{/}</td><td><a href="{{repo}}/blob/main/.github/workflows/smoke.yml">.github/workflows/smoke.yml</a></td></tr>
-          <tr><td>{en}Public use microdata is tabulated on your machine with its survey weights, and cells with fewer than 30 respondents are flagged.{fr}Les microdonnées à grande diffusion sont totalisées sur votre machine avec leurs poids d'enquête, et les cellules de moins de 30 répondants sont signalées.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/modules/statcan/pumf/tabulate.py">statcan/pumf/tabulate.py</a></td></tr>
-          <tr><td>{en}Any data call can become an R, Python, Stata or Julia script that fetches and cleans the same data.{fr}Tout appel de données peut devenir un script R, Python, Stata ou Julia qui récupère et nettoie les mêmes données.{/}</td><td><a href="{{repo}}/tree/main/src/maplestats_mcp/modules/reproduce">modules/reproduce/</a></td></tr>
-        </tbody>
-      </table>
-    </div>
   </div>
 </section>
 
@@ -188,16 +193,20 @@
 
 <section class="section" id="thanks">
   <div class="wrap note thanks">
-    <p class="label">{en}Acknowledgements{fr}Remerciements{/}</p>
     <div class="thanks-body">
-      <p>{en}MapleStats builds on other people's open work. The module layout (one folder per source, tools that register themselves, a bilingual response envelope) follows <a href="https://github.com/ReyemTech/mcp-canada">ReyemTech's mcp-canada</a>. The hosting layer (bearer tokens, rate limits, health checks) follows DweskZ's <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>. Thank you to their authors for building in the open.{fr}MapleStats s'appuie sur le travail ouvert d'autres personnes. L'organisation des modules (un dossier par source, des outils qui s'enregistrent seuls, une enveloppe de réponse bilingue) suit <a href="https://github.com/ReyemTech/mcp-canada">mcp-canada de ReyemTech</a>. La couche d'hébergement (jetons, limites de débit, vérifications d'état) suit <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a> de DweskZ. Merci à leurs auteurs de travailler au grand jour.{/}</p>
-      <p>{en}Much of the Canadian data work stands on the R packages of Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) and their co-authors:{fr}Une bonne part du travail sur les données canadiennes repose sur les paquets R de Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) et de leurs coauteurs :{/}</p>
+      <p class="label">{en}Acknowledgements{fr}Remerciements{/}</p>
+      <p>{en}MapleStats builds on the open work of many others. It learned from the many MCP servers for Canadian and government data that came before it, and much of its architecture and inspiration comes from <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>, my other project, an MCP server for Ecuador's open government data.{fr}MapleStats s'appuie sur le travail ouvert de nombreuses personnes. Il a tiré des leçons des nombreux serveurs MCP de données canadiennes et gouvernementales qui l'ont précédé, et une bonne part de son architecture et de son inspiration vient d'<a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>, mon autre projet, un serveur MCP pour les données ouvertes du gouvernement de l'Équateur.{/}</p>
+      <p>{en}Existing open-source packages helped too, above all the R packages of Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) and their co-authors:{fr}Des paquets libres existants ont aussi aidé, surtout les paquets R de Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) et de leurs coauteurs :{/}</p>
+    </div>
+    <div class="thanks-body">
       <ul class="thanks-list">
         <li><a href="https://github.com/mountainMath/cmhc"><code>cmhc</code></a> {en}The CMHC module was checked against its reverse-engineering of CMHC's Housing Market Information Portal.{fr}Le module de la SCHL a été vérifié par rapport à sa rétro-ingénierie du Portail de l'information sur le marché de l'habitation.{/}</li>
         <li><a href="https://github.com/mountainMath/cansim"><code>cansim</code></a> {en}The R code that reproduce_code writes for Statistics Canada tables and vectors uses it.{fr}Le code R que reproduce_code écrit pour les tableaux et vecteurs de Statistique Canada l'utilise.{/}</li>
         <li><a href="https://github.com/mountainMath/cancensus"><code>cancensus</code></a> {en}A model for census data access in R.{fr}Un modèle pour l'accès aux données du recensement en R.{/}</li>
         <li><a href="https://github.com/mountainMath/canivt"><code>canivt</code></a> {en}Reads Beyond 20/20 files. Census tables and Borealis deposits that exist only in that format are routed to it.{fr}Lit les fichiers Beyond 20/20. Les tableaux du recensement et les dépôts Borealis offerts seulement dans ce format lui sont confiés.{/}</li>
       </ul>
+      <p>{en}Thank you to the developers who built and shared these tools, and to everyone who publishes Canadian data in the open.{fr}Merci aux développeurs qui ont conçu et partagé ces outils, et à toutes les personnes qui publient des données canadiennes au grand jour.{/}</p>
+      <p>{en}For other ways to get Canadian data, some of these packages among them, see the <a href="{{root}}about.html#alternatives">alternatives</a> on the About page.{fr}Pour d'autres façons d'obtenir des données canadiennes, dont certains de ces paquets, voyez les <a href="{{root}}about.html#alternatives">autres options</a> à la page À propos.{/}</p>
     </div>
   </div>
 </section>

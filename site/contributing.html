@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Contributing{fr}Contribuer{/} · MapleStats MCP</title>
+<meta name="description" content="{en}How to help MapleStats MCP: report a wrong number, suggest a source, share a case study, or add code, and the process from issue to live site.{fr}Comment aider MapleStats MCP : signaler un chiffre erroné, proposer une source, partager une étude de cas ou écrire du code, et le processus du ticket jusqu'au site en ligne.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Contributing{fr}Contribuer{/}</p>
+  <h1>{en}Help build MapleStats{fr}Aidez à bâtir MapleStats{/}</h1>
+  <p class="lede">{en}MapleStats is open source and grows one source at a time. You can help without writing any code: report a wrong number, suggest a source, or share how you used it. If you do write code, this page walks through the whole process, from the first issue to the live site.{fr}MapleStats est un logiciel libre qui grandit une source à la fois. Vous pouvez aider sans écrire une ligne de code : signaler un chiffre erroné, proposer une source ou raconter comment vous l'avez utilisé. Si vous écrivez du code, cette page décrit tout le processus, du premier ticket jusqu'au site en ligne.{/}</p>
+</section>
+
+<section class="wrap contrib-ways">
+  <h2 class="contrib-h">{en}Ways to help{fr}Façons d'aider{/}</h2>
+  <div class="claims">
+    <div id="wrong-number"><h3>{en}Report a wrong or missing number{fr}Signaler un chiffre erroné ou manquant{/}</h3><p>{en}Open an issue with the question you asked, the tool call and the source URL from the result's provenance. A wrong number is the most useful bug report there is.{fr}Ouvrez un ticket avec la question posée, l'appel d'outil et l'URL de la source indiquée dans la provenance du résultat. Un chiffre erroné est le signalement le plus utile qui soit.{/}</p><p><a href="{{repo}}/issues/new?title=Wrong%20number%3A%20">{en}Report a number{fr}Signaler un chiffre{/}</a></p></div>
+    <div id="source"><h3>{en}Suggest a source{fr}Proposer une source{/}</h3><p>{en}Name the agency or portal and link to where its data lives. The roadmap lists every source checked so far, including the ones that could not be added and why.{fr}Nommez l'organisme ou le portail et indiquez où se trouvent ses données. La feuille de route énumère chaque source examinée jusqu'ici, y compris celles qui n'ont pas pu être ajoutées, et pourquoi.{/}</p><p><a href="{{repo}}/issues/new?title=Source%3A%20">{en}Suggest a source{fr}Proposer une source{/}</a> · <a href="{{repo}}/blob/main/ROADMAP.md">{en}Roadmap{fr}Feuille de route{/}</a></p></div>
+    <div id="case-study"><h3>{en}Share a case study{fr}Partager une étude de cas{/}</h3><p>{en}Used MapleStats for real work? Open an issue with the question, what the agent found and the calls it made. Good ones join the <a href="{{root}}cases.html">case studies</a>.{fr}Vous avez utilisé MapleStats pour un vrai travail? Ouvrez un ticket avec la question, ce que l'agent a trouvé et les appels qu'il a faits. Les meilleures rejoignent les <a href="{{root}}cases.html">études de cas</a>.{/}</p><p><a href="{{repo}}/issues/new?title=Case%20study%3A%20">{en}Share a case study{fr}Partager une étude de cas{/}</a></p></div>
+  </div>
+  <p class="contrib-note">{en}French speakers help too: every tool carries French search keywords and every page is bilingual. If a phrase reads like a translation, open an issue or send a fix.{fr}Les francophones aident aussi : chaque outil porte des mots-clés de recherche en français et chaque page est bilingue. Si une phrase sonne comme une traduction, ouvrez un ticket ou proposez une correction.{/}</p>
+</section>
+
+<section class="section" id="process">
+  <div class="wrap guide-grid">
+    <h2 class="contrib-h">{en}The process for code{fr}Le processus pour le code{/}</h2>
+    <div class="step-grid">
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">01</p>
+          <h2>{en}Open an issue first{fr}Ouvrir d'abord un ticket{/}</h2>
+          <p>{en}Say what you want to add or fix before you write code, so nobody duplicates work and the approach is agreed early. For a new source, link its API documentation or data page.{fr}Dites ce que vous voulez ajouter ou corriger avant d'écrire du code, pour que personne ne fasse le travail en double et que l'approche soit convenue tôt. Pour une nouvelle source, donnez le lien vers la documentation de son API ou sa page de données.{/}</p>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">02</p>
+          <h2>{en}Set up and read AGENTS.md{fr}Préparer le poste et lire AGENTS.md{/}</h2>
+          <p>{en}Fork the repository, clone it and install with <a href="https://docs.astral.sh/uv/">uv</a>. Then read <a href="{{repo}}/blob/main/AGENTS.md">AGENTS.md</a>: it is the working guide for people and agents alike. It explains how a module is laid out, the response contract every tool follows, and three lines that look removable but are not.{fr}Faites une bifurcation (fork) du dépôt, clonez-le et installez-le avec <a href="https://docs.astral.sh/uv/">uv</a>. Lisez ensuite <a href="{{repo}}/blob/main/AGENTS.md">AGENTS.md</a> : c'est le guide de travail des personnes comme des agents. Il explique la structure d'un module, le contrat de réponse que suit chaque outil et trois lignes qui semblent superflues mais ne le sont pas.{/}</p>
+        </div>
+        <div class="guide-body">
+          <figure class="panel snippet">
+            <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="contrib-setup">{en}Copy{fr}Copier{/}</button></figcaption>
+            <pre><code id="contrib-setup">git clone {{repo}}.git
+cd maplestats-mcp
+uv sync</code></pre>
+          </figure>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">03</p>
+          <h2>{en}Build against the real API{fr}Travailler contre la vraie API{/}</h2>
+          <p>{en}A new source starts as a copy of <code>modules/_example/</code>: typed responses that carry their provenance, errors that are raised rather than returned, and a docstring with English and French search keywords. Before calling a client done, call every function it exports against the live API with realistic arguments. Mocked tests only prove the code does what you assumed the API does; an audit of this project that called every tool live found nine bugs the mocks had missed.{fr}Une nouvelle source commence par une copie de <code>modules/_example/</code> : des réponses typées qui portent leur provenance, des erreurs levées plutôt que renvoyées, et une docstring avec des mots-clés de recherche en anglais et en français. Avant de considérer un client comme terminé, appelez chacune de ses fonctions contre l'API réelle, avec des arguments réalistes. Les tests simulés prouvent seulement que le code fait ce que vous pensiez que l'API fait; un audit de ce projet qui a appelé chaque outil en direct a trouvé neuf bogues que les simulations avaient manqués.{/}</p>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">04</p>
+          <h2>{en}Test it, and list it{fr}Le tester et le répertorier{/}</h2>
+          <p>{en}Add mocked unit tests for the client (with <code>pytest-httpx</code>), covering the quirks the real API has, and a live smoke step for every tool in <code>scripts/smoke_test_modules.py</code>. Then add the module to <code>SOURCES</code> in <code>scripts/build_site.py</code>, so the website can name it. A test fails if either is missing.{fr}Ajoutez des tests unitaires simulés pour le client (avec <code>pytest-httpx</code>), qui couvrent les particularités de la vraie API, et une étape de test en direct pour chaque outil dans <code>scripts/smoke_test_modules.py</code>. Ajoutez ensuite le module à <code>SOURCES</code> dans <code>scripts/build_site.py</code>, pour que le site puisse le nommer. Un test échoue si l'un ou l'autre manque.{/}</p>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">05</p>
+          <h2>{en}Run the checks{fr}Lancer les vérifications{/}</h2>
+          <p>{en}The same four checks that run in CI. All four must pass before a pull request is reviewed.{fr}Les quatre mêmes vérifications que l'intégration continue. Les quatre doivent réussir avant l'examen d'une demande de fusion.{/}</p>
+        </div>
+        <div class="guide-body">
+          <figure class="panel snippet">
+            <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="contrib-checks">{en}Copy{fr}Copier{/}</button></figcaption>
+            <pre><code id="contrib-checks">uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
+uv run pyright
+uv run pytest -q</code></pre>
+          </figure>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">06</p>
+          <h2>{en}Open a pull request{fr}Ouvrir une demande de fusion{/}</h2>
+          <p>{en}Describe what changed and how you checked it against the live source. CI runs the checks on Python 3.12 and 3.13, and a maintainer reviews the change. Small, focused pull requests are reviewed and merged faster.{fr}Décrivez ce qui a changé et comment vous l'avez vérifié contre la source en direct. L'intégration continue lance les vérifications sous Python 3.12 et 3.13, et une personne responsable examine le changement. Les demandes courtes et ciblées sont examinées et fusionnées plus vite.{/}</p>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="step-text">
+          <p class="step-n">07</p>
+          <h2>{en}After the merge{fr}Après la fusion{/}</h2>
+          <p>{en}The website rebuilds and redeploys itself from the main branch, so a new tool appears on the <a href="{{root}}tools.html">Tools</a> page and in the search with nothing done by hand. Every Monday, a scheduled job runs the live smoke tests against the real APIs, so an upstream change is caught even when no code changed.{fr}Le site se reconstruit et se redéploie tout seul à partir de la branche principale : un nouvel outil apparaît dans la page <a href="{{root}}tools.html">Outils</a> et dans la recherche sans rien faire à la main. Chaque lundi, une tâche planifiée lance les tests en direct contre les vraies API, pour repérer un changement en amont même quand le code n'a pas bougé.{/}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap about contrib-more">
+  <div class="about-grid">
+    <div class="about-block">
+      <h2>{en}With a coding agent{fr}Avec un agent de programmation{/}</h2>
+      <div class="about-text">
+        <p>{en}The repository is set up for coding agents. Point yours at AGENTS.md first (CLAUDE.md in the repository points there too), and it follows the same process and runs the same checks.{fr}Le dépôt est conçu pour les agents de programmation. Dirigez d'abord le vôtre vers AGENTS.md (le fichier CLAUDE.md du dépôt y renvoie aussi); il suivra le même processus et lancera les mêmes vérifications.{/}</p>
+        <div class="cmd prompt"><code id="contrib-prompt">{en}Read AGENTS.md in this repository, then add a module for [the source] following it.{fr}Lis AGENTS.md dans ce dépôt, puis ajoute un module pour [la source] en le suivant.{/}</code><button type="button" data-copy-target="contrib-prompt">{en}Copy{fr}Copier{/}</button></div>
+      </div>
+    </div>
+    <div class="about-block">
+      <h2>{en}Ground rules{fr}Règles de base{/}</h2>
+      <div class="about-text">
+        <ul class="contrib-rules">
+          <li>{en}Contributions are released under the project's <a href="{{repo}}/blob/main/LICENSE">MIT licence</a>.{fr}Les contributions sont publiées sous la <a href="{{repo}}/blob/main/LICENSE">licence MIT</a> du projet.{/}</li>
+          <li>{en}The data stays with its publishers. MapleStats centralizes the interface, not the data, so do not commit copies of a source's data.{fr}Les données restent chez leurs éditeurs. MapleStats centralise l'interface, pas les données : ne versez pas de copies des données d'une source dans le dépôt.{/}</li>
+          <li>{en}No API keys or credentials in the code. Every source so far works without one.{fr}Aucune clé d'API ni aucun identifiant dans le code. Toutes les sources actuelles fonctionnent sans.{/}</li>
+          <li>{en}English and French together: a tool without French keywords cannot be found by a French query.{fr}L'anglais et le français ensemble : un outil sans mots-clés français est introuvable par une requête en français.{/}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

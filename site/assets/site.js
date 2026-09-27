@@ -11,6 +11,8 @@
   const doc = document.documentElement;
   const lang = doc.lang === "fr" ? "fr" : "en";
   const root = doc.dataset.root || "";
+  // Pages sit next to the current one (fr/ links to fr/); assets are under root.
+  const pages = doc.dataset.pages ?? root;
   const T = {
     en: {
       copy: "Copy",
@@ -163,7 +165,7 @@
     const [name, module, summary] = entry;
     const source = (modules[module] || [module, module])[lang === "en" ? 0 : 1];
     return (
-      `<li><a href="${root}tools.html#t-${name}"><span class="r-rank">${n}</span>` +
+      `<li><a href="${pages}tools.html#t-${name}"><span class="r-rank">${n}</span>` +
       `<span class="r-name">${highlight(name, query).replace(/_/g, "_<wbr>")}</span>` +
       `<span class="r-src">${escapeHtml(source)}</span>` +
       `<span class="r-sum">${highlight(summary, query)}</span></a></li>`
@@ -251,6 +253,28 @@
     const saved = key && store.get(key);
     const initial = saved && tabs.find((t) => t.dataset.key === saved);
     if (initial) select(initial, false);
+  });
+
+  /* ---------- Show more ---------- */
+
+  // The block is whole in the HTML; it is cut here, so without scripts the
+  // reader still sees all of it.
+  document.querySelectorAll("[data-more]").forEach((box) => {
+    const button = box.querySelector("[data-more-label]");
+    if (!button) return;
+    const set = (collapsed) => {
+      box.toggleAttribute("data-collapsed", collapsed);
+      button.setAttribute("aria-expanded", String(!collapsed));
+      button.textContent = collapsed ? button.dataset.moreLabel : button.dataset.lessLabel;
+    };
+    button.addEventListener("click", () => {
+      const collapse = !box.hasAttribute("data-collapsed");
+      set(collapse);
+      // Collapsing a long script can leave the reader below it.
+      if (collapse && box.getBoundingClientRect().top < 0) box.scrollIntoView({ block: "start" });
+    });
+    set(true);
+    button.hidden = false;
   });
 
   /* ---------- Copy buttons ---------- */

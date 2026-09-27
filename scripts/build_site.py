@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import html
 import importlib
+import importlib.util
 import inspect
 import json
 import math
@@ -33,6 +34,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from datetime import date
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
 
@@ -967,19 +969,21 @@ def tool_details(tool: ToolDoc, lang: Lang) -> str:
         f'<details class="tool" id="t-{esc(tool.name)}" data-tool="{esc(tool.name)}">'
         f'<summary><code class="t-name">{breakable(tool.name)}</code>'
         f'<span class="t-sum">{esc(tool.summary)}</span></summary>'
-        '<div class="t-body">'
+        # Two stacks, side by side where the row is wide enough: what the
+        # tool is for and how to find it, then how to call it.
+        '<div class="t-body"><div class="t-main">'
         + (
             f'<p class="t-use"><b>{use_label}</b> {inline_code(tool.use_for)}</p>'
             if tool.use_for
             else ""
         )
-        + params_table(tool, lang)
         + '<dl class="t-kw">'
         + f"<div><dt>Keywords</dt><dd>{esc(kw)}</dd></div>"
         + f'<div lang="fr"><dt>Mots-clés</dt><dd>{esc(mc)}</dd></div>'
-        + "</dl>"
+        + '</dl></div><div class="t-side">'
+        + params_table(tool, lang)
         + example_call(tool)
-        + "</div></details>"
+        + "</div></div></details>"
     )
 
 
@@ -1199,51 +1203,78 @@ def national_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
 
 
 def plan_panel(lang: Lang, root: str) -> str:
+    """The planner's answer as short lists: one per topic or place, tool over purpose."""
     plan = planner.plan(PLAN_QUESTION[lang]).model_dump(mode="json")
-    matched = "matched" if lang == "en" else "termes reconnus"
-    parts = []
-    for topic in plan["topics"]:
-        steps = "".join(
-            f'<li><a href="{tool_href(s["tool"], root)}"><code>{esc(s["tool"])}</code></a>'
+    caveat = "Caveat" if lang == "en" else "Précaution"
+
+    def group(title: str, steps: list[dict[str, Any]], caveats: list[str]) -> str:
+        items = "".join(
+            f'<li><a href="{tool_href(s["tool"], root)}"><code>{breakable(s["tool"])}</code></a>'
             f"<span>{esc(s['purpose'])}</span></li>"
-            for s in topic["steps"]
+            for s in steps
         )
-        caveats = "".join(f'<p class="caveat">{esc(c)}</p>' for c in topic["caveats"])
-        terms = ", ".join(f"“{esc(t)}”" for t in topic["matched_terms"])
-        parts.append(
-            f'<div class="p-topic"><p class="p-head"><b>{esc(topic["label"])}</b>'
-            f"<span>{matched} {terms}</span></p><ol>{steps}</ol>{caveats}</div>"
-        )
-    for place in plan["places"]:
-        steps = "".join(
-            f'<li><a href="{tool_href(s["tool"], root)}"><code>{esc(s["tool"])}</code></a>'
-            f"<span>{esc(s['purpose'])}</span></li>"
-            for s in place["steps"]
-        )
-        parts.append(
-            f'<div class="p-topic"><p class="p-head"><b>{esc(place["place"])}</b>'
-            f"<span>{esc(place['kind'])}</span></p><ol>{steps}</ol></div>"
-        )
+        notes = "".join(f'<p class="plan-note"><b>{caveat}</b> {esc(c)}</p>' for c in caveats)
+        return f'<div class="plan-group"><h4>{esc(title)}</h4><ol>{items}</ol>{notes}</div>'
+
+    parts = [group(t["label"], t["steps"], t["caveats"]) for t in plan["topics"]]
+    kinds = {"city": "ville"} if lang == "fr" else {}
+    parts += [
+        group(f"{p['place']} ({kinds.get(p['kind'], p['kind'])})", p["steps"], [])
+        for p in plan["places"]
+    ]
     return "".join(parts)
 
 
-async def reproduce_tabs() -> str:
+async def reproduce_scripts() -> list[tuple[str, str]]:
     capture = json.loads(CAPTURE.read_text(encoding="utf-8"))
     request = capture["request"]
     result = await reproduce.reproduce(request["name"], request["arguments"], "all")
+    return [(script.language, script.code) for script in result.scripts]
+
+
+# The homepage shows the first lines of each script; site.js adds the button
+# that shows the rest (without scripts the whole script shows).
+SHOW_MORE: dict[Lang, tuple[str, str]] = {
+    "en": ("Show all {n} lines", "Show fewer lines"),
+    "fr": ("Afficher les {n} lignes", "Afficher moins de lignes"),
+}
+
+
+def script_tabs(
+    scripts: list[tuple[str, str]], prefix: str, more: tuple[str, str] | None = None
+) -> str:
+    """R / Python / Stata / Julia tabs; `prefix` keeps ids unique on a page.
+
+    With `more` (the expand and collapse labels), each script is shown cut
+    to its first lines with a button for the rest; without it, it scrolls.
+    """
     labels = {"r": "R", "python": "Python", "stata": "Stata", "julia": "Julia"}
     tabs, panels = [], []
-    for n, script in enumerate(result.scripts):
+    for n, (language, code) in enumerate(scripts):
         selected = "true" if n == 0 else "false"
         hidden = "" if n == 0 else " hidden"
         tabs.append(
-            f'<button type="button" role="tab" id="rp-tab-{script.language}" aria-selected="{selected}"'
-            f' aria-controls="rp-{script.language}" tabindex="{0 if n == 0 else -1}">'
-            f"{labels.get(script.language, script.language)}</button>"
+            f'<button type="button" role="tab" id="{prefix}-tab-{language}" aria-selected="{selected}"'
+            f' aria-controls="{prefix}-{language}" tabindex="{0 if n == 0 else -1}">'
+            f"{labels.get(language, language)}</button>"
         )
+        body = highlight_script(code.rstrip(), language)
+        lines = code.rstrip().count("\n") + 1
+        if more and lines <= 18:
+            block = f'<pre class="ex-code"><code>{body}</code></pre>'
+        elif more:
+            block = (
+                f'<div class="ex-more" data-more><pre class="ex-code" id="{prefix}-{language}-code">'
+                f"<code>{body}</code></pre>"
+                f'<button type="button" class="ex-toggle" aria-controls="{prefix}-{language}-code"'
+                f' aria-expanded="true" data-more-label="{esc(more[0].format(n=lines))}"'
+                f' data-less-label="{esc(more[1])}" hidden>{esc(more[1])}</button></div>'
+            )
+        else:
+            block = f'<pre class="code scroll"><code>{body}</code></pre>'
         panels.append(
-            f'<div role="tabpanel" id="rp-{script.language}" aria-labelledby="rp-tab-{script.language}"{hidden}>'
-            f'<pre class="code scroll"><code>{highlight_script(script.code.rstrip(), script.language)}</code></pre></div>'
+            f'<div role="tabpanel" id="{prefix}-{language}" aria-labelledby="{prefix}-tab-{language}"{hidden}>'
+            f"{block}</div>"
         )
     return (
         f'<div class="tabs" data-tabs><div role="tablist" class="tablist">{"".join(tabs)}</div>'
@@ -1284,6 +1315,38 @@ def response_html(response: dict[str, Any]) -> str:
     return f'{before}<span class="prov">{marked}</span>{after}'
 
 
+MONTHS_FR = (
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+)
+
+
+def long_date(iso: str, lang: Lang) -> str:
+    """26 September 2026 / 26 septembre 2026."""
+    day = date.fromisoformat(iso[:10])
+    month = f"{day:%B}" if lang == "en" else MONTHS_FR[day.month - 1]
+    return f"{day.day} {month} {day.year}"
+
+
+# The one prompt that sets MapleStats up. The home page, the Connect page and
+# the README all show it word for word (tests/test_site.py checks), so a
+# reader meets the same sentence wherever they start.
+AGENT_PROMPT: dict[Lang, str] = {
+    "en": f"Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in {REPO}",
+    "fr": f"Installe le serveur MCP MapleStats et connecte-le à cet agent. Suis les étapes d'installation de {REPO}",
+}
+
+
 def captured_call(lang: Lang) -> dict[str, str]:
     capture = json.loads(CAPTURE.read_text(encoding="utf-8"))
     request = json.dumps(capture["request"], ensure_ascii=False)
@@ -1291,32 +1354,52 @@ def captured_call(lang: Lang) -> dict[str, str]:
         {"tool_name": capture["request"]["name"], "arguments": capture["request"]["arguments"]},
         ensure_ascii=False,
     )
-    captured = date.fromisoformat(capture["captured"])
-    months_fr = [
-        "janvier",
-        "février",
-        "mars",
-        "avril",
-        "mai",
-        "juin",
-        "juillet",
-        "août",
-        "septembre",
-        "octobre",
-        "novembre",
-        "décembre",
-    ]
-    when = (
-        f"{captured.day} {captured:%B} {captured.year}"
-        if lang == "en"
-        else f"{captured.day} {months_fr[captured.month - 1]} {captured.year}"
-    )
+    when = long_date(capture["captured"], lang)
     return {
         "call_request": highlight_json(request),
         "reproduce_request": highlight_json(reproduce_request),
         "call_response": response_html(capture["response"]),
+        "call_result": call_result(capture["response"], lang),
         "captured_on": when,
     }
+
+
+def call_result(response: dict[str, Any], lang: Lang) -> str:
+    """The recorded observations as a small table, and the provenance in plain words.
+
+    The full JSON stays one click away on the page; this is what a reader
+    needs at a glance: the series, its values, and where they came from.
+    """
+    en = lang == "en"
+    tables = []
+    for code, series in response["series"].items():
+        rows = "".join(
+            f"<tr><td>{esc(long_date(obs['ref_date'], lang))}</td>"
+            f"<td>{esc(number(obs['values'][code], lang, 2))}</td></tr>"
+            for obs in response["observations"]
+            if obs["values"].get(code) is not None
+        )
+        tables.append(
+            f'<table class="ex-table"><caption>{esc(series["label"])} <code>{esc(code)}</code></caption>'
+            f'<thead><tr><th scope="col">Date</th><th scope="col">{"Value" if en else "Valeur"}</th></tr></thead>'
+            f"<tbody>{rows}</tbody></table>"
+        )
+    prov = response["provenance"]
+    stamp = prov["queried_at"]
+    clock = stamp[11:16] if en else stamp[11:16].replace(":", " h ")
+    facts = (
+        (
+            "Source URL" if en else "URL de la source",
+            f'<a href="{esc(prov["url"])}">{esc(prov["url"])}</a>',
+        ),
+        ("Queried" if en else "Consultée le", f"{esc(long_date(stamp, lang))}, {clock} UTC"),
+        ("Result type" if en else "Type de résultat", f"<code>{esc(prov['schema_name'])}</code>"),
+    )
+    rows = "".join(f"<div><dt>{label}</dt><dd>{value}</dd></div>" for label, value in facts)
+    return (
+        f'<div class="ex-part"><p class="ex-label">{"Result" if en else "Résultat"}</p>{"".join(tables)}</div>'
+        f'<div class="ex-part ex-prov"><p class="ex-label">Provenance</p><dl>{rows}</dl></div>'
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1326,6 +1409,1021 @@ def captured_call(lang: Lang) -> dict[str, str]:
 _INCLUDE = re.compile(r"\{\{>\s*([a-z0-9_-]+)\s*\}\}")
 _LANG_BLOCK = re.compile(r"\{en\}(.*?)\{fr\}(.*?)\{/\}", re.DOTALL)
 _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
+
+
+# --------------------------------------------------------------------------
+# Case studies: recorded calls (scripts/capture_cases.py) drawn as charts.
+# --------------------------------------------------------------------------
+
+CASES_DIR = SITE / "_data" / "cases"
+CASE_KEYS = ("pumf", "ircc", "housing", "micro", "cards", "macro", "patents", "boc")
+
+
+def _load_charts() -> Any:
+    """scripts/site_charts.py, loaded by path so tests can import this file too."""
+    spec = importlib.util.spec_from_file_location(
+        "site_charts", Path(__file__).resolve().parent / "site_charts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+charts = _load_charts()
+
+PR_NAMES: dict[str, tuple[str, str]] = {
+    "10": ("Newfoundland and Labrador", "Terre-Neuve-et-Labrador"),
+    "11": ("Prince Edward Island", "Île-du-Prince-Édouard"),
+    "12": ("Nova Scotia", "Nouvelle-Écosse"),
+    "13": ("New Brunswick", "Nouveau-Brunswick"),
+    "24": ("Quebec", "Québec"),
+    "35": ("Ontario", "Ontario"),
+    "46": ("Manitoba", "Manitoba"),
+    "47": ("Saskatchewan", "Saskatchewan"),
+    "48": ("Alberta", "Alberta"),
+    "59": ("British Columbia", "Colombie-Britannique"),
+    "70": ("Northern Canada", "Nord canadien"),
+}
+MONTHS_EN = tuple(f"{date(2000, m, 1):%B}" for m in range(1, 13))
+
+
+def load_case(key: str) -> dict[str, Any]:
+    return json.loads((CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
+
+
+def number(value: float, lang: Lang, decimals: int = 0) -> str:
+    """16,745 / 16 745 (narrow no-break space); 6.5 / 6,5."""
+    text = f"{value:,.{decimals}f}"
+    return text if lang == "en" else text.replace(",", " ").replace(".", ",")
+
+
+def percent(value: float, lang: Lang, decimals: int = 1) -> str:
+    return f"{number(value, lang, decimals)}{'%' if lang == 'en' else ' %'}"
+
+
+def join_names(names: list[str], lang: Lang) -> str:
+    return f" {'and' if lang == 'en' else 'et'} ".join(names)
+
+
+def call_source(response: Any, lang: Lang) -> str:
+    """Source: <url>, queried <date>."""
+    prov = (response[0] if isinstance(response, list) else response)["provenance"]
+    when = long_date(prov["queried_at"], lang)
+    queried = f"queried {when}" if lang == "en" else f"interrogée le {when}"
+    return (
+        f'<span class="case-source">Source: <a href="{esc(prov["url"])}">{esc(prov["url"])}</a>, '
+        f"{queried}</span>"
+    )
+
+
+def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
+    """The calls behind a chart and the script that repeats the first one.
+
+    A run of calls to the same tool (one per candidate, one per year) shows
+    its first request and says how many more there were. A call with no
+    script (a web page the tool parses) shows reproduce_code's note instead.
+    """
+    summary = "How the agent got this" if lang == "en" else "Comment l'agent l'a obtenu"
+    request_label = "Request" if lang == "en" else "Requête"
+    runs: list[list[dict[str, Any]]] = []
+    for call in case["calls"]:
+        if runs and runs[-1][0]["name"] == call["name"] and len(case["calls"]) > 2:
+            runs[-1].append(call)
+        else:
+            runs.append([call])
+    panels = []
+    for run in runs:
+        first = run[0]
+        request = json.dumps(
+            {"name": first["name"], "arguments": first["arguments"]}, ensure_ascii=False
+        )
+        more = ""
+        if len(run) > 1:
+            n = len(run) - 1
+            more = (
+                f'<p class="how-more">{n} more {"call" if n == 1 else "calls"} like this one, with other arguments.</p>'
+                if lang == "en"
+                else f'<p class="how-more">{n} autre{"s" if n > 1 else ""} appel{"s" if n > 1 else ""} semblable{"s" if n > 1 else ""}, avec d\'autres arguments.</p>'
+            )
+        panels.append(
+            f'<figure class="panel"><figcaption class="panel-bar"><span>{request_label}</span>'
+            f"<code>call_tool</code></figcaption><pre><code>{highlight_json(request)}</code></pre>"
+            f"{more}</figure>"
+        )
+    first = case["calls"][0]
+    if first.get("scripts"):
+        tail = f'<figure class="panel">{script_tabs(list(first["scripts"].items()), f"{key}-rp")}</figure>'
+    else:
+        heading = "No script for this one" if lang == "en" else "Pas de script pour celui-ci"
+        notes = " ".join(esc(n) for n in first.get("script_notes", []))
+        tail = f'<div class="how-note"><strong>{heading}.</strong> <code>reproduce_code</code>: {notes}</div>'
+    return (
+        f'<details class="how"><summary>{summary}</summary><div class="how-body">'
+        + "".join(panels)
+        + tail
+        + "</div></details>"
+    )
+
+
+def pumf_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    rows = []
+    for cell in response["cells"]:
+        groups = {g["variable"]: g["code"] for g in cell["groups"]}
+        if groups.get("HDGREE") != "9":
+            continue
+        name = PR_NAMES[groups["PR"]][0 if lang == "en" else 1]
+        half = 1.96 * cell["standard_error"]
+        rows.append((name, cell["estimate"], cell["estimate"] - half, cell["estimate"] + half))
+    by_width = sorted(rows, key=lambda r: r[3] - r[2])
+    label = (
+        "Share of adults 25 to 64 whose highest credential is a bachelor's degree, with 95% confidence intervals"
+        if lang == "en"
+        else "Part des adultes de 25 à 64 ans dont le plus haut diplôme est un baccalauréat, avec intervalles de confiance à 95 %"
+    )
+    return {
+        "chart_pumf": charts.ci_chart(rows, label=label, value_format=lambda v: percent(v, lang)),
+        "pumf_narrow": esc(join_names([r[0] for r in by_width[:2]], lang)),
+        "pumf_wide": esc(join_names([r[0] for r in by_width[-2:]], lang)),
+        "source_pumf": call_source(response, lang),
+    }
+
+
+def ircc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    edmonton, calgary = (call["response"]["rows"] for call in case["calls"])
+    years = [row["period"] for row in edmonton]
+    last = edmonton[-1]
+    partial = ""
+    categories = list(years)
+    if last["cells"] < 12:
+        months = MONTHS_EN if lang == "en" else MONTHS_FR
+        categories[-1] = f"{last['period']}*"
+        partial = (
+            f"*{last['period']} covers January to {months[last['cells'] - 1]} only."
+            if lang == "en"
+            else f"*{last['period']} ne couvre que janvier à {months[last['cells'] - 1]}."
+        )
+    series = [
+        ("Edmonton", [float(r["value"]) for r in edmonton]),
+        ("Calgary", [float(r["value"]) for r in calgary]),
+    ]
+    label = (
+        "New permanent residents by intended destination, Edmonton and Calgary, by year"
+        if lang == "en"
+        else "Nouveaux résidents permanents selon la destination prévue, Edmonton et Calgary, par année"
+    )
+    return {
+        "chart_ircc": charts.grouped_bars(
+            categories, series, label=label, value_format=lambda v: number(v, lang)
+        ),
+        "ircc_partial": esc(partial),
+        "source_ircc": call_source(case["calls"][0]["response"], lang),
+    }
+
+
+def year_ticks(iso: str) -> str | None:
+    return iso[:4] if iso[5:7] == "01" else None
+
+
+def housing_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    # CMHC publishes this table by month; a year counts only once all twelve
+    # months are in, so the chart ends at the last complete year.
+    years: dict[str, dict[str, float]] = {}
+    months: dict[str, int] = {}
+    for row in response["rows"]:
+        year = row["period"][:4]
+        months[year] = months.get(year, 0) + 1
+        totals = years.setdefault(year, {})
+        for column, cell in row["values"].items():
+            totals[column] = totals.get(column, 0.0) + (cell["value"] or 0.0)
+    complete = [y for y in years if months[y] == 12 and y >= "2005"]
+    first, last = complete[0], complete[-1]
+    share = {y: years[y]["Apartment"] / years[y]["Total"] * 100 for y in complete}
+    crossed = next(
+        y
+        for y in complete
+        if all(years[z]["Apartment"] > years[z]["Single"] for z in complete if z >= y)
+    )
+    single_label = "Single-detached" if lang == "en" else "Individuelles"
+    apartment_label = "Apartments" if lang == "en" else "Appartements"
+    label = (
+        "Housing starts in Canada by year, single-detached homes and apartments, centres of 10,000 people or more"
+        if lang == "en"
+        else "Mises en chantier au Canada par année, maisons individuelles et appartements, centres de 10 000 habitants ou plus"
+    )
+    return {
+        "chart_housing": charts.grouped_bars(
+            complete,
+            [
+                (single_label, [years[y]["Single"] for y in complete]),
+                (apartment_label, [years[y]["Apartment"] for y in complete]),
+            ],
+            label=label,
+            value_format=lambda v: number(v, lang),
+        ),
+        "count_housing": number(case["calls"][1]["response"]["total_count"], lang),
+        "housing_first": first,
+        "housing_last": last,
+        "housing_single_first": number(years[first]["Single"], lang),
+        "housing_single_last": number(years[last]["Single"], lang),
+        "housing_apt_first": number(years[first]["Apartment"], lang),
+        "housing_apt_last": number(years[last]["Apartment"], lang),
+        "housing_share_first": esc(percent(share[first], lang, 0)),
+        "housing_share_last": esc(percent(share[last], lang, 0)),
+        "housing_crossed": crossed,
+        "source_housing": call_source(response, lang),
+    }
+
+
+GENSTAT_NAMES: dict[str, tuple[str, str]] = {
+    "1": ("First generation (born abroad)", "Première génération (née à l'étranger)"),
+    "2": (
+        "Second generation, both parents born abroad",
+        "Deuxième génération, deux parents nés à l'étranger",
+    ),
+    "3": (
+        "Second generation, one parent born abroad",
+        "Deuxième génération, un parent né à l'étranger",
+    ),
+    "4": ("Third generation or more", "Troisième génération ou plus"),
+}
+
+
+def micro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    rows = []
+    for cell in response["cells"]:
+        groups = {g["variable"]: g["code"] for g in cell["groups"]}
+        if groups["LOLIMA"] != "2":
+            continue
+        half = 1.96 * cell["standard_error"]
+        name = GENSTAT_NAMES[groups["GENSTAT"]][0 if lang == "en" else 1]
+        rows.append((name, cell["estimate"], cell["estimate"] - half, cell["estimate"] + half))
+    first, second_both, second_one, third = (r[1] for r in rows)
+    label = (
+        "Share of people in low income (LIM-AT) by immigrant generation, 2021 Census, with 95% confidence intervals"
+        if lang == "en"
+        else "Part des personnes à faible revenu (MFR-ApI) selon la génération, recensement de 2021, avec intervalles de confiance à 95 %"
+    )
+    return {
+        "chart_micro": charts.ci_chart(rows, label=label, value_format=lambda v: percent(v, lang)),
+        "micro_first": esc(percent(first, lang)),
+        "micro_second": esc(
+            f"{percent(second_both, lang)} {'and' if lang == 'en' else 'et'} {percent(second_one, lang)}"
+        ),
+        "micro_third": esc(percent(third, lang)),
+        "count_records": number(response["unweighted_n"], lang),
+        "source_micro": call_source(response, lang),
+    }
+
+
+def dollars(value: float, lang: Lang, cents: bool = True) -> str:
+    """$99 / $22.50: cents only when there are any, and only if asked for."""
+    shown = number(value, lang, 2 if cents and value != round(value) else 0)
+    return f"${shown}" if lang == "en" else f"{shown} $"
+
+
+def cards_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    # A purchase rate under 1% is a prepaid card (no credit, so no real rate).
+    priced = [
+        c for c in response["cards"] if c["purchase_rate"] is not None and c["purchase_rate"] >= 1
+    ]
+    groups: dict[tuple[float, float, int], list[str]] = {}
+    for card in priced:
+        key = (card["annual_fee"], card["purchase_rate"], 0 if card["rewards"] else 1)
+        groups.setdefault(key, []).append(card["name"])
+    points = []
+    for (fee, rate, series), names in groups.items():
+        head = f"{dollars(fee, lang)}, {percent(rate, lang, 2)}"
+        shown = ", ".join(names[:3]) + (f" (+{len(names) - 3})" if len(names) > 3 else "")
+        points.append((fee, rate, series, len(names), f"{head}: {shown}"))
+    rewards = [c for c in priced if c["rewards"]]
+    plain = [c for c in priced if not c["rewards"]]
+
+    def median(values: list[float]) -> float:
+        ordered_values = sorted(values)
+        mid = len(ordered_values) // 2
+        if len(ordered_values) % 2:
+            return ordered_values[mid]
+        return (ordered_values[mid - 1] + ordered_values[mid]) / 2
+
+    series = (
+        ["With rewards", "No rewards"] if lang == "en" else ["Avec récompenses", "Sans récompenses"]
+    )
+    label = (
+        "Credit cards offered in Alberta: annual fee against purchase interest rate"
+        if lang == "en"
+        else "Cartes de crédit offertes en Alberta : frais annuels et taux d'intérêt sur les achats"
+    )
+    return {
+        "chart_cards": charts.scatter_chart(
+            points,
+            series=series,
+            label=label,
+            x_format=lambda v: dollars(v, lang),
+            y_format=lambda v: percent(v, lang, 0),
+            x_title="Annual fee" if lang == "en" else "Frais annuels",
+            y_title="Purchase rate" if lang == "en" else "Taux sur les achats",
+        ),
+        "count_cards": number(response["total_matched"], lang),
+        "cards_priced": str(len(priced)),
+        "cards_rewards": str(len(rewards)),
+        "cards_plain": str(len(plain)),
+        "cards_fee_rewards": esc(dollars(median([c["annual_fee"] for c in rewards]), lang)),
+        "cards_fee_plain": esc(dollars(median([c["annual_fee"] for c in plain]), lang)),
+        "cards_rate_rewards": esc(percent(median([c["purchase_rate"] for c in rewards]), lang, 2)),
+        "cards_rate_plain": esc(percent(median([c["purchase_rate"] for c in plain]), lang, 2)),
+        "source_cards": call_source(response, lang),
+    }
+
+
+def month_name(iso: str, lang: Lang) -> str:
+    months = MONTHS_EN if lang == "en" else MONTHS_FR
+    return f"{months[int(iso[5:7]) - 1]} {iso[:4]}"
+
+
+def macro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    levels = [(o["ref_period"][:10], float(o["value"])) for o in response[0]["observations"]]
+    # 12-month inflation: each month against the same month a year earlier.
+    points = [
+        (iso, (value / levels[n - 12][1] - 1) * 100)
+        for n, (iso, value) in enumerate(levels)
+        if n >= 12
+    ]
+    peak_iso, peak = max(points, key=lambda p: p[1])
+    last_iso, last = points[-1]
+    inside = sum(1 for _, v in points if 1 <= v <= 3)
+    label = (
+        "Consumer Price Index, Canada, all-items: 12-month change, with the Bank of Canada's 1% to 3% target range"
+        if lang == "en"
+        else "Indice des prix à la consommation, Canada, ensemble : variation sur 12 mois, avec la fourchette cible de 1 % à 3 % de la Banque du Canada"
+    )
+    band = (1.0, 3.0, "Target range" if lang == "en" else "Fourchette cible")
+    return {
+        "chart_macro": charts.line_chart(
+            points,
+            label=label,
+            value_format=lambda v: percent(v, lang),
+            x_tick_format=year_ticks,
+            band=band,
+        ),
+        "macro_peak": esc(percent(peak, lang)),
+        "macro_peak_month": esc(month_name(peak_iso, lang)),
+        "macro_last": esc(percent(last, lang)),
+        "macro_last_month": esc(month_name(last_iso, lang)),
+        "macro_inside": str(inside),
+        "macro_months": str(len(points)),
+        "source_macro": call_source(response, lang),
+    }
+
+
+def patents_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    calls = case["calls"]
+    by_year = [
+        (c["arguments"]["filed_from"][:4], c["response"]["total_matched"]) for c in calls[1:]
+    ]
+    # Applications are published about 18 months after filing, so the last
+    # year is still filling in; the chart stops the year before it.
+    shown, (partial_year, partial_count) = by_year[:-1], by_year[-1]
+    peak_year, peak = max(shown, key=lambda p: p[1])
+    label = (
+        "Canadian patent applications in IPC class G06N (machine learning and other biological-model computing), by filing year"
+        if lang == "en"
+        else "Demandes de brevet canadiennes dans la classe CIB G06N (apprentissage automatique et autres calculs fondés sur des modèles biologiques), par année de dépôt"
+    )
+    return {
+        "chart_patents": charts.grouped_bars(
+            [year for year, _ in shown],
+            [("G06N", [float(n) for _, n in shown])],
+            label=label,
+            value_format=lambda v: number(v, lang),
+        ),
+        "count_patents": number(calls[0]["response"]["total_matched"], lang),
+        "patents_first_year": shown[0][0],
+        "patents_first": number(shown[0][1], lang),
+        "patents_peak_year": peak_year,
+        "patents_peak": number(peak, lang),
+        "patents_partial_year": partial_year,
+        "patents_partial": number(partial_count, lang),
+        "source_patents": call_source(calls[1]["response"], lang),
+    }
+
+
+def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    points = sorted(
+        (o["ref_date"], float(o["values"]["V39079"]))
+        for o in response["observations"]
+        if o["values"].get("V39079") is not None
+    )
+    values = [v for _, v in points]
+    changes = sum(1 for a, b in pairwise(values) if a != b)
+    label = (
+        "Bank of Canada target for the overnight rate, daily since 2015"
+        if lang == "en"
+        else "Taux cible du financement à un jour de la Banque du Canada, quotidien depuis 2015"
+    )
+    return {
+        "chart_boc": charts.step_chart(
+            points,
+            label=label,
+            value_format=lambda v: percent(v, lang, 2),
+            x_tick_format=year_ticks,
+        ),
+        "boc_changes": str(changes),
+        "boc_min": esc(percent(min(values), lang, 2)),
+        "boc_max": esc(percent(max(values), lang, 2)),
+        "boc_last": esc(percent(values[-1], lang, 2)),
+        "boc_last_date": esc(long_date(points[-1][0], lang)),
+        "source_boc": call_source(response, lang),
+    }
+
+
+# The ring's arcs: sixteen subjects, grouped so every arc is wide enough
+# to carry its own name and count. (short EN, short FR, subject keys); the
+# tooltip lists the subjects each arc holds.
+RING_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("Statistics", "Statistique", ("statistics",)),
+    ("Provinces and cities", "Provinces et villes", ("catalogue", "provincial", "municipal")),
+    ("Money and business", "Argent et affaires", ("money", "business")),
+    (
+        "Land and energy",
+        "Terre et énergie",
+        ("agriculture", "environment", "energy", "geography", "transport"),
+    ),
+    ("People", "Population", ("health", "housing", "immigration")),
+    ("Parliament", "Parlement", ("government",)),
+)
+
+
+# West to east, then north: the order the inner inscription travels.
+RING_ORDER = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU")
+
+
+def _city(name: str) -> str:
+    """'City of Red Deer ArcGIS Hub' -> 'Red Deer': the place a portal serves."""
+    name = re.sub(r"\s*\(.*?\)", "", name)
+    name = re.sub(r"^(City|Town|County|Region) of |^Open ", "", name)
+    for _ in range(2):
+        name = re.sub(
+            r"\s+(Open Data.*|Data Catalogue|Data Catalog|Data Hub|GeoHub|ArcGIS Hub|"
+            r"Atlas|Regional Municipality|Portal|Region|County)$",
+            "",
+            name,
+        )
+    return name.strip()
+
+
+def ring_places(lang: Lang) -> list[str]:
+    """Every province and city with a local source, grouped west to east."""
+    provinces: set[str] = set()
+    cities: dict[str, set[str]] = {}
+    families = {"ckan": CKAN_PORTALS, "arcgis_hub": ARCGIS_PORTALS, "socrata": SOCRATA_PORTALS}
+    for family, portals in families.items():
+        for key, portal in portals.items():
+            place, level = PORTAL_PLACES[family][key]
+            if level == "provincial":
+                provinces.add(place)
+            elif level == "municipal":
+                cities.setdefault(place, set()).add(_city(portal.name_en))
+    for source in SOURCES.values():
+        for place in source.places:
+            if source.level == "municipal" or source.en.startswith("City of"):
+                cities.setdefault(place, set()).add(_city(source.en))
+            elif source.level in ("provincial", "catalogue"):
+                provinces.add(place)
+    # A longer name that contains a city already listed is that city's: EPCOR,
+    # the police, transit and the metropolitan board are all Edmonton's.
+    for place, group in cities.items():
+        short = {c for c in group if len(c.split()) <= 2}
+        cities[place] = {next((k for k in short if k in c and k != c), c) for c in group}
+    names: list[str] = []
+    for code in RING_ORDER:
+        if code in provinces:
+            names.append(PLACES[code][1 if lang == "en" else 2])
+        names.extend(sorted(cities.get(code, ())))
+    return names
+
+
+def counter_list(items: list[tuple[int, str]], lang: Lang) -> str:
+    """Big numbers that count up once scrolled into view (assets/charts.js)."""
+    cells = "".join(
+        f'<li><span class="counter-n" data-count="">{number(n, lang)}</span>'
+        f'<span class="counter-l">{esc(text)}</span></li>'
+        for n, text in sorted(items, key=lambda item: -item[0])
+    )
+    return f'<ul class="counters" data-counters="">{cells}</ul>'
+
+
+def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang) -> dict[str, str]:
+    """The One Ring: every publisher inscribed, the tools as arcs by subject."""
+    en = lang == "en"
+    tools = sum(len(m.tools) for m in modules)
+    outer = sorted(
+        {m.source.short(lang) for m in modules if m.source.level == "national"}, key=str.casefold
+    )
+    by_subject: dict[str, int] = {}
+    for module in modules:
+        source = module.source
+        key = source.domain if source.level == "national" else source.level
+        if key:
+            by_subject[key] = by_subject.get(key, 0) + len(module.tools)
+    arcs = []
+    for short_en, short_fr, keys in RING_GROUPS:
+        members = [(DOMAINS.get(k) or LEVELS[k])[0 if en else 1] for k in keys]  # type: ignore[index]
+        count = sum(by_subject.get(k, 0) for k in keys)
+        short = short_en if en else short_fr
+        listed = ", ".join(m[0].lower() + m[1:] for m in members)
+        arcs.append((short, f"{short}: {listed}", count))
+    arcs.sort(key=lambda arc: -arc[2])
+    data_tools = sum(n for _, _, n in arcs)
+    # Every tool is either in an arc or is one of MapleStats' own (the
+    # planner and the script writer), which the caption names.
+    grouped = {k for _, _, keys in RING_GROUPS for k in keys}
+    assert set(by_subject) - grouped <= {"utility"}, set(by_subject) - grouped
+    label = (
+        f"The ring: {len(outer)} federal publishers around the outside, the provinces and "
+        f"cities with local sources inside, and {tools} tools as arcs by subject"
+        if en
+        else f"L'anneau : {len(outer)} éditeurs fédéraux à l'extérieur, les provinces et les "
+        f"villes dotées de sources locales à l'intérieur, et {tools} outils en arcs par sujet"
+    )
+    micro = load_case("micro")["calls"][0]["response"]
+    items = [
+        (
+            load_case("patents")["calls"][0]["response"]["total_matched"],
+            "patents" if en else "brevets",
+        ),
+        (micro["unweighted_n"], "census records" if en else "fiches du recensement"),
+        (
+            counts["boc_list_series"]["total_count"],
+            "Bank of Canada series" if en else "séries de la Banque du Canada",
+        ),
+        (
+            counts["wds_list_all_cubes"]["total_count"],
+            "Statistics Canada tables" if en else "tableaux de Statistique Canada",
+        ),
+        (
+            counts["statcan_reference_search_data"]["product_count"],
+            "microdata files" if en else "fichiers de microdonnées",
+        ),
+        (
+            load_case("cards")["calls"][0]["response"]["total_matched"],
+            "credit cards" if en else "cartes de crédit",
+        ),
+        (
+            counts["ircc_monthly_list_tables"]["returned_count"],
+            "immigration tables" if en else "tableaux d'immigration",
+        ),
+        (
+            load_case("housing")["calls"][1]["response"]["total_count"],
+            "housing tables" if en else "tableaux sur le logement",
+        ),
+    ]
+    return {
+        "chart_ring": charts.ring_chart(
+            outer,
+            ring_places(lang),
+            arcs,
+            centre=str(tools),
+            centre_lines=(
+                "tools," if en else "outils,",
+                "one connection" if en else "une connexion",
+            ),
+            label=label,
+        ),
+        "ring_federal": str(len(outer)),
+        "ring_data_tools": str(data_tools),
+        "ring_own_tools": str(tools - data_tools),
+        "counters": counter_list(items, lang),
+    }
+
+
+def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
+    context: dict[str, str] = {}
+    builders = {
+        "pumf": pumf_context,
+        "ircc": ircc_context,
+        "housing": housing_context,
+        "micro": micro_context,
+        "cards": cards_context,
+        "macro": macro_context,
+        "patents": patents_context,
+        "boc": boc_context,
+    }
+    for key in CASE_KEYS:
+        case = load_case(key)
+        context.update(builders[key](case, lang))
+        context[f"how_{key}"] = how_block(case, key, lang)
+    counts = {call["name"]: call["response"] for call in load_case("counts")["calls"]}
+    context["count_pumf"] = number(counts["statcan_reference_search_data"]["product_count"], lang)
+    context["count_ircc"] = number(counts["ircc_monthly_list_tables"]["returned_count"], lang)
+    context["count_tables"] = number(counts["wds_list_all_cubes"]["total_count"], lang)
+    context["count_series"] = number(counts["boc_list_series"]["total_count"], lang)
+    context["cases_captured"] = long_date(load_case("counts")["captured"], lang)
+    context.update(finale_context(counts, modules, lang))
+    return context
+
+
+# --------------------------------------------------------------------------
+# The Statistics Canada page (site/statcan.html): counts, families, tool
+# chains and variance methods from the registry and the PUMF module.
+# --------------------------------------------------------------------------
+
+# Every statcan/<family>/ folder in one group, with a line on what it is
+# for; statcan_context() fails the build when a family is missing here.
+STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("Tables and time series", "Tableaux et séries chronologiques", ("wds", "sdmx", "delta")),
+    (
+        "Census",
+        "Recensement",
+        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables", "geo"),
+    ),
+    ("Microdata", "Microdonnées", ("pumf",)),
+    ("Classifications", "Classifications", ("rdaas",)),
+    ("Indicators", "Indicateurs", ("indicators", "sdg")),
+    (
+        "Releases, catalogues and methods",
+        "Diffusions, catalogues et méthodes",
+        ("daily", "reference", "surveys"),
+    ),
+)
+
+STATCAN_NOTES: dict[str, tuple[str, str]] = {
+    "wds": (
+        (
+            "Search tables by title, read their dimensions, members and footnotes, pull series by "
+            "vector or coordinate (latest N periods or a date range), decode code sets, see what "
+            "changed today, and get full-table CSV or SDMX download links."
+        ),
+        (
+            "Chercher les tableaux par titre, lire leurs dimensions, membres et notes, extraire des"
+            " séries par vecteur ou par coordonnée (N dernières périodes ou intervalle de dates), "
+            "décoder les ensembles de codes, voir ce qui a changé aujourd'hui et obtenir les liens "
+            "CSV ou SDMX d'un tableau complet."
+        ),
+    ),
+    "sdmx": (
+        (
+            "Ask for only the slice you need: a table's codelists with parent and child codes, "
+            "complete keys for large dimensions, and observations filtered by key or by vector."
+        ),
+        (
+            "Ne demander que la tranche voulue : les listes de codes d'un tableau avec leurs liens "
+            "parent-enfant, des clés complètes pour les grandes dimensions et des observations "
+            "filtrées par clé ou par vecteur."
+        ),
+    ),
+    "delta": (
+        (
+            "The bulk-update ZIP for one business day, with every table and vector released that "
+            "day, after checking that the file exists."
+        ),
+        (
+            "Le ZIP de mise à jour d'un jour ouvrable, avec tous les tableaux et vecteurs diffusés "
+            "ce jour-là, après vérification que le fichier existe."
+        ),
+    ),
+    "census_profile": (
+        (
+            "Find a geography, from province to dissemination area, and one of 2,631 "
+            "characteristics, then fetch values with quality flags and confidence intervals."
+        ),
+        (
+            "Trouver une géographie, de la province à l'aire de diffusion, et l'une des 2 631 "
+            "caractéristiques, puis obtenir les valeurs avec leurs indicateurs de qualité et "
+            "intervalles de confiance."
+        ),
+    ),
+    "census_profile_2016": (
+        (
+            "The 2016 profile's own JSON API: geographies with their DGUIDs, then a full profile by"
+            " topic, with total, male and female values and suppression symbols."
+        ),
+        (
+            "L'API JSON propre au profil de 2016 : les géographies et leur DGUID, puis le profil "
+            "complet par thème, avec les valeurs totales, hommes et femmes et les symboles de "
+            "suppression."
+        ),
+    ),
+    "census_profile_archive": (
+        (
+            "Direct CSV or TAB bulk-download links for the 2001, 2006, 2011 and 2016 profiles, by "
+            "geography level, in English or French."
+        ),
+        (
+            "Liens directs de téléchargement en bloc, CSV ou TAB, des profils de 2001, 2006, 2011 "
+            "et 2016, par niveau géographique, en français ou en anglais."
+        ),
+    ),
+    "census_tables": (
+        (
+            "Cross-tabulations from the 2006 to 2016 censuses, with their CSV, SDMX or Beyond 20/20"
+            " files; a table that exists only as IVT comes with an R snippet using canivt."
+        ),
+        (
+            "Les tableaux croisés des recensements de 2006 à 2016, avec leurs fichiers CSV, SDMX ou"
+            " Beyond 20/20; un tableau offert seulement en IVT est accompagné d'un extrait R qui "
+            "utilise canivt."
+        ),
+    ),
+    "geo": (
+        (
+            "Census boundary services by year: layer schemas, attribute queries (a DGUID from a "
+            "place name) and polygons reprojected to latitude and longitude."
+        ),
+        (
+            "Services de limites du recensement, par année : schéma des couches, requêtes par "
+            "attribut (le DGUID d'un lieu d'après son nom) et polygones reprojetés en latitude et "
+            "longitude."
+        ),
+    ),
+    "pumf": (
+        (
+            "Find a public use microdata file, list its ZIPs, read its codebook and weights without"
+            " downloading it, and compute weighted totals, shares and means."
+        ),
+        (
+            "Trouver un fichier de microdonnées à grande diffusion, lister ses ZIP, lire son "
+            "dictionnaire et ses poids sans le télécharger, puis calculer des totaux, des parts et "
+            "des moyennes pondérés."
+        ),
+    ),
+    "rdaas": (
+        (
+            "NAICS, the Standard Geographical Classification and the rest: structure, full category"
+            " trees, index terms, exclusions, and concordances that map codes between versions."
+        ),
+        (
+            "Le SCIAN, la Classification géographique type et les autres : structure, arbre complet"
+            " des catégories, termes de l'index, exclusions et concordances entre versions."
+        ),
+    ),
+    "indicators": (
+        (
+            "Current values of named indicators (population, CPI, GDP, trade, unemployment) with "
+            "growth rates and a link to the Daily article, from the feeds behind StatCan's home "
+            "page."
+        ),
+        (
+            "Valeurs actuelles d'indicateurs nommés (population, IPC, PIB, commerce, chômage), avec"
+            " le taux de croissance et un lien vers l'article du Quotidien, tirées des flux de la "
+            "page d'accueil de Statistique Canada."
+        ),
+    ),
+    "sdg": (
+        (
+            "Canada's 86 national indicators and its 251 indicators under the UN global framework: "
+            "search, metadata, and observations with each indicator's own breakdowns."
+        ),
+        (
+            "Les 86 indicateurs du cadre canadien et les 251 du cadre mondial de l'ONU : recherche,"
+            " métadonnées et observations, avec les ventilations propres à chaque indicateur."
+        ),
+    ),
+    "daily": (
+        (
+            "The last 100 days of releases from The Daily's Atom feeds, by subject, and the full "
+            "release archive back to 14 March 2012."
+        ),
+        (
+            "Les diffusions des 100 derniers jours, par sujet, tirées des flux Atom du Quotidien, "
+            "et l'archive complète depuis le 14 mars 2012."
+        ),
+    ),
+    "reference": (
+        (
+            "Three catalogues: definitions, data sources and methods; analysis articles and "
+            "periodicals; and data products, including the PUMFs and bulk files the table APIs "
+            "cannot see."
+        ),
+        (
+            "Trois catalogues : définitions, sources de données et méthodes; articles d'analyse et "
+            "périodiques; produits de données, dont les FMGD et les fichiers en bloc que les API de"
+            " tableaux ne voient pas."
+        ),
+    ),
+    "surveys": (
+        (
+            "The A to Z directory of about 899 surveys and programs, active or not, and each "
+            "survey's IMDB record: status, frequency, description, subjects and methodology link."
+        ),
+        (
+            "Le répertoire alphabétique d'environ 899 enquêtes et programmes, actifs ou non, et la "
+            "fiche BMDI de chaque enquête : statut, fréquence, description, sujets et lien vers la "
+            "méthodologie."
+        ),
+    ),
+}
+
+# Tool chains for the page's workflows; every name must be a registered tool.
+STATCAN_CHAINS: dict[str, tuple[str, ...]] = {
+    "series": (
+        "wds_search_cubes",
+        "wds_get_cube_metadata",
+        "wds_get_series_info_from_cube_pid_coord",
+        "wds_get_data_from_vectors",
+    ),
+    "sdmx": ("sdmx_get_structure", "sdmx_get_key_for_dimension", "sdmx_get_data"),
+    "codes": ("wds_get_cube_metadata", "wds_get_code_sets"),
+    "pumf": (
+        "statcan_pumf_search",
+        "statcan_pumf_list_files",
+        "statcan_pumf_get_codebook",
+        "statcan_pumf_tabulate",
+    ),
+    "census": (
+        "statcan_census_profile_search_geography",
+        "statcan_census_profile_search_characteristic",
+        "statcan_census_profile_get_data",
+    ),
+    "classify": (
+        "rdaas_search_classifications",
+        "rdaas_get_classification_categories_detailed",
+        "rdaas_search_concordances",
+        "rdaas_get_concordance_maps",
+    ),
+    "catalogue": (
+        "statcan_reference_search_data",
+        "statcan_reference_search_documents",
+        "statcan_surveys_search_surveys",
+        "statcan_surveys_get_survey_metadata",
+    ),
+    "releases": (
+        "statcan_daily_get_releases",
+        "wds_get_changed_cube_list",
+        "wds_get_changed_series_list",
+        "statcan_delta_get_file_link",
+    ),
+}
+
+# The file each verified variance method in statcan/pumf/tabulate.py covers,
+# keyed by its url_marker; the build fails when a method has no entry.
+VARIANCE_FILES: dict[str, tuple[str, str]] = {
+    "cen21_ind_": (
+        "2021 Census, individuals file (98M0001X)",
+        "Recensement de 2021, fichier des particuliers (98M0001X)",
+    ),
+    "/89m0025x/2022001/2024.zip": (
+        "Employment Insurance Coverage Survey, 2024 (89M0025X)",
+        "Enquête sur la couverture de l'assurance-emploi, 2024 (89M0025X)",
+    ),
+    "/14-25-0001/2026001/2024-2025.zip": (
+        "CSWC, 2024-2025 (14-25-0001)",
+        "CSWC, 2024-2025 (14-25-0001)",
+    ),
+}
+
+
+def _code_list(names: list[str], lang: Lang) -> str:
+    """<code>a</code>, <code>b</code> and <code>c</code>."""
+    codes = [f"<code>{esc(name)}</code>" for name in names]
+    if len(codes) < 2:
+        return "".join(codes)
+    return f"{', '.join(codes[:-1])} {'and' if lang == 'en' else 'et'} {codes[-1]}"
+
+
+def _tool_chain(names: tuple[str, ...], tools: set[str], root: str) -> str:
+    unknown = [name for name in names if name not in tools]
+    if unknown:
+        raise SystemExit(f"STATCAN_CHAINS names tools the server does not have: {unknown}")
+    return (
+        '<ol class="sc-chain">'
+        + "".join(
+            f'<li><a href="{tool_href(name, root)}"><code>{breakable(name)}</code></a></li>'
+            for name in names
+        )
+        + "</ol>"
+    )
+
+
+def _variance_table(lang: Lang) -> str:
+    from maplestats_mcp.modules.statcan.pumf.tabulate import VARIANCE_METHODS
+
+    en = lang == "en"
+    head = (
+        ("File", "Weight", "Replicates", "Standard error")
+        if en
+        else ("Fichier", "Poids", "Répliques", "Erreur-type")
+    )
+    rows = []
+    for method in VARIANCE_METHODS:
+        if method.url_marker not in VARIANCE_FILES:
+            raise SystemExit(f"add {method.url_marker!r} to VARIANCE_FILES in build_site.py")
+        name = VARIANCE_FILES[method.url_marker][0 if en else 1]
+        divisor = number(method.divisor, lang)
+        if method.centre == "mean":
+            how = (
+                f"Random groups: squared deviations from the replicates' mean, divided by {divisor}"
+                if en
+                else f"Groupes aléatoires : écarts au carré à la moyenne des répliques, divisés par {divisor}"
+            )
+        else:
+            how = (
+                f"Bootstrap: squared deviations from the full-sample estimate, divided by {divisor}"
+                if en
+                else f"Bootstrap : écarts au carré à l'estimation sur l'échantillon complet, divisés par {divisor}"
+            )
+        replicates = method.replicates
+        rows.append(
+            # data-label names each cell where the phone layout hides the header row.
+            f"<tr><td>{esc(name)}</td>"
+            f'<td data-label="{head[1]}"><code>{esc(method.main_weight)}</code></td>'
+            f'<td data-label="{head[2]}"><code>{esc(replicates[0])}</code>–'
+            f"<code>{esc(replicates[-1])}</code> "
+            f'<span class="count">{number(len(replicates), lang)}</span></td>'
+            f'<td data-label="{head[3]}">{esc(how)}</td></tr>'
+        )
+    return (
+        '<div class="table-wrap"><table class="params sc-variance"><thead><tr>'
+        + "".join(f"<th>{h}</th>" for h in head)
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table></div>"
+    )
+
+
+def statcan_context(modules: list[ModuleDoc], lang: Lang, root: str) -> dict[str, str]:
+    from maplestats_mcp.modules.statcan.pumf.tabulate import VARIANCE_METHODS
+
+    en = lang == "en"
+    module = next(m for m in modules if m.key == "statcan")
+    by_family: dict[str, list[ToolDoc]] = {}
+    for tool in module.tools:
+        by_family.setdefault(tool.family, []).append(tool)
+    grouped = [family for _, _, families in STATCAN_GROUPS for family in families]
+    missing = sorted((set(by_family) - set(grouped)) | (set(by_family) - set(STATCAN_NOTES)))
+    stale = sorted((set(grouped) | set(STATCAN_NOTES)) - set(by_family))
+    if missing or stale:
+        raise SystemExit(
+            f"STATCAN_GROUPS/STATCAN_NOTES in build_site.py: add {missing}, remove {stale}"
+        )
+
+    def tools_word(count: int) -> str:
+        if en:
+            return "tool" if count == 1 else "tools"
+        return "outil" if count == 1 else "outils"
+
+    groups = []
+    for title_en, title_fr, families in STATCAN_GROUPS:
+        count = sum(len(by_family[f]) for f in families)
+        items = []
+        for family in families:
+            tools = by_family[family]
+            names = [t.name for t in tools]
+            title = FAMILIES[f"statcan/{family}"][0 if en else 1]
+            items.append(
+                "<li>"
+                f'<h4><a href="{tool_href(names[0], root)}">{esc(title)}</a> '
+                f'<span class="count">{len(tools)}</span></h4>'
+                f'<p class="sc-prefix"><code>{esc(_family_prefix(names, "statcan", family))}</code></p>'
+                f"<p>{esc(STATCAN_NOTES[family][0 if en else 1])}</p>"
+                "</li>"
+            )
+        groups.append(
+            '<div class="sc-group">'
+            f'<div class="sc-group-head"><h3>{esc(title_en if en else title_fr)}</h3>'
+            f'<p class="count">{count} {tools_word(count)}</p></div>'
+            f'<ul class="sc-fams">{"".join(items)}</ul>'
+            "</div>"
+        )
+    registered = {t.name for m in modules for t in m.tools}
+    context = {
+        "statcan_tool_count": str(len(module.tools)),
+        "statcan_family_count": str(len(by_family)),
+        "statcan_groups": "\n".join(groups),
+        "statcan_resources": _code_list(module.resources, lang),
+        "statcan_prompts": _code_list(module.prompts, lang),
+        "statcan_variance_count": str(len(VARIANCE_METHODS)),
+        "statcan_microdata_count": number(
+            next(
+                call["response"]["product_count"]
+                for call in load_case("counts")["calls"]
+                if call["name"] == "statcan_reference_search_data"
+            ),
+            lang,
+        ),
+        "statcan_variance_table": _variance_table(lang),
+    }
+    for key, names in STATCAN_CHAINS.items():
+        context[f"sc_chain_{key}"] = _tool_chain(names, registered, root)
+    return context
+
+
+# On a French page, {{root}} is "../" so the shared assets resolve, but a link
+# to another page must stay in French: "../tools.html#t-x" becomes
+# "tools.html#t-x". The language switch (it carries hreflang) keeps pointing
+# at the English page, and data-pages tells site.js where pages live.
+_PAGE_LINK = re.compile(r'(<a\b(?![^>]*\bhreflang=)[^>]*?\bhref=")\.\./([\w-]+\.html)')
+
+
+def french_links(html_text: str) -> str:
+    html_text = _PAGE_LINK.sub(r"\1\2", html_text)
+    return html_text.replace('data-root="../"', 'data-root="../" data-pages=""', 1)
 
 
 def render(template: str, lang: Lang, context: dict[str, str]) -> str:
@@ -1368,8 +2466,8 @@ async def build(out: Path) -> dict[str, int]:
         "sources_over": str((len(national) + counts["local_catalogue_count"] - 1) // 5 * 5),
         "local_source_count": str(counts["local_source_count"]),
         "search_top": str(index["top"]),
-        "reproduce_tabs": await reproduce_tabs(),
     }
+    scripts = await reproduce_scripts()
     search_results = {lang: await server_search(SEARCH_EXAMPLE[lang]) for lang in LANGS}
 
     if out.exists():
@@ -1386,30 +2484,39 @@ async def build(out: Path) -> dict[str, int]:
     (out / "llms.txt").write_text(llms_txt(modules, counts), encoding="utf-8")
 
     pages = sorted(p for p in SITE.glob("*.html"))
+    cases = {lang: case_context(lang, modules) for lang in LANGS}
     for lang in LANGS:
         root = "" if lang == "en" else "../"
         target_dir = out if lang == "en" else out / "fr"
         target_dir.mkdir(parents=True, exist_ok=True)
+        statcan = statcan_context(modules, lang, root)
         for page in pages:
             context = {
                 **shared,
                 **captured_call(lang),
+                **cases[lang],
+                **statcan,
                 "lang": lang,
                 "root": root,
                 "page": page.name,
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
                 "search_query": esc(SEARCH_EXAMPLE[lang]),
+                "agent_prompt": esc(AGENT_PROMPT[lang]),
                 "search_suggestions": " ".join(
                     f'<button type="button" data-q="{esc(q)}">{esc(q)}</button>'
                     for q in SEARCH_SUGGESTIONS[lang]
                 ),
-                "plan_request": highlight_json(
-                    json.dumps({"question": PLAN_QUESTION[lang]}, ensure_ascii=False)
-                ),
+                "plan_question": esc(PLAN_QUESTION[lang]),
                 "plan_panel": plan_panel(lang, root),
+                "reproduce_tabs": script_tabs(scripts, "rp", SHOW_MORE[lang]),
                 "cur_tools": ' aria-current="page"' if page.name == "tools.html" else "",
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
+                "cur_cases": ' aria-current="page"' if page.name == "cases.html" else "",
+                "cur_statcan": ' aria-current="page"' if page.name == "statcan.html" else "",
+                "cur_contributing": (
+                    ' aria-current="page"' if page.name == "contributing.html" else ""
+                ),
                 "search_results": result_items(search_results[lang], by_name, lang, root),
                 "coverage_matrix": coverage_matrix(lang),
                 "coverage_lists": coverage_lists(lang),
@@ -1419,6 +2526,8 @@ async def build(out: Path) -> dict[str, int]:
                 "level_filters": level_filters(modules, lang),
             }
             rendered = render(page.read_text(encoding="utf-8"), lang, context)
+            if lang == "fr":
+                rendered = french_links(rendered)
             (target_dir / page.name).write_text(rendered, encoding="utf-8")
     return {"tools": len(by_name), "modules": len(modules), "pages": len(pages) * len(LANGS)}
 
