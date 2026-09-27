@@ -274,7 +274,7 @@ From the Notion canonical page; none of these are done yet.
 | Public website | Not started | Product, sources, connection instructions, examples, status. |
 | Launch blog post "One MCP to Rule Them All" | Not started | Narrative drafted on the Notion page. |
 | Cross-source demos | Not started | One substantive Canadian question answered across StatCan, BoC, CMHC and provincial data; `plan_query` is the entry point. |
-| MCP registries | Not started | Submit once the hosted endpoint and docs exist. |
-| PyPI package | Not started | Installable Python package linking to the hosted service. |
+| MCP registries | Ready | `release.yml` publishes `server.json` to the official MCP Registry right after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Other registries still to submit. |
+| PyPI package | Ready | Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). Waiting on the pending publisher on pypi.org and the first tag. After it ships, set `ON_PYPI = True` in `scripts/build_site.py`. |
 | Per-language clients | Not started | Lightweight R, Python and Julia clients over the hosted core; `reproduce_code` already generates per-language scripts. |
 | Ecosystem outreach | Not started | cansim maintainers, MountainMath (CMHC, canivt), OSI Data Analyst Network, Edmonton Data Society, Vancouver group, NRCan (Torben), SFU Economics. |
