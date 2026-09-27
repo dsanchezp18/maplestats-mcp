@@ -150,30 +150,6 @@
   </div>
 </section>
 
-<section class="section" id="rules">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="label">{en}Design rules{fr}Règles de conception{/}</p>
-      <h2>{en}Built for work you have to cite{fr}Conçu pour un travail qu'il faut citer{/}</h2>
-      <p>{en}Each rule is checked by the code or by CI. The right column says where.{fr}Chaque règle est vérifiée par le code ou par l'intégration continue. La colonne de droite indique où.{/}</p>
-    </div>
-    <div class="table-wrap">
-      <table class="rules">
-        <thead><tr><th class="label" scope="col">{en}Rule{fr}Règle{/}</th><th class="label" scope="col">{en}Enforced in{fr}Vérifiée dans{/}</th></tr></thead>
-        <tbody>
-          <tr><td>{en}Every result is a typed object with a provenance block: the source, the exact URL, the time of the query and, where they apply, freshness and row limits.{fr}Chaque résultat est un objet typé avec un bloc de provenance : la source, l'URL exacte, l'heure de la requête et, s'il y a lieu, la fraîcheur des données et les limites de lignes.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/shared/models.py">shared/models.py</a></td></tr>
-          <tr><td>{en}A failed upstream call returns an MCP error that names the cause. It never comes back as an empty result that looks like an answer.{fr}Un appel qui échoue renvoie une erreur MCP qui en nomme la cause. Il ne revient jamais sous forme de résultat vide qui ressemble à une réponse.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/shared/errors.py">shared/errors.py</a></td></tr>
-          <tr><td>{en}Every tool has a Use for line and at least eight search keywords in English and in French.{fr}Chaque outil a une ligne Use for et au moins huit mots-clés de recherche en anglais et en français.{/}</td><td><a href="{{repo}}/blob/main/tests/test_tool_docstrings.py">tests/test_tool_docstrings.py</a></td></tr>
-          <tr><td>{en}French queries find the same tools as their English equivalents.{fr}Les requêtes en français trouvent les mêmes outils que leurs équivalents anglais.{/}</td><td><a href="{{repo}}/blob/main/tests/test_french_discovery.py">tests/test_french_discovery.py</a></td></tr>
-          <tr><td>{en}Every module is called against its live source each Monday, and a failure opens a GitHub issue.{fr}Chaque module est appelé contre sa source réelle tous les lundis, et un échec ouvre un ticket GitHub.{/}</td><td><a href="{{repo}}/blob/main/.github/workflows/smoke.yml">.github/workflows/smoke.yml</a></td></tr>
-          <tr><td>{en}Public use microdata is tabulated on your machine with its survey weights, and cells with fewer than 30 respondents are flagged.{fr}Les microdonnées à grande diffusion sont totalisées sur votre machine avec leurs poids d'enquête, et les cellules de moins de 30 répondants sont signalées.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/modules/statcan/pumf/tabulate.py">statcan/pumf/tabulate.py</a></td></tr>
-          <tr><td>{en}Any data call can become an R, Python, Stata or Julia script that fetches and cleans the same data.{fr}Tout appel de données peut devenir un script R, Python, Stata ou Julia qui récupère et nettoie les mêmes données.{/}</td><td><a href="{{repo}}/tree/main/src/maplestats_mcp/modules/reproduce">modules/reproduce/</a></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
 <section class="section" id="connect">
   <div class="wrap connect">
     <div class="connect-note">

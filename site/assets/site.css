@@ -1428,65 +1428,6 @@ mark {
 
 /* ---------- Rules ---------- */
 
-.rules {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.rules thead th {
-  padding: 0 24px 10px 0;
-  text-align: left;
-}
-
-.rules td {
-  padding: 18px 24px 18px 0;
-  border-top: 1px solid var(--rule);
-  vertical-align: top;
-}
-
-.rules td:first-child {
-  max-width: 64ch;
-  font-size: 1.0625rem;
-  line-height: 1.5;
-}
-
-.rules td:last-child {
-  width: 30%;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.rules td:last-child a {
-  font-family: var(--font-mono);
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
-}
-
-.rules td:last-child a:hover {
-  color: var(--accent);
-}
-
-@media (max-width: 700px) {
-  .rules thead {
-    display: none;
-  }
-
-  .rules tr,
-  .rules td {
-    display: block;
-    width: auto;
-  }
-
-  .rules td:first-child {
-    padding-bottom: 6px;
-  }
-
-  .rules td:last-child {
-    border-top: 0;
-    padding-top: 0;
-    width: auto;
-  }
-}
 
 /* ---------- Connect ---------- */
 
