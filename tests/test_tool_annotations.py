@@ -26,9 +26,10 @@ async def test_every_module_tool_is_annotated_read_only():
 
 
 async def test_visible_search_tools_are_annotated():
-    visible = {tool.name: tool for tool in await mcp.list_tools()}
+    visible = {tool.name: tool.annotations for tool in await mcp.list_tools()}
     for name in ("search_tools", "call_tool", "plan_query"):
-        assert visible[name].annotations is not None, name
-        assert visible[name].annotations.read_only_hint is True, name
-    assert visible["plan_query"].annotations.open_world_hint is False
-    assert visible["search_tools"].annotations.open_world_hint is False
+        annotations = visible[name]
+        assert annotations is not None, name
+        assert annotations.read_only_hint is True, name
+        if name != "call_tool":
+            assert annotations.open_world_hint is False, name
