@@ -1344,7 +1344,7 @@ _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 # --------------------------------------------------------------------------
 
 CASES_DIR = SITE / "_data" / "cases"
-CASE_KEYS = ("pumf", "ircc", "micro", "cards", "macro", "elections", "patents", "boc")
+CASE_KEYS = ("pumf", "ircc", "micro", "cards", "macro", "patents", "boc")
 
 
 def _load_charts() -> Any:
@@ -1658,62 +1658,6 @@ def macro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     }
 
 
-PARTY_NAMES: dict[str, tuple[str, str]] = {
-    "Conservative Party of Canada": ("Conservative", "conservateur"),
-    "Liberal Party of Canada": ("Liberal", "libéral"),
-    "New Democratic Party": ("NDP", "NPD"),
-    "Christian Heritage Party of Canada": ("Christian Heritage", "Héritage chrétien"),
-    "People's Party of Canada": ("People's Party", "Parti populaire"),
-    "Independent": ("Independent", "indépendant"),
-    "Communist Party of Canada": ("Communist", "communiste"),
-    "Marxist-Leninist Party of Canada": ("Marxist-Leninist", "marxiste-léniniste"),
-}
-
-
-def party(name: str, lang: Lang) -> str:
-    pair = PARTY_NAMES.get(name)
-    return pair[0 if lang == "en" else 1] if pair else name
-
-
-def elections_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
-    calls = case["calls"]
-    returns = [
-        c["response"]["sections"]["DETAIL_DATA"][0]
-        for c in calls
-        if c["name"] == "elections_financial_returns_get_financial_return_part"
-    ]
-    member = calls[-1]["response"]["politicians"][0]
-    spent = []
-    for row in returns:
-        amount = float(row["Election_expenses_subject_to_the_limit_Total"] or 0)
-        if amount > 0:
-            spent.append((row["Candidate_last_name"], row["Political_Affiliation"], amount))
-    spent.sort(key=lambda r: -r[2])
-    rows = [(f"{last}, {party(affiliation, lang)}", amount) for last, affiliation, amount in spent]
-    limit = max(float(r["Election_expenses_limit"] or 0) for r in returns)
-    top = spent[0]
-    winner = next(r for r in spent if member["name"].endswith(r[0]))
-    label = (
-        "Election expenses subject to the limit, each candidate in Edmonton Centre, 45th general election"
-        if lang == "en"
-        else "Dépenses électorales assujetties au plafond, chaque candidat d'Edmonton-Centre, 45e élection générale"
-    )
-    return {
-        "chart_elections": charts.hbar_chart(
-            rows, label=label, value_format=lambda v: dollars(v, lang, cents=False), log=False
-        ),
-        "elections_candidates": str(len(returns)),
-        "elections_none": str(len(returns) - len(spent)),
-        "elections_limit": esc(dollars(limit, lang, cents=False)),
-        "elections_top": esc(f"{top[0]} ({party(top[1], lang)})"),
-        "elections_top_spent": esc(dollars(top[2], lang, cents=False)),
-        "elections_member": esc(member["name"]),
-        "elections_member_party": esc(party(winner[1], lang)),
-        "elections_member_spent": esc(dollars(winner[2], lang, cents=False)),
-        "source_elections": call_source(calls[0]["response"], lang),
-    }
-
-
 def patents_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     calls = case["calls"]
     by_year = [
@@ -1801,10 +1745,6 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             "Statistics Canada tables" if en else "Tableaux de Statistique Canada",
             counts["wds_list_all_cubes"]["total_count"],
         ),
-        (
-            "Election candidates, 2025" if en else "Candidats, élection de 2025",
-            counts["elections_financial_returns_search_candidates"]["total_found"],
-        ),
         ("Tools" if en else "Outils", tools),
         (
             "Microdata files" if en else "Fichiers de microdonnées",
@@ -1859,7 +1799,6 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
         "micro": micro_context,
         "cards": cards_context,
         "macro": macro_context,
-        "elections": elections_context,
         "patents": patents_context,
         "boc": boc_context,
     }
@@ -1872,9 +1811,6 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
     context["count_ircc"] = number(counts["ircc_monthly_list_tables"]["returned_count"], lang)
     context["count_tables"] = number(counts["wds_list_all_cubes"]["total_count"], lang)
     context["count_series"] = number(counts["boc_list_series"]["total_count"], lang)
-    context["count_candidates"] = number(
-        counts["elections_financial_returns_search_candidates"]["total_found"], lang
-    )
     context["cases_captured"] = long_date(load_case("counts")["captured"], lang)
     context.update(finale_context(counts, modules, lang))
     return context

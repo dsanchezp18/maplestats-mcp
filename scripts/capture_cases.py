@@ -96,36 +96,6 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"vector_ids": [41690973], "latest_n": 84},
         },
     ],
-    # Political scientists: what every candidate in Edmonton Centre spent in
-    # the 45th general election (election id 62), from each candidate's
-    # filed return (part 3C), then who sits for the riding now. The client
-    # ids come from the first call; four of the ten candidates report no
-    # expenses subject to the limit, and their parts come back blank.
-    "elections": [
-        {
-            "name": "elections_financial_returns_search_candidates",
-            "arguments": {"election_id": "62", "province_id": "48"},
-        },
-        *(
-            {
-                "name": "elections_financial_returns_get_financial_return_part",
-                "arguments": {"candidate_client_id": client_id, "part": "3C", "election_id": "62"},
-            }
-            for client_id in (
-                "56715",
-                "58402",
-                "58489",
-                "58206",
-                "56505",
-                "56694",
-                "56322",
-                "58267",
-                "56845",
-                "58586",
-            )
-        ),
-        {"name": "parliament_search_politicians", "arguments": {"name": "Olszewski"}},
-    ],
     # Scientists: Canadian patent applications in IPC class G06N (computing
     # based on biological models, which is where machine learning is
     # classed), by filing year. The first call counts every patent with a
@@ -166,11 +136,6 @@ CASES: dict[str, list[dict[str, Any]]] = {
         {"name": "ircc_monthly_list_tables", "arguments": {}},
         {"name": "wds_list_all_cubes", "arguments": {"lite": True}},
         {"name": "boc_list_series", "arguments": {}},
-        # every candidate in the 45th general election, for the count only
-        {
-            "name": "elections_financial_returns_search_candidates",
-            "arguments": {"election_id": "62"},
-        },
     ],
 }
 
@@ -191,11 +156,6 @@ def _trim(name: str, response: Any) -> Any:
             "total_tables": response["total_tables"],
             "provenance": response["provenance"],
         }
-    if name == "elections_financial_returns_search_candidates":
-        kept = [c for c in response["candidates"] if c["electoral_district"] == "Edmonton Centre"]
-        return {**response, "candidates": kept, "available_parties": [], "available_provinces": []}
-    if name == "elections_financial_returns_get_financial_return_part":
-        return {**response, "sections": {"DETAIL_DATA": response["sections"]["DETAIL_DATA"]}}
     if name == "ised_ip_horizons_search_patents":
         return {"total_matched": response["total_matched"], "provenance": response["provenance"]}
     if name == "statcan_pumf_list_files":

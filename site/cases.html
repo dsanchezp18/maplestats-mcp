@@ -3,7 +3,7 @@
 <head>
 {{> head}}
 <title>{en}Case studies{fr}Études de cas{/} · MapleStats MCP</title>
-<meta name="description" content="{en}Eight real questions answered through MapleStats MCP, for statisticians, demographers, microeconomists, marketers, macroeconomists, political scientists, scientists and analysts, each drawn from recorded calls.{fr}Huit vraies questions résolues avec MapleStats MCP, pour les statisticiens, les démographes, les microéconomistes, le marketing, les macroéconomistes, les politologues, les scientifiques et les analystes, chacune tirée d'appels enregistrés.{/}">
+<meta name="description" content="{en}Seven real questions answered through MapleStats MCP, for statisticians, demographers, microeconomists, marketers, macroeconomists, scientists and analysts, each drawn from recorded calls.{fr}Sept vraies questions résolues avec MapleStats MCP, pour les statisticiens, les démographes, les microéconomistes, le marketing, les macroéconomistes, les scientifiques et les analystes, chacune tirée d'appels enregistrés.{/}">
 <link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
 <link rel="stylesheet" href="{{root}}assets/charts.css">
 <script src="{{root}}assets/charts.js" defer></script>
@@ -14,7 +14,7 @@
 
 <section class="wrap page-head">
   <p class="label">{en}Case studies{fr}Études de cas{/}</p>
-  <h1>{en}Eight crafts, one connection{fr}Huit métiers, une seule connexion{/}</h1>
+  <h1>{en}Seven crafts, one connection{fr}Sept métiers, une seule connexion{/}</h1>
   <p class="lede">{en}Real questions, answered through MapleStats. Every chart is drawn from calls recorded on {{cases_captured}}; open “How the agent got this” under any chart for the calls it made and the script that fetches the data again.{fr}De vraies questions, résolues avec MapleStats. Chaque graphique vient d'appels enregistrés le {{cases_captured}}; ouvrez « Comment l'agent l'a obtenu » sous un graphique pour voir les appels faits et le script qui récupère de nouveau les données.{/}</p>
 </section>
 
@@ -80,19 +80,6 @@
     <p>{en}The 12-month change in the Consumer Price Index, all-items, not seasonally adjusted (table 18-10-0004), against the Bank of Canada's 1% to 3% target range. It peaked at {{macro_peak}} in {{macro_peak_month}} and was {{macro_last}} in {{macro_last_month}}; {{macro_inside}} of the last {{macro_months}} months were inside the range.{fr}La variation sur 12 mois de l'Indice des prix à la consommation, ensemble, non désaisonnalisé (tableau 18-10-0004), par rapport à la fourchette cible de 1 % à 3 % de la Banque du Canada. Elle a culminé à {{macro_peak}} en {{macro_peak_month}} et s'établissait à {{macro_last}} en {{macro_last_month}}; {{macro_inside}} des {{macro_months}} derniers mois étaient dans la fourchette.{/}</p>
     <figure class="chart-wrap">{{chart_macro}}<figcaption>{{source_macro}}</figcaption></figure>
     {{how_macro}}
-  </div>
-</section>
-
-<section class="wrap stanza" id="political-scientists">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_candidates}}</p>
-    <p class="verse-line">{en}candidates' returns for the political scientists, who follow the money,{fr}rapports de candidats pour les politologues, qui suivent l'argent,{/}</p>
-  </div>
-  <div class="stanza-body">
-    <h2>{en}Edmonton Centre, 2025: the money and the seat{fr}Edmonton-Centre, 2025 : l'argent et le siège{/}</h2>
-    <p>{en}What each candidate in Edmonton Centre spent in the 45th general election, from the financial returns they filed with Elections Canada, against a limit of at most {{elections_limit}}. Of the {{elections_candidates}} candidates, {{elections_none}} report nothing subject to the limit. {{elections_top}} spent the most, {{elections_top_spent}}; the seat went to {{elections_member}} ({{elections_member_party}}), who spent {{elections_member_spent}}, according to openparliament.ca. Two sources, one question.{fr}Ce que chaque candidat d'Edmonton-Centre a dépensé à la 45e élection générale, d'après les rapports financiers déposés auprès d'Élections Canada, par rapport à un plafond d'au plus {{elections_limit}}. Sur les {{elections_candidates}} candidats, {{elections_none}} ne déclarent rien d'assujetti au plafond. {{elections_top}} a dépensé le plus, {{elections_top_spent}}; le siège est allé à {{elections_member}} (parti {{elections_member_party}}), qui a dépensé {{elections_member_spent}}, selon openparliament.ca. Deux sources, une question.{/}</p>
-    <figure class="chart-wrap">{{chart_elections}}<figcaption>{{source_elections}}</figcaption></figure>
-    {{how_elections}}
   </div>
 </section>
 
