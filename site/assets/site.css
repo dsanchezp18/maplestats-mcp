@@ -1907,8 +1907,7 @@ mark {
 
 /* Short sections as blocks in two columns, each with its heading on top,
    so a paragraph runs the width of a half (about 65 characters) instead
-   of sitting in the right two thirds with the last third empty. A tall
-   block spans two rows beside two short ones. */
+   of sitting in the right two thirds with the last third empty. */
 .about-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1924,8 +1923,27 @@ mark {
   border-top: 2px solid var(--ink);
 }
 
-.about-block-tall {
-  grid-row: span 2;
+/* The About page's three short sections side by side, one row of three
+   equal columns with their tops on one line; they stack below 1000px. */
+.about-trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: clamp(24px, 2.5vw, 32px);
+  align-items: start;
+}
+
+.about-trio .about-text p {
+  font-size: 1.0625rem;
+}
+
+@media (max-width: 1000px) {
+  .about-trio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-trio .about-block {
+    padding-block: 20px 24px;
+  }
 }
 
 /* A long section: its heading on the left half and its introduction on the
@@ -1942,10 +1960,6 @@ mark {
   .about-grid,
   .about-split {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .about-block-tall {
-    grid-row: auto;
   }
 }
 
@@ -3328,53 +3342,25 @@ mark {
 
 /* ---------- About: alternatives ---------- */
 
-/* Other ways to reach Canadian data, grouped by kind. Each group is a row:
-   its heading and note on the left five columns, its list on the right
-   seven. Each list row is a name column (links, then owner and language)
-   and one line of description, ruled like .thanks-list; the columns stack
-   on phones. */
+/* Other ways to reach Canadian data, grouped by kind. Each group is a
+   subheading with a one-sentence note, then its entries. Every entry has the
+   same two lines: the name with its owner and language, then one line of
+   description. From 900px the entries run in two columns, row by row, so
+   the list uses the width without long empty lines. */
 .alt-groups {
+  gap: 0;
   padding-bottom: 8px;
 }
 
 .alt-group {
   display: grid;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 14px;
+  margin-top: 36px;
 }
 
 .alt-head {
   display: grid;
-  gap: 10px;
-  align-content: start;
-}
-
-@media (min-width: 1000px) {
-  .alt-group {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    gap: 12px clamp(24px, 2.5vw, 32px);
-    margin-top: 28px;
-    padding-top: 16px;
-    border-top: 1px solid var(--rule-2);
-  }
-
-  .alt-head {
-    grid-row: 1 / span 2;
-    position: sticky;
-    top: calc(var(--top-h) + 24px);
-  }
-
-  .alt-group .alt-list {
-    border-top: 0;
-  }
-
-  .alt-group .alt-list li:first-child {
-    padding-top: 2px;
-  }
-
-  .alt-groups > p:last-child {
-    margin-top: 28px;
-  }
+  gap: 4px;
 }
 
 .alt-group h3 {
@@ -3385,32 +3371,57 @@ mark {
 }
 
 .about-text .alt-note {
+  max-width: none;
   font-size: 1rem;
-  line-height: 1.55;
+  line-height: 1.5;
+  color: var(--ink-3);
 }
 
 .alt-list {
+  display: grid;
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (min-width: 900px) {
+  .alt-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 2.5vw, 32px);
+    border-bottom: 0;
+  }
+
+  /* Each column ends on its own rule; with an odd count the right column
+     ends a row earlier than the left. */
+  .alt-list li:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--rule);
+  }
 }
 
 .alt-list li {
   display: grid;
-  grid-template-columns: 12.5rem minmax(0, 1fr);
-  gap: 20px;
-  padding-block: 12px;
-  border-bottom: 1px solid var(--rule);
+  gap: 2px;
+  align-content: start;
+  padding-block: 12px 13px;
+  border-top: 1px solid var(--rule);
   font-size: 1rem;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--ink-2);
 }
 
+.alt-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  min-width: 0;
+}
+
 .alt-name {
-  display: grid;
-  gap: 2px;
-  align-content: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
   min-width: 0;
 }
 
@@ -3420,21 +3431,22 @@ mark {
 }
 
 .alt-meta {
-  margin-top: 2px;
-  font-size: 0.8125rem;
-  line-height: 1.35;
+  font-size: 0.875rem;
   color: var(--ink-3);
 }
 
-@media (max-width: 560px) {
-  .alt-list li {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-  }
+.alt-group > .alt-note {
+  margin-top: -2px;
+}
 
-  /* The home page links here. On phones the wrapped header is about 158px
-     tall (measured at 390px), more than html's scroll-padding-top allows,
-     so without this the jump lands with the heading under the header. */
+.alt-groups > p:last-child {
+  margin-top: 36px;
+}
+
+/* The home page links here. On phones the wrapped header is about 158px
+   tall (measured at 390px), more than html's scroll-padding-top allows,
+   so without this the jump lands with the heading under the header. */
+@media (max-width: 560px) {
   #alternatives {
     scroll-margin-top: 48px;
   }
