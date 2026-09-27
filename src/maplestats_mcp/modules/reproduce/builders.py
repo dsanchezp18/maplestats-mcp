@@ -4,7 +4,8 @@ or whose filtering happens in MapleStats after the download.
 Every other tool is reproduced from the requests recorded while it ran
 (probe.py). A builder here is needed when that recording is not enough:
 the tool downloads a whole file and filters it itself (CanadaBuys, CER,
-GC InfoBase, CIHI, IRCC, StatCan indicators, IP Horizons), or a better
+GC InfoBase, CIHI, IRCC, StatCan indicators, PHAC Health Infobase in
+phac_infobase.py, IP Horizons), or a better
 native path exists (cansim for StatCan tables, canivt for Beyond 20/20).
 
 Each builder takes the tool's arguments and its result payload (the tool
@@ -528,6 +529,24 @@ async def _statcan_indicators(args: dict[str, Any], result: dict[str, Any]) -> S
     )
 
 
+async def _phac_query(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce import phac_infobase
+
+    return await phac_infobase.query(args, result)
+
+
+async def _phac_describe(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce import phac_infobase
+
+    return await phac_infobase.describe(args, result)
+
+
+async def _phac_list(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce import phac_infobase
+
+    return await phac_infobase.list_datasets(args, result)
+
+
 BUILDERS: dict[str, Builder] = {
     "wds_get_data_from_vectors": _vectors,
     "sdmx_get_vector_data": _sdmx_vector,
@@ -545,6 +564,9 @@ BUILDERS: dict[str, Builder] = {
     "ircc_list_express_entry_rounds": _ircc_rounds,
     "ircc_monthly_query": _ircc_monthly,
     "statcan_indicators_get_indicators": _statcan_indicators,
+    "phac_infobase_query": _phac_query,
+    "phac_infobase_describe_dataset": _phac_describe,
+    "phac_infobase_list_datasets": _phac_list,
 }
 
 # Tools rebuilt from arguments alone, without running the tool first.
@@ -558,6 +580,11 @@ ARGUMENT_ONLY = {
     "canadabuys_search_tenders",
     "canadabuys_search_awards",
     "canadabuys_search_contracts",
+    # The PHAC builders load the file (through the tool's cache) and run the
+    # tool's own query on it, so running the tool first would repeat that.
+    "phac_infobase_query",
+    "phac_infobase_describe_dataset",
+    "phac_infobase_list_datasets",
 }
 
 

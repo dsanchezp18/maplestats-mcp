@@ -51,6 +51,7 @@ _LIMITER = get_limiter(
 _SOURCE = "phac-infobase"
 _REDIRECTS = frozenset({301, 302, 303, 307, 308})
 # French files write quarters "2025 T3" (trimestre); English ones "2025 Q3".
+_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
 _QUARTER = re.compile(r"^(\d{4})\s*-?\s*[QT]([1-4])\b", re.IGNORECASE)
 _DAY_FIRST = re.compile(r"^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$")
 _YEAR_MONTH = re.compile(r"^(\d{4})-(\d{1,2})$")
@@ -287,10 +288,14 @@ def parse_period(value: str) -> date | None:
     text = value.strip()
     if not text:
         return None
-    try:
-        return date.fromisoformat(text[:10])
-    except ValueError:
-        pass
+    # An explicit YYYY-MM-DD, not date.fromisoformat: since Python 3.11 that
+    # also takes 20250107 and ISO weeks (2025-W02-1), which the R and Julia
+    # scripts reproduce_code writes do not read the same way.
+    if match := _ISO_DATE.match(text):
+        try:
+            return date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+        except ValueError:
+            pass
     if match := _QUARTER.match(text):
         year = int(match.group(1))
         return date(year, 3 * int(match.group(2)) - 2, 1) if _valid(year) else None
@@ -377,6 +382,13 @@ def geo_matcher(query: str) -> Callable[[str], bool]:
 
 
 def _resolve(columns: list[str], name: str) -> str:
+    """The header `name` means: the exact header first, then one equal once folded.
+
+    The exact match wins because two headers can fold alike: the CSUS files
+    have both Indicator (the label) and indicator (a code), live 2026-09-27.
+    """
+    if name in columns:
+        return name
     by_fold = {_fold(c): c for c in columns}
     found = by_fold.get(_fold(name))
     if found is None:
@@ -386,7 +398,12 @@ def _resolve(columns: list[str], name: str) -> str:
 
 def _first_present(columns: list[str], candidates: tuple[str, ...]) -> str | None:
     by_fold = {_fold(c): c for c in columns}
-    return next((by_fold[_fold(c)] for c in candidates if _fold(c) in by_fold), None)
+    for candidate in candidates:
+        if candidate in columns:
+            return candidate
+        if _fold(candidate) in by_fold:
+            return by_fold[_fold(candidate)]
+    return None
 
 
 def _markers(rows: list[dict[str, str]], lang: str) -> list[Marker]:

@@ -91,6 +91,12 @@ class Spec:
     sort_descending: bool = False
     # Whole retrieval code per language, replacing the generic loader.
     native: dict[str, Code] = field(default_factory=dict)
+    # The tool's own steps per language, run in "3. Prepare data" after the
+    # filters and before name cleaning (Stata's "python" steps run inside
+    # its Python block; its "stata" code runs after the import).
+    prepare: dict[str, Code] = field(default_factory=dict)
+    # Extra header lines: provenance such as the dataset id and query.
+    details: list[str] = field(default_factory=list)
     languages: tuple[str, ...] = ("r", "python", "stata", "julia")
     notes: list[str] = field(default_factory=list)
     source: str = ""  # key into cleaning.SPECIFIC

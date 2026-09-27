@@ -8,17 +8,90 @@ Filters run right after loading, on the source's own column names.
 
 from __future__ import annotations
 
+import ast
+import dataclasses
 import io
 import json
 import re
 import tokenize
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from maplestats_mcp.modules.reproduce import cleaning
 from maplestats_mcp.modules.reproduce.spec import Filter, Spec
 
-_STDLIB = {"io", "json", "pathlib", "re", "ssl", "unicodedata", "xml", "zipfile"}
+_STDLIB = {
+    "csv",
+    "datetime",
+    "io",
+    "json",
+    "pathlib",
+    "re",
+    "ssl",
+    "unicodedata",
+    "xml",
+    "zipfile",
+}
+
+
+# User-supplied text (dataset ids, filter values, queries) reaches every
+# script. The helpers below keep it inert wherever it lands.
+#
+# Line breaks would end a comment line and start code in any language.
+_LINE_BREAKS = re.compile("[\r\n\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
+# What Stata's do-file parser acts on even inside strings and comments:
+# macro expansion ($name, `name'), block comments (/* */) and line comments
+# (//). "://" in a URL is left alone: // starts a comment only after a blank
+# or at the start of a line.
+_STATA_ACTIVE = re.compile(r"\$|`|/\*|\*/|(?<!:)//")
+# RFC 3986 characters a URL may hold as they are, less "$" (Julia string
+# interpolation, Stata global macros); everything else is percent-encoded.
+_URL_SAFE = "-._~:/?#[]@!&'()*+,;=%"
+
+
+def _hex_escapes(text: str) -> str:
+    return "".join(f"\\x{ord(ch):02x}" for ch in text)
+
+
+def comment_text(text: str, *, stata: bool = False) -> str:
+    """Text safe on one comment line: line breaks written as escapes, and for
+    Stata the characters its parser acts on written as \\xNN."""
+    text = _LINE_BREAKS.sub(lambda m: repr(m.group())[1:-1], text)
+    if stata:
+        text = _STATA_ACTIVE.sub(lambda m: _hex_escapes(m.group()), text)
+    return text
+
+
+def safe_url(url: str) -> str:
+    """The URL with anything that could leave a string literal percent-encoded."""
+    url = quote(url, safe=_URL_SAFE)
+    return url.replace("/*", "/%2A").replace("*/", "%2A/")
+
+
+def safe_file_name(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", name)
+
+
+def _safe_spec(spec: Spec) -> Spec:
+    """The spec with its URL and file name made safe to write into code.
+
+    Several builders put arguments into both as given (a Socrata dataset id,
+    a CKAN resource id), and the renderers write them inside string literals.
+    """
+    url, file_name = safe_url(spec.url), safe_file_name(spec.file_name)
+    if url == spec.url and file_name == spec.file_name:
+        return spec
+    return dataclasses.replace(spec, url=url, file_name=file_name)
+
+
+def jl_quote(value: Any) -> str:
+    """A Julia literal from JSON: JSON escapes are valid Julia, and "$" must not
+    interpolate ("$(...)" in a string runs code)."""
+    return json.dumps(value).replace("$", "\\$")
+
+
+def _stata_safe_text(text: str) -> bool:
+    return '"' not in text and not _LINE_BREAKS.search(text) and not _STATA_ACTIVE.search(text)
 
 
 def _header(prefix: str, spec: Spec, tool: str) -> str:
@@ -27,13 +100,19 @@ def _header(prefix: str, spec: Spec, tool: str) -> str:
         "zip": "the unzipped files",
         "file": "the downloaded file",
     }.get(spec.kind, "the prepared table as `data`")
+
+    def text(value: str) -> str:
+        return comment_text(value, stata=prefix == "*")
+
+    details = "".join(f"{prefix} {text(line)}\n" for line in spec.details)
     return (
         f"{rule}\n"
-        f"{prefix} {spec.title or 'Reproduce ' + tool}\n"
-        f"{prefix} Purpose: Fetch the data behind MapleStats MCP's {tool}\n"
-        f"{prefix}          ({spec.method})\n"
-        f"{prefix} Inputs:  {spec.url}\n"
-        f"{prefix} Outputs: data/raw/{spec.file_name}; {output}\n"
+        f"{prefix} {text(spec.title or 'Reproduce ' + tool)}\n"
+        f"{prefix} Purpose: Fetch the data behind MapleStats MCP's {text(tool)}\n"
+        f"{prefix}          ({text(spec.method)})\n"
+        f"{prefix} Inputs:  {text(spec.url)}\n"
+        f"{details}"
+        f"{prefix} Outputs: data/raw/{text(spec.file_name)}; {output}\n"
         f"{rule}\n"
     )
 
@@ -235,6 +314,7 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
 
 
 def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
+    spec = _safe_spec(spec)
     native = spec.native.get("r")
     packages, read = (list(native.imports), native.body) if native else _r_read(spec)
     prepare: list[str] = []
@@ -252,6 +332,9 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data <- data |>\n  filter(\n    {conditions}\n  )\n"
         )
+    if "r" in spec.prepare:
+        packages += spec.prepare["r"].imports
+        prepare.append(spec.prepare["r"].body)
     if spec.sort_by:
         packages.append("dplyr")
         order = f"desc(`{spec.sort_by}`)" if spec.sort_descending else f"`{spec.sort_by}`"
@@ -447,6 +530,8 @@ def py_prepare(spec: Spec) -> list[str]:
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data = data.filter(\n    {conditions},\n)\n"
         )
+    if "python" in spec.prepare:
+        blocks.append(spec.prepare["python"].body)
     if spec.sort_by:
         blocks.append(
             f"data = data.sort({spec.sort_by!r}, descending={spec.sort_descending}, nulls_last=True)\n"
@@ -477,7 +562,9 @@ def _py_loaded(spec: Spec) -> tuple[list[str], str]:
 
 
 def render_python(spec: Spec, tool: str) -> tuple[str, list[str]]:
+    spec = _safe_spec(spec)
     imports, read = _py_loaded(spec)
+    imports += spec.prepare["python"].imports if "python" in spec.prepare else []
     packages = py_packages(imports, spec)
     prepare = py_prepare(spec)
     if spec.kind not in ("zip", "file"):
@@ -496,12 +583,51 @@ def render_python(spec: Spec, tool: str) -> tuple[str, list[str]]:
     )
     sections = [_header("#", spec, tool), setup, "# %% 1. Read inputs\n", read]
     if spec.kind not in ("zip", "file"):
-        check = f'assert data.height > 0, "{spec.url} returned no rows"\n'
+        check = f"assert data.height > 0, {json.dumps(spec.url + ' returned no rows')}\n"
         sections += ["# %% 2. Check inputs\n", check, "# %% 3. Prepare data\n", *prepare]
     return _join(*sections), packages
 
 
 # Stata ----------------------------------------------------------------------
+
+
+def _stata_literals(code: str) -> str:
+    """Python code whose string literals hold nothing Stata's parser acts on.
+
+    Stata reads a `python:` block through its do-file parser, so a filter
+    value holding "$x", a backtick, "/*", "*/" or " // " could expand a macro
+    or open a comment there. Each such character is written as a \\xNN
+    escape inside the literal, so Python still decodes the same value.
+    Literals without them are left exactly as they are.
+    """
+    if not _STATA_ACTIVE.search(code):
+        return code
+    starts = [0]
+    for line in code.splitlines(keepends=True):
+        starts.append(starts[-1] + len(line))
+
+    def offset(position: tuple[int, int]) -> int:
+        return starts[position[0] - 1] + position[1]
+
+    edits: list[tuple[int, int, str]] = []
+    raw_fstring = False
+    for token in tokenize.generate_tokens(io.StringIO(code).readline):
+        if token.type == tokenize.FSTRING_START:
+            raw_fstring = "r" in token.string.lower()
+        if token.type == tokenize.STRING and _STATA_ACTIVE.search(token.string):
+            value = ast.literal_eval(token.string)
+            text = _STATA_ACTIVE.sub(lambda m: _hex_escapes(m.group()), repr(value))
+            edits.append((offset(token.start), offset(token.end), text))
+        elif token.type == tokenize.FSTRING_MIDDLE and not raw_fstring:
+            start, end = offset(token.start), offset(token.end)
+            middle = code[start:end]
+            if _STATA_ACTIVE.search(middle):
+                edits.append(
+                    (start, end, _STATA_ACTIVE.sub(lambda m: _hex_escapes(m.group()), middle))
+                )
+    for start, end, text in reversed(edits):
+        code = code[:start] + text + code[end:]
+    return code
 
 
 def stata_statements(code: str) -> str:
@@ -513,6 +639,7 @@ def stata_statements(code: str) -> str:
     a block whose body is plain statements becomes `header: a; b`; a block
     with nested blocks runs through exec() on one line.
     """
+    code = _stata_literals(code)
     lines = code.splitlines(keepends=True)
     comments: dict[int, int] = {}
     statements: list[str] = []
@@ -557,6 +684,7 @@ def stata_statements(code: str) -> str:
 
 def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
     imports, read = _py_loaded(spec)
+    imports += spec.prepare["python"].imports if "python" in spec.prepare else []
     packages = py_packages(imports, spec)
     # CSV has no nested values: lists and records go to Stata as JSON text.
     flatten = (
@@ -591,15 +719,19 @@ def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
 
 
 def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
+    spec = _safe_spec(spec)
     path = f"data/raw/{spec.file_name}"
     delimiters = "" if spec.delimiter == "," else f' delimiters("{spec.delimiter}")'
     simple = not (
         spec.filters
         or "python" in spec.native
+        or "python" in spec.prepare
         or spec.na_values
         or spec.sort_by
         or _needs_request(spec)
         or "statcan.gc.ca" in spec.url
+        # A sheet name Stata's parser would act on goes through Python instead.
+        or not _stata_safe_text(spec.sheet)
     )
     packages: list[str] = []
     if spec.kind == "csv" and simple:
@@ -659,6 +791,8 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
         )
         packages.append("python: " + ", ".join(python_packages))
     prepare: list[str] = []
+    if "stata" in spec.prepare and spec.kind not in ("zip", "file"):
+        prepare.append(spec.prepare["stata"].body)
     if spec.kind not in ("zip", "file"):
         specific = cleaning.specific("stata", spec.source)
         if specific:
@@ -685,44 +819,44 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
 
 def _jl_filter(item: Filter) -> str:
     def cell(column: str) -> str:
-        return f'coalesce(string(row[{json.dumps(column)}]), "")'
+        return f'coalesce(string(row[{jl_quote(column)}]), "")'
 
     if item.op == "contains":
-        needle = json.dumps(str(item.value).lower())
+        needle = jl_quote(str(item.value).lower())
         return f"occursin({needle}, lowercase({cell(item.columns[0])}))"
     if item.op == "terms":
         haystack = f'lowercase(join([{", ".join(cell(c) for c in item.columns)}], " "))'
         return " &&\n        ".join(
-            f"occursin({json.dumps(term)}, {haystack})" for term in str(item.value).lower().split()
+            f"occursin({jl_quote(term)}, {haystack})" for term in str(item.value).lower().split()
         )
     if item.op == "is":
-        value = json.dumps(str(item.value).strip().lower())
+        value = jl_quote(str(item.value).strip().lower())
         return f"lowercase(strip({cell(item.columns[0])})) == {value}"
     if item.op == "starts":
-        return f"startswith({cell(item.columns[0])}, {json.dumps(str(item.value))})"
+        return f"startswith({cell(item.columns[0])}, {jl_quote(str(item.value))})"
     symbol = {"eq": "==", "ge": ">=", "le": "<="}[item.op]
-    column = f"row[{json.dumps(item.columns[0])}]"
-    value = item.value if isinstance(item.value, int | float) else json.dumps(str(item.value))
+    column = f"row[{jl_quote(item.columns[0])}]"
+    value = item.value if isinstance(item.value, int | float) else jl_quote(str(item.value))
     if not isinstance(item.value, int | float):
         column = f"string({column})"
-    return f"!ismissing(row[{json.dumps(item.columns[0])}]) && {column} {symbol} {value}"
+    return f"!ismissing(row[{jl_quote(item.columns[0])}]) && {column} {symbol} {value}"
 
 
 def _jl_request(spec: Spec, path: str) -> str:
     """Downloads.download for a plain GET; Downloads.request with a body or headers."""
     if not _needs_request(spec):
-        return f'Downloads.download({json.dumps(spec.url)}, "{path}")\n'
+        return f'Downloads.download({jl_quote(spec.url)}, "{path}")\n'
     headers = dict(spec.headers)
     body = ""
     if spec.post_json is not None:
         headers["Content-Type"] = "application/json"
-        body = f', method = "POST", input = IOBuffer({json.dumps(json.dumps(spec.post_json))})'
+        body = f', method = "POST", input = IOBuffer({jl_quote(jl_quote(spec.post_json))})'
     elif spec.post_form:
         headers["Content-Type"] = "application/x-www-form-urlencoded"
-        body = f', method = "POST", input = IOBuffer({json.dumps(urlencode(spec.post_form))})'
-    pairs = ", ".join(f"{json.dumps(k)} => {json.dumps(v)}" for k, v in headers.items())
+        body = f', method = "POST", input = IOBuffer({jl_quote(urlencode(spec.post_form))})'
+    pairs = ", ".join(f"{jl_quote(k)} => {jl_quote(v)}" for k, v in headers.items())
     return (
-        f"Downloads.request(\n    {json.dumps(spec.url)};\n    headers = [{pairs}]{body},\n"
+        f"Downloads.request(\n    {jl_quote(spec.url)};\n    headers = [{pairs}]{body},\n"
         f'    output = "{path}",\n)\n'
     )
 
@@ -730,14 +864,14 @@ def _jl_request(spec: Spec, path: str) -> str:
 def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
     path = f"data/raw/{spec.file_name}"
     download = _jl_request(spec, path)
-    missing = f", missingstring = {json.dumps(['', *spec.na_values])}" if spec.na_values else ""
-    delim = f", delim = {json.dumps(spec.delimiter)}" if spec.delimiter != "," else ""
+    missing = f", missingstring = {jl_quote(['', *spec.na_values])}" if spec.na_values else ""
+    delim = f", delim = {jl_quote(spec.delimiter)}" if spec.delimiter != "," else ""
     if spec.kind == "csv":
         read = f'data = read_csv("{path}"{delim}{missing})\n'
         return ["Downloads", "TidierFiles"], download + read
     if spec.kind == "zip_csv":
         test = (
-            f"occursin({json.dumps(spec.member_pattern)}, f.name)"
+            f"occursin({jl_quote(spec.member_pattern)}, f.name)"
             if spec.member_pattern
             else (
                 '(endswith(lowercase(f.name), ".csv") || endswith(lowercase(f.name), ".txt")) &&\n'
@@ -756,12 +890,12 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
     if spec.kind in ("zip", "file"):
         return ["Downloads"], download
     if spec.kind == "xlsx":
-        sheet = f", sheet = {json.dumps(spec.sheet)}" if spec.sheet else ""
+        sheet = f", sheet = {jl_quote(spec.sheet)}" if spec.sheet else ""
         skip = f", skip = {spec.skip_rows}" if spec.skip_rows else ""
         return ["Downloads", "TidierFiles"], f'{download}data = read_xlsx("{path}"{sheet}{skip})\n'
     if spec.kind == "json":
         fetch = download
-        walk = "".join(f"[{json.dumps(k)}]" for k in spec.records_path)
+        walk = "".join(f"[{jl_quote(k)}]" for k in spec.records_path)
         payload = f'payload = JSON3.read(read("{path}", String))\n'
         if spec.columnar:
             return ["DataFrames", "Downloads", "JSON3"], (
@@ -787,7 +921,7 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
         elif spec.each_item:
             records = f"records = reduce(vcat, [collect(item{walk}) for item in payload])\n"
         elif spec.record_field:
-            records = f"records = [row[{json.dumps(spec.record_field)}] for row in payload{walk}]\n"
+            records = f"records = [row[{jl_quote(spec.record_field)}] for row in payload{walk}]\n"
         else:
             records = f"records = payload{walk}\n"
         return ["DataFrames", "Downloads", "JSON3", "Tables"], (
@@ -797,6 +931,7 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
 
 
 def render_julia(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
+    spec = _safe_spec(spec)
     native = spec.native.get("julia")
     loaded = (list(native.imports), native.body) if native else _jl_read(spec)
     if loaded is None:
@@ -814,9 +949,12 @@ def render_julia(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data = filter(row -> begin\n        {conditions}\n    end, data)\n"
         )
+    if "julia" in spec.prepare:
+        packages += spec.prepare["julia"].imports
+        prepare.append(spec.prepare["julia"].body)
     if spec.sort_by:
         rev = str(spec.sort_descending).lower()
-        prepare.append(f"sort!(data, {json.dumps(spec.sort_by)}; rev = {rev})\n")
+        prepare.append(f"sort!(data, {jl_quote(spec.sort_by)}; rev = {rev})\n")
     if spec.kind not in ("zip", "file"):
         specific = cleaning.specific("julia", spec.source)
         if specific:
@@ -827,7 +965,7 @@ def render_julia(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
     setup = _join("# 0. Setup\n", usings, 'mkpath("data/raw")\n')
     sections = [_header("#", spec, tool), setup, "# 1. Read inputs\n", read]
     if spec.kind not in ("zip", "file"):
-        check = f'@assert nrow(data) > 0 "{spec.url} returned no rows"\n'
+        check = f"@assert nrow(data) > 0 {jl_quote(spec.url + ' returned no rows')}\n"
         sections += ["# 2. Check inputs\n", check, "# 3. Prepare data\n", *prepare]
     return _join(*sections), sorted(set(packages))
 
