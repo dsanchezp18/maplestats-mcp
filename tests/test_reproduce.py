@@ -873,6 +873,18 @@ def test_generated_period_helpers_match_the_client(language, tmp_path):
     binary = shutil.which("Rscript" if language == "r" else "julia")
     if binary is None:
         pytest.skip(f"{language} is not installed")
+    # GitHub's ubuntu runner ships a bare julia with no packages, so the
+    # binary alone is not enough: probe the packages the script loads.
+    probe = (
+        "suppressMessages({library(dplyr); library(stringr); library(jsonlite)})"
+        if language == "r"
+        else "using Dates, JSON3"
+    )
+    checked = subprocess.run(
+        [binary, "-e", probe], capture_output=True, text=True, timeout=600, check=False
+    )
+    if checked.returncode != 0:
+        pytest.skip(f"{language} packages for this test are not installed")
     plan = SimpleNamespace(needs_fold=False, needs_periods=True)
     values = json.dumps(_PERIODS)
     if language == "r":
