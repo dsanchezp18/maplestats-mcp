@@ -264,6 +264,31 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "drug_prices",
+        "Prescription drug prices and pharmaceutical markets",
+        (
+            "drug price",
+            "drug cost",
+            "medicine price",
+            "patented drug",
+            "patented medicine",
+            "pharmaceutical",
+            "pmprb",
+            "prix des medicaments",
+            "medicaments brevetes",
+            "medicament brevete",
+            "pharmaceutique",
+            "cepmb",
+        ),
+        (
+            PlanStep("pmprb_list_report_tables", "PMPRB price index, price ratios, sales, R&D"),
+            PlanStep("pmprb_get_report_table", "the table's figures by year or country"),
+            PlanStep("pmprb_search_patented_medicines", "a drug's PMPRB price review status"),
+            PlanStep("cihi_search_indicators", "public drug program spending (CIHI)"),
+            PlanStep("wds_search_cubes", "StatCan CPI for prescribed medicines"),
+        ),
+    ),
+    Topic(
         "public_health",
         "Public health surveillance: respiratory viruses, overdoses, infectious disease",
         (

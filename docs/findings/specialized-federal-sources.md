@@ -1553,10 +1553,49 @@ clean-technology use …
 
 ## PMPRB (Patented Medicine Prices Review Board)
 
-**Status:** Investigated, deferred.
+**Status:** Shipped 2026-09-27 (annual report tables and patented
+medicines lists).
 
 Checked 2026-09-26. Nothing machine-readable is published on a regular
-schedule, so no module was built.
+schedule, so no module was built then. Revisited 2026-09-27 on request:
+the HTML tables turned out regular enough for one generic reader.
+
+**Shipped 2026-09-27:** `modules/pmprb/` with `pmprb_list_report_tables`,
+`pmprb_get_report_table` and `pmprb_search_patented_medicines`. Checked
+live in English and French:
+
+- The annual reports index (canada.ca .../services/annual-reports.html,
+  French .../rapports-annuels.html) links HTML reports for 2018 to 2024
+  (2018 sits under /reports-studies/) and HTML medicines lists for 2020
+  and 2021; 2017 and earlier link to the retired pmprb-cepmb.gc.ca site,
+  so links are read from the index and only canada.ca pages kept.
+- 382 tables across the seven reports (31 in 2023, up to 63 in
+  2020-2022), 380 of them with a title. Most charts carry their numbers in
+  a "Figure description" `<details>` table after the image, so the chart
+  data is covered too. Titles are a `<b>` or `<strong>` before the table
+  (an `<h3>` for Figure 5 in 2019-2022); a `<p>` that starts "Figure 1
+  illustrates" (2018) is prose and is skipped. Two 2021 tables carry
+  their real title as `<caption>`, which wins. One title can own several
+  tables (a chart drawn from two, or Table 2's three captioned
+  sub-tables); `pmprb_get_report_table` returns all of them.
+- Two-row headers with colspan and rowspan (2024 Table 5) are laid out on
+  a grid and named "Patented medicine - Sales ($billions)".
+- Numbers: "$17,093,674", "10.9%" in English; "1 294,8 $", "2,2 %" with
+  no-break (U+00A0) or narrow (U+202F) spaces in French, and once no space
+  at all ("1 294,8$"). "$" and "%" are dropped, so units come from the
+  column name or title.
+- Medicines lists: one table per company (103 both years), captioned
+  with the company; 1,289 rows in 2020 and 1,177 in 2021. Columns are read
+  by position because French headers differ between tables
+  ("Appellation commerciale" or "Nom de marque"). Empty comments read
+  "blank". Status spellings vary ("Does not Trigger", "NOH" in 2021,
+  "Notice of Hearing" in 2020, "ECV" in French) and map to seven codes.
+
+Not covered: NPDUIS studies (CompassRx and others, HTML and PDF per
+edition, one spreadsheet), and the reports before 2018 (PDF on the old
+site).
+
+Earlier findings (2026-09-26):
 
 - **Federal CKAN:** the organization is `pmprb-cepmb`
   (`organization_autocomplete?q=patent`). Its 16 records are departmental
