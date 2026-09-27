@@ -97,3 +97,16 @@ async def test_site_builds(tmp_path: Path):
     for asset in ("site.css", "site.js", "search-index.json", "modules.json"):
         assert (out / "assets" / asset).is_file()
     assert (out / "llms.txt").is_file()
+
+
+def test_case_captures_are_complete():
+    """Each case study is a recorded call with its source and its scripts."""
+    import json
+
+    for key in site.CASE_KEYS:
+        case = json.loads((site.CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
+        assert case["request"]["name"] and case["request"]["arguments"], key
+        assert case["response"]["provenance"]["url"].startswith("https://"), key
+        assert {"r", "python"} <= set(case["scripts"]), key
+        if case.get("discover"):
+            assert case["discover"]["response"], key

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Case studies{fr}Études de cas{/} · MapleStats MCP</title>
+<meta name="description" content="{en}Three real questions put to MapleStats MCP, on immigration, the labour market and a city, from the first search to a script that fetches the data again.{fr}Trois vraies questions posées à MapleStats MCP, sur l'immigration, le marché du travail et une ville, de la première recherche au script qui récupère de nouveau les données.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Case studies{fr}Études de cas{/}</p>
+  <h1>{en}Three questions, start to finish{fr}Trois questions, du début à la fin{/}</h1>
+  <p class="lede">{en}Each case is a real question put to MapleStats: the tools the server found, the data that came back with its source, and the script that fetches it again. Every call was recorded on {{case_ircc_captured}}.{fr}Chaque cas est une vraie question posée à MapleStats : les outils trouvés par le serveur, les données obtenues avec leur source et le script qui les récupère de nouveau. Chaque appel a été enregistré le {{case_ircc_captured}}.{/}</p>
+  <ol class="cases-nav">
+    <li><a href="#immigration">{en}Immigration{fr}Immigration{/}</a></li>
+    <li><a href="#labour">{en}Labour market{fr}Marché du travail{/}</a></li>
+    <li><a href="#city">{en}City open data{fr}Données ouvertes municipales{/}</a></li>
+  </ol>
+</section>
+
+<section class="wrap case" id="immigration">
+  <header class="case-head">
+    <p class="label">{en}Immigration · IRCC{fr}Immigration · IRCC{/}</p>
+    <h2>{en}New permanent residents in Edmonton{fr}Nouveaux résidents permanents à Edmonton{/}</h2>
+    <p class="case-q">{en}“How many new permanent residents settled in Edmonton each year since 2015?”{fr}« Combien de nouveaux résidents permanents se sont établis à Edmonton chaque année depuis 2015? »{/}</p>
+    <p class="case-why">{en}IRCC data is hard to work with. Its Monthly Updates come as dozens of separate CSV tables, each with its own columns; every count is rounded to a multiple of 5 and counts from 1 to 4 are hidden. MapleStats reads the tables, filters and sums them, and keeps IRCC's caveat on every answer.{fr}Les données d'IRCC sont difficiles à exploiter. Ses mises à jour mensuelles prennent la forme de dizaines de tableaux CSV distincts, chacun avec ses propres colonnes; chaque compte est arrondi à un multiple de 5 et les comptes de 1 à 4 sont masqués. MapleStats lit les tableaux, les filtre et les additionne, et garde la mise en garde d'IRCC dans chaque réponse.{/}</p>
+  </header>
+  <ol class="steps">
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">01</p>
+        <h3>{en}Find{fr}Trouver{/}<code>search_tools</code></h3>
+        <p>{en}The agent describes the data in plain words. Search ranks IRCC's monthly tools first.{fr}L'agent décrit les données en mots simples. La recherche place les outils mensuels d'IRCC en tête.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>search_tools</code></figcaption>
+        <pre><code>{{case_ircc_search_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}top 3{fr}3 premiers{/}</span></div>
+        <div class="panel-body"><ol class="results">{{case_ircc_search}}</ol></div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">02</p>
+        <h3>{en}Narrow{fr}Préciser{/}<code>ircc_monthly_list_tables</code></h3>
+        <p>{en}Listing the matching tables finds the one broken down by census metropolitan area.{fr}La liste des tableaux correspondants fait ressortir celui qui est ventilé par région métropolitaine de recensement.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
+        <pre><code>{{case_ircc_discover_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}tables found{fr}tableaux trouvés{/}</span></div>
+        <div class="panel-body">{{case_ircc_discover}}</div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">03</p>
+        <h3>{en}Fetch{fr}Récupérer{/}<code>ircc_monthly_query</code></h3>
+        <p>{en}One call filters to Edmonton and sums the months into years. The current year covers only the months IRCC has published so far.{fr}Un seul appel filtre sur Edmonton et additionne les mois en années. L'année en cours ne couvre que les mois déjà publiés par IRCC.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
+        <pre><code>{{case_ircc_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}recorded {{case_ircc_captured}}{fr}enregistré le {{case_ircc_captured}}{/}</span></div>
+        <div class="panel-body">{{case_ircc_result}}{{case_ircc_source}}</div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">04</p>
+        <h3>{en}Reproduce{fr}Reproduire{/}<code>reproduce_code</code></h3>
+        <p>{en}The same call as a script that downloads IRCC's CSV and applies the same filter, so the numbers can be checked without the agent.{fr}Le même appel sous forme de script qui télécharge le CSV d'IRCC et applique le même filtre, pour vérifier les chiffres sans l'agent.{/}</p>
+      </div>
+      <figure class="panel">{{case_ircc_scripts}}</figure>
+    </li>
+  </ol>
+</section>
+
+<section class="wrap case" id="labour">
+  <header class="case-head">
+    <p class="label">{en}Labour market · Statistics Canada{fr}Marché du travail · Statistique Canada{/}</p>
+    <h2>{en}Unemployment rate by province{fr}Taux de chômage par province{/}</h2>
+    <p class="case-q">{en}“What is the latest unemployment rate in each province?”{fr}« Quel est le dernier taux de chômage dans chaque province? »{/}</p>
+    <p class="case-why">{en}The Labour Force Survey is published monthly in large Statistics Canada tables. For the headline figure, the fastest route is Statistics Canada's own indicators feed, the one behind its home page: one call returns the latest rate for Canada and each province, with the source table and the release it came from.{fr}L'Enquête sur la population active paraît chaque mois dans de grands tableaux de Statistique Canada. Pour le chiffre principal, le plus rapide est le fil d'indicateurs de Statistique Canada, celui de sa page d'accueil : un seul appel renvoie le dernier taux pour le Canada et chaque province, avec le tableau source et la diffusion d'où il vient.{/}</p>
+  </header>
+  <ol class="steps">
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">01</p>
+        <h3>{en}Find{fr}Trouver{/}<code>search_tools</code></h3>
+        <p>{en}Search ranks the Statistics Canada indicators feed first.{fr}La recherche place en tête le fil d'indicateurs de Statistique Canada.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>search_tools</code></figcaption>
+        <pre><code>{{case_labour_search_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}top 3{fr}3 premiers{/}</span></div>
+        <div class="panel-body"><ol class="results">{{case_labour_search}}</ol></div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">02</p>
+        <h3>{en}Fetch{fr}Récupérer{/}<code>statcan_indicators_get_indicators</code></h3>
+        <p>{en}The rates for {{case_labour_period}}, seasonally adjusted as Statistics Canada publishes them, with the change from the month before.{fr}Les taux de {{case_labour_period}}, désaisonnalisés comme les publie Statistique Canada, avec la variation par rapport au mois précédent.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
+        <pre><code>{{case_labour_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}recorded {{case_labour_captured}}{fr}enregistré le {{case_labour_captured}}{/}</span></div>
+        <div class="panel-body">{{case_labour_result}}{{case_labour_source}}</div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">03</p>
+        <h3>{en}Reproduce{fr}Reproduire{/}<code>reproduce_code</code></h3>
+        <p>{en}The same call as a script that reads the indicators feed, so the table can be refreshed next month without the agent.{fr}Le même appel sous forme de script qui lit le fil d'indicateurs, pour mettre le tableau à jour le mois prochain sans l'agent.{/}</p>
+      </div>
+      <figure class="panel">{{case_labour_scripts}}</figure>
+    </li>
+  </ol>
+</section>
+
+<section class="wrap case" id="city">
+  <header class="case-head">
+    <p class="label">{en}City open data · Edmonton{fr}Données ouvertes municipales · Edmonton{/}</p>
+    <h2>{en}Edmonton's largest building permits of 2026{fr}Les plus gros permis de construire d'Edmonton en 2026{/}</h2>
+    <p class="case-q">{en}“{{case_city_question}}”{fr}« {{case_city_question}} »{/}</p>
+    <p class="case-why">{en}Every city publishes on its own platform: Edmonton and Calgary on Socrata, Toronto on CKAN, Ottawa on ArcGIS Hub. The planner knows which city runs which, so the agent starts at the right portal and queries the city's own records.{fr}Chaque ville publie sur sa propre plateforme : Edmonton et Calgary sur Socrata, Toronto sur CKAN, Ottawa sur ArcGIS Hub. Le planificateur sait quelle ville utilise quoi; l'agent commence donc au bon portail et interroge les registres de la ville elle-même.{/}</p>
+  </header>
+  <ol class="steps">
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">01</p>
+        <h3>{en}Plan{fr}Planifier{/}<code>plan_query</code></h3>
+        <p>{en}The planner recognizes Edmonton and points to the city's own portal.{fr}Le planificateur reconnaît Edmonton et renvoie au portail de la ville.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>plan_query</code></figcaption>
+        <pre><code>{{case_city_plan_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}first place step{fr}première étape du lieu{/}</span></div>
+        <pre><code>{{case_city_plan}}</code></pre>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">02</p>
+        <h3>{en}Narrow{fr}Préciser{/}<code>socrata_search_datasets</code></h3>
+        <p>{en}A search of Edmonton's catalogue finds the general building permits dataset first.{fr}Une recherche dans le catalogue d'Edmonton trouve d'abord le jeu de données des permis de construire.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
+        <pre><code>{{case_city_discover_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}datasets found{fr}jeux de données trouvés{/}</span></div>
+        <div class="panel-body">{{case_city_discover}}</div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">03</p>
+        <h3>{en}Fetch{fr}Récupérer{/}<code>socrata_query_dataset_rows</code></h3>
+        <p>{en}The permits issued this year, sorted by construction value; permits recorded without a value are left out.{fr}Les permis délivrés cette année, triés par valeur des travaux; les permis inscrits sans valeur sont exclus.{/}</p>
+      </div>
+      <figure class="panel">
+        <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
+        <pre><code>{{case_city_request}}</code></pre>
+        <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span>{en}recorded {{case_city_captured}}{fr}enregistré le {{case_city_captured}}{/}</span></div>
+        <div class="panel-body">{{case_city_result}}{{case_city_source}}</div>
+      </figure>
+    </li>
+    <li class="step">
+      <div class="step-text">
+        <p class="step-n">04</p>
+        <h3>{en}Reproduce{fr}Reproduire{/}<code>reproduce_code</code></h3>
+        <p>{en}The same query as a script against Edmonton's open-data API.{fr}La même requête sous forme de script, sur l'API de données ouvertes d'Edmonton.{/}</p>
+      </div>
+      <figure class="panel">{{case_city_scripts}}</figure>
+    </li>
+  </ol>
+</section>
+
+<section class="wrap case case-yours">
+  <h2>{en}Your project here{fr}Votre projet ici{/}</h2>
+  <p>{en}Using MapleStats for research, reporting or teaching? <a href="{{repo}}/issues/new?title=Case%20study%3A%20">Open an issue</a> with a short description and a link, and it can be written up on this page.{fr}Vous utilisez MapleStats pour la recherche, le journalisme ou l'enseignement? <a href="{{repo}}/issues/new?title=Case%20study%3A%20">Ouvrez un ticket</a> avec une courte description et un lien, et il pourra être présenté sur cette page.{/}</p>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

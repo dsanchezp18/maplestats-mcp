@@ -1591,6 +1591,179 @@ mark {
   }
 }
 
+/* ---------- Case studies ---------- */
+
+.cases-nav {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-weight: 600;
+  counter-reset: case;
+}
+
+.cases-nav li {
+  counter-increment: case;
+}
+
+.cases-nav li::before {
+  content: "0" counter(case) " ";
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.case {
+  padding-block: clamp(40px, 5vw, 64px);
+  border-top: 2px solid var(--ink);
+}
+
+.case-head {
+  display: grid;
+  gap: 12px;
+  margin-bottom: clamp(28px, 3.5vw, 44px);
+}
+
+.case-head h2,
+.case-yours h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.case-q {
+  max-width: 60ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  font-style: italic;
+  color: var(--ink);
+}
+
+.case-why {
+  max-width: 72ch;
+  color: var(--ink-2);
+}
+
+/* Tables, lists and source lines sit inside the dark response panels, so
+   they use the panel's own colours. */
+.panel-body > .found,
+.panel-body > .case-source {
+  margin: 0;
+  padding: 10px 18px;
+}
+
+/* A collapsed-border table ignores its own padding, so the inset goes on
+   the outer cells. */
+.case-table th:first-child,
+.case-table td:first-child {
+  padding-left: 18px;
+}
+
+.case-table th:last-child,
+.case-table td:last-child {
+  padding-right: 18px;
+}
+
+.case-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--panel-ink);
+}
+
+.case-table th,
+.case-table td {
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid var(--panel-rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.case-table thead th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--panel-mute);
+}
+
+.case-table tbody th {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.case-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.case-table .nowrap {
+  white-space: nowrap;
+}
+
+.case-table td.bar {
+  width: 40%;
+  padding-right: 0;
+  vertical-align: middle;
+}
+
+.case-table td.bar span {
+  display: block;
+  height: 12px;
+  background: var(--panel-link);
+}
+
+.case-table.permits td:nth-child(2) {
+  min-width: 18ch;
+  color: var(--panel-mute);
+}
+
+.found {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.found li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-rule);
+  color: var(--panel-mute);
+}
+
+.found li code {
+  color: var(--panel-ink);
+}
+
+.found li.picked {
+  border-color: var(--panel-link);
+  box-shadow: inset 3px 0 0 var(--panel-link);
+  color: var(--panel-ink);
+}
+
+.case-source {
+  font-size: 0.8125rem;
+  color: var(--panel-mute);
+  overflow-wrap: anywhere;
+}
+
+.case-source a {
+  color: var(--panel-link);
+}
+
+.case-yours p {
+  margin-top: 12px;
+  max-width: 64ch;
+  color: var(--ink-2);
+}
+
 /* ---------- Footer ---------- */
 
 .foot {
