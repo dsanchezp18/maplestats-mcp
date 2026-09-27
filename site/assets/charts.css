@@ -374,3 +374,71 @@
     }
   }
 }
+
+/* ---------- Print ----------
+ * A chart that was never scrolled into view has no "play" class, so its
+ * marks still sit at their start state (scaled to nothing, transparent,
+ * undrawn). On paper every mark shows at its final state, and a figure
+ * stays on one page. */
+@media print {
+  .js .chart *,
+  .js .ring * {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .js .chart:not(.play) .c-bar,
+  .js .chart:not(.play) .c-bar-2,
+  .js .chart:not(.play) .c-bar-3,
+  .js .chart:not(.play) .c-hbar,
+  .js .chart:not(.play) .c-pt,
+  .js .chart:not(.play) .c-pt-2,
+  .js .chart:not(.play) .c-ci {
+    transform: none !important;
+  }
+
+  .js .chart:not(.play) .c-pt,
+  .js .chart:not(.play) .c-pt-2,
+  .js .chart:not(.play) .c-dot,
+  .js .chart:not(.play) .c-end,
+  .js .ring:not(.play) .ring-arc-label,
+  .js .ring:not(.play) .ring-spin,
+  .js .ring:not(.play) .ring-spin-2 {
+    opacity: 1 !important;
+  }
+
+  .js .chart:not(.play) .c-line,
+  .js .ring:not(.play) .ring-arc {
+    stroke-dashoffset: 0 !important;
+  }
+
+  .c-ring {
+    display: none;
+  }
+
+  figure,
+  .chart-wrap,
+  .finale-ring,
+  .chart {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* ---------- Phones ----------
+ * Each plotted chart comes twice (scripts/site_charts.py, responsive()):
+ * 640 units wide, and 400 wide so its text stays near its set size in a
+ * phone's column. One shows at a time. */
+.chart.chart-narrow {
+  display: none;
+}
+
+@media screen and (max-width: 560px) {
+  .chart.chart-wide {
+    display: none;
+  }
+
+  .chart.chart-narrow {
+    display: block;
+  }
+}
