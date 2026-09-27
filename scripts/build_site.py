@@ -2022,6 +2022,391 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
     return context
 
 
+# --------------------------------------------------------------------------
+# The Statistics Canada page (site/statcan.html): counts, families, tool
+# chains and variance methods from the registry and the PUMF module.
+# --------------------------------------------------------------------------
+
+# Every statcan/<family>/ folder in one group, with a line on what it is
+# for; statcan_context() fails the build when a family is missing here.
+STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("Tables and time series", "Tableaux et séries chronologiques", ("wds", "sdmx", "delta")),
+    (
+        "Census",
+        "Recensement",
+        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables", "geo"),
+    ),
+    ("Microdata", "Microdonnées", ("pumf",)),
+    ("Classifications", "Classifications", ("rdaas",)),
+    ("Indicators", "Indicateurs", ("indicators", "sdg")),
+    (
+        "Releases, catalogues and methods",
+        "Diffusions, catalogues et méthodes",
+        ("daily", "reference", "surveys"),
+    ),
+)
+
+STATCAN_NOTES: dict[str, tuple[str, str]] = {
+    "wds": (
+        (
+            "Search tables by title, read their dimensions, members and footnotes, pull series by "
+            "vector or coordinate (latest N periods or a date range), decode code sets, see what "
+            "changed today, and get full-table CSV or SDMX download links."
+        ),
+        (
+            "Chercher les tableaux par titre, lire leurs dimensions, membres et notes, extraire des"
+            " séries par vecteur ou par coordonnée (N dernières périodes ou intervalle de dates), "
+            "décoder les ensembles de codes, voir ce qui a changé aujourd'hui et obtenir les liens "
+            "CSV ou SDMX d'un tableau complet."
+        ),
+    ),
+    "sdmx": (
+        (
+            "Ask for only the slice you need: a table's codelists with parent and child codes, "
+            "complete keys for large dimensions, and observations filtered by key or by vector."
+        ),
+        (
+            "Ne demander que la tranche voulue : les listes de codes d'un tableau avec leurs liens "
+            "parent-enfant, des clés complètes pour les grandes dimensions et des observations "
+            "filtrées par clé ou par vecteur."
+        ),
+    ),
+    "delta": (
+        (
+            "The bulk-update ZIP for one business day, with every table and vector released that "
+            "day, after checking that the file exists."
+        ),
+        (
+            "Le ZIP de mise à jour d'un jour ouvrable, avec tous les tableaux et vecteurs diffusés "
+            "ce jour-là, après vérification que le fichier existe."
+        ),
+    ),
+    "census_profile": (
+        (
+            "Find a geography, from province to dissemination area, and one of 2,631 "
+            "characteristics, then fetch values with quality flags and confidence intervals."
+        ),
+        (
+            "Trouver une géographie, de la province à l'aire de diffusion, et l'une des 2 631 "
+            "caractéristiques, puis obtenir les valeurs avec leurs indicateurs de qualité et "
+            "intervalles de confiance."
+        ),
+    ),
+    "census_profile_2016": (
+        (
+            "The 2016 profile's own JSON API: geographies with their DGUIDs, then a full profile by"
+            " topic, with total, male and female values and suppression symbols."
+        ),
+        (
+            "L'API JSON propre au profil de 2016 : les géographies et leur DGUID, puis le profil "
+            "complet par thème, avec les valeurs totales, hommes et femmes et les symboles de "
+            "suppression."
+        ),
+    ),
+    "census_profile_archive": (
+        (
+            "Direct CSV or TAB bulk-download links for the 2001, 2006, 2011 and 2016 profiles, by "
+            "geography level, in English or French."
+        ),
+        (
+            "Liens directs de téléchargement en bloc, CSV ou TAB, des profils de 2001, 2006, 2011 "
+            "et 2016, par niveau géographique, en français ou en anglais."
+        ),
+    ),
+    "census_tables": (
+        (
+            "Cross-tabulations from the 2006 to 2016 censuses, with their CSV, SDMX or Beyond 20/20"
+            " files; a table that exists only as IVT comes with an R snippet using canivt."
+        ),
+        (
+            "Les tableaux croisés des recensements de 2006 à 2016, avec leurs fichiers CSV, SDMX ou"
+            " Beyond 20/20; un tableau offert seulement en IVT est accompagné d'un extrait R qui "
+            "utilise canivt."
+        ),
+    ),
+    "geo": (
+        (
+            "Census boundary services by year: layer schemas, attribute queries (a DGUID from a "
+            "place name) and polygons reprojected to latitude and longitude."
+        ),
+        (
+            "Services de limites du recensement, par année : schéma des couches, requêtes par "
+            "attribut (le DGUID d'un lieu d'après son nom) et polygones reprojetés en latitude et "
+            "longitude."
+        ),
+    ),
+    "pumf": (
+        (
+            "Find a public use microdata file, list its ZIPs, read its codebook and weights without"
+            " downloading it, and compute weighted totals, shares and means."
+        ),
+        (
+            "Trouver un fichier de microdonnées à grande diffusion, lister ses ZIP, lire son "
+            "dictionnaire et ses poids sans le télécharger, puis calculer des totaux, des parts et "
+            "des moyennes pondérés."
+        ),
+    ),
+    "rdaas": (
+        (
+            "NAICS, the Standard Geographical Classification and the rest: structure, full category"
+            " trees, index terms, exclusions, and concordances that map codes between versions."
+        ),
+        (
+            "Le SCIAN, la Classification géographique type et les autres : structure, arbre complet"
+            " des catégories, termes de l'index, exclusions et concordances entre versions."
+        ),
+    ),
+    "indicators": (
+        (
+            "Current values of named indicators (population, CPI, GDP, trade, unemployment) with "
+            "growth rates and a link to the Daily article, from the feeds behind StatCan's home "
+            "page."
+        ),
+        (
+            "Valeurs actuelles d'indicateurs nommés (population, IPC, PIB, commerce, chômage), avec"
+            " le taux de croissance et un lien vers l'article du Quotidien, tirées des flux de la "
+            "page d'accueil de Statistique Canada."
+        ),
+    ),
+    "sdg": (
+        (
+            "Canada's 86 national indicators and its 251 indicators under the UN global framework: "
+            "search, metadata, and observations with each indicator's own breakdowns."
+        ),
+        (
+            "Les 86 indicateurs du cadre canadien et les 251 du cadre mondial de l'ONU : recherche,"
+            " métadonnées et observations, avec les ventilations propres à chaque indicateur."
+        ),
+    ),
+    "daily": (
+        (
+            "The last 100 days of releases from The Daily's Atom feeds, by subject, and the full "
+            "release archive back to 14 March 2012."
+        ),
+        (
+            "Les diffusions des 100 derniers jours, par sujet, tirées des flux Atom du Quotidien, "
+            "et l'archive complète depuis le 14 mars 2012."
+        ),
+    ),
+    "reference": (
+        (
+            "Three catalogues: definitions, data sources and methods; analysis articles and "
+            "periodicals; and data products, including the PUMFs and bulk files the table APIs "
+            "cannot see."
+        ),
+        (
+            "Trois catalogues : définitions, sources de données et méthodes; articles d'analyse et "
+            "périodiques; produits de données, dont les FMGD et les fichiers en bloc que les API de"
+            " tableaux ne voient pas."
+        ),
+    ),
+    "surveys": (
+        (
+            "The A to Z directory of about 899 surveys and programs, active or not, and each "
+            "survey's IMDB record: status, frequency, description, subjects and methodology link."
+        ),
+        (
+            "Le répertoire alphabétique d'environ 899 enquêtes et programmes, actifs ou non, et la "
+            "fiche BMDI de chaque enquête : statut, fréquence, description, sujets et lien vers la "
+            "méthodologie."
+        ),
+    ),
+}
+
+# Tool chains for the page's workflows; every name must be a registered tool.
+STATCAN_CHAINS: dict[str, tuple[str, ...]] = {
+    "series": (
+        "wds_search_cubes",
+        "wds_get_cube_metadata",
+        "wds_get_series_info_from_cube_pid_coord",
+        "wds_get_data_from_vectors",
+    ),
+    "sdmx": ("sdmx_get_structure", "sdmx_get_key_for_dimension", "sdmx_get_data"),
+    "codes": ("wds_get_cube_metadata", "wds_get_code_sets"),
+    "pumf": (
+        "statcan_pumf_search",
+        "statcan_pumf_list_files",
+        "statcan_pumf_get_codebook",
+        "statcan_pumf_tabulate",
+    ),
+    "census": (
+        "statcan_census_profile_search_geography",
+        "statcan_census_profile_search_characteristic",
+        "statcan_census_profile_get_data",
+    ),
+    "classify": (
+        "rdaas_search_classifications",
+        "rdaas_get_classification_categories_detailed",
+        "rdaas_search_concordances",
+        "rdaas_get_concordance_maps",
+    ),
+    "catalogue": (
+        "statcan_reference_search_data",
+        "statcan_reference_search_documents",
+        "statcan_surveys_search_surveys",
+        "statcan_surveys_get_survey_metadata",
+    ),
+    "releases": (
+        "statcan_daily_get_releases",
+        "wds_get_changed_cube_list",
+        "wds_get_changed_series_list",
+        "statcan_delta_get_file_link",
+    ),
+}
+
+# The file each verified variance method in statcan/pumf/tabulate.py covers,
+# keyed by its url_marker; the build fails when a method has no entry.
+VARIANCE_FILES: dict[str, tuple[str, str]] = {
+    "cen21_ind_": (
+        "2021 Census, individuals file (98M0001X)",
+        "Recensement de 2021, fichier des particuliers (98M0001X)",
+    ),
+    "/89m0025x/2022001/2024.zip": (
+        "Employment Insurance Coverage Survey, 2024 (89M0025X)",
+        "Enquête sur la couverture de l'assurance-emploi, 2024 (89M0025X)",
+    ),
+    "/14-25-0001/2026001/2024-2025.zip": (
+        "CSWC, 2024-2025 (14-25-0001)",
+        "CSWC, 2024-2025 (14-25-0001)",
+    ),
+}
+
+
+def _code_list(names: list[str], lang: Lang) -> str:
+    """<code>a</code>, <code>b</code> and <code>c</code>."""
+    codes = [f"<code>{esc(name)}</code>" for name in names]
+    if len(codes) < 2:
+        return "".join(codes)
+    return f"{', '.join(codes[:-1])} {'and' if lang == 'en' else 'et'} {codes[-1]}"
+
+
+def _tool_chain(names: tuple[str, ...], tools: set[str], root: str) -> str:
+    unknown = [name for name in names if name not in tools]
+    if unknown:
+        raise SystemExit(f"STATCAN_CHAINS names tools the server does not have: {unknown}")
+    return (
+        '<ol class="sc-chain">'
+        + "".join(
+            f'<li><a href="{tool_href(name, root)}"><code>{breakable(name)}</code></a></li>'
+            for name in names
+        )
+        + "</ol>"
+    )
+
+
+def _variance_table(lang: Lang) -> str:
+    from maplestats_mcp.modules.statcan.pumf.tabulate import VARIANCE_METHODS
+
+    en = lang == "en"
+    head = (
+        ("File", "Weight", "Replicates", "Standard error")
+        if en
+        else ("Fichier", "Poids", "Répliques", "Erreur-type")
+    )
+    rows = []
+    for method in VARIANCE_METHODS:
+        if method.url_marker not in VARIANCE_FILES:
+            raise SystemExit(f"add {method.url_marker!r} to VARIANCE_FILES in build_site.py")
+        name = VARIANCE_FILES[method.url_marker][0 if en else 1]
+        divisor = number(method.divisor, lang)
+        if method.centre == "mean":
+            how = (
+                f"Random groups: squared deviations from the replicates' mean, divided by {divisor}"
+                if en
+                else f"Groupes aléatoires : écarts au carré à la moyenne des répliques, divisés par {divisor}"
+            )
+        else:
+            how = (
+                f"Bootstrap: squared deviations from the full-sample estimate, divided by {divisor}"
+                if en
+                else f"Bootstrap : écarts au carré à l'estimation sur l'échantillon complet, divisés par {divisor}"
+            )
+        replicates = method.replicates
+        rows.append(
+            # data-label names each cell where the phone layout hides the header row.
+            f"<tr><td>{esc(name)}</td>"
+            f'<td data-label="{head[1]}"><code>{esc(method.main_weight)}</code></td>'
+            f'<td data-label="{head[2]}"><code>{esc(replicates[0])}</code>–'
+            f"<code>{esc(replicates[-1])}</code> "
+            f'<span class="count">{number(len(replicates), lang)}</span></td>'
+            f'<td data-label="{head[3]}">{esc(how)}</td></tr>'
+        )
+    return (
+        '<div class="table-wrap"><table class="params sc-variance"><thead><tr>'
+        + "".join(f"<th>{h}</th>" for h in head)
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table></div>"
+    )
+
+
+def statcan_context(modules: list[ModuleDoc], lang: Lang, root: str) -> dict[str, str]:
+    from maplestats_mcp.modules.statcan.pumf.tabulate import VARIANCE_METHODS
+
+    en = lang == "en"
+    module = next(m for m in modules if m.key == "statcan")
+    by_family: dict[str, list[ToolDoc]] = {}
+    for tool in module.tools:
+        by_family.setdefault(tool.family, []).append(tool)
+    grouped = [family for _, _, families in STATCAN_GROUPS for family in families]
+    missing = sorted((set(by_family) - set(grouped)) | (set(by_family) - set(STATCAN_NOTES)))
+    stale = sorted((set(grouped) | set(STATCAN_NOTES)) - set(by_family))
+    if missing or stale:
+        raise SystemExit(
+            f"STATCAN_GROUPS/STATCAN_NOTES in build_site.py: add {missing}, remove {stale}"
+        )
+
+    def tools_word(count: int) -> str:
+        if en:
+            return "tool" if count == 1 else "tools"
+        return "outil" if count == 1 else "outils"
+
+    groups = []
+    for title_en, title_fr, families in STATCAN_GROUPS:
+        count = sum(len(by_family[f]) for f in families)
+        items = []
+        for family in families:
+            tools = by_family[family]
+            names = [t.name for t in tools]
+            title = FAMILIES[f"statcan/{family}"][0 if en else 1]
+            items.append(
+                "<li>"
+                f'<h4><a href="{tool_href(names[0], root)}">{esc(title)}</a> '
+                f'<span class="count">{len(tools)}</span></h4>'
+                f'<p class="sc-prefix"><code>{esc(_family_prefix(names, "statcan", family))}</code></p>'
+                f"<p>{esc(STATCAN_NOTES[family][0 if en else 1])}</p>"
+                "</li>"
+            )
+        groups.append(
+            '<div class="sc-group">'
+            f'<div class="sc-group-head"><h3>{esc(title_en if en else title_fr)}</h3>'
+            f'<p class="count">{count} {tools_word(count)}</p></div>'
+            f'<ul class="sc-fams">{"".join(items)}</ul>'
+            "</div>"
+        )
+    registered = {t.name for m in modules for t in m.tools}
+    context = {
+        "statcan_tool_count": str(len(module.tools)),
+        "statcan_family_count": str(len(by_family)),
+        "statcan_groups": "\n".join(groups),
+        "statcan_resources": _code_list(module.resources, lang),
+        "statcan_prompts": _code_list(module.prompts, lang),
+        "statcan_variance_count": str(len(VARIANCE_METHODS)),
+        "statcan_microdata_count": number(
+            next(
+                call["response"]["product_count"]
+                for call in load_case("counts")["calls"]
+                if call["name"] == "statcan_reference_search_data"
+            ),
+            lang,
+        ),
+        "statcan_variance_table": _variance_table(lang),
+    }
+    for key, names in STATCAN_CHAINS.items():
+        context[f"sc_chain_{key}"] = _tool_chain(names, registered, root)
+    return context
+
+
 def render(template: str, lang: Lang, context: dict[str, str]) -> str:
     def include(match: re.Match[str]) -> str:
         return render_partial(match.group(1))
@@ -2085,11 +2470,13 @@ async def build(out: Path) -> dict[str, int]:
         root = "" if lang == "en" else "../"
         target_dir = out if lang == "en" else out / "fr"
         target_dir.mkdir(parents=True, exist_ok=True)
+        statcan = statcan_context(modules, lang, root)
         for page in pages:
             context = {
                 **shared,
                 **captured_call(lang),
                 **cases[lang],
+                **statcan,
                 "lang": lang,
                 "root": root,
                 "page": page.name,
@@ -2107,6 +2494,7 @@ async def build(out: Path) -> dict[str, int]:
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
                 "cur_cases": ' aria-current="page"' if page.name == "cases.html" else "",
+                "cur_statcan": ' aria-current="page"' if page.name == "statcan.html" else "",
                 "cur_contributing": (
                     ' aria-current="page"' if page.name == "contributing.html" else ""
                 ),
