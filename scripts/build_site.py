@@ -1785,6 +1785,7 @@ def micro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
             rows,
             label=label,
             value_format=lambda v: percent(v, lang),
+            row_height=64.0,
             range_word=RANGE_WORD[lang],
         ),
         "micro_first": esc(percent(first, lang)),

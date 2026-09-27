@@ -171,6 +171,7 @@ def ci_chart(
     label: str,
     value_format: Callable[[float], str],
     range_word: str = "to",
+    row_height: float = 32.0,
 ) -> str:
     """Horizontal dot-and-whisker chart: one row per (label, estimate, low, high).
 
@@ -191,7 +192,9 @@ def ci_chart(
     left = label_col + 16
     right = WIDTH - value_col - 10
     top = 10.0
-    heights = [max(32.0, 16.0 * len(lines) + 14) for lines in wrapped]
+    # row_height is the least a row gets; a chart with few rows can ask for
+    # more so it does not come out as a thin strip.
+    heights = [max(row_height, 16.0 * len(lines) + 14) for lines in wrapped]
     plot_bottom = top + sum(heights)
     height = plot_bottom + 30
 
