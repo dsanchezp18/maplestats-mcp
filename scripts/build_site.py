@@ -798,6 +798,25 @@ def esc(text: object) -> str:
     return html.escape(str(text), quote=True)
 
 
+def lead(text: str, limit: int = 280) -> str:
+    """The first sentence of a module description, clipped at a clause break.
+
+    Module descriptions are written for agents and some run to thousands of
+    characters; the page shows this lead and keeps the full text behind a
+    disclosure.
+    """
+    sentence_end = r"(?<!e\.g\.)(?<!i\.e\.)(?<=[.!?])\s+(?=[A-Z«“(])| -- "
+    first = re.split(sentence_end, text.strip(), maxsplit=1)[0]
+    if len(first) <= limit:
+        return first
+    cut = first[:limit]
+    for mark in ("; ", ", ", " "):
+        at = cut.rfind(mark)
+        if at > limit // 2:
+            return cut[:at].rstrip(" ,;:") + "…"
+    return cut.rstrip() + "…"
+
+
 def inline_code(text: str) -> str:
     """Escape prose and turn `backticked` spans into <code>."""
     parts = re.split(r"`([^`]+)`", text)
@@ -964,6 +983,19 @@ def tool_details(tool: ToolDoc, lang: Lang) -> str:
     )
 
 
+def module_description(text: str, lang: Lang) -> str:
+    """The lead as a paragraph; the full text in a <details> when it says more."""
+    short = lead(text)
+    html = f'<p class="mod-desc">{inline_code(short)}</p>'
+    if len(text.strip()) > len(short) + 40:
+        label = "Full description" if lang == "en" else "Description complète"
+        html += (
+            f'<details class="mod-more"><summary>{label}</summary>'
+            f'<p class="mod-desc">{inline_code(text.strip())}</p></details>'
+        )
+    return html
+
+
 def atlas(modules: list[ModuleDoc], lang: Lang) -> str:
     pinned = always_visible()
     sections = []
@@ -1015,7 +1047,7 @@ def atlas(modules: list[ModuleDoc], lang: Lang) -> str:
             f'<p class="label">{kicker}</p>'
             f"<h2>{esc(source.title(lang))}</h2>"
             f'<p class="mod-prefix">{" ".join(f"<code>{esc(p)}</code>" for p in prefixes(module))}</p>'
-            f'<p class="mod-desc">{inline_code(module.description[lang])}</p>'
+            f"{module_description(module.description[lang], lang)}"
             f'<p class="mod-meta">{" · ".join(meta)}</p>'
             f"{pinned_note}</header>" + "".join(body) + "</section>"
         )
@@ -1331,6 +1363,7 @@ async def build(out: Path) -> dict[str, int]:
         "places_covered": str(counts["places_covered"]),
         "catalogue_count": str(counts["catalogue_count"]),
         "local_catalogue_count": str(counts["local_catalogue_count"]),
+        "local_plus_federal": str(len(national) - 3 + counts["local_catalogue_count"]),
         "local_source_count": str(counts["local_source_count"]),
         "search_top": str(index["top"]),
         "reproduce_tabs": await reproduce_tabs(),
@@ -1374,6 +1407,7 @@ async def build(out: Path) -> dict[str, int]:
                 "plan_panel": plan_panel(lang, root),
                 "cur_tools": ' aria-current="page"' if page.name == "tools.html" else "",
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
+                "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
                 "search_results": result_items(search_results[lang], by_name, lang, root),
                 "coverage_matrix": coverage_matrix(lang),
                 "coverage_lists": coverage_lists(lang),
