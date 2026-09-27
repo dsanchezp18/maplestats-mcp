@@ -1843,24 +1843,22 @@ def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     }
 
 
-# The ring's short arc labels; the full names are the tooltips.
-RING_SHORT: dict[str, tuple[str, str]] = {
-    "statistics": ("Statistics", "Statistique"),
-    "money": ("Money", "Monnaie"),
-    "housing": ("Housing", "Logement"),
-    "health": ("Health", "Santé"),
-    "environment": ("Environment", "Environnement"),
-    "energy": ("Energy", "Énergie"),
-    "business": ("Business", "Entreprises"),
-    "immigration": ("Immigration", "Immigration"),
-    "government": ("Parliament", "Parlement"),
-    "transport": ("Transport", "Transport"),
-    "geography": ("Geography", "Géographie"),
-    "agriculture": ("Agriculture", "Agriculture"),
-    "provincial": ("Provinces", "Provinces"),
-    "municipal": ("Cities", "Villes"),
-    "catalogue": ("Catalogues", "Catalogues"),
-}
+# The ring's arcs: sixteen subjects, grouped so every arc is wide enough
+# to carry its own name and count. (short EN, short FR, subject keys); the
+# tooltip lists the subjects each arc holds.
+RING_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("Statistics", "Statistique", ("statistics",)),
+    ("Provinces and cities", "Provinces et villes", ("catalogue", "provincial", "municipal")),
+    ("Money and business", "Argent et affaires", ("money", "business")),
+    (
+        "Land and energy",
+        "Terre et énergie",
+        ("agriculture", "environment", "energy", "geography", "transport"),
+    ),
+    ("People", "Population", ("health", "housing", "immigration")),
+    ("Parliament", "Parlement", ("government",)),
+)
+
 
 # West to east, then north: the order the inner inscription travels.
 RING_ORDER = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU")
@@ -1932,16 +1930,21 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
     for module in modules:
         source = module.source
         key = source.domain if source.level == "national" else source.level
-        if key in RING_SHORT:
+        if key:
             by_subject[key] = by_subject.get(key, 0) + len(module.tools)
-    arcs = [
-        (
-            RING_SHORT[key][0 if en else 1],
-            (DOMAINS.get(key) or LEVELS[key])[0 if en else 1],  # type: ignore[index]
-            n,
-        )
-        for key, n in sorted(by_subject.items(), key=lambda item: -item[1])
-    ]
+    arcs = []
+    for short_en, short_fr, keys in RING_GROUPS:
+        members = [(DOMAINS.get(k) or LEVELS[k])[0 if en else 1] for k in keys]  # type: ignore[index]
+        count = sum(by_subject.get(k, 0) for k in keys)
+        short = short_en if en else short_fr
+        listed = ", ".join(m[0].lower() + m[1:] for m in members)
+        arcs.append((short, f"{short}: {listed}", count))
+    arcs.sort(key=lambda arc: -arc[2])
+    data_tools = sum(n for _, _, n in arcs)
+    # Every tool is either in an arc or is one of MapleStats' own (the
+    # planner and the script writer), which the caption names.
+    grouped = {k for _, _, keys in RING_GROUPS for k in keys}
+    assert set(by_subject) - grouped <= {"utility"}, set(by_subject) - grouped
     label = (
         f"The ring: {len(outer)} federal publishers around the outside, the provinces and "
         f"cities with local sources inside, and {tools} tools as arcs by subject"
@@ -1994,6 +1997,8 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             label=label,
         ),
         "ring_federal": str(len(outer)),
+        "ring_data_tools": str(data_tools),
+        "ring_own_tools": str(tools - data_tools),
         "counters": counter_list(items, lang),
     }
 
