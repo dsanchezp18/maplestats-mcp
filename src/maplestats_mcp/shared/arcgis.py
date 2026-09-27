@@ -101,6 +101,11 @@ class ArcGISHubConfig:
     domain: str
     rate_limit_per_second: float
     rate_limit_capacity: float
+    # Open a new connection for every request. For a server behind a load
+    # balancer that pins each connection to one backend: when one backend
+    # fails, every retry on the reused connection fails with it (see the
+    # statcan/geo config for the live case).
+    fresh_connection_per_request: bool = False
 
 
 def _limiter(config: ArcGISHubConfig):
@@ -139,7 +144,8 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
 async def _get(config: ArcGISHubConfig, context: str, url: str, params: dict[str, Any]) -> Any:
     await _limiter(config).acquire()
     try:
-        return await api_get(url, params=params)
+        headers = {"Connection": "close"} if config.fresh_connection_per_request else None
+        return await api_get(url, params=params, headers=headers)
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
