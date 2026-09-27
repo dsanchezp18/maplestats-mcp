@@ -151,3 +151,17 @@ def test_french_banking_spellings():
     ):
         result = client.plan(question)
         assert result.topics[0].topic == "banking", question
+
+
+def test_english_possessive_still_names_the_place():
+    # "Alberta's" missed Alberta until 2026-09-27 (the cross-source demo question).
+    result = client.plan("Did Alberta's population boom tighten its rental market?")
+    assert [p.place for p in result.places] == ["Alberta"]
+    assert {t.topic for t in result.topics} >= {"housing", "population"}
+
+
+def test_rate_hikes_reach_the_rates_topic():
+    result = client.plan("What did the Bank of Canada's rate hikes do to new housing prices?")
+    assert result.topics[0].topic == "rates"
+    french = client.plan("Qu'ont fait les hausses des taux de la Banque du Canada au logement?")
+    assert "rates" in {t.topic for t in french.topics}

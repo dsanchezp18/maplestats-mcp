@@ -193,6 +193,88 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"series_names": ["V39079"], "recent": 3},
         },
     ],
+    # Cross-source demos (site/demos.html): one question, the plan plan_query
+    # gives for it, then the calls that answer it across agencies. Every data
+    # call gets its reproduce_code scripts.
+    #
+    # Alberta: did the population boom tighten the rental market? StatCan's
+    # quarterly population estimate (table 17-10-0009, Alberta), Alberta's
+    # Economic Dashboard for net migration by type, IRCC's permanent residents
+    # destined for Alberta (by province and gender, summed over gender: the
+    # CMA table suppresses small cells), and CMHC's October Rental Market
+    # Survey for Alberta.
+    "demo_alberta": [
+        {
+            "name": "plan_query",
+            "arguments": {"question": "Did Alberta's population boom tighten its rental market?"},
+        },
+        {"name": "wds_get_data_from_vectors", "arguments": {"vector_ids": [15], "latest_n": 48}},
+        {
+            "name": "ab_economic_get_data",
+            "arguments": {
+                "table": "NetMigration_17100040_17100020",
+                "filters": {"GeoName": "Alberta"},
+                "start_date": "2015-01-01",
+                "limit": 1000,
+            },
+        },
+        {
+            "name": "ircc_monthly_query",
+            "arguments": {
+                "table_id": "ODP-PR-Gender",
+                "filters": {"province_territory": "Alberta"},
+                "period": "year",
+                "year_from": 2015,
+                "group_by": ["province_territory"],
+            },
+        },
+        *(
+            {
+                "name": "cmhc_get_table_data",
+                "arguments": {
+                    "category_level_1": "Primary Rental Market",
+                    "category_level_2": category,
+                    "column_field": "2",
+                    "row_field": "TIMESERIES",
+                    "geography_type": "Province",
+                    "geography_id": "48",
+                },
+            }
+            for category in ("Vacancy Rate (%)", "Average Rent ($)")
+        ),
+    ],
+    # Canada: what did the rate hikes do to new housing? The Bank of Canada's
+    # policy rate and 5-year conventional mortgage rate, CMHC's national
+    # housing starts (seasonally adjusted annual rate, by dwelling type) and
+    # StatCan's New Housing Price Index (18-10-0205, Canada, house and land).
+    "demo_rates": [
+        {
+            "name": "plan_query",
+            "arguments": {
+                "question": (
+                    "What did the Bank of Canada's rate hikes do to new housing "
+                    "construction and prices?"
+                )
+            },
+        },
+        {
+            "name": "boc_get_observations",
+            "arguments": {"series_names": ["V39079", "V80691335"], "start_date": "2019-01-01"},
+        },
+        {
+            "name": "cmhc_get_table_data",
+            "arguments": {
+                "category_level_1": "New Housing Construction",
+                "category_level_2": "Starts (SAAR)",
+                "column_field": "8",
+                "row_field": "TIMESERIES",
+            },
+        },
+        {
+            "name": "wds_get_data_from_vectors",
+            "arguments": {"vector_ids": [111955442], "latest_n": 104},
+        },
+    ],
     # The counts in the verse: how much each audience can reach.
     "counts": [
         # every page of the Data catalogue's microdata results, counted by product
@@ -281,10 +363,20 @@ async def _record(client: Client, call: dict[str, Any], with_scripts: bool) -> d
     return record
 
 
+DEMOS = ("demo_alberta", "demo_rates")
+
+
+def _wants_scripts(key: str, n: int, call: dict[str, Any]) -> bool:
+    """A case's first call has scripts; a demo's every data call does."""
+    if key in DEMOS:
+        return call["name"] != "plan_query"
+    return n == 0 and key != "counts"
+
+
 async def capture(key: str) -> Path:
     async with Client(mcp) as client:
         calls = [
-            await _record(client, call, with_scripts=(n == 0 and key != "counts"))
+            await _record(client, call, with_scripts=_wants_scripts(key, n, call))
             for n, call in enumerate(CASES[key])
         ]
     record = {"captured": datetime.now(UTC).date().isoformat(), "calls": calls}
