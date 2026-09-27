@@ -102,6 +102,14 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"province": "AB", "limit": 100},
         },
     ],
+    # The same call in French: FCAC names its cards in French too, and the
+    # French page shows those names (a <key>_fr capture replaces <key> there).
+    "cards_fr": [
+        {
+            "name": "fcac_search_credit_cards",
+            "arguments": {"province": "AB", "limit": 100, "lang": "fr"},
+        },
+    ],
     # Macroeconomists: the Consumer Price Index, Canada, all-items, not
     # seasonally adjusted (table 18-10-0004, vector v41690973). 84 months, so
     # the page can show 72 months of 12-month inflation.

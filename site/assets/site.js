@@ -34,7 +34,7 @@
       offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
       tools: (n) => `${n} ${n === 1 ? "outil" : "outils"}`,
       matches: (n) => `${n} ${n === 1 ? "résultat" : "résultats"}`,
-      cut: (n) => `Au-delà des ${n} premiers : search_tools ne les renverrait pas.`,
+      cut: (n) => `Au-delà des ${n} premiers\u00a0: search_tools ne les renverrait pas.`,
     },
   }[lang];
 
@@ -161,6 +161,9 @@
       .join("");
   }
 
+  // Tool summaries are the server's English docstrings; a French page marks them.
+  const summaryLang = lang === "fr" ? ' lang="en"' : "";
+
   function resultItem(entry, n, modules, query) {
     const [name, module, summary] = entry;
     const source = (modules[module] || [module, module])[lang === "en" ? 0 : 1];
@@ -168,7 +171,7 @@
       `<li><a href="${pages}tools.html#t-${name}"><span class="r-rank">${n}</span>` +
       `<span class="r-name">${highlight(name, query).replace(/_/g, "_<wbr>")}</span>` +
       `<span class="r-src">${escapeHtml(source)}</span>` +
-      `<span class="r-sum">${highlight(summary, query)}</span></a></li>`
+      `<span class="r-sum"${summaryLang}>${highlight(summary, query)}</span></a></li>`
     );
   }
 

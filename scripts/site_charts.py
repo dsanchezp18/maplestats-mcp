@@ -170,12 +170,14 @@ def ci_chart(
     *,
     label: str,
     value_format: Callable[[float], str],
+    range_word: str = "to",
 ) -> str:
     """Horizontal dot-and-whisker chart: one row per (label, estimate, low, high).
 
     Rows are drawn top to bottom in the given order. The interval is a
     ``c-ci`` path (line plus end caps, so one element scales from its centre),
     the estimate a ``c-dot`` circle and its value a ``c-value`` at the right.
+    Each row's tooltip reads "name: estimate (low <range_word> high)".
     """
     if not rows:
         raise ValueError("ci_chart needs at least one row")
@@ -218,7 +220,8 @@ def ci_chart(
         zip(rows, wrapped, heights, values, strict=True)
     ):
         yc = y_top + h / 2
-        tip = f"{name}: {shown} ({value_format(min(lo, hi))} to {value_format(max(lo, hi))})"
+        interval = f"{value_format(min(lo, hi))} {range_word} {value_format(max(lo, hi))}"
+        tip = f"{name}: {shown} ({interval})"
         out.append(
             f'<rect class="c-hit" x="0" y="{_n(y_top)}" width="{WIDTH}" height="{_n(h)}">'
             f"<title>{_esc(tip)}</title></rect>"
@@ -382,6 +385,7 @@ def _time_chart(
     x_tick_format: Callable[[str], str | None],
     steps: bool,
     band: tuple[float, float, str] | None = None,
+    date_format: Callable[[str], str] | None = None,
 ) -> str:
     if not points:
         raise ValueError("a time chart needs at least one point")
@@ -466,7 +470,8 @@ def _time_chart(
         hx, hy = x(date.fromisoformat(d).toordinal()), y(v)
         out.append(
             f'<circle class="c-hit" cx="{_n(hx)}" cy="{_n(hy)}" r="9">'
-            f"<title>{_esc(d)}: {_esc(value_format(v))}</title></circle>"
+            f"<title>{_esc(date_format(d) if date_format else d)}: {_esc(value_format(v))}</title>"
+            "</circle>"
         )
 
     xe, ye = x(days[-1]), y(vals[-1])
@@ -484,13 +489,15 @@ def line_chart(
     value_format: Callable[[float], str],
     x_tick_format: Callable[[str], str | None],
     band: tuple[float, float, str] | None = None,
+    date_format: Callable[[str], str] | None = None,
 ) -> str:
     """A time series as one ``c-line`` path, x proportional to time.
 
     ``points`` are (ISO date, value) in time order. An x tick goes at each
     point for which ``x_tick_format`` returns a label; the last point gets a
     pulsing ``c-dot`` and its value. ``band`` (low, high, label) shades a
-    range behind the line, such as an inflation target.
+    range behind the line, such as an inflation target. ``date_format``
+    writes each point's date in its tooltip (the ISO date by default).
     """
     return _time_chart(
         points,
@@ -499,6 +506,7 @@ def line_chart(
         x_tick_format=x_tick_format,
         steps=False,
         band=band,
+        date_format=date_format,
     )
 
 
@@ -508,6 +516,7 @@ def step_chart(
     label: str,
     value_format: Callable[[float], str],
     x_tick_format: Callable[[str], str | None],
+    date_format: Callable[[str], str] | None = None,
 ) -> str:
     """Like line_chart, drawn as steps (for a rate that changes on given days).
 
@@ -515,7 +524,12 @@ def step_chart(
     of a policy rate become a path of a few dozen segments.
     """
     return _time_chart(
-        points, label=label, value_format=value_format, x_tick_format=x_tick_format, steps=True
+        points,
+        label=label,
+        value_format=value_format,
+        x_tick_format=x_tick_format,
+        steps=True,
+        date_format=date_format,
     )
 
 
