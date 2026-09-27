@@ -1291,13 +1291,15 @@ mark {
   pointer-events: none;
 }
 
-/* Dark request/response panels. */
+/* Code panels: the same frame as the "How it works" examples, so every
+   code box on the site reads alike. A quiet label bar, then the code on the
+   light tint, with the theme's code colours. */
 
 .panel {
   min-width: 0;
-  background: var(--panel);
-  color: var(--panel-ink);
-  border: 1px solid var(--panel-rule);
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--rule-2);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -1308,19 +1310,18 @@ mark {
   justify-content: space-between;
   gap: 4px 14px;
   padding: 8px 16px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--rule);
   font-size: 0.6875rem;
   font-weight: 600;
   font-stretch: 87.5%;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--panel-mute);
+  color: var(--ink-3);
 }
 
 .panel-bar + pre,
 .panel-body {
-  border-bottom: 1px solid var(--panel-rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .panel > :last-child {
@@ -1332,9 +1333,11 @@ mark {
   margin: 0;
   padding: 14px 16px;
   overflow-x: auto;
+  background: var(--ground-2);
   font-size: 0.8125rem;
   line-height: 1.62;
   tab-size: 2;
+  color: var(--ink);
 }
 
 .panel pre code,
@@ -1354,31 +1357,32 @@ mark {
   font-stretch: normal;
   letter-spacing: 0;
   text-transform: none;
+  color: var(--accent);
 }
 
 .s-key {
-  color: var(--s-key);
+  color: var(--code-key);
 }
 
 .s-str {
-  color: var(--s-str);
+  color: var(--code-str);
 }
 
 .s-num {
-  color: var(--s-num);
+  color: var(--code-num);
 }
 
 .s-lit {
-  color: var(--s-lit);
+  color: var(--code-lit);
 }
 
 .s-com {
-  color: var(--s-com);
+  color: var(--ink-3);
   font-style: italic;
 }
 
 .s-fn {
-  color: var(--panel-ink);
+  color: var(--ink);
   font-weight: 500;
 }
 
@@ -1387,7 +1391,7 @@ mark {
 }
 
 .panel a {
-  color: var(--panel-link);
+  color: var(--accent);
 }
 
 /* Tabs, used by the script and client pickers. */
@@ -1420,24 +1424,23 @@ mark {
 }
 
 .panel .tablist {
-  background: var(--panel-2);
-  border-bottom-color: var(--panel-rule);
   padding-inline: 6px;
+  border-bottom-color: var(--rule);
 }
 
 .panel [role="tab"] {
   font-size: 0.8125rem;
   padding: 8px 10px 7px;
-  color: var(--panel-mute);
+  color: var(--ink-3);
 }
 
 .panel [role="tab"]:hover,
 .panel [role="tab"][aria-selected="true"] {
-  color: var(--panel-ink);
+  color: var(--ink);
 }
 
 .panel [role="tab"][aria-selected="true"] {
-  border-bottom-color: var(--s-key);
+  border-bottom-color: var(--accent);
 }
 
 /* ---------- Sources ---------- */
@@ -1720,17 +1723,18 @@ mark {
 
 .snippet .copy {
   padding: 4px 9px;
-  border: 1px solid var(--panel-rule);
+  border: 1px solid var(--rule);
   border-radius: 0;
-  background: transparent;
-  color: var(--panel-ink);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 0.75rem;
   letter-spacing: 0;
   text-transform: none;
 }
 
 .snippet .copy:hover {
-  border-color: var(--panel-mute);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .path {
@@ -2075,7 +2079,7 @@ mark {
 .how-more {
   padding: 10px 16px 14px;
   font-size: 0.875rem;
-  color: var(--panel-mute);
+  color: var(--ink-3);
 }
 
 .how-note {
