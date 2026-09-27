@@ -4172,7 +4172,7 @@ h2.sub {
   }
 }
 
-/* ---------- Home: the ring, smaller, to close the page ---------- */
+/* ---------- Home: the ring, the same size as on the case studies ---------- */
 
 .home-ring .wrap {
   display: grid;
@@ -4187,7 +4187,7 @@ h2.sub {
 
 .home-ring-fig {
   width: 100%;
-  max-width: 480px;
+  max-width: 680px;
   margin: 0;
 }
 

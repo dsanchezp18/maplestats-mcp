@@ -283,3 +283,24 @@ async def test_timeout_raises_upstream_unavailable_with_clear_message(httpx_mock
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
     with pytest.raises(UpstreamUnavailable):
         await client.get_changed_series_list()
+
+
+def test_observation_release_time_is_eastern_converted_to_utc():
+    """WDS releaseTime has no zone and is Ottawa time (8:30 a.m. releases);
+    it must come out as the UTC instant, 12:30Z in summer and 13:30Z in
+    winter, not as 08:30 stamped UTC."""
+    from datetime import UTC, datetime
+
+    summer = client._observation_from_json(
+        {"refPer": "2026-08-01", "releaseTime": "2026-09-14T08:30"}
+    )
+    assert summer.release_time == datetime(2026, 9, 14, 12, 30, tzinfo=UTC)
+    winter = client._observation_from_json(
+        {"refPer": "2025-12-01", "releaseTime": "2026-01-20T08:30"}
+    )
+    assert winter.release_time == datetime(2026, 1, 20, 13, 30, tzinfo=UTC)
+    zoned = client._observation_from_json(
+        {"refPer": "2026-08-01", "releaseTime": "2026-09-14T12:30:00Z"}
+    )
+    assert zoned.release_time == datetime(2026, 9, 14, 12, 30, tzinfo=UTC)
+    assert client._observation_from_json({"refPer": "2026-08-01"}).release_time is None
