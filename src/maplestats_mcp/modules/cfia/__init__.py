@@ -1,0 +1,26 @@
+MODULE_NAME = "cfia"
+MODULE_DESCRIPTION = (
+    "Canadian Food Inspection Agency animal disease tables on inspection.canada.ca, tools "
+    "prefixed cfia_: yearly counts of confirmed herds and flocks per federally reportable "
+    "terrestrial animal disease, 2011 to the current year (updated on the 10th of each month; "
+    "the CKAN copy stops at 2021); one row per confirmation, with date, province and animal "
+    "type, for chronic wasting disease, scrapie, bovine tuberculosis, cysticercosis, BSE, "
+    "trichinellosis and avian influenza before 2021; and every highly pathogenic avian "
+    "influenza infected premises since December 2021 (current or released, province, "
+    "municipality, commercial or not, WOAH class, control zone) with the CFIA's status by "
+    "province table (birds impacted). Read from the HTML pages, which have no data file behind "
+    "them; rabies, aquatic animal diseases and food testing are CKAN datasets (cfia-acia)."
+)
+MODULE_DESCRIPTION_FR = (
+    "Tableaux de l'Agence canadienne d'inspection des aliments sur les maladies animales "
+    "(inspection.canada.ca), outils préfixés cfia_ : nombre annuel de troupeaux et de bandes "
+    "confirmés par maladie à déclaration obligatoire des animaux terrestres, de 2011 à "
+    "l'année en cours (mis à jour le 10 de chaque mois; la copie CKAN s'arrête en 2021); une "
+    "ligne par confirmation, avec date, province et type d'animal, pour la maladie débilitante "
+    "chronique, la tremblante, la tuberculose bovine, la cysticercose, l'ESB, la trichinose et "
+    "l'influenza aviaire avant 2021; et chaque lieu infecté par l'influenza aviaire hautement "
+    "pathogène depuis décembre 2021 (actuel ou libéré, province, municipalité, commercial ou "
+    "non, classification de l'OMSA, zone de contrôle), avec le tableau d'état par province de "
+    "l'ACIA (oiseaux touchés). La rage, les maladies des animaux aquatiques et les analyses "
+    "d'aliments sont des jeux de données CKAN (cfia-acia)."
+)

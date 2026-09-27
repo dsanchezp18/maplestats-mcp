@@ -264,6 +264,47 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "public_health",
+        "Public health surveillance: respiratory viruses, overdoses, infectious disease",
+        (
+            "influenza",
+            "flu",
+            "covid",
+            "rsv",
+            "wastewater",
+            "opioid",
+            "overdose",
+            "measles",
+            "mpox",
+            "tuberculosis",
+            "vaccin",
+            "outbreak",
+            "notifiable",
+            "grippe",
+            "rougeole",
+            "surdose",
+            "opioide",
+            "eaux usees",
+            "tuberculose",
+            "eclosion",
+            "vrs",
+            "virus respiratoire",
+            "declaration obligatoire",
+        ),
+        (
+            PlanStep("phac_infobase_list_datasets", "PHAC Health Infobase dashboard data files"),
+            PlanStep("phac_infobase_query", "filter by province, date range and column values"),
+            PlanStep("ckan_search_datasets", "other PHAC open data: portal='federal'"),
+        ),
+        (
+            (
+                "Surveillance counts are provisional and revised weekly or quarterly; suppressed "
+                "cells ('Suppr.', 'X', 'Mas.' in French files) are not zeros, and provinces "
+                "report on different schedules."
+            ),
+        ),
+    ),
+    Topic(
         "energy",
         "Energy production, pipelines and use",
         (
@@ -587,9 +628,273 @@ MICRODATA = Topic(
 )
 TOPICS = (*TOPICS, MICRODATA)
 
+RECALLS = Topic(
+    "recalls",
+    "Recalls and safety alerts: food, health products, consumer products",
+    (
+        "recall",
+        "food recall",
+        "drug recall",
+        "safety alert",
+        "allergen",
+        "listeria",
+        "salmonella",
+        "product safety",
+        "rappel",
+        "rappel d'aliment",
+        "allergene",
+        "avis de securite",
+        "securite des produits",
+    ),
+    (
+        PlanStep("recalls_search", "Health Canada, CFIA and Transport Canada notices"),
+        PlanStep("recalls_get", "affected products, lots and what to do for one notice"),
+        PlanStep("recalls_summarize", "counts by year, agency, category or issue"),
+        PlanStep("tc_recalls_search", "vehicle recalls by make, model and model year"),
+    ),
+    ("Recall dates in search and counts are last-updated dates, as on the site.",),
+)
+TOPICS = (*TOPICS, RECALLS)
+
+
+AGRICULTURE = Topic(
+    "agriculture",
+    "Agriculture, grain, livestock and food inspection",
+    (
+        "agricultur",
+        "grain",
+        "wheat",
+        "canola",
+        "barley",
+        "durum",
+        "lentil",
+        "crop",
+        "harvest",
+        "farm",
+        "livestock",
+        "cattle",
+        "hog",
+        "slaughter",
+        "dairy",
+        "poultry",
+        "egg",
+        "animal disease",
+        "avian influenza",
+        "bird flu",
+        "hpai",
+        "reportable disease",
+        "chronic wasting",
+        "scrapie",
+        "bovine tuberculosis",
+        "bse",
+        "food inspection",
+        "ble",
+        "cereale",
+        "orge",
+        "lentille",
+        "legumineuse",
+        "silo",
+        "recolte",
+        "betail",
+        "abattage",
+        "laitier",
+        "volaille",
+        "oeuf",
+        "grippe aviaire",
+        "influenza aviaire",
+        "maladie a declaration obligatoire",
+        "maladies a declaration obligatoire",
+        "maladie animale",
+        "maladies animales",
+        "maladie debilitante chronique",
+        "tremblante",
+        "tuberculose bovine",
+        "inspection des aliments",
+    ),
+    (
+        PlanStep("cgc_weekly_query", "CGC weekly grain deliveries, stocks and terminal exports"),
+        PlanStep("cgc_exports_query", "CGC monthly grain exports by destination country"),
+        PlanStep("wds_search_cubes", "StatCan field crop area and production, farm income"),
+        PlanStep(
+            "ckan_search_datasets",
+            "AAFC red meat, poultry, egg, dairy and horticulture market files: "
+            "portal='federal', fq='organization:aafc-aac'",
+        ),
+        PlanStep(
+            "cfia_reportable_diseases",
+            "CFIA yearly counts of federally reportable animal diseases, 2011 to now",
+        ),
+        PlanStep(
+            "cfia_disease_detections",
+            "CFIA detections by date, province and species (CWD, scrapie, bovine TB, BSE)",
+        ),
+        PlanStep(
+            "cfia_avian_influenza",
+            "CFIA avian influenza infected premises and status by province since 2021",
+        ),
+        PlanStep(
+            "ckan_search_datasets",
+            "CFIA rabies, aquatic animal disease and food testing data: "
+            "portal='federal', fq='organization:cfia-acia'",
+        ),
+    ),
+    (
+        (
+            "CGC figures are thousands of tonnes by crop year (August to July); StatCan "
+            "production and stocks estimates are surveys and will not equal CGC handlings."
+        ),
+        (
+            "AAFC market files on open.canada.ca are bulk CSVs refreshed nightly; their "
+            "DataStore copies are mostly gone or stale, so read the file URLs."
+        ),
+        (
+            "CFIA yearly disease counts are herds or flocks; avian influenza premises are "
+            "counted separately and can differ by one or two a year."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, AGRICULTURE)
+
+
+BANKING = Topic(
+    "banking",
+    "Consumer banking: credit cards, bank accounts and their fees",
+    (
+        "credit card",
+        "bank account",
+        "chequing",
+        "checking account",
+        "savings account",
+        "bank fee",
+        "banking fee",
+        "nsf",
+        "overdraft",
+        "fcac",
+        "carte de credit",
+        "cartes de credit",
+        "compte bancaire",
+        "comptes bancaires",
+        "compte-cheque",
+        "compte cheque",
+        "compte d'epargne",
+        "comptes d'epargne",
+        "frais bancaire",
+        "forfait bancaire",
+        "caisse populaire",
+        "insuffisance de fonds",
+        "cheque sans provision",
+        "acfc",
+    ),
+    (
+        PlanStep("fcac_search_credit_cards", "cards in a province: annual fee, purchase rate"),
+        PlanStep("fcac_get_credit_card", "one card's other rates, income and insurance"),
+        PlanStep("fcac_search_bank_accounts", "chequing or savings accounts and monthly fees"),
+        PlanStep("fcac_get_bank_account", "one account's transaction, NSF and overdraft fees"),
+        PlanStep("boc_search_series", "Bank of Canada prime and policy rates for context"),
+    ),
+    (
+        (
+            "FCAC lists only the products institutions submit to its tools, at posted rates; "
+            "it is a snapshot of today's offers, with no history."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, BANKING)
+
 # StatCan's own name for its tables, used when nothing else matches.
 FALLBACK_STEPS: tuple[PlanStep, ...] = (
     PlanStep("statcan_reference_search_data", "StatCan data products on the topic"),
     PlanStep("wds_search_cubes", "StatCan tables by keyword"),
     PlanStep("ckan_search_datasets", "federal open data: portal='federal'"),
 )
+
+
+DAIRY = Topic(
+    "dairy",
+    "Dairy supply management: milk prices, quota, production and sales",
+    (
+        "dairy",
+        "milk",
+        "butter",
+        "cheese",
+        "supply management",
+        "milk quota",
+        "marketing board",
+        "lait",
+        "laitier",
+        "beurre",
+        "fromage",
+        "gestion de l'offre",
+        "matiere grasse",
+        "commission canadienne du lait",
+        "ccl",
+    ),
+    (
+        PlanStep(
+            "cdc_query_market_data",
+            "CDC farm milk production by province and milk class sales (litres, kg, $)",
+        ),
+        PlanStep("cdc_get_component_prices", "CDC special milk class component prices ($/kg)"),
+        PlanStep("cdc_get_butter_support_prices", "CDC butter support price"),
+        PlanStep("cdc_get_national_quota", "national milk production target (total quota)"),
+        PlanStep(
+            "wds_search_cubes",
+            "StatCan milk production and utilization (32-10-0113-01), dairy products",
+        ),
+        PlanStep(
+            "cdc_list_datasets", "provincial marketing boards checked and where to go instead"
+        ),
+    ),
+    (
+        (
+            "Total quota is a production target in kg of butterfat, not actual production; CDC "
+            "production is in litres and StatCan's milk tables in kilolitres, so convert before "
+            "comparing."
+        ),
+        (
+            "CDC component prices cover the special classes (3(d), 4(a), 4(m), 5); farm-gate "
+            "blend prices are set by provincial boards and are published only as PDFs."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, DAIRY)
+
+
+COMMITTEES = Topic(
+    "committees",
+    "House of Commons committees: meetings, witnesses and testimony",
+    (
+        "committee",
+        "committee meeting",
+        "standing committee",
+        "witness",
+        "testimony",
+        "testified",
+        "in camera",
+        "comite",
+        "comite permanent",
+        "temoin",
+        "temoign",
+        "comparution",
+        "huis clos",
+    ),
+    (
+        PlanStep("parliament_list_committees", "find the committee and its slug"),
+        PlanStep("parliament_get_committee", "acronym, subcommittees and recent meetings"),
+        PlanStep(
+            "parliament_search_committee_meetings",
+            "meetings by committee, session or date range, and which were in camera",
+        ),
+        PlanStep(
+            "parliament_get_committee_meeting",
+            "one meeting's witnesses, transcript, minutes and notice",
+        ),
+    ),
+    (
+        (
+            "Committee data starts with session 39-1 (2006) and comes from OpenParliament.ca, "
+            "which is unofficial; in camera meetings have no transcript."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, COMMITTEES)

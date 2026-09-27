@@ -341,7 +341,119 @@ lookup tool, and the nutrient file are record-lookup-shaped products outside
 CKAN's dataset model (and, per the original 2026-09-14 scoping call, out of
 scope regardless) -- not a reason to treat the rest of `hc-sc`'s CKAN
 catalogue as unavailable. PHAC (`phac-aspc`, 761 datasets) is reachable the
-same way and was not investigated further in this pass.
+same way and was not investigated further in this pass. (The
+recalls/safety-alerts site was later shipped as `recalls_*` on 2026-09-26;
+see [its section](#government-of-canada-recalls-and-safety-alerts).)
+
+## PHAC Health Infobase
+
+**Status:** Shipped.
+
+Checked and shipped 2026-09-26 as `modules/phac_infobase/`
+(`phac_infobase_list_datasets`, `phac_infobase_describe_dataset`,
+`phac_infobase_query`).
+
+The site lists its 211 products in `/src/json/articles.json`. Each of
+the 130 non-blog product pages and its local scripts was fetched and
+searched for `.csv`, `.json` and `.zip` references (mostly `d3.csv(...)`
+calls and "Download data" links). The module reads a curated catalogue
+of 55 files with stable names, 9 of them also in French: respiratory
+viruses (RVDSS laboratory detections, FluWatch+ outbreaks, FluWatchers,
+severe outcomes, SPRINT-KIDS, CNISP sentinel hospitals), wastewater
+(weekly, daily, latest trends), opioid and stimulant harms, supervised
+consumption sites, CSUS, CPADS and CSADS survey indicators, tobacco
+sales, measles, mpox, tuberculosis, emerging respiratory pathogens,
+enteric outbreaks, notifiable diseases 1924-2016, hepatitis C treatment,
+vaccine adverse events, cancer statistics, Health of People in Canada,
+the risk factor atlas, the 2018 CCDI, PASS and congenital anomalies
+snapshots, positive mental health, and archived COVID-19 cases, testing,
+hospital capacity and vaccination (last updated 2023-2024).
+
+Overlap with `ckan_*`: open.canada.ca lists 68 resources on
+health-infobase.canada.ca. Of the catalogued files, only the COVID-19
+download, hospital capacity and vaccination coverage files, the COVID-19
+wastewater archive, the 2018 snapshots, the opioid ZIPs and the
+notifiable disease extract are there. The current respiratory,
+wastewater, measles, mpox, tuberculosis, CNISP, vaccine safety and
+substance use survey files are not.
+
+Quirks, all covered by mocked tests:
+
+- A missing file answers HTTP 302 to `/404.html` (HTTP 200 HTML), never 404.
+- Encodings: UTF-8 with and without a BOM; Windows-1252 for the French
+  opioid ZIP, the 2018 snapshots and the enteric outbreak list; DOS code
+  page 850 for the French congenital anomalies file.
+- Suppression and missing markers: `Suppr.` and `n/a` (opioid harms),
+  `Mas.` (masqué, 4,543 cells) and `n.d.` (its French file), `X` (vaccine
+  safety), `N/A`, `-` and `>=99` (COVID-19). They are returned as
+  published and listed with their meaning.
+- French 2018 snapshots use decimal commas (`12,2`); other French files
+  use points.
+- Headers: an empty first column of R row numbers (tuberculosis),
+  hundreds of empty trailing columns (the French positive mental health
+  file is 16 MB because of them), a misspelled `Mesure_Spéficique` in
+  the French opioid file, accents in ZIP member names
+  (`DonnéesMéfaitsSubstances.csv`) and `Copy of HoPiC 2025_...` member
+  names in the Health of People in Canada ZIP.
+- Periods: week-ending dates, `2026 Q1` (`2026 T1` in the French opioid
+  file), `2026 (Jan to Mar)`, `2015-2018`, school and survey years
+  (`2024-2025`).
+- The French opioid file mixes apostrophes within a column (`Visites au
+  service d’urgence`, `Services médicaux d'urgence (SMU)`) and writes
+  `Terre-Neuve et Labrador`; filters ignore apostrophe style and province
+  names ignore hyphens and spaces. Rechecked 2026-09-26 with `lang="fr"`:
+  before these fixes, quarter bounds, `geography="NL"` and a filter typed
+  with a straight apostrophe all returned no rows.
+- Dashboards publish one-line "update date" files; the HTTP
+  Last-Modified header carries the same information and is used instead.
+
+The site also has a documented API (`/api/`, quick-start page in beta)
+over four databases: `opioids`, `cnisp-vri`, `wastewater` and `CYPC`.
+`/api/<db>` returns the table list and `updatedAt`, and
+`/api/<db>/table/<table>` returns a whole table as JSON (nulls for empty
+cells). Only the small CNISP viral respiratory infection tables are read
+this way. The CYPC cancer tables are 140-230 MB and the opioid table 36
+MB (the 178 KB ZIPs carry the dashboard's data in English and French),
+so they are not used. The API
+also exposes a free-form SQL route and a cache-reset route; the module
+uses neither.
+
+Dashboards with no downloadable data:
+
+- Canadian Chronic Disease Surveillance System data tool: ASP.NET
+  WebForms postbacks rendered with JSCharting; open.canada.ca has only
+  its case definitions (XLSX).
+- The current CCDI, perinatal health indicators, positive mental health,
+  suicide surveillance indicator framework, health inequalities and
+  congenital anomalies data tools: the same platform. CCDI, PASS,
+  positive mental health and congenital anomalies have 2018-2019
+  snapshots under `/open/` (catalogued).
+- STBBI surveillance dashboard: HTML tables only.
+- Notifiable Diseases Online (diseases.canada.ca/notifiable): data to
+  2023 is embedded in its page scripts (`ndc_ppd_en.min.js`, about 490
+  KB) and the CSV is built in the browser. The 1924-2016 CNDSS extract on
+  health.canada.ca is the latest file (catalogued).
+- Drug Analysis Service and CIPARS: date-stamped file names
+  (`YearlyCounts_20260105.csv`, `Figure_1_CIPARS_R_Combine_12_02_2025.csv`)
+  that change with each update; not catalogued. CIPARS ZIP downloads were
+  not checked.
+- `/oral-health/` answered HTTP 403.
+
+Three catalogued files carry a year in their name and will move with the
+next release (`TB_incidence_by_PT_2015-2024.csv`,
+`reformatted_data_2025.csv`, `HoPiC-data-2026.zip`); the live smoke test
+reports them as NotFound when that happens. Many other interactive
+reports load small figure CSVs (perinatal trends, cold injuries, PTSD,
+AMR) that could be added as catalogue entries.
+
+Checked values: apparent opioid toxicity deaths in Canada in 2023 are
+8,083 in the 2026-09-22 file; tuberculosis incidence in Nunavut in 2024
+is 87.5 per 100,000 (36 cases); the measles file of 2026-09-21 counts 311
+cases in Alberta this year.
+
+Terms: Health Infobase pages link the Canada.ca terms and conditions;
+the files also listed on open.canada.ca carry the Open Government
+Licence - Canada.
 
 ## ESDC (Employment and Social Development Canada)
 
@@ -843,6 +955,62 @@ Motor Vehicle Safety Recalls Database API
 (data.tc.gc.ca/v1.3/api/{eng,fra}/vehicle-recall-database): search by make,
 model and model-year range, and a bilingual …
 
+## Government of Canada Recalls and Safety Alerts
+
+**Status:** Shipped.
+
+Shipped 2026-09-26: `modules/recalls/` with `recalls_search`,
+`recalls_summarize` and `recalls_get`, covering recalls-rappels.canada.ca
+(Health Canada drugs, natural health products, medical devices, consumer
+products and cannabis; CFIA food; Transport Canada vehicle notices).
+Health Canada's Drug Product Database stays out of scope.
+
+Access paths checked live 2026-09-26:
+
+- **Open-data dump (chosen).** The federal CKAN dataset "Recalls and
+  Safety Alerts" (d38de914-c94c-429b-8ab1-8776c31643e3, `hc-sc`) links one
+  JSON and one CSV file per language under
+  recalls-rappels.canada.ca/sites/default/files/opendata-donneesouvertes/:
+  `HCRSAMOpenData.json` (about 15.7 MB) and `SCRSAMDonneesOuvertes.json`
+  (about 20.8 MB), not gzip-compressed, regenerated daily (Last-Modified
+  around 02:19 UTC). Each holds the same 34,131 NIDs, 1991 to date,
+  14,444 of them archived. English keys: NID, Title, URL, Organization,
+  Product, Issue, "What you should do", Category, "Recall class",
+  "Last updated", Archived; the French file uses Titre, Produit,
+  Problème, "Ce que vous devriez faire", Catégorie, "Classe de rappel",
+  "Dernière mise à jour", Archivé.
+- **Recall pages.** `/{lang}/node/{nid}` answers 302 to the notice's page,
+  404 for an unknown id. Current pages expose Drupal fields with the same
+  class names in both languages (product, issue type, full category path,
+  hazard type, recall date, distribution, companies, agency id such as
+  the Transport Canada recall number, affected products table). Notices
+  migrated from the old site use a legacy layout: a `<dl>` header and free
+  HTML. A notice untranslated into French is served at /fr/ in English.
+- **Not used.** The site's search (`/en/search/site`) is HTML and shows
+  only non-archived notices: its total (19,690) and per-year facets match
+  the dump's non-archived rows by "Last updated" year, so the dump is a
+  superset. The old healthycanadians.gc.ca `recall-alert-rappel-avis/api/`
+  JSON API still answers but stops at October 2021. The RSS feeds carry
+  only the last few notices per feed. Older CFIA-only CKAN datasets
+  (Class I recalls 2018-2021) are narrower and remain reachable through
+  `ckan_*`.
+
+Quirks handled: over 22,000 titles have leading or trailing spaces;
+Product is null on 18,762 rows; Last updated is null on 2,717 Transport
+Canada rows; "What you should do" is flattened HTML with `&nbsp;` and run-on
+paragraphs; zero-width spaces in some titles; recall class is "" or "--"
+when absent and can be a range ("Type I - Type II"); a few URLs point to
+the other language's page. The dump's Organization is a publishing unit
+(nine values, such as "Medical devices" or "Communications and Public
+Affairs Branch"), so agency is derived from it. The dump has no top-level
+product type, so `product_types` is derived from the unit and category
+leaves; for non-archived notices it matched the site's facet counts
+within 1% (vehicle 9,895 vs 9,889, health products 6,283 vs 6,285,
+consumer products 2,256 vs 2,244, food 1,263 vs 1,272). Cannabis counts
+as a consumer product, as on the site. Dates in search and counts are
+last-updated dates; recall and first-published dates exist only on the
+page.
+
 ## Elections Canada
 
 **Status:** Shipped (via `ckan_*` + new `elections_financial_returns` module).
@@ -988,6 +1156,61 @@ Shipped 2026-09-24: `modules/openparliament/` (7 `parliament_` tools) over
 api.openparliament.ca, an unofficial JSON API by OpenParliament.ca/Open
 North that re-publishes LEGISinfo, House votes, Hansard and committee
 evidence (no official …
+
+## OpenParliament committees
+
+**Status:** Shipped.
+
+Shipped 2026-09-26 in the existing `modules/openparliament/` (no new
+module): `parliament_list_committees`, `parliament_get_committee`,
+`parliament_search_committee_meetings` and
+`parliament_get_committee_meeting`, over the same api.openparliament.ca
+JSON API, headers (`Accept: application/json`, `API-Version: v1`) and rate
+limiter as the other `parliament_` tools.
+
+Verified live 2026-09-26:
+
+- `/committees/` returns the current session's 30 top-level committees
+  by default (20 per page unless `limit` is set) and takes `session`.
+  Subcommittees never appear in it, only in a committee's
+  `subcommittees`. Committee data starts with session 39-1 (2006); an
+  earlier or unknown session returns an empty list rather than 404, so
+  the tool raises NotFound for it.
+- `/committees/<slug>/` gives bilingual `name` and `short_name`,
+  `parent_url`, `subcommittees` (paths) and `sessions` (session,
+  House acronym such as FINA, ourcommons.ca `source_url`).
+- `/committees/meetings/` filters on `committee` (slug or path),
+  `session`, `date`, `date__gte`, `date__lte` and `in_camera`, newest
+  first. It silently ignores `has_evidence` and `ordering`, and an
+  unknown committee returns an empty list, so the tool checks the
+  committee's detail page when a committee filter matches nothing. List
+  rows carry no `session`; it is read from the meeting URL. Meetings on
+  notice appear with future dates and `has_evidence` false.
+- `/committees/<slug>/<session>/<number>/` adds start and end times and
+  ourcommons.ca minutes, notice and webcast links (`webcast_url` null
+  for in camera meetings). An unknown meeting returns 404 (HTML).
+- All ourcommons.ca links are English. Their French pages are on
+  noscommunes.ca with French path words (`Committees/fr/FINA?...`,
+  `DocumentViewer/fr/45-1/FINA/reunion-47/proces-verbal` and
+  `.../avis-convocation`; checked back to 39-1); only swapping `en` for
+  `fr` in a DocumentViewer link lands on an error page. With `lang="fr"`
+  the tools return those French links.
+- A meeting's transcript is `/speeches/?document=<meeting path>`, in
+  spoken order, typically 50 to 300 speeches; in camera meetings return
+  none. An unknown document path returns HTTP 400 "Invalid meeting URL"
+  as text/plain. `/speeches/` ignores `committee=`, and
+  `document__startswith` returns 400, so there is no committee-wide
+  speech search in the JSON API (full-text search over committee
+  evidence stays with `parliament_search_hansard`).
+- Witnesses have no `politician_url`. Their first attribution is
+  "Name (Title, Organization)", later ones the bare name; the English
+  form sometimes puts an honorific in the name ("National Chief ...")
+  where the French form puts it in the role. House officers ("The Clerk
+  of the Committee (...)", "Some hon. members") also lack
+  `politician_url` and are excluded from the witness list.
+- Committee studies exist only as HTML pages on openparliament.ca
+  (`/committees/activities/<id>/`, 404 on the API host), so they are
+  not exposed.
 
 ## Senate of Canada votes
 
@@ -1301,6 +1524,46 @@ Technology Products Economic Account (tables 36-10-0366, -0370, -0371,
 -0372, -0411, -0627 and more, via `wds_`) plus open.canada.ca datasets on
 clean-technology use …
 
+## PMPRB (Patented Medicine Prices Review Board)
+
+**Status:** Investigated, deferred.
+
+Checked 2026-09-26. Nothing machine-readable is published on a regular
+schedule, so no module was built.
+
+- **Federal CKAN:** the organization is `pmprb-cepmb`
+  (`organization_autocomplete?q=patent`). Its 16 records are departmental
+  plans, results reports, sustainability strategies, annual reports 2022
+  to 2024, accessibility plans and a transition binder: HTML links or
+  PDFs, none DataStore-active. A full-text search for "NPDUIS" finds
+  nothing.
+- **Annual reports** (canada.ca/en/patented-medicine-prices-review/
+  services/annual-reports.html): 2018 to 2024 as HTML and PDF. The 2024
+  page has 42 HTML tables (sales, price trends, international price
+  comparisons, R&D ratios), mostly without captions, so each would need
+  its own parser, once a year.
+- **List of patented medicines:** HTML for 2020 and 2021 (the 2021 page
+  has 103 tables, one per company), PDF for 2015 to 2019, and no list
+  after 2021.
+- **NPDUIS studies** (CompassRx, Meds Entry Watch, Meds Pipeline Monitor,
+  market intelligence reports, chartbooks): HTML pages with tables and
+  PDFs. The only spreadsheet found is the CompassRx 10th edition "data
+  companion file" (`Datacompanion-CompassRx10thEdition.xlsx`, 88 KB):
+  an overview sheet and five top-50 tables (top-selling medicines,
+  patented medicines, multi-source generics, single-source non-patented
+  medicines and manufacturers by drug cost, public plans 2022/23). The
+  9th edition, Meds Entry Watch 9th edition and the 2026 Meds Pipeline
+  Monitor pages link no data files.
+- The old site (`www.pmprb-cepmb.gc.ca`), which older editions still
+  link to, could not be checked: this session's egress allowlist refused
+  the host. Its content has moved to canada.ca.
+- The underlying NPDUIS database is CIHI's (prescription claims from
+  public drug plans); CIHI's own releases are covered by `cihi_`.
+
+Revisit if PMPRB publishes the annual report tables or NPDUIS data as
+files, or if a user needs the annual report tables badly enough to parse
+each year's HTML.
+
 ## Competition Bureau Canada
 
 **Status:** Shipped.
@@ -1312,6 +1575,92 @@ reviews). Checked 2026-09-25: the merger-review reports are full HTML tables
 parties, dates, NAICS and outcome; the Tribunal's decisions site refuses
 automated requests, and enforcement and market studies are PDFs.
 [Details](docs/findings/competition-bureau.md)
+
+## Financial Consumer Agency of Canada (FCAC)
+
+**Status:** Shipped.
+
+Checked and shipped 2026-09-26 as `modules/fcac/`
+(`fcac_search_credit_cards`, `fcac_get_credit_card`,
+`fcac_search_bank_accounts`, `fcac_get_bank_account`).
+
+What FCAC publishes:
+
+- **Federal CKAN:** the organization is `fcac-acfc`. Its 36 records are
+  annual reports, fees reports, access to information and privacy
+  reports, accessibility plans and committee briefing books, all HTML
+  links, none DataStore-active. Full-text searches for bank fees, credit
+  card comparison and financial literacy find nothing from FCAC.
+- **Research and Data Exchange** (fcac-research-recherche-acfc.canada.ca,
+  a Power Pages site): a catalogue of three survey datasets (Monthly
+  Financial Well-being Monitor, 63,412 responses from August 2020 to
+  December 2025; Canadian Financial Capability Survey; 2018 Financial
+  Well-being Survey). Each is released only through a data-sharing
+  request form. The well-being dashboard is a Power BI "publish to web"
+  embed, not an API.
+- **Complaints and compliance:** the 2024-2025 annual report is one HTML
+  page (9 tables, complaints discussed in the text). Commissioner's
+  decisions and summaries of proceedings (penalties since 2012, e.g. a
+  $4.25M penalty paid by RBC in April 2026) are prose on one HTML page.
+  No data files.
+- **Comparison tools** (itools-ioutils.fcac-acfc.gc.ca): the Credit Card
+  Comparison Tool (`/CCCT-OCCC/`) and the Account Comparison Tool
+  (`/ACT-OCC/`). Financial institutions supply and update the products.
+  This is the one regularly updated, product-level data FCAC publishes,
+  and it exists nowhere else, so the module reads it.
+
+How the tools work (confirmed with plain HTTP requests, English and
+French):
+
+- They are ASP.NET WebForms pages with no JSON and no export (the "Print
+  or save as PDF" button prints the page). A search is a GET of
+  `SearchFilter-{eng|fra}.aspx` for the session cookie and view state,
+  then a POST of the filters, answered by a 302 to
+  `SearchResult-{lang}.aspx`. Results are ten per page behind
+  `__doPostBack` pager links, including "..." links to the next block of
+  five pages. A product's detail page opens only by posting its "View
+  details" button from the result page it is on; product ids (GUIDs in a
+  hidden field, the same in both languages) have no URL of their own. A
+  fresh-session GET of the detail page redirects to
+  `SessionExpired-eng.aspx`.
+- Form values: provinces are numeric and differ between the two tools
+  (Ontario is 7 for cards and 16 for accounts; posting "ON" redirects to
+  `Error.aspx`). Currencies are CAD, USD and other. The card form hides
+  "student" and "secured card" behind a "Show more optional filters"
+  postback; student adds 6 student cards to Ontario's 95, secured returns
+  the 25 secured cards. "Carry a balance" left the Ontario list at 95.
+  The account form takes chequing or savings and nine customer groups
+  (senior, GIS recipient, RDSP beneficiary, youth, student, newcomer,
+  Indigenous, social assistance, Disability Tax Credit); a group adds its
+  accounts (Ontario chequing: 61, 69 with senior, 72 with student).
+- Counts seen: credit cards 95 in Ontario, 84 in Quebec, 119 in British
+  Columbia, 5 in USD (Ontario), none in "other" currency; accounts 61
+  chequing and 38 savings in Ontario, 42 savings in British Columbia, 6
+  USD savings in Alberta. Walking the 10 pages of Ontario cards takes
+  about 2 seconds.
+- Card rows give name, institution, annual fee, purchase rate (sometimes
+  a range, e.g. 21.90% to 29.90%), currency and reward categories.
+  Chequing rows give the monthly fee, included transactions and the
+  low-cost/no-cost flag; savings rows give an interest rate instead and
+  name their button `btnViewItemDetailSavings`.
+- Detail pages are grey title blocks whose element ids name the section
+  (`lblAnnualFeeTitle`, `lblInteresrRateTitle` with the site's typo,
+  `lblNSFFeesTitle`, `Label1` for account history), with labelled items
+  as `<strong>Label: </strong>value`. The module keys sections by those
+  ids, so keys are the same in both languages. Savings interest rates
+  come as balance tiers.
+- French pages write "30,95 $", "6 000,00 $" (non-breaking spaces) and
+  "10,9000 %", and French result order can differ from English for equal
+  fees. No-fee wording varies: "No annual fee", "No fee", "None",
+  "Aucun frais annuel", "Sans frais", "Aucun".
+
+The module walks the full result list once per province and option set
+(cached six hours), filters, sorts and limits locally, and checks the
+number of products read against the page's own count, so a short walk
+raises instead of being cached. Each call runs in its own cookie jar; a
+session-expired or error page is retried once in a new session. Terms:
+Canada.ca terms apply. The tools state that the information is provided
+by financial institutions and that additional fees may apply.
 
 ## CAPP Statistics Handbook (Canadian Association of Petroleum Producers)
 
@@ -1338,6 +1687,292 @@ user agent), and so does the guest search of the registry. The catalogue
 metadata is reachable through `ckan_*`, but the data files are not.
 Revisit if the files move to open.canada.ca storage or the challenge is
 lifted.
+
+## Canadian Grain Commission
+
+**Status:** Shipped.
+
+Checked and shipped 2026-09-26 as `modules/cgc/` (`cgc_weekly_describe`,
+`cgc_weekly_query`, `cgc_exports_describe`, `cgc_exports_query`).
+
+**Federal CKAN.** `organization_autocomplete?q=grain` gives the slug
+`cgc-ccg`: 13 datasets, none with a DataStore resource. The useful ones
+(Grain Statistics Weekly, Canadian grain exports, Grain deliveries at
+prairie points, Producer cars statistics) list per-crop-year CSVs on
+grainscanada.gc.ca, but the records were last updated in October 2024 and
+stop at crop year 2024-25; 2025-26 and the current 2026-27 are not listed.
+"Exports of Canadian grain and wheat flour" points to
+`/exports-grain-wheat-flour/csv/exports.csv`, which now answers HTTP 200
+with the site's "Error 404" page. So `ckan_*` does not reach current CGC
+data, which is why a module was built.
+
+**Reaching grainscanada.gc.ca.** A plain `curl` from the sandbox fails in
+the TLS handshake with `SSL_ERROR_SYSCALL`, as reported, but not every
+time and not because of ALPN: curl offers `h2,http/1.1` in every case, and
+the same URL succeeded with `--http2` and mostly with `--http1.1` in the
+same minute. With httpx and fresh connections to the bare host, 3 of 15
+failed with `http2=False` and 2 of 5 (on the 25 MB file) with
+`http2=True`; the `www.` host passed 30 of 30 in one run and failed once
+in a later curl run. The failures are intermittent handshake drops on the
+server side, unlike StatCan's fixed ALPN block. The module uses
+`www.grainscanada.gc.ca` (the site's own links do) through the shared
+client (`http2=True`) and retries connection failures up to 9 times in
+all (3 passes over the shared client's 3 attempts). No failure reached
+the tools in the live runs.
+
+**Grain Statistics Weekly.** The landing page links the current crop
+year's CSV (`/en/grain-research/statistics/grain-statistics-weekly/2026-27/gsw-shg-en.csv`,
+2.7 MB and 24,507 rows after 7 weeks; the page still says "15.0 mb")
+plus one Excel file per week; an archive page lists 2017-18 to 2025-26
+and the CKAN record adds 2013-14 to 2016-17. All 14 English files were
+downloaded and parsed:
+
+- Long format: crop year, grain week, week-ending date, worksheet,
+  metric, period (`Current Week` or `Crop Year` to date), grain, grade,
+  region, Ktonnes (thousands of tonnes). The same 12 worksheets every
+  year: Primary, Process, Primary Shipment Distribution, Producer Cars,
+  Feed Grains, Feed Grains Shipment Distribution, Terminal Receipts,
+  Terminal Exports, Terminal Stocks, Terminal Disposition, Imported
+  Grains, Summary.
+- A full crop year is 131,000 to 219,000 rows and 12 to 25 MB (2024-25:
+  219,182 rows, 24.7 MB).
+- The header changes: `crop_year,grain_week,...` to 2016-17,
+  `grain_week,crop_year,...` from 2017-18 to 2023-24, and quoted Title
+  Case (`"Crop Year","Grain Week",...`) from 2024-25. English files up to
+  2017-18 sit in a `csv/` subfolder.
+- Week-ending dates are day/month/year, zero-padded or not
+  (`09/08/2026`, `11/8/2013`). Week 52 can end on July 31 rather than a
+  Sunday. Some years skip a week number (2018-19 starts at week 2).
+- Values carry thousands separators to 2023-24 (`1,191.10`), negative
+  adjustments in brackets (`(0.4)`), and blank cells as `""` or `.`.
+- Rows with no region are national totals (Process worksheet).
+- The 2025-26 file does not keep week order (its first rows are
+  `Crop Year` rows of week 1).
+- `All grades combined` is used for grains not reported by grade (peas):
+  in the 2026-27 file it never overlaps per-grade rows, so summing over
+  grades does not double count.
+
+French files (`/fr/recherche-donnees/statistiques/statistique-hebdomadaire/26-27/gsw-shg-fr.csv`,
+two-digit crop years) are Windows-1252 with French headers and labels
+("Silos primaires", "Livraisons", "Blé", "Semaine en cours"). Since
+2025-26 the accented letters are missing from the header ("Silo Agr",
+"Activit"); the 2014-15 file writes dates as `10AUG2014`. Row counts
+differ slightly from the English file (2025-26: 218,434 French rows,
+218,374 English), and the French Summary worksheet has a "La semaine
+précédente" period the English one lacks. French names are not spelled
+consistently: the weekly files write "Colombie britannique" and "Saint
+Laurent", the exports file "Saint-Laurent", and the French exports file
+splits Vietnam across "Viet-Nam" (2013) and "Vietnam" and Côte d'Ivoire
+across "Cote-d'Ivoire" and "Côte d'Ivoire"; China is "R.P. de Chine".
+Filters therefore ignore hyphens, spaces and apostrophe style, and an
+unknown value lists the names that contain it ("Chine" suggests "R.P. de
+Chine").
+
+Checked values: week 7 of 2026-27 (ending 2026-09-20) gives canola
+deliveries to primary elevators of 55.1, 217.7, 91.8 and 2.6 thousand
+tonnes in Manitoba, Saskatchewan, Alberta and British Columbia, 367.2 in
+total, the same as the CGC's week 7 Excel report. The file for that week
+has Last-Modified Thursday 2026-09-24.
+
+**Monthly exports.** "Exports of grain from licensed facilities"
+(`/en/grain-research/statistics/exports-grain-licensed-facilities/csv/exports.csv`,
+French `/fr/recherche-donnees/statistiques/exportations/csv/exportation.csv`):
+50,397 rows, January 2013 to July 2026 (Last-Modified 2026-08-24), with
+year, month name, grain (42 names, including imported and "US" grains),
+grade (`--` when ungraded), Ktonnes, elevator type (PRIMARY, TERMINALS,
+CONTAINER), port region, world region (blank for "Not Specified") and
+destination (156 countries). The English file is Windows-1252
+("Türkiye"). The CSV lags the monthly Excel files by about a month.
+Canola exports to China P.R. in calendar 2025 sum to 2,125.7 thousand
+tonnes.
+
+**What was built.** Describe tools list the weeks, worksheets and their
+metrics, periods, grains, regions and grades (or the export dimensions);
+query tools filter (ignoring case, accents, hyphens, spaces and
+apostrophe style; one value or a list),
+bound weeks or years, and either return published rows or sum per week
+(or per month, calendar year or crop year for exports) over the columns
+not kept in `group_by`. Summing weekly rows refuses to mix metrics or
+periods. Weekly tables are held column-wise so a full crop year costs a
+few MB of memory. `lang="fr"` reads the French files.
+
+Not covered: grain deliveries at prairie points (annual), producer car
+allocations (a separate weekly CSV; the weekly file's Producer Cars
+worksheet has the shipments), elevator charge summaries, varieties by
+acreage insured, grain quality data, and the Excel-only weekly reports.
+
+## Agriculture and Agri-Food Canada (AAFC)
+
+**Status:** Covered (via `ckan_*`).
+
+Checked 2026-09-26. `organization_autocomplete?q=agriculture` gives
+`aafc-aac`: 399 datasets, all under the Open Government Licence. Most are
+geospatial (Annual Crop Inventory, soil surveys and Soil Landscapes of
+Canada, agroclimate indicators, Canadian Drought Monitor, crop spatial
+density, grain elevator locations), served as GeoTIFF, file geodatabase,
+GeoJSON and ESRI REST.
+
+The market information is a set of bulk files on `od-do.agr.gc.ca`, each
+a CSV, JSON and XML with bilingual columns and an HTML data dictionary:
+
+| Dataset | File | Latest data on 2026-09-26 |
+|---|---|---|
+| Weekly Red Meat Slaughter | `WeeklyRedMeatSlaughter_AbattageAnimauxViandeRougeHebdomadaire.csv` | week ending 2026-09-19 |
+| Monthly Red Meat Slaughter | `MonthlyRedMeatSlaughter_AbattageAnimauxViandeRougeMensuelle.csv` | 2026-09-26 (month to date) |
+| Weekly Poultry Slaughter | `WeeklyPoultrySlaughter_AbattageVolailleHebdomadaire.csv` | 2026-09-19 |
+| Imports and exports of poultry and red meat | `MeatImportExport_ImportationExportationViande.csv` | 2026-09-19 |
+| Imports and exports of eggs and egg products | `Egg_ImEx_ImEx_Oeufs.csv` | 2026-09-26 |
+| Poultry and egg products in storage | `PoultryEggStorage_StockageVolaillesOeufs.csv` | 2026-09-01 |
+| Dairy statistics and market information (Canadian Dairy Commission data) | `CDC_CCL.csv` | 2026-07-31 |
+| Daily Wholesale Prices Report (last 55 weeks, 42 MB; archives by 5-year zip) | `DailyWholesalePrices_PrixDeGrossistesQuotidiens.csv` | 2026-09-23 |
+| Weekly Wholesale Prices (last 55 weeks) | `WeeklyWholesalePrices_PrixDeGrossistesHebdomadaires55.csv` | regenerated nightly |
+| Horticulture Monthly Storage Reports | `MonthlyStorageReports_RapportsMensuelsEntreposage.csv` | timed out once; not read |
+| Weekly FOB Market prices | `WeeklyFOBMarketPrices_PrixDeMarcheFABHebdomadaire.csv` | 2014-05-23 (discontinued) |
+
+Every file had Last-Modified 2026-09-26 02:57 GMT: they are regenerated
+nightly, even though the CKAN records were last edited in 2023-2025.
+Their DataStore copies are not usable: twelve market resources are
+flagged `datastore_active`, but `datastore_search` answers "Resource not
+found" for eleven of them (Meat Imports Exports, both FOB price files,
+Horticulture storage, the seven Daily Wholesale Prices archive zips), and
+the one that answers (Daily Wholesale Prices, 55 weeks, 197,291 rows)
+stops at 2025-12-05.
+`ckan_get_dataset` returns the current file URLs; `ckan_datastore_search`
+should not be used for AAFC market data.
+
+AAFC's own site (agriculture.canada.ca) has no separate data portal or
+JSON API: the red meat and livestock market information pages link to
+these open.canada.ca records and to AIMIS (`aimis-simia.agr.gc.ca`), an
+interactive report generator built from HTML forms. A module would add
+typed columns and filters over files that are already current and
+reachable, so none was built. The Canadian Dairy Commission's own data
+has a separate roadmap row.
+
+## CFIA (Canadian Food Inspection Agency)
+
+**Status:** Shipped 2026-09-26: `modules/cfia/` (3 tools) for the
+inspection.canada.ca animal disease tables; the rest through `ckan_*`.
+
+### CKAN (`cfia-acia`)
+
+Checked 2026-09-26. `organization_autocomplete?q=inspection` gives
+`cfia-acia`: 267 datasets, mostly food testing results:
+
+- Animal Rabies Cases in Canada: 2011-2013, 2014-2018, 2019-2021, 2022
+  and 2023 as separate datasets, all DataStore-active (monthly counts by
+  province and species; 156 to 780 rows each).
+- Federally Reportable Aquatic Animal Diseases in Canada 2010-2025: two
+  DataStore-active CSVs (295 and 157 rows, including blank rows).
+- Federally Reportable Diseases for Terrestrial Animals in Canada
+  (2010-2021): one bulk CSV, not DataStore-active, not updated since
+  2021.
+- CFIA National Microbiological Monitoring Program data by fiscal year
+  (2015/2016 to 2024/2025), Food Safety Action Plan targeted surveys,
+  chemical residue monitoring, authenticity surveys (honey, oils, fish
+  and meat species substitution), plant pest surveillance (emerald ash
+  borer and others to 2020), Class I recalls with public warnings
+  (2018-2021), many DataStore-active.
+
+Recalls are a separate roadmap row (Government of Canada Recalls and
+Safety Alerts).
+
+### inspection.canada.ca tables (`cfia_`)
+
+Verified live on 2026-09-26 in English and French.
+
+Access and terms: robots.txt answers HTTP 200 with an empty body (no
+disallowed paths, no crawl delay). The pages link the Canada.ca terms,
+which allow non-commercial reproduction with the title, author and a
+note that it copies the version at the source URL; every result carries
+the page URL and its "Date modified" in its provenance. Retired URLs
+answer HTTP 410 (the yearly `...-canada-2025` pages and the old CFIA
+terms page), which the module reports as a layout change. The client
+sends at most one request per second. None of the tables has a JSON or
+CSV file behind it: the pages load only the WET toolkit, Adobe
+analytics and Font Awesome, and the premises table is sorted and
+filtered client-side by wet-boew attributes over the inline HTML. The
+HPAI dashboards page embeds Power BI, which was not used.
+
+Pages used (French equivalents under `/fr/sante-animaux/animaux-terrestres/maladies/declaration-obligatoire/`):
+
+- `/en/animal-health/terrestrial-animals/diseases/reportable/canada`
+  ("Federally reportable diseases for terrestrial animals in Canada").
+  Sixteen Disease/Total tables, one per year from 2011 to 2026, under an
+  `<h2>` holding the year. They are **yearly totals**, not monthly
+  counts: each total links to a per-disease "data by month" page. The
+  page states "Current as of: 2026-08-31" and was modified 2026-09-10.
+  Spot values: 2026 avian influenza 19, chronic wasting disease 7,
+  equine infectious anemia 7; 2022 avian influenza 279; 2013 equine
+  infectious anemia 36. The French page lists diseases in French
+  alphabetical order and spells scrapie "Tremblante du mouton" in 2019
+  and "Tremblante" elsewhere; avian influenza is "Notifiable avian
+  influenza" for 2014-2016. Keyed by disease, the French counts equal
+  the English ones for every year. Anaplasmosis (2011, 2013) and anthrax
+  (2011, 2012) carry table notes: anaplasmosis left the list on April 1,
+  2014, and the CFIA no longer reports anthrax detections.
+- The per-disease pages with one row per confirmation (Year, Date
+  confirmed, Location, Animal type infected; BSE adds Age of animal):
+  chronic wasting disease (`cwd/herds-infected`, 101 rows 2011-2026,
+  modified 2026-09-10, plus a separate 1996-2010 yearly table that is not
+  read), scrapie (48 rows 2011-2019, three marked atypical), bovine
+  tuberculosis (6), cysticercosis (5), BSE (3), trichinellosis (1) and
+  avian influenza before 2021 (17 flocks 2014-2016). Some rows stand for
+  several herds ("Elk (3 herds)", "Wapiti (3 troupeaux)"); counting
+  those, the detection rows add up exactly to the yearly totals for all
+  42 disease-year pairs. One bovine TB row's location is "Alberta and
+  Saskatchewan". Equine infectious anemia's page is one table per
+  province and year, stops at 2019 and was modified 2023-09-18, so only
+  its yearly totals are served; Newcastle disease links to a control
+  zone map.
+- `.../avian-influenza/latest-bird-flu-situation/investigations-and-orders`:
+  one row per infected premises since December 2021 (662 rows: Date
+  detected with a `data-order="YYYYMMDD"` sort key, premises id and
+  municipality, province, premises type, WOAH classification, primary
+  control zone, status of the order). A current premises has a hidden
+  "quarantine" span, a released one a "*" table-note link. On
+  2026-09-26: 12 current (Manitoba 6, Alberta 3, Saskatchewan 3) and 650
+  released, which matches the status-by-province table province by
+  province; by year of detection 1 (2021), 280 (2022), 132 (2023), 102
+  (2024), 121 (2025), 26 (2026). The newest was AB-IP116, County of
+  Vermilion River, detected 2026-09-26 in PCZ-337.
+- `.../latest-bird-flu-situation/status-province`: current and released
+  premises and estimated birds impacted by province (modified
+  2026-09-25; birds column "Updated: 2026-09-04"; totals 12, 650 and
+  17,561,900 birds; New Brunswick "Under 100").
+
+Quirks handled (each covered by a fixture test):
+
+- The French pages hold data errors the English ones do not: the French
+  scrapie page dates a 2019 flock "21 huin", the French avian influenza
+  page writes "9 décembre" for a flock the English page dates December
+  19, 2014, and the French premises table gives six premises another
+  detection date (AB-IP116 on September 25 against 26, ON-IP58 on
+  February 12 against 21, BC-IP196 to 199 on November 16 against 17) and
+  malformed sort keys to twelve more ("202411222", "2022061er"). Dates,
+  counts and statuses always come from the English page; `lang="fr"`
+  takes the labels (municipality, animal type, control zone "ZCP-...",
+  published date text) from the French page, joined by premises id, or
+  by row for detection pages only when every row's year lines up.
+- Premises ids hide a sort padding digit (`BC-IP<span class="wb-inv">0</span>99`
+  displays as BC-IP99). The released marker is usually inside `<sup>`
+  but not on QC-IP65, and on AB-IP84 the English page uses the French
+  label "Note de bas de page". On the French page AB-IP104's location
+  sits inside the `<sup>`.
+- Cell spellings: "Non-commercial", "captive wild" (untranslated on the
+  French page too), "non- commerciale"; "N/A - LPAI" (sometimes with a
+  no-break space) for four 2024 low pathogenic premises; N/A written
+  "s.o.", "S.O", "o.s."; two orders in one cell ("Revoked" then "PCZ-239
+  Revoked"); "Released" or "Zone libérée" for 2022 premises without a
+  zone. The French status table writes "`0" for British Columbia's
+  current premises and groups thousands with spaces; the French premises
+  table spells Prince Edward Island "Île-Prince-Édouard".
+- A missing table, renamed column, table outside a year heading or
+  unreadable count raises `UpstreamError` instead of returning partial
+  figures.
+
+Yearly totals and premises counts are maintained separately and differ
+slightly for avian influenza (2022: 279 flocks against 280 premises;
+2025: 119 against 121); both are returned as published, with a note.
 
 ## Job Bank labour market information (ESDC)
 
@@ -1486,6 +2121,148 @@ published and say so in their provenance.
 
 The interactive tools (Federal Employment Tracking Tool and others) load
 static JSON with build-hashed names; they are not covered.
+
+## Canadian Dairy Commission and provincial marketing boards
+
+**Status:** Shipped (CDC); provincial boards not built.
+
+Checked 2026-09-26; shipped the same day as `modules/cdc/` (6 tools,
+prefix `cdc_`). Live smoke test: `scripts/smoke_test_cdc.py`.
+
+### What the CDC publishes in machine-readable form
+
+- **Special milk class component prices**: one static CSV per calendar
+  year, `cdc-ccl.ca/sites/default/files/pricing/pricing_history_<year>.csv`,
+  2002 to the current year (2001 and next year answer 404 with an HTML
+  page). The "History of Special Milk Class Prices" form on
+  `/en/pricing/history` is a Drupal POST that only sets a `file_link`
+  cookie pointing at that file, so the file is read directly. Columns:
+  `Milk Class`, `Effective Date` (with a time, `2025-01-01 00:00:00`),
+  `Butterfat($/kg)`, `Proteins($/kg)`, `Other solids($/kg)`. Classes:
+  4A, 5A, 5B, 5C from 2002; 3D from April 2013; 4M from June 2020. Rows
+  are unsorted. A price the CDC does not set is `0` or blank: 4(m)
+  butterfat, 4(a) butterfat before 2024, 4(a) solids-non-fat for recent
+  months (posted around the 5th of the next month), and months not yet
+  announced (the 2026 file already has November and December rows for
+  3(d) and 4(a) butterfat). The tool returns None for these. October
+  2026 5(a) is 4.6287 / 8.6652 / 1.2415 in both the CSV and the
+  "Component Pricing" page. `cdc_get_component_prices`.
+- **Butter support price** (node 720): one HTML table, 2010-2026, labels
+  like `2024 (May)` and `2022 (Sept.)`; a plain year takes effect
+  February 1. The French page writes `10, 5662`; values are read from the
+  English page, and with `lang="fr"` the row labels (`2024 (mai)`,
+  `2023 (fév.)`) come from the French page when its rows, dates and prices
+  line up with the English ones (they did on 2026-09-26). The CDC stopped buying skim milk powder in 2017, so there
+  is no powder support price. `cdc_get_butter_support_prices`.
+- **National milk production target (total quota)**: one HTML page per
+  year, 2017-2026, linked from node 653 (earlier years by email request).
+  Layouts differ: 2017-2019 label rows `December 2019` (the English 2019
+  page has `Mars 2019`), 2020 onward only the month; 2017 and January to
+  July 2018 add a "% change from same month 1 year ago" column; 2018 is
+  split into "Total quota before August 2018" and "since August 2018" and
+  has no December; the 2023 page gives March as `34,889,4085` (kept as
+  text, value None). Tables carry the placeholder caption "Caption text".
+  Figures are read from the English pages; with `lang="fr"` the French
+  index (node 653 in French lists the same years) supplies the French
+  page linked for each year. `cdc_get_national_quota`.
+- **Harmonized Milk Classification System** (node 717): five HTML tables,
+  31 classes and subclasses, with a rowspan for 4(a)'s six product lines
+  and footnote links in `<sup>`. `cdc_get_milk_classes`.
+- **CDC market data**: `od-do.agr.gc.ca/CDC_CCL.csv` (also XML and JSON),
+  the resources of the open.canada.ca dataset "Dairy statistics and market
+  information" (`308a7041-413a-47a0-9604-ae1c55676693`, organization
+  aafc-aac, Open Government Licence - Canada, not DataStore-active). One
+  bilingual 4 MB file of 22,321 rows, regenerated daily (Last-Modified
+  2026-09-26), with four datasets: Total Production - CDC (litres by
+  province, January 2016 to July 2026), Provincial Sales P10 - CDC and
+  Sales by Region - CDC (East/West; litres, kg and dollars of butterfat,
+  protein and other solids by class and subclass, July 2020 to July 2026),
+  and Farms with milk shipments (count on August 1, 2016-2025). The data
+  dictionary lists which confidential classes are folded into others.
+  `cdc_query_market_data`. This file is AAFC-hosted but is the CDC's own
+  data; AAFC's broader dairy portal (Canadian Dairy Information Centre)
+  is left to the AAFC work.
+
+Not machine-readable: the monthly Market Updates are Articulate Rise
+presentations (`share.articulate.com`), cost of production studies and
+annual reports are PDFs, and butter and skim milk powder stocks are not
+published by the CDC. The CDC organization `cdc-ccl` on open.canada.ca
+has no datasets.
+
+Terms: the site links the Government of Canada terms (canada.ca
+transparency/terms); robots.txt disallows only admin, search and user
+paths and sets no crawl delay. The module requests at most 2 per second
+and caches past years for 7 days.
+
+### Provincial boards and national agencies
+
+| Source | Decision | Evidence (2026-09-26) |
+|---|---|---|
+| Dairy Farmers of Ontario (milk.org) | PDF only | Quota exchange archive: monthly `MMS-Exchange-Summary-<Month>-<Year>.pdf`; annual reports PDF; prices behind the industry login. robots.txt allows all. |
+| Les Producteurs de lait du Québec (lait.org) | PDF only | The statistics selector posts `action=get_statistics` to `admin-ajax.php` (allowed by robots.txt, crawl delay 5) and returns links such as `fichiers/stats/2025/202506PF.pdf`: one PDF per month and statistic (farm prices, quota prices and transactions, sales by class, production). |
+| Alberta Milk | PDF only | Monthly `quota-summary` PDFs; the quota page shows 14 months of average prices, components and quality as text only. |
+| BC Milk Marketing Board (bcmilk.com) | Blocked | Every request, robots.txt included, gets HTTP 202 with `sg-captcha: challenge`. |
+| Egg Farmers of Canada | Blocked (terms) | Weekly producer prices, cost of production, production, imports and industrial product declarations are Tableau Public views (workbook `ESPMarketInformationDataExternalv2`, profile `mis.eggs`); `<view>.csv?:showVizHome=no` exports CSV, but only the current fiscal year's default filter (3,344 producer price rows, weeks 202601-202638). The site's terms allow use "only for your own personal non-commercial purposes" and prohibit "reproduction, retransmission, distribution ... republication" without written permission. robots.txt crawl delay 10; Cloudflare answered its "Sorry, you have been blocked" page to a request made seconds after two others. |
+| Chicken Farmers of Canada | PDF only | Monthly `Market-Update-<Month>-<Year>.pdf`; robots.txt crawl delay 60. |
+| Turkey Farmers of Canada | PDF only | Yearly facts page and `turkey-stats-1974_2025.pdf` e-book. |
+| Canadian Hatching Egg Producers (chep-poic.ca) | Blocked | TLS verification fails (unable to get local issuer certificate); plain HTTP answers 403. |
+| Farm Products Council of Canada | No data | Organization `fpcc-cpac` has 0 datasets on open.canada.ca; its site reset connections. |
+
+Alternatives, named in `cdc_list_datasets`: StatCan tables through `wds_`
+(milk production and utilization 32-10-0113-01, dairy products
+32-10-0112-01, milk and cream sales 32-10-0114-01, poultry meat
+32-10-0117-01, eggs 32-10-0121-01 and 32-10-0119-01, chick and poult
+placements 32-10-0120-01, all checked through getCubeMetadata), and Global
+Affairs Canada's tariff rate quota holder lists for dairy, chicken, eggs
+and turkey through `ckan_search_datasets(portal="federal",
+fq="organization:dfatd-maecd")`.
+
+## ISED Business Number (BN) validation
+
+**Status:** Blocked.
+
+Checked 2026-09-26. No tool built; `ised_corporations_get_corporation`
+already accepts and returns business numbers for federal corporations.
+
+- **BN Web Validation Look-Up Tool**: the Treasury Board "Data Reference
+  Standard on the Business Number" (effective May 7, 2024) lists it as
+  "accessible only via login". Its link goes to ISED's Keycloak sign-in
+  (`sso.ised-isde.canada.ca/auth/realms/individual`, client
+  `bnsearch`); the application, `ised-isde.canada.ca/app/scr/isedbnapi/
+  web/searchBn-chercherNe`, answers 302 to
+  `oauth2/authorization/keycloak` without a session. CRA's privacy impact
+  assessment summary for the Web Validation Service says it "is only
+  available to government departments who have adopted the use of the BN
+  under the Terms of Use (ToU) or in the case of Provincial users a
+  Memorandum of Understanding", disclosure rests on ITA 241(4)(l) and ETA
+  295(5)(j) for program administration, and participants may not disclose
+  the results further. No public endpoint, fields or rate limits exist.
+- **CRA GST/HST Registry**: confirms one GST/HST number given the business
+  name; its terms say it "is not intended to be a search engine", may be
+  used "only to validate the GST/HST number of a business", and "any
+  commercial reproduction of the registry results is strictly
+  prohibited". It validates GST/HST accounts, not BNs in general. Not built.
+- **Canada's Business Registries** (`ised-isde.canada.ca/cbr-rec/`): a
+  public JSON API behind the search page
+  (`/cbr/srch/api/v3/search?fq=keyword:{...}`) answers without a key and
+  finds businesses by name or BN across federal and provincial registries
+  (a search for 847871746 returns Shopify Inc., BN `847871746RC0001`,
+  with its Alberta, Ontario and Quebec extra-provincial records). Its
+  terms, shown before first use and in the FAQ, say "We don't allow the
+  use of automated tools to collect data" and "You are not allowed to use
+  automated tools to copy, search or scrape data". Not built.
+- **ISED API Store** (`api.ised-isde.canada.ca`): the Federal Corporation
+  API (`/v1/corporations/{corporation_bn9}.json`, `/v2/corporations/
+  {number}/directors`) needs a `user-key` header from a plan that
+  requires login (Public Plan, 60 hits per minute). The unauthenticated
+  legacy endpoint the corporations submodule already uses covers the same
+  lookup.
+
+Confirmed live: `ised_corporations_get_corporation("4261607")` and
+`("847871746")` both return Shopify Inc. with business number 847871746.
+This covers federal corporations only; provincial corporations, sole
+proprietorships and partnerships have no public BN lookup that permits
+automated use.
 
 ## StatCan terms: SDMX, CORD, NDM
 

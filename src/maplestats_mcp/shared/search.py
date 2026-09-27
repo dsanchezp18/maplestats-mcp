@@ -35,7 +35,9 @@ def _fold(word: str) -> str:
 
 
 def tokenize(text: str) -> list[str]:
-    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    # NFKD leaves the ligatures whole, so "œufs" would never meet "oeufs".
+    text = text.casefold().replace("œ", "oe").replace("æ", "ae")
+    decomposed = unicodedata.normalize("NFKD", text)
     plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     return [_fold(word) for word in _WORD.findall(plain)]
 

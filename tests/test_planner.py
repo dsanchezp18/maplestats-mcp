@@ -72,6 +72,14 @@ def test_short_terms_do_not_match_inside_words():
     assert "transport" not in {t.topic for t in result.topics}
 
 
+def test_dairy_questions_in_both_languages():
+    english = client.plan("butterfat price and milk quota")
+    assert english.topics[0].topic == "dairy"
+    assert english.topics[0].steps[0].tool == "cdc_query_market_data"
+    french = client.plan("prix du beurre et gestion de l'offre")
+    assert "dairy" in {t.topic for t in french.topics}
+
+
 def test_no_topic_falls_back():
     result = client.plan("zebra migration")
     assert not result.topics and result.fallback_steps
@@ -80,3 +88,66 @@ def test_no_topic_falls_back():
 def test_empty_question():
     with pytest.raises(InvalidInput):
         client.plan("  ")
+
+
+def test_agriculture_routes_to_grain_and_agency_catalogues():
+    result = client.plan("How much canola did Saskatchewan farmers deliver this crop year?")
+    top = result.topics[0]
+    assert top.topic == "agriculture"
+    assert top.steps[0].tool == "cgc_weekly_query"
+    french = client.plan("exportations de blé vers la Chine")
+    assert "agriculture" in {t.topic for t in french.topics}
+
+
+def test_animal_disease_questions_reach_the_cfia_tools():
+    for question in (
+        "How many farms had avian influenza in British Columbia this year?",
+        "chronic wasting disease detections in Saskatchewan elk herds",
+        "maladies à déclaration obligatoire chez les animaux terrestres",
+        "cas de grippe aviaire au Québec",
+        "influenza aviaire dans les élevages de volailles",
+    ):
+        result = client.plan(question)
+        topic = next((t for t in result.topics if t.topic == "agriculture"), None)
+        assert topic is not None, question
+        tools = [s.tool for s in topic.steps]
+        assert {"cfia_reportable_diseases", "cfia_avian_influenza"} <= set(tools), question
+        # CKAN stays for rabies, aquatic diseases and food testing.
+        ckan = [s for s in topic.steps if s.tool == "ckan_search_datasets"]
+        assert "cfia-acia" in ckan[-1].purpose and "rabies" in ckan[-1].purpose
+
+
+def test_committee_questions_route_to_committee_tools():
+    english = client.plan("Which witnesses appeared at the finance committee meeting last week?")
+    assert english.topics[0].topic == "committees"
+    tools = [s.tool for s in english.topics[0].steps]
+    assert tools[0] == "parliament_list_committees"
+    assert "parliament_get_committee_meeting" in tools
+    french = client.plan("Qui a témoigné devant le comité de la santé ?")
+    assert french.topics[0].topic == "committees"
+    assert {"temoign", "comite"} <= set(french.topics[0].matched_terms)
+    huis_clos = client.plan("réunions à huis clos du comité permanent des finances")
+    assert "committees" in {t.topic for t in huis_clos.topics}
+
+
+def test_typographic_apostrophes_and_ligatures():
+    # The typographic apostrophe used to be dropped: "d’épargne" became "depargne".
+    assert client._normalize("Compte d’épargne") == "compte d'epargne"
+    assert client._normalize("Producteurs d’Œufs") == "producteurs d'oeufs"
+    savings = client.plan("Quel compte d’épargne offre le meilleur taux ?")
+    assert "banking" in {t.topic for t in savings.topics}
+    eggs = client.plan("production d’œufs au Canada")
+    assert "agriculture" in {t.topic for t in eggs.topics}
+    offre = client.plan("prix du lait et gestion de l’offre")
+    dairy = next(t for t in offre.topics if t.topic == "dairy")
+    assert "gestion de l'offre" in dairy.matched_terms
+
+
+def test_french_banking_spellings():
+    for question in (
+        "frais d'un compte chèque sans frais",
+        "comparer les cartes de crédit au Québec",
+        "forfait bancaire à la caisse populaire",
+    ):
+        result = client.plan(question)
+        assert result.topics[0].topic == "banking", question

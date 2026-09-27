@@ -100,6 +100,8 @@ Sources, by tool-name prefix:
   (CIPO patent lookup and search, bulk IP files and data dictionaries),
   ised_clean_growth_ (federal cleantech investment 2016-2024).
 - Competition Bureau merger reviews: competition_bureau_.
+- FCAC credit card and bank account comparison tools (fees, interest
+  rates, rewards, low-cost accounts): fcac_.
 - Parliamentary Budget Officer publications and their tables (costings of
   bills and measures, economic and fiscal outlooks): pbo_.
 - IRCC: ircc_ (Express Entry draws), ircc_monthly_ (monthly permanent and
@@ -112,10 +114,18 @@ Sources, by tool-name prefix:
   ab_economic_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
   household/commercial/industrial energy surveys): nrcan_energy_use_.
   Canada Energy Regulator (pipeline throughput, energy exports, tolls):
-  cer_. GC InfoBase federal spending and results (Estimates, Public
-  Accounts, program spending and FTEs): gc_infobase_. CIHI health-system
-  indicators (Indicator Library): cihi_. NRCan geocoding and official
-  place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
+  cer_. Canadian Grain Commission (weekly grain deliveries, stocks and
+  terminal exports; monthly grain exports by destination): cgc_. GC
+  InfoBase federal spending and results (Estimates, Public Accounts,
+  program spending and FTEs): gc_infobase_. CIHI health-system
+  indicators (Indicator Library): cihi_. PHAC Health Infobase surveillance
+  files (FluWatch+, wastewater, opioid harms, measles, TB): phac_infobase_.
+  NRCan geocoding and official place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
+  Recalls and safety alerts (Health Canada, CFIA food, all agencies): recalls_.
+  Canadian Dairy Commission (milk component and butter support prices,
+  total quota, milk production and class sales): cdc_. CFIA reportable
+  animal diseases (yearly counts, detections, avian influenza infected
+  premises): cfia_.
   Canada Gazette notices and regulations: gazette_.
   Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,
   votes, MPs and Hansard (unofficial OpenParliament.ca): parliament_.
@@ -136,6 +146,9 @@ Routing hints: many federal administrative series (IRCC permits, CRA
 tax statistics and charities, OSFI bank returns, ISED insolvency data)
 (beyond ircc_monthly_) are ordinary open.canada.ca datasets -- use ckan_search_datasets with
 portal="federal" and fq="organization:<org>" (cic for IRCC, cra-arc, osfi-bsif, ic).
+AAFC market data (red meat, poultry and eggs, dairy, horticulture prices) and
+CFIA rabies, aquatic animal disease and food testing data are there too:
+aafc-aac, cfia-acia (terrestrial reportable diseases and avian influenza: cfia_).
 
 Language: most tools accept lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's

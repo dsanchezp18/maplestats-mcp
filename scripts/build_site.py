@@ -100,6 +100,7 @@ DOMAINS: dict[str, tuple[str, str]] = {
     "government": ("Parliament, law and elections", "Parlement, droit et élections"),
     "transport": ("Transport and safety", "Transport et sécurité"),
     "geography": ("Geography", "Géographie"),
+    "agriculture": ("Agriculture and food", "Agriculture et alimentation"),
 }
 
 # One entry per modules/<key>/ directory. tests/test_site.py keeps this in
@@ -141,6 +142,14 @@ SOURCES: dict[str, Source] = {
         domain="statistics",
     ),
     "canadabuys": Source("CanadaBuys", "AchatsCanada", "national", domain="money"),
+    "cdc": Source(
+        "Canadian Dairy Commission",
+        "Commission canadienne du lait",
+        "national",
+        "CDC",
+        "CCL",
+        domain="agriculture",
+    ),
     "cer": Source(
         "Canada Energy Regulator",
         "Régie de l'énergie du Canada",
@@ -148,6 +157,22 @@ SOURCES: dict[str, Source] = {
         "CER",
         "Régie de l'énergie",
         domain="energy",
+    ),
+    "cfia": Source(
+        "Canadian Food Inspection Agency",
+        "Agence canadienne d'inspection des aliments",
+        "national",
+        "CFIA",
+        "ACIA",
+        domain="agriculture",
+    ),
+    "cgc": Source(
+        "Canadian Grain Commission",
+        "Commission canadienne des grains",
+        "national",
+        "CGC",
+        "CCG",
+        domain="agriculture",
     ),
     "cihi": Source(
         "Canadian Institute for Health Information",
@@ -234,6 +259,14 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="municipal_feed",
     ),
+    "fcac": Source(
+        "Financial Consumer Agency of Canada: comparison tools",
+        "Agence de la consommation en matière financière du Canada : outils de comparaison",
+        "national",
+        "FCAC",
+        "ACFC",
+        domain="money",
+    ),
     "gazette": Source("Canada Gazette", "Gazette du Canada", "national", domain="government"),
     "gc_infobase": Source("GC InfoBase", "InfoBase du GC", "national", domain="money"),
     "ircc": Source(
@@ -319,7 +352,23 @@ SOURCES: dict[str, Source] = {
         "DPB",
         domain="money",
     ),
+    "phac_infobase": Source(
+        "Public Health Agency of Canada: Health Infobase",
+        "Agence de la santé publique du Canada : Infobase de la santé",
+        "national",
+        "PHAC Health Infobase",
+        "Infobase de la santé (ASPC)",
+        domain="health",
+    ),
     "planner": Source("Query planner", "Planificateur de requêtes", "utility"),
+    "recalls": Source(
+        "Recalls and safety alerts",
+        "Rappels et avis de sécurité",
+        "national",
+        "Recalls",
+        "Rappels",
+        domain="health",
+    ),
     "reproduce": Source("Reproduction code", "Code de reproduction", "utility"),
     "senate": Source(
         "Senate of Canada votes",

@@ -22,3 +22,10 @@ PAGE_SIZE = 500
 MAX_ROWS = 5000
 LIMIT_DEFAULT = 50
 LIMIT_MAX = 500
+
+# Committee rosters change a few times a session. Confirmed live
+# 2026-09-26: /committees/ lists only top-level committees (subcommittees
+# appear only in a committee's `subcommittees`), and committee data
+# starts with session 39-1 (2006).
+COMMITTEE_TTL_SECONDS = 24 * 60 * 60
+RECENT_MEETINGS = 10
