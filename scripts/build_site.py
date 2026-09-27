@@ -1502,6 +1502,17 @@ def _load_charts() -> Any:
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    # The pages get each plotted chart twice, the second drawn for phones
+    # (site_charts.responsive); the ring is square and scales as it is.
+    for name in (
+        "ci_chart",
+        "grouped_bars",
+        "hbar_chart",
+        "line_chart",
+        "scatter_chart",
+        "step_chart",
+    ):
+        setattr(module, name, module.responsive(getattr(module, name)))
     return module
 
 

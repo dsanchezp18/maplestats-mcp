@@ -352,3 +352,20 @@ def test_tooltips_take_the_page_language() -> None:
         )
     )
     assert "mois 2015-01: 2.0%" in [el.text for el in line.iter(f"{NS}title")]
+
+
+def test_responsive_adds_a_narrow_drawing_for_phones() -> None:
+    """responsive() returns the chart at WIDTH and again at NARROW, each marked
+    for charts.css to show one, and leaves the module's WIDTH as it was."""
+    both = charts.responsive(charts.ci_chart)(CI_ROWS, label="x", value_format=pct)
+    wide, narrow = (
+        both[both.index(f'<svg class="chart {c}"') :] for c in ("chart-wide", "chart-narrow")
+    )
+    wide = _parse(wide[: wide.index("</svg>") + 6])
+    narrow = _parse(narrow[: narrow.index("</svg>") + 6])
+    assert (wide.get("viewBox") or "").split()[2] == str(charts.WIDTH)
+    assert (narrow.get("viewBox") or "").split()[2] == str(charts.NARROW)
+    assert charts.WIDTH == 640
+    # Crowded tick labels are thinned in the narrow drawing, never overlapped.
+    xs = sorted(float(t.get("x") or 0) for t in narrow.iter(f"{NS}text") if "c-axis" in _classes(t))
+    assert all(b - a >= 40 for a, b in pairwise(xs))

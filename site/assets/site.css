@@ -294,7 +294,7 @@ mark {
 .top-row {
   display: flex;
   align-items: center;
-  gap: 16px 28px;
+  gap: 16px 24px;
   min-height: var(--top-h);
 }
 
@@ -342,7 +342,7 @@ mark {
 .nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: clamp(18px, 1.4vw, 26px);
   margin-left: auto;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -369,7 +369,7 @@ mark {
 .top-end {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   font-size: 0.9375rem;
 }
 
@@ -384,15 +384,30 @@ mark {
   border-color: var(--ink);
 }
 
-/* Two header rows below 1000 px: the French nav and the theme switch do not
-   fit on one row at 800 px (measured). */
-@media (max-width: 1000px) {
+/* One row (brand, nav, language, theme, GitHub) needs about 1,250 px of
+   content width in French with a wide fallback font (DejaVu Sans, measured
+   when Source Sans 3 has not loaded), so the theme switch shows only its
+   icon there, and below 1380 px the nav takes a second row of its own.
+   Same breakpoint in both languages, so switching language does not
+   reflow the header. */
+@media (min-width: 1380px) {
+  .theme [data-theme-label] {
+    display: none;
+  }
+
+  .theme {
+    padding-inline: 8px;
+  }
+}
+
+@media (max-width: 1379px) {
   :root {
-    --top-h: 104px;
+    --top-h: 100px;
   }
 
   .top-row {
     flex-wrap: wrap;
+    row-gap: 8px;
     padding-block: 10px 0;
     min-height: 0;
   }
@@ -401,14 +416,95 @@ mark {
     margin-left: auto;
   }
 
+  /* The nav row runs edge to edge, so on narrow screens its links scroll
+     out under the screen edge rather than stopping at the gutter; the
+     padding keeps them aligned with the brand above. */
   .nav {
     order: 3;
-    width: 100%;
-    margin-left: 0;
-    gap: 20px;
+    flex: 0 0 calc(100% + 2 * var(--gutter));
+    min-width: 0;
+    margin-inline: calc(-1 * var(--gutter));
+    padding: 6px var(--gutter);
+    gap: 24px;
     overflow-x: auto;
-    padding-block: 10px;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--gutter);
     scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Every link gets the current page's padding, so the row is the same
+     height on every page and each link a taller tap target. */
+  .nav a,
+  .nav a[aria-current="page"] {
+    padding-block: 6px;
+  }
+
+  /* Where the links overflow, the edge they run past fades out, so the
+     row reads as one that scrolls. The header script sets data-more. */
+  .nav[data-more="end"] {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+  }
+
+  .nav[data-more="start"] {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
+  }
+
+  .nav[data-more="both"] {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent);
+  }
+}
+
+@media (max-width: 1000px) {
+  .nav {
+    gap: 20px;
+  }
+}
+
+/* Phones: brand and utilities share the first row, so the sticky header
+   stays two short rows (about 100 px) rather than three. */
+@media (max-width: 480px) {
+  .top-row {
+    column-gap: 10px;
+  }
+
+  .top-end {
+    gap: 8px;
+  }
+
+  .top-end .lang {
+    padding-inline: 6px;
+  }
+
+  .brand-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand {
+    gap: 7px;
+    font-size: 1.0625rem;
+  }
+
+  .brand svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .top-end .lang {
+    font-size: 0.8125rem;
+    padding-inline: 5px;
+  }
+
+  .theme {
+    padding-inline: 7px;
   }
 }
 
@@ -613,6 +709,29 @@ mark {
     display: block;
     width: 180px;
     height: auto;
+  }
+}
+
+/* Phones: the header already carries the mark, so the big logo goes, and
+   the hero tightens so the setup prompt starts near the first screen. */
+@media (max-width: 640px) {
+  .hero-logo {
+    display: none;
+  }
+
+  .hero {
+    padding-top: 24px;
+    row-gap: 28px;
+  }
+
+  .hero .lede {
+    margin-top: 16px;
+    padding-top: 16px;
+    font-size: 1.125rem;
+  }
+
+  .points p {
+    font-size: 1rem;
   }
 }
 
@@ -2046,18 +2165,6 @@ mark {
   height: auto;
 }
 
-/* On a phone the chart keeps a readable width and scrolls inside its frame,
-   rather than shrinking its labels to a few pixels. */
-@media (max-width: 640px) {
-  .chart-wrap {
-    overflow-x: auto;
-  }
-
-  .chart-wrap .chart {
-    min-width: 560px;
-  }
-}
-
 .chart-wrap figcaption {
   margin-top: 10px;
 }
@@ -2484,16 +2591,6 @@ mark {
   padding-block: 12px 96px;
 }
 
-@media (max-width: 900px) {
-  .atlas-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .atlas-index {
-    display: none;
-  }
-}
-
 .atlas-index {
   position: sticky;
   top: calc(var(--top-h) + 128px);
@@ -2527,6 +2624,19 @@ mark {
 
 .atlas-index .count {
   margin-left: auto;
+}
+
+/* One column: the index would sit sticky over the tool list, so it goes;
+   the search and the source chips above do its job. After the base rule,
+   which would otherwise win. */
+@media (max-width: 900px) {
+  .atlas-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .atlas-index {
+    display: none;
+  }
 }
 
 .mod,
@@ -4217,3 +4327,35 @@ h2.sub {
   margin-top: 0;
 }
 
+
+/* ---------- Print ----------
+   The header keeps only the brand, and controls that do nothing on paper
+   (nav, language and theme switches, copy buttons) go. Charts are handled
+   in charts.css. */
+@media print {
+  .top {
+    position: static;
+  }
+
+  .skip,
+  .nav,
+  .top-end,
+  .theme,
+  [data-copy-target],
+  .copy {
+    display: none !important;
+  }
+
+  .step-text,
+  .stanza-text,
+  .atlas-index {
+    position: static;
+  }
+
+  figure,
+  pre,
+  .panel {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

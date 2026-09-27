@@ -22,22 +22,56 @@ from datetime import date
 from itertools import pairwise
 
 __all__ = [
+    "NARROW",
     "ci_chart",
     "grouped_bars",
     "hbar_chart",
     "line_chart",
+    "responsive",
     "ring_chart",
     "scatter_chart",
     "step_chart",
 ]
 
 WIDTH = 640
+# A phone's chart column is 288-360 px; drawn 640 units wide it shows the
+# 11-unit text at about 6 px. responsive() adds a second drawing this wide,
+# which charts.css shows instead on small screens.
+NARROW = 400
 
 # Font sizes (viewBox units) must match charts.css; widths are estimates.
 _MONO_PX = 11.0  # .c-axis, .c-value, .c-legend
 _LABEL_PX = 12.5  # .c-label
 _MONO_CHAR = 0.6  # a monospace glyph is ~0.6em wide
 _TEXT_CHAR = 0.56  # a generous average for the proportional label font
+
+
+def responsive[**P](draw: Callable[P, str]) -> Callable[P, str]:
+    """``draw`` returning its chart twice: at WIDTH, and at NARROW for phones.
+
+    The two ``<svg>``s are marked ``chart-wide`` and ``chart-narrow`` and
+    charts.css displays one of them, so the other is out of the page and
+    the accessibility tree. Only the narrow drawing's ``<svg>`` is added: any
+    markup ``draw`` returns after it (a data table) appears once.
+    """
+
+    def both(*args: P.args, **kwargs: P.kwargs) -> str:
+        global WIDTH
+        wide = draw(*args, **kwargs)
+        saved, WIDTH = WIDTH, NARROW
+        try:
+            narrow = draw(*args, **kwargs)
+        finally:
+            WIDTH = saved
+        narrow_svg = narrow[: narrow.index("</svg>") + len("</svg>")]
+        end = wide.index("</svg>") + len("</svg>")
+        return (
+            wide[:end].replace('<svg class="chart"', '<svg class="chart chart-wide"', 1)
+            + narrow_svg.replace('<svg class="chart"', '<svg class="chart chart-narrow"', 1)
+            + wide[end:]
+        )
+
+    return both
 
 
 def _n(x: float) -> str:
@@ -203,14 +237,21 @@ def ci_chart(
     ticks = _ticks(min(lows), max(highs))
     x = _scale(ticks[0], ticks[-1], left, right)
 
+    # In a narrow drawing the tick labels can run into each other; then
+    # only every second (or third) one is labelled.
+    tick_w = max(_mono_w(value_format(t)) for t in ticks) + 8
+    spacing = (right - left) / max(len(ticks) - 1, 1)
+    every = max(1, math.ceil(tick_w / spacing))
+
     out = [_open(height, label)]
-    for t in ticks:
+    for k, t in enumerate(ticks):
         xt = x(t)
         out.append(
             f'<line class="c-grid" x1="{_n(xt)}" y1="{_n(top)}" '
             f'x2="{_n(xt)}" y2="{_n(plot_bottom)}"/>'
         )
-        out.append(_text(xt, plot_bottom + 18, value_format(t), "c-axis", "middle"))
+        if k % every == 0:
+            out.append(_text(xt, plot_bottom + 18, value_format(t), "c-axis", "middle"))
     if ticks[0] < 0 < ticks[-1]:
         x0 = x(0)
         out.append(
