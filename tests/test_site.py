@@ -3,13 +3,19 @@
 Its hand-kept tables (SOURCES, FAMILIES, PORTAL_PLACES) must cover every
 module, sub-API and portal, and the search it ships to the browser must
 rank tools exactly as search_tools does, because the site says it does.
+The French pages must read as French: English only where it is marked.
 """
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
+import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = ROOT / "src" / "maplestats_mcp" / "modules"
@@ -147,7 +153,10 @@ def test_case_captures_are_complete():
     """Each case study is recorded calls with their source and, for the first, scripts."""
     import json
 
-    for key in (*site.CASE_KEYS, "counts", "statcan"):
+    french = [path.stem for path in site.CASES_DIR.glob("*_fr.json")]
+    # A French capture stands in for a case on the French pages, so it needs its case.
+    assert {key.removesuffix("_fr") for key in french} <= set(site.CASE_KEYS)
+    for key in (*site.CASE_KEYS, *french, "counts", "statcan"):
         case = json.loads((site.CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
         assert case["captured"] and case["calls"], key
         for call in case["calls"]:
@@ -186,3 +195,133 @@ def test_french_pages_link_to_french_pages():
     assert 'href="../assets/site.css"' in out
     assert 'href="https://example.org/a.html"' in out
     assert 'data-pages=""' in out
+
+
+# --------------------------------------------------------------------------
+# French pages read as French.
+# --------------------------------------------------------------------------
+
+# Common English words and the site's own English labels. On a French page,
+# English is allowed only inside code or an element marked lang="en" (the
+# server's English docstrings, the planner's plan, reproduce_code's notes).
+ENGLISH_MARKERS = re.compile(
+    r"\b(?:the|and|of|with|from|this|that|you|your|is|are|to|for)\b"
+    r"|\b(?:Use for|Keywords|Request|Response|Show|Copy|Copied|Caveat|Result|Value|tools)\b"
+    r"|\b(?:queried|Queried|Source URL)\b|\bSource:"
+    r"|\b(?:January|February|March|April|June|July|August|September|October|November|December)\b"
+)
+# Names that contain such words and stay as they are in French.
+ALLOWED_NAMES = re.compile(
+    r"Bank of Canada Valet|Model Context Protocol|Beyond 20/20"
+    r"|\b[a-z0-9]+(?:_[a-z0-9]+)+\b"  # tool and argument names
+)
+_LITERAL = {"script", "style", "code", "pre", "kbd", "samp"}
+_VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta"}
+_VOID |= {"source", "wbr"}
+_TEXT_ATTRS = ("title", "aria-label", "placeholder", "alt")
+
+
+class _FrenchText(HTMLParser):
+    """The text a reader of a page sees in French: text and text attributes."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.stack: list[tuple[str, str, bool]] = [("", "", False)]
+        self.chunks: list[str] = []
+
+    def _french(self) -> bool:
+        lang = next((lang for _, lang, _ in reversed(self.stack) if lang), "")
+        return lang.startswith("fr") and not self.stack[-1][2]
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        literal = self.stack[-1][2] or tag in _LITERAL
+        self.stack.append((tag, values.get("lang") or "", literal))
+        if self._french():
+            self.chunks += [values[a] or "" for a in _TEXT_ATTRS if values.get(a)]
+            if tag == "meta" and values.get("name") == "description":
+                self.chunks.append(values.get("content") or "")
+        if tag in _VOID:
+            self.stack.pop()
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag not in _VOID:
+            self.stack.pop()
+
+    def handle_endtag(self, tag: str) -> None:
+        if any(name == tag for name, _, _ in self.stack[1:]):
+            while self.stack.pop()[0] != tag:
+                pass
+
+    def handle_data(self, data: str) -> None:
+        # Collapse ASCII whitespace only: the no-break spaces are what is checked.
+        text = re.sub(r"[ \t\r\n]+", " ", data).strip(" ")
+        if text.strip() and self._french():
+            self.chunks.append(text)
+
+
+def french_text(page: Path) -> list[str]:
+    parser = _FrenchText()
+    parser.feed(page.read_text(encoding="utf-8"))
+    return parser.chunks
+
+
+@pytest.fixture(scope="module")
+def built_site(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    out = tmp_path_factory.mktemp("built") / "site"
+    asyncio.run(site.build(out))
+    return out
+
+
+def test_french_pages_have_no_unmarked_english(built_site: Path):
+    """English on a French page is either code or inside a lang="en" element."""
+    pages = sorted((built_site / "fr").glob("*.html"))
+    assert pages
+    leaks = []
+    for page in pages:
+        for chunk in french_text(page):
+            if ENGLISH_MARKERS.search(ALLOWED_NAMES.sub("", chunk)):
+                leaks.append(f"fr/{page.name}: {chunk[:120]}")
+    assert not leaks, "English on French pages:\n" + "\n".join(leaks[:25])
+
+
+def test_french_pages_space_their_punctuation(built_site: Path):
+    """No plain space where French wants a no-break one, and none missing."""
+    problems = []
+    for page in sorted((built_site / "fr").glob("*.html")):
+        for chunk in french_text(page):
+            # A plain space before the mark, or no space at all.
+            plain = re.search(r" [:;?!%»]|« |\w[;?!](?:\s|$)|\w:(?:\s|$)|\d%", chunk)
+            if plain:
+                problems.append(f"fr/{page.name}: …{chunk[max(0, plain.start() - 30) :][:70]}")
+    assert not problems, "French punctuation spacing:\n" + "\n".join(problems[:25])
+
+
+def test_french_punctuation_rules():
+    fix = site.french_punctuation
+    nb, nnb = "\u00a0", "\u202f"
+    assert fix("Le plus simple : demandez") == f"Le plus simple{nb}: demandez"
+    assert fix("directement; chaque chiffre") == f"directement{nnb}; chaque chiffre"
+    assert fix("depuis 2020?") == f"depuis 2020{nnb}?"
+    assert fix("13,3 %") == f"13,3{nnb}%"
+    assert fix("«texte»") == f"«{nb}texte{nb}»"
+    # URLs, times, codes and a mark already spaced are left alone.
+    for same in ("https://ouvert.canada.ca", "EPSG:4326", "a;b", f"fin{nb}: suite", "18 h 27"):
+        assert fix(same) == same
+    # A mark at the start of a text follows a tag: it is spaced if a word precedes.
+    assert fix(": notes", before="e") == f"{nb}: notes"
+    assert fix(": notes", before=" ") == ": notes"
+
+
+def test_french_typography_skips_code_and_english():
+    page = (
+        '<html lang="fr"><p title="Note: x">Résultat: <code>a: b</code>'
+        '<span lang="en">Source: here</span> fin?</p><script>if(a?b:c);</script></html>'
+    )
+    out = site.french_typography(page)
+    assert 'title="Note\u00a0: x"' in out
+    assert "Résultat\u00a0: <code>a: b</code>" in out
+    assert '<span lang="en">Source: here</span>' in out
+    assert "fin\u202f?" in out
+    assert "<script>if(a?b:c);</script>" in out
