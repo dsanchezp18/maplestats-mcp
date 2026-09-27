@@ -1364,6 +1364,8 @@ async def build(out: Path) -> dict[str, int]:
         "catalogue_count": str(counts["catalogue_count"]),
         "local_catalogue_count": str(counts["local_catalogue_count"]),
         "local_plus_federal": str(len(national) - 3 + counts["local_catalogue_count"]),
+        # "more than N": the source count rounded down to the multiple of 5 below it
+        "sources_over": str((len(national) + counts["local_catalogue_count"] - 1) // 5 * 5),
         "local_source_count": str(counts["local_source_count"]),
         "search_top": str(index["top"]),
         "reproduce_tabs": await reproduce_tabs(),
