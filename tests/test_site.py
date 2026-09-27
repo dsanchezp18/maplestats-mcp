@@ -111,5 +111,8 @@ def test_case_captures_are_complete():
             response = call["response"]
             provenance = (response[0] if isinstance(response, list) else response)["provenance"]
             assert provenance["url"].startswith("https://"), key
-        if key != "counts":
-            assert {"r", "python"} <= set(case["calls"][0]["scripts"]), key
+        if key == "counts":
+            continue
+        first = case["calls"][0]
+        # A web page the tool parses has no script, only reproduce_code's note why.
+        assert {"r", "python"} <= set(first["scripts"]) or first["script_notes"], key

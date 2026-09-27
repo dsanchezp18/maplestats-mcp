@@ -93,10 +93,45 @@ def _all_charts() -> dict[str, str]:
             value_format=lambda v: f"{v:.2f}%",
             x_tick_format=january,
         ),
+        "band": charts.line_chart(
+            _monthly(60),
+            label="Inflation",
+            value_format=pct,
+            x_tick_format=january,
+            band=(1.0, 3.0, "Target range"),
+        ),
+        "scatter": charts.scatter_chart(
+            [
+                (0.0, 20.99, 0, 16, "$0, 20.99%: 16 cards"),
+                (99.0, 21.99, 0, 1, "a"),
+                (0.0, 12.9, 1, 2, "b"),
+            ],
+            series=["With rewards", "No rewards"],
+            label="Cards",
+            x_format=lambda v: f"${v:.0f}",
+            y_format=pct,
+            x_title="Annual fee",
+            y_title="Purchase rate",
+        ),
+        "hbar": charts.hbar_chart(
+            [("Patents", 1_610_458.0), ("Series", 15_937.0), ("Tables", 67.0)],
+            label="Reach",
+            value_format=lambda v: f"{v:,.0f}",
+            tick_format=lambda v: f"{v:g}",
+        ),
+        "hbar_linear": charts.hbar_chart(
+            [("Statistics", 62.0), ("Energy", 5.0)],
+            label="Tools",
+            value_format=lambda v: f"{v:.0f}",
+            log=False,
+        ),
     }
 
 
-@pytest.mark.parametrize("name", ["ci", "bars", "line", "step"])
+CHARTS = ["ci", "bars", "line", "step", "band", "scatter", "hbar", "hbar_linear"]
+
+
+@pytest.mark.parametrize("name", CHARTS)
 def test_chart_is_labelled_well_formed_svg(name: str) -> None:
     svg = _all_charts()[name]
     root = _parse(svg)
@@ -113,7 +148,7 @@ def test_chart_is_labelled_well_formed_svg(name: str) -> None:
     assert 600 <= width <= 700
 
 
-@pytest.mark.parametrize("name", ["ci", "bars", "line", "step"])
+@pytest.mark.parametrize("name", CHARTS)
 def test_no_colour_attributes(name: str) -> None:
     root = _parse(_all_charts()[name])
     for el in root.iter():
@@ -233,3 +268,35 @@ def test_empty_input_raises() -> None:
         charts.grouped_bars([], [("a", [])], label="x", value_format=pct)
     with pytest.raises(ValueError):
         charts.line_chart([], label="x", value_format=pct, x_tick_format=january)
+
+
+def test_band_is_drawn_behind_the_line_with_its_label() -> None:
+    root = _parse(_all_charts()["band"])
+    order = [_classes(el) for el in root.iter()]
+    band = next(i for i, c in enumerate(order) if "c-band" in c)
+    line = next(i for i, c in enumerate(order) if "c-line" in c)
+    assert band < line
+    assert any(el.text == "Target range" for el in root.iter(f"{NS}text"))
+
+
+def test_scatter_dot_area_grows_with_count_and_big_dots_go_first() -> None:
+    root = _parse(_all_charts()["scatter"])
+    dots = [el for el in root.iter(f"{NS}circle") if "--i" in (el.get("style") or "")]
+    radii = [float(el.get("r") or 0) for el in dots]
+    assert len(dots) == 3
+    assert radii == sorted(radii, reverse=True)
+    assert radii[0] == 16.0  # 4.5 * sqrt(16) = 18, capped at 16
+    series_two = [el for el in dots if "c-pt-2" in _classes(el)]
+    assert len(series_two) == 1
+
+
+def test_hbar_log_grid_is_powers_of_ten_and_bars_are_ordered() -> None:
+    root = _parse(_all_charts()["hbar"])
+    axis = [el.text for el in root.iter(f"{NS}text") if "c-axis" in _classes(el)]
+    assert axis == ["1", "10", "100", "1000", "10000", "100000", "1e+06", "1e+07"]
+    widths = [
+        float(el.get("width") or 0) for el in root.iter(f"{NS}rect") if "c-hbar" in _classes(el)
+    ]
+    assert widths == sorted(widths, reverse=True)
+    with pytest.raises(ValueError):
+        charts.hbar_chart([("zero", 0.0)], label="x", value_format=str)

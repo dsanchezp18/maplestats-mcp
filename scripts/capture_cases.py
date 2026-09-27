@@ -65,13 +65,88 @@ CASES: dict[str, list[dict[str, Any]]] = {
         }
         for city in ("Edmonton", "Calgary")
     ],
-    # Economists: the monthly unemployment rate, Canada, seasonally adjusted
-    # (Labour Force Survey, table 14-10-0287, vector v2062815).
-    "labour": [
+    # Microeconomists: the low-income rate (LIM-AT) by immigrant generation,
+    # from the same Census microdata with replicate-weight standard errors.
+    # Only valid codes, so "not available" is not counted as either outcome.
+    "micro": [
+        {
+            "name": "statcan_pumf_tabulate",
+            "arguments": {
+                "url": CENSUS_2021_PUMF,
+                "rows": ["GENSTAT", "LOLIMA"],
+                "statistic": "share",
+                "filters": {"GENSTAT": ["1", "2", "3", "4"], "LOLIMA": ["1", "2"]},
+            },
+        },
+    ],
+    # Marketers: every credit card offered in Alberta, with its annual fee,
+    # purchase rate and rewards (FCAC's Credit Card Comparison Tool).
+    "cards": [
+        {
+            "name": "fcac_search_credit_cards",
+            "arguments": {"province": "AB", "limit": 100},
+        },
+    ],
+    # Macroeconomists: the Consumer Price Index, Canada, all-items, not
+    # seasonally adjusted (table 18-10-0004, vector v41690973). 84 months, so
+    # the page can show 72 months of 12-month inflation.
+    "macro": [
         {
             "name": "wds_get_data_from_vectors",
-            "arguments": {"vector_ids": [2062815], "latest_n": 60},
+            "arguments": {"vector_ids": [41690973], "latest_n": 84},
         },
+    ],
+    # Political scientists: what every candidate in Edmonton Centre spent in
+    # the 45th general election (election id 62), from each candidate's
+    # filed return (part 3C), then who sits for the riding now. The client
+    # ids come from the first call; four of the ten candidates report no
+    # expenses subject to the limit, and their parts come back blank.
+    "elections": [
+        {
+            "name": "elections_financial_returns_search_candidates",
+            "arguments": {"election_id": "62", "province_id": "48"},
+        },
+        *(
+            {
+                "name": "elections_financial_returns_get_financial_return_part",
+                "arguments": {"candidate_client_id": client_id, "part": "3C", "election_id": "62"},
+            }
+            for client_id in (
+                "56715",
+                "58402",
+                "58489",
+                "58206",
+                "56505",
+                "56694",
+                "56322",
+                "58267",
+                "56845",
+                "58586",
+            )
+        ),
+        {"name": "parliament_search_politicians", "arguments": {"name": "Olszewski"}},
+    ],
+    # Scientists: Canadian patent applications in IPC class G06N (computing
+    # based on biological models, which is where machine learning is
+    # classed), by filing year. The first call counts every patent with a
+    # filing date; the rest count G06N one year at a time.
+    "patents": [
+        {
+            "name": "ised_ip_horizons_search_patents",
+            "arguments": {"filed_from": "1800-01-01", "limit": 1},
+        },
+        *(
+            {
+                "name": "ised_ip_horizons_search_patents",
+                "arguments": {
+                    "ipc": "G06N",
+                    "filed_from": f"{year}-01-01",
+                    "filed_to": f"{year}-12-31",
+                    "limit": 1,
+                },
+            }
+            for year in range(2005, 2024)
+        ),
     ],
     # Analysts: the Bank of Canada's target for the overnight rate.
     "boc": [
@@ -82,10 +157,20 @@ CASES: dict[str, list[dict[str, Any]]] = {
     ],
     # The counts in the verse: how much each audience can reach.
     "counts": [
-        {"name": "statcan_pumf_list_files", "arguments": {"catalogue_number": "98M0001X"}},
+        # every page of the Data catalogue's microdata results, counted by product
+        {
+            "name": "statcan_reference_search_data",
+            "arguments": {"query": "public use microdata", "count": 100},
+            "all_pages": True,
+        },
         {"name": "ircc_monthly_list_tables", "arguments": {}},
         {"name": "wds_list_all_cubes", "arguments": {"lite": True}},
         {"name": "boc_list_series", "arguments": {}},
+        # every candidate in the 45th general election, for the count only
+        {
+            "name": "elections_financial_returns_search_candidates",
+            "arguments": {"election_id": "62"},
+        },
     ],
 }
 
@@ -106,14 +191,42 @@ def _trim(name: str, response: Any) -> Any:
             "total_tables": response["total_tables"],
             "provenance": response["provenance"],
         }
+    if name == "elections_financial_returns_search_candidates":
+        kept = [c for c in response["candidates"] if c["electoral_district"] == "Edmonton Centre"]
+        return {**response, "candidates": kept, "available_parties": [], "available_provinces": []}
+    if name == "elections_financial_returns_get_financial_return_part":
+        return {**response, "sections": {"DETAIL_DATA": response["sections"]["DETAIL_DATA"]}}
+    if name == "ised_ip_horizons_search_patents":
+        return {"total_matched": response["total_matched"], "provenance": response["provenance"]}
     if name == "statcan_pumf_list_files":
         return {"file_count": len(response["files"]), "provenance": response["provenance"]}
     return response
 
 
+async def _microdata_products(client: Client, name: str, arguments: dict[str, Any]) -> Any:
+    """Page through the Data catalogue and count distinct microdata products."""
+    products: dict[str, str] = {}
+    first: dict[str, Any] = {}
+    page = 0
+    while True:
+        response = await _call(client, name, {**arguments, "page": page})
+        first = first or response
+        documents = response["documents"]
+        for doc in documents:
+            if "microd" in (doc.get("category") or "").lower() and doc.get("catalogue_number"):
+                products[doc["catalogue_number"]] = doc["title"]
+        if len(documents) < arguments["count"]:
+            break
+        page += 1
+    return {"product_count": len(products), "pages": page + 1, "provenance": first["provenance"]}
+
+
 async def _record(client: Client, call: dict[str, Any], with_scripts: bool) -> dict[str, Any]:
     name, arguments = call["name"], call["arguments"]
-    response = _trim(name, await _call(client, name, arguments))
+    if call.get("all_pages"):
+        response = await _microdata_products(client, name, arguments)
+    else:
+        response = _trim(name, await _call(client, name, arguments))
     record: dict[str, Any] = {"name": name, "arguments": arguments, "response": response}
     if with_scripts:
         code = await reproduce.reproduce(name, arguments, "all")

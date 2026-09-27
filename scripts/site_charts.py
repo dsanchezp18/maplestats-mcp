@@ -21,7 +21,7 @@ from collections.abc import Callable, Sequence
 from datetime import date
 from itertools import pairwise
 
-__all__ = ["ci_chart", "grouped_bars", "line_chart", "step_chart"]
+__all__ = ["ci_chart", "grouped_bars", "hbar_chart", "line_chart", "scatter_chart", "step_chart"]
 
 WIDTH = 640
 
@@ -373,12 +373,15 @@ def _time_chart(
     value_format: Callable[[float], str],
     x_tick_format: Callable[[str], str | None],
     steps: bool,
+    band: tuple[float, float, str] | None = None,
 ) -> str:
     if not points:
         raise ValueError("a time chart needs at least one point")
     days = [date.fromisoformat(d).toordinal() for d, _ in points]
     vals = [v for _, v in points]
     lo, hi = min(vals), max(vals)
+    if band:
+        lo, hi = min(lo, band[0]), max(hi, band[1])
     pad = (hi - lo) * 0.08 if hi > lo else (abs(hi) * 0.1 or 1.0)
     # Padding must not push an all-positive series (a rate, a price) below
     # zero: an axis running to -2% under a policy rate reads as a claim.
@@ -403,6 +406,14 @@ def _time_chart(
             f'<line class="{cls}" x1="{_n(left)}" y1="{_n(yt)}" x2="{_n(right)}" y2="{_n(yt)}"/>'
         )
         out.append(_text(left - 8, yt + 3.8, shown, "c-axis", "end"))
+
+    if band:
+        b_lo, b_hi, b_label = band
+        out.append(
+            f'<rect class="c-band" x="{_n(left)}" y="{_n(y(b_hi))}" width="{_n(right - left)}" '
+            f'height="{_n(y(b_lo) - y(b_hi))}"/>'
+        )
+        out.append(_text(right - 6, y(b_lo) - 6, b_label, "c-band-label", "end"))
 
     # X ticks: a run of points with the same label (every day of a January in
     # daily data) gets one tick, at its first point; ticks too close to the
@@ -464,15 +475,22 @@ def line_chart(
     label: str,
     value_format: Callable[[float], str],
     x_tick_format: Callable[[str], str | None],
+    band: tuple[float, float, str] | None = None,
 ) -> str:
     """A time series as one ``c-line`` path, x proportional to time.
 
     ``points`` are (ISO date, value) in time order. An x tick goes at each
     point for which ``x_tick_format`` returns a label; the last point gets a
-    pulsing ``c-dot`` and its value.
+    pulsing ``c-dot`` and its value. ``band`` (low, high, label) shades a
+    range behind the line, such as an inflation target.
     """
     return _time_chart(
-        points, label=label, value_format=value_format, x_tick_format=x_tick_format, steps=False
+        points,
+        label=label,
+        value_format=value_format,
+        x_tick_format=x_tick_format,
+        steps=False,
+        band=band,
     )
 
 
@@ -491,3 +509,141 @@ def step_chart(
     return _time_chart(
         points, label=label, value_format=value_format, x_tick_format=x_tick_format, steps=True
     )
+
+
+# ---------------------------------------------------------------------------
+# Scatter
+
+_PT_CLASSES = ("c-pt", "c-pt-2")
+
+
+def scatter_chart(
+    points: list[tuple[float, float, int, int, str]],
+    *,
+    series: list[str],
+    label: str,
+    x_format: Callable[[float], str],
+    y_format: Callable[[float], str],
+    x_title: str,
+    y_title: str,
+) -> str:
+    """Dots at (x, y), one colour per series (at most two).
+
+    Each point is (x, y, series index, count, tooltip). Identical points are
+    passed once with their count, and the dot's area grows with it, so a
+    stack of sixteen cards at one price reads as one large dot.
+    """
+    if not points:
+        raise ValueError("scatter_chart needs at least one point")
+    if len(series) > len(_PT_CLASSES):
+        raise ValueError(f"scatter_chart draws at most {len(_PT_CLASSES)} series")
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    x_ticks = _ticks(min(0.0, min(xs)), max(xs))
+    y_ticks = _ticks(min(ys), max(ys))
+    y_labels = [y_format(t) for t in y_ticks]
+
+    height = 340.0
+    top = 44.0
+    bottom = height - 48
+    left = max(_mono_w(t) for t in y_labels) + 16
+    right = WIDTH - 16
+    x = _scale(x_ticks[0], x_ticks[-1], left, right)
+    y = _scale(y_ticks[0], y_ticks[-1], bottom, top)
+
+    out = [_open(height, label)]
+    key_x = left
+    for i, name in enumerate(series):
+        out.append(f'<circle class="{_PT_CLASSES[i]}" cx="{_n(key_x + 5)}" cy="10" r="5"/>')
+        out.append(_text(key_x + 15, 14, name, "c-legend"))
+        key_x += 15 + _mono_w(name) + 22
+    out.append(_text(left, 32, y_title, "c-axis"))
+    for t, shown in zip(y_ticks, y_labels, strict=True):
+        yt = y(t)
+        out.append(
+            f'<line class="c-grid" x1="{_n(left)}" y1="{_n(yt)}" x2="{_n(right)}" y2="{_n(yt)}"/>'
+        )
+        out.append(_text(left - 8, yt + 3.8, shown, "c-axis", "end"))
+    for t in x_ticks:
+        xt = x(t)
+        out.append(
+            f'<line class="c-grid" x1="{_n(xt)}" y1="{_n(bottom)}" x2="{_n(xt)}" y2="{_n(bottom + 5)}"/>'
+        )
+        out.append(_text(xt, bottom + 18, x_format(t), "c-axis", "middle"))
+    out.append(_text((left + right) / 2, bottom + 38, x_title, "c-axis", "middle"))
+
+    # Larger dots first, so small ones stay on top and hoverable.
+    order = sorted(range(len(points)), key=lambda k: -points[k][3])
+    for i, k in enumerate(order):
+        px, py, s_idx, count, tip = points[k]
+        r = min(4.5 * math.sqrt(count), 16.0)
+        out.append(
+            f'<circle class="{_PT_CLASSES[s_idx]}" style="--i:{i}" cx="{_n(x(px))}" '
+            f'cy="{_n(y(py))}" r="{_n(r)}"><title>{_esc(tip)}</title></circle>'
+        )
+    out.append("</svg>")
+    return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# Horizontal bars on a log scale
+
+
+def hbar_chart(
+    rows: list[tuple[str, float]],
+    *,
+    label: str,
+    value_format: Callable[[float], str],
+    log: bool = True,
+    tick_format: Callable[[float], str] | None = None,
+) -> str:
+    """One horizontal bar per (label, value), the value printed at its end.
+
+    With ``log`` (the default) the scale is log10, for counts that span orders
+    of magnitude (fifteen thousand series beside fifty portals), and each
+    gridline is a power of ten; otherwise it is linear from zero.
+    ``tick_format`` labels the gridlines when they need a shorter form than
+    the values (1k, 1M), and defaults to ``value_format``.
+    """
+    if not rows or any(v <= 0 for _, v in rows):
+        raise ValueError("hbar_chart needs positive values")
+    label_col = min(max(_label_w(name) for name, _ in rows), 250.0)
+    left = label_col + 16
+    values = [value_format(v) for _, v in rows]
+    right = WIDTH - max(_mono_w(v) for v in values) - 16
+    top = 8.0
+    row_h = 30.0
+    bottom = top + row_h * len(rows)
+    height = bottom + 26
+    if log:
+        decades = max(1, math.ceil(math.log10(max(v for _, v in rows))))
+        x = _scale(0, decades, left, right)
+        grid = [(float(d), 10.0**d) for d in range(decades + 1)]
+    else:
+        ticks = _ticks(0.0, max(v for _, v in rows))
+        x = _scale(0, ticks[-1], left, right)
+        grid = [(t, t) for t in ticks]
+
+    def position(v: float) -> float:
+        return x(math.log10(v)) if log else x(v)
+
+    out = [_open(height, label)]
+    for at, shown_tick in grid:
+        xt = x(at)
+        out.append(
+            f'<line class="c-grid" x1="{_n(xt)}" y1="{_n(top)}" x2="{_n(xt)}" y2="{_n(bottom)}"/>'
+        )
+        out.append(
+            _text(xt, bottom + 18, (tick_format or value_format)(shown_tick), "c-axis", "middle")
+        )
+    for i, ((name, v), shown) in enumerate(zip(rows, values, strict=True)):
+        yc = top + i * row_h + row_h / 2
+        w = position(v) - left
+        out.append(_text(left - 10, yc + 4.2, _truncate(name, 40), "c-label", "end"))
+        out.append(
+            f'<rect class="c-hbar" style="--i:{i}" x="{_n(left)}" y="{_n(yc - 8)}" '
+            f'width="{_n(max(w, 1.0))}" height="16"><title>{_esc(f"{name}: {shown}")}</title></rect>'
+        )
+        out.append(_text(left + w + 8, yc + 4, shown, "c-value"))
+    out.append("</svg>")
+    return "".join(out)
