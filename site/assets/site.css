@@ -422,16 +422,25 @@ mark {
   padding-block: clamp(36px, 4.5vw, 56px) clamp(48px, 5.5vw, 80px);
 }
 
-/* The logo on the left, the words on the right. */
+/* The logo on the left, the words on the right. The logo takes the height
+   of the text beside it: its top meets the cap line of the kicker and its
+   bottom the baseline of the last line. Where the column is too narrow for
+   that, the square keeps the column width and sits centred on the text. */
 .hero-logo {
   grid-column: 1 / span 4;
+  position: relative;
+  align-self: stretch;
 }
 
+/* Out of flow, so only the text sets the row height; the SVG then fits the
+   largest square it can, flush left (preserveAspectRatio="xMinYMid"). */
 .hero-logo .logo {
-  display: block;
+  position: absolute;
+  /* Top: the headline's cap line, measured at 0.145 of its size; bottom:
+     8px above the text box, where the last line's baseline sits. */
+  inset: calc(var(--h1-size, 5rem) * 0.145) 0 8px;
   width: 100%;
-  max-width: 380px;
-  height: auto;
+  height: calc(100% - var(--h1-size, 5rem) * 0.145 - 8px);
 }
 
 .logo-tile {
@@ -446,26 +455,57 @@ mark {
   grid-column: 5 / -1;
 }
 
-.hero .kicker {
-  margin-bottom: 14px;
-}
-
 .hero .lede {
-  margin-top: 28px;
+  margin-top: 22px;
   padding-top: 22px;
-  max-width: 46ch;
+  max-width: 34em;
   border-top: 2px solid var(--ink);
   font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
   line-height: 1.4;
   color: var(--ink);
 }
 
-.hero .why {
-  margin-top: 18px;
-  max-width: 62ch;
-  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
-  line-height: 1.6;
+/* What it does, and what it hands back: two short points under the lede. */
+.points {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.points p {
+  font-size: 1.0625rem;
+  line-height: 1.55;
   color: var(--ink-2);
+}
+
+.points .point-label {
+  margin-bottom: 4px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Between the stacked layout and full width, the text steps down a size so
+   it stays as tall as the logo column is wide. */
+@media (min-width: 1181px) and (max-width: 1360px) {
+  .hero .lede {
+    font-size: 1.375rem;
+  }
+
+  .points p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .points {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
 }
 
 .setup {
@@ -501,14 +541,17 @@ mark {
   content: none;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
   .hero-logo,
   .hero-text {
     grid-column: 1 / -1;
   }
 
   .hero-logo .logo {
-    max-width: 180px;
+    position: static;
+    display: block;
+    width: 180px;
+    height: auto;
   }
 }
 
@@ -1505,20 +1548,7 @@ mark {
   }
 }
 
-.note blockquote {
-  margin: 0;
-  display: grid;
-  gap: 16px;
-  max-width: 62ch;
-  font-size: clamp(1.125rem, 1.05rem + 0.35vw, 1.3125rem);
-  line-height: 1.55;
-}
 
-.note cite {
-  font-style: normal;
-  font-size: 0.9375rem;
-  color: var(--ink-3);
-}
 
 .thanks-body {
   display: grid;
@@ -1549,6 +1579,47 @@ mark {
   }
 }
 
+/* ---------- About ---------- */
+
+.about {
+  display: grid;
+  padding-bottom: clamp(56px, 7vw, 96px);
+}
+
+.about-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
+  gap: 12px clamp(20px, 3.4vw, 52px);
+  padding-block: 24px 32px;
+  border-top: 2px solid var(--ink);
+}
+
+.about-row h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.about-text {
+  display: grid;
+  gap: 14px;
+}
+
+.about-text p {
+  max-width: 66ch;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+@media (max-width: 800px) {
+  .about-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .foot {
@@ -1572,7 +1643,7 @@ mark {
 
 .foot-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.7fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 32px 48px;
 }
 
@@ -1838,6 +1909,18 @@ mark {
   max-width: 76ch;
   font-size: 0.9375rem;
   color: var(--ink-2);
+}
+
+.mod-more summary {
+  width: max-content;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mod-more[open] summary {
+  margin-bottom: 8px;
 }
 
 .mod-meta,
@@ -2278,25 +2361,22 @@ mark {
   color: var(--ink-2);
 }
 
-.note .closing {
-  font-family: var(--font-display);
-  font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.6rem);
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-}
 
 /* The headline is one line beside the logo; French runs longer, so smaller.
    Measured in Source Serif 4 at 700: the English line is 10.2 em wide, the
    French 13.1 em; both fit the eight-column text block. */
-@media (min-width: 981px) {
-  .hero h1 {
-    font-size: min(5.5vw, 5.1rem);
-    white-space: nowrap;
+@media (min-width: 1181px) {
+  .hero {
+    --h1-size: min(5.5vw, 5.1rem);
   }
 
-  html[lang="fr"] .hero h1 {
-    font-size: min(4.3vw, 4rem);
+  html[lang="fr"] .hero {
+    --h1-size: min(4.3vw, 4rem);
+  }
+
+  .hero h1 {
+    font-size: var(--h1-size);
+    white-space: nowrap;
   }
 }
 
