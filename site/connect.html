@@ -4,7 +4,6 @@
 {{> head}}
 <title>{en}Connect{fr}Connexion{/} · MapleStats MCP</title>
 <meta name="description" content="{en}Add MapleStats MCP to Claude, Cursor, VS Code, Codex or Gemini CLI, or host it over HTTP.{fr}Ajoutez MapleStats MCP à Claude, Cursor, VS Code, Codex ou Gemini CLI, ou hébergez-le en HTTP.{/}">
-<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
 </head>
 <body>
 {{> header}}
@@ -117,6 +116,7 @@ uvx maplestats-mcp</code></pre>
         </figure>
         <div class="table-wrap">
           <table class="params env">
+            <caption class="sr">{en}Environment variables for a hosted server{fr}Variables d'environnement d'un serveur hébergé{/}</caption>
             <thead><tr><th>{en}Variable{fr}Variable{/}</th><th>{en}Default{fr}Défaut{/}</th><th>{en}Purpose{fr}Rôle{/}</th></tr></thead>
             <tbody>
               <tr><td><code>MAPLE_TRANSPORT</code></td><td><code>stdio</code></td><td>{en}<code>stdio</code> for local clients, <code>http</code> for hosting{fr}<code>stdio</code> pour les clients locaux, <code>http</code> pour l'hébergement{/}</td></tr>

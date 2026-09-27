@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 import re
+import shutil
+import subprocess
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
@@ -140,7 +143,7 @@ async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
         assert index.count("<li>") == len(families)
         linked = set(re.findall(r'tools\.html#t-([a-z0-9_]+)"', text))
         assert linked and linked <= tool_names
-        boxes = re.findall(r"<pre><code>(.*?)</code></pre>", text, re.DOTALL)
+        boxes = re.findall(r"<pre tabindex=\"0\"><code>(.*?)</code></pre>", text, re.DOTALL)
         assert len(boxes) >= 12
         for box in boxes:
             plain = html.unescape(re.sub(r"<[^>]+>", "", box))
@@ -325,3 +328,176 @@ def test_french_typography_skips_code_and_english():
     assert '<span lang="en">Source: here</span>' in out
     assert "fin\u202f?" in out
     assert "<script>if(a?b:c);</script>" in out
+
+
+# --------------------------------------------------------------------------
+# The browser's search is the server's, run by node on the shipped files.
+# --------------------------------------------------------------------------
+
+# Words whose casefold() differs from a plain lower-casing, beside the usual.
+FOLD_SAMPLES = [
+    "Stra\u00dfe",
+    "STRASSE",
+    "Gro\u00dfhandel \u1e9e",
+    "\u03a3\u038a\u03a3\u03a5\u03a6\u039f\u03a3",
+    "\u1fb3 \u1fbc",
+    "\u0152uvres compl\u00e8tes",
+    "h\u00f4pitaux",
+    "\ufb01nance",
+    "journaux, prix et taux",
+]
+
+_NODE_SEARCH = """
+const fs = require("fs");
+const [siteJs, indexPath] = process.argv.slice(1);
+const { tokenize, rank } = require(siteJs);
+const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+const { queries, samples } = JSON.parse(fs.readFileSync(0, "utf8"));
+process.stdout.write(JSON.stringify({
+  ranked: queries.map((q) => rank(index, q).slice(0, index.top).map((i) => index.tools[i][0])),
+  tokens: samples.map(tokenize),
+}));
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_site_js_search_matches_the_python_search(built_site: Path):
+    """site.js, loaded by node, tokenizes and ranks as search.py and search_tools do.
+
+    test_site_search_ranks_like_search_tools ties the Python ranking to the
+    live search_tools; this ties the shipped JavaScript to that ranking.
+    """
+    node = shutil.which("node")
+    assert node
+    index_path = built_site / "assets" / "search-index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    queries = [*QUERIES, *FOLD_SAMPLES]
+    result = subprocess.run(
+        [node, "-e", _NODE_SEARCH, str(built_site / "assets" / "site.js"), str(index_path)],
+        input=json.dumps({"queries": queries, "samples": FOLD_SAMPLES}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+        timeout=60,
+    )
+    got = json.loads(result.stdout)
+    for query, names in zip(queries, got["ranked"], strict=True):
+        expected = [index["tools"][i][0] for i in site.rank(index, query)[: index["top"]]]
+        assert names == expected, query
+    for sample, tokens in zip(FOLD_SAMPLES, got["tokens"], strict=True):
+        assert tokens == site.tokenize(sample), sample
+
+
+# --------------------------------------------------------------------------
+# Accessibility and metadata of the built pages.
+# --------------------------------------------------------------------------
+
+
+def _pages(built_site: Path) -> list[Path]:
+    pages = sorted(built_site.glob("*.html")) + sorted((built_site / "fr").glob("*.html"))
+    return [p for p in pages if p.name != "404.html"]
+
+
+def test_every_page_has_canonical_and_social_metadata(built_site: Path):
+    pages = _pages(built_site)
+    assert len(pages) == 2 * len(list((ROOT / "site").glob("*.html")))
+    for page in pages:
+        text = page.read_text(encoding="utf-8")
+        lang = "fr" if page.parent.name == "fr" else "en"
+        url = site.page_url(page.name, lang)
+        where = f"{lang}/{page.name}"
+        assert url.startswith(site.SITE_URL), where
+        assert f'<link rel="canonical" href="{url}">' in text, where
+        assert f'<meta property="og:url" content="{url}">' in text, where
+        for code, other in (("en", "en"), ("fr", "fr"), ("x-default", "en")):
+            href = site.page_url(page.name, other)
+            assert f'<link rel="alternate" hreflang="{code}" href="{href}">' in text, where
+        assert '<meta property="og:type" content="website">' in text, where
+        locale, alternate = ("en_CA", "fr_CA") if lang == "en" else ("fr_CA", "en_CA")
+        assert f'<meta property="og:locale" content="{locale}">' in text, where
+        assert f'<meta property="og:locale:alternate" content="{alternate}">' in text, where
+        assert '<meta name="twitter:card" content="summary_large_image">' in text, where
+        assert f'<meta property="og:image" content="{site.SITE_URL}assets/og.png">' in text
+        title = re.search(r"<title>(.*?)</title>", text)
+        description = re.search(r'<meta name="description" content="([^"]*)">', text)
+        og_title = re.search(r'<meta property="og:title" content="([^"]*)">', text)
+        og_description = re.search(r'<meta property="og:description" content="([^"]*)">', text)
+        assert title and description and og_title and og_description, where
+        assert og_title.group(1) == title.group(1).strip(), where
+        assert og_description.group(1) == description.group(1), where
+        assert "\x00" not in text, where
+    image = site.SITE / "assets" / "og.png"
+    header = image.read_bytes()[:24]
+    assert header[:8] == b"\x89PNG\r\n\x1a\n"
+    assert int.from_bytes(header[16:20], "big") == 1200
+    assert int.from_bytes(header[20:24], "big") == 630
+    assert image.stat().st_size < 150_000
+
+
+def test_sitemap_robots_and_not_found_page(built_site: Path):
+    sitemap = (built_site / "sitemap.xml").read_text(encoding="utf-8")
+    locs = re.findall(r"<loc>([^<]+)</loc>", sitemap)
+    expected = [
+        site.page_url(p.name, lang) for p in (ROOT / "site").glob("*.html") for lang in site.LANGS
+    ]
+    assert sorted(locs) == sorted(expected)
+    robots = (built_site / "robots.txt").read_text(encoding="utf-8")
+    assert f"Sitemap: {site.SITE_URL}sitemap.xml" in robots
+    missing = (built_site / "404.html").read_text(encoding="utf-8")
+    base = "/maplestats-mcp/"
+    assert f'href="{base}assets/site.css"' in missing
+    assert f'href="{base}fr/"' in missing and '<section lang="fr">' in missing
+    # Every link and asset is absolute: the page is served at any depth.
+    assert not re.findall(r'(?:href|src)="(?!/|https://)', missing)
+
+
+def test_scrolling_boxes_take_keyboard_focus(built_site: Path):
+    """Every code block and every table box can be reached, and scrolled, by keyboard."""
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        where = page.relative_to(built_site)
+        assert not re.search(r"<pre\b(?![^>]*tabindex)", text), where
+        assert not re.search(r'<div class="cmd\b[^"]*">\s*<code\b(?![^>]*tabindex)', text), where
+        for wrap in re.finditer(r'<div class="table-wrap[^"]*"([^>]*)>', text):
+            attrs = wrap.group(1)
+            assert 'role="region"' in attrs and 'tabindex="0"' in attrs, where
+            label = re.search(r'aria-labelledby="([^"]+)"', attrs)
+            assert label and f'<caption id="{label.group(1)}"' in text[wrap.end() :], where
+
+
+def test_table_boxes_need_a_caption():
+    with pytest.raises(SystemExit):
+        site.focusable_scrollers('<div class="table-wrap"><table><thead></thead></table></div>')
+    out = site.focusable_scrollers(
+        '<pre><code>x</code></pre><div class="table-wrap post-wide"><table class="t">'
+        '<caption class="sr">Cap</caption></table></div>'
+    )
+    assert '<pre tabindex="0">' in out
+    assert 'role="region" aria-labelledby="tbl-1" tabindex="0"' in out
+    assert '<caption id="tbl-1" class="sr">Cap</caption>' in out
+
+
+def test_tab_panels_ship_visible_and_named(built_site: Path):
+    """Without scripts every panel shows, headed by its tab's name."""
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        panels = re.findall(r'<div role="tabpanel"[^>]*>', text)
+        assert all(" hidden" not in panel for panel in panels), page
+        assert text.count('<p class="tab-name">') == len(panels), page
+
+
+def test_every_chart_is_followed_by_its_data(built_site: Path):
+    for page in (built_site / "cases.html", built_site / "fr" / "cases.html"):
+        text = page.read_text(encoding="utf-8")
+        charts = re.findall(r'<svg\b[^>]*class="chart[^"]*"[^>]*>', text)
+        assert len(charts) == 9, page
+        for svg in charts:
+            ident = re.search(r'aria-details="([^"]+)"', svg)
+            assert ident, svg[:80]
+            table = text.index(f'<details class="chart-data" id="{ident.group(1)}">')
+            assert "<caption" in text[table : table + 600]
+    french = (built_site / "fr" / "cases.html").read_text(encoding="utf-8")
+    assert "<summary>Voir les donn\u00e9es</summary>" in french
+    # French numbers: a comma for decimals, a narrow no-break space before %.
+    assert re.search(r'<td class="num">\d+,\d\u202f%</td>', french)

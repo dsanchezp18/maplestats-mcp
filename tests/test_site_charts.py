@@ -352,3 +352,48 @@ def test_tooltips_take_the_page_language() -> None:
         )
     )
     assert "mois 2015-01: 2.0%" in [el.text for el in line.iter(f"{NS}title")]
+
+
+def test_data_table_follows_and_is_linked_from_its_chart() -> None:
+    svg = charts.ci_chart(CI_ROWS, label="x", value_format=pct)
+    out = charts.with_table(
+        svg,
+        ident="data-ci",
+        summary="Show the data",
+        caption="Shares <by> province",
+        head=("Province", "Estimate", "Low", "High"),
+        rows=charts.ci_rows(CI_ROWS, pct),
+    )
+    chart, table = out.split("</svg>", 1)
+    assert chart.startswith('<svg aria-details="data-ci" class="chart"')
+    # Well-formed, with a caption, a header row and one row per chart row.
+    root = ET.fromstring(table)
+    assert root.tag == "details" and root.get("id") == "data-ci"
+    assert root.findtext("summary") == "Show the data"
+    tbl = root.find("div/table")
+    assert tbl is not None and tbl.findtext("caption") == "Shares <by> province"
+    rows = tbl.findall("tbody/tr")
+    assert [r.findtext("th") for r in rows] == [name for name, *_ in CI_ROWS]
+    assert [td.text for td in rows[0].findall("td")] == ["10.3%", "9.5%", "11.2%"]
+    with pytest.raises(ValueError):
+        charts.with_table(svg, ident="x", summary="s", caption="c", head=("a",), rows=[["a", "b"]])
+
+
+def test_table_rows_come_from_the_chart_series() -> None:
+    bars = charts.bar_rows(["2020", "2021"], [("A", [1.0, None]), ("B", [2.0, 3.0])], pct)
+    assert bars == [["2020", "1.0%", "2.0%"], ["2021", "–", "3.0%"]]
+    # A step chart's table lists the days the value changes, not every day.
+    daily = _daily_runs(900, [1.0, 1.5, 0.5])
+    steps = charts.time_rows(daily, pct, steps=True)
+    assert [value for _, value in steps] == ["1.0%", "1.5%", "0.5%", "0.5%"]
+    assert steps[0][0] == daily[0][0] and steps[-1][0] == daily[-1][0]
+    # A long series summarised by year: average, lowest, highest.
+    yearly = charts.yearly_rows(_monthly(24), pct)
+    assert [row[0] for row in yearly] == ["2015", "2016"]
+    assert yearly[0][2:] == ["2.0%", "3.8%"]
+    points = [(10.0, 20.0, 1, 2, "b"), (0.0, 19.0, 0, 1, "a")]
+    assert charts.scatter_rows(points, ["S0", "S1"], str, str) == [
+        ["S0", "0.0", "19.0", "1"],
+        ["S1", "10.0", "20.0", "2"],
+    ]
+    assert charts.ring_rows([("A", "A: x", 3)], str) == [["A: x", "3"]]
