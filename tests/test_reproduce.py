@@ -615,3 +615,46 @@ async def test_every_phac_catalogue_entry_gets_scripts(phac_files):
                 assert set(code) == {"r", "python", "stata", "julia"}, (dataset.id, lang)
                 ast.parse(code["python"])
                 _stata_python_lines_compile(code["stata"])
+
+
+async def test_phac_limit_zero_raises_like_the_tool(phac_files):
+    # The tool rejects limit=0; the builder must not quietly use the default.
+    for limit in (0, -5):
+        with pytest.raises(InvalidInput):
+            await client.reproduce(
+                "phac_infobase_query", {"dataset_id": "wastewater_daily", "limit": limit}
+            )
+    # A missing limit is the tool's default.
+    code = _by_language(
+        await client.reproduce("phac_infobase_query", {"dataset_id": "wastewater_daily"})
+    )
+    assert ".tail(100)" in code["python"]
+
+
+async def test_phac_julia_matches_zip_member_names_as_the_tool_does(phac_files):
+    code = _by_language(
+        await client.reproduce(
+            "phac_infobase_query", {"dataset_id": "opioid_stimulant_harms", "lang": "fr"}
+        )
+    )
+    jl = code["julia"]
+    # Names decoded as Python's zipfile decodes them (UTF-8 flag, else code page
+    # 437), then folded: dropping non-ASCII letters turned DonnéesMéfaits into
+    # "donnesmfaits", which never held the folded member name.
+    assert "zip_general_purpose_bit_flag(archive, i) & 0x0800 != 0" in jl
+    assert 'decode(Vector{UInt8}(codeunits(zip_name(archive, i))), "CP437")' in jl
+    assert 'occursin("donneesmefaitssubstances.csv", fold(member_names[i]))' in jl
+    assert "ascii_name" not in jl
+    assert "using StringEncodings" in jl
+
+
+async def test_phac_repeated_column_is_selected_once(phac_files):
+    code = _by_language(
+        await client.reproduce(
+            "phac_infobase_query",
+            {"dataset_id": "wastewater_daily", "columns": ["Value", "VALUE", "Source"]},
+        )
+    )
+    assert "data.select(['Value', 'Source'])" in code["python"]
+    assert 'select(all_of(c("Value", "Source")))' in code["r"]
+    assert 'select!(data, ["Value", "Source"])' in code["julia"]

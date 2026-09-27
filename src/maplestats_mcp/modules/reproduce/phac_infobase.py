@@ -125,7 +125,9 @@ async def _plan(tool: str, args: dict[str, Any], *, describe: bool) -> _Plan:
     )
     if describe:
         return plan
-    limit = int(args.get("limit") or constants.ROWS_DEFAULT)
+    # Only a missing limit takes the default: 0 or a negative limit reaches the
+    # tool below, which rejects it as the tool call would have.
+    limit = constants.ROWS_DEFAULT if args.get("limit") is None else int(args["limit"])
     # The tool validates every argument; running it here raises the same
     # InvalidInput for a bad column, bound or limit, and gives the counts.
     result = await phac.query(
@@ -160,7 +162,10 @@ async def _plan(tool: str, args: dict[str, Any], *, describe: bool) -> _Plan:
     plan.start_date = phac._bound(plan.start or None, "start", end=False)
     plan.end_date = phac._bound(plan.end or None, "end", end=True)
     if args.get("columns"):
-        plan.columns = [phac._resolve(table.columns, str(c)) for c in args["columns"]]
+        # A column named twice ("value", "VALUE") is kept once: the tool's rows hold
+        # it once, and polars and DataFrames reject a repeated name in a selection.
+        resolved = [phac._resolve(table.columns, str(c)) for c in args["columns"]]
+        plan.columns = list(dict.fromkeys(resolved))
     return plan
 
 
@@ -724,8 +729,6 @@ def _jl_helpers(plan: _Plan) -> str:
             '    " ",\n'
             ")\n"
             f'place(text) = replace(fold(text), r"{_PLACE_STRIP}" => "")\n'
-            "# ZIP member names may not be valid UTF-8; compare their ASCII letters only.\n"
-            "ascii_name(name) = String(filter(isascii, collect(name)))\n"
         )
     if plan.needs_periods:
 
@@ -805,27 +808,35 @@ def _jl_read(plan: _Plan, file_name: str) -> Code:
         return Code(packages, "\n".join(b for b in (_jl_helpers(plan), fetch, read) if b))
     packages.append("CSV")
     utf8 = _iconv(plan.encoding) == "UTF-8"
-    if not utf8:
+    if not utf8 and plan.kind != "zip":
         packages.append("StringEncodings")
     label = _ENCODING_LABELS.get(plan.encoding, plan.encoding)
     if plan.kind == "zip":
         # ZipArchives, not ZipFile: ZipFile.jl rejects the French archive outright
         # because a member name is not valid UTF-8 (checked with Julia 1.11).
-        packages.append("ZipArchives")
+        # Names are decoded as Python's zipfile decodes them (UTF-8 when the entry
+        # sets flag 0x0800, code page 437 otherwise) and then matched as the tool
+        # matches them: comparing only their ASCII letters missed the accented
+        # French member whenever the ZIP held a second CSV.
+        packages += ["ZipArchives", "StringEncodings"]
         pick = (
-            f"first(i for i in csv_members if occursin({_jl_str(_fold(plan.member))}, fold(ascii_name(names_in_zip[i]))))"
+            f"first(i for i in csv_members if occursin({_jl_str(_fold(plan.member))}, fold(member_names[i])))"
             if plan.member
             else "first(csv_members)"
         )
         bytes_code = (
-            "# The data file inside the ZIP. The French opioid ZIP stores its member name\n"
-            "# (DonnéesMéfaitsSubstances.csv) in code page 437 without the UTF-8 flag:\n"
-            "# when the ZIP holds one CSV, that is the file; otherwise match the catalogue's\n"
-            "# member name, ignoring case and accents.\n\n"
+            "# The data file inside the ZIP: the first CSV whose name holds the catalogue's\n"
+            "# member name, ignoring case and accents. Names are read as the tool reads\n"
+            "# them: UTF-8 when the entry says so, otherwise code page 437 (the French\n"
+            "# opioid ZIP stores DonnéesMéfaitsSubstances.csv that way).\n\n"
             f"archive = ZipReader(read({_jl_str(path)}))\n"
-            "names_in_zip = zip_names(archive)\n"
-            'csv_members = findall(name -> endswith(lowercase(ascii_name(name)), ".csv"), names_in_zip)\n'
-            f"member = length(csv_members) == 1 ? only(csv_members) : {pick}\n"
+            "member_names = [\n"
+            "    zip_general_purpose_bit_flag(archive, i) & 0x0800 != 0 ? zip_name(archive, i) :\n"
+            '    decode(Vector{UInt8}(codeunits(zip_name(archive, i))), "CP437")\n'
+            "    for i in 1:zip_nentries(archive)\n"
+            "]\n"
+            'csv_members = findall(name -> endswith(lowercase(name), ".csv"), member_names)\n'
+            f"member = {pick}\n"
             "bytes = zip_readentry(archive, member)\n"
         )
     else:
@@ -988,8 +999,9 @@ def _spec(plan: _Plan, describe: bool) -> Spec:
     ]
     if plan.kind == "zip" and plan.member:
         notes.append(
-            "R and Julia take the ZIP's only CSV when there is one, since the French member "
-            "name is stored without the UTF-8 flag; Python matches the name as the tool does."
+            "R takes the ZIP's only CSV when there is one, since the French member name is "
+            "stored in code page 437 without the UTF-8 flag; Python and Julia decode the "
+            "names as the tool does and match the member name."
         )
     return Spec(
         kind="json" if plan.kind == "api" else ("zip_csv" if plan.kind == "zip" else "csv"),
