@@ -334,11 +334,10 @@ def parse_long_date(text):
 """
 
 _PY_INT = r"""
-# \x20 is a space: Stata's Python block drops a space written after "[".
 def parse_int(text):
     value = text.replace("\xa0", " ").replace("\u202f", " ").strip().strip("`'")
-    if re.fullmatch(r"\d{1,3}([\x20,]\d{3})+|\d+", value):
-        return int(re.sub(r"[\x20,]", "", value))
+    if re.fullmatch(r"\d{1,3}([ ,]\d{3})+|\d+", value):
+        return int(re.sub(r"[ ,]", "", value))
     return None
 """
 
@@ -2054,8 +2053,9 @@ with_labels <- function(english, french) {
   labels <- french |>
     select(province_code, number, fr_location = location, fr_zone = control_zone,
            fr_order = control_zone_order_text, fr_type = premises_type_label,
-           fr_woah = woah_classification_label, fr_date = date_detected, fr_valid = sort_key_valid) |>
-    distinct(province_code, number, .keep_all = TRUE)
+           fr_woah = woah_classification_label, fr_date = date_detected, fr_valid = sort_key_valid)
+  # A premises listed twice takes its last row, as the tool's dict does.
+  labels <- labels[!duplicated(labels[c("province_code", "number")], fromLast = TRUE), ]
   joined <- left_join(data, labels, by = c("province_code", "number"))
   matched <- !is.na(joined$fr_valid)
   unmatched <- sum(!matched)

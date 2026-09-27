@@ -637,6 +637,42 @@ def _stata_literals(code: str) -> str:
     return code
 
 
+def _string_spans(statement: str) -> list[tuple[int, int]]:
+    """Where the string literals (whole f-strings included) sit in a one-line statement."""
+    spans: list[tuple[int, int]] = []
+    depth, start = 0, 0
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(statement).readline):
+            if token.type == tokenize.FSTRING_START:
+                if depth == 0:
+                    start = token.start[1]
+                depth += 1
+            elif token.type == tokenize.FSTRING_END:
+                depth -= 1
+                if depth == 0:
+                    spans.append((start, token.end[1]))
+            elif token.type == tokenize.STRING and depth == 0:
+                spans.append((token.start[1], token.end[1]))
+    except (tokenize.TokenError, SyntaxError):
+        return []
+    return spans
+
+
+def _tidy_brackets(statement: str) -> str:
+    """Drop the spaces that joining a statement's lines leaves inside brackets
+    ("f( a, )" -> "f(a)"), outside its string literals: a filter value such as
+    "Canada ( excluding territories )" must reach Python as written."""
+    if not re.search(r"[(\[{] |,? [)\]}]", statement):
+        return statement
+    out: list[str] = []
+    last = 0
+    for start, end in [*_string_spans(statement), (len(statement), len(statement))]:
+        code = re.sub(r"([(\[{]) ", r"\1", statement[last:start])
+        out.append(re.sub(r",? ([)\]}])", r"\1", code) + statement[start:end])
+        last = end
+    return "".join(out)
+
+
 def stata_statements(code: str) -> str:
     """Python rewritten for a Stata `python:` block.
 
@@ -665,9 +701,7 @@ def stata_statements(code: str) -> str:
                 for row in range(start, token.end[0] + 1)
             ]
             indent = parts[0][: len(parts[0]) - len(parts[0].lstrip())]
-            joined = " ".join(part.strip() for part in parts)
-            joined = re.sub(r"([(\[{]) ", r"\1", joined)
-            joined = re.sub(r",? ([)\]}])", r"\1", joined)
+            joined = _tidy_brackets(" ".join(part.strip() for part in parts))
             statements.append(indent + joined)
             start = None
     chunks: list[list[str]] = []

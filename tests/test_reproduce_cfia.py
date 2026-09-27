@@ -20,6 +20,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import tokenize
 import types
 from datetime import date
@@ -381,20 +382,25 @@ async def test_python_and_stata_scripts_end_to_end(tmp_path, monkeypatch):
         code = _codes(await client.reproduce(tool, args))
         expected = await _expected(tool, args)
         script: dict[str, Any] = {"__name__": "__script__"}
+        aggregate = await _expected_aggregate(tool, args)
         exec(compile(code["python"], "<script>", "exec"), script)  # noqa: S102
-        assert _frame_rows(script["data"], _fields(tool)) == expected, tool
         stata: dict[str, Any] = {"__name__": "__stata__"}
         for line in _stata_block(code["stata"]).splitlines():
             exec(compile(line, "<stata-python>", "exec"), stata)  # noqa: S102
-        assert _frame_rows(stata["data"], _fields(tool)) == expected, tool
+        for namespace in (script, stata):
+            assert _frame_rows(namespace["data"], _FIELDS[tool]) == expected, tool
+            if aggregate is not None:
+                name, columns = _AGGREGATES[tool]
+                assert _frame_rows(namespace[name], columns) == aggregate, (tool, args)
+
+
+def _text(value: Any) -> str:
+    value = _plain(value)
+    return "" if value is None else str(value)
 
 
 def _frame_rows(frame: Any, fields: list[str]) -> list[list[str]]:
-    def text(value: Any) -> str:
-        value = _plain(value)
-        return "" if value is None else str(value)
-
-    return [[text(row[f]) for f in fields] for row in frame.iter_rows(named=True)]
+    return [[_text(row[f]) for f in fields] for row in frame.iter_rows(named=True)]
 
 
 # Hostile text ---------------------------------------------------------------------------
@@ -468,6 +474,12 @@ _E2E = [
     ("cfia_disease_detections", {"disease": "cwd", "province": "NS", "counts_by": "province"}),
     ("cfia_avian_influenza", {"status": "current", "province": "NS", "counts_by": "premises_type"}),
     ("cfia_reportable_diseases", {"year_from": 2026, "disease": "scrapie", "totals_by": "disease"}),
+    ("cfia_avian_influenza", {"limit": 7}),
+    (
+        "cfia_disease_detections",
+        {"disease": "cwd", "animal_type": "wapiti", "counts_by": "animal_type", "lang": "fr"},
+    ),
+    ("cfia_reportable_diseases", {"disease": "bovine", "totals_by": "disease"}),
 ]
 
 
@@ -481,30 +493,49 @@ def _probe(binary: str, code: str) -> bool:
     return _run([binary, "-e", code]).returncode == 0
 
 
-def _tool_rows(tool: str, result: Any) -> list[list[str]]:
-    rows = result.premises if tool == "cfia_avian_influenza" else result.rows
-    fields = {
-        "cfia_reportable_diseases": ["year", "disease_key", "disease", "count", "note"],
-        "cfia_disease_detections": list(_DETECTION_FIELDS),
-        "cfia_avian_influenza": ["premises_id", "province", "location", "date_detected", "status"],
-    }[tool]
-
-    def text(value: Any) -> str:
-        value = _plain(value)
-        return "" if value is None else str(value)
-
-    return [[text(getattr(row, f)) for f in fields] for row in rows]
+# Every field of each returned row, and the totals or counts the tool returns
+# beside them (the script's frame name and columns).
+_FIELDS = {
+    "cfia_reportable_diseases": [
+        "year",
+        "disease_key",
+        "disease",
+        "count",
+        "note",
+        "detections_tool",
+    ],
+    "cfia_disease_detections": list(_DETECTION_FIELDS),
+    "cfia_avian_influenza": [
+        "premises_id",
+        "province_code",
+        "province",
+        "location",
+        "date_detected",
+        "status",
+        "premises_type",
+        "premises_type_label",
+        "woah_classification",
+        "woah_classification_label",
+        "low_pathogenic",
+        "control_zone",
+        "control_zone_order",
+        "control_zone_order_text",
+    ],
+}
+_AGGREGATES = {
+    "cfia_reportable_diseases": ("totals", ["key", "label", "total", "rows"]),
+    "cfia_disease_detections": ("counts", ["key", "label", "detections", "herds"]),
+    "cfia_avian_influenza": ("counts", ["key", "label", "current", "released", "total"]),
+}
 
 
 def _fields(tool: str) -> list[str]:
-    return {
-        "cfia_reportable_diseases": ["year", "disease_key", "disease", "count", "note"],
-        "cfia_disease_detections": list(_DETECTION_FIELDS),
-        "cfia_avian_influenza": ["premises_id", "province", "location", "date_detected", "status"],
-    }[tool]
+    return _FIELDS[tool]
 
 
-def _offline_r(code: str, out: Path, fields: list[str]) -> str:
+def _offline_r(
+    code: str, out: Path, fields: list[str], aggregate: tuple[str, list[str], Path] | None = None
+) -> str:
     pages = ", ".join(
         f"{json.dumps(url)} = {json.dumps(str(_FIXTURES / name))}"
         for url, name in _PAGES.items()
@@ -521,15 +552,24 @@ def _offline_r(code: str, out: Path, fields: list[str]) -> str:
         "fetch_page <- function(url, file) {", "fetch_online <- function(url, file) {"
     )
     code = code.replace("# 1. Read inputs ----\n", "# 1. Read inputs ----\n" + override, 1)
-    columns = ", ".join(json.dumps(f) for f in fields)
-    return code + (
-        f"\nout <- as.data.frame(data)[, c({columns})]\n"
-        f"write.table(out, {json.dumps(str(out))}, sep = '\\t', na = '', quote = FALSE, "
-        "row.names = FALSE, col.names = FALSE, fileEncoding = 'UTF-8')\n"
-    )
+    frames = [("data", fields, out), *([aggregate] if aggregate else [])]
+    for name, columns, path in frames:
+        names = ", ".join(json.dumps(f) for f in columns)
+        code += (
+            f"\nwrite.table(as.data.frame({name})[, c({names}), drop = FALSE], "
+            f"{json.dumps(str(path))}, sep = '\\t', na = '', quote = FALSE, "
+            "row.names = FALSE, col.names = FALSE, fileEncoding = 'UTF-8')\n"
+        )
+    return code
 
 
-def _offline_julia(code: str, out: Path, fields: list[str], name: str) -> str:
+def _offline_julia(
+    code: str,
+    out: Path,
+    fields: list[str],
+    name: str,
+    aggregate: tuple[str, list[str], Path] | None = None,
+) -> str:
     pages = ", ".join(
         f"{json.dumps(url)} => {json.dumps(str(_FIXTURES / page))}"
         for url, page in _PAGES.items()
@@ -542,47 +582,135 @@ def _offline_julia(code: str, out: Path, fields: list[str], name: str) -> str:
     )
     code = code.replace("function fetch_page(url, file)", "function fetch_online(url, file)")
     code = code.replace("# 1. Read inputs\n", "# 1. Read inputs\n" + override, 1)
-    columns = ", ".join(json.dumps(f) for f in fields)
-    writer = (
-        f'\nopen({json.dumps(str(out))}, "w") do io\n'
-        f"    for row in eachrow(data[:, [{columns}]])\n"
-        '        println(io, join([ismissing(x) ? "" : string(x) for x in row], "\\t"))\n'
-        "    end\n"
-        "end\n"
-    )
+    writer = ""
+    for frame, columns, path in [("data", fields, out), *([aggregate] if aggregate else [])]:
+        names = ", ".join(json.dumps(f) for f in columns)
+        writer += (
+            f'\nopen({json.dumps(str(path))}, "w") do io\n'
+            f"    for row in eachrow({frame}[:, [{names}]])\n"
+            '        println(io, join([ismissing(x) ? "" : string(x) for x in row], "\\t"))\n'
+            "    end\n"
+            "end\n"
+        )
     # One Julia process runs every script, each in its own module.
     return f"module {name}\n{code}{writer}end\n"
 
 
-async def _expected(tool: str, args: dict[str, Any]) -> list[list[str]]:
+async def _tool_result(tool: str, args: dict[str, Any]) -> Any:
     function = {
         "cfia_reportable_diseases": cfia.get_reportable_diseases,
         "cfia_disease_detections": cfia.get_disease_detections,
         "cfia_avian_influenza": cfia.get_avian_influenza,
     }[tool]
-    return _tool_rows(tool, await function(**args))
+    return await function(**args)
+
+
+async def _expected(tool: str, args: dict[str, Any]) -> list[list[str]]:
+    result = await _tool_result(tool, args)
+    rows = result.premises if tool == "cfia_avian_influenza" else result.rows
+    return [[_text(getattr(row, f)) for f in _FIELDS[tool]] for row in rows]
+
+
+async def _expected_aggregate(tool: str, args: dict[str, Any]) -> list[list[str]] | None:
+    """The tool's totals (reportable) or counts, None when it returns none."""
+    result = await _tool_result(tool, args)
+    groups = result.totals if tool == "cfia_reportable_diseases" else result.counts
+    if groups is None:
+        return None
+    return [[_text(getattr(group, c)) for c in _AGGREGATES[tool][1]] for group in groups]
 
 
 def _read_rows(path: Path) -> list[list[str]]:
-    return [line.split("\t") for line in path.read_text(encoding="utf-8").splitlines()]
+    # R writes TRUE/FALSE and Julia true/false where Python writes True/False.
+    booleans = {"TRUE": "True", "true": "True", "FALSE": "False", "false": "False"}
+    return [
+        [booleans.get(cell, cell) for cell in line.split("\t")]
+        for line in path.read_text(encoding="utf-8").splitlines()
+    ]
+
+
+def _aggregate_file(tool: str, path: Path) -> tuple[str, list[str], Path]:
+    name, columns = _AGGREGATES[tool]
+    return name, columns, path
+
+
+_R_SCRIPT_PACKAGES = (
+    "rvest",
+    "xml2",
+    "dplyr",
+    "stringr",
+    "stringi",
+    "httr2",
+    "janitor",
+    "readr",
+    "tibble",
+    "tidyr",
+)
 
 
 async def test_r_scripts_reproduce_the_tool_offline(tmp_path):
     rscript = shutil.which("Rscript")
     if rscript is None:
         pytest.skip("R is not installed")
-    packages = "rvest, xml2, dplyr, stringr, stringi, httr2, janitor, readr, tibble, tidyr"
-    load = "; ".join(f"library({p})" for p in packages.split(", "))
+    load = "; ".join(f"library({p})" for p in _R_SCRIPT_PACKAGES)
     if not _probe(rscript, f"suppressMessages({{{load}}})"):
         pytest.skip("R packages for the CFIA scripts are not installed")
     for index, (tool, args) in enumerate(_E2E):
         result = await client.reproduce(tool, args, "r")
-        out = tmp_path / f"out_{index}.tsv"
+        out, groups = tmp_path / f"out_{index}.tsv", tmp_path / f"groups_{index}.tsv"
+        aggregate = await _expected_aggregate(tool, args)
         script = tmp_path / f"script_{index}.R"
-        script.write_text(_offline_r(result.scripts[0].code, out, _fields(tool)))
+        script.write_text(
+            _offline_r(
+                result.scripts[0].code,
+                out,
+                _fields(tool),
+                _aggregate_file(tool, groups) if aggregate is not None else None,
+            )
+        )
         run = _run([rscript, str(script)], cwd=tmp_path)
         assert run.returncode == 0, run.stderr[-3000:]
         assert _read_rows(out) == await _expected(tool, args), tool
+        if aggregate is not None:
+            assert _read_rows(groups) == aggregate, (tool, args)
+
+
+async def test_r_french_premises_listed_twice_take_the_last_row(tmp_path, monkeypatch):
+    """The tool joins French labels through a dict, so a repeated id keeps its last row."""
+    rscript = shutil.which("Rscript")
+    if rscript is None:
+        pytest.skip("R is not installed")
+    load = "; ".join(f"library({p})" for p in _R_SCRIPT_PACKAGES)
+    if not _probe(rscript, f"suppressMessages({{{load}}})"):
+        pytest.skip("R packages for the CFIA scripts are not installed")
+    pages = tmp_path / "pages"
+    shutil.copytree(_FIXTURES, pages, ignore=shutil.ignore_patterns("*.py", "__pycache__"))
+    french = (pages / "premises_fr.html").read_text(encoding="utf-8")
+    start = french.index("<tbody>") + len("<tbody>")
+    end = french.index("</tr>", start) + len("</tr>")
+    repeated = french[start:end].replace("</td>\n<td>", " (bis)</td>\n<td>", 1)
+    (pages / "premises_fr.html").write_text(french[:end] + repeated + french[end:], "utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "_FIXTURES", pages)
+    served = {
+        url: (pages / name).read_text(encoding="utf-8") for url, name in _PAGES.items() if name
+    }
+
+    async def fetch(url: str) -> str:
+        return served[url]
+
+    monkeypatch.setattr(cfia, "_fetch", fetch)
+    cache_module._caches.clear()
+    args = {"province": "AB", "lang": "fr"}
+    expected = await _expected("cfia_avian_influenza", args)
+    location = _FIELDS["cfia_avian_influenza"].index("location")
+    assert any(row[location].endswith("(bis)") for row in expected)
+    result = await client.reproduce("cfia_avian_influenza", args, "r")
+    out = tmp_path / "out.tsv"
+    script = tmp_path / "script.R"
+    script.write_text(_offline_r(result.scripts[0].code, out, _fields("cfia_avian_influenza")))
+    run = _run([rscript, str(script)], cwd=tmp_path)
+    assert run.returncode == 0, run.stderr[-3000:]
+    assert _read_rows(out) == expected
 
 
 async def test_julia_scripts_reproduce_the_tool_offline(tmp_path):
@@ -595,15 +723,26 @@ async def test_julia_scripts_reproduce_the_tool_offline(tmp_path):
     modules, outputs = [], []
     for index, (tool, args) in enumerate(_E2E):
         result = await client.reproduce(tool, args, "julia")
-        out = tmp_path / f"out_{index}.tsv"
-        outputs.append((out, tool, args))
-        modules.append(_offline_julia(result.scripts[0].code, out, _fields(tool), f"Run{index}"))
+        out, groups = tmp_path / f"out_{index}.tsv", tmp_path / f"groups_{index}.tsv"
+        aggregate = await _expected_aggregate(tool, args)
+        outputs.append((out, groups, aggregate, tool, args))
+        modules.append(
+            _offline_julia(
+                result.scripts[0].code,
+                out,
+                _fields(tool),
+                f"Run{index}",
+                _aggregate_file(tool, groups) if aggregate is not None else None,
+            )
+        )
     script = tmp_path / "scripts.jl"
     script.write_text("\n".join(modules))
     run = _run([julia, str(script)], cwd=tmp_path)
     assert run.returncode == 0, run.stderr[-3000:]
-    for out, tool, args in outputs:
+    for out, groups, aggregate, tool, args in outputs:
         assert _read_rows(out) == await _expected(tool, args), tool
+        if aggregate is not None:
+            assert _read_rows(groups) == aggregate, (tool, args)
 
 
 @pytest.mark.parametrize("language", ["r", "julia"])
