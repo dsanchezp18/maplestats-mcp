@@ -318,10 +318,24 @@ def _observation_from_json(dp: dict[str, Any]) -> ObservationRow:
         symbol_code=int(dp.get("symbolCode", 0) or 0),
         status_code=int(dp.get("statusCode", 0) or 0),
         security_level_code=int(dp.get("securityLevelCode", 0) or 0),
-        release_time=datetime.fromisoformat(release_time).replace(tzinfo=UTC)
-        if release_time
-        else None,
+        release_time=_release_time_utc(release_time) if release_time else None,
     )
+
+
+# WDS sends releaseTime without a zone ("2026-09-14T08:30"). It is Ottawa
+# local time: StatCan publishes at 8:30 a.m. Eastern, and getAllCubesListLite
+# reports the same release as "2026-09-14T12:30:00Z" (confirmed live against
+# table 18-10-0004). Stamping it UTC put every release four or five hours
+# early, so a zone-less value is read in America/Toronto and converted; a
+# value that already carries a zone is kept as sent.
+_WDS_ZONE = ZoneInfo("America/Toronto")
+
+
+def _release_time_utc(raw: str) -> datetime:
+    parsed = datetime.fromisoformat(raw)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=_WDS_ZONE)
+    return parsed.astimezone(UTC)
 
 
 def _vector_data_from_json(obj: dict[str, Any], *, source_url: str, cached: bool) -> VectorData:
