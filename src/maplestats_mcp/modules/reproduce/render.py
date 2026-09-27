@@ -723,6 +723,17 @@ def stata_statements(code: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def _stata_checks_in_python(spec: Spec) -> bool:
+    """Whether the Python block checks the rows, right after the read.
+
+    Filters and the tool's own steps may leave no rows, and the tool then
+    returns an empty table, so Stata must not assert after them: the block
+    checks the download before them instead, as the Python script does.
+    Without them the do-file keeps its own check after the import.
+    """
+    return spec.kind not in ("zip", "file") and bool(spec.filters or "python" in spec.prepare)
+
+
 def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
     imports, read = _py_loaded(spec)
     imports += spec.prepare["python"].imports if "python" in spec.prepare else []
@@ -744,6 +755,11 @@ def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
         []
         if spec.kind in ("zip", "file")
         else [
+            *(
+                [f"assert data.height > 0, {json.dumps(spec.url + ' returned no rows')}\n"]
+                if _stata_checks_in_python(spec)
+                else []
+            ),
             *py_prepare(spec),
             flatten,
             f'data.write_csv(RAW_DIR / "{csv_name}")\n',
@@ -850,7 +866,13 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
     )
     sections = [_header("*", spec, tool), setup, "* 1. Read inputs\n", read]
     if spec.kind not in ("zip", "file"):
-        sections += ["* 2. Check inputs\n", "assert _N > 0\n", "* 3. Prepare data\n", *prepare]
+        check = (
+            "* The Python block checked the download for rows before its filters and\n"
+            "* steps, which may leave none (the tool then returns an empty table).\n"
+            if _stata_checks_in_python(spec)
+            else "assert _N > 0\n"
+        )
+        sections += ["* 2. Check inputs\n", check, "* 3. Prepare data\n", *prepare]
     sections.append("log close\n")
     return _join(*sections), packages
 
