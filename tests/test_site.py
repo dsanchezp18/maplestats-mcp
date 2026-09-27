@@ -596,3 +596,55 @@ def test_every_chart_is_followed_by_its_data(built_site: Path):
     assert "<summary>Voir les donn\u00e9es</summary>" in french
     # French numbers: a comma for decimals, a narrow no-break space before %.
     assert re.search(r'<td class="num">\d+,\d\u202f%</td>', french)
+
+
+def test_pages_make_no_third_party_requests(built_site: Path):
+    """Fonts and every other asset come from the site itself, not a CDN."""
+    fonts_css = (built_site / "assets" / "fonts.css").read_text(encoding="utf-8")
+    for url in re.findall(r"url\(([^)]+)\)", fonts_css):
+        assert (built_site / "assets" / url).is_file(), url
+    for page in [*built_site.glob("*.html"), *(built_site / "fr").glob("*.html")]:
+        text = page.read_text(encoding="utf-8")
+        loaded = re.findall(r'<(?:link|script|img)\b[^>]*(?:href|src)="(https?://[^"]+)"', text)
+        # Canonical, hreflang and og: URLs name this site; they load nothing.
+        foreign = [u for u in loaded if not u.startswith(site.SITE_URL)]
+        assert not foreign, (page.name, foreign)
+
+
+def test_llms_txt_links_each_tool_to_its_entry(built_site: Path):
+    text = (built_site / "llms.txt").read_text(encoding="utf-8")
+    tools_page = (built_site / "tools.html").read_text(encoding="utf-8")
+    links = re.findall(r"^- \[([^\]]+)\]\(([^)]+)\)", text, re.MULTILINE)
+    anchors = [
+        url.split("#", 1)[1] for _, url in links if url.startswith(site.SITE_URL + "tools.html#")
+    ]
+    assert len(anchors) == len(re.findall(r'<details class="tool" id="t-', tools_page))
+    for anchor in anchors:
+        assert f'id="{anchor}"' in tools_page, anchor
+    for _, url in links:
+        assert url.startswith(site.SITE_URL), url
+
+
+def test_stylesheets_close_every_block():
+    """Each section of a stylesheet starts at the top level.
+
+    A merge once dropped the closing brace of `@media print`; browsers close
+    an open block at the end of the file, so every rule after it silently
+    applied to print only.
+    """
+    for sheet in (ROOT / "site" / "assets").glob("*.css"):
+        depth = 0
+        text = re.sub(
+            r"/\*(?!\s*-{5,}).*?\*/", "", sheet.read_text(encoding="utf-8"), flags=re.DOTALL
+        )
+        for match in re.finditer(r"[{}]|/\*\s*-{5,}", text):
+            token = match.group(0)
+            if token == "{":
+                depth += 1
+            elif token == "}":
+                depth -= 1
+                assert depth >= 0, sheet.name
+            else:
+                line = text[: match.start()].count("\n") + 1
+                assert depth == 0, f"{sheet.name}: section at line {line} opens inside a block"
+        assert depth == 0, sheet.name

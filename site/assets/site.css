@@ -4358,6 +4358,7 @@ h2.sub {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+}
 
 /* ---------- Accessibility: focus, no-JS fallbacks, chart data ---------- */
 

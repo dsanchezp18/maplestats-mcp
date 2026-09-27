@@ -3377,7 +3377,7 @@ def not_found_page() -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Page not found · Page introuvable · MapleStats MCP</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..900&amp;family=Source+Sans+3:wght@400..900&amp;display=swap">
+<link rel="stylesheet" href="{base}assets/fonts.css">
 <link rel="stylesheet" href="{base}assets/site.css">
 <link rel="icon" href="{base}assets/mark.svg" type="image/svg+xml">
 <script>try{{var t=localStorage.getItem("maplestats:theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}}catch(e){{}}</script>
@@ -3420,11 +3420,20 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
             + f". Setup steps for an agent, per client: {REPO}#the-easiest-way-ask-your-agent"
         ),
         "",
+        "## Docs",
+        "",
+        f"- [Connect]({page_url('connect.html', 'en')}): install and client setup, per client",
+        f"- [Tools]({page_url('tools.html', 'en')}): every tool with its parameters",
+        f"- [Sources]({page_url('sources.html', 'en')}): which agencies and portals cover where",
+        f"- [Statistics Canada]({page_url('statcan.html', 'en')}): tables, census and microdata",
+        f"- [Case studies]({page_url('cases.html', 'en')}): recorded calls behind real questions",
+        "",
     ]
+    tools_url = page_url("tools.html", "en")
     for module in ordered(modules, "en"):
         lines.append(f"## {module.source.en} ({module.key})")
         lines.append("")
-        lines.extend(f"- {t.name}: {t.summary}" for t in module.tools)
+        lines.extend(f"- [{t.name}]({tools_url}#t-{t.name}): {t.summary}" for t in module.tools)
         lines.append("")
     return "\n".join(lines)
 

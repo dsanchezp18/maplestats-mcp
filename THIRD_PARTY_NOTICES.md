@@ -58,3 +58,22 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Website fonts
+
+The website (`site/assets/fonts/`) serves three font families under the
+SIL Open Font License 1.1. Each family's full licence text sits beside its
+files and is published with the site:
+
+- **Source Serif 4**, Copyright 2014 The Source Serif 4 Project Authors
+  (https://github.com/adobe-fonts/source-serif):
+  `site/assets/fonts/OFL-source-serif-4.txt`
+- **Source Sans 3**, Copyright 2010-2020 Adobe, with Reserved Font Name
+  'Source' (https://github.com/adobe-fonts/source-sans):
+  `site/assets/fonts/OFL-source-sans-3.txt`
+- **IBM Plex Mono**, Copyright 2017 IBM Corp., with Reserved Font Name
+  "Plex" (https://github.com/IBM/plex):
+  `site/assets/fonts/OFL-ibm-plex-mono.txt`
+
+The files are the Latin and Latin Extended subsets that Google Fonts
+serves, unmodified.
