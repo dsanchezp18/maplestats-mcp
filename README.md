@@ -9,6 +9,7 @@
   <p align="center">
     <a href="https://pypi.org/project/maplestats-mcp/"><img src="https://img.shields.io/pypi/v/maplestats-mcp" alt="PyPI version"></a>
     <a href="https://pypi.org/project/maplestats-mcp/"><img src="https://img.shields.io/pypi/pyversions/maplestats-mcp" alt="Supported Python versions"></a>
+    <a href="https://github.com/dsanchezp18/maplestats-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dsanchezp18/maplestats-mcp" alt="License: MIT"></a>
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
   </p>
 </p>
