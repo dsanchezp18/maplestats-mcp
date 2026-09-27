@@ -100,13 +100,16 @@ async def test_site_builds(tmp_path: Path):
 
 
 def test_case_captures_are_complete():
-    """Each case study is a recorded call with its source and its scripts."""
+    """Each case study is recorded calls with their source and, for the first, scripts."""
     import json
 
-    for key in site.CASE_KEYS:
+    for key in (*site.CASE_KEYS, "counts"):
         case = json.loads((site.CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
-        assert case["request"]["name"] and case["request"]["arguments"], key
-        assert case["response"]["provenance"]["url"].startswith("https://"), key
-        assert {"r", "python"} <= set(case["scripts"]), key
-        if case.get("discover"):
-            assert case["discover"]["response"], key
+        assert case["captured"] and case["calls"], key
+        for call in case["calls"]:
+            assert call["name"], key
+            response = call["response"]
+            provenance = (response[0] if isinstance(response, list) else response)["provenance"]
+            assert provenance["url"].startswith("https://"), key
+        if key != "counts":
+            assert {"r", "python"} <= set(case["calls"][0]["scripts"]), key

@@ -1338,68 +1338,40 @@ _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 
 
 # --------------------------------------------------------------------------
-# Case studies: recorded calls (scripts/capture_cases.py) rendered as pages.
+# Case studies: recorded calls (scripts/capture_cases.py) drawn as charts.
 # --------------------------------------------------------------------------
 
 CASES_DIR = SITE / "_data" / "cases"
-CASE_KEYS = ("ircc", "labour", "city")
-# The query each case shows going through the real search_tools at build time.
-CASE_SEARCH: dict[str, dict[Lang, str]] = {
-    "ircc": {
-        "en": "new permanent residents by city",
-        "fr": "nouveaux résidents permanents par ville",
-    },
-    "labour": {
-        "en": "latest unemployment rate provinces",
-        "fr": "dernier taux de chômage des provinces",
-    },
+CASE_KEYS = ("pumf", "ircc", "labour", "boc")
+
+
+def _load_charts() -> Any:
+    """scripts/site_charts.py, loaded by path so tests can import this file too."""
+    spec = importlib.util.spec_from_file_location(
+        "site_charts", Path(__file__).resolve().parent / "site_charts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+charts = _load_charts()
+
+PR_NAMES: dict[str, tuple[str, str]] = {
+    "10": ("Newfoundland and Labrador", "Terre-Neuve-et-Labrador"),
+    "11": ("Prince Edward Island", "Île-du-Prince-Édouard"),
+    "12": ("Nova Scotia", "Nouvelle-Écosse"),
+    "13": ("New Brunswick", "Nouveau-Brunswick"),
+    "24": ("Quebec", "Québec"),
+    "35": ("Ontario", "Ontario"),
+    "46": ("Manitoba", "Manitoba"),
+    "47": ("Saskatchewan", "Saskatchewan"),
+    "48": ("Alberta", "Alberta"),
+    "59": ("British Columbia", "Colombie-Britannique"),
+    "70": ("Northern Canada", "Nord canadien"),
 }
-# The city case starts from the planner, which knows which portal a city runs.
-CASE_PLAN_QUESTION: dict[Lang, str] = {
-    "en": "What were the largest building permits issued in Edmonton in 2026?",
-    "fr": "Quels ont été les plus gros permis de construire délivrés à Edmonton en 2026?",
-}
-PROVINCES_FR = {
-    "Canada": "Canada",
-    "Newfoundland and Labrador": "Terre-Neuve-et-Labrador",
-    "Prince Edward Island": "Île-du-Prince-Édouard",
-    "Nova Scotia": "Nouvelle-Écosse",
-    "New Brunswick": "Nouveau-Brunswick",
-    "Quebec": "Québec",
-    "Ontario": "Ontario",
-    "Manitoba": "Manitoba",
-    "Saskatchewan": "Saskatchewan",
-    "Alberta": "Alberta",
-    "British Columbia": "Colombie-Britannique",
-}
-MONTHS_EN_ABBR = (
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-)
-MONTHS_FR_ABBR = (
-    "janv.",
-    "févr.",
-    "mars",
-    "avr.",
-    "mai",
-    "juin",
-    "juill.",
-    "août",
-    "sept.",
-    "oct.",
-    "nov.",
-    "déc.",
-)
+MONTHS_EN = tuple(f"{date(2000, m, 1):%B}" for m in range(1, 13))
 
 
 def load_case(key: str) -> dict[str, Any]:
@@ -1412,180 +1384,170 @@ def number(value: float, lang: Lang, decimals: int = 0) -> str:
     return text if lang == "en" else text.replace(",", " ").replace(".", ",")
 
 
-def bar_rows(rows: list[tuple[str, str, float, str]], extra: bool) -> str:
-    """Table rows with a proportional bar: (label, value text, value, extra cell)."""
-    top = max((r[2] for r in rows), default=1) or 1
-    out = []
-    for label, text, value, more in rows:
-        width = f"{100 * value / top:.1f}%"
-        out.append(
-            f'<tr><th scope="row">{esc(label)}</th><td class="num">{esc(text)}</td>'
-            + (f'<td class="num">{esc(more)}</td>' if extra else "")
-            + f'<td class="bar" aria-hidden="true"><span style="width:{width}"></span></td></tr>'
-        )
-    return "".join(out)
+def percent(value: float, lang: Lang, decimals: int = 1) -> str:
+    return f"{number(value, lang, decimals)}{'%' if lang == 'en' else ' %'}"
 
 
-def ircc_result(case: dict[str, Any], lang: Lang) -> str:
-    months = MONTHS_EN_ABBR if lang == "en" else MONTHS_FR_ABBR
-    rows = []
-    for row in case["response"]["rows"]:
-        label = row["period"]
-        if row["cells"] < 12:
-            span = f"{months[0]}–{months[row['cells'] - 1]}"
-            label = f"{label} ({span})"
-        rows.append((label, number(row["value"], lang), float(row["value"]), ""))
-    head = (
-        ("Year", "New permanent residents")
-        if lang == "en"
-        else ("Année", "Nouveaux résidents permanents")
-    )
-    return (
-        '<table class="case-table"><thead><tr>'
-        f'<th scope="col">{head[0]}</th><th scope="col" class="num">{head[1]}</th><th></th>'
-        f"</tr></thead><tbody>{bar_rows(rows, extra=False)}</tbody></table>"
-    )
+def join_names(names: list[str], lang: Lang) -> str:
+    return f" {'and' if lang == 'en' else 'et'} ".join(names)
 
 
-def labour_result(case: dict[str, Any], lang: Lang) -> str:
-    items = sorted(case["response"]["indicators"], key=lambda i: i["geo_code"])
-    rows = []
-    for item in items:
-        name = (
-            item["geo_name"]
-            if lang == "en"
-            else PROVINCES_FR.get(item["geo_name"], item["geo_name"])
-        )
-        rate = float(item["value"].rstrip("%"))
-        change = float(item["growth"].split()[0])
-        rate_text = f"{number(rate, lang, 1)}{'%' if lang == 'en' else ' %'}"
-        sign = "+" if change > 0 else ("−" if change < 0 else "")
-        unit = " pts" if lang == "en" else " pt"
-        rows.append((name, rate_text, rate, f"{sign}{number(abs(change), lang, 1)}{unit}"))
-    head = (
-        ("Province", "Unemployment rate", "Monthly change")
-        if lang == "en"
-        else ("Province", "Taux de chômage", "Variation mensuelle")
-    )
-    return (
-        '<table class="case-table"><thead><tr>'
-        f'<th scope="col">{head[0]}</th><th scope="col" class="num">{head[1]}</th>'
-        f'<th scope="col" class="num">{head[2]}</th><th></th>'
-        f"</tr></thead><tbody>{bar_rows(rows, extra=True)}</tbody></table>"
-    )
-
-
-def city_result(case: dict[str, Any], lang: Lang) -> str:
-    head = (
-        ("Issued", "Project", "Neighbourhood", "Construction value")
-        if lang == "en"
-        else ("Délivré", "Projet", "Quartier", "Valeur des travaux")
-    )
-    body = []
-    for row in case["response"]["rows"]:
-        millions = float(row["construction_value"]) / 1e6
-        value = (
-            f"${number(millions, lang, 1)}M" if lang == "en" else f"{number(millions, lang, 1)} M$"
-        )
-        body.append(
-            f'<tr><td class="nowrap">{esc(long_date(row["issue_date"], lang))}</td>'
-            f"<td>{esc(row['job_description'])}</td>"
-            f'<td>{esc(row["neighbourhood"].title())}</td><td class="num">{esc(value)}</td></tr>'
-        )
-    cols = "".join(
-        f'<th scope="col"{' class="num"' if i == 3 else ""}>{h}</th>' for i, h in enumerate(head)
-    )
-    return f'<table class="case-table permits"><thead><tr>{cols}</tr></thead><tbody>{"".join(body)}</tbody></table>'
-
-
-def discover_list(case: dict[str, Any]) -> str:
-    """The tables or datasets the discovery call returned, the one used marked."""
-    found = case["discover"]["response"]
-    args = case["request"]["arguments"]
-    if "tables" in found:
-        items = [(t["table_id"], t["title"]) for t in found["tables"]]
-        picked = args["table_id"]
-    else:
-        items = [(d["id"], d["name"]) for d in found["datasets"]]
-        picked = args["dataset_id"]
-    lis = "".join(
-        f"<li{' class="picked"' if key == picked else ''}><code>{esc(key)}</code><span>{esc(title)}</span></li>"
-        for key, title in items
-    )
-    return f'<ul class="found">{lis}</ul>'
-
-
-def case_source(case: dict[str, Any], lang: Lang) -> str:
-    prov = case["response"]["provenance"]
-    url = prov["url"]
-    label = "Source"
+def call_source(response: Any, lang: Lang) -> str:
+    """Source: <url>, queried <date>."""
+    prov = (response[0] if isinstance(response, list) else response)["provenance"]
     when = long_date(prov["queried_at"], lang)
     queried = f"queried {when}" if lang == "en" else f"interrogée le {when}"
-    extra = ""
-    if case["request"]["name"] == "statcan_indicators_get_indicators":
-        first = case["response"]["indicators"][0]
-        table = first["source_table"]
-        pid = f"{table[:2]}-{table[2:4]}-{table[4:8]}-01"
-        daily = (
-            first["daily_url"]
-            if lang == "en"
-            else first["daily_url"].replace("-eng.htm", "-fra.htm")
-        )
-        extra = (
-            f" · {'Table' if lang == 'en' else 'Tableau'} {pid} · "
-            f'<a href="{esc(daily)}">{"The Daily" if lang == "en" else "Le Quotidien"}, '
-            f"{esc(long_date(first['release_date'], lang))}</a>"
-        )
     return (
-        f'<p class="case-source">{label}: <a href="{esc(url)}">{esc(url)}</a>, {queried}{extra}</p>'
+        f'<span class="case-source">Source: <a href="{esc(prov["url"])}">{esc(prov["url"])}</a>, '
+        f"{queried}</span>"
     )
 
 
-def case_context(
-    lang: Lang, root: str, by_name: dict[str, ToolDoc], searches: dict[str, dict[Lang, list[str]]]
-) -> dict[str, str]:
+def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
+    """The calls behind a chart and the script that repeats the first one."""
+    summary = "How the agent got this" if lang == "en" else "Comment l'agent l'a obtenu"
+    request_label = "Request" if lang == "en" else "Requête"
+    panels = []
+    for call in case["calls"]:
+        request = json.dumps({"name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False)
+        panels.append(
+            f'<figure class="panel"><figcaption class="panel-bar"><span>{request_label}</span>'
+            f"<code>call_tool</code></figcaption><pre><code>{highlight_json(request)}</code></pre></figure>"
+        )
+    scripts = script_tabs(list(case["calls"][0]["scripts"].items()), f"{key}-rp")
+    return (
+        f'<details class="how"><summary>{summary}</summary><div class="how-body">'
+        + "".join(panels)
+        + f'<figure class="panel">{scripts}</figure></div></details>'
+    )
+
+
+def pumf_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    rows = []
+    for cell in response["cells"]:
+        groups = {g["variable"]: g["code"] for g in cell["groups"]}
+        if groups.get("HDGREE") != "9":
+            continue
+        name = PR_NAMES[groups["PR"]][0 if lang == "en" else 1]
+        half = 1.96 * cell["standard_error"]
+        rows.append((name, cell["estimate"], cell["estimate"] - half, cell["estimate"] + half))
+    by_width = sorted(rows, key=lambda r: r[3] - r[2])
+    label = (
+        "Share of adults 25 to 64 whose highest credential is a bachelor's degree, with 95% confidence intervals"
+        if lang == "en"
+        else "Part des adultes de 25 à 64 ans dont le plus haut diplôme est un baccalauréat, avec intervalles de confiance à 95 %"
+    )
+    return {
+        "chart_pumf": charts.ci_chart(rows, label=label, value_format=lambda v: percent(v, lang)),
+        "pumf_narrow": esc(join_names([r[0] for r in by_width[:2]], lang)),
+        "pumf_wide": esc(join_names([r[0] for r in by_width[-2:]], lang)),
+        "source_pumf": call_source(response, lang),
+    }
+
+
+def ircc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    edmonton, calgary = (call["response"]["rows"] for call in case["calls"])
+    years = [row["period"] for row in edmonton]
+    last = edmonton[-1]
+    partial = ""
+    categories = list(years)
+    if last["cells"] < 12:
+        months = MONTHS_EN if lang == "en" else MONTHS_FR
+        categories[-1] = f"{last['period']}*"
+        partial = (
+            f"*{last['period']} covers January to {months[last['cells'] - 1]} only."
+            if lang == "en"
+            else f"*{last['period']} ne couvre que janvier à {months[last['cells'] - 1]}."
+        )
+    series = [
+        ("Edmonton", [float(r["value"]) for r in edmonton]),
+        ("Calgary", [float(r["value"]) for r in calgary]),
+    ]
+    label = (
+        "New permanent residents by intended destination, Edmonton and Calgary, by year"
+        if lang == "en"
+        else "Nouveaux résidents permanents selon la destination prévue, Edmonton et Calgary, par année"
+    )
+    return {
+        "chart_ircc": charts.grouped_bars(
+            categories, series, label=label, value_format=lambda v: number(v, lang)
+        ),
+        "ircc_partial": esc(partial),
+        "source_ircc": call_source(case["calls"][0]["response"], lang),
+    }
+
+
+def year_ticks(iso: str) -> str | None:
+    return iso[:4] if iso[5:7] == "01" else None
+
+
+def labour_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    observations = response[0]["observations"]
+    points = [(o["ref_period"][:10], float(o["value"])) for o in observations]
+    last_iso, last_value = points[-1]
+    month = MONTHS_EN if lang == "en" else MONTHS_FR
+    label = (
+        "Unemployment rate, Canada, seasonally adjusted, monthly"
+        if lang == "en"
+        else "Taux de chômage, Canada, désaisonnalisé, mensuel"
+    )
+    return {
+        "chart_labour": charts.line_chart(
+            points, label=label, value_format=lambda v: percent(v, lang), x_tick_format=year_ticks
+        ),
+        "labour_latest": esc(percent(last_value, lang)),
+        "labour_month": esc(f"{month[int(last_iso[5:7]) - 1]} {last_iso[:4]}"),
+        "source_labour": call_source(response, lang),
+    }
+
+
+def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    points = sorted(
+        (o["ref_date"], float(o["values"]["V39079"]))
+        for o in response["observations"]
+        if o["values"].get("V39079") is not None
+    )
+    values = [v for _, v in points]
+    changes = sum(1 for a, b in zip(values, values[1:], strict=False) if a != b)
+    label = (
+        "Bank of Canada target for the overnight rate, daily since 2015"
+        if lang == "en"
+        else "Taux cible du financement à un jour de la Banque du Canada, quotidien depuis 2015"
+    )
+    return {
+        "chart_boc": charts.step_chart(
+            points, label=label, value_format=lambda v: percent(v, lang, 2), x_tick_format=year_ticks
+        ),
+        "boc_changes": str(changes),
+        "boc_min": esc(percent(min(values), lang, 2)),
+        "boc_max": esc(percent(max(values), lang, 2)),
+        "boc_last": esc(percent(values[-1], lang, 2)),
+        "boc_last_date": esc(long_date(points[-1][0], lang)),
+        "source_boc": call_source(response, lang),
+    }
+
+
+def case_context(lang: Lang) -> dict[str, str]:
     context: dict[str, str] = {}
-    renderers = {"ircc": ircc_result, "labour": labour_result, "city": city_result}
+    builders = {
+        "pumf": pumf_context,
+        "ircc": ircc_context,
+        "labour": labour_context,
+        "boc": boc_context,
+    }
     for key in CASE_KEYS:
         case = load_case(key)
-        request = {"name": case["request"]["name"], "arguments": case["request"]["arguments"]}
-        context[f"case_{key}_request"] = highlight_json(json.dumps(request, ensure_ascii=False))
-        context[f"case_{key}_result"] = renderers[key](case, lang)
-        context[f"case_{key}_source"] = case_source(case, lang)
-        context[f"case_{key}_captured"] = long_date(case["captured"], lang)
-        context[f"case_{key}_scripts"] = script_tabs(list(case["scripts"].items()), f"{key}-rp")
-        if case.get("discover"):
-            discover = {k: case["discover"][k] for k in ("name", "arguments")}
-            context[f"case_{key}_discover_request"] = highlight_json(
-                json.dumps(discover, ensure_ascii=False)
-            )
-            context[f"case_{key}_discover"] = discover_list(case)
-        if key in CASE_SEARCH:
-            context[f"case_{key}_search_request"] = highlight_json(
-                json.dumps({"query": CASE_SEARCH[key][lang]}, ensure_ascii=False)
-            )
-            context[f"case_{key}_search"] = result_items(
-                searches[key][lang][:3], by_name, lang, root
-            )
-    plan = planner.plan(CASE_PLAN_QUESTION[lang]).model_dump(mode="json")
-    place = plan["places"][0]
-    context["case_city_question"] = esc(CASE_PLAN_QUESTION[lang])
-    context["case_city_plan_request"] = highlight_json(
-        json.dumps({"question": CASE_PLAN_QUESTION[lang]}, ensure_ascii=False)
-    )
-    period = load_case("labour")["response"]["indicators"][0]["reference_period"]
-    month, year = period.split()
-    months_en = [f"{date(2000, m, 1):%B}" for m in range(1, 13)]
-    context["case_labour_period"] = esc(
-        period if lang == "en" else f"{MONTHS_FR[months_en.index(month)]} {year}"
-    )
-    context["case_city_plan"] = highlight_json(
-        json.dumps(
-            {"place": place["place"], "kind": place["kind"], "steps": place["steps"][:1]},
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+        context.update(builders[key](case, lang))
+        context[f"how_{key}"] = how_block(case, key, lang)
+    counts = {call["name"]: call["response"] for call in load_case("counts")["calls"]}
+    context["count_pumf"] = number(counts["statcan_pumf_list_files"]["file_count"], lang)
+    context["count_ircc"] = number(counts["ircc_monthly_list_tables"]["returned_count"], lang)
+    context["count_tables"] = number(counts["wds_list_all_cubes"]["total_count"], lang)
+    context["count_series"] = number(counts["boc_list_series"]["total_count"], lang)
+    context["cases_captured"] = long_date(load_case("counts")["captured"], lang)
     return context
 
 
@@ -1632,10 +1594,6 @@ async def build(out: Path) -> dict[str, int]:
         "reproduce_tabs": await reproduce_tabs(),
     }
     search_results = {lang: await server_search(SEARCH_EXAMPLE[lang]) for lang in LANGS}
-    case_searches: dict[str, dict[Lang, list[str]]] = {
-        key: {lang: await server_search(queries[lang]) for lang in LANGS}
-        for key, queries in CASE_SEARCH.items()
-    }
 
     if out.exists():
         shutil.rmtree(out)
@@ -1659,7 +1617,7 @@ async def build(out: Path) -> dict[str, int]:
             context = {
                 **shared,
                 **captured_call(lang),
-                **case_context(lang, root, by_name, case_searches),
+                **case_context(lang),
                 "lang": lang,
                 "root": root,
                 "page": page.name,
