@@ -35,9 +35,8 @@ commands on your machine:
 1. Make sure [uv](https://docs.astral.sh/uv/) is installed (`uv --version`).
    If it is missing, install it with the official installer from that page.
 2. Use this launch command. It installs straight from GitHub and works
-   whether or not a PyPI release exists:
+   before and after the PyPI release:
    `uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp`.
-   If `uvx maplestats-mcp` resolves on PyPI, the shorter form also works.
 3. Register it with the client you are running in, under the name
    `maplestats`:
    - **Claude Code:** `claude mcp add --scope user maplestats -- uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp`
@@ -145,29 +144,27 @@ contract.
 
 ## Install locally (no Docker required)
 
-MapleStats MCP is published on PyPI as `maplestats-mcp`. With
+MapleStats MCP is not on PyPI yet, so install it from GitHub for now. With
 [uv](https://docs.astral.sh/uv/), MCP clients can run it without a separate
 install step:
 
 ```bash
-uvx maplestats-mcp
+uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp
 ```
 
 Or install the command once:
 
 ```bash
-uv tool install maplestats-mcp
-```
-
-```bash
-pip install maplestats-mcp
-```
-
-The development version installs straight from GitHub:
-
-```bash
 uv tool install git+https://github.com/dsanchezp18/maplestats-mcp.git
 ```
+
+```bash
+pip install git+https://github.com/dsanchezp18/maplestats-mcp.git
+```
+
+The first PyPI release will publish it as `maplestats-mcp`. From then on the
+shorter forms work too: `uvx maplestats-mcp`, `uv tool install
+maplestats-mcp` and `pip install maplestats-mcp`.
 
 Once installed, the command is on your `PATH`:
 
@@ -201,7 +198,7 @@ For clients that accept a standard `mcpServers` JSON configuration, add:
   "mcpServers": {
     "maplestats": {
       "command": "uvx",
-      "args": ["maplestats-mcp"]
+      "args": ["--from", "git+https://github.com/dsanchezp18/maplestats-mcp", "maplestats-mcp"]
     }
   }
 }
@@ -210,11 +207,13 @@ For clients that accept a standard `mcpServers` JSON configuration, add:
 For Claude Code:
 
 ```bash
-claude mcp add maplestats -- uvx maplestats-mcp
+claude mcp add --scope user maplestats -- uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp
 ```
 
-If you installed the command with `uv tool install` or `pip`, use
-`"command": "maplestats-mcp"` instead of `uvx`.
+After the PyPI release, `"args": ["maplestats-mcp"]` and
+`uvx maplestats-mcp` are enough. If you installed the command with
+`uv tool install` or `pip`, use `"command": "maplestats-mcp"` with no
+`args` instead of `uvx`.
 
 On Windows, make sure the directory where `uv` installs tools is on `PATH`,
 then restart the MCP client after installation.
