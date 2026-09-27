@@ -64,7 +64,7 @@ REPO = "https://github.com/dsanchezp18/maplestats-mcp"
 # Cursor and VS Code install links, the Connect page's install and hosting
 # commands and llms.txt then use the plain package name. Until then they
 # install from GitHub, since `uvx maplestats-mcp` fails with no PyPI package.
-ON_PYPI = False
+ON_PYPI = True
 PACKAGE = "maplestats-mcp"
 # What `uv tool install` and `pip install` take, and the arguments after `uvx`.
 INSTALL_SOURCE = PACKAGE if ON_PYPI else f"git+{REPO}"
