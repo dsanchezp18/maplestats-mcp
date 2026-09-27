@@ -583,12 +583,23 @@ mark {
   font-weight: 500;
 }
 
-.connect-easy {
-  margin-bottom: clamp(32px, 4vw, 48px);
+/* The setup prompt beside the Connect page's headline: a column, so the
+   prompt wraps inside its box and the three steps stack. */
+.page-aside {
+  align-self: start;
+}
+
+.page-aside .cmd.prompt code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.page-aside .setup-steps {
+  flex-direction: column;
 }
 
 .by-hand-head {
-  padding-top: 8px;
+  padding-top: clamp(16px, 2vw, 28px);
 }
 
 @media (max-width: 1240px) {
@@ -721,6 +732,59 @@ mark {
 .section-head p:not(.label) {
   max-width: 64ch;
   color: var(--ink-2);
+}
+
+/* Page and section heads split on wide screens: the label and headline on
+   the left half, the lede on the right half, starting at the same line as
+   the twelve-column grids below (column 7). Anything else in the head, such
+   as the Tools page's pinned tools, runs across both halves underneath. */
+@media (min-width: 1000px) {
+  .page-head,
+  .section-head {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 2.5vw, 32px);
+    align-items: start;
+  }
+
+  .section-head {
+    max-width: none;
+  }
+
+  .page-head > *,
+  .section-head > * {
+    grid-column: 1 / -1;
+  }
+
+  .page-head > .label,
+  .page-head > h1,
+  .section-head > .label,
+  .section-head > h2 {
+    grid-column: 1;
+  }
+
+  .page-head > .lede,
+  .section-head > p:not(.label) {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0.35em;
+  }
+
+  /* A head with an aside (the setup prompt on the Connect page): the
+     label, headline and lede stack on the left, the aside on the right. */
+  .page-head.has-aside {
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .page-head.has-aside > .lede {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 4px;
+  }
+
+  .page-head.has-aside > .page-aside {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
 }
 
 .sub {
@@ -1743,10 +1807,13 @@ mark {
 
 /* ---------- Note from the author ---------- */
 
+/* Two balanced columns: the label and the thanks on the left, the list of
+   packages and the closing lines on the right. */
 .note {
   display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
-  gap: clamp(20px, 3.4vw, 52px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px clamp(24px, 2.5vw, 32px);
+  align-items: start;
 }
 
 @media (max-width: 900px) {
@@ -1760,8 +1827,13 @@ mark {
 .thanks-body {
   display: grid;
   gap: 16px;
+  align-content: start;
   max-width: 68ch;
   color: var(--ink-2);
+}
+
+.thanks-body > .label {
+  margin-bottom: 4px;
 }
 
 .thanks-list {
@@ -1801,7 +1873,9 @@ mark {
   border-top: 2px solid var(--ink);
 }
 
-.about-row h2 {
+.about-row h2,
+.about-block h2,
+.about-split h2 {
   font-family: var(--font-display);
   font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
   font-weight: 700;
@@ -1827,10 +1901,60 @@ mark {
   }
 }
 
+/* Short sections as blocks in two columns, each with its heading on top,
+   so a paragraph runs the width of a half (about 65 characters) instead
+   of sitting in the right two thirds with the last third empty. A tall
+   block spans two rows beside two short ones. */
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(24px, 2.5vw, 32px);
+  align-items: start;
+}
+
+.about-block {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding-block: 24px 32px;
+  border-top: 2px solid var(--ink);
+}
+
+.about-block-tall {
+  grid-row: span 2;
+}
+
+/* A long section: its heading on the left half and its introduction on the
+   right half, like the section heads, with the rest below at full width. */
+.about-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px clamp(24px, 2.5vw, 32px);
+  padding-block: 24px 8px;
+  border-top: 2px solid var(--ink);
+}
+
+@media (max-width: 800px) {
+  .about-grid,
+  .about-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-block-tall {
+    grid-row: auto;
+  }
+}
+
+.about-block .cmd.prompt code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Case studies ---------- */
 
 /* Each stanza: the count and its verse line on the left, under the hero's
-   logo column; the chart and its story on the right. */
+   logo column, with the case's headline and story below them; the chart,
+   its source and the calls behind it on the right, at full chart width. */
 .stanza {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1840,10 +1964,16 @@ mark {
   border-top: 2px solid var(--ink);
 }
 
-.stanza-verse {
+.stanza-text {
   grid-column: 1 / span 4;
   position: sticky;
   top: calc(var(--top-h) + 24px);
+  display: grid;
+  gap: 14px;
+}
+
+.stanza-verse {
+  margin-bottom: 10px;
 }
 
 .stanza-body {
@@ -1873,23 +2003,23 @@ mark {
   color: var(--ink-2);
 }
 
-.stanza-body h2 {
+.stanza-text h2 {
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+  font-size: clamp(1.5rem, 1.2rem + 0.7vw, 1.9rem);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.015em;
 }
 
-.stanza-body > p {
+.stanza-text > p {
   max-width: 68ch;
   color: var(--ink-2);
 }
 
 .chart-wrap {
-  margin: 8px 0 0;
-  padding-top: 18px;
-  border-top: 1px solid var(--rule);
+  margin: 0;
 }
 
 .chart-wrap .chart {
@@ -2085,13 +2215,39 @@ mark {
 }
 
 @media (max-width: 1240px) {
-  .stanza-verse,
+  .stanza-text,
   .stanza-body {
     grid-column: 1 / -1;
   }
 
-  .stanza-verse {
+  .stanza-text {
     position: static;
+  }
+
+  /* Stacked, the chart sits under the story again, on the rule that used
+     to separate them. */
+  .chart-wrap {
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+/* Between phone and full width, the verse sits beside the headline and
+   story instead of above them. */
+@media (min-width: 861px) and (max-width: 1240px) {
+  .stanza-text {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    column-gap: clamp(24px, 2.5vw, 32px);
+  }
+
+  .stanza-verse {
+    grid-row: 1 / span 2;
+    margin-bottom: 0;
+  }
+
+  .stanza-text h2 {
+    padding-top: 0;
+    border-top: 0;
   }
 }
 
@@ -2159,6 +2315,7 @@ mark {
   padding-block: clamp(40px, 5vw, 72px) clamp(28px, 3vw, 40px);
   display: grid;
   gap: 16px;
+  align-content: start;
 }
 
 .page-head h1 {
@@ -2492,11 +2649,70 @@ mark {
   }
 }
 
+/* An open tool: what it is for and its keywords, then its parameters and
+   an example call. In a narrow row these stack in that order (the two
+   wrappers step aside); where the row is wide, they are two columns, so
+   the text keeps a readable measure and the right half is not left empty.
+   The row, not the viewport, decides: the atlas column is narrower than
+   the page beside its index. */
+.tool {
+  container-type: inline-size;
+}
+
 .t-body {
   display: grid;
   gap: 14px;
   max-width: 900px;
   padding: 2px 0 22px;
+}
+
+.t-main,
+.t-side {
+  display: contents;
+}
+
+.t-side .table-wrap {
+  order: 1;
+}
+
+.t-kw {
+  order: 2;
+}
+
+.t-side .call {
+  order: 3;
+}
+
+@container (min-width: 860px) {
+  .t-body {
+    max-width: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 2.5vw, 36px);
+    align-items: start;
+  }
+
+  .t-main,
+  .t-side {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    min-width: 0;
+  }
+
+  .t-main > *,
+  .t-side > * {
+    order: 0;
+  }
+
+  .t-use {
+    max-width: 72ch;
+  }
+
+  /* A long call wraps in its half rather than scrolling sideways. */
+  .t-side .call {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 }
 
 .t-use {
@@ -2642,7 +2858,8 @@ mark {
 /* ---------- Connect page ---------- */
 
 .connect-note h2,
-.guide h2 {
+.guide h2,
+.guide-grid h2 {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2.25rem);
@@ -2755,6 +2972,20 @@ mark {
   color: var(--ink-2);
 }
 
+/* Wide enough, each question sits beside its answer, so the list fills the
+   column instead of leaving its right third empty. */
+@media (min-width: 1100px) {
+  .faq > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 6px clamp(20px, 2vw, 28px);
+  }
+
+  .faq dd {
+    margin-top: 0;
+  }
+}
+
 /* ---------- One MCP to rule them all ---------- */
 
 .kicker {
@@ -2769,7 +3000,8 @@ mark {
 }
 
 /* Same columns as the hero: the verse under the logo, the argument under
-   the hero text, the three claims across the full width. */
+   the hero text, with the paragraph and the three claims side by side
+   below the headline, so the block is about as tall as the verse. */
 .thesis .wrap {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -2783,10 +3015,6 @@ mark {
 
 .thesis-body {
   grid-column: 5 / -1;
-}
-
-.claims {
-  grid-column: 1 / -1;
 }
 
 @media (max-width: 1240px) {
@@ -2811,6 +3039,26 @@ mark {
   font-size: clamp(1.15rem, 1rem + 0.5vw, 1.375rem);
 }
 
+/* Stacked above the argument, the three counts run across in a row. */
+@media (min-width: 861px) and (max-width: 1240px) {
+  .thesis .verse {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto auto;
+    grid-auto-flow: column;
+    column-gap: clamp(24px, 2.5vw, 32px);
+  }
+
+  .verse .verse-count:not(:first-child) {
+    margin-top: 0;
+  }
+
+  .thesis .verse-aside {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
 .verse-aside {
   margin-top: 18px;
   font-size: 0.9375rem;
@@ -2820,8 +3068,25 @@ mark {
 
 .thesis-body {
   display: grid;
-  gap: 16px;
-  max-width: 780px;
+  gap: 22px;
+}
+
+.thesis-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 24px clamp(24px, 2.5vw, 32px);
+  align-items: start;
+}
+
+.thesis .claims {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+@media (max-width: 860px) {
+  .thesis-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .thesis-body h2 {
@@ -2960,6 +3225,216 @@ mark {
 
 .contrib-note {
   margin-top: 28px;
+  max-width: 72ch;
+  color: var(--ink-2);
+}
+
+.contrib-more .cmd.prompt {
+  margin-top: 14px;
+}
+
+/* The process for code: the seven steps in two balanced columns, read
+   down the first and then the second (the numbers keep the order), each
+   with its terminal panel, if any, under its text. Columns rather than
+   rows, so a short step next to a long one leaves no hole. */
+.guide-grid {
+  display: grid;
+  gap: clamp(28px, 3vw, 40px);
+}
+
+.guide-grid > .contrib-h {
+  margin-bottom: 0;
+}
+
+.step-grid {
+  columns: 2;
+  column-gap: clamp(32px, 4vw, 64px);
+}
+
+.step-grid .guide-step {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  break-inside: avoid;
+  padding-bottom: clamp(32px, 3.5vw, 48px);
+}
+
+.step-grid .guide-step h2 {
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.875rem);
+}
+
+.step-grid .step-text {
+  position: static;
+}
+
+.step-grid .step-text p {
+  max-width: 66ch;
+}
+
+@media (max-width: 900px) {
+  .step-grid {
+    columns: 1;
+  }
+}
+
+.contrib-rules {
+  margin: 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
+/* ---------- Home: the Statistics Canada feature link ---------- */
+
+.sources-feature {
+  margin-top: 28px;
+}
+
+/* Across the full width: the title on the left half, the description on
+   the right half, on the same line as the section heads above. */
+.sources-feature a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px clamp(24px, 2.5vw, 32px);
+  align-items: baseline;
+  padding: 18px 22px;
+  border: 2px solid var(--ink);
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.sources-feature a:hover {
+  border-color: var(--accent);
+}
+
+.sources-feature strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--accent);
+}
+
+
+@media (max-width: 900px) {
+  .sources-feature a {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- About: alternatives ---------- */
+
+/* Other ways to reach Canadian data, grouped by kind. Each group is a row:
+   its heading and note on the left five columns, its list on the right
+   seven. Each list row is a name column (links, then owner and language)
+   and one line of description, ruled like .thanks-list; the columns stack
+   on phones. */
+.alt-groups {
+  padding-bottom: 8px;
+}
+
+.alt-group {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.alt-head {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+@media (min-width: 1000px) {
+  .alt-group {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 12px clamp(24px, 2.5vw, 32px);
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-2);
+  }
+
+  .alt-head {
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: calc(var(--top-h) + 24px);
+  }
+
+  .alt-group .alt-list {
+    border-top: 0;
+  }
+
+  .alt-group .alt-list li:first-child {
+    padding-top: 2px;
+  }
+
+  .alt-groups > p:last-child {
+    margin-top: 28px;
+  }
+}
+
+.alt-group h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.about-text .alt-note {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.alt-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.alt-list li {
+  display: grid;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+  gap: 20px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.alt-name {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  min-width: 0;
+}
+
+.alt-name a {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.alt-meta {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .alt-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  /* The home page links here. On phones the wrapped header is about 158px
+     tall (measured at 390px), more than html's scroll-padding-top allows,
+     so without this the jump lands with the heading under the header. */
+  #alternatives {
+    scroll-margin-top: 48px;
+  }
+}
+
 /* ---------- Statistics Canada page ---------- */
 
 /* Four figures under the page head, on the same 2px rule as the sections. */
@@ -3224,117 +3699,6 @@ mark {
   color: var(--ink-2);
 }
 
-.contrib-more .cmd.prompt {
-  margin-top: 14px;
-}
-
-.contrib-rules {
-  margin: 0;
-  padding-left: 1.1em;
-  display: grid;
-  gap: 8px;
-  color: var(--ink-2);
-}
-
-/* ---------- Home: the Statistics Canada feature link ---------- */
-
-.sources-feature {
-  margin-top: 28px;
-}
-
-.sources-feature a {
-  display: block;
-  max-width: 880px;
-  padding: 18px 22px;
-  border: 2px solid var(--ink);
-  color: var(--ink-2);
-  text-decoration: none;
-}
-
-.sources-feature a:hover {
-  border-color: var(--accent);
-}
-
-.sources-feature strong {
-  display: block;
-  margin-bottom: 4px;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  color: var(--accent);
-}
-
-
-/* ---------- About: alternatives ---------- */
-
-/* Other ways to reach Canadian data, grouped by kind. Each row is a name
-   column (links, then owner and language) and one line of description,
-   ruled like .thanks-list; the columns stack on phones. */
-.alt-group {
-  display: grid;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.alt-group h3 {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.about-text .alt-note {
-  font-size: 1rem;
-  line-height: 1.55;
-}
-
-.alt-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--rule);
-}
-
-.alt-list li {
-  display: grid;
-  grid-template-columns: 12.5rem minmax(0, 1fr);
-  gap: 20px;
-  padding-block: 12px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 1rem;
-  line-height: 1.55;
-  color: var(--ink-2);
-}
-
-.alt-name {
-  display: grid;
-  gap: 2px;
-  align-content: start;
-  min-width: 0;
-}
-
-.alt-name a {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.alt-meta {
-  margin-top: 2px;
-  font-size: 0.8125rem;
-  line-height: 1.35;
-  color: var(--ink-3);
-}
-
-@media (max-width: 560px) {
-  .alt-list li {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-  }
-
-  /* The home page links here. On phones the wrapped header is about 158px
-     tall (measured at 390px), more than html's scroll-padding-top allows,
-     so without this the jump lands with the heading under the header. */
-  #alternatives {
-    scroll-margin-top: 48px;
 .sc-points b {
   color: var(--ink);
 }

@@ -48,12 +48,14 @@
     </div>
     <div class="thesis-body">
       <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
-      <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
-    </div>
-    <div class="claims">
-      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
-      <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
-      <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
+      <div class="thesis-split">
+        <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
+        <div class="claims">
+          <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
+          <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
+          <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -155,7 +157,7 @@
 
     <h3 class="sub">{en}Federal and national{fr}Fédéral et national{/} <span class="count">{{national_count}}</span></h3>
     <div class="domains">{{national_sources}}</div>
-    <p class="sources-feature"><a href="{{root}}statcan.html"><strong>{en}Statistics Canada, in depth{fr}Statistique Canada en détail{/}</strong> {en}Every table, series and microdata file an agent can reach, and the hard parts MapleStats handles for you.{fr}Chaque tableau, série et fichier de microdonnées qu'un agent peut atteindre, et les difficultés que MapleStats règle pour vous.{/} <span aria-hidden="true">→</span></a></p>
+    <p class="sources-feature"><a href="{{root}}statcan.html"><strong>{en}Statistics Canada, in depth{fr}Statistique Canada en détail{/}</strong> <span>{en}Every table, series and microdata file an agent can reach, and the hard parts MapleStats handles for you.{fr}Chaque tableau, série et fichier de microdonnées qu'un agent peut atteindre, et les difficultés que MapleStats règle pour vous.{/} <span aria-hidden="true">→</span></span></a></p>
 
     <div class="local">
       <h3 class="sub">{en}Provinces, territories and cities{fr}Provinces, territoires et villes{/} <span class="count">{{local_source_count}}</span></h3>
@@ -191,10 +193,12 @@
 
 <section class="section" id="thanks">
   <div class="wrap note thanks">
-    <p class="label">{en}Acknowledgements{fr}Remerciements{/}</p>
     <div class="thanks-body">
+      <p class="label">{en}Acknowledgements{fr}Remerciements{/}</p>
       <p>{en}MapleStats builds on the open work of many others. It learned from the many MCP servers for Canadian and government data that came before it, and much of its architecture and inspiration comes from <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>, my other project, an MCP server for Ecuador's open government data.{fr}MapleStats s'appuie sur le travail ouvert de nombreuses personnes. Il a tiré des leçons des nombreux serveurs MCP de données canadiennes et gouvernementales qui l'ont précédé, et une bonne part de son architecture et de son inspiration vient d'<a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>, mon autre projet, un serveur MCP pour les données ouvertes du gouvernement de l'Équateur.{/}</p>
       <p>{en}Existing open-source packages helped too, above all the R packages of Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) and their co-authors:{fr}Des paquets libres existants ont aussi aidé, surtout les paquets R de Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) et de leurs coauteurs :{/}</p>
+    </div>
+    <div class="thanks-body">
       <ul class="thanks-list">
         <li><a href="https://github.com/mountainMath/cmhc"><code>cmhc</code></a> {en}The CMHC module was checked against its reverse-engineering of CMHC's Housing Market Information Portal.{fr}Le module de la SCHL a été vérifié par rapport à sa rétro-ingénierie du Portail de l'information sur le marché de l'habitation.{/}</li>
         <li><a href="https://github.com/mountainMath/cansim"><code>cansim</code></a> {en}The R code that reproduce_code writes for Statistics Canada tables and vectors uses it.{fr}Le code R que reproduce_code écrit pour les tableaux et vecteurs de Statistique Canada l'utilise.{/}</li>

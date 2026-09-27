@@ -17,33 +17,41 @@
 </section>
 
 <section class="wrap about">
-  <div class="about-row">
-    <h2>{en}What it is{fr}Ce que c'est{/}</h2>
-    <div class="about-text">
-      <p>{en}One server with {{tool_count}} tools across {{module_count}} modules: Statistics Canada, the Bank of Canada, CMHC, {{other_national_count}} other federal sources and {{local_catalogue_count}} provincial, territorial and city catalogues. A connected agent sees three of them, plan_query, search_tools and call_tool, and finds the rest by searching in plain language.{fr}Un seul serveur, {{tool_count}} outils répartis en {{module_count}} modules : Statistique Canada, la Banque du Canada, la SCHL, {{other_national_count}} autres sources fédérales et {{local_catalogue_count}} catalogues provinciaux, territoriaux et municipaux. Un agent connecté en voit trois, plan_query, search_tools et call_tool, et trouve les autres par une recherche en langage courant.{/}</p>
+  <div class="about-grid">
+    <div class="about-block">
+      <h2>{en}What it is{fr}Ce que c'est{/}</h2>
+      <div class="about-text">
+        <p>{en}One server with {{tool_count}} tools across {{module_count}} modules: Statistics Canada, the Bank of Canada, CMHC, {{other_national_count}} other federal sources and {{local_catalogue_count}} provincial, territorial and city catalogues. A connected agent sees three of them, plan_query, search_tools and call_tool, and finds the rest by searching in plain language.{fr}Un seul serveur, {{tool_count}} outils répartis en {{module_count}} modules : Statistique Canada, la Banque du Canada, la SCHL, {{other_national_count}} autres sources fédérales et {{local_catalogue_count}} catalogues provinciaux, territoriaux et municipaux. Un agent connecté en voit trois, plan_query, search_tools et call_tool, et trouve les autres par une recherche en langage courant.{/}</p>
+      </div>
+    </div>
+    <div class="about-block about-block-tall">
+      <h2>{en}How it works{fr}Comment il fonctionne{/}</h2>
+      <div class="about-text">
+        <p>{en}MapleStats centralizes the interface, not the data. It keeps no copy: every call goes to the publisher, and every result names its source, the exact URL and the time of the query. Any data call can also come back as an R, Python, Stata or Julia script, so the analysis can be rerun without the agent.{fr}MapleStats centralise l'interface, pas les données. Il ne garde aucune copie : chaque appel va à l'éditeur, et chaque résultat nomme sa source, l'URL exacte et l'heure de la requête. Tout appel de données peut aussi revenir sous forme de script R, Python, Stata ou Julia, pour refaire l'analyse sans l'agent.{/}</p>
+        <p>{en}It runs on your machine over stdio, with no account or API key. The code is on <a href="{{repo}}">GitHub</a> under the MIT licence. Version {{version}} is a beta; the <a href="{{repo}}/blob/main/ROADMAP.md">roadmap</a> lists what is covered and what is next.{fr}Il s'exécute sur votre machine par stdio, sans compte ni clé d'API. Le code est sur <a href="{{repo}}">GitHub</a>, sous licence MIT. La version {{version}} est une bêta; la <a href="{{repo}}/blob/main/ROADMAP.md">feuille de route</a> indique ce qui est couvert et ce qui suit.{/}</p>
+      </div>
+    </div>
+    <div class="about-block">
+      <h2>{en}Who builds it{fr}Qui le réalise{/}</h2>
+      <div class="about-text">
+        <p>{en}I'm Daniel Sánchez Pazmiño, an economist and data specialist in Edmonton. I work at the Government of Alberta's Office of Statistics and Information. I'm interested in applied microeconomics, official statistics and agentic programming. MapleStats is an independent personal project, not affiliated with or endorsed by my employer. More at <a href="https://danielstats.io">danielstats.io</a>.{fr}Je suis Daniel Sánchez Pazmiño, économiste et spécialiste des données à Edmonton. Je travaille au Bureau de la statistique et de l'information du gouvernement de l'Alberta. Je m'intéresse à la microéconomie appliquée, à la statistique officielle et à la programmation agentique. MapleStats est un projet personnel indépendant, qui n'est ni affilié à mon employeur ni approuvé par lui. Pour en savoir plus : <a href="https://danielstats.io">danielstats.io</a>.{/}</p>
+      </div>
     </div>
   </div>
-  <div class="about-row">
-    <h2>{en}How it works{fr}Comment il fonctionne{/}</h2>
-    <div class="about-text">
-      <p>{en}MapleStats centralizes the interface, not the data. It keeps no copy: every call goes to the publisher, and every result names its source, the exact URL and the time of the query. Any data call can also come back as an R, Python, Stata or Julia script, so the analysis can be rerun without the agent.{fr}MapleStats centralise l'interface, pas les données. Il ne garde aucune copie : chaque appel va à l'éditeur, et chaque résultat nomme sa source, l'URL exacte et l'heure de la requête. Tout appel de données peut aussi revenir sous forme de script R, Python, Stata ou Julia, pour refaire l'analyse sans l'agent.{/}</p>
-      <p>{en}It runs on your machine over stdio, with no account or API key. The code is on <a href="{{repo}}">GitHub</a> under the MIT licence. Version {{version}} is a beta; the <a href="{{repo}}/blob/main/ROADMAP.md">roadmap</a> lists what is covered and what is next.{fr}Il s'exécute sur votre machine par stdio, sans compte ni clé d'API. Le code est sur <a href="{{repo}}">GitHub</a>, sous licence MIT. La version {{version}} est une bêta; la <a href="{{repo}}/blob/main/ROADMAP.md">feuille de route</a> indique ce qui est couvert et ce qui suit.{/}</p>
+  <div class="about-alts" id="alternatives">
+    <div class="about-split">
+      <h2>{en}Alternatives{fr}Autres options{/}</h2>
+      <div class="about-text">
+        <p>{en}MapleStats is one way into Canadian data, not the only one, and for some jobs it is not the best one. These are the other options I know of, checked in September 2026. Most are free and open source; the last group is not.{fr}MapleStats est une façon d'accéder aux données canadiennes, pas la seule, et pour certaines tâches ce n'est pas la meilleure. Voici les autres options que je connais, vérifiées en septembre 2026. La plupart sont gratuites et libres; le dernier groupe ne l'est pas.{/}</p>
+      </div>
     </div>
-  </div>
-  <div class="about-row">
-    <h2>{en}Who builds it{fr}Qui le réalise{/}</h2>
-    <div class="about-text">
-      <p>{en}I'm Daniel Sánchez Pazmiño, an economist and data specialist in Edmonton. I work at the Government of Alberta's Office of Statistics and Information. I'm interested in applied microeconomics, official statistics and agentic programming. MapleStats is an independent personal project, not affiliated with or endorsed by my employer. More at <a href="https://danielstats.io">danielstats.io</a>.{fr}Je suis Daniel Sánchez Pazmiño, économiste et spécialiste des données à Edmonton. Je travaille au Bureau de la statistique et de l'information du gouvernement de l'Alberta. Je m'intéresse à la microéconomie appliquée, à la statistique officielle et à la programmation agentique. MapleStats est un projet personnel indépendant, qui n'est ni affilié à mon employeur ni approuvé par lui. Pour en savoir plus : <a href="https://danielstats.io">danielstats.io</a>.{/}</p>
-    </div>
-  </div>
-  <div class="about-row" id="alternatives">
-    <h2>{en}Alternatives{fr}Autres options{/}</h2>
-    <div class="about-text">
-      <p>{en}MapleStats is one way into Canadian data, not the only one, and for some jobs it is not the best one. These are the other options I know of, checked in September 2026. Most are free and open source; the last group is not.{fr}MapleStats est une façon d'accéder aux données canadiennes, pas la seule, et pour certaines tâches ce n'est pas la meilleure. Voici les autres options que je connais, vérifiées en septembre 2026. La plupart sont gratuites et libres; le dernier groupe ne l'est pas.{/}</p>
+    <div class="about-text alt-groups">
 
       <div class="alt-group">
-        <h3>{en}Other MCP servers for Canadian data{fr}Autres serveurs MCP de données canadiennes{/}</h3>
-        <p class="alt-note">{en}These do what MapleStats does, for some or all of the same sources. A narrower server is simpler to set up and gives the agent fewer tools to choose from, which can be the better trade.{fr}Ils font ce que fait MapleStats, pour une partie ou la totalité des mêmes sources. Un serveur plus étroit est plus simple à installer et offre moins d'outils à l'agent, ce qui peut être le meilleur compromis.{/}</p>
+        <div class="alt-head">
+          <h3>{en}Other MCP servers for Canadian data{fr}Autres serveurs MCP de données canadiennes{/}</h3>
+          <p class="alt-note">{en}These do what MapleStats does, for some or all of the same sources. A narrower server is simpler to set up and gives the agent fewer tools to choose from, which can be the better trade.{fr}Ils font ce que fait MapleStats, pour une partie ou la totalité des mêmes sources. Un serveur plus étroit est plus simple à installer et offre moins d'outils à l'agent, ce qui peut être le meilleur compromis.{/}</p>
+        </div>
         <ul class="alt-list">
           <li>
             <span class="alt-name"><a href="https://github.com/ReyemTech/mcp-canada"><code>mcp-canada</code></a><span class="alt-meta">ReyemTech · Python</span></span>
@@ -74,8 +82,10 @@
       </div>
 
       <div class="alt-group">
-        <h3>{en}R and Python packages{fr}Paquets R et Python{/}</h3>
-        <p class="alt-note">{en}Libraries, not MCP servers: you write the code and get data frames back, with no agent in between. For reproducible analysis they are often the better tool. Most of the R packages are by Jens von Bergmann (mountainMath) and co-authors.{fr}Des bibliothèques, pas des serveurs MCP : vous écrivez le code et obtenez des tableaux de données, sans agent entre les deux. Pour une analyse reproductible, ce sont souvent de meilleurs outils. La plupart des paquets R sont de Jens von Bergmann (mountainMath) et de ses coauteurs.{/}</p>
+        <div class="alt-head">
+          <h3>{en}R and Python packages{fr}Paquets R et Python{/}</h3>
+          <p class="alt-note">{en}Libraries, not MCP servers: you write the code and get data frames back, with no agent in between. For reproducible analysis they are often the better tool. Most of the R packages are by Jens von Bergmann (mountainMath) and co-authors.{fr}Des bibliothèques, pas des serveurs MCP : vous écrivez le code et obtenez des tableaux de données, sans agent entre les deux. Pour une analyse reproductible, ce sont souvent de meilleurs outils. La plupart des paquets R sont de Jens von Bergmann (mountainMath) et de ses coauteurs.{/}</p>
+        </div>
         <ul class="alt-list">
           <li>
             <span class="alt-name"><a href="https://github.com/mountainMath/cansim"><code>cansim</code></a><span class="alt-meta">mountainMath · R</span></span>
@@ -117,8 +127,10 @@
       </div>
 
       <div class="alt-group">
-        <h3>{en}The official sources{fr}Les sources officielles{/}</h3>
-        <p class="alt-note">{en}MapleStats calls these directly and keeps no copy, so you can always go to the source yourself. None of them needs a key, and their documentation is the final word on what the data means.{fr}MapleStats les appelle directement et ne garde aucune copie : vous pouvez donc toujours aller vous-même à la source. Aucune ne demande de clé, et leur documentation fait foi sur le sens des données.{/}</p>
+        <div class="alt-head">
+          <h3>{en}The official sources{fr}Les sources officielles{/}</h3>
+          <p class="alt-note">{en}MapleStats calls these directly and keeps no copy, so you can always go to the source yourself. None of them needs a key, and their documentation is the final word on what the data means.{fr}MapleStats les appelle directement et ne garde aucune copie : vous pouvez donc toujours aller vous-même à la source. Aucune ne demande de clé, et leur documentation fait foi sur le sens des données.{/}</p>
+        </div>
         <ul class="alt-list">
           <li>
             <span class="alt-name"><a href="{en}https://www.statcan.gc.ca/en/developers/wds{fr}https://www.statcan.gc.ca/fr/developpeurs/sdw{/}">{en}Web Data Service{fr}Service de données Web{/}</a><span class="alt-meta">{en}Statistics Canada{fr}Statistique Canada{/}</span></span>
@@ -144,8 +156,10 @@
       </div>
 
       <div class="alt-group">
-        <h3>{en}Paid terminals and data services{fr}Terminaux et services de données payants{/}</h3>
-        <p class="alt-note">{en}Commercial services cover far more countries than MapleStats and come with support staff. If you have a licence and need international comparisons, they will serve you better.{fr}Les services commerciaux couvrent bien plus de pays que MapleStats et offrent du soutien. Si vous avez une licence et devez faire des comparaisons internationales, ils vous serviront mieux.{/}</p>
+        <div class="alt-head">
+          <h3>{en}Paid terminals and data services{fr}Terminaux et services de données payants{/}</h3>
+          <p class="alt-note">{en}Commercial services cover far more countries than MapleStats and come with support staff. If you have a licence and need international comparisons, they will serve you better.{fr}Les services commerciaux couvrent bien plus de pays que MapleStats et offrent du soutien. Si vous avez une licence et devez faire des comparaisons internationales, ils vous serviront mieux.{/}</p>
+        </div>
         <ul class="alt-list">
           <li>
             <span class="alt-name"><a href="https://www.haver.com/">Haver Analytics</a><span class="alt-meta">{en}Subscription{fr}Abonnement{/}</span></span>
