@@ -3003,3 +3003,77 @@ mark {
   color: var(--accent);
 }
 
+
+/* ---------- About: alternatives ---------- */
+
+/* Other ways to reach Canadian data, grouped by kind. Each row is a name
+   column (links, then owner and language) and one line of description,
+   ruled like .thanks-list; the columns stack on phones. */
+.alt-group {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.alt-group h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.about-text .alt-note {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.alt-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.alt-list li {
+  display: grid;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+  gap: 20px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.alt-name {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  min-width: 0;
+}
+
+.alt-name a {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.alt-meta {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .alt-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  /* The home page links here. On phones the wrapped header is about 158px
+     tall (measured at 390px), more than html's scroll-padding-top allows,
+     so without this the jump lands with the heading under the header. */
+  #alternatives {
+    scroll-margin-top: 48px;
+  }
+}
