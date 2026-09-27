@@ -9,11 +9,16 @@ The French pages must read as French: English only where it is marked.
 from __future__ import annotations
 
 import asyncio
+import base64
+import html
 import importlib.util
+import json
 import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
+from urllib.parse import parse_qs, unquote, urlsplit
 
 import pytest
 
@@ -325,3 +330,32 @@ def test_french_typography_skips_code_and_english():
     assert '<span lang="en">Source: here</span>' in out
     assert "fin\u202f?" in out
     assert "<script>if(a?b:c);</script>" in out
+
+
+def _snippet_json(page: str, code_id: str) -> dict[str, Any]:
+    match = re.search(rf'<code id="{code_id}">(.*?)</code>', page, re.DOTALL)
+    assert match, code_id
+    return json.loads(html.unescape(re.sub(r"<[^>]+>", "", match.group(1))))
+
+
+def test_install_links_match_the_snippets(built_site: Path):
+    """Both one-click links decode to the launch command the snippets show."""
+    for page in ("index.html", "connect.html", "fr/index.html", "fr/connect.html"):
+        text = (built_site / page).read_text(encoding="utf-8")
+        cursor = _snippet_json(text, "cl-cursor-1")["mcpServers"]["maplestats"]
+        vscode = _snippet_json(text, "cl-vscode-1")["servers"]["maplestats"]
+        assert cursor["args"] == vscode["args"] == site.UVX_ARGS, page
+        assert " ".join([cursor["command"], *cursor["args"]]) == site.UVX_COMMAND, page
+        assert f"-- {site.UVX_COMMAND}</code>" in text, page
+
+        href = re.search(r'href="(cursor://[^"]+)"', text)
+        assert href, page
+        query = parse_qs(urlsplit(html.unescape(href.group(1))).query)
+        assert query["name"] == ["maplestats"], page
+        assert json.loads(base64.b64decode(query["config"][0])) == cursor, page
+
+        href = re.search(r'href="vscode:mcp/install\?([^"]+)"', text)
+        assert href, page
+        config = json.loads(unquote(html.unescape(href.group(1))))
+        expected = {"name": "maplestats", "command": vscode["command"], "args": vscode["args"]}
+        assert config == expected, page

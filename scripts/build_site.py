@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import html
 import importlib
 import importlib.util
@@ -39,6 +40,7 @@ from datetime import date
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import quote
 
 from fastmcp import Client
 from fastmcp.server.transforms.search import BM25SearchTransform
@@ -58,6 +60,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
 DEFAULT_OUT = ROOT / "build" / "site"
 REPO = "https://github.com/dsanchezp18/maplestats-mcp"
+# Flip to True once the first release is on PyPI: every install snippet, the
+# Cursor and VS Code install links, the Connect page's install and hosting
+# commands and llms.txt then use the plain package name. Until then they
+# install from GitHub, since `uvx maplestats-mcp` fails with no PyPI package.
+ON_PYPI = False
+PACKAGE = "maplestats-mcp"
+# What `uv tool install` and `pip install` take, and the arguments after `uvx`.
+INSTALL_SOURCE = PACKAGE if ON_PYPI else f"git+{REPO}"
+UVX_ARGS: list[str] = [PACKAGE] if ON_PYPI else ["--from", INSTALL_SOURCE, PACKAGE]
+UVX_COMMAND = " ".join(["uvx", *UVX_ARGS])
 
 Lang = Literal["en", "fr"]
 LANGS: tuple[Lang, ...] = ("en", "fr")
@@ -1418,6 +1430,53 @@ AGENT_PROMPT: dict[Lang, str] = {
     "en": f"Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in {REPO}",
     "fr": f"Installe le serveur MCP MapleStats et connecte-le à cet agent. Suis les étapes d'installation de {REPO}",
 }
+
+# Shown next to the install snippets while the package is not on PyPI.
+INSTALL_NOTE: dict[Lang, str] = {
+    "en": "Until the first release on PyPI, MapleStats installs from GitHub, "
+    "so these commands point uvx at the repository.",
+    "fr": "D'ici la première version sur PyPI, MapleStats s'installe depuis GitHub; "
+    "ces commandes indiquent donc le dépôt à uvx.",
+}
+DEV_INSTALL_COMMENT: dict[Lang, str] = {
+    "en": "or the development version, from GitHub",
+    "fr": "ou la version de développement, depuis GitHub",
+}
+
+
+def cursor_install_href() -> str:
+    """Cursor's one-click link: the server entry as base64 JSON."""
+    config = json.dumps({"command": "uvx", "args": UVX_ARGS}, separators=(",", ":"))
+    encoded = base64.b64encode(config.encode("utf-8")).decode("ascii")
+    # Percent-encoded so a "+" in the base64 is not read back as a space.
+    return f"cursor://anysphere.cursor-deeplink/mcp/install?name=maplestats&config={quote(encoded, safe='')}"
+
+
+def vscode_install_href() -> str:
+    """VS Code's one-click link: the named server entry as URL-encoded JSON."""
+    config = {"name": "maplestats", "command": "uvx", "args": UVX_ARGS}
+    return "vscode:mcp/install?" + quote(json.dumps(config, separators=(",", ":")), safe="")
+
+
+def install_context(lang: Lang) -> dict[str, str]:
+    """The launch command, its arguments and the install links, from UVX_ARGS."""
+    dev = ""
+    if ON_PYPI:
+        dev = (
+            f'\n\n<span class="s-com"># {DEV_INSTALL_COMMENT[lang]}</span>\n'
+            f"uv tool install git+{REPO}.git"
+        )
+    return {
+        "uvx_command": esc(UVX_COMMAND),
+        "uvx_args_json": ", ".join(
+            f'<span class="s-str">{esc(json.dumps(arg))}</span>' for arg in UVX_ARGS
+        ),
+        "install_source": esc(INSTALL_SOURCE),
+        "dev_install": dev,
+        "cursor_install_href": esc(cursor_install_href()),
+        "vscode_install_href": esc(vscode_install_href()),
+        "install_note": "" if ON_PYPI else f'<p class="install-note">{esc(INSTALL_NOTE[lang])}</p>',
+    }
 
 
 def captured_call(lang: Lang) -> dict[str, str]:
@@ -2878,6 +2937,7 @@ async def build(out: Path) -> dict[str, int]:
             context = {
                 **shared,
                 **captured_call(lang),
+                **install_context(lang),
                 **cases[lang],
                 **statcan,
                 "lang": lang,
@@ -2931,9 +2991,9 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         ),
         "",
         (
-            f"Install (stdio, no API key): `uvx --from git+{REPO} maplestats-mcp`, or "
-            "`uvx maplestats-mcp` once it is on PyPI. Setup steps for an agent, per client: "
-            f"{REPO}#let-your-agent-set-it-up"
+            f"Install (stdio, no API key): `{UVX_COMMAND}`"
+            + ("" if ON_PYPI else " (from GitHub until the first PyPI release)")
+            + f". Setup steps for an agent, per client: {REPO}#the-easiest-way-ask-your-agent"
         ),
         "",
     ]
