@@ -2287,9 +2287,32 @@ mark {
   color: var(--accent);
 }
 
+/* Same columns as the hero: the verse under the logo, the argument under
+   the hero text, the three claims across the full width. */
 .thesis .wrap {
   display: grid;
-  gap: clamp(28px, 3.5vw, 48px);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(28px, 3.5vw, 48px) clamp(24px, 2.5vw, 32px);
+  align-items: start;
+}
+
+.thesis .verse {
+  grid-column: 1 / span 4;
+}
+
+.thesis-body {
+  grid-column: 5 / -1;
+}
+
+.claims {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1180px) {
+  .thesis .verse,
+  .thesis-body {
+    grid-column: 1 / -1;
+  }
 }
 
 .verse {
@@ -2314,6 +2337,12 @@ mark {
   display: grid;
   gap: 16px;
   max-width: 780px;
+}
+
+@media (min-width: 1181px) {
+  .verse {
+    font-size: clamp(1.35rem, 0.9rem + 0.9vw, 1.75rem);
+  }
 }
 
 .thesis-body h2 {
