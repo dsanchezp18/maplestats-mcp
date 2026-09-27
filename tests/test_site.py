@@ -145,3 +145,20 @@ def test_agent_prompt_is_the_same_everywhere():
     for page in ("index.html", "connect.html"):
         template = (site.SITE / page).read_text(encoding="utf-8")
         assert "{{agent_prompt}}" in template, page
+
+
+def test_french_pages_link_to_french_pages():
+    """A French page's links stay in fr/; only the language switch goes to English."""
+    page = (
+        '<html lang="fr" data-root="../"><link href="../assets/site.css" rel="stylesheet">'
+        '<a href="../tools.html#t-wds_search_cubes">x</a> <a href="../index.html#how">y</a>'
+        '<a class="lang" href="../cases.html" hreflang="en">English</a>'
+        '<a href="https://example.org/a.html">z</a>'
+    )
+    out = site.french_links(page)
+    assert 'href="tools.html#t-wds_search_cubes"' in out
+    assert 'href="index.html#how"' in out
+    assert 'href="../cases.html" hreflang="en"' in out
+    assert 'href="../assets/site.css"' in out
+    assert 'href="https://example.org/a.html"' in out
+    assert 'data-pages=""' in out

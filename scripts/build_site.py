@@ -2407,6 +2407,18 @@ def statcan_context(modules: list[ModuleDoc], lang: Lang, root: str) -> dict[str
     return context
 
 
+# On a French page, {{root}} is "../" so the shared assets resolve, but a link
+# to another page must stay in French: "../tools.html#t-x" becomes
+# "tools.html#t-x". The language switch (it carries hreflang) keeps pointing
+# at the English page, and data-pages tells site.js where pages live.
+_PAGE_LINK = re.compile(r'(<a\b(?![^>]*\bhreflang=)[^>]*?\bhref=")\.\./([\w-]+\.html)')
+
+
+def french_links(html_text: str) -> str:
+    html_text = _PAGE_LINK.sub(r"\1\2", html_text)
+    return html_text.replace('data-root="../"', 'data-root="../" data-pages=""', 1)
+
+
 def render(template: str, lang: Lang, context: dict[str, str]) -> str:
     def include(match: re.Match[str]) -> str:
         return render_partial(match.group(1))
@@ -2507,6 +2519,8 @@ async def build(out: Path) -> dict[str, int]:
                 "level_filters": level_filters(modules, lang),
             }
             rendered = render(page.read_text(encoding="utf-8"), lang, context)
+            if lang == "fr":
+                rendered = french_links(rendered)
             (target_dir / page.name).write_text(rendered, encoding="utf-8")
     return {"tools": len(by_name), "modules": len(modules), "pages": len(pages) * len(LANGS)}
 

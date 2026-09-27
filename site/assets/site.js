@@ -11,6 +11,8 @@
   const doc = document.documentElement;
   const lang = doc.lang === "fr" ? "fr" : "en";
   const root = doc.dataset.root || "";
+  // Pages sit next to the current one (fr/ links to fr/); assets are under root.
+  const pages = doc.dataset.pages ?? root;
   const T = {
     en: {
       copy: "Copy",
@@ -163,7 +165,7 @@
     const [name, module, summary] = entry;
     const source = (modules[module] || [module, module])[lang === "en" ? 0 : 1];
     return (
-      `<li><a href="${root}tools.html#t-${name}"><span class="r-rank">${n}</span>` +
+      `<li><a href="${pages}tools.html#t-${name}"><span class="r-rank">${n}</span>` +
       `<span class="r-name">${highlight(name, query).replace(/_/g, "_<wbr>")}</span>` +
       `<span class="r-src">${escapeHtml(source)}</span>` +
       `<span class="r-sum">${highlight(summary, query)}</span></a></li>`
