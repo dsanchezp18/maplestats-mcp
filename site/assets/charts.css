@@ -1,0 +1,197 @@
+/* Inline-SVG charts drawn by scripts/site_charts.py.
+ *
+ * The markup carries classes only, so these rules (and the theme's custom
+ * properties from site.css) decide every colour. Sizes are in viewBox units:
+ * each chart is 640 units wide and scales with its container.
+ *
+ * Motion runs only when the page's inline script has set <html class="js">
+ * and assets/charts.js adds "play" to a chart scrolled into view; without
+ * JavaScript, or with reduced motion, every chart shows its final state. */
+
+/* Series colours, checked with the dataviz palette validator for
+   colour-blind separation and contrast on each theme's surface. */
+:root {
+  --chart-1: #c8221a;
+  --chart-2: #3b6fb6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --chart-1: #f0503f;
+    --chart-2: #5e8fdc;
+  }
+}
+
+:root[data-theme="dark"] {
+  --chart-1: #f0503f;
+  --chart-2: #5e8fdc;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.c-grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.c-base {
+  stroke: var(--ink-3);
+}
+
+.c-axis {
+  fill: var(--ink-3);
+}
+
+.chart .c-label {
+  fill: var(--ink-2);
+  font-family: var(--font-text);
+  font-size: 12.5px;
+}
+
+.c-value {
+  fill: var(--ink);
+  font-weight: 600;
+}
+
+.c-legend {
+  fill: var(--ink-2);
+}
+
+.c-bar,
+.c-key {
+  fill: var(--chart-1);
+}
+
+.c-bar-2,
+.c-key-2 {
+  fill: var(--chart-2);
+}
+
+.c-bar-3,
+.c-key-3 {
+  fill: var(--ink-3);
+}
+
+.c-line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.c-ci {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.c-dot {
+  fill: var(--chart-1);
+  stroke: var(--ground);
+  stroke-width: 2;
+}
+
+/* The ring behind the last point of a line; seen only while it pulses. */
+.c-ring {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 1.5;
+  opacity: 0;
+}
+
+/* Invisible, larger-than-the-mark hover targets that carry the tooltips. */
+.c-hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.c-hit:hover + .c-dot,
+.c-bar:hover,
+.c-bar-2:hover {
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .chart .c-bar,
+  .js .chart .c-bar-2,
+  .js .chart .c-bar-3 {
+    transform-box: fill-box;
+    transform-origin: bottom;
+    transition: transform 700ms cubic-bezier(0.22, 0.8, 0.26, 1);
+    transition-delay: calc(var(--i, 0) * 45ms);
+  }
+
+  .js .chart:not(.play) .c-bar,
+  .js .chart:not(.play) .c-bar-2,
+  .js .chart:not(.play) .c-bar-3 {
+    transform: scaleY(0);
+  }
+
+  /* Intervals open outwards from their centre, one row after another. */
+  .js .chart .c-ci {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 650ms cubic-bezier(0.22, 0.8, 0.26, 1);
+    transition-delay: calc(var(--i, 0) * 70ms);
+  }
+
+  .js .chart:not(.play) .c-ci {
+    transform: scaleX(0);
+  }
+
+  .js .chart .c-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1.6s cubic-bezier(0.45, 0.05, 0.25, 1);
+  }
+
+  .js .chart:not(.play) .c-line {
+    stroke-dashoffset: 1;
+  }
+
+  .js .chart .c-dot {
+    transition: opacity 350ms ease-out;
+    transition-delay: calc(var(--i, 0) * 70ms + 300ms);
+  }
+
+  /* The last point of a line appears as the line reaches it. */
+  .js .chart .c-end {
+    transition: opacity 400ms ease-out 1.5s;
+  }
+
+  .js .chart:not(.play) .c-dot,
+  .js .chart:not(.play) .c-end {
+    opacity: 0;
+  }
+
+  .js .chart.play .c-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: c-pulse 2.4s ease-out 2s infinite;
+  }
+
+  @keyframes c-pulse {
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(3);
+    }
+  }
+}

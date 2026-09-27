@@ -1666,6 +1666,18 @@ mark {
   height: auto;
 }
 
+/* On a phone the chart keeps a readable width and scrolls inside its frame,
+   rather than shrinking its labels to a few pixels. */
+@media (max-width: 640px) {
+  .chart-wrap {
+    overflow-x: auto;
+  }
+
+  .chart-wrap .chart {
+    min-width: 560px;
+  }
+}
+
 .chart-wrap figcaption {
   margin-top: 10px;
 }

@@ -222,6 +222,14 @@ query tokenizer ported to `site/assets/site.js`; if you change
 `shared/search.py`, change `tokenize()` there to match
 (`tests/test_site.py` checks the Python side against `search_tools`).
 
+The case-studies page (`site/cases.html`) is the exception to "nothing
+by hand": its charts are drawn from calls recorded by
+`scripts/capture_cases.py` into `site/_data/cases/*.json`, so the build
+never depends on an upstream. Re-run that script to refresh them (the
+PUMF case downloads a ~170 MB file). The charts are inline SVG from
+`scripts/site_charts.py`, styled and animated by `site/assets/charts.css`
+and `site/assets/charts.js`.
+
 ```bash
 uv run python scripts/build_site.py
 uv run python -m http.server --directory build/site 8080

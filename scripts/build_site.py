@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import html
 import importlib
+import importlib.util
 import inspect
 import json
 import math
@@ -33,6 +34,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from datetime import date
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
 
@@ -1409,7 +1411,9 @@ def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
     request_label = "Request" if lang == "en" else "Requête"
     panels = []
     for call in case["calls"]:
-        request = json.dumps({"name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False)
+        request = json.dumps(
+            {"name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False
+        )
         panels.append(
             f'<figure class="panel"><figcaption class="panel-bar"><span>{request_label}</span>'
             f"<code>call_tool</code></figcaption><pre><code>{highlight_json(request)}</code></pre></figure>"
@@ -1511,7 +1515,7 @@ def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if o["values"].get("V39079") is not None
     )
     values = [v for _, v in points]
-    changes = sum(1 for a, b in zip(values, values[1:], strict=False) if a != b)
+    changes = sum(1 for a, b in pairwise(values) if a != b)
     label = (
         "Bank of Canada target for the overnight rate, daily since 2015"
         if lang == "en"
@@ -1519,7 +1523,10 @@ def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     )
     return {
         "chart_boc": charts.step_chart(
-            points, label=label, value_format=lambda v: percent(v, lang, 2), x_tick_format=year_ticks
+            points,
+            label=label,
+            value_format=lambda v: percent(v, lang, 2),
+            x_tick_format=year_ticks,
         ),
         "boc_changes": str(changes),
         "boc_min": esc(percent(min(values), lang, 2)),
