@@ -180,7 +180,7 @@
 
   /* ---------- Hero search ---------- */
 
-  document.querySelectorAll("[data-hero-search]").forEach((box) => {
+  document.querySelectorAll("[data-live-search]").forEach((box) => {
     const input = box.querySelector("input");
     const list = box.querySelector("[data-results]");
     const status = box.querySelector("[data-status]");

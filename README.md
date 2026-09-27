@@ -1,27 +1,70 @@
 <p align="center">
   <h1 align="center">🍁 MapleStats MCP</h1>
   <p align="center">
-    <strong>One MCP server for Canadian public data.</strong>
+    <strong>One MCP server for Canadian open data.</strong>
   </p>
 </p>
 
 <!-- mcp-name: io.github.dsanchezp18/maplestats-mcp -->
 
 MapleStats MCP gives AI agents (Claude, Cursor, and any MCP-compatible
-client) structured, typed access to Canadian public data through a
+client) structured, typed access to Canadian open data through a
 single server — covering Statistics Canada (tables, Census and public use
 microdata), the Bank of Canada, CMHC, federal agencies, and federal,
 provincial, territorial and municipal open-data portals, in English and
 French.
 
 *MapleStats MCP donne aux agents IA (Claude, Cursor et tout client
-compatible MCP) un accès structuré et typé aux données publiques
+compatible MCP) un accès structuré et typé aux données ouvertes
 canadiennes par l'entremise d'un seul serveur — couvrant Statistique
 Canada, la Banque du Canada, ainsi que des portails CKAN fédéraux,
 provinciaux, territoriaux et municipaux vérifiés.*
 
 See [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/PROJECT_GUIDE.md) for the project vision and
 [`ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/ROADMAP.md) for source coverage status.
+
+## Let your agent set it up
+
+Paste this into Claude Code, Codex, Cursor or any agent that can run
+commands on your machine:
+
+> Set up the MapleStats MCP server for me: https://github.com/dsanchezp18/maplestats-mcp
+
+### Instructions for the agent doing the setup
+
+1. Make sure [uv](https://docs.astral.sh/uv/) is installed (`uv --version`).
+   If it is missing, install it with the official installer from that page.
+2. Use this launch command. It installs straight from GitHub and works
+   whether or not a PyPI release exists:
+   `uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp`.
+   If `uvx maplestats-mcp` resolves on PyPI, the shorter form also works.
+3. Register it with the client you are running in, under the name
+   `maplestats`:
+   - **Claude Code:** `claude mcp add --scope user maplestats -- uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp`
+   - **Codex CLI:** `codex mcp add maplestats -- uvx --from git+https://github.com/dsanchezp18/maplestats-mcp maplestats-mcp`
+   - **Cursor, Claude Desktop and other `mcpServers` clients:** add the
+     entry below to the client's config file (Cursor: `~/.cursor/mcp.json`;
+     Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
+     on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows),
+     keeping any servers already there.
+   - **VS Code:** the same entry under a `servers` key (not `mcpServers`)
+     in `.vscode/mcp.json`.
+
+   ```json
+   {
+     "mcpServers": {
+       "maplestats": {
+         "command": "uvx",
+         "args": ["--from", "git+https://github.com/dsanchezp18/maplestats-mcp", "maplestats-mcp"]
+       }
+     }
+   }
+   ```
+4. The server speaks MCP over stdio and needs no API key, account or open
+   port. Tell the user to restart or reload the client, then check that
+   the `search_tools` tool is listed.
+
+More clients and hosting options: [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html).
 
 ## Bilingual by design / Conçu pour être bilingue
 
