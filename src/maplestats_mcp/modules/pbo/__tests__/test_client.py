@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import re
+from datetime import date
 
 import pytest
 import yaml
@@ -129,3 +130,155 @@ async def test_errors(httpx_mock):
     httpx_mock.add_response(url=_url("publications/RP-9999-999-S"), status_code=404)
     with pytest.raises(NotFound):
         await client.get_publication("RP-9999-999-S")
+
+
+def _request(number: int, internal: str, **extra):
+    record = {
+        "id": number,
+        "internal_id": internal,
+        "request_date": "2025-02-24T00:00:00-05:00",
+        "deadline_date": "2025-03-10T00:00:00-04:00",
+        "extension_date": None,
+        "request_status": "completed",
+        "disposition_status": "all_disclosed",
+        "summary_en": "Information about the Canada Housing Infrastructure Fund.",
+        "summary_fr": "Informations concernant le Fonds canadien pour les infrastructures "
+        "liées au logement.",
+        "disposition_note_en": None,
+        "disposition_note_fr": None,
+        "permalinks": {"en": {"website": f"https://www.pbo-dpb.ca/en/x/{internal}"}},
+        "department": {
+            "name_en": "Housing, Infrastructure and Communities Canada",
+            "name_fr": "Logement, Infrastructures et Collectivités Canada",
+            "acronym_en": "HICC",
+            "acronym_fr": "LICC",
+        },
+    }
+    record.update(extra)
+    return record
+
+
+_DND = {
+    "name_en": "National Defence",
+    "name_fr": "Défense nationale",
+    "acronym_en": "DND",
+    "acronym_fr": "MDN",
+}
+_REGISTER = [
+    _request(
+        1126,
+        "IR0957",
+        request_date="2026-08-24T00:00:00-04:00",
+        deadline_date="2026-09-08T00:00:00-04:00",
+        extension_date="2026-09-29T00:00:00-04:00",
+        request_status="pending",
+        disposition_status=None,
+    ),
+    _request(
+        1061,
+        "IR0889",
+        request_date="2026-01-08T00:00:00-05:00",
+        deadline_date="2026-01-22T00:00:00-05:00",
+        request_status="pending_correspondence",
+        disposition_status=None,
+        department=_DND,
+        summary_en="Defence industrial strategy",
+        summary_fr="Stratégie industrielle de défense",
+    ),
+    _request(979, "IR0816"),
+    _request(
+        718,
+        "IR0080a",
+        request_date="2008-12-01T00:00:00-05:00",
+        disposition_status="nothing_disclosed",
+        department=_DND,
+        summary_en="Recurring: data on Economic and Fiscal Statement",
+        summary_fr="Récurrent : données sur l'énoncé économique",
+        disposition_note_en="Consult IR0080a for a copy of legal opinion.",
+    ),
+]
+
+
+def _mock_register(httpx_mock):
+    # Two pages, as the live list does (40 per page there).
+    httpx_mock.add_response(
+        url=_url("information-requests?page=1"),
+        json={"data": _REGISTER[:2], "meta": {"current_page": 1, "last_page": 2, "total": 4}},
+    )
+    httpx_mock.add_response(
+        url=_url("information-requests?page=2"),
+        json={"data": _REGISTER[2:], "meta": {"current_page": 2, "last_page": 2, "total": 4}},
+    )
+
+
+async def test_information_request_register_filters_and_counts(httpx_mock, monkeypatch):
+    monkeypatch.setattr(client, "_today", lambda: date(2026, 9, 27))
+    _mock_register(httpx_mock)
+    everything = await client.search_information_requests()
+    assert everything.total_matched == 4
+    assert everything.by_disposition == {"none": 2, "all_disclosed": 1, "nothing_disclosed": 1}
+    assert everything.by_department == {"HICC": 2, "DND": 2}
+
+    open_ = await client.search_information_requests(status="open")
+    assert [r.id for r in open_.requests] == ["IR0957", "IR0889"]
+    # The extension (Sept. 29) is not yet past; the DND request is 248 days late.
+    assert [r.days_past_deadline for r in open_.requests] == [0, 248]
+
+    dnd = await client.search_information_requests(department="défense")
+    assert {r.id for r in dnd.requests} == {"IR0889", "IR0080a"}
+    assert (await client.search_information_requests(department="mdn")).total_matched == 2
+
+    french = await client.search_information_requests("liees au LOGEMENT", lang="fr")
+    assert [r.id for r in french.requests] == ["IR0957", "IR0816"]
+    assert french.requests[0].department_acronym == "LICC"
+    assert french.requests[0].status_label == "En attente"
+
+    dated = await client.search_information_requests(since="2025", until="2026-01")
+    assert [r.id for r in dated.requests] == ["IR0889", "IR0816"]
+
+
+async def test_information_request_letters(httpx_mock):
+    _mock_register(httpx_mock)
+    httpx_mock.add_response(
+        url=_url("information-requests/718"),
+        json={
+            "data": {
+                **_REGISTER[3],
+                "contacts": [{"firstname": "not passed on"}],
+                "files": [
+                    {
+                        "document_type": "request_letter",
+                        "mime": "application/pdf",
+                        "urls": {"en": {"public": "https://s3/en"}, "fr": {"public": None}},
+                    },
+                    {
+                        "document_type": "reply_letter",
+                        "mime": "application/pdf",
+                        "bilingual": True,
+                        "urls": {"public": "https://s3/both"},
+                    },
+                ],
+            }
+        },
+    )
+    result = await client.get_information_request("ir0080A", lang="fr")
+    assert result.request.disposition_label == "Aucune communication"
+    assert result.request.disposition_note == "Consult IR0080a for a copy of legal opinion."
+    # The French letter is missing, so the English one stands in.
+    assert [(f.label, f.url) for f in result.files] == [
+        ("Lettre de demande", "https://s3/en"),
+        ("Lettre de réponse", "https://s3/both"),
+    ]
+    assert "contacts" not in result.model_dump()
+
+
+async def test_information_request_errors(httpx_mock):
+    with pytest.raises(InvalidInput):
+        await client.get_information_request("../1")
+    with pytest.raises(InvalidInput):
+        await client.search_information_requests(status="late")
+    with pytest.raises(InvalidInput):
+        await client.search_information_requests(since="March 2024")
+    _mock_register(httpx_mock)
+    with pytest.raises(NotFound):
+        await client.get_information_request("IR9999")

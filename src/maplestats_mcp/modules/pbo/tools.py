@@ -7,7 +7,15 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maplestats_mcp.modules.pbo import client
-from maplestats_mcp.modules.pbo.schemas import PboPublication, PboSearchResult, PublicationType
+from maplestats_mcp.modules.pbo.schemas import (
+    Disposition,
+    PboInformationRequest,
+    PboInformationRequestList,
+    PboPublication,
+    PboSearchResult,
+    PublicationType,
+    RequestStatus,
+)
 
 Lang = Literal["en", "fr"]
 
@@ -63,3 +71,65 @@ async def pbo_get_publication(publication_id: str, lang: Lang = "en") -> PboPubl
     directeur parlementaire du budget, résultats de l'évaluation.
     """
     return await client.get_publication(publication_id, lang=lang)
+
+
+@tool
+async def pbo_search_information_requests(
+    query: str = "",
+    department: str = "",
+    status: RequestStatus | Literal["open"] | None = None,
+    disposition: Disposition | None = None,
+    since: str = "",
+    until: str = "",
+    page: int = 1,
+    lang: Lang = "en",
+) -> PboInformationRequestList:
+    """Search the register of information requests PBO sent to federal departments.
+
+    Use for: what data the Parliamentary Budget Officer asked departments
+    for, and whether they answered: all 1,100+ requests since 2008 with the
+    department, request date, deadline, extension, status and outcome (all
+    disclosed, disclosed in part, nothing disclosed, information does not
+    exist). Counts by outcome, status and department come with every result,
+    so it answers "how often did National Defence refuse PBO" or "which
+    requests are overdue". `query` matches words in the request summary
+    (English and French, accents ignored); `department` an acronym (FIN,
+    DND, CRA, TBS) or part of a name; `status` 'open' keeps every pending
+    request, and open ones carry days_past_deadline; `since`/`until` bound
+    the request date (YYYY, YYYY-MM or YYYY-MM-DD). 25 per page, newest
+    first. Pass an id to pbo_get_information_request for the letters.
+    Keywords: Parliamentary Budget Officer, PBO information request,
+    access to information, departmental disclosure, refused request,
+    overdue request, government transparency, data request, PBO mandate.
+    Mots-clés : directeur parlementaire du budget, DPB, demande
+    d'information, communication de renseignements, refus de communiquer,
+    demande en retard, transparence gouvernementale, ministère fédéral.
+    """
+    return await client.search_information_requests(
+        query,
+        department=department,
+        status=status,
+        disposition=disposition,
+        since=since,
+        until=until,
+        page=page,
+        lang=lang,
+    )
+
+
+@tool
+async def pbo_get_information_request(request_id: str, lang: Lang = "en") -> PboInformationRequest:
+    """Read one PBO information request with links to its letters.
+
+    Use for: the details of one request from pbo_search_information_requests:
+    department, dates, status, outcome and note, and the request letter and
+    the department's replies (mostly PDF) in the requested language.
+    `request_id` is PBO's number, e.g. 'IR0959', 'RI0929' or 'IR0080a'.
+    Keywords: PBO information request, request letter, reply letter,
+    departmental response, disclosure, Parliamentary Budget Officer,
+    IR number, request details.
+    Mots-clés : demande d'information du DPB, lettre de demande, lettre de
+    réponse, réponse du ministère, communication, directeur parlementaire
+    du budget, numéro de demande, détails.
+    """
+    return await client.get_information_request(request_id, lang=lang)

@@ -21,3 +21,29 @@ TYPES = {
     "OA": ("Additional analysis", "Analyse complémentaire"),
     "LIBARC": ("Archived publication", "Publication archivée"),
 }
+
+# Information requests (checked live 2026-09-27): 1,121 requests since
+# December 2008, 40 per page; the list ignores every filter parameter.
+REGISTER_TTL_SECONDS = 6 * 60 * 60
+IR_PAGE_SIZE = 25
+IR_FETCH_CONCURRENCY = 4
+
+REQUEST_STATUSES = {
+    "completed": ("Completed", "Terminée"),
+    "pending": ("Pending", "En attente"),
+    "pending_correspondence": ("Pending correspondence", "Correspondance en attente"),
+    "pending_data": ("Pending data", "Données en attente"),
+    "canceled": ("Canceled", "Annulée"),
+}
+DISPOSITIONS = {
+    "all_disclosed": ("All disclosed", "Communication totale"),
+    "disclosed_in_part": ("Disclosed in part", "Communication partielle"),
+    "nothing_disclosed": ("Nothing disclosed", "Aucune communication"),
+    "does_not_exist": ("Information does not exist", "L'information n'existe pas"),
+}
+DOCUMENT_TYPES = {
+    "request_letter": ("Request letter", "Lettre de demande"),
+    "reply_letter": ("Reply letter", "Lettre de réponse"),
+    "other_outgoing_letter": ("Other letter from PBO", "Autre lettre du DPB"),
+    "other_incoming_letter": ("Other letter to PBO", "Autre lettre au DPB"),
+}

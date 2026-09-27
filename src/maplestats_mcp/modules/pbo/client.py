@@ -17,13 +17,31 @@ Checked live 2026-09-26:
    kvlist (key/value rows; print_only ones are author credits). Of 42
    sampled publications, 21 had tables: costing notes since 2021 and most
    reports since 2025. Archived and pre-2021 items have no PBOML.
+
+Information requests, checked live 2026-09-27:
+
+4. /information-requests lists all 1,121 requests (December 2008 on),
+   newest first, 40 per page; it ignores every filter parameter tried
+   (department, status, search, query), so the register is read whole
+   and filtered here. /information-requests/<numeric id> adds `files`
+   (letters, nearly all PDF) and staff `contacts`, which are not passed
+   on. Letter URLs are {en: {public}, fr: {public}} or, for a bilingual
+   letter, a bare {public}; a language may be null.
+5. Request numbers are mostly IR + 4 digits, but 9 are RI…, and some
+   carry a suffix (IR0080a); the detail path takes only the numeric id,
+   so the number is resolved through the register.
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import re
+import unicodedata
+from collections import Counter
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 import yaml
@@ -31,6 +49,10 @@ from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.pbo import constants
 from maplestats_mcp.modules.pbo.schemas import (
+    PboInformationRequest,
+    PboInformationRequestFile,
+    PboInformationRequestList,
+    PboInformationRequestSummary,
     PboPublication,
     PboPublicationSummary,
     PboSearchResult,
@@ -264,5 +286,226 @@ async def get_publication(publication_id: str, *, lang: str = "en") -> PboPublic
         text_truncated=len(text) > constants.TEXT_MAX_CHARS,
         provenance=_provenance(
             constants.API + f"publications/{publication_id}", cached, "PboPublication"
+        ),
+    )
+
+
+# ------------------------------------------------------ information requests
+
+
+def _fold(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def _label(table: dict[str, tuple[str, str]], code: str | None, lang: str) -> str | None:
+    if not code:
+        return None
+    english, french = table.get(code, (code, code))
+    return french if lang == "fr" else english
+
+
+def _today() -> date:
+    # PBO sets deadlines in Ottawa time.
+    return datetime.now(ZoneInfo("America/Toronto")).date()
+
+
+def request_summary(
+    record: dict[str, Any], lang: str, today: date | None = None
+) -> PboInformationRequestSummary:
+    department = record.get("department") or {}
+    status = str(record.get("request_status") or "")
+    disposition = record.get("disposition_status") or None
+    deadline = str(record.get("deadline_date") or "")[:10] or None
+    extension = str(record.get("extension_date") or "")[:10] or None
+    late: int | None = None
+    due = extension or deadline
+    if status.startswith("pending") and due:
+        late = max(0, ((today or _today()) - date.fromisoformat(due)).days)
+    other = "fr" if lang == "en" else "en"
+    return PboInformationRequestSummary(
+        id=str(record.get("internal_id") or ""),
+        summary=str(record.get(f"summary_{lang}") or record.get(f"summary_{other}") or ""),
+        department=str(
+            department.get(f"name_{lang}") or department.get(f"name_{other}") or "unknown"
+        ),
+        department_acronym=department.get(f"acronym_{lang}") or department.get("acronym_en"),
+        request_date=str(record.get("request_date") or "")[:10] or None,
+        deadline_date=deadline,
+        extension_date=extension,
+        status=status,
+        status_label=_label(constants.REQUEST_STATUSES, status, lang) or status,
+        disposition=disposition,
+        disposition_label=_label(constants.DISPOSITIONS, disposition, lang),
+        disposition_note=record.get(f"disposition_note_{lang}")
+        or record.get(f"disposition_note_{other}"),
+        days_past_deadline=late,
+        url=((record.get("permalinks") or {}).get(lang) or {}).get("website"),
+    )
+
+
+async def _register() -> tuple[list[dict[str, Any]], bool]:
+    """Every information request, newest first, read page by page."""
+
+    async def fetch() -> list[dict[str, Any]]:
+        first = await _get("information-requests", {"page": 1})
+        last_page = int((first.get("meta") or {}).get("last_page") or 1)
+        gate = asyncio.Semaphore(constants.IR_FETCH_CONCURRENCY)
+
+        async def one(page: int) -> list[dict[str, Any]]:
+            async with gate:
+                listing = await _get("information-requests", {"page": page})
+            return list(listing.get("data") or [])
+
+        rest = await asyncio.gather(*(one(p) for p in range(2, last_page + 1)))
+        rows = list(first.get("data") or [])
+        for page_rows in rest:
+            rows.extend(page_rows)
+        if not rows:
+            raise UpstreamError("pbo: the information-request register came back empty.")
+        return rows
+
+    return await cached_fetch("pbo:information-requests", constants.REGISTER_TTL_SECONDS, fetch)
+
+
+def _matches(record: dict[str, Any], words: list[str]) -> bool:
+    haystack = _fold(" ".join(str(record.get(k) or "") for k in ("summary_en", "summary_fr")))
+    return all(w in haystack for w in words)
+
+
+def _department_matches(record: dict[str, Any], wanted: str) -> bool:
+    department = record.get("department") or {}
+    acronyms = {_fold(str(department.get(k) or "")) for k in ("acronym_en", "acronym_fr")}
+    if wanted in acronyms:
+        return True
+    names = _fold(" ".join(str(department.get(k) or "") for k in ("name_en", "name_fr")))
+    return wanted in names
+
+
+def _date_arg(value: str, name: str) -> str:
+    value = value.strip()
+    if not value:
+        return ""
+    if not re.fullmatch(r"\d{4}(-\d{2}(-\d{2})?)?", value):
+        raise InvalidInput(f"pbo: {name} must be YYYY, YYYY-MM or YYYY-MM-DD, not {value!r}.")
+    return value
+
+
+async def search_information_requests(
+    query: str = "",
+    *,
+    department: str = "",
+    status: str | None = None,
+    disposition: str | None = None,
+    since: str = "",
+    until: str = "",
+    page: int = 1,
+    lang: str = "en",
+) -> PboInformationRequestList:
+    """Filter PBO's register of information requests, newest first, with counts."""
+    if page < 1:
+        raise InvalidInput("pbo: page must be >= 1.")
+    if status and status not in constants.REQUEST_STATUSES and status != "open":
+        raise InvalidInput(
+            f"pbo: unknown status {status!r}; use 'open' or one of "
+            f"{list(constants.REQUEST_STATUSES)}."
+        )
+    if disposition and disposition not in constants.DISPOSITIONS:
+        raise InvalidInput(
+            f"pbo: unknown disposition {disposition!r}; use {list(constants.DISPOSITIONS)}."
+        )
+    since, until = _date_arg(since, "since"), _date_arg(until, "until")
+
+    rows, cached = await _register()
+    words = _fold(query).split()
+    wanted_department = _fold(department.strip())
+    matched: list[dict[str, Any]] = []
+    for record in rows:
+        requested = str(record.get("request_date") or "")[:10]
+        record_status = str(record.get("request_status") or "")
+        if words and not _matches(record, words):
+            continue
+        if wanted_department and not _department_matches(record, wanted_department):
+            continue
+        if status == "open" and not record_status.startswith("pending"):
+            continue
+        if status and status != "open" and record_status != status:
+            continue
+        if disposition and record.get("disposition_status") != disposition:
+            continue
+        # A prefix compare lets "2024" or "2024-03" bound a whole year or month.
+        if since and requested[: len(since)] < since:
+            continue
+        if until and requested[: len(until)] > until:
+            continue
+        matched.append(record)
+
+    start = (page - 1) * constants.IR_PAGE_SIZE
+    shown = matched[start : start + constants.IR_PAGE_SIZE]
+    today = _today()
+    departments = Counter(
+        str((r.get("department") or {}).get(f"acronym_{lang}") or "unknown") for r in matched
+    )
+    return PboInformationRequestList(
+        requests=[request_summary(r, lang, today) for r in shown],
+        returned_count=len(shown),
+        total_matched=len(matched),
+        page=page,
+        last_page=max(1, -(-len(matched) // constants.IR_PAGE_SIZE)),
+        by_disposition=dict(
+            Counter(str(r.get("disposition_status") or "none") for r in matched).most_common()
+        ),
+        by_status=dict(Counter(str(r.get("request_status") or "") for r in matched).most_common()),
+        by_department=dict(departments.most_common(15)),
+        provenance=_provenance(
+            constants.API + "information-requests",
+            cached,
+            "PboInformationRequestList",
+            f"{len(rows)} requests since December 2008, newest first",
+        ),
+    )
+
+
+def _file(entry: dict[str, Any], lang: str) -> PboInformationRequestFile:
+    urls = entry.get("urls") or {}
+    other = "fr" if lang == "en" else "en"
+    url = urls.get("public")
+    if url is None:
+        url = (urls.get(lang) or {}).get("public") or (urls.get(other) or {}).get("public")
+    kind = str(entry.get("document_type") or "")
+    return PboInformationRequestFile(
+        document_type=kind,
+        label=entry.get(f"description_{lang}")
+        or _label(constants.DOCUMENT_TYPES, kind, lang)
+        or kind,
+        mime=entry.get("mime"),
+        url=url,
+    )
+
+
+async def get_information_request(request_id: str, *, lang: str = "en") -> PboInformationRequest:
+    """One information request with its letters."""
+    wanted = request_id.strip().upper()
+    if not re.fullmatch(r"[A-Z]{2}\d{3,5}[A-Z]?", wanted):
+        raise InvalidInput(f"pbo: {request_id!r} is not a PBO request number like 'IR0959'.")
+    rows, _ = await _register()
+    found = next((r for r in rows if str(r.get("internal_id") or "").upper() == wanted), None)
+    if found is None:
+        raise NotFound(f"pbo: no information request {wanted}.")
+
+    async def fetch() -> dict[str, Any]:
+        record = await _get(f"information-requests/{found['id']}")
+        return record.get("data", record) if isinstance(record, dict) else {}
+
+    record, cached = await cached_fetch(
+        f"pbo:information-request:{found['id']}", constants.PUBLICATION_TTL_SECONDS, fetch
+    )
+    return PboInformationRequest(
+        request=request_summary(record, lang),
+        files=[_file(f, lang) for f in record.get("files") or [] if isinstance(f, dict)],
+        provenance=_provenance(
+            constants.API + f"information-requests/{found['id']}",
+            cached,
+            "PboInformationRequest",
         ),
     )

@@ -2146,7 +2146,7 @@ served as `rest-393962616e6b.pbo-dpb.ca`), found in the site's scripts:
   types; the module keeps `Publication` ones.
 - `/tags` (153 series and topics), `/news-releases` (93) and
   `/information-requests` (1,121 requests PBO sent to departments, with
-  dates, status and summaries; not exposed yet).
+  dates, status and summaries; exposed 2026-09-27, see below).
 
 PBOML slices are `heading`, `markdown`, `svg` (charts, no data), `table`
 (`variables` maps column ids to bilingual labels; `content` rows hold
@@ -2169,6 +2169,33 @@ published and say so in their provenance.
 
 The interactive tools (Federal Employment Tracking Tool and others) load
 static JSON with build-hashed names; they are not covered.
+
+
+### Information requests (added 2026-09-27)
+
+`pbo_search_information_requests` and `pbo_get_information_request`.
+Checked live 2026-09-27:
+
+- `/information-requests` returns all 1,121 requests (IR0001, December
+  2008, to IR0959, September 2026), newest first, 40 per page over 29
+  pages. It ignores every filter tried (`department`, `departments`,
+  `search`, `query`, `request_status`), so the module reads the whole
+  register (about 30 seconds cold, cached 6 hours) and filters locally.
+  `/search?query=` does return `InformationRequest` hits, but ranked and
+  capped, so it is not used.
+- Values seen: status completed 1,080, pending 20, pending_correspondence
+  14, canceled 6, pending_data 1; disposition all_disclosed 836,
+  disclosed_in_part 160, nothing_disclosed 67, does_not_exist 28, null 30;
+  108 departments (FIN 168, DND 108, CRA 84, TBS 60, ESDC 56).
+- Request numbers are not uniform: 9 are `RI…` and some carry a suffix
+  (`IR0080a`). The detail path takes only the numeric `id`
+  (`/information-requests/IR0959` answers with the website's HTML), so the
+  number is resolved through the register.
+- Detail adds `files` (request letter, reply letter, other letters; 51 of
+  52 sampled were PDF, one DOCX) and `contacts` (PBO staff names and
+  phone numbers, not passed on). A letter's `urls` is `{en: {public},
+  fr: {public}}`, or a bare `{public}` when bilingual; one language can be
+  null, in which case the other is returned.
 
 ## Canadian Dairy Commission and provincial marketing boards
 
