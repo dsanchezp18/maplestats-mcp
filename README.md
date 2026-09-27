@@ -26,12 +26,17 @@ provinciaux, territoriaux et municipaux vérifiés.*
 See [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/PROJECT_GUIDE.md) for the project vision and
 [`ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/ROADMAP.md) for source coverage status.
 
-## Let your agent set it up
+## The easiest way: ask your agent
 
-Paste this into Claude Code, Codex, Cursor or any agent that can run
-commands on your machine:
+1. Copy this prompt.
+2. Paste it into Claude Code, Codex, Cursor or any agent that can run
+   commands on your computer.
+3. Restart the agent when it says so, then ask for data.
 
-> Set up the MapleStats MCP server for me: https://github.com/dsanchezp18/maplestats-mcp
+> Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in https://github.com/dsanchezp18/maplestats-mcp
+
+Prefer to do it by hand? See [Install locally](#install-locally-no-docker-required)
+or the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page.
 
 ### Instructions for the agent doing the setup
 

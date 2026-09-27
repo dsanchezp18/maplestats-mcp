@@ -1314,6 +1314,15 @@ def long_date(iso: str, lang: Lang) -> str:
     return f"{day.day} {month} {day.year}"
 
 
+# The one prompt that sets MapleStats up. The home page, the Connect page and
+# the README all show it word for word (tests/test_site.py checks), so a
+# reader meets the same sentence wherever they start.
+AGENT_PROMPT: dict[Lang, str] = {
+    "en": f"Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in {REPO}",
+    "fr": f"Installe le serveur MCP MapleStats et connecte-le à cet agent. Suis les étapes d'installation de {REPO}",
+}
+
+
 def captured_call(lang: Lang) -> dict[str, str]:
     capture = json.loads(CAPTURE.read_text(encoding="utf-8"))
     request = json.dumps(capture["request"], ensure_ascii=False)
@@ -1344,7 +1353,7 @@ _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 # --------------------------------------------------------------------------
 
 CASES_DIR = SITE / "_data" / "cases"
-CASE_KEYS = ("pumf", "ircc", "micro", "cards", "macro", "elections", "patents", "boc")
+CASE_KEYS = ("pumf", "ircc", "housing", "micro", "cards", "macro", "patents", "boc")
 
 
 def _load_charts() -> Any:
@@ -1514,6 +1523,57 @@ def year_ticks(iso: str) -> str | None:
     return iso[:4] if iso[5:7] == "01" else None
 
 
+def housing_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    # CMHC publishes this table by month; a year counts only once all twelve
+    # months are in, so the chart ends at the last complete year.
+    years: dict[str, dict[str, float]] = {}
+    months: dict[str, int] = {}
+    for row in response["rows"]:
+        year = row["period"][:4]
+        months[year] = months.get(year, 0) + 1
+        totals = years.setdefault(year, {})
+        for column, cell in row["values"].items():
+            totals[column] = totals.get(column, 0.0) + (cell["value"] or 0.0)
+    complete = [y for y in years if months[y] == 12 and y >= "2005"]
+    first, last = complete[0], complete[-1]
+    share = {y: years[y]["Apartment"] / years[y]["Total"] * 100 for y in complete}
+    crossed = next(
+        y
+        for y in complete
+        if all(years[z]["Apartment"] > years[z]["Single"] for z in complete if z >= y)
+    )
+    single_label = "Single-detached" if lang == "en" else "Individuelles"
+    apartment_label = "Apartments" if lang == "en" else "Appartements"
+    label = (
+        "Housing starts in Canada by year, single-detached homes and apartments, centres of 10,000 people or more"
+        if lang == "en"
+        else "Mises en chantier au Canada par année, maisons individuelles et appartements, centres de 10 000 habitants ou plus"
+    )
+    return {
+        "chart_housing": charts.grouped_bars(
+            complete,
+            [
+                (single_label, [years[y]["Single"] for y in complete]),
+                (apartment_label, [years[y]["Apartment"] for y in complete]),
+            ],
+            label=label,
+            value_format=lambda v: number(v, lang),
+        ),
+        "count_housing": number(case["calls"][1]["response"]["total_count"], lang),
+        "housing_first": first,
+        "housing_last": last,
+        "housing_single_first": number(years[first]["Single"], lang),
+        "housing_single_last": number(years[last]["Single"], lang),
+        "housing_apt_first": number(years[first]["Apartment"], lang),
+        "housing_apt_last": number(years[last]["Apartment"], lang),
+        "housing_share_first": esc(percent(share[first], lang, 0)),
+        "housing_share_last": esc(percent(share[last], lang, 0)),
+        "housing_crossed": crossed,
+        "source_housing": call_source(response, lang),
+    }
+
+
 GENSTAT_NAMES: dict[str, tuple[str, str]] = {
     "1": ("First generation (born abroad)", "Première génération (née à l'étranger)"),
     "2": (
@@ -1658,62 +1718,6 @@ def macro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     }
 
 
-PARTY_NAMES: dict[str, tuple[str, str]] = {
-    "Conservative Party of Canada": ("Conservative", "conservateur"),
-    "Liberal Party of Canada": ("Liberal", "libéral"),
-    "New Democratic Party": ("NDP", "NPD"),
-    "Christian Heritage Party of Canada": ("Christian Heritage", "Héritage chrétien"),
-    "People's Party of Canada": ("People's Party", "Parti populaire"),
-    "Independent": ("Independent", "indépendant"),
-    "Communist Party of Canada": ("Communist", "communiste"),
-    "Marxist-Leninist Party of Canada": ("Marxist-Leninist", "marxiste-léniniste"),
-}
-
-
-def party(name: str, lang: Lang) -> str:
-    pair = PARTY_NAMES.get(name)
-    return pair[0 if lang == "en" else 1] if pair else name
-
-
-def elections_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
-    calls = case["calls"]
-    returns = [
-        c["response"]["sections"]["DETAIL_DATA"][0]
-        for c in calls
-        if c["name"] == "elections_financial_returns_get_financial_return_part"
-    ]
-    member = calls[-1]["response"]["politicians"][0]
-    spent = []
-    for row in returns:
-        amount = float(row["Election_expenses_subject_to_the_limit_Total"] or 0)
-        if amount > 0:
-            spent.append((row["Candidate_last_name"], row["Political_Affiliation"], amount))
-    spent.sort(key=lambda r: -r[2])
-    rows = [(f"{last}, {party(affiliation, lang)}", amount) for last, affiliation, amount in spent]
-    limit = max(float(r["Election_expenses_limit"] or 0) for r in returns)
-    top = spent[0]
-    winner = next(r for r in spent if member["name"].endswith(r[0]))
-    label = (
-        "Election expenses subject to the limit, each candidate in Edmonton Centre, 45th general election"
-        if lang == "en"
-        else "Dépenses électorales assujetties au plafond, chaque candidat d'Edmonton-Centre, 45e élection générale"
-    )
-    return {
-        "chart_elections": charts.hbar_chart(
-            rows, label=label, value_format=lambda v: dollars(v, lang, cents=False), log=False
-        ),
-        "elections_candidates": str(len(returns)),
-        "elections_none": str(len(returns) - len(spent)),
-        "elections_limit": esc(dollars(limit, lang, cents=False)),
-        "elections_top": esc(f"{top[0]} ({party(top[1], lang)})"),
-        "elections_top_spent": esc(dollars(top[2], lang, cents=False)),
-        "elections_member": esc(member["name"]),
-        "elections_member_party": esc(party(winner[1], lang)),
-        "elections_member_spent": esc(dollars(winner[2], lang, cents=False)),
-        "source_elections": call_source(calls[0]["response"], lang),
-    }
-
-
 def patents_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     calls = case["calls"]
     by_year = [
@@ -1776,78 +1780,158 @@ def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     }
 
 
-def short_count(value: float) -> str:
-    """1, 10, 100, 1k, 10k, 100k, 1M: gridline labels that fit a log axis."""
-    for size, suffix in ((1e6, "M"), (1e3, "k")):
-        if value >= size:
-            return f"{value / size:g}{suffix}"
-    return f"{value:g}"
+# The ring's short arc labels; the full names are the tooltips.
+RING_SHORT: dict[str, tuple[str, str]] = {
+    "statistics": ("Statistics", "Statistique"),
+    "money": ("Money", "Monnaie"),
+    "housing": ("Housing", "Logement"),
+    "health": ("Health", "Santé"),
+    "environment": ("Environment", "Environnement"),
+    "energy": ("Energy", "Énergie"),
+    "business": ("Business", "Entreprises"),
+    "immigration": ("Immigration", "Immigration"),
+    "government": ("Parliament", "Parlement"),
+    "transport": ("Transport", "Transport"),
+    "geography": ("Geography", "Géographie"),
+    "agriculture": ("Agriculture", "Agriculture"),
+    "provincial": ("Provinces", "Provinces"),
+    "municipal": ("Cities", "Villes"),
+    "catalogue": ("Catalogues", "Catalogues"),
+}
+
+# West to east, then north: the order the inner inscription travels.
+RING_ORDER = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU")
+
+
+def _city(name: str) -> str:
+    """'City of Red Deer ArcGIS Hub' -> 'Red Deer': the place a portal serves."""
+    name = re.sub(r"\s*\(.*?\)", "", name)
+    name = re.sub(r"^(City|Town|County|Region) of |^Open ", "", name)
+    for _ in range(2):
+        name = re.sub(
+            r"\s+(Open Data.*|Data Catalogue|Data Catalog|Data Hub|GeoHub|ArcGIS Hub|"
+            r"Atlas|Regional Municipality|Portal|Region|County)$",
+            "",
+            name,
+        )
+    return name.strip()
+
+
+def ring_places(lang: Lang) -> list[str]:
+    """Every province and city with a local source, grouped west to east."""
+    provinces: set[str] = set()
+    cities: dict[str, set[str]] = {}
+    families = {"ckan": CKAN_PORTALS, "arcgis_hub": ARCGIS_PORTALS, "socrata": SOCRATA_PORTALS}
+    for family, portals in families.items():
+        for key, portal in portals.items():
+            place, level = PORTAL_PLACES[family][key]
+            if level == "provincial":
+                provinces.add(place)
+            elif level == "municipal":
+                cities.setdefault(place, set()).add(_city(portal.name_en))
+    for source in SOURCES.values():
+        for place in source.places:
+            if source.level == "municipal" or source.en.startswith("City of"):
+                cities.setdefault(place, set()).add(_city(source.en))
+            elif source.level in ("provincial", "catalogue"):
+                provinces.add(place)
+    # A longer name that contains a city already listed is that city's: EPCOR,
+    # the police, transit and the metropolitan board are all Edmonton's.
+    for place, group in cities.items():
+        short = {c for c in group if len(c.split()) <= 2}
+        cities[place] = {next((k for k in short if k in c and k != c), c) for c in group}
+    names: list[str] = []
+    for code in RING_ORDER:
+        if code in provinces:
+            names.append(PLACES[code][1 if lang == "en" else 2])
+        names.extend(sorted(cities.get(code, ())))
+    return names
+
+
+def counter_list(items: list[tuple[int, str]], lang: Lang) -> str:
+    """Big numbers that count up once scrolled into view (assets/charts.js)."""
+    cells = "".join(
+        f'<li><span class="counter-n" data-count="">{number(n, lang)}</span>'
+        f'<span class="counter-l">{esc(text)}</span></li>'
+        for n, text in sorted(items, key=lambda item: -item[0])
+    )
+    return f'<ul class="counters" data-counters="">{cells}</ul>'
 
 
 def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang) -> dict[str, str]:
-    """Two charts: what one connection reaches, and the tools by subject."""
+    """The One Ring: every publisher inscribed, the tools as arcs by subject."""
     en = lang == "en"
     tools = sum(len(m.tools) for m in modules)
-    reach = [
-        (
-            "Patents" if en else "Brevets",
-            load_case("patents")["calls"][0]["response"]["total_matched"],
-        ),
-        (
-            "Bank of Canada series" if en else "Séries de la Banque du Canada",
-            counts["boc_list_series"]["total_count"],
-        ),
-        (
-            "Statistics Canada tables" if en else "Tableaux de Statistique Canada",
-            counts["wds_list_all_cubes"]["total_count"],
-        ),
-        (
-            "Election candidates, 2025" if en else "Candidats, élection de 2025",
-            counts["elections_financial_returns_search_candidates"]["total_found"],
-        ),
-        ("Tools" if en else "Outils", tools),
-        (
-            "Microdata files" if en else "Fichiers de microdonnées",
-            counts["statcan_reference_search_data"]["product_count"],
-        ),
-        (
-            "Credit cards, Alberta" if en else "Cartes de crédit, Alberta",
-            load_case("cards")["calls"][0]["response"]["total_matched"],
-        ),
-        (
-            "Immigration tables" if en else "Tableaux d'immigration",
-            counts["ircc_monthly_list_tables"]["returned_count"],
-        ),
-    ]
-    reach.sort(key=lambda r: -r[1])
+    outer = sorted(
+        {m.source.short(lang) for m in modules if m.source.level == "national"}, key=str.casefold
+    )
     by_subject: dict[str, int] = {}
     for module in modules:
         source = module.source
-        if source.level == "national" and source.domain:
-            name = DOMAINS[source.domain][0 if en else 1]
-        elif source.level in ("provincial", "municipal", "catalogue"):
-            name = LEVELS[source.level][0 if en else 1]
-        else:
-            continue
-        by_subject[name] = by_subject.get(name, 0) + len(module.tools)
-    subjects = sorted(by_subject.items(), key=lambda r: -r[1])
+        key = source.domain if source.level == "national" else source.level
+        if key in RING_SHORT:
+            by_subject[key] = by_subject.get(key, 0) + len(module.tools)
+    arcs = [
+        (
+            RING_SHORT[key][0 if en else 1],
+            (DOMAINS.get(key) or LEVELS[key])[0 if en else 1],  # type: ignore[index]
+            n,
+        )
+        for key, n in sorted(by_subject.items(), key=lambda item: -item[1])
+    ]
+    label = (
+        f"The ring: {len(outer)} federal publishers around the outside, the provinces and "
+        f"cities with local sources inside, and {tools} tools as arcs by subject"
+        if en
+        else f"L'anneau : {len(outer)} éditeurs fédéraux à l'extérieur, les provinces et les "
+        f"villes dotées de sources locales à l'intérieur, et {tools} outils en arcs par sujet"
+    )
+    micro = load_case("micro")["calls"][0]["response"]
+    items = [
+        (
+            load_case("patents")["calls"][0]["response"]["total_matched"],
+            "patents" if en else "brevets",
+        ),
+        (micro["unweighted_n"], "census records" if en else "fiches du recensement"),
+        (
+            counts["boc_list_series"]["total_count"],
+            "Bank of Canada series" if en else "séries de la Banque du Canada",
+        ),
+        (
+            counts["wds_list_all_cubes"]["total_count"],
+            "Statistics Canada tables" if en else "tableaux de Statistique Canada",
+        ),
+        (
+            counts["statcan_reference_search_data"]["product_count"],
+            "microdata files" if en else "fichiers de microdonnées",
+        ),
+        (
+            load_case("cards")["calls"][0]["response"]["total_matched"],
+            "credit cards" if en else "cartes de crédit",
+        ),
+        (
+            counts["ircc_monthly_list_tables"]["returned_count"],
+            "immigration tables" if en else "tableaux d'immigration",
+        ),
+        (
+            load_case("housing")["calls"][1]["response"]["total_count"],
+            "housing tables" if en else "tableaux sur le logement",
+        ),
+    ]
     return {
-        "chart_reach": charts.hbar_chart(
-            reach,
-            label="What one connection reaches, log scale"
-            if en
-            else "Ce qu'une seule connexion atteint, échelle logarithmique",
-            value_format=lambda v: number(v, lang),
-            tick_format=short_count,
+        "chart_ring": charts.ring_chart(
+            outer,
+            ring_places(lang),
+            arcs,
+            centre=str(tools),
+            centre_lines=(
+                "tools," if en else "outils,",
+                "one connection" if en else "une connexion",
+            ),
+            label=label,
         ),
-        "chart_subjects": charts.hbar_chart(
-            subjects,
-            label="Tools by subject and level of government"
-            if en
-            else "Outils par sujet et ordre de gouvernement",
-            value_format=lambda v: number(v, lang),
-            log=False,
-        ),
+        "ring_federal": str(len(outer)),
+        "counters": counter_list(items, lang),
     }
 
 
@@ -1856,10 +1940,10 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
     builders = {
         "pumf": pumf_context,
         "ircc": ircc_context,
+        "housing": housing_context,
         "micro": micro_context,
         "cards": cards_context,
         "macro": macro_context,
-        "elections": elections_context,
         "patents": patents_context,
         "boc": boc_context,
     }
@@ -1872,9 +1956,6 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
     context["count_ircc"] = number(counts["ircc_monthly_list_tables"]["returned_count"], lang)
     context["count_tables"] = number(counts["wds_list_all_cubes"]["total_count"], lang)
     context["count_series"] = number(counts["boc_list_series"]["total_count"], lang)
-    context["count_candidates"] = number(
-        counts["elections_financial_returns_search_candidates"]["total_found"], lang
-    )
     context["cases_captured"] = long_date(load_case("counts")["captured"], lang)
     context.update(finale_context(counts, modules, lang))
     return context
@@ -1953,6 +2034,7 @@ async def build(out: Path) -> dict[str, int]:
                 "page": page.name,
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
                 "search_query": esc(SEARCH_EXAMPLE[lang]),
+                "agent_prompt": esc(AGENT_PROMPT[lang]),
                 "search_suggestions": " ".join(
                     f'<button type="button" data-q="{esc(q)}">{esc(q)}</button>'
                     for q in SEARCH_SUGGESTIONS[lang]
@@ -1965,6 +2047,9 @@ async def build(out: Path) -> dict[str, int]:
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
                 "cur_cases": ' aria-current="page"' if page.name == "cases.html" else "",
+                "cur_contributing": (
+                    ' aria-current="page"' if page.name == "contributing.html" else ""
+                ),
                 "search_results": result_items(search_results[lang], by_name, lang, root),
                 "coverage_matrix": coverage_matrix(lang),
                 "coverage_lists": coverage_lists(lang),

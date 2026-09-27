@@ -21,7 +21,15 @@ from collections.abc import Callable, Sequence
 from datetime import date
 from itertools import pairwise
 
-__all__ = ["ci_chart", "grouped_bars", "hbar_chart", "line_chart", "scatter_chart", "step_chart"]
+__all__ = [
+    "ci_chart",
+    "grouped_bars",
+    "hbar_chart",
+    "line_chart",
+    "ring_chart",
+    "scatter_chart",
+    "step_chart",
+]
 
 WIDTH = 640
 
@@ -645,5 +653,149 @@ def hbar_chart(
             f'width="{_n(max(w, 1.0))}" height="16"><title>{_esc(f"{name}: {shown}")}</title></rect>'
         )
         out.append(_text(left + w + 8, yc + 4, shown, "c-value"))
+    out.append("</svg>")
+    return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# The ring: names inscribed on two circles, arcs sized by count, a centre figure
+
+RING = 640.0  # the ring's viewBox is square
+_SERIF_CHAR = 0.5  # an average glyph of the italic inscription font, in em
+
+
+def _circle_path(cx: float, cy: float, r: float) -> str:
+    """A full circle, clockwise from the top: the path text is set along."""
+    return (
+        f"M{_n(cx)},{_n(cy - r)} a{_n(r)},{_n(r)} 0 1,1 0,{_n(2 * r)} "
+        f"a{_n(r)},{_n(r)} 0 1,1 0,{_n(-2 * r)}"
+    )
+
+
+def _point(cx: float, cy: float, r: float, angle: float) -> tuple[float, float]:
+    """Angle in degrees clockwise from the top."""
+    a = math.radians(angle - 90)
+    return cx + r * math.cos(a), cy + r * math.sin(a)
+
+
+def _arc_path(cx: float, cy: float, r: float, a0: float, a1: float, reverse: bool = False) -> str:
+    (x0, y0), (x1, y1) = _point(cx, cy, r, a0), _point(cx, cy, r, a1)
+    large = 1 if a1 - a0 > 180 else 0
+    if reverse:
+        return f"M{_n(x1)},{_n(y1)} A{_n(r)},{_n(r)} 0 {large},0 {_n(x0)},{_n(y0)}"
+    return f"M{_n(x0)},{_n(y0)} A{_n(r)},{_n(r)} 0 {large},1 {_n(x1)},{_n(y1)}"
+
+
+def _inscription(ident: str, names: list[str], r: float, cls: str) -> tuple[str, str]:
+    """(defs path, text) for names set once around a circle, ends meeting at the top.
+
+    The font size is chosen so the names fill the circumference, and
+    textLength closes any remaining gap by adjusting the letter spacing, so
+    the last separator lands exactly where the first name starts.
+    """
+    text = " · ".join(names) + " · "
+    circumference = 2 * math.pi * r
+    size = min(max(circumference / (len(text) * _SERIF_CHAR), 7.0), 15.0)
+    # Centre the lettering in its band: the baseline sits a third of the
+    # font size inside the band's middle.
+    baseline = r - size * 0.33
+    path = f'<path id="{ident}" d="{_circle_path(RING / 2, RING / 2, baseline)}"/>'
+    length = 2 * math.pi * baseline
+    return path, (
+        f'<text class="{cls}" style="font-size:{_n(size)}px">'
+        f'<textPath href="#{ident}" textLength="{_n(length)}" lengthAdjust="spacing">'
+        f"{_esc(text)}</textPath></text>"
+    )
+
+
+def ring_chart(
+    outer: list[str],
+    inner: list[str],
+    arcs: list[tuple[str, str, int]],
+    *,
+    centre: str,
+    centre_lines: tuple[str, str],
+    label: str,
+    ident: str = "ring",
+) -> str:
+    """The case-study finale: one ring for everything the server reaches.
+
+    ``outer`` and ``inner`` are inscribed around two bands (the federal
+    publishers, then the provinces and cities). ``arcs`` are (short label,
+    full label, count), drawn clockwise from the top in the order given, each
+    sweep proportional to its count and labelled along the arc where the
+    label fits. The centre shows ``centre`` over two short lines.
+    """
+    if not outer or not arcs or any(n <= 0 for _, _, n in arcs):
+        raise ValueError("ring_chart needs names and positive arc counts")
+    c = RING / 2
+    safe = _esc(label)
+    out = [
+        (
+            f'<svg class="chart ring" data-chart="" viewBox="0 0 {_n(RING)} {_n(RING)}" role="img" '
+            f'aria-label="{safe}" preserveAspectRatio="xMidYMid meet"><title>{safe}</title>'
+        )
+    ]
+    defs: list[str] = []
+    body: list[str] = []
+
+    # Two inscription bands, each between two thin rules.
+    bands = [
+        (outer, 293.0, (276.0, 312.0), "ring-script"),
+        (inner, 252.0, (236.0, 268.0), "ring-script-2"),
+    ]
+    for n, (names, r, (lo, hi), cls) in enumerate(bands):
+        if not names:
+            continue
+        path, text = _inscription(f"{ident}-script-{n}", names, r, cls)
+        defs.append(path)
+        spin = "ring-spin" if n == 0 else "ring-spin-2"
+        body.append(
+            f'<circle class="ring-rule" cx="{_n(c)}" cy="{_n(c)}" r="{_n(hi)}"/>'
+            f'<circle class="ring-rule" cx="{_n(c)}" cy="{_n(c)}" r="{_n(lo)}"/>'
+            f'<g class="{spin}">{text}</g>'
+        )
+
+    # Arcs: sweep proportional to count, a small gap between neighbours.
+    r_arc, width, gap = 184.0, 52.0, 1.4
+    total = sum(n for _, _, n in arcs)
+    sweep = 360.0 - gap * len(arcs)
+    angle = gap / 2
+    labels: list[str] = []
+    for i, (short, full, count) in enumerate(arcs):
+        a0, a1 = angle, angle + sweep * count / total
+        angle = a1 + gap
+        body.append(
+            f'<path class="ring-arc" style="--i:{i}" pathLength="1" '
+            f'd="{_arc_path(c, c, r_arc, a0, a1)}" stroke-width="{_n(width)}">'
+            f"<title>{_esc(f'{full}: {count}')}</title></path>"
+        )
+        arc_len = math.radians(a1 - a0) * r_arc
+        mid = (a0 + a1) / 2
+        # Labels on the lower half run the other way, so they read upright.
+        lower = 90 < mid < 270
+        size = 12.0
+        for text in (f"{short} {count}", str(count)):
+            if len(text) * size * _TEXT_CHAR + 12 <= arc_len:
+                pid = f"{ident}-arc-{i}"
+                shift = size * 0.35
+                # The baseline sits below the band's centre line for text read
+                # along the arc, above it for text read against it.
+                r_text = r_arc + shift if lower else r_arc - shift
+                defs.append(
+                    f'<path id="{pid}" d="{_arc_path(c, c, r_text, a0, a1, reverse=lower)}"/>'
+                )
+                labels.append(
+                    f'<text class="ring-arc-label" style="--i:{i}">'
+                    f'<textPath href="#{pid}" startOffset="50%" text-anchor="middle">{_esc(text)}</textPath></text>'
+                )
+                break
+
+    out.append("<defs>" + "".join(defs) + "</defs>")
+    out.extend(body)
+    out.extend(labels)
+    out.append(_text(c, c + 14, centre, "ring-n", "middle", ' data-count=""'))
+    out.append(_text(c, c + 46, centre_lines[0], "ring-sub", "middle"))
+    out.append(_text(c, c + 68, centre_lines[1], "ring-sub", "middle"))
     out.append("</svg>")
     return "".join(out)

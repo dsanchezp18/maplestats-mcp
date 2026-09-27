@@ -545,6 +545,52 @@ mark {
   content: none;
 }
 
+.setup-steps {
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  list-style: none;
+  counter-reset: setup;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.setup-steps li {
+  counter-increment: setup;
+}
+
+.setup-steps li::before {
+  content: counter(setup);
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  margin-right: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+.setup-links {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  font-weight: 500;
+}
+
+.connect-easy {
+  margin-bottom: clamp(32px, 4vw, 48px);
+}
+
+.by-hand-head {
+  padding-top: 8px;
+}
+
 @media (max-width: 1240px) {
   .hero-logo,
   .hero-text {
@@ -1421,15 +1467,6 @@ mark {
   padding: 2px 0;
 }
 
-.gaps {
-  margin-top: 36px;
-  max-width: 72ch;
-  padding-top: 18px;
-  border-top: 1px solid var(--rule);
-  font-size: 0.9375rem;
-  color: var(--ink-2);
-}
-
 /* ---------- Rules ---------- */
 
 
@@ -1701,43 +1738,143 @@ mark {
   gap: 12px;
 }
 
+/* The finale: a dark panel in both themes, the ring on the left, the
+   argument on the right, and what one connection reaches along the bottom. */
 .finale {
+  background: var(--panel);
+  color: var(--panel-ink);
+}
+
+.finale-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 20px clamp(24px, 2.5vw, 32px);
-  padding-block: clamp(56px, 7vw, 96px);
-  border-top: 2px solid var(--ink);
+  gap: clamp(28px, 3.5vw, 48px) clamp(24px, 2.5vw, 32px);
+  align-items: center;
+  padding-block: clamp(64px, 8vw, 112px);
 }
 
 .verse-finale {
   grid-column: 1 / -1;
+  text-align: center;
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 1.2rem + 4vw, 4.6rem);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.025em;
+  color: var(--panel-ink);
+}
+
+/* The ring is the centrepiece: centred and as wide as the inscription needs
+   to stay legible, with the argument in two columns underneath. */
+.finale-ring {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.finale-ring .chart {
+  width: 100%;
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.finale-ring figcaption {
+  max-width: 60ch;
+  margin: 18px auto 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--panel-mute);
 }
 
 .finale-body {
-  grid-column: 5 / -1;
+  grid-column: 1 / -1;
   display: grid;
-  gap: 16px;
+  gap: 22px;
+  justify-items: center;
+  text-align: center;
+}
+
+.finale-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px clamp(28px, 4vw, 64px);
+  max-width: 1080px;
+  text-align: left;
+}
+
+@media (max-width: 860px) {
+  .finale-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .finale-body p {
-  max-width: 64ch;
+  max-width: 62ch;
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
   line-height: 1.6;
-  color: var(--ink-2);
+  color: var(--panel-mute);
 }
 
 .finale-body .finale-lead {
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+  font-size: clamp(1.6rem, 1.2rem + 1.3vw, 2.4rem);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.12;
   letter-spacing: -0.015em;
-  color: var(--ink);
+  color: var(--panel-ink);
+}
+
+.finale-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 28px;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.finale-links a {
+  color: var(--panel-link);
+}
+
+.finale-reach {
+  grid-column: 1 / -1;
+  padding-top: 28px;
+  border-top: 1px solid var(--panel-rule);
+  text-align: center;
+}
+
+.finale-reach .label {
+  color: var(--panel-link);
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px clamp(24px, 2.5vw, 32px);
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counters li {
+  display: grid;
+  gap: 4px;
+}
+
+.counter-n {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.4rem + 2vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--panel-ink);
+}
+
+.counter-l {
+  font-size: 0.9375rem;
+  color: var(--panel-mute);
 }
 
 .how-more {
@@ -1752,22 +1889,20 @@ mark {
   color: var(--ink-2);
 }
 
-.finale-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 28px;
-  font-weight: 600;
-}
-
 @media (max-width: 1240px) {
   .stanza-verse,
-  .stanza-body,
-  .finale-body {
+  .stanza-body {
     grid-column: 1 / -1;
   }
 
   .stanza-verse {
     position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -2607,3 +2742,42 @@ mark {
     display: none;
   }
 }
+
+/* ---------- Contributing ---------- */
+
+.contrib-h {
+  margin-bottom: 24px;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 1.3rem + 1vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.contrib-ways {
+  padding-bottom: clamp(40px, 5vw, 64px);
+}
+
+.contrib-ways .claims p + p {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.contrib-note {
+  margin-top: 28px;
+  max-width: 72ch;
+  color: var(--ink-2);
+}
+
+.contrib-more .cmd.prompt {
+  margin-top: 14px;
+}
+
+.contrib-rules {
+  margin: 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 8px;
+  color: var(--ink-2);
+}
+

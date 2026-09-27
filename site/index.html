@@ -21,12 +21,16 @@
     </div>
   </div>
   <div class="setup">
-    <p class="setup-lead"><strong>{en}Set it up{fr}Installation{/}</strong> {en}Paste this into Claude Code, Codex, Cursor or any agent that can run commands. The repository tells it the rest.{fr}Collez ceci dans Claude Code, Codex, Cursor ou un autre agent. Le dépôt lui explique le reste.{/}</p>
+    <p class="setup-lead"><strong>{en}The easiest way: ask your agent{fr}Le plus simple : demandez à votre agent{/}</strong> {en}One prompt installs MapleStats and connects it. The agent reads the setup steps from the repository and does the rest.{fr}Une seule requête installe MapleStats et le connecte. L'agent lit les étapes d'installation dans le dépôt et s'occupe du reste.{/}</p>
     <div class="setup-row">
-      <div class="cmd prompt"><code id="setup-prompt">{en}Set up the MapleStats MCP server for me: {{repo}}{fr}Installe le serveur MCP MapleStats pour moi : {{repo}}{/}</code><button type="button" data-copy-target="setup-prompt">{en}Copy{fr}Copier{/}</button></div>
-      <a href="{{root}}connect.html">{en}Or connect it by hand{fr}Ou connectez-le vous-même{/}</a>
-      <a href="{{root}}tools.html">{en}Browse the {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a>
+      <div class="cmd prompt"><code id="setup-prompt">{{agent_prompt}}</code><button type="button" data-copy-target="setup-prompt">{en}Copy{fr}Copier{/}</button></div>
     </div>
+    <ol class="setup-steps">
+      <li>{en}Copy the prompt.{fr}Copiez la requête.{/}</li>
+      <li>{en}Paste it into Claude Code, Codex, Cursor or any agent that can run commands on your computer.{fr}Collez-la dans Claude Code, Codex, Cursor ou tout agent qui peut exécuter des commandes sur votre ordinateur.{/}</li>
+      <li>{en}Restart the agent when it says so, then ask for data.{fr}Redémarrez l'agent quand il vous le dit, puis demandez des données.{/}</li>
+    </ol>
+    <p class="setup-links"><a href="{{root}}connect.html#by-hand">{en}Or set it up by hand{fr}Ou installez-le vous-même{/}</a><a href="{{root}}tools.html">{en}Browse the {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a></p>
     <p class="fineprint">{en}Version {{version}}, beta. Runs on your machine over stdio, with no account or API key.{fr}Version {{version}}, bêta. S'exécute sur votre machine par stdio, sans compte ni clé d'API.{/}</p>
   </div>
 </section>
@@ -35,7 +39,7 @@
   <div class="wrap">
     <div class="verse">
       <p class="verse-count">3</p>
-      <p class="verse-line">{en}MCPs for the statisticians, who put an interval on every estimate,{fr}MCP pour les statisticiens, qui mettent un intervalle sur chaque estimation,{/}</p>
+      <p class="verse-line">{en}MCPs for the statisticians, keepers of the weights and the margins,{fr}MCP pour les statisticiens, gardiens des poids et des marges,{/}</p>
       <p class="verse-count">7</p>
       <p class="verse-line">{en}for the demographers, counting who comes to stay,{fr}pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
       <p class="verse-count">9</p>
@@ -154,7 +158,6 @@
       </details>
     </div>
 
-    <p class="gaps">{en}Not covered: Nunavut has no open-data portal to connect to (checked 19 September 2026). The Registry of Lobbyists blocks automated downloads, and individual bankruptcy records cost $8 a search. The <a href="{{repo}}/blob/main/ROADMAP.md">roadmap</a> tracks every source checked so far.{fr}Non couvert : le Nunavut n'a aucun portail de données ouvertes (vérifié le 19 septembre 2026). Le Registre des lobbyistes bloque les téléchargements automatisés, et les dossiers de faillite individuels coûtent 8 $ par recherche. La <a href="{{repo}}/blob/main/ROADMAP.md">feuille de route</a> recense chaque source examinée.{/}</p>
   </div>
 </section>
 
