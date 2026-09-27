@@ -14,7 +14,7 @@
   <div class="hero-logo">{{> logo}}</div>
   <div class="hero-text">
     <h1>{en}One MCP to rule them all.{fr}Un MCP pour les gouverner tous.{/}</h1>
-    <p class="lede">{en}MapleStats is one server for publicly available Canadian data. Use it with your AI agent to get precise, well-sourced statistics and reports from more than {{sources_over}} sources, including Statistics Canada, the Bank of Canada and CMHC.{fr}MapleStats est un seul serveur pour les données canadiennes accessibles au public. Utilisez-le avec votre agent IA pour obtenir des statistiques et des rapports précis et bien sourcés, tirés de plus de {{sources_over}} sources, dont Statistique Canada, la Banque du Canada et la SCHL.{/}</p>
+    <p class="lede">{en}MapleStats is one server for publicly available Canadian data. Connect it to your AI agent to retrieve precise, well-sourced statistics and reports from more than {{sources_over}} sources, including Statistics Canada, the Bank of Canada and CMHC. Never worry about Canadian data retrieval again: focus on what actually matters to you.{fr}MapleStats est un seul serveur pour les données canadiennes accessibles au public. Connectez-le à votre agent IA pour obtenir des statistiques et des rapports précis et bien sourcés, tirés de plus de {{sources_over}} sources, dont Statistique Canada, la Banque du Canada et la SCHL. Ne vous souciez plus de trouver des données canadiennes : concentrez-vous sur ce qui compte vraiment pour vous.{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MCP is the standard way to plug data into AI agents. MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}Le MCP est la façon standard de brancher des données sur un agent IA. MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
       <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Any data call can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}Tout appel de données peut revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
@@ -33,7 +33,15 @@
 
 <section class="section thesis" id="why">
   <div class="wrap">
-    <p class="verse">{en}Three MCPs for the statisticians under the sky, seven for the data portals in their halls of stone…{fr}Trois MCP pour les statisticiens sous le ciel, sept pour les portails de données dans leurs demeures de pierre…{/}<span>{en}Okay, perhaps not quite.{fr}Bon, peut-être pas tout à fait.{/}</span></p>
+    <div class="verse">
+      <p class="verse-count">3</p>
+      <p class="verse-line">{en}MCPs for the statisticians, who put an interval on every estimate,{fr}MCP pour les statisticiens, qui mettent un intervalle sur chaque estimation,{/}</p>
+      <p class="verse-count">7</p>
+      <p class="verse-line">{en}for the demographers, counting who comes to stay,{fr}pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
+      <p class="verse-count">9</p>
+      <p class="verse-line">{en}for the analysts, doomed to explain the rate…{fr}pour les analystes, condamnés à expliquer le taux…{/}</p>
+      <p class="verse-aside">{en}Okay, perhaps not quite.{fr}Bon, peut-être pas tout à fait.{/}</p>
+    </div>
     <div class="thesis-body">
       <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
       <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
@@ -150,30 +158,6 @@
   </div>
 </section>
 
-<section class="section" id="rules">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="label">{en}Design rules{fr}Règles de conception{/}</p>
-      <h2>{en}Built for work you have to cite{fr}Conçu pour un travail qu'il faut citer{/}</h2>
-      <p>{en}Each rule is checked by the code or by CI. The right column says where.{fr}Chaque règle est vérifiée par le code ou par l'intégration continue. La colonne de droite indique où.{/}</p>
-    </div>
-    <div class="table-wrap">
-      <table class="rules">
-        <thead><tr><th class="label" scope="col">{en}Rule{fr}Règle{/}</th><th class="label" scope="col">{en}Enforced in{fr}Vérifiée dans{/}</th></tr></thead>
-        <tbody>
-          <tr><td>{en}Every result is a typed object with a provenance block: the source, the exact URL, the time of the query and, where they apply, freshness and row limits.{fr}Chaque résultat est un objet typé avec un bloc de provenance : la source, l'URL exacte, l'heure de la requête et, s'il y a lieu, la fraîcheur des données et les limites de lignes.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/shared/models.py">shared/models.py</a></td></tr>
-          <tr><td>{en}A failed upstream call returns an MCP error that names the cause. It never comes back as an empty result that looks like an answer.{fr}Un appel qui échoue renvoie une erreur MCP qui en nomme la cause. Il ne revient jamais sous forme de résultat vide qui ressemble à une réponse.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/shared/errors.py">shared/errors.py</a></td></tr>
-          <tr><td>{en}Every tool has a Use for line and at least eight search keywords in English and in French.{fr}Chaque outil a une ligne Use for et au moins huit mots-clés de recherche en anglais et en français.{/}</td><td><a href="{{repo}}/blob/main/tests/test_tool_docstrings.py">tests/test_tool_docstrings.py</a></td></tr>
-          <tr><td>{en}French queries find the same tools as their English equivalents.{fr}Les requêtes en français trouvent les mêmes outils que leurs équivalents anglais.{/}</td><td><a href="{{repo}}/blob/main/tests/test_french_discovery.py">tests/test_french_discovery.py</a></td></tr>
-          <tr><td>{en}Every module is called against its live source each Monday, and a failure opens a GitHub issue.{fr}Chaque module est appelé contre sa source réelle tous les lundis, et un échec ouvre un ticket GitHub.{/}</td><td><a href="{{repo}}/blob/main/.github/workflows/smoke.yml">.github/workflows/smoke.yml</a></td></tr>
-          <tr><td>{en}Public use microdata is tabulated on your machine with its survey weights, and cells with fewer than 30 respondents are flagged.{fr}Les microdonnées à grande diffusion sont totalisées sur votre machine avec leurs poids d'enquête, et les cellules de moins de 30 répondants sont signalées.{/}</td><td><a href="{{repo}}/blob/main/src/maplestats_mcp/modules/statcan/pumf/tabulate.py">statcan/pumf/tabulate.py</a></td></tr>
-          <tr><td>{en}Any data call can become an R, Python, Stata or Julia script that fetches and cleans the same data.{fr}Tout appel de données peut devenir un script R, Python, Stata ou Julia qui récupère et nettoie les mêmes données.{/}</td><td><a href="{{repo}}/tree/main/src/maplestats_mcp/modules/reproduce">modules/reproduce/</a></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
 <section class="section" id="connect">
   <div class="wrap connect">
     <div class="connect-note">
@@ -190,14 +174,15 @@
   <div class="wrap note thanks">
     <p class="label">{en}Acknowledgements{fr}Remerciements{/}</p>
     <div class="thanks-body">
-      <p>{en}MapleStats builds on other people's open work. The module layout (one folder per source, tools that register themselves, a bilingual response envelope) follows <a href="https://github.com/ReyemTech/mcp-canada">ReyemTech's mcp-canada</a>. The hosting layer (bearer tokens, rate limits, health checks) follows DweskZ's <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>. Thank you to their authors for building in the open.{fr}MapleStats s'appuie sur le travail ouvert d'autres personnes. L'organisation des modules (un dossier par source, des outils qui s'enregistrent seuls, une enveloppe de réponse bilingue) suit <a href="https://github.com/ReyemTech/mcp-canada">mcp-canada de ReyemTech</a>. La couche d'hébergement (jetons, limites de débit, vérifications d'état) suit <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a> de DweskZ. Merci à leurs auteurs de travailler au grand jour.{/}</p>
-      <p>{en}Much of the Canadian data work stands on the R packages of Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) and their co-authors:{fr}Une bonne part du travail sur les données canadiennes repose sur les paquets R de Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) et de leurs coauteurs :{/}</p>
+      <p>{en}MapleStats builds on the open work of many others. It learned from the many MCP servers for Canadian and government data that came before it, and much of its architecture and inspiration comes from <a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>, my other project, an MCP server for Ecuador's open government data.{fr}MapleStats s'appuie sur le travail ouvert de nombreuses personnes. Il a tiré des leçons des nombreux serveurs MCP de données canadiennes et gouvernementales qui l'ont précédé, et une bonne part de son architecture et de son inspiration vient d'<a href="https://github.com/DweskZ/EcuDataMCP">EcuDataMCP</a>, mon autre projet, un serveur MCP pour les données ouvertes du gouvernement de l'Équateur.{/}</p>
+      <p>{en}Existing open-source packages helped too, above all the R packages of Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) and their co-authors:{fr}Des paquets libres existants ont aussi aidé, surtout les paquets R de Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) et de leurs coauteurs :{/}</p>
       <ul class="thanks-list">
         <li><a href="https://github.com/mountainMath/cmhc"><code>cmhc</code></a> {en}The CMHC module was checked against its reverse-engineering of CMHC's Housing Market Information Portal.{fr}Le module de la SCHL a été vérifié par rapport à sa rétro-ingénierie du Portail de l'information sur le marché de l'habitation.{/}</li>
         <li><a href="https://github.com/mountainMath/cansim"><code>cansim</code></a> {en}The R code that reproduce_code writes for Statistics Canada tables and vectors uses it.{fr}Le code R que reproduce_code écrit pour les tableaux et vecteurs de Statistique Canada l'utilise.{/}</li>
         <li><a href="https://github.com/mountainMath/cancensus"><code>cancensus</code></a> {en}A model for census data access in R.{fr}Un modèle pour l'accès aux données du recensement en R.{/}</li>
         <li><a href="https://github.com/mountainMath/canivt"><code>canivt</code></a> {en}Reads Beyond 20/20 files. Census tables and Borealis deposits that exist only in that format are routed to it.{fr}Lit les fichiers Beyond 20/20. Les tableaux du recensement et les dépôts Borealis offerts seulement dans ce format lui sont confiés.{/}</li>
       </ul>
+      <p>{en}Thank you to the developers who built and shared these tools, and to everyone who publishes Canadian data in the open.{fr}Merci aux développeurs qui ont conçu et partagé ces outils, et à toutes les personnes qui publient des données canadiennes au grand jour.{/}</p>
     </div>
   </div>
 </section>

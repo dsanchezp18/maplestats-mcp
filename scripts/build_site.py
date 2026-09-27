@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import html
 import importlib
+import importlib.util
 import inspect
 import json
 import math
@@ -33,6 +34,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from datetime import date
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
 
@@ -1231,19 +1233,24 @@ async def reproduce_tabs() -> str:
     capture = json.loads(CAPTURE.read_text(encoding="utf-8"))
     request = capture["request"]
     result = await reproduce.reproduce(request["name"], request["arguments"], "all")
+    return script_tabs([(script.language, script.code) for script in result.scripts], "rp")
+
+
+def script_tabs(scripts: list[tuple[str, str]], prefix: str) -> str:
+    """R / Python / Stata / Julia tabs; `prefix` keeps ids unique on a page."""
     labels = {"r": "R", "python": "Python", "stata": "Stata", "julia": "Julia"}
     tabs, panels = [], []
-    for n, script in enumerate(result.scripts):
+    for n, (language, code) in enumerate(scripts):
         selected = "true" if n == 0 else "false"
         hidden = "" if n == 0 else " hidden"
         tabs.append(
-            f'<button type="button" role="tab" id="rp-tab-{script.language}" aria-selected="{selected}"'
-            f' aria-controls="rp-{script.language}" tabindex="{0 if n == 0 else -1}">'
-            f"{labels.get(script.language, script.language)}</button>"
+            f'<button type="button" role="tab" id="{prefix}-tab-{language}" aria-selected="{selected}"'
+            f' aria-controls="{prefix}-{language}" tabindex="{0 if n == 0 else -1}">'
+            f"{labels.get(language, language)}</button>"
         )
         panels.append(
-            f'<div role="tabpanel" id="rp-{script.language}" aria-labelledby="rp-tab-{script.language}"{hidden}>'
-            f'<pre class="code scroll"><code>{highlight_script(script.code.rstrip(), script.language)}</code></pre></div>'
+            f'<div role="tabpanel" id="{prefix}-{language}" aria-labelledby="{prefix}-tab-{language}"{hidden}>'
+            f'<pre class="code scroll"><code>{highlight_script(code.rstrip(), language)}</code></pre></div>'
         )
     return (
         f'<div class="tabs" data-tabs><div role="tablist" class="tablist">{"".join(tabs)}</div>'
@@ -1284,6 +1291,29 @@ def response_html(response: dict[str, Any]) -> str:
     return f'{before}<span class="prov">{marked}</span>{after}'
 
 
+MONTHS_FR = (
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+)
+
+
+def long_date(iso: str, lang: Lang) -> str:
+    """26 September 2026 / 26 septembre 2026."""
+    day = date.fromisoformat(iso[:10])
+    month = f"{day:%B}" if lang == "en" else MONTHS_FR[day.month - 1]
+    return f"{day.day} {month} {day.year}"
+
+
 def captured_call(lang: Lang) -> dict[str, str]:
     capture = json.loads(CAPTURE.read_text(encoding="utf-8"))
     request = json.dumps(capture["request"], ensure_ascii=False)
@@ -1291,26 +1321,7 @@ def captured_call(lang: Lang) -> dict[str, str]:
         {"tool_name": capture["request"]["name"], "arguments": capture["request"]["arguments"]},
         ensure_ascii=False,
     )
-    captured = date.fromisoformat(capture["captured"])
-    months_fr = [
-        "janvier",
-        "février",
-        "mars",
-        "avril",
-        "mai",
-        "juin",
-        "juillet",
-        "août",
-        "septembre",
-        "octobre",
-        "novembre",
-        "décembre",
-    ]
-    when = (
-        f"{captured.day} {captured:%B} {captured.year}"
-        if lang == "en"
-        else f"{captured.day} {months_fr[captured.month - 1]} {captured.year}"
-    )
+    when = long_date(capture["captured"], lang)
     return {
         "call_request": highlight_json(request),
         "reproduce_request": highlight_json(reproduce_request),
@@ -1326,6 +1337,547 @@ def captured_call(lang: Lang) -> dict[str, str]:
 _INCLUDE = re.compile(r"\{\{>\s*([a-z0-9_-]+)\s*\}\}")
 _LANG_BLOCK = re.compile(r"\{en\}(.*?)\{fr\}(.*?)\{/\}", re.DOTALL)
 _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
+
+
+# --------------------------------------------------------------------------
+# Case studies: recorded calls (scripts/capture_cases.py) drawn as charts.
+# --------------------------------------------------------------------------
+
+CASES_DIR = SITE / "_data" / "cases"
+CASE_KEYS = ("pumf", "ircc", "micro", "cards", "macro", "elections", "patents", "boc")
+
+
+def _load_charts() -> Any:
+    """scripts/site_charts.py, loaded by path so tests can import this file too."""
+    spec = importlib.util.spec_from_file_location(
+        "site_charts", Path(__file__).resolve().parent / "site_charts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+charts = _load_charts()
+
+PR_NAMES: dict[str, tuple[str, str]] = {
+    "10": ("Newfoundland and Labrador", "Terre-Neuve-et-Labrador"),
+    "11": ("Prince Edward Island", "Île-du-Prince-Édouard"),
+    "12": ("Nova Scotia", "Nouvelle-Écosse"),
+    "13": ("New Brunswick", "Nouveau-Brunswick"),
+    "24": ("Quebec", "Québec"),
+    "35": ("Ontario", "Ontario"),
+    "46": ("Manitoba", "Manitoba"),
+    "47": ("Saskatchewan", "Saskatchewan"),
+    "48": ("Alberta", "Alberta"),
+    "59": ("British Columbia", "Colombie-Britannique"),
+    "70": ("Northern Canada", "Nord canadien"),
+}
+MONTHS_EN = tuple(f"{date(2000, m, 1):%B}" for m in range(1, 13))
+
+
+def load_case(key: str) -> dict[str, Any]:
+    return json.loads((CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
+
+
+def number(value: float, lang: Lang, decimals: int = 0) -> str:
+    """16,745 / 16 745 (narrow no-break space); 6.5 / 6,5."""
+    text = f"{value:,.{decimals}f}"
+    return text if lang == "en" else text.replace(",", " ").replace(".", ",")
+
+
+def percent(value: float, lang: Lang, decimals: int = 1) -> str:
+    return f"{number(value, lang, decimals)}{'%' if lang == 'en' else ' %'}"
+
+
+def join_names(names: list[str], lang: Lang) -> str:
+    return f" {'and' if lang == 'en' else 'et'} ".join(names)
+
+
+def call_source(response: Any, lang: Lang) -> str:
+    """Source: <url>, queried <date>."""
+    prov = (response[0] if isinstance(response, list) else response)["provenance"]
+    when = long_date(prov["queried_at"], lang)
+    queried = f"queried {when}" if lang == "en" else f"interrogée le {when}"
+    return (
+        f'<span class="case-source">Source: <a href="{esc(prov["url"])}">{esc(prov["url"])}</a>, '
+        f"{queried}</span>"
+    )
+
+
+def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
+    """The calls behind a chart and the script that repeats the first one.
+
+    A run of calls to the same tool (one per candidate, one per year) shows
+    its first request and says how many more there were. A call with no
+    script (a web page the tool parses) shows reproduce_code's note instead.
+    """
+    summary = "How the agent got this" if lang == "en" else "Comment l'agent l'a obtenu"
+    request_label = "Request" if lang == "en" else "Requête"
+    runs: list[list[dict[str, Any]]] = []
+    for call in case["calls"]:
+        if runs and runs[-1][0]["name"] == call["name"] and len(case["calls"]) > 2:
+            runs[-1].append(call)
+        else:
+            runs.append([call])
+    panels = []
+    for run in runs:
+        first = run[0]
+        request = json.dumps(
+            {"name": first["name"], "arguments": first["arguments"]}, ensure_ascii=False
+        )
+        more = ""
+        if len(run) > 1:
+            n = len(run) - 1
+            more = (
+                f'<p class="how-more">{n} more {"call" if n == 1 else "calls"} like this one, with other arguments.</p>'
+                if lang == "en"
+                else f'<p class="how-more">{n} autre{"s" if n > 1 else ""} appel{"s" if n > 1 else ""} semblable{"s" if n > 1 else ""}, avec d\'autres arguments.</p>'
+            )
+        panels.append(
+            f'<figure class="panel"><figcaption class="panel-bar"><span>{request_label}</span>'
+            f"<code>call_tool</code></figcaption><pre><code>{highlight_json(request)}</code></pre>"
+            f"{more}</figure>"
+        )
+    first = case["calls"][0]
+    if first.get("scripts"):
+        tail = f'<figure class="panel">{script_tabs(list(first["scripts"].items()), f"{key}-rp")}</figure>'
+    else:
+        heading = "No script for this one" if lang == "en" else "Pas de script pour celui-ci"
+        notes = " ".join(esc(n) for n in first.get("script_notes", []))
+        tail = f'<div class="how-note"><strong>{heading}.</strong> <code>reproduce_code</code>: {notes}</div>'
+    return (
+        f'<details class="how"><summary>{summary}</summary><div class="how-body">'
+        + "".join(panels)
+        + tail
+        + "</div></details>"
+    )
+
+
+def pumf_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    rows = []
+    for cell in response["cells"]:
+        groups = {g["variable"]: g["code"] for g in cell["groups"]}
+        if groups.get("HDGREE") != "9":
+            continue
+        name = PR_NAMES[groups["PR"]][0 if lang == "en" else 1]
+        half = 1.96 * cell["standard_error"]
+        rows.append((name, cell["estimate"], cell["estimate"] - half, cell["estimate"] + half))
+    by_width = sorted(rows, key=lambda r: r[3] - r[2])
+    label = (
+        "Share of adults 25 to 64 whose highest credential is a bachelor's degree, with 95% confidence intervals"
+        if lang == "en"
+        else "Part des adultes de 25 à 64 ans dont le plus haut diplôme est un baccalauréat, avec intervalles de confiance à 95 %"
+    )
+    return {
+        "chart_pumf": charts.ci_chart(rows, label=label, value_format=lambda v: percent(v, lang)),
+        "pumf_narrow": esc(join_names([r[0] for r in by_width[:2]], lang)),
+        "pumf_wide": esc(join_names([r[0] for r in by_width[-2:]], lang)),
+        "source_pumf": call_source(response, lang),
+    }
+
+
+def ircc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    edmonton, calgary = (call["response"]["rows"] for call in case["calls"])
+    years = [row["period"] for row in edmonton]
+    last = edmonton[-1]
+    partial = ""
+    categories = list(years)
+    if last["cells"] < 12:
+        months = MONTHS_EN if lang == "en" else MONTHS_FR
+        categories[-1] = f"{last['period']}*"
+        partial = (
+            f"*{last['period']} covers January to {months[last['cells'] - 1]} only."
+            if lang == "en"
+            else f"*{last['period']} ne couvre que janvier à {months[last['cells'] - 1]}."
+        )
+    series = [
+        ("Edmonton", [float(r["value"]) for r in edmonton]),
+        ("Calgary", [float(r["value"]) for r in calgary]),
+    ]
+    label = (
+        "New permanent residents by intended destination, Edmonton and Calgary, by year"
+        if lang == "en"
+        else "Nouveaux résidents permanents selon la destination prévue, Edmonton et Calgary, par année"
+    )
+    return {
+        "chart_ircc": charts.grouped_bars(
+            categories, series, label=label, value_format=lambda v: number(v, lang)
+        ),
+        "ircc_partial": esc(partial),
+        "source_ircc": call_source(case["calls"][0]["response"], lang),
+    }
+
+
+def year_ticks(iso: str) -> str | None:
+    return iso[:4] if iso[5:7] == "01" else None
+
+
+GENSTAT_NAMES: dict[str, tuple[str, str]] = {
+    "1": ("First generation (born abroad)", "Première génération (née à l'étranger)"),
+    "2": (
+        "Second generation, both parents born abroad",
+        "Deuxième génération, deux parents nés à l'étranger",
+    ),
+    "3": (
+        "Second generation, one parent born abroad",
+        "Deuxième génération, un parent né à l'étranger",
+    ),
+    "4": ("Third generation or more", "Troisième génération ou plus"),
+}
+
+
+def micro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    rows = []
+    for cell in response["cells"]:
+        groups = {g["variable"]: g["code"] for g in cell["groups"]}
+        if groups["LOLIMA"] != "2":
+            continue
+        half = 1.96 * cell["standard_error"]
+        name = GENSTAT_NAMES[groups["GENSTAT"]][0 if lang == "en" else 1]
+        rows.append((name, cell["estimate"], cell["estimate"] - half, cell["estimate"] + half))
+    first, second_both, second_one, third = (r[1] for r in rows)
+    label = (
+        "Share of people in low income (LIM-AT) by immigrant generation, 2021 Census, with 95% confidence intervals"
+        if lang == "en"
+        else "Part des personnes à faible revenu (MFR-ApI) selon la génération, recensement de 2021, avec intervalles de confiance à 95 %"
+    )
+    return {
+        "chart_micro": charts.ci_chart(rows, label=label, value_format=lambda v: percent(v, lang)),
+        "micro_first": esc(percent(first, lang)),
+        "micro_second": esc(
+            f"{percent(second_both, lang)} {'and' if lang == 'en' else 'et'} {percent(second_one, lang)}"
+        ),
+        "micro_third": esc(percent(third, lang)),
+        "count_records": number(response["unweighted_n"], lang),
+        "source_micro": call_source(response, lang),
+    }
+
+
+def dollars(value: float, lang: Lang, cents: bool = True) -> str:
+    """$99 / $22.50: cents only when there are any, and only if asked for."""
+    shown = number(value, lang, 2 if cents and value != round(value) else 0)
+    return f"${shown}" if lang == "en" else f"{shown} $"
+
+
+def cards_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    # A purchase rate under 1% is a prepaid card (no credit, so no real rate).
+    priced = [
+        c for c in response["cards"] if c["purchase_rate"] is not None and c["purchase_rate"] >= 1
+    ]
+    groups: dict[tuple[float, float, int], list[str]] = {}
+    for card in priced:
+        key = (card["annual_fee"], card["purchase_rate"], 0 if card["rewards"] else 1)
+        groups.setdefault(key, []).append(card["name"])
+    points = []
+    for (fee, rate, series), names in groups.items():
+        head = f"{dollars(fee, lang)}, {percent(rate, lang, 2)}"
+        shown = ", ".join(names[:3]) + (f" (+{len(names) - 3})" if len(names) > 3 else "")
+        points.append((fee, rate, series, len(names), f"{head}: {shown}"))
+    rewards = [c for c in priced if c["rewards"]]
+    plain = [c for c in priced if not c["rewards"]]
+
+    def median(values: list[float]) -> float:
+        ordered_values = sorted(values)
+        mid = len(ordered_values) // 2
+        if len(ordered_values) % 2:
+            return ordered_values[mid]
+        return (ordered_values[mid - 1] + ordered_values[mid]) / 2
+
+    series = (
+        ["With rewards", "No rewards"] if lang == "en" else ["Avec récompenses", "Sans récompenses"]
+    )
+    label = (
+        "Credit cards offered in Alberta: annual fee against purchase interest rate"
+        if lang == "en"
+        else "Cartes de crédit offertes en Alberta : frais annuels et taux d'intérêt sur les achats"
+    )
+    return {
+        "chart_cards": charts.scatter_chart(
+            points,
+            series=series,
+            label=label,
+            x_format=lambda v: dollars(v, lang),
+            y_format=lambda v: percent(v, lang, 0),
+            x_title="Annual fee" if lang == "en" else "Frais annuels",
+            y_title="Purchase rate" if lang == "en" else "Taux sur les achats",
+        ),
+        "count_cards": number(response["total_matched"], lang),
+        "cards_priced": str(len(priced)),
+        "cards_rewards": str(len(rewards)),
+        "cards_plain": str(len(plain)),
+        "cards_fee_rewards": esc(dollars(median([c["annual_fee"] for c in rewards]), lang)),
+        "cards_fee_plain": esc(dollars(median([c["annual_fee"] for c in plain]), lang)),
+        "cards_rate_rewards": esc(percent(median([c["purchase_rate"] for c in rewards]), lang, 2)),
+        "cards_rate_plain": esc(percent(median([c["purchase_rate"] for c in plain]), lang, 2)),
+        "source_cards": call_source(response, lang),
+    }
+
+
+def month_name(iso: str, lang: Lang) -> str:
+    months = MONTHS_EN if lang == "en" else MONTHS_FR
+    return f"{months[int(iso[5:7]) - 1]} {iso[:4]}"
+
+
+def macro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    levels = [(o["ref_period"][:10], float(o["value"])) for o in response[0]["observations"]]
+    # 12-month inflation: each month against the same month a year earlier.
+    points = [
+        (iso, (value / levels[n - 12][1] - 1) * 100)
+        for n, (iso, value) in enumerate(levels)
+        if n >= 12
+    ]
+    peak_iso, peak = max(points, key=lambda p: p[1])
+    last_iso, last = points[-1]
+    inside = sum(1 for _, v in points if 1 <= v <= 3)
+    label = (
+        "Consumer Price Index, Canada, all-items: 12-month change, with the Bank of Canada's 1% to 3% target range"
+        if lang == "en"
+        else "Indice des prix à la consommation, Canada, ensemble : variation sur 12 mois, avec la fourchette cible de 1 % à 3 % de la Banque du Canada"
+    )
+    band = (1.0, 3.0, "Target range" if lang == "en" else "Fourchette cible")
+    return {
+        "chart_macro": charts.line_chart(
+            points,
+            label=label,
+            value_format=lambda v: percent(v, lang),
+            x_tick_format=year_ticks,
+            band=band,
+        ),
+        "macro_peak": esc(percent(peak, lang)),
+        "macro_peak_month": esc(month_name(peak_iso, lang)),
+        "macro_last": esc(percent(last, lang)),
+        "macro_last_month": esc(month_name(last_iso, lang)),
+        "macro_inside": str(inside),
+        "macro_months": str(len(points)),
+        "source_macro": call_source(response, lang),
+    }
+
+
+PARTY_NAMES: dict[str, tuple[str, str]] = {
+    "Conservative Party of Canada": ("Conservative", "conservateur"),
+    "Liberal Party of Canada": ("Liberal", "libéral"),
+    "New Democratic Party": ("NDP", "NPD"),
+    "Christian Heritage Party of Canada": ("Christian Heritage", "Héritage chrétien"),
+    "People's Party of Canada": ("People's Party", "Parti populaire"),
+    "Independent": ("Independent", "indépendant"),
+    "Communist Party of Canada": ("Communist", "communiste"),
+    "Marxist-Leninist Party of Canada": ("Marxist-Leninist", "marxiste-léniniste"),
+}
+
+
+def party(name: str, lang: Lang) -> str:
+    pair = PARTY_NAMES.get(name)
+    return pair[0 if lang == "en" else 1] if pair else name
+
+
+def elections_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    calls = case["calls"]
+    returns = [
+        c["response"]["sections"]["DETAIL_DATA"][0]
+        for c in calls
+        if c["name"] == "elections_financial_returns_get_financial_return_part"
+    ]
+    member = calls[-1]["response"]["politicians"][0]
+    spent = []
+    for row in returns:
+        amount = float(row["Election_expenses_subject_to_the_limit_Total"] or 0)
+        if amount > 0:
+            spent.append((row["Candidate_last_name"], row["Political_Affiliation"], amount))
+    spent.sort(key=lambda r: -r[2])
+    rows = [(f"{last}, {party(affiliation, lang)}", amount) for last, affiliation, amount in spent]
+    limit = max(float(r["Election_expenses_limit"] or 0) for r in returns)
+    top = spent[0]
+    winner = next(r for r in spent if member["name"].endswith(r[0]))
+    label = (
+        "Election expenses subject to the limit, each candidate in Edmonton Centre, 45th general election"
+        if lang == "en"
+        else "Dépenses électorales assujetties au plafond, chaque candidat d'Edmonton-Centre, 45e élection générale"
+    )
+    return {
+        "chart_elections": charts.hbar_chart(
+            rows, label=label, value_format=lambda v: dollars(v, lang, cents=False), log=False
+        ),
+        "elections_candidates": str(len(returns)),
+        "elections_none": str(len(returns) - len(spent)),
+        "elections_limit": esc(dollars(limit, lang, cents=False)),
+        "elections_top": esc(f"{top[0]} ({party(top[1], lang)})"),
+        "elections_top_spent": esc(dollars(top[2], lang, cents=False)),
+        "elections_member": esc(member["name"]),
+        "elections_member_party": esc(party(winner[1], lang)),
+        "elections_member_spent": esc(dollars(winner[2], lang, cents=False)),
+        "source_elections": call_source(calls[0]["response"], lang),
+    }
+
+
+def patents_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    calls = case["calls"]
+    by_year = [
+        (c["arguments"]["filed_from"][:4], c["response"]["total_matched"]) for c in calls[1:]
+    ]
+    # Applications are published about 18 months after filing, so the last
+    # year is still filling in; the chart stops the year before it.
+    shown, (partial_year, partial_count) = by_year[:-1], by_year[-1]
+    peak_year, peak = max(shown, key=lambda p: p[1])
+    label = (
+        "Canadian patent applications in IPC class G06N (machine learning and other biological-model computing), by filing year"
+        if lang == "en"
+        else "Demandes de brevet canadiennes dans la classe CIB G06N (apprentissage automatique et autres calculs fondés sur des modèles biologiques), par année de dépôt"
+    )
+    return {
+        "chart_patents": charts.grouped_bars(
+            [year for year, _ in shown],
+            [("G06N", [float(n) for _, n in shown])],
+            label=label,
+            value_format=lambda v: number(v, lang),
+        ),
+        "count_patents": number(calls[0]["response"]["total_matched"], lang),
+        "patents_first_year": shown[0][0],
+        "patents_first": number(shown[0][1], lang),
+        "patents_peak_year": peak_year,
+        "patents_peak": number(peak, lang),
+        "patents_partial_year": partial_year,
+        "patents_partial": number(partial_count, lang),
+        "source_patents": call_source(calls[1]["response"], lang),
+    }
+
+
+def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    response = case["calls"][0]["response"]
+    points = sorted(
+        (o["ref_date"], float(o["values"]["V39079"]))
+        for o in response["observations"]
+        if o["values"].get("V39079") is not None
+    )
+    values = [v for _, v in points]
+    changes = sum(1 for a, b in pairwise(values) if a != b)
+    label = (
+        "Bank of Canada target for the overnight rate, daily since 2015"
+        if lang == "en"
+        else "Taux cible du financement à un jour de la Banque du Canada, quotidien depuis 2015"
+    )
+    return {
+        "chart_boc": charts.step_chart(
+            points,
+            label=label,
+            value_format=lambda v: percent(v, lang, 2),
+            x_tick_format=year_ticks,
+        ),
+        "boc_changes": str(changes),
+        "boc_min": esc(percent(min(values), lang, 2)),
+        "boc_max": esc(percent(max(values), lang, 2)),
+        "boc_last": esc(percent(values[-1], lang, 2)),
+        "boc_last_date": esc(long_date(points[-1][0], lang)),
+        "source_boc": call_source(response, lang),
+    }
+
+
+def short_count(value: float) -> str:
+    """1, 10, 100, 1k, 10k, 100k, 1M: gridline labels that fit a log axis."""
+    for size, suffix in ((1e6, "M"), (1e3, "k")):
+        if value >= size:
+            return f"{value / size:g}{suffix}"
+    return f"{value:g}"
+
+
+def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang) -> dict[str, str]:
+    """Two charts: what one connection reaches, and the tools by subject."""
+    en = lang == "en"
+    tools = sum(len(m.tools) for m in modules)
+    reach = [
+        (
+            "Patents" if en else "Brevets",
+            load_case("patents")["calls"][0]["response"]["total_matched"],
+        ),
+        (
+            "Bank of Canada series" if en else "Séries de la Banque du Canada",
+            counts["boc_list_series"]["total_count"],
+        ),
+        (
+            "Statistics Canada tables" if en else "Tableaux de Statistique Canada",
+            counts["wds_list_all_cubes"]["total_count"],
+        ),
+        (
+            "Election candidates, 2025" if en else "Candidats, élection de 2025",
+            counts["elections_financial_returns_search_candidates"]["total_found"],
+        ),
+        ("Tools" if en else "Outils", tools),
+        (
+            "Microdata files" if en else "Fichiers de microdonnées",
+            counts["statcan_reference_search_data"]["product_count"],
+        ),
+        (
+            "Credit cards, Alberta" if en else "Cartes de crédit, Alberta",
+            load_case("cards")["calls"][0]["response"]["total_matched"],
+        ),
+        (
+            "Immigration tables" if en else "Tableaux d'immigration",
+            counts["ircc_monthly_list_tables"]["returned_count"],
+        ),
+    ]
+    reach.sort(key=lambda r: -r[1])
+    by_subject: dict[str, int] = {}
+    for module in modules:
+        source = module.source
+        if source.level == "national" and source.domain:
+            name = DOMAINS[source.domain][0 if en else 1]
+        elif source.level in ("provincial", "municipal", "catalogue"):
+            name = LEVELS[source.level][0 if en else 1]
+        else:
+            continue
+        by_subject[name] = by_subject.get(name, 0) + len(module.tools)
+    subjects = sorted(by_subject.items(), key=lambda r: -r[1])
+    return {
+        "chart_reach": charts.hbar_chart(
+            reach,
+            label="What one connection reaches, log scale"
+            if en
+            else "Ce qu'une seule connexion atteint, échelle logarithmique",
+            value_format=lambda v: number(v, lang),
+            tick_format=short_count,
+        ),
+        "chart_subjects": charts.hbar_chart(
+            subjects,
+            label="Tools by subject and level of government"
+            if en
+            else "Outils par sujet et ordre de gouvernement",
+            value_format=lambda v: number(v, lang),
+            log=False,
+        ),
+    }
+
+
+def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
+    context: dict[str, str] = {}
+    builders = {
+        "pumf": pumf_context,
+        "ircc": ircc_context,
+        "micro": micro_context,
+        "cards": cards_context,
+        "macro": macro_context,
+        "elections": elections_context,
+        "patents": patents_context,
+        "boc": boc_context,
+    }
+    for key in CASE_KEYS:
+        case = load_case(key)
+        context.update(builders[key](case, lang))
+        context[f"how_{key}"] = how_block(case, key, lang)
+    counts = {call["name"]: call["response"] for call in load_case("counts")["calls"]}
+    context["count_pumf"] = number(counts["statcan_reference_search_data"]["product_count"], lang)
+    context["count_ircc"] = number(counts["ircc_monthly_list_tables"]["returned_count"], lang)
+    context["count_tables"] = number(counts["wds_list_all_cubes"]["total_count"], lang)
+    context["count_series"] = number(counts["boc_list_series"]["total_count"], lang)
+    context["count_candidates"] = number(
+        counts["elections_financial_returns_search_candidates"]["total_found"], lang
+    )
+    context["cases_captured"] = long_date(load_case("counts")["captured"], lang)
+    context.update(finale_context(counts, modules, lang))
+    return context
 
 
 def render(template: str, lang: Lang, context: dict[str, str]) -> str:
@@ -1386,6 +1938,7 @@ async def build(out: Path) -> dict[str, int]:
     (out / "llms.txt").write_text(llms_txt(modules, counts), encoding="utf-8")
 
     pages = sorted(p for p in SITE.glob("*.html"))
+    cases = {lang: case_context(lang, modules) for lang in LANGS}
     for lang in LANGS:
         root = "" if lang == "en" else "../"
         target_dir = out if lang == "en" else out / "fr"
@@ -1394,6 +1947,7 @@ async def build(out: Path) -> dict[str, int]:
             context = {
                 **shared,
                 **captured_call(lang),
+                **cases[lang],
                 "lang": lang,
                 "root": root,
                 "page": page.name,
@@ -1410,6 +1964,7 @@ async def build(out: Path) -> dict[str, int]:
                 "cur_tools": ' aria-current="page"' if page.name == "tools.html" else "",
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
+                "cur_cases": ' aria-current="page"' if page.name == "cases.html" else "",
                 "search_results": result_items(search_results[lang], by_name, lang, root),
                 "coverage_matrix": coverage_matrix(lang),
                 "coverage_lists": coverage_lists(lang),

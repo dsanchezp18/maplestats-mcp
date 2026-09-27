@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Case studies{fr}Études de cas{/} · MapleStats MCP</title>
+<meta name="description" content="{en}Eight real questions answered through MapleStats MCP, for statisticians, demographers, microeconomists, marketers, macroeconomists, political scientists, scientists and analysts, each drawn from recorded calls.{fr}Huit vraies questions résolues avec MapleStats MCP, pour les statisticiens, les démographes, les microéconomistes, le marketing, les macroéconomistes, les politologues, les scientifiques et les analystes, chacune tirée d'appels enregistrés.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+<link rel="stylesheet" href="{{root}}assets/charts.css">
+<script src="{{root}}assets/charts.js" defer></script>
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Case studies{fr}Études de cas{/}</p>
+  <h1>{en}Eight crafts, one connection{fr}Huit métiers, une seule connexion{/}</h1>
+  <p class="lede">{en}Real questions, answered through MapleStats. Every chart is drawn from calls recorded on {{cases_captured}}; open “How the agent got this” under any chart for the calls it made and the script that fetches the data again.{fr}De vraies questions, résolues avec MapleStats. Chaque graphique vient d'appels enregistrés le {{cases_captured}}; ouvrez « Comment l'agent l'a obtenu » sous un graphique pour voir les appels faits et le script qui récupère de nouveau les données.{/}</p>
+</section>
+
+<section class="wrap stanza" id="statisticians">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_pumf}}</p>
+    <p class="verse-line">{en}microdata files for the statisticians, who put an interval on every estimate,{fr}fichiers de microdonnées pour les statisticiens, qui mettent un intervalle sur chaque estimation,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}A bachelor's degree, province by province{fr}Le baccalauréat, province par province{/}</h2>
+    <p>{en}The share of adults aged 25 to 64 whose highest credential is a bachelor's degree, estimated from the 2021 Census public use microdata file with its survey weights. Each bar is a 95% confidence interval from the file's 16 replicate weights: narrowest in {{pumf_narrow}}, widest in {{pumf_wide}}, where fewer people are in the sample.{fr}La part des adultes de 25 à 64 ans dont le plus haut diplôme est un baccalauréat, estimée à partir du fichier de microdonnées à grande diffusion du recensement de 2021 avec ses poids d'enquête. Chaque barre est un intervalle de confiance à 95 % tiré des 16 poids de réplication du fichier : le plus étroit pour {{pumf_narrow}}, le plus large pour {{pumf_wide}}, où l'échantillon est plus petit.{/}</p>
+    <figure class="chart-wrap">{{chart_pumf}}<figcaption>{{source_pumf}}</figcaption></figure>
+    {{how_pumf}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="demographers">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_ircc}}</p>
+    <p class="verse-line">{en}immigration tables for the demographers, counting who comes to stay,{fr}tableaux d'immigration pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</h2>
+    <p>{en}New permanent residents who named each city as their destination, by year, from IRCC's Monthly Updates. {{ircc_partial}} IRCC rounds every count to a multiple of 5.{fr}Les nouveaux résidents permanents qui ont indiqué chaque ville comme destination, par année, d'après les mises à jour mensuelles d'IRCC. {{ircc_partial}} IRCC arrondit chaque compte à un multiple de 5.{/}</p>
+    <figure class="chart-wrap">{{chart_ircc}}<figcaption>{{source_ircc}}</figcaption></figure>
+    {{how_ircc}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="microeconomists">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_records}}</p>
+    <p class="verse-line">{en}census records for the microeconomists, who explain the world one person at a time,{fr}fiches du recensement pour les microéconomistes, qui expliquent le monde une personne à la fois,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</h2>
+    <p>{en}The share of people below the low-income measure after tax, by immigrant generation, from the same 2021 Census microdata, with 95% confidence intervals from its replicate weights. First-generation immigrants are the most likely to be in low income ({{micro_first}}). Their children, born in Canada, are the least likely ({{micro_second}}), below the third generation or more ({{micro_third}}).{fr}La part des personnes sous la mesure de faible revenu après impôt, selon la génération, tirée des mêmes microdonnées du recensement de 2021, avec des intervalles de confiance à 95 % issus des poids de réplication. Les immigrants de première génération sont les plus susceptibles d'être à faible revenu ({{micro_first}}). Leurs enfants, nés au Canada, le sont le moins ({{micro_second}}), moins que la troisième génération ou plus ({{micro_third}}).{/}</p>
+    <figure class="chart-wrap">{{chart_micro}}<figcaption>{{source_micro}}</figcaption></figure>
+    {{how_micro}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="marketers">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_cards}}</p>
+    <p class="verse-line">{en}credit cards for the marketers, pricing the next product,{fr}cartes de crédit pour les spécialistes du marketing, qui fixent le prix du prochain produit,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</h2>
+    <p>{en}Every credit card offered in Alberta, from the Financial Consumer Agency of Canada's comparison tool: its annual fee against its purchase interest rate. The {{cards_rewards}} cards with rewards have a median fee of {{cards_fee_rewards}} and a median rate of {{cards_rate_rewards}}; the {{cards_plain}} without rewards, {{cards_fee_plain}} and {{cards_rate_plain}}. Larger dots are several cards at the same price. One prepaid card, which charges no interest, is left out.{fr}Toutes les cartes de crédit offertes en Alberta, d'après l'outil de comparaison de l'Agence de la consommation en matière financière du Canada : les frais annuels selon le taux d'intérêt sur les achats. Les {{cards_rewards}} cartes à récompenses ont des frais médians de {{cards_fee_rewards}} et un taux médian de {{cards_rate_rewards}}; les {{cards_plain}} cartes sans récompenses, {{cards_fee_plain}} et {{cards_rate_plain}}. Les gros points regroupent plusieurs cartes au même prix. Une carte prépayée, sans intérêt, est exclue.{/}</p>
+    <figure class="chart-wrap">{{chart_cards}}<figcaption>{{source_cards}}</figcaption></figure>
+    {{how_cards}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="macroeconomists">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_tables}}</p>
+    <p class="verse-line">{en}Statistics Canada tables for the macroeconomists, forecasting what's next,{fr}tableaux de Statistique Canada pour les macroéconomistes, qui prévoient la suite,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}Inflation, and the band it is meant to stay in{fr}L'inflation, et la fourchette où elle devrait rester{/}</h2>
+    <p>{en}The 12-month change in the Consumer Price Index, all-items, not seasonally adjusted (table 18-10-0004), against the Bank of Canada's 1% to 3% target range. It peaked at {{macro_peak}} in {{macro_peak_month}} and was {{macro_last}} in {{macro_last_month}}; {{macro_inside}} of the last {{macro_months}} months were inside the range.{fr}La variation sur 12 mois de l'Indice des prix à la consommation, ensemble, non désaisonnalisé (tableau 18-10-0004), par rapport à la fourchette cible de 1 % à 3 % de la Banque du Canada. Elle a culminé à {{macro_peak}} en {{macro_peak_month}} et s'établissait à {{macro_last}} en {{macro_last_month}}; {{macro_inside}} des {{macro_months}} derniers mois étaient dans la fourchette.{/}</p>
+    <figure class="chart-wrap">{{chart_macro}}<figcaption>{{source_macro}}</figcaption></figure>
+    {{how_macro}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="political-scientists">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_candidates}}</p>
+    <p class="verse-line">{en}candidates' returns for the political scientists, who follow the money,{fr}rapports de candidats pour les politologues, qui suivent l'argent,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}Edmonton Centre, 2025: the money and the seat{fr}Edmonton-Centre, 2025 : l'argent et le siège{/}</h2>
+    <p>{en}What each candidate in Edmonton Centre spent in the 45th general election, from the financial returns they filed with Elections Canada, against a limit of at most {{elections_limit}}. Of the {{elections_candidates}} candidates, {{elections_none}} report nothing subject to the limit. {{elections_top}} spent the most, {{elections_top_spent}}; the seat went to {{elections_member}} ({{elections_member_party}}), who spent {{elections_member_spent}}, according to openparliament.ca. Two sources, one question.{fr}Ce que chaque candidat d'Edmonton-Centre a dépensé à la 45e élection générale, d'après les rapports financiers déposés auprès d'Élections Canada, par rapport à un plafond d'au plus {{elections_limit}}. Sur les {{elections_candidates}} candidats, {{elections_none}} ne déclarent rien d'assujetti au plafond. {{elections_top}} a dépensé le plus, {{elections_top_spent}}; le siège est allé à {{elections_member}} (parti {{elections_member_party}}), qui a dépensé {{elections_member_spent}}, selon openparliament.ca. Deux sources, une question.{/}</p>
+    <figure class="chart-wrap">{{chart_elections}}<figcaption>{{source_elections}}</figcaption></figure>
+    {{how_elections}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="scientists">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_patents}}</p>
+    <p class="verse-line">{en}patents for the scientists, checking who got there first,{fr}brevets pour les scientifiques, qui vérifient qui est arrivé le premier,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</h2>
+    <p>{en}Canadian patent applications in IPC class G06N, where machine learning is classified, by filing year, from ISED's IP Horizons data. From {{patents_first}} in {{patents_first_year}} to a peak of {{patents_peak}} in {{patents_peak_year}}. Applications are published about 18 months after filing, so {{patents_partial_year}} ({{patents_partial}} so far) is left out.{fr}Les demandes de brevet canadiennes dans la classe CIB G06N, où se classe l'apprentissage automatique, par année de dépôt, d'après les données Horizons PI d'ISDE. De {{patents_first}} en {{patents_first_year}} à un sommet de {{patents_peak}} en {{patents_peak_year}}. Les demandes sont publiées environ 18 mois après le dépôt; {{patents_partial_year}} ({{patents_partial}} pour l'instant) est donc exclue.{/}</p>
+    <figure class="chart-wrap">{{chart_patents}}<figcaption>{{source_patents}}</figcaption></figure>
+    {{how_patents}}
+  </div>
+</section>
+
+<section class="wrap stanza" id="analysts">
+  <div class="stanza-verse">
+    <p class="verse-count">{{count_series}}</p>
+    <p class="verse-line">{en}Bank of Canada series for the analysts, doomed to explain the rate,{fr}séries de la Banque du Canada pour les analystes, condamnés à expliquer le taux,{/}</p>
+  </div>
+  <div class="stanza-body">
+    <h2>{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</h2>
+    <p>{en}The Bank of Canada's target for the overnight rate on every business day since January 2015: {{boc_changes}} changes, from a low of {{boc_min}} to a high of {{boc_max}}. On {{boc_last_date}} it stood at {{boc_last}}.{fr}Le taux cible du financement à un jour de la Banque du Canada, chaque jour ouvrable depuis janvier 2015 : {{boc_changes}} changements, d'un creux de {{boc_min}} à un sommet de {{boc_max}}. Le {{boc_last_date}}, il s'établissait à {{boc_last}}.{/}</p>
+    <figure class="chart-wrap">{{chart_boc}}<figcaption>{{source_boc}}</figcaption></figure>
+    {{how_boc}}
+  </div>
+</section>
+
+<section class="wrap finale">
+  <p class="verse-finale">{en}One MCP for the Agent to help them all.{fr}Un MCP pour que l'Agent les aide tous.{/}</p>
+  <div class="finale-body">
+    <p class="finale-lead">{en}Data access and discovery are no longer the bottleneck.{fr}L'accès aux données et leur découverte ne sont plus le goulot d'étranglement.{/}</p>
+    <p>{en}Never pay Haver, Bloomberg, Macrobond or CEIC for numbers Canada already publishes for free. Ask the question, get the number with its source and a script that fetches it again, and spend your time on what you actually want to do: the model, the argument, the decision.{fr}Ne payez plus Haver, Bloomberg, Macrobond ou CEIC pour des chiffres que le Canada publie déjà gratuitement. Posez la question, obtenez le chiffre avec sa source et un script qui le récupère de nouveau, et consacrez votre temps à ce que vous voulez vraiment faire : le modèle, l'argument, la décision.{/}</p>
+    <figure class="chart-wrap">{{chart_reach}}<figcaption><span class="case-source">{en}Counts from the recorded calls above, and the server's own registry.{fr}Comptes tirés des appels enregistrés ci-dessus et du registre du serveur.{/}</span></figcaption></figure>
+    <p>{en}MCP stands for Model Context Protocol, an open standard for connecting AI agents to tools and data. Think of it as a USB-C port for AI: any agent that speaks it can plug into any server that does. MapleStats is that plug for Canadian data: {{tool_count}} tools from federal agencies, provinces, cities and open-data catalogues, behind one connection.{fr}MCP signifie Model Context Protocol, une norme ouverte qui relie les agents IA aux outils et aux données. Voyez-le comme un port USB-C pour l'IA : tout agent qui le parle peut se brancher sur tout serveur qui le parle aussi. MapleStats est cette prise pour les données canadiennes : {{tool_count}} outils d'organismes fédéraux, de provinces, de villes et de catalogues de données ouvertes, derrière une seule connexion.{/}</p>
+    <figure class="chart-wrap">{{chart_subjects}}<figcaption><span class="case-source">{en}From the server's registry when this page was built. <a href="{{root}}tools.html">Browse every tool</a>.{fr}Tiré du registre du serveur lors de la construction de cette page. <a href="{{root}}tools.html">Parcourir tous les outils</a>.{/}</span></figcaption></figure>
+    <p class="finale-links"><a href="{{root}}connect.html">{en}Connect it to your agent{fr}Connectez-le à votre agent{/}</a><a href="{{repo}}/issues/new?title=Case%20study%3A%20">{en}Share your own case study{fr}Proposez votre étude de cas{/}</a></p>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

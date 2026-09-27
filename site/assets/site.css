@@ -460,7 +460,7 @@ mark {
   padding-top: 22px;
   max-width: 34em;
   border-top: 2px solid var(--ink);
-  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.5rem);
   line-height: 1.4;
   color: var(--ink);
 }
@@ -491,9 +491,13 @@ mark {
 
 /* Between the stacked layout and full width, the text steps down a size so
    it stays as tall as the logo column is wide. */
-@media (min-width: 1181px) and (max-width: 1360px) {
+@media (min-width: 1241px) and (max-width: 1360px) {
   .hero .lede {
     font-size: 1.375rem;
+  }
+
+  html[lang="fr"] .hero .lede {
+    font-size: 1.3rem;
   }
 
   .points p {
@@ -541,7 +545,7 @@ mark {
   content: none;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1240px) {
   .hero-logo,
   .hero-text {
     grid-column: 1 / -1;
@@ -1246,15 +1250,37 @@ mark {
   margin-left: auto;
 }
 
+/* The coverage table sits centred on the page, with its heading, note,
+   legend and list toggle centred above and below it. */
 .local {
   margin-top: clamp(56px, 7vw, 88px);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
   gap: 18px;
+  text-align: center;
 }
 
 .local > p {
   max-width: 66ch;
   color: var(--ink-2);
+}
+
+.local .table-wrap {
+  width: max-content;
+  margin-top: 8px;
+}
+
+.local .legend {
+  justify-content: center;
+}
+
+.local-list {
+  justify-self: stretch;
+}
+
+.local-list[open] .local-cols {
+  text-align: left;
 }
 
 .matrix {
@@ -1289,12 +1315,20 @@ mark {
 }
 
 .matrix td {
-  min-width: 42px;
-  height: 40px;
+  min-width: 54px;
+  height: 48px;
   padding: 0 4px;
   text-align: center;
-  font: 500 0.875rem/1 var(--font-mono);
+  font: 500 0.9375rem/1 var(--font-mono);
   border-radius: 0;
+}
+
+@media (max-width: 900px) {
+  .matrix td {
+    min-width: 42px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
 }
 
 .matrix tbody td.c0 {
@@ -1323,7 +1357,7 @@ mark {
 
 .matrix tfoot td,
 .matrix tfoot th {
-  height: 34px;
+  height: 40px;
   border-top: 1px solid var(--rule-2);
 }
 
@@ -1398,65 +1432,6 @@ mark {
 
 /* ---------- Rules ---------- */
 
-.rules {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.rules thead th {
-  padding: 0 24px 10px 0;
-  text-align: left;
-}
-
-.rules td {
-  padding: 18px 24px 18px 0;
-  border-top: 1px solid var(--rule);
-  vertical-align: top;
-}
-
-.rules td:first-child {
-  max-width: 64ch;
-  font-size: 1.0625rem;
-  line-height: 1.5;
-}
-
-.rules td:last-child {
-  width: 30%;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.rules td:last-child a {
-  font-family: var(--font-mono);
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
-}
-
-.rules td:last-child a:hover {
-  color: var(--accent);
-}
-
-@media (max-width: 700px) {
-  .rules thead {
-    display: none;
-  }
-
-  .rules tr,
-  .rules td {
-    display: block;
-    width: auto;
-  }
-
-  .rules td:first-child {
-    padding-bottom: 6px;
-  }
-
-  .rules td:last-child {
-    border-top: 0;
-    padding-top: 0;
-    width: auto;
-  }
-}
 
 /* ---------- Connect ---------- */
 
@@ -1617,6 +1592,182 @@ mark {
 @media (max-width: 800px) {
   .about-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Case studies ---------- */
+
+/* Each stanza: the count and its verse line on the left, under the hero's
+   logo column; the chart and its story on the right. */
+.stanza {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px clamp(24px, 2.5vw, 32px);
+  align-items: start;
+  padding-block: clamp(44px, 5.5vw, 72px);
+  border-top: 2px solid var(--ink);
+}
+
+.stanza-verse {
+  grid-column: 1 / span 4;
+  position: sticky;
+  top: calc(var(--top-h) + 24px);
+}
+
+.stanza-body {
+  grid-column: 5 / -1;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.verse-count {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 2rem + 3.6vw, 5.5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  font-variant-numeric: lining-nums;
+}
+
+.verse-line {
+  margin-top: 10px;
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+.stanza-body h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.stanza-body > p {
+  max-width: 68ch;
+  color: var(--ink-2);
+}
+
+.chart-wrap {
+  margin: 8px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+
+.chart-wrap .chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* On a phone the chart keeps a readable width and scrolls inside its frame,
+   rather than shrinking its labels to a few pixels. */
+@media (max-width: 640px) {
+  .chart-wrap {
+    overflow-x: auto;
+  }
+
+  .chart-wrap .chart {
+    min-width: 560px;
+  }
+}
+
+.chart-wrap figcaption {
+  margin-top: 10px;
+}
+
+.chart-wrap .case-source {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.how summary {
+  width: max-content;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.how-body {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.finale {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 20px clamp(24px, 2.5vw, 32px);
+  padding-block: clamp(56px, 7vw, 96px);
+  border-top: 2px solid var(--ink);
+}
+
+.verse-finale {
+  grid-column: 1 / -1;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 1.2rem + 4vw, 4.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.finale-body {
+  grid-column: 5 / -1;
+  display: grid;
+  gap: 16px;
+}
+
+.finale-body p {
+  max-width: 64ch;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.finale-body .finale-lead {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.how-more {
+  padding: 10px 16px 14px;
+  font-size: 0.875rem;
+  color: var(--panel-mute);
+}
+
+.how-note {
+  max-width: 68ch;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.finale-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  font-weight: 600;
+}
+
+@media (max-width: 1240px) {
+  .stanza-verse,
+  .stanza-body,
+  .finale-body {
+    grid-column: 1 / -1;
+  }
+
+  .stanza-verse {
+    position: static;
   }
 }
 
@@ -2287,25 +2438,52 @@ mark {
   color: var(--accent);
 }
 
+/* Same columns as the hero: the verse under the logo, the argument under
+   the hero text, the three claims across the full width. */
 .thesis .wrap {
   display: grid;
-  gap: clamp(28px, 3.5vw, 48px);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(28px, 3.5vw, 48px) clamp(24px, 2.5vw, 32px);
+  align-items: start;
 }
 
-.verse {
-  max-width: 34ch;
-  font-size: clamp(1.35rem, 1rem + 1.4vw, 2.1rem);
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--ink-2);
+.thesis .verse {
+  grid-column: 1 / span 4;
 }
 
-.verse span {
-  display: block;
-  margin-top: 10px;
-  font-size: 0.55em;
-  font-style: normal;
+.thesis-body {
+  grid-column: 5 / -1;
+}
+
+.claims {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1240px) {
+  .thesis .verse,
+  .thesis-body {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The home page's verse uses the case-study stanzas' count and line
+   styles, smaller, so the three counts stack in the logo column. */
+.verse .verse-count {
+  font-size: clamp(2.4rem, 1.8rem + 2vw, 3.5rem);
+}
+
+.verse .verse-count:not(:first-child) {
+  margin-top: 18px;
+}
+
+.verse .verse-line {
+  margin-top: 6px;
+  font-size: clamp(1.15rem, 1rem + 0.5vw, 1.375rem);
+}
+
+.verse-aside {
+  margin-top: 18px;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--accent);
 }
@@ -2365,7 +2543,7 @@ mark {
 /* The headline is one line beside the logo; French runs longer, so smaller.
    Measured in Source Serif 4 at 700: the English line is 10.2 em wide, the
    French 13.1 em; both fit the eight-column text block. */
-@media (min-width: 1181px) {
+@media (min-width: 1241px) {
   .hero {
     --h1-size: min(5.5vw, 5.1rem);
   }

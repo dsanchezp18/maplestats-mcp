@@ -97,3 +97,22 @@ async def test_site_builds(tmp_path: Path):
     for asset in ("site.css", "site.js", "search-index.json", "modules.json"):
         assert (out / "assets" / asset).is_file()
     assert (out / "llms.txt").is_file()
+
+
+def test_case_captures_are_complete():
+    """Each case study is recorded calls with their source and, for the first, scripts."""
+    import json
+
+    for key in (*site.CASE_KEYS, "counts"):
+        case = json.loads((site.CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
+        assert case["captured"] and case["calls"], key
+        for call in case["calls"]:
+            assert call["name"], key
+            response = call["response"]
+            provenance = (response[0] if isinstance(response, list) else response)["provenance"]
+            assert provenance["url"].startswith("https://"), key
+        if key == "counts":
+            continue
+        first = case["calls"][0]
+        # A web page the tool parses has no script, only reproduce_code's note why.
+        assert {"r", "python"} <= set(first["scripts"]) or first["script_notes"], key
