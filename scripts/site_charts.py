@@ -768,7 +768,7 @@ def ring_chart(
         body.append(
             f'<path class="ring-arc" style="--i:{i}" pathLength="1" '
             f'd="{_arc_path(c, c, r_arc, a0, a1)}" stroke-width="{_n(width)}">'
-            f"<title>{_esc(f'{full}: {count}')}</title></path>"
+            f"<title>{_esc(f'{full} ({count})')}</title></path>"
         )
         arc_len = math.radians(a1 - a0) * r_arc
         mid = (a0 + a1) / 2
