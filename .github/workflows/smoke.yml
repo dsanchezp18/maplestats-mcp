@@ -53,8 +53,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked
+      # One retry after a pause: of eight failed jobs on 2026-09-26/27, seven
+      # were StatCan and portal blips (503, 429, 500, timeouts) that passed
+      # on a rerun minutes later. A real upstream change fails both attempts.
       - name: Run ${{ matrix.script }}
-        run: uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log
+        run: |
+          if uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log; then
+            exit 0
+          fi
+          echo "::warning::${{ matrix.script }} failed; retrying once in 120s"
+          sleep 120
+          uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log
         shell: bash -o pipefail {0}
       - name: Summarize failure
         if: failure()

@@ -195,6 +195,56 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
         await client.list_services("2021")
 
 
+_SERVICE_JSON = {"layers": [{"id": 9, "name": "CSD - lcsd000b21s_e"}]}
+_BOGUS_BASE = f"{constants.BASE_URL}/2021/Not_A_Real_Service/MapServer"
+
+
+async def test_500_for_unlisted_service_becomes_not_found(httpx_mock):
+    # Live 2026-09-27: an unknown service now answers HTTP 500, not an
+    # embedded 404, so the listing decides whether the caller is wrong.
+    httpx_mock.add_response(url=f"{_BOGUS_BASE}/9?f=json", status_code=500, is_reusable=True)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
+    with pytest.raises(NotFound, match="Not_A_Real_Service"):
+        await client.get_layer_detail("2021", "Not_A_Real_Service", 9)
+
+
+async def test_500_for_unlisted_layer_becomes_not_found(httpx_mock):
+    httpx_mock.add_response(url=f"{_BASE}/999?f=json", status_code=500, is_reusable=True)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
+    httpx_mock.add_response(url=f"{_BASE}?f=json", json=_SERVICE_JSON)
+    with pytest.raises(NotFound, match="no layer 999"):
+        await client.get_layer_detail("2021", "Cartographic_boundary_files", 999)
+
+
+async def test_500_for_listed_layer_stays_upstream_error(httpx_mock):
+    # The service and layer exist, so the 500 is a real outage.
+    httpx_mock.add_response(url=f"{_BASE}/9?f=json", status_code=500, is_reusable=True)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
+    httpx_mock.add_response(url=f"{_BASE}?f=json", json=_SERVICE_JSON)
+    with pytest.raises(UpstreamError, match="get_layer_detail"):
+        await client.get_layer_detail("2021", "Cartographic_boundary_files", 9)
+
+
+async def test_500_with_listings_down_keeps_original_error(httpx_mock):
+    httpx_mock.add_response(status_code=500, is_reusable=True)
+    with pytest.raises(UpstreamError, match="get_layer_detail"):
+        await client.get_layer_detail("2021", "Cartographic_boundary_files", 9)
+
+
+async def test_query_500_for_unlisted_service_becomes_not_found(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{_BOGUS_BASE}/9/query?where=1%3D1&outFields=%2A&f=geojson"
+            "&resultRecordCount=100&resultOffset=0&returnGeometry=false"
+        ),
+        status_code=500,
+        is_reusable=True,
+    )
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
+    with pytest.raises(NotFound):
+        await client.query_layer_features("2021", "Not_A_Real_Service", 9)
+
+
 async def test_list_services_filters_by_language(httpx_mock):
     services = {
         "services": [

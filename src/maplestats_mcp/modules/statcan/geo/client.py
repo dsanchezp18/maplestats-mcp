@@ -12,6 +12,7 @@ platform-level quirks those two functions handle.
 
 from __future__ import annotations
 
+import contextlib
 import re
 
 from maplestats_mcp.modules.statcan.geo import constants
@@ -26,7 +27,7 @@ from maplestats_mcp.modules.statcan.geo.schemas import (
 from maplestats_mcp.shared.arcgis import ArcGISHubConfig, get_json, query_layer
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.json_utils import list_or_empty
 
 CONFIG = ArcGISHubConfig(
@@ -94,6 +95,25 @@ async def list_services(year: str, lang: str | None = None) -> GeoServiceList:
     )
 
 
+async def _raise_if_unknown(year: str, service: str, layer_id: int) -> None:
+    """Turn an HTTP 500 for a bad service or layer into NotFound.
+
+    Confirmed live 2026-09-27: the server now answers an unknown service or
+    layer with an HTML "Application Error" page and HTTP 500, not the
+    embedded {"error": {"code": 404}} it used to send. A 500 also means a
+    real outage, so check the service and layer listings before blaming the
+    caller. If the listings fail too, the caller keeps the original error.
+    """
+    services = await list_services(year)
+    if service not in {s.name.rsplit("/", 1)[-1] for s in services.services}:
+        raise NotFound(
+            f"No service {service!r} for {year}; statcan_geo_list_services lists the valid names."
+        )
+    body = await get_json(CONFIG, "list_layers", f"{constants.BASE_URL}/{year}/{service}/MapServer")
+    if layer_id not in {layer.get("id") for layer in list_or_empty(body, "layers")}:
+        raise NotFound(f"Service {service!r} ({year}) has no layer {layer_id}.")
+
+
 async def get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDetail:
     year = _validate_path_segment(year, "year")
     service = _validate_path_segment(service, "service")
@@ -105,9 +125,14 @@ async def get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDe
     async def fetch():
         return await get_json(CONFIG, "get_layer_detail", url)
 
-    body, was_cached = await cached_fetch(
-        cache_key, constants.CACHE_TTL_LAYER_DETAIL_SECONDS, fetch
-    )
+    try:
+        body, was_cached = await cached_fetch(
+            cache_key, constants.CACHE_TTL_LAYER_DETAIL_SECONDS, fetch
+        )
+    except UpstreamError:
+        with contextlib.suppress(UpstreamError, UpstreamUnavailable):
+            await _raise_if_unknown(year, service, layer_id)
+        raise
     fields = [
         GeoLayerField(name=f["name"], field_type=f["type"], alias=f.get("alias"))
         for f in list_or_empty(body, "fields")
@@ -167,18 +192,23 @@ async def query_layer_features(
         )
 
     service_url = f"{constants.BASE_URL}/{year}/{service}/MapServer"
-    body = await query_layer(
-        CONFIG,
-        service_url,
-        layer_id,
-        where=where,
-        out_fields=out_fields,
-        return_geometry=return_geometry,
-        limit=result_record_count,
-        offset=result_offset,
-        output_format="geojson",
-        out_sr=out_sr if return_geometry else None,
-    )
+    try:
+        body = await query_layer(
+            CONFIG,
+            service_url,
+            layer_id,
+            where=where,
+            out_fields=out_fields,
+            return_geometry=return_geometry,
+            limit=result_record_count,
+            offset=result_offset,
+            output_format="geojson",
+            out_sr=out_sr if return_geometry else None,
+        )
+    except UpstreamError:
+        with contextlib.suppress(UpstreamError, UpstreamUnavailable):
+            await _raise_if_unknown(year, service, layer_id)
+        raise
 
     features = [
         GeoFeature(attributes=f.get("properties", {}), geometry=f.get("geometry"))
