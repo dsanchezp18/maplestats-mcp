@@ -10,14 +10,11 @@
 {{> header}}
 <main id="main">
 
-<section class="wrap page-head">
+<section class="wrap page-head has-aside">
   <p class="label">{en}Connect{fr}Connexion{/}</p>
   <h1>{en}Connect MapleStats to your agent{fr}Connecter MapleStats à votre agent{/}</h1>
   <p class="lede">{en}The easiest way is to let your agent do it: paste one prompt and it installs the server and connects it. If you would rather do it yourself, it takes two steps by hand. Either way there is no account and no API key.{fr}Le plus simple est de laisser votre agent s'en charger : collez une requête, il installe le serveur et le connecte. Si vous préférez le faire vous-même, il suffit de deux étapes. Dans les deux cas, ni compte ni clé d'API.{/}</p>
-</section>
-
-<section class="wrap connect-easy">
-  <div class="setup">
+  <div class="setup page-aside">
     <p class="setup-lead"><strong>{en}The easiest way: ask your agent{fr}Le plus simple : demandez à votre agent{/}</strong> {en}The agent reads the setup steps from the repository, installs uv if it is missing, adds MapleStats to its own settings and tells you when to restart.{fr}L'agent lit les étapes d'installation dans le dépôt, installe uv s'il manque, ajoute MapleStats à ses propres réglages et vous dit quand redémarrer.{/}</p>
     <div class="setup-row">
       <div class="cmd prompt"><code id="setup-prompt">{{agent_prompt}}</code><button type="button" data-copy-target="setup-prompt">{en}Copy{fr}Copier{/}</button></div>

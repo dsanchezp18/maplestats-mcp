@@ -15,108 +15,124 @@
 <section class="wrap page-head">
   <p class="label">{en}Case studies{fr}Études de cas{/}</p>
   <h1>{en}Eight crafts, one connection{fr}Huit métiers, une seule connexion{/}</h1>
-  <p class="lede">{en}What does an agent actually do with MapleStats? Eight people asked it something real. Here is what it found, and the calls it made to find it.{fr}Que fait vraiment un agent avec MapleStats? Huit personnes lui ont posé une vraie question. Voici ce qu'il a trouvé, et les appels qu'il a faits pour le trouver.{/}</p>
+  <p class="lede">{en}What can you do with MapleStats? Eight different kinds of people asked their agent a question through the MCP. See for yourself below (heads up: it's amazing).{fr}Que pouvez-vous faire avec MapleStats? Huit profils différents ont posé une question à leur agent grâce au MCP. Voyez par vous-même ci-dessous (petit avertissement : c'est impressionnant).{/}</p>
 </section>
 
 <section class="wrap stanza" id="statisticians">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_pumf}}</p>
-    <p class="verse-line">{en}microdata files for the statisticians, keepers of the weights and the margins,{fr}fichiers de microdonnées pour les statisticiens, gardiens des poids et des marges,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_pumf}}</p>
+      <p class="verse-line">{en}microdata files for the statisticians, keepers of the weights and the margins,{fr}fichiers de microdonnées pour les statisticiens, gardiens des poids et des marges,{/}</p>
+    </div>
     <h2>{en}A bachelor's degree, province by province{fr}Le baccalauréat, province par province{/}</h2>
     <p>{en}The share of adults aged 25 to 64 whose highest credential is a bachelor's degree, estimated from the 2021 Census public use microdata file with its survey weights. Each bar is a 95% confidence interval from the file's 16 replicate weights: narrowest in {{pumf_narrow}}, widest in {{pumf_wide}}, where fewer people are in the sample.{fr}La part des adultes de 25 à 64 ans dont le plus haut diplôme est un baccalauréat, estimée à partir du fichier de microdonnées à grande diffusion du recensement de 2021 avec ses poids d'enquête. Chaque barre est un intervalle de confiance à 95 % tiré des 16 poids de réplication du fichier : le plus étroit pour {{pumf_narrow}}, le plus large pour {{pumf_wide}}, où l'échantillon est plus petit.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_pumf}}<figcaption>{{source_pumf}}</figcaption></figure>
     {{how_pumf}}
   </div>
 </section>
 
 <section class="wrap stanza" id="demographers">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_ircc}}</p>
-    <p class="verse-line">{en}immigration tables for the demographers, counting who comes to stay,{fr}tableaux d'immigration pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_ircc}}</p>
+      <p class="verse-line">{en}immigration tables for the demographers, counting who comes to stay,{fr}tableaux d'immigration pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
+    </div>
     <h2>{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</h2>
     <p>{en}New permanent residents who named each city as their destination, by year, from IRCC's Monthly Updates. {{ircc_partial}} IRCC rounds every count to a multiple of 5.{fr}Les nouveaux résidents permanents qui ont indiqué chaque ville comme destination, par année, d'après les mises à jour mensuelles d'IRCC. {{ircc_partial}} IRCC arrondit chaque compte à un multiple de 5.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_ircc}}<figcaption>{{source_ircc}}</figcaption></figure>
     {{how_ircc}}
   </div>
 </section>
 
 <section class="wrap stanza" id="urban-planners">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_housing}}</p>
-    <p class="verse-line">{en}housing tables for the urban planners, who count the cranes before the keys,{fr}tableaux sur le logement pour les urbanistes, qui comptent les grues avant les clés,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_housing}}</p>
+      <p class="verse-line">{en}housing tables for the urban planners, who count the cranes before the keys,{fr}tableaux sur le logement pour les urbanistes, qui comptent les grues avant les clés,{/}</p>
+    </div>
     <h2>{en}Canada is building up, not out{fr}Le Canada construit en hauteur, pas en largeur{/}</h2>
     <p>{en}Housing starts by year from CMHC, for single-detached homes and apartments, in centres of 10,000 people or more. In {{housing_first}}, Canada started {{housing_single_first}} single-detached homes and {{housing_apt_first}} apartments; in {{housing_last}}, {{housing_single_last}} and {{housing_apt_last}}. Apartments went from {{housing_share_first}} of all starts to {{housing_share_last}}, and have outnumbered single-detached homes every year since {{housing_crossed}}.{fr}Les mises en chantier par année selon la SCHL, pour les maisons individuelles et les appartements, dans les centres de 10 000 habitants ou plus. En {{housing_first}}, le Canada a mis en chantier {{housing_single_first}} maisons individuelles et {{housing_apt_first}} appartements; en {{housing_last}}, {{housing_single_last}} et {{housing_apt_last}}. Les appartements sont passés de {{housing_share_first}} de toutes les mises en chantier à {{housing_share_last}}, et dépassent les maisons individuelles chaque année depuis {{housing_crossed}}.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_housing}}<figcaption>{{source_housing}}</figcaption></figure>
     {{how_housing}}
   </div>
 </section>
 
 <section class="wrap stanza" id="microeconomists">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_records}}</p>
-    <p class="verse-line">{en}census records for the microeconomists, weavers of incentives, one life at a time,{fr}fiches du recensement pour les microéconomistes, tisseurs d'incitations, une vie à la fois,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_records}}</p>
+      <p class="verse-line">{en}census records for the microeconomists, weavers of incentives, one life at a time,{fr}fiches du recensement pour les microéconomistes, tisseurs d'incitations, une vie à la fois,{/}</p>
+    </div>
     <h2>{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</h2>
     <p>{en}The share of people below the low-income measure after tax, by immigrant generation, from the same 2021 Census microdata, with 95% confidence intervals from its replicate weights. First-generation immigrants are the most likely to be in low income ({{micro_first}}). Their children, born in Canada, are the least likely ({{micro_second}}), below the third generation or more ({{micro_third}}).{fr}La part des personnes sous la mesure de faible revenu après impôt, selon la génération, tirée des mêmes microdonnées du recensement de 2021, avec des intervalles de confiance à 95 % issus des poids de réplication. Les immigrants de première génération sont les plus susceptibles d'être à faible revenu ({{micro_first}}). Leurs enfants, nés au Canada, le sont le moins ({{micro_second}}), moins que la troisième génération ou plus ({{micro_third}}).{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_micro}}<figcaption>{{source_micro}}</figcaption></figure>
     {{how_micro}}
   </div>
 </section>
 
 <section class="wrap stanza" id="marketers">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_cards}}</p>
-    <p class="verse-line">{en}credit cards for the marketers, pricing the next product,{fr}cartes de crédit pour les spécialistes du marketing, qui fixent le prix du prochain produit,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_cards}}</p>
+      <p class="verse-line">{en}credit cards for the marketers, readers of the rivals' fine print,{fr}cartes de crédit pour le marketing, lecteurs des petits caractères de la concurrence,{/}</p>
+    </div>
     <h2>{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</h2>
     <p>{en}Every credit card offered in Alberta, from the Financial Consumer Agency of Canada's comparison tool: its annual fee against its purchase interest rate. The {{cards_rewards}} cards with rewards have a median fee of {{cards_fee_rewards}} and a median rate of {{cards_rate_rewards}}; the {{cards_plain}} without rewards, {{cards_fee_plain}} and {{cards_rate_plain}}. Larger dots are several cards at the same price. One prepaid card, which charges no interest, is left out.{fr}Toutes les cartes de crédit offertes en Alberta, d'après l'outil de comparaison de l'Agence de la consommation en matière financière du Canada : les frais annuels selon le taux d'intérêt sur les achats. Les {{cards_rewards}} cartes à récompenses ont des frais médians de {{cards_fee_rewards}} et un taux médian de {{cards_rate_rewards}}; les {{cards_plain}} cartes sans récompenses, {{cards_fee_plain}} et {{cards_rate_plain}}. Les gros points regroupent plusieurs cartes au même prix. Une carte prépayée, sans intérêt, est exclue.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_cards}}<figcaption>{{source_cards}}</figcaption></figure>
     {{how_cards}}
   </div>
 </section>
 
 <section class="wrap stanza" id="macroeconomists">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_tables}}</p>
-    <p class="verse-line">{en}Statistics Canada tables for the macroeconomists, forecasting what's next,{fr}tableaux de Statistique Canada pour les macroéconomistes, qui prévoient la suite,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_tables}}</p>
+      <p class="verse-line">{en}Statistics Canada tables for the macroeconomists, forecasting what's next,{fr}tableaux de Statistique Canada pour les macroéconomistes, qui prévoient la suite,{/}</p>
+    </div>
     <h2>{en}Inflation, and the band it is meant to stay in{fr}L'inflation, et la fourchette où elle devrait rester{/}</h2>
     <p>{en}The 12-month change in the Consumer Price Index, all-items, not seasonally adjusted (table 18-10-0004), against the Bank of Canada's 1% to 3% target range. It peaked at {{macro_peak}} in {{macro_peak_month}} and was {{macro_last}} in {{macro_last_month}}; {{macro_inside}} of the last {{macro_months}} months were inside the range.{fr}La variation sur 12 mois de l'Indice des prix à la consommation, ensemble, non désaisonnalisé (tableau 18-10-0004), par rapport à la fourchette cible de 1 % à 3 % de la Banque du Canada. Elle a culminé à {{macro_peak}} en {{macro_peak_month}} et s'établissait à {{macro_last}} en {{macro_last_month}}; {{macro_inside}} des {{macro_months}} derniers mois étaient dans la fourchette.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_macro}}<figcaption>{{source_macro}}</figcaption></figure>
     {{how_macro}}
   </div>
 </section>
 
 <section class="wrap stanza" id="scientists">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_patents}}</p>
-    <p class="verse-line">{en}patents for the scientists, checking who got there first,{fr}brevets pour les scientifiques, qui vérifient qui est arrivé le premier,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_patents}}</p>
+      <p class="verse-line">{en}patents for the scientists, checking who got there first,{fr}brevets pour les scientifiques, qui vérifient qui est arrivé le premier,{/}</p>
+    </div>
     <h2>{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</h2>
     <p>{en}Canadian patent applications in IPC class G06N, where machine learning is classified, by filing year, from ISED's IP Horizons data. From {{patents_first}} in {{patents_first_year}} to a peak of {{patents_peak}} in {{patents_peak_year}}. Applications are published about 18 months after filing, so {{patents_partial_year}} ({{patents_partial}} so far) is left out.{fr}Les demandes de brevet canadiennes dans la classe CIB G06N, où se classe l'apprentissage automatique, par année de dépôt, d'après les données Horizons PI d'ISDE. De {{patents_first}} en {{patents_first_year}} à un sommet de {{patents_peak}} en {{patents_peak_year}}. Les demandes sont publiées environ 18 mois après le dépôt; {{patents_partial_year}} ({{patents_partial}} pour l'instant) est donc exclue.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_patents}}<figcaption>{{source_patents}}</figcaption></figure>
     {{how_patents}}
   </div>
 </section>
 
 <section class="wrap stanza" id="analysts">
-  <div class="stanza-verse">
-    <p class="verse-count">{{count_series}}</p>
-    <p class="verse-line">{en}Bank of Canada series for the analysts, doomed to explain the rate,{fr}séries de la Banque du Canada pour les analystes, condamnés à expliquer le taux,{/}</p>
-  </div>
-  <div class="stanza-body">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_series}}</p>
+      <p class="verse-line">{en}Bank of Canada series for the analysts, doomed to explain the rate,{fr}séries de la Banque du Canada pour les analystes, condamnés à expliquer le taux,{/}</p>
+    </div>
     <h2>{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</h2>
     <p>{en}The Bank of Canada's target for the overnight rate on every business day since January 2015: {{boc_changes}} changes, from a low of {{boc_min}} to a high of {{boc_max}}. On {{boc_last_date}} it stood at {{boc_last}}.{fr}Le taux cible du financement à un jour de la Banque du Canada, chaque jour ouvrable depuis janvier 2015 : {{boc_changes}} changements, d'un creux de {{boc_min}} à un sommet de {{boc_max}}. Le {{boc_last_date}}, il s'établissait à {{boc_last}}.{/}</p>
+  </div>
+  <div class="stanza-body">
     <figure class="chart-wrap">{{chart_boc}}<figcaption>{{source_boc}}</figcaption></figure>
     {{how_boc}}
   </div>

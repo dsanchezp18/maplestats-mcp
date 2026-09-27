@@ -969,19 +969,21 @@ def tool_details(tool: ToolDoc, lang: Lang) -> str:
         f'<details class="tool" id="t-{esc(tool.name)}" data-tool="{esc(tool.name)}">'
         f'<summary><code class="t-name">{breakable(tool.name)}</code>'
         f'<span class="t-sum">{esc(tool.summary)}</span></summary>'
-        '<div class="t-body">'
+        # Two stacks, side by side where the row is wide enough: what the
+        # tool is for and how to find it, then how to call it.
+        '<div class="t-body"><div class="t-main">'
         + (
             f'<p class="t-use"><b>{use_label}</b> {inline_code(tool.use_for)}</p>'
             if tool.use_for
             else ""
         )
-        + params_table(tool, lang)
         + '<dl class="t-kw">'
         + f"<div><dt>Keywords</dt><dd>{esc(kw)}</dd></div>"
         + f'<div lang="fr"><dt>Mots-clés</dt><dd>{esc(mc)}</dd></div>'
-        + "</dl>"
+        + '</dl></div><div class="t-side">'
+        + params_table(tool, lang)
         + example_call(tool)
-        + "</div></details>"
+        + "</div></div></details>"
     )
 
 
