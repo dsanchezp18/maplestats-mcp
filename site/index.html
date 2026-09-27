@@ -5,6 +5,8 @@
 <title>MapleStats MCP</title>
 <meta name="description" content="{en}One MCP server for Canadian open data: Statistics Canada, the Bank of Canada, CMHC and {{catalogue_count}} open-data catalogues, in English and French.{fr}Un seul serveur MCP pour les données ouvertes canadiennes : Statistique Canada, la Banque du Canada, la SCHL et {{catalogue_count}} catalogues de données ouvertes, en français et en anglais.{/}">
 <link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+<link rel="stylesheet" href="{{root}}assets/charts.css">
+<script src="{{root}}assets/charts.js" defer></script>
 </head>
 <body>
 {{> header}}
@@ -74,7 +76,7 @@
       <li><a href="{{root}}cases.html#urban-planners"><span class="use-who">{en}Urban planners{fr}Urbanistes{/}</span><span class="use-q">{en}Canada is building up, not out{fr}Le Canada construit en hauteur, pas en largeur{/}</span><span class="use-n"><b>{{count_housing}}</b> {en}housing tables{fr}tableaux sur le logement{/}</span></a></li>
       <li><a href="{{root}}cases.html#microeconomists"><span class="use-who">{en}Microeconomists{fr}Microéconomistes{/}</span><span class="use-q">{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</span><span class="use-n"><b>{{count_records}}</b> {en}census records{fr}fiches du recensement{/}</span></a></li>
       <li><a href="{{root}}cases.html#marketers"><span class="use-who">{en}Marketers{fr}Marketing{/}</span><span class="use-q">{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</span><span class="use-n"><b>{{count_cards}}</b> {en}credit cards{fr}cartes de crédit{/}</span></a></li>
-      <li><a href="{{root}}cases.html#macroeconomists"><span class="use-who">{en}Macroeconomists{fr}Macroéconomistes{/}</span><span class="use-q">{en}Inflation, and the band it is meant to stay in{fr}L'inflation, et la fourchette où elle devrait rester{/}</span><span class="use-n"><b>{{count_tables}}</b> {en}Statistics Canada tables{fr}tableaux de Statistique Canada{/}</span></a></li>
+      <li><a href="{{root}}cases.html#macroeconomists"><span class="use-who">{en}Macroeconomists{fr}Macroéconomistes{/}</span><span class="use-q">{en}When the yield curve turns upside down{fr}Quand la courbe des taux s'inverse{/}</span><span class="use-n"><b>{{count_curve}}</b> {en}days of bond yields{fr}jours de rendements obligataires{/}</span></a></li>
       <li><a href="{{root}}cases.html#scientists"><span class="use-who">{en}Scientists{fr}Scientifiques{/}</span><span class="use-q">{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</span><span class="use-n"><b>{{count_patents}}</b> {en}patents{fr}brevets{/}</span></a></li>
       <li><a href="{{root}}cases.html#analysts"><span class="use-who">{en}Analysts{fr}Analystes{/}</span><span class="use-q">{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</span><span class="use-n"><b>{{count_series}}</b> {en}Bank of Canada series{fr}séries de la Banque du Canada{/}</span></a></li>
     </ul>
@@ -216,6 +218,14 @@
       <p>{en}Thank you to the developers who built and shared these tools, and to everyone who publishes Canadian data in the open.{fr}Merci aux développeurs qui ont conçu et partagé ces outils, et à toutes les personnes qui publient des données canadiennes au grand jour.{/}</p>
       <p>{en}For other ways to get Canadian data, some of these packages among them, see the <a href="{{root}}about.html#alternatives">alternatives</a> on the About page.{fr}Pour d'autres façons d'obtenir des données canadiennes, dont certains de ces paquets, voyez les <a href="{{root}}about.html#alternatives">autres options</a> à la page À propos.{/}</p>
     </div>
+  </div>
+</section>
+
+<section class="section home-ring" id="one-mcp">
+  <div class="wrap">
+    <p class="verse-finale">{en}One MCP for the Agent to help them all.{fr}Un MCP pour que l'Agent les aide tous.{/}</p>
+    <figure class="home-ring-fig">{{chart_ring}}</figure>
+    <p class="source-links"><a href="{{root}}cases.html">{en}See what people asked it{fr}Voir ce qu'on lui a demandé{/}</a><a href="{{root}}connect.html">{en}Connect it to your agent{fr}Connectez-le à votre agent{/}</a></p>
   </div>
 </section>
 

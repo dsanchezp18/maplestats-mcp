@@ -102,13 +102,16 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"province": "AB", "limit": 100},
         },
     ],
-    # Macroeconomists: the Consumer Price Index, Canada, all-items, not
-    # seasonally adjusted (table 18-10-0004, vector v41690973). 84 months, so
-    # the page can show 72 months of 12-month inflation.
-    "macro": [
+    # Macroeconomists: the yield curve, the gap between the 10-year and
+    # 2-year Government of Canada benchmark bond yields, every business day
+    # since 2001 (Bank of Canada Valet).
+    "curve": [
         {
-            "name": "wds_get_data_from_vectors",
-            "arguments": {"vector_ids": [41690973], "latest_n": 84},
+            "name": "boc_get_observations",
+            "arguments": {
+                "series_names": ["BD.CDN.2YR.DQ.YLD", "BD.CDN.10YR.DQ.YLD"],
+                "start_date": "2001-01-01",
+            },
         },
     ],
     # Scientists: Canadian patent applications in IPC class G06N (computing
