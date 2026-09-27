@@ -420,9 +420,8 @@ mark {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: clamp(28px, 3vw, 40px) clamp(24px, 2.5vw, 32px);
-  align-items: start;
   padding-block: clamp(36px, 4.5vw, 56px) clamp(48px, 5.5vw, 80px);
 }
 
@@ -430,37 +429,49 @@ mark {
   grid-column: 1 / -1;
 }
 
-.hero-copy {
-  padding-top: 20px;
+.hero-copy,
+.hero-logo,
+.setup {
+  padding-top: 22px;
   border-top: 2px solid var(--ink);
+}
+
+.hero-copy {
+  grid-column: 1 / span 7;
 }
 
 .hero .lede {
-  max-width: 44ch;
-  font-size: clamp(1.1875rem, 1rem + 0.7vw, 1.5rem);
-  line-height: 1.45;
+  max-width: 42ch;
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  line-height: 1.4;
   color: var(--ink);
 }
 
-.lede-2 {
-  margin-top: 18px;
-  max-width: 56ch;
+.hero .why {
+  margin-top: 20px;
+  max-width: 60ch;
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
-  line-height: 1.58;
+  line-height: 1.6;
   color: var(--ink-2);
 }
 
-/* The pixel leaf at hero scale: the header mark's cells in a ruled table. */
-.hero-mark {
-  justify-self: end;
-  width: min(100%, 420px);
-  padding-top: 20px;
-  border-top: 2px solid var(--ink);
+/* The logo sits centred in its column, level with the text beside it. */
+.hero-logo {
+  grid-column: 9 / -1;
+  display: grid;
+  place-items: center;
 }
 
-.hero-mark svg {
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo svg {
   display: block;
-  width: 100%;
+  width: 148px;
   height: auto;
 }
 
@@ -468,20 +479,89 @@ mark {
   fill: var(--accent);
 }
 
+/* Rules in the page colour split the leaf into separate pixels. */
 .leaf-grid .rule {
   fill: none;
-  stroke: var(--ink);
-  stroke-width: 1px;
+  stroke: var(--ground);
+  stroke-width: 3px;
   vector-effect: non-scaling-stroke;
 }
 
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 2.125rem;
+  font-weight: 400;
+  font-variation-settings: "opsz" 60;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.wordmark span {
+  color: var(--accent);
+}
+
+.setup {
+  grid-column: 1 / -1;
+}
+
+.setup-lead {
+  max-width: 110ch;
+  color: var(--ink-2);
+}
+
+.setup-lead strong {
+  margin-right: 10px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.setup-row {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 26px;
+  font-weight: 500;
+}
+
+.cmd.prompt code::before {
+  content: none;
+}
+
 @media (max-width: 980px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
+  .hero-copy,
+  .hero-logo,
+  .setup {
+    grid-column: 1 / -1;
   }
 
-  .hero-mark {
-    display: none;
+  .hero-logo {
+    order: 2;
+    padding-block: 12px 0;
+    border-top: 0;
+  }
+
+  .setup {
+    order: 1;
+  }
+
+  .logo svg {
+    width: 112px;
+  }
+
+  .wordmark {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .cmd.prompt code {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -1484,6 +1564,35 @@ mark {
   font-style: normal;
   font-size: 0.9375rem;
   color: var(--ink-3);
+}
+
+.thanks-body {
+  display: grid;
+  gap: 16px;
+  max-width: 68ch;
+  color: var(--ink-2);
+}
+
+.thanks-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.thanks-list li {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 16px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (max-width: 560px) {
+  .thanks-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
 }
 
 /* ---------- Footer ---------- */

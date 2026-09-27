@@ -1399,7 +1399,11 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
             "other tool is found with search_tools and run with call_tool."
         ),
         "",
-        f"Install: `uvx maplestats-mcp` (stdio). Source: {REPO}",
+        (
+            f"Install (stdio, no API key): `uvx --from git+{REPO} maplestats-mcp`, or "
+            "`uvx maplestats-mcp` once it is on PyPI. Setup steps for an agent, per client: "
+            f"{REPO}#let-your-agent-set-it-up"
+        ),
         "",
     ]
     for module in ordered(modules, "en"):

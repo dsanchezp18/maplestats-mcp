@@ -15,15 +15,20 @@
   <h1>{en}One MCP to rule them all.{fr}Un MCP pour les gouverner tous.{/}</h1>
   <div class="hero-copy">
     <p class="lede">{en}MapleStats is one server for Canadian open data: Statistics Canada, the Bank of Canada, CMHC, {{other_national_count}} other federal sources and {{local_catalogue_count}} provincial, territorial and city catalogues.{fr}MapleStats est un seul serveur pour les données ouvertes canadiennes : Statistique Canada, la Banque du Canada, la SCHL, {{other_national_count}} autres sources fédérales et {{local_catalogue_count}} catalogues provinciaux, territoriaux et municipaux.{/}</p>
-    <p class="lede-2">{en}Ask for data in plain English or French. The server finds the right source, gets the numbers from the publisher and returns them with their source and a script to fetch them again.{fr}Demandez des données en français ou en anglais. Le serveur trouve la bonne source, va chercher les chiffres chez l'éditeur et les renvoie avec leur source et un script pour les obtenir de nouveau.{/}</p>
-    <div class="actions">
-      <div class="cmd"><code id="cmd-hero">uvx maplestats-mcp</code><button type="button" data-copy-target="cmd-hero">{en}Copy{fr}Copier{/}</button></div>
-      <a href="{{root}}connect.html">{en}Connect a client{fr}Connecter un client{/}</a>
+    <p class="why">{en}Canada publishes a great deal of open data, but it is spread across dozens of agencies and portals, each with its own interface, identifiers and formats, so finding one number usually starts with knowing where to look. MapleStats puts them behind one connection. An agent asks in plain English or French, and the numbers come back from the publisher with their source attached.{fr}Le Canada publie énormément de données ouvertes, mais elles sont réparties entre des dizaines d'organismes et de portails, chacun avec son interface, ses identifiants et ses formats : trouver un seul chiffre commence souvent par savoir où chercher. MapleStats les réunit derrière une seule connexion. L'agent pose sa question en français ou en anglais, et les chiffres reviennent de l'éditeur, avec leur source.{/}</p>
+  </div>
+  <div class="hero-logo">
+    <p class="logo" role="img" aria-label="MapleStats MCP"><svg class="leaf-grid" viewBox="9 9 46 46" aria-hidden="true" focusable="false"><g class="cell"><rect x="29.5" y="9.5" width="5" height="5"/><rect x="24.5" y="14.5" width="15" height="5"/><rect x="9.5" y="19.5" width="5" height="5"/><rect x="24.5" y="19.5" width="15" height="5"/><rect x="49.5" y="19.5" width="5" height="5"/><rect x="9.5" y="24.5" width="10" height="5"/><rect x="24.5" y="24.5" width="15" height="5"/><rect x="44.5" y="24.5" width="10" height="5"/><rect x="9.5" y="29.5" width="45" height="5"/><rect x="14.5" y="34.5" width="35" height="5"/><rect x="19.5" y="39.5" width="25" height="5"/><rect x="14.5" y="44.5" width="10" height="5"/><rect x="29.5" y="44.5" width="5" height="5"/><rect x="39.5" y="44.5" width="10" height="5"/><rect x="29.5" y="49.5" width="5" height="5"/></g><path class="rule" d="M9.5 9.5V54.5 M14.5 9.5V54.5 M19.5 9.5V54.5 M24.5 9.5V54.5 M29.5 9.5V54.5 M34.5 9.5V54.5 M39.5 9.5V54.5 M44.5 9.5V54.5 M49.5 9.5V54.5 M54.5 9.5V54.5 M9.5 9.5H54.5 M9.5 14.5H54.5 M9.5 19.5H54.5 M9.5 24.5H54.5 M9.5 29.5H54.5 M9.5 34.5H54.5 M9.5 39.5H54.5 M9.5 44.5H54.5 M9.5 49.5H54.5 M9.5 54.5H54.5"/></svg><span class="wordmark" aria-hidden="true">maplestats<span>-mcp</span></span></p>
+  </div>
+  <div class="setup">
+    <p class="setup-lead"><strong>{en}Set it up{fr}Installation{/}</strong> {en}Paste this into Claude Code, Codex, Cursor or any agent that can run commands. The repository tells it the rest.{fr}Collez ceci dans Claude Code, Codex, Cursor ou tout agent qui exécute des commandes. Le dépôt lui explique le reste.{/}</p>
+    <div class="setup-row">
+      <div class="cmd prompt"><code id="setup-prompt">{en}Set up the MapleStats MCP server for me: {{repo}}{fr}Installe le serveur MCP MapleStats pour moi : {{repo}}{/}</code><button type="button" data-copy-target="setup-prompt">{en}Copy{fr}Copier{/}</button></div>
+      <a href="{{root}}connect.html">{en}Or connect it by hand{fr}Ou connectez-le vous-même{/}</a>
       <a href="{{root}}tools.html">{en}Browse the {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a>
     </div>
     <p class="fineprint">{en}Version {{version}}, beta. Runs on your machine over stdio, with no account or API key.{fr}Version {{version}}, bêta. S'exécute sur votre machine par stdio, sans compte ni clé d'API.{/}</p>
   </div>
-  <div class="hero-mark"><svg class="leaf-grid" viewBox="9 9 46 46" role="img" aria-label="{en}The MapleStats leaf, drawn as table cells{fr}La feuille de MapleStats, dessinée en cellules de tableau{/}"><g class="cell"><rect x="29.5" y="9.5" width="5" height="5"/><rect x="24.5" y="14.5" width="15" height="5"/><rect x="9.5" y="19.5" width="5" height="5"/><rect x="24.5" y="19.5" width="15" height="5"/><rect x="49.5" y="19.5" width="5" height="5"/><rect x="9.5" y="24.5" width="10" height="5"/><rect x="24.5" y="24.5" width="15" height="5"/><rect x="44.5" y="24.5" width="10" height="5"/><rect x="9.5" y="29.5" width="45" height="5"/><rect x="14.5" y="34.5" width="35" height="5"/><rect x="19.5" y="39.5" width="25" height="5"/><rect x="14.5" y="44.5" width="10" height="5"/><rect x="29.5" y="44.5" width="5" height="5"/><rect x="39.5" y="44.5" width="10" height="5"/><rect x="29.5" y="49.5" width="5" height="5"/></g><path class="rule" d="M9.5 9.5V54.5 M14.5 9.5V54.5 M19.5 9.5V54.5 M24.5 9.5V54.5 M29.5 9.5V54.5 M34.5 9.5V54.5 M39.5 9.5V54.5 M44.5 9.5V54.5 M49.5 9.5V54.5 M54.5 9.5V54.5 M9.5 9.5H54.5 M9.5 14.5H54.5 M9.5 19.5H54.5 M9.5 24.5H54.5 M9.5 29.5H54.5 M9.5 34.5H54.5 M9.5 39.5H54.5 M9.5 44.5H54.5 M9.5 49.5H54.5 M9.5 54.5H54.5"/></svg></div>
 </section>
 
 <section class="section thesis" id="why">
@@ -178,6 +183,22 @@
       <p><a href="{{root}}connect.html">{en}Full setup, hosting and troubleshooting{fr}Installation complète, hébergement et dépannage{/}</a></p>
     </div>
     {{> clients}}
+  </div>
+</section>
+
+<section class="section" id="thanks">
+  <div class="wrap note thanks">
+    <p class="label">{en}Acknowledgements{fr}Remerciements{/}</p>
+    <div class="thanks-body">
+      <p>{en}MapleStats builds on other people's open work. The module layout (one folder per source, tools that register themselves, a bilingual response envelope) follows <a href="https://github.com/ReyemTech/mcp-canada">ReyemTech's mcp-canada</a>. The hosting layer (bearer tokens, rate limits, health checks) follows DweskZ's EcuDataMCP. Thank you to their authors for building in the open.{fr}MapleStats s'appuie sur le travail ouvert d'autres personnes. L'organisation des modules (un dossier par source, des outils qui s'enregistrent seuls, une enveloppe de réponse bilingue) suit <a href="https://github.com/ReyemTech/mcp-canada">mcp-canada de ReyemTech</a>. La couche d'hébergement (jetons, limites de débit, vérifications d'état) suit EcuDataMCP de DweskZ. Merci à leurs auteurs de travailler au grand jour.{/}</p>
+      <p>{en}Much of the Canadian data work stands on the R packages of Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) and their co-authors:{fr}Une bonne part du travail sur les données canadiennes repose sur les paquets R de Jens von Bergmann (<a href="https://github.com/mountainMath">mountainMath</a>) et de leurs coauteurs :{/}</p>
+      <ul class="thanks-list">
+        <li><a href="https://github.com/mountainMath/cmhc"><code>cmhc</code></a> {en}The CMHC module was checked against its reverse-engineering of CMHC's Housing Market Information Portal.{fr}Le module de la SCHL a été vérifié par rapport à sa rétro-ingénierie du Portail de l'information sur le marché de l'habitation.{/}</li>
+        <li><a href="https://github.com/mountainMath/cansim"><code>cansim</code></a> {en}The R code that reproduce_code writes for Statistics Canada tables and vectors uses it.{fr}Le code R que reproduce_code écrit pour les tableaux et vecteurs de Statistique Canada l'utilise.{/}</li>
+        <li><a href="https://github.com/mountainMath/cancensus"><code>cancensus</code></a> {en}A model for census data access in R.{fr}Un modèle pour l'accès aux données du recensement en R.{/}</li>
+        <li><a href="https://github.com/mountainMath/canivt"><code>canivt</code></a> {en}Reads Beyond 20/20 files. Census tables and Borealis deposits that exist only in that format are routed to it.{fr}Lit les fichiers Beyond 20/20. Les tableaux du recensement et les dépôts Borealis offerts seulement dans ce format lui sont confiés.{/}</li>
+      </ul>
+    </div>
   </div>
 </section>
 
