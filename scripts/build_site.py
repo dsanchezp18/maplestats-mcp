@@ -1201,43 +1201,51 @@ def national_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
 
 
 def plan_panel(lang: Lang, root: str) -> str:
+    """The planner's answer as short lists: one per topic or place, tool over purpose."""
     plan = planner.plan(PLAN_QUESTION[lang]).model_dump(mode="json")
-    matched = "matched" if lang == "en" else "termes reconnus"
-    parts = []
-    for topic in plan["topics"]:
-        steps = "".join(
-            f'<li><a href="{tool_href(s["tool"], root)}"><code>{esc(s["tool"])}</code></a>'
+    caveat = "Caveat" if lang == "en" else "Précaution"
+
+    def group(title: str, steps: list[dict[str, Any]], caveats: list[str]) -> str:
+        items = "".join(
+            f'<li><a href="{tool_href(s["tool"], root)}"><code>{breakable(s["tool"])}</code></a>'
             f"<span>{esc(s['purpose'])}</span></li>"
-            for s in topic["steps"]
+            for s in steps
         )
-        caveats = "".join(f'<p class="caveat">{esc(c)}</p>' for c in topic["caveats"])
-        terms = ", ".join(f"“{esc(t)}”" for t in topic["matched_terms"])
-        parts.append(
-            f'<div class="p-topic"><p class="p-head"><b>{esc(topic["label"])}</b>'
-            f"<span>{matched} {terms}</span></p><ol>{steps}</ol>{caveats}</div>"
-        )
-    for place in plan["places"]:
-        steps = "".join(
-            f'<li><a href="{tool_href(s["tool"], root)}"><code>{esc(s["tool"])}</code></a>'
-            f"<span>{esc(s['purpose'])}</span></li>"
-            for s in place["steps"]
-        )
-        parts.append(
-            f'<div class="p-topic"><p class="p-head"><b>{esc(place["place"])}</b>'
-            f"<span>{esc(place['kind'])}</span></p><ol>{steps}</ol></div>"
-        )
+        notes = "".join(f'<p class="plan-note"><b>{caveat}</b> {esc(c)}</p>' for c in caveats)
+        return f'<div class="plan-group"><h4>{esc(title)}</h4><ol>{items}</ol>{notes}</div>'
+
+    parts = [group(t["label"], t["steps"], t["caveats"]) for t in plan["topics"]]
+    kinds = {"city": "ville"} if lang == "fr" else {}
+    parts += [
+        group(f"{p['place']} ({kinds.get(p['kind'], p['kind'])})", p["steps"], [])
+        for p in plan["places"]
+    ]
     return "".join(parts)
 
 
-async def reproduce_tabs() -> str:
+async def reproduce_scripts() -> list[tuple[str, str]]:
     capture = json.loads(CAPTURE.read_text(encoding="utf-8"))
     request = capture["request"]
     result = await reproduce.reproduce(request["name"], request["arguments"], "all")
-    return script_tabs([(script.language, script.code) for script in result.scripts], "rp")
+    return [(script.language, script.code) for script in result.scripts]
 
 
-def script_tabs(scripts: list[tuple[str, str]], prefix: str) -> str:
-    """R / Python / Stata / Julia tabs; `prefix` keeps ids unique on a page."""
+# The homepage shows the first lines of each script; site.js adds the button
+# that shows the rest (without scripts the whole script shows).
+SHOW_MORE: dict[Lang, tuple[str, str]] = {
+    "en": ("Show all {n} lines", "Show fewer lines"),
+    "fr": ("Afficher les {n} lignes", "Afficher moins de lignes"),
+}
+
+
+def script_tabs(
+    scripts: list[tuple[str, str]], prefix: str, more: tuple[str, str] | None = None
+) -> str:
+    """R / Python / Stata / Julia tabs; `prefix` keeps ids unique on a page.
+
+    With `more` (the expand and collapse labels), each script is shown cut
+    to its first lines with a button for the rest; without it, it scrolls.
+    """
     labels = {"r": "R", "python": "Python", "stata": "Stata", "julia": "Julia"}
     tabs, panels = [], []
     for n, (language, code) in enumerate(scripts):
@@ -1248,9 +1256,23 @@ def script_tabs(scripts: list[tuple[str, str]], prefix: str) -> str:
             f' aria-controls="{prefix}-{language}" tabindex="{0 if n == 0 else -1}">'
             f"{labels.get(language, language)}</button>"
         )
+        body = highlight_script(code.rstrip(), language)
+        lines = code.rstrip().count("\n") + 1
+        if more and lines <= 18:
+            block = f'<pre class="ex-code"><code>{body}</code></pre>'
+        elif more:
+            block = (
+                f'<div class="ex-more" data-more><pre class="ex-code" id="{prefix}-{language}-code">'
+                f"<code>{body}</code></pre>"
+                f'<button type="button" class="ex-toggle" aria-controls="{prefix}-{language}-code"'
+                f' aria-expanded="true" data-more-label="{esc(more[0].format(n=lines))}"'
+                f' data-less-label="{esc(more[1])}" hidden>{esc(more[1])}</button></div>'
+            )
+        else:
+            block = f'<pre class="code scroll"><code>{body}</code></pre>'
         panels.append(
             f'<div role="tabpanel" id="{prefix}-{language}" aria-labelledby="{prefix}-tab-{language}"{hidden}>'
-            f'<pre class="code scroll"><code>{highlight_script(code.rstrip(), language)}</code></pre></div>'
+            f"{block}</div>"
         )
     return (
         f'<div class="tabs" data-tabs><div role="tablist" class="tablist">{"".join(tabs)}</div>'
@@ -1335,8 +1357,47 @@ def captured_call(lang: Lang) -> dict[str, str]:
         "call_request": highlight_json(request),
         "reproduce_request": highlight_json(reproduce_request),
         "call_response": response_html(capture["response"]),
+        "call_result": call_result(capture["response"], lang),
         "captured_on": when,
     }
+
+
+def call_result(response: dict[str, Any], lang: Lang) -> str:
+    """The recorded observations as a small table, and the provenance in plain words.
+
+    The full JSON stays one click away on the page; this is what a reader
+    needs at a glance: the series, its values, and where they came from.
+    """
+    en = lang == "en"
+    tables = []
+    for code, series in response["series"].items():
+        rows = "".join(
+            f"<tr><td>{esc(long_date(obs['ref_date'], lang))}</td>"
+            f"<td>{esc(number(obs['values'][code], lang, 2))}</td></tr>"
+            for obs in response["observations"]
+            if obs["values"].get(code) is not None
+        )
+        tables.append(
+            f'<table class="ex-table"><caption>{esc(series["label"])} <code>{esc(code)}</code></caption>'
+            f'<thead><tr><th scope="col">Date</th><th scope="col">{"Value" if en else "Valeur"}</th></tr></thead>'
+            f"<tbody>{rows}</tbody></table>"
+        )
+    prov = response["provenance"]
+    stamp = prov["queried_at"]
+    clock = stamp[11:16] if en else stamp[11:16].replace(":", " h ")
+    facts = (
+        (
+            "Source URL" if en else "URL de la source",
+            f'<a href="{esc(prov["url"])}">{esc(prov["url"])}</a>',
+        ),
+        ("Queried" if en else "Consultée le", f"{esc(long_date(stamp, lang))}, {clock} UTC"),
+        ("Result type" if en else "Type de résultat", f"<code>{esc(prov['schema_name'])}</code>"),
+    )
+    rows = "".join(f"<div><dt>{label}</dt><dd>{value}</dd></div>" for label, value in facts)
+    return (
+        f'<div class="ex-part"><p class="ex-label">{"Result" if en else "Résultat"}</p>{"".join(tables)}</div>'
+        f'<div class="ex-part ex-prov"><p class="ex-label">Provenance</p><dl>{rows}</dl></div>'
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2001,8 +2062,8 @@ async def build(out: Path) -> dict[str, int]:
         "sources_over": str((len(national) + counts["local_catalogue_count"] - 1) // 5 * 5),
         "local_source_count": str(counts["local_source_count"]),
         "search_top": str(index["top"]),
-        "reproduce_tabs": await reproduce_tabs(),
     }
+    scripts = await reproduce_scripts()
     search_results = {lang: await server_search(SEARCH_EXAMPLE[lang]) for lang in LANGS}
 
     if out.exists():
@@ -2039,10 +2100,9 @@ async def build(out: Path) -> dict[str, int]:
                     f'<button type="button" data-q="{esc(q)}">{esc(q)}</button>'
                     for q in SEARCH_SUGGESTIONS[lang]
                 ),
-                "plan_request": highlight_json(
-                    json.dumps({"question": PLAN_QUESTION[lang]}, ensure_ascii=False)
-                ),
+                "plan_question": esc(PLAN_QUESTION[lang]),
                 "plan_panel": plan_panel(lang, root),
+                "reproduce_tabs": script_tabs(scripts, "rp", SHOW_MORE[lang]),
                 "cur_tools": ' aria-current="page"' if page.name == "tools.html" else "",
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",

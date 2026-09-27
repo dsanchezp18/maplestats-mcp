@@ -253,6 +253,28 @@
     if (initial) select(initial, false);
   });
 
+  /* ---------- Show more ---------- */
+
+  // The block is whole in the HTML; it is cut here, so without scripts the
+  // reader still sees all of it.
+  document.querySelectorAll("[data-more]").forEach((box) => {
+    const button = box.querySelector("[data-more-label]");
+    if (!button) return;
+    const set = (collapsed) => {
+      box.toggleAttribute("data-collapsed", collapsed);
+      button.setAttribute("aria-expanded", String(!collapsed));
+      button.textContent = collapsed ? button.dataset.moreLabel : button.dataset.lessLabel;
+    };
+    button.addEventListener("click", () => {
+      const collapse = !box.hasAttribute("data-collapsed");
+      set(collapse);
+      // Collapsing a long script can leave the reader below it.
+      if (collapse && box.getBoundingClientRect().top < 0) box.scrollIntoView({ block: "start" });
+    });
+    set(true);
+    button.hidden = false;
+  });
+
   /* ---------- Copy buttons ---------- */
 
   document.querySelectorAll("[data-copy-target]").forEach((button) => {
