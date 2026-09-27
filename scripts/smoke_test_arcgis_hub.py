@@ -10,6 +10,7 @@ from typing import Any
 from maplestats_mcp.modules.arcgis_hub import client, constants
 from maplestats_mcp.shared.arcgis import LayerNotQueryable
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.http import new_client
 
 
 async def _check(label: str, awaitable: Awaitable[Any]) -> Any:
@@ -39,7 +40,7 @@ async def check_portal(portal: str) -> int:
 
     item = search.items[0]
     detail = await _check("get_dataset", client.get_dataset(portal, item.id))
-    if not detail.download_urls:
+    if constants.PORTALS[portal].downloads and not detail.download_urls:
         print(f"FAIL: {portal} item has no download links")
         return 1
 
@@ -48,6 +49,7 @@ async def check_portal(portal: str) -> int:
     # any other error still fails, and so does a run where none can be queried.
     queried = False
     unqueryable = 0
+    empty = 0
     for candidate in search.items:
         candidate_detail = (
             detail if candidate is item else await client.get_dataset(portal, candidate.id)
@@ -65,12 +67,28 @@ async def check_portal(portal: str) -> int:
             raise
         print(f"OK: query_feature_layer -> {type(rows).__name__}")
         if not rows.rows:
-            print(f"FAIL: {portal} query_feature_layer returned no rows")
-            return 1
+            # A live layer can be empty today (Milton's "Current Road Closures",
+            # 2026-09-27), so move on; a portal where every layer is empty fails.
+            print(f"OK (skip): {candidate.id} has no rows right now")
+            empty += 1
+            continue
         queried = True
+        # Until 2026-09-27 every layer-level item's links answered HTTP 400 (the
+        # id's "_<layer>" suffix) and others 404 (layers=0), unnoticed. Checked on
+        # the item just queried: a secured one cannot be downloaded either.
+        if not constants.PORTALS[portal].downloads:
+            break
+        csv_link = next(l.url for l in candidate_detail.download_urls if l.format == "csv")
+        async with new_client() as http:
+            status = (await http.get(csv_link)).status_code
+        # The API redirects (302) or queues the export (202) when a link is right.
+        if status not in (200, 202, 302):
+            print(f"FAIL: {portal} csv download link answered HTTP {status}: {csv_link}")
+            return 1
+        print(f"OK: csv download link -> HTTP {status}")
         break
-    if not queried and unqueryable:
-        print(f"FAIL: {portal} every search result with a service cannot be queried")
+    if not queried and (unqueryable or empty):
+        print(f"FAIL: {portal} no search result with a service returned rows")
         return 1
     if not queried:
         print("OK (skip): no search result has a service_url to query")

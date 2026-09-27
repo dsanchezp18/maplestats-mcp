@@ -1553,10 +1553,49 @@ clean-technology use …
 
 ## PMPRB (Patented Medicine Prices Review Board)
 
-**Status:** Investigated, deferred.
+**Status:** Shipped 2026-09-27 (annual report tables and patented
+medicines lists).
 
 Checked 2026-09-26. Nothing machine-readable is published on a regular
-schedule, so no module was built.
+schedule, so no module was built then. Revisited 2026-09-27 on request:
+the HTML tables turned out regular enough for one generic reader.
+
+**Shipped 2026-09-27:** `modules/pmprb/` with `pmprb_list_report_tables`,
+`pmprb_get_report_table` and `pmprb_search_patented_medicines`. Checked
+live in English and French:
+
+- The annual reports index (canada.ca .../services/annual-reports.html,
+  French .../rapports-annuels.html) links HTML reports for 2018 to 2024
+  (2018 sits under /reports-studies/) and HTML medicines lists for 2020
+  and 2021; 2017 and earlier link to the retired pmprb-cepmb.gc.ca site,
+  so links are read from the index and only canada.ca pages kept.
+- 382 tables across the seven reports (31 in 2023, up to 63 in
+  2020-2022), 380 of them with a title. Most charts carry their numbers in
+  a "Figure description" `<details>` table after the image, so the chart
+  data is covered too. Titles are a `<b>` or `<strong>` before the table
+  (an `<h3>` for Figure 5 in 2019-2022); a `<p>` that starts "Figure 1
+  illustrates" (2018) is prose and is skipped. Two 2021 tables carry
+  their real title as `<caption>`, which wins. One title can own several
+  tables (a chart drawn from two, or Table 2's three captioned
+  sub-tables); `pmprb_get_report_table` returns all of them.
+- Two-row headers with colspan and rowspan (2024 Table 5) are laid out on
+  a grid and named "Patented medicine - Sales ($billions)".
+- Numbers: "$17,093,674", "10.9%" in English; "1 294,8 $", "2,2 %" with
+  no-break (U+00A0) or narrow (U+202F) spaces in French, and once no space
+  at all ("1 294,8$"). "$" and "%" are dropped, so units come from the
+  column name or title.
+- Medicines lists: one table per company (103 both years), captioned
+  with the company; 1,289 rows in 2020 and 1,177 in 2021. Columns are read
+  by position because French headers differ between tables
+  ("Appellation commerciale" or "Nom de marque"). Empty comments read
+  "blank". Status spellings vary ("Does not Trigger", "NOH" in 2021,
+  "Notice of Hearing" in 2020, "ECV" in French) and map to seven codes.
+
+Not covered: NPDUIS studies (CompassRx and others, HTML and PDF per
+edition, one spreadsheet), and the reports before 2018 (PDF on the old
+site).
+
+Earlier findings (2026-09-26):
 
 - **Federal CKAN:** the organization is `pmprb-cepmb`
   (`organization_autocomplete?q=patent`). Its 16 records are departmental
@@ -2146,7 +2185,7 @@ served as `rest-393962616e6b.pbo-dpb.ca`), found in the site's scripts:
   types; the module keeps `Publication` ones.
 - `/tags` (153 series and topics), `/news-releases` (93) and
   `/information-requests` (1,121 requests PBO sent to departments, with
-  dates, status and summaries; not exposed yet).
+  dates, status and summaries; exposed 2026-09-27, see below).
 
 PBOML slices are `heading`, `markdown`, `svg` (charts, no data), `table`
 (`variables` maps column ids to bilingual labels; `content` rows hold
@@ -2169,6 +2208,33 @@ published and say so in their provenance.
 
 The interactive tools (Federal Employment Tracking Tool and others) load
 static JSON with build-hashed names; they are not covered.
+
+
+### Information requests (added 2026-09-27)
+
+`pbo_search_information_requests` and `pbo_get_information_request`.
+Checked live 2026-09-27:
+
+- `/information-requests` returns all 1,121 requests (IR0001, December
+  2008, to IR0959, September 2026), newest first, 40 per page over 29
+  pages. It ignores every filter tried (`department`, `departments`,
+  `search`, `query`, `request_status`), so the module reads the whole
+  register (about 30 seconds cold, cached 6 hours) and filters locally.
+  `/search?query=` does return `InformationRequest` hits, but ranked and
+  capped, so it is not used.
+- Values seen: status completed 1,080, pending 20, pending_correspondence
+  14, canceled 6, pending_data 1; disposition all_disclosed 836,
+  disclosed_in_part 160, nothing_disclosed 67, does_not_exist 28, null 30;
+  108 departments (FIN 168, DND 108, CRA 84, TBS 60, ESDC 56).
+- Request numbers are not uniform: 9 are `RI…` and some carry a suffix
+  (`IR0080a`). The detail path takes only the numeric `id`
+  (`/information-requests/IR0959` answers with the website's HTML), so the
+  number is resolved through the register.
+- Detail adds `files` (request letter, reply letter, other letters; 51 of
+  52 sampled were PDF, one DOCX) and `contacts` (PBO staff names and
+  phone numbers, not passed on). A letter's `urls` is `{en: {public},
+  fr: {public}}`, or a bare `{public}` when bilingual; one language can be
+  null, in which case the other is returned.
 
 ## Canadian Dairy Commission and provincial marketing boards
 

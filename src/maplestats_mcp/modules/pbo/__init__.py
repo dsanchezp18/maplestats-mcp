@@ -6,7 +6,8 @@ rest-393962616e6b.pbo-dpb.ca), checked live 2026-09-26: /publications
 (863 publications, 15 per page, filter by `types`), /publications/<id>
 (the full record with the publication as PBOML, PBO's YAML markup, whose
 table, html and kvlist slices carry the tables), /search?query= (scored
-results across content types), /tags and /information-requests.
+results across content types), /tags and /information-requests (1,121
+requests PBO sent to departments since 2008, checked 2026-09-27).
 
 Terms: PBO materials may be used and reproduced for personal and
 non-commercial use without permission, unaltered and with attribution;
@@ -21,7 +22,9 @@ MODULE_DESCRIPTION = (
     "with its tables: cost estimates over five years, economic and fiscal "
     "projections, Estimates analysis. Tables come from PBO's structured PBOML "
     "documents, present for costing notes since 2021 and most reports since "
-    "2025; older items link to their PDF only. Use is personal and non-commercial, "
+    "2025; older items link to their PDF only. Also the register of 1,100+ information "
+    "requests PBO sent to federal departments since 2008, with deadlines, status "
+    "and outcome (disclosed, in part, refused), counted by department. Use is personal and non-commercial, "
     "unaltered, with attribution to PBO."
 )
 MODULE_DESCRIPTION_FR = (
@@ -30,7 +33,9 @@ MODULE_DESCRIPTION_FR = (
     "d'évaluation du coût de mesures législatives, estimations de coûts de projets "
     "de loi et de motions, archives depuis 2008) et lecture d'une publication avec "
     "ses tableaux, tirés des documents PBOML (notes d'évaluation depuis 2021, la "
-    "plupart des rapports depuis 2025; les plus anciennes n'ont que le PDF). "
+    "plupart des rapports depuis 2025; les plus anciennes n'ont que le PDF), et "
+    "le registre des plus de 1 100 demandes d'information envoyées aux ministères "
+    "depuis 2008 (échéances, statut, communication totale, partielle ou refusée). "
     "Utilisation personnelle et non commerciale, sans modification, avec mention "
     "du DPB."
 )

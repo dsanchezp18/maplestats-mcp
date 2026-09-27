@@ -27,6 +27,7 @@ from maplestats_mcp.modules.arcgis_hub.schemas import (
 from maplestats_mcp.shared.arcgis import (
     DOWNLOAD_FORMATS,
     ArcGISHubConfig,
+    collection_url,
     default_layer_index,
     download_url,
     excerpt,
@@ -37,7 +38,7 @@ from maplestats_mcp.shared.arcgis import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 
 
@@ -50,6 +51,7 @@ def _config(portal: str) -> ArcGISHubConfig:
         domain=info.domain,
         rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
         rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
+        collection=info.collection,
     )
 
 
@@ -109,6 +111,7 @@ async def search_datasets(
     """Search one portal's ArcGIS Hub dataset catalogue; ``lang`` is accepted for consistency."""
     del lang
     config = _config(portal)
+    item_type = item_type or constants.PORTALS[portal].default_item_type
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise InvalidInput(
             f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
@@ -136,7 +139,7 @@ async def search_datasets(
         query=query,
         provenance=make_provenance(
             source=config.source,
-            url=f"https://{config.domain}/api/search/v1/collections/dataset/items",
+            url=f"{collection_url(config)}/items",
             cached=was_cached,
             schema_name="arcgis_hub.DatasetSearchResult",
             coverage=f"{len(items)} of {total_count} total matches returned",
@@ -160,6 +163,22 @@ async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail
     )
     props = feature.get("properties") or {}
     canonical_id = props.get("id") or item_id
+    service_url = props.get("url") or None
+    # Checked live 2026-09-27 (Cochrane, Okotoks, Ottawa): a layer-level item's
+    # id is "<item id>_<layer id>", which the download API rejects with HTTP 400;
+    # it wants the bare item id and the layer's own id, which is not always 0
+    # (Cochrane's "Parks" is layer 18 and 404s with layers=0).
+    download_id, _, suffix = canonical_id.partition("_")
+    layer_index = 0
+    if suffix.isdigit():
+        layer_index = int(suffix)
+    elif constants.PORTALS[portal].downloads and service_url and "/rest/services/" in service_url:
+        # A secured or broken service cannot be downloaded either way, so its
+        # detail still returns, with the old default.
+        try:
+            layer_index = await default_layer_index(config, service_url)
+        except UpstreamError:
+            layer_index = 0
     return ItemDetail(
         portal=portal,
         id=canonical_id,
@@ -175,15 +194,19 @@ async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail
         num_views=get_or(props, "numViews", 0),
         extent=feature.get("geometry") or None,
         spatial_reference_wkid=props.get("spatialReference") or None,
-        service_url=props.get("url") or None,
+        service_url=service_url,
         landing_page_url=f"{constants.landing_page_url(portal)}{canonical_id}",
-        download_urls=[
-            DownloadLink(format=fmt, url=download_url(config, canonical_id, fmt))
+        download_urls=[]
+        if not constants.PORTALS[portal].downloads
+        else [
+            DownloadLink(
+                format=fmt, url=download_url(config, download_id, fmt, layer_index=layer_index)
+            )
             for fmt in DOWNLOAD_FORMATS
         ],
         provenance=make_provenance(
             source=config.source,
-            url=f"https://{config.domain}/api/search/v1/collections/dataset/items/{item_id}",
+            url=f"{collection_url(config)}/items/{item_id}",
             cached=was_cached,
             schema_name="arcgis_hub.ItemDetail",
         ),

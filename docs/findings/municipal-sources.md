@@ -198,6 +198,11 @@ year-less date labels), found 2026-09-22 by inspecting …
 
 **Status:** Not shipped.
 
+Re-checked 2026-09-27, unchanged: data.leduc.ca's Hub API lists one
+Hub Page and no datasets; the "City of Spruce Grove Open Data" group is
+invitation-only and empty to anonymous search; no Beaumont, Alberta or
+Fort Saskatchewan open-data group exists.
+
 Re-checked 2026-09-22 through ArcGIS Online group search: Leduc's Hub
 (data.leduc.ca) holds only a Terms of Use page; Spruce Grove's open-data
 group is empty; Fort Saskatchewan has none. The public "City of Beaumont
@@ -209,7 +214,22 @@ datasets for these municipalities remain reachable via `ckan_*`
 
 ## Cochrane
 
-**Status:** Blocked.
+**Status:** Shipped (re-checked 2026-09-27).
+
+Re-checked 2026-09-27: the Town of Cochrane's Hub site item ("Cochrane
+GeoHub", org `M1SNYuFIW9v2gSO7`) now points at `geohub.cochrane.ca`, and
+that domain's Hub Search API answers anonymously (29 datasets; all layers
+tried answer queries). Added as `portal="cochrane"`, config-only. The old
+`data-cochranegis.opendata.arcgis.com` still returns `GWM_0003` (HTTP
+401/404), as before. Found by looking the org up through ArcGIS Online
+(`cochranegis.maps.arcgis.com/sharing/rest/portals/self`, then a search
+for its Hub Site Application items).
+
+Layers there are often not layer 0 ("Parks" is layer 18), which exposed a
+download-link bug affecting every portal; see "ArcGIS Hub download links"
+below.
+
+Earlier finding:
 
 `data-cochranegis.opendata.arcgis.com` renders its public pages fine (HTTP
 200) but its Hub Search API and DCAT feed both reject anonymous access
@@ -217,6 +237,21 @@ datasets for these municipalities remain reachable via `ckan_*`
 with multiple user agents. The org's API access appears to require
 authentication this server does not have; re-investigate only if that
 changes.
+
+## Okotoks
+
+**Status:** Shipped (re-checked 2026-09-27).
+
+Re-checked 2026-09-27: `okotoksmaps-okotoks.hub.arcgis.com` still answers
+`GWM_0003`, but the town (org `Fl5sQFvYY7w7mPQj`) now runs "Okotoks Open
+Data" at `maps-okotoks.hub.arcgis.com`, whose Hub API answers. That site
+has no `dataset` collection (`/collections/dataset` is a 404 "Collection
+with id \"dataset\" not found"); `/api/search/v1/collections` lists only
+`all`, which holds 58 Feature Services, a Hub Page and the site itself. So
+the portal is configured with `collection="all"` and
+`default_item_type="Feature Service"`; the `type` filter works on `all`.
+All 58 layers answer anonymous count queries; their ids are not 0
+(Floodway is 35).
 
 ## Red Deer
 
@@ -245,7 +280,26 @@ cover.
 
 ## Halton Region
 
-**Status:** Unknown.
+**Status:** Shipped via its municipalities (re-checked 2026-09-27).
+
+Re-checked 2026-09-27: `opendata.halton.ca` and `data.halton.ca` still do
+not resolve, `halton.ca/open-data` is a 404, and ArcGIS Online has no
+Halton Region open-data group or Hub site. Three of the region's four
+municipalities run Hub sites whose API answers, added config-only:
+
+- Oakville: `portal-exploreoakville.opendata.arcgis.com`, "Town of
+  Oakville Open Data Portal", 157 datasets (transit, budget results,
+  citizen survey, energy use, infrastructure layers).
+- Burlington: `navburl-burlington.opendata.arcgis.com`, "Navigate
+  Burlington", 99 datasets (service business plans, facility energy,
+  layers).
+- Milton: `discover-milton.hub.arcgis.com`, "Discover the Town of
+  Milton", 25 datasets. Its "Current Road Closures" layer can be empty.
+
+Halton Hills (`tohhgis`) has no Hub site, only 7 loose public feature
+services; not added. `plan_query` maps "Halton" to the three portals.
+
+Earlier finding:
 
 `opendata.halton.ca` does not resolve; no live Halton Region government
 portal was found. Only a separate Conservation Halton ArcGIS Hub
@@ -282,3 +336,28 @@ gis-capitalregion.opendata.arcgis.com), ArcGIS Hub: `arcgis_hub_*`
 (`portal="emrb"`), config-only. 85 regional growth-plan datasets confirmed
 live 2026-09-22; smoke test passed. An earlier check of emrb.ca's home page
 found no data links -- the Hub lives on its own subdomain.
+
+## ArcGIS Hub download links
+
+Fixed 2026-09-27, found while adding Cochrane and Okotoks; it affected
+every `arcgis_hub_*` portal. `arcgis_hub_get_dataset` built its
+download links as `/api/download/v1/items/<id>/<fmt>?layers=0` from the
+Hub item's id, and two things were wrong, both checked live:
+
+- A layer-level item's Hub id is `<item id>_<layer id>` (Cochrane
+  "Parks": `93d9602d6f7a40beae96106397ee3a83_18`; Ottawa items end in
+  `_1`). The download API rejects it with HTTP 400 "itemId must match
+  /^(?:(?![g-z])[a-z0-9])+$/". It wants the bare 32-character id.
+- `layers` must be the layer's own id, not its position: Cochrane
+  "Parks" (18) and Okotoks "Floodway" (35) answer `layers=0` with 404.
+
+Links now use the bare id with the suffix's layer id, or, for an id
+without a suffix, the service's first layer id (the same lookup
+`query_feature_layer` uses, now cached for an hour). The live smoke test
+now requests the csv link of the item it queried and expects HTTP 302
+(redirect to the file) or 202 (export queued); all 37 portals with
+working downloads pass. Red Deer's download API answers HTTP 500 "A
+domain record with hostname = reddeer.opendata.arcgis.com does not
+exist" for every item, and `hub.arcgis.com` only reports an export
+"Pending" since 2024, so that portal is marked `downloads=False` and
+returns no links; its layers remain queryable.

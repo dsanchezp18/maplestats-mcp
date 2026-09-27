@@ -381,6 +381,14 @@ SOURCES: dict[str, Source] = {
         "DPB",
         domain="money",
     ),
+    "pmprb": Source(
+        "Patented Medicine Prices Review Board",
+        "Conseil d'examen du prix des médicaments brevetés",
+        "national",
+        "PMPRB",
+        "CEPMB",
+        domain="health",
+    ),
     "phac_infobase": Source(
         "Public Health Agency of Canada: Health Infobase",
         "Agence de la santé publique du Canada : Infobase de la santé",
@@ -542,6 +550,11 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "sturgeon_county": ("AB", _M),
         "emrb": ("AB", _M),
         "red_deer": ("AB", _M),
+        "cochrane": ("AB", _M),
+        "okotoks": ("AB", _M),
+        "oakville": ("ON", _M),
+        "burlington": ("ON", _M),
+        "milton": ("ON", _M),
     },
     "socrata": {
         "ns": ("NS", _P),

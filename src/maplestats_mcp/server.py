@@ -138,7 +138,11 @@ Sources, by tool-name prefix:
 - FCAC credit card and bank account comparison tools (fees, interest
   rates, rewards, low-cost accounts): fcac_.
 - Parliamentary Budget Officer publications and their tables (costings of
-  bills and measures, economic and fiscal outlooks): pbo_.
+  bills and measures, economic and fiscal outlooks) and its information
+  requests to departments: pbo_.
+- Patented Medicine Prices Review Board annual report tables (patented
+  drug price index, international price ratios, sales, R&D) and patented
+  medicines lists: pmprb_.
 - IRCC: ircc_ (Express Entry draws), ircc_monthly_ (monthly permanent and
   temporary residents, permits, asylum claims). Elections Canada candidate financial
   returns: elections_financial_returns_. CRA digital economy platform
@@ -169,7 +173,7 @@ Sources, by tool-name prefix:
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
   runs row-level queries on DataStore-active resources.
-- ArcGIS Hub portals (33 provinces, cities, regions): arcgis_hub_, with a
+- ArcGIS Hub portals (38 provinces, cities, regions): arcgis_hub_, with a
   `portal` argument -- arcgis_hub_list_portals lists the keys.
 - Socrata portals (Nova Scotia, New Brunswick, Calgary, Edmonton,
   Winnipeg): socrata_, with a `portal` argument -- socrata_list_portals.

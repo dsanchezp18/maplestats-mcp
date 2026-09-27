@@ -87,12 +87,45 @@ async def test_get_dataset_maps_item_detail_and_download_links(httpx_mock):
         url=f"{_COLLECTION_URL}/items/14cca5b087f74d2d9eadc018c261d1b3",
         json=_ITEM_DETAIL_FEATURE,
     )
+    # Download links carry the service's own first layer id: Cochrane's "Parks"
+    # (layer 18) answers layers=0 with HTTP 404 (live 2026-09-27).
+    httpx_mock.add_response(
+        url=f"{_ITEM_DETAIL_FEATURE['properties']['url']}?f=json",
+        json={"layers": [{"id": 18, "name": "Parks"}], "tables": []},
+    )
     result = await client.get_dataset(PORTAL, "14cca5b087f74d2d9eadc018c261d1b3")
     assert result.id == "14cca5b087f74d2d9eadc018c261d1b3"
     assert result.service_url is not None
     assert result.service_url.endswith(("FeatureServer", "MapServer/129"))
     assert {link.format for link in result.download_urls} == {"csv", "shapefile", "geojson", "kml"}
+    assert all(link.url.endswith("?layers=18") for link in result.download_urls)
+    # The detail's id carries a layer suffix ("_0" here), which the download API
+    # rejects; links use the bare item id.
+    assert result.download_urls[0].url.endswith(
+        "/items/14cca5b087f74d2d9eadc018c261d1b3/csv?layers=18"
+    )
     assert result.created_at is not None
+
+
+async def test_layer_level_item_downloads_use_bare_id_and_its_layer(httpx_mock):
+    # Hub ids of layer-level items end in "_<layer id>" (Cochrane "Parks",
+    # 93d9602d6f7a40beae96106397ee3a83_18, live 2026-09-27); no service lookup needed.
+    feature = {
+        **_ITEM_DETAIL_FEATURE,
+        "properties": {
+            **_ITEM_DETAIL_FEATURE["properties"],
+            "id": "93d9602d6f7a40beae96106397ee3a83_18",
+        },
+    }
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/93d9602d6f7a40beae96106397ee3a83_18", json=feature
+    )
+    result = await client.get_dataset(PORTAL, "93d9602d6f7a40beae96106397ee3a83_18")
+    assert result.id == "93d9602d6f7a40beae96106397ee3a83_18"
+    assert result.download_urls[0].url == (
+        f"https://{constants.PORTALS[PORTAL].domain}/api/download/v1/items/"
+        "93d9602d6f7a40beae96106397ee3a83/csv?layers=18"
+    )
 
 
 async def test_query_feature_layer_returns_attributes(httpx_mock):
@@ -164,9 +197,12 @@ async def test_token_required_service_is_not_queryable(httpx_mock):
         json=_ITEM_DETAIL_FEATURE,
     )
     service_url = "https://services.arcgis.com/G6F8XLCl5KtAlZ2G/arcgis/rest/services/2025_Contracts_Awarded_greater_than_25000_Jan_-_Jun/FeatureServer"
+    # Read twice: the item detail (for download links) tolerates it, then the
+    # query raises. A failed read is never cached.
     httpx_mock.add_response(
         url=f"{service_url}?f=json",
         json={"error": {"code": 499, "message": "Token Required", "details": []}},
+        is_reusable=True,
     )
     with pytest.raises(LayerNotQueryable, match="needs an ArcGIS login"):
         await client.query_feature_layer(PORTAL, "14cca5b087f74d2d9eadc018c261d1b3")
@@ -271,7 +307,7 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
 
 def test_portal_key_literal_matches_registry():
     assert set(get_args(PortalKey)) == set(constants.PORTALS)
-    assert len(constants.PORTALS) == 33
+    assert len(constants.PORTALS) == 38
 
 
 async def test_unknown_portal_raises_invalid_input():
@@ -289,9 +325,17 @@ def test_list_portals_localizes_names():
 
 @pytest.mark.parametrize("portal", sorted(constants.PORTALS))
 async def test_every_portal_searches_its_own_domain(httpx_mock, portal):
-    domain = constants.PORTALS[portal].domain
+    info = constants.PORTALS[portal]
+    domain = info.domain
+    # Okotoks has only the "all" collection, so it also filters by type.
+    type_filter = (
+        f"&type={info.default_item_type.replace(' ', '+')}" if info.default_item_type else ""
+    )
     httpx_mock.add_response(
-        url=f"https://{domain}/api/search/v1/collections/dataset/items?limit=10&startindex=1",
+        url=(
+            f"https://{domain}/api/search/v1/collections/{info.collection}/items"
+            f"?limit=10&startindex=1{type_filter}"
+        ),
         json={"features": [_SEARCH_FEATURE], "numberMatched": 1},
     )
     result = await client.search_datasets(portal)
@@ -343,3 +387,15 @@ async def test_default_layer_index_uses_service_urls_own_trailing_layer_id(httpx
     result = await client.query_feature_layer("durham", "f56de642442e4b41985557b54254a70c")
     assert result.layer_index == 129
     assert result.rows[0]["AssetType"] == "Forcemain"
+
+
+async def test_portal_without_working_downloads_gives_no_links(httpx_mock):
+    # Red Deer's download API answers HTTP 500 "domain record not found" for
+    # every item (live 2026-09-27); no service lookup is made for it either.
+    domain = constants.PORTALS["red_deer"].domain
+    httpx_mock.add_response(
+        url=f"https://{domain}/api/search/v1/collections/dataset/items/14cca5b087f74d2d9eadc018c261d1b3",
+        json=_ITEM_DETAIL_FEATURE,
+    )
+    result = await client.get_dataset("red_deer", "14cca5b087f74d2d9eadc018c261d1b3")
+    assert result.download_urls == [] and result.service_url is not None

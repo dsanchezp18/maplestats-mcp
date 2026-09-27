@@ -42,6 +42,28 @@ async def main() -> int:
     print(f"OK: LIBARC-0809-001 structured={archived.has_structured_content}")
     ok &= not archived.has_structured_content and archived.publication.pdf_url is not None
 
+    # Information requests, checked live 2026-09-27: 1,121 since 2008.
+    register = await client.search_information_requests()
+    print(f"OK: information requests -> {register.total_matched}, {register.by_disposition}")
+    ok &= register.total_matched > 1100 and register.by_disposition.get("all_disclosed", 0) > 800
+
+    refused = await client.search_information_requests(
+        department="DND", disposition="nothing_disclosed"
+    )
+    print(f"OK: DND nothing disclosed -> {refused.total_matched}")
+    ok &= refused.total_matched > 10 and set(refused.by_department) == {"DND"}
+
+    housing = await client.search_information_requests("logement", lang="fr", since="2025")
+    print(f"OK: 'logement' since 2025 (fr) -> {[r.id for r in housing.requests]}")
+    ok &= housing.total_matched > 0 and all(
+        (r.request_date or "") >= "2025" for r in housing.requests
+    )
+
+    letters = await client.get_information_request("IR0080a")
+    print(f"OK: IR0080a -> {letters.request.disposition}, {len(letters.files)} letters")
+    ok &= letters.request.department_acronym is not None and len(letters.files) >= 2
+    ok &= all(f.url for f in letters.files)
+
     print("\nPBO SMOKE TEST PASSED" if ok else "\nPBO SMOKE TEST FAILED")
     return 0 if ok else 1
 

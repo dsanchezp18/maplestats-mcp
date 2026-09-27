@@ -115,4 +115,10 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "lethbridge": ("Lethbridge", (_arcgis("lethbridge"),)),
     "red deer": ("Red Deer", (_arcgis("red_deer"),)),
     "medicine hat": ("Medicine Hat", (_arcgis("medicine_hat"),)),
+    "oakville": ("Oakville", (_arcgis("oakville"),)),
+    "burlington": ("Burlington (Ontario)", (_arcgis("burlington"),)),
+    "milton": ("Milton (Ontario)", (_arcgis("milton"),)),
+    "halton": ("Halton Region", (_arcgis("oakville"), _arcgis("burlington"), _arcgis("milton"))),
+    "cochrane": ("Cochrane (Alberta)", (_arcgis("cochrane"),)),
+    "okotoks": ("Okotoks", (_arcgis("okotoks"),)),
 }
