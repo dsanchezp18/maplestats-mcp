@@ -69,11 +69,16 @@
           <h3>{en}Plan{fr}Planifier{/}<code>plan_query</code></h3>
           <p>{en}The planner reads the question and lists the agencies to ask, in order, with the caveats on combining them. Places it recognizes add their local portals.{fr}Le planificateur lit la question et énumère les organismes à interroger, dans l'ordre, avec les précautions à prendre pour combiner leurs résultats. Les lieux qu'il reconnaît ajoutent leurs portails locaux.{/}</p>
         </div>
-        <figure class="panel">
-          <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>plan_query</code></figcaption>
-          <pre><code>{{plan_request}}</code></pre>
-          <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><code>planner.QueryPlan</code></div>
-          <div class="panel-body plan">{{plan_panel}}</div>
+        <figure class="ex">
+          <figcaption class="ex-head"><code>plan_query</code><span>{en}Run when this page was built{fr}Exécuté à la construction de la page{/}</span></figcaption>
+          <div class="ex-part ex-ask">
+            <p class="ex-label">{en}Question{fr}Question{/}</p>
+            <p class="ex-question">{{plan_question}}</p>
+          </div>
+          <div class="ex-part">
+            <p class="ex-label">{en}Plan{fr}Plan{/}</p>
+            <div class="plan">{{plan_panel}}</div>
+          </div>
         </figure>
       </li>
 
@@ -83,15 +88,17 @@
           <h3>{en}Find{fr}Trouver{/}<code>search_tools</code></h3>
           <p>{en}Search ranks the catalogue against a plain-language query and returns the top {{search_top}}. French works because every tool carries French keywords. The panel runs the server's own index in your browser, so type your own query.{fr}La recherche classe le catalogue selon une requête en langage courant et renvoie les {{search_top}} premiers outils. Le français fonctionne, car chaque outil porte des mots-clés français. Le panneau exécute l'index du serveur dans votre navigateur : essayez votre propre requête.{/}</p>
         </div>
-        <div class="probe" data-live-search>
-          <div class="probe-head"><span class="fn">search_tools</span><span>{en}The server's own ranking, run in your browser{fr}Le classement du serveur, exécuté dans votre navigateur{/}</span></div>
-          <label class="sr" for="search-q">{en}Describe the data you need{fr}Décrivez les données recherchées{/}</label>
-          <div class="probe-input"><span class="prompt" aria-hidden="true">&gt;</span><input id="search-q" type="search" value="{{search_query}}" autocomplete="off" spellcheck="false" placeholder="{en}Describe the data, in English or French{fr}Décrivez les données, en français ou en anglais{/}"></div>
+        <div class="ex probe" data-live-search>
+          <p class="ex-head"><code>search_tools</code><span>{en}Runs in your browser{fr}S'exécute dans votre navigateur{/}</span></p>
+          <div class="ex-part ex-ask">
+            <label class="ex-label" for="search-q">{en}Describe the data you need{fr}Décrivez les données recherchées{/}</label>
+            <div class="probe-input"><span class="prompt" aria-hidden="true">&gt;</span><input id="search-q" type="search" value="{{search_query}}" autocomplete="off" spellcheck="false" placeholder="{en}Describe the data, in English or French{fr}Décrivez les données, en français ou en anglais{/}"></div>
+            <p class="probe-try"><span>{en}Try{fr}Essayez{/}</span> {{search_suggestions}}</p>
+          </div>
           <ol class="results" data-results aria-live="polite">
       {{search_results}}
           </ol>
           <p class="probe-status" data-status>{en}Top {{search_top}} of {{searchable_count}} tools, ranked by the same BM25 index search_tools uses.{fr}Les {{search_top}} premiers sur {{searchable_count}} outils, classés par le même index BM25 que search_tools.{/}</p>
-          <p class="probe-try"><span>{en}Try{fr}Essayez{/}</span> {{search_suggestions}}</p>
         </div>
       </li>
 
@@ -101,11 +108,17 @@
           <h3>{en}Fetch{fr}Récupérer{/}<code>call_tool</code></h3>
           <p>{en}The agent calls the tool by name. The result is a typed object, and its provenance block, marked here, gives the exact upstream URL and the time of the query.{fr}L'agent appelle l'outil par son nom. Le résultat est un objet typé, et son bloc de provenance, mis en évidence ici, donne l'URL exacte de la source et l'heure de la requête.{/}</p>
         </div>
-        <figure class="panel">
-          <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>call_tool</code></figcaption>
-          <pre><code>{{call_request}}</code></pre>
-          <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><span><code>boc.ObservationsResult</code> {en}recorded {{captured_on}}{fr}enregistré le {{captured_on}}{/}</span></div>
-          <pre class="code wrap-lines"><code>{{call_response}}</code></pre>
+        <figure class="ex">
+          <figcaption class="ex-head"><code>call_tool</code><span>{en}Recorded {{captured_on}}{fr}Enregistré le {{captured_on}}{/}</span></figcaption>
+          <div class="ex-part ex-ask">
+            <p class="ex-label">{en}Request{fr}Requête{/}</p>
+            <pre class="ex-json"><code>{{call_request}}</code></pre>
+          </div>
+          <div class="ex-split">{{call_result}}</div>
+          <details class="ex-raw">
+            <summary>{en}Show the full response as JSON{fr}Afficher la réponse complète en JSON{/}</summary>
+            <pre class="ex-code ex-wrap"><code>{{call_response}}</code></pre>
+          </details>
         </figure>
       </li>
 
@@ -115,10 +128,12 @@
           <h3>{en}Reproduce{fr}Reproduire{/}<code>reproduce_code</code></h3>
           <p>{en}The same call becomes an R, Python, Stata or Julia script that downloads, checks and cleans the data, so the analysis does not depend on the agent.{fr}Le même appel devient un script R, Python, Stata ou Julia qui télécharge, vérifie et nettoie les données, pour que l'analyse ne dépende pas de l'agent.{/}</p>
         </div>
-        <figure class="panel">
-          <figcaption class="panel-bar"><span>{en}Request{fr}Requête{/}</span><code>reproduce_code</code></figcaption>
-          <pre><code>{{reproduce_request}}</code></pre>
-          <div class="panel-bar"><span>{en}Response{fr}Réponse{/}</span><code>reproduce.ReproductionCode</code></div>
+        <figure class="ex">
+          <figcaption class="ex-head"><code>reproduce_code</code><span>{en}Run when this page was built{fr}Exécuté à la construction de la page{/}</span></figcaption>
+          <div class="ex-part ex-ask">
+            <p class="ex-label">{en}Request{fr}Requête{/}</p>
+            <pre class="ex-json"><code>{{reproduce_request}}</code></pre>
+          </div>
           {{reproduce_tabs}}
         </figure>
       </li>
