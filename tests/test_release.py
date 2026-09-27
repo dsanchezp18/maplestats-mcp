@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
+import sys
 import tomllib
+import zipfile
 from pathlib import Path
 
 from maplestats_mcp import __version__
@@ -42,3 +45,23 @@ def test_release_pins_a_real_publisher_checksum():
     match = re.search(r'MCP_PUBLISHER_SHA256: "([0-9a-f]{64})"', workflow)
     assert match, "release.yml must pin mcp-publisher's SHA-256"
     assert set(match.group(1)) != {"0"}
+
+
+def test_smithery_bundle_launches_this_release(tmp_path, monkeypatch):
+    # Smithery installs whatever version the bundle pins, and rejects a
+    # release without tools or input schemas.
+    monkeypatch.setattr(sys, "argv", ["build_smithery_bundle.py", str(tmp_path)])
+    spec = importlib.util.spec_from_file_location(
+        "build_smithery_bundle", ROOT / "scripts" / "build_smithery_bundle.py"
+    )
+    assert spec is not None and spec.loader is not None
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    assert script.main() == 0
+
+    with zipfile.ZipFile(tmp_path / f"maplestats-mcp-{__version__}.mcpb") as bundle:
+        manifest = json.loads(bundle.read("manifest.json"))
+    assert manifest["version"] == __version__
+    assert manifest["server"]["type"] == "python"
+    assert manifest["server"]["mcp_config"]["args"] == [f"maplestats-mcp=={__version__}"]
+    assert manifest["tools"] and all("inputSchema" in tool for tool in manifest["tools"])
