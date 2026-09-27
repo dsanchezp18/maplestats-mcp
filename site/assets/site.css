@@ -2445,20 +2445,24 @@ mark {
   }
 }
 
-.verse {
-  max-width: 34ch;
-  font-size: clamp(1.35rem, 1rem + 1.4vw, 2.1rem);
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--ink-2);
+/* The home page's verse uses the case-study stanzas' count and line
+   styles, smaller, so the three counts stack in the logo column. */
+.verse .verse-count {
+  font-size: clamp(2.4rem, 1.8rem + 2vw, 3.5rem);
 }
 
-.verse span {
-  display: block;
-  margin-top: 10px;
-  font-size: 0.55em;
-  font-style: normal;
+.verse .verse-count:not(:first-child) {
+  margin-top: 18px;
+}
+
+.verse .verse-line {
+  margin-top: 6px;
+  font-size: clamp(1.15rem, 1rem + 0.5vw, 1.375rem);
+}
+
+.verse-aside {
+  margin-top: 18px;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--accent);
 }
@@ -2467,12 +2471,6 @@ mark {
   display: grid;
   gap: 16px;
   max-width: 780px;
-}
-
-@media (min-width: 1241px) {
-  .verse {
-    font-size: clamp(1.35rem, 0.9rem + 0.9vw, 1.75rem);
-  }
 }
 
 .thesis-body h2 {
