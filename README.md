@@ -365,5 +365,5 @@ co-authors:
 MapleStats is not the only way to reach this data. The website's About
 page lists the
 [alternatives](https://dsanchezp18.github.io/maplestats-mcp/about.html#alternatives):
-other MCP servers for Canadian data, R and Python packages, the
-official APIs MapleStats calls, and paid data services.
+other MCP servers for Canadian data, R and Python packages, and the
+official APIs MapleStats calls.

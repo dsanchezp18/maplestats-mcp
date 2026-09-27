@@ -102,6 +102,23 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"province": "AB", "limit": 100},
         },
     ],
+    # The same call in French: FCAC names its cards in French too, and the
+    # French page shows those names (a <key>_fr capture replaces <key> there).
+    "cards_fr": [
+        {
+            "name": "fcac_search_credit_cards",
+            "arguments": {"province": "AB", "limit": 100, "lang": "fr"},
+        },
+    ],
+    # The Statistics Canada page (site/statcan.html): the Consumer Price
+    # Index, all-items, not seasonally adjusted (table 18-10-0004, vector
+    # 41690973), with the scripts reproduce_code writes for it.
+    "macro": [
+        {
+            "name": "wds_get_data_from_vectors",
+            "arguments": {"vector_ids": [41690973], "latest_n": 84},
+        },
+    ],
     # Macroeconomists: the yield curve, the gap between the 10-year and
     # 2-year Government of Canada benchmark bond yields, every business day
     # since 2001 (Bank of Canada Valet).
@@ -143,6 +160,22 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"series_names": ["V39079"], "start_date": "2015-01-01"},
         },
     ],
+    # The Statistics Canada page walks one series from search to SDMX: find
+    # the CPI table, read its dimensions, turn coordinate 2.2 (Canada,
+    # all-items) into its vector, then ask SDMX for the same series. The
+    # WDS data call itself is the macro case above.
+    "statcan": [
+        {"name": "wds_search_cubes", "arguments": {"query": "consumer price index", "limit": 5}},
+        {"name": "wds_get_cube_metadata", "arguments": {"product_id": 18100004}},
+        {
+            "name": "wds_get_series_info_from_cube_pid_coord",
+            "arguments": {"product_id": 18100004, "coordinate": "2.2"},
+        },
+        {
+            "name": "sdmx_get_vector_data",
+            "arguments": {"vector_id": 41690973, "last_n_observations": 3},
+        },
+    ],
     # The counts in the verse: how much each audience can reach.
     "counts": [
         # every page of the Data catalogue's microdata results, counted by product
@@ -180,6 +213,19 @@ def _trim(name: str, response: Any) -> Any:
         return {"total_matched": response["total_matched"], "provenance": response["provenance"]}
     if name == "statcan_pumf_list_files":
         return {"file_count": len(response["files"]), "provenance": response["provenance"]}
+    if name == "wds_get_cube_metadata":
+        # About 185 kB in full, mostly member names and footnote text: keep
+        # each dimension's first members and counts.
+        dimensions = [
+            {
+                **{k: v for k, v in dim.items() if k != "members"},
+                "member_count": len(dim["members"]),
+                "members": dim["members"][:5],
+            }
+            for dim in response["dimensions"]
+        ]
+        kept = {k: v for k, v in response.items() if k not in ("dimensions", "footnotes")}
+        return {**kept, "footnote_count": len(response["footnotes"]), "dimensions": dimensions}
     return response
 
 

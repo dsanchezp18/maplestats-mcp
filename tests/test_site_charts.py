@@ -333,3 +333,22 @@ def test_ring_inscriptions_close_and_arcs_share_the_circle() -> None:
     assert centre[0].text == "84" and "data-count" in centre[0].attrib
     with pytest.raises(ValueError):
         charts.ring_chart([], [], [("a", "a", 1)], centre="1", centre_lines=("", ""), label="x")
+
+
+def test_tooltips_take_the_page_language() -> None:
+    """A French page words its intervals and dates in French."""
+    ci = _parse(charts.ci_chart(CI_ROWS, label="x", value_format=pct, range_word="à"))
+    tips = [el.text for el in ci.iter(f"{NS}title")]
+    assert "Quebec: 10.3% (9.5% à 11.2%)" in tips
+    default = _parse(charts.ci_chart(CI_ROWS, label="x", value_format=pct))
+    assert "Quebec: 10.3% (9.5% to 11.2%)" in [el.text for el in default.iter(f"{NS}title")]
+    line = _parse(
+        charts.line_chart(
+            _monthly(24),
+            label="x",
+            value_format=pct,
+            x_tick_format=january,
+            date_format=lambda d: f"mois {d[:7]}",
+        )
+    )
+    assert "mois 2015-01: 2.0%" in [el.text for el in line.iter(f"{NS}title")]

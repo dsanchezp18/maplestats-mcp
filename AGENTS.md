@@ -228,7 +228,16 @@ by hand": its charts are drawn from calls recorded by
 never depends on an upstream. Re-run that script to refresh them (the
 PUMF case downloads a ~170 MB file). The charts are inline SVG from
 `scripts/site_charts.py`, styled and animated by `site/assets/charts.css`
-and `site/assets/charts.js`.
+and `site/assets/charts.js`. A `<case>_fr` capture (the same call with
+`lang="fr"`) replaces `<case>` on the French page, for tools that answer
+in French.
+
+French pages must read as French. The build spaces French punctuation
+itself (`french_typography()`: no-break spaces before `: ; ? ! %` and
+inside « »), so write templates with plain spaces. Text the server has
+only in English (tool docstrings, the planner's plan, `reproduce_code`'s
+notes) goes on a French page inside a `lang="en"` element;
+`tests/test_site.py` fails on English outside one.
 
 ```bash
 uv run python scripts/build_site.py

@@ -34,7 +34,7 @@
       offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
       tools: (n) => `${n} ${n === 1 ? "outil" : "outils"}`,
       matches: (n) => `${n} ${n === 1 ? "résultat" : "résultats"}`,
-      cut: (n) => `Au-delà des ${n} premiers : search_tools ne les renverrait pas.`,
+      cut: (n) => `Au-delà des ${n} premiers\u00a0: search_tools ne les renverrait pas.`,
     },
   }[lang];
 
@@ -161,6 +161,9 @@
       .join("");
   }
 
+  // Tool summaries are the server's English docstrings; a French page marks them.
+  const summaryLang = lang === "fr" ? ' lang="en"' : "";
+
   function resultItem(entry, n, modules, query) {
     const [name, module, summary] = entry;
     const source = (modules[module] || [module, module])[lang === "en" ? 0 : 1];
@@ -168,7 +171,7 @@
       `<li><a href="${pages}tools.html#t-${name}"><span class="r-rank">${n}</span>` +
       `<span class="r-name">${highlight(name, query).replace(/_/g, "_<wbr>")}</span>` +
       `<span class="r-src">${escapeHtml(source)}</span>` +
-      `<span class="r-sum">${highlight(summary, query)}</span></a></li>`
+      `<span class="r-sum"${summaryLang}>${highlight(summary, query)}</span></a></li>`
     );
   }
 
@@ -276,6 +279,61 @@
     set(true);
     button.hidden = false;
   });
+
+  /* ---------- On this page ---------- */
+
+  // The contents list is open in the HTML, so without scripts it shows in
+  // full. Here it stays open beside the article on wide screens, starts
+  // closed above it on narrow ones, and marks the section being read.
+  const toc = document.querySelector("[data-toc]");
+  if (toc) {
+    const box = toc.querySelector("details");
+    const summary = box && box.querySelector("summary");
+    const wide = window.matchMedia("(min-width: 1241px)");
+    const fit = () => {
+      if (box) box.open = wide.matches;
+    };
+    fit();
+    if (wide.addEventListener) wide.addEventListener("change", fit);
+    if (summary) {
+      summary.addEventListener("click", (event) => {
+        if (wide.matches) event.preventDefault();
+      });
+    }
+    const links = Array.from(toc.querySelectorAll('a[href^="#"]'));
+    const targets = links.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))));
+    links.forEach((a) =>
+      a.addEventListener("click", () => {
+        if (box && !wide.matches) box.open = false;
+      }),
+    );
+    let queued = false;
+    const mark = () => {
+      queued = false;
+      const line = window.innerHeight * 0.3;
+      let current = -1;
+      targets.forEach((el, i) => {
+        if (el && el.getBoundingClientRect().top <= line) current = i;
+      });
+      // At the very bottom the last short sections can never reach the line.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        current = targets.length - 1;
+      }
+      links.forEach((a, i) => {
+        if (i === current) a.setAttribute("aria-current", "location");
+        else a.removeAttribute("aria-current");
+      });
+    };
+    const queue = () => {
+      if (!queued) {
+        queued = true;
+        window.requestAnimationFrame(mark);
+      }
+    };
+    window.addEventListener("scroll", queue, { passive: true });
+    window.addEventListener("resize", queue);
+    mark();
+  }
 
   /* ---------- Copy buttons ---------- */
 
