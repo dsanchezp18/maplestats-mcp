@@ -4358,4 +4358,95 @@ h2.sub {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+
+/* ---------- Accessibility: focus, no-JS fallbacks, chart data ---------- */
+
+/* Boxes that scroll sideways take keyboard focus (build_site.py gives them
+   tabindex="0"). The ring is drawn inside, where a panel's rounded,
+   clipped edge cannot hide it. */
+pre[tabindex]:focus-visible,
+.table-wrap[tabindex]:focus-visible,
+.cmd code[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Without JavaScript every tab panel shows, each under its tab's name, and
+   the controls that only work with scripts are not offered. */
+.tab-name {
+  margin: 18px 0 8px;
+  font-weight: 600;
+}
+
+.js .tab-name,
+html:not(.js) [role="tablist"],
+html:not(.js) [data-copy-target],
+html:not(.js) .probe-input,
+html:not(.js) .probe-try,
+html:not(.js) label[for="search-q"],
+html:not(.js) .atlas-search input,
+html:not(.js) .chips {
+  display: none;
+}
+
+/* The numbers behind each chart (site_charts.with_table). */
+.chart-data {
+  margin-top: 12px;
+  font-size: 0.8125rem;
+}
+
+.chart-data summary {
+  cursor: pointer;
+  width: fit-content;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chart-data .table-wrap {
+  margin-top: 8px;
+}
+
+.chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-table caption {
+  padding-bottom: 6px;
+  text-align: left;
+  color: var(--ink-2);
+}
+
+.chart-table th,
+.chart-table td {
+  padding: 5px 12px 5px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  font-weight: 400;
+}
+
+.chart-table thead th {
+  border-bottom-color: var(--rule-2);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.chart-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.finale-ring .chart-data,
+.home-ring-fig .chart-data {
+  max-width: 680px;
+  margin-inline: auto;
+  text-align: left;
+}
+
+/* 404.html */
+.not-found {
+  display: grid;
+  gap: 28px;
+  padding-block: 64px;
 }

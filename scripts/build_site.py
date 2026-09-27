@@ -71,8 +71,21 @@ INSTALL_SOURCE = PACKAGE if ON_PYPI else f"git+{REPO}"
 UVX_ARGS: list[str] = [PACKAGE] if ON_PYPI else ["--from", INSTALL_SOURCE, PACKAGE]
 UVX_COMMAND = " ".join(["uvx", *UVX_ARGS])
 
+# Where GitHub Pages serves the site (.github/workflows/pages.yml). Canonical,
+# hreflang and Open Graph URLs, the sitemap and the 404 page are absolute
+# from here, because a crawler or a link preview has no page to resolve from.
+SITE_URL = "https://dsanchezp18.github.io/maplestats-mcp/"
+
 Lang = Literal["en", "fr"]
 LANGS: tuple[Lang, ...] = ("en", "fr")
+
+
+def page_url(name: str, lang: Lang) -> str:
+    """A page's absolute URL; index.html is its folder."""
+    path = "" if name == "index.html" else name
+    return f"{SITE_URL}{'' if lang == 'en' else 'fr/'}{path}"
+
+
 Level = Literal["national", "provincial", "municipal", "catalogue", "utility"]
 Row = Literal["provincial_catalogue", "provincial_agency", "municipal_catalogue", "municipal_feed"]
 
@@ -987,8 +1000,10 @@ def params_table(tool: ToolDoc, lang: Lang) -> str:
             f"<tr><td><code>{esc(p.name)}</code></td>"
             f'<td><code class="type">{esc(p.type)}</code></td><td>{default}</td></tr>'
         )
+    caption = "Parameters of" if lang == "en" else "Paramètres de"
     return (
-        '<div class="table-wrap"><table class="params"><thead><tr>'
+        '<div class="table-wrap"><table class="params">'
+        f'<caption class="sr">{caption} <code>{esc(tool.name)}</code></caption><thead><tr>'
         + "".join(f"<th>{h}</th>" for h in head)
         + "</tr></thead><tbody>"
         + "".join(rows)
@@ -1712,6 +1727,23 @@ def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
     )
 
 
+# Every chart is followed by its data (site_charts.with_table), in a closed
+# <details>: the chart itself is one labelled image to a screen reader.
+SHOW_DATA: dict[Lang, str] = {"en": "Show the data", "fr": "Voir les données"}
+CI_HEAD: dict[Lang, tuple[str, str, str]] = {
+    "en": ("Estimate", "95% CI low", "95% CI high"),
+    "fr": ("Estimation", "IC à 95 %, borne inf.", "IC à 95 %, borne sup."),
+}
+
+
+def chart_table(
+    svg: str, key: str, lang: Lang, caption: str, head: tuple[str, ...], rows: list[list[str]]
+) -> str:
+    return charts.with_table(
+        svg, ident=f"data-{key}", summary=SHOW_DATA[lang], caption=caption, head=head, rows=rows
+    )
+
+
 def pumf_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     response = case["calls"][0]["response"]
     rows = []
@@ -1730,12 +1762,18 @@ def pumf_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Part des adultes de 25 à 64 ans dont le plus haut diplôme est un baccalauréat, avec intervalles de confiance à 95 %"
     )
+
+    def fmt(v: float) -> str:
+        return percent(v, lang)
+
     return {
-        "chart_pumf": charts.ci_chart(
-            rows,
-            label=label,
-            value_format=lambda v: percent(v, lang),
-            range_word=RANGE_WORD[lang],
+        "chart_pumf": chart_table(
+            charts.ci_chart(rows, label=label, value_format=fmt, range_word=RANGE_WORD[lang]),
+            "pumf",
+            lang,
+            label,
+            ("Province", *CI_HEAD[lang]),
+            charts.ci_rows(rows, fmt),
         ),
         "pumf_narrow": esc(join_names([in_text[r[0]] for r in by_width[:2]], lang)),
         "pumf_wide": esc(join_names([in_text[r[0]] for r in by_width[-2:]], lang)),
@@ -1766,9 +1804,18 @@ def ircc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Nouveaux résidents permanents selon la destination prévue, Edmonton et Calgary, par année"
     )
+
+    def fmt(v: float) -> str:
+        return number(v, lang)
+
     return {
-        "chart_ircc": charts.grouped_bars(
-            categories, series, label=label, value_format=lambda v: number(v, lang)
+        "chart_ircc": chart_table(
+            charts.grouped_bars(categories, series, label=label, value_format=fmt),
+            "ircc",
+            lang,
+            label,
+            ("Year" if lang == "en" else "Année", *(name for name, _ in series)),
+            charts.bar_rows(categories, series, fmt),
         ),
         "ircc_partial": esc(partial),
         "source_ircc": call_source(case["calls"][0]["response"], lang),
@@ -1819,15 +1866,22 @@ def housing_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Mises en chantier au Canada par année, maisons individuelles et appartements, centres de 10 000 habitants ou plus"
     )
+    series: list[tuple[str, list[float | None]]] = [
+        (single_label, [years[y]["Single"] for y in complete]),
+        (apartment_label, [years[y]["Apartment"] for y in complete]),
+    ]
+
+    def fmt(v: float) -> str:
+        return number(v, lang)
+
     return {
-        "chart_housing": charts.grouped_bars(
-            complete,
-            [
-                (single_label, [years[y]["Single"] for y in complete]),
-                (apartment_label, [years[y]["Apartment"] for y in complete]),
-            ],
-            label=label,
-            value_format=lambda v: number(v, lang),
+        "chart_housing": chart_table(
+            charts.grouped_bars(complete, series, label=label, value_format=fmt),
+            "housing",
+            lang,
+            label,
+            ("Year" if lang == "en" else "Année", single_label, apartment_label),
+            charts.bar_rows(complete, series, fmt),
         ),
         "count_housing": number(case["calls"][1]["response"]["total_count"], lang),
         "housing_first": first,
@@ -1873,13 +1927,20 @@ def micro_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Part des personnes à faible revenu (MFR-ApI) selon la génération, recensement de 2021, avec intervalles de confiance à 95 %"
     )
+
+    def fmt(v: float) -> str:
+        return percent(v, lang)
+
     return {
-        "chart_micro": charts.ci_chart(
-            rows,
-            label=label,
-            value_format=lambda v: percent(v, lang),
-            row_height=64.0,
-            range_word=RANGE_WORD[lang],
+        "chart_micro": chart_table(
+            charts.ci_chart(
+                rows, label=label, value_format=fmt, row_height=64.0, range_word=RANGE_WORD[lang]
+            ),
+            "micro",
+            lang,
+            label,
+            ("Generation" if lang == "en" else "Génération", *CI_HEAD[lang]),
+            charts.ci_rows(rows, fmt),
         ),
         "micro_first": esc(percent(first, lang)),
         "micro_second": esc(
@@ -1930,15 +1991,27 @@ def cards_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Cartes de crédit répertoriées pour l'Alberta dans l'outil de comparaison de l'ACFC : frais annuels et taux d'intérêt sur les achats"
     )
+    x_title = "Annual fee" if lang == "en" else "Frais annuels"
+    y_title = "Purchase rate" if lang == "en" else "Taux sur les achats"
     return {
-        "chart_cards": charts.scatter_chart(
-            points,
-            series=series,
-            label=label,
-            x_format=lambda v: dollars(v, lang),
-            y_format=lambda v: percent(v, lang, 0),
-            x_title="Annual fee" if lang == "en" else "Frais annuels",
-            y_title="Purchase rate" if lang == "en" else "Taux sur les achats",
+        "chart_cards": chart_table(
+            charts.scatter_chart(
+                points,
+                series=series,
+                label=label,
+                x_format=lambda v: dollars(v, lang),
+                y_format=lambda v: percent(v, lang, 0),
+                x_title=x_title,
+                y_title=y_title,
+            ),
+            "cards",
+            lang,
+            label,
+            ("Type", x_title, y_title, "Cards" if lang == "en" else "Cartes"),
+            # The table gives the rate to the cent the tooltips show.
+            charts.scatter_rows(
+                points, series, lambda v: dollars(v, lang), lambda v: percent(v, lang, 2)
+            ),
         ),
         "count_cards": number(response["total_matched"], lang),
         "cards_priced": str(len(priced)),
@@ -1994,16 +2067,37 @@ def curve_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     bp = "bp" if lang == "en" else "pb"
     points = [(iso, v * 100) for iso, v in points]
     band = (band[0] * 100, 0.0, band[2])
+
+    def fmt(v: float) -> str:
+        return f"{number(v, lang)} {bp}"
+
+    # Some 300 monthly points would make a long table; a row per year keeps
+    # it readable, and the caption says what the rows are.
+    caption = (
+        "The 10-year minus 2-year yield gap by year: the average, lowest and highest of that year's monthly averages"
+        if lang == "en"
+        else "L'écart de rendement entre 10 ans et 2 ans par année : moyenne, minimum et maximum des moyennes mensuelles de l'année"
+    )
+    head = ("Year", "Average", "Lowest month", "Highest month")
+    if lang == "fr":
+        head = ("Année", "Moyenne", "Mois le plus bas", "Mois le plus haut")
     return {
-        "chart_curve": charts.line_chart(
-            points,
-            label=label,
-            value_format=lambda v: f"{number(v, lang)} {bp}",
-            x_tick_format=lambda iso: (
-                iso[:4] if iso[5:7] == "01" and int(iso[:4]) % 5 == 0 else None
+        "chart_curve": chart_table(
+            charts.line_chart(
+                points,
+                label=label,
+                value_format=fmt,
+                x_tick_format=lambda iso: (
+                    iso[:4] if iso[5:7] == "01" and int(iso[:4]) % 5 == 0 else None
+                ),
+                band=band,
+                date_format=tip_date(lang, monthly=True),
             ),
-            band=band,
-            date_format=tip_date(lang, monthly=True),
+            "curve",
+            lang,
+            caption,
+            head,
+            charts.yearly_rows(points, fmt),
         ),
         "count_curve": number(len(days), lang),
         "curve_first_year": days[0][0][:4],
@@ -2054,12 +2148,20 @@ def patents_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Demandes de brevet canadiennes dans la classe CIB G06N (apprentissage automatique et autres calculs fondés sur des modèles biologiques), par année de dépôt"
     )
+    years = [year for year, _ in shown]
+    series: list[tuple[str, list[float | None]]] = [("G06N", [float(n) for _, n in shown])]
+
+    def fmt(v: float) -> str:
+        return number(v, lang)
+
     return {
-        "chart_patents": charts.grouped_bars(
-            [year for year, _ in shown],
-            [("G06N", [float(n) for _, n in shown])],
-            label=label,
-            value_format=lambda v: number(v, lang),
+        "chart_patents": chart_table(
+            charts.grouped_bars(years, series, label=label, value_format=fmt),
+            "patents",
+            lang,
+            label,
+            ("Filing year" if lang == "en" else "Année de dépôt", "G06N"),
+            charts.bar_rows(years, series, fmt),
         ),
         "count_patents": number(calls[0]["response"]["total_matched"], lang),
         "patents_first_year": shown[0][0],
@@ -2087,13 +2189,31 @@ def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         if lang == "en"
         else "Taux cible du financement à un jour de la Banque du Canada, quotidien depuis 2015"
     )
+
+    def fmt(v: float) -> str:
+        return percent(v, lang, 2)
+
+    # Every day since 2015 would be thousands of rows; the rate only moves on
+    # announcement days, so the table lists those (and the first and last day).
+    caption = (
+        "Bank of Canada target for the overnight rate: the first day, each day it changed, and the last day"
+        if lang == "en"
+        else "Taux cible du financement à un jour de la Banque du Canada : le premier jour, chaque jour où il a changé et le dernier jour"
+    )
     return {
-        "chart_boc": charts.step_chart(
-            points,
-            label=label,
-            value_format=lambda v: percent(v, lang, 2),
-            x_tick_format=year_ticks,
-            date_format=tip_date(lang, monthly=False),
+        "chart_boc": chart_table(
+            charts.step_chart(
+                points,
+                label=label,
+                value_format=fmt,
+                x_tick_format=year_ticks,
+                date_format=tip_date(lang, monthly=False),
+            ),
+            "boc",
+            lang,
+            caption,
+            ("Date", "Rate" if lang == "en" else "Taux"),
+            charts.time_rows(points, fmt, lambda iso: long_date(iso, lang), steps=True),
         ),
         "boc_changes": str(changes),
         "boc_min": esc(percent(min(values), lang, 2)),
@@ -2250,16 +2370,27 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         ),
     ]
     return {
-        "chart_ring": charts.ring_chart(
-            outer,
-            ring_places(lang),
-            arcs,
-            centre=str(tools),
-            centre_lines=(
-                "tools," if en else "outils,",
-                "one connection" if en else "une connexion",
+        "chart_ring": chart_table(
+            charts.ring_chart(
+                outer,
+                ring_places(lang),
+                arcs,
+                centre=str(tools),
+                centre_lines=(
+                    "tools," if en else "outils,",
+                    "one connection" if en else "une connexion",
+                ),
+                label=label,
             ),
-            label=label,
+            "ring",
+            lang,
+            (
+                f"The {tools} tools by subject (the arcs); MapleStats' own tools are counted only in the total"
+                if en
+                else f"Les {tools} outils par sujet (les arcs); les outils propres à MapleStats ne comptent que dans le total"
+            ),
+            ("Subject", "Tools") if en else ("Sujet", "Outils"),
+            charts.ring_rows(arcs, lambda v: number(v, lang)),
         ),
         "ring_federal": str(len(outer)),
         "counters": counter_list(items, lang),
@@ -2738,8 +2869,14 @@ def _variance_table(lang: Lang) -> str:
             f'<span class="count">{number(len(replicates), lang)}</span></td>'
             f'<td data-label="{head[3]}">{esc(how)}</td></tr>'
         )
+    caption = (
+        "PUMF files with a standard-error method"
+        if en
+        else "Fichiers de microdonnées avec une méthode d'erreur-type"
+    )
     return (
-        '<div class="table-wrap post-wide"><table class="params post-table post-variance"><thead><tr>'
+        '<div class="table-wrap post-wide"><table class="params post-table post-variance">'
+        f'<caption class="sr">{caption}</caption><thead><tr>'
         + "".join(f"<th>{h}</th>" for h in head)
         + "</tr></thead><tbody>"
         + "".join(rows)
@@ -2824,6 +2961,81 @@ _PAGE_LINK = re.compile(r'(<a\b(?![^>]*\bhreflang=)[^>]*?\bhref=")\.\./([\w-]+\.
 def french_links(html_text: str) -> str:
     html_text = _PAGE_LINK.sub(r"\1\2", html_text)
     return html_text.replace('data-root="../"', 'data-root="../" data-pages=""', 1)
+
+
+# A box that scrolls sideways must take keyboard focus, or a keyboard user
+# cannot read what is cut off (axe: scrollable-region-focusable). The code
+# blocks, the setup prompt and the tables that scroll are all marked here,
+# after rendering, so a new template or fragment gets it without asking. A
+# table box is a region named by its table's caption, so every table in one
+# needs a <caption> (class="sr" when it would only repeat the heading).
+_PRE_TAG = re.compile(r"<pre\b(?![^>]*\btabindex=)")
+_CMD_CODE = re.compile(r'(<div class="cmd\b[^"]*">\s*<code)\b(?![^>]*\btabindex=)')
+_TABLE_WRAP = re.compile(r'<div class="table-wrap\b[^"]*"(?![^>]*\btabindex=)')
+_TABLE_CAPTION = re.compile(r"\s*<table\b[^>]*>\s*<caption\b(?![^>]*\bid=)")
+
+
+def focusable_scrollers(html_text: str) -> str:
+    html_text = _PRE_TAG.sub('<pre tabindex="0"', html_text)
+    html_text = _CMD_CODE.sub(r'\1 tabindex="0"', html_text)
+    out: list[str] = []
+    pos = 0
+    for n, match in enumerate(_TABLE_WRAP.finditer(html_text), start=1):
+        close = html_text.index(">", match.end()) + 1
+        caption = _TABLE_CAPTION.match(html_text, close)
+        if not caption:
+            snippet = html_text[match.start() : match.start() + 160]
+            raise SystemExit(f"a .table-wrap table needs a <caption> to name it: {snippet}")
+        label = f"tbl-{n}"
+        out.append(html_text[pos : match.end()])
+        out.append(f' role="region" aria-labelledby="{label}" tabindex="0"')
+        out.append(html_text[match.end() : caption.end()])
+        out.append(f' id="{label}"')
+        pos = caption.end()
+    out.append(html_text[pos:])
+    return "".join(out)
+
+
+# Tabs without JavaScript: the templates mark every panel but the first
+# hidden, which is how site.js starts them, but without scripts the tab
+# buttons do nothing and those panels could never be read. So every panel
+# ships visible, headed by its tab's name (.tab-name, shown only without
+# scripts, when the tab list is hidden by site.css), and site.js hides the
+# unselected ones as it starts the tabs.
+_TABPANEL = re.compile(r'<div role="tabpanel"([^>]*?)\saria-labelledby="([^"]+)"([^>]*)>')
+_TAB_BUTTON = re.compile(
+    r'<button\b[^>]*\brole="tab"[^>]*\bid="([^"]+)"[^>]*>(.*?)</button>', re.DOTALL
+)
+
+
+def tabs_without_scripts(html_text: str) -> str:
+    names = {m.group(1): m.group(2) for m in _TAB_BUTTON.finditer(html_text)}
+
+    def panel(match: re.Match[str]) -> str:
+        before, label, after = match.groups()
+        attrs = re.sub(r"\shidden\b", "", f'{before} aria-labelledby="{label}"{after}')
+        name = names.get(label)
+        if name is None:
+            raise SystemExit(f"tab panel labelled by a missing tab: {label}")
+        return f'<div role="tabpanel"{attrs}><p class="tab-name">{name}</p>'
+
+    return _TABPANEL.sub(panel, html_text)
+
+
+# Link previews (Open Graph, X/Twitter) repeat each page's own <title> and
+# description; head.html holds these marks where they go.
+OG_TITLE, OG_DESCRIPTION = "\x00og-title", "\x00og-description"
+_TITLE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
+_META_DESCRIPTION = re.compile(r'<meta name="description" content="([^"]*)">')
+
+
+def social_meta(html_text: str) -> str:
+    title = _TITLE.search(html_text)
+    description = _META_DESCRIPTION.search(html_text)
+    if not title or not description:
+        raise SystemExit("every page needs a <title> and a meta description")
+    plain_title = html.escape(html.unescape(title.group(1).strip()), quote=True)
+    return html_text.replace(OG_TITLE, plain_title).replace(OG_DESCRIPTION, description.group(1))
 
 
 # French typography, as Canadian French usage sets it: a narrow no-break
@@ -3084,6 +3296,12 @@ def _write_site(
                 "root": root,
                 "page": page.name,
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
+                "site_url": SITE_URL,
+                "canonical": page_url(page.name, lang),
+                "url_en": page_url(page.name, "en"),
+                "url_fr": page_url(page.name, "fr"),
+                "og_title": OG_TITLE,
+                "og_description": OG_DESCRIPTION,
                 "search_query": esc(SEARCH_EXAMPLE[lang]),
                 "agent_prompt": esc(AGENT_PROMPT[lang]),
                 "search_suggestions": suggestion_buttons(lang),
@@ -3112,10 +3330,76 @@ def _write_site(
                 rendered = link_tools(rendered, set(by_name), root)
             if lang == "fr":
                 rendered = french_links(rendered)
+            rendered = tabs_without_scripts(focusable_scrollers(rendered))
             # Both languages: English pages have French passages too.
             rendered = french_typography(rendered)
+            # After the typography, so a French preview is spaced as the page is.
+            rendered = social_meta(rendered)
             (target_dir / page.name).write_text(rendered, encoding="utf-8")
+    (out / "sitemap.xml").write_text(sitemap([p.name for p in pages]), encoding="utf-8")
+    (out / "robots.txt").write_text(
+        f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}sitemap.xml\n", encoding="utf-8"
+    )
+    (out / "404.html").write_text(not_found_page(), encoding="utf-8")
     return len(pages) * len(LANGS)
+
+
+def sitemap(names: list[str]) -> str:
+    """Every page in both languages, each naming its other-language twin."""
+    entries = []
+    # The home page first; the rest in file order.
+    for name in sorted(names, key=lambda n: (n != "index.html", n)):
+        alternates: tuple[tuple[str, Lang], ...] = (("en", "en"), ("fr", "fr"), ("x-default", "en"))
+        links = "".join(
+            f'<xhtml:link rel="alternate" hreflang="{code}" href="{page_url(name, lang)}"/>'
+            for code, lang in alternates
+        )
+        entries += [f"<url><loc>{page_url(name, lang)}</loc>{links}</url>" for lang in LANGS]
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+        'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' + "\n".join(entries) + "\n</urlset>\n"
+    )
+
+
+def not_found_page() -> str:
+    """404.html, in both languages on one page.
+
+    GitHub Pages serves it for any missing path under the site, at whatever
+    depth, so every link and asset is absolute from the site's own path.
+    """
+    base = "/" + SITE_URL.split("://", 1)[1].split("/", 1)[1]
+    return french_typography(
+        f"""<!doctype html>
+<html lang="en" data-root="{base}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Page not found · Page introuvable · MapleStats MCP</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..900&amp;family=Source+Sans+3:wght@400..900&amp;display=swap">
+<link rel="stylesheet" href="{base}assets/site.css">
+<link rel="icon" href="{base}assets/mark.svg" type="image/svg+xml">
+<script>try{{var t=localStorage.getItem("maplestats:theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}}catch(e){{}}</script>
+</head>
+<body>
+<main id="main" class="wrap not-found">
+  <p><a href="{base}"><img src="{base}assets/logo.svg" width="96" height="96" alt="MapleStats MCP"></a></p>
+  <section>
+    <h1>Page not found</h1>
+    <p>There is no page at this address. It may have moved.</p>
+    <p><a href="{base}">MapleStats MCP home</a> · <a href="{base}tools.html">All tools</a></p>
+  </section>
+  <section lang="fr">
+    <h2>Page introuvable</h2>
+    <p>Il n'y a pas de page à cette adresse. Elle a peut-être été déplacée.</p>
+    <p><a href="{base}fr/">Accueil de MapleStats MCP</a> · <a href="{base}fr/tools.html">Tous les outils</a></p>
+  </section>
+</main>
+</body>
+</html>
+"""
+    )
 
 
 def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:

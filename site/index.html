@@ -4,7 +4,6 @@
 {{> head}}
 <title>MapleStats MCP</title>
 <meta name="description" content="{en}One MCP server for Canadian open data: Statistics Canada, the Bank of Canada, CMHC and {{catalogue_count}} open-data catalogues, in English and French.{fr}Un seul serveur MCP pour les données ouvertes canadiennes : Statistique Canada, la Banque du Canada, la SCHL et {{catalogue_count}} catalogues de données ouvertes, en français et en anglais.{/}">
-<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
 <link rel="stylesheet" href="{{root}}assets/charts.css">
 <script src="{{root}}assets/charts.js" defer></script>
 </head>
@@ -149,10 +148,10 @@
             <div class="probe-input"><span class="prompt" aria-hidden="true">&gt;</span><input id="search-q" type="search" value="{{search_query}}" autocomplete="off" spellcheck="false" placeholder="{en}Describe the data, in English or French{fr}Décrivez les données, en français ou en anglais{/}"></div>
             <p class="probe-try"><span>{en}Try{fr}Essayez{/}</span> {{search_suggestions}}</p>
           </div>
-          <ol class="results" data-results aria-live="polite">
+          <ol class="results" data-results>
       {{search_results}}
           </ol>
-          <p class="probe-status" data-status>{en}Top {{search_top}} of {{searchable_count}} tools, ranked by the same BM25 index search_tools uses.{fr}Les {{search_top}} premiers sur {{searchable_count}} outils, classés par le même index BM25 que search_tools.{/}</p>
+          <p class="probe-status" data-status aria-live="polite">{en}Top {{search_top}} of {{searchable_count}} searchable tools, ranked by the same BM25 index search_tools uses.{fr}Les {{search_top}} premiers des {{searchable_count}} outils indexés, classés par le même index BM25 que search_tools.{/}</p>
         </div>
       </li>
 

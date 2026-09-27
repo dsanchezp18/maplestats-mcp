@@ -4,7 +4,6 @@
 {{> head}}
 <title>{en}How the MCP queries Statistics Canada{fr}Comment le MCP interroge Statistique Canada{/} · MapleStats MCP</title>
 <meta name="description" content="{en}How MapleStats MCP talks to Statistics Canada: finding a table, coordinates and vectors in the Web Data Service, SDMX slices, public use microdata with replicate weights, and the live-API quirks it handles, with recorded calls.{fr}Comment MapleStats MCP dialogue avec Statistique Canada : trouver un tableau, les coordonnées et les vecteurs du Service de données Web, les requêtes SDMX, les microdonnées à grande diffusion et leurs poids de réplication, et les particularités des API en direct, avec des appels enregistrés.{/}">
-<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
 </head>
 <body>
 {{> header}}
@@ -212,6 +211,7 @@
   <p>{en}An agent's answer is only as good as the check someone can run without the agent. <code>reproduce_code</code> takes a tool name and its arguments and writes an R, Python, Stata or Julia script that fetches the same data straight from StatCan. What the script does depends on the call:{fr}La réponse d'un agent ne vaut que la vérification qu'on peut faire sans lui. <code>reproduce_code</code> prend le nom d'un outil et ses arguments, et écrit un script R, Python, Stata ou Julia qui récupère les mêmes données directement chez Statistique Canada. Ce que fait le script dépend de l'appel :{/}</p>
   <div class="table-wrap post-wide">
     <table class="params post-table post-scripts-table">
+      <caption class="sr">{en}What reproduce_code writes for each kind of call{fr}Ce qu'écrit reproduce_code pour chaque type d'appel{/}</caption>
       <thead><tr><th>{en}Call{fr}Appel{/}</th><th>{en}Script{fr}Script{/}</th></tr></thead>
       <tbody>
         <tr><td>{en}A <code>wds_</code> or <code>sdmx_</code> call with a <code>product_id</code>{fr}Un appel <code>wds_</code> ou <code>sdmx_</code> avec un <code>product_id</code>{/}</td><td>{en}Downloads the full table as CSV, to filter to the rows the tool returned; in R, cansim's <code>get_cansim()</code>.{fr}Télécharge le tableau complet en CSV, à filtrer selon les lignes renvoyées par l'outil; en R, <code>get_cansim()</code> de cansim.{/}</td></tr>

@@ -23,14 +23,21 @@ from itertools import pairwise
 
 __all__ = [
     "NARROW",
+    "bar_rows",
     "ci_chart",
+    "ci_rows",
     "grouped_bars",
     "hbar_chart",
     "line_chart",
     "responsive",
     "ring_chart",
+    "ring_rows",
     "scatter_chart",
+    "scatter_rows",
     "step_chart",
+    "time_rows",
+    "with_table",
+    "yearly_rows",
 ]
 
 WIDTH = 640
@@ -862,3 +869,124 @@ def ring_chart(
     out.append(_text(c, c + 68, centre_lines[1], "ring-sub", "middle"))
     out.append("</svg>")
     return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# The data behind a chart, as a table
+#
+# A chart is one role="img" with a label, so a screen reader never reaches
+# the per-mark <title> tooltips. with_table() follows each chart with its
+# numbers in a closed <details> ("Show the data"), linked from the <svg> by
+# aria-details. The *_rows() helpers take the chart's own inputs and value
+# formatters, so the table cannot drift from what is drawn.
+
+Cell = str
+Rows = list[list[Cell]]
+
+
+def with_table(
+    svg: str,
+    *,
+    ident: str,
+    summary: str,
+    caption: str,
+    head: Sequence[str],
+    rows: Rows,
+) -> str:
+    """``svg`` followed by a ``<details>`` holding its data table.
+
+    ``ident`` must be unique on the page; the first column is a label and
+    the others are numbers (set right-aligned by charts.css). ``caption``
+    names the table, and says so when the rows summarise the drawn series.
+    """
+    if not rows:
+        raise ValueError("with_table needs at least one row")
+    if any(len(row) != len(head) for row in rows):
+        raise ValueError("every row needs one cell per heading")
+    if not svg.startswith("<svg "):
+        raise ValueError("with_table takes a chart from this module")
+    # Every drawing links the table: responsive() emits a wide and a narrow
+    # copy, and on a phone the narrow one is the one a screen reader meets.
+    linked = svg.replace('<svg class="chart', f'<svg aria-details="{_esc(ident)}" class="chart')
+    heads = "".join(
+        f'<th scope="col"{"" if i == 0 else ' class="num"'}>{_esc(h)}</th>'
+        for i, h in enumerate(head)
+    )
+    body = "".join(
+        f'<tr><th scope="row">{_esc(row[0])}</th>'
+        + "".join(f'<td class="num">{_esc(cell)}</td>' for cell in row[1:])
+        + "</tr>"
+        for row in rows
+    )
+    return (
+        f'{linked}<details class="chart-data" id="{_esc(ident)}"><summary>{_esc(summary)}</summary>'
+        f'<div class="table-wrap"><table class="chart-table"><caption>{_esc(caption)}</caption>'
+        f"<thead><tr>{heads}</tr></thead><tbody>{body}</tbody></table></div></details>"
+    )
+
+
+def ci_rows(
+    rows: list[tuple[str, float, float, float]], value_format: Callable[[float], str]
+) -> Rows:
+    """ci_chart's rows: name, estimate, low, high."""
+    return [
+        [name, value_format(est), value_format(min(lo, hi)), value_format(max(lo, hi))]
+        for name, est, lo, hi in rows
+    ]
+
+
+def bar_rows(
+    categories: list[str],
+    series: list[tuple[str, list[float | None]]],
+    value_format: Callable[[float], str],
+    missing: str = "–",
+) -> Rows:
+    """grouped_bars' data: one row per category, one column per series."""
+    return [
+        [category] + [missing if vals[c] is None else value_format(vals[c]) for _, vals in series]  # type: ignore[arg-type]
+        for c, category in enumerate(categories)
+    ]
+
+
+def time_rows(
+    points: list[tuple[str, float]],
+    value_format: Callable[[float], str],
+    date_format: Callable[[str], str] | None = None,
+    *,
+    steps: bool = False,
+) -> Rows:
+    """A time series' points; for a step chart only the days it changes."""
+    shown = _change_points(points) if steps else points
+    return [[date_format(d) if date_format else d, value_format(v)] for d, v in shown]
+
+
+def yearly_rows(points: list[tuple[str, float]], value_format: Callable[[float], str]) -> Rows:
+    """A long series summarised by calendar year: average, lowest, highest."""
+    years: dict[str, list[float]] = {}
+    for d, v in points:
+        years.setdefault(d[:4], []).append(v)
+    return [
+        [
+            year,
+            value_format(sum(vals) / len(vals)),
+            value_format(min(vals)),
+            value_format(max(vals)),
+        ]
+        for year, vals in years.items()
+    ]
+
+
+def scatter_rows(
+    points: list[tuple[float, float, int, int, str]],
+    series: list[str],
+    x_format: Callable[[float], str],
+    y_format: Callable[[float], str],
+) -> Rows:
+    """scatter_chart's points by series, then x, then y: series, x, y, count."""
+    ordered_points = sorted(points, key=lambda p: (p[2], p[0], p[1]))
+    return [[series[s], x_format(x), y_format(y), str(n)] for x, y, s, n, _ in ordered_points]
+
+
+def ring_rows(arcs: list[tuple[str, str, int]], count_format: Callable[[float], str]) -> Rows:
+    """ring_chart's arcs: the full label and its count."""
+    return [[full, count_format(count)] for _, full, count in arcs]
