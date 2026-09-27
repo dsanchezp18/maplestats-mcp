@@ -277,6 +277,61 @@
     button.hidden = false;
   });
 
+  /* ---------- On this page ---------- */
+
+  // The contents list is open in the HTML, so without scripts it shows in
+  // full. Here it stays open beside the article on wide screens, starts
+  // closed above it on narrow ones, and marks the section being read.
+  const toc = document.querySelector("[data-toc]");
+  if (toc) {
+    const box = toc.querySelector("details");
+    const summary = box && box.querySelector("summary");
+    const wide = window.matchMedia("(min-width: 1241px)");
+    const fit = () => {
+      if (box) box.open = wide.matches;
+    };
+    fit();
+    if (wide.addEventListener) wide.addEventListener("change", fit);
+    if (summary) {
+      summary.addEventListener("click", (event) => {
+        if (wide.matches) event.preventDefault();
+      });
+    }
+    const links = Array.from(toc.querySelectorAll('a[href^="#"]'));
+    const targets = links.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))));
+    links.forEach((a) =>
+      a.addEventListener("click", () => {
+        if (box && !wide.matches) box.open = false;
+      }),
+    );
+    let queued = false;
+    const mark = () => {
+      queued = false;
+      const line = window.innerHeight * 0.3;
+      let current = -1;
+      targets.forEach((el, i) => {
+        if (el && el.getBoundingClientRect().top <= line) current = i;
+      });
+      // At the very bottom the last short sections can never reach the line.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        current = targets.length - 1;
+      }
+      links.forEach((a, i) => {
+        if (i === current) a.setAttribute("aria-current", "location");
+        else a.removeAttribute("aria-current");
+      });
+    };
+    const queue = () => {
+      if (!queued) {
+        queued = true;
+        window.requestAnimationFrame(mark);
+      }
+    };
+    window.addEventListener("scroll", queue, { passive: true });
+    window.addEventListener("resize", queue);
+    mark();
+  }
+
   /* ---------- Copy buttons ---------- */
 
   document.querySelectorAll("[data-copy-target]").forEach((button) => {

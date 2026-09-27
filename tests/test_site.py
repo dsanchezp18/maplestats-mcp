@@ -100,7 +100,13 @@ async def test_site_builds(tmp_path: Path):
 
 
 async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
-    """statcan.html builds in both languages and shows the registry's StatCan counts."""
+    """statcan.html builds in both languages and shows the registry's StatCan counts.
+
+    Every family is listed once, every tool link names a real tool, and every
+    trimmed JSON box is still JSON once its // comment lines are dropped.
+    """
+    import html
+    import json
     import re
 
     modules = await site.collect_modules()
@@ -108,22 +114,40 @@ async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
     families = {t.family for t in statcan.tools}
     await site.build(tmp_path / "site")
     tool_names = {t.name for m in modules for t in m.tools}
-    for page in (tmp_path / "site" / "statcan.html", tmp_path / "site" / "fr" / "statcan.html"):
+    count_tables = next(
+        call["response"]["total_count"]
+        for call in site.load_case("counts")["calls"]
+        if call["name"] == "wds_list_all_cubes"
+    )
+    pages = {
+        "en": tmp_path / "site" / "statcan.html",
+        "fr": tmp_path / "site" / "fr" / "statcan.html",
+    }
+    for lang, page in pages.items():
         text = page.read_text(encoding="utf-8")
-        assert f"<dt>{len(statcan.tools)}</dt>" in text
-        assert f"<dt>{len(families)}</dt>" in text
-        assert text.count('<div class="sc-group">') == len(site.STATCAN_GROUPS)
-        # Every family is listed once, and every tool link names a real tool.
-        assert text.count('<p class="sc-prefix">') == len(families)
+        assert f'<p class="fig">{len(statcan.tools)}</p>' in text
+        assert f"{'in' if lang == 'en' else 'en'} {len(families)} famil" in text
+        assert f'<p class="fig">{site.number(count_tables, lang)}</p>' in text
+        index = text[text.index('<div class="post-families') :]
+        index = index[: index.index("</section>")]
+        assert index.count('<div class="post-family">') == len(site.STATCAN_GROUPS)
+        assert index.count("<li>") == len(families)
         linked = set(re.findall(r'tools\.html#t-([a-z0-9_]+)"', text))
         assert linked and linked <= tool_names
+        boxes = re.findall(r"<pre><code>(.*?)</code></pre>", text, re.DOTALL)
+        assert len(boxes) >= 12
+        for box in boxes:
+            plain = html.unescape(re.sub(r"<[^>]+>", "", box))
+            json.loads(
+                "\n".join(ln for ln in plain.split("\n") if not ln.lstrip().startswith("//"))
+            )
 
 
 def test_case_captures_are_complete():
     """Each case study is recorded calls with their source and, for the first, scripts."""
     import json
 
-    for key in (*site.CASE_KEYS, "counts"):
+    for key in (*site.CASE_KEYS, "counts", "statcan"):
         case = json.loads((site.CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
         assert case["captured"] and case["calls"], key
         for call in case["calls"]:

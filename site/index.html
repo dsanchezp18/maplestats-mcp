@@ -50,14 +50,12 @@
     </div>
     <div class="thesis-body">
       <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
-      <div class="thesis-split">
-        <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
-        <div class="claims">
-          <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
-          <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
-          <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
-        </div>
-      </div>
+      <p>{en}As MCP made it easier to connect AI agents to data, we started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. MapleStats takes the opposite approach, one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. MapleStats prend le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
+    </div>
+    <div class="claims">
+      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
+      <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
+      <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
     </div>
   </div>
 </section>
@@ -68,19 +66,27 @@
     <div class="section-head">
       <p class="label">{en}Case studies{fr}Études de cas{/}</p>
       <h2>{en}What can you do with it{fr}Que pouvez-vous en faire{/}</h2>
-      <p>{en}Eight kinds of people asked their agent a real question through MapleStats. Each card opens the answer: the chart, the calls the agent made, and a script that fetches the same numbers again.{fr}Huit profils différents ont posé une vraie question à leur agent grâce à MapleStats. Chaque carte ouvre la réponse : le graphique, les appels de l'agent et un script qui récupère de nouveau les mêmes chiffres.{/}</p>
+      <p>{en}Eight kinds of people asked their agent a real question through MapleStats. Here is one of them: a macroeconomist reading the yield curve.{fr}Huit profils différents ont posé une vraie question à leur agent grâce à MapleStats. En voici un : un macroéconomiste qui lit la courbe des taux.{/}</p>
     </div>
-    <ul class="uses">
-      <li><a href="{{root}}cases.html#statisticians"><span class="use-who">{en}Statisticians{fr}Statisticiens{/}</span><span class="use-q">{en}A bachelor's degree, province by province{fr}Le baccalauréat, province par province{/}</span><span class="use-n"><b>{{count_pumf}}</b> {en}microdata files{fr}fichiers de microdonnées{/}</span></a></li>
-      <li><a href="{{root}}cases.html#demographers"><span class="use-who">{en}Demographers{fr}Démographes{/}</span><span class="use-q">{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</span><span class="use-n"><b>{{count_ircc}}</b> {en}immigration tables{fr}tableaux d'immigration{/}</span></a></li>
-      <li><a href="{{root}}cases.html#urban-planners"><span class="use-who">{en}Urban planners{fr}Urbanistes{/}</span><span class="use-q">{en}Canada is building up, not out{fr}Le Canada construit en hauteur, pas en largeur{/}</span><span class="use-n"><b>{{count_housing}}</b> {en}housing tables{fr}tableaux sur le logement{/}</span></a></li>
-      <li><a href="{{root}}cases.html#microeconomists"><span class="use-who">{en}Microeconomists{fr}Microéconomistes{/}</span><span class="use-q">{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</span><span class="use-n"><b>{{count_records}}</b> {en}census records{fr}fiches du recensement{/}</span></a></li>
-      <li><a href="{{root}}cases.html#marketers"><span class="use-who">{en}Marketers{fr}Marketing{/}</span><span class="use-q">{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</span><span class="use-n"><b>{{count_cards}}</b> {en}credit cards{fr}cartes de crédit{/}</span></a></li>
-      <li><a href="{{root}}cases.html#macroeconomists"><span class="use-who">{en}Macroeconomists{fr}Macroéconomistes{/}</span><span class="use-q">{en}When the yield curve turns upside down{fr}Quand la courbe des taux s'inverse{/}</span><span class="use-n"><b>{{count_curve}}</b> {en}days of bond yields{fr}jours de rendements obligataires{/}</span></a></li>
-      <li><a href="{{root}}cases.html#scientists"><span class="use-who">{en}Scientists{fr}Scientifiques{/}</span><span class="use-q">{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</span><span class="use-n"><b>{{count_patents}}</b> {en}patents{fr}brevets{/}</span></a></li>
-      <li><a href="{{root}}cases.html#analysts"><span class="use-who">{en}Analysts{fr}Analystes{/}</span><span class="use-q">{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</span><span class="use-n"><b>{{count_series}}</b> {en}Bank of Canada series{fr}séries de la Banque du Canada{/}</span></a></li>
+    <div class="feature-case">
+      <div class="feature-text">
+        <p class="use-who">{en}Macroeconomists{fr}Macroéconomistes{/}</p>
+        <h3>{en}When the yield curve turns upside down{fr}Quand la courbe des taux s'inverse{/}</h3>
+        <p>{en}The gap between the 10-year and 2-year Government of Canada bond yields, every business day since {{curve_first_year}}. When it drops below zero, markets expect rates to fall, usually because they expect the economy to slow. It inverted in {{curve_spells}}.{fr}L'écart entre les rendements des obligations du gouvernement du Canada à 10 ans et à 2 ans, chaque jour ouvrable depuis {{curve_first_year}}. Quand il passe sous zéro, les marchés s'attendent à une baisse des taux, le plus souvent parce qu'ils prévoient un ralentissement. La courbe s'est inversée en {{curve_spells}}.{/}</p>
+        <p class="source-links"><a href="{{root}}cases.html#macroeconomists">{en}See how the agent got it{fr}Voir comment l'agent l'a obtenu{/}</a></p>
+      </div>
+      <figure class="chart-wrap">{{chart_curve}}<figcaption>{{source_curve}}</figcaption></figure>
+    </div>
+    <p class="uses-more-label">{en}The other seven{fr}Les sept autres{/}</p>
+    <ul class="uses-more">
+      <li><a href="{{root}}cases.html#statisticians"><b>{en}Statisticians{fr}Statisticiens{/}</b> <span>{en}A bachelor's degree, province by province{fr}Le baccalauréat, province par province{/}</span></a></li>
+      <li><a href="{{root}}cases.html#demographers"><b>{en}Demographers{fr}Démographes{/}</b> <span>{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</span></a></li>
+      <li><a href="{{root}}cases.html#urban-planners"><b>{en}Urban planners{fr}Urbanistes{/}</b> <span>{en}Canada is building up, not out{fr}Le Canada construit en hauteur, pas en largeur{/}</span></a></li>
+      <li><a href="{{root}}cases.html#microeconomists"><b>{en}Microeconomists{fr}Microéconomistes{/}</b> <span>{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</span></a></li>
+      <li><a href="{{root}}cases.html#marketers"><b>{en}Marketers{fr}Marketing{/}</b> <span>{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</span></a></li>
+      <li><a href="{{root}}cases.html#scientists"><b>{en}Scientists{fr}Scientifiques{/}</b> <span>{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</span></a></li>
+      <li><a href="{{root}}cases.html#analysts"><b>{en}Analysts{fr}Analystes{/}</b> <span>{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</span></a></li>
     </ul>
-    <p class="source-links"><a href="{{root}}cases.html">{en}See all eight case studies{fr}Voir les huit études de cas{/}</a></p>
   </div>
 </section>
 
@@ -223,7 +229,7 @@
 
 <section class="section home-ring" id="one-mcp">
   <div class="wrap">
-    <p class="verse-finale">{en}One MCP for the Agent to help them all.{fr}Un MCP pour que l'Agent les aide tous.{/}</p>
+    <p class="verse-finale">{en}One MCP for the Agent to find them, one MCP to bring them all together.{fr}Un MCP pour que l'Agent les trouve, un MCP pour les réunir tous.{/}</p>
     <figure class="home-ring-fig">{{chart_ring}}</figure>
     <p class="source-links"><a href="{{root}}cases.html">{en}See what people asked it{fr}Voir ce qu'on lui a demandé{/}</a><a href="{{root}}connect.html">{en}Connect it to your agent{fr}Connectez-le à votre agent{/}</a></p>
   </div>
