@@ -99,6 +99,26 @@ async def test_site_builds(tmp_path: Path):
     assert (out / "llms.txt").is_file()
 
 
+async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
+    """statcan.html builds in both languages and shows the registry's StatCan counts."""
+    import re
+
+    modules = await site.collect_modules()
+    statcan = next(m for m in modules if m.key == "statcan")
+    families = {t.family for t in statcan.tools}
+    await site.build(tmp_path / "site")
+    tool_names = {t.name for m in modules for t in m.tools}
+    for page in (tmp_path / "site" / "statcan.html", tmp_path / "site" / "fr" / "statcan.html"):
+        text = page.read_text(encoding="utf-8")
+        assert f"<dt>{len(statcan.tools)}</dt>" in text
+        assert f"<dt>{len(families)}</dt>" in text
+        assert text.count('<div class="sc-group">') == len(site.STATCAN_GROUPS)
+        # Every family is listed once, and every tool link names a real tool.
+        assert text.count('<p class="sc-prefix">') == len(families)
+        linked = set(re.findall(r'tools\.html#t-([a-z0-9_]+)"', text))
+        assert linked and linked <= tool_names
+
+
 def test_case_captures_are_complete():
     """Each case study is recorded calls with their source and, for the first, scripts."""
     import json

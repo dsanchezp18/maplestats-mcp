@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Statistics Canada{fr}Statistique Canada{/} · MapleStats MCP</title>
+<meta name="description" content="{en}What MapleStats MCP can do with Statistics Canada data: tables and series, SDMX slices, classifications, the 2001 to 2021 censuses, public use microdata with survey weights, and StatCan's catalogues.{fr}Ce que MapleStats MCP permet de faire avec les données de Statistique Canada : tableaux et séries, requêtes SDMX, classifications, recensements de 2001 à 2021, microdonnées à grande diffusion pondérées et catalogues de Statistique Canada.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Statistics Canada{fr}Statistique Canada{/}</p>
+  <h1>{en}Statistics Canada, through one connection{fr}Statistique Canada, par une seule connexion{/}</h1>
+  <p class="lede">{en}Statistics Canada publishes through many separate services: a table API and an SDMX API, a classification service, census APIs and download pages, microdata ZIPs, feeds and catalogues. MapleStats covers {{statcan_family_count}} of them with {{statcan_tool_count}} tools, so an agent can go from a question to a table, a series, a census profile or a weighted estimate from microdata, and cite where each number came from.{fr}Statistique Canada diffuse ses données par de nombreux services distincts : une API de tableaux et une API SDMX, un service de classifications, des API et des pages de téléchargement du recensement, des ZIP de microdonnées, des flux et des catalogues. MapleStats en couvre {{statcan_family_count}} avec {{statcan_tool_count}} outils. Un agent passe ainsi d'une question à un tableau, une série, un profil du recensement ou une estimation pondérée tirée de microdonnées, et cite la source de chaque chiffre.{/}</p>
+</section>
+
+<section class="wrap">
+  <dl class="sc-figures">
+    <div><dt>{{statcan_tool_count}}</dt><dd>{en}tools, of the server's {{tool_count}}{fr}outils, sur les {{tool_count}} du serveur{/}</dd></div>
+    <div><dt>{{statcan_family_count}}</dt><dd>{en}StatCan services and product families{fr}services et familles de produits de Statistique Canada{/}</dd></div>
+    <div><dt>{{count_tables}}</dt><dd>{en}tables in the Web Data Service on {{cases_captured}}{fr}tableaux dans le Service de données Web le {{cases_captured}}{/}</dd></div>
+    <div><dt>{{statcan_variance_count}}</dt><dd>{en}microdata files with standard errors from their user guides{fr}fichiers de microdonnées avec des erreurs-types tirées de leur guide{/}</dd></div>
+  </dl>
+</section>
+
+<section class="section" id="covered">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">{en}Coverage{fr}Couverture{/}</p>
+      <h2>{en}What's covered{fr}Ce qui est couvert{/}</h2>
+      <p>{en}Each family below is a separate StatCan service or product, with its tool prefix and number of tools, counted from the server's registry when this page is built. A connected agent does not see these tools in a list: it finds them by asking <code>search_tools</code> in plain language, then runs them with <code>call_tool</code>.{fr}Chaque famille ci-dessous est un service ou un produit distinct de Statistique Canada, avec son préfixe et son nombre d'outils, comptés dans le registre du serveur au moment où la page est générée. Un agent connecté ne voit pas ces outils dans une liste : il les trouve en interrogeant <code>search_tools</code> en langage courant, puis les exécute avec <code>call_tool</code>.{/}</p>
+    </div>
+    <div class="sc-groups">
+{{statcan_groups}}
+    </div>
+    <p class="sc-more"><a href="{{root}}tools.html#m-statcan">{en}All {{statcan_tool_count}} Statistics Canada tools, with their parameters, on the Tools page{fr}Les {{statcan_tool_count}} outils de Statistique Canada, avec leurs paramètres, dans la page Outils{/}</a></p>
+  </div>
+</section>
+
+<section class="section" id="tasks">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">{en}Workflows{fr}Démarches{/}</p>
+      <h2>{en}What an agent can do with it{fr}Ce qu'un agent peut en faire{/}</h2>
+      <p>{en}Common tasks, and the tools an agent chains for each, in order. Each name links to the tool's entry on the Tools page.{fr}Des tâches courantes, et les outils qu'un agent enchaîne pour chacune, dans l'ordre. Chaque nom mène à la fiche de l'outil dans la page Outils.{/}</p>
+    </div>
+    <div class="sc-tasks">
+      <article class="sc-task">
+        <h3>{en}Find a table and pull a series{fr}Trouver un tableau et en extraire une série{/}</h3>
+        <p>{en}Search tables by topic, read the dimensions and member ids, turn a coordinate into its vector id, then fetch the latest observations. For a fixed window, <code>wds_get_data_by_reference_period_range</code> takes a range of reference periods instead.{fr}Chercher un tableau par sujet, lire ses dimensions et les identifiants de ses membres, convertir une coordonnée en numéro de vecteur, puis obtenir les dernières observations. Pour une période précise, <code>wds_get_data_by_reference_period_range</code> prend plutôt un intervalle de périodes de référence.{/}</p>
+        {{sc_chain_series}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Slice a large table on the server{fr}Découper un grand tableau côté serveur{/}</h3>
+        <p>{en}Read a table's SDMX codelists, build a complete key for any dimension with more than about 30 codes, and ask for just that slice instead of downloading the whole table.{fr}Lire les listes de codes SDMX d'un tableau, construire une clé complète pour toute dimension de plus d'une trentaine de codes, et ne demander que cette tranche au lieu de télécharger le tableau entier.{/}</p>
+        {{sc_chain_sdmx}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Decode codes and read the notes{fr}Décoder les codes et lire les notes{/}</h3>
+        <p>{en}Table metadata carries member trees, frequency, date range and footnotes; code sets explain scalar factors, symbols, status flags and units. The reference documents {{statcan_resources}} explain StatCan's identifiers and its known quirks.{fr}Les métadonnées d'un tableau donnent l'arbre des membres, la fréquence, la période couverte et les notes; les ensembles de codes expliquent les facteurs scalaires, les symboles, les indicateurs d'état et les unités. Les documents de référence {{statcan_resources}} décrivent les identifiants de Statistique Canada et ses particularités connues.{/}</p>
+        {{sc_chain_codes}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Tabulate public use microdata{fr}Totaliser des microdonnées à grande diffusion{/}</h3>
+        <p>{en}Find the survey, pick a file, look up the variables and weights in its codebook, then compute weighted totals, shares or means grouped by up to three variables. <a href="#microdata">More on this below.</a>{fr}Trouver l'enquête, choisir un fichier, repérer les variables et les poids dans son dictionnaire, puis calculer des totaux, des parts ou des moyennes pondérés selon au plus trois variables. <a href="#microdata">Détails plus bas.</a>{/}</p>
+        {{sc_chain_pumf}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Profile a place from the census{fr}Dresser le profil d'un lieu d'après le recensement{/}</h3>
+        <p>{en}Find a geography and a characteristic, then fetch the values for every combination. The 2016 profile has its own API, the 2001 to 2016 profiles come as bulk files, and census geography supplies boundaries and DGUIDs.{fr}Trouver une géographie et une caractéristique, puis obtenir les valeurs pour chaque combinaison. Le profil de 2016 a sa propre API, ceux de 2001 à 2016 sont offerts en fichiers en bloc, et la géographie du recensement fournit les limites et les DGUID.{/}</p>
+        {{sc_chain_census}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Map codes between classifications{fr}Passer d'une version de classification à l'autre{/}</h3>
+        <p>{en}Find a classification such as NAICS, list its full category tree, then find the concordance between two versions and read its code-to-code map.{fr}Trouver une classification comme le SCIAN, afficher l'arbre complet de ses catégories, puis trouver la concordance entre deux versions et lire sa correspondance code à code.{/}</p>
+        {{sc_chain_classify}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Search the catalogues and methods{fr}Chercher dans les catalogues et les méthodes{/}</h3>
+        <p>{en}Search the Data catalogue for products the table APIs cannot see, such as PUMFs and bulk files, the definitions and methods catalogue for documentation, and the survey directory for a survey's IMDB record. A Data catalogue search for public use microdata returned {{count_pumf}} products on {{cases_captured}}.{fr}Chercher dans le catalogue Données les produits que les API de tableaux ne voient pas, comme les FMGD et les fichiers en bloc; dans le catalogue des définitions et méthodes, la documentation; et dans le répertoire des enquêtes, la fiche BMDI d'une enquête. Une recherche de microdonnées à grande diffusion dans le catalogue Données a renvoyé {{count_pumf}} produits le {{cases_captured}}.{/}</p>
+        {{sc_chain_catalogue}}
+      </article>
+      <article class="sc-task">
+        <h3>{en}Follow new releases{fr}Suivre les nouvelles diffusions{/}</h3>
+        <p>{en}Read The Daily by subject, list the tables that changed on a date and the series that changed today, and get a day's bulk-update ZIP. The Daily's archive search goes back to 2012.{fr}Lire Le Quotidien par sujet, lister les tableaux modifiés à une date donnée et les séries modifiées aujourd'hui, et obtenir le ZIP de mise à jour d'une journée. La recherche dans l'archive du Quotidien remonte à 2012.{/}</p>
+        {{sc_chain_releases}}
+      </article>
+    </div>
+    <p class="sc-more">{en}The server also ships guided prompts for some of these workflows: {{statcan_prompts}}.{fr}Le serveur fournit aussi des invites guidées pour certaines de ces démarches : {{statcan_prompts}}.{/}</p>
+  </div>
+</section>
+
+<section class="section" id="microdata">
+  <div class="wrap sc-split">
+    <div class="sc-split-head">
+      <p class="label">{en}Microdata{fr}Microdonnées{/}</p>
+      <h2>{en}Microdata, with its survey design{fr}Des microdonnées, avec leur plan de sondage{/}</h2>
+      <p>{en}<code>statcan_pumf_tabulate</code> computes a weighted table from a PUMF on the server, with DuckDB. The first call downloads the file into a local cache, which can take a minute or two; later calls reuse it.{fr}<code>statcan_pumf_tabulate</code> calcule un tableau pondéré à partir d'un FMGD, sur le serveur, avec DuckDB. Le premier appel télécharge le fichier dans un cache local, ce qui peut prendre une minute ou deux; les appels suivants le réutilisent.{/}</p>
+    </div>
+    <div class="sc-split-body">
+      <ul class="sc-points">
+        <li>{en}<b>Codebooks in every format StatCan ships.</b> The Labour Force Survey's CSV codebook, Stata <code>.dct</code> and <code>.do</code> files, SPSS label files and SAS files, in English or French, read from inside the ZIP with HTTP range requests: nothing is downloaded to see the variables.{fr}<b>Des dictionnaires dans tous les formats de Statistique Canada.</b> Le dictionnaire CSV de l'Enquête sur la population active, les fichiers Stata <code>.dct</code> et <code>.do</code>, les fichiers d'étiquettes SPSS et les fichiers SAS, en français ou en anglais, lus dans le ZIP par requêtes HTTP partielles : rien n'est téléchargé pour voir les variables.{/}</li>
+        <li>{en}<b>The right weight.</b> The survey weight defaults to the codebook's main weight. Names alone mislead: in one file <code>WTQ_05</code> is a question about night work, in another <code>DOHWT</code> is an inclusion flag, so labels and field widths are checked too.{fr}<b>Le bon poids.</b> Par défaut, le poids d'enquête est le poids principal du dictionnaire. Les noms seuls induisent en erreur : dans un fichier, <code>WTQ_05</code> porte sur le travail de nuit; dans un autre, <code>DOHWT</code> est un indicateur d'inclusion. Les étiquettes et la largeur des champs sont donc vérifiées aussi.{/}</li>
+        <li>{en}<b>The sample count beside every estimate.</b> Each cell carries its unweighted count, and cells with fewer than 30 respondents (<code>min_count</code>) are flagged <code>low_count</code>.{fr}<b>L'effectif à côté de chaque estimation.</b> Chaque cellule indique son compte non pondéré, et celles de moins de 30 répondants (<code>min_count</code>) sont marquées <code>low_count</code>.{/}</li>
+        <li>{en}<b>Standard errors only where the method is documented.</b> Each variance formula is copied from the survey's user guide and checked against it. For any other file the result gives no standard error, says why, and lists the replicate weights it found.{fr}<b>Des erreurs-types seulement là où la méthode est documentée.</b> Chaque formule de variance est tirée du guide de l'utilisateur de l'enquête et vérifiée d'après celui-ci. Pour tout autre fichier, le résultat ne donne pas d'erreur-type, explique pourquoi et liste les poids de réplication trouvés.{/}</li>
+      </ul>
+      {{statcan_variance_table}}
+      <p class="sc-small">{en}PUMF bootstrap weights are perturbed for confidentiality, so their standard errors are comparable to StatCan's official ones, not the same. The notes on each result also warn about implied decimals, such as the Labour Force Survey's hourly earnings stored in cents.{fr}Les poids bootstrap des FMGD sont perturbés pour protéger la confidentialité : leurs erreurs-types sont comparables à celles de Statistique Canada, sans être identiques. Les notes de chaque résultat signalent aussi les décimales implicites, comme la rémunération horaire de l'Enquête sur la population active, exprimée en cents.{/}</p>
+      <p class="sc-small">{en}Two case studies use the 2021 Census file this way: <a href="{{root}}cases.html#statisticians">bachelor's degrees by province</a> and <a href="{{root}}cases.html#microeconomists">low income across immigrant generations</a>.{fr}Deux études de cas utilisent ainsi le fichier du recensement de 2021 : <a href="{{root}}cases.html#statisticians">le baccalauréat par province</a> et <a href="{{root}}cases.html#microeconomists">le faible revenu d'une génération à l'autre</a>.{/}</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="quirks">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">{en}Under the hood{fr}Sous le capot{/}</p>
+      <h2>{en}The hard parts it handles for you{fr}Les difficultés qu'il règle à votre place{/}</h2>
+      <p>{en}Each StatCan service has quirks that are easy to get wrong and hard to spot. These were found by calling the live services, and the code records how each one was confirmed.{fr}Chaque service de Statistique Canada a ses particularités, faciles à rater et difficiles à repérer. Elles ont été trouvées en appelant les services en direct, et le code consigne comment chacune a été confirmée.{/}</p>
+    </div>
+    <dl class="sc-quirks">
+      <div>
+        <p class="label">{en}Connection{fr}Connexion{/}</p>
+        <dt>{en}Connections that hang for no visible reason{fr}Des connexions bloquées sans raison apparente{/}</dt>
+        <dd>{en}Something on StatCan's network path blocks TLS connections that offer only HTTP/1.1. The server's HTTP client offers HTTP/2 during the handshake, which avoids it, and the Python scripts from <code>reproduce_code</code> do the same.{fr}Un élément du réseau de Statistique Canada bloque les connexions TLS qui n'offrent que HTTP/1.1. Le client HTTP du serveur offre HTTP/2 pendant la négociation, ce qui l'évite, et les scripts Python de <code>reproduce_code</code> font de même.{/}</dd>
+      </div>
+      <div>
+        <p class="label">WDS</p>
+        <dt>{en}Values that are not what they look like{fr}Des valeurs trompeuses{/}</dt>
+        <dd>{en}WDS never applies a series' scalar factor, so a value published in thousands comes back unscaled. Results keep the raw value with its scalar factor code, and <code>wds_get_code_sets</code> decodes it.{fr}Le WDS n'applique jamais le facteur scalaire d'une série : une valeur publiée en milliers revient sans mise à l'échelle. Les résultats gardent la valeur brute et son code de facteur scalaire, que <code>wds_get_code_sets</code> décode.{/}</dd>
+      </div>
+      <div>
+        <p class="label">WDS, SDMX</p>
+        <dt>{en}The overnight lock{fr}Le verrouillage de nuit{/}</dt>
+        <dd>{en}From midnight to 8:30 a.m. Eastern, while data is updated, some methods answer HTTP 409. That comes back as a named "data locked" error that says to retry after 8:30, not as a generic failure.{fr}De minuit à 8 h 30, heure de l'Est, pendant la mise à jour des données, certaines méthodes répondent HTTP 409. L'erreur revient sous un nom précis, « données verrouillées », avec la consigne de réessayer après 8 h 30, et non comme un échec générique.{/}</dd>
+      </div>
+      <div>
+        <p class="label">WDS</p>
+        <dt>{en}Strict dates and odd request shapes{fr}Des dates strictes et des requêtes à part{/}</dt>
+        <dd>{en}Reference-period ranges need full <code>YYYY-MM-DD</code> dates and release ranges full <code>YYYY-MM-DDTHH:MM</code>; anything shorter gets HTTP 406. One bulk method takes a single object as its request body where the others take a list, and an unknown table id also answers 406, which the server reports as invalid input.{fr}Les intervalles de périodes de référence exigent des dates complètes <code>AAAA-MM-JJ</code>, et ceux de diffusion <code>AAAA-MM-JJTHH:MM</code>; toute forme plus courte reçoit HTTP 406. Une méthode en bloc prend un objet unique comme corps de requête là où les autres prennent une liste, et un identifiant de tableau inconnu répond aussi 406, que le serveur signale comme une entrée invalide.{/}</dd>
+      </div>
+      <div>
+        <p class="label">WDS</p>
+        <dt>{en}Nulls where lists should be{fr}Des null au lieu de listes{/}</dt>
+        <dd>{en}Some tables send an explicit null, instead of leaving the field out, for lists such as their survey and subject codes and for numeric codes on observations. These are read as empty lists and zeros, so the call does not fail.{fr}Certains tableaux envoient un null explicite, au lieu d'omettre le champ, pour des listes comme leurs codes d'enquête et de sujet, et pour des codes numériques des observations. Ils sont lus comme des listes vides et des zéros : l'appel n'échoue pas.{/}</dd>
+      </div>
+      <div>
+        <p class="label">SDMX</p>
+        <dt>{en}Wildcards that return a sample{fr}Des jokers qui renvoient un échantillon{/}</dt>
+        <dd>{en}Leaving a dimension with more than about 30 codes blank in an SDMX key returns a sparse, unpredictable subset, not every code; <code>sdmx_get_key_for_dimension</code> builds the complete key instead. The SDMX API also answers in XML whatever format is requested, and rejects <code>lastNObservations</code> combined with a date range; the server parses the XML and explains the rejection.{fr}Laisser vide, dans une clé SDMX, une dimension de plus d'une trentaine de codes renvoie un sous-ensemble clairsemé et imprévisible, pas tous les codes; <code>sdmx_get_key_for_dimension</code> construit plutôt la clé complète. L'API SDMX répond aussi en XML quel que soit le format demandé, et refuse <code>lastNObservations</code> combiné à un intervalle de dates; le serveur lit le XML et explique le refus.{/}</dd>
+      </div>
+      <div>
+        <p class="label">RDaaS</p>
+        <dt>{en}The current NAICS, with no categories{fr}Le SCIAN actuel, sans catégories{/}</dt>
+        <dd>{en}RDaaS answers a request for the category tree of the current NAICS (2022.1.0) with an empty body, while older versions return full data. The result says so and points to the 2017-to-2022 concordance, whose target codes are the current NAICS codes. Index terms switch to French only through a request header, which the server sends.{fr}Le RDaaS répond par un corps vide à une demande de l'arbre des catégories du SCIAN actuel (2022.1.0), alors que les versions antérieures renvoient tout. Le résultat le signale et renvoie à la concordance de 2017 à 2022, dont les codes cibles sont ceux du SCIAN actuel. Les termes de l'index ne passent au français que par un en-tête de requête, que le serveur envoie.{/}</dd>
+      </div>
+      <div>
+        <p class="label">{en}Catalogues{fr}Catalogues{/}</p>
+        <dt>{en}Searches that ignore the keyword{fr}Des recherches qui ignorent le mot-clé{/}</dt>
+        <dd>{en}The reference, analysis and data catalogues ignore the search term, and list everything, unless the session has first visited the base page. The server warms the session up, notices when it has expired, and warms it up again before retrying.{fr}Les catalogues de référence, d'analyse et de données ignorent le terme cherché, et listent tout, si la session n'a pas d'abord visité la page de base. Le serveur prépare la session, remarque quand elle a expiré et la prépare de nouveau avant de réessayer.{/}</dd>
+      </div>
+      <div>
+        <p class="label">{en}Surveys, geography{fr}Enquêtes, géographie{/}</p>
+        <dt>{en}Errors that look like something else{fr}Des erreurs déguisées{/}</dt>
+        <dd>{en}An unknown survey id ends on StatCan's own error page, which answers HTTP 500; the server reports it as not found. The census geography service returns every error as HTTP 200 with an error object inside, and about one request in three to five hits a passing HTTP 500, which the shared retry layer absorbs.{fr}Un identifiant d'enquête inconnu aboutit à la page d'erreur de Statistique Canada, qui répond HTTP 500; le serveur le signale comme introuvable. Le service de géographie du recensement renvoie toutes ses erreurs en HTTP 200, avec un objet d'erreur, et environ une requête sur trois à cinq subit une erreur HTTP 500 passagère, que la couche commune de nouvelles tentatives absorbe.{/}</dd>
+      </div>
+      <div>
+        <p class="label">{en}Census, SDG{fr}Recensement, ODD{/}</p>
+        <dt>{en}One shape across different sources{fr}Une seule forme pour des sources différentes{/}</dt>
+        <dd>{en}The 2021 Census Profile picks its language from a request header rather than a parameter, and the two SDG frameworks name the same metadata fields differently. Callers pass <code>lang</code> and <code>framework</code> and get one consistent shape.{fr}Le Profil du recensement de 2021 choisit sa langue par un en-tête de requête plutôt que par un paramètre, et les deux cadres des ODD nomment différemment les mêmes champs de métadonnées. L'appelant passe <code>lang</code> et <code>framework</code> et obtient toujours la même forme.{/}</dd>
+      </div>
+    </dl>
+    <p class="notice sc-audit">{en}<b>Why the live services, not mocks.</b> The first StatCan build called only 2 of its 32 tools against the real API; the rest passed tests written against hand-made fixtures. Calling all 32 live found 9 more bugs that the fixtures could not catch, among them wrong field names for 4 of the 10 code-set categories and footnotes that are objects, not strings. The rule since then: before a client is done, a script calls every function it exports against the real API, and the test suite fails for any module without a live smoke test.{fr}<b>Pourquoi les services réels, et non des simulations.</b> La première version du module n'appelait que 2 de ses 32 outils sur l'API réelle; les autres passaient des tests écrits d'après des données fictives. L'appel en direct des 32 outils a révélé 9 autres bogues que ces données ne pouvaient pas détecter, dont des noms de champs erronés pour 4 des 10 catégories d'ensembles de codes et des notes qui sont des objets, pas des chaînes. La règle depuis : avant qu'un client soit terminé, un script appelle chacune de ses fonctions sur l'API réelle, et la suite de tests échoue pour tout module sans test de fumée en direct.{/}</p>
+  </div>
+</section>
+
+<section class="section" id="scripts">
+  <div class="wrap sc-split">
+    <div class="sc-split-head">
+      <p class="label">{en}Reproducible code{fr}Code reproductible{/}</p>
+      <h2>{en}From a call to a script{fr}D'un appel à un script{/}</h2>
+      <p>{en}<a href="{{root}}tools.html#t-reproduce_code"><code>reproduce_code</code></a> turns a StatCan call into an R, Python, Stata or Julia script that fetches the same data from StatCan, so the analysis runs without the agent. What the script does depends on the call.{fr}<a href="{{root}}tools.html#t-reproduce_code"><code>reproduce_code</code></a> transforme un appel à Statistique Canada en script R, Python, Stata ou Julia qui récupère les mêmes données à la source : l'analyse tourne sans l'agent. Ce que fait le script dépend de l'appel.{/}</p>
+    </div>
+    <div class="sc-split-body">
+      <div class="table-wrap">
+        <table class="params sc-scripts">
+          <thead><tr><th>{en}Call{fr}Appel{/}</th><th>{en}Script{fr}Script{/}</th></tr></thead>
+          <tbody>
+            <tr><td>{en}A <code>wds_</code> or <code>sdmx_</code> call with a <code>product_id</code>{fr}Un appel <code>wds_</code> ou <code>sdmx_</code> avec un <code>product_id</code>{/}</td><td>{en}Downloads the full table as CSV, to filter to the rows the tool returned; in R, cansim's <code>get_cansim()</code>.{fr}Télécharge le tableau complet en CSV, à filtrer selon les lignes renvoyées par l'outil; en R, <code>get_cansim()</code> de cansim.{/}</td></tr>
+            <tr><td><code>wds_get_data_from_vectors</code></td><td>{en}Sends the same WDS request for those vectors; in R, cansim's <code>get_cansim_vector()</code>.{fr}Envoie la même requête WDS pour ces vecteurs; en R, <code>get_cansim_vector()</code> de cansim.{/}</td></tr>
+            <tr><td><code>sdmx_get_vector_data</code></td><td>{en}Fetches the same vector through WDS, which serves it as JSON.{fr}Récupère le même vecteur par le WDS, qui le sert en JSON.{/}</td></tr>
+            <tr><td>{en}A <code>statcan_pumf_</code> call with a ZIP <code>url</code>{fr}Un appel <code>statcan_pumf_</code> avec l'<code>url</code> d'un ZIP{/}</td><td>{en}Downloads the same ZIP, with notes on the weight variable and on reading fixed-width files with the Stata, SPSS or SAS files inside it. The weighted table itself is computed by the server.{fr}Télécharge le même ZIP, avec des notes sur la variable de poids et sur la lecture des fichiers à largeur fixe à l'aide des fichiers Stata, SPSS ou SAS qu'il contient. Le tableau pondéré lui-même est calculé par le serveur.{/}</td></tr>
+            <tr><td><code>statcan_census_tables_get_downloads</code></td><td>{en}2016: the full-table CSV, and in R the Beyond 20/20 file read with canivt. 2006 and 2011: R only, with canivt.{fr}2016 : le CSV du tableau complet et, en R, le fichier Beyond 20/20 lu avec canivt. 2006 et 2011 : R seulement, avec canivt.{/}</td></tr>
+            <tr><td><code>statcan_indicators_get_indicators</code></td><td>{en}Downloads the same feed and repeats the tool's filters.{fr}Télécharge le même flux et reprend les filtres de l'outil.{/}</td></tr>
+            <tr><td>{en}The Daily, and the documents and analysis catalogues{fr}Le Quotidien, et les catalogues de documents et d'analyses{/}</td><td>{en}No script: these return documents, not data.{fr}Aucun script : ils renvoient des documents, pas des données.{/}</td></tr>
+            <tr><td>{en}Any other StatCan tool{fr}Tout autre outil de Statistique Canada{/}</td><td>{en}The tool runs once while its upstream requests are recorded, and the script repeats the data request exactly.{fr}L'outil s'exécute une fois pendant que ses requêtes sont enregistrées, et le script reprend exactement la requête de données.{/}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="questions">
+  <div class="wrap sc-split">
+    <div class="sc-split-head">
+      <p class="label">{en}Examples{fr}Exemples{/}</p>
+      <h2>{en}Questions an agent can answer{fr}Des questions auxquelles un agent peut répondre{/}</h2>
+      <p>{en}Ask in plain language, in English or French. Naming the table or survey helps but is not required.{fr}Posez la question en langage courant, en français ou en anglais. Nommer le tableau ou l'enquête aide, sans être nécessaire.{/}</p>
+    </div>
+    <div class="sc-split-body">
+      <ul class="prompts">
+        <li>{en}What was the 12-month change in the Consumer Price Index each month since 2019? Use table 18-10-0004 and cite it.{fr}Quelle a été la variation sur 12 mois de l'Indice des prix à la consommation, chaque mois depuis 2019? Utilisez le tableau 18-10-0004 et citez-le.{/}</li>
+        <li>{en}From the 2021 Census public use microdata, what share of adults aged 25 to 64 hold a bachelor's degree in each province, with standard errors?{fr}D'après les microdonnées à grande diffusion du recensement de 2021, quelle part des adultes de 25 à 64 ans détient un baccalauréat dans chaque province, avec les erreurs-types?{/}</li>
+        <li>{en}What was the median total income of households in each census tract of Halifax in 2021?{fr}Quel était le revenu total médian des ménages dans chaque secteur de recensement d'Halifax en 2021?{/}</li>
+        <li>{en}Which NAICS 2022 codes replaced NAICS 2017 code 519130, and what does each cover?{fr}Quels codes du SCIAN 2022 remplacent le code 519130 du SCIAN 2017, et que couvre chacun?{/}</li>
+        <li>{en}Which surveys publish public use microdata on health, and which weight variables does the latest file use?{fr}Quelles enquêtes publient des microdonnées à grande diffusion sur la santé, et quelles variables de poids le fichier le plus récent utilise-t-il?{/}</li>
+        <li>{en}How does Statistics Canada define the low-income measure after tax, and which document explains the method?{fr}Comment Statistique Canada définit-il la mesure de faible revenu après impôt, et quel document en explique la méthode?{/}</li>
+        <li lang="{en}fr{fr}en{/}">{en}Quels tableaux de Statistique Canada sur le logement ont été mis à jour ce mois-ci, et qu'en a dit Le Quotidien?{fr}Which Statistics Canada tables on housing were updated this month, and what did The Daily say about them?{/}</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="next">
+  <div class="wrap">
+    <ul class="sc-next">
+      <li><p class="label">{en}Tools{fr}Outils{/}</p><a href="{{root}}tools.html#m-statcan">{en}Browse all {{statcan_tool_count}} Statistics Canada tools{fr}Parcourir les {{statcan_tool_count}} outils de Statistique Canada{/}</a><p>{en}Every tool's parameters, keywords and an example call.{fr}Les paramètres, les mots-clés et un exemple d'appel pour chaque outil.{/}</p></li>
+      <li><p class="label">{en}Case studies{fr}Études de cas{/}</p><a href="{{root}}cases.html">{en}See StatCan data in real questions{fr}Voir les données de Statistique Canada à l'œuvre{/}</a><p>{en}Microdata estimates with confidence intervals, and the CPI against the inflation target, with the calls behind each chart.{fr}Des estimations tirées de microdonnées avec leurs intervalles de confiance, et l'IPC par rapport à la cible d'inflation, avec les appels derrière chaque graphique.{/}</p></li>
+      <li><p class="label">{en}Connect{fr}Connexion{/}</p><a href="{{root}}connect.html">{en}Add MapleStats to your agent{fr}Ajouter MapleStats à votre agent{/}</a><p>{en}Two steps, no account or API key.{fr}Deux étapes, sans compte ni clé d'API.{/}</p></li>
+    </ul>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>
