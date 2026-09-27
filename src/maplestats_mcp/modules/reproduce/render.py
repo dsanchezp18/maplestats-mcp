@@ -28,6 +28,7 @@ _STDLIB = {
     "pathlib",
     "re",
     "ssl",
+    "time",
     "unicodedata",
     "xml",
     "zipfile",
@@ -547,7 +548,13 @@ def _py_imports(lines: list[str]) -> str:
 
 
 def py_packages(imports: list[str], spec: Spec) -> list[str]:
-    names = {"httpx": "httpx[http2]", "polars": "polars", "pandas": "pandas", "certifi": "certifi"}
+    names = {
+        "httpx": "httpx[http2]",
+        "polars": "polars",
+        "pandas": "pandas",
+        "certifi": "certifi",
+        "bs4": "beautifulsoup4",
+    }
     packages = {names[line.split()[1]] for line in imports if line.split()[1] in names}
     if "pandas" in packages:
         packages |= {"lxml", "pyarrow"}
@@ -630,6 +637,42 @@ def _stata_literals(code: str) -> str:
     return code
 
 
+def _string_spans(statement: str) -> list[tuple[int, int]]:
+    """Where the string literals (whole f-strings included) sit in a one-line statement."""
+    spans: list[tuple[int, int]] = []
+    depth, start = 0, 0
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(statement).readline):
+            if token.type == tokenize.FSTRING_START:
+                if depth == 0:
+                    start = token.start[1]
+                depth += 1
+            elif token.type == tokenize.FSTRING_END:
+                depth -= 1
+                if depth == 0:
+                    spans.append((start, token.end[1]))
+            elif token.type == tokenize.STRING and depth == 0:
+                spans.append((token.start[1], token.end[1]))
+    except (tokenize.TokenError, SyntaxError):
+        return []
+    return spans
+
+
+def _tidy_brackets(statement: str) -> str:
+    """Drop the spaces that joining a statement's lines leaves inside brackets
+    ("f( a, )" -> "f(a)"), outside its string literals: a filter value such as
+    "Canada ( excluding territories )" must reach Python as written."""
+    if not re.search(r"[(\[{] |,? [)\]}]", statement):
+        return statement
+    out: list[str] = []
+    last = 0
+    for start, end in [*_string_spans(statement), (len(statement), len(statement))]:
+        code = re.sub(r"([(\[{]) ", r"\1", statement[last:start])
+        out.append(re.sub(r",? ([)\]}])", r"\1", code) + statement[start:end])
+        last = end
+    return "".join(out)
+
+
 def stata_statements(code: str) -> str:
     """Python rewritten for a Stata `python:` block.
 
@@ -658,9 +701,7 @@ def stata_statements(code: str) -> str:
                 for row in range(start, token.end[0] + 1)
             ]
             indent = parts[0][: len(parts[0]) - len(parts[0].lstrip())]
-            joined = " ".join(part.strip() for part in parts)
-            joined = re.sub(r"([(\[{]) ", r"\1", joined)
-            joined = re.sub(r",? ([)\]}])", r"\1", joined)
+            joined = _tidy_brackets(" ".join(part.strip() for part in parts))
             statements.append(indent + joined)
             start = None
     chunks: list[list[str]] = []
@@ -680,6 +721,17 @@ def stata_statements(code: str) -> str:
         else:
             out.append(f"exec({chr(10).join(chunk) + chr(10)!r})")
     return "\n".join(out) + "\n"
+
+
+def _stata_checks_in_python(spec: Spec) -> bool:
+    """Whether the Python block checks the rows, right after the read.
+
+    Filters and the tool's own steps may leave no rows, and the tool then
+    returns an empty table, so Stata must not assert after them: the block
+    checks the download before them instead, as the Python script does.
+    Without them the do-file keeps its own check after the import.
+    """
+    return spec.kind not in ("zip", "file") and bool(spec.filters or "python" in spec.prepare)
 
 
 def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
@@ -703,6 +755,11 @@ def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
         []
         if spec.kind in ("zip", "file")
         else [
+            *(
+                [f"assert data.height > 0, {json.dumps(spec.url + ' returned no rows')}\n"]
+                if _stata_checks_in_python(spec)
+                else []
+            ),
             *py_prepare(spec),
             flatten,
             f'data.write_csv(RAW_DIR / "{csv_name}")\n',
@@ -809,7 +866,13 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
     )
     sections = [_header("*", spec, tool), setup, "* 1. Read inputs\n", read]
     if spec.kind not in ("zip", "file"):
-        sections += ["* 2. Check inputs\n", "assert _N > 0\n", "* 3. Prepare data\n", *prepare]
+        check = (
+            "* The Python block checked the download for rows before its filters and\n"
+            "* steps, which may leave none (the tool then returns an empty table).\n"
+            if _stata_checks_in_python(spec)
+            else "assert _N > 0\n"
+        )
+        sections += ["* 2. Check inputs\n", check, "* 3. Prepare data\n", *prepare]
     sections.append("log close\n")
     return _join(*sections), packages
 

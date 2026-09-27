@@ -145,6 +145,41 @@ StatusFilter = Literal["current", "released", "all"]
 _NOT_APPLICABLE = {"n/a", "na", "s.o.", "s.o", "so", "o.s.", "os", "-", ""}
 _ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 
+# What the parsers check each page against, kept here (not inline) so
+# reproduce/cfia.py writes the same checks and spellings into its scripts.
+# Header cells are compared folded (_fold), without hidden text.
+YEAR_HEADING = re.compile(r"(19|20)\d{2}")
+AS_OF = re.compile(r"(?:Current as of|À jour en date du)\s*:?\s*(\d{4}-\d{2}-\d{2})", re.IGNORECASE)
+REPORTABLE_COLUMNS = (["disease", "total"], ["maladie", "total"])
+DETECTION_COLUMNS = (("year", "annee"), "date", ("location", "lieu"))
+PREMISES_TABLE_ID = "dataset-filter"
+PREMISES_COLUMNS = (
+    ("date detected", "date de detection"),
+    "province",
+    ("premises type", "type de lieu"),
+)
+STATUS_FIRST_COLUMN = "province"
+# Premises cells, compared folded with everything but letters removed.
+PREMISES_TYPES = {
+    "commercial": ("commercial", "commerciale"),
+    "non_commercial": ("noncommercial", "noncommerciale"),
+    "captive_wild": ("captivewild", "fauneencaptivite", "sauvagecaptif"),
+}
+WOAH_CLASSES = {
+    "poultry": ("poultry", "volailles", "volaille"),
+    "non_poultry": ("nonpoultry", "nonvolailles", "nonvolaille"),
+}
+LOW_PATHOGENIC = ("lpai", "iafp")
+# The order column's first line, folded, starts with one of these.
+ORDER_PREFIXES: dict[str, tuple[str, ...]] = {
+    "active": ("active", "actif"),
+    "revoked": ("revoked", "revoque"),
+    "released": ("released", "zone liberee", "liberee", "libere"),
+}
+QUARANTINE_MARKER = "quarant"
+# "Alberta and Saskatchewan", "Alberta et Saskatchewan" (folded).
+LOCATION_SEPARATORS = re.compile(r",|\band\b|\bet\b|/")
+
 
 # ---------------------------------------------------------------------------
 # Small helpers
@@ -244,7 +279,7 @@ def province_code(text: str) -> str | None:
 
 def province_codes_in(location: str) -> list[str]:
     """Codes for each province named in 'Alberta and Saskatchewan' or 'Alberta et Saskatchewan'."""
-    parts = re.split(r",|\band\b|\bet\b|/", _fold(location))
+    parts = LOCATION_SEPARATORS.split(_fold(location))
     codes: list[str] = []
     for part in parts:
         code = province_code(part.strip())
@@ -403,6 +438,14 @@ def date_modified(soup: BeautifulSoup | Tag) -> date | None:
         return None
 
 
+def page_title(soup: BeautifulSoup | Tag) -> str | None:
+    """The page's <h1>, which the Canada.ca terms ask a reproduction to credit."""
+    node = soup.find("h1")
+    if not isinstance(node, Tag):
+        return None
+    return _clean(node.get_text(" ")) or None
+
+
 def _table_notes(main: Tag) -> dict[str, str]:
     """Table note text by id ('fn1' -> 'Atypical scrapie'), without the return link."""
     notes: dict[str, str] = {}
@@ -464,6 +507,7 @@ class _ReportablePage:
     rows: tuple[_YearRow, ...]
     current_as_of: date | None
     modified: date | None
+    title: str | None = None
 
 
 def parse_reportable_page(page: str, url: str) -> _ReportablePage:
@@ -472,9 +516,7 @@ def parse_reportable_page(page: str, url: str) -> _ReportablePage:
     modified = date_modified(soup)
     notes = _table_notes(main)
     text = _clean(main.get_text(" "))
-    as_of_match = re.search(
-        r"(?:Current as of|À jour en date du)\s*:?\s*(\d{4}-\d{2}-\d{2})", text, re.IGNORECASE
-    )
+    as_of_match = AS_OF.search(text)
     current_as_of = date.fromisoformat(as_of_match.group(1)) if as_of_match else None
 
     tables = main.find_all("table")
@@ -484,10 +526,10 @@ def parse_reportable_page(page: str, url: str) -> _ReportablePage:
     for table in tables:
         heading = table.find_previous("h2")
         year_text = _clean(heading.get_text(" ")) if isinstance(heading, Tag) else ""
-        if not re.fullmatch(r"(19|20)\d{2}", year_text):
+        if not YEAR_HEADING.fullmatch(year_text):
             _changed(url, f"a table is not under a year heading ({year_text[:40]!r})")
         header = _header_cells(table)
-        if header[:2] not in (["disease", "total"], ["maladie", "total"]):
+        if header[:2] not in REPORTABLE_COLUMNS:
             _changed(url, f"unexpected columns {header}")
         for tr in _body_rows(table):
             cells = tr.find_all("td")
@@ -502,7 +544,7 @@ def parse_reportable_page(page: str, url: str) -> _ReportablePage:
             if not name or count is None:
                 _changed(url, f"unreadable row {name!r} / {count_text!r}")
             rows.append(_YearRow(int(year_text), disease_key(name), name, count, note))
-    return _ReportablePage(tuple(rows), current_as_of, modified)
+    return _ReportablePage(tuple(rows), current_as_of, modified, page_title(soup))
 
 
 _REPORTABLE_NOTES = {
@@ -676,6 +718,7 @@ class _DetectionRow:
 class _DetectionPage:
     rows: tuple[_DetectionRow, ...]
     modified: date | None
+    title: str | None = None
 
 
 _HERDS = re.compile(
@@ -689,13 +732,14 @@ def parse_detection_page(page: str, url: str) -> _DetectionPage:
     main = _main(soup, url)
     notes = _table_notes(main)
     table = None
+    years, dates, locations = DETECTION_COLUMNS
     for candidate in main.find_all("table"):
         header = _header_cells(candidate)
         if (
             len(header) >= 4
-            and header[0] in ("year", "annee")
-            and header[1].startswith("date")
-            and header[2] in ("location", "lieu")
+            and header[0] in years
+            and header[1].startswith(dates)
+            and header[2] in locations
         ):
             table = candidate
             break
@@ -708,7 +752,7 @@ def parse_detection_page(page: str, url: str) -> _DetectionPage:
         texts = [_clean(c.get_text(" ")) for c in cells]
         if not any(texts):
             continue
-        if len(cells) < 4 or not re.fullmatch(r"(19|20)\d{2}", texts[0]):
+        if len(cells) < 4 or not YEAR_HEADING.fullmatch(texts[0]):
             _changed(url, f"unreadable row {texts}")
         date_text, date_note = _strip_notes(cells[1], notes)
         animal, animal_note = _strip_notes(cells[3], notes)
@@ -732,7 +776,7 @@ def parse_detection_page(page: str, url: str) -> _DetectionPage:
         )
     if not rows:
         _changed(url, "the detection table is empty")
-    return _DetectionPage(tuple(rows), date_modified(soup))
+    return _DetectionPage(tuple(rows), date_modified(soup), page_title(soup))
 
 
 @dataclass
@@ -1007,6 +1051,7 @@ class _PremisesPage:
     rows: tuple[_PremisesRow, ...]
     skipped: int
     modified: date | None
+    title: str | None = None
 
 
 _PREMISES_ID = re.compile(r"^\s*([A-Z]{2})\s*-\s*IP\s*(\d+)\s*", re.IGNORECASE)
@@ -1022,12 +1067,9 @@ def normalize_premises_type(text: str) -> tuple[str | None, str | None]:
     if not label or _not_applicable(label):
         return None, None
     compact = re.sub(r"[^a-z]", "", _fold(label))
-    if compact in ("commercial", "commerciale"):
-        return "commercial", label
-    if compact in ("noncommercial", "noncommerciale"):
-        return "non_commercial", label
-    if compact in ("captivewild", "fauneencaptivite", "sauvagecaptif"):
-        return "captive_wild", label
+    for key, spellings in PREMISES_TYPES.items():
+        if compact in spellings:
+            return key, label
     return re.sub(r"[^a-z0-9]+", "_", _fold(label)).strip("_"), label
 
 
@@ -1035,47 +1077,44 @@ def normalize_woah(text: str) -> tuple[Woah | None, str | None, bool]:
     """(poultry|non_poultry|None, label, low pathogenic?) from the WOAH column."""
     label = _clean(text)
     folded = _fold(label)
-    low = "lpai" in folded or "iafp" in folded
+    low = any(marker in folded for marker in LOW_PATHOGENIC)
     compact = re.sub(r"[^a-z]", "", folded)
-    if compact in ("poultry", "volailles", "volaille"):
-        return "poultry", label, low
-    if compact in ("nonpoultry", "nonvolailles", "nonvolaille"):
-        return "non_poultry", label, low
+    for key, spellings in WOAH_CLASSES.items():
+        if compact in spellings:
+            return cast(Woah, key), label, low
     return None, label or None, low
 
 
 def normalize_order(text: str) -> Order | None:
     first = _fold(text.split(";")[0])
-    if first.startswith(("active", "actif")):
-        return "active"
-    if first.startswith(("revoked", "revoque")):
-        return "revoked"
-    if first.startswith(("released", "zone liberee", "liberee", "libere")):
-        return "released"
+    for key, prefixes in ORDER_PREFIXES.items():
+        if first.startswith(prefixes):
+            return cast(Order, key)
     return None
 
 
 def parse_premises_page(page: str, url: str) -> _PremisesPage:
     soup = BeautifulSoup(page, "html.parser")
     main = _main(soup, url)
-    table = main.find("table", id="dataset-filter")
+    table = main.find("table", id=PREMISES_TABLE_ID)
     if not isinstance(table, Tag):
         table = next(
             (
                 t
                 for t in main.find_all("table")
-                if (_header_cells(t) or [""])[0].startswith(("date detected", "date de detection"))
+                if (_header_cells(t) or [""])[0].startswith(PREMISES_COLUMNS[0])
             ),
             None,
         )
     if not isinstance(table, Tag):
         _changed(url, "no infected premises table")
     header = _header_cells(table)
+    dates, province, types = PREMISES_COLUMNS
     if (
         len(header) != 7
-        or not header[0].startswith(("date detected", "date de detection"))
-        or header[2] != "province"
-        or not header[3].startswith(("premises type", "type de lieu"))
+        or not header[0].startswith(dates)
+        or header[2] != province
+        or not header[3].startswith(types)
     ):
         _changed(url, f"unexpected columns {header}")
 
@@ -1103,7 +1142,8 @@ def parse_premises_page(page: str, url: str) -> _PremisesPage:
         # remaining <sup> wrapper (which on AB-IP104 in French holds the
         # location itself).
         current = any(
-            "quarant" in _fold(span.get_text()) for span in id_cell.find_all(class_="invisible")
+            QUARANTINE_MARKER in _fold(span.get_text())
+            for span in id_cell.find_all(class_="invisible")
         )
         released = bool(id_cell.find("a", class_="fn-lnk"))
         for node in id_cell.select(".invisible, a.fn-lnk"):
@@ -1152,7 +1192,7 @@ def parse_premises_page(page: str, url: str) -> _PremisesPage:
     # A few odd rows are skipped with a note; many mean the layout moved.
     if skipped > max(5, len(rows) // 20):
         _changed(url, f"{skipped} rows could not be read")
-    return _PremisesPage(tuple(rows), skipped, date_modified(soup))
+    return _PremisesPage(tuple(rows), skipped, date_modified(soup), page_title(soup))
 
 
 @dataclass(frozen=True)
@@ -1163,13 +1203,15 @@ class _StatusPage:
     total_birds: int | None
     birds_as_of: date | None
     modified: date | None
+    title: str | None = None
 
 
 def parse_status_page(page: str, url: str) -> _StatusPage:
     soup = BeautifulSoup(page, "html.parser")
     main = _main(soup, url)
     table = next(
-        (t for t in main.find_all("table") if (_header_cells(t) or [""])[0] == "province"), None
+        (t for t in main.find_all("table") if (_header_cells(t) or [""])[0] == STATUS_FIRST_COLUMN),
+        None,
     )
     if not isinstance(table, Tag):
         _changed(url, "no status-by-province table")
@@ -1204,7 +1246,7 @@ def parse_status_page(page: str, url: str) -> _StatusPage:
         )
     if not rows:
         _changed(url, "the status table is empty")
-    return _StatusPage(tuple(rows), *totals, birds_as_of, date_modified(soup))
+    return _StatusPage(tuple(rows), *totals, birds_as_of, date_modified(soup), page_title(soup))
 
 
 _PREMISES_TYPE_LABELS = {

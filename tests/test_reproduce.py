@@ -16,7 +16,7 @@ import pytest
 
 from maplestats_mcp.modules.reproduce import client, probe
 from maplestats_mcp.modules.reproduce.render import RENDERERS
-from maplestats_mcp.modules.reproduce.spec import Filter, Spec
+from maplestats_mcp.modules.reproduce.spec import Code, Filter, Spec
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput
@@ -763,6 +763,82 @@ def test_stata_python_block_escapes_user_text_but_decodes_to_it():
 
     plain = "x = 'abc'\nurl = 'https://example.ca/a?b=1'\ny = 7 // 2\n"
     assert _stata_literals(plain) == plain
+
+
+def test_stata_python_block_keeps_spaces_inside_brackets_in_strings():
+    # Joining a statement's lines tidies "( a, )" to "(a)" in code, but it used
+    # to reach inside literals too, so Stata filtered on another value.
+    values = ["Canada ( excluding territories )", "x [ y ], )", "{ z }"]
+    spec = Spec(
+        kind="xlsx",
+        url="https://example.ca/data/file.xlsx",
+        file_name="file.xlsx",
+        method="m",
+        sheet="Table ( 1 )",
+        filters=[Filter("is", ["Geography"], values[0]), Filter("contains", ["Name"], values[1])],
+        prepare={"python": Code([], f"label = f'{values[2]} {{ len( values ) }}'\n")},
+    )
+    do, _ = RENDERERS["stata"](spec, "tool")
+    strings = _stata_block_strings(do)
+    assert values[0].lower() in strings and values[1].lower() in strings
+    assert "Table ( 1 )" in strings
+    assert "label = f'{ z } { len( values ) }'" in do
+    # Code outside literals is still tidied as before.
+    from maplestats_mcp.modules.reproduce.render import stata_statements
+
+    assert stata_statements("f(\n    'a ( b )',\n    [ 1, 2 ],\n)\n") == "f('a ( b )', [1, 2])\n"
+
+
+def _filtered_to_nothing() -> Spec:
+    return Spec(
+        kind="csv",
+        url="https://example.ca/data/file.csv",
+        file_name="file.csv",
+        method="m",
+        filters=[Filter("is", ["Name"], "nobody")],
+    )
+
+
+def test_stata_checks_rows_before_filters_not_after():
+    # A filter may leave no rows, and the tool then returns an empty table: the
+    # do-file used to assert _N > 0 after the Python block had filtered.
+    do, _ = RENDERERS["stata"](_filtered_to_nothing(), "tool")
+    assert "assert _N" not in do
+    block = do.split("\npython:\n", 1)[1].split("\nend\n", 1)[0].splitlines()
+    check = block.index(
+        'assert data.height > 0, "https://example.ca/data/file.csv returned no rows"'
+    )
+    assert check - 1 == next(
+        i for i, line in enumerate(block) if line.startswith("data = pl.read_csv")
+    )
+    assert check + 1 == next(
+        i for i, line in enumerate(block) if line.startswith("data = data.filter")
+    )
+    # The Python script checks at the same point.
+    python, _ = RENDERERS["python"](_filtered_to_nothing(), "tool")
+    assert python.index("assert data.height > 0") < python.index("data = data.filter(")
+    # Without filters or the tool's steps the do-file keeps its own check.
+    plain = Spec(kind="json", url="https://example.ca/a.json", file_name="a.json", method="m")
+    do, _ = RENDERERS["stata"](plain, "tool")
+    assert "\nassert _N > 0\n" in do and "assert data.height" not in do
+
+
+def test_stata_block_runs_to_the_end_when_filters_remove_every_row(
+    httpx_mock, tmp_path, monkeypatch
+):
+    pl = pytest.importorskip("polars")
+    monkeypatch.chdir(tmp_path)
+    httpx_mock.add_response(url="https://example.ca/data/file.csv", text="Name,Value\nAda,1\n")
+    do, _ = RENDERERS["stata"](_filtered_to_nothing(), "tool")
+    block = do.split("\npython:\n", 1)[1].split("\nend\n", 1)[0]
+    namespace: dict[str, object] = {}
+    for line in block.splitlines():  # Stata compiles the block one line at a time
+        exec(compile(line, "<stata-python>", "exec"), namespace)  # noqa: S102
+    written = pl.read_csv(tmp_path / "data/raw/file_prepared.csv")
+    assert written.columns == ["Name", "Value"] and written.height == 0
+    # Nothing after the block asserts on the (empty) imported table.
+    after = do.split("\nend\n", 1)[1]
+    assert "assert" not in after
 
 
 async def test_argument_ids_cannot_leave_their_string_or_comment():
