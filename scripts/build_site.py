@@ -544,12 +544,8 @@ SEARCH_EXAMPLE: dict[Lang, str] = {
     "en": "Bank of Canada policy rate",
     "fr": "taux directeur de la Banque du Canada",
 }
-HERO_QUERY: dict[Lang, str] = {
-    "en": "housing starts",
-    "fr": "taux d'inoccupation des logements locatifs",
-}
 # Checked against search_tools on 2026-09-26: each one's top results are on topic.
-HERO_SUGGESTIONS: dict[Lang, tuple[str, ...]] = {
+SEARCH_SUGGESTIONS: dict[Lang, tuple[str, ...]] = {
     "en": (
         "federal contract awards",
         "PUMF bootstrap weights",
@@ -1339,7 +1335,6 @@ async def build(out: Path) -> dict[str, int]:
         "search_top": str(index["top"]),
         "reproduce_tabs": await reproduce_tabs(),
     }
-    hero_results = {lang: await server_search(HERO_QUERY[lang]) for lang in LANGS}
     search_results = {lang: await server_search(SEARCH_EXAMPLE[lang]) for lang in LANGS}
 
     if out.exists():
@@ -1368,19 +1363,15 @@ async def build(out: Path) -> dict[str, int]:
                 "root": root,
                 "page": page.name,
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
-                "hero_query": esc(HERO_QUERY[lang]),
-                "hero_results": result_items(hero_results[lang], by_name, lang, root),
-                "hero_suggestions": " ".join(
+                "search_query": esc(SEARCH_EXAMPLE[lang]),
+                "search_suggestions": " ".join(
                     f'<button type="button" data-q="{esc(q)}">{esc(q)}</button>'
-                    for q in HERO_SUGGESTIONS[lang]
+                    for q in SEARCH_SUGGESTIONS[lang]
                 ),
                 "plan_request": highlight_json(
                     json.dumps({"question": PLAN_QUESTION[lang]}, ensure_ascii=False)
                 ),
                 "plan_panel": plan_panel(lang, root),
-                "search_request": highlight_json(
-                    json.dumps({"query": SEARCH_EXAMPLE[lang]}, ensure_ascii=False)
-                ),
                 "cur_tools": ' aria-current="page"' if page.name == "tools.html" else "",
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "search_results": result_items(search_results[lang], by_name, lang, root),
@@ -1402,7 +1393,7 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         "# MapleStats MCP",
         "",
         (
-            "> One MCP server for Canadian public data: Statistics Canada, the Bank of Canada, "
+            "> One MCP server for Canadian open data: Statistics Canada, the Bank of Canada, "
             f"CMHC, federal agencies and {counts['catalogue_count']} open-data catalogues, in "
             "English and French. Clients see plan_query, search_tools and call_tool; every "
             "other tool is found with search_tools and run with call_tool."

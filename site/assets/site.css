@@ -420,7 +420,7 @@ mark {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: clamp(28px, 3vw, 40px) clamp(24px, 2.5vw, 32px);
   align-items: start;
   padding-block: clamp(36px, 4.5vw, 56px) clamp(48px, 5.5vw, 80px);
@@ -435,9 +435,53 @@ mark {
   border-top: 2px solid var(--ink);
 }
 
+.hero .lede {
+  max-width: 44ch;
+  font-size: clamp(1.1875rem, 1rem + 0.7vw, 1.5rem);
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.lede-2 {
+  margin-top: 18px;
+  max-width: 56ch;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.58;
+  color: var(--ink-2);
+}
+
+/* The pixel leaf at hero scale: the header mark's cells in a ruled table. */
+.hero-mark {
+  justify-self: end;
+  width: min(100%, 420px);
+  padding-top: 20px;
+  border-top: 2px solid var(--ink);
+}
+
+.hero-mark svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.leaf-grid .cell {
+  fill: var(--accent);
+}
+
+.leaf-grid .rule {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
 @media (max-width: 980px) {
   .hero {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-mark {
+    display: none;
   }
 }
 
