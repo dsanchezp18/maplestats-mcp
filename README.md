@@ -1,5 +1,8 @@
 <p align="center">
-  <h1 align="center">🍁 MapleStats MCP</h1>
+  <img src="https://raw.githubusercontent.com/dsanchezp18/maplestats-mcp/main/site/assets/logo.svg" width="160" height="160" alt="MapleStats MCP logo: a white pixel maple leaf over the name maplestats-mcp on a red square">
+</p>
+<p align="center">
+  <h1 align="center">MapleStats MCP</h1>
   <p align="center">
     <strong>One MCP server for Canadian open data.</strong>
   </p>
