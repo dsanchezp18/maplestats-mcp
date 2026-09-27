@@ -545,7 +545,7 @@ SEARCH_EXAMPLE: dict[Lang, str] = {
     "fr": "taux directeur de la Banque du Canada",
 }
 HERO_QUERY: dict[Lang, str] = {
-    "en": "rental vacancy rates",
+    "en": "housing starts",
     "fr": "taux d'inoccupation des logements locatifs",
 }
 # Checked against search_tools on 2026-09-26: each one's top results are on topic.

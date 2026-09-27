@@ -53,6 +53,34 @@
     },
   };
 
+  /* ---------- Light / dark switch ---------- */
+
+  const themeLabels = {
+    en: { dark: "Dark", light: "Light", toDark: "Switch to dark mode", toLight: "Switch to light mode" },
+    fr: { dark: "Sombre", light: "Clair", toDark: "Passer au mode sombre", toLight: "Passer au mode clair" },
+  }[lang];
+  const systemDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const currentTheme = () => doc.dataset.theme || (systemDark && systemDark.matches ? "dark" : "light");
+
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    const label = button.querySelector("[data-theme-label]");
+    const show = () => {
+      const dark = currentTheme() === "dark";
+      // The button names the mode it switches to.
+      label.textContent = dark ? themeLabels.light : themeLabels.dark;
+      button.setAttribute("aria-label", dark ? themeLabels.toLight : themeLabels.toDark);
+    };
+    button.addEventListener("click", () => {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      doc.dataset.theme = next;
+      store.set("maplestats:theme", next);
+      show();
+    });
+    if (systemDark && systemDark.addEventListener) systemDark.addEventListener("change", show);
+    button.hidden = false;
+    show();
+  });
+
   /* ---------- Tokenizer: a port of shared/search.py ---------- */
 
   function fold(word) {
@@ -63,7 +91,9 @@
   }
 
   function tokenize(text) {
-    const plain = text.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "");
+    // Like search.py: NFKD leaves the ligatures whole, so fold them first.
+    const folded = text.toLowerCase().replace(/œ/g, "oe").replace(/æ/g, "ae");
+    const plain = folded.normalize("NFKD").replace(/\p{M}/gu, "");
     return (plain.match(/[\p{L}\p{N}]{2,}/gu) || []).map(fold);
   }
 
