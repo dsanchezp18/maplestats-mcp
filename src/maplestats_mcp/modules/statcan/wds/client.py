@@ -95,11 +95,16 @@ async def _post(method: str, body: list[dict[str, Any]]) -> list[dict[str, Any]]
         _raise_unavailable(method, exc)
 
 
-async def _get(method: str, path_suffix: str = "", params: dict[str, Any] | None = None) -> Any:
+async def _get(
+    method: str,
+    path_suffix: str = "",
+    params: dict[str, Any] | None = None,
+    timeout: float = 30.0,
+) -> Any:
     await _limiter().acquire()
     url = f"{constants.BASE_URL}{method}{path_suffix}"
     try:
-        return await api_get(url, params=params)
+        return await api_get(url, params=params, timeout=timeout)
     except httpx.HTTPStatusError as exc:
         _raise_if_locked(exc, method)
     except httpx.HTTPError as exc:
@@ -158,7 +163,7 @@ async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
     cache_key = f"wds:{method}"
 
     async def fetch() -> list[dict[str, Any]]:
-        return await _get(method)
+        return await _get(method, timeout=constants.CUBES_LIST_TIMEOUT_SECONDS)
 
     data, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_CUBES_LIST_SECONDS, fetch)
     cubes = [_cube_summary_from_json(obj) for obj in data]

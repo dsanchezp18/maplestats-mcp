@@ -84,3 +84,18 @@ async def test_new_client_sends_project_user_agent(httpx_mock):
     finally:
         await client.aclose()
     assert httpx_mock.get_requests()[0].headers["User-Agent"] == f"maplestats-mcp/{__version__}"
+
+
+async def test_statcan_requests_open_a_fresh_connection(httpx_mock):
+    # StatCan pins a connection to one backend (probed 2026-09-27), so a
+    # retry on the same connection repeats the same failure.
+    url = "https://www12.statcan.gc.ca/rest/census-recensement/CR2016Geo.json"
+    httpx_mock.add_response(url=url, json={})
+    await api_get(url)
+    assert httpx_mock.get_requests()[0].headers["Connection"] == "close"
+
+
+async def test_other_hosts_keep_the_connection(httpx_mock):
+    httpx_mock.add_response(url="https://example.invalid/data", json={})
+    await api_get("https://example.invalid/data")
+    assert httpx_mock.get_requests()[0].headers.get("Connection") != "close"

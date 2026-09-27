@@ -23,3 +23,8 @@ COORDINATE_DIMENSIONS = 10
 # StatCan's documented daily lock window: no reliable data 12am-8:30am ET.
 LOCK_WINDOW_START_HOUR_ET = 0
 LOCK_WINDOW_END_HOUR_ET = 8.5
+
+# The cube list is about 5 MB. Probed 2026-09-27 from GitHub runners: usually
+# under a second, but one runner took 31-70 s on every try, past the shared
+# 30 s default.
+CUBES_LIST_TIMEOUT_SECONDS = 120.0

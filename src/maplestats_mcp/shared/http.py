@@ -145,15 +145,29 @@ def new_client(
     )
 
 
-def _request_headers(headers: dict[str, str] | None) -> dict[str, str]:
+# StatCan hosts whose load balancers pin each connection to one backend.
+# Probed 2026-09-27 from three GitHub runners and locally: on a reused
+# connection geo.statcan.gc.ca answered 500 ten times in a row on one runner
+# and 200 ten times on the others, and www12's census REST API answered twice
+# and then timed out for the rest of the connection. With a new connection per
+# request, failures were independent (geo: 6 of 10 succeeded), so a retry can
+# reach a healthy backend instead of repeating the broken one.
+_FRESH_CONNECTION_HOSTS = frozenset(
+    {"geo.statcan.gc.ca", "www12.statcan.gc.ca", "www150.statcan.gc.ca"}
+)
+
+
+def _request_headers(url: str, headers: dict[str, str] | None) -> dict[str, str]:
     """Identify this client while preserving source-specific overrides.
 
     Montreal's CKAN edge returns 403 to requests with no User-Agent but
     accepts the same request once the client identifies itself. Keeping this
     in shared HTTP plumbing fixes that portal without changing StatCan's
     required HTTP/2 transport or repeating the header in every source client.
+    StatCan hosts also get `Connection: close` (see _FRESH_CONNECTION_HOSTS).
     """
-    return {**_DEFAULT_HEADERS, **(headers or {})}
+    fresh = {"Connection": "close"} if httpx.URL(url).host in _FRESH_CONNECTION_HOSTS else {}
+    return {**_DEFAULT_HEADERS, **fresh, **(headers or {})}
 
 
 def is_retryable(exc: BaseException) -> bool:
@@ -189,7 +203,7 @@ async def api_get(
     timeout: float = 30.0,
 ) -> Any:
     response = await _client.get(
-        url, params=params, headers=_request_headers(headers), timeout=timeout
+        url, params=params, headers=_request_headers(url, headers), timeout=timeout
     )
     response.raise_for_status()
     return decode_json(response, url=url)
@@ -222,7 +236,7 @@ async def get_raw(
     (429/500/502/503/504).
     """
     response = await _client.get(
-        url, params=params, headers=_request_headers(headers), timeout=timeout
+        url, params=params, headers=_request_headers(url, headers), timeout=timeout
     )
     if response.status_code in _PASSTHROUGH_STATUSES:
         return response
@@ -250,7 +264,7 @@ async def post_form_raw(
     JSON-decodes and always sends a JSON body, neither of which fits.
     """
     response = await _client.post(
-        url, data=data, headers=_request_headers(headers), timeout=timeout
+        url, data=data, headers=_request_headers(url, headers), timeout=timeout
     )
     response.raise_for_status()
     return response
@@ -270,7 +284,7 @@ async def api_post(
     timeout: float = 30.0,
 ) -> Any:
     response = await _client.post(
-        url, json=json_body, headers=_request_headers(headers), timeout=timeout
+        url, json=json_body, headers=_request_headers(url, headers), timeout=timeout
     )
     response.raise_for_status()
     return decode_json(response, url=url)
