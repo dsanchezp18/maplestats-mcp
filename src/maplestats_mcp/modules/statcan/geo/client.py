@@ -34,6 +34,12 @@ CONFIG = ArcGISHubConfig(
     domain="geo.statcan.gc.ca",
     rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
+    # Confirmed live 2026-09-26: one of geo.statcan.gc.ca's backends answered
+    # HTTP 500 to every request, and each connection stays on one backend,
+    # so all retries on a reused connection failed together (a live smoke
+    # run did). A new connection per request spreads retries across
+    # backends; failures then became independent (about 1 in 4).
+    fresh_connection_per_request=True,
 )
 
 # `year` and `service` are interpolated directly into the request path

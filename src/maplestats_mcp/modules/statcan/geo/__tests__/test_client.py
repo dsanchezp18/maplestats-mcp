@@ -212,3 +212,14 @@ async def test_list_services_filters_by_language(httpx_mock):
     ]
     everything = await client.list_services("2021")
     assert [s.language for s in everything.services] == ["en", "fr", "en", "fr"]
+
+
+async def test_every_request_opens_a_fresh_connection(httpx_mock):
+    # One broken backend pinned per connection made all retries fail together
+    # (live 2026-09-26); Connection: close spreads them across backends.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/2021?f=json",
+        match_headers={"Connection": "close"},
+        json=_SERVICES_JSON,
+    )
+    await client.list_services("2021")
