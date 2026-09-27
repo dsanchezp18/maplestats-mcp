@@ -2510,6 +2510,7 @@ async def build(out: Path) -> dict[str, int]:
                 "plan_panel": plan_panel(lang, root),
                 "reproduce_tabs": script_tabs(scripts, "rp", SHOW_MORE[lang]),
                 "cur_tools": ' aria-current="page"' if page.name == "tools.html" else "",
+                "cur_sources": ' aria-current="page"' if page.name == "sources.html" else "",
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
                 "cur_cases": ' aria-current="page"' if page.name == "cases.html" else "",

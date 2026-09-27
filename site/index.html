@@ -60,6 +60,46 @@
   </div>
 </section>
 
+
+<section class="section" id="uses">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">{en}Case studies{fr}Études de cas{/}</p>
+      <h2>{en}What can you do with it{fr}Que pouvez-vous en faire{/}</h2>
+      <p>{en}Eight kinds of people asked their agent a real question through MapleStats. Each card opens the answer: the chart, the calls the agent made, and a script that fetches the same numbers again.{fr}Huit profils différents ont posé une vraie question à leur agent grâce à MapleStats. Chaque carte ouvre la réponse : le graphique, les appels de l'agent et un script qui récupère de nouveau les mêmes chiffres.{/}</p>
+    </div>
+    <ul class="uses">
+      <li><a href="{{root}}cases.html#statisticians"><span class="use-who">{en}Statisticians{fr}Statisticiens{/}</span><span class="use-q">{en}A bachelor's degree, province by province{fr}Le baccalauréat, province par province{/}</span><span class="use-n"><b>{{count_pumf}}</b> {en}microdata files{fr}fichiers de microdonnées{/}</span></a></li>
+      <li><a href="{{root}}cases.html#demographers"><span class="use-who">{en}Demographers{fr}Démographes{/}</span><span class="use-q">{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</span><span class="use-n"><b>{{count_ircc}}</b> {en}immigration tables{fr}tableaux d'immigration{/}</span></a></li>
+      <li><a href="{{root}}cases.html#urban-planners"><span class="use-who">{en}Urban planners{fr}Urbanistes{/}</span><span class="use-q">{en}Canada is building up, not out{fr}Le Canada construit en hauteur, pas en largeur{/}</span><span class="use-n"><b>{{count_housing}}</b> {en}housing tables{fr}tableaux sur le logement{/}</span></a></li>
+      <li><a href="{{root}}cases.html#microeconomists"><span class="use-who">{en}Microeconomists{fr}Microéconomistes{/}</span><span class="use-q">{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</span><span class="use-n"><b>{{count_records}}</b> {en}census records{fr}fiches du recensement{/}</span></a></li>
+      <li><a href="{{root}}cases.html#marketers"><span class="use-who">{en}Marketers{fr}Marketing{/}</span><span class="use-q">{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</span><span class="use-n"><b>{{count_cards}}</b> {en}credit cards{fr}cartes de crédit{/}</span></a></li>
+      <li><a href="{{root}}cases.html#macroeconomists"><span class="use-who">{en}Macroeconomists{fr}Macroéconomistes{/}</span><span class="use-q">{en}Inflation, and the band it is meant to stay in{fr}L'inflation, et la fourchette où elle devrait rester{/}</span><span class="use-n"><b>{{count_tables}}</b> {en}Statistics Canada tables{fr}tableaux de Statistique Canada{/}</span></a></li>
+      <li><a href="{{root}}cases.html#scientists"><span class="use-who">{en}Scientists{fr}Scientifiques{/}</span><span class="use-q">{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</span><span class="use-n"><b>{{count_patents}}</b> {en}patents{fr}brevets{/}</span></a></li>
+      <li><a href="{{root}}cases.html#analysts"><span class="use-who">{en}Analysts{fr}Analystes{/}</span><span class="use-q">{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</span><span class="use-n"><b>{{count_series}}</b> {en}Bank of Canada series{fr}séries de la Banque du Canada{/}</span></a></li>
+    </ul>
+    <p class="source-links"><a href="{{root}}cases.html">{en}See all eight case studies{fr}Voir les huit études de cas{/}</a></p>
+  </div>
+</section>
+
+<section class="section" id="sources">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">Sources</p>
+      <h2>{en}Where the data comes from{fr}D'où viennent les données{/}</h2>
+      <p>{en}Federal agencies answer most national questions; provincial agencies and open-data catalogues add the local detail. Every result comes straight from its publisher.{fr}Les organismes fédéraux répondent à la plupart des questions nationales; les organismes provinciaux et les catalogues de données ouvertes ajoutent le détail local. Chaque résultat vient directement de son éditeur.{/}</p>
+    </div>
+    <dl class="source-stats">
+      <div><dt>{{national_count}}</dt><dd>{en}federal and national sources{fr}sources fédérales et nationales{/}</dd></div>
+      <div><dt>{{local_source_count}}</dt><dd>{en}provincial, territorial and city sources{fr}sources provinciales, territoriales et municipales{/}</dd></div>
+      <div><dt>{{places_covered}}/13</dt><dd>{en}provinces and territories with local data{fr}provinces et territoires avec des données locales{/}</dd></div>
+      <div><dt>{{tool_count}}</dt><dd>{en}tools behind one connection{fr}outils derrière une seule connexion{/}</dd></div>
+    </dl>
+    <p class="sources-feature"><a href="{{root}}statcan.html"><strong>{en}Statistics Canada, in depth{fr}Statistique Canada en détail{/}</strong> <span>{en}Every table, series and microdata file an agent can reach, and the hard parts MapleStats handles for you.{fr}Chaque tableau, série et fichier de microdonnées qu'un agent peut atteindre, et les difficultés que MapleStats règle pour vous.{/} <span aria-hidden="true">→</span></span></a></p>
+    <p class="source-links"><a href="{{root}}sources.html">{en}See every source and where it covers{fr}Voir chaque source et ce qu'elle couvre{/}</a><a href="{{root}}tools.html">{en}Browse all {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a></p>
+  </div>
+</section>
+
 <section class="section" id="how">
   <div class="wrap">
     <div class="section-head">
@@ -144,38 +184,6 @@
         </figure>
       </li>
     </ol>
-  </div>
-</section>
-
-<section class="section" id="sources">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="label">Sources</p>
-      <h2>{en}Where the data comes from{fr}D'où viennent les données{/}</h2>
-      <p>{en}Federal agencies answer most national questions. Provincial agencies and open-data catalogues add the local detail in {{places_covered}} of the 13 provinces and territories. Each result comes straight from its publisher; the server keeps no copy.{fr}Les organismes fédéraux répondent à la plupart des questions nationales. Les organismes provinciaux et les catalogues de données ouvertes ajoutent le détail local dans {{places_covered}} des 13 provinces et territoires. Chaque résultat vient directement de son éditeur; le serveur n'en garde aucune copie.{/}</p>
-    </div>
-
-    <h3 class="sub">{en}Federal and national{fr}Fédéral et national{/} <span class="count">{{national_count}}</span></h3>
-    <div class="domains">{{national_sources}}</div>
-    <p class="sources-feature"><a href="{{root}}statcan.html"><strong>{en}Statistics Canada, in depth{fr}Statistique Canada en détail{/}</strong> <span>{en}Every table, series and microdata file an agent can reach, and the hard parts MapleStats handles for you.{fr}Chaque tableau, série et fichier de microdonnées qu'un agent peut atteindre, et les difficultés que MapleStats règle pour vous.{/} <span aria-hidden="true">→</span></span></a></p>
-
-    <div class="local">
-      <h3 class="sub">{en}Provinces, territories and cities{fr}Provinces, territoires et villes{/} <span class="count">{{local_source_count}}</span></h3>
-      <p>{en}Columns follow the Standard Geographical Classification. Hover a cell for the sources it counts. The federal catalogue, open.canada.ca, covers every column and is not counted here.{fr}Les colonnes suivent la Classification géographique type. Survolez une cellule pour voir les sources qu'elle compte. Le catalogue fédéral, ouvert.canada.ca, couvre toutes les colonnes et n'est pas compté ici.{/}</p>
-      {{coverage_matrix}}
-      <p class="legend">
-        <span class="sw"><i class="c1"></i>1</span>
-        <span class="sw"><i class="c2"></i>2</span>
-        <span class="sw"><i class="c3"></i>{en}3 to 5{fr}3 à 5{/}</span>
-        <span class="sw"><i class="c4"></i>{en}6 or more{fr}6 ou plus{/}</span>
-        <span>{en}sources per cell{fr}sources par cellule{/}</span>
-      </p>
-      <details class="local-list">
-        <summary>{en}List every local source{fr}Voir toutes les sources locales{/}</summary>
-        <div class="local-cols">{{coverage_lists}}</div>
-      </details>
-    </div>
-
   </div>
 </section>
 
