@@ -11,8 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.12"
       - run: uv sync --locked
@@ -24,7 +24,7 @@ jobs:
       - name: Tag matches the package version
         run: test "${GITHUB_REF_NAME#v}" = "$(uv run python -c 'import maplestats_mcp; print(maplestats_mcp.__version__)')"
       - run: uv build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -36,7 +36,7 @@ jobs:
     permissions:
       id-token: write  # PyPI trusted publishing: no token stored in the repo
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -49,7 +49,7 @@ jobs:
       id-token: write  # GitHub OIDC login to the MCP Registry
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Pinned and checksummed: this job holds an OIDC token, so an unverified
       # "latest" binary could publish anything under our name. To bump, set
       # both values from the release's registry_<version>_checksums.txt.
