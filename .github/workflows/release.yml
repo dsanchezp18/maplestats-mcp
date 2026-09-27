@@ -56,6 +56,7 @@ jobs:
       - name: Install mcp-publisher
         env:
           MCP_PUBLISHER_VERSION: v1.8.1
+          # From registry_1.8.1_checksums.txt, checked against the downloaded file.
           MCP_PUBLISHER_SHA256: "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc"
         run: |
           curl -fsSL -o mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"

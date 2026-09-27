@@ -6,6 +6,9 @@ reproduce_code writes for the first call. The website build reads these
 files and never calls an upstream itself, so every chart is dated and
 stays as recorded until this script is run again.
 
+A key and its French twin (<key>_fr, the same call with lang="fr") are
+always captured together, so both pages show data from the same day.
+
 The PUMF case downloads the 2021 Census individuals file (about 170 MB) on
 its first call, so it takes a few minutes.
 
@@ -33,6 +36,11 @@ OUT = Path(__file__).resolve().parent.parent / "site" / "_data" / "cases"
 CENSUS_2021_PUMF = (
     "https://www150.statcan.gc.ca/n1/pub/98m0001x/2023001/cen21_ind_98m0001x_part_rec21.zip"
 )
+
+# The patent case counts one filing year per call, from 2005 to the year
+# before the capture; build_site.py leaves out the years the bulk release
+# cannot hold in full yet (see patents_context there).
+PATENT_YEARS = range(2005, datetime.now(UTC).year)
 
 CASES: dict[str, list[dict[str, Any]]] = {
     # Statisticians: a weighted share from Census microdata, with standard
@@ -94,8 +102,9 @@ CASES: dict[str, list[dict[str, Any]]] = {
             },
         },
     ],
-    # Marketers: every credit card offered in Alberta, with its annual fee,
-    # purchase rate and rewards (FCAC's Credit Card Comparison Tool).
+    # Marketers: every card listed for Alberta in FCAC's Credit Card
+    # Comparison Tool (in Canadian dollars; student and secured cards are
+    # separate searches there), with its annual fee, purchase rate and rewards.
     "cards": [
         {
             "name": "fcac_search_credit_cards",
@@ -150,7 +159,7 @@ CASES: dict[str, list[dict[str, Any]]] = {
                     "limit": 1,
                 },
             }
-            for year in range(2005, 2024)
+            for year in PATENT_YEARS
         ),
     ],
     # Analysts: the Bank of Canada's target for the overnight rate.
@@ -174,6 +183,14 @@ CASES: dict[str, list[dict[str, Any]]] = {
         {
             "name": "sdmx_get_vector_data",
             "arguments": {"vector_id": 41690973, "last_n_observations": 3},
+        },
+    ],
+    # The home page's worked example: the last three days of the policy
+    # rate, shown as its request, response and reproduce_code scripts.
+    "policy_rate": [
+        {
+            "name": "boc_get_observations",
+            "arguments": {"series_names": ["V39079"], "recent": 3},
         },
     ],
     # The counts in the verse: how much each audience can reach.
@@ -210,7 +227,10 @@ def _trim(name: str, response: Any) -> Any:
     if name == "cmhc_list_categories":
         return {"total_count": response["total_count"], "provenance": response["provenance"]}
     if name == "ised_ip_horizons_search_patents":
-        return {"total_matched": response["total_matched"], "provenance": response["provenance"]}
+        # release_date is the bulk release the count comes from; the site
+        # uses it to tell complete filing years from ones still filling in.
+        keep = ("total_matched", "release_date", "provenance")
+        return {k: response[k] for k in keep}
     if name == "statcan_pumf_list_files":
         return {"file_count": len(response["files"]), "provenance": response["provenance"]}
     if name == "wds_get_cube_metadata":
@@ -276,8 +296,19 @@ async def capture(key: str) -> Path:
     return path
 
 
-async def main(keys: list[str]) -> None:
+def with_twins(keys: list[str]) -> list[str]:
+    """`keys` with each one's French twin (or English original), once each, in order."""
+    out: list[str] = []
     for key in keys:
+        base = key.removesuffix("_fr")
+        for twin in (base, f"{base}_fr"):
+            if twin in CASES and twin not in out:
+                out.append(twin)
+    return out
+
+
+async def main(keys: list[str]) -> None:
+    for key in with_twins(keys):
         print(f"captured {await capture(key)}")
 
 

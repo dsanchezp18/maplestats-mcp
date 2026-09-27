@@ -3,85 +3,15 @@
    The search is the server's own: search-index.json holds the BM25 index
    search_tools builds (same tokens, k1, b and result count, written by
    scripts/build_site.py), and tokenize() below is a port of
-   src/maplestats_mcp/shared/search.py for the query side. */
+   src/maplestats_mcp/shared/search.py for the query side.
+
+   tokenize() and rank() come first and touch no page, so node can load this
+   file (tests/test_site.py checks it ranks as the server does). Each page
+   feature after them starts in its own try/catch: one that fails leaves the
+   others working. */
 
 (() => {
   "use strict";
-
-  const doc = document.documentElement;
-  const lang = doc.lang === "fr" ? "fr" : "en";
-  const root = doc.dataset.root || "";
-  // Pages sit next to the current one (fr/ links to fr/); assets are under root.
-  const pages = doc.dataset.pages ?? root;
-  const T = {
-    en: {
-      copy: "Copy",
-      copied: "Copied",
-      selected: "Selected, press Ctrl+C",
-      top: (n, total) => `Top ${n} of ${total} tools, ranked by the same BM25 index search_tools uses.`,
-      none: "No tool matches. Try a broader term, or the agency's name.",
-      offline: "The search index did not load. Open the Tools page instead.",
-      tools: (n) => `${n} ${n === 1 ? "tool" : "tools"}`,
-      matches: (n) => `${n} ${n === 1 ? "match" : "matches"}`,
-      cut: (n) => `Beyond the top ${n}: search_tools would not return these.`,
-    },
-    fr: {
-      copy: "Copier",
-      copied: "Copié",
-      selected: "Sélectionné, faites Ctrl+C",
-      top: (n, total) => `Les ${n} premiers sur ${total} outils, classés par le même index BM25 que search_tools.`,
-      none: "Aucun outil ne correspond. Essayez un terme plus large ou le nom de l'organisme.",
-      offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
-      tools: (n) => `${n} ${n === 1 ? "outil" : "outils"}`,
-      matches: (n) => `${n} ${n === 1 ? "résultat" : "résultats"}`,
-      cut: (n) => `Au-delà des ${n} premiers\u00a0: search_tools ne les renverrait pas.`,
-    },
-  }[lang];
-
-  const store = {
-    get(key) {
-      try {
-        return localStorage.getItem(key);
-      } catch {
-        return null;
-      }
-    },
-    set(key, value) {
-      try {
-        localStorage.setItem(key, value);
-      } catch {
-        /* private mode or blocked storage: the choice is simply not kept */
-      }
-    },
-  };
-
-  /* ---------- Light / dark switch ---------- */
-
-  const themeLabels = {
-    en: { dark: "Dark", light: "Light", toDark: "Switch to dark mode", toLight: "Switch to light mode" },
-    fr: { dark: "Sombre", light: "Clair", toDark: "Passer au mode sombre", toLight: "Passer au mode clair" },
-  }[lang];
-  const systemDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
-  const currentTheme = () => doc.dataset.theme || (systemDark && systemDark.matches ? "dark" : "light");
-
-  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-    const label = button.querySelector("[data-theme-label]");
-    const show = () => {
-      const dark = currentTheme() === "dark";
-      // The button names the mode it switches to.
-      label.textContent = dark ? themeLabels.light : themeLabels.dark;
-      button.setAttribute("aria-label", dark ? themeLabels.toLight : themeLabels.toDark);
-    };
-    button.addEventListener("click", () => {
-      const next = currentTheme() === "dark" ? "light" : "dark";
-      doc.dataset.theme = next;
-      store.set("maplestats:theme", next);
-      show();
-    });
-    if (systemDark && systemDark.addEventListener) systemDark.addEventListener("change", show);
-    button.hidden = false;
-    show();
-  });
 
   /* ---------- Tokenizer: a port of shared/search.py ---------- */
 
@@ -92,34 +22,28 @@
     return word;
   }
 
+  // What Python's str.casefold() changes beyond toLowerCase(), for the Latin
+  // and Greek text that can reach the index: "Straße" (and "STRASSE") is
+  // "strasse" on the server, a final sigma is a sigma, and an iota subscript
+  // is an iota. The others casefold treats apart are Cherokee and archaic
+  // Cyrillic letters, which no docstring here uses.
+  const CASEFOLD = { "ß": "ss", "ς": "σ", "\u0345": "ι" };
+
   function tokenize(text) {
     // Like search.py: NFKD leaves the ligatures whole, so fold them first.
-    const folded = text.toLowerCase().replace(/œ/g, "oe").replace(/æ/g, "ae");
+    // casefold turns the iota subscript inside a letter into an iota too
+    // (ᾳ is "αι"), so it is split out (NFD) before it is folded.
+    const folded = text
+      .toLowerCase()
+      .replace(/œ/g, "oe")
+      .replace(/æ/g, "ae")
+      .normalize("NFD")
+      .replace(/[ßς\u0345]/g, (c) => CASEFOLD[c]);
     const plain = folded.normalize("NFKD").replace(/\p{M}/gu, "");
     return (plain.match(/[\p{L}\p{N}]{2,}/gu) || []).map(fold);
   }
 
-  /* ---------- Index and ranking ---------- */
-
-  let loading = null;
-
-  function loadIndex() {
-    if (!loading) {
-      const get = (name) =>
-        fetch(`${root}assets/${name}`).then((r) => {
-          if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`);
-          return r.json();
-        });
-      loading = Promise.all([get("search-index.json"), get("modules.json")]).then(([index, modules]) => ({
-        index,
-        modules,
-      }));
-      loading.catch(() => {
-        loading = null;
-      });
-    }
-    return loading;
-  }
+  /* ---------- Ranking ---------- */
 
   // Mirrors fastmcp's _BM25Index.query term for term, including the order
   // of operations, so ties and scores come out as they do on the server.
@@ -142,6 +66,96 @@
     const hits = [];
     for (let i = 0; i < n; i++) if (scores[i] > 0) hits.push(i);
     return hits.sort((a, b) => scores[b] - scores[a] || a - b);
+  }
+
+  // Under node there is no page: hand over the search and stop.
+  if (typeof document === "undefined") {
+    if (typeof module === "object" && module.exports) module.exports = { tokenize, rank };
+    return;
+  }
+
+  const doc = document.documentElement;
+  const lang = doc.lang === "fr" ? "fr" : "en";
+  const root = doc.dataset.root || "";
+  // Pages sit next to the current one (fr/ links to fr/); assets are under root.
+  const pages = doc.dataset.pages ?? root;
+  const T = {
+    en: {
+      copy: "Copy",
+      copied: "Copied",
+      selected: "Selected, press Ctrl+C",
+      // "searchable": plan_query is always listed, so search_tools ranks the others.
+      top: (n, total) => `Top ${n} of ${total} searchable tools, ranked by the same BM25 index search_tools uses.`,
+      few: (n, total) =>
+        `${n} of ${total} searchable tools ${n === 1 ? "matches" : "match"}, ranked by the same BM25 index search_tools uses.`,
+      none: "No tool matches. Try a broader term, or the agency's name.",
+      offline: "The search index did not load. Open the Tools page instead.",
+      tools: (n) => `${n} ${n === 1 ? "tool" : "tools"}`,
+      matches: (n) => `${n} ${n === 1 ? "match" : "matches"}`,
+      cut: (n) => `Beyond the top ${n}: search_tools would not return these.`,
+    },
+    fr: {
+      copy: "Copier",
+      copied: "Copié",
+      selected: "Sélectionné, faites Ctrl+C",
+      top: (n, total) => `Les ${n} premiers des ${total} outils indexés, classés par le même index BM25 que search_tools.`,
+      few: (n, total) =>
+        `${n} des ${total} outils indexés ${n === 1 ? "correspond" : "correspondent"}, classés par le même index BM25 que search_tools.`,
+      none: "Aucun outil ne correspond. Essayez un terme plus large ou le nom de l'organisme.",
+      offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
+      tools: (n) => `${n} ${n === 1 ? "outil" : "outils"}`,
+      matches: (n) => `${n} ${n === 1 ? "résultat" : "résultats"}`,
+      cut: (n) => `Au-delà des ${n} premiers : search_tools ne les renverrait pas.`,
+    },
+  }[lang];
+
+  const store = {
+    get(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {
+        /* private mode or blocked storage: the choice is simply not kept */
+      }
+    },
+  };
+
+  // One feature failing (a missing element, an old browser) must not stop
+  // the ones after it.
+  const feature = (name, init) => {
+    try {
+      init();
+    } catch (error) {
+      if (window.console) console.error(`site.js: ${name} did not start`, error);
+    }
+  };
+
+  /* ---------- Index loading and result rendering ---------- */
+
+  let loading = null;
+
+  function loadIndex() {
+    if (!loading) {
+      const get = (name) =>
+        fetch(`${root}assets/${name}`).then((r) => {
+          if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`);
+          return r.json();
+        });
+      loading = Promise.all([get("search-index.json"), get("modules.json")]).then(([index, modules]) => ({
+        index,
+        modules,
+      }));
+      loading.catch(() => {
+        loading = null;
+      });
+    }
+    return loading;
   }
 
   function escapeHtml(text) {
@@ -183,101 +197,165 @@
     };
   }
 
+  /* ---------- Light / dark switch ---------- */
+
+  feature("theme switch", () => {
+    const themeLabels = {
+      en: { dark: "Dark", light: "Light", toDark: "Switch to dark mode", toLight: "Switch to light mode" },
+      fr: { dark: "Sombre", light: "Clair", toDark: "Passer au mode sombre", toLight: "Passer au mode clair" },
+    }[lang];
+    const systemDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const currentTheme = () => doc.dataset.theme || (systemDark && systemDark.matches ? "dark" : "light");
+
+    document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+      const label = button.querySelector("[data-theme-label]");
+      const show = () => {
+        const dark = currentTheme() === "dark";
+        // The button names the mode it switches to.
+        label.textContent = dark ? themeLabels.light : themeLabels.dark;
+        button.setAttribute("aria-label", dark ? themeLabels.toLight : themeLabels.toDark);
+      };
+      button.addEventListener("click", () => {
+        const next = currentTheme() === "dark" ? "light" : "dark";
+        doc.dataset.theme = next;
+        store.set("maplestats:theme", next);
+        show();
+      });
+      if (systemDark && systemDark.addEventListener) systemDark.addEventListener("change", show);
+      button.hidden = false;
+      show();
+    });
+  });
+
   /* ---------- Hero search ---------- */
 
-  document.querySelectorAll("[data-live-search]").forEach((box) => {
-    const input = box.querySelector("input");
-    const list = box.querySelector("[data-results]");
-    const status = box.querySelector("[data-status]");
-    let asked = "";
+  feature("search", () => {
+    document.querySelectorAll("[data-live-search]").forEach((box) => {
+      const input = box.querySelector("input");
+      const list = box.querySelector("[data-results]");
+      const status = box.querySelector("[data-status]");
+      let asked = "";
 
-    const run = async () => {
-      const query = input.value.trim();
-      asked = query;
-      if (!query) {
-        list.innerHTML = "";
-        return;
-      }
-      try {
-        const { index, modules } = await loadIndex();
-        if (asked !== query) return;
-        const hits = rank(index, query).slice(0, index.top);
-        list.innerHTML = hits.length
-          ? hits.map((i, k) => resultItem(index.tools[i], k + 1, modules, query)).join("")
-          : `<li class="empty">${T.none}</li>`;
-        status.textContent = T.top(index.top, index.len.length);
-      } catch {
-        status.textContent = T.offline;
-      }
-    };
+      const run = async () => {
+        const query = input.value.trim();
+        asked = query;
+        if (!query) {
+          list.innerHTML = "";
+          status.textContent = "";
+          return;
+        }
+        try {
+          const { index, modules } = await loadIndex();
+          if (asked !== query) return;
+          const hits = rank(index, query).slice(0, index.top);
+          const total = index.len.length;
+          list.innerHTML = hits.map((i, k) => resultItem(index.tools[i], k + 1, modules, query)).join("");
+          // The status is the live region: it says how many came back ("Top
+          // 5" only when there were 5 to show), or that none did.
+          if (!hits.length) status.textContent = T.none;
+          else if (hits.length < index.top) status.textContent = T.few(hits.length, total);
+          else status.textContent = T.top(index.top, total);
+        } catch {
+          status.textContent = T.offline;
+        }
+      };
 
-    input.addEventListener("input", debounce(run, 60));
-    box.querySelectorAll("[data-q]").forEach((button) =>
-      button.addEventListener("click", () => {
-        input.value = button.dataset.q;
-        run();
-      }),
-    );
-    // The first results are rendered at build time; re-rank once the index
-    // arrives so the matched words are marked.
-    loadIndex().then(run, () => {});
+      input.addEventListener("input", debounce(run, 60));
+      box.querySelectorAll("[data-q]").forEach((button) =>
+        button.addEventListener("click", () => {
+          input.value = button.dataset.q;
+          run();
+        }),
+      );
+      // The first results are rendered at build time, so the index (some
+      // 150 KB) is fetched only once the reader comes near the box: on focus,
+      // or when it scrolls into view. It then re-ranks so matched words are marked.
+      let warmed = false;
+      const warm = () => {
+        if (warmed) return;
+        warmed = true;
+        loadIndex().then(run, () => {
+          warmed = false;
+        });
+      };
+      input.addEventListener("focus", warm);
+      if ("IntersectionObserver" in window) {
+        const seen = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            seen.disconnect();
+            warm();
+          }
+        });
+        seen.observe(box);
+      } else {
+        warm();
+      }
+    });
   });
 
   /* ---------- Tabs ---------- */
 
-  document.querySelectorAll("[data-tabs]").forEach((group) => {
-    const tabs = Array.from(group.querySelector('[role="tablist"]').querySelectorAll('[role="tab"]'));
-    const key = group.dataset.tabs ? `maplestats:${group.dataset.tabs}` : null;
+  feature("tabs", () => {
+    document.querySelectorAll("[data-tabs]").forEach((group) => {
+      const tabs = Array.from(group.querySelector('[role="tablist"]').querySelectorAll('[role="tab"]'));
+      const key = group.dataset.tabs ? `maplestats:${group.dataset.tabs}` : null;
 
-    const select = (tab, focus) => {
-      tabs.forEach((t) => {
-        const on = t === tab;
-        t.setAttribute("aria-selected", String(on));
-        t.tabIndex = on ? 0 : -1;
-        const panel = document.getElementById(t.getAttribute("aria-controls"));
-        if (panel) panel.hidden = !on;
-      });
-      if (focus) tab.focus();
-    };
+      // A choice by click or by arrow key is kept for the next page.
+      const select = (tab, focus, keep) => {
+        tabs.forEach((t) => {
+          const on = t === tab;
+          t.setAttribute("aria-selected", String(on));
+          t.tabIndex = on ? 0 : -1;
+          const panel = document.getElementById(t.getAttribute("aria-controls"));
+          if (panel) panel.hidden = !on;
+        });
+        if (focus) tab.focus();
+        if (keep && key) store.set(key, tab.dataset.key || "");
+      };
 
-    tabs.forEach((tab, i) => {
-      tab.addEventListener("click", () => {
-        select(tab, false);
-        if (key) store.set(key, tab.dataset.key || "");
+      tabs.forEach((tab, i) => {
+        tab.addEventListener("click", () => select(tab, false, true));
+        tab.addEventListener("keydown", (event) => {
+          const moves = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 };
+          if (!(event.key in moves)) return;
+          event.preventDefault();
+          select(tabs[(moves[event.key] + tabs.length) % tabs.length], true, true);
+        });
       });
-      tab.addEventListener("keydown", (event) => {
-        const moves = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 };
-        if (!(event.key in moves)) return;
-        event.preventDefault();
-        select(tabs[(moves[event.key] + tabs.length) % tabs.length], true);
-      });
+
+      // Every panel is visible in the HTML (so a page without scripts shows
+      // them all); starting the tabs hides all but the saved or first one.
+      const saved = key && store.get(key);
+      const initial =
+        (saved && tabs.find((t) => t.dataset.key === saved)) ||
+        tabs.find((t) => t.getAttribute("aria-selected") === "true") ||
+        tabs[0];
+      if (initial) select(initial, false, false);
     });
-
-    const saved = key && store.get(key);
-    const initial = saved && tabs.find((t) => t.dataset.key === saved);
-    if (initial) select(initial, false);
   });
 
   /* ---------- Show more ---------- */
 
   // The block is whole in the HTML; it is cut here, so without scripts the
   // reader still sees all of it.
-  document.querySelectorAll("[data-more]").forEach((box) => {
-    const button = box.querySelector("[data-more-label]");
-    if (!button) return;
-    const set = (collapsed) => {
-      box.toggleAttribute("data-collapsed", collapsed);
-      button.setAttribute("aria-expanded", String(!collapsed));
-      button.textContent = collapsed ? button.dataset.moreLabel : button.dataset.lessLabel;
-    };
-    button.addEventListener("click", () => {
-      const collapse = !box.hasAttribute("data-collapsed");
-      set(collapse);
-      // Collapsing a long script can leave the reader below it.
-      if (collapse && box.getBoundingClientRect().top < 0) box.scrollIntoView({ block: "start" });
+  feature("show more", () => {
+    document.querySelectorAll("[data-more]").forEach((box) => {
+      const button = box.querySelector("[data-more-label]");
+      if (!button) return;
+      const set = (collapsed) => {
+        box.toggleAttribute("data-collapsed", collapsed);
+        button.setAttribute("aria-expanded", String(!collapsed));
+        button.textContent = collapsed ? button.dataset.moreLabel : button.dataset.lessLabel;
+      };
+      button.addEventListener("click", () => {
+        const collapse = !box.hasAttribute("data-collapsed");
+        set(collapse);
+        // Collapsing a long script can leave the reader below it.
+        if (collapse && box.getBoundingClientRect().top < 0) box.scrollIntoView({ block: "start" });
+      });
+      set(true);
+      button.hidden = false;
     });
-    set(true);
-    button.hidden = false;
   });
 
   /* ---------- On this page ---------- */
@@ -285,8 +363,9 @@
   // The contents list is open in the HTML, so without scripts it shows in
   // full. Here it stays open beside the article on wide screens, starts
   // closed above it on narrow ones, and marks the section being read.
-  const toc = document.querySelector("[data-toc]");
-  if (toc) {
+  feature("contents", () => {
+    const toc = document.querySelector("[data-toc]");
+    if (!toc) return;
     const box = toc.querySelector("details");
     const summary = box && box.querySelector("summary");
     const wide = window.matchMedia("(min-width: 1241px)");
@@ -333,37 +412,40 @@
     window.addEventListener("scroll", queue, { passive: true });
     window.addEventListener("resize", queue);
     mark();
-  }
+  });
 
   /* ---------- Copy buttons ---------- */
 
-  document.querySelectorAll("[data-copy-target]").forEach((button) => {
-    const label = button.textContent;
-    button.addEventListener("click", async () => {
-      const target = document.getElementById(button.dataset.copyTarget);
-      if (!target) return;
-      const text = target.innerText.replace(/\n$/, "");
-      try {
-        await navigator.clipboard.writeText(text);
-        button.textContent = T.copied;
-      } catch {
-        const range = document.createRange();
-        range.selectNodeContents(target);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        button.textContent = T.selected;
-      }
-      setTimeout(() => {
-        button.textContent = label;
-      }, 1600);
+  feature("copy buttons", () => {
+    document.querySelectorAll("[data-copy-target]").forEach((button) => {
+      const label = button.textContent;
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copyTarget);
+        if (!target) return;
+        const text = target.innerText.replace(/\n$/, "");
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = T.copied;
+        } catch {
+          const range = document.createRange();
+          range.selectNodeContents(target);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          button.textContent = T.selected;
+        }
+        setTimeout(() => {
+          button.textContent = label;
+        }, 1600);
+      });
     });
   });
 
   /* ---------- Tool atlas ---------- */
 
-  const atlas = document.querySelector("[data-atlas]");
-  if (atlas) {
+  feature("tool atlas", () => {
+    const atlas = document.querySelector("[data-atlas]");
+    if (!atlas) return;
     const input = document.getElementById("atlas-q");
     const status = atlas.querySelector("[data-atlas-status]");
     const groups = atlas.querySelector("[data-atlas-groups]");
@@ -474,5 +556,5 @@
     window.addEventListener("hashchange", openFromHash);
     openFromHash();
     status.textContent = T.tools(countVisible());
-  }
+  });
 })();

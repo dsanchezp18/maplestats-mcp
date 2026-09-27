@@ -3,15 +3,20 @@ name: Website
 # Builds the website from site/ and the server's own tool registry
 # (scripts/build_site.py) and publishes it to GitHub Pages. Needs Pages
 # enabled once with Settings > Pages > Source: GitHub Actions.
+#
+# It runs after the CI workflow (ci.yml, name: CI) finishes a push to main,
+# and only if CI passed, so a commit that fails lint, types or the tests in
+# tests/test_site.py is never published. It builds the exact commit CI
+# tested (head_sha), not whatever main points to by then. workflow_run has
+# no path filter, so every green push to main rebuilds the site: a change to
+# scripts/site_charts.py, pyproject.toml or uv.lock is published as surely as
+# one to site/. workflow_dispatch rebuilds the current main by hand.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    paths:
-      - "site/**"
-      - "src/**"
-      - "scripts/build_site.py"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -23,10 +28,18 @@ concurrency:
 
 jobs:
   build:
+    # A pull request whose head branch is also called main triggers
+    # workflow_run too; only CI runs for pushes to this repository count.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.12"

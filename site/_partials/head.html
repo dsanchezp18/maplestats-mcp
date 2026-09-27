@@ -1,11 +1,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..900;1,8..60,400..700&amp;family=Source+Sans+3:ital,wght@0,400..900;1,400..700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<link rel="preload" href="{{root}}assets/fonts/source-sans-3-normal-400-900-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{root}}assets/fonts/source-serif-4-normal-400-900-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{root}}assets/fonts.css">
 <script>document.documentElement.classList.add("js");try{var t=localStorage.getItem("maplestats:theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="stylesheet" href="{{root}}assets/site.css">
 <link rel="icon" href="{{root}}assets/mark.svg" type="image/svg+xml">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="{{canonical}}">
+<link rel="alternate" hreflang="en" href="{{url_en}}">
+<link rel="alternate" hreflang="fr" href="{{url_fr}}">
+<link rel="alternate" hreflang="x-default" href="{{url_en}}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MapleStats MCP">
+<meta property="og:title" content="{{og_title}}">
+<meta property="og:description" content="{{og_description}}">
+<meta property="og:url" content="{{canonical}}">
+<meta property="og:locale" content="{en}en_CA{fr}fr_CA{/}">
+<meta property="og:locale:alternate" content="{en}fr_CA{fr}en_CA{/}">
+<meta property="og:image" content="{{site_url}}assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{en}MapleStats MCP: one MCP server for Canadian open data{fr}MapleStats MCP&nbsp;: un seul serveur MCP pour les données ouvertes canadiennes{/}">
+<meta name="twitter:card" content="summary_large_image">
 <script src="{{root}}assets/site.js" defer></script>

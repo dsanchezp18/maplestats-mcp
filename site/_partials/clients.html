@@ -13,7 +13,7 @@
     <p>{en}Run this once in a terminal. <code>--scope user</code> makes the server available in every project; leave it out to add it to the current project only.{fr}Exécutez cette commande une fois dans un terminal. <code>--scope user</code> rend le serveur accessible dans tous les projets; sans cette option, il n'est ajouté qu'au projet courant.{/}</p>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="cl-code-1">{en}Copy{fr}Copier{/}</button></figcaption>
-      <pre><code id="cl-code-1">claude mcp add --scope user maplestats -- uvx maplestats-mcp</code></pre>
+      <pre><code id="cl-code-1">claude mcp add --scope user maplestats -- {{uvx_command}}</code></pre>
     </figure>
   </div>
 
@@ -25,7 +25,7 @@
   <span class="s-key">"mcpServers"</span>: {
     <span class="s-key">"maplestats"</span>: {
       <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
-      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+      <span class="s-key">"args"</span>: [{{uvx_args_json}}]
     }
   }
 }</code></pre>
@@ -34,7 +34,7 @@
   </div>
 
   <div role="tabpanel" id="cl-cursor" aria-labelledby="cl-tab-cursor" hidden>
-    <p class="install-links"><a href="cursor://anysphere.cursor-deeplink/mcp/install?name=maplestats&amp;config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJtYXBsZXN0YXRzLW1jcCJdfQ==">{en}Add to Cursor{fr}Ajouter à Cursor{/}</a></p>
+    <p class="install-links"><a href="{{cursor_install_href}}">{en}Add to Cursor{fr}Ajouter à Cursor{/}</a></p>
     <p>{en}The link opens Cursor with the entry filled in. To add it by hand, put it in <code>~/.cursor/mcp.json</code> for every project, or in <code>.cursor/mcp.json</code> for one project.{fr}Le lien ouvre Cursor avec l'entrée déjà remplie. Pour l'ajouter à la main, placez-la dans <code>~/.cursor/mcp.json</code> pour tous les projets, ou dans <code>.cursor/mcp.json</code> pour un seul projet.{/}</p>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span class="path">~/.cursor/mcp.json</span><button type="button" class="copy" data-copy-target="cl-cursor-1">{en}Copy{fr}Copier{/}</button></figcaption>
@@ -42,7 +42,7 @@
   <span class="s-key">"mcpServers"</span>: {
     <span class="s-key">"maplestats"</span>: {
       <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
-      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+      <span class="s-key">"args"</span>: [{{uvx_args_json}}]
     }
   }
 }</code></pre>
@@ -50,7 +50,7 @@
   </div>
 
   <div role="tabpanel" id="cl-vscode" aria-labelledby="cl-tab-vscode" hidden>
-    <p class="install-links"><a href="vscode:mcp/install?%7B%22name%22%3A%22maplestats%22%2C%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22maplestats-mcp%22%5D%7D">{en}Install in VS Code{fr}Installer dans VS Code{/}</a></p>
+    <p class="install-links"><a href="{{vscode_install_href}}">{en}Install in VS Code{fr}Installer dans VS Code{/}</a></p>
     <p>{en}To add it by hand, note that VS Code uses a <code>servers</code> key, not <code>mcpServers</code>. Put this in <code>.vscode/mcp.json</code> in a workspace, or run MCP: Open User Configuration from the Command Palette to add it for every workspace.{fr}Pour l'ajouter à la main, notez que VS Code utilise la clé <code>servers</code>, et non <code>mcpServers</code>. Placez ceci dans <code>.vscode/mcp.json</code> d'un espace de travail, ou lancez la commande <span lang="en">MCP: Open User Configuration</span> dans la palette de commandes pour l'ajouter à tous vos espaces de travail.{/}</p>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span class="path">.vscode/mcp.json</span><button type="button" class="copy" data-copy-target="cl-vscode-1">{en}Copy{fr}Copier{/}</button></figcaption>
@@ -59,7 +59,7 @@
     <span class="s-key">"maplestats"</span>: {
       <span class="s-key">"type"</span>: <span class="s-str">"stdio"</span>,
       <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
-      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+      <span class="s-key">"args"</span>: [{{uvx_args_json}}]
     }
   }
 }</code></pre>
@@ -70,13 +70,13 @@
     <p>{en}Add it from the terminal, or write the same entry into <code>~/.codex/config.toml</code> yourself.{fr}Ajoutez-le depuis le terminal, ou écrivez vous-même la même entrée dans <code>~/.codex/config.toml</code>.{/}</p>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="cl-codex-1">{en}Copy{fr}Copier{/}</button></figcaption>
-      <pre><code id="cl-codex-1">codex mcp add maplestats -- uvx maplestats-mcp</code></pre>
+      <pre><code id="cl-codex-1">codex mcp add maplestats -- {{uvx_command}}</code></pre>
     </figure>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span class="path">~/.codex/config.toml</span><button type="button" class="copy" data-copy-target="cl-codex-2">{en}Copy{fr}Copier{/}</button></figcaption>
       <pre><code id="cl-codex-2">[mcp_servers.maplestats]
 command = <span class="s-str">"uvx"</span>
-args = [<span class="s-str">"maplestats-mcp"</span>]</code></pre>
+args = [{{uvx_args_json}}]</code></pre>
     </figure>
   </div>
 
@@ -84,7 +84,7 @@ args = [<span class="s-str">"maplestats-mcp"</span>]</code></pre>
     <p>{en}Add it from the terminal (<code>-s user</code> for every project), or write the entry into <code>~/.gemini/settings.json</code> next to any settings already there.{fr}Ajoutez-le depuis le terminal (<code>-s user</code> pour tous les projets), ou écrivez l'entrée dans <code>~/.gemini/settings.json</code>, à côté des réglages qui s'y trouvent déjà.{/}</p>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span>{en}Terminal{fr}Terminal{/}</span><button type="button" class="copy" data-copy-target="cl-gemini-0">{en}Copy{fr}Copier{/}</button></figcaption>
-      <pre><code id="cl-gemini-0">gemini mcp add -s user maplestats uvx maplestats-mcp</code></pre>
+      <pre><code id="cl-gemini-0">gemini mcp add -s user maplestats {{uvx_command}}</code></pre>
     </figure>
     <figure class="panel snippet">
       <figcaption class="panel-bar"><span class="path">~/.gemini/settings.json</span><button type="button" class="copy" data-copy-target="cl-gemini-1">{en}Copy{fr}Copier{/}</button></figcaption>
@@ -92,7 +92,7 @@ args = [<span class="s-str">"maplestats-mcp"</span>]</code></pre>
   <span class="s-key">"mcpServers"</span>: {
     <span class="s-key">"maplestats"</span>: {
       <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
-      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+      <span class="s-key">"args"</span>: [{{uvx_args_json}}]
     }
   }
 }</code></pre>
@@ -107,7 +107,7 @@ args = [<span class="s-str">"maplestats-mcp"</span>]</code></pre>
   <span class="s-key">"mcpServers"</span>: {
     <span class="s-key">"maplestats"</span>: {
       <span class="s-key">"command"</span>: <span class="s-str">"uvx"</span>,
-      <span class="s-key">"args"</span>: [<span class="s-str">"maplestats-mcp"</span>]
+      <span class="s-key">"args"</span>: [{{uvx_args_json}}]
     }
   }
 }</code></pre>

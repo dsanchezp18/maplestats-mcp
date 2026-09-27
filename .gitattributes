@@ -5,3 +5,6 @@
 
 # PowerShell scripts are run on Windows; keep CRLF in the working tree.
 *.ps1 text eol=crlf
+
+# Fonts are binary; never normalize their bytes.
+*.woff2 binary
