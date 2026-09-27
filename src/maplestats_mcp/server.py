@@ -22,6 +22,8 @@ from fastmcp.server.providers.filesystem_discovery import (
     import_module_from_file,
 )
 from fastmcp.server.transforms.search import BM25SearchTransform
+from fastmcp.tools import Tool
+from mcp.types import ToolAnnotations
 
 from maplestats_mcp import __version__, config
 from maplestats_mcp.shared import search
@@ -29,6 +31,21 @@ from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 
 MODULES_ROOT = Path(__file__).parent / "modules"
 _COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
+
+# Every tool only reads public data, so the MCP behaviour hints are the
+# same everywhere and set once here rather than on each @tool. Modules in
+# _LOCAL_MODULES compute from bundled metadata without calling a source,
+# so they are not open-world.
+_LOCAL_MODULES = frozenset({"planner"})
+
+
+def _read_only_annotations(open_world: bool) -> ToolAnnotations:
+    return ToolAnnotations(
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=open_world,
+    )
 
 
 class ModuleProvider(FileSystemProvider):
@@ -52,11 +69,29 @@ class ModuleProvider(FileSystemProvider):
             and "__pycache__" not in path.parts
             and "__tests__" not in path.parts
         )
+        annotations = _read_only_annotations(self._root.name not in _LOCAL_MODULES)
         for file_path in files:
             module = import_module_from_file(file_path, provider_root=self._root)
             for component in extract_components(module):
+                if isinstance(component, Tool) and component.annotations is None:
+                    component.annotations = annotations
                 self._register_component(component)
         self._loaded = True
+
+
+class AnnotatedBM25SearchTransform(BM25SearchTransform):
+    """BM25 search whose synthetic search_tools/call_tool carry the same
+    read-only hints as the module tools (call_tool can only reach them)."""
+
+    def _make_search_tool(self) -> Tool:
+        search_tool = super()._make_search_tool()
+        search_tool.annotations = _read_only_annotations(open_world=False)
+        return search_tool
+
+    def _make_call_tool(self) -> Tool:
+        call_tool = super()._make_call_tool()
+        call_tool.annotations = _read_only_annotations(open_world=True)
+        return call_tool
 
 
 # Sent to every client on initialize, so it stays a short routing index
@@ -190,7 +225,7 @@ def build_server() -> FastMCP:
             mcp.add_provider(ModuleProvider(root=module_dir))
     mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
     mcp.add_transform(
-        BM25SearchTransform(
+        AnnotatedBM25SearchTransform(
             max_results=5,
             always_visible=["search_tools", "plan_query"],
             search_tool_name="search_tools",
