@@ -267,17 +267,23 @@
   stroke-width: 1;
 }
 
+/* The inscriptions are set in the text sans, upright and lightly tracked,
+   so they read as a quiet list around the ring rather than as lettering. */
+.ring text.ring-script,
+.ring text.ring-script-2 {
+  font-family: var(--font-text);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
 .ring text.ring-script {
   fill: var(--ring-fire);
-  font-family: var(--font-display);
-  font-style: italic;
-  letter-spacing: 0.02em;
+  fill-opacity: 0.85;
 }
 
 .ring text.ring-script-2 {
   fill: var(--panel-mute);
-  font-family: var(--font-display);
-  font-style: italic;
+  fill-opacity: 0.8;
 }
 
 .ring .ring-arc {
@@ -366,7 +372,7 @@
       filter: drop-shadow(0 0 0 transparent);
     }
     to {
-      filter: drop-shadow(0 0 3px var(--ring-arc));
+      filter: drop-shadow(0 0 1.5px rgba(240, 80, 63, 0.45));
     }
   }
 }

@@ -661,7 +661,7 @@ def hbar_chart(
 # The ring: names inscribed on two circles, arcs sized by count, a centre figure
 
 RING = 640.0  # the ring's viewBox is square
-_SERIF_CHAR = 0.5  # an average glyph of the italic inscription font, in em
+_RING_CHAR = 0.54  # an average glyph of the inscription (text sans, tracked), in em
 
 
 def _circle_path(cx: float, cy: float, r: float) -> str:
@@ -695,7 +695,7 @@ def _inscription(ident: str, names: list[str], r: float, cls: str) -> tuple[str,
     """
     text = " · ".join(names) + " · "
     circumference = 2 * math.pi * r
-    size = min(max(circumference / (len(text) * _SERIF_CHAR), 7.0), 15.0)
+    size = min(max(circumference / (len(text) * _RING_CHAR), 7.0), 15.0)
     # Centre the lettering in its band: the baseline sits a third of the
     # font size inside the band's middle.
     baseline = r - size * 0.33
@@ -775,21 +775,26 @@ def ring_chart(
         # Labels on the lower half run the other way, so they read upright.
         lower = 90 < mid < 270
         size = 12.0
-        for text in (f"{short} {count}", str(count)):
-            if len(text) * size * _TEXT_CHAR + 12 <= arc_len:
-                pid = f"{ident}-arc-{i}"
-                shift = size * 0.35
-                # The baseline sits below the band's centre line for text read
-                # along the arc, above it for text read against it.
-                r_text = r_arc + shift if lower else r_arc - shift
-                defs.append(
-                    f'<path id="{pid}" d="{_arc_path(c, c, r_text, a0, a1, reverse=lower)}"/>'
+        named = f"{short} {count}"
+        if len(named) * size * _TEXT_CHAR + 12 <= arc_len:
+            # A name and count run along the arc; on the lower half the
+            # path is reversed and the baseline moves out, so it reads upright.
+            pid = f"{ident}-arc-{i}"
+            shift = size * 0.35
+            r_text = r_arc + shift if lower else r_arc - shift
+            defs.append(f'<path id="{pid}" d="{_arc_path(c, c, r_text, a0, a1, reverse=lower)}"/>')
+            labels.append(
+                f'<text class="ring-arc-label" style="--i:{i}">'
+                f'<textPath href="#{pid}" startOffset="50%" text-anchor="middle">{_esc(named)}</textPath></text>'
+            )
+        elif size * 1.2 + 6 <= arc_len:
+            # A short arc gets its count alone, upright at the arc's middle.
+            x, y = _point(c, c, r_arc, mid)
+            labels.append(
+                _text(
+                    x, y + size * 0.35, str(count), "ring-arc-label", "middle", f' style="--i:{i}"'
                 )
-                labels.append(
-                    f'<text class="ring-arc-label" style="--i:{i}">'
-                    f'<textPath href="#{pid}" startOffset="50%" text-anchor="middle">{_esc(text)}</textPath></text>'
-                )
-                break
+            )
 
     out.append("<defs>" + "".join(defs) + "</defs>")
     out.extend(body)

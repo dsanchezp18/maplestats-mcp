@@ -99,6 +99,26 @@ async def test_site_builds(tmp_path: Path):
     assert (out / "llms.txt").is_file()
 
 
+async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
+    """statcan.html builds in both languages and shows the registry's StatCan counts."""
+    import re
+
+    modules = await site.collect_modules()
+    statcan = next(m for m in modules if m.key == "statcan")
+    families = {t.family for t in statcan.tools}
+    await site.build(tmp_path / "site")
+    tool_names = {t.name for m in modules for t in m.tools}
+    for page in (tmp_path / "site" / "statcan.html", tmp_path / "site" / "fr" / "statcan.html"):
+        text = page.read_text(encoding="utf-8")
+        assert f"<dt>{len(statcan.tools)}</dt>" in text
+        assert f"<dt>{len(families)}</dt>" in text
+        assert text.count('<div class="sc-group">') == len(site.STATCAN_GROUPS)
+        # Every family is listed once, and every tool link names a real tool.
+        assert text.count('<p class="sc-prefix">') == len(families)
+        linked = set(re.findall(r'tools\.html#t-([a-z0-9_]+)"', text))
+        assert linked and linked <= tool_names
+
+
 def test_case_captures_are_complete():
     """Each case study is recorded calls with their source and, for the first, scripts."""
     import json
@@ -125,3 +145,20 @@ def test_agent_prompt_is_the_same_everywhere():
     for page in ("index.html", "connect.html"):
         template = (site.SITE / page).read_text(encoding="utf-8")
         assert "{{agent_prompt}}" in template, page
+
+
+def test_french_pages_link_to_french_pages():
+    """A French page's links stay in fr/; only the language switch goes to English."""
+    page = (
+        '<html lang="fr" data-root="../"><link href="../assets/site.css" rel="stylesheet">'
+        '<a href="../tools.html#t-wds_search_cubes">x</a> <a href="../index.html#how">y</a>'
+        '<a class="lang" href="../cases.html" hreflang="en">English</a>'
+        '<a href="https://example.org/a.html">z</a>'
+    )
+    out = site.french_links(page)
+    assert 'href="tools.html#t-wds_search_cubes"' in out
+    assert 'href="index.html#how"' in out
+    assert 'href="../cases.html" hreflang="en"' in out
+    assert 'href="../assets/site.css"' in out
+    assert 'href="https://example.org/a.html"' in out
+    assert 'data-pages=""' in out
