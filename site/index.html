@@ -16,7 +16,7 @@
   <div class="hero-logo">{{> logo}}</div>
   <div class="hero-text">
     <h1>{en}One MCP to rule them all.{fr}Un MCP pour les gouverner tous.{/}</h1>
-    <p class="lede">{en}MapleStats is one server for publicly available Canadian data. Connect it to your AI agent to retrieve precise, well-sourced statistics and reports from more than {{sources_over}} sources, including Statistics Canada, the Bank of Canada and CMHC. Never worry about Canadian data retrieval again: focus on what actually matters to you.{fr}MapleStats est un seul serveur pour les données canadiennes accessibles au public. Connectez-le à votre agent IA pour obtenir des statistiques et des rapports précis et bien sourcés, tirés de plus de {{sources_over}} sources, dont Statistique Canada, la Banque du Canada et la SCHL. Ne vous souciez plus de trouver des données canadiennes : concentrez-vous sur ce qui compte vraiment pour vous.{/}</p>
+    <p class="lede">{en}MapleStats is one server for publicly available Canadian data. Connect it to your AI agent to retrieve precise, well-sourced statistics and reports from {{source_count}} sources, including Statistics Canada, the Bank of Canada and CMHC. Never worry about Canadian data retrieval again: focus on what actually matters to you.{fr}MapleStats est un seul serveur pour les données canadiennes accessibles au public. Connectez-le à votre agent IA pour obtenir des statistiques et des rapports précis et bien sourcés, tirés de {{source_count}} sources, dont Statistique Canada, la Banque du Canada et la SCHL. Ne vous souciez plus de trouver des données canadiennes : concentrez-vous sur ce qui compte vraiment pour vous.{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MCP is the standard way to plug data into AI agents. MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}Le MCP est la façon standard de brancher des données sur un agent IA. MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
       <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Any data call can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}Tout appel de données peut revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
@@ -66,18 +66,18 @@
     <div class="section-head">
       <p class="label">{en}Case studies{fr}Études de cas{/}</p>
       <h2>{en}What can you do with it{fr}Que pouvez-vous en faire{/}</h2>
-      <p>{en}Eight kinds of people asked their agent a real question through MapleStats. Here is one of them: a macroeconomist reading the yield curve.{fr}Huit profils différents ont posé une vraie question à leur agent grâce à MapleStats. En voici un : un macroéconomiste qui lit la courbe des taux.{/}</p>
+      <p>{en}{{cases_word_cap}} questions, from {{cases_word}} kinds of work, each answered with MapleStats tool calls. Here is one of them: a macroeconomist reading the yield curve.{fr}{{cases_word_cap}} questions de {{cases_word}} métiers différents, chacune résolue par des appels aux outils de MapleStats. En voici une : celle d'un macroéconomiste qui lit la courbe des taux.{/}</p>
     </div>
     <div class="feature-case">
       <div class="feature-text">
         <p class="use-who">{en}Macroeconomists{fr}Macroéconomistes{/}</p>
         <h3>{en}When the yield curve turns upside down{fr}Quand la courbe des taux s'inverse{/}</h3>
         <p>{en}The gap between the 10-year and 2-year Government of Canada bond yields, every business day since {{curve_first_year}}. When it drops below zero, markets expect rates to fall, usually because they expect the economy to slow. It inverted in {{curve_spells}}.{fr}L'écart entre les rendements des obligations du gouvernement du Canada à 10 ans et à 2 ans, chaque jour ouvrable depuis {{curve_first_year}}. Quand il passe sous zéro, les marchés s'attendent à une baisse des taux, le plus souvent parce qu'ils prévoient un ralentissement. La courbe s'est inversée en {{curve_spells}}.{/}</p>
-        <p class="source-links"><a href="{{root}}cases.html#macroeconomists">{en}See how the agent got it{fr}Voir comment l'agent l'a obtenu{/}</a></p>
+        <p class="source-links"><a href="{{root}}cases.html#macroeconomists">{en}See the calls behind it{fr}Voir les appels à l'origine de ce graphique{/}</a></p>
       </div>
       <figure class="chart-wrap">{{chart_curve}}<figcaption>{{source_curve}}</figcaption></figure>
     </div>
-    <p class="uses-more-label">{en}The other seven{fr}Les sept autres{/}</p>
+    <p class="uses-more-label">{en}The other {{others_word}}{fr}Les {{others_word}} autres{/}</p>
     <ul class="uses-more">
       <li><a href="{{root}}cases.html#statisticians"><b>{en}Statisticians{fr}Statisticiens{/}</b> <span>{en}A bachelor's degree, province by province{fr}Le baccalauréat, province par province{/}</span></a></li>
       <li><a href="{{root}}cases.html#demographers"><b>{en}Demographers{fr}Démographes{/}</b> <span>{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</span></a></li>

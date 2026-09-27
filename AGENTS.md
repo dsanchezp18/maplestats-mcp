@@ -55,9 +55,10 @@ per module directory (auto-discovers every `@tool`/`@resource`/
 `@prompt`-decorated function, recursing into submodule subfolders —
 confirmed working for the `statcan/{wds,sdmx,rdaas}/` split), and adds
 a `BM25SearchTransform`. The practical effect: the server exposes only
-two tools directly, `search_tools` and `call_tool` — every per-source
-tool is discovered by natural-language query through `search_tools`
-and invoked through `call_tool`. Don't design a new tool assuming a
+three tools directly, `search_tools`, `call_tool` and `plan_query`
+(kept visible through the transform's `always_visible` list) — every
+other tool is discovered by natural-language query through
+`search_tools` and invoked through `call_tool`. Don't design a new tool assuming a
 client sees it in a flat list; write its docstring so it's findable.
 
 ### Response contract

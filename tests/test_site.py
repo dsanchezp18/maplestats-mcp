@@ -156,7 +156,7 @@ def test_case_captures_are_complete():
     french = [path.stem for path in site.CASES_DIR.glob("*_fr.json")]
     # A French capture stands in for a case on the French pages, so it needs its case.
     assert {key.removesuffix("_fr") for key in french} <= set(site.CASE_KEYS)
-    for key in (*site.CASE_KEYS, *french, "counts", "statcan"):
+    for key in (*site.CASE_KEYS, *french, "counts", "statcan", site.POLICY_RATE):
         case = json.loads((site.CASES_DIR / f"{key}.json").read_text(encoding="utf-8"))
         assert case["captured"] and case["calls"], key
         for call in case["calls"]:
@@ -169,6 +169,64 @@ def test_case_captures_are_complete():
         first = case["calls"][0]
         # A web page the tool parses has no script, only reproduce_code's note why.
         assert {"r", "python"} <= set(first["scripts"]) or first["script_notes"], key
+
+
+def test_french_captures_match_their_english_day():
+    """A <key>_fr capture is recorded with <key>, so both pages show one day's data."""
+    import json
+
+    for path in site.CASES_DIR.glob("*_fr.json"):
+        french = json.loads(path.read_text(encoding="utf-8"))
+        english = site.load_case(path.stem.removesuffix("_fr"))
+        assert french["captured"] == english["captured"], path.name
+
+
+def test_capturing_a_case_captures_its_french_twin():
+    spec = importlib.util.spec_from_file_location(
+        "capture_cases", ROOT / "scripts" / "capture_cases.py"
+    )
+    assert spec and spec.loader
+    capture = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(capture)
+    assert capture.with_twins(["cards"]) == ["cards", "cards_fr"]
+    assert capture.with_twins(["cards_fr", "boc"]) == ["cards", "cards_fr", "boc"]
+    assert capture.with_twins(["boc", "boc"]) == ["boc"]
+    # Every French capture on disk has a twin in CASES, so a recapture keeps them in step.
+    for path in site.CASES_DIR.glob("*_fr.json"):
+        assert path.stem in capture.CASES and path.stem.removesuffix("_fr") in capture.CASES
+
+
+def test_build_refuses_an_output_that_holds_sources(tmp_path: Path):
+    """The build replaces its output wholesale; it must never replace sources."""
+    for out in (
+        ROOT,
+        ROOT.parent,
+        ROOT / "site",
+        ROOT / "site" / "out",
+        ROOT / "src",
+        ROOT / "src" / "maplestats_mcp",
+        ROOT / "site" / "..",
+    ):
+        with pytest.raises(SystemExit):
+            site.safe_out(out)
+    assert site.safe_out(ROOT / "build" / "site") == ROOT / "build" / "site"
+    assert site.safe_out(tmp_path / "site") == (tmp_path / "site").resolve()
+
+
+async def test_failed_build_keeps_the_last_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    out = tmp_path / "site"
+    out.mkdir()
+    (out / "index.html").write_text("old", encoding="utf-8")
+
+    def broken(stage: Path, *args: object) -> int:
+        (stage / "index.html").write_text("half", encoding="utf-8")
+        raise RuntimeError("render failed")
+
+    monkeypatch.setattr(site, "_write_site", broken)
+    with pytest.raises(RuntimeError):
+        await site.build(out)
+    assert (out / "index.html").read_text(encoding="utf-8") == "old"
+    assert [p.name for p in tmp_path.iterdir()] == ["site"]
 
 
 def test_agent_prompt_is_the_same_everywhere():
