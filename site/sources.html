@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>Sources · MapleStats MCP</title>
+<meta name="description" content="{en}Every publisher MapleStats MCP reaches: federal agencies by subject, and the provincial, territorial and city sources in each province and territory.{fr}Chaque éditeur que MapleStats MCP atteint : les organismes fédéraux par sujet, et les sources provinciales, territoriales et municipales de chaque province et territoire.{/}">
+<link rel="alternate" hreflang="{en}fr{fr}en{/}" href="{{alt_href}}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">Sources</p>
+  <h1>{en}Where the data comes from{fr}D'où viennent les données{/}</h1>
+  <p class="lede">{en}Federal agencies answer most national questions. Provincial agencies and open-data catalogues add the local detail in {{places_covered}} of the 13 provinces and territories. Each result comes straight from its publisher; the server keeps no copy.{fr}Les organismes fédéraux répondent à la plupart des questions nationales. Les organismes provinciaux et les catalogues de données ouvertes ajoutent le détail local dans {{places_covered}} des 13 provinces et territoires. Chaque résultat vient directement de son éditeur; le serveur n'en garde aucune copie.{/}</p>
+  <p class="source-links"><a href="{{root}}tools.html">{en}Browse all {{tool_count}} tools{fr}Parcourir les {{tool_count}} outils{/}</a><a href="{{root}}statcan.html">{en}How the MCP queries Statistics Canada{fr}Comment le MCP interroge Statistique Canada{/}</a></p>
+</section>
+
+<section class="section sources-page">
+  <div class="wrap">
+    <h2 class="sub">{en}Federal and national{fr}Fédéral et national{/} <span class="count">{{national_count}}</span></h2>
+    <p class="sources-note">{en}Grouped by subject, with each source's tool count. A name opens its tools.{fr}Regroupées par sujet, avec le nombre d'outils de chaque source. Un nom ouvre ses outils.{/}</p>
+    <div class="domains">{{national_sources}}</div>
+    <p class="sources-feature"><a href="{{root}}statcan.html"><strong>{en}Statistics Canada, in depth{fr}Statistique Canada en détail{/}</strong> <span>{en}Every table, series and microdata file an agent can reach, and the hard parts MapleStats handles for you.{fr}Chaque tableau, série et fichier de microdonnées qu'un agent peut atteindre, et les difficultés que MapleStats règle pour vous.{/} <span aria-hidden="true">→</span></span></a></p>
+
+    <div class="local">
+      <h3 class="sub">{en}Provinces, territories and cities{fr}Provinces, territoires et villes{/} <span class="count">{{local_source_count}}</span></h3>
+      <p>{en}Columns follow the Standard Geographical Classification. Hover a cell for the sources it counts. The federal catalogue, open.canada.ca, covers every column and is not counted here.{fr}Les colonnes suivent la Classification géographique type. Survolez une cellule pour voir les sources qu'elle compte. Le catalogue fédéral, ouvert.canada.ca, couvre toutes les colonnes et n'est pas compté ici.{/}</p>
+      {{coverage_matrix}}
+      <p class="legend">
+        <span class="sw"><i class="c1"></i>1</span>
+        <span class="sw"><i class="c2"></i>2</span>
+        <span class="sw"><i class="c3"></i>{en}3 to 5{fr}3 à 5{/}</span>
+        <span class="sw"><i class="c4"></i>{en}6 or more{fr}6 ou plus{/}</span>
+        <span>{en}sources per cell{fr}sources par cellule{/}</span>
+      </p>
+      <details class="local-list">
+        <summary>{en}List every local source{fr}Voir toutes les sources locales{/}</summary>
+        <div class="local-cols">{{coverage_lists}}</div>
+      </details>
+    </div>
+
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

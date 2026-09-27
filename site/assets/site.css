@@ -3871,3 +3871,119 @@ mark {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- Sources: the short home summary and the full page ---------- */
+
+.source-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px clamp(24px, 2.5vw, 32px);
+  margin: 8px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+
+.source-stats dt {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 3rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  font-variant-numeric: lining-nums;
+}
+
+.source-stats dd {
+  margin: 6px 0 0;
+  max-width: 24ch;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+@media (max-width: 760px) {
+  .source-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.source-links {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-weight: 600;
+}
+
+.sources-note {
+  margin: 6px 0 18px;
+  color: var(--ink-3);
+  font-size: 0.9375rem;
+}
+
+h2.sub {
+  margin-bottom: 0;
+}
+
+/* ---------- Home: what you can do with it ---------- */
+
+.uses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uses a {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  height: 100%;
+  padding: 18px 18px 16px;
+  border: 2px solid var(--rule-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.uses a:hover {
+  border-color: var(--accent);
+}
+
+.use-who {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.use-q {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.use-n {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.use-n b {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+@media (max-width: 1100px) {
+  .uses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .uses {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
