@@ -330,7 +330,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* The arcs draw in one after another, then the inscriptions light up and
+  /* The arcs draw in one after another, then the inscriptions fade in and
      turn, the outer one clockwise and the inner one the other way. */
   .js .ring .ring-arc {
     stroke-dasharray: 1 1;
@@ -368,22 +368,9 @@
     animation: ring-turn 320s linear infinite reverse;
   }
 
-  .js .ring.play .ring-script {
-    animation: ring-glow 4s ease-in-out 1.6s infinite alternate;
-  }
-
   @keyframes ring-turn {
     to {
       transform: rotate(360deg);
-    }
-  }
-
-  @keyframes ring-glow {
-    from {
-      filter: drop-shadow(0 0 0 transparent);
-    }
-    to {
-      filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--ring-arc) 45%, transparent));
     }
   }
 }
