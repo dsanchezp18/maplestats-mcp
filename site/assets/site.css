@@ -1246,15 +1246,37 @@ mark {
   margin-left: auto;
 }
 
+/* The coverage table sits centred on the page, with its heading, note,
+   legend and list toggle centred above and below it. */
 .local {
   margin-top: clamp(56px, 7vw, 88px);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
   gap: 18px;
+  text-align: center;
 }
 
 .local > p {
   max-width: 66ch;
   color: var(--ink-2);
+}
+
+.local .table-wrap {
+  width: max-content;
+  margin-top: 8px;
+}
+
+.local .legend {
+  justify-content: center;
+}
+
+.local-list {
+  justify-self: stretch;
+}
+
+.local-list[open] .local-cols {
+  text-align: left;
 }
 
 .matrix {
@@ -1289,12 +1311,20 @@ mark {
 }
 
 .matrix td {
-  min-width: 42px;
-  height: 40px;
+  min-width: 54px;
+  height: 48px;
   padding: 0 4px;
   text-align: center;
-  font: 500 0.875rem/1 var(--font-mono);
+  font: 500 0.9375rem/1 var(--font-mono);
   border-radius: 0;
+}
+
+@media (max-width: 900px) {
+  .matrix td {
+    min-width: 42px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
 }
 
 .matrix tbody td.c0 {
@@ -1323,7 +1353,7 @@ mark {
 
 .matrix tfoot td,
 .matrix tfoot th {
-  height: 34px;
+  height: 40px;
   border-top: 1px solid var(--rule-2);
 }
 
