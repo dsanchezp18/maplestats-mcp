@@ -18,7 +18,7 @@
       selected: "Selected, press Ctrl+C",
       top: (n, total) => `Top ${n} of ${total} tools, ranked by the same BM25 index search_tools uses.`,
       none: "No tool matches. Try a broader term, or the agency's name.",
-      offline: "The search index did not load. Open the tool atlas instead.",
+      offline: "The search index did not load. Open the Tools page instead.",
       tools: (n) => `${n} ${n === 1 ? "tool" : "tools"}`,
       matches: (n) => `${n} ${n === 1 ? "match" : "matches"}`,
       cut: (n) => `Beyond the top ${n}: search_tools would not return these.`,
@@ -29,7 +29,7 @@
       selected: "Sélectionné, faites Ctrl+C",
       top: (n, total) => `Les ${n} premiers sur ${total} outils, classés par le même index BM25 que search_tools.`,
       none: "Aucun outil ne correspond. Essayez un terme plus large ou le nom de l'organisme.",
-      offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt le répertoire des outils.",
+      offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
       tools: (n) => `${n} ${n === 1 ? "outil" : "outils"}`,
       matches: (n) => `${n} ${n === 1 ? "résultat" : "résultats"}`,
       cut: (n) => `Au-delà des ${n} premiers : search_tools ne les renverrait pas.`,
@@ -53,6 +53,34 @@
     },
   };
 
+  /* ---------- Light / dark switch ---------- */
+
+  const themeLabels = {
+    en: { dark: "Dark", light: "Light", toDark: "Switch to dark mode", toLight: "Switch to light mode" },
+    fr: { dark: "Sombre", light: "Clair", toDark: "Passer au mode sombre", toLight: "Passer au mode clair" },
+  }[lang];
+  const systemDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const currentTheme = () => doc.dataset.theme || (systemDark && systemDark.matches ? "dark" : "light");
+
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    const label = button.querySelector("[data-theme-label]");
+    const show = () => {
+      const dark = currentTheme() === "dark";
+      // The button names the mode it switches to.
+      label.textContent = dark ? themeLabels.light : themeLabels.dark;
+      button.setAttribute("aria-label", dark ? themeLabels.toLight : themeLabels.toDark);
+    };
+    button.addEventListener("click", () => {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      doc.dataset.theme = next;
+      store.set("maplestats:theme", next);
+      show();
+    });
+    if (systemDark && systemDark.addEventListener) systemDark.addEventListener("change", show);
+    button.hidden = false;
+    show();
+  });
+
   /* ---------- Tokenizer: a port of shared/search.py ---------- */
 
   function fold(word) {
@@ -63,7 +91,9 @@
   }
 
   function tokenize(text) {
-    const plain = text.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "");
+    // Like search.py: NFKD leaves the ligatures whole, so fold them first.
+    const folded = text.toLowerCase().replace(/œ/g, "oe").replace(/æ/g, "ae");
+    const plain = folded.normalize("NFKD").replace(/\p{M}/gu, "");
     return (plain.match(/[\p{L}\p{N}]{2,}/gu) || []).map(fold);
   }
 
@@ -150,7 +180,7 @@
 
   /* ---------- Hero search ---------- */
 
-  document.querySelectorAll("[data-hero-search]").forEach((box) => {
+  document.querySelectorAll("[data-live-search]").forEach((box) => {
     const input = box.querySelector("input");
     const list = box.querySelector("[data-results]");
     const status = box.querySelector("[data-status]");

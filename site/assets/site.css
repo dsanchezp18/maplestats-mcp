@@ -1,6 +1,6 @@
 /* MapleStats MCP website. Tokens first; every colour below comes from them.
    Direction A, "red grid": white ground, black ink and 2px rules, one
-   Canadian red; Archivo (wide for display) with IBM Plex Mono. */
+   Canadian red; Source Serif 4 headings, Source Sans 3 text, IBM Plex Mono code. */
 
 :root {
   color-scheme: light;
@@ -45,8 +45,8 @@
   --prov: rgba(255, 143, 133, 0.1);
   --shadow: none;
 
-  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  --font-text: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --font-text: "Source Sans 3", "Source Sans Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --gutter: clamp(16px, 4vw, 64px);
   --max: 1312px;
@@ -140,12 +140,15 @@
 }
 
 html {
+  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   scroll-padding-top: calc(var(--top-h) + 24px);
 }
 
 body {
   margin: 0;
+  /* clip, not hidden: no sideways page scroll, and sticky headers still work. */
+  overflow-x: clip;
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-text);
@@ -302,8 +305,7 @@ mark {
   color: var(--ink);
   text-decoration: none;
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: 1.1875rem;
   letter-spacing: -0.012em;
   white-space: nowrap;
@@ -324,11 +326,7 @@ mark {
 }
 
 .mark .cell {
-  fill: #ffffff;
-}
-
-.mark .grid {
-  stroke: var(--accent);
+  fill: var(--on-accent);
 }
 
 .brand-tag {
@@ -386,7 +384,9 @@ mark {
   border-color: var(--ink);
 }
 
-@media (max-width: 760px) {
+/* Two header rows below 1000 px: the French nav and the theme switch do not
+   fit on one row at 800 px (measured). */
+@media (max-width: 1000px) {
   :root {
     --top-h: 104px;
   }
@@ -416,31 +416,155 @@ mark {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: clamp(28px, 3vw, 40px) clamp(24px, 2.5vw, 32px);
   align-items: start;
   padding-block: clamp(36px, 4.5vw, 56px) clamp(48px, 5.5vw, 80px);
 }
 
-.hero h1 {
-  grid-column: 1 / -1;
+/* The logo on the left, the words on the right. The logo takes the height
+   of the text beside it: its top meets the cap line of the kicker and its
+   bottom the baseline of the last line. Where the column is too narrow for
+   that, the square keeps the column width and sits centred on the text. */
+.hero-logo {
+  grid-column: 1 / span 4;
+  position: relative;
+  align-self: stretch;
 }
 
-.hero-copy {
-  padding-top: 20px;
+/* Out of flow, so only the text sets the row height; the SVG then fits the
+   largest square it can, flush left (preserveAspectRatio="xMinYMid"). */
+.hero-logo .logo {
+  position: absolute;
+  /* Top: the headline's cap line, measured at 0.145 of its size; bottom:
+     8px above the text box, where the last line's baseline sits. */
+  inset: calc(var(--h1-size, 5rem) * 0.145) 0 8px;
+  width: 100%;
+  height: calc(100% - var(--h1-size, 5rem) * 0.145 - 8px);
+}
+
+.logo-tile {
+  fill: var(--accent);
+}
+
+.logo-ink {
+  fill: var(--on-accent);
+}
+
+.hero-text {
+  grid-column: 5 / -1;
+}
+
+.hero .lede {
+  margin-top: 22px;
+  padding-top: 22px;
+  max-width: 34em;
+  border-top: 2px solid var(--ink);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* What it does, and what it hands back: two short points under the lede. */
+.points {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.points p {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.points .point-label {
+  margin-bottom: 4px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Between the stacked layout and full width, the text steps down a size so
+   it stays as tall as the logo column is wide. */
+@media (min-width: 1181px) and (max-width: 1360px) {
+  .hero .lede {
+    font-size: 1.375rem;
+  }
+
+  .points p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .points {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+.setup {
+  grid-column: 1 / -1;
+  padding-top: 22px;
   border-top: 2px solid var(--ink);
 }
 
-@media (max-width: 980px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
+.setup-lead {
+  max-width: 110ch;
+  color: var(--ink-2);
+}
+
+.setup-lead strong {
+  margin-right: 10px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.setup-row {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 26px;
+  font-weight: 500;
+}
+
+.cmd.prompt code::before {
+  content: none;
+}
+
+@media (max-width: 1180px) {
+  .hero-logo,
+  .hero-text {
+    grid-column: 1 / -1;
+  }
+
+  .hero-logo .logo {
+    position: static;
+    display: block;
+    width: 180px;
+    height: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .cmd.prompt code {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
 .hero h1 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 115%;
+  font-weight: 700;
   font-size: clamp(2.6rem, 0.9rem + 6.2vw, 5.9rem);
   line-height: 0.92;
   letter-spacing: -0.025em;
@@ -714,8 +838,7 @@ mark {
 
 .section-head h2 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: clamp(1.95rem, 1.35rem + 1.9vw, 2.95rem);
   line-height: 1.04;
   letter-spacing: -0.022em;
@@ -792,8 +915,7 @@ mark {
 
 .step h3 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: 1.625rem;
   line-height: 1.1;
   letter-spacing: -0.015em;
@@ -1426,19 +1548,76 @@ mark {
   }
 }
 
-.note blockquote {
-  margin: 0;
+
+
+.thanks-body {
   display: grid;
   gap: 16px;
-  max-width: 62ch;
-  font-size: clamp(1.125rem, 1.05rem + 0.35vw, 1.3125rem);
-  line-height: 1.55;
+  max-width: 68ch;
+  color: var(--ink-2);
 }
 
-.note cite {
-  font-style: normal;
-  font-size: 0.9375rem;
-  color: var(--ink-3);
+.thanks-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.thanks-list li {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 16px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (max-width: 560px) {
+  .thanks-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}
+
+/* ---------- About ---------- */
+
+.about {
+  display: grid;
+  padding-bottom: clamp(56px, 7vw, 96px);
+}
+
+.about-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
+  gap: 12px clamp(20px, 3.4vw, 52px);
+  padding-block: 24px 32px;
+  border-top: 2px solid var(--ink);
+}
+
+.about-row h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.about-text {
+  display: grid;
+  gap: 14px;
+}
+
+.about-text p {
+  max-width: 66ch;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+@media (max-width: 800px) {
+  .about-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---------- Footer ---------- */
@@ -1464,7 +1643,7 @@ mark {
 
 .foot-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.7fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 32px 48px;
 }
 
@@ -1503,8 +1682,7 @@ mark {
 
 .page-head h1 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: clamp(2.2rem, 1.5rem + 2.6vw, 3.6rem);
   line-height: 1.02;
   letter-spacing: -0.028em;
@@ -1707,8 +1885,7 @@ mark {
 
 .mod-head h2 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: 1.75rem;
   line-height: 1.12;
   letter-spacing: -0.015em;
@@ -1732,6 +1909,18 @@ mark {
   max-width: 76ch;
   font-size: 0.9375rem;
   color: var(--ink-2);
+}
+
+.mod-more summary {
+  width: max-content;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mod-more[open] summary {
+  margin-bottom: 8px;
 }
 
 .mod-meta,
@@ -1974,8 +2163,7 @@ mark {
 .connect-note h2,
 .guide h2 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2.25rem);
   line-height: 1.08;
   letter-spacing: -0.018em;
@@ -2130,8 +2318,7 @@ mark {
 
 .thesis-body h2 {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-stretch: 112%;
+  font-weight: 700;
   font-size: clamp(1.95rem, 1.35rem + 1.9vw, 2.95rem);
   line-height: 1.04;
   letter-spacing: -0.022em;
@@ -2166,8 +2353,7 @@ mark {
 .claims h3 {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 800;
-  font-stretch: 108%;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -2175,23 +2361,71 @@ mark {
   color: var(--ink-2);
 }
 
-.note .closing {
-  font-family: var(--font-display);
-  font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.6rem);
-  font-weight: 800;
-  font-stretch: 112%;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-}
 
-/* The headline is one line wherever it fits; French runs longer, so smaller. */
-@media (min-width: 761px) {
-  .hero h1 {
-    font-size: min(5.1vw, 4.9rem);
-    white-space: nowrap;
+/* The headline is one line beside the logo; French runs longer, so smaller.
+   Measured in Source Serif 4 at 700: the English line is 10.2 em wide, the
+   French 13.1 em; both fit the eight-column text block. */
+@media (min-width: 1181px) {
+  .hero {
+    --h1-size: min(5.5vw, 5.1rem);
   }
 
-  html[lang="fr"] .hero h1 {
-    font-size: min(4.05vw, 3.9rem);
+  html[lang="fr"] .hero {
+    --h1-size: min(4.3vw, 4rem);
+  }
+
+  .hero h1 {
+    font-size: var(--h1-size);
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Light / dark switch ---------- */
+
+.theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule-2);
+  background: transparent;
+  color: var(--ink);
+  font: 600 0.875rem/1.2 var(--font-text);
+  cursor: pointer;
+}
+
+.theme:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.theme svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.theme .sun,
+:root[data-theme="dark"] .theme .moon {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme .sun {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme .moon {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .theme .sun {
+    display: block;
+  }
+}
+
+@media (max-width: 560px) {
+  .theme [data-theme-label] {
+    display: none;
   }
 }

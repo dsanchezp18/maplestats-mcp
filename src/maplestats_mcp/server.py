@@ -66,7 +66,7 @@ class ModuleProvider(FileSystemProvider):
 # docs://catalogue, which is generated and cannot drift), and its
 # docs:// resources.
 SERVER_INSTRUCTIONS = """
-MapleStats MCP -- one server for Canadian public data.
+MapleStats MCP -- one server for Canadian open data.
 
 How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
