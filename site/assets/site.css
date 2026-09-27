@@ -1937,11 +1937,12 @@ mark {
   gap: 12px;
 }
 
-/* The finale: a dark panel in both themes, the ring on the left, the
-   argument on the right, and what one connection reaches along the bottom. */
+/* The finale: a tinted band in the page's own theme, the ring as the
+   centrepiece, the argument under it, and what one connection reaches. */
 .finale {
-  background: var(--panel);
-  color: var(--panel-ink);
+  background: var(--ground-2);
+  color: var(--ink);
+  border-top: 2px solid var(--rule-2);
 }
 
 .finale-grid {
@@ -1960,7 +1961,7 @@ mark {
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.025em;
-  color: var(--panel-ink);
+  color: var(--ink);
 }
 
 /* The ring is the centrepiece: centred and as wide as the inscription needs
@@ -1982,7 +1983,7 @@ mark {
   font-size: 0.875rem;
   line-height: 1.5;
   text-align: center;
-  color: var(--panel-mute);
+  color: var(--ink-2);
 }
 
 .finale-body {
@@ -2011,7 +2012,7 @@ mark {
   max-width: 62ch;
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
   line-height: 1.6;
-  color: var(--panel-mute);
+  color: var(--ink-2);
 }
 
 .finale-body .finale-lead {
@@ -2020,7 +2021,7 @@ mark {
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.015em;
-  color: var(--panel-ink);
+  color: var(--ink);
 }
 
 .finale-links {
@@ -2033,18 +2034,18 @@ mark {
 }
 
 .finale-links a {
-  color: var(--panel-link);
+  color: var(--accent);
 }
 
 .finale-reach {
   grid-column: 1 / -1;
   padding-top: 28px;
-  border-top: 1px solid var(--panel-rule);
+  border-top: 1px solid var(--rule);
   text-align: center;
 }
 
 .finale-reach .label {
-  color: var(--panel-link);
+  color: var(--accent);
 }
 
 .counters {
@@ -2068,12 +2069,12 @@ mark {
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: lining-nums tabular-nums;
-  color: var(--panel-ink);
+  color: var(--ink);
 }
 
 .counter-l {
   font-size: 0.9375rem;
-  color: var(--panel-mute);
+  color: var(--ink-2);
 }
 
 .how-more {
