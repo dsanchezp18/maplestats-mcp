@@ -116,3 +116,12 @@ def test_case_captures_are_complete():
         first = case["calls"][0]
         # A web page the tool parses has no script, only reproduce_code's note why.
         assert {"r", "python"} <= set(first["scripts"]) or first["script_notes"], key
+
+
+def test_agent_prompt_is_the_same_everywhere():
+    """The setup prompt reads word for word the same on the site and in the README."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"> {site.AGENT_PROMPT['en']}" in readme
+    for page in ("index.html", "connect.html"):
+        template = (site.SITE / page).read_text(encoding="utf-8")
+        assert "{{agent_prompt}}" in template, page

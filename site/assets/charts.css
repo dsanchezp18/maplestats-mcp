@@ -250,3 +250,123 @@
     }
   }
 }
+
+/* ---------- The ring (case-study finale) ----------
+ * It sits on the dark finale panel in both themes, so its colours are the
+ * panel's: fiery letters on the outer band, quieter ones inside, arcs in the
+ * dark theme's first series colour. Arc labels are dark ink on the arcs. */
+.ring {
+  --ring-fire: #ff8f85;
+  --ring-arc: #f0503f;
+  --ring-arc-ink: #1a0604;
+}
+
+.ring .ring-rule {
+  fill: none;
+  stroke: var(--panel-rule);
+  stroke-width: 1;
+}
+
+.ring text.ring-script {
+  fill: var(--ring-fire);
+  font-family: var(--font-display);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.ring text.ring-script-2 {
+  fill: var(--panel-mute);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+.ring .ring-arc {
+  fill: none;
+  stroke: var(--ring-arc);
+}
+
+.ring .ring-arc:hover {
+  stroke: var(--ring-fire);
+}
+
+.ring text.ring-arc-label {
+  fill: var(--ring-arc-ink);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.ring text.ring-n {
+  fill: var(--panel-ink);
+  font-family: var(--font-display);
+  font-size: 92px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ring text.ring-sub {
+  fill: var(--panel-mute);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The arcs draw in one after another, then the inscriptions light up and
+     turn, the outer one clockwise and the inner one the other way. */
+  .js .ring .ring-arc {
+    stroke-dasharray: 1 1;
+    transition: stroke-dashoffset 900ms cubic-bezier(0.3, 0.7, 0.2, 1);
+    transition-delay: calc(var(--i, 0) * 70ms);
+  }
+
+  .js .ring:not(.play) .ring-arc {
+    stroke-dashoffset: 1;
+  }
+
+  .js .ring .ring-arc-label {
+    transition: opacity 400ms ease-out;
+    transition-delay: calc(var(--i, 0) * 70ms + 700ms);
+  }
+
+  .js .ring:not(.play) .ring-arc-label,
+  .js .ring:not(.play) .ring-spin,
+  .js .ring:not(.play) .ring-spin-2 {
+    opacity: 0;
+  }
+
+  .js .ring .ring-spin,
+  .js .ring .ring-spin-2 {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    transition: opacity 1.4s ease-out 600ms;
+  }
+
+  .js .ring.play .ring-spin {
+    animation: ring-turn 240s linear infinite;
+  }
+
+  .js .ring.play .ring-spin-2 {
+    animation: ring-turn 320s linear infinite reverse;
+  }
+
+  .js .ring.play .ring-script {
+    animation: ring-glow 4s ease-in-out 1.6s infinite alternate;
+  }
+
+  @keyframes ring-turn {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes ring-glow {
+    from {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    to {
+      filter: drop-shadow(0 0 3px var(--ring-arc));
+    }
+  }
+}

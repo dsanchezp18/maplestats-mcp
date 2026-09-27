@@ -125,10 +125,22 @@ def _all_charts() -> dict[str, str]:
             value_format=lambda v: f"{v:.0f}",
             log=False,
         ),
+        "ring": charts.ring_chart(
+            ["Bank of Canada", "StatCan", "CMHC <&>"],
+            ["Alberta", "Edmonton", "Calgary"],
+            [
+                ("Statistics", "Statistics and census", 62),
+                ("Money", "Money and prices", 21),
+                ("Energy", "Energy", 1),
+            ],
+            centre="84",
+            centre_lines=("tools,", "one connection"),
+            label="Ring",
+        ),
     }
 
 
-CHARTS = ["ci", "bars", "line", "step", "band", "scatter", "hbar", "hbar_linear"]
+CHARTS = ["ci", "bars", "line", "step", "band", "scatter", "hbar", "hbar_linear", "ring"]
 
 
 @pytest.mark.parametrize("name", CHARTS)
@@ -300,3 +312,24 @@ def test_hbar_log_grid_is_powers_of_ten_and_bars_are_ordered() -> None:
     assert widths == sorted(widths, reverse=True)
     with pytest.raises(ValueError):
         charts.hbar_chart([("zero", 0.0)], label="x", value_format=str)
+
+
+def test_ring_inscriptions_close_and_arcs_share_the_circle() -> None:
+    root = _parse(_all_charts()["ring"])
+    paths = {el.get("id"): el for el in root.iter(f"{NS}path") if el.get("id")}
+    text_paths = list(root.iter(f"{NS}textPath"))
+    # Two inscriptions plus a label on each arc that has room for one.
+    assert {tp.get("href") for tp in text_paths[:2]} == {"#ring-script-0", "#ring-script-1"}
+    assert all(tp.get("href", "")[1:] in paths for tp in text_paths)
+    inscription = text_paths[0].text or ""
+    assert inscription.endswith(" · ") and "CMHC <&>" in inscription
+    arcs = [el for el in root.iter(f"{NS}path") if "ring-arc" in _classes(el)]
+    assert len(arcs) == 3
+    assert all(el.get("pathLength") == "1" for el in arcs)
+    # The smallest arc (1 of 84) is too short for any label.
+    labels = [tp.text for tp in text_paths[2:]]
+    assert labels[0] == "Statistics 62" and len(labels) == 2
+    centre = [el for el in root.iter(f"{NS}text") if "ring-n" in _classes(el)]
+    assert centre[0].text == "84" and "data-count" in centre[0].attrib
+    with pytest.raises(ValueError):
+        charts.ring_chart([], [], [("a", "a", 1)], centre="1", centre_lines=("", ""), label="x")

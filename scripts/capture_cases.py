@@ -65,6 +65,21 @@ CASES: dict[str, list[dict[str, Any]]] = {
         }
         for city in ("Edmonton", "Calgary")
     ],
+    # Urban planners: housing starts by dwelling type, Canada, every month
+    # since 1990 (CMHC table 5.6.1, centres of 10,000 people or more). The
+    # second call counts CMHC's data categories for the verse.
+    "housing": [
+        {
+            "name": "cmhc_get_table_data",
+            "arguments": {
+                "category_level_1": "New Housing Construction",
+                "category_level_2": "Starts (Actual)",
+                "column_field": "1",
+                "row_field": "TIMESERIES",
+            },
+        },
+        {"name": "cmhc_list_categories", "arguments": {}},
+    ],
     # Microeconomists: the low-income rate (LIM-AT) by immigrant generation,
     # from the same Census microdata with replicate-weight standard errors.
     # Only valid codes, so "not available" is not counted as either outcome.
@@ -156,6 +171,8 @@ def _trim(name: str, response: Any) -> Any:
             "total_tables": response["total_tables"],
             "provenance": response["provenance"],
         }
+    if name == "cmhc_list_categories":
+        return {"total_count": response["total_count"], "provenance": response["provenance"]}
     if name == "ised_ip_horizons_search_patents":
         return {"total_matched": response["total_matched"], "provenance": response["provenance"]}
     if name == "statcan_pumf_list_files":
