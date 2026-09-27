@@ -28,6 +28,7 @@ from urllib.parse import unquote, urlparse
 
 from maplestats_mcp.modules.phac_infobase import client as phac
 from maplestats_mcp.modules.phac_infobase import constants
+from maplestats_mcp.modules.reproduce.render import comment_text
 from maplestats_mcp.modules.reproduce.spec import Code, Spec
 
 _METHOD = "exact: the catalogue file, then the tool's filters"
@@ -215,33 +216,40 @@ def _numbers_comment(plan: _Plan, prefix: str) -> str:
 
 
 def _steps_comment(plan: _Plan, prefix: str) -> str:
-    """What the tool did, in its order, as a comment above the steps."""
+    """What the tool did, in its order, as a comment above the steps.
+
+    Column names come from the file's header, which may hold a line break
+    inside quotes; render.comment_text writes it as an escape so it cannot end the
+    comment line and start code.
+    """
+    date_column = comment_text(plan.date_column or "")
+    geo_column = comment_text(plan.geo_column or "")
     lines = [f"Keep the rows {plan.tool} kept, in the tool's order:"]
     for column, value in plan.filters:
-        lines.append(f"- {column} equals {value!r} (compared as fold() does);")
+        lines.append(f"- {comment_text(column)} equals {value!r} (compared as fold() does);")
     if plan.geography and plan.pruid:
         lines.append(
-            f"- {plan.geo_column} is {plan.geography!r}: PRUID {plan.pruid} or its English, "
+            f"- {geo_column} is {plan.geography!r}: PRUID {plan.pruid} or its English, "
             "French or abbreviated name (compared as place() does);"
         )
     elif plan.geography:
-        lines.append(f"- {plan.geo_column} contains {plan.geography!r} (compared as fold() does);")
+        lines.append(f"- {geo_column} contains {plan.geography!r} (compared as fold() does);")
     if plan.start_date or plan.end_date:
         bounds = []
         if plan.start_date:
             bounds.append(f"from {plan.start_date} (start {plan.start!r})")
         if plan.end_date:
             bounds.append(f"to {plan.end_date} (end {plan.end!r})")
-        lines.append(f"- {plan.date_column}, read by parse_period(), {' '.join(bounds)};")
+        lines.append(f"- {date_column}, read by parse_period(), {' '.join(bounds)};")
     if plan.date_column:
         lines.append(
-            f"- sorted by {plan.date_column} (rows without a date first, ties in file "
+            f"- sorted by {date_column} (rows without a date first, ties in file "
             f"order), then the last {plan.limit} rows, oldest first;"
         )
     else:
         lines.append(f"- the first {plan.limit} rows (no date column);")
     if plan.columns:
-        lines.append(f"- the columns {', '.join(plan.columns)}.")
+        lines.append(f"- the columns {', '.join(comment_text(c) for c in plan.columns)}.")
     return "".join(f"{prefix} {line}\n" for line in lines)
 
 
@@ -273,6 +281,7 @@ def _py_helpers(fold: bool, periods: bool) -> str:
             "# parse_period() gives the start date of a period cell, as the tool reads\n"
             "# it: 2025-08-30, 2025 Q3 (French files: 2025 T3), 2024-10, 30-08-2025, or a\n"
             '# leading year ("2026 (Jan to Mar)", "2015-2018"); None when there is no year.\n\n'
+            f"ISO_DATE = {compiled(phac._ISO_DATE)}\n"
             f"QUARTER = {compiled(phac._QUARTER)}\n"
             f"YEAR_MONTH = {compiled(phac._YEAR_MONTH)}\n"
             f"DAY_FIRST = {compiled(phac._DAY_FIRST)}\n"
@@ -281,10 +290,11 @@ def _py_helpers(fold: bool, periods: bool) -> str:
             "    text = value.strip()\n"
             "    if not text:\n"
             "        return None\n"
-            "    try:\n"
-            "        return date.fromisoformat(text[:10])\n"
-            "    except ValueError:\n"
-            "        pass\n"
+            "    if match := ISO_DATE.match(text):\n"
+            "        try:\n"
+            "            return date(int(match.group(1)), int(match.group(2)), int(match.group(3)))\n"
+            "        except ValueError:\n"
+            "            pass\n"
             "    if match := QUARTER.match(text):\n"
             "        year = int(match.group(1))\n"
             "        return date(year, 3 * int(match.group(2)) - 2, 1) if 1800 <= year <= 2100 else None\n"
@@ -526,7 +536,8 @@ def _r_helpers(plan: _Plan) -> str:
             "  head <- str_sub(text, 1, 10)\n"
             '  as_date <- \\(y, m, d) as.Date(sprintf("%s-%s-%s", y, m, d), format = "%Y-%m-%d")\n'
             "  valid <- \\(year) !is.na(year) & year >= 1800 & year <= 2100\n"
-            '  iso <- if_else(str_detect(head, "^\\\\d{4}-\\\\d{2}-\\\\d{2}$"), head, NA_character_)\n'
+            "  # Year 0 is no date to Python, which the tool runs on.\n"
+            '  iso <- if_else(str_detect(head, "^\\\\d{4}-\\\\d{2}-\\\\d{2}$") & !str_starts(head, "0000"), head, NA_character_)\n'
             f"  quarter <- str_match(text, {pattern(phac._QUARTER)})\n"
             f"  year_month <- str_match(text, {pattern(phac._YEAR_MONTH)})\n"
             f"  day_first <- str_match(text, {pattern(phac._DAY_FIRST)})\n"
@@ -751,7 +762,8 @@ def _jl_helpers(plan: _Plan) -> str:
             "    head = first(text, 10)\n"
             '    if occursin(r"^\\d{4}-\\d{2}-\\d{2}$", head)\n'
             '        parsed = tryparse(Date, head, dateformat"yyyy-mm-dd")\n'
-            "        parsed === nothing || return parsed\n"
+            "        # Year 0 is no date to Python, which the tool runs on.\n"
+            "        parsed === nothing || Dates.year(parsed) < 1 || return parsed\n"
             "    end\n"
             "    m = match(QUARTER, text)\n"
             "    if m !== nothing\n"

@@ -31,21 +31,29 @@ GENERIC: dict[str, Code] = {
         (
             "# Standard cleaning: snake_case names without accents (PÉRIODE -> periode,\n"
             "# referenceNumber -> reference_number, as janitor does in R), trimmed text,\n"
-            "# empty strings as missing.\n\n"
-            "data = data.rename(\n"
-            "    {\n"
-            "        column: re.sub(\n"
-            '            r"[^0-9a-z]+",\n'
-            '            "_",\n'
-            "            re.sub(\n"
-            '                r"([a-z0-9])([A-Z])",\n'
-            '                r"\\1_\\2",\n'
-            '                unicodedata.normalize("NFKD", column).encode("ascii", "ignore").decode(),\n'
-            "            ).lower(),\n"
-            '        ).strip("_")\n'
-            "        for column in data.columns\n"
-            "    }\n"
-            ")\n"
+            "# empty strings as missing. Names that clean alike are numbered as janitor\n"
+            "# numbers them (Indicator, indicator -> indicator, indicator_2).\n\n"
+            "clean_names = [\n"
+            "    re.sub(\n"
+            '        r"[^0-9a-z]+",\n'
+            '        "_",\n'
+            "        re.sub(\n"
+            '            r"([a-z0-9])([A-Z])",\n'
+            '            r"\\1_\\2",\n'
+            '            unicodedata.normalize("NFKD", column).encode("ascii", "ignore").decode(),\n'
+            "        ).lower(),\n"
+            '    ).strip("_")\n'
+            "    for column in data.columns\n"
+            "]\n"
+            "while len(set(clean_names)) < len(clean_names):\n"
+            "    name_counts = {}\n"
+            "    numbered = []\n"
+            "    for name in clean_names:\n"
+            "        name_counts[name] = name_counts.get(name, 0) + 1\n"
+            "        count = name_counts[name]\n"
+            '        numbered.append(name if count == 1 else f"{name}_{count}")\n'
+            "    clean_names = numbered\n"
+            "data = data.rename(dict(zip(data.columns, clean_names)))\n"
             'data = data.with_columns(pl.col(pl.Utf8).str.strip_chars().replace("", None))\n'
         ),
     ),
@@ -53,8 +61,46 @@ GENERIC: dict[str, Code] = {
         [],
         (
             "* Standard cleaning: lower-case names, trimmed text, and numbers stored as\n"
-            "* text converted (destring leaves genuinely non-numeric text alone).\n\n"
-            "rename *, lower\n"
+            "* text converted (destring leaves genuinely non-numeric text alone).\n"
+            "* rename *, lower stops at a clash (Indicator next to indicator), so names\n"
+            "* that lower-case alike are numbered as janitor numbers them (indicator,\n"
+            "* indicator_2), then renamed in one group rename, which allows swaps.\n\n"
+            "local names\n"
+            "foreach var of varlist _all {\n"
+            "    local names `names' `=strlower(\"`var'\")'\n"
+            "}\n"
+            "local dups : list dups names\n"
+            'while "`dups\'" != "" {\n'
+            "    local numbered\n"
+            "    local before\n"
+            "    foreach name of local names {\n"
+            "        local count 1\n"
+            "        foreach earlier of local before {\n"
+            '            if "`earlier\'" == "`name\'" local ++count\n'
+            "        }\n"
+            "        local before `before' `name'\n"
+            "        if `count' > 1 {\n"
+            '            local name = substr("`name\'", 1, 32 - strlen("_`count\'")) + "_`count\'"\n'
+            "        }\n"
+            "        local numbered `numbered' `name'\n"
+            "    }\n"
+            "    local names `numbered'\n"
+            "    local dups : list dups names\n"
+            "}\n"
+            "local old_names\n"
+            "local new_names\n"
+            "local i 0\n"
+            "foreach var of varlist _all {\n"
+            "    local ++i\n"
+            "    local name : word `i' of `names'\n"
+            '    if "`name\'" != "`var\'" {\n'
+            "        local old_names `old_names' `var'\n"
+            "        local new_names `new_names' `name'\n"
+            "    }\n"
+            "}\n"
+            'if "`old_names\'" != "" {\n'
+            "    rename (`old_names') (`new_names')\n"
+            "}\n"
             "quietly ds, has(type string)\n"
             "local text_vars `r(varlist)'\n"
             "foreach var of local text_vars {\n"

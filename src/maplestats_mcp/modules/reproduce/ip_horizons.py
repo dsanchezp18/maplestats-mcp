@@ -18,6 +18,7 @@ import json
 import re
 from typing import Any
 
+from maplestats_mcp.modules.reproduce.render import jl_quote
 from maplestats_mcp.modules.reproduce.spec import Code, Spec
 
 _TLS_NOTE = (
@@ -212,7 +213,7 @@ def search_spec(args: dict[str, Any], groups: dict[str, list[Any]]) -> Spec:
             f"fixed({json.dumps(term)}, ignore_case = TRUE))"
         )
         jl_filters.append(
-            f'occursin({json.dumps(term)}, lowercase(string(coalesce(row.application_patent_title_english, ""), '
+            f'occursin({jl_quote(term)}, lowercase(string(coalesce(row.application_patent_title_english, ""), '
             '" ", coalesce(row.application_patent_title_french, ""))))'
         )
     for key, symbol in (("filed_from", ">="), ("filed_to", "<=")):
@@ -229,7 +230,7 @@ def search_spec(args: dict[str, Any], groups: dict[str, list[Any]]) -> Spec:
             )
             jl_filters.append(
                 f'!ismissing(row.filing_date) && occursin(r"^\\d{{4}}-\\d{{2}}-\\d{{2}}$", row.filing_date) '
-                f"&& row.filing_date {symbol} {value}"
+                f"&& row.filing_date {symbol} {jl_quote(str(args[key]))}"
             )
     py_joins: list[str] = []
     r_joins: list[str] = []
@@ -245,7 +246,8 @@ def search_spec(args: dict[str, Any], groups: dict[str, list[Any]]) -> Spec:
         kind = party_types.get(str(args.get("party_type") or "").lower())
         py_party = f'pl.col("party_name").str.to_lowercase().str.contains({name}, literal=True)'
         r_party = f"str_detect(party_name, fixed({name}, ignore_case = TRUE))"
-        jl_party = f'occursin({name}, lowercase(coalesce(row.party_name, "")))'
+        jl_name = jl_quote(str(args["party_name"]).strip().lower())
+        jl_party = f'occursin({jl_name}, lowercase(coalesce(row.party_name, "")))'
         if kind:
             py_party += f', pl.col("interested_party_type") == {json.dumps(kind)}'
             r_party += f", interested_party_type == {json.dumps(kind)}"
