@@ -82,6 +82,8 @@ def plan(question: str) -> QueryPlan:
         for _, topic, hits in scored[:_MAX_TOPICS]
     ]
 
+    # An English possessive ("Alberta's population") must still name the place.
+    text = re.sub(r"(\w)'s\b", r"\1", text)
     places: list[PlaceMatch] = []
     seen: set[str] = set()
     for alias, (label, steps) in CITIES.items():

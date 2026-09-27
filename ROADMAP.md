@@ -273,7 +273,7 @@ From the Notion canonical page; none of these are done yet.
 | Hosted MCP endpoint | Not started | Launch gate: a stable hosted server (Azure Container Apps recipe discussed 2026-09-24: one replica, Azure Files volume for the PUMF cache, bearer token). |
 | Public website | Not started | Product, sources, connection instructions, examples, status. |
 | Launch blog post "One MCP to Rule Them All" | Not started | Narrative drafted on the Notion page. |
-| Cross-source demos | Not started | One substantive Canadian question answered across StatCan, BoC, CMHC and provincial data; `plan_query` is the entry point. |
+| Cross-source demos | Shipped | Shipped 2026-09-27: site/demos.html, two questions that start from `plan_query` and join recorded calls year by year. Alberta's population boom and its rental market (StatCan population estimates, the Alberta Economic Dashboard's net migration, IRCC permanent residents, CMHC vacancy and rent) and what the rate hikes did to new housing (Bank of Canada policy and mortgage rates, CMHC starts, StatCan New Housing Price Index). Re-record with `scripts/capture_cases.py demo_alberta demo_rates`. |
 | MCP registries | Shipped (official registry) | `io.github.dsanchezp18/maplestats-mcp` 0.1.0 is listed on the official MCP Registry, published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Other registries still to submit. |
 | PyPI package | Shipped | `maplestats-mcp` 0.1.0 is on PyPI. Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). |
 | Per-language clients | Not started | Lightweight R, Python and Julia clients over the hosted core; `reproduce_code` already generates per-language scripts. |

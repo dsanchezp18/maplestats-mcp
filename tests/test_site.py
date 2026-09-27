@@ -648,3 +648,38 @@ def test_stylesheets_close_every_block():
                 line = text[: match.start()].count("\n") + 1
                 assert depth == 0, f"{sheet.name}: section at line {line} opens inside a block"
         assert depth == 0, sheet.name
+
+
+def test_demos_join_several_agencies(built_site: Path):
+    """Each demo shows its recorded plan, charts with data, and every agency it asked."""
+    agencies = {
+        "alberta-rent": (
+            "Statistics Canada",
+            "Alberta Economic Dashboard",
+            "Immigration, Refugees and Citizenship Canada",
+            "Canada Mortgage and Housing Corporation",
+        ),
+        "rate-hikes": (
+            "Bank of Canada",
+            "Canada Mortgage and Housing Corporation",
+            "Statistics Canada",
+        ),
+    }
+    text = (built_site / "demos.html").read_text(encoding="utf-8")
+    sections = re.split(r'<section class="wrap stanza demo" id="', text)[1:]
+    assert [s.split('"', 1)[0] for s in sections] == list(agencies)
+    for section in sections:
+        key = section.split('"', 1)[0]
+        assert "plan_query" in section and 'class="plan"' in section, key
+        sources = section[section.index('<ul class="demo-sources">') :]
+        for agency in agencies[key]:
+            assert f"<strong>{agency}</strong>" in sources, (key, agency)
+        # The joined table: one row per year, a heading per series with its agency.
+        join = section[section.index('class="table-wrap demo-join"') :]
+        assert join.count('<span class="demo-agency">') >= len(agencies[key]), key
+        assert len(re.findall(r'<tr><th scope="row">20\d\d</th>', join)) >= 5, key
+        # Every data call carries scripts; the plan does not.
+        assert section.count('class="demo-scripts"') == section.count("Request: ") - 1, key
+        assert "{{" not in section, key
+    french = (built_site / "fr" / "demos.html").read_text(encoding="utf-8")
+    assert "Banque du Canada" in french and 'aria-current="page">Démos' in french
