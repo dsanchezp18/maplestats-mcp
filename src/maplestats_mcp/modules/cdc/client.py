@@ -509,9 +509,15 @@ def parse_component_rows(rows: list[dict[str, str]]) -> list[ComponentPrice]:
     columns = Columns(rows)
     class_col = columns.first_of(["Milk Class", "Classe de lait"])
     date_col = columns.first_of(["Effective Date", "Date d'entrée en vigueur"])
-    fat_col = columns.first_of(["Butterfat($/kg)", "Butterfat ($/kg)"])
-    protein_col = columns.first_of(["Proteins($/kg)", "Proteins ($/kg)", "Protein($/kg)"])
-    other_col = columns.first_of(["Other solids($/kg)", "Other solids ($/kg)"])
+    # On 2026-09-28 the current year's CSV briefly came with French headers
+    # for the three prices (and "Classe de lait") beside an English date column.
+    fat_col = columns.first_of(["Butterfat($/kg)", "Butterfat ($/kg)", "M.G.($/kg)"])
+    protein_col = columns.first_of(
+        ["Proteins($/kg)", "Proteins ($/kg)", "Protein($/kg)", "Protéine($/kg)"]
+    )
+    other_col = columns.first_of(
+        ["Other solids($/kg)", "Other solids ($/kg)", "Autres solides($/kg)"]
+    )
     if not (class_col and date_col and fat_col and protein_col and other_col):
         raise UpstreamError(f"cdc: component price columns changed: {columns.names}.")
     parsed = []

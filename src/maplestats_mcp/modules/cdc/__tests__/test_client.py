@@ -97,6 +97,21 @@ def test_component_rows_are_sorted_and_zeros_become_none():
     assert rows[1].protein_per_kg is None and rows[1].butterfat_per_kg == 11.6418
 
 
+def test_component_rows_accept_french_price_headers():
+    # The live 2026 file briefly had these mixed headers (2026-09-28).
+    raw = [
+        {
+            "Classe de lait": "5C",
+            "Effective Date": "2026-01-01 00:00:00",
+            "M.G.($/kg)": "6.8538",
+            "Protéine($/kg)": "2.4098",
+            "Autres solides($/kg)": "2.4098",
+        }
+    ]
+    rows = client.parse_component_rows(raw)
+    assert rows[0].butterfat_per_kg == 6.8538 and rows[0].protein_per_kg == 2.4098
+
+
 def test_component_columns_changed_is_an_upstream_error():
     with pytest.raises(UpstreamError):
         client.parse_component_rows([{"Class": "5A", "Date": "2026-01-01"}])

@@ -11,7 +11,7 @@ import pytest
 
 from maplestats_mcp.modules.eps import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 
 _CURRENT_QUERY = re.compile(re.escape(constants.DATASETS["current"]) + r"/query.*")
 
@@ -129,3 +129,10 @@ async def test_get_last_load_date_parses_day_first(httpx_mock):
     assert result.last_load_date is not None
     assert result.last_load_date.isoformat() == "2026-09-20"
     assert result.raw_value == "20/09/2026"
+
+
+async def test_empty_load_date_table_means_a_reload_in_progress(httpx_mock):
+    # EPS rebuilds this table on reload; it was empty on 2026-09-28.
+    httpx_mock.add_response(json={"features": []})
+    with pytest.raises(UpstreamUnavailable, match="reloads"):
+        await client.get_last_load_date()

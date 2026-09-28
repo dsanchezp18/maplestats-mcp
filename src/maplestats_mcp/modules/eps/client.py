@@ -23,7 +23,7 @@ from maplestats_mcp.modules.eps.schemas import (
 from maplestats_mcp.shared import arcgis
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 
 _CONFIG = arcgis.ArcGISHubConfig(
     source=constants.SOURCE,
@@ -281,7 +281,16 @@ async def get_last_load_date(*, lang: str = "en") -> LoadDate:
     del lang
 
     async def fetch() -> dict[str, Any]:
-        return await arcgis.query_layer(_CONFIG, constants.LOAD_DATE_URL, 0, limit=1)
+        body = await arcgis.query_layer(_CONFIG, constants.LOAD_DATE_URL, 0, limit=1)
+        # Seen 2026-09-28: EPS rebuilds this one-row table when it reloads
+        # the data, and it is empty meanwhile. Raising here also keeps the
+        # empty answer out of the cache.
+        if not body.get("features"):
+            raise UpstreamUnavailable(
+                "eps: the load-date table is empty, which happens while EPS reloads "
+                "its data. Try again later."
+            )
+        return body
 
     body, was_cached = await cached_fetch(
         "eps:load-date", constants.CACHE_TTL_LOAD_DATE_SECONDS, fetch
