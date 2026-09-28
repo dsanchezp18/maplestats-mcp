@@ -16,6 +16,7 @@
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>
     <a href="https://smithery.ai/servers/dsanchezp998/maplestats-mcp"><img src="https://img.shields.io/badge/Smithery-listed-FF5601" alt="Listed on Smithery"></a>
+    <a href="https://registry.modelcontextprotocol.io/?q=io.github.dsanchezp18/maplestats-mcp"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry.modelcontextprotocol.io%2Fv0%2Fservers%2Fio.github.dsanchezp18%252Fmaplestats-mcp%2Fversions%2Flatest&query=%24.server.version&label=MCP%20Registry&prefix=v&color=blue" alt="MCP Registry version"></a>
   </p>
 </p>
 
