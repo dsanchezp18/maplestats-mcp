@@ -18,8 +18,11 @@ async def plan_query(question: str, lang: Literal["en", "fr"] = "en") -> QueryPl
     and interest rates moved in Calgary since 2020?"). Returns the
     topics it touches, the tools to call for each in order, local
     portals for any province or city named, and caveats on combining
-    them. Then run the steps with call_tool. lang is accepted for
-    consistency; the plan text is English.
+    them. Then run the steps with call_tool. Read-only and offline: it
+    matches the question against this server's source map and calls no
+    external API. Use search_tools instead to find a single tool for a
+    narrow, single-source need. lang is accepted for consistency; the
+    plan text is English.
     Keywords: plan, which data source, where to find, combine sources,
     cross-source, question, research, Canada data.
     Mots-clés : planifier, quelle source de données, où trouver, combiner

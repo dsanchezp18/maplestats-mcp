@@ -86,12 +86,77 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
     def _make_search_tool(self) -> Tool:
         search_tool = super()._make_search_tool()
         search_tool.annotations = _read_only_annotations(open_world=False)
+        search_tool.description = _SEARCH_TOOLS_DESCRIPTION
+        _describe_param(
+            search_tool,
+            "query",
+            "What you need, in plain English or French, e.g. 'Calgary rent "
+            "index' or 'taux de chômage Québec'. Topic words work better "
+            "than tool names.",
+        )
         return search_tool
 
     def _make_call_tool(self) -> Tool:
         call_tool = super()._make_call_tool()
         call_tool.annotations = _read_only_annotations(open_world=True)
+        call_tool.description = _CALL_TOOL_DESCRIPTION
+        _describe_param(
+            call_tool,
+            "name",
+            "Exact tool name as returned by search_tools or plan_query, "
+            "e.g. 'boc_get_observations'.",
+        )
+        _describe_param(
+            call_tool,
+            "arguments",
+            "Object matching that tool's inputSchema from search_tools. "
+            "Omit or pass {} for a tool with no required parameters.",
+        )
         return call_tool
+
+
+# Glama and similar registries grade these two synthetic tools on their
+# descriptions alone; FastMCP's defaults say what they do but not when to
+# pick each one, or what happens on a bad name.
+_SEARCH_TOOLS_DESCRIPTION = """\
+Find the right data tool for one specific need by plain-language search.
+
+Use for: locating a tool when you know roughly what data you want
+(a StatCan table, Bank of Canada series, a city's open-data portal).
+Returns the best-matching tool definitions, ranked by relevance, each
+with its name, description and full input schema, in the same format
+as list_tools. Read-only; it searches this server's catalogue only and
+calls no external API.
+Use plan_query instead when a question may span several sources or you
+do not know where to start; use call_tool to run a tool once you have
+its name. Queries in English or French both work. An empty result
+means no tool matched: rephrase with topic words (e.g. 'housing
+starts' rather than 'CMHC table').
+"""
+
+_CALL_TOOL_DESCRIPTION = """\
+Run one data tool found through search_tools or plan_query.
+
+Use for: executing a tool by exact name with arguments that match the
+inputSchema search_tools returned for it. Every reachable tool is
+read-only: it fetches public data from the upstream agency (StatCan,
+Bank of Canada, open-data portals) and changes nothing. Returns that
+tool's typed result, including a provenance block (source, URL, query
+time, freshness).
+Errors come back as MCP tool errors, not as data: an unknown or
+misspelled name raises 'Unknown tool' (search again for the exact
+name), invalid arguments raise a validation error naming the field,
+and upstream outages or empty matches raise a typed error explaining
+what to change. search_tools, call_tool and plan_query cannot be called
+through it; call them directly. Tool calls are subject to the server's
+timeout (MAPLE_TOOL_TIMEOUT_SECONDS, default 120).
+"""
+
+
+def _describe_param(tool: Tool, param: str, description: str) -> None:
+    props = tool.parameters.get("properties", {})
+    if param in props:
+        props[param]["description"] = description
 
 
 # Sent to every client on initialize, so it stays a short routing index
