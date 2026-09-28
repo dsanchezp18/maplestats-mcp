@@ -1106,7 +1106,7 @@ mark {
   padding-bottom: 16px;
 }
 
-.plan-group h4 {
+.plan-group :is(h3, h4) {
   margin: 0 0 8px;
   font-size: 0.9375rem;
   font-weight: 600;

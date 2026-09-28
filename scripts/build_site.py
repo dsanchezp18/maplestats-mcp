@@ -1380,11 +1380,12 @@ def national_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
     return "".join(blocks)
 
 
-def plan_panel(lang: Lang, root: str, plan: dict[str, Any] | None = None) -> str:
+def plan_panel(lang: Lang, root: str, plan: dict[str, Any] | None = None, heading: int = 4) -> str:
     """The planner's answer as short lists: one per topic or place, tool over purpose.
 
     `plan` is a recorded plan_query response (the demos page); without it,
     the planner answers the home page's question when the site is built.
+    `heading` is the level of each list's title, one below the section's.
     """
     # plan_query writes its plan in English only (its lang argument is accepted
     # for consistency), so on a French page the plan's own words are marked
@@ -1402,7 +1403,7 @@ def plan_panel(lang: Lang, root: str, plan: dict[str, Any] | None = None) -> str
         notes = "".join(
             f'<p class="plan-note"><b>{caveat}</b> {en_span(esc(c), lang)}</p>' for c in caveats
         )
-        head = f"<h4{en if title_en else ''}>{esc(title)}</h4>"
+        head = f"<h{heading}{en if title_en else ''}>{esc(title)}</h{heading}>"
         return f'<div class="plan-group">{head}<ol>{items}</ol>{notes}</div>'
 
     parts = [group(t["label"], t["steps"], t["caveats"], True) for t in plan["topics"]]
@@ -2769,7 +2770,7 @@ def demo_alberta_context(case: dict[str, Any], lang: Lang, root: str) -> dict[st
         ],
     )
     return {
-        "demo_ab_plan": plan_panel(lang, root, plan),
+        "demo_ab_plan": plan_panel(lang, root, plan, heading=3),
         "demo_ab_question": esc(plan["question"]),
         "chart_demo_ab_people": chart_table(
             charts.grouped_bars(years, people_series, label=people_label, value_format=people),
@@ -2927,7 +2928,7 @@ def demo_rates_context(case: dict[str, Any], lang: Lang, root: str) -> dict[str,
         (y for y in years if y > peak_single_year), key=lambda y: avg(y, "Single")
     )
     return {
-        "demo_rates_plan": plan_panel(lang, root, plan),
+        "demo_rates_plan": plan_panel(lang, root, plan, heading=3),
         "demo_rates_question": esc(plan["question"]),
         "chart_demo_rates_policy": chart_table(
             charts.step_chart(
