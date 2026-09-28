@@ -1,0 +1,19 @@
+name: Data source request
+description: Ask for a Canadian public data source or portal the server does not cover yet.
+labels: [source-request]
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Agency, city or portal name.
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Link to the data or API
+  - type: textarea
+    id: use
+    attributes:
+      label: What you want to answer with it

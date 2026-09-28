@@ -37,12 +37,12 @@ async def wds_search_cubes(query: str, limit: int = 25, lang: Lang = "en") -> Cu
     Keywords: statcan, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse, labour force, unemployment rate,
     employment, GDP by industry, CPI, population estimates, retail trade,
-    wages, trade, time series.
+    wages, trade, interprovincial migration, time series.
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
     productId, découverte, wds, catalogue, parcourir, population active,
     taux de chômage, emploi, PIB par industrie, IPC, estimations de
-    population, commerce de détail, salaires, commerce, séries
-    chronologiques.
+    population, commerce de détail, salaires, commerce, migration
+    interprovinciale, séries chronologiques.
     """
     return await client.search_cubes(query, limit=limit)
 
