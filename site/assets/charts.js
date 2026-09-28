@@ -42,13 +42,14 @@
     Array.prototype.forEach.call(target.querySelectorAll("[data-count]"), countUp);
   }
 
-  // The ring's inscriptions: the build can only estimate text widths, so
+  // The square's inscriptions: the build can only estimate text widths, so
   // the browser measures each one and sets the font size that fills its
-  // circle with normal letter spacing. textLength then closes the last
+  // path with normal letter spacing. textLength then closes the last
   // fraction of a pixel. Without JavaScript the build's estimate stands.
   function fitInscriptions() {
+    var bands = {};
     Array.prototype.forEach.call(
-      document.querySelectorAll(".ring text.ring-script, .ring text.ring-script-2"),
+      document.querySelectorAll(".square text.sq-script, .square text.sq-script-2"),
       function (text) {
         var tp = text.querySelector("textPath");
         var path = tp && document.getElementById((tp.getAttribute("href") || "").slice(1));
@@ -58,10 +59,29 @@
         var size = parseFloat(window.getComputedStyle(text).fontSize);
         var natural = text.getComputedTextLength();
         if (!natural || !size) return;
-        text.style.fontSize = (size * target / natural).toFixed(2) + "px";
-        tp.setAttribute("textLength", target.toFixed(1));
+        var key = text.getAttribute("data-band") || "";
+        (bands[key] = bands[key] || []).push({
+          text: text,
+          tp: tp,
+          target: target,
+          fit: (size * target) / natural,
+        });
       }
     );
+    // A band's two halves share the smaller fitted size, so the top and
+    // bottom lettering match; textLength spaces the shorter one out.
+    Object.keys(bands).forEach(function (key) {
+      var size = Math.min.apply(
+        null,
+        bands[key].map(function (half) {
+          return half.fit;
+        })
+      );
+      bands[key].forEach(function (half) {
+        half.text.style.fontSize = size.toFixed(2) + "px";
+        half.tp.setAttribute("textLength", half.target.toFixed(1));
+      });
+    });
   }
 
   function start() {

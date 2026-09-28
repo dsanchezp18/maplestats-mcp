@@ -41,7 +41,7 @@ from datetime import date
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from fastmcp import Client
 from fastmcp.server.transforms.search import BM25SearchTransform
@@ -75,6 +75,99 @@ UVX_COMMAND = " ".join(["uvx", *UVX_ARGS])
 # hreflang and Open Graph URLs, the sitemap and the 404 page are absolute
 # from here, because a crawler or a link preview has no page to resolve from.
 SITE_URL = "https://dsanchezp18.github.io/maplestats-mcp/"
+
+# Badges, the same ones as README.md's: (group, link, image, alt EN, alt FR).
+# "user" badges sit under the install prompt on the home and Connect pages,
+# "dev" badges on the Contribute page. They are live images from the
+# services that score or list the server, so they are the pages' only
+# requests to other hosts (BADGE_HOSTS; tests/test_site.py allows exactly
+# those), loaded lazily.
+_SHIELDS = "https://img.shields.io"
+_REGISTRY_VERSION = (
+    f"{_SHIELDS}/badge/dynamic/json?url=https%3A%2F%2Fregistry.modelcontextprotocol.io%2Fv0%2F"
+    "servers%2Fio.github.dsanchezp18%252Fmaplestats-mcp%2Fversions%2Flatest"
+    "&query=%24.server.version&label=MCP%20Registry&prefix=v&color=blue"
+)
+BADGES: tuple[tuple[str, str, str, str, str], ...] = (
+    (
+        "user",
+        "https://pypi.org/project/maplestats-mcp/",
+        f"{_SHIELDS}/pypi/v/maplestats-mcp",
+        "PyPI version",
+        "Version sur PyPI",
+    ),
+    (
+        "user",
+        "https://pypi.org/project/maplestats-mcp/",
+        f"{_SHIELDS}/pypi/pyversions/maplestats-mcp",
+        "Supported Python versions",
+        "Versions de Python prises en charge",
+    ),
+    (
+        "user",
+        f"{REPO}/blob/main/LICENSE",
+        f"{_SHIELDS}/github/license/dsanchezp18/maplestats-mcp",
+        "License: MIT",
+        "Licence MIT",
+    ),
+    (
+        "user",
+        "https://pypistats.org/packages/maplestats-mcp",
+        f"{_SHIELDS}/pypi/dm/maplestats-mcp",
+        "PyPI downloads per month",
+        "Téléchargements PyPI par mois",
+    ),
+    (
+        "user",
+        "https://registry.modelcontextprotocol.io/?q=io.github.dsanchezp18/maplestats-mcp",
+        _REGISTRY_VERSION,
+        "Version on the official MCP Registry",
+        "Version au registre MCP officiel",
+    ),
+    (
+        "user",
+        "https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp",
+        "https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg",
+        "Quality and maintenance score on Glama",
+        "Note de qualité et d'entretien sur Glama",
+    ),
+    (
+        "user",
+        "https://smithery.ai/servers/dsanchezp998/maplestats-mcp",
+        f"{_SHIELDS}/badge/Smithery-listed-FF5601",
+        "Listed on Smithery",
+        "Répertorié sur Smithery",
+    ),
+    (
+        "user",
+        "https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp",
+        "https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp",
+        "Trust score on M8ven",
+        "Note de confiance sur M8ven",
+    ),
+    (
+        "dev",
+        f"{REPO}/actions/workflows/ci.yml",
+        f"{_SHIELDS}/github/actions/workflow/status/dsanchezp18/maplestats-mcp/ci.yml?branch=main&label=CI",
+        "CI status",
+        "État de l'intégration continue",
+    ),
+    (
+        "dev",
+        f"{REPO}/actions/workflows/pages.yml",
+        f"{_SHIELDS}/github/actions/workflow/status/dsanchezp18/maplestats-mcp/pages.yml?branch=main&label=website",
+        "Website build status",
+        "État de la publication du site",
+    ),
+    (
+        "dev",
+        "https://github.com/astral-sh/ruff",
+        f"{_SHIELDS}/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json",
+        "Linted with Ruff",
+        "Vérifié avec Ruff",
+    ),
+)
+BADGE_HOSTS = frozenset(urlsplit(image).netloc for _, _, image, _, _ in BADGES)
 
 Lang = Literal["en", "fr"]
 LANGS: tuple[Lang, ...] = ("en", "fr")
@@ -1501,6 +1594,17 @@ def vscode_install_href() -> str:
     return "vscode:mcp/install?" + quote(json.dumps(config, separators=(",", ":")), safe="")
 
 
+def badge_row(group: str, lang: Lang) -> str:
+    """The badges of one group, as a list of linked images."""
+    cells = "".join(
+        f'<li><a href="{esc(link)}"><img src="{esc(image)}" alt="{esc(alt_en if lang == "en" else alt_fr)}" '
+        f'height="20" loading="lazy" decoding="async"></a></li>'
+        for grp, link, image, alt_en, alt_fr in BADGES
+        if grp == group
+    )
+    return f'<ul class="badges" aria-label="Badges">{cells}</ul>'
+
+
 def install_context(lang: Lang) -> dict[str, str]:
     """The launch command, its arguments and the install links, from UVX_ARGS."""
     dev = ""
@@ -1519,6 +1623,8 @@ def install_context(lang: Lang) -> dict[str, str]:
         "cursor_install_href": esc(cursor_install_href()),
         "vscode_install_href": esc(vscode_install_href()),
         "install_note": "" if ON_PYPI else f'<p class="install-note">{esc(INSTALL_NOTE[lang])}</p>',
+        "badges_user": badge_row("user", lang),
+        "badges_dev": badge_row("dev", lang),
     }
 
 
@@ -1604,7 +1710,7 @@ def _load_charts() -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     # The pages get each plotted chart twice, the second drawn for phones
-    # (site_charts.responsive); the ring is square and scales as it is.
+    # (site_charts.responsive); the square finale scales as it is.
     for name in (
         "ci_chart",
         "grouped_bars",
@@ -2241,10 +2347,10 @@ def boc_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     }
 
 
-# The ring's arcs: sixteen subjects, grouped so every arc is wide enough
-# to carry its own name and count. (short EN, short FR, subject keys); the
+# The square's segments: sixteen subjects, grouped so every segment is
+# long enough to carry its own name and count. (short EN, short FR, subject keys); the
 # tooltip lists the subjects each arc holds.
-RING_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+SQUARE_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("Statistics", "Statistique", ("statistics",)),
     ("Provinces and cities", "Provinces et villes", ("catalogue", "provincial", "municipal")),
     ("Money and business", "Argent et affaires", ("money", "business")),
@@ -2259,7 +2365,7 @@ RING_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 
 
 # West to east, then north: the order the inner inscription travels.
-RING_ORDER = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU")
+SQUARE_ORDER = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU")
 
 
 def _city(name: str) -> str:
@@ -2281,7 +2387,7 @@ def alphabetical(name: str) -> str:
     return unicodedata.normalize("NFKD", name.casefold()).encode("ascii", "ignore").decode()
 
 
-def ring_places(lang: Lang) -> list[str]:
+def square_places(lang: Lang) -> list[str]:
     """Every province and city with a local source, grouped west to east."""
     provinces: set[str] = set()
     cities: dict[str, set[str]] = {}
@@ -2305,7 +2411,7 @@ def ring_places(lang: Lang) -> list[str]:
         short = {c for c in group if len(c.split()) <= 2}
         cities[place] = {next((k for k in short if k in c and k != c), c) for c in group}
     names: list[str] = []
-    for code in RING_ORDER:
+    for code in SQUARE_ORDER:
         if code in provinces:
             names.append(PLACES[code][1 if lang == "en" else 2])
         names.extend(sorted((place_name(c, lang) for c in cities.get(code, ())), key=alphabetical))
@@ -2323,7 +2429,7 @@ def counter_list(items: list[tuple[int, str]], lang: Lang) -> str:
 
 
 def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang) -> dict[str, str]:
-    """The One Ring: every publisher inscribed, the tools as arcs by subject."""
+    """The square: every publisher inscribed, the tools as segments by subject."""
     en = lang == "en"
     tools = sum(len(m.tools) for m in modules)
     outer = sorted(
@@ -2336,7 +2442,7 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         if key:
             by_subject[key] = by_subject.get(key, 0) + len(module.tools)
     arcs = []
-    for short_en, short_fr, keys in RING_GROUPS:
+    for short_en, short_fr, keys in SQUARE_GROUPS:
         members = [(DOMAINS.get(k) or LEVELS[k])[0 if en else 1] for k in keys]  # type: ignore[index]
         count = sum(by_subject.get(k, 0) for k in keys)
         short = short_en if en else short_fr
@@ -2345,14 +2451,14 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
     arcs.sort(key=lambda arc: -arc[2])
     # Every tool is either in an arc or is one of MapleStats' own (the
     # planner and the script writer), counted only in the centre figure.
-    grouped = {k for _, _, keys in RING_GROUPS for k in keys}
+    grouped = {k for _, _, keys in SQUARE_GROUPS for k in keys}
     assert set(by_subject) - grouped <= {"utility"}, set(by_subject) - grouped
     label = (
-        f"The ring: {len(outer)} federal publishers around the outside, the provinces and "
-        f"cities with local sources inside, and {tools} tools as arcs by subject"
+        f"The square: {len(outer)} federal publishers around the outside, the provinces and "
+        f"cities with local sources inside, and {tools} tools as segments by subject"
         if en
-        else f"L'anneau : {len(outer)} éditeurs fédéraux à l'extérieur, les provinces et les "
-        f"villes dotées de sources locales à l'intérieur, et {tools} outils en arcs par sujet"
+        else f"Le carré : {len(outer)} éditeurs fédéraux à l'extérieur, les provinces et les "
+        f"villes dotées de sources locales à l'intérieur, et {tools} outils en segments par sujet"
     )
     micro = load_case("micro")["calls"][0]["response"]
     items = [
@@ -2387,10 +2493,10 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         ),
     ]
     return {
-        "chart_ring": chart_table(
-            charts.ring_chart(
+        "chart_square": chart_table(
+            charts.square_chart(
                 outer,
-                ring_places(lang),
+                square_places(lang),
                 arcs,
                 centre=str(tools),
                 centre_lines=(
@@ -2399,17 +2505,17 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
                 ),
                 label=label,
             ),
-            "ring",
+            "square",
             lang,
             (
-                f"The {tools} tools by subject (the arcs); MapleStats' own tools are counted only in the total"
+                f"The {tools} tools by subject (the segments); MapleStats' own tools are counted only in the total"
                 if en
-                else f"Les {tools} outils par sujet (les arcs); les outils propres à MapleStats ne comptent que dans le total"
+                else f"Les {tools} outils par sujet (les segments); les outils propres à MapleStats ne comptent que dans le total"
             ),
             ("Subject", "Tools") if en else ("Sujet", "Outils"),
-            charts.ring_rows(arcs, lambda v: number(v, lang)),
+            charts.square_rows(arcs, lambda v: number(v, lang)),
         ),
-        "ring_federal": str(len(outer)),
+        "square_federal": str(len(outer)),
         "counters": counter_list(items, lang),
     }
 

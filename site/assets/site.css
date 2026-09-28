@@ -2188,7 +2188,7 @@ mark {
   gap: 12px;
 }
 
-/* The finale: a tinted band in the page's own theme, the ring as the
+/* The finale: a tinted band in the page's own theme, the square as the
    centrepiece, the argument under it, and what one connection reaches. */
 .finale {
   background: var(--ground-2);
@@ -2231,20 +2231,20 @@ mark {
   color: var(--accent);
 }
 
-/* The ring is the centrepiece: centred and as wide as the inscription needs
+/* The square is the centrepiece: centred and as wide as the inscription needs
    to stay legible, with the argument in two columns underneath. */
-.finale-ring {
+.finale-square {
   grid-column: 1 / -1;
   margin: 0;
 }
 
-.finale-ring .chart {
+.finale-square .chart {
   width: 100%;
   max-width: 680px;
   margin-inline: auto;
 }
 
-.finale-ring figcaption {
+.finale-square figcaption {
   max-width: 60ch;
   margin: 18px auto 0;
   font-size: 0.875rem;
@@ -4298,31 +4298,31 @@ h2.sub {
   }
 }
 
-/* ---------- Home: the ring, the same size as on the case studies ---------- */
+/* ---------- Home: the square, the same size as on the case studies ---------- */
 
-.home-ring .wrap {
+.home-square .wrap {
   display: grid;
   justify-items: center;
   gap: 24px;
   text-align: center;
 }
 
-.home-ring .verse-finale {
+.home-square .verse-finale {
   font-size: clamp(1.6rem, 0.9rem + 2.4vw, 3rem);
 }
 
-.home-ring-fig {
+.home-square-fig {
   width: 100%;
   max-width: 680px;
   margin: 0;
 }
 
-.home-ring-fig .chart {
+.home-square-fig .chart {
   width: 100%;
   height: auto;
 }
 
-.home-ring .source-links {
+.home-square .source-links {
   justify-content: center;
   margin-top: 0;
 }
@@ -4438,8 +4438,8 @@ html:not(.js) .chips {
   white-space: nowrap;
 }
 
-.finale-ring .chart-data,
-.home-ring-fig .chart-data {
+.finale-square .chart-data,
+.home-square-fig .chart-data {
   max-width: 680px;
   margin-inline: auto;
   text-align: left;
@@ -4497,4 +4497,36 @@ html:not(.js) .chips {
   cursor: pointer;
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Badges (build_site.BADGES): a wrapping row of the live images README.md
+   shows, each 20px tall at its own width. */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badges li {
+  display: flex;
+}
+
+.badges a {
+  display: inline-flex;
+  border-radius: 3px;
+}
+
+.badges img {
+  display: block;
+  height: 20px;
+  width: auto;
+}
+
+@media print {
+  .badges {
+    display: none;
+  }
 }
