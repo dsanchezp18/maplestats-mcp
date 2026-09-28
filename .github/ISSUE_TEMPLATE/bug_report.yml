@@ -1,0 +1,27 @@
+name: Bug report
+description: A tool returned wrong data, an error, or nothing when it should have.
+labels: [bug]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool name
+      description: The tool that misbehaved, e.g. statcan_get_data_from_vectors.
+    validations:
+      required: true
+  - type: textarea
+    id: call
+    attributes:
+      label: Arguments and result
+      description: The arguments you passed and what came back (error text or a snippet of the response).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `uvx maplestats-mcp --version`, or the commit if running from source.

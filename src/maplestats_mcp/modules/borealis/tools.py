@@ -33,7 +33,8 @@ async def borealis_search_ivt(
     dataset titles are as deposited (English or French).
     Keywords: Beyond 20/20, IVT, Borealis, Dataverse, Data Liberation
     Initiative, historical census, Canadian Business Patterns, Labour
-    Force Historical Review, canivt, custom tabulation.
+    Force Historical Review, canivt, custom tabulation, research data
+    repository, university data library.
     Mots-clés : Beyond 20/20, IVT, Borealis, Dataverse, Initiative de
     démocratisation des données, recensement historique, Structure des
     industries canadiennes, Revue chronologique de la population active,
