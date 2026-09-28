@@ -59,7 +59,7 @@ dependencies = [
 Homepage = "https://github.com/dsanchezp18/maplestats-mcp"
 Repository = "https://github.com/dsanchezp18/maplestats-mcp"
 Issues = "https://github.com/dsanchezp18/maplestats-mcp/issues"
-Changelog = "https://github.com/dsanchezp18/maplestats-mcp/commits/main"
+Changelog = "https://github.com/dsanchezp18/maplestats-mcp/releases"
 
 [project.scripts]
 maplestats-mcp = "maplestats_mcp.__main__:main"

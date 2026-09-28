@@ -75,6 +75,10 @@ UVX_COMMAND = " ".join(["uvx", *UVX_ARGS])
 # hreflang and Open Graph URLs, the sitemap and the 404 page are absolute
 # from here, because a crawler or a link preview has no page to resolve from.
 SITE_URL = "https://dsanchezp18.github.io/maplestats-mcp/"
+# Pages kept for reference but out of the navigation, the sitemap and
+# llms.txt: each carries a banner saying so and asks search engines not to
+# index it, and stays reachable at its own address.
+ARCHIVED = frozenset({"demos-archive.html"})
 
 # Badges, the same ones as README.md's: (group, link, image, alt EN, alt FR).
 # "user" badges sit under the install prompt on the home and Connect pages,
@@ -1383,7 +1387,7 @@ def national_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
 def plan_panel(lang: Lang, root: str, plan: dict[str, Any] | None = None, heading: int = 4) -> str:
     """The planner's answer as short lists: one per topic or place, tool over purpose.
 
-    `plan` is a recorded plan_query response (the demos page); without it,
+    `plan` is a recorded plan_query response (the archived demos page); without it,
     the planner answers the home page's question when the site is built.
     `heading` is the level of each list's title, one below the section's.
     """
@@ -1695,7 +1699,7 @@ _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 
 
 # --------------------------------------------------------------------------
-# Case studies: recorded calls (scripts/capture_cases.py) drawn as charts.
+# Demos (cases.html): recorded calls (scripts/capture_cases.py) drawn as charts.
 # --------------------------------------------------------------------------
 
 CASES_DIR = SITE / "_data" / "cases"
@@ -2568,7 +2572,7 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
 
 
 # --------------------------------------------------------------------------
-# Cross-source demos (site/demos.html): one question each, the plan
+# Cross-source demos (site/demos-archive.html, archived): one question each, the plan
 # plan_query gave for it, then recorded calls to several agencies
 # (scripts/capture_cases.py demo_alberta demo_rates) joined year by year.
 # --------------------------------------------------------------------------
@@ -3275,7 +3279,7 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
     if coord["response"]["vector_id"] != macro["arguments"]["vector_ids"][0]:
         raise SystemExit("the coordinate call and the CPI call no longer name the same vector")
 
-    # The CPI call from the case studies: its latest month in full.
+    # The CPI call from the demos: its latest month in full.
     series = macro["response"][0]
     obs = series["observations"]
     earlier = len(obs) - 1
@@ -3865,6 +3869,9 @@ def _write_site(
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
                 "site_url": SITE_URL,
                 "canonical": page_url(page.name, lang),
+                "robots_meta": (
+                    '<meta name="robots" content="noindex">\n' if page.name in ARCHIVED else ""
+                ),
                 "url_en": page_url(page.name, "en"),
                 "url_fr": page_url(page.name, "fr"),
                 "og_title": OG_TITLE,
@@ -3880,7 +3887,6 @@ def _write_site(
                 "cur_connect": ' aria-current="page"' if page.name == "connect.html" else "",
                 "cur_about": ' aria-current="page"' if page.name == "about.html" else "",
                 "cur_cases": ' aria-current="page"' if page.name == "cases.html" else "",
-                "cur_demos": ' aria-current="page"' if page.name == "demos.html" else "",
                 "cur_statcan": ' aria-current="page"' if page.name == "statcan.html" else "",
                 "cur_contributing": (
                     ' aria-current="page"' if page.name == "contributing.html" else ""
@@ -3904,7 +3910,8 @@ def _write_site(
             # After the typography, so a French preview is spaced as the page is.
             rendered = social_meta(rendered)
             (target_dir / page.name).write_text(rendered, encoding="utf-8")
-    (out / "sitemap.xml").write_text(sitemap([p.name for p in pages]), encoding="utf-8")
+    listed = [p.name for p in pages if p.name not in ARCHIVED]
+    (out / "sitemap.xml").write_text(sitemap(listed), encoding="utf-8")
     (out / "robots.txt").write_text(
         f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}sitemap.xml\n", encoding="utf-8"
     )
@@ -3994,8 +4001,7 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         f"- [Tools]({page_url('tools.html', 'en')}): every tool with its parameters",
         f"- [Sources]({page_url('sources.html', 'en')}): which agencies and portals cover where",
         f"- [Statistics Canada]({page_url('statcan.html', 'en')}): tables, census and microdata",
-        f"- [Case studies]({page_url('cases.html', 'en')}): recorded calls behind real questions",
-        f"- [Cross-source demos]({page_url('demos.html', 'en')}): one question answered across agencies",
+        f"- [Demos]({page_url('cases.html', 'en')}): recorded calls behind real questions",
         "",
     ]
     tools_url = page_url("tools.html", "en")
