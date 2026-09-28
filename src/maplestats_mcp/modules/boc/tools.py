@@ -42,11 +42,12 @@ async def boc_search_series(query: str, limit: int = 25, lang: Lang = "en") -> S
     inflation measures, commodity prices, and hundreds of other
     monetary/financial series.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
-    rate, interest rate, policy rate, prime rate, cpi, inflation,
-    commodity price, discover.
+    rate, interest rate, policy rate, prime rate, five-year mortgage
+    rate, bond yield, cpi, inflation, commodity price, discover.
     Mots-clés : banque du canada, valet, série, recherche, trouver, taux
-    de change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
-    inflation, prix des matières premières, découvrir.
+    de change, taux d'intérêt, taux directeur, taux préférentiel, taux
+    hypothécaire, rendement des obligations, IPC, inflation, prix des
+    matières premières, découvrir.
     """
     return await client.search_series(query, limit=limit)
 
