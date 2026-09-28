@@ -91,3 +91,27 @@ jobs:
         run: |
           test -n "$SMITHERY_API_KEY" || { echo "::error::SMITHERY_API_KEY secret is not set"; exit 1; }
           npx -y @smithery/cli@4.11.1 mcp publish "dist/maplestats-mcp-${GITHUB_REF_NAME#v}.mcpb" -n dsanchezp998/maplestats-mcp
+
+  github-release:
+    # The tag's GitHub Release, with notes GitHub writes from the pull
+    # requests merged since the previous tag, and the built wheel and sdist
+    # attached. pyproject.toml's Changelog link and the site's version line
+    # point at these releases.
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --repo "$GITHUB_REPOSITORY"
+          --title "$GITHUB_REF_NAME"
+          --generate-notes
+          --verify-tag

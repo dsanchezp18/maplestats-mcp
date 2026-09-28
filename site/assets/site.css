@@ -2087,7 +2087,7 @@ mark {
   overflow-wrap: anywhere;
 }
 
-/* ---------- Case studies ---------- */
+/* ---------- Demos ---------- */
 
 /* Each stanza: the count and its verse line on the left, under the hero's
    logo column, with the case's headline and story below them; the chart,
@@ -4298,7 +4298,7 @@ h2.sub {
   }
 }
 
-/* ---------- Home: the square, the same size as on the case studies ---------- */
+/* ---------- Home: the square, the same size as on the demos page ---------- */
 
 .home-square .wrap {
   display: grid;
@@ -4529,4 +4529,18 @@ html:not(.js) .chips {
   .badges {
     display: none;
   }
+}
+
+/* An archived page (build_site.ARCHIVED) says so above its title. */
+.archived-wrap {
+  padding-top: 24px;
+}
+
+.archived-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--ground-2);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
 }
