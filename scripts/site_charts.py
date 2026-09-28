@@ -30,10 +30,10 @@ __all__ = [
     "hbar_chart",
     "line_chart",
     "responsive",
-    "ring_chart",
-    "ring_rows",
     "scatter_chart",
     "scatter_rows",
+    "square_chart",
+    "square_rows",
     "step_chart",
     "time_rows",
     "with_table",
@@ -723,57 +723,146 @@ def hbar_chart(
 
 
 # ---------------------------------------------------------------------------
-# The ring: names inscribed on two circles, arcs sized by count, a centre figure
+# The square: names inscribed around two rounded squares, the tools as
+# segments along a square track, a centre figure
 
-RING = 640.0  # the ring's viewBox is square
-_RING_CHAR = 0.54  # an average glyph of the inscription (text sans, tracked), in em
+SQUARE = 640.0  # the square's viewBox
+_SQUARE_CHAR = 0.54  # an average glyph of the inscription (text sans, tracked), in em
+# Corner radius of the outermost rule. Inner squares keep the bands an even
+# width by shrinking it by their inset, down to a sharp corner.
+_SQUARE_CORNER = 110.0
+_SQUARE_EDGE = 312.0
 
 
-def _circle_path(cx: float, cy: float, r: float) -> str:
-    """A full circle, clockwise from the top: the path text is set along."""
+def _corner(half: float) -> float:
+    return max(0.0, _SQUARE_CORNER - (_SQUARE_EDGE - half))
+
+
+def _rounded_square(c: float, half: float, r: float) -> str:
+    """A closed rounded square, clockwise from the middle of the top: a band's rule."""
+    t, b, left, right = c - half, c + half, c - half, c + half
+    arc = (lambda x, y: f" A{_n(r)},{_n(r)} 0 0,1 {_n(x)},{_n(y)}") if r else (lambda x, y: "")
     return (
-        f"M{_n(cx)},{_n(cy - r)} a{_n(r)},{_n(r)} 0 1,1 0,{_n(2 * r)} "
-        f"a{_n(r)},{_n(r)} 0 1,1 0,{_n(-2 * r)}"
+        f"M{_n(c)},{_n(t)} L{_n(right - r)},{_n(t)}{arc(right, t + r)}"
+        f" L{_n(right)},{_n(b - r)}{arc(right - r, b)}"
+        f" L{_n(left + r)},{_n(b)}{arc(left, b - r)}"
+        f" L{_n(left)},{_n(t + r)}{arc(left + r, t)} Z"
     )
 
 
-def _point(cx: float, cy: float, r: float, angle: float) -> tuple[float, float]:
-    """Angle in degrees clockwise from the top."""
-    a = math.radians(angle - 90)
-    return cx + r * math.cos(a), cy + r * math.sin(a)
+def _track_point(c: float, half: float, s: float) -> tuple[float, float]:
+    """The point ``s`` along a sharp square, clockwise from the middle of the top."""
+    side = 2 * half
+    s %= 4 * side
+    if s < half:
+        return c + s, c - half
+    s -= half
+    if s < side:
+        return c + half, c - half + s
+    s -= side
+    if s < side:
+        return c + half - s, c + half
+    s -= side
+    if s < side:
+        return c - half, c + half - s
+    return c - half + (s - side), c - half
 
 
-def _arc_path(cx: float, cy: float, r: float, a0: float, a1: float, reverse: bool = False) -> str:
-    (x0, y0), (x1, y1) = _point(cx, cy, r, a0), _point(cx, cy, r, a1)
-    large = 1 if a1 - a0 > 180 else 0
-    if reverse:
-        return f"M{_n(x1)},{_n(y1)} A{_n(r)},{_n(r)} 0 {large},0 {_n(x0)},{_n(y0)}"
-    return f"M{_n(x0)},{_n(y0)} A{_n(r)},{_n(r)} 0 {large},1 {_n(x1)},{_n(y1)}"
+def _track_path(c: float, half: float, s0: float, s1: float) -> str:
+    """The stretch of the sharp square track from ``s0`` to ``s1``, through its corners."""
+    points = [_track_point(c, half, s0)]
+    points += [
+        _track_point(c, half, k) for k in (half, 3 * half, 5 * half, 7 * half) if s0 < k < s1
+    ]
+    points.append(_track_point(c, half, s1))
+    return "M" + " L".join(f"{_n(x)},{_n(y)}" for x, y in points)
 
 
-def _inscription(ident: str, names: list[str], r: float, cls: str) -> tuple[str, str]:
-    """(defs path, text) for names set once around a circle, ends meeting at the top.
+def _straight_runs(half: float, s0: float, s1: float) -> list[tuple[float, float, int]]:
+    """(start, end, side) of each straight part of [s0, s1]; sides 0-3 are top, right, bottom, left."""
+    bounds = [(0.0, half, 0), (half, 3 * half, 1), (3 * half, 5 * half, 2)]
+    bounds += [(5 * half, 7 * half, 3), (7 * half, 8 * half, 0)]
+    runs = []
+    for lo, hi, side in bounds:
+        a, b = max(s0, lo), min(s1, hi)
+        if b > a:
+            runs.append((a, b, side))
+    return runs
 
-    The font size is chosen so the names fill the circumference, and
-    textLength closes any remaining gap by adjusting the letter spacing, so
-    the last separator lands exactly where the first name starts.
+
+def _half_square(c: float, half: float, r: float, top: bool) -> str:
+    """Half a rounded square from the middle of its left side to the middle of
+    its right: over the top, or along the bottom, so text on either reads
+    left to right and upright."""
+    left, right = c - half, c + half
+    if top:
+        t = c - half
+        return (
+            f"M{_n(left)},{_n(c)} L{_n(left)},{_n(t + r)}"
+            + (f" A{_n(r)},{_n(r)} 0 0,1 {_n(left + r)},{_n(t)}" if r else "")
+            + f" L{_n(right - r)},{_n(t)}"
+            + (f" A{_n(r)},{_n(r)} 0 0,1 {_n(right)},{_n(t + r)}" if r else "")
+            + f" L{_n(right)},{_n(c)}"
+        )
+    b = c + half
+    return (
+        f"M{_n(left)},{_n(c)} L{_n(left)},{_n(b - r)}"
+        + (f" A{_n(r)},{_n(r)} 0 0,0 {_n(left + r)},{_n(b)}" if r else "")
+        + f" L{_n(right - r)},{_n(b)}"
+        + (f" A{_n(r)},{_n(r)} 0 0,0 {_n(right)},{_n(b - r)}" if r else "")
+        + f" L{_n(right)},{_n(c)}"
+    )
+
+
+def _half_length(half: float, r: float) -> float:
+    """The length of _half_square(): two half sides, one side, two quarter circles."""
+    return 4 * half - (4 - math.pi) * r
+
+
+def _inscription(ident: str, names: list[str], half: float, cls: str) -> tuple[list[str], str]:
+    """(defs paths, text) for names set around a rounded square in two halves.
+
+    The names are split where the two halves come out closest in length:
+    the first half runs from the left side over the top, the second along
+    the bottom, both left to right, so no lettering is upside down. Both
+    share one font size, chosen so the longer half fills its path;
+    textLength closes the rest by adjusting the letter spacing. Glyphs
+    stand on the outer side of the top path and the inner side of the
+    bottom one, so each baseline moves the other way to centre its
+    lettering in the band. Non-breaking spaces pad the seams at the sides,
+    since SVG drops ordinary spaces at the ends of a text.
     """
-    text = " · ".join(names) + " · "
-    circumference = 2 * math.pi * r
-    size = min(max(circumference / (len(text) * _RING_CHAR), 7.0), 15.0)
-    # Centre the lettering in its band: the baseline sits a third of the
-    # font size inside the band's middle.
-    baseline = r - size * 0.33
-    path = f'<path id="{ident}" d="{_circle_path(RING / 2, RING / 2, baseline)}"/>'
-    length = 2 * math.pi * baseline
-    return path, (
-        f'<text class="{cls}" style="font-size:{_n(size)}px">'
-        f'<textPath href="#{ident}" textLength="{_n(length)}" lengthAdjust="spacing">'
-        f"{_esc(text)}</textPath></text>"
+    pad, sep = "\u00a0\u00a0", " · "
+
+    def line(part: list[str]) -> str:
+        return pad + sep.join(part) + pad
+
+    split = min(
+        range(1, len(names)) if len(names) > 1 else [1],
+        key=lambda k: abs(len(line(names[:k])) - len(line(names[k:]))),
     )
+    parts = [p for p in (names[:split], names[split:]) if p]
+    r = _corner(half)
+    longest = max(len(line(p)) for p in parts)
+    size = min(max(_half_length(half, r) / (longest * _SQUARE_CHAR), 7.0), 15.0)
+    inset = size * 0.33
+    c = SQUARE / 2
+    defs, texts = [], []
+    for n, part in enumerate(parts):
+        top = n == 0
+        h = half - inset if top else half + inset
+        rr = max(0.0, r - inset) if top else r + inset
+        pid = f"{ident}-{'top' if top else 'bottom'}"
+        defs.append(f'<path id="{pid}" d="{_half_square(c, h, rr, top)}"/>')
+        texts.append(
+            f'<text class="{cls}" data-band="{ident}" style="font-size:{_n(size)}px">'
+            f'<textPath href="#{pid}" textLength="{_n(_half_length(h, rr))}" lengthAdjust="spacing">'
+            f"{_esc(line(part))}</textPath></text>"
+        )
+    return defs, "".join(texts)
 
 
-def ring_chart(
+def square_chart(
     outer: list[str],
     inner: list[str],
     arcs: list[tuple[str, str, int]],
@@ -781,24 +870,26 @@ def ring_chart(
     centre: str,
     centre_lines: tuple[str, str],
     label: str,
-    ident: str = "ring",
+    ident: str = "square",
 ) -> str:
-    """The case-study finale: one ring for everything the server reaches.
+    """The case-study finale: one square for everything the server reaches.
 
     ``outer`` and ``inner`` are inscribed around two bands (the federal
     publishers, then the provinces and cities). ``arcs`` are (short label,
-    full label, count), drawn clockwise from the top in the order given, each
-    sweep proportional to its count and labelled along the arc where the
-    label fits. The centre shows ``centre`` over two short lines.
+    full label, count), laid clockwise from the middle of the top along a
+    square track in the order given, each as long as its share of the count
+    and labelled on its longest straight run where the label fits: upright
+    on the top and bottom, turned on the sides. The centre shows ``centre``
+    over two short lines.
     """
     if not outer or not arcs or any(n <= 0 for _, _, n in arcs):
-        raise ValueError("ring_chart needs names and positive arc counts")
-    c = RING / 2
+        raise ValueError("square_chart needs names and positive segment counts")
+    c = SQUARE / 2
     safe = _esc(label)
     out = [
         (
-            f'<svg class="chart ring" data-chart="" viewBox="0 0 {_n(RING)} {_n(RING)}" role="img" '
-            f'aria-label="{safe}" preserveAspectRatio="xMidYMid meet"><title>{safe}</title>'
+            f'<svg class="chart square" data-chart="" viewBox="0 0 {_n(SQUARE)} {_n(SQUARE)}" '
+            f'role="img" aria-label="{safe}" preserveAspectRatio="xMidYMid meet"><title>{safe}</title>'
         )
     ]
     defs: list[str] = []
@@ -806,67 +897,60 @@ def ring_chart(
 
     # Two inscription bands, each between two thin rules.
     bands = [
-        (outer, 293.0, (276.0, 312.0), "ring-script"),
-        (inner, 252.0, (236.0, 268.0), "ring-script-2"),
+        (outer, 293.0, (276.0, 312.0), "sq-script"),
+        (inner, 252.0, (236.0, 268.0), "sq-script-2"),
     ]
-    for n, (names, r, (lo, hi), cls) in enumerate(bands):
+    for n, (names, half, (lo, hi), cls) in enumerate(bands):
         if not names:
             continue
-        path, text = _inscription(f"{ident}-script-{n}", names, r, cls)
-        defs.append(path)
-        spin = "ring-spin" if n == 0 else "ring-spin-2"
+        paths, text = _inscription(f"{ident}-script-{n}", names, half, cls)
+        defs.extend(paths)
         body.append(
-            f'<circle class="ring-rule" cx="{_n(c)}" cy="{_n(c)}" r="{_n(hi)}"/>'
-            f'<circle class="ring-rule" cx="{_n(c)}" cy="{_n(c)}" r="{_n(lo)}"/>'
-            f'<g class="{spin}">{text}</g>'
+            f'<path class="sq-rule" d="{_rounded_square(c, hi, _corner(hi))}"/>'
+            f'<path class="sq-rule" d="{_rounded_square(c, lo, _corner(lo))}"/>'
+            f'<g class="sq-fade">{text}</g>'
         )
 
-    # Arcs: sweep proportional to count, a small gap between neighbours.
-    r_arc, width, gap = 184.0, 52.0, 1.4
+    # Segments: each as long as its share, a small gap between neighbours.
+    half, width = 184.0, 52.0
+    perimeter = 8 * half
+    gap = perimeter * 1.4 / 360
     total = sum(n for _, _, n in arcs)
-    sweep = 360.0 - gap * len(arcs)
-    angle = gap / 2
+    usable = perimeter - gap * len(arcs)
+    pos = gap / 2
     labels: list[str] = []
+    size = 12.0
     for i, (short, full, count) in enumerate(arcs):
-        a0, a1 = angle, angle + sweep * count / total
-        angle = a1 + gap
+        s0, s1 = pos, pos + usable * count / total
+        pos = s1 + gap
         body.append(
-            f'<path class="ring-arc" style="--i:{i}" pathLength="1" '
-            f'd="{_arc_path(c, c, r_arc, a0, a1)}" stroke-width="{_n(width)}">'
+            f'<path class="sq-arc" style="--i:{i}" pathLength="1" '
+            f'd="{_track_path(c, half, s0, s1)}" stroke-width="{_n(width)}">'
             f"<title>{_esc(f'{full} ({count})')}</title></path>"
         )
-        arc_len = math.radians(a1 - a0) * r_arc
-        mid = (a0 + a1) / 2
-        # Labels on the lower half run the other way, so they read upright.
-        lower = 90 < mid < 270
-        size = 12.0
+        a, b, side = max(_straight_runs(half, s0, s1), key=lambda run: run[1] - run[0])
+        room = b - a
+        x, y = _track_point(c, half, (a + b) / 2)
+        turn = {1: 90, 3: -90}.get(side, 0)
         named = f"{short} {count}"
-        if len(named) * size * _TEXT_CHAR + 12 <= arc_len:
-            # A name and count run along the arc; on the lower half the
-            # path is reversed and the baseline moves out, so it reads upright.
-            pid = f"{ident}-arc-{i}"
-            shift = size * 0.35
-            r_text = r_arc + shift if lower else r_arc - shift
-            defs.append(f'<path id="{pid}" d="{_arc_path(c, c, r_text, a0, a1, reverse=lower)}"/>')
-            labels.append(
-                f'<text class="ring-arc-label" style="--i:{i}">'
-                f'<textPath href="#{pid}" startOffset="50%" text-anchor="middle">{_esc(named)}</textPath></text>'
-            )
-        elif size * 1.2 + 6 <= arc_len:
-            # A short arc gets its count alone, upright at the arc's middle.
-            x, y = _point(c, c, r_arc, mid)
-            labels.append(
-                _text(
-                    x, y + size * 0.35, str(count), "ring-arc-label", "middle", f' style="--i:{i}"'
-                )
-            )
+        if len(named) * size * _TEXT_CHAR + 12 <= room:
+            shown, rotate = named, turn
+        elif size * 1.2 + 6 <= room:
+            # A short segment gets its count alone, upright.
+            shown, rotate = str(count), 0
+        else:
+            continue
+        spin = f' transform="rotate({rotate} {_n(x)} {_n(y)})"' if rotate else ""
+        labels.append(
+            _text(x, y + size * 0.35, shown, "sq-arc-label", "middle", f' style="--i:{i}"{spin}')
+        )
 
     out.append("<defs>" + "".join(defs) + "</defs>")
     out.extend(body)
     out.extend(labels)
-    out.append(_text(c, c + 14, centre, "ring-n", "middle", ' data-count=""'))
-    out.append(_text(c, c + 46, centre_lines[0], "ring-sub", "middle"))
-    out.append(_text(c, c + 68, centre_lines[1], "ring-sub", "middle"))
+    out.append(_text(c, c + 14, centre, "sq-n", "middle", ' data-count=""'))
+    out.append(_text(c, c + 46, centre_lines[0], "sq-sub", "middle"))
+    out.append(_text(c, c + 68, centre_lines[1], "sq-sub", "middle"))
     out.append("</svg>")
     return "".join(out)
 
@@ -987,6 +1071,6 @@ def scatter_rows(
     return [[series[s], x_format(x), y_format(y), str(n)] for x, y, s, n, _ in ordered_points]
 
 
-def ring_rows(arcs: list[tuple[str, str, int]], count_format: Callable[[float], str]) -> Rows:
-    """ring_chart's arcs: the full label and its count."""
+def square_rows(arcs: list[tuple[str, str, int]], count_format: Callable[[float], str]) -> Rows:
+    """square_chart's segments: the full label and its count."""
     return [[full, count_format(count)] for _, full, count in arcs]

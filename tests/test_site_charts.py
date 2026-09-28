@@ -125,7 +125,7 @@ def _all_charts() -> dict[str, str]:
             value_format=lambda v: f"{v:.0f}",
             log=False,
         ),
-        "ring": charts.ring_chart(
+        "square": charts.square_chart(
             ["Bank of Canada", "StatCan", "CMHC <&>"],
             ["Alberta", "Edmonton", "Calgary"],
             [
@@ -135,12 +135,12 @@ def _all_charts() -> dict[str, str]:
             ],
             centre="84",
             centre_lines=("tools,", "one connection"),
-            label="Ring",
+            label="Square",
         ),
     }
 
 
-CHARTS = ["ci", "bars", "line", "step", "band", "scatter", "hbar", "hbar_linear", "ring"]
+CHARTS = ["ci", "bars", "line", "step", "band", "scatter", "hbar", "hbar_linear", "square"]
 
 
 @pytest.mark.parametrize("name", CHARTS)
@@ -314,25 +314,58 @@ def test_hbar_log_grid_is_powers_of_ten_and_bars_are_ordered() -> None:
         charts.hbar_chart([("zero", 0.0)], label="x", value_format=str)
 
 
-def test_ring_inscriptions_close_and_arcs_share_the_circle() -> None:
-    root = _parse(_all_charts()["ring"])
+def test_square_inscriptions_close_and_segments_share_the_track() -> None:
+    root = _parse(_all_charts()["square"])
     paths = {el.get("id"): el for el in root.iter(f"{NS}path") if el.get("id")}
     text_paths = list(root.iter(f"{NS}textPath"))
-    # Two inscriptions plus a label on each arc that has room for one.
-    assert {tp.get("href") for tp in text_paths[:2]} == {"#ring-script-0", "#ring-script-1"}
+    # Each band's names run in two halves, over the top and along the
+    # bottom, both from the left side to the right: the only text on a path.
+    hrefs = [tp.get("href") for tp in text_paths]
+    assert hrefs == [f"#square-script-{n}-{h}" for n in (0, 1) for h in ("top", "bottom")]
     assert all(tp.get("href", "")[1:] in paths for tp in text_paths)
-    inscription = text_paths[0].text or ""
-    assert inscription.endswith(" · ") and "CMHC <&>" in inscription
-    arcs = [el for el in root.iter(f"{NS}path") if "ring-arc" in _classes(el)]
-    assert len(arcs) == 3
-    assert all(el.get("pathLength") == "1" for el in arcs)
-    # The smallest arc (1 of 84) is too short for any label.
-    labels = [tp.text for tp in text_paths[2:]]
-    assert labels[0] == "Statistics 62" and len(labels) == 2
-    centre = [el for el in root.iter(f"{NS}text") if "ring-n" in _classes(el)]
+    for n in (0, 1):
+        top, bottom = (paths[f"square-script-{n}-{h}"].get("d") or "" for h in ("top", "bottom"))
+        start_top, start_bottom = top.split()[0], bottom.split()[0]
+        # Both start on the left side, halfway down; the top one climbs
+        # (clockwise arcs), the bottom one descends (anticlockwise arcs).
+        assert start_top.endswith(",320") and start_bottom.endswith(",320")
+        assert "0,1" in top and "0,0" in bottom
+    written = "".join(tp.text or "" for tp in text_paths[:2])
+    assert "CMHC <&>" in written and "Bank of Canada" in written
+    # The seams are padded with non-breaking spaces, which SVG keeps.
+    assert all((tp.text or "").startswith("\u00a0") for tp in text_paths)
+    segments = [el for el in root.iter(f"{NS}path") if "sq-arc" in _classes(el)]
+    assert len(segments) == 3
+    assert all(el.get("pathLength") == "1" for el in segments)
+    # The first segment (62 of 84) starts on the top and turns the corners
+    # it passes: its path has more than two points.
+    first = segments[0].get("d") or ""
+    assert first.count("L") >= 2
+    # Labels are plain text: the name and count where they fit, upright on
+    # the top and bottom and turned on the sides; the 1-of-84 segment is too
+    # short for any label.
+    labels = [el for el in root.iter(f"{NS}text") if "sq-arc-label" in _classes(el)]
+    assert [el.text for el in labels] == ["Statistics 62", "Money 21"]
+    for el in labels:
+        turn = el.get("transform") or ""
+        assert turn == "" or re.fullmatch(r"rotate\((90|-90) [\d.]+ [\d.]+\)", turn), turn
+    centre = [el for el in root.iter(f"{NS}text") if "sq-n" in _classes(el)]
     assert centre[0].text == "84" and "data-count" in centre[0].attrib
     with pytest.raises(ValueError):
-        charts.ring_chart([], [], [("a", "a", 1)], centre="1", centre_lines=("", ""), label="x")
+        charts.square_chart([], [], [("a", "a", 1)], centre="1", centre_lines=("", ""), label="x")
+
+
+def test_track_points_walk_the_square_clockwise() -> None:
+    c, half = 320.0, 100.0
+    assert charts._track_point(c, half, 0) == (320.0, 220.0)
+    assert charts._track_point(c, half, half) == (420.0, 220.0)
+    assert charts._track_point(c, half, 3 * half) == (420.0, 420.0)
+    assert charts._track_point(c, half, 5 * half) == (220.0, 420.0)
+    assert charts._track_point(c, half, 7 * half) == (220.0, 220.0)
+    assert charts._track_point(c, half, 8 * half) == (320.0, 220.0)
+    # A stretch across the top-right corner goes through it.
+    assert charts._track_path(c, half, 50, 150) == "M370,220 L420,220 L420,270"
+    assert charts._straight_runs(half, 50, 150) == [(50, 100.0, 0), (100.0, 150, 1)]
 
 
 def test_tooltips_take_the_page_language() -> None:
@@ -413,4 +446,4 @@ def test_table_rows_come_from_the_chart_series() -> None:
         ["S0", "0.0", "19.0", "1"],
         ["S1", "10.0", "20.0", "2"],
     ]
-    assert charts.ring_rows([("A", "A: x", 3)], str) == [["A: x", "3"]]
+    assert charts.square_rows([("A", "A: x", 3)], str) == [["A: x", "3"]]

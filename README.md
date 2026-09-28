@@ -12,6 +12,7 @@
     <a href="https://github.com/dsanchezp18/maplestats-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dsanchezp18/maplestats-mcp" alt="License: MIT"></a>
     <a href="https://pypistats.org/packages/maplestats-mcp"><img src="https://img.shields.io/pypi/dm/maplestats-mcp" alt="PyPI downloads per month"></a>
     <a href="https://github.com/dsanchezp18/maplestats-mcp/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/ci.yml?branch=main&label=CI" alt="CI status"></a>
+    <a href="https://dsanchezp18.github.io/maplestats-mcp/"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/pages.yml?branch=main&label=website" alt="Website build status"></a>
     <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>
