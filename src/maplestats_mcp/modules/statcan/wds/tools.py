@@ -51,12 +51,13 @@ async def wds_search_cubes(
     discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, unemployment rate, employment, GDP by
     industry, CPI, population estimates, retail trade, wages, trade,
-    time series.
+    interprovincial migration, time series.
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
     productId, découverte, wds, catalogue, parcourir, liste, inventaire,
     tous les cubes, liste complète, tableaux, population active, taux de
     chômage, emploi, PIB par industrie, IPC, estimations de population,
-    commerce de détail, salaires, commerce, séries chronologiques.
+    commerce de détail, salaires, commerce, migration interprovinciale,
+    séries chronologiques.
     """
     if query is not None:
         if not lite:

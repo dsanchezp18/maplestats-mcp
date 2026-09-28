@@ -12,6 +12,7 @@
     <a href="https://github.com/dsanchezp18/maplestats-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dsanchezp18/maplestats-mcp" alt="License: MIT"></a>
     <a href="https://pypistats.org/packages/maplestats-mcp"><img src="https://img.shields.io/pypi/dm/maplestats-mcp" alt="PyPI downloads per month"></a>
     <a href="https://github.com/dsanchezp18/maplestats-mcp/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/ci.yml?branch=main&label=CI" alt="CI status"></a>
+    <a href="https://dsanchezp18.github.io/maplestats-mcp/"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/pages.yml?branch=main&label=website" alt="Website build status"></a>
     <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>
@@ -314,7 +315,7 @@ uv run python -m http.server --directory build/site 8080
 |---|---|---|
 | `MAPLE_TRANSPORT` | `stdio` | `stdio` for local MCP clients; `http` for hosting |
 | `MAPLE_HOST` / `MAPLE_PORT` | `127.0.0.1` / `8000` | HTTP bind address |
-| `MAPLE_AUTH_TOKEN` | unset | Bearer token required on `/mcp` if set |
+| `MAPLE_AUTH_TOKEN` | unset | Optional, HTTP hosting only: bearer token required on `/mcp` if set. Never needed for local `uvx maplestats-mcp` (stdio), and never sent anywhere; the server only compares incoming requests against it |
 | `MAPLE_REQUIRE_AUTH` | `0` | Refuse to start without a token if `1` |
 | `MAPLE_RATE_LIMIT_REQUESTS` / `MAPLE_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Per-client sliding-window rate limit |
 | `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | Cap on in-flight MCP requests (POST/DELETE); excess requests wait up to 5 s, then get 503. Long-lived GET event streams are not counted |

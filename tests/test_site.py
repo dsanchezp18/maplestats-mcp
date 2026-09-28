@@ -582,7 +582,7 @@ def test_every_chart_is_followed_by_its_data(built_site: Path):
     for page in (built_site / "cases.html", built_site / "fr" / "cases.html"):
         text = page.read_text(encoding="utf-8")
         charts = re.findall(r'<svg\b[^>]*class="chart[^"]*"[^>]*>', text)
-        # Nine charts; all but the ring are drawn twice (wide and narrow, see
+        # Nine charts; all but the square are drawn twice (wide and narrow, see
         # site_charts.responsive), and every drawing links the same table.
         wide = [svg for svg in charts if "chart-narrow" not in svg]
         assert len(wide) == 9, page
@@ -599,16 +599,45 @@ def test_every_chart_is_followed_by_its_data(built_site: Path):
 
 
 def test_pages_make_no_third_party_requests(built_site: Path):
-    """Fonts and every other asset come from the site itself, not a CDN."""
+    """Fonts, scripts and styles come from the site itself, not a CDN.
+
+    The one exception is the badges: live images from the services that
+    list or score the server, lazily loaded, and only from BADGE_HOSTS.
+    """
     fonts_css = (built_site / "assets" / "fonts.css").read_text(encoding="utf-8")
     for url in re.findall(r"url\(([^)]+)\)", fonts_css):
         assert (built_site / "assets" / url).is_file(), url
     for page in [*built_site.glob("*.html"), *(built_site / "fr").glob("*.html")]:
         text = page.read_text(encoding="utf-8")
-        loaded = re.findall(r'<(?:link|script|img)\b[^>]*(?:href|src)="(https?://[^"]+)"', text)
+        loaded = re.findall(r'<(?:link|script)\b[^>]*(?:href|src)="(https?://[^"]+)"', text)
         # Canonical, hreflang and og: URLs name this site; they load nothing.
         foreign = [u for u in loaded if not u.startswith(site.SITE_URL)]
         assert not foreign, (page.name, foreign)
+        for img in re.findall(r'<img\b[^>]*src="https?://[^"]+"[^>]*>', text):
+            src = html.unescape(re.search(r'src="([^"]+)"', img).group(1))  # type: ignore[union-attr]
+            assert urlsplit(src).netloc in site.BADGE_HOSTS, (page.name, src)
+            assert 'loading="lazy"' in img, (page.name, src)
+
+
+def test_badges_match_the_readme(built_site: Path):
+    """The site shows the README's badges, and the README shows the site's."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    in_readme = {html.unescape(u) for u in re.findall(r'<img src="(https://[^"]+)"', readme)}
+    listed = {image for _, _, image, _, _ in site.BADGES}
+    assert listed <= in_readme, listed - in_readme
+    # Every README badge but the logo is on the site.
+    assert {u for u in in_readme if "logo.svg" not in u} <= listed
+    for page, group in (
+        ("index.html", "user"),
+        ("connect.html", "user"),
+        ("contributing.html", "dev"),
+    ):
+        for lang_dir in ("", "fr/"):
+            text = html.unescape((built_site / lang_dir / page).read_text(encoding="utf-8"))
+            for grp, link, image, alt_en, alt_fr in site.BADGES:
+                if grp == group:
+                    assert f'src="{image}"' in text, (lang_dir + page, image)
+                    assert (alt_fr if lang_dir else alt_en) in text, (lang_dir + page, alt_en)
 
 
 def test_llms_txt_links_each_tool_to_its_entry(built_site: Path):

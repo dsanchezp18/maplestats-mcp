@@ -44,15 +44,17 @@ async def boc_search_series(
     inflation measures, commodity prices, and hundreds of other
     monetary/financial series. Pass `query` for a keyword search (top
     `limit` matches, default 25). Omit `query` to list the entire
-    catalogue (`limit` then keeps only the first N) - a full inventory scan or building a local index.
+    catalogue (`limit` then keeps only the first N) - a full inventory
+    scan or building a local index.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
-    rate, interest rate, policy rate, prime rate, cpi, inflation,
-    commodity price, discover, list, inventory, all series, catalogue,
-    full list.
+    rate, interest rate, policy rate, prime rate, five-year mortgage
+    rate, bond yield, cpi, inflation, commodity price, discover, list,
+    inventory, all series, catalogue, full list.
     Mots-clés : banque du canada, valet, série, recherche, trouver, taux
-    de change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
-    inflation, prix des matières premières, découvrir, liste, inventaire,
-    toutes les séries, catalogue, liste complète, parcourir.
+    de change, taux d'intérêt, taux directeur, taux préférentiel, taux
+    hypothécaire, rendement des obligations, IPC, inflation, prix des
+    matières premières, découvrir, liste, inventaire, toutes les séries,
+    catalogue, liste complète, parcourir.
     """
     if query is not None:
         return await client.search_series(query, limit=25 if limit is None else limit)
