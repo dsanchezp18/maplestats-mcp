@@ -2469,11 +2469,11 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         ),
         (micro["unweighted_n"], "census records" if en else "fiches du recensement"),
         (
-            counts["boc_list_series"]["total_count"],
+            counts["boc_search_series"]["total_count"],
             "Bank of Canada series" if en else "séries de la Banque du Canada",
         ),
         (
-            counts["wds_list_all_cubes"]["total_count"],
+            counts["wds_search_cubes"]["total_count"],
             "Statistics Canada tables" if en else "tableaux de Statistique Canada",
         ),
         (
@@ -2555,8 +2555,8 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
     counts = {call["name"]: call["response"] for call in load_case("counts")["calls"]}
     context["count_pumf"] = number(counts["statcan_reference_search_data"]["product_count"], lang)
     context["count_ircc"] = number(counts["ircc_monthly_list_tables"]["returned_count"], lang)
-    context["count_tables"] = number(counts["wds_list_all_cubes"]["total_count"], lang)
-    context["count_series"] = number(counts["boc_list_series"]["total_count"], lang)
+    context["count_tables"] = number(counts["wds_search_cubes"]["total_count"], lang)
+    context["count_series"] = number(counts["boc_search_series"]["total_count"], lang)
     context["cases_captured"] = long_date(load_case("counts")["captured"], lang)
     # "Eight questions", "the other seven": counted from CASE_KEYS, in words.
     words = NUMBER_WORDS[lang]
@@ -3271,7 +3271,7 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         raise SystemExit("the text says member 2 is the root of both CPI dimensions; check it")
     combos = math.prod(d["member_count"] for d in dims)
 
-    coord = calls["wds_get_series_info_from_cube_pid_coord"]
+    coord = calls["wds_get_series_info"]
     if coord["response"]["vector_id"] != macro["arguments"]["vector_ids"][0]:
         raise SystemExit("the coordinate call and the CPI call no longer name the same vector")
 

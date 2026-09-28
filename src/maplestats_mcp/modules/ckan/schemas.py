@@ -220,6 +220,21 @@ class GroupDetail(BaseModel):
     provenance: Provenance
 
 
+class CollectionDetail(BaseModel):
+    """One CKAN organization or group: CKAN gives both the same shape."""
+
+    portal: str
+    kind: Literal["organization", "group"]
+    id: str
+    name: str
+    title: str
+    description: str | None = None
+    package_count: int = 0
+    image_url: str | None = None
+    landing_page_url: str | None = None
+    provenance: Provenance
+
+
 class DatastoreField(BaseModel):
     id: str
     type: str

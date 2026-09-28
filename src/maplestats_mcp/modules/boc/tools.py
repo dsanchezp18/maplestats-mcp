@@ -34,69 +34,65 @@ Lang = Literal["en", "fr"]
 
 
 @tool
-async def boc_search_series(query: str, limit: int = 25, lang: Lang = "en") -> SeriesList:
-    """Search Bank of Canada Valet's ~16,000 statistical series by keyword.
+async def boc_search_series(
+    query: str | None = None, limit: int | None = None, lang: Lang = "en"
+) -> SeriesList:
+    """Search or list Bank of Canada Valet's ~16,000 statistical series.
 
     Use for: finding a Valet series name when you only know a topic -
     exchange rates, interest rates (policy rate, prime rate), CPI/
     inflation measures, commodity prices, and hundreds of other
-    monetary/financial series.
+    monetary/financial series. Pass `query` for a keyword search (top
+    `limit` matches, default 25). Omit `query` to list the entire
+    catalogue (`limit` then keeps only the first N) - a full inventory
+    scan or building a local index.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
     rate, interest rate, policy rate, prime rate, five-year mortgage
-    rate, bond yield, cpi, inflation, commodity price, discover.
+    rate, bond yield, cpi, inflation, commodity price, discover, list,
+    inventory, all series, catalogue, full list.
     Mots-clés : banque du canada, valet, série, recherche, trouver, taux
     de change, taux d'intérêt, taux directeur, taux préférentiel, taux
     hypothécaire, rendement des obligations, IPC, inflation, prix des
-    matières premières, découvrir.
+    matières premières, découvrir, liste, inventaire, toutes les séries,
+    catalogue, liste complète, parcourir.
     """
-    return await client.search_series(query, limit=limit)
+    if query is not None:
+        return await client.search_series(query, limit=25 if limit is None else limit)
+    result = await client.list_series()
+    if limit is not None:
+        # model_copy so the cached full list is not trimmed in place.
+        series = result.series[:limit]
+        return result.model_copy(update={"series": series, "total_count": len(series)})
+    return result
 
 
 @tool
-async def boc_list_series(lang: Lang = "en") -> SeriesList:
-    """List every Bank of Canada Valet statistical series (~16,000).
-
-    Use for: a full inventory scan or building a local index. Prefer
-    boc_search_series for a topic search - this returns the entire
-    catalogue.
-    Keywords: bank of canada, boc, valet, list, inventory, all series,
-    catalogue, full list.
-    Mots-clés : banque du canada, valet, liste, inventaire, toutes les
-    séries, catalogue, liste complète, parcourir.
-    """
-    return await client.list_series()
-
-
-@tool
-async def boc_search_groups(query: str, limit: int = 25, lang: Lang = "en") -> GroupList:
-    """Search Bank of Canada Valet's series groups by keyword.
+async def boc_search_groups(
+    query: str | None = None, limit: int | None = None, lang: Lang = "en"
+) -> GroupList:
+    """Search or list Bank of Canada Valet's series groups (~2,500).
 
     Use for: finding a themed group of related series (e.g. daily
     exchange rates, the CPI family including CPI-trim/median/common,
     weekly/monthly/annual commodity price indexes) when you want several
-    related series at once rather than one series name.
+    related series at once rather than one series name. Pass `query`
+    for a keyword search (top `limit` matches, default 25). Omit `query`
+    to list every group (`limit` then keeps only the first N) - a full inventory scan.
     Keywords: bank of canada, boc, valet, group, series group, search,
-    find, cpi, exchange rates, commodity prices, discover.
+    find, cpi, exchange rates, commodity prices, discover, list, groups,
+    inventory, catalogue, full list.
     Mots-clés : banque du canada, valet, groupe, groupe de séries,
     recherche, trouver, IPC, taux de change, prix des produits de base,
-    découvrir.
+    découvrir, liste, groupes, inventaire, catalogue, liste complète,
+    parcourir.
     """
-    return await client.search_groups(query, limit=limit)
-
-
-@tool
-async def boc_list_groups(lang: Lang = "en") -> GroupList:
-    """List every Bank of Canada Valet series group (~2,500).
-
-    Use for: a full inventory scan of themed series groupings. Prefer
-    boc_search_groups for a topic search - this returns the entire
-    catalogue.
-    Keywords: bank of canada, boc, valet, list, groups, inventory,
-    catalogue, full list.
-    Mots-clés : banque du canada, valet, liste, groupes, inventaire,
-    catalogue, liste complète, parcourir.
-    """
-    return await client.list_groups()
+    if query is not None:
+        return await client.search_groups(query, limit=25 if limit is None else limit)
+    result = await client.list_groups()
+    if limit is not None:
+        groups = result.groups[:limit]
+        return result.model_copy(update={"groups": groups, "total_count": len(groups)})
+    return result
 
 
 @tool

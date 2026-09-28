@@ -116,7 +116,7 @@ CASES = [
     ("list municipal open data portals", "arcgis_hub_list_portals"),
     ("hospital beds staffed by province", "cihi_search_indicators"),
     ("drug price review board annual report", "pmprb_list_report_tables"),
-    ("download full StatCan table as CSV", "wds_get_full_table_download_csv"),
+    ("download full StatCan table as CSV", "wds_get_full_table_download"),
     ("Quebec population estimates ISQ", "isq_search_tables"),
     ("research data repository Canadian universities", "borealis_search_ivt"),
     ("place name gazetteer coordinates", "nrcan_geo_search_names"),

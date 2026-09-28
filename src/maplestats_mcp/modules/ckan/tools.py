@@ -17,6 +17,7 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.ckan import client
 from maplestats_mcp.modules.ckan.constants import DATASTORE_ROWS_DEFAULT, SEARCH_ROWS_DEFAULT
 from maplestats_mcp.modules.ckan.schemas import (
+    CollectionDetail,
     DatastoreSearchResult,
     GroupDetail,
     GroupList,
@@ -30,6 +31,8 @@ from maplestats_mcp.modules.ckan.schemas import (
     ResourceDetail,
     TagList,
 )
+from maplestats_mcp.shared.envelope import raise_error
+from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
 
@@ -115,23 +118,6 @@ async def ckan_list_organizations(portal: PortalKey, lang: Lang = "en") -> Organ
 
 
 @tool
-async def ckan_get_organization(
-    portal: PortalKey, organization_id: str, lang: Lang = "en"
-) -> OrganizationDetail:
-    """Get one CKAN publishing organization's description and dataset count.
-
-    Use for: confirming a department's or agency's identity before
-    filtering searches by it. `organization_id` is the id or short name
-    (e.g. "statcan", "nrcan-rncan" on the federal portal).
-    Keywords: CKAN, organization detail, department, agency, publisher,
-    ministry, open data, datasets.
-    Mots-clés : CKAN, détail de l'organisation, ministère, organisme,
-    éditeur, ministères et organismes, données ouvertes, jeux de données.
-    """
-    return await client.get_organization(portal, organization_id, lang)
-
-
-@tool
 async def ckan_get_resource(
     portal: PortalKey, resource_id: str, lang: Lang = "en"
 ) -> ResourceDetail:
@@ -193,18 +179,42 @@ async def ckan_list_groups(portal: PortalKey, lang: Lang = "en") -> GroupList:
 
 
 @tool
-async def ckan_get_group(portal: PortalKey, group_id: str, lang: Lang = "en") -> GroupDetail:
-    """Get one CKAN thematic group's description and dataset count.
+async def ckan_get_organization_or_group(
+    portal: PortalKey,
+    kind: Literal["organization", "group"],
+    collection_id: str,
+    lang: Lang = "en",
+) -> CollectionDetail:
+    """Get one CKAN publishing organization or thematic group: description and dataset count.
 
-    Use for: checking what a group from ckan_list_groups covers and how
-    many datasets it holds before filtering ckan_search_datasets with
-    fq="groups:<name>".
-    Keywords: CKAN, group detail, theme, topic, category, open data,
-    catalogue, subject area, dataset count.
-    Mots-clés : CKAN, détail du groupe, thème, sujet, catégorie,
-    données ouvertes, catalogue, domaine, nombre de jeux de données.
+    Use for: confirming a department's or agency's identity
+    (kind="organization", e.g. "statcan", "nrcan-rncan" on the federal
+    portal) before filtering ckan_search_datasets with
+    fq="organization:<name>", or checking what a group from
+    ckan_list_groups covers (kind="group") before filtering with
+    fq="groups:<name>". `collection_id` is the id or short name. Groups
+    are not available on federal, Alberta, or Toronto.
+    Keywords: CKAN, organization detail, department, agency, publisher,
+    ministry, group detail, theme, topic, category, open data, catalogue,
+    subject area, dataset count.
+    Mots-clés : CKAN, détail de l'organisation, ministère, organisme,
+    éditeur, ministères et organismes, détail du groupe, thème, sujet,
+    catégorie, données ouvertes, catalogue, domaine, nombre de jeux de
+    données.
     """
-    return await client.get_group(portal, group_id, lang)
+    detail: OrganizationDetail | GroupDetail
+    if kind == "organization":
+        detail = await client.get_organization(portal, collection_id, lang)
+    elif kind == "group":
+        detail = await client.get_group(portal, collection_id, lang)
+    else:
+        raise_error(
+            InvalidInput,
+            "error.invalid_input",
+            lang,
+            detail="ckan: kind must be 'organization' or 'group'.",
+        )
+    return CollectionDetail(kind=kind, **detail.model_dump())
 
 
 @tool

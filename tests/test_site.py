@@ -130,7 +130,7 @@ async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
     count_tables = next(
         call["response"]["total_count"]
         for call in site.load_case("counts")["calls"]
-        if call["name"] == "wds_list_all_cubes"
+        if call["name"] == "wds_search_cubes"
     )
     pages = {
         "en": tmp_path / "site" / "statcan.html",
