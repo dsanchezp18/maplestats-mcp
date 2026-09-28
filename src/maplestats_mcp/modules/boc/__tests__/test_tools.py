@@ -11,8 +11,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from maplestats_mcp.modules.boc import tools
-from maplestats_mcp.modules.boc.schemas import SeriesDetail
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.modules.boc.schemas import SeriesDetail, SeriesList, SeriesSummary
 from maplestats_mcp.shared.models import Provenance
 
 ALL_TOOLS = [
@@ -88,6 +87,20 @@ async def test_boc_search_groups_without_query_lists(monkeypatch):
     mock_search.assert_awaited_once_with("fx", limit=5)
 
 
-async def test_boc_limit_without_query_rejected():
-    with pytest.raises(InvalidInput):
-        await tools.boc_search_series(limit=5)
+async def test_boc_limit_without_query_trims_list(monkeypatch):
+    full = SeriesList(
+        series=[SeriesSummary(name=f"S{i}", label="", description="") for i in range(3)],
+        total_count=3,
+        provenance=Provenance(
+            source="boc",
+            url="https://example.invalid",
+            queried_at=datetime.now(UTC),
+            cached=False,
+            schema_name="boc.SeriesList",
+        ),
+    )
+    monkeypatch.setattr(tools.client, "list_series", AsyncMock(return_value=full))
+    result = await tools.boc_search_series(limit=2)
+    assert [s.name for s in result.series] == ["S0", "S1"]
+    assert result.total_count == 2
+    assert full.total_count == 3  # the cached list is left whole

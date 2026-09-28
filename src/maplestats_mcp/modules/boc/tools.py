@@ -29,24 +29,8 @@ from maplestats_mcp.modules.boc.schemas import (
     SeriesDetail,
     SeriesList,
 )
-from maplestats_mcp.shared.envelope import raise_error
-from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
-
-
-def _check_limit(query: str | None, limit: int | None, lang: str) -> int:
-    """Resolve `limit`: it only makes sense alongside a `query`."""
-    if query is None:
-        if limit is not None:
-            raise_error(
-                InvalidInput,
-                "error.invalid_input",
-                lang,
-                detail="boc: `limit` applies only with `query`; omit it to list everything.",
-            )
-        return 0
-    return 25 if limit is None else limit
 
 
 @tool
@@ -59,8 +43,8 @@ async def boc_search_series(
     exchange rates, interest rates (policy rate, prime rate), CPI/
     inflation measures, commodity prices, and hundreds of other
     monetary/financial series. Pass `query` for a keyword search (top
-    `limit` matches, default 25). Omit `query` (and `limit`) to list the
-    entire catalogue - a full inventory scan or building a local index.
+    `limit` matches, default 25). Omit `query` to list the entire
+    catalogue (`limit` then keeps only the first N) - a full inventory scan or building a local index.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, discover, list, inventory, all series, catalogue,
@@ -70,10 +54,14 @@ async def boc_search_series(
     inflation, prix des matières premières, découvrir, liste, inventaire,
     toutes les séries, catalogue, liste complète, parcourir.
     """
-    n = _check_limit(query, limit, lang)
-    if query is None:
-        return await client.list_series()
-    return await client.search_series(query, limit=n)
+    if query is not None:
+        return await client.search_series(query, limit=25 if limit is None else limit)
+    result = await client.list_series()
+    if limit is not None:
+        # model_copy so the cached full list is not trimmed in place.
+        series = result.series[:limit]
+        return result.model_copy(update={"series": series, "total_count": len(series)})
+    return result
 
 
 @tool
@@ -87,7 +75,7 @@ async def boc_search_groups(
     weekly/monthly/annual commodity price indexes) when you want several
     related series at once rather than one series name. Pass `query`
     for a keyword search (top `limit` matches, default 25). Omit `query`
-    (and `limit`) to list every group - a full inventory scan.
+    to list every group (`limit` then keeps only the first N) - a full inventory scan.
     Keywords: bank of canada, boc, valet, group, series group, search,
     find, cpi, exchange rates, commodity prices, discover, list, groups,
     inventory, catalogue, full list.
@@ -96,10 +84,13 @@ async def boc_search_groups(
     découvrir, liste, groupes, inventaire, catalogue, liste complète,
     parcourir.
     """
-    n = _check_limit(query, limit, lang)
-    if query is None:
-        return await client.list_groups()
-    return await client.search_groups(query, limit=n)
+    if query is not None:
+        return await client.search_groups(query, limit=25 if limit is None else limit)
+    result = await client.list_groups()
+    if limit is not None:
+        groups = result.groups[:limit]
+        return result.model_copy(update={"groups": groups, "total_count": len(groups)})
+    return result
 
 
 @tool
