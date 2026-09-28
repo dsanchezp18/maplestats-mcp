@@ -177,7 +177,7 @@ CASES: dict[str, list[dict[str, Any]]] = {
         {"name": "wds_search_cubes", "arguments": {"query": "consumer price index", "limit": 5}},
         {"name": "wds_get_cube_metadata", "arguments": {"product_id": 18100004}},
         {
-            "name": "wds_get_series_info_from_cube_pid_coord",
+            "name": "wds_get_series_info",
             "arguments": {"product_id": 18100004, "coordinate": "2.2"},
         },
         {
@@ -284,8 +284,8 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "all_pages": True,
         },
         {"name": "ircc_monthly_list_tables", "arguments": {}},
-        {"name": "wds_list_all_cubes", "arguments": {"lite": True}},
-        {"name": "boc_list_series", "arguments": {}},
+        {"name": "wds_search_cubes", "arguments": {"lite": True}},
+        {"name": "boc_search_series", "arguments": {}},
     ],
 }
 
@@ -296,9 +296,9 @@ async def _call(client: Client, name: str, arguments: dict[str, Any]) -> Any:
     return data.get("result", data)
 
 
-def _trim(name: str, response: Any) -> Any:
+def _trim(name: str, arguments: dict[str, Any], response: Any) -> Any:
     """Keep what the page uses and the provenance; drop bulky lists it does not."""
-    if name in ("wds_list_all_cubes", "boc_list_series"):
+    if name in ("wds_search_cubes", "boc_search_series") and "query" not in arguments:
         return {"total_count": response["total_count"], "provenance": response["provenance"]}
     if name == "ircc_monthly_list_tables":
         return {
@@ -354,7 +354,7 @@ async def _record(client: Client, call: dict[str, Any], with_scripts: bool) -> d
     if call.get("all_pages"):
         response = await _microdata_products(client, name, arguments)
     else:
-        response = _trim(name, await _call(client, name, arguments))
+        response = _trim(name, arguments, await _call(client, name, arguments))
     record: dict[str, Any] = {"name": name, "arguments": arguments, "response": response}
     if with_scripts:
         code = await reproduce.reproduce(name, arguments, "all")

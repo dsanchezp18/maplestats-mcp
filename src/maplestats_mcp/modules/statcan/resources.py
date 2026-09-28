@@ -23,7 +23,7 @@ StatCan identifies data three ways, all resolvable into each other:
   dimension, always exactly 10 positions (unused dimensions padded
   with "0"), e.g. "2.2.0.0.0.0.0.0.0.0".
 
-Use wds_get_series_info_from_vector / wds_get_series_info_from_cube_pid_coord
+Use wds_get_series_info (with vector_id, or product_id + coordinate)
 to convert between coordinate and vectorId. SDMX queries use a shorter
 key — only the non-time dimensions, no trailing zero padding (see
 sdmx_get_structure to find how many non-time dimensions a table has).

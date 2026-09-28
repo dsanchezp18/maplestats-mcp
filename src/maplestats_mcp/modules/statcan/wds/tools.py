@@ -23,42 +23,55 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     SeriesInfo,
     VectorData,
 )
+from maplestats_mcp.shared.envelope import raise_error
+from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
 
 
 @tool
-async def wds_search_cubes(query: str, limit: int = 25, lang: Lang = "en") -> CubeSummaryList:
-    """Search Statistics Canada's ~8,000 data tables (cubes) by title keyword.
+async def wds_search_cubes(
+    query: str | None = None,
+    limit: int | None = None,
+    lite: bool = True,
+    lang: Lang = "en",
+) -> CubeSummaryList:
+    """Search Statistics Canada's ~8,000 data tables (cubes) by title
+    keyword, or list every table when `query` is omitted.
 
     Use for: finding a StatCan table's productId when you only know a
     topic, discovering which tables cover a subject before requesting
-    metadata or data.
+    metadata or data; with no `query`, a full inventory scan, building a
+    local index, or checking the total table count.
+    With `query`: case-insensitive title match, `limit` defaults to 25.
+    Without `query`: the full list (`lite=False` for the non-lite
+    inventory); `limit` optionally truncates it. `lite=False` is only
+    valid without `query`.
     Keywords: statcan, statistics canada, table, cube, search, productId,
-    discover, wds, catalogue, browse, labour force, unemployment rate,
-    employment, GDP by industry, CPI, population estimates, retail trade,
-    wages, trade, time series.
+    discover, wds, catalogue, browse, list, inventory, all cubes, full
+    list, tables, labour force, unemployment rate, employment, GDP by
+    industry, CPI, population estimates, retail trade, wages, trade,
+    time series.
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
-    productId, découverte, wds, catalogue, parcourir, population active,
-    taux de chômage, emploi, PIB par industrie, IPC, estimations de
-    population, commerce de détail, salaires, commerce, séries
-    chronologiques.
+    productId, découverte, wds, catalogue, parcourir, liste, inventaire,
+    tous les cubes, liste complète, tableaux, population active, taux de
+    chômage, emploi, PIB par industrie, IPC, estimations de population,
+    commerce de détail, salaires, commerce, séries chronologiques.
     """
-    return await client.search_cubes(query, limit=limit)
-
-
-@tool
-async def wds_list_all_cubes(lite: bool = True, lang: Lang = "en") -> CubeSummaryList:
-    """List every StatCan data table (cube) currently available via WDS.
-
-    Use for: a full inventory scan, building a local index, checking
-    total table count. Prefer wds_search_cubes for a topic search.
-    Keywords: statcan, list, inventory, all cubes, catalogue, wds,
-    productId, full list, tables.
-    Mots-clés : statcan, liste, inventaire, tous les cubes, catalogue,
-    wds, productId, liste complète, tableaux.
-    """
-    return await client.get_all_cubes_list(lite=lite)
+    if query is not None:
+        if not lite:
+            raise_error(
+                InvalidInput,
+                "error.invalid_input",
+                lang,
+                detail="wds_search_cubes: lite=False is only valid when query is omitted.",
+            )
+        return await client.search_cubes(query, limit=25 if limit is None else limit)
+    result = await client.get_all_cubes_list(lite=lite)
+    if limit is not None:
+        cubes = result.cubes[:limit]
+        return result.model_copy(update={"cubes": cubes, "total_count": len(cubes)})
+    return result
 
 
 @tool
@@ -76,33 +89,51 @@ async def wds_get_cube_metadata(product_id: int, lang: Lang = "en") -> CubeMetad
     return await client.get_cube_metadata(product_id)
 
 
+def _vector_or_coord(
+    tool_name: str,
+    vector_id: int | None,
+    product_id: int | None,
+    coordinate: str | None,
+    lang: str,
+) -> None:
+    """Require exactly one of `vector_id` or (`product_id` + `coordinate`)."""
+    has_vector = vector_id is not None
+    has_coord = product_id is not None or coordinate is not None
+    if has_vector == has_coord or (has_coord and (product_id is None or coordinate is None)):
+        raise_error(
+            InvalidInput,
+            "error.invalid_input",
+            lang,
+            detail=(
+                f"{tool_name}: pass exactly one of vector_id, or product_id together "
+                "with coordinate."
+            ),
+        )
+
+
 @tool
-async def wds_get_series_info_from_vector(vector_id: int, lang: Lang = "en") -> SeriesInfo:
-    """Resolve a StatCan vector ID to its productId and coordinate.
+async def wds_get_series_info(
+    vector_id: int | None = None,
+    product_id: int | None = None,
+    coordinate: str | None = None,
+    lang: Lang = "en",
+) -> SeriesInfo:
+    """Resolve a StatCan series either way: a vector ID to its productId
+    and coordinate, or a productId + coordinate to its stable vector ID.
 
     Use for: figuring out which table and dimension-position a known
-    vector belongs to.
-    Keywords: statcan, vector, resolve, productId, coordinate, series info,
-    wds, Statistics Canada.
-    Mots-clés : statcan, vecteur, résoudre, conversion, productId,
-    coordonnée, information de série, identifiant, wds.
-    """
-    return await client.get_series_info_from_vector(vector_id)
-
-
-@tool
-async def wds_get_series_info_from_cube_pid_coord(
-    product_id: int, coordinate: str, lang: Lang = "en"
-) -> SeriesInfo:
-    """Resolve a productId + coordinate to its stable vector ID.
-
-    Use for: converting a table/dimension-position pair (from
-    wds_get_cube_metadata) into a vector ID for later reuse.
-    Keywords: statcan, coordinate, vector, resolve, productId, series info,
-    wds, Statistics Canada.
-    Mots-clés : statcan, coordonnée, vecteur, résoudre, conversion,
+    vector belongs to, or converting a table/dimension-position pair
+    (from wds_get_cube_metadata) into a vector ID for later reuse. Pass
+    exactly one form: `vector_id`, or `product_id` + `coordinate`.
+    Keywords: statcan, vector, coordinate, resolve, productId, series
+    info, wds, Statistics Canada, conversion, identifier.
+    Mots-clés : statcan, vecteur, coordonnée, résoudre, conversion,
     productId, information de série, identifiant, wds.
     """
+    _vector_or_coord("wds_get_series_info", vector_id, product_id, coordinate, lang)
+    if vector_id is not None:
+        return await client.get_series_info_from_vector(vector_id)
+    assert product_id is not None and coordinate is not None
     return await client.get_series_info_from_cube_pid_coord(product_id, coordinate)
 
 
@@ -216,65 +247,50 @@ async def wds_get_changed_cube_list(date: str | None = None, lang: Lang = "en") 
 
 
 @tool
-async def wds_get_changed_series_data_from_vector(vector_id: int, lang: Lang = "en") -> VectorData:
-    """Get just the newly-changed data points for a vector.
+async def wds_get_changed_series_data(
+    vector_id: int | None = None,
+    product_id: int | None = None,
+    coordinate: str | None = None,
+    lang: Lang = "en",
+) -> VectorData:
+    """Get just the newly-changed data points for one series, identified
+    by vector ID or by table + coordinate.
 
     Use for: fetching only what changed rather than the full latest-N
-    window, after wds_get_changed_series_list flags a vector.
-    Keywords: statcan, changed, vector, delta, updated data, wds, Statistics
-    Canada, revisions.
-    Mots-clés : statcan, modifié, vecteur, écart, données mises à jour,
-    série, changements, wds.
+    window, after wds_get_changed_series_list flags a vector. Pass
+    exactly one form: `vector_id`, or `product_id` + `coordinate`.
+    Keywords: statcan, changed, vector, coordinate, delta, updated data,
+    wds, Statistics Canada, revisions.
+    Mots-clés : statcan, modifié, vecteur, coordonnée, écart, données
+    mises à jour, série, changements, tableau, wds.
     """
-    return await client.get_changed_series_data_from_vector(vector_id)
-
-
-@tool
-async def wds_get_changed_series_data_from_cube_coord(
-    product_id: int, coordinate: str, lang: Lang = "en"
-) -> VectorData:
-    """Get just the newly-changed data points for a table + coordinate.
-
-    Use for: fetching only what changed for a specific series identified
-    by productId/coordinate rather than vector ID.
-    Keywords: statcan, changed, coordinate, delta, updated data, wds,
-    Statistics Canada, revisions.
-    Mots-clés : statcan, modifié, coordonnée, écart, données mises à jour,
-    changements, tableau, wds.
-    """
+    _vector_or_coord("wds_get_changed_series_data", vector_id, product_id, coordinate, lang)
+    if vector_id is not None:
+        return await client.get_changed_series_data_from_vector(vector_id)
+    assert product_id is not None and coordinate is not None
     return await client.get_changed_series_data_from_cube_pid_coord(product_id, coordinate)
 
 
 @tool
-async def wds_get_full_table_download_csv(
-    product_id: int, lang: Lang = "en"
+async def wds_get_full_table_download(
+    product_id: int,
+    format: Literal["csv", "sdmx"] = "csv",
+    lang: Lang = "en",
 ) -> FullTableDownloadLink:
-    """Get the download URL for a full StatCan table as CSV.
+    """Get the download URL for a full StatCan table as CSV (default) or
+    SDMX/XML (`format="sdmx"`).
 
     Use for: bulk/offline analysis of an entire table rather than
-    individual series — hands back a URL, does not fetch the file.
-    Keywords: statcan, csv, download, full table, bulk, export, wds,
-    Statistics Canada.
-    Mots-clés : statcan, csv, téléchargement, tableau complet, en masse,
-    exportation, wds, données complètes.
+    individual series, in CSV or SDMX format — hands back a URL, does
+    not fetch the file. `lang` picks the CSV language edition.
+    Keywords: statcan, csv, sdmx, xml, download, full table, bulk,
+    export, wds, Statistics Canada.
+    Mots-clés : statcan, csv, sdmx, xml, téléchargement, tableau complet,
+    en masse, exportation, wds, données complètes.
     """
+    if format == "sdmx":
+        return await client.get_full_table_download_sdmx(product_id)
     return await client.get_full_table_download_csv(product_id, lang)
-
-
-@tool
-async def wds_get_full_table_download_sdmx(
-    product_id: int, lang: Lang = "en"
-) -> FullTableDownloadLink:
-    """Get the download URL for a full StatCan table as SDMX/XML.
-
-    Use for: bulk retrieval in SDMX format rather than CSV — hands back
-    a URL, does not fetch the file.
-    Keywords: statcan, sdmx, xml, download, full table, bulk, export,
-    wds.
-    Mots-clés : statcan, sdmx, xml, téléchargement, tableau complet, en
-    masse, exportation, wds.
-    """
-    return await client.get_full_table_download_sdmx(product_id)
 
 
 @tool

@@ -19,7 +19,8 @@ def find_and_fetch_series(topic: str, lang: Lang = "en") -> str:
         "member ids.\n"
         "3. Build a coordinate from the member ids you want (10 dot-separated "
         "positions, pad unused with '0'), then call "
-        "wds_get_series_info_from_cube_pid_coord to resolve it to a vectorId.\n"
+        "wds_get_series_info(product_id=..., coordinate=...) to resolve it to a "
+        "vectorId.\n"
         "4. Call wds_get_data_from_vectors(vector_ids=[...]) for the latest "
         "observations, or sdmx_get_vector_data for a filtered SDMX query."
     )

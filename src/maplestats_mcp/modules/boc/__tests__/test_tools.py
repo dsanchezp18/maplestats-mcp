@@ -12,13 +12,12 @@ import pytest
 
 from maplestats_mcp.modules.boc import tools
 from maplestats_mcp.modules.boc.schemas import SeriesDetail
+from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.models import Provenance
 
 ALL_TOOLS = [
     tools.boc_search_series,
-    tools.boc_list_series,
     tools.boc_search_groups,
-    tools.boc_list_groups,
     tools.boc_get_series,
     tools.boc_get_group,
     tools.boc_get_observations,
@@ -65,3 +64,30 @@ async def test_boc_get_series_delegates_to_client(monkeypatch):
 
     mock_get_series.assert_awaited_once_with("FXUSDCAD")
     assert result is fake_result
+
+
+async def test_boc_search_series_without_query_lists(monkeypatch):
+    mock_list = AsyncMock(return_value="all")
+    mock_search = AsyncMock(return_value="some")
+    monkeypatch.setattr(tools.client, "list_series", mock_list)
+    monkeypatch.setattr(tools.client, "search_series", mock_search)
+
+    assert await tools.boc_search_series() == "all"
+    assert await tools.boc_search_series("cpi") == "some"
+    mock_search.assert_awaited_once_with("cpi", limit=25)
+
+
+async def test_boc_search_groups_without_query_lists(monkeypatch):
+    mock_list = AsyncMock(return_value="all")
+    mock_search = AsyncMock(return_value="some")
+    monkeypatch.setattr(tools.client, "list_groups", mock_list)
+    monkeypatch.setattr(tools.client, "search_groups", mock_search)
+
+    assert await tools.boc_search_groups() == "all"
+    assert await tools.boc_search_groups("fx", limit=5) == "some"
+    mock_search.assert_awaited_once_with("fx", limit=5)
+
+
+async def test_boc_limit_without_query_rejected():
+    with pytest.raises(InvalidInput):
+        await tools.boc_search_series(limit=5)

@@ -272,7 +272,7 @@ Two example workflows, also available as guided MCP prompts
 `build_sdmx_or_key`):
 
 - **Find and fetch a data series:** `wds_search_cubes` → `wds_get_cube_metadata`
-  → `wds_get_series_info_from_cube_pid_coord` → `wds_get_data_from_vectors`.
+  → `wds_get_series_info` → `wds_get_data_from_vectors`.
 - **Look up a classification:** `rdaas_search_classifications` →
   `rdaas_get_classification` → `rdaas_get_classification_categories_detailed`.
 

@@ -51,16 +51,21 @@ async def rdaas_search_classifications(
 
 
 @tool
-async def rdaas_get_classification_search_filters(lang: Lang = "en") -> SearchFilters:
-    """Get the valid audience/status filter values for classification search.
+async def rdaas_get_search_filters(
+    kind: Literal["classification", "concordance"], lang: Lang = "en"
+) -> SearchFilters:
+    """Get the valid audience/status filter values for classification or
+    concordance search (`kind`).
 
     Use for: discovering what values `audience`/`status` accept before
-    filtering a search.
+    filtering a classification or concordance search.
     Keywords: statcan, rdaas, filters, search, audience, status,
-    classification, Statistics Canada.
+    classification, concordance, Statistics Canada.
     Mots-clés : statcan, rdaas, filtres, recherche, public cible, statut,
-    classification, valeurs valides.
+    classification, concordance, valeurs valides.
     """
+    if kind == "concordance":
+        return await client.get_concordance_search_filters()
     return await client.get_classification_search_filters()
 
 
@@ -183,20 +188,6 @@ async def rdaas_search_concordances(
     conversion, recherche.
     """
     return await client.search_concordances(query, start=start, limit=limit, lang=lang)
-
-
-@tool
-async def rdaas_get_concordance_search_filters(lang: Lang = "en") -> SearchFilters:
-    """Get the valid audience/status filter values for concordance search.
-
-    Use for: discovering what values `audience`/`status` accept before
-    filtering a concordance search.
-    Keywords: statcan, rdaas, filters, search, concordance, audience,
-    status, Statistics Canada.
-    Mots-clés : statcan, rdaas, filtres, recherche, concordance, public
-    cible, statut, valeurs valides.
-    """
-    return await client.get_concordance_search_filters()
 
 
 @tool

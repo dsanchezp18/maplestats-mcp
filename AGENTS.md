@@ -151,7 +151,12 @@ assumption shared by the code and its tests.
    `get_limiter(source, rate, capacity)` for the source's documented
    rate limit, and `shared/cache.py`'s `cached_fetch` for anything
    cacheable. Raise typed errors; never return error-shaped dicts.
-5. Write `tools.py`: one `@tool` per client function, each with a
+5. Write `tools.py`: one `@tool` per client function (exception: client
+   functions that return the same model and differ only in how the input
+   is given, like `wds_get_series_info` taking a vector id or a product
+   id plus coordinate, share one tool with an argument that picks the
+   form; never merge tools with different return models, since a Union
+   return makes FastMCP wrap the output under `result`), each with a
    `lang: Literal["en", "fr"] = "en"` parameter and a docstring
    containing `Use for:`, `Keywords:` (8+ keywords), and `Mots-clés :`
    (a French equivalent set of 8+ terms, not a literal word-for-word
