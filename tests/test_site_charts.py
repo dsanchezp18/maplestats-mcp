@@ -326,11 +326,13 @@ def test_square_inscriptions_close_and_segments_share_the_track() -> None:
     for n in (0, 1):
         loop = paths[f"square-script-{n}-loop"].get("d") or ""
         assert loop.endswith("Z")
-    turning = [tp.find(f"{NS}animate") for tp in text_paths]
-    assert all(a is not None and a.get("attributeName") == "startOffset" for a in turning)
+    turning = [(tp.find(f"{NS}animate"), tp) for tp in text_paths]
+    spans = []
+    for animate, _ in turning:
+        assert animate is not None and animate.get("attributeName") == "startOffset"
+        spans.append(float(animate.get("to") or 0) - float(animate.get("from") or 0))
     # The outer band turns clockwise, the inner one the other way.
-    assert float(turning[0].get("to")) > float(turning[0].get("from"))
-    assert float(turning[2].get("to")) < float(turning[2].get("from"))
+    assert spans[0] > 0 > spans[2]
     written = "".join(text_paths[0].itertext())
     assert "CMHC <&>" in written and "Bank of Canada" in written
     # The join is padded with non-breaking spaces, which SVG keeps.
