@@ -2526,20 +2526,20 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
         },
     ]
     payload = json.dumps(examples, ensure_ascii=False).replace("</", "<\\/")
+    calling = "calling" if en else "appel de"
+    heading = "Ask MapleStats" if en else "Demandez à MapleStats"
+    tabs = "".join(
+        f'<button type="button" class="ask-tab" role="tab" data-ask-tab="{n}">'
+        f"<span>{esc(ex['label'])}</span><i></i></button>"
+        for n, ex in enumerate(examples)
+    )
     return {
         "chat_demo": (
-            '<div class="chat-mock" data-chat-demo="' + lang + '">'
-            '<div class="chat-mock-bar"><span class="chat-dot"></span><span class="chat-dot"></span>'
-            '<span class="chat-dot"></span><span class="chat-mock-title">Claude · MapleStats MCP</span>'
-            '<span class="chat-mock-status" data-chat-status=""></span></div>'
-            '<div class="chat-mock-body" data-chat-body="" aria-live="polite"></div>'
-            '<div class="chat-progress" aria-hidden="true"><span></span></div>'
-            '<div class="chat-nav">'
-            f'<button type="button" class="chat-nav-btn" data-chat-prev="" aria-label="{"Previous example" if en else "Exemple précédent"}">‹</button>'
-            '<span class="chat-nav-label" data-chat-label=""></span>'
-            f'<button type="button" class="chat-nav-btn" data-chat-next="" aria-label="{"Next example" if en else "Exemple suivant"}">›</button>'
-            "</div>"
-            f'<script type="application/json" data-chat-examples="">{payload}</script></div>'
+            f'<div class="ask" data-ask="{lang}" data-calling="{calling}">'
+            f'<p class="ask-head"><span class="ask-dot"></span>{heading}</p>'
+            '<div class="ask-stage" data-ask-stage="" aria-live="polite"></div>'
+            f'<div class="ask-tabs" role="tablist">{tabs}</div>'
+            f'<script type="application/json" data-ask-examples="">{payload}</script></div>'
         )
     }
 

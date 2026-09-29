@@ -558,12 +558,12 @@
     status.textContent = T.tools(countVisible());
   });
 
-  // The home page's chat card: plays each recorded question in turn (the
-  // question, then the tool's answer), with arrows to move between them.
-  // It rests, showing the first answer, for anyone who prefers less motion.
-  (function chatDemo() {
-    var root = document.querySelector("[data-chat-demo]");
-    var data = root && root.querySelector("[data-chat-examples]");
+  // The home page's prompt: types each recorded question, resolves the tool
+  // call, then shows the answer with its figures. Tabs jump between the
+  // questions; it rests on the first answer for anyone who prefers less motion.
+  (function askDemo() {
+    var root = document.querySelector("[data-ask]");
+    var data = root && root.querySelector("[data-ask-examples]");
     if (!root || !data) return;
     var examples;
     try {
@@ -571,72 +571,104 @@
     } catch (e) {
       return;
     }
-    var body = root.querySelector("[data-chat-body]");
-    var status = root.querySelector("[data-chat-status]");
-    var label = root.querySelector("[data-chat-label]");
-    var bar = root.querySelector(".chat-progress span");
+    var stage = root.querySelector("[data-ask-stage]");
+    var tabs = Array.prototype.slice.call(root.querySelectorAll("[data-ask-tab]"));
+    var calling = root.getAttribute("data-calling");
     var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var hold = 8000;
     var index = 0;
     var timers = [];
-    var hold = 7000;
+
+    function later(fn, ms) {
+      timers.push(window.setTimeout(fn, ms));
+    }
 
     function clear() {
       timers.forEach(window.clearTimeout);
       timers = [];
     }
 
-    function bubble(cls, html, delay) {
-      var el = document.createElement("div");
-      el.className = "chat-bubble " + cls + " chat-enter";
-      el.style.animationDelay = delay + "ms";
-      el.innerHTML = html;
-      body.appendChild(el);
+    function el(tag, cls, text) {
+      var node = document.createElement(tag);
+      node.className = cls;
+      if (text) node.textContent = text;
+      return node;
+    }
+
+    function answer(ex) {
+      stage.querySelector(".ask-tool").classList.add("done");
+      var a = el("p", "ask-a ask-in");
+      a.innerHTML = ex.html;
+      stage.appendChild(a);
+      if (ex.code) {
+        var rows = el("ul", "ask-rows ask-in");
+        ex.code.split("\n").forEach(function (line) {
+          var parts = line.split("  ");
+          var li = document.createElement("li");
+          li.appendChild(el("span", "", parts[0]));
+          li.appendChild(el("b", "", parts.slice(1).join("  ")));
+          rows.appendChild(li);
+        });
+        stage.appendChild(rows);
+      }
+      stage.appendChild(el("p", "ask-src ask-in", ex.cite));
     }
 
     function show(n) {
       clear();
       index = (n + examples.length) % examples.length;
       var ex = examples[index];
-      body.innerHTML = "";
-      status.textContent = ex.label;
-      label.textContent = ex.label + " · " + (index + 1) + " / " + examples.length;
-      var user = document.createElement("div");
-      user.className = "chat-bubble user chat-enter";
-      user.textContent = ex.user;
-      body.appendChild(user);
-      var answer = function () {
-        var html = '<span class="chat-tool"></span><p>' + ex.html + "</p>";
-        if (ex.code) html += '<pre class="chat-code"></pre>';
-        html += '<span class="chat-cite"></span>';
-        bubble("assistant", html, 0);
-        var box = body.lastChild;
-        box.querySelector(".chat-tool").textContent = "tool · " + ex.tool;
-        if (ex.code) box.querySelector(".chat-code").textContent = ex.code;
-        box.querySelector(".chat-cite").textContent = ex.cite;
-      };
+      stage.innerHTML = "";
+      tabs.forEach(function (tab, i) {
+        tab.classList.toggle("on", i === index);
+        tab.setAttribute("aria-selected", i === index ? "true" : "false");
+        var mark = tab.querySelector("i");
+        mark.style.transition = "none";
+        mark.style.width = "0";
+      });
+      var q = el("p", "ask-q");
+      var typed = el("span", "");
+      q.appendChild(el("span", "ask-prompt", "\u203a"));
+      q.appendChild(typed);
+      stage.appendChild(q);
+      var tool = el("p", "ask-tool ask-in");
+      tool.appendChild(el("span", "ask-spin"));
+      tool.appendChild(document.createTextNode(calling + " "));
+      tool.appendChild(el("code", "", ex.tool));
       if (still) {
-        answer();
-        bar.style.width = "0";
+        typed.textContent = ex.user;
+        stage.appendChild(tool);
+        answer(ex);
         return;
       }
-      timers.push(window.setTimeout(answer, 900));
-      bar.style.transition = "none";
-      bar.style.width = "0";
+      var at = 0;
+      (function type() {
+        at += 1;
+        typed.textContent = ex.user.slice(0, at);
+        if (at < ex.user.length) {
+          later(type, 22);
+          return;
+        }
+        later(function () {
+          stage.appendChild(tool);
+        }, 350);
+        later(function () {
+          answer(ex);
+        }, 1300);
+      })();
+      var bar = tabs[index].querySelector("i");
       void bar.offsetWidth;
       bar.style.transition = "width " + hold + "ms linear";
       bar.style.width = "100%";
-      timers.push(
-        window.setTimeout(function () {
-          show(index + 1);
-        }, hold)
-      );
+      later(function () {
+        show(index + 1);
+      }, hold);
     }
 
-    root.querySelector("[data-chat-prev]").addEventListener("click", function () {
-      show(index - 1);
-    });
-    root.querySelector("[data-chat-next]").addEventListener("click", function () {
-      show(index + 1);
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener("click", function () {
+        show(i);
+      });
     });
     root.addEventListener("mouseenter", function () {
       if (!still) clear();
