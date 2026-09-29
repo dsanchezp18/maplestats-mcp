@@ -61,6 +61,19 @@ QUERIES = [
 ]
 
 
+@pytest.mark.parametrize("script", ["charts.js", "site.js"])
+def test_site_scripts_parse(script: str):
+    """A syntax error silently stops every chart from playing, so check each script parses."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    path = ROOT / "site" / "assets" / script
+    result = subprocess.run(
+        [node, "--check", str(path)], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_every_module_has_site_metadata():
     modules = {p.name for p in MODULES.iterdir() if p.is_dir() and not p.name.startswith("_")}
     missing = sorted(modules - set(site.SOURCES))

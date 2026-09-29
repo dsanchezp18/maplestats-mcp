@@ -1959,28 +1959,6 @@ mark {
   margin-bottom: 4px;
 }
 
-.thanks-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--rule);
-}
-
-.thanks-list li {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: 16px;
-  padding-block: 12px;
-  border-bottom: 1px solid var(--rule);
-}
-
-@media (max-width: 560px) {
-  .thanks-list li {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
-  }
-}
-
 /* ---------- About ---------- */
 
 .about {

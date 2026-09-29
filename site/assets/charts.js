@@ -91,6 +91,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".square animate"), function (a) {
       a.parentNode.removeChild(a);
     });
+  }
 
   function start() {
     stillInscriptions();

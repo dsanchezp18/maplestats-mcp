@@ -345,30 +345,15 @@ MIT
 
 ## Acknowledgments
 
-The module architecture (per-source folders, auto-registered tools,
-bilingual response envelope) and the hosting layer (Bearer auth,
-sliding-window rate limiting, health checks) were informed by prior
-open-source work building MCP servers for government and public data
-— most directly **ReyemTech's `mcp-canada`** for the module pattern
-and **DweskZ's `EcuDataMCP`** for the hosting middleware, alongside
-the StatCan-specific benchmarks reviewed while researching this
-project. Thank you to their authors for building in the open.
-
-Much of the Canadian data work here stands on **Jens von Bergmann's
-([mountainMath](https://github.com/mountainMath)) R packages** and their
-co-authors:
-
-- [`cmhc`](https://github.com/mountainMath/cmhc): the CMHC module was
-  audited against its reverse-engineering of CMHC's Housing Market
-  Information Portal.
-- [`cansim`](https://github.com/mountainMath/cansim): the R code that
-  `reproduce_code` generates for Statistics Canada tables and vectors uses it.
-- [`cancensus`](https://github.com/mountainMath/cancensus): a model for
-  census data access in R.
-- [`canivt`](https://github.com/mountainMath/canivt): reads Beyond 20/20
-  IVT files; census tables and Borealis deposits that exist only in that
-  format are routed to it, and its sampling notes pointed to Borealis as
-  the main IVT holder outside StatCan.
+MapleStats owes its architecture to
+[EcuDataMCP](https://github.com/DweskZ/EcuDataMCP), my MCP server for
+Ecuador's open data, and its module pattern to ReyemTech's `mcp-canada`.
+Its approach to Canadian data owes much to the R developers who got there
+first: Jens von Bergmann
+([mountainMath](https://github.com/mountainMath)) and his co-authors,
+Thierry Warin ([statcanR](https://github.com/warint/statcanR)), Valentin
+Lucet ([rgovcan](https://github.com/VLucet/rgovcan)), and others. Thanks
+to them, and to everyone who publishes Canadian data in the open.
 
 ### Alternatives
 
