@@ -111,7 +111,7 @@ the same data straight from the source. Most tools accept `lang: "en"|"fr"`
 
 ## What it covers
 
-About 200 tools. Run `docs://catalogue` for the full, bilingual list.
+About 230 tools. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -119,6 +119,8 @@ About 200 tools. Run `docs://catalogue` for the full, bilingual list.
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
 | Federal agencies | `eccc_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `cihi_`, `phac_infobase_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `ircc_*`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `canadabuys_` | Weather and climate, corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, health, spending, energy, oceans, grain, immigration, budgets, tenders |
+| Wildland fire | `cwfis_` | NRCan's Canadian Wildland Fire Information System: satellite hotspots, fire danger and weather stations |
+| Electricity | `electricity_ontario_`, `electricity_quebec_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only) |
 | Parliament | `parliament_`, `senate_` | Bills, votes, MPs, Hansard, committees |
 | Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_` | Alberta Energy Regulator, BC Geographic Warehouse, Alberta Economic Dashboard, Institut de la statistique du Québec |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
