@@ -12,13 +12,13 @@
 <section class="wrap page-head">
   <p class="label">{en}FAQ and licences{fr}FAQ et licences{/}</p>
   <h1>{en}Questions people ask{fr}Les questions qu'on nous pose{/}</h1>
-  <p class="lede">{en}Short answers about your queries, the data and what you may do with it. Last updated September 29, 2026.{fr}De courtes réponses sur vos requêtes, sur les données et sur ce que vous pouvez en faire. Dernière mise à jour : 29 septembre 2026.{/}</p>
+  <p class="lede">{en}Short answers about your queries, the data and what you may do with it. Last updated 29 September 2026.{fr}De courtes réponses sur vos requêtes, sur les données et sur ce que vous pouvez en faire. Dernière mise à jour : 29 septembre 2026.{/}</p>
 </section>
 
 <section class="wrap faq" id="faq">
   <details class="faq-item" id="queries" open>
     <summary>{en}Does MapleStats save my queries?{fr}MapleStats conserve-t-il mes requêtes ?{/}</summary>
-    <p>{en}No. The server runs on your computer, and I do not receive your questions, your tool calls or your results. The code has no telemetry, no account and no analytics. Its console log, which stays on your machine, shows the start-up and the web requests it makes to publishers; your AI client may keep that log.{fr}Non. Le serveur s'exécute sur votre ordinateur, et je ne reçois ni vos questions, ni vos appels d'outils, ni vos résultats. Le code n'a ni télémétrie, ni compte, ni analytique. Son journal de console, qui reste sur votre machine, montre le démarrage et les requêtes web qu'il adresse aux éditeurs; votre client IA peut conserver ce journal.{/}</p>
+    <p>{en}No. The server runs on your computer, and I do not receive your questions, your tool calls or your results. The server does see the tool calls your AI agent makes, such as a search phrase or a table number, because it has to run them, but not your conversation, and it writes none of them down. The code has no telemetry, no account and no analytics, and its console log shows only start-up messages.{fr}Non. Le serveur s'exécute sur votre ordinateur, et je ne reçois ni vos questions, ni vos appels d'outils, ni vos résultats. Le serveur voit bien les appels d'outils que fait votre agent IA, comme une expression de recherche ou un numéro de tableau, puisqu'il doit les exécuter, mais pas votre conversation, et il n'en note aucun. Le code n'a ni télémétrie, ni compte, ni analytique, et son journal de console ne montre que des messages de démarrage.{/}</p>
     <p>{en}Two things are kept on your machine to save time: an in-memory copy of recent responses, gone when the server stops, and the microdata and patent tables you download, kept in a cache folder you choose. Neither holds your questions.{fr}Deux choses sont conservées sur votre machine pour gagner du temps : une copie en mémoire des réponses récentes, qui disparaît à l'arrêt du serveur, et les tableaux de microdonnées et de brevets que vous téléchargez, gardés dans un dossier de cache que vous choisissez. Aucune ne contient vos questions.{/}</p>
   </details>
 
@@ -34,17 +34,17 @@
 
   <details class="faq-item" id="fresh">
     <summary>{en}How fresh is the data?{fr}Les données sont-elles à jour ?{/}</summary>
-    <p>{en}It comes live from the publisher, kept for a short time in memory. Each result says where it came from, when it was queried and any limits, in its <code>provenance</code> block.{fr}Elle vient en direct de l'éditeur, gardée un court moment en mémoire. Chaque résultat indique sa provenance, le moment de la requête et ses limites, dans son bloc <code>provenance</code>.{/}</p>
+    <p>{en}It comes live from the publisher, kept for a short time in memory. Each result says where it came from, when it was queried and any limits, in its <code>provenance</code> block.{fr}Elles viennent en direct de l'éditeur et sont gardées un court moment en mémoire. Chaque résultat indique sa provenance, le moment de la requête et ses limites, dans son bloc <code>provenance</code>.{/}</p>
   </details>
 
   <details class="faq-item" id="check">
     <summary>{en}Can I check a number without trusting the agent?{fr}Puis-je vérifier un chiffre sans faire confiance à l'agent ?{/}</summary>
-    <p>{en}Yes. Ask for the script: <code>reproduce_code</code> writes R, Python, Stata or Julia code that fetches the same data straight from the source, and every result links to the publisher's page.{fr}Oui. Demandez le script : <code>reproduce_code</code> écrit du code R, Python, Stata ou Julia qui va chercher les mêmes données directement à la source, et chaque résultat renvoie à la page de l'éditeur.{/}</p>
+    <p>{en}Yes, for most data calls. Ask for the script: <code>reproduce_code</code> writes R, Python, Stata or Julia code that fetches the same data straight from the source, and every result names its source with a link.{fr}Oui, pour la plupart des appels de données. Demandez le script : <code>reproduce_code</code> écrit du code R, Python, Stata ou Julia qui va chercher les mêmes données directement à la source, et chaque résultat nomme sa source avec un lien.{/}</p>
   </details>
 
   <details class="faq-item" id="clients">
     <summary>{en}Which AI tools work with it?{fr}Avec quels outils IA fonctionne-t-il ?{/}</summary>
-    <p>{en}Any client that speaks MCP, including Claude, Codex and Cursor. The <a href="{{root}}connect.html">Connect</a> page has the steps.{fr}Tout client qui parle MCP, dont Claude, Codex et Cursor. La page <a href="{{root}}connect.html">Connexion</a> donne les étapes.{/}</p>
+    <p>{en}Any client that speaks MCP, including Claude, Codex and Cursor. The <a href="{{root}}connect.html">Connect</a> page has the steps.{fr}Tout client qui parle MCP, dont Claude, Codex et Cursor. La page <a href="{{root}}connect.html">Installation</a> donne les étapes.{/}</p>
   </details>
 
   <details class="faq-item" id="wrong">

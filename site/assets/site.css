@@ -38,7 +38,7 @@
   --c1-ink: #5c0d08;
   --c2: #f5a39a;
   --c2-ink: #3d0805;
-  --c3: #df4436;
+  --c3: #d23a2d;
   --c3-ink: #ffffff;
   --c4: #9c160f;
   --c4-ink: #ffffff;
@@ -745,7 +745,7 @@ mark {
 .hero h1 {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(2.6rem, 0.9rem + 6.2vw, 5.9rem);
+  font-size: clamp(2.6rem, 0.9rem + 6.2vw, 4.8rem);
   line-height: 0.92;
   letter-spacing: -0.025em;
 }
@@ -1054,16 +1054,6 @@ mark {
   color: var(--ink);
 }
 
-.ex-json {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  color: var(--ink);
-}
-
-.ex-json code,
 .ex-code code {
   font-size: inherit;
 }
@@ -1502,8 +1492,7 @@ mark {
   color: var(--ink-3);
 }
 
-.panel-bar + pre,
-.panel-body {
+.panel-bar + pre {
   border-bottom: 1px solid var(--rule);
 }
 
@@ -1562,15 +1551,6 @@ mark {
 .s-com {
   color: var(--ink-3);
   font-style: italic;
-}
-
-.s-fn {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-.panel-body {
-  padding: 6px 0;
 }
 
 .panel a {
@@ -1954,15 +1934,6 @@ mark {
   padding-bottom: clamp(56px, 7vw, 96px);
 }
 
-.about-row {
-  display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.62fr);
-  gap: 12px clamp(20px, 3.4vw, 52px);
-  padding-block: 24px 32px;
-  border-top: 2px solid var(--ink);
-}
-
-.about-row h2,
 .about-block h2,
 .about-split h2 {
   font-family: var(--font-display);
@@ -1982,12 +1953,6 @@ mark {
   font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
   line-height: 1.6;
   color: var(--ink-2);
-}
-
-@media (max-width: 800px) {
-  .about-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* Short sections as blocks in two columns, each with its heading on top,
@@ -3581,25 +3546,6 @@ mark {
   color: var(--ink-2);
 }
 
-.post-byline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-size: 0.9375rem;
-  color: var(--ink-3);
-}
-
-.post-byline a {
-  color: var(--ink);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.post-byline a:hover {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
 /* The contents list. */
 .post-toc {
   grid-area: toc;
@@ -4836,4 +4782,57 @@ html:not(.js) .chips {
 
 .lang-ask a {
   color: var(--ink-2);
+}
+
+/* The pause control and the question buttons of the home prompt. */
+.ask-pause {
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid var(--ink-3);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.ask-pause:hover,
+.ask-pause:focus-visible {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.ask-mcp {
+  margin-left: 0;
+}
+
+.ask-title {
+  margin-right: auto;
+}
+
+.ask-tab {
+  min-height: 36px;
+}
+
+/* Without JavaScript the window has nothing to play. */
+html:not(.js) .thesis-demo {
+  display: none;
+}
+
+/* Buttons, copy controls and disclosure summaries: at least 32 px to tap. */
+.cmd button,
+details.how > summary,
+.ex-raw > summary {
+  min-height: 32px;
+}
+
+@media (max-width: 480px) {
+  .ask-mcp {
+    display: none;
+  }
+
+  .ask-bar {
+    flex-wrap: nowrap;
+  }
 }

@@ -85,11 +85,32 @@
   }
 
   // The inscriptions turn by SMIL, which ignores the reduced-motion
-  // preference; stop them where they stand for anyone who asked for less.
+  // preference: remove the animation for anyone who asked for less, now or
+  // later. Offscreen squares are paused so they do not run for nothing.
   function stillInscriptions() {
-    if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    Array.prototype.forEach.call(document.querySelectorAll(".square animate"), function (a) {
-      a.parentNode.removeChild(a);
+    var query = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    function stop() {
+      Array.prototype.forEach.call(document.querySelectorAll(".square animate"), function (a) {
+        a.parentNode.removeChild(a);
+      });
+    }
+    if (query && query.matches) stop();
+    if (query && query.addEventListener) {
+      query.addEventListener("change", function (event) {
+        if (event.matches) stop();
+      });
+    }
+    if (!("IntersectionObserver" in window)) return;
+    var watcher = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var svg = entry.target;
+        if (!svg.pauseAnimations) return;
+        if (entry.isIntersecting) svg.unpauseAnimations();
+        else svg.pauseAnimations();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("svg.square"), function (svg) {
+      watcher.observe(svg);
     });
   }
 

@@ -1160,7 +1160,7 @@ def tool_details(tool: ToolDoc, lang: Lang) -> str:
     # The docstring is English; on a French page it is marked so, and the
     # labels around it say which keywords are which.
     en = en_only(lang)
-    use_label = "Use for" if lang == "en" else "Usage"
+    use_label = "Use for" if lang == "en" else "Utilisation :"
     kw_label, mc_label = (
         ("Keywords", "Mots-clés")
         if lang == "en"
@@ -1699,7 +1699,7 @@ def call_result(response: dict[str, Any], lang: Lang) -> str:
             "Source URL" if en else "URL de la source",
             f'<a href="{esc(prov["url"])}">{esc(prov["url"])}</a>',
         ),
-        ("Queried" if en else "Consultée le", f"{esc(long_date(stamp, lang))}, {clock} UTC"),
+        ("Queried" if en else "Interrogée le", f"{esc(long_date(stamp, lang))}, {clock} UTC"),
         ("Result type" if en else "Type de résultat", f"<code>{esc(prov['schema_name'])}</code>"),
     )
     rows = "".join(f"<div><dt>{label}</dt><dd>{value}</dd></div>" for label, value in facts)
@@ -1808,12 +1808,60 @@ def statcan_title(url: str, lang: Lang) -> str | None:
     return None
 
 
+# Where a person can read about a source, for the ones whose recorded URL is a
+# file download or an API endpoint: (URL fragment, label EN, label FR, page EN, page FR).
+SOURCE_PAGES: tuple[tuple[str, str, str, str, str], ...] = (
+    (
+        "98m0001x/2023001/cen21_ind",
+        "Statistics Canada, 2021 Census individuals file (98M0001X)",
+        "Statistique Canada, fichier des particuliers du recensement de 2021 (98M0001X)",
+        "https://www150.statcan.gc.ca/n1/en/catalogue/98M0001X",
+        "https://www150.statcan.gc.ca/n1/fr/catalogue/98M0001X",
+    ),
+    (
+        "hmip-pimh/en/TableMapChart/ExportTable",
+        "CMHC Housing Market Information Portal",
+        "Portail d'information sur le marché de l'habitation de la SCHL",
+        "https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart?geographyType=Country&geographyId=1",
+        "https://www03.cmhc-schl.gc.ca/hmip-pimh/fr/TableMapChart?geographyType=Country&geographyId=1",
+    ),
+    (
+        "valet/observations/V39079",
+        "Bank of Canada, policy interest rate",
+        "Banque du Canada, taux directeur",
+        "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+        "https://www.banqueducanada.ca/grandes-fonctions/politique-monetaire/taux-directeur/",
+    ),
+    (
+        "valet/observations/BD.CDN.2YR",
+        "Bank of Canada, Canadian bond yields",
+        "Banque du Canada, rendements des obligations canadiennes",
+        "https://www.bankofcanada.ca/rates/interest-rates/canadian-bonds/",
+        "https://www.banqueducanada.ca/taux/taux-dinteret/obligations-canadiennes/",
+    ),
+    (
+        "SearchFilter-eng.aspx",
+        "Financial Consumer Agency of Canada, credit card comparison tool",
+        "Agence de la consommation en matière financière du Canada, outil de comparaison des cartes de crédit",
+        "https://itools-ioutils.fcac-acfc.gc.ca/CCCT-OCCC/SearchFilter-eng.aspx",
+        "https://itools-ioutils.fcac-acfc.gc.ca/CCCT-OCCC/SearchFilter-fra.aspx",
+    ),
+)
+
+
 def call_source(response: Any, lang: Lang) -> str:
     """Source: <url>, queried <date>; for a Statistics Canada file, its publisher and name."""
     prov = (response[0] if isinstance(response, list) else response)["provenance"]
     when = long_date(prov["queried_at"], lang)
     queried = f"queried {when}" if lang == "en" else f"interrogée le {when}"
     label = "Source:" if lang == "en" else f"Source{NBSP}:"
+    for fragment, label_en, label_fr, page_en, page_fr in SOURCE_PAGES:
+        if fragment in prov["url"]:
+            page = esc(page_en if lang == "en" else page_fr)
+            name = esc(label_en if lang == "en" else label_fr)
+            return (
+                f'<span class="case-source">{label} <a href="{page}">{name}</a>, {queried}</span>'
+            )
     url = esc(prov["url"])
     title = statcan_title(prov["url"], lang) if prov["source"].startswith("statcan") else None
     if title:
@@ -2256,6 +2304,14 @@ def month_name(iso: str, lang: Lang) -> str:
     return f"{months[int(iso[5:7]) - 1]} {iso[:4]}"
 
 
+def basis_points(value: float, lang: Lang) -> str:
+    """-123 bp as '−123 bp' (a real minus sign); a value that rounds to zero is '0 bp', not '-0 bp'."""
+    whole = round(value)
+    sign = "−" if whole < 0 else ""
+    unit = "bp" if lang == "en" else " pb"
+    return f"{sign}{number(abs(whole), lang)}{' ' if lang == 'en' else ''}{unit}"
+
+
 def curve_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     response = case["calls"][0]["response"]
     two, ten = "BD.CDN.2YR.DQ.YLD", "BD.CDN.10YR.DQ.YLD"
@@ -2290,12 +2346,11 @@ def curve_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     )
     low = min(p[1] for p in points)
     band = (low, 0.0, "Inverted" if lang == "en" else "Inversée")
-    bp = "bp" if lang == "en" else "pb"
     points = [(iso, v * 100) for iso, v in points]
     band = (band[0] * 100, 0.0, band[2])
 
     def fmt(v: float) -> str:
-        return f"{number(v, lang)} {bp}"
+        return basis_points(v, lang)
 
     # Some 300 monthly points would make a long table; a row per year keeps
     # it readable, and the caption says what the rows are.
@@ -2332,9 +2387,9 @@ def curve_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
             if len(names) <= 2
             else ", ".join(names[:-1]) + (" and " if lang == "en" else " et ") + names[-1]
         ),
-        "curve_deepest": esc(f"{number(deepest * 100, lang)} {bp}"),
+        "curve_deepest": esc(basis_points(deepest * 100, lang)),
         "curve_deepest_month": esc(month_name(deepest_iso, lang)),
-        "curve_last": esc(f"{number(points[-1][1], lang)} {bp}"),
+        "curve_last": esc(basis_points(points[-1][1], lang)),
         "curve_last_month": esc(month_name(points[-1][0], lang)),
         "source_curve": call_source(response, lang),
     }
@@ -2727,18 +2782,21 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
     calling = "calling" if en else "appel de"
     heading = "MapleStats MCP"
     tabs = "".join(
-        f'<button type="button" class="ask-tab" role="tab" data-ask-tab="{n}">'
+        f'<button type="button" class="ask-tab" aria-pressed="false" data-ask-tab="{n}">'
         f"<span>{esc(ex['label'])}</span><i></i></button>"
         for n, ex in enumerate(examples)
     )
+    pause, play = ("Pause", "Play") if en else ("Pause", "Lecture")
     return {
         "chat_demo": (
             f'<div class="ask" data-ask="{lang}" data-calling="{calling}">'
             '<div class="ask-bar"><span class="ask-lights"><i></i><i></i><i></i></span>'
             '<span class="ask-title" data-ask-title=""></span>'
+            f'<button type="button" class="ask-pause" aria-pressed="false" data-ask-pause="" '
+            f'data-pause="{pause}" data-play="{play}">{pause}</button>'
             f'<span class="ask-mcp">{heading}</span></div>'
-            '<div class="ask-stage" data-ask-stage="" aria-live="polite"></div>'
-            f'<div class="ask-tabs" role="tablist">{tabs}</div>'
+            '<div class="ask-stage" data-ask-stage=""></div>'
+            f'<div class="ask-tabs">{tabs}</div>'
             f'<script type="application/json" data-ask-examples="">{payload}</script></div>'
         )
     }
@@ -2797,7 +2855,12 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             load_case("patents")["calls"][0]["response"]["total_matched"],
             "patents" if en else "brevets",
         ),
-        (micro["unweighted_n"], "census records" if en else "fiches du recensement"),
+        (
+            micro["unweighted_n"],
+            "census records in one tabulation"
+            if en
+            else "fiches du recensement dans une tabulation",
+        ),
         (
             counts["boc_search_series"]["total_count"],
             "Bank of Canada series" if en else "séries de la Banque du Canada",
@@ -2816,11 +2879,11 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         ),
         (
             counts["ircc_monthly_list_tables"]["returned_count"],
-            "immigration tables" if en else "tableaux d'immigration",
+            "current IRCC tables" if en else "tableaux d'IRCC à jour",
         ),
         (
             load_case("housing")["calls"][1]["response"]["total_count"],
-            "housing tables" if en else "tableaux sur le logement",
+            "CMHC data categories" if en else "catégories de données de la SCHL",
         ),
     ]
     return {
@@ -4302,7 +4365,8 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         "",
         (
             "> One MCP server for Canadian open data: Statistics Canada, the Bank of Canada, "
-            f"CMHC, federal agencies and {counts['catalogue_count']} open-data catalogues, in "
+            f"CMHC, federal agencies, the federal portal and {counts['local_catalogue_count']} "
+            "provincial, territorial and city open-data catalogues, in "
             "English and French. Clients see plan_query, search_tools and call_tool; every "
             "other tool is found with search_tools and run with call_tool."
         ),
@@ -4320,6 +4384,9 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         f"- [Sources]({page_url('sources.html', 'en')}): which agencies and portals cover where",
         f"- [Statistics Canada]({page_url('statcan.html', 'en')}): tables, census and microdata",
         f"- [Demos]({page_url('cases.html', 'en')}): recorded calls behind real questions",
+        f"- [FAQ and licences]({page_url('faq.html', 'en')}): whether queries are saved, and what applies to the data",
+        f"- [About]({page_url('about.html', 'en')}): what MapleStats is, who builds it, alternatives",
+        f"- [Contributing]({page_url('contributing.html', 'en')}): report a number, suggest a source, add code",
         "",
     ]
     tools_url = page_url("tools.html", "en")

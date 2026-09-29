@@ -18,7 +18,7 @@
     <p class="lede">{en}Canadian data lives in dozens of places. MapleStats puts {{source_count}} of them behind one connection, so your AI agent can find, fetch and cite the numbers while you focus on what they mean.{fr}Les données canadiennes se trouvent en des dizaines d'endroits. MapleStats en réunit {{source_count}} derrière une seule connexion, pour que votre agent IA trouve, récupère et cite les chiffres pendant que vous vous concentrez sur ce qu'ils signifient.{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
-      <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Any data call can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}Tout appel de données peut revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
+      <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Most data calls can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}La plupart des appels de données peuvent revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
     </div>
   </div>
   <div class="setup">
@@ -54,7 +54,7 @@
     </div>
     <div class="thesis-demo">{{chat_demo}}</div>
     <div class="claims">
-      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no copy. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucune copie. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
+      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no dataset of its own, only short-lived caches. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucun jeu de données, seulement des caches de courte durée. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
       <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
       <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
     </div>
@@ -84,7 +84,7 @@
       <li><a href="{{root}}cases.html#demographers"><b>{en}Demographers{fr}Démographes{/}</b> <span>{en}Who comes to stay: Edmonton and Calgary{fr}Ceux qui viennent s'établir : Edmonton et Calgary{/}</span></a></li>
       <li><a href="{{root}}cases.html#urban-planners"><b>{en}Urban planners{fr}Urbanistes{/}</b> <span>{en}Canada is building up, not out{fr}Le Canada construit en hauteur, pas en largeur{/}</span></a></li>
       <li><a href="{{root}}cases.html#microeconomists"><b>{en}Microeconomists{fr}Microéconomistes{/}</b> <span>{en}Low income across immigrant generations{fr}Le faible revenu d'une génération à l'autre{/}</span></a></li>
-      <li><a href="{{root}}cases.html#marketers"><b>{en}Marketers{fr}Marketing{/}</b> <span>{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</span></a></li>
+      <li><a href="{{root}}cases.html#marketers"><b>{en}Marketers{fr}Spécialistes du marketing{/}</b> <span>{en}What a rewards card costs{fr}Ce que coûte une carte à récompenses{/}</span></a></li>
       <li><a href="{{root}}cases.html#wealth-managers"><b>{en}Wealth managers{fr}Gestionnaires de patrimoine{/}</b> <span>{en}Who funds the RRSP{fr}Qui alimente le REER{/}</span></a></li>
       <li><a href="{{root}}cases.html#scientists"><b>{en}Scientists{fr}Scientifiques{/}</b> <span>{en}Machine learning at the patent office{fr}L'apprentissage automatique au bureau des brevets{/}</span></a></li>
       <li><a href="{{root}}cases.html#analysts"><b>{en}Financial analysts{fr}Analystes financiers{/}</b> <span>{en}The policy rate since 2015{fr}Le taux directeur depuis 2015{/}</span></a></li>
@@ -200,7 +200,7 @@
 <section class="section" id="connect">
   <div class="wrap connect">
     <div class="connect-note">
-      <p class="label">{en}Connect{fr}Connexion{/}</p>
+      <p class="label">{en}Connect{fr}Installation{/}</p>
       <h2 class="section-title">{en}Add it to your client{fr}Ajoutez-le à votre client{/}</h2>
       <p>{en}Your client starts the server with <a href="https://docs.astral.sh/uv/">uv</a> when it needs it. There is nothing to host and no port to open.{fr}Votre client lance le serveur avec <a href="https://docs.astral.sh/uv/">uv</a> au besoin. Il n'y a rien à héberger ni aucun port à ouvrir.{/}</p>
       {{install_note}}

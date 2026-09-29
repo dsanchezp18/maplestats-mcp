@@ -12,6 +12,10 @@ import logging
 from maplestats_mcp import __version__, config
 
 logging.basicConfig(level=logging.INFO)
+# httpx and httpcore log every upstream request at INFO, URL and query string
+# included, which would print what people search for. Keep them to warnings.
+for _noisy in ("httpx", "httpcore"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 logger = logging.getLogger("maplestats_mcp")
 
 

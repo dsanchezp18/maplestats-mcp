@@ -559,8 +559,11 @@
   });
 
   // The home page's prompt: types each recorded question, resolves the tool
-  // call, then shows the answer with its figures. Tabs jump between the
-  // questions; it rests on the first answer for anyone who prefers less motion.
+  // call, then shows the answer with its figures, and moves to the next
+  // question every few seconds. Hovering or focusing it, or the Pause button,
+  // stops the rotation (after finishing the answer on screen); the buttons
+  // below jump to a question. It rests on the first answer, with no motion,
+  // for anyone who prefers reduced motion.
   (function askDemo() {
     var root = document.querySelector("[data-ask]");
     var data = root && root.querySelector("[data-ask-examples]");
@@ -574,11 +577,15 @@
     var stage = root.querySelector("[data-ask-stage]");
     var title = root.querySelector("[data-ask-title]");
     var tabs = Array.prototype.slice.call(root.querySelectorAll("[data-ask-tab]"));
+    var toggle = root.querySelector("[data-ask-pause]");
     var calling = root.getAttribute("data-calling");
-    var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var motion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    var still = !!(motion && motion.matches);
     var hold = 8000;
     var index = 0;
     var timers = [];
+    var userPaused = false;
+    var hovering = false;
 
     function later(fn, ms) {
       timers.push(window.setTimeout(fn, ms));
@@ -596,13 +603,18 @@
       return node;
     }
 
-    function answer(ex) {
-      stage.querySelector(".ask-tool").classList.add("done");
-      var a = el("p", "ask-a ask-in");
+    // The tool line and the answer, filled into `into`.
+    function fill(into, ex, animate) {
+      var tool = el("p", "ask-tool done" + (animate ? " ask-in" : ""));
+      tool.appendChild(el("span", "ask-spin"));
+      tool.appendChild(document.createTextNode(calling + " "));
+      tool.appendChild(el("code", "", ex.tool));
+      into.appendChild(tool);
+      var a = el("p", "ask-a" + (animate ? " ask-in" : ""));
       a.innerHTML = ex.html;
-      stage.appendChild(a);
+      into.appendChild(a);
       if (ex.code) {
-        var rows = el("ul", "ask-rows ask-in");
+        var rows = el("ul", "ask-rows" + (animate ? " ask-in" : ""));
         ex.code.split("\n").forEach(function (line) {
           var parts = line.split("  ");
           var li = document.createElement("li");
@@ -610,37 +622,76 @@
           li.appendChild(el("b", "", parts.slice(1).join("  ")));
           rows.appendChild(li);
         });
-        stage.appendChild(rows);
+        into.appendChild(rows);
       }
-      stage.appendChild(el("p", "ask-src ask-in", ex.cite));
+      into.appendChild(el("p", "ask-src" + (animate ? " ask-in" : ""), ex.cite));
     }
 
-    function show(n) {
+    // The window is as tall as its tallest example, so the page below does
+    // not move as the questions change.
+    function fit() {
+      var probe = el("div", "ask-stage");
+      probe.style.cssText =
+        "position:absolute;visibility:hidden;pointer-events:none;min-height:0;width:" +
+        stage.clientWidth +
+        "px";
+      root.appendChild(probe);
+      var tallest = 0;
+      examples.forEach(function (ex) {
+        probe.innerHTML = "";
+        var q = el("p", "ask-q");
+        q.appendChild(el("span", "ask-prompt", "\u203a"));
+        q.appendChild(document.createTextNode(ex.user));
+        probe.appendChild(q);
+        fill(probe, ex, false);
+        tallest = Math.max(tallest, probe.scrollHeight);
+      });
+      root.removeChild(probe);
+      // A few pixels of slack: text can wrap a line differently once it is on screen.
+      stage.style.minHeight = tallest + 16 + "px";
+    }
+
+    function mark(i) {
+      tabs.forEach(function (tab, k) {
+        tab.classList.toggle("on", k === i);
+        tab.setAttribute("aria-pressed", k === i ? "true" : "false");
+        var mark = tab.querySelector("i");
+        mark.style.transition = "none";
+        mark.style.width = "0";
+      });
+    }
+
+    // Wait `ms`, then move on, with the current tab's bar filling meanwhile.
+    function rotate(ms) {
+      if (still || userPaused || hovering) return;
+      var bar = tabs[index].querySelector("i");
+      bar.style.transition = "none";
+      bar.style.width = "0";
+      void bar.offsetWidth;
+      bar.style.transition = "width " + ms + "ms linear";
+      bar.style.width = "100%";
+      later(function () {
+        show(index + 1, false);
+      }, ms);
+    }
+
+    // `instant` shows the finished answer at once, without typing.
+    function show(n, instant) {
       clear();
       index = (n + examples.length) % examples.length;
       var ex = examples[index];
       stage.innerHTML = "";
       title.textContent = ex.client;
-      tabs.forEach(function (tab, i) {
-        tab.classList.toggle("on", i === index);
-        tab.setAttribute("aria-selected", i === index ? "true" : "false");
-        var mark = tab.querySelector("i");
-        mark.style.transition = "none";
-        mark.style.width = "0";
-      });
+      mark(index);
       var q = el("p", "ask-q");
       var typed = el("span", "");
       q.appendChild(el("span", "ask-prompt", "\u203a"));
       q.appendChild(typed);
       stage.appendChild(q);
-      var tool = el("p", "ask-tool ask-in");
-      tool.appendChild(el("span", "ask-spin"));
-      tool.appendChild(document.createTextNode(calling + " "));
-      tool.appendChild(el("code", "", ex.tool));
-      if (still) {
+      if (still || instant) {
         typed.textContent = ex.user;
-        stage.appendChild(tool);
-        answer(ex);
+        fill(stage, ex, false);
+        rotate(hold);
         return;
       }
       var at = 0;
@@ -652,32 +703,79 @@
           return;
         }
         later(function () {
+          var tool = el("p", "ask-tool ask-in");
+          tool.appendChild(el("span", "ask-spin"));
+          tool.appendChild(document.createTextNode(calling + " "));
+          tool.appendChild(el("code", "", ex.tool));
           stage.appendChild(tool);
         }, 350);
         later(function () {
-          answer(ex);
+          stage.innerHTML = "";
+          stage.appendChild(q);
+          fill(stage, ex, true);
         }, 1300);
       })();
-      var bar = tabs[index].querySelector("i");
-      void bar.offsetWidth;
-      bar.style.transition = "width " + hold + "ms linear";
-      bar.style.width = "100%";
-      later(function () {
-        show(index + 1);
-      }, hold);
+      rotate(hold);
+    }
+
+    // Stop rotating; the answer on screen is finished, not cut off.
+    function hush() {
+      clear();
+      show(index, true);
+      tabs[index].querySelector("i").style.width = "0";
+    }
+
+    function resume() {
+      if (!userPaused && !hovering) rotate(hold / 2);
     }
 
     tabs.forEach(function (tab, i) {
       tab.addEventListener("click", function () {
-        show(i);
+        stage.setAttribute("aria-live", "polite");
+        show(i, hovering || userPaused);
       });
     });
-    root.addEventListener("mouseenter", function () {
-      if (!still) clear();
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        userPaused = !userPaused;
+        toggle.setAttribute("aria-pressed", userPaused ? "true" : "false");
+        toggle.textContent = toggle.getAttribute(userPaused ? "data-play" : "data-pause");
+        if (userPaused) hush();
+        else resume();
+      });
+    }
+    root.addEventListener("pointerenter", function (event) {
+      if (event.pointerType !== "mouse" || still) return;
+      hovering = true;
+      hush();
     });
-    root.addEventListener("mouseleave", function () {
-      if (!still) show(index);
+    root.addEventListener("pointerleave", function (event) {
+      if (event.pointerType !== "mouse" || still) return;
+      hovering = false;
+      resume();
     });
-    show(0);
+    root.addEventListener("focusin", function () {
+      if (still) return;
+      hovering = true;
+      hush();
+    });
+    root.addEventListener("focusout", function (event) {
+      if (still || root.contains(event.relatedTarget)) return;
+      hovering = false;
+      resume();
+    });
+    if (motion) {
+      var onMotion = function (event) {
+        still = event.matches;
+        if (still) hush();
+        else resume();
+      };
+      if (motion.addEventListener) motion.addEventListener("change", onMotion);
+      else if (motion.addListener) motion.addListener(onMotion);
+    }
+    window.addEventListener("resize", fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    fit();
+    show(0, false);
   })();
 })();
