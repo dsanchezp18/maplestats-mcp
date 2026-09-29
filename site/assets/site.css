@@ -4540,3 +4540,209 @@ html:not(.js) .chips {
   font-size: 0.9375rem;
   color: var(--ink-2);
 }
+
+/* ---------- Home: the argument beside a live prompt ----------
+   The text sits left and a chat card plays real questions on the right;
+   the verse runs as one row of three counts beneath them. */
+
+.thesis-body {
+  grid-column: 1 / span 7;
+  grid-row: 1;
+}
+
+.thesis-demo {
+  grid-column: 8 / -1;
+  grid-row: 1;
+  align-self: center;
+}
+
+.thesis .verse {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  grid-auto-flow: column;
+  column-gap: clamp(24px, 2.5vw, 32px);
+}
+
+.thesis .verse .verse-count:not(:first-child) {
+  margin-top: 0;
+}
+
+.thesis .verse-aside {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+.thesis .claims {
+  grid-row: 3;
+}
+
+@media (max-width: 1100px) {
+  .thesis-body,
+  .thesis-demo {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .thesis .verse {
+    grid-row: auto;
+  }
+
+  .thesis .claims {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .thesis .verse {
+    display: block;
+  }
+
+  .thesis .verse .verse-count:not(:first-child) {
+    margin-top: 18px;
+  }
+}
+
+.chat-mock {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--surface, var(--bg));
+  overflow: hidden;
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.5);
+}
+
+.chat-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.chat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rule);
+}
+
+.chat-dot:nth-child(1) {
+  background: var(--accent);
+}
+
+.chat-mock-title {
+  margin-left: 8px;
+}
+
+.chat-mock-status {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.chat-mock-body {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 300px;
+  padding: 16px;
+}
+
+.chat-bubble {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.chat-bubble.user {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--ink);
+}
+
+.chat-bubble.assistant {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--rule);
+  color: var(--ink);
+}
+
+.chat-tool,
+.chat-cite {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.chat-bubble p {
+  margin: 0;
+}
+
+.chat-code {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+}
+
+.chat-progress {
+  height: 3px;
+  background: var(--rule);
+}
+
+.chat-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+}
+
+.chat-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.chat-nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.chat-nav-btn:hover,
+.chat-nav-btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chat-enter {
+    animation: chat-in 420ms ease-out both;
+  }
+
+  @keyframes chat-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+}

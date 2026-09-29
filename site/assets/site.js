@@ -557,4 +557,93 @@
     openFromHash();
     status.textContent = T.tools(countVisible());
   });
+
+  // The home page's chat card: plays each recorded question in turn (the
+  // question, then the tool's answer), with arrows to move between them.
+  // It rests, showing the first answer, for anyone who prefers less motion.
+  (function chatDemo() {
+    var root = document.querySelector("[data-chat-demo]");
+    var data = root && root.querySelector("[data-chat-examples]");
+    if (!root || !data) return;
+    var examples;
+    try {
+      examples = JSON.parse(data.textContent);
+    } catch (e) {
+      return;
+    }
+    var body = root.querySelector("[data-chat-body]");
+    var status = root.querySelector("[data-chat-status]");
+    var label = root.querySelector("[data-chat-label]");
+    var bar = root.querySelector(".chat-progress span");
+    var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var index = 0;
+    var timers = [];
+    var hold = 7000;
+
+    function clear() {
+      timers.forEach(window.clearTimeout);
+      timers = [];
+    }
+
+    function bubble(cls, html, delay) {
+      var el = document.createElement("div");
+      el.className = "chat-bubble " + cls + " chat-enter";
+      el.style.animationDelay = delay + "ms";
+      el.innerHTML = html;
+      body.appendChild(el);
+    }
+
+    function show(n) {
+      clear();
+      index = (n + examples.length) % examples.length;
+      var ex = examples[index];
+      body.innerHTML = "";
+      status.textContent = ex.label;
+      label.textContent = ex.label + " · " + (index + 1) + " / " + examples.length;
+      var user = document.createElement("div");
+      user.className = "chat-bubble user chat-enter";
+      user.textContent = ex.user;
+      body.appendChild(user);
+      var answer = function () {
+        var html = '<span class="chat-tool"></span><p>' + ex.html + "</p>";
+        if (ex.code) html += '<pre class="chat-code"></pre>';
+        html += '<span class="chat-cite"></span>';
+        bubble("assistant", html, 0);
+        var box = body.lastChild;
+        box.querySelector(".chat-tool").textContent = "tool · " + ex.tool;
+        if (ex.code) box.querySelector(".chat-code").textContent = ex.code;
+        box.querySelector(".chat-cite").textContent = ex.cite;
+      };
+      if (still) {
+        answer();
+        bar.style.width = "0";
+        return;
+      }
+      timers.push(window.setTimeout(answer, 900));
+      bar.style.transition = "none";
+      bar.style.width = "0";
+      void bar.offsetWidth;
+      bar.style.transition = "width " + hold + "ms linear";
+      bar.style.width = "100%";
+      timers.push(
+        window.setTimeout(function () {
+          show(index + 1);
+        }, hold)
+      );
+    }
+
+    root.querySelector("[data-chat-prev]").addEventListener("click", function () {
+      show(index - 1);
+    });
+    root.querySelector("[data-chat-next]").addEventListener("click", function () {
+      show(index + 1);
+    });
+    root.addEventListener("mouseenter", function () {
+      if (!still) clear();
+    });
+    root.addEventListener("mouseleave", function () {
+      if (!still) show(index);
+    });
+    show(0);
+  })();
 })();

@@ -318,22 +318,23 @@ def test_square_inscriptions_close_and_segments_share_the_track() -> None:
     root = _parse(_all_charts()["square"])
     paths = {el.get("id"): el for el in root.iter(f"{NS}path") if el.get("id")}
     text_paths = list(root.iter(f"{NS}textPath"))
-    # Each band's names run in two halves, over the top and along the
-    # bottom, both from the left side to the right: the only text on a path.
+    # Each band's names run once round a closed loop that turns: the text is
+    # drawn twice on the same path, a lap apart, so the pair has no seam.
     hrefs = [tp.get("href") for tp in text_paths]
-    assert hrefs == [f"#square-script-{n}-{h}" for n in (0, 1) for h in ("top", "bottom")]
+    assert hrefs == [f"#square-script-{n}-loop" for n in (0, 1) for _ in (0, 1)]
     assert all(tp.get("href", "")[1:] in paths for tp in text_paths)
     for n in (0, 1):
-        top, bottom = (paths[f"square-script-{n}-{h}"].get("d") or "" for h in ("top", "bottom"))
-        start_top, start_bottom = top.split()[0], bottom.split()[0]
-        # Both start on the left side, halfway down; the top one climbs
-        # (clockwise arcs), the bottom one descends (anticlockwise arcs).
-        assert start_top.endswith(",320") and start_bottom.endswith(",320")
-        assert "0,1" in top and "0,0" in bottom
-    written = "".join(tp.text or "" for tp in text_paths[:2])
+        loop = paths[f"square-script-{n}-loop"].get("d") or ""
+        assert loop.endswith("Z")
+    turning = [tp.find(f"{NS}animate") for tp in text_paths]
+    assert all(a is not None and a.get("attributeName") == "startOffset" for a in turning)
+    # The outer band turns clockwise, the inner one the other way.
+    assert float(turning[0].get("to")) > float(turning[0].get("from"))
+    assert float(turning[2].get("to")) < float(turning[2].get("from"))
+    written = "".join(text_paths[0].itertext())
     assert "CMHC <&>" in written and "Bank of Canada" in written
-    # The seams are padded with non-breaking spaces, which SVG keeps.
-    assert all((tp.text or "").startswith("\u00a0") for tp in text_paths)
+    # The join is padded with non-breaking spaces, which SVG keeps.
+    assert all("".join(tp.itertext()).endswith(" · ") for tp in text_paths)
     segments = [el for el in root.iter(f"{NS}path") if "sq-arc" in _classes(el)]
     assert len(segments) == 3
     assert all(el.get("pathLength") == "1" for el in segments)

@@ -2423,6 +2423,127 @@ def square_places(lang: Lang) -> list[str]:
     return names
 
 
+def chat_demo_context(lang: Lang) -> dict[str, str]:
+    """The live prompting card on the home page: four questions, each answered
+    from a recorded call (site/_data/cases), played by assets/site.js."""
+    en = lang == "en"
+    rate = load_case("policy_rate")["calls"][0]["response"]["observations"]
+    rate_rows = sorted(
+        (o["ref_date"], o["values"]["V39079"])
+        for o in rate
+        if o["values"].get("V39079") is not None
+    )[-3:]
+    curve = load_case("curve")["calls"][0]["response"]["observations"]
+    both = sorted(
+        (o["ref_date"], o["values"]["BD.CDN.10YR.DQ.YLD"], o["values"]["BD.CDN.2YR.DQ.YLD"])
+        for o in curve
+        if o["values"].get("BD.CDN.10YR.DQ.YLD") is not None
+        and o["values"].get("BD.CDN.2YR.DQ.YLD") is not None
+    )
+    day, ten, two = both[-1]
+    counts = {call["name"]: call["response"] for call in load_case("counts")["calls"]}
+    tables = counts["wds_search_cubes"]["total_count"]
+    cards = load_case("cards")["calls"][0]["response"]["total_matched"]
+
+    def code(rows: list[tuple[str, str]]) -> str:
+        return chr(10).join(f"{a}  {b}" for a, b in rows)
+
+    examples = [
+        {
+            "label": "Policy rate" if en else "Taux directeur",
+            "user": "What is the Bank of Canada's overnight rate?"
+            if en
+            else "Quel est le taux cible du financement à un jour de la Banque du Canada ?",
+            "tool": "boc_get_observations",
+            "html": (
+                f"On {long_date(rate_rows[-1][0], lang)} the target for the overnight rate was "
+                f"<strong>{number(rate_rows[-1][1], lang, 2)}%</strong>."
+                if en
+                else f"Le {long_date(rate_rows[-1][0], lang)}, le taux cible du financement à un jour "
+                f"était de <strong>{number(rate_rows[-1][1], lang, 2)} %</strong>."
+            ),
+            "code": code([(d, number(v, lang, 2)) for d, v in rate_rows]),
+            "cite": "source · Bank of Canada Valet"
+            if en
+            else "source · Valet de la Banque du Canada",
+        },
+        {
+            "label": "Yield curve" if en else "Courbe des taux",
+            "user": "How far apart are the 10-year and 2-year Government of Canada yields?"
+            if en
+            else "Quel écart y a-t-il entre les rendements à 10 ans et à 2 ans du gouvernement du Canada ?",
+            "tool": "boc_get_observations",
+            "html": (
+                f"On {long_date(day, lang)} the 10-year yield was {number(ten, lang, 2)}% and the "
+                f"2-year {number(two, lang, 2)}%: a spread of "
+                f"<strong>{number(ten - two, lang, 2)} points</strong>."
+                if en
+                else f"Le {long_date(day, lang)}, le rendement à 10 ans était de {number(ten, lang, 2)} % "
+                f"et celui à 2 ans de {number(two, lang, 2)} % : un écart de "
+                f"<strong>{number(ten - two, lang, 2)} points</strong>."
+            ),
+            "code": code(
+                [
+                    ("10-year" if en else "10 ans", number(ten, lang, 2)),
+                    ("2-year" if en else "2 ans", number(two, lang, 2)),
+                ]
+            ),
+            "cite": "source · Bank of Canada Valet"
+            if en
+            else "source · Valet de la Banque du Canada",
+        },
+        {
+            "label": "StatCan tables" if en else "Tableaux StatCan",
+            "user": "How many tables does Statistics Canada publish?"
+            if en
+            else "Combien de tableaux Statistique Canada publie-t-il ?",
+            "tool": "wds_search_cubes",
+            "html": (
+                f"The Web Data Service lists <strong>{number(tables, lang)}</strong> tables."
+                if en
+                else f"Le Service de données Web recense <strong>{number(tables, lang)}</strong> tableaux."
+            ),
+            "code": "",
+            "cite": "source · Statistics Canada, Web Data Service"
+            if en
+            else "source · Statistique Canada, Service de données Web",
+        },
+        {
+            "label": "Credit cards" if en else "Cartes de crédit",
+            "user": "How many credit cards can I compare in Alberta?"
+            if en
+            else "Combien de cartes de crédit puis-je comparer en Alberta ?",
+            "tool": "fcac_search_credit_cards",
+            "html": (
+                f"The FCAC tool lists <strong>{number(cards, lang)}</strong> cards in Alberta."
+                if en
+                else f"L'outil de l'ACFC recense <strong>{number(cards, lang)}</strong> cartes en Alberta."
+            ),
+            "code": "",
+            "cite": "source · Financial Consumer Agency of Canada"
+            if en
+            else "source · Agence de la consommation en matière financière du Canada",
+        },
+    ]
+    payload = json.dumps(examples, ensure_ascii=False).replace("</", "<\\/")
+    return {
+        "chat_demo": (
+            '<div class="chat-mock" data-chat-demo="' + lang + '">'
+            '<div class="chat-mock-bar"><span class="chat-dot"></span><span class="chat-dot"></span>'
+            '<span class="chat-dot"></span><span class="chat-mock-title">Claude · MapleStats MCP</span>'
+            '<span class="chat-mock-status" data-chat-status=""></span></div>'
+            '<div class="chat-mock-body" data-chat-body="" aria-live="polite"></div>'
+            '<div class="chat-progress" aria-hidden="true"><span></span></div>'
+            '<div class="chat-nav">'
+            f'<button type="button" class="chat-nav-btn" data-chat-prev="" aria-label="{"Previous example" if en else "Exemple précédent"}">‹</button>'
+            '<span class="chat-nav-label" data-chat-label=""></span>'
+            f'<button type="button" class="chat-nav-btn" data-chat-next="" aria-label="{"Next example" if en else "Exemple suivant"}">›</button>'
+            "</div>"
+            f'<script type="application/json" data-chat-examples="">{payload}</script></div>'
+        )
+    }
+
+
 def counter_list(items: list[tuple[int, str]], lang: Lang) -> str:
     """Big numbers that count up once scrolled into view (assets/charts.js)."""
     cells = "".join(
@@ -2573,6 +2694,7 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
     context["cases_word_cap"] = words[len(CASE_KEYS)].capitalize()
     context["others_word"] = words[len(CASE_KEYS) - 1]
     context.update(finale_context(counts, modules, lang))
+    context.update(chat_demo_context(lang))
     return context
 
 
