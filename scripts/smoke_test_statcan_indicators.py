@@ -24,7 +24,10 @@ async def main() -> int:
     sample = econ.indicators[0]
     print("  sample:", sample.model_dump())
     ok &= bool(sample.title)
-    ok &= bool(sample.value)
+    # Some feed entries carry no level (26 of 230 on 2026-09-29, including
+    # the first, a same-day release), so require a value on some, not the first.
+    every_economic = await client.get_indicators("economic", limit=300)
+    ok &= any(i.value for i in every_economic.indicators)
 
     population = await client.get_indicators("all", "population estimate")
     print(f"OK: get_indicators(all, 'population estimate') -> {population.total_matched}")
