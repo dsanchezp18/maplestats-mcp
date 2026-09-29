@@ -2205,7 +2205,7 @@ mark {
 }
 
 /* The closing line, as two lines of verse: each half on its own line,
-   the second in the accent, sized so neither wraps on a desktop. */
+   both in the ink colour, sized so neither wraps on a desktop. */
 .verse-finale {
   grid-column: 1 / -1;
   display: grid;
@@ -2225,10 +2225,6 @@ mark {
 .verse-finale .vf-2 {
   display: block;
   text-wrap: balance;
-}
-
-.verse-finale .vf-2 {
-  color: var(--accent);
 }
 
 /* The square is the centrepiece: centred and as wide as the inscription needs

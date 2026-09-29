@@ -84,7 +84,16 @@
     });
   }
 
+  // The inscriptions turn by SMIL, which ignores the reduced-motion
+  // preference; stop them where they stand for anyone who asked for less.
+  function stillInscriptions() {
+    if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    Array.prototype.forEach.call(document.querySelectorAll(".square animate"), function (a) {
+      a.parentNode.removeChild(a);
+    });
+
   function start() {
+    stillInscriptions();
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(fitInscriptions);
     } else {

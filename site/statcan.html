@@ -2,7 +2,7 @@
 <html lang="{{lang}}" data-root="{{root}}">
 <head>
 {{> head}}
-<title>{en}How the MCP queries Statistics Canada{fr}Comment le MCP interroge Statistique Canada{/} · MapleStats MCP</title>
+<title>{en}How MapleStats works with Statistics Canada{fr}Comment MapleStats travaille avec Statistique Canada{/} · MapleStats MCP</title>
 <meta name="description" content="{en}How MapleStats MCP works with Statistics Canada: finding a table, coordinates and vectors in the Web Data Service, SDMX slices, public use microdata with replicate weights, and the live-API quirks it handles, with recorded calls.{fr}Comment MapleStats MCP travaille avec Statistique Canada : trouver un tableau, les coordonnées et les vecteurs du Service de données Web, les requêtes SDMX, les microdonnées à grande diffusion et leurs poids de réplication, et les particularités des API en direct, avec des appels enregistrés.{/}">
 </head>
 <body>
@@ -12,9 +12,8 @@
 
 <header class="post-head">
   <p class="label">{en}Statistics Canada · Notes from the code{fr}Statistique Canada · Notes tirées du code{/}</p>
-  <h1>{en}How the MCP queries Statistics Canada{fr}Comment le MCP interroge Statistique Canada{/}</h1>
+  <h1>{en}How MapleStats works with Statistics Canada{fr}Comment MapleStats travaille avec Statistique Canada{/}</h1>
   <p class="post-dek">{en}Statistics Canada does not have one API. It has several. In this post I explain how MapleStats MCP finds a table, turns a coordinate into a vector, slices a large table with SDMX and weights a microdata file, and what I learned from the live services along the way.{fr}Statistique Canada n'a pas une API, mais plusieurs. J'explique ici comment MapleStats MCP trouve un tableau, passe d'une coordonnée à un vecteur, découpe un grand tableau avec SDMX et pondère un fichier de microdonnées, et ce que les services en direct m'ont appris en chemin.{/}</p>
-  <p class="post-byline"><a href="{{root}}about.html">Daniel Sánchez Pazmiño</a> <span aria-hidden="true">·</span> <time datetime="{{sc_date_iso}}">{{sc_date}}</time> <span aria-hidden="true">·</span> <span>{en}Calls recorded on that date{fr}Appels enregistrés à cette date{/}</span></p>
 </header>
 
 <nav class="post-toc" data-toc aria-label="{en}On this page{fr}Sur cette page{/}">

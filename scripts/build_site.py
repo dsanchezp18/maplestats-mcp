@@ -2437,6 +2437,11 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
     """The square: every publisher inscribed, the tools as segments by subject."""
     en = lang == "en"
     tools = sum(len(m.tools) for m in modules)
+    # The same count as the Sources page: national modules plus local sources.
+    sources = (
+        sum(1 for m in modules if m.source.level == "national")
+        + coverage_counts()["local_source_count"]
+    )
     outer = sorted(
         {m.source.short(lang) for m in modules if m.source.level == "national"}, key=alphabetical
     )
@@ -2503,9 +2508,9 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
                 outer,
                 square_places(lang),
                 arcs,
-                centre=str(tools),
+                centre=str(sources),
                 centre_lines=(
-                    "tools," if en else "outils,",
+                    "sources,",
                     "one connection" if en else "une connexion",
                 ),
                 label=label,

@@ -790,74 +790,50 @@ def _straight_runs(half: float, s0: float, s1: float) -> list[tuple[float, float
     return runs
 
 
-def _half_square(c: float, half: float, r: float, top: bool) -> str:
-    """Half a rounded square from the middle of its left side to the middle of
-    its right: over the top, or along the bottom, so text on either reads
-    left to right and upright."""
-    left, right = c - half, c + half
-    if top:
-        t = c - half
-        return (
-            f"M{_n(left)},{_n(c)} L{_n(left)},{_n(t + r)}"
-            + (f" A{_n(r)},{_n(r)} 0 0,1 {_n(left + r)},{_n(t)}" if r else "")
-            + f" L{_n(right - r)},{_n(t)}"
-            + (f" A{_n(r)},{_n(r)} 0 0,1 {_n(right)},{_n(t + r)}" if r else "")
-            + f" L{_n(right)},{_n(c)}"
-        )
-    b = c + half
-    return (
-        f"M{_n(left)},{_n(c)} L{_n(left)},{_n(b - r)}"
-        + (f" A{_n(r)},{_n(r)} 0 0,0 {_n(left + r)},{_n(b)}" if r else "")
-        + f" L{_n(right - r)},{_n(b)}"
-        + (f" A{_n(r)},{_n(r)} 0 0,0 {_n(right)},{_n(b - r)}" if r else "")
-        + f" L{_n(right)},{_n(c)}"
-    )
+def _loop_length(half: float, r: float) -> float:
+    """The length of _rounded_square(): four sides less the corners, plus four quarter circles."""
+    return 8 * half - (8 - 2 * math.pi) * r
 
 
-def _half_length(half: float, r: float) -> float:
-    """The length of _half_square(): two half sides, one side, two quarter circles."""
-    return 4 * half - (4 - math.pi) * r
+def _inscription(
+    ident: str, names: list[str], half: float, cls: str, seconds: float
+) -> tuple[list[str], str]:
+    """(defs paths, text) for names set on one closed rounded square, turning.
 
-
-def _inscription(ident: str, names: list[str], half: float, cls: str) -> tuple[list[str], str]:
-    """(defs paths, text) for names set around a rounded square in two halves.
-
-    The names are split where the two halves come out closest in length:
-    the first half runs from the left side over the top, the second along
-    the bottom, both left to right, so no lettering is upside down. Both
-    share one font size, chosen so the longer half fills its path;
-    textLength closes the rest by adjusting the letter spacing. Glyphs
-    stand on the outer side of the top path and the inner side of the
-    bottom one, so each baseline moves the other way to centre its
-    lettering in the band. Non-breaking spaces pad the seams at the sides,
-    since SVG drops ordinary spaces at the ends of a text.
+    The names run once round the loop, clockwise, and the loop turns:
+    ``seconds`` is one revolution, negative for the other way. The text is
+    drawn twice on the same path, one copy a full lap behind the other, so
+    that as the start offset advances by one lap the pair covers the loop
+    with no seam. The font size fills the path at the usual letter
+    spacing; textLength closes the rest. Glyphs stand on the outer side of
+    the path, so the baseline sits inside the band's centre line by a third
+    of the size. A non-breaking dot pads the join, since SVG drops ordinary
+    spaces at the ends of a text.
     """
-    pad, sep = "\u00a0\u00a0", " · "
-
-    def line(part: list[str]) -> str:
-        return pad + sep.join(part) + pad
-
-    split = min(
-        range(1, len(names)) if len(names) > 1 else [1],
-        key=lambda k: abs(len(line(names[:k])) - len(line(names[k:]))),
-    )
-    parts = [p for p in (names[:split], names[split:]) if p]
+    sep = " · "
+    line = sep.join(names) + " · "
     r = _corner(half)
-    longest = max(len(line(p)) for p in parts)
-    size = min(max(_half_length(half, r) / (longest * _SQUARE_CHAR), 7.0), 15.0)
+    total = _loop_length(half, r)
+    size = min(max(total / (len(line) * _SQUARE_CHAR), 7.0), 15.0)
     inset = size * 0.33
+    h = half - inset
+    rr = max(0.0, r - inset)
+    lap = _loop_length(h, rr)
     c = SQUARE / 2
-    defs, texts = [], []
-    for n, part in enumerate(parts):
-        top = n == 0
-        h = half - inset if top else half + inset
-        rr = max(0.0, r - inset) if top else r + inset
-        pid = f"{ident}-{'top' if top else 'bottom'}"
-        defs.append(f'<path id="{pid}" d="{_half_square(c, h, rr, top)}"/>')
+    pid = f"{ident}-loop"
+    defs = [f'<path id="{pid}" d="{_rounded_square(c, h, rr)}"/>']
+    forward = seconds > 0
+    dur = abs(seconds)
+    texts = []
+    for behind in (False, True):
+        start = lap * (-1 if behind else 0)
+        end = start + (lap if forward else -lap)
         texts.append(
             f'<text class="{cls}" data-band="{ident}" style="font-size:{_n(size)}px">'
-            f'<textPath href="#{pid}" textLength="{_n(_half_length(h, rr))}" lengthAdjust="spacing">'
-            f"{_esc(line(part))}</textPath></text>"
+            f'<textPath href="#{pid}" startOffset="{_n(start)}" textLength="{_n(lap)}" lengthAdjust="spacing">'
+            f'<animate attributeName="startOffset" from="{_n(start)}" to="{_n(end)}" '
+            f'dur="{_n(dur)}s" repeatCount="indefinite"/>'
+            f"{_esc(line)}</textPath></text>"
         )
     return defs, "".join(texts)
 
@@ -897,13 +873,13 @@ def square_chart(
 
     # Two inscription bands, each between two thin rules.
     bands = [
-        (outer, 293.0, (276.0, 312.0), "sq-script"),
-        (inner, 252.0, (236.0, 268.0), "sq-script-2"),
+        (outer, 293.0, (276.0, 312.0), "sq-script", 240.0),
+        (inner, 252.0, (236.0, 268.0), "sq-script-2", -320.0),
     ]
-    for n, (names, half, (lo, hi), cls) in enumerate(bands):
+    for n, (names, half, (lo, hi), cls, seconds) in enumerate(bands):
         if not names:
             continue
-        paths, text = _inscription(f"{ident}-script-{n}", names, half, cls)
+        paths, text = _inscription(f"{ident}-script-{n}", names, half, cls, seconds)
         defs.extend(paths)
         body.append(
             f'<path class="sq-rule" d="{_rounded_square(c, hi, _corner(hi))}"/>'
