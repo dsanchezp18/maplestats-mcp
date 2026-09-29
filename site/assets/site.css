@@ -1947,18 +1947,6 @@ mark {
 
 
 
-.thanks-body {
-  display: grid;
-  gap: 16px;
-  align-content: start;
-  max-width: 68ch;
-  color: var(--ink-2);
-}
-
-.thanks-body > .label {
-  margin-bottom: 4px;
-}
-
 /* ---------- About ---------- */
 
 .about {

@@ -74,6 +74,30 @@ def test_site_scripts_parse(script: str):
     assert result.returncode == 0, result.stderr
 
 
+def test_rename_retries_while_windows_refuses(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """The output swap survives a folder that is briefly locked, and gives up when it stays so."""
+    source, target = tmp_path / "stage", tmp_path / "site"
+    source.mkdir()
+    real_rename = Path.rename
+    refusals = {"left": 2}
+
+    def flaky(self: Path, destination: Path) -> Path:
+        if refusals["left"]:
+            refusals["left"] -= 1
+            raise PermissionError("locked")
+        return real_rename(self, destination)
+
+    monkeypatch.setattr(Path, "rename", flaky)
+    site._rename(source, target, tries=5, wait=0)
+    assert target.exists() and not source.exists()
+
+    refusals["left"] = 99
+    other = tmp_path / "other"
+    other.mkdir()
+    with pytest.raises(PermissionError):
+        site._rename(other, tmp_path / "gone", tries=3, wait=0)
+
+
 def test_every_module_has_site_metadata():
     modules = {p.name for p in MODULES.iterdir() if p.is_dir() and not p.name.startswith("_")}
     missing = sorted(modules - set(site.SOURCES))

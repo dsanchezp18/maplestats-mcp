@@ -34,6 +34,7 @@ import math
 import re
 import shutil
 import tempfile
+import time
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -3993,10 +3994,27 @@ async def build(out: Path) -> dict[str, int]:
         raise
     old = out.with_name(f"{stage.name}-old")
     if out.exists():
-        out.rename(old)
-    stage.rename(out)
+        _rename(out, old)
+    _rename(stage, out)
     shutil.rmtree(old, ignore_errors=True)
     return {"tools": len(by_name), "modules": len(modules), "pages": pages}
+
+
+def _rename(source: Path, target: Path, tries: int = 10, wait: float = 0.5) -> None:
+    """Rename a directory, retrying while Windows refuses it.
+
+    Right after a build writes hundreds of files, a virus scanner or the
+    search indexer can hold one open, and the rename of the folder fails with
+    PermissionError for a moment. Other systems succeed on the first try.
+    """
+    for attempt in range(tries):
+        try:
+            source.rename(target)
+            return
+        except PermissionError:
+            if attempt == tries - 1:
+                raise
+            time.sleep(wait)
 
 
 def safe_out(out: Path) -> Path:
