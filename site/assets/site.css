@@ -4586,12 +4586,22 @@ html:not(.js) .chips {
     grid-row: auto;
   }
 
+  .thesis-body {
+    order: 1;
+  }
+
+  .thesis-demo {
+    order: 2;
+  }
+
   .thesis .verse {
     grid-row: auto;
+    order: 3;
   }
 
   .thesis .claims {
     grid-row: auto;
+    order: 4;
   }
 }
 

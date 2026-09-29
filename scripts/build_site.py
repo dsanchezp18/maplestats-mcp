@@ -3346,26 +3346,6 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
     at = next((n for n, c in enumerate(cubes) if c["product_id"] == 18100004), None)
     if at is None:
         raise SystemExit("the recorded search no longer finds table 18100004")
-    fields = ("product_id", "cansim_id", f"cube_title_{suffix}", "release_time")
-    before, after = at, len(cubes) - at - 2
-
-    def skipped(count: int) -> list[str]:
-        if not count:
-            return []
-        return [f"{_MORE}{count} more" if en else f"{_MORE}{count} de plus"]
-
-    search_shown = {
-        "cubes": skipped(before)
-        + [{k: c[k] for k in fields} for c in cubes[at : at + 2]]
-        + skipped(after),
-        "total_count": search["response"]["total_count"],
-        "provenance": {
-            "url": search["response"]["provenance"]["url"],
-            "coverage": search["response"]["provenance"]["coverage"],
-            _MORE: _more_fields(len(search["response"]["provenance"]) - 2, lang),
-        },
-    }
-
     # The table's dimensions: two members each, in the page's language.
     meta = calls["wds_get_cube_metadata"]
     dims = meta["response"]["dimensions"]
@@ -3493,15 +3473,8 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         + "</figure>"
     )
 
-    captured = max(load_case(key)["captured"] for key in ("statcan", "macro", "pumf"))
     return {
-        "sc_date": esc(long_date(captured, lang)),
-        "sc_date_iso": captured,
-        "sc_search_box": _call_box(search, search_shown, lang, response_flat=3),
-        "sc_meta_box": _call_box(meta, meta_shown, lang, response_flat=4),
-        "sc_coord_box": _call_box(coord, coord["response"], lang),
         "sc_data_box": _call_box(macro, data_shown, lang, response_flat=4),
-        "sc_sdmx_box": _call_box(sdmx, sdmx["response"], lang, response_flat=4),
         "sc_pumf_box": _call_box(pumf, pumf_shown, lang, request_flat=3, response_flat=4),
         "sc_pumf_table": pumf_table,
         "sc_script_box": script_box,

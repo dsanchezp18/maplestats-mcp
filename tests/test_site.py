@@ -148,7 +148,7 @@ async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
         linked = set(re.findall(r'tools\.html#t-([a-z0-9_]+)"', text))
         assert linked and linked <= tool_names
         boxes = re.findall(r"<pre tabindex=\"0\"><code>(.*?)</code></pre>", text, re.DOTALL)
-        assert len(boxes) >= 12
+        assert len(boxes) >= 6
         for box in boxes:
             plain = html.unescape(re.sub(r"<[^>]+>", "", box))
             json.loads(
