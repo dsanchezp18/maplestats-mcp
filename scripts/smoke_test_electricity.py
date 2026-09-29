@@ -13,6 +13,7 @@ import sys
 from datetime import timedelta
 
 from maplestats_mcp.modules.electricity import client
+from maplestats_mcp.modules.electricity import quebec_client as client_qc
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 
@@ -121,6 +122,41 @@ async def main() -> int:
         len(dated_if.total_schedules) == 24,
         f"{dated_if.date}",
     )
+
+    qc_demand = await client_qc.get_demand(limit=8)
+    ok &= _report(
+        "quebec demand recent",
+        len(qc_demand.points) == 8 and qc_demand.latest_demand_mw is not None,
+        f"latest {qc_demand.latest_timestamp} {qc_demand.latest_demand_mw} MW, "
+        f"{qc_demand.rows_matched} rows",
+    )
+    qc_hist = await client_qc.get_demand("history", "2024-01-15", "2024-01-15", limit=24)
+    ok &= _report(
+        "quebec demand history",
+        len(qc_hist.points) >= 23 and qc_hist.peak_demand_mw is not None,
+        f"{len(qc_hist.points)} rows, peak {qc_hist.peak_demand_mw} MW on 2024-01-15",
+    )
+    qc_gen = await client_qc.get_generation(limit=12)
+    ok &= _report(
+        "quebec generation recent",
+        len(qc_gen.points) >= 1 and qc_gen.points[-1].hydro_mw is not None,
+        f"latest {qc_gen.points[-1].timestamp}, shares {qc_gen.average_share_percent}",
+    )
+    qc_gen_hist = await client_qc.get_generation("history", "2025-06-01", "2025-06-01", limit=24)
+    ok &= _report(
+        "quebec generation history",
+        len(qc_gen_hist.points) >= 23,
+        f"{len(qc_gen_hist.points)} rows",
+    )
+    qc_trade = await client_qc.get_trade(limit=6)
+    ok &= _report(
+        "quebec trade",
+        len(qc_trade.points) == 6 and "ontario" in qc_trade.points[-1].net_exports_mw,
+        f"latest {qc_trade.points[-1].timestamp}, "
+        f"exports {qc_trade.points[-1].exports_total_mw} MW",
+    )
+    qc_trade_range = await client_qc.get_trade("2026-09-28", "2026-09-28", limit=24)
+    ok &= _report("quebec trade date range", len(qc_trade_range.points) >= 1, "ok")
 
     for label, coro in (
         ("missing dated file", client.get_zonal_prices("day_ahead", "2020-01-01")),

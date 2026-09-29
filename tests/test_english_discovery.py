@@ -57,6 +57,8 @@ CASES = [
     ("Edmonton crime occurrences", "eps_list_occurrences"),
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
     ("Ontario electricity demand by hour", "electricity_ontario_get_hourly_demand"),
+    ("Hydro-Quebec electricity demand right now", "electricity_quebec_get_demand"),
+    ("Quebec electricity exports to New York", "electricity_quebec_get_trade"),
     ("Ontario generation mix nuclear wind gas", "electricity_ontario_get_supply_by_fuel"),
     ("wildfire burned area by year", "nrcan_nbac_query_fires"),
     ("patented medicine prices", "pmprb_search_patented_medicines"),

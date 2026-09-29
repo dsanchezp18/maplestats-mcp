@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -155,4 +155,64 @@ class IntertieFlows(BaseModel):
     total_mean_actual_flow_mw: float | None
     sign_convention: str
     created_at: str | None
+    provenance: Provenance
+
+
+QuebecDataset = Literal["recent", "history"]
+
+
+class QuebecDemandPoint(BaseModel):
+    timestamp: datetime = Field(description="Interval timestamp, UTC.")
+    demand_mw: float | None
+
+
+class QuebecDemand(BaseModel):
+    dataset: QuebecDataset
+    interval: str
+    points: list[QuebecDemandPoint]
+    rows_matched: int
+    latest_timestamp: datetime | None
+    latest_demand_mw: float | None
+    peak_demand_mw: float | None
+    average_demand_mw: float | None
+    provenance: Provenance
+
+
+class QuebecGenerationPoint(BaseModel):
+    timestamp: datetime = Field(description="Interval timestamp, UTC.")
+    total_mw: float | None
+    hydro_mw: float | None
+    wind_mw: float | None
+    solar_mw: float | None
+    thermal_mw: float | None
+    other_mw: float | None
+
+
+class QuebecGeneration(BaseModel):
+    dataset: QuebecDataset
+    points: list[QuebecGenerationPoint]
+    rows_matched: int
+    average_share_percent: dict[str, float] = Field(
+        description="Mean share of each source in the mean total, over the matched rows."
+    )
+    provenance: Provenance
+
+
+class QuebecTradePoint(BaseModel):
+    timestamp: datetime = Field(description="Hour timestamp, UTC.")
+    exports_total_mw: float | None = Field(
+        description="Sum of the markets with positive net flow (verified on 48 live rows)."
+    )
+    net_exports_mw: dict[str, float | None] = Field(
+        description="Per market; negative means Quebec is a net importer from it."
+    )
+    imports_mw: dict[str, float | None] = Field(description="Total imports per market.")
+    import_sources_mw: dict[str, dict[str, float | None]] = Field(
+        description="Imports per market by generation source (null where not reported)."
+    )
+
+
+class QuebecTrade(BaseModel):
+    points: list[QuebecTradePoint]
+    rows_matched: int
     provenance: Provenance

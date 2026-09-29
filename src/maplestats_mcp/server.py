@@ -245,7 +245,8 @@ Sources, by tool-name prefix:
 - Vancouver (Opendatasoft): opendatasoft_vancouver_. Newfoundland and
   Labrador: nl_opendata_. Edmonton: eps_ (police
   occurrences), ets_ (real-time transit), epcor_ (water quality).
-  Ontario electricity demand, generation mix and prices (IESO): electricity_ontario_.
+  Electricity demand, generation and prices: electricity_ontario_ (IESO),
+  electricity_quebec_ (Hydro-Quebec).
 
 Routing hints: many federal administrative series (IRCC permits, CRA
 tax statistics and charities, OSFI bank returns, ISED insolvency data)

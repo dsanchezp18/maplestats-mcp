@@ -2642,3 +2642,19 @@ but CC BY-NC 4.0; BC Hydro answers 403 to automated clients; NB Power
 gives no reuse permission; SaskPower and Nova Scotia Power expose no
 machine-readable feed.
 
+### Hydro-Québec (added 2026-09-29)
+
+Three `electricity_quebec_*` tools over Hydro-Québec's Opendatasoft open
+data (Explore API v2.1, no key). All datasets are CC BY-NC 4.0; the owner
+accepted the non-commercial terms, and each response repeats the notice.
+Timestamps are UTC instants. Recent demand is 192 fifteen-minute rows from
+local midnight of the previous day, with unreached slots as null rows;
+recent generation and trade are 48 hourly rows whose future hours are zero
+placeholders, so the client cuts off at the current time and filters nulls.
+Archives are not kept current: hourly demand 2019-01-01 to 2025-01-01,
+generation to 2026-01-01. `/records` caps `limit` at 100 and
+`offset + limit` at 10,000, so rows come from `/exports/json` and
+`/records?limit=0` supplies `total_count`. Negative per-market trade values
+are net imports, and Ontario's unknown import source is spelled
+`importations_sources_ontario_unknow` upstream.
+

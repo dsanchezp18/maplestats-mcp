@@ -25,3 +25,28 @@ MAX_LIMIT = 2000
 
 # Fuel column of the hourly output report -> snake_case key.
 CONTROL_ACTIONS_FUEL = "control_actions"
+
+# Hydro-Quebec open data (Opendatasoft, keyless). Terms: licence CC BY-NC 4.0
+# on every dataset used (catalogue `metas.default.license`, read 2026-09-29).
+QUEBEC_SOURCE = "electricity"
+QUEBEC_DATASETS_URL = "https://donnees.hydroquebec.com/api/explore/v2.1/catalog/datasets"
+QUEBEC_LICENCE = (
+    "Hydro-Quebec open data, licence CC BY-NC 4.0 "
+    "(https://creativecommons.org/licenses/by-nc/4.0/): credit Hydro-Quebec; "
+    "non-commercial use only."
+)
+# Dataset ids. "recent" is the rolling two-day window; "history" is the archive.
+QUEBEC_DEMAND_DATASETS = {
+    "recent": "demande-electricite-quebec",
+    "history": "historique-demande-electricite-quebec",
+}
+QUEBEC_GENERATION_DATASETS = {
+    "recent": "production-electricite-quebec",
+    "history": "historique-production-electricite-quebec",
+}
+QUEBEC_TRADE_DATASET = "importations-exportations-avec-transits"
+QUEBEC_TRADE_MARKETS = ("newengland", "newbrunswick", "newyork", "ontario")
+QUEBEC_TRADE_SOURCES = ("gas", "nuclear", "unknown", "wind", "hydro")
+
+QUEBEC_CACHE_TTL_RECENT_SECONDS = 5 * 60
+QUEBEC_CACHE_TTL_HISTORY_SECONDS = 6 * 60 * 60

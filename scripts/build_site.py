@@ -352,12 +352,12 @@ SOURCES: dict[str, Source] = {
         domain="environment",
     ),
     "electricity": Source(
-        "Ontario electricity system (IESO)",
-        "Réseau d'électricité de l'Ontario (SIERE)",
+        "Electricity: Ontario (IESO) and Quebec (Hydro-Québec)",
+        "Électricité : Ontario (SIERE) et Québec (Hydro-Québec)",
         "provincial",
-        "IESO",
-        "SIERE",
-        places=("ON",),
+        "IESO, Hydro-Québec",
+        "SIERE, Hydro-Québec",
+        places=("ON", "QC"),
         row="provincial_agency",
     ),
     "elections_financial_returns": Source(

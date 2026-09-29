@@ -362,6 +362,7 @@ TOPICS: tuple[Topic, ...] = (
         (
             PlanStep("cer_list_datasets", "CER pipeline throughput, exports and tolls"),
             PlanStep("electricity_ontario_get_hourly_demand", "Ontario electricity demand (IESO)"),
+            PlanStep("electricity_quebec_get_demand", "Quebec electricity demand (Hydro-Quebec)"),
             PlanStep("aer_get_production_volumes_link", "Alberta production volumes"),
             PlanStep("nrcan_energy_use_list_products", "energy use by sector and province"),
             PlanStep("wds_search_cubes", "StatCan energy supply and disposition tables"),

@@ -1,4 +1,4 @@
-"""MCP tools for Ontario electricity system data (IESO public reports)."""
+"""MCP tools for electricity data: Ontario (IESO) and Quebec (Hydro-Quebec)."""
 
 from __future__ import annotations
 
@@ -6,13 +6,17 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.electricity import client
+from maplestats_mcp.modules.electricity import client, quebec_client
 from maplestats_mcp.modules.electricity.schemas import (
     AdequacyOutlook,
     HoepHistory,
     HourlyDemand,
     IntertieFlows,
     PriceMarket,
+    QuebecDataset,
+    QuebecDemand,
+    QuebecGeneration,
+    QuebecTrade,
     RealtimeDemand,
     SupplyByFuel,
     ZonalPrices,
@@ -171,3 +175,76 @@ async def electricity_ontario_get_intertie_flows(
     Québec, Manitoba, New York, flux, échanges d'électricité, interprovincial.
     """
     return await client.get_intertie_flows(date, lang=lang)
+
+
+@tool
+async def electricity_quebec_get_demand(
+    dataset: QuebecDataset = "recent",
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 48,
+    lang: Lang = "en",
+) -> QuebecDemand:
+    """Quebec electricity demand in MW from Hydro-Quebec open data.
+
+    `dataset="recent"`: 15-minute total demand for about two local days (the
+    latest `limit` reached intervals, or a UTC date range). `dataset="history"`:
+    hourly average MW from 2019-01-01 to 2025-01-01 only. Timestamps are UTC.
+    Licence CC BY-NC 4.0: credit Hydro-Quebec, non-commercial use only.
+    Use for: how much electricity Quebec is using now, Quebec peak demand,
+    Hydro-Quebec load history, winter peaks.
+    Keywords: Quebec, Hydro-Quebec, electricity demand, load, MW, peak
+    demand, 15-minute, hourly, open data, power grid, consumption.
+    Mots-clés : Québec, Hydro-Québec, demande d'électricité, charge, MW,
+    pointe, 15 minutes, horaire, données ouvertes, réseau, consommation.
+    """
+    return await quebec_client.get_demand(dataset, start_date, end_date, limit, lang=lang)
+
+
+@tool
+async def electricity_quebec_get_generation(
+    dataset: QuebecDataset = "recent",
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 48,
+    lang: Lang = "en",
+) -> QuebecGeneration:
+    """Quebec electricity generation by source (hydro, wind, solar, thermal, other) in MW.
+
+    `dataset="recent"`: hourly for about two local days; `dataset="history"`:
+    hourly from 2019-01-01 to 2026-01-01 only. Includes each source's mean
+    share over the returned rows. Timestamps are UTC. Licence CC BY-NC 4.0:
+    credit Hydro-Quebec, non-commercial use only.
+    Use for: Quebec generation mix, hydroelectric output, wind share,
+    thermal generation in Quebec.
+    Keywords: Quebec, Hydro-Quebec, generation, supply, hydroelectric, wind,
+    solar, thermal, energy mix, MW, open data, sources of electricity.
+    Mots-clés : Québec, Hydro-Québec, production d'électricité, hydraulique,
+    éolien, solaire, thermique, bouquet énergétique, MW, sources d'électricité.
+    """
+    return await quebec_client.get_generation(dataset, start_date, end_date, limit, lang=lang)
+
+
+@tool
+async def electricity_quebec_get_trade(
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 48,
+    lang: Lang = "en",
+) -> QuebecTrade:
+    """Quebec hourly electricity exports and imports by market (incl. wheel-through).
+
+    Net exports (negative = net import) for New England, New Brunswick, New York
+    and Ontario, imports per market and imports by source (gas, nuclear, wind,
+    hydro, unknown). About two local days; hours not yet reached are excluded.
+    Timestamps are UTC. Licence CC BY-NC 4.0: credit Hydro-Quebec,
+    non-commercial use only.
+    Use for: Quebec electricity exports, imports from Ontario or New York,
+    interprovincial and cross-border power trade.
+    Keywords: Quebec, Hydro-Quebec, exports, imports, electricity trade,
+    New England, New Brunswick, New York, Ontario, wheel-through, interties.
+    Mots-clés : Québec, Hydro-Québec, exportations, importations, commerce
+    d'électricité, Nouvelle-Angleterre, Nouveau-Brunswick, New York, Ontario,
+    transits, interconnexions.
+    """
+    return await quebec_client.get_trade(start_date, end_date, limit, lang=lang)
