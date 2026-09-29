@@ -15,7 +15,7 @@
   <div class="hero-logo">{{> logo}}</div>
   <div class="hero-text">
     <h1>{en}One Canadian data server to rule them all.{fr}Un serveur de données canadiennes pour les gouverner tous.{/}</h1>
-    <p class="lede">{en}MapleStats is one MCP server for publicly available Canadian data. MCP, the Model Context Protocol, is the open standard AI agents use to reach outside tools and data. Connect MapleStats to your AI agent to get statistics and reports, each with its source, from {{source_count}} sources, including Statistics Canada, the Bank of Canada and CMHC. Never worry about Canadian data retrieval again: focus on what actually matters to you.{fr}MapleStats est un seul serveur MCP pour les données canadiennes accessibles au public. Le MCP (Model Context Protocol) est la norme ouverte qu'utilisent les agents IA pour accéder à des outils et à des données externes. Connectez MapleStats à votre agent IA pour obtenir des statistiques et des rapports, chacun avec sa source, tirés de {{source_count}} sources, dont Statistique Canada, la Banque du Canada et la SCHL. Ne vous souciez plus de trouver des données canadiennes : concentrez-vous sur ce qui compte vraiment pour vous.{/}</p>
+    <p class="lede">{en}Canadian data lives in dozens of places. MapleStats puts {{source_count}} of them behind one connection, so your AI agent can find, fetch and cite the numbers while you focus on what they mean.{fr}Les données canadiennes se trouvent en des dizaines d'endroits. MapleStats en réunit {{source_count}} derrière une seule connexion, pour que votre agent IA trouve, récupère et cite les chiffres pendant que vous vous concentrez sur ce qu'ils signifient.{/}</p>
     <p class="lang-ask">{en}Looking for the French version? <a href="{{alt_href}}" hreflang="fr" lang="fr">Lisez-le en français.</a>{fr}Vous cherchez la version anglaise ? <a href="{{alt_href}}" hreflang="en" lang="en">Read it in English.</a>{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
@@ -167,8 +167,8 @@
         <figure class="ex">
           <figcaption class="ex-head"><code>call_tool</code><span>{en}Recorded {{captured_on}}{fr}Enregistré le {{captured_on}}{/}</span></figcaption>
           <div class="ex-part ex-ask">
-            <p class="ex-label">{en}Request{fr}Requête{/}</p>
-            <pre class="ex-json"><code>{{call_request}}</code></pre>
+            <p class="ex-label">{en}Prompt{fr}Demande{/}</p>
+            <p class="ex-question">{en}What is the Bank of Canada's overnight rate?{fr}Quel est le taux cible du financement à un jour de la Banque du Canada ?{/}</p>
           </div>
           <div class="ex-split">{{call_result}}</div>
           <details class="ex-raw">
@@ -187,8 +187,8 @@
         <figure class="ex">
           <figcaption class="ex-head"><code>reproduce_code</code><span>{en}Run when this page was built{fr}Exécuté à la construction de la page{/}</span></figcaption>
           <div class="ex-part ex-ask">
-            <p class="ex-label">{en}Request{fr}Requête{/}</p>
-            <pre class="ex-json"><code>{{reproduce_request}}</code></pre>
+            <p class="ex-label">{en}Prompt{fr}Demande{/}</p>
+            <p class="ex-question">{en}Write me a script that fetches this, so I can rerun it myself.{fr}Écrivez-moi un script qui va chercher ces données, pour que je puisse le relancer moi-même.{/}</p>
           </div>
           {{reproduce_tabs}}
         </figure>
@@ -223,7 +223,7 @@
 <section class="section home-square" id="one-mcp">
   <div class="wrap">
     <figure class="home-square-fig">{{chart_square}}</figure>
-    <h2 class="home-square-title">{en}Ask once. Reach every source.{fr}Une question. Toutes les sources.{/}</h2>
+    <h2 class="home-square-title">{en}Every source. One server.{fr}Toutes les sources. Un seul serveur.{/}</h2>
     <p class="source-links"><a href="{{root}}cases.html">{en}See what people asked it{fr}Voir ce qu'on lui a demandé{/}</a><a href="{{root}}connect.html">{en}Connect it to your agent{fr}Connectez-le à votre agent{/}</a></p>
   </div>
 </section>

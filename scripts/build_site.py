@@ -1635,14 +1635,8 @@ def install_context(lang: Lang) -> dict[str, str]:
 
 def captured_call(lang: Lang) -> dict[str, str]:
     call = policy_rate_call()
-    request = json.dumps({"name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False)
-    reproduce_request = json.dumps(
-        {"tool_name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False
-    )
     when = long_date(load_case(POLICY_RATE)["captured"], lang)
     return {
-        "call_request": highlight_json(request),
-        "reproduce_request": highlight_json(reproduce_request),
         "call_response": response_html(call["response"]),
         "call_result": call_result(call["response"], lang),
         "captured_on": when,
