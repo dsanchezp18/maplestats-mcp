@@ -622,11 +622,11 @@ def test_every_chart_is_followed_by_its_data(built_site: Path):
     for page in (built_site / "cases.html", built_site / "fr" / "cases.html"):
         text = page.read_text(encoding="utf-8")
         charts = re.findall(r'<svg\b[^>]*class="chart[^"]*"[^>]*>', text)
-        # Nine charts; all but the square are drawn twice (wide and narrow, see
+        # Ten charts; all but the square are drawn twice (wide and narrow, see
         # site_charts.responsive), and every drawing links the same table.
         wide = [svg for svg in charts if "chart-narrow" not in svg]
-        assert len(wide) == 9, page
-        assert len({re.search(r'aria-details="([^"]+)"', s).group(1) for s in wide}) == 9  # type: ignore[union-attr]
+        assert len(wide) == 10, page
+        assert len({re.search(r'aria-details="([^"]+)"', s).group(1) for s in wide}) == 10  # type: ignore[union-attr]
         for svg in charts:
             ident = re.search(r'aria-details="([^"]+)"', svg)
             assert ident, svg[:80]

@@ -275,6 +275,17 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"vector_ids": [111955442], "latest_n": 104},
         },
     ],
+    # Wealth managers: who puts money into an RRSP. Statistics Canada table
+    # 11-10-0044 (built from Canada Revenue Agency tax records): Canada, the
+    # last three tax years, for contributors, dollars, the median and the
+    # share of dollars by contributor age (members 27 to 32 of dimension 2).
+    "rrsp": [
+        {
+            "name": "wds_get_data_from_cube_coord",
+            "arguments": {"product_id": 11100044, "coordinate": f"1.{member}", "latest_n": 3},
+        }
+        for member in (4, 21, 22, 27, 28, 29, 30, 31, 32)
+    ],
     # The home page's prompt card: five plain questions, five different
     # publishers. The credit-card answer is worked out from the "cards" case.
     "prompts": [

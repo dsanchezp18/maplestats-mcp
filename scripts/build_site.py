@@ -1698,7 +1698,7 @@ _VAR = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 # --------------------------------------------------------------------------
 
 CASES_DIR = SITE / "_data" / "cases"
-CASE_KEYS = ("pumf", "ircc", "housing", "micro", "cards", "curve", "patents", "boc")
+CASE_KEYS = ("pumf", "ircc", "housing", "micro", "cards", "rrsp", "curve", "patents", "boc")
 
 
 def _load_charts() -> Any:
@@ -2145,6 +2145,84 @@ def cards_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
         "cards_rate_rewards": esc(percent(median([c["purchase_rate"] for c in rewards]), lang, 2)),
         "cards_rate_plain": esc(percent(median([c["purchase_rate"] for c in plain]), lang, 2)),
         "source_cards": call_source(response, lang),
+    }
+
+
+def rrsp_source(response: Any, lang: Lang) -> str:
+    """Source line naming the table (11-10-0044) and linking its Statistics Canada page."""
+    when = long_date(response["provenance"]["queried_at"], lang)
+    en = lang == "en"
+    url = f"https://www150.statcan.gc.ca/t1/tbl1/{'en' if en else 'fr'}/tv.action?pid=1110004401"
+    return (
+        f'<span class="case-source">{"Source:" if en else f"Source{NBSP}:"} '
+        f"{'Statistics Canada' if en else 'Statistique Canada'}, "
+        f'<a href="{url}">{"table" if en else "tableau"} 11-10-0044</a>, '
+        f"{'queried' if en else 'interrogée le'} {when}</span>"
+    )
+
+
+def rrsp_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
+    en = lang == "en"
+    # Each call is one series of table 11-10-0044, Canada; the last observation is the newest year.
+    latest = {
+        call["arguments"]["coordinate"]: max(
+            call["response"]["observations"], key=lambda o: o["ref_period"]
+        )
+        for call in case["calls"]
+    }
+    contributors = latest["1.4"]["value"]
+    # Total contributions are published in thousands of dollars (scalar factor 3).
+    total = latest["1.21"]["value"] * 10 ** latest["1.21"]["scalar_factor_code"]
+    median = latest["1.22"]["value"]
+    year = latest["1.4"]["ref_period"][:4]
+    names = (
+        ["Under 25", "25 to 34", "35 to 44", "45 to 54", "55 to 64", "65 and over"]
+        if en
+        else [
+            "Moins de 25 ans",
+            "25 à 34 ans",
+            "35 à 44 ans",
+            "45 à 54 ans",
+            "55 à 64 ans",
+            "65 ans et plus",
+        ]
+    )
+    shares = [latest[f"1.{member}"]["value"] for member in range(27, 33)]
+    rows = list(zip(names, shares, strict=True))
+    label = (
+        f"Share of RRSP contributions by the age of the contributor, Canada, {year} tax year"
+        if en
+        else f"Part des cotisations à un REER selon l'âge du cotisant, Canada, année d'imposition {year}"
+    )
+    older = sum(shares[3:])
+    peak_name, peak_share = max(rows, key=lambda row: row[1])
+    billions = total / 1e9
+    return {
+        "chart_rrsp": chart_table(
+            charts.hbar_chart(
+                rows,
+                label=label,
+                value_format=lambda v: percent(v, lang, 0),
+                log=False,
+            ),
+            "rrsp",
+            lang,
+            label,
+            ("Age group", "Share of contributions")
+            if en
+            else ("Groupe d'âge", "Part des cotisations"),
+            [[name, percent(share, lang, 0)] for name, share in rows],
+        ),
+        "count_rrsp": number(contributors, lang),
+        "rrsp_total": esc(
+            f"${number(billions, lang, 1)} billion" if en else f"{number(billions, lang, 1)} G$"
+        ),
+        "rrsp_median": esc(dollars(median, lang)),
+        "rrsp_year": year,
+        "rrsp_older": esc(percent(older, lang, 0)),
+        "rrsp_peak_name": esc(peak_name.lower() if en else peak_name),
+        "rrsp_peak_share": esc(percent(peak_share, lang, 0)),
+        "source_rrsp": rrsp_source(case["calls"][0]["response"], lang),
     }
 
 
@@ -2768,6 +2846,7 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
         "housing": housing_context,
         "micro": micro_context,
         "cards": cards_context,
+        "rrsp": rrsp_context,
         "curve": curve_context,
         "patents": patents_context,
         "boc": boc_context,

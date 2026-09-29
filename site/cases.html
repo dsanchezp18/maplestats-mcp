@@ -92,6 +92,21 @@
   </div>
 </section>
 
+<section class="wrap stanza" id="wealth-managers">
+  <div class="stanza-text">
+    <div class="stanza-verse">
+      <p class="verse-count">{{count_rrsp}}</p>
+      <p class="verse-line">{en}RRSP contributors for the wealth managers, who advise on the years still ahead,{fr}cotisants à un REER pour les gestionnaires de patrimoine, qui conseillent sur les années à venir,{/}</p>
+    </div>
+    <h2>{en}Who funds the RRSP{fr}Qui alimente le REER{/}</h2>
+    <p>{en}For the {{rrsp_year}} tax year, {{count_rrsp}} tax filers put {{rrsp_total}} into a registered retirement savings plan, with a median contribution of {{rrsp_median}}. This chart splits those dollars by the age of the contributor. {{rrsp_older}} of the money comes from people aged 45 and over, and the largest share, {{rrsp_peak_share}}, from those aged {{rrsp_peak_name}}. The figures come from Statistics Canada's table 11-10-0044, built from Canada Revenue Agency tax records, and Statistics Canada publishes the age shares rounded to whole percentages. The same table breaks them down by province and city.{fr}Pour l'année d'imposition {{rrsp_year}}, {{count_rrsp}} déclarants ont versé {{rrsp_total}} dans un régime enregistré d'épargne-retraite, avec une cotisation médiane de {{rrsp_median}}. Le graphique répartit ces dollars selon l'âge du cotisant. {{rrsp_older}} de l'argent vient de personnes de 45 ans et plus, et la plus grande part, {{rrsp_peak_share}}, des personnes de {{rrsp_peak_name}}. Les chiffres viennent du tableau 11-10-0044 de Statistique Canada, tiré des dossiers fiscaux de l'Agence du revenu du Canada, et Statistique Canada publie les parts par âge arrondies au pourcentage entier. Le même tableau les détaille par province et par ville.{/}</p>
+  </div>
+  <div class="stanza-body">
+    <figure class="chart-wrap">{{chart_rrsp}}<figcaption>{{source_rrsp}}</figcaption></figure>
+    {{how_rrsp}}
+  </div>
+</section>
+
 <section class="wrap stanza" id="macroeconomists">
   <div class="stanza-text">
     <div class="stanza-verse">
