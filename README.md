@@ -163,6 +163,7 @@ server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 | `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it |
 | `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Response cache size per TTL bucket |
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
+| `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
 

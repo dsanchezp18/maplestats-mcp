@@ -21,3 +21,6 @@ services:
       # Render's proxy sets X-Forwarded-For, so per-client rate limits work.
       - key: MAPLE_TRUST_PROXY_HEADERS
         value: "1"
+      # PUMF tabulation downloads whole ZIPs; the free disk does not persist.
+      - key: MAPLE_PUMF_TABULATE
+        value: "0"

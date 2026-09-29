@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp import config
 from maplestats_mcp.modules.statcan.pumf import client, constants, tabulate
 from maplestats_mcp.modules.statcan.pumf.schemas import (
     Codebook,
@@ -92,44 +93,47 @@ async def statcan_pumf_get_codebook(
     return await client.get_codebook(url, query=query, lang=lang, limit=limit)
 
 
-@tool
-async def statcan_pumf_tabulate(
-    url: str,
-    rows: list[str],
-    statistic: Literal["total", "share", "mean"] = "total",
-    value_variable: str | None = None,
-    filters: dict[str, list[str]] | None = None,
-    weight: str | None = None,
-    data_file: str | None = None,
-    min_count: int = 30,
-    lang: Literal["en", "fr"] = "en",
-) -> WeightedTable:
-    """Compute a weighted table from PUMF microdata (totals, shares or means).
+# Left undefined when MAPLE_PUMF_TABULATE=0, so discovery never lists it.
+if config.get_pumf_tabulate_enabled():
 
-    Use for: population estimates from survey microdata, e.g. labour
-    force status by province from the LFS, or mean hourly earnings. rows
-    are up to 3 codebook variables to group by; filters keep only the
-    listed codes (e.g. {"PROV": ["48"]}); share gives percentages within
-    each group of all but the last row variable. Uses the survey weight
-    (default: the codebook's main weight) and returns unweighted counts,
-    flagging small cells. Standard errors and CVs come from the survey's
-    documented replicate weights where verified (2021 Census individuals).
-    The first call downloads the file (may take a minute or two; retry
-    if it times out).
-    Keywords: weighted estimate, tabulation, crosstab, microdata analysis,
-    survey weight, population estimate, PUMF, LFS.
-    Mots-clés : estimation pondérée, totalisation, tableau croisé,
-    microdonnées, poids d'enquête, estimation de population, FMGD,
-    Statistique Canada.
-    """
-    return await tabulate.tabulate(
-        url,
-        rows=rows,
-        statistic=statistic,
-        value_variable=value_variable,
-        filters=filters,
-        weight=weight,
-        data_file=data_file,
-        min_count=min_count,
-        lang=lang,
-    )
+    @tool
+    async def statcan_pumf_tabulate(
+        url: str,
+        rows: list[str],
+        statistic: Literal["total", "share", "mean"] = "total",
+        value_variable: str | None = None,
+        filters: dict[str, list[str]] | None = None,
+        weight: str | None = None,
+        data_file: str | None = None,
+        min_count: int = 30,
+        lang: Literal["en", "fr"] = "en",
+    ) -> WeightedTable:
+        """Compute a weighted table from PUMF microdata (totals, shares or means).
+
+        Use for: population estimates from survey microdata, e.g. labour
+        force status by province from the LFS, or mean hourly earnings. rows
+        are up to 3 codebook variables to group by; filters keep only the
+        listed codes (e.g. {"PROV": ["48"]}); share gives percentages within
+        each group of all but the last row variable. Uses the survey weight
+        (default: the codebook's main weight) and returns unweighted counts,
+        flagging small cells. Standard errors and CVs come from the survey's
+        documented replicate weights where verified (2021 Census individuals).
+        The first call downloads the file (may take a minute or two; retry
+        if it times out).
+        Keywords: weighted estimate, tabulation, crosstab, microdata analysis,
+        survey weight, population estimate, PUMF, LFS.
+        Mots-clés : estimation pondérée, totalisation, tableau croisé,
+        microdonnées, poids d'enquête, estimation de population, FMGD,
+        Statistique Canada.
+        """
+        return await tabulate.tabulate(
+            url,
+            rows=rows,
+            statistic=statistic,
+            value_variable=value_variable,
+            filters=filters,
+            weight=weight,
+            data_file=data_file,
+            min_count=min_count,
+            lang=lang,
+        )

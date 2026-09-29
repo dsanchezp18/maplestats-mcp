@@ -110,6 +110,17 @@ def get_pumf_cache_dir() -> Path:
     return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "pumf"
 
 
+def get_pumf_tabulate_enabled() -> bool:
+    """Whether statcan_pumf_tabulate is offered.
+
+    A small hosted instance sets MAPLE_PUMF_TABULATE=0: the tool downloads
+    whole PUMF ZIPs (30 to 534 MB) into a disk that free hosts lose on every
+    restart. Search, ZIP listings and codebooks need no disk and stay on.
+    """
+    raw = os.environ.get("MAPLE_PUMF_TABULATE", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def get_pumf_cache_max_bytes() -> int:
     """Cap on the PUMF cache; the least recently used files are removed past it."""
     raw = os.environ.get("MAPLE_PUMF_CACHE_MAX_GB", "5")
