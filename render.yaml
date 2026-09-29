@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: maplestats-mcp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Render sends traffic to port 10000 by default.
+      - key: MAPLE_PORT
+        value: "10000"
+      - key: MAPLE_HOST
+        value: "0.0.0.0"
+      - key: MAPLE_TRANSPORT
+        value: http
+      # Render generates the token once; read it in the dashboard (Environment).
+      - key: MAPLE_AUTH_TOKEN
+        generateValue: true
+      - key: MAPLE_REQUIRE_AUTH
+        value: "1"
+      # Render's proxy sets X-Forwarded-For, so per-client rate limits work.
+      - key: MAPLE_TRUST_PROXY_HEADERS
+        value: "1"
