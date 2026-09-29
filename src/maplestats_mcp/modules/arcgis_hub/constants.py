@@ -256,6 +256,54 @@ PORTALS: dict[str, Portal] = {
         ),
         downloads=False,
     ),
+    "brampton": Portal(
+        "geohub.brampton.ca",
+        "City of Brampton GeoHub",
+        "GeoHub de la Ville de Brampton",
+        note="Peel Region, Ontario. 352 datasets confirmed live 2026-09-29 (transit GTFS, imagery, layers).",
+    ),
+    "kingston": Portal(
+        "opendatakingston.cityofkingston.ca",
+        "Open Data Kingston",
+        "Données ouvertes de Kingston",
+        note="Ontario. 201 datasets confirmed live 2026-09-29.",
+    ),
+    "kelowna": Portal(
+        "opendata.kelowna.ca",
+        "Open Kelowna",
+        "Données ouvertes de Kelowna",
+        note="British Columbia. 133 datasets confirmed live 2026-09-29.",
+    ),
+    "barrie": Portal(
+        "opendata.barrie.ca",
+        "City of Barrie Open Data",
+        "Données ouvertes de la Ville de Barrie",
+        note="Ontario. 113 datasets confirmed live 2026-09-29.",
+    ),
+    "burnaby": Portal(
+        "data.burnaby.ca",
+        "City of Burnaby OpenData",
+        "Données ouvertes de la Ville de Burnaby",
+        note="British Columbia. 66 datasets confirmed live 2026-09-29.",
+    ),
+    "fredericton": Portal(
+        "data-fredericton.opendata.arcgis.com",
+        "City of Fredericton Open Data",
+        "Données ouvertes de la Ville de Fredericton",
+        note="New Brunswick. 66 datasets confirmed live 2026-09-29.",
+    ),
+    "greater_sudbury": Portal(
+        "opendata.greatersudbury.ca",
+        "City of Greater Sudbury Open Data",
+        "Données ouvertes du Grand Sudbury",
+        note="Ontario. 50 datasets confirmed live 2026-09-29.",
+    ),
+    "guelph": Portal(
+        "explore.guelph.ca",
+        "Guelph Open Data",
+        "Données ouvertes de Guelph",
+        note="Ontario. 41 datasets confirmed live 2026-09-29.",
+    ),
 }
 
 RATE_LIMIT_PER_SECOND = 2.0

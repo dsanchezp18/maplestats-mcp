@@ -361,6 +361,7 @@ TOPICS: tuple[Topic, ...] = (
         ),
         (
             PlanStep("cer_list_datasets", "CER pipeline throughput, exports and tolls"),
+            PlanStep("electricity_ontario_get_hourly_demand", "Ontario electricity demand (IESO)"),
             PlanStep("aer_get_production_volumes_link", "Alberta production volumes"),
             PlanStep("nrcan_energy_use_list_products", "energy use by sector and province"),
             PlanStep("wds_search_cubes", "StatCan energy supply and disposition tables"),
@@ -398,6 +399,9 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("eccc_query_items", "observations for a station or area"),
             PlanStep("nrcan_nbac_query_fires", "burned area by year (national)"),
             PlanStep("bcgw_get_active_wildfires", "current BC wildfires"),
+            PlanStep("cwfis_get_hotspots", "satellite fire hotspots, last 24 hours or archive"),
+            PlanStep("cwfis_get_weather_stations", "Fire Weather Index by station or point"),
+            PlanStep("cwfis_get_situation_report", "national wildfire situation and season totals"),
             PlanStep("earthquakes_search", "earthquakes by area and date"),
             PlanStep("dfo_iwls_get_water_levels", "tides and coastal water levels"),
         ),

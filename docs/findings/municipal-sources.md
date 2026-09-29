@@ -361,3 +361,24 @@ domain record with hostname = reddeer.opendata.arcgis.com does not
 exist" for every item, and `hub.arcgis.com` only reports an export
 "Pending" since 2024, so that portal is marked `downloads=False` and
 returns no links; its layers remain queryable.
+
+## Brampton, Kingston, Kelowna, Barrie, Burnaby, Fredericton, Greater Sudbury, Guelph
+
+Added config-only on 2026-09-29 after a probe of guessed ArcGIS Hub domains
+against `/api/search/v1/collections/dataset/items` (the older `/api/v3`
+endpoint answers with the global ArcGIS count for any host, so it cannot
+show whether a site exists). Datasets confirmed live: Brampton 352
+(`geohub.brampton.ca`), Kingston 201 (`opendatakingston.cityofkingston.ca`),
+Kelowna 133 (`opendata.kelowna.ca`), Barrie 113 (`opendata.barrie.ca`),
+Burnaby 66 (`data.burnaby.ca`), Fredericton 66
+(`data-fredericton.opendata.arcgis.com`), Greater Sudbury 50
+(`opendata.greatersudbury.ca`), Guelph 41 (`explore.guelph.ca`). The smoke
+test passed for all eight (search, detail, feature query, CSV link).
+`plan_query` maps each city; Brampton now also lists the Peel portal.
+
+Guessed domains that returned 401, 400, 404 or did not resolve (Richmond,
+Vaughan, St. John's, Moncton, Nanaimo, Abbotsford, Delta, Whitehorse,
+Thunder Bay, Coquitlam, Langley, Kamloops, Brantford, Whitby, Oshawa, New
+Westminster, Saanich, Peterborough, Prince George, Niagara) are probably
+wrong domains, not confirmed absences.
+

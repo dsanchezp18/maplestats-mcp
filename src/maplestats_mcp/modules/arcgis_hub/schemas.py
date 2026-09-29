@@ -50,6 +50,14 @@ PortalKey = Literal[
     "oakville",
     "burlington",
     "milton",
+    "brampton",
+    "kingston",
+    "kelowna",
+    "barrie",
+    "burnaby",
+    "fredericton",
+    "greater_sudbury",
+    "guelph",
 ]
 
 

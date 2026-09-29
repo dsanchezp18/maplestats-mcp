@@ -2587,3 +2587,58 @@ already covered), not a new data-access route.
 
 Unlike the SDG hub's Open SDG GitHub Pages platform, none of these expose a
 discoverable public REST/JSON surface -- confirmed no new capability. |
+
+## Payments Canada
+
+Checked 2026-09-29 and not built. The organisation lives at payments.ca;
+paymentscanada.ca is a parked domain listed for sale. Its statistics are one
+HTML table of ACSS annual volumes and values by payment item (2021-2025,
+$000) and one PDF per year for Lynx. No API, CSV, XLSX or JSON exists in the
+sitemap (2,231 URLs) or on the pages. The Terms of Use (payments.ca/legal)
+section 2.4(i) prohibit using the site to "spider, crawl or scrape", and
+section 3.2 permits reproduction only unmodified, attributed and
+non-commercial, so no module was built. Bank of Canada Valet and Statistics
+Canada payment tables are the machine-readable alternatives.
+
+## CWFIS (NRCan Canadian Wildland Fire Information System)
+
+Shipped 2026-09-29 as `modules/cwfis/` (8 tools). The GeoServer behind
+`nrcan_nbac` also serves the hotspot layer (18.5 million rows since 1994,
+including US and Mexican detections, so `canada_only` defaults to true),
+daily fire-weather stations with the Fire Weather Index system, SCRIBE
+station forecasts, the national fire danger grid and the National Fire
+Database. Quirks confirmed live: spatial CQL matches only when the CRS is
+named (`BBOX(geom,x1,y1,x2,y2,'EPSG:4326')`); `DWITHIN` returned stations
+hundreds of kilometres away, so radius search is a bbox plus a haversine
+filter; the station layer has no primary key, so a paged query needs an
+explicit `sortBy`; a descending sort on `frp` puts NULLs first; station
+province codes are legacy (NF, SA) and names are space-padded; the NFDB
+layer is titled 1970-2024 but runs 1980-2023; fire danger grid code 4 is
+inferred as Extreme. The archive needs a date range, since an open side
+would scan up to 18.5 million rows. Situation reports come from
+`api.cwfif.nrcan.gc.ca/situationreports` (`limit` capped at 100, the `type`
+filter ignored, nothing before 1998); their numeric totals exist for
+1998-2023 only, and from 2024 the figures appear only in the narrative. No
+licence statement was found in the WFS, the API or the site bundle.
+
+## IESO electricity (Ontario)
+
+Shipped 2026-09-29 as `modules/electricity/`. IESO's public reports
+(`reports-public.ieso.ca/public`) are keyless static CSV and XML folders;
+the terms grant a limited licence to reproduce content with the IESO
+copyright notice. Hourly demand is one CSV per year since 2002 and
+generation by fuel one XML per year since 2015; both lag the clock by about
+a day. HOEP ended on 2025-05-01 with the market renewal (its folder is
+empty), so prices come from the Ontario Zonal Price reports: day-ahead
+files (tomorrow's appears about 12:30 EST) and 12 five-minute real-time
+intervals per delivery hour. Dated files are kept about three months. All
+hours are hour-ending in EST year-round, so daylight-saving days still
+have 24 rows. Fuel rows carry a negative count of unavailable points, 9
+fuel-hours lack a value, and a `CONTROL ACTIONS` pseudo-fuel is excluded
+from shares. The undated adequacy file is the furthest-out day (34 days
+ahead), not today. Other provinces, checked 2026-09-29: AESO's API needs a
+key and its site terms are non-commercial only; Hydro-Québec is keyless
+but CC BY-NC 4.0; BC Hydro answers 403 to automated clients; NB Power
+gives no reuse permission; SaskPower and Nova Scotia Power expose no
+machine-readable feed.
+

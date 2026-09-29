@@ -213,7 +213,7 @@ Sources, by tool-name prefix:
   returns: elections_financial_returns_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
-  nrcan_nbac_. CanadaBuys federal tenders and contract awards: canadabuys_.
+  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. CanadaBuys federal tenders and contract awards: canadabuys_.
   DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
   ab_economic_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
   household/commercial/industrial energy surveys): nrcan_energy_use_.
@@ -245,6 +245,7 @@ Sources, by tool-name prefix:
 - Vancouver (Opendatasoft): opendatasoft_vancouver_. Newfoundland and
   Labrador: nl_opendata_. Edmonton: eps_ (police
   occurrences), ets_ (real-time transit), epcor_ (water quality).
+  Ontario electricity demand, generation mix and prices (IESO): electricity_ontario_.
 
 Routing hints: many federal administrative series (IRCC permits, CRA
 tax statistics and charities, OSFI bank returns, ISED insolvency data)
