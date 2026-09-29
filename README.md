@@ -78,6 +78,21 @@ Website: <https://dsanchezp18.github.io/maplestats-mcp/>.
 Other clients and hosting: the
 [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page.
 
+## Hosted server (no install)
+
+A public copy runs at `https://maplestats-mcp.onrender.com/mcp`, with no account or
+key. It is on a free host: the first request after a quiet spell can take up to a
+minute, each client gets 60 requests a minute, and the microdata tabulation tool is
+switched off. For Claude Code:
+
+```bash
+claude mcp add --transport http --scope user maplestats https://maplestats-mcp.onrender.com/mcp
+```
+
+Other clients, and what the hosted server logs:
+[Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html#hosted) and the
+[FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#hosted).
+
 ## Install
 
 ```bash
