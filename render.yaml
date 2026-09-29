@@ -13,11 +13,15 @@ services:
         value: "0.0.0.0"
       - key: MAPLE_TRANSPORT
         value: http
-      # Render generates the token once; read it in the dashboard (Environment).
-      - key: MAPLE_AUTH_TOKEN
-        generateValue: true
+      # Public endpoint: no token. The server only reads public open data;
+      # the limits below (per client, from X-Forwarded-For) protect the free
+      # instance and the upstream government APIs.
       - key: MAPLE_REQUIRE_AUTH
-        value: "1"
+        value: "0"
+      - key: MAPLE_RATE_LIMIT_REQUESTS
+        value: "60"
+      - key: MAPLE_MAX_CONCURRENT_REQUESTS
+        value: "4"
       # Render's proxy sets X-Forwarded-For, so per-client rate limits work.
       - key: MAPLE_TRUST_PROXY_HEADERS
         value: "1"
