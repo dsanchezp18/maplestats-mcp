@@ -4836,3 +4836,9 @@ details.how > summary,
     flex-wrap: nowrap;
   }
 }
+
+/* The one-line hosted command wraps instead of scrolling out of view. */
+#hosted-1 {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -43,57 +43,50 @@ Website: <https://dsanchezp18.github.io/maplestats-mcp/>.
    commands on your computer.
 3. Restart the agent when it says so, then ask for data.
 
-> Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in https://github.com/dsanchezp18/maplestats-mcp
+> Connect the MapleStats MCP server to this agent. Follow the setup steps in https://github.com/dsanchezp18/maplestats-mcp
 
 ### Instructions for the agent doing the setup
 
-1. Make sure [uv](https://docs.astral.sh/uv/) is installed (`uv --version`);
-   if not, install it with the official installer from that page.
-2. The launch command is `uvx maplestats-mcp`. It fetches the release from
-   PyPI once and reuses it.
-3. Register it under the name `maplestats`:
-   - **Claude Code:** `claude mcp add --scope user maplestats -- uvx maplestats-mcp`
-   - **Codex CLI:** `codex mcp add maplestats -- uvx maplestats-mcp`
-   - **Cursor, Claude Desktop and other `mcpServers` clients:** add the
-     entry below to the client's config file (Cursor: `~/.cursor/mcp.json`;
-     Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
+The default is the hosted server: nothing to install, no account, no key.
+
+1. Register this remote (HTTP) MCP server under the name `maplestats`:
+   - **Claude Code:** `claude mcp add --transport http --scope user maplestats https://maplestats-mcp.onrender.com/mcp`
+   - **Cursor, Claude Desktop and other `mcpServers` clients:** add the entry
+     below to the client's config file (Cursor: `~/.cursor/mcp.json`; Claude
+     Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
      on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows),
-     keeping any servers already there.
-   - **VS Code:** the same entry under a `servers` key in `.vscode/mcp.json`.
+     keeping any servers already there. If the client only accepts custom
+     connectors (Claude Desktop, claude.ai), add `https://maplestats-mcp.onrender.com/mcp` as one.
+   - **VS Code:** the same entry under a `servers` key, with `"type": "http"`,
+     in `.vscode/mcp.json`.
 
    ```json
    {
      "mcpServers": {
        "maplestats": {
-         "command": "uvx",
-         "args": ["maplestats-mcp"]
+         "url": "https://maplestats-mcp.onrender.com/mcp"
        }
      }
    }
    ```
-4. The server speaks MCP over stdio and needs no API key, account or open
-   port. Tell the user to restart the client, then check that the
+2. Tell the user to restart or reload the client, then check that the
    `search_tools` tool is listed.
+3. Only if the client cannot use remote servers, or the user wants the
+   microdata tabulation tool or everything kept on their own machine, run it
+   locally instead: `claude mcp add --scope user maplestats -- uvx maplestats-mcp`
+   (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
+   maplestats-mcp` entry for other clients (see [Install](#install)).
 
-Other clients and hosting: the
-[Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page.
+The hosted server is a free instance: the first request after a quiet spell can
+take up to a minute, each client gets 60 requests a minute, and the microdata
+tabulation tool is switched off there. What it logs:
+[FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#hosted). Other
+clients: the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html)
+page.
 
-## Hosted server (no install)
+## Install locally (optional)
 
-A public copy runs at `https://maplestats-mcp.onrender.com/mcp`, with no account or
-key. It is on a free host: the first request after a quiet spell can take up to a
-minute, each client gets 60 requests a minute, and the microdata tabulation tool is
-switched off. For Claude Code:
-
-```bash
-claude mcp add --transport http --scope user maplestats https://maplestats-mcp.onrender.com/mcp
-```
-
-Other clients, and what the hosted server logs:
-[Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html#hosted) and the
-[FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#hosted).
-
-## Install
+Prefer to run it on your machine? It works over stdio with no account or key.
 
 ```bash
 uvx maplestats-mcp                 # run without installing

@@ -1594,8 +1594,8 @@ def long_date(iso: str, lang: Lang) -> str:
 # the README all show it word for word (tests/test_site.py checks), so a
 # reader meets the same sentence wherever they start.
 AGENT_PROMPT: dict[Lang, str] = {
-    "en": f"Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in {REPO}",
-    "fr": f"Installe le serveur MCP MapleStats et connecte-le à cet agent. Suis les étapes d'installation de {REPO}",
+    "en": f"Connect the MapleStats MCP server to this agent. Follow the setup steps in {REPO}",
+    "fr": f"Connecte le serveur MCP MapleStats à cet agent. Suis les étapes de {REPO}",
 }
 
 # Shown next to the install snippets while the package is not on PyPI.
@@ -4372,7 +4372,10 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         ),
         "",
         (
-            f"Install (stdio, no API key): `{UVX_COMMAND}`"
+            "Connect (hosted, no install, no API key): "
+            "`claude mcp add --transport http --scope user maplestats "
+            "https://maplestats-mcp.onrender.com/mcp`, or add that address as a remote MCP "
+            f"server. Or run it locally (stdio): `{UVX_COMMAND}`"
             + ("" if ON_PYPI else " (from GitHub until the first PyPI release)")
             + f". Setup steps for an agent, per client: {REPO}#the-easiest-way-ask-your-agent"
         ),
