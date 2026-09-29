@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}FAQ and licences{fr}FAQ et licences{/} · MapleStats MCP</title>
+<meta name="description" content="{en}Whether MapleStats saves your queries, what it sends and to whom, and the licences that apply to the code and to the data.{fr}Si MapleStats conserve vos requêtes, ce qu'il envoie et à qui, et les licences qui s'appliquent au code et aux données.{/}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}FAQ and licences{fr}FAQ et licences{/}</p>
+  <h1>{en}Questions people ask{fr}Les questions qu'on nous pose{/}</h1>
+  <p class="lede">{en}Short answers about your queries, the data and what you may do with it. Last updated September 29, 2026.{fr}De courtes réponses sur vos requêtes, sur les données et sur ce que vous pouvez en faire. Dernière mise à jour : 29 septembre 2026.{/}</p>
+</section>
+
+<section class="wrap faq" id="faq">
+  <details class="faq-item" id="queries" open>
+    <summary>{en}Does MapleStats save my queries?{fr}MapleStats conserve-t-il mes requêtes ?{/}</summary>
+    <p>{en}No. The server runs on your computer, and I do not receive your questions, your tool calls or your results. The code has no telemetry, no account and no analytics. Its console log, which stays on your machine, shows the start-up and the web requests it makes to publishers; your AI client may keep that log.{fr}Non. Le serveur s'exécute sur votre ordinateur, et je ne reçois ni vos questions, ni vos appels d'outils, ni vos résultats. Le code n'a ni télémétrie, ni compte, ni analytique. Son journal de console, qui reste sur votre machine, montre le démarrage et les requêtes web qu'il adresse aux éditeurs; votre client IA peut conserver ce journal.{/}</p>
+    <p>{en}Two things are kept on your machine to save time: an in-memory copy of recent responses, gone when the server stops, and the microdata and patent tables you download, kept in a cache folder you choose. Neither holds your questions.{fr}Deux choses sont conservées sur votre machine pour gagner du temps : une copie en mémoire des réponses récentes, qui disparaît à l'arrêt du serveur, et les tableaux de microdonnées et de brevets que vous téléchargez, gardés dans un dossier de cache que vous choisissez. Aucune ne contient vos questions.{/}</p>
+  </details>
+
+  <details class="faq-item" id="who-sees">
+    <summary>{en}Who sees my questions, then?{fr}Qui voit alors mes questions ?{/}</summary>
+    <p>{en}Two parties. The AI assistant you use handles your conversation under its own privacy policy. And when a tool runs, your computer calls the publisher's service directly, so Statistics Canada, the Bank of Canada or a city's portal sees that request and your IP address, as with any web page. MapleStats sits in between and keeps nothing.{fr}Deux parties. L'assistant IA que vous utilisez traite votre conversation selon sa propre politique de confidentialité. Et quand un outil s'exécute, votre ordinateur appelle directement le service de l'éditeur : Statistique Canada, la Banque du Canada ou le portail d'une ville voit cette requête et votre adresse IP, comme pour toute page web. MapleStats se trouve entre les deux et ne garde rien.{/}</p>
+  </details>
+
+  <details class="faq-item" id="hosted">
+    <summary>{en}Is there a hosted MapleStats I connect to?{fr}Existe-t-il un MapleStats hébergé auquel me connecter ?{/}</summary>
+    <p>{en}Not yet. Today MapleStats runs on your machine over stdio, with no account or API key. If you host it yourself over HTTP, what gets logged is up to your deployment: the server's usual access log records the request path and the client address, not the tool arguments. If I open a public endpoint, this page will say what it logs before it goes live.{fr}Pas encore. Aujourd'hui, MapleStats s'exécute sur votre machine par stdio, sans compte ni clé d'API. Si vous l'hébergez vous-même en HTTP, ce qui est journalisé dépend de votre déploiement : le journal d'accès habituel du serveur note le chemin de la requête et l'adresse du client, pas les arguments des outils. Si j'ouvre un point d'accès public, cette page dira ce qu'il journalise avant sa mise en service.{/}</p>
+  </details>
+
+  <details class="faq-item" id="fresh">
+    <summary>{en}How fresh is the data?{fr}Les données sont-elles à jour ?{/}</summary>
+    <p>{en}It comes live from the publisher, kept for a short time in memory. Each result says where it came from, when it was queried and any limits, in its <code>provenance</code> block.{fr}Elle vient en direct de l'éditeur, gardée un court moment en mémoire. Chaque résultat indique sa provenance, le moment de la requête et ses limites, dans son bloc <code>provenance</code>.{/}</p>
+  </details>
+
+  <details class="faq-item" id="check">
+    <summary>{en}Can I check a number without trusting the agent?{fr}Puis-je vérifier un chiffre sans faire confiance à l'agent ?{/}</summary>
+    <p>{en}Yes. Ask for the script: <code>reproduce_code</code> writes R, Python, Stata or Julia code that fetches the same data straight from the source, and every result links to the publisher's page.{fr}Oui. Demandez le script : <code>reproduce_code</code> écrit du code R, Python, Stata ou Julia qui va chercher les mêmes données directement à la source, et chaque résultat renvoie à la page de l'éditeur.{/}</p>
+  </details>
+
+  <details class="faq-item" id="clients">
+    <summary>{en}Which AI tools work with it?{fr}Avec quels outils IA fonctionne-t-il ?{/}</summary>
+    <p>{en}Any client that speaks MCP, including Claude, Codex and Cursor. The <a href="{{root}}connect.html">Connect</a> page has the steps.{fr}Tout client qui parle MCP, dont Claude, Codex et Cursor. La page <a href="{{root}}connect.html">Connexion</a> donne les étapes.{/}</p>
+  </details>
+
+  <details class="faq-item" id="wrong">
+    <summary>{en}Something is wrong or missing. What do I do?{fr}Il y a une erreur ou un oubli. Que faire ?{/}</summary>
+    <p>{en}Open an issue on <a href="{{repo}}/issues">GitHub</a> with the question and the source URL from the result. The <a href="{{root}}contributing.html">Contribute</a> page explains what helps most.{fr}Ouvrez un ticket sur <a href="{{repo}}/issues">GitHub</a> avec la question et l'URL de la source du résultat. La page <a href="{{root}}contributing.html">Contribuer</a> explique ce qui aide le plus.{/}</p>
+  </details>
+</section>
+
+<section class="wrap faq" id="licences">
+  <h2 class="contrib-h">{en}Licences and reuse{fr}Licences et réutilisation{/}</h2>
+  <p>{en}MapleStats MCP is independent. It is not affiliated with or endorsed by Statistics Canada, the Bank of Canada, CMHC or any government.{fr}MapleStats MCP est indépendant. Il n'est ni affilié à Statistique Canada, à la Banque du Canada, à la SCHL ou à un gouvernement, ni approuvé par eux.{/}</p>
+
+  <h3>{en}The code{fr}Le code{/}</h3>
+  <p>{en}The server, the scripts and the source of this website are under the <a href="{{repo}}/blob/main/LICENSE">MIT licence</a>. You may use, copy, change and share them, including commercially, if you keep the licence notice.{fr}Le serveur, les scripts et le code source de ce site sont sous la <a href="{{repo}}/blob/main/LICENSE">licence MIT</a>. Vous pouvez les utiliser, les copier, les modifier et les partager, y compris à des fins commerciales, en conservant l'avis de licence.{/}</p>
+
+  <h3>{en}The data{fr}Les données{/}</h3>
+  <p>{en}The MIT licence covers the code, not the data. The data belongs to the agencies and portals that publish it, and their terms apply to it. Many publish under an open government licence, such as the Open Government Licence – Canada or the Statistics Canada Open Licence, but the terms differ by publisher and dataset, and a few sources carry their own conditions. Each result's <code>provenance</code> block names the publisher and links to the source, so you can read the terms that apply before you reuse a number.{fr}La licence MIT couvre le code, pas les données. Les données appartiennent aux organismes et aux portails qui les publient, et leurs conditions s'y appliquent. Beaucoup publient sous une licence gouvernementale ouverte, comme la Licence du gouvernement ouvert – Canada ou la Licence ouverte de Statistique Canada, mais les conditions varient selon l'éditeur et le jeu de données, et quelques sources ont leurs propres conditions. Le bloc <code>provenance</code> de chaque résultat nomme l'éditeur et renvoie à la source, pour que vous lisiez les conditions applicables avant de réutiliser un chiffre.{/}</p>
+
+  <h3>{en}Crediting{fr}Citer{/}</h3>
+  <p>{en}When you publish a number, credit the publisher named in the result, not MapleStats. A mention of MapleStats as the route you took is welcome but not required.{fr}Quand vous publiez un chiffre, citez l'éditeur nommé dans le résultat, pas MapleStats. Mentionner MapleStats comme le chemin emprunté est bienvenu, mais pas obligatoire.{/}</p>
+
+  <h3>{en}Questions{fr}Questions{/}</h3>
+  <p>{en}If something here is unclear or you want to do something it does not cover, open an issue on <a href="{{repo}}/issues">GitHub</a>.{fr}Si un point est peu clair ou si vous voulez faire quelque chose qui n'est pas couvert, ouvrez un ticket sur <a href="{{repo}}/issues">GitHub</a>.{/}</p>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

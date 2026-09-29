@@ -14,8 +14,9 @@
 <section class="wrap hero">
   <div class="hero-logo">{{> logo}}</div>
   <div class="hero-text">
-    <h1>{en}One maplestats-mcp.{fr}Un seul maplestats-mcp.{/}</h1>
+    <h1>{en}One Canadian data server to rule them all.{fr}Un serveur de données canadiennes pour les gouverner tous.{/}</h1>
     <p class="lede">{en}MapleStats is one MCP server for publicly available Canadian data. MCP, the Model Context Protocol, is the open standard AI agents use to reach outside tools and data. Connect MapleStats to your AI agent to get statistics and reports, each with its source, from {{source_count}} sources, including Statistics Canada, the Bank of Canada and CMHC. Never worry about Canadian data retrieval again: focus on what actually matters to you.{fr}MapleStats est un seul serveur MCP pour les données canadiennes accessibles au public. Le MCP (Model Context Protocol) est la norme ouverte qu'utilisent les agents IA pour accéder à des outils et à des données externes. Connectez MapleStats à votre agent IA pour obtenir des statistiques et des rapports, chacun avec sa source, tirés de {{source_count}} sources, dont Statistique Canada, la Banque du Canada et la SCHL. Ne vous souciez plus de trouver des données canadiennes : concentrez-vous sur ce qui compte vraiment pour vous.{/}</p>
+    <p class="lang-ask">{en}Looking for the French version? <a href="{{alt_href}}" hreflang="fr" lang="fr">Lisez-le en français.</a>{fr}Vous cherchez la version anglaise ? <a href="{{alt_href}}" hreflang="en" lang="en">Read it in English.</a>{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
       <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Any data call can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}Tout appel de données peut revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
@@ -46,11 +47,11 @@
       <p class="verse-line">{en}for the demographers, counting who comes to stay,{fr}pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
       <p class="verse-count">9</p>
       <p class="verse-line">{en}for the analysts, doomed to explain the rate…{fr}pour les analystes, condamnés à expliquer le taux…{/}</p>
-      <p class="verse-aside">{en}Okay, perhaps not quite.{fr}Bon, peut-être pas tout à fait.{/}</p>
+      <p class="verse-aside">{en}But MapleStats is the one MCP to rule them all.{fr}Mais MapleStats est le MCP unique pour les gouverner tous.{/}</p>
     </div>
     <div class="thesis-body">
       <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
-      <p>{en}MCP made it easier to connect AI agents to data, and people started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. I built MapleStats to take the opposite approach: one MCP for Canadian open data.{fr}Le MCP a facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. J'ai conçu MapleStats pour prendre le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
+      <p>{en}MCPs made it easier to connect AI agents to data, and people started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. I built MapleStats to take the opposite approach: one MCP for Canadian open data.{fr}Les MCP ont facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. J'ai conçu MapleStats pour prendre le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
     </div>
     <div class="thesis-demo">{{chat_demo}}</div>
     <div class="claims">
@@ -222,6 +223,7 @@
 <section class="section home-square" id="one-mcp">
   <div class="wrap">
     <figure class="home-square-fig">{{chart_square}}</figure>
+    <h2 class="home-square-title">{en}Ask once. Reach every source.{fr}Une question. Toutes les sources.{/}</h2>
     <p class="source-links"><a href="{{root}}cases.html">{en}See what people asked it{fr}Voir ce qu'on lui a demandé{/}</a><a href="{{root}}connect.html">{en}Connect it to your agent{fr}Connectez-le à votre agent{/}</a></p>
   </div>
 </section>

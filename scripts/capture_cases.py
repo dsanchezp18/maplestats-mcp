@@ -275,6 +275,21 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"vector_ids": [111955442], "latest_n": 104},
         },
     ],
+    # The home page's prompt card: five plain questions, five different
+    # publishers. The credit-card answer is worked out from the "cards" case.
+    "prompts": [
+        # retail price of ground beef, per kilogram, Canada (coordinate 11.4)
+        {
+            "name": "wds_get_data_from_cube_coord",
+            "arguments": {"product_id": 18100245, "coordinate": "11.4", "latest_n": 3},
+        },
+        {"name": "ircc_get_latest_express_entry_round", "arguments": {}},
+        {"name": "pbo_get_publication", "arguments": {"publication_id": "RP-2627-002-S"}},
+        {
+            "name": "canadabuys_search_awards",
+            "arguments": {"query": "window replacement", "buyer": "National Research Council"},
+        },
+    ],
     # The counts in the verse: how much each audience can reach.
     "counts": [
         # every page of the Data catalogue's microdata results, counted by product
@@ -328,6 +343,18 @@ def _trim(name: str, arguments: dict[str, Any], response: Any) -> Any:
         ]
         kept = {k: v for k, v in response.items() if k not in ("dimensions", "footnotes")}
         return {**kept, "footnote_count": len(response["footnotes"]), "dimensions": dimensions}
+    if name == "ircc_get_latest_express_entry_round":
+        rnd = {k: v for k, v in response["round"].items() if k != "crs_distribution"}
+        return {**{k: v for k, v in response.items() if k != "round"}, "round": rnd}
+    if name == "pbo_get_publication":
+        # The fiscal outlook's summary table is all the page quotes.
+        tables = [t for t in response["tables"] if t["reference"] == "Table 2"]
+        return {**{k: v for k, v in response.items() if k != "tables"}, "tables": tables}
+    if name == "canadabuys_search_awards":
+        return {
+            **{k: v for k, v in response.items() if k != "awards"},
+            "awards": response["awards"][:1],
+        }
     return response
 
 
@@ -370,7 +397,7 @@ def _wants_scripts(key: str, n: int, call: dict[str, Any]) -> bool:
     """A case's first call has scripts; a demo's every data call does."""
     if key in DEMOS:
         return call["name"] != "plan_query"
-    return n == 0 and key != "counts"
+    return n == 0 and key not in ("counts", "prompts")
 
 
 async def capture(key: str) -> Path:

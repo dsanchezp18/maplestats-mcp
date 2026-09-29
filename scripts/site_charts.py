@@ -826,7 +826,9 @@ def _inscription(
     dur = abs(seconds)
     texts = []
     for behind in (False, True):
-        start = lap * (-1 if behind else 0)
+        # The second copy sits a lap away from the first: behind it when the
+        # loop turns forward, ahead of it when it turns back.
+        start = 0.0 if not behind else -lap if forward else lap
         end = start + (lap if forward else -lap)
         texts.append(
             f'<text class="{cls}" data-band="{ident}" style="font-size:{_n(size)}px">'

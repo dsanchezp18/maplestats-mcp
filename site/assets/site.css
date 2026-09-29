@@ -4281,8 +4281,14 @@ h2.sub {
   text-align: center;
 }
 
-.home-square .verse-finale {
+.home-square-title {
+  margin: 0;
+  font-family: var(--font-display);
   font-size: clamp(1.6rem, 0.9rem + 2.4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+  color: var(--ink);
 }
 
 .home-square-fig {
@@ -4595,35 +4601,51 @@ html:not(.js) .chips {
 
 .ask {
   display: grid;
-  gap: 18px;
-  padding-left: clamp(16px, 2vw, 28px);
-  border-left: 2px solid var(--accent);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--surface, var(--bg));
+  box-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.55);
 }
 
-.ask-head {
+.ask-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
   font-family: var(--font-mono, monospace);
   font-size: 0.8125rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
-.ask-dot {
-  width: 8px;
-  height: 8px;
+.ask-lights {
+  display: flex;
+  gap: 6px;
+}
+
+.ask-lights i {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
+  background: var(--rule);
+}
+
+.ask-lights i:first-child {
   background: var(--accent);
+}
+
+.ask-mcp {
+  margin-left: auto;
+  color: var(--ink-3);
 }
 
 .ask-stage {
   display: grid;
   gap: 14px;
   align-content: start;
-  min-height: 250px;
+  min-height: 270px;
+  padding: 18px 18px 6px;
 }
 
 .ask-stage p,
@@ -4711,6 +4733,8 @@ html:not(.js) .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
+  padding: 8px 18px 12px;
+  border-top: 1px solid var(--rule);
 }
 
 .ask-tab {
@@ -4764,4 +4788,59 @@ html:not(.js) .chips {
       transform: rotate(360deg);
     }
   }
+}
+
+/* ---------- FAQ and licences ---------- */
+
+.faq {
+  display: grid;
+  gap: 12px;
+  max-width: 72ch;
+  padding-bottom: clamp(32px, 4vw, 56px);
+}
+
+.faq p {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.faq h3 {
+  margin: 12px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.faq-item {
+  border-top: 1px solid var(--rule);
+  padding-block: 14px;
+}
+
+.faq-item:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.faq-item summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.faq-item[open] summary {
+  margin-bottom: 10px;
+}
+
+.faq-item p + p {
+  margin-top: 10px;
+}
+
+.lang-ask {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.lang-ask a {
+  color: var(--ink-2);
 }

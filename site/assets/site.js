@@ -572,6 +572,7 @@
       return;
     }
     var stage = root.querySelector("[data-ask-stage]");
+    var title = root.querySelector("[data-ask-title]");
     var tabs = Array.prototype.slice.call(root.querySelectorAll("[data-ask-tab]"));
     var calling = root.getAttribute("data-calling");
     var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -619,6 +620,7 @@
       index = (n + examples.length) % examples.length;
       var ex = examples[index];
       stage.innerHTML = "";
+      title.textContent = ex.client;
       tabs.forEach(function (tab, i) {
         tab.classList.toggle("on", i === index);
         tab.setAttribute("aria-selected", i === index ? "true" : "false");

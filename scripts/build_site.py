@@ -2424,110 +2424,210 @@ def square_places(lang: Lang) -> list[str]:
 
 
 def chat_demo_context(lang: Lang) -> dict[str, str]:
-    """The live prompting card on the home page: four questions, each answered
-    from a recorded call (site/_data/cases), played by assets/site.js."""
+    """The prompt on the home page: five questions to five different publishers,
+    each answered from a recorded call (site/_data/cases), played by assets/site.js."""
     en = lang == "en"
-    rate = load_case("policy_rate")["calls"][0]["response"]["observations"]
-    rate_rows = sorted(
-        (o["ref_date"], o["values"]["V39079"])
-        for o in rate
-        if o["values"].get("V39079") is not None
-    )[-3:]
-    curve = load_case("curve")["calls"][0]["response"]["observations"]
-    both = sorted(
-        (o["ref_date"], o["values"]["BD.CDN.10YR.DQ.YLD"], o["values"]["BD.CDN.2YR.DQ.YLD"])
-        for o in curve
-        if o["values"].get("BD.CDN.10YR.DQ.YLD") is not None
-        and o["values"].get("BD.CDN.2YR.DQ.YLD") is not None
-    )
-    day, ten, two = both[-1]
-    counts = {call["name"]: call["response"] for call in load_case("counts")["calls"]}
-    tables = counts["wds_search_cubes"]["total_count"]
-    cards = load_case("cards")["calls"][0]["response"]["total_matched"]
+    prompts = {call["name"]: call["response"] for call in load_case("prompts")["calls"]}
 
-    def code(rows: list[tuple[str, str]]) -> str:
-        return chr(10).join(f"{a}  {b}" for a, b in rows)
+    def fee(value: float) -> str:
+        return f"${number(value, lang, 2)}" if en else f"{number(value, lang, 2)} $"
+
+    def pct(value: float) -> str:
+        return f"{number(value, lang, 2)}%" if en else f"{number(value, lang, 2)} %"
+
+    def rows(pairs: list[tuple[str, str]]) -> str:
+        return chr(10).join(f"{a}  {b}" for a, b in pairs)
+
+    def month(iso: str) -> str:
+        names = MONTHS_EN if en else MONTHS_FR
+        return f"{names[int(iso[5:7]) - 1]} {iso[:4]}"
+
+    # Ground beef, Canada: the latest month and the one before.
+    beef = sorted(
+        prompts["wds_get_data_from_cube_coord"]["observations"], key=lambda o: o["ref_period"]
+    )
+    last, before = beef[-1], beef[-2]
+    move = last["value"] - before["value"]
+    if en:
+        beef_html = (
+            f"In {month(last['ref_period'])} ground beef averaged <strong>{fee(last['value'])} "
+            f"a kilogram</strong> across Canada, {'up' if move > 0 else 'down'} "
+            f"{fee(abs(move))} from {month(before['ref_period'])}."
+        )
+    else:
+        beef_html = (
+            f"En {month(last['ref_period'])}, le bœuf haché coûtait en moyenne "
+            f"<strong>{fee(last['value'])} le kilogramme</strong> au Canada, "
+            f"{fee(abs(move))} {'de plus' if move > 0 else 'de moins'} qu'en "
+            f"{month(before['ref_period'])}."
+        )
+
+    # Credit cards in Alberta: the lowest purchase rate among no-fee cards.
+    cards = load_case("cards")["calls"][0]["response"]["cards"]
+    free = sorted(
+        (c for c in cards if c["annual_fee"] == 0 and c["purchase_rate"] is not None),
+        key=lambda c: c["purchase_rate"],
+    )
+    best = free[0]
+    short_names = [c for c in free if len(c["name"]) <= 34]
+    if en:
+        card_html = (
+            f"Of {number(len(free), lang)} no-fee cards with a listed rate, "
+            f"<strong>{esc(best['name'])}</strong> from {esc(best['institution'])} charges the "
+            f"least: {pct(best['purchase_rate'])} on purchases."
+        )
+    else:
+        card_html = (
+            f"Sur {number(len(free), lang)} cartes sans frais annuels dont le taux est indiqué, "
+            f"<strong>{esc(best['name'])}</strong> de {esc(best['institution'])} est la moins "
+            f"chère : {pct(best['purchase_rate'])} sur les achats."
+        )
+
+    # The latest Express Entry round.
+    rnd = prompts["ircc_get_latest_express_entry_round"]["round"]
+    if en:
+        draw_html = (
+            f"On {long_date(rnd['draw_date'], lang)} IRCC invited <strong>"
+            f"{number(rnd['invitations_issued'], lang)} candidates</strong> in a "
+            f"{esc(rnd['draw_name'])} draw, with a CRS cutoff of {number(rnd['crs_cutoff'], lang)}."
+        )
+    else:
+        draw_html = (
+            f"Le {long_date(rnd['draw_date'], lang)}, IRCC a invité <strong>"
+            f"{number(rnd['invitations_issued'], lang)} candidats</strong> lors d'un tirage "
+            f"« {esc(rnd['draw_name'])} », avec un score SGC minimal de "
+            f"{number(rnd['crs_cutoff'], lang)}."
+        )
+
+    # The Parliamentary Budget Officer's fiscal outlook: the deficit this year.
+    outlook = prompts["pbo_get_publication"]
+    table = outlook["tables"][0]
+    balance = [
+        (r["sdg7j"], float(str(r["Budgetary balance"]).replace(chr(92) + "-", "-")))
+        for r in table["rows"]
+    ]
+    this_year = next(b for b in balance if b[0] == "2026-2027")
+    title = outlook["publication"]["title"].replace("\u2013", "-")
+    if en:
+        budget_html = (
+            f"In its {esc(title.split(' - ')[-1])} outlook the Parliamentary Budget Officer projects "
+            f"a deficit of <strong>${number(abs(this_year[1]), lang, 1)} billion</strong> "
+            f"for {this_year[0]}."
+        )
+    else:
+        budget_html = (
+            f"Dans ses perspectives de {esc(title.split(' - ')[-1])}, le directeur parlementaire "
+            f"du budget prévoit un déficit de <strong>{number(abs(this_year[1]), lang, 1)} G$</strong> "
+            f"pour {this_year[0]}."
+        )
+
+    # One federal contract award.
+    award = prompts["canadabuys_search_awards"]["awards"][0]
+    value = award["total_contract_value"]
+    if en:
+        award_html = (
+            f"<strong>{esc(award['supplier_name'])}</strong> of {esc(award['supplier_city'])}, "
+            f"{esc(award['supplier_province'])}, won the {esc(award['title'])} for "
+            f"${number(value, lang)} on {long_date(award['award_date'], lang)}."
+        )
+    else:
+        award_html = (
+            f"<strong>{esc(award['supplier_name'])}</strong>, de {esc(award['supplier_city'])} "
+            f"({esc(award['supplier_province'])}), a remporté le contrat « {esc(award['title'])} » "
+            f"pour {number(value, lang)} $ le {long_date(award['award_date'], lang)}."
+        )
 
     examples = [
         {
-            "label": "Policy rate" if en else "Taux directeur",
-            "user": "What is the Bank of Canada's overnight rate?"
+            "label": "Meat prices" if en else "Prix de la viande",
+            "client": "Claude",
+            "user": "What does ground beef cost at the grocery store?"
             if en
-            else "Quel est le taux cible du financement à un jour de la Banque du Canada ?",
-            "tool": "boc_get_observations",
-            "html": (
-                f"On {long_date(rate_rows[-1][0], lang)} the target for the overnight rate was "
-                f"<strong>{number(rate_rows[-1][1], lang, 2)}%</strong>."
-                if en
-                else f"Le {long_date(rate_rows[-1][0], lang)}, le taux cible du financement à un jour "
-                f"était de <strong>{number(rate_rows[-1][1], lang, 2)} %</strong>."
-            ),
-            "code": code([(d, number(v, lang, 2)) for d, v in rate_rows]),
-            "cite": "source · Bank of Canada Valet"
+            else "Combien coûte le bœuf haché à l'épicerie ?",
+            "tool": "wds_get_data_from_cube_coord",
+            "html": beef_html,
+            "code": rows([(o["ref_period"][:7], fee(o["value"])) for o in beef]),
+            "cite": "source · Statistics Canada, table 18-10-0245"
             if en
-            else "source · Valet de la Banque du Canada",
-        },
-        {
-            "label": "Yield curve" if en else "Courbe des taux",
-            "user": "How far apart are the 10-year and 2-year Government of Canada yields?"
-            if en
-            else "Quel écart y a-t-il entre les rendements à 10 ans et à 2 ans du gouvernement du Canada ?",
-            "tool": "boc_get_observations",
-            "html": (
-                f"On {long_date(day, lang)} the 10-year yield was {number(ten, lang, 2)}% and the "
-                f"2-year {number(two, lang, 2)}%: a spread of "
-                f"<strong>{number(ten - two, lang, 2)} points</strong>."
-                if en
-                else f"Le {long_date(day, lang)}, le rendement à 10 ans était de {number(ten, lang, 2)} % "
-                f"et celui à 2 ans de {number(two, lang, 2)} % : un écart de "
-                f"<strong>{number(ten - two, lang, 2)} points</strong>."
-            ),
-            "code": code(
-                [
-                    ("10-year" if en else "10 ans", number(ten, lang, 2)),
-                    ("2-year" if en else "2 ans", number(two, lang, 2)),
-                ]
-            ),
-            "cite": "source · Bank of Canada Valet"
-            if en
-            else "source · Valet de la Banque du Canada",
-        },
-        {
-            "label": "StatCan tables" if en else "Tableaux StatCan",
-            "user": "How many tables does Statistics Canada publish?"
-            if en
-            else "Combien de tableaux Statistique Canada publie-t-il ?",
-            "tool": "wds_search_cubes",
-            "html": (
-                f"The Web Data Service lists <strong>{number(tables, lang)}</strong> tables."
-                if en
-                else f"Le Service de données Web recense <strong>{number(tables, lang)}</strong> tableaux."
-            ),
-            "code": "",
-            "cite": "source · Statistics Canada, Web Data Service"
-            if en
-            else "source · Statistique Canada, Service de données Web",
+            else "source · Statistique Canada, tableau 18-10-0245",
         },
         {
             "label": "Credit cards" if en else "Cartes de crédit",
-            "user": "How many credit cards can I compare in Alberta?"
+            "client": "Codex",
+            "user": "Which credit card in Alberta has no annual fee and the lowest interest rate?"
             if en
-            else "Combien de cartes de crédit puis-je comparer en Alberta ?",
+            else "Quelle carte de crédit en Alberta n'a pas de frais annuels et le taux d'intérêt le plus bas ?",
             "tool": "fcac_search_credit_cards",
-            "html": (
-                f"The FCAC tool lists <strong>{number(cards, lang)}</strong> cards in Alberta."
-                if en
-                else f"L'outil de l'ACFC recense <strong>{number(cards, lang)}</strong> cartes en Alberta."
+            "html": card_html,
+            "code": rows(
+                [(re.sub("[®™]", "", c["name"]), pct(c["purchase_rate"])) for c in short_names[:3]]
             ),
-            "code": "",
             "cite": "source · Financial Consumer Agency of Canada"
             if en
             else "source · Agence de la consommation en matière financière du Canada",
         },
+        {
+            "label": "Immigration",
+            "client": "Cursor",
+            "user": "When was the last Express Entry draw, and how high was the cutoff?"
+            if en
+            else "Quand a eu lieu le dernier tirage Entrée express, et quel était le score minimal ?",
+            "tool": "ircc_get_latest_express_entry_round",
+            "html": draw_html,
+            "code": rows(
+                [
+                    ("draw" if en else "tirage", f"#{rnd['draw_number']}"),
+                    ("invitations", number(rnd["invitations_issued"], lang)),
+                    ("CRS" if en else "SGC", number(rnd["crs_cutoff"], lang)),
+                ]
+            ),
+            "cite": "source · Immigration, Refugees and Citizenship Canada"
+            if en
+            else "source · Immigration, Réfugiés et Citoyenneté Canada",
+        },
+        {
+            "label": "Federal budget" if en else "Budget fédéral",
+            "client": "Claude Code",
+            "user": "What deficit does the Parliamentary Budget Officer expect this year?"
+            if en
+            else "Quel déficit le directeur parlementaire du budget prévoit-il cette année ?",
+            "tool": "pbo_get_publication",
+            "html": budget_html,
+            "code": rows(
+                [
+                    (year, f"{number(value, lang, 1)}")
+                    for year, value in balance
+                    if year in ("2025-2026", "2026-2027", "2027-2028")
+                ]
+            ),
+            "cite": "source · Parliamentary Budget Officer"
+            if en
+            else "source · Directeur parlementaire du budget",
+        },
+        {
+            "label": "Contracts" if en else "Contrats",
+            "client": "VS Code",
+            "user": "Who won the National Research Council's window replacement contract?"
+            if en
+            else "Qui a remporté le contrat de remplacement des fenêtres du Conseil national de recherches ?",
+            "tool": "canadabuys_search_awards",
+            "html": award_html,
+            "code": rows(
+                [
+                    (
+                        "value" if en else "valeur",
+                        f"${number(value, lang)}" if en else f"{number(value, lang)} $",
+                    ),
+                    ("awarded" if en else "attribué", award["award_date"]),
+                    ("buyer" if en else "acheteur", "NRC"),
+                ]
+            ),
+            "cite": "source · CanadaBuys" if en else "source · AchatsCanada",
+        },
     ]
-    payload = json.dumps(examples, ensure_ascii=False).replace("</", "<\\/")
+    payload = json.dumps(examples, ensure_ascii=False).replace("</", "<" + chr(92) + "/")
     calling = "calling" if en else "appel de"
-    heading = "Ask MapleStats" if en else "Demandez à MapleStats"
+    heading = "MapleStats MCP"
     tabs = "".join(
         f'<button type="button" class="ask-tab" role="tab" data-ask-tab="{n}">'
         f"<span>{esc(ex['label'])}</span><i></i></button>"
@@ -2536,7 +2636,9 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
     return {
         "chat_demo": (
             f'<div class="ask" data-ask="{lang}" data-calling="{calling}">'
-            f'<p class="ask-head"><span class="ask-dot"></span>{heading}</p>'
+            '<div class="ask-bar"><span class="ask-lights"><i></i><i></i><i></i></span>'
+            '<span class="ask-title" data-ask-title=""></span>'
+            f'<span class="ask-mcp">{heading}</span></div>'
             '<div class="ask-stage" data-ask-stage="" aria-live="polite"></div>'
             f'<div class="ask-tabs" role="tablist">{tabs}</div>'
             f'<script type="application/json" data-ask-examples="">{payload}</script></div>'

@@ -333,6 +333,13 @@ def test_square_inscriptions_close_and_segments_share_the_track() -> None:
         spans.append(float(animate.get("to") or 0) - float(animate.get("from") or 0))
     # The outer band turns clockwise, the inner one the other way.
     assert spans[0] > 0 > spans[2]
+    # The two copies of a band sit a lap apart, so between them they cover the
+    # whole loop at every moment: the second is behind a forward band and
+    # ahead of a backward one.
+    for first, second, direction in ((0, 1, 1), (2, 3, -1)):
+        lap = float(text_paths[first].get("textLength") or 0)
+        offsets = [float(text_paths[k].get("startOffset") or 0) for k in (first, second)]
+        assert offsets == [0.0, -direction * lap]
     written = "".join(text_paths[0].itertext())
     assert "CMHC <&>" in written and "Bank of Canada" in written
     # The join is padded with non-breaking spaces, which SVG keeps.

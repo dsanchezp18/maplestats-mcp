@@ -23,21 +23,18 @@
 
 <!-- mcp-name: io.github.dsanchezp18/maplestats-mcp -->
 
-MapleStats MCP gives AI agents (Claude, Cursor, and any MCP-compatible
-client) structured, typed access to Canadian open data through a
-single server — covering Statistics Canada (tables, Census and public use
-microdata), the Bank of Canada, CMHC, federal agencies, and federal,
-provincial, territorial and municipal open-data portals, in English and
-French.
+MapleStats MCP gives AI agents (Claude, Cursor and any MCP client) typed
+access to Canadian open data through one server: Statistics Canada
+(tables, Census, public use microdata), the Bank of Canada, CMHC, federal
+agencies, and federal, provincial, territorial and municipal open-data
+portals, in English and French. Every result carries its source.
 
-*MapleStats MCP donne aux agents IA (Claude, Cursor et tout client
-compatible MCP) un accès structuré et typé aux données ouvertes
-canadiennes par l'entremise d'un seul serveur — couvrant Statistique
-Canada, la Banque du Canada, ainsi que des portails CKAN fédéraux,
-provinciaux, territoriaux et municipaux vérifiés.*
+*MapleStats MCP donne aux agents IA un accès structuré aux données
+ouvertes canadiennes par un seul serveur, en français et en anglais.*
 
-See [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/PROJECT_GUIDE.md) for the project vision and
-[`ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/ROADMAP.md) for source coverage status.
+Project vision: [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/PROJECT_GUIDE.md).
+Source coverage: [`ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/ROADMAP.md).
+Website: <https://dsanchezp18.github.io/maplestats-mcp/>.
 
 ## The easiest way: ask your agent
 
@@ -48,17 +45,13 @@ See [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main
 
 > Install the MapleStats MCP server and connect it to this agent. Follow the setup steps in https://github.com/dsanchezp18/maplestats-mcp
 
-Prefer to do it by hand? See [Install locally](#install-locally-no-docker-required)
-or the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page.
-
 ### Instructions for the agent doing the setup
 
-1. Make sure [uv](https://docs.astral.sh/uv/) is installed (`uv --version`).
-   If it is missing, install it with the official installer from that page.
-2. Use this launch command, which fetches the release from PyPI the first
-   time and reuses it afterwards: `uvx maplestats-mcp`.
-3. Register it with the client you are running in, under the name
-   `maplestats`:
+1. Make sure [uv](https://docs.astral.sh/uv/) is installed (`uv --version`);
+   if not, install it with the official installer from that page.
+2. The launch command is `uvx maplestats-mcp`. It fetches the release from
+   PyPI once and reuses it.
+3. Register it under the name `maplestats`:
    - **Claude Code:** `claude mcp add --scope user maplestats -- uvx maplestats-mcp`
    - **Codex CLI:** `codex mcp add maplestats -- uvx maplestats-mcp`
    - **Cursor, Claude Desktop and other `mcpServers` clients:** add the
@@ -66,8 +59,7 @@ or the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page
      Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
      on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows),
      keeping any servers already there.
-   - **VS Code:** the same entry under a `servers` key (not `mcpServers`)
-     in `.vscode/mcp.json`.
+   - **VS Code:** the same entry under a `servers` key in `.vscode/mcp.json`.
 
    ```json
    {
@@ -80,202 +72,61 @@ or the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page
    }
    ```
 4. The server speaks MCP over stdio and needs no API key, account or open
-   port. Tell the user to restart or reload the client, then check that
-   the `search_tools` tool is listed.
+   port. Tell the user to restart the client, then check that the
+   `search_tools` tool is listed.
 
-More clients and hosting options: [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html).
+Other clients and hosting: the
+[Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html) page.
 
-## Bilingual by design / Conçu pour être bilingue
-
-Tools accept `lang: "en"|"fr"`, several sources are French-first
-or French-only (Quebec's and Montreal's CKAN catalogues, `ckan_*` with `portal="qc"`/`"montreal"`),
-and tool discovery works in either language: every tool's docstring
-carries both a `Keywords:` line and a `Mots-clés :` line, so calling
-`search_tools` with a French-language query (e.g. *"recherche de
-jeux de données sur le climat"*) finds the same tools an equivalent
-English query would. Read `docs://catalogue` for a bilingual
-(EN/FR) one-line description of every module. Not every underlying
-government portal is itself bilingual — see each module's own
-docstring (or `docs://catalogue`) for where `lang` genuinely changes
-the response versus where it is a documented no-op on a monolingual
-source.
-
-*Chaque outil accepte `lang : "en"|"fr"`, plusieurs sources sont
-francophones ou exclusivement en français (les catalogues CKAN du Québec
-et de Montréal, `ckan_*` avec `portal="qc"`/`"montreal"`), et la découverte d'outils
-fonctionne dans les deux langues : chaque outil porte à la fois une
-ligne `Keywords:` et une ligne `Mots-clés :`, de sorte qu'un appel à
-`search_tools` avec une requête en français trouve les mêmes outils
-qu'une requête équivalente en anglais. Consultez `docs://catalogue`
-pour une description bilingue (EN/FR) de chaque module. Tous les
-portails gouvernementaux sous-jacents ne sont pas eux-mêmes
-bilingues — consultez la documentation de chaque module (ou
-`docs://catalogue`) pour savoir où `lang` change réellement la
-réponse et où il s'agit d'un no-op documenté sur une source
-unilingue.*
-
-## Status
-
-About 200 tools across these sources (run `docs://catalogue` for a
-bilingual one-line description of each module):
-
-| Area | Tool prefixes | Covers |
-|---|---|---|
-| Reproduction code | `reproduce_code` | R, Python, Stata or Julia code that fetches the same data from the source (cansim, canivt, polars, TidierFiles, import delimited) |
-| Query planner | `plan_query` | Always visible: turns a question into an ordered, multi-source plan with caveats on combining sources |
-| Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Public use microdata files (find, list downloads, read codebooks and weights without downloading the ZIP, weighted tables with DuckDB), 2006-2016 census data tables (CSV, SDMX, Beyond 20/20 with a canivt route), tables and series, classifications (e.g. NAICS), 2001–2021 Census Profiles, The Daily, indicators, daily bulk-update files, definitions/methods and analysis catalogues, survey directory and IMDB metadata, census geography, SDG hub |
-| Bank of Canada | `boc_` | Valet series, groups, observations |
-| CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal tables; Excel data tables |
-| ECCC / MSC | `eccc_` | Weather, climate, hydrometric, air quality (OGC API) |
-| ISED | `ised_corporations_`, `ised_spectrum_`, `ised_cipo_` | Federal corporations, spectrum licences, trademarks |
-| Canada Gazette | `gazette_` | Part I notices and proposed regulations, Part II registered regulations: issues, notice lists, notice text (EN/FR) |
-| Vehicle recalls | `tc_recalls_` | Transport Canada motor vehicle safety recalls by make, model and year, with bilingual details |
-| Dairy supply management | `cdc_` | Canadian Dairy Commission: special milk class component prices since 2002, butter support price, national total quota, Harmonized Milk Classification System, milk production by province and milk class sales (EN/FR); provincial marketing boards checked and routed to StatCan tables |
-| Animal disease | `cfia_` | CFIA federally reportable terrestrial animal diseases: yearly counts 2011 to now, each confirmed detection with date, province and species (chronic wasting disease, scrapie, bovine TB, BSE, cysticercosis), and every avian influenza infected premises since December 2021 with status by province (EN/FR); rabies, aquatic diseases and food testing via `ckan_` |
-| Recalls and safety alerts | `recalls_` | Health Canada, CFIA and Transport Canada recalls and alerts (recalls-rappels.canada.ca): search, counts by year or category, affected products and lots (EN/FR) |
-| Consumer banking products | `fcac_` | FCAC comparison tools: credit cards (annual fees, purchase, cash advance and balance transfer rates, rewards, insurance) and chequing and savings accounts (monthly fees, transactions, interest tiers, NSF and other fees) by province, read live (EN/FR) |
-| Geocoding and place names | `nrcan_geo_` | NRCan Geolocator (places, addresses, postal codes) and Canadian Geographical Names Database (EN/FR) |
-| Parliament | `parliament_` | House of Commons bills, recorded votes with party and MP ballots, MPs, Hansard and committee speeches, full-text Hansard search, and committees with their meetings, witnesses and transcripts (via unofficial OpenParliament.ca, EN/FR) |
-| Senate votes | `senate_` | Senate of Canada recorded votes by session or bill, with each senator's vote (sencanada.ca, EN/FR) |
-| Earthquakes | `earthquakes_` | Earthquakes Canada (NRCan) event catalogue by date, magnitude, point radius or bbox |
-| Health system | `cihi_` | CIHI Indicator Library: ~200 indicators (hospital mortality, readmissions, wait times, spending), data by place and year (EN/FR) |
-| Public health surveillance | `phac_infobase_` | PHAC Health Infobase dashboard files: respiratory viruses and FluWatch+, wastewater, opioid and stimulant harms, measles, mpox, TB, vaccine safety, archived COVID-19 (French titles for all; French data files for 9 of 55) |
-| Federal spending | `gc_infobase_` | GC InfoBase open datasets: Estimates, Public Accounts, program spending/FTEs, results (EN/FR) |
-| Energy regulation | `cer_` | Canada Energy Regulator CSVs: pipeline throughput and capacity, oil/gas/LNG/NGL exports, tolls, incidents (EN/FR) |
-| Energy use | `nrcan_energy_use_` | NRCan Comprehensive Energy Use Database and energy surveys (SHEU, SCIEU, ICE, ...), EN/FR tables |
-| Oceans | `dfo_iwls_` | DFO tide stations, tide times, predicted and observed water levels |
-| Grain | `cgc_` | Canadian Grain Commission: Grain Statistics Weekly from 2013-14 (deliveries, shipments, stocks, terminal receipts and exports by province, port and grade) and monthly grain exports by destination country since 2013 (EN/FR) |
-| Other federal | `ircc_`, `ircc_monthly_`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `nrcan_nbac_`, `canadabuys_` | Express Entry draws, IRCC monthly immigration tables (permanent residents, permits, asylum), Parliamentary Budget Officer costings and outlooks, candidate financial returns, digital platform operators, burned areas, federal tenders, contract awards and contract history |
-| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_` | Alberta Energy Regulator; BC Geographic Warehouse; Alberta Economic Dashboard (~260 curated economic tables); Institut de la statistique du Québec (~7,000 detailed tables) |
-| CKAN catalogues | `ckan_` + `portal` | Federal (open.canada.ca), Ontario, BC, Alberta, Quebec, NWT, Yukon, Montreal, Toronto, Regina (`ckan_list_portals`): dataset search/detail and DataStore row queries |
-| ArcGIS Hub portals | `arcgis_hub_` + `portal` | 38 provinces, cities, regions, and agencies (`arcgis_hub_list_portals`) |
-| Socrata portals | `socrata_` + `portal` | Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg (`socrata_list_portals`) |
-| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver (Opendatasoft); Newfoundland and Labrador (HTML catalogue); Edmonton police occurrences, real-time transit (GTFS-RT), and EPCOR water quality |
-
-Many other federal administrative series (CRA statistics and
-charities, OSFI returns, ISED insolvency data) are ordinary open.canada.ca
-datasets, reachable through `ckan_search_datasets(portal="federal", fq="organization:<org>")`.
-
-Most tools accept `lang: "en"|"fr"` (a documented no-op on single-language
-sources), and every tool returns a typed response with a `provenance`
-block (source, URL, query time, freshness, limits). See
-[`AGENTS.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/AGENTS.md) for the full architecture and response
-contract.
-
-## Install locally (no Docker required)
-
-MapleStats MCP is on [PyPI](https://pypi.org/project/maplestats-mcp/) as
-`maplestats-mcp`. With [uv](https://docs.astral.sh/uv/), MCP clients can run
-it without a separate install step:
+## Install
 
 ```bash
-uvx maplestats-mcp
+uvx maplestats-mcp                 # run without installing
+uv tool install maplestats-mcp     # or install the command once (pip works too)
+uv tool upgrade maplestats-mcp     # update
 ```
 
-Or install the command once:
-
-```bash
-uv tool install maplestats-mcp
-```
-
-```bash
-pip install maplestats-mcp
-```
-
-For the development version, install from GitHub instead:
-`uv tool install git+https://github.com/dsanchezp18/maplestats-mcp.git`.
-
-Once installed, the command is on your `PATH`:
-
-```bash
-maplestats-mcp
-```
-
-It speaks MCP over **stdio** by default, which is the format local MCP
-clients expect. The process is started by the client; do not open a port and
-do not run Docker.
-
-To update an existing installation:
-
-```bash
-uv tool upgrade maplestats-mcp
-```
-
-If you are working from a clone instead:
-
-```bash
-uv sync
-uv run maplestats-mcp
-```
-
-### MCP client configuration
-
-For clients that accept a standard `mcpServers` JSON configuration, add:
-
-```json
-{
-  "mcpServers": {
-    "maplestats": {
-      "command": "uvx",
-      "args": ["maplestats-mcp"]
-    }
-  }
-}
-```
-
-For Claude Code:
-
-```bash
-claude mcp add --scope user maplestats -- uvx maplestats-mcp
-```
-
-If you installed the command with
-`uv tool install` or `pip`, use `"command": "maplestats-mcp"` with no
-`args` instead of `uvx`.
-
-On Windows, make sure the directory where `uv` installs tools is on `PATH`,
-then restart the MCP client after installation.
-
-## Development quick start
-
-```bash
-uv sync
-```
-
-**Run directly from a checkout (stdio, for local MCP clients):**
-
-```bash
-uv run maplestats-mcp
-```
-
-**Run as a hosted HTTP server:**
-
-```bash
-MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 uv run maplestats-mcp
-```
-
-See [Hosting](#hosting) below for the full environment-variable
-surface (auth, rate limiting, TLS).
+For the development version: `uv tool install git+https://github.com/dsanchezp18/maplestats-mcp.git`.
+If you installed the command, use `"command": "maplestats-mcp"` with no
+`args` in the JSON above. On Windows, make sure the directory where `uv`
+installs tools is on `PATH`, and restart the client afterwards.
 
 ## Using it
 
-Tools are discovered through a search layer rather than listed flat —
-call `search_tools` with a plain-language query, then `call_tool` with
-the name it returns:
+Tools are found through search rather than listed flat: call
+`search_tools` with a plain-language query (English or French), then
+`call_tool` with the name it returns.
 
 ```json
 {"name": "search_tools", "arguments": {"query": "consumer price index"}}
 {"name": "call_tool", "arguments": {"name": "wds_search_cubes", "arguments": {"query": "consumer price index"}}}
 ```
 
-Two example workflows, also available as guided MCP prompts
-(`find_and_fetch_series`, `look_up_classification`,
-`build_sdmx_or_key`):
+`plan_query` turns a question into an ordered, multi-source plan, and
+`reproduce_code` writes the R, Python, Stata or Julia script that fetches
+the same data straight from the source. Most tools accept `lang: "en"|"fr"`
+(a documented no-op on single-language sources), and every response has a
+`provenance` block: source, URL, query time, freshness and limits.
+`docs://catalogue` describes every module in both languages.
 
-- **Find and fetch a data series:** `wds_search_cubes` → `wds_get_cube_metadata`
-  → `wds_get_series_info` → `wds_get_data_from_vectors`.
-- **Look up a classification:** `rdaas_search_classifications` →
-  `rdaas_get_classification` → `rdaas_get_classification_categories_detailed`.
+## What it covers
+
+About 200 tools. Run `docs://catalogue` for the full, bilingual list.
+
+| Area | Tool prefixes | Covers |
+|---|---|---|
+| Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Tables and series, classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), The Daily, indicators, surveys, census geography |
+| Bank of Canada | `boc_` | Valet series, groups, observations |
+| CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
+| Federal agencies | `eccc_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `cihi_`, `phac_infobase_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `ircc_*`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `canadabuys_` | Weather and climate, corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, health, spending, energy, oceans, grain, immigration, budgets, tenders |
+| Parliament | `parliament_`, `senate_` | Bills, votes, MPs, Hansard, committees |
+| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_` | Alberta Energy Regulator, BC Geographic Warehouse, Alberta Economic Dashboard, Institut de la statistique du Québec |
+| Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
+| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
+
+Other federal series (CRA, OSFI, ISED insolvency) are ordinary
+open.canada.ca datasets, reachable with
+`ckan_search_datasets(portal="federal", fq="organization:<org>")`.
 
 ## Development
 
@@ -287,57 +138,33 @@ uv run pyright                   # type check
 uv run pytest                    # unit tests (mocked, no network)
 ```
 
-**Live verification** (hits the real StatCan APIs — needs outbound
-HTTPS, not just mocks):
-
-```powershell
-.\scripts\verify.ps1
-```
-
-runs the full gate above plus every `scripts/smoke_test*.py` live smoke
-test. If Docker is installed, it also
-runs a build, `compose up`, and health check.
-
-See [`AGENTS.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/AGENTS.md) for the full contributor guide, including
-how to add a new source module.
-
-**Website:** `site/` holds the project website, generated from the tool
-registry by `scripts/build_site.py`:
-
-```bash
-uv run python scripts/build_site.py              # writes build/site/
-uv run python -m http.server --directory build/site 8080
-```
+`.\scripts\verify.ps1` runs that gate plus every `scripts/smoke_test*.py`
+against the live APIs. The website is generated from the tool registry:
+`uv run python scripts/build_site.py` writes `build/site/`. See
+[`AGENTS.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/AGENTS.md)
+for the contributor guide and how to add a source module.
 
 ## Hosting
 
+`MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 uv run maplestats-mcp`
+serves HTTP instead of stdio; `docker compose up --build` does the same in
+Docker. Docker is optional and unnecessary on a personal computer. If the
+server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
+`MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version.
+
 | Env var | Default | Purpose |
 |---|---|---|
-| `MAPLE_TRANSPORT` | `stdio` | `stdio` for local MCP clients; `http` for hosting |
+| `MAPLE_TRANSPORT` | `stdio` | `stdio` for local clients, `http` for hosting |
 | `MAPLE_HOST` / `MAPLE_PORT` | `127.0.0.1` / `8000` | HTTP bind address |
-| `MAPLE_AUTH_TOKEN` | unset | Optional, HTTP hosting only: bearer token required on `/mcp` if set. Never needed for local `uvx maplestats-mcp` (stdio), and never sent anywhere; the server only compares incoming requests against it |
-| `MAPLE_REQUIRE_AUTH` | `0` | Refuse to start without a token if `1` |
-| `MAPLE_RATE_LIMIT_REQUESTS` / `MAPLE_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Per-client sliding-window rate limit |
-| `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | Cap on in-flight MCP requests (POST/DELETE); excess requests wait up to 5 s, then get 503. Long-lived GET event streams are not counted |
-| `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS termination in-process |
-| `MAPLE_TRUST_PROXY_HEADERS` | `0` | Key rate limits on `X-Forwarded-For`; enable only behind a proxy that sets it |
-| `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Max entries per TTL bucket in the in-memory response cache |
-| `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run before it fails with a named error |
-| `MAPLE_PUMF_CACHE_DIR` | system temp | Where `statcan_pumf_tabulate` keeps downloaded microdata; use a persistent volume when hosted |
-| `MAPLE_PUMF_CACHE_MAX_GB` | `5` | Size cap on that cache (least recently used files removed first) |
-| `MAPLE_IP_HORIZONS_CACHE_DIR` | system temp | Where the CIPO patent lookup and search tools keep downloaded tables as Parquet; filled only on first use |
-| `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | `3` | Size cap on that cache (least recently used files removed first) |
-
-```bash
-MAPLE_TRANSPORT=http MAPLE_REQUIRE_AUTH=0 docker compose up --build
-```
-
-Docker is an optional deployment method. For a personal computer, use the
-local installation above. If the HTTP server is exposed beyond the local
-machine, set `MAPLE_AUTH_TOKEN` and keep `MAPLE_REQUIRE_AUTH=1`.
-
-`GET /health` reports uptime and version; it bypasses auth/rate
-limiting so it's always reachable.
+| `MAPLE_AUTH_TOKEN`, `MAPLE_REQUIRE_AUTH` | unset, `0` | Bearer token required on `/mcp`; refuse to start without one if `1` |
+| `MAPLE_RATE_LIMIT_REQUESTS` / `MAPLE_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Per-client rate limit |
+| `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | In-flight request cap; the excess waits 5 s, then gets 503 |
+| `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS in-process |
+| `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it |
+| `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Response cache size per TTL bucket |
+| `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
+| `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
+| `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
 
 ## License
 
@@ -355,10 +182,5 @@ Thierry Warin ([statcanR](https://github.com/warint/statcanR)), Valentin
 Lucet ([rgovcan](https://github.com/VLucet/rgovcan)), and others. Thanks
 to them, and to everyone who publishes Canadian data in the open.
 
-### Alternatives
-
-MapleStats is not the only way to reach this data. The website's About
-page lists the
-[alternatives](https://dsanchezp18.github.io/maplestats-mcp/about.html#alternatives):
-other MCP servers for Canadian data, R and Python packages, and the
-official APIs MapleStats calls.
+For other ways to get Canadian data, see the
+[alternatives](https://dsanchezp18.github.io/maplestats-mcp/about.html#alternatives).
