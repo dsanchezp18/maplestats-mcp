@@ -51,6 +51,7 @@ The default is the hosted server: nothing to install, no account, no key.
 
 1. Register this remote (HTTP) MCP server under the name `maplestats`:
    - **Claude Code:** `claude mcp add --transport http --scope user maplestats https://maplestats-mcp.onrender.com/mcp`
+   - **Codex CLI:** `codex mcp add maplestats --url https://maplestats-mcp.onrender.com/mcp`
    - **Cursor, Claude Desktop and other `mcpServers` clients:** add the entry
      below to the client's config file (Cursor: `~/.cursor/mcp.json`; Claude
      Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -79,7 +80,7 @@ The default is the hosted server: nothing to install, no account, no key.
 
 The hosted server is a free instance: the first request after a quiet spell can
 take up to a minute, each client gets 60 requests a minute, and the microdata
-tabulation tool is switched off there. What it logs:
+tabulation tool is switched off there. Your agent's tool calls (a search phrase, a table number) reach the server and its host, Render, and the code stores none of them; to keep them on your machine, run it locally. What it logs:
 [FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#hosted). Other
 clients: the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html)
 page.
