@@ -2658,3 +2658,29 @@ generation to 2026-01-01. `/records` caps `limit` at 100 and
 are net imports, and Ontario's unknown import source is spelled
 `importations_sources_ontario_unknow` upstream.
 
+## Federal election results (Elections Canada)
+
+**Status:** Shipped 2026-09-29 as `modules/elections_results/` (2 tools).
+
+The federal CKAN catalogue holds official voting results only for the 42nd to
+44th general elections, and none for the 45th (April 28, 2025). elections.ca
+publishes the same official results as numbered CSV tables for the 38th to
+45th, found by reading each election's "Summary Tables" page
+(`content.aspx?section=res&dir=rep/off/<n>gedata&document=summary`). The folder
+differs by election (`/res/rep/off/ovrGE45/62/`, `ovr2021app/53/`, `ovr2019app/51/`,
+`ovr2015app/41/`, `/scripts/OVR2011/34/`, `OVR2008/31/data/`, `OVR2006/25/`,
+`OVR2004/23/data/`) and the 38th names files `table12.csv` rather than
+`table_tableau12.csv`; table numbers are the same in all eight (3 turnout, 7
+seats, 8 and 9 votes and share by party, 11 riding results, 12 every candidate,
+13 returning officers). Files are UTF-8 with a BOM, except the 2004 and 2008
+files in Windows-1252. `robots.txt` disallows only `/pol/can/sof/efr/`.
+
+Checks: every table answered for all eight elections, and the rows of table 12
+carrying a majority (the winner) reconcile with the seat count: 308 for the
+38th to 41st, 338 for the 42nd to 44th, 343 for the 45th. The 45th's page also
+links per-riding poll-by-poll files (`pollresults_resultatsbureau<riding>.csv`,
+zips per province); they are not wrapped. Not built: the 36th and 37th general
+elections (no data files found), earlier history and by-elections. ParlInfo at
+the Library of Parliament (`lop.parl.ca`, history since 1867) answers HTTP 403
+with a Cloudflare challenge, and no open.canada.ca dataset holds that history
+(searches for historical federal election results returned nothing).

@@ -58,6 +58,19 @@ PortalKey = Literal[
     "fredericton",
     "greater_sudbury",
     "guelph",
+    "moncton",
+    "abbotsford",
+    "whitby",
+    "oshawa",
+    "niagara_falls",
+    "niagara_region",
+    "st_catharines",
+    "thunder_bay",
+    "peterborough",
+    "coquitlam",
+    "saanich",
+    "kamloops",
+    "prince_george",
 ]
 
 

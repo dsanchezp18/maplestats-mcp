@@ -382,3 +382,31 @@ Thunder Bay, Coquitlam, Langley, Kamloops, Brantford, Whitby, Oshawa, New
 Westminster, Saanich, Peterborough, Prince George, Niagara) are probably
 wrong domains, not confirmed absences.
 
+## Moncton, Abbotsford, Whitby, Oshawa, Niagara Falls, Niagara Region, St. Catharines, Thunder Bay, Peterborough, Coquitlam, Saanich, Kamloops, Prince George
+
+Added config-only on 2026-09-29. The guessed domains of the previous batch were
+wrong, so the real ones came from an ArcGIS Online search for public Hub Site
+Applications titled with each city, then each was checked against
+`/api/search/v1/collections/dataset/items` (a made-up host answers with no
+count, a real one with `numberMatched`). Datasets confirmed live: Moncton 54
+(`ouvert.moncton.ca`), Abbotsford 136 (`opendata-abbotsford.hub.arcgis.com`),
+Whitby 19 (`geohub-whitby.hub.arcgis.com`), Oshawa 314
+(`city-oshawa.opendata.arcgis.com`), Niagara Falls 301 (`open.niagarafalls.ca`),
+Niagara Region 44 (`open.niagararegion.ca`), St. Catharines 12
+(`st-catharines-open-data-2-stcatharines.hub.arcgis.com`), Thunder Bay 67
+(`opendata.thunderbay.ca`), Peterborough 94 (`data-ptbo.opendata.arcgis.com`),
+Coquitlam 27 (`data.coquitlam.ca`), Saanich 51
+(`opendata-saanich.hub.arcgis.com`), Kamloops 156
+(`mydata-kamloops.opendata.arcgis.com`), Prince George 175
+(`data-cityofpg.opendata.arcgis.com`). The smoke test passed for twelve
+(search, detail, feature query, CSV link). Oshawa passed search and detail, and
+its one feature-layer query (a slow layer) timed out on two runs; another Oshawa
+layer (drop-in program schedule) answers, and most of its 314 items are
+CSV-only. The `/api/v3` endpoint answers with the global ArcGIS count for any
+host, so it cannot show whether a site exists.
+
+Not shipped: Langley (the site answers but the Hub search API returns no
+count), Richmond BC, Vaughan, Richmond Hill, Nanaimo, North Vancouver, St.
+John's, Sault Ste. Marie, Wood Buffalo, Charlottetown, Whitehorse and
+Yellowknife (no public Hub site found by that search; several use other
+platforms). Not yet re-checked by another route.

@@ -53,6 +53,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "duckdb>=1.5.5",
     "pyyaml>=6.0.3",
+    "xlrd>=2.0.1",
 ]
 
 [project.urls]

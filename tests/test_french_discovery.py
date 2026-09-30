@@ -91,6 +91,12 @@ CASES = [
     ("offices de commercialisation du lait", "cdc_list_datasets"),
     ("producteurs d'œufs gestion de l'offre", "cdc_list_datasets"),
     ("classification harmonisée du lait", "cdc_get_milk_classes"),
+    ("tableaux Excel agence de la statistique Terre-Neuve-et-Labrador", "nl_stats_list_files"),
+    ("population trimestrielle Terre-Neuve-et-Labrador feuille Excel", "nl_stats_read_file"),
+    ("tableaux du Bureau de la statistique du Yukon", "yukon_stats_list_tables"),
+    ("loyer et taux d'inoccupation Yukon Whitehorse", "yukon_stats_query_table"),
+    ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
+    ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
     ("production de lait par province", "cdc_query_market_data"),
     ("nombre de fermes laitières", "cdc_query_market_data"),
     # CFIA animal disease tables (2026-09-26).

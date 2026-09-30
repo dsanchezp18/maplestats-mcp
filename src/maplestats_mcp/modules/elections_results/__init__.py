@@ -1,0 +1,25 @@
+MODULE_NAME = "elections_results"
+MODULE_DESCRIPTION = (
+    "Federal general election results from Elections Canada's official voting results "
+    "(elections.ca), tools prefixed elections_results_: the 38th to 45th general "
+    "elections (2004 to 2025). Every candidate's votes and share by electoral district "
+    "(winners flagged), turnout and ballots by province, seats by party and gender, "
+    "valid votes by party and province, riding-level turnout with the elected "
+    "candidate, and returning officers, straight from the official CSV tables. Results "
+    "before 2004 and by-elections are not covered (the 36th and 37th general elections "
+    "have no data files on elections.ca; the Library of Parliament's history site "
+    "blocks automated access). Poll-by-poll results stay on ckan_ (organization "
+    "'elections') and candidate finance is in elections_financial_returns_."
+)
+MODULE_DESCRIPTION_FR = (
+    "Résultats des élections générales fédérales tirés des résultats officiels du vote "
+    "d'Élections Canada (elections.ca), outils préfixés elections_results_ : les 38e à "
+    "45e élections générales (2004 à 2025). Votes et part des votes de chaque candidat "
+    "par circonscription (gagnants indiqués), participation et bulletins par province, "
+    "sièges par parti et genre, votes valides par parti et province, participation par "
+    "circonscription avec le candidat élu, et directeurs du scrutin, à partir des "
+    "tableaux CSV officiels. Les résultats antérieurs à 2004 et les élections partielles "
+    "ne sont pas couverts. Les résultats par bureau de scrutin restent dans ckan_ "
+    "(organisation « elections ») et le financement des candidats dans "
+    "elections_financial_returns_."
+)

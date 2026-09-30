@@ -290,3 +290,41 @@ site.
   lettres, ISQ investment and R&D surveys, disposable income by MRC),
   most others are ISQ tabulations of StatCan microdata for Québec, and 2
   (population estimates, CPI) duplicate StatCan tables.
+
+## Provincial and territorial statistics agencies
+
+Checked live on 2026-09-30 (ISQ is already shipped, Alberta Treasury Board and
+Finance is `ab_economic`).
+
+| Agency | What it publishes | Reachable now | Verdict |
+|---|---|---|---|
+| BC Stats | `bc-stats` on BC CKAN: 99 datasets, CSV and XLSX, about half with DataStore; OGL-BC | Yes, `ckan_*` (`portal="bc"`) | Covered. Gap: XLSX-only tables (LFS, GDP, tourism, population projections) have no DataStore. |
+| Saskatchewan Bureau of Statistics | XLSX and PDF on `publications.saskatchewan.ca` (Provincial Economic Accounts, Labour Force Statistics, Monthly Statistical Review) | No | Marginal: format ids change each issue, no open licence found, LFS repeats StatCan. |
+| Manitoba Bureau of Statistics | Only the Economic Dashboard CSV (`gov.mb.ca/finance/economicdashboard/_asset/api/first_layer.csv`): 22 latest values, mostly StatCan | No | Small; the site's robots.txt disallows ClaudeBot and anthropic-ai. Not built. |
+| Ontario Ministry of Finance | HTML tables on ontario.ca (quarterly demographics); datasets on data.ontario.ca | `ckan_*` (`portal="on"`) | data.ontario.ca answered HTTP 429 (Azure WAF) on four attempts from one IP: re-test the shipped `portal="on"` client. |
+| Nova Scotia Finance | Daily Stats commentary and chart images, no data files; Socrata copies archived in 2020 | Partly | Skip. |
+| New Brunswick Finance | gnb.ca | Socrata (`portal="nb"`) | Blocked by a Cloudflare challenge. |
+| PEI Statistics Bureau | princeedwardisland.ca | Almost nothing in the Hub | Blocked by a Radware bot challenge. |
+| NL Statistics Agency | stats.gov.nl.ca: 18 topic pages, about 160 XLSX and XLS files (labour, CPI, population, GDP, trade), monthly updates; copyright grant for public use | No (`nl_opendata` is a different site) | **Build candidate**: no robots.txt, unblocked, no overlap. |
+| Yukon Bureau of Statistics | Ten clean CSV datasets on open.yukon.ca (population by age and sex, rent and vacancy, building permits, fuel prices), OGL-Yukon | `ckan_*` (`portal="yt"`) for search and links, no row reader | **Build candidate** as a row reader; `open.yukon.ca/robots.txt` disallows `/api/` and sets Crawl-Delay 10. yukon.ca is blocked. |
+| NWT Bureau of Statistics | statsnwt.ca XLSX and PDF with irregular layouts | CKAN links only | Later. |
+| Nunavut Bureau of Statistics | gov.nu.ca | No | Blocked (Cloudflare), contents unverified. |
+
+### Status after the 2026-09-30 build
+
+NL Statistics Agency (`modules/nl_stats/`) and the Yukon Bureau of Statistics
+(`modules/yukon_stats/`) are shipped. Smoke tests: NL lists 160 files in 15
+topics and reads both an .xlsx and a legacy .xls (the quarterly population
+sheet starts at 1971, 530,854 for N.L.); Yukon lists 176 tables in ten
+datasets and returns Whitehorse's population (34,368 in September 2025) and
+the territory's median rent ($1,340, first quarter 2025). Quirks: NL layouts
+vary (title rows, units rows, years across columns), so headers are guessed;
+several NL rows repeat one file under different titles; Yukon's population CSV
+is 53 MB because a footnote repeats on every row, so `footnotes` is dropped;
+Yukon community names carry suffixes (`Whitehorse - City`).
+
+Ontario re-test: `data.ontario.ca` answered HTTP 429 to every request from the
+development machine, including the home page and a plain `package_list`, with
+both a browser User-Agent and `maplestats-mcp`. The project client fails the
+same way (`UpstreamUnavailable`). The block is at the address, not in the
+client; test again from another network before changing anything.

@@ -304,6 +304,84 @@ PORTALS: dict[str, Portal] = {
         "Données ouvertes de Guelph",
         note="Ontario. 41 datasets confirmed live 2026-09-29.",
     ),
+    "moncton": Portal(
+        "ouvert.moncton.ca",
+        "City of Moncton Open Data",
+        "Données ouvertes de la Ville de Moncton",
+        note="New Brunswick. 54 datasets confirmed live 2026-09-29.",
+    ),
+    "abbotsford": Portal(
+        "opendata-abbotsford.hub.arcgis.com",
+        "City of Abbotsford Open Data",
+        "Données ouvertes de la Ville d'Abbotsford",
+        note="British Columbia. 136 datasets confirmed live 2026-09-29.",
+    ),
+    "whitby": Portal(
+        "geohub-whitby.hub.arcgis.com",
+        "Whitby GeoHub",
+        "GeoHub de Whitby",
+        note="Durham Region, Ontario. 19 datasets confirmed live 2026-09-29.",
+    ),
+    "oshawa": Portal(
+        "city-oshawa.opendata.arcgis.com",
+        "City of Oshawa Open Data",
+        "Données ouvertes de la Ville d'Oshawa",
+        note="Durham Region, Ontario. 314 datasets confirmed live 2026-09-29.",
+    ),
+    "niagara_falls": Portal(
+        "open.niagarafalls.ca",
+        "City of Niagara Falls Open Data",
+        "Données ouvertes de la Ville de Niagara Falls",
+        note="Niagara Region, Ontario. 301 datasets confirmed live 2026-09-29.",
+    ),
+    "niagara_region": Portal(
+        "open.niagararegion.ca",
+        "Niagara Region Open Data",
+        "Données ouvertes de la région de Niagara",
+        note="Ontario. 44 datasets confirmed live 2026-09-29.",
+    ),
+    "st_catharines": Portal(
+        "st-catharines-open-data-2-stcatharines.hub.arcgis.com",
+        "St Catharines Open Data",
+        "Données ouvertes de St. Catharines",
+        note="Niagara Region, Ontario. 12 datasets confirmed live 2026-09-29.",
+    ),
+    "thunder_bay": Portal(
+        "opendata.thunderbay.ca",
+        "City of Thunder Bay Open Data",
+        "Portail de données ouvertes de Thunder Bay",
+        note="Ontario. 67 datasets confirmed live 2026-09-29.",
+    ),
+    "peterborough": Portal(
+        "data-ptbo.opendata.arcgis.com",
+        "City of Peterborough Open Data",
+        "Données ouvertes SIG de Peterborough",
+        note="Ontario. 94 datasets confirmed live 2026-09-29.",
+    ),
+    "coquitlam": Portal(
+        "data.coquitlam.ca",
+        "City of Coquitlam Open Data",
+        "Portail de données ouvertes de Coquitlam",
+        note="British Columbia. 27 datasets confirmed live 2026-09-29.",
+    ),
+    "saanich": Portal(
+        "opendata-saanich.hub.arcgis.com",
+        "Saanich Open Data",
+        "Données ouvertes du district de Saanich",
+        note="British Columbia. 51 datasets confirmed live 2026-09-29.",
+    ),
+    "kamloops": Portal(
+        "mydata-kamloops.opendata.arcgis.com",
+        "City of Kamloops Open Data",
+        "Données ouvertes de la Ville de Kamloops",
+        note="British Columbia. 156 datasets confirmed live 2026-09-29.",
+    ),
+    "prince_george": Portal(
+        "data-cityofpg.opendata.arcgis.com",
+        "City of Prince George Open Data",
+        "Données ouvertes de Prince George",
+        note="British Columbia. 175 datasets confirmed live 2026-09-29.",
+    ),
 }
 
 RATE_LIMIT_PER_SECOND = 2.0

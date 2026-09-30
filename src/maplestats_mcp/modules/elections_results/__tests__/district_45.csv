@@ -1,0 +1,5 @@
+﻿Province,Electoral District Name/Nom de circonscription,Electoral District Number/Numéro de circonscription,Population,Electors/Électeurs,Voting desks/Tables de vote,Valid Ballots/Bulletins valides,Percentage of Valid Ballots /Pourcentage des bulletins valides,Rejected Ballots/Bulletins rejetés,Percentage of Rejected Ballots /Pourcentage des bulletins rejetés,Total Ballots Cast/Total des bulletins déposés,Percentage of Voter Turnout/Pourcentage de la participation électorale,Elected Candidate/Candidat élu
+"Newfoundland and Labrador/Terre-Neuve-et-Labrador","Avalon",10001,81781,70859,201,47030,99.2,389,.8,47419,66.9,"Connors, Paul Liberal/Libéral"
+"Newfoundland and Labrador/Terre-Neuve-et-Labrador","Cape Spear",10002,85038,69828,175,45988,99,451,1,46439,66.5,"Osborne, Tom Liberal/Libéral"
+"Newfoundland and Labrador/Terre-Neuve-et-Labrador","Central Newfoundland",10003,74122,64095,231,40636,98.8,492,1.2,41128,64.2,"Small, Clifford Conservative/Conservateur"
+"Newfoundland and Labrador/Terre-Neuve-et-Labrador","Labrador",10004,26655,20027,83,11284,98.5,168,1.5,11452,57.2,"Earle, Philip Liberal/Libéral"

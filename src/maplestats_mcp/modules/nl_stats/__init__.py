@@ -1,0 +1,25 @@
+MODULE_NAME = "nl_stats"
+MODULE_DESCRIPTION = (
+    "Newfoundland and Labrador Statistics Agency (stats.gov.nl.ca), tools prefixed "
+    "nl_stats_: about 140 Excel files across 15 topics (population and migration, labour "
+    "force, consumer price index, GDP, trade, industry, income, health, education, "
+    "employment insurance, minimum wage, personal finance, transportation, charitable "
+    "donations, income support), listed from the agency's topic pages and read sheet by "
+    "sheet from the .xlsx and .xls files (monthly labour and price series, quarterly "
+    "population since 1971, census division and St. John's CMA estimates). This is the "
+    "provincial statistics agency, not the province's open-data portal (nl_opendata_). "
+    "Sheets keep the agency's own layout: title rows and years across columns are "
+    "returned as published, with a guessed header row."
+)
+MODULE_DESCRIPTION_FR = (
+    "Agence de la statistique de Terre-Neuve-et-Labrador (stats.gov.nl.ca), outils "
+    "préfixés nl_stats_ : environ 140 fichiers Excel répartis en 15 sujets (population et "
+    "migration, population active, indice des prix à la consommation, PIB, commerce, "
+    "industrie, revenu, santé, éducation, assurance-emploi, salaire minimum, finances "
+    "personnelles, transports, dons de bienfaisance, aide au revenu), listés à partir des "
+    "pages thématiques de l'agence et lus feuille par feuille (.xlsx et .xls : séries "
+    "mensuelles du travail et des prix, population trimestrielle depuis 1971, divisions "
+    "de recensement et RMR de St. John's). Il s'agit de l'agence provinciale de "
+    "statistique, pas du portail de données ouvertes (nl_opendata_). Les feuilles "
+    "gardent la mise en page de l'agence."
+)
