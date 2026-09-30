@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from maplestats_mcp.modules.elections_results import client, constants
+from maplestats_mcp.modules.elections_results import client, constants, historical
 from maplestats_mcp.shared.http import new_client
 
 
@@ -41,6 +41,25 @@ async def main() -> int:
     async with new_client():
         for number in numbers:
             failures += await check_election(number)
+
+        # Historical ridings (1867 to 2015): leading parties must match known seat counts.
+        expected = {42: {"Lib": 184, "C": 99, "NDP": 44, "BQ": 10}, 41: {"C": 166, "NDP": 103}}
+        for number, seats in expected.items():
+            result = await historical.get_historical(election=number, limit=500)
+            leaders: dict[str, int] = {}
+            for riding in result.ridings:
+                leaders[riding.leading_party or ""] = leaders.get(riding.leading_party or "", 0) + 1
+            for party, count in seats.items():
+                if leaders.get(party) != count:
+                    print(
+                        f"FAIL: election {number} {party} leads {leaders.get(party)}, want {count}"
+                    )
+                    failures += 1
+        first = await historical.get_historical(election=1, limit=1)
+        if first.total_ridings < 150:
+            print("FAIL: first general election has too few ridings")
+            failures += 1
+        print("OK: historical ridings reconcile with seat counts (41st, 42nd)")
     print("ELECTIONS RESULTS SMOKE TEST", "FAILED" if failures else "PASSED")
     return 1 if failures else 0
 

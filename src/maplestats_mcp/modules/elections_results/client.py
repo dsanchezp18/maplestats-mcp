@@ -32,9 +32,11 @@ Lang = Literal["en", "fr"]
 _NOT_COVERED = {
     "en": [
         (
-            "General elections before the 38th (2004): the 36th and 37th have no data files on "
-            "elections.ca, and the Library of Parliament's ParlInfo (history back to 1867) "
-            "answers automated requests with a Cloudflare challenge."
+            "Official Elections Canada tables before the 38th (2004): the 36th and 37th have no "
+            "data files on elections.ca, and the Library of Parliament's ParlInfo answers "
+            "automated requests with a Cloudflare challenge. For the 1st to 42nd general "
+            "elections (1867 to 2015) by riding, use elections_results_get_historical (party "
+            "totals from a CC0 research data set, no candidate names)."
         ),
         "By-elections (elections.ca lists them as web pages, not data files).",
         (
@@ -45,9 +47,12 @@ _NOT_COVERED = {
     ],
     "fr": [
         (
-            "Élections générales antérieures à la 38e (2004) : les 36e et 37e n'ont pas de "
-            "fichiers de données sur elections.ca, et ParlInfo de la Bibliothèque du Parlement "
-            "(historique depuis 1867) répond aux requêtes automatisées par un défi Cloudflare."
+            "Tableaux officiels d'Élections Canada antérieurs à la 38e (2004) : les 36e et 37e "
+            "n'ont pas de fichiers de données sur elections.ca, et ParlInfo de la Bibliothèque "
+            "du Parlement répond aux requêtes automatisées par un défi Cloudflare. Pour les 1re "
+            "à 42e élections générales (1867 à 2015) par circonscription, utiliser "
+            "elections_results_get_historical (totaux par parti d'un jeu de données de recherche "
+            "CC0, sans noms de candidats)."
         ),
         "Élections partielles (elections.ca les présente en pages web, sans fichiers).",
         (

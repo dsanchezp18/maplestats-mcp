@@ -97,6 +97,7 @@ CASES = [
     ("loyer et taux d'inoccupation Yukon Whitehorse", "yukon_stats_query_table"),
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
     ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
+    ("résultats historiques par circonscription depuis 1867", "elections_results_get_historical"),
     ("production de lait par province", "cdc_query_market_data"),
     ("nombre de fermes laitières", "cdc_query_market_data"),
     # CFIA animal disease tables (2026-09-26).

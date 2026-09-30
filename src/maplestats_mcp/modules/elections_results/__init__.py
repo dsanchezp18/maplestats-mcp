@@ -5,10 +5,10 @@ MODULE_DESCRIPTION = (
     "elections (2004 to 2025). Every candidate's votes and share by electoral district "
     "(winners flagged), turnout and ballots by province, seats by party and gender, "
     "valid votes by party and province, riding-level turnout with the elected "
-    "candidate, and returning officers, straight from the official CSV tables. Results "
-    "before 2004 and by-elections are not covered (the 36th and 37th general elections "
-    "have no data files on elections.ca; the Library of Parliament's history site "
-    "blocks automated access). Poll-by-poll results stay on ckan_ (organization "
+    "candidate, and returning officers, straight from the official CSV tables. elections_results_get_historical adds "
+    "every general election from 1867 to 2015 by riding (party totals from the Winer and "
+    "Ferris CC0 data set on Scholars Portal Dataverse). By-elections are not covered ("
+    "the Library of Parliament's history site blocks automated access). Poll-by-poll results stay on ckan_ (organization "
     "'elections') and candidate finance is in elections_financial_returns_."
 )
 MODULE_DESCRIPTION_FR = (
@@ -18,8 +18,10 @@ MODULE_DESCRIPTION_FR = (
     "par circonscription (gagnants indiqués), participation et bulletins par province, "
     "sièges par parti et genre, votes valides par parti et province, participation par "
     "circonscription avec le candidat élu, et directeurs du scrutin, à partir des "
-    "tableaux CSV officiels. Les résultats antérieurs à 2004 et les élections partielles "
-    "ne sont pas couverts. Les résultats par bureau de scrutin restent dans ckan_ "
+    "tableaux CSV officiels. elections_results_get_historical ajoute toutes les élections "
+    "générales de 1867 à 2015 par circonscription (totaux par parti du jeu de données "
+    "CC0 de Winer et Ferris, Scholars Portal Dataverse). Les élections partielles ne sont "
+    "pas couvertes. Les résultats par bureau de scrutin restent dans ckan_ "
     "(organisation « elections ») et le financement des candidats dans "
     "elections_financial_returns_."
 )

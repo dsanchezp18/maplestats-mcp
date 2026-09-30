@@ -2684,3 +2684,28 @@ elections (no data files found), earlier history and by-elections. ParlInfo at
 the Library of Parliament (`lop.parl.ca`, history since 1867) answers HTTP 403
 with a Cloudflare challenge, and no open.canada.ca dataset holds that history
 (searches for historical federal election results returned nothing).
+
+### Older federal results (1867 to 2015)
+
+Searched 2026-09-30 for anything before the 38th general election. Elections
+Canada has no data files for the 36th and 37th (their pages hold candidate
+lists and expense limits), by-elections are web pages, ParlInfo answers HTTP
+403 with a Cloudflare challenge, and open.canada.ca has no historical
+dataset. What exists is a research data set on Scholars Portal Dataverse
+(Borealis): Stanley L. Winer and J. Stephen Ferris (with Haizhen Mou, Derek
+E. H. Olmstead and Jérôme Archambault), "Data Set on Federal Elections, With
+Superconstituencies, Canada 1867 - 2015, Elections 1 - 42",
+https://doi.org/10.5683/SP2/1N4Y1G, CC0 1.0, one 3.3 MB workbook (file id
+86556; the download answers 303 to a signed storage URL). Its sheet "Canada
+1867-2015 (raw data)" has 10,585 constituency-election rows with electors,
+rejected and cast ballots, candidates, seats, an acclamation flag and up to
+13 party and vote pairs (largest first); "Party Names and History" decodes
+125 party mnemonics (eight small ones are unmapped). Party totals only: no
+candidate names. The authors corrected vote counts where the parliamentary
+site's figures disagreed with the Chief Electoral Officer's reports. Checks:
+the party with the most votes in each riding reproduces the known seats of the
+42nd (Lib 184, C 99, NDP 44, BQ 10), 41st (C 166, NDP 103, Lib 34, BQ 4) and
+38th (Lib 135, C 99, BQ 54, NDP 19) general elections. Multi-member ridings
+(seats 2) and acclamations are flagged, so the leading party is not a recorded
+winner. A second Borealis set, "Federal Elections in Ontario (1867-1911)",
+was not needed.
