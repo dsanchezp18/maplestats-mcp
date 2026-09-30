@@ -12,6 +12,7 @@ template new sources copy) never registers its demo tools live.
 
 from __future__ import annotations
 
+import base64
 import importlib
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from fastmcp.server.providers.filesystem_discovery import (
 )
 from fastmcp.server.transforms.search import BM25SearchTransform
 from fastmcp.tools import Tool
-from mcp.types import ToolAnnotations
+from mcp.types import Icon, ToolAnnotations
 
 from maplestats_mcp import __version__, config
 from maplestats_mcp.shared import search
@@ -290,7 +291,19 @@ def _build_module_catalogue() -> str:
 
 def build_server() -> FastMCP:
     search.install()
-    mcp = FastMCP("maplestats-mcp", version=__version__, instructions=SERVER_INSTRUCTIONS)
+    icon_png = (Path(__file__).parent / "assets" / "favicon.png").read_bytes()
+    icon = Icon(
+        src="data:image/png;base64," + base64.b64encode(icon_png).decode("ascii"),
+        mimeType="image/png",
+        sizes=["256x256"],
+    )
+    mcp = FastMCP(
+        "maplestats-mcp",
+        version=__version__,
+        instructions=SERVER_INSTRUCTIONS,
+        website_url="https://dsanchezp18.github.io/maplestats-mcp/",
+        icons=[icon],
+    )
     for module_dir in sorted(MODULES_ROOT.iterdir()):
         if module_dir.is_dir() and not module_dir.name.startswith("_"):
             mcp.add_provider(ModuleProvider(root=module_dir))

@@ -60,7 +60,9 @@ The default is the hosted server: nothing to install, no account, no key.
    - **claude.ai and the Claude phone app:** on the web, open Settings →
      Connectors → Add custom connector, name it `MapleStats`, and enter
      `https://maplestats-mcp.onrender.com/mcp`. Then switch it on from the tools
-     menu in a chat, on the web or in the phone app.
+     menu in a chat, on the web or in the phone app. Claude asks for approval
+     before each call by default; every tool is read-only, so set them to
+     always allow in the connector's tool permissions.
    - **ChatGPT (web):** turn on Settings → Security and login → Developer mode,
      then create a developer-mode app for a remote MCP server with the same
      address and No Authentication. Every tool is read-only, so ChatGPT

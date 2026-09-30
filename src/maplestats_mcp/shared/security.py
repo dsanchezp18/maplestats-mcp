@@ -208,3 +208,30 @@ def with_health_endpoint(inner_app: ASGIApp, *, version: str) -> ASGIApp:
         await inner_app(scope, receive, send)
 
     return app
+
+
+def with_icon_routes(inner_app: ASGIApp, *, icons: dict[str, tuple[bytes, str]]) -> ASGIApp:
+    """Serve static icon files by path, bypassing security.
+
+    MCP clients such as claude.ai fetch the connector icon from the server's own
+    domain (usually /favicon.ico), so the hosted server has to answer there.
+    """
+
+    async def app(scope: dict, receive: Callable, send: Callable) -> None:
+        icon = icons.get(scope.get("path", "")) if scope.get("type") == "http" else None
+        if icon is not None and scope.get("method") in ("GET", "HEAD"):
+            body, content_type = icon
+            headers = [
+                (b"content-type", content_type.encode("ascii")),
+                (b"content-length", str(len(body)).encode("utf-8")),
+                (b"cache-control", b"public, max-age=86400"),
+            ]
+            await send({"type": "http.response.start", "status": 200, "headers": headers})
+            await send(
+                {"type": "http.response.body", "body": b"" if scope["method"] == "HEAD" else body}
+            )
+            return
+
+        await inner_app(scope, receive, send)
+
+    return app
