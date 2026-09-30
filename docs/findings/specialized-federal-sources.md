@@ -2709,3 +2709,29 @@ the party with the most votes in each riding reproduces the known seats of the
 (seats 2) and acclamations are flagged, so the leading party is not a recorded
 winner. A second Borealis set, "Federal Elections in Ontario (1867-1911)",
 was not needed.
+
+## House of Commons open data (ourcommons.ca)
+
+**Status:** Shipped 2026-09-30 as `modules/ourcommons/` (4 tools).
+
+Looking for what the Library of Parliament publishes: ParlInfo
+(`lop.parl.ca`) answers HTTP 403 with a Cloudflare challenge, but the House
+of Commons' own open data page (`www.ourcommons.ca/en/open-data`) lists XML
+feeds, and its robots.txt disallows only `/Embed/`, `/ErrorPage/`,
+`/ParlDataWidgets/`, `/PublicationSearch/` and `/Search/`. Confirmed live:
+`/members/{en,fr}/search/xml` (337 sitting members with person id, riding,
+province, party, mandate start), `/members/{en,fr}/{person id}/roles/xml`
+(the bare person id works in place of "first-last(id)"; seats, caucus,
+parliamentary positions, committees, 74 parliamentary associations for one
+member, and the election candidate roles with results; former members work,
+e.g. person 9 with 1997 and 2000 elections), `/members/{lang}/party-standings/xml`
+(343 seats, 6 shown as Vacant), `/members/{lang}/ministries/xml` (38
+ministers in order of precedence). The constituencies feed
+(`/members/en/constituencies/xml`) is not wrapped: it repeats what the member
+list gives. A bad person id answers 302 to an error page.
+
+Not built: the members' expenditure reports, whose URL needs a "dynamic
+document id" from the page (the example pattern with `Id=0` returns 404);
+votes, debates and committee evidence, which the `parliament_` tools already
+cover through OpenParliament.ca; and LEGISinfo's bills JSON, also covered. Person ids
+are the House's own, not OpenParliament slugs.

@@ -98,6 +98,9 @@ CASES = [
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
     ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
     ("résultats historiques par circonscription depuis 1867", "elections_results_get_historical"),
+    ("qui représente la circonscription député actuel", "ourcommons_list_members"),
+    ("répartition des sièges par parti Chambre des communes", "ourcommons_get_party_standings"),
+    ("Conseil des ministres ordre de préséance", "ourcommons_get_ministry"),
     ("production de lait par province", "cdc_query_market_data"),
     ("nombre de fermes laitières", "cdc_query_market_data"),
     # CFIA animal disease tables (2026-09-26).

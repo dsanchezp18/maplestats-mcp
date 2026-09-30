@@ -480,6 +480,14 @@ SOURCES: dict[str, Source] = {
         places=("YT",),
         row="provincial_agency",
     ),
+    "ourcommons": Source(
+        "House of Commons open data",
+        "Données ouvertes de la Chambre des communes",
+        "national",
+        "House of Commons",
+        "Chambre des communes",
+        domain="government",
+    ),
     "nl_opendata": Source(
         "Open Data Newfoundland and Labrador",
         "Données ouvertes de Terre-Neuve-et-Labrador",
