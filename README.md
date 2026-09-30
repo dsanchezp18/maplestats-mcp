@@ -67,6 +67,13 @@ The default is the hosted server: nothing to install, no account, no key.
      then create a developer-mode app for a remote MCP server with the same
      address and No Authentication. Every tool is read-only, so ChatGPT
      should not ask to confirm calls. OpenAI documents this feature for the web.
+   - **A whole organization:** on Claude Team or Enterprise, an Owner adds it once
+     under Organization settings → Connectors → Add custom connector, and each
+     member then connects it. On ChatGPT Business, Enterprise or Edu, an admin
+     turns on Developer mode (Workspace Settings → Permissions & Roles →
+     Connected Data), creates the app, and publishes it (Workspace settings →
+     Apps → Drafts → Publish). The hosted server is a shared free instance, so
+     a large organization should run its own copy.
    - **VS Code:** the same entry under a `servers` key, with `"type": "http"`,
      in `.vscode/mcp.json`.
 
