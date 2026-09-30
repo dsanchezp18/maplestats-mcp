@@ -29,6 +29,7 @@ restricted to that first `<details>` only.
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 import httpx
@@ -54,6 +55,26 @@ _LIMITER = get_limiter(
 _client = new_client(follow_redirects=True)
 _warmed: set[tuple[str, str]] = set()
 
+# statcan.gc.ca answers HTTP 429 when its catalogue pages are hit in quick
+# succession (seen in the live smoke run of 2026-09-30, from the CI runner and
+# a developer machine). This client does not use the shared retrying GET, so it
+# waits and retries here, honouring Retry-After.
+_RETRY_STATUSES = frozenset({429, 502, 503, 504})
+_RETRY_ATTEMPTS = 4
+_RETRY_BASE_SECONDS = 2.0
+_RETRY_MAX_SECONDS = 30.0
+
+
+async def _get(url: str, params: dict[str, str] | None = None) -> httpx.Response:
+    for attempt in range(_RETRY_ATTEMPTS):
+        response = await _client.get(url, params=params)
+        if response.status_code not in _RETRY_STATUSES or attempt == _RETRY_ATTEMPTS - 1:
+            return response
+        retry_after = response.headers.get("retry-after", "")
+        delay = float(retry_after) if retry_after.isdigit() else _RETRY_BASE_SECONDS * 2**attempt
+        await asyncio.sleep(min(delay, _RETRY_MAX_SECONDS))
+    raise AssertionError("unreachable")
+
 
 def _base_url(catalogue: str, lang: str) -> str:
     config = constants.CATALOGUE_CONFIG[(catalogue, lang)]
@@ -64,7 +85,7 @@ async def _warm_up(catalogue: str, lang: str, *, force: bool = False) -> None:
     key = (catalogue, lang)
     if key in _warmed and not force:
         return
-    response = await _client.get(_base_url(catalogue, lang))
+    response = await _get(_base_url(catalogue, lang))
     response.raise_for_status()
     _warmed.add(key)
 
@@ -190,7 +211,7 @@ async def _search(
         await _LIMITER.acquire()
         try:
             await _warm_up(catalogue, lang)
-            response = await _client.get(url, params=params)
+            response = await _get(url, params=params)
             response.raise_for_status()
             if config["query_param"] not in params or not _query_ignored(
                 response.text, config["query_param"]
@@ -201,7 +222,7 @@ async def _search(
             # once and retry before giving up rather than return every
             # document in the catalogue as a "match".
             await _warm_up(catalogue, lang, force=True)
-            response = await _client.get(url, params=params)
+            response = await _get(url, params=params)
             response.raise_for_status()
             if _query_ignored(response.text, config["query_param"]):
                 _warmed.discard((catalogue, lang))

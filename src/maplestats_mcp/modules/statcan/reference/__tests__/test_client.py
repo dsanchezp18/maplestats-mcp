@@ -203,3 +203,35 @@ async def test_ignored_query_after_rewarm_raises_instead_of_returning_everything
     with pytest.raises(UpstreamError):
         await client.search_documents("housing")
     assert ("reference", "en") not in client._warmed
+
+
+@pytest.fixture
+def no_sleep(monkeypatch):
+    waits: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    monkeypatch.setattr(client.asyncio, "sleep", fake_sleep)
+    return waits
+
+
+async def test_rate_limited_search_waits_and_retries(httpx_mock, no_sleep):
+    search_url = f"{_BASE_URL_EN}?count=10&text=housing"
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")  # warm-up
+    httpx_mock.add_response(url=search_url, status_code=429, headers={"retry-after": "3"})
+    httpx_mock.add_response(url=search_url, status_code=429)
+    httpx_mock.add_response(url=search_url, html=_RESULTS_HTML)
+    result = await client.search_documents("housing")
+    assert result.total_matched == 2031
+    # First wait follows Retry-After, the second falls back to the 2 s base delay.
+    assert no_sleep == [3.0, 4.0]
+
+
+async def test_persistent_rate_limit_still_raises(httpx_mock, no_sleep):
+    search_url = f"{_BASE_URL_EN}?count=10&text=housing"
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(url=search_url, status_code=429, is_reusable=True)
+    with pytest.raises(UpstreamError, match="429"):
+        await client.search_documents("housing")
+    assert len(no_sleep) == client._RETRY_ATTEMPTS - 1
