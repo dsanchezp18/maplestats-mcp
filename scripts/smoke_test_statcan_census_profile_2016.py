@@ -14,8 +14,16 @@ import sys
 from maplestats_mcp.modules.statcan.census_profile_2016 import client
 from maplestats_mcp.shared.errors import InvalidInput
 
+# The 2016 Census Profile Web Data Service is offline: www12.statcan.gc.ca answers its
+# 'temporarily offline for updating' page for /rest/census-recensement (checked in a
+# browser and from CI on 2026-09-30). Set to None once it responds again.
+SERVICE_DOWN: str | None = "StatCan's 2016 Census Profile service is offline"
+
 
 async def main() -> int:
+    if SERVICE_DOWN:
+        print(f"SKIP: {SERVICE_DOWN}")
+        return 0
     ok = True
 
     geos = await client.list_geographies("canada_provinces_territories")

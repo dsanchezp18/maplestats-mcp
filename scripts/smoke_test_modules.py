@@ -54,6 +54,14 @@ DOWN_MODULES = {
     "nrcan_energy_use": "oee.nrcan.gc.ca does not complete a TLS handshake",
 }
 
+# Single tools whose upstream is down while the rest of their module works.
+DOWN_TOOLS = {
+    # www12.statcan.gc.ca answers its 'temporarily offline for updating' page for
+    # the census table indexes of 2006, 2011 and 2016, in a browser too (2026-09-30).
+    "statcan_census_tables_search": "StatCan's census table pages are offline",
+    "statcan_census_tables_get_downloads": "StatCan's census table pages are offline",
+}
+
 STEPS: list[Step] = [
     # Alberta Economic Dashboard
     Step("ab_economic", "ab_economic_list_indicators", {}, _non_empty("indicators")),
@@ -421,8 +429,9 @@ async def main(modules: set[str]) -> int:
         for step in STEPS:
             if modules and step.module not in modules:
                 continue
-            if step.module in DOWN_MODULES:
-                print(f"SKIP {step.tool}: {DOWN_MODULES[step.module]}")
+            if step.module in DOWN_MODULES or step.tool in DOWN_TOOLS:
+                reason = DOWN_MODULES.get(step.module) or DOWN_TOOLS[step.tool]
+                print(f"SKIP {step.tool}: {reason}")
                 continue
             label = step.tool
             try:
