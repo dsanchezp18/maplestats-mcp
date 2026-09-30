@@ -410,3 +410,27 @@ count), Richmond BC, Vaughan, Richmond Hill, Nanaimo, North Vancouver, St.
 John's, Sault Ste. Marie, Wood Buffalo, Charlottetown, Whitehorse and
 Yellowknife (no public Hub site found by that search; several use other
 platforms). Not yet re-checked by another route.
+
+## Police and conservation authority portals (Toronto and Ottawa police, six Ontario conservation authorities)
+
+Added config-only on 2026-09-30, together with the Ontario GeoHub (a provincial
+geospatial hub, 242 datasets, `ontariogeohub-lio.opendata.arcgis.com`) and
+Parks Canada (`data-apca.opendata.arcgis.com`, 25 datasets). Found by an
+ArcGIS Online search for public Hub Site Applications (the keyword "police"
+alone returned only United States agencies), then confirmed by the Hub
+`numberMatched`: Toronto Police Public Safety Data Portal 71
+(`data.torontopolice.on.ca`; the older `torontops.hub.arcgis.com` lists 111
+items, mostly map layers, and has the same shootings and neighbourhood crime
+rate datasets), Ottawa Police 98 items but only the `all` collection (13
+feature layers, so searches default to Feature Service, as for Okotoks),
+Conservation Halton 36, Credit Valley Conservation 2, Niagara Peninsula 31,
+Hamilton 31, Central Lake Ontario 27 and Quinte 14. The smoke test passed for
+all ten.
+
+Not added: a search hit named "Conservation Open Data" is the California
+Department of Conservation. Peel, Halton, York, Durham, Waterloo, London,
+Hamilton, Calgary, Saskatoon, Winnipeg, Halifax and Vancouver police sites
+were probed (several guessed domains) and none answered; Calgary and Winnipeg
+police data already sit on their cities' Socrata portals. Other conservation
+authorities (Grand River, Toronto and Region, Lake Simcoe, Rideau Valley and
+others) did not turn up a public Hub site in that search.
