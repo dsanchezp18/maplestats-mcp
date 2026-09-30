@@ -155,7 +155,9 @@ async def main() -> int:
         f"latest {qc_trade.points[-1].timestamp}, "
         f"exports {qc_trade.points[-1].exports_total_mw} MW",
     )
-    qc_trade_range = await client_qc.get_trade("2026-09-28", "2026-09-28", limit=24)
+    # The feed keeps only the most recent days, so ask for the latest point's own date.
+    latest_day = str(qc_trade.points[-1].timestamp)[:10]
+    qc_trade_range = await client_qc.get_trade(latest_day, latest_day, limit=24)
     ok &= _report("quebec trade date range", len(qc_trade_range.points) >= 1, "ok")
 
     for label, coro in (
