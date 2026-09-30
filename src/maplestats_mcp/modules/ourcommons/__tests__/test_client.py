@@ -38,7 +38,7 @@ async def test_members_filter_by_province_and_party_accent_insensitive(httpx_moc
     first = everyone.members[0]
     assert (first.person_id, first.last_name) == (89156, "Aboultaif")
     assert first.constituency == "Edmonton Manning" and first.province == "Alberta"
-    assert first.elected.year == 2025
+    assert first.elected and first.elected.year == 2025
 
     alberta = await client.list_members(province="ALBERTA")
     assert alberta.total_members >= 1
@@ -64,7 +64,10 @@ async def test_roles_for_a_sitting_member(httpx_mock):
     assert roles.seats[0].constituency == "Edmonton Manning" and roles.seats[0].end is None
     assert roles.committee_roles[0].committee == "Foreign Affairs and International Development"
     assert len(roles.associations) == 74
-    assert [(e.election_date.year, e.result) for e in roles.election_history][:2] == [
+    assert [
+        (e.election_date.year if e.election_date else None, e.result)
+        for e in roles.election_history
+    ][:2] == [
         (2025, "Re-Elected"),
         (2021, "Re-Elected"),
     ]
@@ -77,9 +80,11 @@ async def test_roles_for_a_former_member(httpx_mock):
     httpx_mock.add_response(url=url, content=_bytes("roles_9.xml"))
     roles = await client.get_member_roles(9)
     assert roles.last_name == "Baker" and len(roles.seats) == 2
-    assert roles.seats[0].end.year == 2002 and roles.seats[1].start.year == 1997
-    assert roles.parliamentary_positions[0].title.startswith("Secretary of State")
-    assert roles.parliamentary_positions[0].start.year == 1999
+    end, start = roles.seats[0].end, roles.seats[1].start
+    assert end and end.year == 2002 and start and start.year == 1997
+    position = roles.parliamentary_positions[0]
+    assert position.title.startswith("Secretary of State")
+    assert position.start and position.start.year == 1999
 
 
 async def test_unknown_person_id_is_not_found(httpx_mock):

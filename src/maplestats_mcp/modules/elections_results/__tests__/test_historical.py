@@ -28,7 +28,7 @@ _HEADER = (
 
 
 def _row(values: dict[str, object], pairs: list[tuple[str, int]]) -> list[object]:
-    row: dict[str, object] = dict.fromkeys(_HEADER)
+    row: dict[str, object | None] = dict.fromkeys(_HEADER)
     row.update(values)
     for i, (party, votes) in enumerate(pairs, start=1):
         row[f"k{i}"], row[f"v{i}"] = party, votes
@@ -40,6 +40,7 @@ def _row(values: dict[str, object], pairs: list[tuple[str, int]]) -> list[object
 def _workbook() -> bytes:
     workbook = Workbook()
     raw = workbook.active
+    assert raw is not None
     raw.title = historical.RAW_SHEET
     raw.append(_HEADER)
     raw.append(

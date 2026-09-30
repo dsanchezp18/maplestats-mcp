@@ -127,6 +127,7 @@ async def test_catalogue_keeps_only_bureau_csvs(monkeypatch):
 
     everything = await client.list_tables()
     assert [t.title for t in everything.tables] == ["Rent and vacancy rates", "Crime"]
-    assert everything.tables[0].modified.year == 2026
+    modified = everything.tables[0].modified
+    assert modified and modified.year == 2026
     assert (await client.list_tables(query="rent vacancy")).total_tables == 1
     assert (await client.list_tables(dataset="social")).tables[0].title == "Crime"

@@ -232,7 +232,8 @@ def _parse_xls(body: bytes) -> dict[str, list[list[str]]]:
             for c in range(sheet.ncols):
                 cell = sheet.cell(r, c)
                 if cell.ctype == xlrd.XL_CELL_DATE:
-                    row.append(_text(xlrd.xldate.xldate_as_datetime(cell.value, book.datemode)))
+                    serial = float(cell.value)
+                    row.append(_text(xlrd.xldate.xldate_as_datetime(serial, book.datemode)))
                 elif cell.ctype == xlrd.XL_CELL_ERROR:
                     row.append("")
                 else:
