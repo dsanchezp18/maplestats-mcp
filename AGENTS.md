@@ -4,7 +4,7 @@ This is the canonical guide for any agent (or human) contributing code
 to MapleStats MCP. `CLAUDE.md` in this repo intentionally carries no
 independent content — it points here.
 
-Read [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) and [`ROADMAP.md`](ROADMAP.md)
+Read [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md)
 first for project scope and source status. This file is about *how*
 to build things here, not *what* to build.
 
@@ -278,7 +278,7 @@ uv run python -m http.server --directory build/site 8080
   and retry, then raise — never return or cache that page as a result.
   See `statcan/reference`, `statcan/surveys`, and
   `elections_financial_returns` for the pattern.
-- No CLI companion yet (deferred by design, see `PROJECT_GUIDE.md`).
+- No CLI companion yet (deferred by design, see `docs/PROJECT_GUIDE.md`).
 
 ## Acknowledgments
 

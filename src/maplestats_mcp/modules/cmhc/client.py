@@ -6,7 +6,7 @@ cmhc rate limiter and either returns a typed model or raises a
 https://www03.cmhc-schl.gc.ca/hmip-pimh/ this session (not assumed from
 the independently-maintained `mountainMath/cmhc` R package alone,
 though its source was read and cross-checked as the "existing community
-access pattern" this project's PROJECT_GUIDE.md asks to investigate):
+access pattern" this project's docs/PROJECT_GUIDE.md asks to investigate):
 
 - `GET /{lang}/TableMapChart?geographyType=Country&geographyId=1` ->
   full category taxonomy for a geography, as

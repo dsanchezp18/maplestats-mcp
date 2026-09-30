@@ -1,7 +1,7 @@
 # Findings
 
 What each source turned out to need, checked against live responses. The
-status of each source is in [`ROADMAP.md`](../../ROADMAP.md).
+status of each source is in [`ROADMAP.md`](../ROADMAP.md).
 
 ## Documents
 

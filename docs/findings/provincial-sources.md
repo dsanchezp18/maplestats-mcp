@@ -1,6 +1,6 @@
 # Provincial sources
 
-Findings moved from [`ROADMAP.md`](../../ROADMAP.md) on 2026-09-25. Each section
+Findings moved from [`ROADMAP.md`](../ROADMAP.md) on 2026-09-25. Each section
 records what was checked, against which live responses, and what the
 module does about it. Dates are when a finding was confirmed; the
 status in `ROADMAP.md` is the current one.

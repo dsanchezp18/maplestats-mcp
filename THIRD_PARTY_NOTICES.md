@@ -75,5 +75,5 @@ files and is published with the site:
   "Plex" (https://github.com/IBM/plex):
   `site/assets/fonts/OFL-ibm-plex-mono.txt`
 
-The files are the Latin and Latin Extended subsets that Google Fonts
+The files are the Latin subset that Google Fonts
 serves, unmodified.

@@ -1,9 +1,9 @@
 # Hosting the server, and what to do about PUMF tabulation
 
 Written 2026-09-29. Hosting prices and free-tier limits are from memory and
-were not checked live; confirm them before choosing. Nothing here is
-decided: the current leaning is to host without `statcan_pumf_tabulate`
-(section 4), to be revisited.
+were not checked live; confirm them before choosing. Archived: the
+server is now hosted on Render's free tier without `statcan_pumf_tabulate`
+(`render.yaml`); this note records the options considered.
 
 ## 1. Hosting options
 

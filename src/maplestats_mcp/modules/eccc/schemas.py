@@ -17,7 +17,7 @@ live, see client.py); swob-realtime carries ~150 raw meteorological
 variables named in WMO-style shorthand, each as a -value/-uom/-qa
 triplet. Modelling ~100 distinct property schemas as separate typed
 models would not be proportionate to this module's scope (see
-AGENTS.md/PROJECT_GUIDE.md's rule against bespoke tools where a common
+AGENTS.md/docs/PROJECT_GUIDE.md's rule against bespoke tools where a common
 discovery/resource/metadata abstraction is sufficient) — Feature.
 properties is deliberately dict[str, Any], the same choice already
 made for modules/arcgis_*'s FeatureQueryResult.rows.

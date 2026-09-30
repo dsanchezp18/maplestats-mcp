@@ -32,8 +32,8 @@ portals, in English and French. Every result carries its source.
 *MapleStats MCP donne aux agents IA un accès structuré aux données
 ouvertes canadiennes par un seul serveur, en français et en anglais.*
 
-Project vision: [`PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/PROJECT_GUIDE.md).
-Source coverage: [`ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/ROADMAP.md).
+Project vision: [`docs/PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/PROJECT_GUIDE.md).
+Source coverage: [`docs/ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/ROADMAP.md).
 Website: <https://dsanchezp18.github.io/maplestats-mcp/>.
 
 ## The easiest way: ask your agent

@@ -1,6 +1,6 @@
 # Census and specialized federal sources
 
-Findings moved from [`ROADMAP.md`](../../ROADMAP.md) on 2026-09-25. Each section
+Findings moved from [`ROADMAP.md`](../ROADMAP.md) on 2026-09-25. Each section
 records what was checked, against which live responses, and what the
 module does about it. Dates are when a finding was confirmed; the
 status in `ROADMAP.md` is the current one.
@@ -1416,7 +1416,7 @@ the 2021 Census (random groups, divisor 35; reproduces the guide's examples
 exactly), EICS 2024 and CSWC 2024-2025 (1,000 bootstrap weights, divisor
 1,000). SHS documents no PUMF variance method, so no SE.
 
-See docs/pumf-beyond2020-scope.md.
+See docs/archive/pumf-beyond2020-scope.md.
 
 ## Census data tables 2006-2016 (Beyond 20/20)
 

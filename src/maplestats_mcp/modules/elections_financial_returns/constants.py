@@ -80,7 +80,7 @@ DOWNLOAD_FORMAT_JSON = "3"
 # "-1"/"All") returned 1,926 candidate rows in one unpaginated response for
 # the 45th general election alone. Capped here for the same
 # agent-facing-compactness reason SEARCH_ROWS_MAX/DATASTORE_ROWS_MAX are
-# capped elsewhere in this project (see the CRA row in ROADMAP.md) -- a
+# capped elsewhere in this project (see the CRA row in docs/ROADMAP.md) -- a
 # caller should narrow with last_name/party_id/province_id rather than
 # pull the full roster through this tool.
 CANDIDATE_SEARCH_MAX = 300

@@ -1,6 +1,6 @@
 # MapleStats MCP — Project Guide
 
-Source of truth: Notion page "MapleStats MCP" (Programming Hub / Software
+Vision and background. Notion page "MapleStats MCP" (Programming Hub / Software
 Projects & Ideas), last edited 2026-09-14. This guide is a working copy of
 that page for local reference during development. When the two diverge,
 update this file from Notion rather than editing Notion from memory.
@@ -9,7 +9,7 @@ update this file from Notion rather than editing Notion from memory.
 
 | Field | Value |
 |---|---|
-| Development Stage | Local beta / pre-hosting |
+| Development Stage | Hosted beta (Render free tier) |
 | Priority | High |
 | Project Type | Data product |
 | Repository | `maplestats-mcp` |
