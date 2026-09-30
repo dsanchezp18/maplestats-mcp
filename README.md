@@ -56,8 +56,15 @@ The default is the hosted server: nothing to install, no account, no key.
      below to the client's config file (Cursor: `~/.cursor/mcp.json`; Claude
      Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
      on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows),
-     keeping any servers already there. If the client only accepts custom
-     connectors (Claude Desktop, claude.ai), add `https://maplestats-mcp.onrender.com/mcp` as one.
+     keeping any servers already there.
+   - **claude.ai and the Claude phone app:** on the web, open Settings →
+     Connectors → Add custom connector, name it `MapleStats`, and enter
+     `https://maplestats-mcp.onrender.com/mcp`. Then switch it on from the tools
+     menu in a chat, on the web or in the phone app.
+   - **ChatGPT (web):** turn on Settings → Security and login → Developer mode,
+     then create a developer-mode app for a remote MCP server with the same
+     address and No Authentication. Every tool is read-only, so ChatGPT
+     should not ask to confirm calls. OpenAI documents this feature for the web.
    - **VS Code:** the same entry under a `servers` key, with `"type": "http"`,
      in `.vscode/mcp.json`.
 
