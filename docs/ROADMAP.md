@@ -4,6 +4,12 @@ Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
+**State at 2026-09-30:** 237 tools in 50 modules. Every source in the tables below is
+`Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
+`Not built`). Local coverage is 69 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
+Opendatasoft. What is left is launch work (hosted endpoint, blog post, clients, outreach)
+and the candidates listed at the end of this file.
+
 Per-source findings (what was checked live, quirks, limits) live in
 [`findings/`](findings/README.md); the tables below keep the
 status and a one-line summary.
@@ -54,9 +60,10 @@ tool counts in the rows below predate that change.
 
 ### Next provincial sequence
 
-The four CKAN provinces, the Socrata pair, and the ArcGIS Hub trio are now
-shipped. The remaining provincial work should stay adaptor-first so one
-implementation unlocks several provinces:
+All ten provinces are now covered: the four CKAN provinces, the Socrata pair,
+the ArcGIS Hub trio and Newfoundland and Labrador's custom portal. The sequence
+below is kept as the record of how the adaptors were chosen (statistics agencies
+are tracked separately in `findings/provincial-sources.md`):
 
 For this provincial phase, "coverage" means the official/main provincial
 portal. Municipal portals and secondary departmental or specialized portals
@@ -305,10 +312,25 @@ From the Notion canonical page; the hosted endpoint, blog post, per-language cli
 | Item | Status | Notes |
 |---|---|---|
 | Hosted MCP endpoint | Not started | Launch gate: a stable hosted server (Azure Container Apps recipe discussed 2026-09-24: one replica, Azure Files volume for the PUMF cache, bearer token). |
-| Public website | Shipped | Live at dsanchezp18.github.io/maplestats-mcp (checked 2026-09-28, HTTP 200): home, sources, tools, connect, demos, StatCan page, about, contributing; English and French. |
+| Public website | Shipped | Live at dsanchezp18.github.io/maplestats-mcp (checked 2026-09-28, HTTP 200): home, sources, tools, connect, StatCan page, about, contributing; English and French. The demos page was removed 2026-09-29. |
 | Launch blog post "One MCP to Rule Them All" | Not started | Narrative drafted on the Notion page. |
 | Cross-source demos | Removed | Shipped 2026-09-27 as a site page (Alberta's population boom and rental market; what the rate hikes did to new housing), then archived and removed 2026-09-29. `plan_query` and the recorded cases on the demos page cover the same ground. |
-| MCP registries | Shipped (official, Glama, Smithery) | `io.github.dsanchezp18/maplestats-mcp` 0.1.1 is the latest version on the official MCP Registry (checked live 2026-09-28; 0.1.0 is superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Glama and Smithery listing pages resolve (badges in the README). Checked in a browser 2026-09-28: not listed on PulseMCP (new submissions are paused by them) or mcp.so (no listing found; submission form exists). |
+| MCP registries | Shipped (official, Glama, Smithery) | `io.github.dsanchezp18/maplestats-mcp` 0.1.1 is the latest version on the official MCP Registry (checked live 2026-09-28; 0.1.0 is superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Glama and Smithery listing pages resolve (badges in the README). Checked in a browser 2026-09-28: not listed on PulseMCP (new submissions are paused by them) or mcp.so (no listing found; submission form exists). Since then badges were added for Mcprush, LobeHub, piwheels, M8ven and MCPLookup (README and site), and every tool got a human-readable title, which Claude's connector directory requires (2026-09-30). |
 | PyPI package | Shipped | `maplestats-mcp` 0.1.1 is on PyPI (0.1.0 also available). Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). |
 | Per-language clients | Not started | Lightweight R, Python and Julia clients over the hosted core; `reproduce_code` already generates per-language scripts. |
 | Ecosystem outreach | Not started | cansim maintainers, MountainMath (CMHC, canivt), OSI Data Analyst Network, Edmonton Data Society, Vancouver group, NRCan (Torben), SFU Economics. |
+
+## Open candidates
+
+Nothing below is started. Ordered by expected value.
+
+| Candidate | Why | Known obstacle |
+|---|---|---|
+| Library of Parliament (ParlInfo, LEGISinfo, Parliamentary Guide history) | Historical federal data the current tools lack: members since 1867, election history, riding history, bills and party standings. | ParlInfo (`lop.parl.ca`) answers automated requests with a Cloudflare challenge (HTTP 403). Routes through `ourcommons.ca` open data and LEGISinfo JSON are being checked. |
+| Provincial general election results (Ontario, BC, Alberta, Quebec) | Companion to `elections_results_`. | Not yet checked which files each province publishes. |
+| Transit schedule feeds (TransLink, TTC, STM, OC Transpo, Calgary Transit) | Only Edmonton's real-time feed is covered. | Static GTFS hosting and terms differ by agency. |
+| Excel reader for XLSX-only BC Stats tables | LFS, GDP, tourism and population projections have no DataStore rows on the BC portal. | Layouts are irregular. |
+| Saskatchewan Bureau of Statistics Provincial Economic Accounts | The one table StatCan does not repeat. | File ids change each issue, so it needs page scraping; no open licence found. |
+| CAPP Statistics Handbook | 76 Excel tables (reserves, production, producer sales since 1947). | Deferred; industry copyright, attribution required. |
+| Candidate names for federal elections before 2004 | Would complete `elections_results_get_historical`, which has party totals only. | No open source found; the 36th and 37th have no Elections Canada data files. |
+| More municipal portals (Richmond BC, Vaughan, Nanaimo, St. John's, others) | Coverage. | No public ArcGIS Hub site found; some run other platforms. |
