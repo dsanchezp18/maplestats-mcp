@@ -238,11 +238,6 @@ and `site/assets/charts.js`. A `<case>_fr` capture (the same call with
 `lang="fr"`) replaces `<case>` on the French page, for tools that answer
 in French.
 
-The cross-source demos page (`site/demos.html`) works the same way from
-the `demo_*` captures: each records its `plan_query` call first, then every
-data call with its `reproduce_code` scripts, and the build joins them year
-by year (`demos_context` in `scripts/build_site.py`).
-
 French pages must read as French. The build spaces French punctuation
 itself (`french_typography()`: no-break spaces before `: ; ? ! %` and
 inside « »), so write templates with plain spaces. Text the server has

@@ -76,10 +76,6 @@ UVX_COMMAND = " ".join(["uvx", *UVX_ARGS])
 # hreflang and Open Graph URLs, the sitemap and the 404 page are absolute
 # from here, because a crawler or a link preview has no page to resolve from.
 SITE_URL = "https://dsanchezp18.github.io/maplestats-mcp/"
-# Pages kept for reference but out of the navigation, the sitemap and
-# llms.txt: each carries a banner saying so and asks search engines not to
-# index it, and stays reachable at its own address.
-ARCHIVED = frozenset({"demos-archive.html"})
 
 # Badges, the same ones as README.md's: (group, link, image, alt EN, alt FR).
 # "user" badges sit under the install prompt on the home and Connect pages,
@@ -1410,17 +1406,16 @@ def national_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
     return "".join(blocks)
 
 
-def plan_panel(lang: Lang, root: str, plan: dict[str, Any] | None = None, heading: int = 4) -> str:
+def plan_panel(lang: Lang, root: str, heading: int = 4) -> str:
     """The planner's answer as short lists: one per topic or place, tool over purpose.
 
-    `plan` is a recorded plan_query response (the archived demos page); without it,
-    the planner answers the home page's question when the site is built.
+    The planner answers the home page's question when the site is built.
     `heading` is the level of each list's title, one below the section's.
     """
     # plan_query writes its plan in English only (its lang argument is accepted
     # for consistency), so on a French page the plan's own words are marked
     # lang="en" and only the labels around them are French.
-    plan = plan or planner.plan(PLAN_QUESTION[lang]).model_dump(mode="json")
+    plan = planner.plan(PLAN_QUESTION[lang]).model_dump(mode="json")
     caveat = "Caveat" if lang == "en" else "Précaution"
     en = en_only(lang)
 
@@ -2963,447 +2958,6 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
 
 
 # --------------------------------------------------------------------------
-# Cross-source demos (site/demos-archive.html, archived): one question each, the plan
-# plan_query gave for it, then recorded calls to several agencies
-# (scripts/capture_cases.py demo_alberta demo_rates) joined year by year.
-# --------------------------------------------------------------------------
-
-# Who each call's tool belongs to, for the "answered from" list and the
-# column headings of the joined table.
-DEMO_AGENCIES: dict[str, tuple[str, str]] = {
-    "wds_": ("Statistics Canada", "Statistique Canada"),
-    "ab_economic_": ("Alberta Economic Dashboard", "Tableau de bord économique de l'Alberta"),
-    "ircc_": (
-        "Immigration, Refugees and Citizenship Canada",
-        "Immigration, Réfugiés et Citoyenneté Canada",
-    ),
-    "cmhc_": (
-        "Canada Mortgage and Housing Corporation",
-        "Société canadienne d'hypothèques et de logement",
-    ),
-    "boc_": ("Bank of Canada", "Banque du Canada"),
-}
-
-
-def demo_agency(tool: str, lang: Lang) -> str:
-    for prefix, names in DEMO_AGENCIES.items():
-        if tool.startswith(prefix):
-            return names[0 if lang == "en" else 1]
-    raise KeyError(f"no agency for {tool}")
-
-
-def demo_sources(case: dict[str, Any], lang: Lang) -> str:
-    """One line per data call: its agency, then where and when it was read."""
-    items = "".join(
-        f"<li><strong>{esc(demo_agency(call['name'], lang))}</strong> "
-        f"{call_source(call['response'], lang)}</li>"
-        for call in case["calls"]
-        if call["name"] != "plan_query"
-    )
-    return f'<ul class="demo-sources">{items}</ul>'
-
-
-def demo_how(case: dict[str, Any], key: str, lang: Lang) -> str:
-    """Every call behind a demo: its request, and for a data call its scripts."""
-    summary = (
-        "The calls behind this answer"
-        if lang == "en"
-        else "Les appels à l'origine de cette réponse"
-    )
-    request_label = "Request" if lang == "en" else "Requête"
-    scripts_label = (
-        "Scripts that fetch it again" if lang == "en" else "Scripts pour le récupérer de nouveau"
-    )
-    panels = []
-    for n, call in enumerate(case["calls"]):
-        request = json.dumps(
-            {"name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False
-        )
-        who = "plan_query" if call["name"] == "plan_query" else demo_agency(call["name"], lang)
-        panel = (
-            f'<figure class="panel"><figcaption class="panel-bar"><span>{request_label}: {esc(who)}</span>'
-            f"<code>call_tool</code></figcaption><pre><code>{highlight_json(request)}</code></pre></figure>"
-        )
-        if call.get("scripts"):
-            tabs = script_tabs(list(call["scripts"].items()), f"{key}-{n}")
-            panel += (
-                f'<details class="demo-scripts"><summary>{scripts_label}</summary>'
-                f'<figure class="panel">{tabs}</figure></details>'
-            )
-        panels.append(panel)
-    return (
-        f'<details class="how"><summary>{summary}</summary><div class="how-body">'
-        + "".join(panels)
-        + "</div></details>"
-    )
-
-
-def demo_table(caption: str, head: list[str], rows: list[list[str]]) -> str:
-    """The sources joined: one row per year, one column per series (and its agency)."""
-    heads = "".join(
-        f'<th scope="col"{"" if i == 0 else ' class="num"'}>{h}</th>' for i, h in enumerate(head)
-    )
-    body = "".join(
-        f'<tr><th scope="row">{esc(row[0])}</th>'
-        + "".join(f'<td class="num">{esc(cell)}</td>' for cell in row[1:])
-        + "</tr>"
-        for row in rows
-    )
-    return (
-        f'<div class="table-wrap demo-join"><table class="chart-table"><caption>{esc(caption)}</caption>'
-        f"<thead><tr>{heads}</tr></thead><tbody>{body}</tbody></table></div>"
-    )
-
-
-def _col(name: str, agency: str) -> str:
-    return f'{esc(name)}<span class="demo-agency">{esc(agency)}</span>'
-
-
-def demo_alberta_context(case: dict[str, Any], lang: Lang, root: str) -> dict[str, str]:
-    calls = case["calls"]
-    plan, population, migration, residents, vacancy, rent = (c["response"] for c in calls)
-    july = {
-        o["ref_period"][:4]: o["value"]
-        for o in population[0]["observations"]
-        if o["ref_period"].endswith("-07-01")
-    }
-    growth = {y: july[y] - july[str(int(y) - 1)] for y in july if str(int(y) - 1) in july}
-    quarters: dict[str, dict[str, list[float]]] = {}
-    for row in migration["rows"]:
-        quarters.setdefault(row["Date"][:4], {}).setdefault(row["Type"], []).append(row["Value"])
-    # Calendar years with all four quarters in.
-    net = {
-        y: {t: sum(v) for t, v in types.items()}
-        for y, types in quarters.items()
-        if all(len(v) == 4 for v in types.values())
-    }
-    admitted = {r["period"]: r["value"] for r in residents["rows"] if r["cells"] >= 24}
-    october = {r["period"][:4]: r["values"]["Total"]["value"] for r in vacancy["rows"]}
-    rents = {r["period"][:4]: r["values"]["Total"]["value"] for r in rent["rows"]}
-    change = {
-        y: (rents[y] / rents[str(int(y) - 1)] - 1) * 100 for y in rents if str(int(y) - 1) in rents
-    }
-    years = [
-        y for y in sorted(net) if y in growth and y in admitted and y in october and y in change
-    ]
-    peak = max(years, key=lambda y: net[y]["Total migration"])
-    tight = min(years, key=lambda y: october[y])
-    last = years[-1]
-    before = str(int(peak) - 2)
-
-    def people(v: float) -> str:
-        return number(v, lang)
-
-    def pct(v: float) -> str:
-        return percent(v, lang, 1)
-
-    intl = "Net international migration" if lang == "en" else "Migration internationale nette"
-    inter = "Net interprovincial migration" if lang == "en" else "Migration interprovinciale nette"
-    prs = "New permanent residents" if lang == "en" else "Nouveaux résidents permanents"
-    # Short legend names: the full ones overflow the legend in French.
-    short = (
-        ("International", "Interprovincial", "Permanent admissions")
-        if lang == "en"
-        else ("Internationale", "Interprovinciale", "Admissions permanentes")
-    )
-    people_series: list[tuple[str, list[float | None]]] = [
-        (short[0], [net[y]["International"] for y in years]),
-        (short[1], [net[y]["Interprovincial"] for y in years]),
-        (short[2], [admitted[y] for y in years]),
-    ]
-    people_label = (
-        "Alberta: net international and interprovincial migration (Alberta Economic Dashboard) and new permanent residents (IRCC), by year"
-        if lang == "en"
-        else "Alberta : migration internationale et interprovinciale nette (Tableau de bord économique de l'Alberta) et nouveaux résidents permanents (IRCC), par année"
-    )
-    vac_name = "Vacancy rate, October" if lang == "en" else "Taux d'inoccupation, octobre"
-    rent_name = "Change in average rent" if lang == "en" else "Variation du loyer moyen"
-    rent_series: list[tuple[str, list[float | None]]] = [
-        (vac_name, [october[y] for y in years]),
-        (rent_name, [change[y] for y in years]),
-    ]
-    rent_label = (
-        "Alberta: rental vacancy rate and the yearly change in average rent, October Rental Market Survey (CMHC)"
-        if lang == "en"
-        else "Alberta : taux d'inoccupation des logements locatifs et variation annuelle du loyer moyen, Enquête sur les logements locatifs d'octobre (SCHL)"
-    )
-    year_word = "Year" if lang == "en" else "Année"
-    statcan, alberta, ircc, cmhc = (
-        demo_agency(t, lang) for t in ("wds_", "ab_economic_", "ircc_", "cmhc_")
-    )
-    grow_name = (
-        "Population growth, July to July"
-        if lang == "en"
-        else "Croissance de la population, juillet à juillet"
-    )
-    join = demo_table(
-        (
-            "Alberta, year by year, from four sources"
-            if lang == "en"
-            else "L'Alberta, année par année, selon quatre sources"
-        ),
-        [
-            year_word,
-            _col(grow_name, statcan),
-            _col(intl, alberta),
-            _col(inter, alberta),
-            _col(prs, ircc),
-            _col(vac_name, cmhc),
-            _col(rent_name, cmhc),
-        ],
-        [
-            [
-                y,
-                people(growth[y]),
-                people(net[y]["International"]),
-                people(net[y]["Interprovincial"]),
-                people(admitted[y]),
-                pct(october[y]),
-                pct(change[y]),
-            ]
-            for y in years
-        ],
-    )
-    return {
-        "demo_ab_plan": plan_panel(lang, root, plan, heading=3),
-        "demo_ab_question": esc(plan["question"]),
-        "chart_demo_ab_people": chart_table(
-            charts.grouped_bars(years, people_series, label=people_label, value_format=people),
-            "demo-ab-people",
-            lang,
-            people_label,
-            (year_word, *short),
-            charts.bar_rows(years, people_series, people),
-        ),
-        "chart_demo_ab_rent": chart_table(
-            charts.grouped_bars(years, rent_series, label=rent_label, value_format=pct),
-            "demo-ab-rent",
-            lang,
-            rent_label,
-            (year_word, vac_name, rent_name),
-            charts.bar_rows(years, rent_series, pct),
-        ),
-        "demo_ab_join": join,
-        "demo_ab_sources": demo_sources(case, lang),
-        "demo_ab_how": demo_how(case, "demo-ab", lang),
-        "demo_ab_first": years[0],
-        "demo_ab_last": last,
-        "demo_ab_peak": peak,
-        "demo_ab_before": before,
-        "demo_ab_net_before": people(net[before]["Total migration"]),
-        "demo_ab_net_peak": people(net[peak]["Total migration"]),
-        "demo_ab_intl_peak": people(net[peak]["International"]),
-        "demo_ab_inter_peak": people(net[peak]["Interprovincial"]),
-        "demo_ab_pr_peak": people(admitted[peak]),
-        "demo_ab_growth_peak": people(max(growth[y] for y in years)),
-        "demo_ab_growth_peak_year": max(years, key=lambda y: growth[y]),
-        "demo_ab_tight": tight,
-        "demo_ab_vac_tight": esc(pct(october[tight])),
-        "demo_ab_rent_tight": esc(pct(change[tight])),
-        "demo_ab_rent_next": esc(pct(change[str(int(tight) + 1)])),
-        "demo_ab_vac_last": esc(pct(october[last])),
-        "demo_ab_rent_last": esc(pct(change[last])),
-        "demo_ab_rent_before": number(rents[before], lang),
-        "demo_ab_rent_now": number(rents[last], lang),
-        "demo_ab_captured": long_date(case["captured"], lang),
-    }
-
-
-def demo_rates_context(case: dict[str, Any], lang: Lang, root: str) -> dict[str, str]:
-    plan, rates, starts, nhpi = (c["response"] for c in case["calls"])
-    policy = sorted(
-        (o["ref_date"], float(o["values"]["V39079"]))
-        for o in rates["observations"]
-        if o["values"].get("V39079") is not None
-    )
-    mortgage = sorted(
-        (o["ref_date"], float(o["values"]["V80691335"]))
-        for o in rates["observations"]
-        if o["values"].get("V80691335") is not None
-    )
-    changes = [b for a, b in pairwise(policy) if a[1] != b[1]]
-    hikes = [p for p, prev in zip(changes, [policy[0], *changes], strict=False) if p[1] > prev[1]]
-    first_hike, top = hikes[0], max(policy, key=lambda p: p[1])
-    top_day = next(d for d, v in policy if v == top[1])
-    cut = next(p for p in changes if p[0] > top_day)
-    # Housing starts, seasonally adjusted at annual rates: a year's average
-    # month, for the years with all twelve in.
-    by_year: dict[str, list[dict[str, Any]]] = {}
-    for row in starts["rows"]:
-        by_year.setdefault(row["period"][:4], []).append(row["values"])
-    years = [y for y in sorted(by_year) if y >= "2019" and len(by_year[y]) == 12]
-
-    def avg(y: str, kind: str) -> float:
-        return sum(v[kind]["value"] for v in by_year[y]) / 12
-
-    index = {o["ref_period"]: o["value"] for o in nhpi[0]["observations"]}
-    yoy = sorted(
-        (p, (v / index[f"{int(p[:4]) - 1}{p[4:]}"] - 1) * 100)
-        for p, v in index.items()
-        if f"{int(p[:4]) - 1}{p[4:]}" in index and p >= "2019-01"
-    )
-    peak_month = max(index, key=lambda p: index[p])
-    latest = max(index)
-    boom = max(yoy, key=lambda p: p[1])
-    turned = next(p for p, v in yoy if p > boom[0] and v < 0)
-    single, apartment = (
-        "Single-detached" if lang == "en" else "Individuelles",
-        ("Apartments" if lang == "en" else "Appartements"),
-    )
-
-    def rate(v: float) -> str:
-        return percent(v, lang, 2)
-
-    def people(v: float) -> str:
-        return number(v, lang)
-
-    policy_label = (
-        "Bank of Canada target for the overnight rate, daily since 2019"
-        if lang == "en"
-        else "Taux cible du financement à un jour de la Banque du Canada, quotidien depuis 2019"
-    )
-    starts_label = (
-        "Housing starts in Canada, single-detached and apartments, average month at seasonally adjusted annual rates (CMHC)"
-        if lang == "en"
-        else "Mises en chantier au Canada, maisons individuelles et appartements, mois moyen en taux annuel désaisonnalisé (SCHL)"
-    )
-    nhpi_label = (
-        "New Housing Price Index, Canada, change from the same month a year earlier (Statistics Canada)"
-        if lang == "en"
-        else "Indice des prix des logements neufs, Canada, variation par rapport au même mois un an plus tôt (Statistique Canada)"
-    )
-    starts_series: list[tuple[str, list[float | None]]] = [
-        (single, [avg(y, "Single") for y in years]),
-        (apartment, [avg(y, "Apartment") for y in years]),
-    ]
-    year_word = "Year" if lang == "en" else "Année"
-    boc, cmhc, statcan = (demo_agency(t, lang) for t in ("boc_", "cmhc_", "wds_"))
-    end_rate = "Policy rate, end of year" if lang == "en" else "Taux directeur, fin d'année"
-    avg_mortgage = (
-        "5-year mortgage rate, yearly average"
-        if lang == "en"
-        else "Taux hypothécaire de 5 ans, moyenne annuelle"
-    )
-    dec = (
-        "New home prices, December over a year earlier"
-        if lang == "en"
-        else "Prix des logements neufs, décembre sur un an"
-    )
-    rows = []
-    for y in years:
-        year_end = [v for d, v in policy if d[:4] == y][-1]
-        m = [v for d, v in mortgage if d[:4] == y]
-        rows.append(
-            [
-                y,
-                rate(year_end),
-                rate(sum(m) / len(m)),
-                people(avg(y, "Single")),
-                people(avg(y, "Apartment")),
-                percent(dict(yoy)[f"{y}-12-01"], lang, 1),
-            ]
-        )
-    join = demo_table(
-        "Canada, year by year, from three sources"
-        if lang == "en"
-        else "Le Canada, année par année, selon trois sources",
-        [
-            year_word,
-            _col(end_rate, boc),
-            _col(avg_mortgage, boc),
-            _col(single, cmhc),
-            _col(apartment, cmhc),
-            _col(dec, statcan),
-        ],
-        rows,
-    )
-    first_full, last_full = years[0], years[-1]
-    peak_single_year = max(years, key=lambda y: avg(y, "Single"))
-    low_single_year = min(
-        (y for y in years if y > peak_single_year), key=lambda y: avg(y, "Single")
-    )
-    return {
-        "demo_rates_plan": plan_panel(lang, root, plan, heading=3),
-        "demo_rates_question": esc(plan["question"]),
-        "chart_demo_rates_policy": chart_table(
-            charts.step_chart(
-                policy,
-                label=policy_label,
-                value_format=rate,
-                x_tick_format=year_ticks,
-                date_format=tip_date(lang, monthly=False),
-            ),
-            "demo-rates-policy",
-            lang,
-            (
-                "Bank of Canada target for the overnight rate: the first day, each day it changed, and the last day"
-                if lang == "en"
-                else "Taux cible du financement à un jour de la Banque du Canada : le premier jour, chaque jour où il a changé et le dernier jour"
-            ),
-            ("Date", "Rate" if lang == "en" else "Taux"),
-            charts.time_rows(policy, rate, lambda iso: long_date(iso, lang), steps=True),
-        ),
-        "chart_demo_rates_starts": chart_table(
-            charts.grouped_bars(years, starts_series, label=starts_label, value_format=people),
-            "demo-rates-starts",
-            lang,
-            starts_label,
-            (year_word, single, apartment),
-            charts.bar_rows(years, starts_series, people),
-        ),
-        "chart_demo_rates_nhpi": chart_table(
-            charts.line_chart(
-                yoy,
-                label=nhpi_label,
-                value_format=lambda v: percent(v, lang, 1),
-                x_tick_format=year_ticks,
-                date_format=tip_date(lang, monthly=True),
-            ),
-            "demo-rates-nhpi",
-            lang,
-            nhpi_label,
-            ("Month" if lang == "en" else "Mois", "Change" if lang == "en" else "Variation"),
-            charts.time_rows(yoy, lambda v: percent(v, lang, 1), lambda iso: month_name(iso, lang)),
-        ),
-        "demo_rates_join": join,
-        "demo_rates_sources": demo_sources(case, lang),
-        "demo_rates_how": demo_how(case, "demo-rates", lang),
-        "demo_rates_hikes": str(len([h for h in hikes if first_hike[0] <= h[0] <= top_day])),
-        "demo_rates_low": esc(rate(policy[[d for d, _ in policy].index(first_hike[0]) - 1][1])),
-        "demo_rates_first_hike": esc(long_date(first_hike[0], lang)),
-        "demo_rates_top": esc(rate(top[1])),
-        "demo_rates_top_date": esc(long_date(top_day, lang)),
-        "demo_rates_cut_date": esc(long_date(cut[0], lang)),
-        "demo_rates_now": esc(rate(policy[-1][1])),
-        "demo_rates_mortgage_top": esc(rate(max(v for _, v in mortgage))),
-        "demo_rates_boom": esc(percent(boom[1], lang, 1)),
-        "demo_rates_boom_month": esc(month_name(boom[0], lang)),
-        "demo_rates_turned": esc(month_name(turned, lang)),
-        "demo_rates_peak_month": esc(month_name(peak_month, lang)),
-        "demo_rates_latest_month": esc(month_name(latest, lang)),
-        "demo_rates_since_peak": esc(
-            percent(abs(index[latest] / index[peak_month] - 1) * 100, lang, 1)
-        ),
-        "demo_rates_single_peak_year": peak_single_year,
-        "demo_rates_single_peak": people(avg(peak_single_year, "Single")),
-        "demo_rates_single_low_year": low_single_year,
-        "demo_rates_single_low": people(avg(low_single_year, "Single")),
-        "demo_rates_apt_first": people(avg(first_full, "Apartment")),
-        "demo_rates_apt_last": people(avg(last_full, "Apartment")),
-        "demo_rates_first": first_full,
-        "demo_rates_last": last_full,
-        "demo_rates_captured": long_date(case["captured"], lang),
-    }
-
-
-def demos_context(lang: Lang, root: str) -> dict[str, str]:
-    return {
-        **demo_alberta_context(load_case("demo_alberta"), lang, root),
-        **demo_rates_context(load_case("demo_rates"), lang, root),
-    }
-
-
-# --------------------------------------------------------------------------
 # The Statistics Canada page (site/statcan.html): a post that walks through
 # recorded calls (site/_data/cases/statcan.json, macro.json and pumf.json),
 # with counts from the registry and variance methods from the PUMF module.
@@ -4235,7 +3789,6 @@ def _write_site(
         target_dir = out if lang == "en" else out / "fr"
         target_dir.mkdir(parents=True, exist_ok=True)
         statcan = statcan_context(modules, lang, root, statcan_searched[lang])
-        demos = demos_context(lang, root)
         for page in pages:
             context = {
                 **shared,
@@ -4243,16 +3796,12 @@ def _write_site(
                 **install_context(lang),
                 **cases[lang],
                 **statcan,
-                **demos,
                 "lang": lang,
                 "root": root,
                 "page": page.name,
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
                 "site_url": SITE_URL,
                 "canonical": page_url(page.name, lang),
-                "robots_meta": (
-                    '<meta name="robots" content="noindex">\n' if page.name in ARCHIVED else ""
-                ),
                 "url_en": page_url(page.name, "en"),
                 "url_fr": page_url(page.name, "fr"),
                 "og_title": OG_TITLE,
@@ -4291,8 +3840,7 @@ def _write_site(
             # After the typography, so a French preview is spaced as the page is.
             rendered = social_meta(rendered)
             (target_dir / page.name).write_text(rendered, encoding="utf-8")
-    listed = [p.name for p in pages if p.name not in ARCHIVED]
-    (out / "sitemap.xml").write_text(sitemap(listed), encoding="utf-8")
+    (out / "sitemap.xml").write_text(sitemap([p.name for p in pages]), encoding="utf-8")
     (out / "robots.txt").write_text(
         f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}sitemap.xml\n", encoding="utf-8"
     )

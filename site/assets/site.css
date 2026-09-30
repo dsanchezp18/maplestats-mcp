@@ -4371,53 +4371,6 @@ html:not(.js) .chips {
   padding-block: 64px;
 }
 
-/* ---------- Cross-source demos (demos.html) ---------- */
-
-.demo .stanza-body > * + * {
-  margin-top: 24px;
-}
-
-/* The joined table: long headings wrap, each with its agency underneath. */
-.demo-join thead th.num {
-  white-space: normal;
-  min-width: 6.5rem;
-  vertical-align: bottom;
-}
-
-.demo-agency {
-  display: block;
-  margin-top: 2px;
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--ink-3);
-}
-
-.demo-sources {
-  margin: 8px 0 0;
-  padding-left: 1.1rem;
-  font-size: 0.875rem;
-}
-
-.demo-sources li + li {
-  margin-top: 6px;
-}
-
-.demo-sources .case-source {
-  color: var(--ink-3);
-  overflow-wrap: anywhere;
-}
-
-.demo-scripts {
-  margin-top: 8px;
-}
-
-.demo-scripts summary {
-  width: max-content;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--accent);
-}
-
 /* Badges (build_site.BADGES): a wrapping row of the live images README.md
    shows, each 20px tall at its own width. */
 .badges {
@@ -4448,20 +4401,6 @@ html:not(.js) .chips {
   .badges {
     display: none;
   }
-}
-
-/* An archived page (build_site.ARCHIVED) says so above its title. */
-.archived-wrap {
-  padding-top: 24px;
-}
-
-.archived-note {
-  margin: 0;
-  padding: 10px 14px;
-  border-left: 3px solid var(--accent);
-  background: var(--ground-2);
-  font-size: 0.9375rem;
-  color: var(--ink-2);
 }
 
 /* ---------- Home: the argument beside a live prompt ----------
