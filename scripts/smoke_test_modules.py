@@ -48,6 +48,12 @@ def _non_empty(key: str) -> Check:
 
 _TODAY = datetime.now(UTC).date()
 
+# Modules whose upstream is down; remove an entry once the source responds.
+DOWN_MODULES = {
+    # oee.nrcan.gc.ca fails the TLS handshake from CI and locally (2026-09-29).
+    "nrcan_energy_use": "oee.nrcan.gc.ca does not complete a TLS handshake",
+}
+
 STEPS: list[Step] = [
     # Alberta Economic Dashboard
     Step("ab_economic", "ab_economic_list_indicators", {}, _non_empty("indicators")),
@@ -414,6 +420,9 @@ async def main(modules: set[str]) -> int:
     async with Client(mcp) as client:
         for step in STEPS:
             if modules and step.module not in modules:
+                continue
+            if step.module in DOWN_MODULES:
+                print(f"SKIP {step.tool}: {DOWN_MODULES[step.module]}")
                 continue
             label = step.tool
             try:
