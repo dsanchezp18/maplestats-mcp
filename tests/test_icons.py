@@ -17,7 +17,7 @@ from maplestats_mcp.asgi import app
     ],
 )
 async def test_icon_routes_serve_the_mark(path: str, content_type: str):
-    transport = httpx.ASGITransport(app=app)
+    transport = httpx.ASGITransport(app=app)  # pyright: ignore[reportArgumentType]
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get(path)
     assert response.status_code == 200

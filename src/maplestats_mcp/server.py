@@ -294,7 +294,7 @@ def build_server() -> FastMCP:
     icon_png = (Path(__file__).parent / "assets" / "favicon.png").read_bytes()
     icon = Icon(
         src="data:image/png;base64," + base64.b64encode(icon_png).decode("ascii"),
-        mimeType="image/png",
+        mime_type="image/png",
         sizes=["256x256"],
     )
     mcp = FastMCP(
