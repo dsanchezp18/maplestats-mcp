@@ -168,6 +168,13 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
         "Note de confiance sur M8ven",
     ),
     (
+        "user",
+        "https://mcplookup.com/server/io.github.dsanchezp18/maplestats-mcp",
+        "https://mcplookup.com/badge/io.github.dsanchezp18/maplestats-mcp",
+        "Trust index on MCPLookup",
+        "Indice de confiance sur MCPLookup",
+    ),
+    (
         "dev",
         f"{REPO}/actions/workflows/ci.yml",
         f"{_SHIELDS}/github/actions/workflow/status/dsanchezp18/maplestats-mcp/ci.yml?branch=main&label=CI",
