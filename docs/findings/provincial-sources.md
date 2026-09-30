@@ -323,8 +323,4 @@ several NL rows repeat one file under different titles; Yukon's population CSV
 is 53 MB because a footnote repeats on every row, so `footnotes` is dropped;
 Yukon community names carry suffixes (`Whitehorse - City`).
 
-Ontario re-test: `data.ontario.ca` answered HTTP 429 to every request from the
-development machine, including the home page and a plain `package_list`, with
-both a browser User-Agent and `maplestats-mcp`. The project client fails the
-same way (`UpstreamUnavailable`). The block is at the address, not in the
-client; test again from another network before changing anything.
+Ontario re-test: `data.ontario.ca` answered HTTP 429 to every request from the development machine for part of 2026-09-30, including the home page and a plain `package_list`, with both a browser User-Agent and `maplestats-mcp`; the project client failed the same way (`UpstreamUnavailable`). A fetch from outside that network succeeded at the same time, so the block was on the address. It cleared later the same day: the live smoke test for `portal="on"` passed. If it returns, it is the site's WAF, not the client.
