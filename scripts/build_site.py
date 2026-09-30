@@ -141,6 +141,20 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
     ),
     (
         "user",
+        "https://mcprush.com/dsanchezp18/maplestats-mcp",
+        f"{_SHIELDS}/badge/Mcprush-listed-B6F24B",
+        "Listed on Mcprush",
+        "Répertorié sur Mcprush",
+    ),
+    (
+        "user",
+        "https://www.piwheels.org/project/maplestats-mcp/",
+        f"{_SHIELDS}/badge/piwheels-Raspberry%20Pi-C51A4A",
+        "Wheels for Raspberry Pi on piwheels",
+        "Paquets pour Raspberry Pi sur piwheels",
+    ),
+    (
+        "user",
         "https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp",
         "https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp",
         "Trust score on M8ven",
