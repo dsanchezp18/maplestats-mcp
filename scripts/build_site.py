@@ -148,6 +148,13 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
     ),
     (
         "user",
+        "https://lobehub.com/mcp/dsanchezp18-maplestats-mcp",
+        f"{_SHIELDS}/badge/LobeHub-listed-1F1F1F",
+        "Listed on LobeHub",
+        "Répertorié sur LobeHub",
+    ),
+    (
+        "user",
         "https://www.piwheels.org/project/maplestats-mcp/",
         f"{_SHIELDS}/badge/piwheels-Raspberry%20Pi-C51A4A",
         "Wheels for Raspberry Pi on piwheels",

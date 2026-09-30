@@ -18,6 +18,7 @@
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>
     <a href="https://smithery.ai/servers/dsanchezp998/maplestats-mcp"><img src="https://img.shields.io/badge/Smithery-listed-FF5601" alt="Listed on Smithery"></a>
     <a href="https://mcprush.com/dsanchezp18/maplestats-mcp"><img src="https://img.shields.io/badge/Mcprush-listed-B6F24B" alt="Listed on Mcprush"></a>
+    <a href="https://lobehub.com/mcp/dsanchezp18-maplestats-mcp"><img src="https://img.shields.io/badge/LobeHub-listed-1F1F1F" alt="Listed on LobeHub"></a>
     <a href="https://www.piwheels.org/project/maplestats-mcp/"><img src="https://img.shields.io/badge/piwheels-Raspberry%20Pi-C51A4A" alt="Wheels for Raspberry Pi on piwheels"></a>
     <a href="https://registry.modelcontextprotocol.io/?q=io.github.dsanchezp18/maplestats-mcp"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry.modelcontextprotocol.io%2Fv0%2Fservers%2Fio.github.dsanchezp18%252Fmaplestats-mcp%2Fversions%2Flatest&query=%24.server.version&label=MCP%20Registry&prefix=v&color=blue" alt="MCP Registry version"></a>
   </p>
