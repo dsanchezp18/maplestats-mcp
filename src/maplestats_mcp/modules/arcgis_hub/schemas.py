@@ -71,6 +71,16 @@ PortalKey = Literal[
     "saanich",
     "kamloops",
     "prince_george",
+    "toronto_police",
+    "ottawa_police",
+    "conservation_halton",
+    "credit_valley",
+    "npca",
+    "hamilton_conservation",
+    "cloca",
+    "quinte_conservation",
+    "ontario_geohub",
+    "parks_canada",
 ]
 
 

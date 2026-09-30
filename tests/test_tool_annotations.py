@@ -33,3 +33,10 @@ async def test_visible_search_tools_are_annotated():
         assert annotations.read_only_hint is True, name
         if name != "call_tool":
             assert annotations.open_world_hint is False, name
+
+
+async def test_every_tool_has_a_title():
+    """Claude's connector directory rejects tools without a title."""
+    untitled = sorted(tool.name for tool in await mcp._list_tools() if not tool.title)
+    untitled += sorted(tool.name for tool in await mcp.list_tools() if not tool.title)
+    assert not untitled, f"tools missing a title: {untitled}"

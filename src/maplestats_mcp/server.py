@@ -76,6 +76,9 @@ class ModuleProvider(FileSystemProvider):
             for component in extract_components(module):
                 if isinstance(component, Tool) and component.annotations is None:
                     component.annotations = annotations
+                # Directories such as Claude's require a human-readable title.
+                if isinstance(component, Tool) and component.title is None:
+                    component.title = component.name.replace("_", " ").capitalize()
                 self._register_component(component)
         self._loaded = True
 
@@ -87,6 +90,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
     def _make_search_tool(self) -> Tool:
         search_tool = super()._make_search_tool()
         search_tool.annotations = _read_only_annotations(open_world=False)
+        search_tool.title = "Search tools"
         search_tool.description = _SEARCH_TOOLS_DESCRIPTION
         _describe_param(
             search_tool,
@@ -100,6 +104,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
     def _make_call_tool(self) -> Tool:
         call_tool = super()._make_call_tool()
         call_tool.annotations = _read_only_annotations(open_world=True)
+        call_tool.title = "Call a tool"
         call_tool.description = _CALL_TOOL_DESCRIPTION
         _describe_param(
             call_tool,

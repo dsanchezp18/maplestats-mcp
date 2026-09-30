@@ -27,7 +27,7 @@ def _qc_city(org: str) -> PlanStep:
 
 
 PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
-    "ontario": ("Ontario", (_ckan("on"),)),
+    "ontario": ("Ontario", (_ckan("on"), _arcgis("ontario_geohub"))),
     "british columbia": (
         "British Columbia",
         (_ckan("bc"), PlanStep("bcgw_query_layer", "BC Geographic Warehouse layers")),
@@ -71,7 +71,7 @@ PROVINCE_ALIASES: dict[str, str] = {
 }
 
 CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
-    "toronto": ("Toronto", (_ckan("toronto"),)),
+    "toronto": ("Toronto", (_ckan("toronto"), _arcgis("toronto_police"))),
     "montreal": ("Montreal", (_ckan("montreal"),)),
     "regina": ("Regina", (_ckan("regina"),)),
     "quebec city": ("Quebec City", (_qc_city("ville-de-quebec"),)),
@@ -99,7 +99,7 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
             _arcgis("metro_vancouver"),
         ),
     ),
-    "ottawa": ("Ottawa", (_arcgis("ottawa"),)),
+    "ottawa": ("Ottawa", (_arcgis("ottawa"), _arcgis("ottawa_police"))),
     "halifax": ("Halifax", (_arcgis("halifax"),)),
     "hamilton": ("Hamilton", (_arcgis("hamilton"),)),
     "london": ("London (Ontario)", (_arcgis("london"),)),

@@ -382,6 +382,70 @@ PORTALS: dict[str, Portal] = {
         "Données ouvertes de Prince George",
         note="British Columbia. 175 datasets confirmed live 2026-09-29.",
     ),
+    "toronto_police": Portal(
+        "data.torontopolice.on.ca",
+        "Toronto Police Service Public Safety Data Portal",
+        "Portail de données sur la sécurité publique du Service de police de Toronto",
+        note="Ontario. 71 datasets confirmed live 2026-09-30 (reported crimes, shootings, victims, personnel, budget). The older torontops.hub.arcgis.com lists 111 items, mostly map layers.",
+    ),
+    "ottawa_police": Portal(
+        "data.ottawapolice.ca",
+        "Ottawa Police Service Community Safety Data Portal",
+        "Portail de données sur la sécurité communautaire du Service de police d'Ottawa",
+        note="Ontario. Only the 'all' collection exists (98 items, mostly PDFs and pages), so searches default to Feature Service (13 layers: hate crime, shootings, bike theft, overdose calls). Checked 2026-09-30.",
+        collection="all",
+        default_item_type="Feature Service",
+    ),
+    "conservation_halton": Portal(
+        "conservationhalton-camaps.opendata.arcgis.com",
+        "Conservation Halton Open Data",
+        "Données ouvertes de Conservation Halton",
+        note="Conservation authority, Ontario. 36 datasets confirmed live 2026-09-30.",
+    ),
+    "credit_valley": Portal(
+        "cvc-camaps.opendata.arcgis.com",
+        "Credit Valley Conservation Open Data Hub",
+        "Carrefour de données ouvertes de Credit Valley Conservation",
+        note="Conservation authority, Ontario. Only 2 datasets confirmed live 2026-09-30.",
+    ),
+    "npca": Portal(
+        "gis-npca-camaps.opendata.arcgis.com",
+        "Niagara Peninsula Conservation Authority Open Data",
+        "Données ouvertes de l'Office de protection de la nature de la péninsule de Niagara",
+        note="Conservation authority, Ontario. 31 datasets confirmed live 2026-09-30.",
+    ),
+    "hamilton_conservation": Portal(
+        "hca-open-data-camaps.hub.arcgis.com",
+        "Hamilton Conservation Authority Open Data",
+        "Données ouvertes de l'Office de protection de la nature de Hamilton",
+        note="Ontario. 31 datasets confirmed live 2026-09-30.",
+    ),
+    "cloca": Portal(
+        "cloca-camaps.opendata.arcgis.com",
+        "Central Lake Ontario Conservation Authority Open Data",
+        "Données ouvertes de l'Office de protection de la nature du centre du lac Ontario",
+        note="Ontario. 27 datasets confirmed live 2026-09-30.",
+    ),
+    "quinte_conservation": Portal(
+        "data.quinteconservation.ca",
+        "Quinte Conservation Authority Open Data",
+        "Données ouvertes de l'Office de protection de la nature de Quinte",
+        note="Ontario. 14 datasets confirmed live 2026-09-30.",
+    ),
+    "ontario_geohub": Portal(
+        "ontariogeohub-lio.opendata.arcgis.com",
+        "Ontario GeoHub (Land Information Ontario)",
+        "Géoportail de l'Ontario (Information sur les terres de l'Ontario)",
+        note="Provincial geospatial data, Ontario. 242 datasets confirmed live 2026-09-30; titles are bilingual.",
+        bilingual_content=True,
+    ),
+    "parks_canada": Portal(
+        "data-apca.opendata.arcgis.com",
+        "Parks Canada Open Data",
+        "Données ouvertes de Parcs Canada",
+        note="Federal. 25 datasets confirmed live 2026-09-30 (trails, protected places); titles are bilingual.",
+        bilingual_content=True,
+    ),
 }
 
 RATE_LIMIT_PER_SECOND = 2.0
