@@ -251,6 +251,8 @@ Sources, by tool-name prefix:
 - Vancouver (Opendatasoft): opendatasoft_vancouver_. Newfoundland and
   Labrador: nl_opendata_. Edmonton: eps_ (police
   occurrences), ets_ (real-time transit), epcor_ (water quality).
+  Static transit timetables (TTC, STM buses, OC Transpo, Calgary Transit):
+  transit_, with an `agency` argument -- transit_list_agencies.
   Electricity demand, generation and prices: electricity_ontario_ (IESO),
   electricity_quebec_ (Hydro-Quebec).
 

@@ -54,6 +54,8 @@ CASES = [
     ("generate R code to reproduce this query", "reproduce_code"),
     ("Alberta economic dashboard unemployment", "ab_economic_get_data"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
+    ("TTC scheduled departures at a stop", "transit_get_stop_departures"),
+    ("bus route frequency headway by hour", "transit_get_route_summary"),
     ("Edmonton crime occurrences", "eps_list_occurrences"),
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
     ("Ontario electricity demand by hour", "electricity_ontario_get_hourly_demand"),

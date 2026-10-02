@@ -427,6 +427,15 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="municipal_feed",
     ),
+    "transit": Source(
+        "Transit schedules (static GTFS)",
+        "Horaires de transport en commun (GTFS statique)",
+        "municipal",
+        "Transit schedules",
+        "Horaires de transport",
+        places=("ON", "QC", "AB"),
+        row="municipal_feed",
+    ),
     "fcac": Source(
         "Financial Consumer Agency of Canada: comparison tools",
         "Agence de la consommation en matière financière du Canada : outils de comparaison",
