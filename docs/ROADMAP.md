@@ -6,7 +6,7 @@ any narrower or broader source list implied elsewhere.
 
 **State at 2026-10-02:** 253 tools in 54 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
-`Not built`). Local coverage is 68 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
+`Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
 and the candidates listed at the end of this file.
 
@@ -187,6 +187,18 @@ portal is confirmed to exist and be reachable.
 | Saanich | Shipped | opendata-saanich.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="saanich"`), config-only. 51 datasets confirmed live 2026-09-29; smoke test passed (search, detail, feature query, CSV link). English-only. |
 | Kamloops | Shipped | mydata-kamloops.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="kamloops"`), config-only. 156 datasets confirmed live 2026-09-29; smoke test passed (search, detail, feature query, CSV link). English-only. |
 | Prince George | Shipped | data-cityofpg.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="prince_george"`), config-only. 175 datasets confirmed live 2026-09-29; smoke test passed (search, detail, feature query, CSV link). English-only. |
+| Delta | Shipped | opendata-deltabc.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="delta"`), config-only. 16 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: Open Government Licence. English-only. |
+| Yellowknife | Shipped | opendata.yellowknife.ca, ArcGIS Hub: `arcgis_hub_*` (`portal="yellowknife"`), config-only. 6 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: the city's Open Data Licence v1 (commercial reuse, attribution). English-only. |
+| Cambridge (Ontario) | Shipped | opendata-cityofcambridge.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="cambridge"`), config-only. 48 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: the city's Open Data Licence v2.1 (commercial reuse, attribution). English-only. |
+| Maple Ridge | Shipped | gis-mapleridge.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="maple_ridge"`), config-only. 61 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: Open Government Licence. English-only. |
+| Pickering | Shipped | data-cityofpickering.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="pickering"`), config-only. 268 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: the city's Open Data Licence v1. English-only. |
+| Sarnia | Shipped | city-of-sarnia.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="sarnia"`), config-only. 14 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: a licence based on the Open Government Licence - Canada 2.0. English-only. |
+| Saint John (New Brunswick) | Shipped | catalogue-saintjohn.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="saint_john"`), config-only. 233 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: Open Government Licence - City of Saint John. English-only. |
+| Port Moody | Shipped | data.portmoody.ca, ArcGIS Hub: `arcgis_hub_*` (`portal="port_moody"`), config-only. 104 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: the city's licence (commercial reuse, attribution). English-only. |
+| White Rock | Shipped | data.whiterockcity.ca, ArcGIS Hub: `arcgis_hub_*` (`portal="white_rock"`), config-only. 59 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: White Rock Open Government License. English-only. |
+| Penticton | Shipped | open.penticton.ca, ArcGIS Hub: `arcgis_hub_*` (`portal="penticton"`), config-only. 136 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: City of Penticton Open Government Licence. English-only. |
+| Orangeville | Shipped | open-orangeville.hub.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="orangeville"`), config-only. 18 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: Open Government Licence - Orangeville. English-only. |
+| Canmore | Shipped | opendata-canmore.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="canmore"`), config-only. 19 datasets confirmed live 2026-10-02; smoke test passed (search, detail, feature query, CSV link). Licence checked: Town of Canmore Open Data Licence. English-only. |
 | Toronto Police Service | Shipped | data.torontopolice.on.ca (Public Safety Data Portal), ArcGIS Hub: `arcgis_hub_*` (`portal="toronto_police"`), config-only. 71 datasets (reported crimes, shootings, victims, personnel, budget) confirmed live 2026-09-30; smoke test passed (search, detail, feature query, CSV link). English-only. |
 | Ottawa Police Service | Shipped | data.ottawapolice.ca (Community Safety Data Portal), ArcGIS Hub: `arcgis_hub_*` (`portal="ottawa_police"`), config-only. 98 items, of which 13 feature layers (hate crime, shootings, bike theft, overdose calls); searches default to Feature Service confirmed live 2026-09-30; smoke test passed (search, detail, feature query, CSV link). English-only. |
 | Conservation Halton | Shipped | conservationhalton-camaps.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="conservation_halton"`), config-only. 36 datasets confirmed live 2026-09-30; smoke test passed (search, detail, feature query, CSV link). English-only. |
@@ -232,7 +244,7 @@ municipality/region this roadmap had previously only identified as
 "Not CKAN" (Halifax, Mississauga, York Region, Markham, Newmarket,
 Aurora, Peel Region, Durham Region, Region of Waterloo, Metro
 Vancouver). Only Halton Region (no live government portal found)
-remains open from that set. Inventory further major cities not yet checked (Richmond BC, Vaughan, Richmond Hill, Nanaimo, North Vancouver, St. John's, Sault Ste. Marie, Wood Buffalo, Charlottetown, Whitehorse, Yellowknife: no public Hub site found on 2026-09-29; Langley's site answers but its Hub search returns no count) and add each once a real portal is confirmed.
+remains open from that set. Re-checked 2026-10-02 (see [municipal sources](findings/municipal-sources.md#more-municipal-portals-rechecked-2026-10-02)): Delta and Yellowknife were found and shipped, along with ten other mid-size municipalities. Still without a usable portal: Richmond BC, Vaughan, Richmond Hill, North Vancouver, St. John's, Sault Ste. Marie, Wood Buffalo and Charlottetown (none found); Nanaimo, Whitehorse and the District of North Vancouver run custom sites with no adaptor here; Langley's site answers but its Hub search returns no count.
 
 ## Census and specialized federal agencies
 
@@ -352,4 +364,4 @@ Nothing below is started. Ordered by expected value.
 
 | Candidate | Why | Known obstacle |
 |---|---|---|
-| More municipal portals (Richmond BC, Vaughan, Nanaimo, St. John's, others) | Coverage. | No public ArcGIS Hub site found; some run other platforms. |
+| Custom municipal portals (Nanaimo, Whitehorse, District of North Vancouver) | Coverage. | Nanaimo's Open Data Publisher, Whitehorse's static download page and DNV's GEOweb are not Hub, Socrata, CKAN or Opendatasoft, so each would need its own module; Richmond BC, Vaughan, Richmond Hill, St. John's, Sault Ste. Marie, Wood Buffalo and Charlottetown have no portal found. |
