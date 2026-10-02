@@ -514,9 +514,18 @@ TOPICS: tuple[Topic, ...] = (
             "voiture",
             "autobus",
             "circulation",
+            "timetable",
+            "schedule",
+            "horaire",
         ),
         (
             PlanStep("tc_recalls_search", "Transport Canada vehicle recalls"),
+            PlanStep(
+                "transit_search_stops", "TTC, STM, OC Transpo or Calgary Transit stops by name"
+            ),
+            PlanStep(
+                "transit_get_stop_departures", "scheduled departures at a stop on a given date"
+            ),
             PlanStep("ets_get_service_alerts", "Edmonton transit, when the question is Edmonton"),
             PlanStep(
                 "ckan_search_datasets", "collision and traffic datasets on provincial portals"

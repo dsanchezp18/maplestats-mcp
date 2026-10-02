@@ -4,7 +4,7 @@ Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
-**State at 2026-09-30:** 241 tools in 51 modules. Every source in the tables below is
+**State at 2026-10-01:** 247 tools in 52 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
 `Not built`). Local coverage is 69 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
@@ -159,6 +159,8 @@ portal is confirmed to exist and be reachable.
 | Edmonton Police Service | Shipped | Community Safety Data Portal feature services on services9.arcgis.com (EPS's own ArcGIS Online org, found by resolving the Community Safety Map's item ids), not in data.edmonton.ca. [Details](findings/municipal-sources.md#edmonton-police-service) |
 | Edmonton Metropolitan Region Board | Shipped | emrgis.emrb.ca (EMRGIS, also served at gis-capitalregion.opendata.arcgis.com), ArcGIS Hub: `arcgis_hub_*` (`portal="emrb"`), config-only. 85 regional growth-plan datasets confirmed live 2026-09-22 … [Details](findings/municipal-sources.md#edmonton-metropolitan-region-board) |
 | Edmonton Transit Service real-time | Shipped | gtfs.edmonton.ca GTFS-Realtime (protobuf): new module `modules/ets/` (`ets_*`, 3 tools: vehicle positions, stop predictions, service alerts). [Details](findings/municipal-sources.md#edmonton-transit-service-real-time) |
+| Transit schedules (TTC, STM, OC Transpo, Calgary Transit) | Shipped | 2026-10-01: new module `modules/transit/` (`transit_*`, 6 tools, `agency` argument): feeds and licences, route and stop search, a stop's scheduled departures on a date, a route's trips and frequency by hour. Reads each agency's static GTFS zip by HTTP range (stop_times.txt streamed in 4 MB ranges, never stored). Smoke test passed against all four live zips and reconciled with a full download of Calgary's. STM metro lines are left out under STM's terms. [Details](findings/municipal-sources.md#transit-schedules-static-gtfs) |
+| TransLink static GTFS | Not built | Checked 2026-10-01: the zip is open (gtfs-static.translink.ca, range requests work) but the Terms of Use require users to identify themselves to TransLink and let it impose conditions, which a public server cannot do on its callers' behalf. [Details](findings/municipal-sources.md#transit-schedules-static-gtfs) |
 | EPCOR Edmonton water quality | Shipped | 2026-09-25: the report-PDF listing tool was removed (the server serves data, not documents); `epcor_get_daily_water_quality` remains. [Details](findings/municipal-sources.md#epcor-edmonton-water-quality) |
 | Edmonton-metro gaps | Not shipped | Re-checked 2026-09-22 and again 2026-09-27 (unchanged) through ArcGIS Online group search: Leduc's Hub (data.leduc.ca) holds only a Terms of Use page; Spruce Grove's open-data group is empty; Fort Saskatchewan has none. [Details](findings/municipal-sources.md#edmonton-metro-gaps) |
 | Cochrane | Shipped | Re-checked 2026-09-27: the town moved its GeoHub to geohub.cochrane.ca, whose Hub API answers (29 datasets); the old data-cochranegis.opendata.arcgis.com still refuses anonymous access. `arcgis_hub_*` (`portal="cochrane"`), config-only. [Details](findings/municipal-sources.md#cochrane) |
@@ -351,6 +353,5 @@ Nothing below is started. Ordered by expected value.
 | Candidate | Why | Known obstacle |
 |---|---|---|
 | Library of Parliament (ParlInfo: members since 1867, riding history) | ParlInfo blocked; House of Commons feeds shipped | Historical federal data the current tools lack. ParlInfo (`lop.parl.ca`) answers automated requests with a Cloudflare challenge (HTTP 403). What was reachable is now `ourcommons_`. LEGISinfo's bills JSON (`parl.ca/legisinfo/en/bills/json`, 947 KB) answers but `parliament_` already covers bills. |
-| Transit schedule feeds (TransLink, TTC, STM, OC Transpo, Calgary Transit) | Only Edmonton's real-time feed is covered. | Static GTFS hosting and terms differ by agency. |
 | CAPP Statistics Handbook | 76 Excel tables (reserves, production, producer sales since 1947). | Deferred; industry copyright, attribution required. |
 | More municipal portals (Richmond BC, Vaughan, Nanaimo, St. John's, others) | Coverage. | No public ArcGIS Hub site found; some run other platforms. |

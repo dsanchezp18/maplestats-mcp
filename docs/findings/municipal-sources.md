@@ -175,6 +175,60 @@ trip updates carry ETS's per-stop `scheduled_time` and `trip_headsign`, and
 keep already-served stops in the feed (filtered out by default). The static
 schedule stays on data.edmonton.ca via `socrata_*`.
 
+## Transit schedules (static GTFS)
+
+**Status:** Shipped for the TTC, STM (buses), OC Transpo and Calgary Transit;
+TransLink not built.
+
+New module `modules/transit/` (`transit_*`, 6 tools, one `agency` argument:
+`transit_list_agencies`, `transit_get_feed_info`, `transit_search_routes`,
+`transit_search_stops`, `transit_get_stop_departures`,
+`transit_get_route_summary`). Nothing is stored: each zip's central
+directory and small tables are read by HTTP range, and `stop_times.txt`
+(14 to 71 MB compressed, 100 to 373 MB inflated) is streamed in 4 MB ranges,
+inflated incrementally and filtered to the requested stop or trips, so memory
+stays flat. Adding an agency is one entry in `constants.AGENCIES`.
+
+Checked live 2026-10-01 (all answer 206 to a `Range` request without a key):
+
+| Agency | Zip | Size | Licence and terms |
+|---|---|---|---|
+| TTC | ckan0.cf.opendata.inter.prod-toronto.ca ... /completegtfs.zip (City of Toronto open data, "Merged GTFS - TTC Routes and Schedules") | 84 MB | Open Government Licence - Toronto (use, copy, publish, distribute "for any lawful purpose", including commercially; attribution: "Contains information licensed under the Open Government Licence - Toronto."). The CKAN record says "License not specified"; the City's licence page covers its open data. |
+| STM | www.stm.info/sites/default/files/gtfs/gtfs_stm.zip | 43 MB | CC BY 4.0 per STM's "Terms of use for GTFS and API". The same page says "Metro schedules are for information purposes only ... and cannot be used to develop an application on metro schedules", so metro lines (route_type 1) are excluded from route and departure results; buses are included. |
+| OC Transpo | oct-gtfs-emasagcnfmcgeham.z01.azurefd.net/public-access/GTFSExport.zip (OC Transpo's own host) | 45 MB | OC Transpo's developer terms say the data is "separately licensed under the City of Ottawa Open Data Terms of Use", a worldwide, royalty-free licence to use, modify and distribute "for any lawful purpose". The City catalogue still lists octranspo.com/files/google_transit.zip, which returns 404; the Azure host needs no key (only real-time needs an account). |
+| Calgary Transit | data.calgary.ca/download/npk7-z3bj/application%2Fzip (redirects to a CDN) | 18 MB | Open Government Licence - City of Calgary v2.1 (the "Open Calgary Terms of Use"): use, copy, publish, distribute for any lawful purpose including commercial, with attribution. |
+
+**TransLink (Metro Vancouver) is not built.** The zip itself
+(gtfs-static.translink.ca/gtfs/google_transit.zip, 16 MB) is open and
+range-readable, but the terms at
+translink.ca/about-us/doing-business-with-translink/app-developer-resources/gtfs/gtfs-data
+say: "You must provide TransLink sufficient information as TransLink may
+request to identify you, your organization or company, who will be using the
+Data, where it will be distributed and whether the use of the data is for
+non-commercial or commercial purposes. TransLink reserves the right to impose
+conditions or restrictions on your use of the Data." The licence is "limited,
+revocable and non-exclusive", and the data must carry the legend "Route and
+arrival data used in this product or service is provided by permission of
+TransLink ...". A public server cannot identify its callers to TransLink or
+promise their purpose, so the feed is left out until the operator has an
+agreement with TransLink; then it is one entry in `constants.AGENCIES`.
+
+Quirks found against the live feeds:
+
+- The City of Toronto's download host answered about half of all requests
+  with a transient HTTP 502 (a stretch of 100 % on 2026-10-01, larger ranges
+  failing more often), and HEAD more often than GET. Every range request is
+  retried (6 attempts, `shared/remote_zip.py` and `transit/zipstream.py`) and
+  a failed read reloads the directory and tries again. The first stop or route
+  lookup on the TTC can still take minutes.
+- Throughput differs: Calgary's CDN delivered about 330 KB/s, so its 13.5 MB
+  `stop_times.txt` took about 40 s the first time; later calls for the same
+  stop or route are cached for an hour.
+- Calgary's zip has no `feed_info.txt` (no validity dates) and 521 routes
+  with repeated short names, so a route number can need the `route_id`.
+- STM and OC Transpo run trips past 24:00; the listing includes the previous
+  service day's after-midnight trips and flags them.
+
 ## EPCOR Edmonton water quality
 
 **Status:** Shipped.

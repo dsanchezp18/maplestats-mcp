@@ -19,9 +19,10 @@ import zlib
 from dataclasses import dataclass
 
 import httpx
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.http import is_retryable, new_client
 
 _EOCD = b"PK\x05\x06"
 _CENTRAL = b"PK\x01\x02"
@@ -39,10 +40,28 @@ class ZipMember:
     header_offset: int
 
 
+# Some hosts answer a share of otherwise valid requests with a transient
+# 502 or a dropped connection (Toronto's open-data download host failed
+# about half of its range requests on 2026-10-01 and served the same ones
+# a moment later), so each request is retried on the shared retryable set.
+_RETRY = retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(6),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
+    reraise=True,
+)
+
+
+@_RETRY
+async def _get_range(url: str, start: int, end: int) -> httpx.Response:
+    response = await _client.get(url, headers={"Range": f"bytes={start}-{end}"})
+    response.raise_for_status()
+    return response
+
+
 async def _range(url: str, start: int, end: int) -> bytes:
     try:
-        response = await _client.get(url, headers={"Range": f"bytes={start}-{end}"})
-        response.raise_for_status()
+        response = await _get_range(url, start, end)
     except httpx.HTTPStatusError as exc:
         raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
     except httpx.HTTPError as exc:
@@ -61,15 +80,25 @@ async def _range(url: str, start: int, end: int) -> bytes:
 
 
 async def _size(url: str) -> int:
+    # HEAD first; some hosts answer it with a 502 far more often than a
+    # ranged GET (Toronto's open-data host, 2026-10-01), so any HEAD
+    # failure falls back to reading the total from a one-byte range.
     try:
         response = await _client.head(url)
         response.raise_for_status()
+        length = response.headers.get("content-length")
+        if length:
+            return int(length)
+    except httpx.HTTPError:
+        pass
+    try:
+        ranged = await _get_range(url, 0, 0)
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(f"{url} could not be reached.") from exc
-    length = response.headers.get("content-length")
-    if not length:
+    total = ranged.headers.get("content-range", "").rpartition("/")[2]
+    if not total.isdigit():
         raise UpstreamError(f"{url} reports no size, so it cannot be read by range.")
-    return int(length)
+    return int(total)
 
 
 def _decode_name(raw: bytes, flags: int) -> str:

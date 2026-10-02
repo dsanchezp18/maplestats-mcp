@@ -29,6 +29,7 @@ CASES = [
     ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),
     ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
+    ("horaire des autobus de la STM passages prévus à un arrêt", "transit_get_stop_departures"),
     ("demande d'électricité Ontario par heure", "electricity_ontario_get_hourly_demand"),
     ("production hydroélectrique Hydro-Québec par source", "electricity_quebec_get_generation"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
