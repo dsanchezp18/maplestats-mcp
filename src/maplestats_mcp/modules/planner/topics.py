@@ -179,6 +179,10 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("statcan_daily_get_releases", "what StatCan released recently on the topic"),
             PlanStep("wds_search_cubes", "GDP by industry, trade, retail tables"),
             PlanStep("wds_get_data_from_vectors", "pull the series once vectors are known"),
+            PlanStep(
+                "cimt_get_trade",
+                "exports or imports by HS commodity, partner and province",
+            ),
             PlanStep("rdaas_search_classifications", "NAICS codes for the industry"),
             PlanStep(
                 "ab_economic_list_indicators", "Alberta dashboard, when the question is Alberta"
