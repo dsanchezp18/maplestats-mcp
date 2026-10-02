@@ -137,6 +137,9 @@ async def test_search_builds_filters_and_returns_organizations(httpx_mock):
     fq = request.url.params["fq"]
     assert "type:opendata" in fq and "res_format:XLSX" in fq
     assert "organization:health" in fq and "license_id:OGLA" in fq
+    # The portal answers HTTP 520 for sort plus facets, so they are never sent together.
+    assert "sort" not in request.url.params and "start" not in request.url.params
+    assert "facet.field" in request.url.params
     assert result.total_datasets == 41 and result.truncated
     assert result.organizations[0].title == "Health"
     assert "Open Government Licence" in result.licence_note
@@ -254,3 +257,20 @@ async def test_http_404_on_download_is_not_found(httpx_mock, show):
     httpx_mock.add_response(url=XLSX_URL, status_code=404)
     with pytest.raises(NotFound):
         await client.read_resource(XLSX_URL)
+
+
+async def test_explicit_sort_drops_the_facets(httpx_mock):
+    body = _envelope({"count": 1, "results": [_package()], "search_facets": {}})
+    httpx_mock.add_response(url=re.compile(r".*package_search.*"), json=body)
+    result = await client.search_datasets(sort="modified")
+    params = httpx_mock.get_requests()[0].url.params
+    assert params["sort"] == "metadata_modified desc" and "facet.field" not in params
+    assert result.organizations == []
+
+
+async def test_later_pages_drop_the_facets(httpx_mock):
+    body = _envelope({"count": 50, "results": [_package()], "search_facets": {}})
+    httpx_mock.add_response(url=re.compile(r".*package_search.*"), json=body)
+    await client.search_datasets(offset=20)
+    params = httpx_mock.get_requests()[0].url.params
+    assert params["start"] == "20" and "facet.field" not in params

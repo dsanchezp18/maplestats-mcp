@@ -272,13 +272,13 @@ so the real format is read from the first bytes; many workbooks open with an ind
 report-parameters sheet, so the default sheet is the one with the most declared cells; headers
 sit under title rows and sometimes span two rows (highway traffic volumes: years above
 labels), hence `header_row` and `header_rows`; a 3.8 MB workbook with 30 real rows declares
-millions of styled empty rows, so sheet dimensions are only reset when they are a lone A1;
-resource titles contain U+FFFD for a lost en dash. Verified live on more than 25 datasets
+millions of styled empty rows, so sheet dimensions are only reset when they are a lone A1; `package_search` answers HTTP 520 when `facet.field` is combined with `sort` or `start`, so organization counts come only with the default order on the first page; one CSV (monthly labour force statistics, 2015) is over the 40 MB read limit;
+resource titles contain U+FFFD for a lost en dash. Verified live on 30 datasets
 from Assisted Living and Social Services (AISH and Income Support caseloads), Treasury Board
 and Finance (indicators at a glance, population projections, multipliers, corporate income
 tax), Energy and Minerals (oil sands royalty data, royalty revenue), Municipal Affairs,
 Transportation and Economic Corridors (traffic volumes), Service Alberta (births, deaths),
-Health (indicator tables), Advanced Education (enrolment) and CSV files.
+Health (indicator tables), Advanced Education (enrolment), CSV files (collisions, natural gas price, wildlife carcasses, the 10.4 MB wildfire file) and a legacy .xls (oil sands project data).
 
 ## Manitoba
 

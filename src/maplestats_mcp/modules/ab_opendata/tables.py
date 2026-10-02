@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import csv
 import io
+import warnings
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, time
@@ -222,7 +223,10 @@ def _fix_dimensions(sheet: Any) -> None:
 def _open_xlsx(body: bytes) -> Any:
     from openpyxl import load_workbook  # ~0.7 s to import, so loaded on first use
 
-    return load_workbook(io.BytesIO(body), read_only=True, data_only=True)
+    with warnings.catch_warnings():
+        # Agency workbooks carry print-area names openpyxl cannot set; harmless for reading.
+        warnings.simplefilter("ignore", UserWarning)
+        return load_workbook(io.BytesIO(body), read_only=True, data_only=True)
 
 
 def _open_xls(body: bytes) -> Any:

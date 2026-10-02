@@ -223,25 +223,25 @@ async def _search(
         filters.append(f"organization:{slug}")
     if ogl_only:
         filters.append(f"license_id:{constants.OGL_LICENCE_ID}")
-    order = {
-        "relevance": "score desc, metadata_modified desc" if query else "metadata_modified desc",
-        "modified": "metadata_modified desc",
-        "title": "title_string asc",
-    }
+    order = {"relevance": None, "modified": "metadata_modified desc", "title": "title_string asc"}
     if sort not in order:
         raise InvalidInput(f"ab_opendata: sort must be one of {list(order)}.")
-    return await _api(
-        "package_search",
-        {
-            "q": (query or "").strip(),
-            "fq": " AND ".join(filters),
-            "rows": rows,
-            "start": start,
-            "sort": order[sort],
-            "facet.field": json.dumps(["organization"]),
-            "facet.limit": constants.ORGANIZATIONS_FACET_LIMIT,
-        },
-    )
+    params: dict[str, Any] = {
+        "q": (query or "").strip(),
+        "fq": " AND ".join(filters),
+        "rows": rows,
+    }
+    # Confirmed live 2026-10-02: the portal answers HTTP 520 when `facet.field`
+    # is sent together with `sort` or with `start` (even 0). So organization counts
+    # come only with the default order on the first page.
+    if order[sort]:
+        params["sort"] = order[sort]
+    if start:
+        params["start"] = start
+    if not order[sort] and not start:
+        params["facet.field"] = json.dumps(["organization"])
+        params["facet.limit"] = constants.ORGANIZATIONS_FACET_LIMIT
+    return await _api("package_search", params)
 
 
 async def search_datasets(
@@ -289,7 +289,7 @@ async def search_datasets(
 
 
 async def list_organizations(format: str | None = None, lang: Lang = "en") -> OrganizationList:
-    result, cached = await _search(None, None, format, False, "title", 1, 0)
+    result, cached = await _search(None, None, format, False, "relevance", 1, 0)
     organizations = _facet_organizations(result)
     return OrganizationList(
         organizations=organizations,

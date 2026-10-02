@@ -66,7 +66,8 @@ class DatasetList(BaseModel):
     offset: int
     truncated: bool
     organizations: list[OrganizationCount] = Field(
-        description="Organizations among all matches, to narrow with `organization`."
+        description="Organizations among all matches, to narrow with `organization`; empty "
+        "when `sort` is modified or title or `offset` is above 0 (the portal fails on counts plus sort or start)."
     )
     licence_note: str
     provenance: Provenance

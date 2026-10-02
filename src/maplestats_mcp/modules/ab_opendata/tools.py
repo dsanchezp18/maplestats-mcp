@@ -45,6 +45,7 @@ async def ab_opendata_search_datasets(
     keeps xlsx, xls or csv; `ogl_alberta_only` drops the rare dataset under another
     licence (those are flagged, with a plain note that other terms apply). The
     portal's DataStore has no active resources, so files are the only route to rows.
+    `sort` modified or title, or an `offset`, drops the organization counts (portal limitation).
     Pace: one request per 10 seconds (portal crawl delay).
     Keywords: Open Alberta, Alberta government, open.alberta.ca, dataset search,
     Excel, CSV, AISH, Income Support, Alberta Health, Treasury Board and Finance,
