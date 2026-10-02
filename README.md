@@ -151,7 +151,7 @@ About 230 tools. Run `docs://catalogue` for the full, bilingual list.
 | Wildland fire | `cwfis_` | NRCan's Canadian Wildland Fire Information System: satellite hotspots, fire danger and weather stations |
 | Electricity | `electricity_ontario_`, `electricity_quebec_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only) |
 | Parliament | `parliament_`, `senate_` | Bills, votes, MPs, Hansard, committees |
-| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_` | Alberta Energy Regulator, BC Geographic Warehouse, Alberta Economic Dashboard, Institut de la statistique du Québec |
+| Provincial agencies | `aer_`, `bcgw_`, `ab_economic_`, `isq_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, Alberta Economic Dashboard, Institut de la statistique du Québec, provincial general election results (Quebec, Alberta, British Columbia) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
 

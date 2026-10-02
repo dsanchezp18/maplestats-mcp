@@ -1,0 +1,141 @@
+"""Constants for the provincial general election results module.
+
+Every URL and rule below was checked live on 2026-10-01.
+
+Quebec: Elections Quebec's open data host serves one JSON file per general
+election, the same file its results pages draw from. The site's terms of use
+(electionsquebec.qc.ca/notre-institution/conditions-dutilisation/) allow
+downloading and reproducing any element for non-profit purposes without
+permission, if the source and the copyright (c) are named. Its robots.txt asks
+for a 10 second crawl delay, so reads are paced that slowly and cached.
+
+Alberta: the official results site (officialresults.elections.ab.ca) has a
+provincial summary page and a winning-candidates page for every event. The
+terms (elections.ab.ca/terms-conditions/) allow non-commercial and educational
+reproduction without further permission if the materials are not modified, are
+attributed to Elections Alberta and are not presented as an official version.
+
+British Columbia: the Elections BC Open Data Licence (royalty-free, commercial
+use allowed, attribution required) covers the "Provincial Voting Results"
+dataset on the BC Data Catalogue. elections.bc.ca itself answers robots.txt with
+"Disallow: /" for unknown agents, so only the catalogue's CSV downloads are used
+(its robots.txt asks for a 10 second crawl delay and disallows only /api/).
+
+Ontario is deliberately absent: see BLOCKED.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+PROVINCES: dict[str, tuple[str, str]] = {
+    "qc": ("Quebec", "Québec"),
+    "ab": ("Alberta", "Alberta"),
+    "bc": ("British Columbia", "Colombie-Britannique"),
+}
+
+QC_BASE = "https://donnees.electionsquebec.qc.ca/production/provincial/resultats/archives"
+QC_PAGE = "https://www.electionsquebec.qc.ca/resultats-et-statistiques/"
+QC_ATTRIBUTION = "Source: Élections Québec, directeur général des élections du Québec. ©"
+
+AB_BASE = "https://officialresults.elections.ab.ca"
+AB_PAGE = "https://www.elections.ab.ca/elections/election-results/historical-results/"
+AB_ATTRIBUTION = (
+    "Source: Elections Alberta. Reproduced from the published results without modification of "
+    "the figures; this is not an official version of the results."
+)
+
+BC_DATASET_PAGE = "https://catalogue.data.gov.bc.ca/dataset/provincial-voting-results"
+BC_RESOURCE_BASE = (
+    "https://catalogue.data.gov.bc.ca/dataset/44914a35-de9a-4830-ac48-870001ef8935/resource"
+)
+BC_FILE_BY_VA = (
+    f"{BC_RESOURCE_BASE}/fb40239e-b718-4a79-b18f-7a62139d9792/download/"
+    "provincial_voting_results_by_va.csv"
+)
+BC_FILE_BY_PLACE = (
+    f"{BC_RESOURCE_BASE}/4e7be8e3-0805-4f39-87f3-47c4c29e262d/download/"
+    "provincial_voting_results_by_voting_place.csv"
+)
+BC_ATTRIBUTION = "Contains information licenced under the Elections BC Open Data Licence"
+BC_LICENCE_URL = "https://www.elections.bc.ca/docs/EBC-Open-Data-Licence.pdf"
+BC_MAX_BYTES = 45 * 1024 * 1024
+
+
+@dataclass(frozen=True)
+class Election:
+    province: str
+    date: str
+    seats: int
+    source_key: str
+
+
+# Seats are the number of electoral districts in each election (the district
+# counts the sources themselves list; the smoke test reconciles them).
+ELECTIONS: tuple[Election, ...] = (
+    Election("qc", "2022-10-03", 125, "2022-10-03"),
+    Election("qc", "2018-10-01", 125, "2018-10-01"),
+    Election("qc", "2014-04-07", 125, "2014-04-07"),
+    Election("qc", "2012-09-04", 125, "2012-09-04"),
+    Election("qc", "2008-12-08", 125, "2008-12-08"),
+    Election("qc", "2007-03-26", 125, "2007-03-26"),
+    Election("qc", "2003-04-14", 125, "2003-04-14"),
+    Election("qc", "1998-11-30", 125, "1998-11-30"),
+    Election("qc", "1994-09-12", 125, "1994-09-12"),
+    Election("qc", "1989-09-25", 125, "1989-09-25"),
+    Election("qc", "1985-12-02", 122, "1985-12-02"),
+    Election("qc", "1981-04-13", 122, "1981-04-13"),
+    Election("qc", "1976-11-15", 110, "1976-11-15"),
+    Election("qc", "1973-10-29", 110, "1973-10-29"),
+    # Alberta's source_key is the official results site's EventId.
+    Election("ab", "2023-05-29", 87, "101"),
+    Election("ab", "2019-04-16", 87, "60"),
+    Election("ab", "2015-05-05", 87, "31"),
+    Election("ab", "2012-04-23", 87, "21"),
+    Election("ab", "2008-03-03", 83, "12"),
+    # BC's source_key is the event year; the catalogue gives years, not dates, so
+    # the polling days are the published general election dates.
+    Election("bc", "2024-10-19", 93, "2024"),
+    Election("bc", "2020-10-24", 87, "2020"),
+    Election("bc", "2017-05-09", 87, "2017"),
+    Election("bc", "2013-05-14", 85, "2013"),
+    Election("bc", "2009-05-12", 85, "2009"),
+    Election("bc", "2005-05-17", 79, "2005"),
+)
+
+# Years in the by-voting-place file (the by-voting-area file ends in 2020).
+BC_PLACE_YEARS = frozenset({"2024"})
+
+
+@dataclass(frozen=True)
+class Blocked:
+    province: str
+    source: str
+    url: str
+    reason: str
+
+
+BLOCKED: tuple[Blocked, ...] = (
+    Blocked(
+        "on",
+        "Elections Ontario (results.elections.on.ca Election Explorer and CSV downloads)",
+        "https://www.elections.on.ca/en/terms-of-use.html",
+        "The terms of use bar using software, scripts or robots (including crawlers) 'to "
+        "scrape the sites or services or otherwise copy data from the sites or services', "
+        "and allow copying of content 'except for personal use' without prior written "
+        "consent. A public server cannot meet that, so Ontario is not built.",
+    ),
+)
+
+RATE_LIMIT_SOURCE = "elections-provincial"
+# One request per 10 seconds, the crawl delay Quebec and the BC catalogue ask for.
+RATE_LIMIT_PER_SECOND = 0.1
+RATE_LIMIT_CAPACITY = 1.0
+
+# Past results never change; a day keeps the BC file (30 MB) from being re-read.
+CACHE_TTL_SECONDS = 24 * 60 * 60
+
+ROWS_LIMIT_DEFAULT = 50
+ROWS_LIMIT_MAX = 1000
+
+PROVENANCE_SOURCE = "provincial-election-results"
