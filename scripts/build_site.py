@@ -548,6 +548,14 @@ SOURCES: dict[str, Source] = {
         "RNCan feux de végétation",
         domain="environment",
     ),
+    "nfd": Source(
+        "National Forestry Database (CCFM)",
+        "Base nationale de données forestières (CCMF)",
+        "national",
+        "National Forestry Database",
+        "Base nationale de données forestières",
+        domain="environment",
+    ),
     "nrcan_nbac": Source(
         "Natural Resources Canada: burned areas",
         "Ressources naturelles Canada : zones brûlées",

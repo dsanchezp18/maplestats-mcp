@@ -76,6 +76,8 @@ CASES = [
     ("which provincial elections have results available", "elections_provincial_list_elections"),
     ("compare bank account fees FCAC", "fcac_search_bank_accounts"),
     ("grain deliveries by province", "cgc_weekly_query"),
+    ("timber harvest volume by province", "nfd_query_table"),
+    ("seedlings planted forestry data comments", "nfd_table_comments"),
     ("milk class prices dairy", "cdc_get_component_prices"),
     ("animal disease cases CFIA", "cfia_disease_detections"),
     ("chronic disease prevalence public health", "phac_infobase_list_datasets"),

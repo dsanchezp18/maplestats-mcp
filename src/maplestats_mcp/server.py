@@ -222,7 +222,8 @@ Sources, by tool-name prefix:
   Columbia): elections_provincial_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
-  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. CanadaBuys federal tenders and contract awards: canadabuys_.
+  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. National Forestry Database (provincial fires,
+  harvest, planting, pests, timber revenues): nfd_. CanadaBuys federal tenders and contract awards: canadabuys_.
   DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
   ab_economic_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
   household/commercial/industrial energy surveys): nrcan_energy_use_.

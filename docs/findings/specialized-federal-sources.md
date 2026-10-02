@@ -1869,6 +1869,83 @@ allocations (a separate weekly CSV; the weekly file's Producer Cars
 worksheet has the shipments), elevator charge summaries, varieties by
 acreage insured, grain quality data, and the Excel-only weekly reports.
 
+## National Forestry Database
+
+**Status:** Shipped.
+
+Checked and shipped 2026-10-02 as `modules/nfd/` (`nfd_list_tables`,
+`nfd_describe_table`, `nfd_query_table`, `nfd_table_comments`). The
+Canadian Council of Forest Ministers' National Forestry Database
+(nfdp.ccfm.org, with the Canadian Forest Service) pairs with `cwfis_` and
+`nrcan_nbac_`. Federal CKAN only links a Zenodo record, not these files.
+
+**Terms.** `terms.php`: "made available for public use under the Open
+Government Licence - Canada version 2.0". `robots.txt` is
+`User-agent: *` / `Disallow:` (everything allowed).
+
+**Reaching it.** Port 80 answers; port 443 timed out on every attempt from
+the build machine (curl and httpx, several minutes apart), although the
+brief gave https URLs. The site's own pages link its files as
+`http://nfdp.ccfm.org/...`, so the module uses http and follows a redirect
+if the host later moves to https. Re-test https before treating this as
+permanent.
+
+**Catalogue.** The Download page (`/en/download.php`, `/fr/download.php`) has
+25 tables, not 37 (25 CSV, 25 XLSX, 25 dictionaries, 19 comments files;
+the 6 fire tables 3.1.1 to 3.2.3 have no comments, HTTP 404). Table
+numbers are the NFD's own: 2, 3.1.1 to 3.1.3, 3.2.1 to 3.2.3, 3.3, 4, 5.1,
+5.2, 6.1 to 6.6, 7, 8.1.1 to 8.1.4, 8.2.1 to 8.2.3. File names contain
+spaces, commas and parentheses and must be percent-encoded. One table's
+dictionary link is single-quoted in the HTML; the French page is
+Windows-1252 with HTML entities.
+
+**Files.** One bilingual CSV per table (UTF-8 with BOM, CRLF): English and
+French columns for year, jurisdiction, each category and the value. Last
+modified 2026-07-30 on all; the dictionaries are dated 2026-04-17 to
+2026-06-19. Years: 1940 to 2024 for harvest, 1970 for property losses,
+1975 for regeneration and insects, 1988 or 1992 for pest control, 1990 for
+wood supply, fires (to 2025) and revenues. All 25 tables were downloaded
+and parsed; the module was run against every one (describe, a BC query,
+comments).
+
+- Property losses (3.3) has six columns with a combined `Year / Année`
+  heading and no category pairs; every other table has the same
+  `Year, Année, ISO, Jurisdiction, Juridiction, <pairs>, <value>, qualifier,
+  <valeur>, qualifier` shape (the two value columns matched in the files
+  compared).
+- Values are blank where the agency gave none; the qualifier then says why.
+  Nine codes, identical in all dictionaries and case-sensitive (`E` is
+  estimated by Statistics Canada or the CFS, `e` by the provincial agency;
+  `U` is not available and large, `u` not available and very small): `a`
+  actual, `p` preliminary, `r` revised, `n` not applicable, `s` too small.
+  One harvest row has a value and no code.
+- Labels carry footnote markers (`Prescribed burning*b`, `Fuelwood*b and
+  firewood*c`); the text is in the comments workbook (sheets `21_EN` and
+  `21_FR`, with ISO, jurisdiction, year, comment, footnotes; property
+  losses adds Protection Zone).
+- Yukon is `YK` in table 6.2 and `YT` elsewhere; wood supply has `GC`
+  ("Canada", the federal government, 59 rows); property losses has `NP`
+  (national parks); Nunavut appears only in some tables.
+- Keys repeat: 110 groups in wood supply, 10 in roundwood harvest, 3 or 4
+  in each fire table and 1 in property losses (for example Prince Edward
+  Island 2007 human-caused fires: two rows, 0.02 and 18 ha; New Brunswick
+  2005 other roundwood, federal land: one `u` row and one `E` row of
+  30,009 m3). They are kept as published.
+- 8.1.4 and 8.2.3 put rates (kg/ha, BIU/ha, PIB/ha) and totals in one value
+  column, told apart by `Unit of Measure`; summing across them is wrong, so
+  the tool refuses a `group_by` that would.
+- Spelling slips in the files: `Renenues` (table 7 heading), `Valuer (en
+  dollar)`, `julliet` in a dictionary, `Douglas-Fir` and `Douglas-fir` in
+  6.5, an untranslated `Other` in a French treatment column, French month
+  names in both capitalizations in 3.2.2, and `2 Billion Trees` with an
+  empty French label.
+
+**Checks.** Area burned 2023 summed over causes and the 12 reporting
+jurisdictions: 17.6 million ha; British Columbia 2.84 million ha.
+
+**Not built.** The XLSX copies (same data as the CSV) and the NFD profile
+and glossary pages.
+
 ## Agriculture and Agri-Food Canada (AAFC)
 
 **Status:** Covered (via `ckan_*`).
