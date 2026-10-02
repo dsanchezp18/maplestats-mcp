@@ -1,4 +1,4 @@
-"""Live smoke test for provincial general election results (Quebec, Alberta, BC).
+"""Live smoke test for provincial general election results (QC, AB, BC, SK).
 
 Every general election must reconcile with the legislature's seat count and, for
 the newest of each province, with the known seats by party.
@@ -17,6 +17,10 @@ KNOWN_SEATS: dict[tuple[str, str], dict[str, int]] = {
     ("qc", "2022-10-03"): {"Coalition": 90, "libéral": 21, "solidaire": 11, "québécois": 3},
     ("ab", "2023-05-29"): {"UNITED CONSERVATIVE": 49, "NDP": 38},
     ("bc", "2024-10-19"): {"NDP": 47, "Conservative": 44, "Green": 2},
+    ("sk", "2024-10-28"): {"Saskatchewan Party": 34, "New Democratic": 27},
+    ("sk", "2020-10-26"): {"Saskatchewan Party": 48, "New Democratic": 13},
+    ("sk", "2016-04-04"): {"Saskatchewan Party": 51, "New Democratic": 10},
+    ("sk", "2011-11-07"): {"Saskatchewan Party": 49, "New Democratic": 9},
 }
 
 
@@ -70,6 +74,17 @@ async def main() -> int:
                 failures += 1
             else:
                 print(f"OK: 'gaspe' -> {result.rows[0].district}, {result.rows[0].candidate}")
+
+        if "sk" in provinces:
+            # Split polls and the 2011 workbook's misspelled sheet must come through.
+            result = await client.get_results("sk", "2011", district="nutana", winners_only=True)
+            if not result.rows or result.rows[0].district != "Saskatoon Nutana":
+                print(f"FAIL: 2011 Saskatoon Nutana found {result.rows[:1]}")
+                failures += 1
+            else:
+                print(
+                    f"OK: 2011 nutana -> {result.rows[0].candidate} ({result.rows[0].party_code})"
+                )
 
         blocked = client.list_elections()
         if not any(b.province == "on" for b in blocked.blocked):

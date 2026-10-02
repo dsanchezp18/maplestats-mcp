@@ -402,12 +402,12 @@ SOURCES: dict[str, Source] = {
         domain="government",
     ),
     "elections_provincial": Source(
-        "Provincial general election results: Quebec, Alberta, British Columbia",
-        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique",
+        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan",
+        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique, Saskatchewan",
         "provincial",
-        "Elections Quebec, Elections Alberta, Elections BC",
-        "Élections Québec, Elections Alberta, Elections BC",
-        places=("QC", "AB", "BC"),
+        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan",
+        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan",
+        places=("QC", "AB", "BC", "SK"),
         row="provincial_agency",
     ),
     "elections_financial_returns": Source(
