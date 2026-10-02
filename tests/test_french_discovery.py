@@ -111,6 +111,8 @@ CASES = [
     ("population trimestrielle Terre-Neuve-et-Labrador feuille Excel", "nl_stats_read_file"),
     ("tableaux du Bureau de la statistique du Yukon", "yukon_stats_list_tables"),
     ("loyer et taux d'inoccupation Yukon Whitehorse", "yukon_stats_query_table"),
+    ("fichiers Excel et CSV des données ouvertes de l'Alberta", "ab_opendata_search_datasets"),
+    ("lire les lignes d'un fichier Excel Open Alberta", "ab_opendata_read_resource"),
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
     ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
     ("résultats historiques par circonscription depuis 1867", "elections_results_get_historical"),

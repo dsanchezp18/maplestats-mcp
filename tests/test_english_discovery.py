@@ -54,6 +54,8 @@ CASES = [
     ("generate R code to reproduce this query", "reproduce_code"),
     ("Alberta economic dashboard unemployment", "ab_economic_get_data"),
     ("BC Stats Excel workbook list British Columbia", "bc_stats_list_files"),
+    ("Open Alberta Excel CSV dataset files AISH caseload", "ab_opendata_search_datasets"),
+    ("read rows of an Open Alberta xlsx file", "ab_opendata_read_resource"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
     ("TTC scheduled departures at a stop", "transit_get_stop_departures"),
     ("bus route frequency headway by hour", "transit_get_route_summary"),

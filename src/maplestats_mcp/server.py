@@ -230,7 +230,7 @@ Sources, by tool-name prefix:
   harvest, planting, pests, timber revenues): nfd_. CanadaBuys federal tenders and contract awards: canadabuys_.
   BC Registrar of Lobbyists (registrations, lobbying activity reports):
   bc_lobbyists_. DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
-  ab_economic_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
+  ab_economic_. Open Alberta Excel and CSV files (search, sheets, rows): ab_opendata_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
   household/commercial/industrial energy surveys): nrcan_energy_use_.
   Canada Energy Regulator (pipeline throughput, energy exports, tolls):
   cer_. Canadian Grain Commission (weekly grain deliveries, stocks and

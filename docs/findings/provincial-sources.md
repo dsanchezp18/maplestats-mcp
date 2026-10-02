@@ -245,6 +245,41 @@ rows with local government and contact fields) and fire centre and forest
 area boundaries are available on the same host and could be added. Provincial
 parks fire-ban markers (`provincial_parks_fire_ban_markers`) were not checked.
 
+## Open Alberta files (ab_opendata)
+
+**Status:** Shipped 2026-10-02 (`modules/ab_opendata/`, 5 tools).
+
+open.alberta.ca is searchable through `ckan_*` (`portal="ab"`) but nothing there could read
+the files. It has 3,018 datasets of type `opendata`; about 700 have an XLSX resource, 221 a
+CSV and 120 an XLS, and the DataStore has no active resources, so the files are the only
+route. Licence: 3,016 datasets are `OGLA` (Open Government Licence - Alberta: a worldwide,
+royalty-free, perpetual, non-exclusive licence to use the information, including for
+commercial purposes; attribution "Contains information licensed under the Open Government
+Licence – Alberta."). The other two have another licence or none (for example the energy
+industry activity reports carry `OGNL`, "No licence"); the tools flag them and say plainly
+that other terms apply, by default the non-commercial alberta.ca terms of use.
+
+Access: `robots.txt` disallows `/api/` and sets `Crawl-Delay: 10`; the download paths
+(`/dataset/<id>/resource/<id>/download/<file>`) are allowed. The owner accepted CKAN API use
+with pacing (the Yukon precedent), so API calls and downloads share one bucket of one request
+per 10 seconds. Only files hosted on open.alberta.ca and listed by their dataset are read;
+resources that link elsewhere (regionaldashboard.alberta.ca exports, with no extension) are
+listed as not readable.
+
+Quirks confirmed live: the portal's `format` and the file name are unreliable (an "XLSX"
+resource can be an .xls file, names are cut at about 100 characters and lose the extension),
+so the real format is read from the first bytes; many workbooks open with an index, notes or
+report-parameters sheet, so the default sheet is the one with the most declared cells; headers
+sit under title rows and sometimes span two rows (highway traffic volumes: years above
+labels), hence `header_row` and `header_rows`; a 3.8 MB workbook with 30 real rows declares
+millions of styled empty rows, so sheet dimensions are only reset when they are a lone A1; `package_search` answers HTTP 520 when `facet.field` is combined with `sort` or `start`, so organization counts come only with the default order on the first page; one CSV (monthly labour force statistics, 2015) is over the 40 MB read limit;
+resource titles contain U+FFFD for a lost en dash. Verified live on 30 datasets
+from Assisted Living and Social Services (AISH and Income Support caseloads), Treasury Board
+and Finance (indicators at a glance, population projections, multipliers, corporate income
+tax), Energy and Minerals (oil sands royalty data, royalty revenue), Municipal Affairs,
+Transportation and Economic Corridors (traffic volumes), Service Alberta (births, deaths),
+Health (indicator tables), Advanced Education (enrolment), CSV files (collisions, natural gas price, wildlife carcasses, the 10.4 MB wildfire file) and a legacy .xls (oil sands project data).
+
 ## Manitoba
 
 **Status:** Shipped.
