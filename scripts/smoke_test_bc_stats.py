@@ -62,7 +62,7 @@ async def main() -> int:
             f"population 1971 = {row_1971 and row_1971[2]} thousand (StatCan 2,240,470)",
         )
 
-        cpi_file, cpi = await _read(
+        _cpi_file, cpi = await _read(
             "Consumer Price Index (CPI), Monthly", sheet="page1", header_row=6, contains="All-items"
         )
         check(
@@ -71,7 +71,7 @@ async def main() -> int:
             "(StatCan 18-10-0004-01: 163.8 for Aug 26)",
         )
 
-        lfs_file, lfs = await _read(
+        _lfs_file, lfs = await _read(
             "Monthly Data Tables (XLS)", sheet="BC_LFS_DATA", contains="Aug", limit=10
         )
         check(
