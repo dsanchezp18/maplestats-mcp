@@ -606,6 +606,14 @@ SOURCES: dict[str, Source] = {
         "Rappels",
         domain="health",
     ),
+    "represent": Source(
+        "Elected officials and districts, via Open North Represent",
+        "Élus et circonscriptions, par Open North Represent",
+        "national",
+        "Represent",
+        "Represent",
+        domain="government",
+    ),
     "reproduce": Source("Reproduction code", "Code de reproduction", "utility"),
     "senate": Source(
         "Senate of Canada votes",
