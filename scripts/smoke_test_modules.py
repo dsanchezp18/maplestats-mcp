@@ -300,25 +300,147 @@ STEPS: list[Step] = [
         {"question": "How have rents and mortgage rates changed in Calgary?"},
         _non_empty("topics"),
     ),
-    # StatCan PUMFs (range reads inside the ZIPs)
-    Step("statcan", "statcan_pumf_search", {"query": "labour"}, _non_empty("products")),
+    # StatCan SDMX. 14100063's structure document is empty upstream (HTTP 200,
+    # zero bytes), so its steps also prove the WDS fallback; the data steps
+    # prove the newest observations come back by default.
     Step(
-        "statcan", "statcan_pumf_list_files", {"catalogue_number": "98M0001X"}, _non_empty("files")
+        "statcan/sdmx",
+        "sdmx_get_structure",
+        {"product_id": 14100063},
+        lambda data: len(data["dimensions"]) == 6,
     ),
     Step(
-        "statcan",
+        "statcan/sdmx",
+        "sdmx_get_structure",
+        {"product_id": 98100002, "dimension_position": 1, "limit": 5},
+        lambda data: (
+            len(data["dimensions"][0]["codes"]) == 5
+            and "paged" in (data["provenance"]["limits"] or "")
+        ),
+    ),
+    Step(
+        "statcan/sdmx",
+        "sdmx_get_key_for_dimension",
+        {"product_id": 14100063, "dimension_position": 4},
+        _non_empty("or_key"),
+    ),
+    Step(
+        "statcan/sdmx",
+        "sdmx_get_data",
+        {"product_id": 18100004, "key": "2.2"},
+        lambda data: data["series"][0]["observations"][-1]["period"] >= "2026",
+    ),
+    Step(
+        "statcan/sdmx",
+        "sdmx_get_vector_data",
+        {"vector_id": 41690973, "last_n_observations": 3},
+        lambda data: data["row_count"] == 3,
+    ),
+    # StatCan RDaaS
+    Step(
+        "statcan/rdaas", "rdaas_search_classifications", {"query": "NAICS"}, _non_empty("results")
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_search_classifications",
+        {"query": "NAICS", "status": ["RELEASED"], "limit": 3},
+        lambda data: all(r["status"] == "RELEASED" for r in data["results"]),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_search_filters",
+        {"kind": "classification"},
+        _non_empty("filters"),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_search_filters",
+        {"kind": "concordance"},
+        _non_empty("filters"),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_classification",
+        lambda ctx: {"classification_id": ctx["rdaas_search_classifications"]["results"][0]["id"]},
+        _non_empty("levels"),
+    ),
+    # NAICS 2017.3.0 (the current NAICS 2022 has no detailed categories upstream).
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_classification_categories_detailed",
+        {"classification_id": "S049Pjk4RIUgw6j2", "limit": 5},
+        lambda data: len(data["categories"]) == 5 and data["total_count"] > 5,
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_classification_exclusions",
+        {"classification_id": "P1PiDASifm2o9oHQ"},
+        _non_empty("exclusions"),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_term_exclusion",
+        lambda ctx: {
+            "term_exclusion_id": ctx["rdaas_get_classification_exclusions"]["exclusions"][0]["id"]
+        },
+        _non_empty("term"),
+    ),
+    # NAICS 2022's index is 8 MB: the paged call must stay small.
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_classification_indexes",
+        {"classification_id": "MJRdRiFsfmJAprtT", "query": "bakery", "limit": 5},
+        lambda data: 0 < len(data["entries"]) <= 5 and data["total_count"] >= len(data["entries"]),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_classification_index_entry",
+        lambda ctx: {
+            "classification_id": "MJRdRiFsfmJAprtT",
+            "index_id": ctx["rdaas_get_classification_indexes"]["entries"][0]["index_id"],
+        },
+        _non_empty("primary_term"),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_search_concordances",
+        {"query": "NAICS", "limit": 3},
+        _non_empty("results"),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_concordance",
+        lambda ctx: {"concordance_id": ctx["rdaas_search_concordances"]["results"][0]["id"]},
+        _non_empty("source_id"),
+    ),
+    Step(
+        "statcan/rdaas",
+        "rdaas_get_concordance_maps",
+        lambda ctx: {"concordance_id": ctx["rdaas_search_concordances"]["results"][0]["id"]},
+        _non_empty("maps"),
+    ),
+    # StatCan PUMFs (range reads inside the ZIPs)
+    Step("statcan/pumf", "statcan_pumf_search", {"query": "labour"}, _non_empty("products")),
+    Step(
+        "statcan/pumf",
+        "statcan_pumf_list_files",
+        {"catalogue_number": "98M0001X"},
+        _non_empty("files"),
+    ),
+    Step(
+        "statcan/pumf",
         "statcan_pumf_list_zip",
         lambda ctx: {"url": ctx["statcan_pumf_list_files"]["files"][0]["url"]},
         _non_empty("codebook_files"),
     ),
     Step(
-        "statcan",
+        "statcan/pumf",
         "statcan_pumf_get_codebook",
         lambda ctx: {"url": ctx["statcan_pumf_list_files"]["files"][0]["url"], "query": "tenure"},
         _non_empty("weight_variables"),
     ),
     Step(
-        "statcan",
+        "statcan/pumf",
         "statcan_pumf_tabulate",
         {
             "url": "https://www150.statcan.gc.ca/n1/pub/89m0025x/2022001/2024.zip",

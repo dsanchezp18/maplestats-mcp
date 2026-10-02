@@ -23,6 +23,9 @@ class SdmxDimension(BaseModel):
     dimension_id: str
     codelist_id: str
     codes: list[SdmxCode]
+    # Total codes in the dimension; `codes` holds only the requested page
+    # (code_query/limit/offset), so this tells the caller what was left out.
+    code_count: int | None = None
 
 
 class SdmxStructure(BaseModel):
@@ -62,4 +65,6 @@ class SdmxData(BaseModel):
     key: str
     series: list[SdmxSeries]
     row_count: int
+    # Series in the response before the per-call cap; None when not capped.
+    series_total: int | None = None
     provenance: Provenance

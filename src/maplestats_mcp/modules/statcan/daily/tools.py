@@ -62,10 +62,11 @@ async def statcan_daily_get_releases(
     a publication timestamp, and a plain-text summary. Use "all" for
     every subject in one call. Keywords: The Daily, release bulletin, new
     data, recent releases, what's new, StatCan announcement, Statistics
-    Canada, latest statistics.
+    Canada, latest statistics, today's releases, press releases, news.
     Mots-clés : Le Quotidien, bulletin de diffusion, nouvelles données,
     diffusions récentes, quoi de neuf, annonce de Statistique Canada,
-    Statistique Canada, dernières statistiques.
+    Statistique Canada, dernières statistiques, communiqués du Quotidien,
+    communiqués d'aujourd'hui, diffusions du jour, nouveautés.
     """
     return await client.get_releases(subject, lang=lang, limit=limit)
 
@@ -88,11 +89,16 @@ async def statcan_daily_search_archive(
     2020"); leave it empty to browse by date range alone. start_date
     and end_date are "YYYY-MM-DD" and filter to releases on or between
     those dates (inclusive); omit either to leave that side open.
-    Results are returned most-recent-first. Keywords: The Daily, historical,
+    Results are returned most-recent-first. The archive also holds UPCOMING
+    releases (entries of type "meeting", dated in the future): search with
+    start_date set to today to see what StatCan has scheduled. Those entries
+    link only to the www150.statcan.gc.ca home page, not to an article.
+    Keywords: The Daily, historical,
     archive, past releases, release history, when was, Statistics Canada,
-    release date.
+    release date, upcoming releases, release schedule, release calendar.
     Mots-clés : Le Quotidien, historique, archive, diffusions passées,
-    historique des diffusions, quand, Statistique Canada, date de diffusion.
+    historique des diffusions, quand, Statistique Canada, date de diffusion,
+    diffusions à venir, calendrier de diffusion.
     """
     return await client.search_archive(
         query, lang=lang, start_date=start_date, end_date=end_date, limit=limit

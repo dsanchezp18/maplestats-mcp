@@ -139,6 +139,12 @@ CASES = [
     # Gaps found and fixed 2026-09-28: BoC mortgage rates, WDS
     # interprovincial migration and Borealis as a research repository
     # were each missing from the top 3 before their keywords were added.
+    # StatCan misses found in the 2026-10-02 review (no StatCan tool in the top
+    # 5, or the wrong one first).
+    ("population estimates by province quarterly", "wds_search_cubes"),
+    ("monthly unemployment rate for Alberta", "wds_search_cubes"),
+    ("time series for a vector between two dates", "wds_get_data_by_reference_period_range"),
+    ("NOC occupation classification", "rdaas_search_classifications"),
 ]
 
 

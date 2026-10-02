@@ -88,6 +88,23 @@ async def get_indicators(
         for entry in results.get("geo") or []
     }
 
+    # The feed numbers geographies 0-13 (0 Canada, 1 NL ... 9 AB, 10 BC, 11 YT,
+    # 12 NT, 13 NU), not SGC province codes: geo_code=48 matched nothing and
+    # returned an empty list with no hint. A code the feed does not use but
+    # that is a province/territory SGC code is mapped; 10-13 are valid feed
+    # codes and are never reinterpreted as SGC.
+    note: str | None = None
+    if geo_code is not None and str(geo_code) not in geo_names:
+        mapped = constants.SGC_TO_FEED_GEO_CODE.get(geo_code)
+        if mapped is None or str(mapped) not in geo_names:
+            valid = ", ".join(f"{code}={name}" for code, name in geo_names.items())
+            raise InvalidInput(
+                f"statcan_indicators:get_indicators: geo_code {geo_code} is not in this feed. "
+                f"Use one of: {valid} (or a province SGC code such as 48 for Alberta)."
+            )
+        note = f"geo_code {geo_code} read as SGC code and mapped to feed code {mapped}"
+        geo_code = mapped
+
     query_lower = query.strip().lower()
     matched: list[Indicator] = []
     for entry in results["indicators"]:
@@ -135,5 +152,6 @@ async def get_indicators(
             url=url,
             cached=was_cached,
             schema_name="statcan_indicators.IndicatorList",
+            limits=note,
         ),
     )

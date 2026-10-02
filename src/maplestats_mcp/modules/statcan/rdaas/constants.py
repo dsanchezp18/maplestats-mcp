@@ -19,3 +19,9 @@ CACHE_TTL_SECONDS = 24 * 60 * 60  # 24h
 
 DEFAULT_SEARCH_LIMIT = 10
 MAX_SEARCH_LIMIT = 500
+
+# Index and detailed-category endpoints ignore start/limit (verified live
+# 2026-10-02: NAICS 2022 indexes are 8.3 MB whatever is asked), so the full
+# list is cached and paged here.
+DEFAULT_LIST_LIMIT = 100
+MAX_LIST_LIMIT = 1000

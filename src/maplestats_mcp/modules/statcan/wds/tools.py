@@ -41,7 +41,9 @@ async def wds_search_cubes(
 
     Use for: finding a StatCan table's productId when you only know a
     topic, discovering which tables cover a subject before requesting
-    metadata or data; with no `query`, a full inventory scan, building a
+    metadata or data (e.g. the monthly unemployment rate for Alberta is
+    in the Labour Force Survey tables, quarterly population estimates by
+    province in 17-10-0009); with no `query`, a full inventory scan, building a
     local index, or checking the total table count.
     With `query`: case-insensitive title match, `limit` defaults to 25.
     Without `query`: the full list (`lite=False` for the non-lite
@@ -51,13 +53,14 @@ async def wds_search_cubes(
     discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, unemployment rate, employment, GDP by
     industry, CPI, population estimates, retail trade, wages, trade,
-    interprovincial migration, time series.
+    interprovincial migration, time series, monthly, quarterly, by
+    province, Alberta, search statcan tables.
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
     productId, découverte, wds, catalogue, parcourir, liste, inventaire,
     tous les cubes, liste complète, tableaux, population active, taux de
     chômage, emploi, PIB par industrie, IPC, estimations de population,
     commerce de détail, salaires, commerce, migration interprovinciale,
-    séries chronologiques.
+    séries chronologiques, mensuel, trimestriel, par province, Alberta.
     """
     if query is not None:
         if not lite:
@@ -209,9 +212,11 @@ async def wds_get_data_by_reference_period_range(
     must be full "YYYY-MM-DD" — WDS rejects an abbreviated "YYYY-MM"
     with HTTP 406.
     Keywords: statcan, reference period, range, history, vectors, wds, date
-    range, Statistics Canada.
+    range, Statistics Canada, time series between two dates, start date,
+    end date, vector, historical window.
     Mots-clés : statcan, période de référence, plage, plage de dates,
-    historique, vecteurs, données historiques, wds.
+    historique, vecteurs, données historiques, wds, série chronologique
+    entre deux dates, date de début, date de fin, vecteur.
     """
     return await client.get_data_from_vector_by_reference_period_range(
         vector_ids, start_ref_period, end_ref_period

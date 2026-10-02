@@ -31,6 +31,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.retrying import RETRY_STATUSES, get_with_retry
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -53,7 +54,7 @@ def _imdb_url(lang: str) -> str:
 async def _warm_up_list(lang: str, *, force: bool = False) -> None:
     if lang in _warmed_list_langs and not force:
         return
-    response = await _client.get(_list_url(lang))
+    response = await get_with_retry(_client, _list_url(lang))
     response.raise_for_status()
     _warmed_list_langs.add(lang)
 
@@ -81,7 +82,7 @@ async def search_surveys(
         await _LIMITER.acquire()
         try:
             await _warm_up_list(lang)
-            response = await _client.get(url)
+            response = await get_with_retry(_client, url)
             response.raise_for_status()
             if _has_survey_links(response.text):
                 return response.text
@@ -90,7 +91,7 @@ async def search_surveys(
             # renders no links without one): re-warm once rather than cache
             # "no surveys" for the whole TTL.
             await _warm_up_list(lang, force=True)
-            response = await _client.get(url)
+            response = await get_with_retry(_client, url)
             response.raise_for_status()
             if not _has_survey_links(response.text):
                 _warmed_list_langs.discard(lang)
@@ -206,7 +207,8 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            return await _client.get(url)
+            # 500 is IMDB's deterministic unknown-survey answer (see below): no retry.
+            return await get_with_retry(_client, url, retry_statuses=RETRY_STATUSES - {500})
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "statcan_surveys:get_survey_metadata did not respond in time. Try again shortly."
