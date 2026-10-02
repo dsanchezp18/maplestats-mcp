@@ -27,6 +27,7 @@ from maplestats_mcp.shared.errors import InvalidInput
 
 Builder = Callable[[dict[str, Any], dict[str, Any]], Awaitable[Spec]]
 _WDS = "https://www150.statcan.gc.ca/t1/wds/rest/"
+_SDMX = "https://www150.statcan.gc.ca/t1/wds/sdmx/statcan/rest/"
 _EXACT = "exact: rebuilt from the tool's arguments"
 _FILTERED = "exact: the source file, then the tool's filters"
 
@@ -85,6 +86,33 @@ async def _table(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 async def _vectors(args: dict[str, Any], result: dict[str, Any]) -> Spec:
     return vector_spec(args["vector_ids"], int(args.get("latest_n", 12)))
+
+
+async def _sdmx_data(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.reproduce.excel import sdmx_generic_steps
+    from maplestats_mcp.modules.reproduce.render import safe_url
+
+    spec = table_spec(args["product_id"], str(args.get("lang", "en")))
+    params = {
+        name: args[key]
+        for key, name in (
+            ("start_period", "startPeriod"),
+            ("end_period", "endPeriod"),
+            ("last_n_observations", "lastNObservations"),
+        )
+        if args.get(key) not in (None, "")
+    }
+    query = f"?{urlencode(params)}" if params else ""
+    pid = str(args["product_id"]).replace("-", "")[:8]
+    url = safe_url(f"{_SDMX}data/DF_{pid}/{args['key']}{query}")
+    # Power Query reads SDMX-ML, so the Excel query fetches only the key's
+    # series, as the tool does; the scripts read the full table instead.
+    spec.native["excel"] = Code([url], sdmx_generic_steps(url))
+    spec.notes.append(
+        "The Excel (Power Query) query reads only this key's series from StatCan's SDMX "
+        "service, as the tool does; the other scripts download the full table."
+    )
+    return spec
 
 
 async def _sdmx_vector(args: dict[str, Any], result: dict[str, Any]) -> Spec:
@@ -569,6 +597,7 @@ async def _cfia_avian_influenza(args: dict[str, Any], result: dict[str, Any]) ->
 BUILDERS: dict[str, Builder] = {
     "wds_get_data_from_vectors": _vectors,
     "sdmx_get_vector_data": _sdmx_vector,
+    "sdmx_get_data": _sdmx_data,
     "socrata_query_dataset_rows": _socrata,
     "ckan_datastore_search": _ckan,
     "boc_get_observations": _boc,
@@ -595,6 +624,7 @@ BUILDERS: dict[str, Builder] = {
 ARGUMENT_ONLY = {
     "wds_get_data_from_vectors",
     "sdmx_get_vector_data",
+    "sdmx_get_data",
     "socrata_query_dataset_rows",
     "ckan_datastore_search",
     "boc_get_observations",

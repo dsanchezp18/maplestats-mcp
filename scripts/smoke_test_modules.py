@@ -409,7 +409,28 @@ STEPS: list[Step] = [
         "reproduce",
         "reproduce_code",
         {"tool_name": "canadabuys_search_awards", "arguments": {"query": "snow removal"}},
-        lambda data: len(data["scripts"]) == 4 and "snow" in data["scripts"][1]["code"],
+        lambda data: len(data["scripts"]) == 5 and "snow" in data["scripts"][1]["code"],
+    ),
+    # Excel: a Power Query reading the key's series, and a formatted workbook.
+    Step(
+        "reproduce",
+        "reproduce_code",
+        {
+            "tool_name": "sdmx_get_data",
+            "arguments": {"product_id": 18100004, "key": "2.2", "last_n_observations": 3},
+            "language": "excel",
+        },
+        lambda data: "Xml.Document" in data["scripts"][0]["code"],
+    ),
+    Step(
+        "reproduce",
+        "reproduce_workbook",
+        {
+            "tool_name": "boc_get_observations",
+            "arguments": {"series_names": ["FXUSDCAD"], "recent": 5},
+            "delivery": "base64",
+        },
+        lambda data: bool(data["workbook_base64"]) and "Source" in data["sheets"],
     ),
     # Transport Canada vehicle recalls
     Step(

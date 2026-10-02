@@ -180,8 +180,9 @@ plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
 plain-language query (English or French). Then call_tool with the name.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
-and arguments) returns R, Python, Stata and Julia code that retrieves and
-cleans the same data. Read docs://catalogue
+and arguments) returns R, Python, Stata and Julia code, and an Excel Power
+Query, that retrieves and cleans the same data; reproduce_workbook returns
+the rows as a formatted Excel workbook. Read docs://catalogue
 for a bilingual one-line description of every module.
 
 Sources, by tool-name prefix:

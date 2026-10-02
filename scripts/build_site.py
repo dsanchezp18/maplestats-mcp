@@ -1192,7 +1192,13 @@ def highlight_json(text: str) -> str:
     return "".join(out)
 
 
-_COMMENT = {"r": r"#.*$", "python": r"#.*$", "julia": r"#.*$", "stata": r"(?:^\s*\*|//).*$"}
+_COMMENT = {
+    "r": r"#.*$",
+    "python": r"#.*$",
+    "julia": r"#.*$",
+    "stata": r"(?:^\s*\*|//).*$",
+    "excel": r"//.*$",
+}
 
 
 def highlight_script(code: str, language: str) -> str:
@@ -1654,7 +1660,13 @@ def script_tabs(
     With `more` (the expand and collapse labels), each script is shown cut
     to its first lines with a button for the rest; without it, it scrolls.
     """
-    labels = {"r": "R", "python": "Python", "stata": "Stata", "julia": "Julia"}
+    labels = {
+        "r": "R",
+        "python": "Python",
+        "stata": "Stata",
+        "julia": "Julia",
+        "excel": "Excel (Power Query)",
+    }
     tabs, panels = [], []
     for n, (language, code) in enumerate(scripts):
         selected = "true" if n == 0 else "false"
