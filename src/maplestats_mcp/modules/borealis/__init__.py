@@ -23,7 +23,12 @@ MODULE_DESCRIPTION = (
     "justice surveys and HART housing tabulations. Search by words in the dataset "
     "or file name; each hit returns its download URL, size, whether it needs a "
     "Borealis login, and an R snippet that reads it with canivt. StatCan's own "
-    "2006-2016 census tables are covered by statcan_census_tables_."
+    "2006-2016 census tables are covered by statcan_census_tables_. It also searches "
+    "the ODESI collection (borealis_odesi_ tools): DDI metadata for Statistics Canada "
+    "public use microdata files (PUMFs), public opinion polls, aggregate and census "
+    "data, with the study description, variable names and labels, and which files are "
+    "public or restricted. The DLI-licensed collection is skipped because its files need "
+    "a login at a DLI-member institution."
 )
 MODULE_DESCRIPTION_FR = (
     "Tableaux statistiques Beyond 20/20 (.ivt) sur Borealis, le dépôt Dataverse "
@@ -35,5 +40,10 @@ MODULE_DESCRIPTION_FR = (
     "chronologique de la population active de 1997 à 2008, Structure des "
     "industries canadiennes et Nombre d'entreprises canadiennes. Chaque résultat "
     "donne l'URL de téléchargement, la taille, l'accès et un extrait R qui lit le "
-    "fichier avec canivt."
+    "fichier avec canivt. Les outils borealis_odesi_ cherchent aussi dans la collection "
+    "ODESI : métadonnées DDI des fichiers de microdonnées à grande diffusion (FMGD) de "
+    "Statistique Canada, des sondages d'opinion, des données agrégées et du recensement, "
+    "avec la description de l'étude, les variables et les fichiers publics ou restreints. "
+    "La collection sous licence de l'IDD est exclue : ses fichiers exigent une connexion "
+    "d'un établissement membre."
 )

@@ -181,6 +181,105 @@ All three shipped tools confirmed live end-to-end 2026-09-22 (a real ST1
 Tuesday report parsed to 2026-09-15, a real 2023 archive link resolving to
 the pre-"prd" path, and a real ST3 Oil link with a live last-modified date).
 
+### Alberta Wildfire live status
+
+Shipped 2026-10-02 as `modules/ab_wildfire/` (7 tools), the provincial
+counterpart of `cwfis` (national hotspots, FWI stations and situation
+reports, which it does not duplicate). Alberta Wildfire's status map and
+dashboard read from anonymous ArcGIS Online feature services owned by
+`WMBappServices` (`services.arcgis.com/Eb8P5h4CJk8utIBz`, 63 items, no key).
+
+**Licence.** The ArcGIS items carry only a no-warranty disclaimer, but the
+open.alberta.ca dataset `alberta-wildfire-status-map` (licence id OGLA)
+points at the same map under the Open Government Licence - Alberta: a
+"worldwide, royalty-free, perpetual, non-exclusive licence to use the
+Information, including for commercial purposes", attribution "Contains
+information licensed under the Open Government Licence - Alberta."
+`services.arcgis.com/robots.txt` answers 403 (an API host with no robots
+file); `www.arcgis.com/robots.txt` disallows nothing. The dataset's CKAN
+record lists only the map URL as a resource, so the services themselves are
+the machine-readable path.
+
+**Layers used** (all `maxRecordCount` 2000, checked 2026-10-02):
+
+| Service / layer | Rows | Used for |
+| --- | --- | --- |
+| `Wildfire_year_to_date/0` | 823 | `ab_wildfire_get_fires`, `_summarize_fires` (current) |
+| `wildfire_prev5_ytd/1` | 6,821 | same, `dataset="previous_5_years"` |
+| `Wildfire_Perimeter_Extinguished_(PROD)/3`, `Wildfire_Perimeter_Active_(PROD)/3` | 118, 0 | `_get_fire_perimeters` |
+| `fire_danger_rating/0` | 807 | `_get_fire_danger`, `_summarize_fire_danger` |
+| `Wildfire_Statistics_Prod_View/0`, `5_year_summary_on_this_day_prod_view/2` | 5, 6 | `_get_season_statistics` |
+| `alberta_fire_ban_system/1-4`, `off_highway_vehicle_ohv_restriction/0` | 63 + 11 + 0 + 0, 0 | `_get_fire_restrictions` |
+
+**Quirks confirmed live.** `Wildfire_year_to_date` is the union of the map's
+separate "active" and "non active" point layers (its item says "all the
+active and extinguished wildfire locations"), so one query covers both; the
+active layer was empty on 2026-10-02, normal off-season, and the dashboard's
+active count still read 1 (a "Turned Over" fire), so the two disagree. The
+dashboard's 753 wildfires and 17,771.48 ha equal the layer's
+`FIRE_TYPE='Wildfire'` rows with `FIRE_YEAR=2026` exactly; the layer also
+holds 54 mutual-aid fires (no cause) and 17 carry-over fires from 2025 (one
+of 138,581 ha). The previous-five-years layer is each year cut at today's
+date, not a history, and spells "Assistance Ended" as "Assisstance Ended" in
+211 of its rows (the client folds the two). `FIRE_STATUS_DATE` is text
+`YYYY/MM/DD HH:MM:SS` with no zone; the assessment date is a true date. Size
+classes follow A to 0.1 ha, B to 4, C to 40, D to 200, E above (the data's
+ranges agree). Layer attribute domains are empty, so labels are free text.
+`editingInfo.dataLastEditDate` of each layer gives a usable as-of time
+(minutes old on 2026-10-02). The fire danger layer covers the whole province
+(Edmonton and Calgary are rated), its `Last_Updated` stamp read about five
+hours ahead of the clock, and its `Shape__Area` is in Web Mercator, so
+polygon counts, not areas, are reported. The map's own "Extinguished
+Wildfire Perimeter" service holds 2 polygons while the `(PROD)` service holds
+118 (refreshed 2026-09-24), so the PROD ones are used. Fire bans have no end
+date: entries from 2023 and 2025 were still listed, and a jurisdiction can be
+several polygons (Special Areas Board is three), so the tool merges them and
+warns about entries over a year old. Perimeter queries use `f=geojson` with
+`maxAllowableOffset` 0.0005 degrees (about 50 m), which cut one perimeter to
+about 9 kB.
+
+**Not built.** Evacuation orders: no layer in the owner's 63 items; the
+municipal and emergency-management evacuation maps are separate systems.
+Municipal-reported wildfires (`Extinguished_Municipal_Wildfire_Prod`, 252
+rows with local government and contact fields) and fire centre and forest
+area boundaries are available on the same host and could be added. Provincial
+parks fire-ban markers (`provincial_parks_fire_ban_markers`) were not checked.
+
+## Open Alberta files (ab_opendata)
+
+**Status:** Shipped 2026-10-02 (`modules/ab_opendata/`, 5 tools).
+
+open.alberta.ca is searchable through `ckan_*` (`portal="ab"`) but nothing there could read
+the files. It has 3,018 datasets of type `opendata`; about 700 have an XLSX resource, 221 a
+CSV and 120 an XLS, and the DataStore has no active resources, so the files are the only
+route. Licence: 3,016 datasets are `OGLA` (Open Government Licence - Alberta: a worldwide,
+royalty-free, perpetual, non-exclusive licence to use the information, including for
+commercial purposes; attribution "Contains information licensed under the Open Government
+Licence – Alberta."). The other two have another licence or none (for example the energy
+industry activity reports carry `OGNL`, "No licence"); the tools flag them and say plainly
+that other terms apply, by default the non-commercial alberta.ca terms of use.
+
+Access: `robots.txt` disallows `/api/` and sets `Crawl-Delay: 10`; the download paths
+(`/dataset/<id>/resource/<id>/download/<file>`) are allowed. The owner accepted CKAN API use
+with pacing (the Yukon precedent), so API calls and downloads share one bucket of one request
+per 10 seconds. Only files hosted on open.alberta.ca and listed by their dataset are read;
+resources that link elsewhere (regionaldashboard.alberta.ca exports, with no extension) are
+listed as not readable.
+
+Quirks confirmed live: the portal's `format` and the file name are unreliable (an "XLSX"
+resource can be an .xls file, names are cut at about 100 characters and lose the extension),
+so the real format is read from the first bytes; many workbooks open with an index, notes or
+report-parameters sheet, so the default sheet is the one with the most declared cells; headers
+sit under title rows and sometimes span two rows (highway traffic volumes: years above
+labels), hence `header_row` and `header_rows`; a 3.8 MB workbook with 30 real rows declares
+millions of styled empty rows, so sheet dimensions are only reset when they are a lone A1;
+resource titles contain U+FFFD for a lost en dash. Verified live on more than 25 datasets
+from Assisted Living and Social Services (AISH and Income Support caseloads), Treasury Board
+and Finance (indicators at a glance, population projections, multipliers, corporate income
+tax), Energy and Minerals (oil sands royalty data, royalty revenue), Municipal Affairs,
+Transportation and Economic Corridors (traffic volumes), Service Alberta (births, deaths),
+Health (indicator tables), Advanced Education (enrolment) and CSV files.
+
 ## Manitoba
 
 **Status:** Shipped.

@@ -188,16 +188,18 @@ Sources, by tool-name prefix:
 - Statistics Canada: wds_ (tables/cubes, vectors), sdmx_ (filtered
   series), rdaas_ (classifications, e.g. NAICS), statcan_census_profile_
   (2021), statcan_census_profile_2016_, statcan_census_profile_archive_
-  (2001-2016 bulk links), statcan_daily_ (The Daily releases),
+  (2001-2016 bulk links), statcan_daily_ (The Daily releases, release calendar),
   statcan_indicators_, statcan_delta_ (daily bulk-update files),
   statcan_reference_ (definitions/methods, analysis), statcan_surveys_
-  (survey directory + IMDB metadata), statcan_geo_ (census geography),
+  (survey directory + IMDB metadata, RDC and RTRA microdata holdings), statcan_geo_ (census geography),
   statcan_sdg_ (Sustainable Development Goals hub), statcan_pumf_ (public
   use microdata files: find, list downloads, read codebooks),
   statcan_census_tables_ (2006-2016 census cross-tabulations: CSV, SDMX,
-  Beyond 20/20 IVT).
+  Beyond 20/20 IVT), cimt_ (exports and imports by HS commodity,
+  partner, US state and province, monthly from 1988).
 - Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 IVT tables from
-  university libraries: historical censuses, Business Patterns, LFS review).
+  university libraries: historical censuses, Business Patterns, LFS review;
+  ODESI DDI metadata for StatCan PUMFs and polls, public files only).
 - Bank of Canada Valet: boc_ (rates, FX, CPI, commodity prices).
 - CMHC housing: cmhc_ (HMIP rental/starts tables), cmhc_dt_ (Excel data
   tables).
@@ -222,7 +224,9 @@ Sources, by tool-name prefix:
   Columbia, Saskatchewan): elections_provincial_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
-  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. CanadaBuys federal tenders and contract awards: canadabuys_.
+  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. Alberta Wildfire live
+  status (fires, perimeters, fire danger, fire bans): ab_wildfire_. National Forestry Database (provincial fires,
+  harvest, planting, pests, timber revenues): nfd_. CanadaBuys federal tenders and contract awards: canadabuys_.
   BC Registrar of Lobbyists (registrations, lobbying activity reports):
   bc_lobbyists_. DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
   ab_economic_. Open Alberta Excel and CSV files (search, sheets, rows): ab_opendata_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
