@@ -14,8 +14,17 @@ check the answers against something other than the code under test:
    downloaded whole; Victoria's counts are checked against an independent
    `zipfile` read, the same way as Calgary's.
 
+5. StatCan's national database (23-26-0003): the catalogue's statuses are
+   checked (live overlaps named, TransLink excluded), then a capped sample
+   of nested feeds (none over 15 MB compressed) is run through every tool,
+   and Barrie's counts and one stop's departures are compared with an
+   independent read that fetches the nested zip with plain httpx ranges
+   and zlib/zipfile. The host asks for a two-second crawl delay, so this
+   part takes a few minutes.
+
 Pass agency keys as arguments to run only those (the independent
-reconciliations run for the keys that have one).
+reconciliations run for the keys that have one); pass `national` to run
+only the national part, or `national:<id>` keys for single national feeds.
 
 The first scan of each agency streams tens of MB, so the run takes a few
 minutes; the City of Toronto's host answers some requests with a transient
@@ -27,14 +36,19 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import struct
 import sys
 import zipfile
+import zlib
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import httpx
 
-from maplestats_mcp.modules.transit import client, constants
+from maplestats_mcp.modules.transit import client, constants, national
+from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.remote_zip import ZipMember
 
 # A point in each core, a search radius in metres, and the least routes and
 # stops a real feed has (a sanity floor, not a count to match).
@@ -111,6 +125,188 @@ def _independent_counts(key: str, day: date) -> dict[str, str | int]:
     }
 
 
+NATIONAL_SAMPLE = (
+    "barrie_transit",
+    "winnipeg_transit",
+    "halifax_transit",
+    "saskatoon_transit",
+    "edmonton_transit_service",
+    "yellowknife_transit",
+    "whitehorse_transit",
+    "exo_l'assomption",
+)
+NATIONAL_MAX_MEMBER_BYTES = 15 * 1024 * 1024
+
+
+def _mid_window_wednesday(start: date, end: date) -> date:
+    day = start + timedelta(days=(end - start).days // 2)
+    while day.weekday() != 2:
+        day += timedelta(days=1)
+    return day if day <= end else day - timedelta(days=7)
+
+
+def _independent_national(member: ZipMember, day: date) -> dict[str, str | int]:
+    """Counts from the nested zip fetched with httpx ranges and read with zipfile.
+
+    Shares nothing with the module under test except the outer archive's
+    central directory offsets.
+    """
+    url = constants.NATIONAL_URL
+    # StatCan's network drops the TLS handshake of a client that does not offer
+    # HTTP/2 in ALPN (AGENTS.md, "Three things that look removable").
+    web = httpx.Client(http2=True, timeout=300)
+    header = web.get(
+        url, headers={"Range": f"bytes={member.header_offset}-{member.header_offset + 29}"}
+    ).content
+    name_len, extra_len = struct.unpack("<HH", header[26:30])
+    start = member.header_offset + 30 + name_len + extra_len
+    body = web.get(
+        url, headers={"Range": f"bytes={start}-{start + member.compressed_size - 1}"}
+    ).content
+    archive = zipfile.ZipFile(io.BytesIO(zlib.decompress(body, -15)))
+    names = archive.namelist()
+
+    def rows(name: str) -> list[dict[str, str]]:
+        if name not in names:
+            return []
+        with archive.open(name) as handle:
+            text = io.TextIOWrapper(handle, encoding="utf-8-sig", newline="")
+            return [{k.strip(): v.strip() for k, v in r.items()} for r in csv.DictReader(text)]
+
+    def active(on: date) -> set[str]:
+        weekday = on.strftime("%A").lower()
+        stamp = on.strftime("%Y%m%d")
+        ids = {
+            r["service_id"]
+            for r in rows("calendar.txt")
+            if r[weekday] == "1" and r["start_date"] <= stamp <= r["end_date"]
+        }
+        for r in rows("calendar_dates.txt"):
+            if r["date"] == stamp:
+                (ids.add if r["exception_type"] == "1" else ids.discard)(r["service_id"])
+        return ids
+
+    today, yesterday = active(day), active(day - timedelta(days=1))
+    trip_service = {r["trip_id"]: r["service_id"] for r in rows("trips.txt")}
+    counts: dict[str, int] = {}
+    for r in rows("stop_times.txt"):
+        hours = int((r["departure_time"] or r["arrival_time"]).split(":")[0])
+        service = trip_service.get(r["trip_id"])
+        counts[r["stop_id"]] = (
+            counts.get(r["stop_id"], 0)
+            + (service in today)
+            + (service in yesterday and hours >= 24)
+        )
+    busiest = max(counts, key=lambda k: counts[k])
+    return {
+        "routes": len(rows("routes.txt")),
+        "stops": len(rows("stops.txt")),
+        "stop_id": busiest,
+        "departures": counts[busiest],
+    }
+
+
+async def national_checks(check: Callable[[bool, str], None], keys: list[str]) -> None:
+    result = await client.list_national_agencies()
+    by_key = {a.key: a for a in result.agencies}
+    statuses = {
+        s: sum(a.status == s for a in result.agencies)
+        for s in ("available", "overlaps_live", "excluded")
+    }
+    check(
+        result.total_matches >= 130,
+        f"national catalogue lists {result.total_matches} feeds {statuses}",
+    )
+    check(
+        statuses["overlaps_live"] == len(constants.NATIONAL_OVERLAPS)
+        and all(by_key[f"national:{k}"].live_agency_key for k in constants.NATIONAL_OVERLAPS),
+        "every configured overlap is in the catalogue and names its live agency",
+    )
+    check(
+        by_key["national:translink_vancouver"].status == "excluded",
+        "TransLink is excluded from the national feeds",
+    )
+    check(
+        all(a.licence_url and a.attribution for a in result.agencies if a.status == "available"),
+        "every available feed carries a licence page and an attribution line",
+    )
+    sample = keys or [f"national:{k}" for k in NATIONAL_SAMPLE]
+    catalog = await client._load_national()
+    for key in sample:
+        member = catalog.members[national.member_path(key.removeprefix("national:"))]
+        small = member.compressed_size <= NATIONAL_MAX_MEMBER_BYTES
+        check(small, f"{key}: nested zip {member.compressed_size:,} bytes is within the smoke cap")
+        if not small:
+            continue
+        agency = by_key[key]
+        assert agency.service_window_start and agency.service_window_end
+        day = _mid_window_wednesday(agency.service_window_start, agency.service_window_end)
+        info = await client.get_feed_info(key)
+        check(
+            info.route_count > 0 and info.stop_count > 0,
+            f"{key}: {info.route_count} routes, {info.stop_count} stops (window "
+            f"{agency.service_window_start}..{agency.service_window_end}, probing {day})",
+        )
+        routes = await client.search_routes(key, limit=500)
+        check(routes.total_matches == info.route_count, f"{key}: route search returns all routes")
+        named = await client.search_stops(key, "a", limit=5)
+        check(bool(named.stops), f"{key}: stop name search finds stops")
+        stop = named.stops[0]
+        departures = await client.get_stop_departures(
+            key, stop.stop_id, service_date=str(day), start_time="00:00", limit=500
+        )
+        check(
+            all(d.route_id for d in departures.departures),
+            f"{key}: stop {stop.stop_id} has {departures.total_matches} departures on {day}",
+        )
+        candidates = [r for r in routes.routes if r.route_type in (2, 3)][:6]
+        summary = await client.get_route_summary(key, candidates[0].route_id, service_date=str(day))
+        for route in candidates[1:]:
+            if summary.trips_on_date > 0:
+                break
+            summary = await client.get_route_summary(key, route.route_id, service_date=str(day))
+        scanned = sum(h.trips for h in summary.hourly)
+        check(
+            summary.trips_on_date > 0 and scanned == summary.trips_on_date,
+            f"{key}: route {summary.route.short_name or summary.route.long_name} runs "
+            f"{summary.trips_on_date} trips on {day} ({scanned} found in stop_times)",
+        )
+        check(
+            "Statistics Canada" in (summary.provenance.limits or "")
+            and summary.provenance.url == constants.NATIONAL_URL,
+            f"{key}: provenance names the StatCan compilation and the agency's own terms",
+        )
+    try:
+        await client.search_routes("national:toronto_transit_commission")
+        check(False, "an overlapping national feed is refused")
+    except InvalidInput as exc:
+        check("agency='ttc'" in str(exc), "an overlapping national feed points to the live key")
+    if "national:barrie_transit" in sample:
+        barrie = by_key["national:barrie_transit"]
+        assert barrie.service_window_start and barrie.service_window_end
+        day = _mid_window_wednesday(barrie.service_window_start, barrie.service_window_end)
+        barrie_zip = catalog.members[national.member_path("barrie_transit")]
+        truth = await asyncio.to_thread(_independent_national, barrie_zip, day)
+        info = await client.get_feed_info("national:barrie_transit")
+        check(
+            (info.route_count, info.stop_count) == (truth["routes"], truth["stops"]),
+            f"barrie_transit: {info.route_count} routes / {info.stop_count} stops equal the "
+            "independent read",
+        )
+        stop = await client.get_stop_departures(
+            "national:barrie_transit",
+            str(truth["stop_id"]),
+            service_date=str(day),
+            start_time="00:00",
+            limit=500,
+        )
+        check(
+            stop.total_matches == truth["departures"],
+            f"barrie_transit stop {truth['stop_id']}: {stop.total_matches} departures equal "
+            f"the independent count {truth['departures']}",
+        )
+
+
 async def main() -> int:
     failures = 0
 
@@ -119,7 +315,12 @@ async def main() -> int:
         print(("OK: " if ok else "FAIL: ") + label)
         failures += not ok
 
-    keys = sys.argv[1:] or list(CORES)
+    args = sys.argv[1:]
+    national_keys = [a for a in args if a.startswith("national:")]
+    only_national = "national" in args or bool(national_keys)
+    keys = [a for a in args if a != "national" and not a.startswith("national:")]
+    if not args:
+        keys = list(CORES)
     agencies = await client.list_agencies()
     check(
         all(a.reachable for a in agencies.agencies if a.reachable is not None),
@@ -222,6 +423,9 @@ async def main() -> int:
             f"{key} stop {truth['stop_id']}: {stop.total_matches} departures "
             f"equal the independent count {truth['departures']}",
         )
+
+    if not args or only_national:
+        await national_checks(check, national_keys)
 
     print("TRANSIT SMOKE TEST " + ("PASSED" if not failures else f"FAILED ({failures})"))
     return 1 if failures else 0
