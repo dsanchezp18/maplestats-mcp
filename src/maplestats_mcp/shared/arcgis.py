@@ -357,6 +357,7 @@ async def query_layer(
     offset: int = 0,
     output_format: str = "json",
     out_sr: int | None = None,
+    extra_params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Query one FeatureServer/MapServer layer's rows via the ArcGIS REST API.
 
@@ -389,6 +390,10 @@ async def query_layer(
     omitted from the request entirely when left `None` so a service's
     own native spatial reference is returned unchanged, the same
     default every existing caller already relies on.
+
+    `extra_params` adds raw ArcGIS query parameters (e.g. the spatial
+    filter `geometry`/`geometryType`/`inSR`/`spatialRel`) for callers
+    that need them; it is merged last and absent for every other caller.
     """
     _require_arcgis_rest_url(config, "query_layer", service_url)
     params: dict[str, Any] = {
@@ -403,6 +408,8 @@ async def query_layer(
         params["orderByFields"] = order_by
     if out_sr is not None:
         params["outSR"] = out_sr
+    if extra_params:
+        params.update(extra_params)
     url = f"{_service_root(service_url)}/{layer_index}/query"
     body = await _get(config, f"{config.source}:query_layer:{layer_index}", url, params)
     _raise_if_embedded_error(config.source, "query_layer", body)

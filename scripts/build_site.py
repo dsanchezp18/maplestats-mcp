@@ -264,6 +264,16 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="provincial_agency",
     ),
+    "ab_wildfire": Source(
+        "Alberta Wildfire: live status",
+        "Alberta Wildfire : état des feux en direct",
+        "provincial",
+        "Alberta Wildfire",
+        "Alberta Wildfire",
+        places=("AB",),
+        row="provincial_agency",
+        domain="environment",
+    ),
     "aer": Source(
         "Alberta Energy Regulator",
         "Alberta Energy Regulator",
@@ -304,8 +314,8 @@ SOURCES: dict[str, Source] = {
     ),
     "boc": Source("Bank of Canada", "Banque du Canada", "national", domain="money"),
     "borealis": Source(
-        "Borealis: Beyond 20/20 tables",
-        "Borealis : tableaux Beyond 20/20",
+        "Borealis: Beyond 20/20 tables and ODESI",
+        "Borealis : tableaux Beyond 20/20 et ODESI",
         "national",
         "Borealis",
         "Borealis",
@@ -675,6 +685,7 @@ FAMILIES: dict[str, tuple[str, str]] = {
     "ised/corporations": ("Federal corporations", "Sociétés fédérales"),
     "ised/ip_horizons": ("Patents and IP bulk data", "Brevets et données de PI"),
     "ised/spectrum": ("Spectrum licences", "Licences de spectre"),
+    "statcan/cimt": ("Merchandise trade by commodity", "Commerce de marchandises par produit"),
     "statcan/census_profile": ("2021 Census Profile", "Profil du recensement de 2021"),
     "statcan/census_profile_2016": ("2016 Census Profile", "Profil du recensement de 2016"),
     "statcan/census_profile_archive": (
@@ -3117,7 +3128,11 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
 # Every statcan/<family>/ folder in one group, for the family list at the
 # end of the post; statcan_context() fails the build when one is missing.
 STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("Tables and time series", "Tableaux et séries chronologiques", ("wds", "sdmx", "delta")),
+    (
+        "Tables and time series",
+        "Tableaux et séries chronologiques",
+        ("wds", "sdmx", "delta", "cimt"),
+    ),
     (
         "Census",
         "Recensement",
