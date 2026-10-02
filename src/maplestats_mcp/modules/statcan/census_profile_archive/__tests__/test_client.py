@@ -6,6 +6,15 @@ from maplestats_mcp.modules.statcan.census_profile_archive import client
 from maplestats_mcp.shared.errors import InvalidInput
 
 
+@pytest.fixture(autouse=True)
+def _no_reachability_probe(monkeypatch):
+    # URL building is what these tests check; the www12 probe has its own file.
+    async def unblocked() -> None:
+        return None
+
+    monkeypatch.setattr(client, "_blocked_note", unblocked)
+
+
 async def test_list_geography_levels_2016():
     result = await client.list_geography_levels(2016)
     assert result.year == 2016

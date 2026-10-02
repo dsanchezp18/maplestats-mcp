@@ -4,7 +4,16 @@ import httpx
 import pytest
 
 from maplestats_mcp import __version__
-from maplestats_mcp.shared.http import api_get, get_raw, is_retryable, new_client
+from maplestats_mcp.shared.errors import CloudflareChallenge, UpstreamUnavailable
+from maplestats_mcp.shared.http import (
+    api_get,
+    api_post,
+    get_raw,
+    is_cloudflare_challenge,
+    is_retryable,
+    new_client,
+    send_with_retry,
+)
 
 
 async def test_api_get_decodes_json(httpx_mock):
@@ -99,3 +108,43 @@ async def test_other_hosts_keep_the_connection(httpx_mock):
     httpx_mock.add_response(url="https://example.invalid/data", json={})
     await api_get("https://example.invalid/data")
     assert httpx_mock.get_requests()[0].headers.get("Connection") != "close"
+
+
+async def test_cloudflare_challenge_is_unavailable_not_a_403(httpx_mock, cloudflare_challenge):
+    """www12.statcan.gc.ca, live 2026-10-02: 403 + Cf-Mitigated: challenge."""
+    httpx_mock.add_response(url="https://www12.statcan.gc.ca/x", **cloudflare_challenge)
+    with pytest.raises(CloudflareChallenge, match="does not try to bypass") as raised:
+        await api_get("https://www12.statcan.gc.ca/x")
+    assert isinstance(raised.value, UpstreamUnavailable)
+    assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_cloudflare_challenge_is_recognised_on_every_request_helper(
+    httpx_mock, cloudflare_challenge
+):
+    httpx_mock.add_response(is_reusable=True, **cloudflare_challenge)
+    with pytest.raises(CloudflareChallenge):
+        await get_raw("https://www12.statcan.gc.ca/a")
+    with pytest.raises(CloudflareChallenge):
+        await api_post("https://www12.statcan.gc.ca/b", json_body={})
+
+
+def test_a_plain_403_is_not_a_challenge():
+    plain = httpx.Response(403, request=httpx.Request("GET", "https://example.invalid/"))
+    assert not is_cloudflare_challenge(plain)
+    by_title = httpx.Response(
+        403,
+        content=b"<title>Just a moment...</title>",
+        request=httpx.Request("GET", "https://example.invalid/"),
+    )
+    assert is_cloudflare_challenge(by_title)
+
+
+async def test_send_with_retry_retries_503_and_returns_404(httpx_mock):
+    url = "https://www150.statcan.gc.ca/delta/x.zip"
+    httpx_mock.add_response(method="HEAD", url=url, status_code=503, headers={"Retry-After": "2"})
+    httpx_mock.add_response(method="HEAD", url=url, status_code=404)
+    async with new_client() as client:
+        response = await send_with_retry(client, "HEAD", url)
+    assert response.status_code == 404  # not raised: the caller decides what 404 means
+    assert len(httpx_mock.get_requests()) == 2

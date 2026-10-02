@@ -3328,7 +3328,12 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         raise SystemExit("the coordinate call and the CPI call no longer name the same vector")
 
     # The CPI call from the demos: its latest month in full.
-    series = macro["response"][0]
+    # wds_get_data_from_vectors now answers {"series": [...], "failed": [], "provenance"};
+    # the recorded call may predate that and be a bare list of series.
+    recorded = macro["response"]
+    series = recorded[0] if isinstance(recorded, list) else recorded["series"][0]
+    if not isinstance(recorded, list):
+        series = {**series, "provenance": recorded["provenance"]}
     obs = series["observations"]
     earlier = len(obs) - 1
     data_shown = [

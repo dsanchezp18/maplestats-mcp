@@ -20,8 +20,14 @@ from maplestats_mcp.modules.statcan.census_tables.schemas import (
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw, new_client
+from maplestats_mcp.shared.errors import (
+    CloudflareChallenge,
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
+from maplestats_mcp.shared.http import get_raw, new_client, send_with_retry
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -49,6 +55,8 @@ async def _page(url: str) -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
+    except CloudflareChallenge as exc:
+        raise CloudflareChallenge(f"census tables: {exc} {constants.BLOCKED_NOTE}") from exc
     except httpx.HTTPStatusError as exc:
         # StatCan answers retired pages with a 302 to its "page not found"
         # notice (the 2011 Census tabulations since 2026-09, checked 2026-09-25).
@@ -60,9 +68,16 @@ async def _page(url: str) -> str:
                 "Copies of retired tables are on Borealis: use borealis_search_ivt "
                 "(e.g. 'census 2011 language')."
             ) from exc
-        raise UpstreamError(
-            f"census tables: {url} returned HTTP {exc.response.status_code}."
-        ) from exc
+        status = exc.response.status_code
+        if status == 403:
+            raise UpstreamUnavailable(
+                f"census tables: {url} was refused (HTTP 403). {constants.BLOCKED_NOTE}"
+            ) from exc
+        if status == 429 or status >= 500:
+            raise UpstreamUnavailable(
+                f"census tables: {url} returned HTTP {status}. Try again shortly."
+            ) from exc
+        raise UpstreamError(f"census tables: {url} returned HTTP {status}.") from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(f"census tables: {url} could not be reached.") from exc
     return response.text
@@ -234,7 +249,7 @@ async def _head(url: str) -> tuple[bool, int | None, bool]:
     """(available, size, service offline) for one download link."""
     await _LIMITER.acquire()
     try:
-        response = await _HEAD_CLIENT.head(url)
+        response = await send_with_retry(_HEAD_CLIENT, "HEAD", url, timeout=60.0)
     except httpx.TooManyRedirects:
         return False, None, True
     except httpx.HTTPError:
@@ -261,7 +276,10 @@ async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownlo
         "sdmx": f"{base}OpenDataDownload.cfm?PID={pid}",
         "ivt": f"{base}Download.cfm?PID={pid}",
     }
-    checks = await asyncio.gather(*(_head(u) for u in urls.values()))
+    try:
+        checks = await asyncio.gather(*(_head(u) for u in urls.values()))
+    except CloudflareChallenge as exc:
+        raise CloudflareChallenge(f"{exc} {constants.BLOCKED_NOTE}") from exc
     downloads = [
         Download(format=fmt, url=url, available=ok, size_bytes=size)
         for (fmt, url), (ok, size, _) in zip(urls.items(), checks, strict=True)

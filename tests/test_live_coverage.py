@@ -18,7 +18,7 @@ MODULES = ROOT / "src" / "maplestats_mcp" / "modules"
 SCRIPTS = ROOT / "scripts"
 
 
-def _covered_by_table() -> frozenset[str]:
+def _load_smoke_table():
     spec = importlib.util.spec_from_file_location(
         "smoke_modules", SCRIPTS / "smoke_test_modules.py"
     )
@@ -27,7 +27,11 @@ def _covered_by_table() -> frozenset[str]:
     # dataclasses resolve their module through sys.modules while executing.
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    return module.COVERED_MODULES
+    return module
+
+
+def _covered_by_table() -> frozenset[str]:
+    return _load_smoke_table().COVERED_MODULES
 
 
 def test_every_module_has_a_live_smoke_test():
@@ -42,3 +46,34 @@ def test_every_module_has_a_live_smoke_test():
         if name not in table and not any(s.startswith(name) for s in own_scripts)
     ]
     assert not missing, f"No live smoke test for: {missing}. Add steps to smoke_test_modules.py."
+
+
+# StatCan is one module with 15 sub-APIs (modules/statcan/<sub>/), and a smoke
+# script for any one of them used to satisfy the module-level test for all of
+# them: statcan/wds had one tool in smoke_test.py and 12 with no live call
+# (2026-10-02 review). A sub-API now needs its own smoke_test_statcan_<sub>*.py,
+# or a step in smoke_test_modules.py for one of its tools (e.g. pumf).
+#
+# sdmx and rdaas are listed as pending because their live steps are being added
+# by the change that fixes those sub-APIs; remove them from this set once
+# scripts/smoke_test_statcan_sdmx.py and smoke_test_statcan_rdaas.py exist.
+SUB_API_PENDING = frozenset({"sdmx", "rdaas"})
+
+
+def test_every_statcan_sub_api_has_its_own_live_smoke_test():
+    statcan = MODULES / "statcan"
+    subs = sorted(p.parent.name for p in statcan.glob("*/tools.py"))
+    scripts = {p.stem for p in SCRIPTS.glob("smoke_test_statcan_*.py")}
+    step_tools = {step.tool for step in _load_smoke_table().STEPS}
+    missing = []
+    for sub in subs:
+        if sub in SUB_API_PENDING:
+            continue
+        has_script = any(
+            s == f"smoke_test_statcan_{sub}" or s.startswith(f"smoke_test_statcan_{sub}_")
+            for s in scripts
+        )
+        has_step = any(t.startswith((f"{sub}_", f"statcan_{sub}_")) for t in step_tools)
+        if not (has_script or has_step):
+            missing.append(sub)
+    assert not missing, f"StatCan sub-APIs with no live smoke test of their own: {missing}"

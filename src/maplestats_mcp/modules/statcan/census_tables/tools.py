@@ -24,6 +24,12 @@ async def statcan_census_tables_search(
 ) -> CensusTableSearch:
     """Search the 2006, 2011 (Census and NHS) and 2016 census data tables.
 
+    STATUS (checked 2026-10-02): unavailable. These tables live on StatCan's
+    www12 host, which answers scripts with a Cloudflare bot challenge
+    (HTTP 403); the tool then returns an "unavailable" error naming other
+    routes (WDS 2021 tables, WDS 17100122/17100123, Borealis copies). It
+    works again if StatCan lifts the challenge.
+
     Use for: census cross-tabulations by topic and geography, e.g.
     "income household type" or "language dissemination areas", with the
     catalogue number and PID of each table. Every word must appear in
@@ -47,6 +53,10 @@ async def statcan_census_tables_get_downloads(
     pid: str, release: Release = "2016", lang: Literal["en", "fr"] = "en"
 ) -> CensusTableDownloads:
     """Get a census data table's download links: CSV, SDMX and Beyond 20/20 IVT.
+
+    STATUS (checked 2026-10-02): unavailable while www12 is behind its
+    Cloudflare bot challenge (see statcan_census_tables_search). The links
+    themselves still open in a browser.
 
     Use for: downloading a table found with statcan_census_tables_search
     (by pid). Checks which formats exist and their sizes. When only the
