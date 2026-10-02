@@ -97,6 +97,10 @@ CASES = [
     ("spectrum licences held by Rogers", "ised_spectrum_query_licences"),
     ("patent search by keyword", "ised_ip_horizons_search_patents"),
     ("how did my MP vote on a bill", "parliament_get_vote"),
+    (
+        "who ran in the 1997 and 2000 federal elections candidate names",
+        "elections_results_get_historical_candidates",
+    ),
     ("median household income by census tract", "statcan_census_profile_search_characteristic"),
     ("population density by province", "statcan_census_profile_search_geography"),
     ("what surveys does Statistics Canada run", "statcan_surveys_search_surveys"),
