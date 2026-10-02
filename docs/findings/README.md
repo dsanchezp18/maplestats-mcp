@@ -10,6 +10,7 @@ status of each source is in [`ROADMAP.md`](../ROADMAP.md).
 - [Federal sources](federal-sources.md)
 - [Municipal sources](municipal-sources.md)
 - [Provincial sources](provincial-sources.md)
+- [Elected officials and districts (Open North Represent)](represent-open-north.md)
 - [Census and specialized federal sources](specialized-federal-sources.md)
 - [Territorial sources](territorial-sources.md)
 
