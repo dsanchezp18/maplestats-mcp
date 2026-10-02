@@ -35,19 +35,27 @@ async def rdaas_search_classifications(
     query: str = "",
     start: int = 0,
     limit: int = 10,
+    audience: list[str] | None = None,
+    status: list[str] | None = None,
     lang: Lang = "en",
 ) -> ClassificationSearchResult:
     """Search StatCan's classifications (e.g. NAICS, the Standard
     Geographical Classification, occupational classifications).
 
     Use for: finding the classification id for a topic before requesting
-    its full detail, categories, or concordances.
+    its full detail, categories, or concordances. `audience` and `status`
+    (lists) filter results; valid values come from rdaas_get_search_filters
+    (e.g. status ["RELEASED"] for current versions only).
     Keywords: statcan, naics, classification, search, rdaas, standard,
-    geographical, occupational, codes.
+    geographical, occupational, codes, NOC, national occupational
+    classification, occupation, SOC, industry classification.
     Mots-clés : statcan, scian, classification, recherche, rdaas, norme,
-    géographique, professionnelle, codes.
+    géographique, professionnelle, codes, CNP, classification nationale
+    des professions, profession, métier.
     """
-    return await client.search_classifications(query, start=start, limit=limit, lang=lang)
+    return await client.search_classifications(
+        query, start=start, limit=limit, audience=audience, status=status, lang=lang
+    )
 
 
 @tool
@@ -57,8 +65,9 @@ async def rdaas_get_search_filters(
     """Get the valid audience/status filter values for classification or
     concordance search (`kind`).
 
-    Use for: discovering what values `audience`/`status` accept before
-    filtering a classification or concordance search.
+    Use for: discovering what values `audience`/`status` accept; pass
+    them as the `audience`/`status` arguments of rdaas_search_classifications
+    or rdaas_search_concordances.
     Keywords: statcan, rdaas, filters, search, audience, status,
     classification, concordance, Statistics Canada.
     Mots-clés : statcan, rdaas, filtres, recherche, public cible, statut,
@@ -88,12 +97,19 @@ async def rdaas_get_classification(
 
 @tool
 async def rdaas_get_classification_categories_detailed(
-    classification_id: str, lang: Lang = "en"
+    classification_id: str,
+    query: str = "",
+    limit: int = 100,
+    offset: int = 0,
+    lang: Lang = "en",
 ) -> ClassificationCategoriesDetailed:
     """Get the detailed category tree for one classification.
 
     Use for: listing every code/category within a classification (e.g.
-    all NAICS sectors and subsectors). Confirmed live: RDaaS itself
+    all NAICS sectors and subsectors). Paged: `limit` (default 100, max
+    1000) and `offset`; `query` keeps categories whose code or descriptor
+    contains the text. total_count and provenance.limits say what was left
+    out. Confirmed live: RDaaS itself
     returns no category data for the CURRENT released NAICS
     (2022.1.0) specifically -- retired NAICS versions and the NAICS
     Trade Variant return full data, so this is not a NAICS-wide gap.
@@ -106,7 +122,9 @@ async def rdaas_get_classification_categories_detailed(
     Mots-clés : statcan, classification, catégories, codes, scian,
     rdaas, arborescence, détaillé.
     """
-    return await client.get_classification_categories_detailed(classification_id, lang=lang)
+    return await client.get_classification_categories_detailed(
+        classification_id, lang=lang, query=query, limit=limit, offset=offset
+    )
 
 
 @tool
@@ -127,17 +145,27 @@ async def rdaas_get_classification_exclusions(
 
 @tool
 async def rdaas_get_classification_indexes(
-    classification_id: str, lang: Lang = "en"
+    classification_id: str,
+    query: str = "",
+    limit: int = 100,
+    offset: int = 0,
+    lang: Lang = "en",
 ) -> ClassificationIndexes:
     """List all index entries (alternate terms mapped to a code) for one classification.
 
-    Use for: finding which code a plain-language term maps to.
+    Use for: finding which code a plain-language term maps to. Pass
+    `query` (matches the term or the code description) -- the NAICS 2022
+    index has tens of thousands of entries (8 MB), so the list is paged:
+    `limit` (default 100, max 1000) and `offset`; total_count and
+    provenance.limits say what was left out.
     Keywords: statcan, index, classification, rdaas, terms, alternate names,
     naics, Statistics Canada.
     Mots-clés : statcan, index, classification, rdaas, termes, noms
     alternatifs, scian, correspondance de termes.
     """
-    return await client.get_classification_indexes(classification_id, lang=lang)
+    return await client.get_classification_indexes(
+        classification_id, lang=lang, query=query, limit=limit, offset=offset
+    )
 
 
 @tool
@@ -176,18 +204,24 @@ async def rdaas_search_concordances(
     query: str = "",
     start: int = 0,
     limit: int = 10,
+    audience: list[str] | None = None,
+    status: list[str] | None = None,
     lang: Lang = "en",
 ) -> ConcordanceSearchResult:
     """Search StatCan's concordances: correspondence tables between two
     classification versions (e.g. NAICS 2012 to NAICS 2017).
 
     Use for: finding a concordance id before requesting its code maps.
+    `audience` and `status` (lists) filter results; valid values come from
+    rdaas_get_search_filters.
     Keywords: statcan, concordance, correspondence, rdaas, naics, version,
     mapping, Statistics Canada.
     Mots-clés : statcan, concordance, correspondance, rdaas, scian, version,
     conversion, recherche.
     """
-    return await client.search_concordances(query, start=start, limit=limit, lang=lang)
+    return await client.search_concordances(
+        query, start=start, limit=limit, audience=audience, status=status, lang=lang
+    )
 
 
 @tool

@@ -10,6 +10,7 @@ or by a step in scripts/smoke_test_modules.py.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -53,11 +54,6 @@ def test_every_module_has_a_live_smoke_test():
 # them: statcan/wds had one tool in smoke_test.py and 12 with no live call
 # (2026-10-02 review). A sub-API now needs its own smoke_test_statcan_<sub>*.py,
 # or a step in smoke_test_modules.py for one of its tools (e.g. pumf).
-#
-# sdmx and rdaas are listed as pending because their live steps are being added
-# by the change that fixes those sub-APIs; remove them from this set once
-# scripts/smoke_test_statcan_sdmx.py and smoke_test_statcan_rdaas.py exist.
-SUB_API_PENDING = frozenset({"sdmx", "rdaas"})
 
 
 def test_every_statcan_sub_api_has_its_own_live_smoke_test():
@@ -67,8 +63,6 @@ def test_every_statcan_sub_api_has_its_own_live_smoke_test():
     step_tools = {step.tool for step in _load_smoke_table().STEPS}
     missing = []
     for sub in subs:
-        if sub in SUB_API_PENDING:
-            continue
         has_script = any(
             s == f"smoke_test_statcan_{sub}" or s.startswith(f"smoke_test_statcan_{sub}_")
             for s in scripts
@@ -77,3 +71,18 @@ def test_every_statcan_sub_api_has_its_own_live_smoke_test():
         if not (has_script or has_step):
             missing.append(sub)
     assert not missing, f"StatCan sub-APIs with no live smoke test of their own: {missing}"
+
+
+# Sub-APIs where every tool, not only one, needs its own live step.
+STATCAN_TOOL_LEVEL_SUB_APIS = ("sdmx", "rdaas")
+
+
+def test_statcan_sdmx_and_rdaas_tools_each_have_a_live_step():
+    stepped = {step.tool for step in _load_smoke_table().STEPS}
+    missing: list[str] = []
+    for sub in STATCAN_TOOL_LEVEL_SUB_APIS:
+        source = (MODULES / "statcan" / sub / "tools.py").read_text(encoding="utf-8")
+        tools = re.findall(r"@tool\s+async def (\w+)\(", source)
+        assert tools, f"no tools found in statcan/{sub}/tools.py"
+        missing += [name for name in tools if name not in stepped]
+    assert not missing, f"StatCan tools without a live smoke step: {missing}"

@@ -7,6 +7,7 @@ from __future__ import annotations
 import pytest
 
 from maplestats_mcp.modules.statcan.rdaas import client
+from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 _SEARCH_RESPONSE = {
@@ -62,6 +63,13 @@ _MAPS_RESPONSE = {
         }
     ]
 }
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    cache_module._caches.clear()
+    yield
+    cache_module._caches.clear()
 
 
 async def test_search_classifications_parses_graph_and_facets(httpx_mock):

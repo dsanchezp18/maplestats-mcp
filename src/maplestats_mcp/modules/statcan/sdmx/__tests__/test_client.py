@@ -7,6 +7,7 @@ from __future__ import annotations
 import pytest
 
 from maplestats_mcp.modules.statcan.sdmx import client, constants
+from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput
 
 _STRUCTURE_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -78,6 +79,13 @@ _DATA_XML = """<?xml version='1.0' encoding='UTF-8'?>
   </message:DataSet>
 </message:GenericData>
 """
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    cache_module._caches.clear()
+    yield
+    cache_module._caches.clear()
 
 
 def _parse(xml_text: str):

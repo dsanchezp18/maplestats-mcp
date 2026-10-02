@@ -195,17 +195,37 @@ async def get_indicator_metadata(
     )
 
 
-async def get_indicator_data(framework: str, code: str, *, lang: str = "en") -> SdgIndicatorData:
-    """Get one indicator's observations.
+async def get_indicator_data(
+    framework: str,
+    code: str,
+    *,
+    lang: str = "en",
+    limit: int = constants.DATA_LIMIT_DEFAULT,
+    offset: int = 0,
+    start_year: int | None = None,
+    end_year: int | None = None,
+    filters: dict[str, str] | None = None,
+) -> SdgIndicatorData:
+    """Get one indicator's observations, filtered and paged.
 
     The upstream file is columnar (one list per column, e.g. `Year`,
     `Value`, and zero or more disaggregation columns such as
     `Geography` or `Pillar` that vary per indicator, confirmed live);
     this reshapes it into one row per observation, with every
-    non-Year/Value column carried in `disaggregations`.
+    non-Year/Value column carried in `disaggregations`. Canada indicator
+    1-1-1 is 6,041 rows (1 MB of JSON), so `limit` caps the rows returned
+    and `start_year`/`end_year`/`filters` (column name -> exact value,
+    e.g. {"Geography": "Alberta"}) narrow them first.
+
+    Confirmed live 2026-10-02: a Global-framework indicator with no data
+    (1-1-1) has the body `[]`, not an object -- zero observations.
     """
     lang = _validate_lang(lang)
     code = _validate_code(code)
+    if limit < 1 or limit > constants.DATA_LIMIT_MAX:
+        raise InvalidInput(f"limit must be between 1 and {constants.DATA_LIMIT_MAX}, got {limit}.")
+    if offset < 0:
+        raise InvalidInput(f"offset must be >= 0, got {offset}.")
     url = f"{_base_url(framework)}/{lang}/data/{code}.json"
     cache_key = f"statcan-sdg:data:{framework}:{lang}:{code}"
 
@@ -213,30 +233,63 @@ async def get_indicator_data(framework: str, code: str, *, lang: str = "en") -> 
         return await _get_json(f"statcan_sdg:get_indicator_data:{framework}", url)
 
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DATA_SECONDS, fetch)
+    no_data = not isinstance(body, dict)
+    if no_data:
+        body = {}
     years = list_or_empty(body, "Year")
     values = list_or_empty(body, "Value")
     disaggregation_columns = [c for c in body if c not in ("Year", "Value")]
+    unknown = [c for c in (filters or {}) if c not in disaggregation_columns]
+    if unknown:
+        raise InvalidInput(
+            f"filters name unknown column(s) {unknown}; this indicator's columns are "
+            f"{disaggregation_columns}."
+        )
+
+    def column_value(column: str, i: int) -> Any:
+        column_values = body[column]
+        return column_values[i] if i < len(column_values) else None
+
+    matched = [
+        i
+        for i in range(len(years))
+        if (start_year is None or years[i] >= start_year)
+        and (end_year is None or years[i] <= end_year)
+        and all(str(column_value(c, i)) == v for c, v in (filters or {}).items())
+    ]
+    page = matched[offset : offset + limit]
     observations = [
         SdgObservation(
             year=years[i],
             value=values[i] if i < len(values) else None,
             disaggregations={
-                column: body[column][i]
+                column: column_value(column, i)
                 for column in disaggregation_columns
-                if body[column][i] is not None
+                if column_value(column, i) is not None
             },
         )
-        for i in range(len(years))
+        for i in page
     ]
+    notes: list[str] = []
+    if no_data or not years:
+        notes.append("upstream publishes no observations for this indicator")
+    if len(page) < len(matched):
+        notes.append(
+            f"returned {len(page)} of {len(matched)} matching rows; use offset/limit, "
+            "start_year/end_year or filters for the rest"
+        )
     return SdgIndicatorData(
         code=code,
         framework=framework,
         observations=observations,
         returned_count=len(observations),
+        total_matched=len(matched),
+        offset=offset,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=was_cached,
             schema_name="statcan_sdg.SdgIndicatorData",
+            limits="; ".join(notes) if notes else None,
         ),
     )

@@ -29,7 +29,6 @@ restricted to that first `<details>` only.
 
 from __future__ import annotations
 
-import asyncio
 import re
 
 import httpx
@@ -45,6 +44,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.retrying import get_with_retry
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -55,25 +55,12 @@ _LIMITER = get_limiter(
 _client = new_client(follow_redirects=True)
 _warmed: set[tuple[str, str]] = set()
 
+
 # statcan.gc.ca answers HTTP 429 when its catalogue pages are hit in quick
-# succession (seen in the live smoke run of 2026-09-30, from the CI runner and
-# a developer machine). This client does not use the shared retrying GET, so it
-# waits and retries here, honouring Retry-After.
-_RETRY_STATUSES = frozenset({429, 502, 503, 504})
-_RETRY_ATTEMPTS = 4
-_RETRY_BASE_SECONDS = 2.0
-_RETRY_MAX_SECONDS = 30.0
-
-
+# succession (seen in the live smoke run of 2026-09-30); the shared retrying
+# GET waits and retries, honouring Retry-After.
 async def _get(url: str, params: dict[str, str] | None = None) -> httpx.Response:
-    for attempt in range(_RETRY_ATTEMPTS):
-        response = await _client.get(url, params=params)
-        if response.status_code not in _RETRY_STATUSES or attempt == _RETRY_ATTEMPTS - 1:
-            return response
-        retry_after = response.headers.get("retry-after", "")
-        delay = float(retry_after) if retry_after.isdigit() else _RETRY_BASE_SECONDS * 2**attempt
-        await asyncio.sleep(min(delay, _RETRY_MAX_SECONDS))
-    raise AssertionError("unreachable")
+    return await get_with_retry(_client, url, params=params)
 
 
 def _base_url(catalogue: str, lang: str) -> str:

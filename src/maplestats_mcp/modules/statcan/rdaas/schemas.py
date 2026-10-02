@@ -166,6 +166,9 @@ class ClassificationCategory(BaseModel):
 class ClassificationCategoriesDetailed(BaseModel):
     classification_id: str
     categories: list[ClassificationCategory]
+    # Categories matching the query before limit/offset paging.
+    total_count: int | None = None
+    offset: int = 0
     provenance: Provenance
 
 
@@ -210,6 +213,9 @@ class ClassificationIndexEntry(BaseModel):
 class ClassificationIndexes(BaseModel):
     classification_id: str
     entries: list[ClassificationIndexEntry]
+    # Entries matching the query before limit/offset paging.
+    total_count: int | None = None
+    offset: int = 0
     provenance: Provenance
 
 

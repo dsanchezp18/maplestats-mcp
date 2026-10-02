@@ -30,3 +30,18 @@ CACHE_TTL_SECONDS = 6 * 60 * 60
 
 SEARCH_LIMIT_DEFAULT = 20
 SEARCH_LIMIT_MAX = 300
+
+# Province/territory SGC codes -> the feed's own 0-13 numbering (verified live
+# 2026-10-02 against the "geo" lookup of ind-all.json). 10-13 are not listed:
+# they are valid feed codes (BC, YT, NT, NU) and collide with SGC 10-13.
+SGC_TO_FEED_GEO_CODE = {
+    24: 5,
+    35: 6,
+    46: 7,
+    47: 8,
+    48: 9,
+    59: 10,
+    60: 11,
+    61: 12,
+    62: 13,
+}

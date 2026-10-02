@@ -141,6 +141,9 @@ CASES = [
     ("grippe aviaire lieux infectés", "cfia_avian_influenza"),
     ("influenza aviaire hautement pathogène par province", "cfia_avian_influenza"),
     ("éclosion de grippe aviaire dans les élevages de volailles", "cfia_avian_influenza"),
+    # StatCan misses found in the 2026-10-02 review.
+    ("taux de chômage mensuel en Alberta", "wds_search_cubes"),
+    ("communiqués du Quotidien aujourd'hui", "statcan_daily_get_releases"),
 ]
 
 
