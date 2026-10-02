@@ -6,7 +6,7 @@ any narrower or broader source list implied elsewhere.
 
 **State at 2026-10-02:** 263 tools in 56 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
-`Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
+`Not built`). Local coverage is 81 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
 and the candidates listed at the end of this file.
 
@@ -157,6 +157,7 @@ portal is confirmed to exist and be reachable.
 | Parkland County | Shipped | opendata.parklandcounty.com, ArcGIS Hub: `arcgis_hub_*` (`portal="parkland_county"`), config-only. 20 datasets confirmed live 2026-09-22; smoke test passed (search, detail, feature query). Found via an Edmonton-metro coverage sweep. |
 | Sturgeon County | Shipped | data-sturgeoncounty.opendata.arcgis.com (Sturgeon County Atlas), ArcGIS Hub: `arcgis_hub_*` (`portal="sturgeon_county"`), config-only. 29 datasets confirmed live 2026-09-22; smoke test passed. |
 | Alberta Geological Survey | Shipped | geology-ags-aer.opendata.arcgis.com (AER's geology arm), ArcGIS Hub: `arcgis_hub_*` (`portal="alberta_geological_survey"`), config-only. 41 datasets confirmed live 2026-09-22; smoke test passed. |
+| BC Energy Regulator | Shipped | data-bc-er.opendata.arcgis.com, ArcGIS Hub: `arcgis_hub_*` (`portal="bc_energy_regulator"`), config-only. 42 datasets confirmed live 2026-10-02 (wells, orphan sites, incidents, facilities); smoke test passed. Licence: BCER Open Data Licence, based on OGL-BC 2.0, commercial use allowed. The IRIS bulk files (iris.bcogc.ca) are not covered. |
 | Edmonton Police Service | Shipped | Community Safety Data Portal feature services on services9.arcgis.com (EPS's own ArcGIS Online org, found by resolving the Community Safety Map's item ids), not in data.edmonton.ca. [Details](findings/municipal-sources.md#edmonton-police-service) |
 | Edmonton Metropolitan Region Board | Shipped | emrgis.emrb.ca (EMRGIS, also served at gis-capitalregion.opendata.arcgis.com), ArcGIS Hub: `arcgis_hub_*` (`portal="emrb"`), config-only. 85 regional growth-plan datasets confirmed live 2026-09-22 … [Details](findings/municipal-sources.md#edmonton-metropolitan-region-board) |
 | Edmonton Transit Service real-time | Shipped | gtfs.edmonton.ca GTFS-Realtime (protobuf): new module `modules/ets/` (`ets_*`, 3 tools: vehicle positions, stop predictions, service alerts). [Details](findings/municipal-sources.md#edmonton-transit-service-real-time) |
