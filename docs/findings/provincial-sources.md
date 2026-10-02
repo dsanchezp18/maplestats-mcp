@@ -128,16 +128,12 @@ rather than assumed to match.
 open.alberta.ca, CKAN Action API: `ckan_*` (`portal="ab"`), 8 tools (added
 `ckan_datastore_search` 2026-09-20). Dataset, organization, resource,
 license, and tag responses were verified against live responses; the portal
-does not expose useful groups in the tested catalogue. **Real portal-side
-bug found while adding datastore_search**: every DataStore-active resource
-tried (the `datastore_active` flag itself is correctly `true`) returns HTTP
-500 "Internal Server Error" from `datastore_search`, confirmed across
-multiple unrelated resources and with a plain `curl` outside this client too
-— a genuine backend issue on Alberta's own deployment, not a bug here.
-
-The tool is still shipped and correctly surfaces this as `UpstreamError`
-(verified by the live smoke test) rather than silently failing; re-test if
-Alberta's DataStore is ever fixed. A second, genuinely separate Alberta
+does not expose useful groups in the tested catalogue. **Alberta has no DataStore.** When `datastore_search` was added (2026-09-20),
+every DataStore-active resource returned HTTP 500. Checked again on
+2026-10-02: none of the 37,487 packages has `datastore_active` set, so the
+resources are file-only and `ckan_datastore_search` cannot read them. The
+tool still surfaces the portal's errors as `UpstreamError`.
+A second, genuinely separate Alberta
 platform is now also shipped, per the same 2026-09-22 competitive-coverage
 request as the BC row above: the Alberta Energy Regulator's statistical
 reports (`www.aer.ca`, not open.alberta.ca -- a different agency, different
