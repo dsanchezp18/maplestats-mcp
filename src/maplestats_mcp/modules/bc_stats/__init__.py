@@ -1,0 +1,27 @@
+MODULE_NAME = "bc_stats"
+MODULE_DESCRIPTION = (
+    "BC Stats Excel tables (tools prefixed bc_stats_): the provincial statistics agency's "
+    "workbooks that the BC data catalogue (catalogue.data.gov.bc.ca) publishes as .xlsx, "
+    "mostly with no DataStore rows: monthly Labour Force Survey data tables, GDP by industry "
+    "and the BC Economic Accounts, monthly and annual tourism indicators, population "
+    "estimates and projections, consumer price index tables, bankruptcies, business counts, "
+    "international commodity exports, housing starts, building permits. Files are listed "
+    "from the catalogue's BC Stats organization with the agency's own titles, licence and "
+    "update cycle, and read sheet by sheet with a guessed header row, an optional text "
+    "filter and paging. Sheets keep the agency's layout (title rows, multi-row headers, "
+    "years across columns). Use ckan_ with portal=bc for the rest of the catalogue."
+)
+MODULE_DESCRIPTION_FR = (
+    "Tableaux Excel de BC Stats (outils préfixés bc_stats_) : les classeurs de l'agence "
+    "provinciale de statistique que le catalogue de données de la Colombie-Britannique "
+    "(catalogue.data.gov.bc.ca) publie en .xlsx, le plus souvent sans lignes DataStore : "
+    "tableaux mensuels de l'Enquête sur la population active, PIB par industrie et comptes "
+    "économiques de la C.-B., indicateurs touristiques mensuels et annuels, estimations et "
+    "projections de population, indice des prix à la consommation, faillites, nombre "
+    "d'entreprises, exportations de produits de base, mises en chantier, permis de bâtir. "
+    "Les fichiers sont listés à partir de l'organisation BC Stats du catalogue avec les "
+    "titres de l'agence, la licence et la fréquence de mise à jour, puis lus feuille par "
+    "feuille (ligne d'en-tête devinée, filtre de texte facultatif, pagination). Les feuilles "
+    "gardent la mise en page de l'agence. Voir ckan_ avec portal=bc pour le reste du "
+    "catalogue."
+)
