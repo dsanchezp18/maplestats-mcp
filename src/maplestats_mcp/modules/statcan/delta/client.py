@@ -30,6 +30,19 @@ _LIMITER = get_limiter(
 
 _client = new_client(timeout=15.0, follow_redirects=True)
 
+FILE_NOTES = [
+    (
+        "Released on business days about 8:30 ET; a correction arrives in the next day's file and "
+        "nothing is deleted. About 47 business days are kept (statcan_delta_list_files)."
+    ),
+    (
+        "Each zip holds codeSet.xml, YYYYMMDD.xml (cube metadata) and YYYYMMDD.csv (data, "
+        "sorted by productId, scalar factors not applied); read one table without "
+        "downloading with statcan_delta_read_table. Metadata schema: "
+        "https://www.statcan.gc.ca/en/developers-developpeurs/df-fd/cubemetadata.zip"
+    ),
+]
+
 
 async def get_file_link(date: str) -> DeltaFileLink:
     """Resolve the Delta File URL for one date and confirm whether it exists."""
@@ -59,6 +72,9 @@ async def get_file_link(date: str) -> DeltaFileLink:
         url=url,
         exists=exists,
         size_bytes=size_bytes,
+        last_modified=response.headers.get("last-modified") if exists else None,
+        etag=response.headers.get("etag") if exists else None,
+        notes=FILE_NOTES,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,

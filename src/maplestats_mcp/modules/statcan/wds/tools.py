@@ -40,13 +40,15 @@ async def wds_search_cubes(
     keyword, or list every table when `query` is omitted.
 
     Use for: finding a StatCan table's productId when you only know a
-    topic, discovering which tables cover a subject before requesting
+    topic (find a table on GDP by industry), discovering which tables cover a subject before requesting
     metadata or data; with no `query`, a full inventory scan, building a
     local index, or checking the total table count.
     With `query`: case-insensitive title match, `limit` defaults to 25.
     Without `query`: the full list (`lite=False` for the non-lite
     inventory); `limit` optionally truncates it. `lite=False` is only
-    valid without `query`.
+    valid without `query`. Revision history: 19 statistics also have a
+    real-time (vintage) table; statcan_delta_list_real_time_tables pairs
+    each with its regular table.
     Keywords: statcan, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, unemployment rate, employment, GDP by

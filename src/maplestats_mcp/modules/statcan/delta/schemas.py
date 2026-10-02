@@ -12,4 +12,7 @@ class DeltaFileLink(BaseModel):
     url: str
     exists: bool
     size_bytes: int | None = None
+    last_modified: str | None = None
+    etag: str | None = None
+    notes: list[str] = []
     provenance: Provenance

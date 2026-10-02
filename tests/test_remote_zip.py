@@ -102,3 +102,102 @@ async def test_corrupt_deflate_data_is_an_error(httpx_mock):
     httpx_mock.add_callback(_serve(bytes(body)), url=URL, is_reusable=True)
     with pytest.raises(UpstreamError, match="deflate"):
         await remote_zip.read_member(URL, member)
+
+
+def _zip64_archive(*, claimed_usize: int) -> bytes:
+    """A small real archive whose directory is rewritten the ZIP64 way.
+
+    The first member gets 0xFFFFFFFF in the size and offset slots (values
+    in the 0x0001 extra field, as in StatCan's 3.87 GB Delta File, whose
+    CSV inflates to 29 GB), and the end record is replaced by a ZIP64
+    record plus locator with 0xFFFF/0xFFFFFFFF placeholders.
+    """
+    plain = _archive()
+    archive = zipfile.ZipFile(io.BytesIO(plain))
+    infos = archive.infolist()
+    cd_start = archive.start_dir
+    body = bytearray(plain[:cd_start])
+    directory = bytearray()
+    for index, info in enumerate(infos):
+        name = info.filename.encode("cp437" if info.flag_bits & 0x800 == 0 else "utf-8")
+        if index == 0:
+            extra = struct.pack(
+                "<HHQQQ", 1, 24, claimed_usize, info.compress_size, info.header_offset
+            )
+            usize = csize = offset = 0xFFFFFFFF
+        else:
+            extra, usize, csize, offset = (
+                b"",
+                info.file_size,
+                info.compress_size,
+                info.header_offset,
+            )
+        directory += struct.pack(
+            "<4sHHHHHHIIIHHHHHII",
+            b"PK\x01\x02",
+            45,
+            45,
+            info.flag_bits,
+            info.compress_type,
+            0,
+            0,
+            info.CRC,
+            csize,
+            usize,
+            len(name),
+            len(extra),
+            0,
+            0,
+            0,
+            0,
+            offset,
+        )
+        directory += name + extra
+    record_offset = len(body) + len(directory)
+    end64 = struct.pack(
+        "<4sQHHIIQQQQ",
+        b"PK\x06\x06",
+        44,
+        45,
+        45,
+        0,
+        0,
+        len(infos),
+        len(infos),
+        len(directory),
+        cd_start,
+    )
+    locator = struct.pack("<4sIQI", b"PK\x06\x07", 0, record_offset, 1)
+    eocd = struct.pack("<4sHHHHIIH", b"PK\x05\x06", 0, 0, 0xFFFF, 0xFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0)
+    return bytes(body + directory + end64 + locator + eocd)
+
+
+async def test_zip64_directory_sizes_come_from_the_extra_field(httpx_mock):
+    body = _zip64_archive(claimed_usize=29_000_000_000)
+    httpx_mock.add_callback(_serve(body), url=URL, is_reusable=True)
+    members, total = await remote_zip.list_members(URL)
+    assert total == len(body)
+    first, second = members
+    assert first.name == "data.csv"
+    assert first.size == 29_000_000_000
+    assert first.header_offset == 0
+    assert second.name == "Français/codebook.txt"
+    assert second.size == len("étiquette".encode())
+    # The real compressed member is still readable through the ZIP64 offset.
+    assert (await remote_zip.read_member(URL, first)).startswith(b"a,b\n1,2")
+
+
+async def test_zip64_record_beyond_the_tail_is_read_by_range(httpx_mock, monkeypatch):
+    monkeypatch.setattr(remote_zip, "_TAIL_BYTES", 120)
+    body = _zip64_archive(claimed_usize=5_000_000_000)
+    httpx_mock.add_callback(_serve(body), url=URL, is_reusable=True)
+    members, _ = await remote_zip.list_members(URL)
+    assert members[0].size == 5_000_000_000
+
+
+async def test_zip64_without_locator_is_an_error(httpx_mock):
+    body = bytearray(_zip64_archive(claimed_usize=5_000_000_000))
+    body[-42:-38] = b"XXXX"
+    httpx_mock.add_callback(_serve(bytes(body)), url=URL, is_reusable=True)
+    with pytest.raises(UpstreamError, match="locator"):
+        await remote_zip.list_members(URL)

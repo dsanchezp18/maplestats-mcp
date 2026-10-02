@@ -954,3 +954,47 @@ COMMITTEES = Topic(
     ),
 )
 TOPICS = (*TOPICS, COMMITTEES)
+
+STATCAN_UPDATES = Topic(
+    "statcan_updates",
+    "StatCan daily updates, revisions and real-time (vintage) tables",
+    (
+        "delta file",
+        "bulk update",
+        "released today",
+        "daily release",
+        "what changed",
+        "real-time table",
+        "real time table",
+        "real-time data",
+        "vintage",
+        "revision history",
+        "historical release",
+        "first release",
+        "fichier delta",
+        "mise a jour en bloc",
+        "historique des revisions",
+        "donnees en temps reel",
+        "tableau en temps reel",
+    ),
+    (
+        PlanStep("statcan_delta_list_files", "which dates have a Delta File (about 47 days kept)"),
+        PlanStep("statcan_delta_list_tables", "cubes released or changed that day, with titles"),
+        PlanStep("statcan_delta_read_table", "that day's rows for one productId, by range"),
+        PlanStep("statcan_delta_list_real_time_tables", "the 19 revision-history (vintage) tables"),
+        PlanStep(
+            "wds_get_changed_series_data", "changed series since a date, when the file is huge"
+        ),
+    ),
+    (
+        (
+            "A Delta File has no deletions and carries corrections the next business day; "
+            "values are raw, with the scalar factor not applied."
+        ),
+        (
+            "Only the 19 statistics with a real-time table have a revision history; the regular "
+            "table shows the latest revision."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, STATCAN_UPDATES)
