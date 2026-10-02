@@ -270,14 +270,14 @@ async def ckan_describe_resource(
     """List the sheets and columns of the Excel or CSV file behind a CKAN resource.
 
     Use for: looking inside a file-only dataset before reading it, on federal
-    (open.canada.ca), Ontario, BC, Toronto, Québec, Montréal, NWT, Yukon,
-    Regina and Alberta portals. Most of their tabular datasets have no
+    (open.canada.ca), Ontario, BC, Québec, Montréal, NWT, Yukon,
+    Regina and Alberta portals (not Toronto: its robots.txt disallows file downloads). Most of their tabular datasets have no
     DataStore (`datastore_active` false), so the file is the only route to
     the numbers: ECCC wastewater indicators, CRA tax statistics and
     benefits by FSA, DFO salmon escapement, ESDC temporary foreign workers,
     ISED insolvency, Finance budget tables, Ontario tourism, education and
-    agriculture workbooks, BC treasury and local-government finance, Toronto
-    open data files, NWT traffic counts. `resource_id` comes from
+    agriculture workbooks, BC treasury and local-government finance, NWT
+    traffic counts. `resource_id` comes from
     ckan_get_dataset; no URL is accepted, the file link is taken from the
     portal's own record and only the portal's known data hosts are downloaded.
     Returns every sheet with declared rows and columns, the guessed header
@@ -289,7 +289,7 @@ async def ckan_describe_resource(
     bytes because labels are often wrong. Files over 40 MB are refused.
     Cached 2 hours; the portal's robots.txt crawl delay applies to API calls.
     Keywords: CKAN, resource file, Excel, xlsx, xls, CSV, sheets, columns, header
-    row, file-only dataset, open.canada.ca, Ontario, BC, Toronto, licence.
+    row, file-only dataset, open.canada.ca, Ontario, BC, licence.
     Mots-clés : CKAN, ressource, fichier Excel, xlsx, xls, CSV, feuilles, colonnes,
     ligne d'en-tête, jeu de données sans DataStore, ouvert.canada.ca, Ontario,
     Colombie-Britannique, licence.
@@ -314,12 +314,12 @@ async def ckan_read_resource(
     """Read rows of the Excel or CSV file behind a CKAN resource, from any CKAN portal.
 
     Use for: getting the numbers of a file-only dataset (no DataStore) on
-    federal (open.canada.ca), Ontario, BC, Toronto, Québec, Montréal, NWT,
-    Yukon, Regina or Alberta: ECCC wastewater indicators, tax filer
+    federal (open.canada.ca), Ontario, BC, Québec, Montréal, NWT,
+    Yukon, Regina or Alberta (not Toronto, whose robots.txt disallows file downloads): ECCC wastewater indicators, tax filer
     statistics and child benefits by FSA, DFO salmon escapement, ESDC
     temporary foreign worker data, ISED insolvency statistics, Finance
     budget tables, Ontario tourism, education and farm finance workbooks, BC
-    treasury-board and municipal finance, Toronto and NWT files. `resource_id`
+    treasury-board and municipal finance, NWT files. `resource_id`
     comes from ckan_get_dataset (no URL is accepted). When the DataStore is
     active the rows come from it (like ckan_datastore_search) and a 404 falls
     back to the file; otherwise the file is downloaded and read: .xlsx, legacy

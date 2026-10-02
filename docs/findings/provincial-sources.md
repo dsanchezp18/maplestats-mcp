@@ -286,7 +286,7 @@ Health (indicator tables), Advanced Education (enrolment), CSV files (collisions
 
 Most tabular datasets on the CKAN portals have no DataStore rows, only a file: the federal
 portal (about 93% of its tabular datasets), Ontario (43%), BC (about half beyond the
-`bc_stats_` workbooks), Toronto (35%), and leftovers on NWT, Yukon, Regina, Montreal and
+`bc_stats_` workbooks), Toronto (35%, not read: robots.txt), and leftovers on NWT, Yukon, Regina, Montreal and
 Quebec. The reader takes a portal and a resource id, never a URL: `resource_show` and
 `package_show` give the file link, the licence and the organization; a relative federal link is
 resolved against open.canada.ca. The table code is shared with `ab_opendata`
@@ -310,8 +310,8 @@ Quebec, NWT, Yukon, Montreal and Regina; Toronto's CKAN host sets none. The two 
 read follow the crawl delay (a bucket of two, refilled at one per delay), downloads go at one
 per second per portal, and Alberta shares the `ab-opendata` bucket (10 seconds). A first read on
 the federal portal therefore takes about 20 to 40 seconds. Toronto's CKAN robots.txt disallows
-`/dataset/*/resource/*/download/*`; the owner decided to include Toronto anyway, as with the
-earlier ISQ override, and every Toronto response says so in `provenance.limits`.
+`/dataset/*/resource/*/download/*`, and the owner decided not to override it, so the
+file reader refuses Toronto (its DataStore resources still work through `ckan_datastore_search`).
 
 Quirks confirmed live: labels and file names lie (Montreal's "XLSX" library workbook is
 .xls; a BC "csv" is an .xlsx; DFO's NuSEDS "CSV" is a 9.8 MB zip; Ontario's OMAFRA ".xls" is a
@@ -323,8 +323,7 @@ and NWT's traffic workbooks have several comparable sheets, so the sheet list co
 `sheet` is named. NWT's 2024 traffic workbook declares one sheet as 65,536 rows by 16,217
 columns for about 9,800 by 109; openpyxl padded every row and a pass took 250 seconds, so
 implausible dimensions are reset (7.5 seconds) and are never used to pick a sheet. Files over
-40 MB are refused: DFO's 55 and 61 MB NuSEDS files, Yukon's 53 MB population file. Toronto's API
-answered 502 and read timeouts in some runs; file downloads from its CKAN host were fine.
+40 MB are refused: DFO's 55 and 61 MB NuSEDS files, Yukon's 53 MB population file.
 
 Licences: ids differ per portal (federal `ca-ogl-lgo`, Ontario `OGL-ON-1.0`, BC numeric,
 Montreal and Quebec Creative Commons), so `licences.classify` reads id and title together into

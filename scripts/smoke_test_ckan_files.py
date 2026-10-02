@@ -15,8 +15,8 @@ portals run side by side. Resources and expectations were checked by hand on
 - nt: a snow survey workbook and the 2024 traffic workbook, whose declared
   65,536 x 16,217 sheet once took 250 s to read;
 - yt (53 MB CSV refused), regina, montreal (85-sheet budget), qc (a
-  Montreal library workbook, really .xls), toronto (CSV and the robots.txt
-  override note) and ab.
+  Montreal library workbook, really .xls), toronto (file reading refused: its
+  robots.txt disallows downloads) and ab.
 """
 
 from __future__ import annotations
@@ -196,13 +196,13 @@ async def qc() -> None:
 
 
 async def toronto() -> None:
-    parking = await files.read_resource("toronto", "53caa383-5515-4b01-81aa-cfdced622548", limit=1)
-    check(
-        parking.format == "csv"
-        and "overrides the site's robots.txt" in (parking.provenance.limits or ""),
-        "toronto CSV with the robots.txt override stated in limits",
-    )
-    check(parking.source.licence_status == "not_stated", "toronto licence not stated -> warning")
+    # Toronto's CKAN robots.txt disallows resource downloads: the reader must refuse.
+    try:
+        await files.read_resource("toronto", "53caa383-5515-4b01-81aa-cfdced622548", limit=1)
+    except InvalidInput as exc:
+        check("robots.txt" in str(exc), "toronto file reading refused (robots.txt)")
+    else:
+        check(False, "toronto file reading refused (robots.txt)")
 
 
 async def ab() -> None:

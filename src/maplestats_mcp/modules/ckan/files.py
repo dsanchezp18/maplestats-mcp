@@ -1,6 +1,6 @@
 """Read the Excel and CSV files behind CKAN resources that have no DataStore rows.
 
-Most federal, Ontario, BC and Toronto datasets are files only: the portal
+Most federal, Ontario and BC datasets are files only: the portal
 lists a URL and `datastore_active` is false, so `ckan_datastore_search` has
 nothing to query. This module resolves the file itself and reads it as a
 table.
@@ -210,13 +210,13 @@ class _Resolved:
         parts = [n for n in notes if n]
         if (_text(self.resource.get("url")) or "").lower().startswith("http://"):
             parts.append("the portal lists a plain-http link; it was fetched over https")
-        if self.portal.robots_override:
-            parts.append(self.portal.robots_override)
         return "; ".join(parts) or None
 
 
 async def _resolve(portal_key: str, resource_id: str, lang: str) -> tuple[_Resolved, bool]:
     portal = client._portal(portal_key)
+    if portal.file_reader_off_reason:
+        raise InvalidInput(f"ckan file reader: {portal.file_reader_off_reason}")
     if not portal.file_hosts:
         raise InvalidInput(f"ckan file reader: portal {portal_key!r} has no file hosts configured.")
     rid = resource_id.strip()

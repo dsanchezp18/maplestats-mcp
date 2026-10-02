@@ -74,7 +74,9 @@ class Portal:
     crawl_delay_seconds: float = 10.0
     download_delay_seconds: float = 1.0
     shared_bucket: str | None = None
-    robots_override: str | None = None
+    # Set when the file reader must not read this portal's files (the reason is
+    # given to the caller); the catalogue and DataStore tools still work.
+    file_reader_off_reason: str | None = None
 
 
 PORTALS: dict[str, Portal] = {
@@ -274,12 +276,10 @@ PORTALS: dict[str, Portal] = {
             "refresh_rate",
         ),
         resource_extra_fields=("record_count",),
-        file_hosts=("ckan0.cf.opendata.inter.prod-toronto.ca", "open.toronto.ca"),
-        crawl_delay_seconds=1.0,
-        robots_override=(
-            "This overrides the site's robots.txt on the project owner's decision: the "
-            "Toronto CKAN host disallows /dataset/*/resource/*/download/* for all crawlers, "
-            "and this reader downloads those paths anyway, one request per second."
+        file_reader_off_reason=(
+            "Toronto's CKAN host disallows /dataset/*/resource/*/download/* for all crawlers "
+            "in its robots.txt, so this server does not download its files. Rows of resources "
+            "with an active DataStore can be read with ckan_datastore_search."
         ),
     ),
     "regina": Portal(

@@ -389,18 +389,13 @@ async def test_bc_access_only_licence_carries_a_warning(httpx_mock):
     assert result.provenance.coverage and "NOT an open licence" in result.provenance.coverage
 
 
-async def test_toronto_states_the_robots_override_in_limits(httpx_mock):
-    url = f"https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/{PKG}/resource/{RES}/download/x.csv"
-    _mock_api(httpx_mock, _resource(url), _package("notspecified", "License not specified"))
-    httpx_mock.add_response(url=url, content=b"a,b,c\n1,2,3\n")
-    result = await files.read_resource("toronto", RES)
-    assert result.source.licence_status == "not_stated"
-    assert result.source.licence_warning
-    assert (
-        result.provenance.limits and "overrides the site's robots.txt" in result.provenance.limits
-    )
-    structure = await files.describe_resource("toronto", RES)
-    assert structure.provenance.limits and "owner's decision" in structure.provenance.limits
+async def test_toronto_files_are_not_read_because_of_its_robots_txt():
+    # Toronto's CKAN host disallows resource downloads for all crawlers; the project owner
+    # decided not to override that, so the reader refuses before any request is made.
+    with pytest.raises(InvalidInput, match="robots.txt"):
+        await files.read_resource("toronto", RES)
+    with pytest.raises(InvalidInput, match="robots.txt"):
+        await files.describe_resource("toronto", RES)
 
 
 # --- DataStore ---------------------------------------------------------------------------
