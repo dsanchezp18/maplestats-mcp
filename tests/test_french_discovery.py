@@ -27,6 +27,8 @@ CASES = [
     ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
     ("appels d'offres du gouvernement fédéral", "canadabuys_search_tenders"),
     ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),
+    ("danger d'incendie Alberta cote extrême", "ab_wildfire_get_fire_danger"),
+    ("interdiction de feu restriction Alberta comté", "ab_wildfire_get_fire_restrictions"),
     ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
     ("horaire des autobus de la STM passages prévus à un arrêt", "transit_get_stop_departures"),
