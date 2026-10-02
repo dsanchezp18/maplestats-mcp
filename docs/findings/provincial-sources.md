@@ -357,7 +357,8 @@ licence. Labour force and CPI tables on the same page repeat StatCan.
 ## Provincial general election results
 
 **Status:** Shipped 2026-10-01 for Quebec, Alberta and British Columbia as
-`modules/elections_provincial/` (3 tools); Ontario not built (terms of use).
+`modules/elections_provincial/` (3 tools), with Saskatchewan added 2026-10-02 (see
+the Saskatchewan section below); Ontario not built (terms of use).
 Each source's terms and robots rules were read before any data was requested.
 
 | Province | Source | Terms (wording) | Decision |
@@ -388,3 +389,55 @@ seats for all 25 elections (Quebec 110, 122 or 125; Alberta 83 in 2008 and 87 af
 85, 85, 87, 87, 93), party seats add up, and the newest election of each province matches
 known results (Quebec 2022 CAQ 90, PLQ 21, QS 11, PQ 3; Alberta 2023 UCP 49, NDP 38; BC 2024
 NDP 47, Conservative 44, Green 2).
+
+### Saskatchewan (added 2026-10-02)
+
+**Source.** Elections Saskatchewan (the Chief Electoral Officer's office, a
+legislative office, not part of the provincial government's saskatchewan.ca
+site). `elections.sk.ca/reports-data/election-results/` links one
+poll-by-poll file per general election on `cdn.elections.sk.ca`: CSV for 2024
+(`/upload/2024-GE-POLL-BY-POLL-RESULTS-v1.0.csv`), 2020
+(`.../2020-GE-POLL-BY-POLL-RESULTS-v2.0.csv`) and 2016
+(`/reports/2016 GE Poll by Poll Results.csv`), and an Excel workbook for 2011
+(`/upload/statementofvotes-2011-pollresults.xlsx`, one sheet per
+constituency). Earlier elections (1905 to 2007) are PDFs only. The ten
+by-elections since 2014 each have a CSV; they are not read. The results of the
+2024 election are also on `results.election.sk.ca`, which did not answer.
+
+**Terms: none found.** Read before any data was requested, on 2026-10-02:
+
+- `elections.sk.ca/robots.txt` and the CDN's `/robots.txt` return 404 (the CDN
+  answers an Azure XML error), so there is no crawl rule.
+- The footer links are Accessibility, Privacy policy, Legislation and News
+  releases, and the only text is "Copyright (c) 2025 Elections Saskatchewan".
+  `/terms-of-use`, `/copyright` and `/privacy` are 404s; the Privacy policy
+  page covers personal information, cookies and Google Analytics only; the
+  Legislation, FAQ, Links, Media and Accessibility pages and the results page
+  itself carry no licence, reuse or scraping wording.
+- No open-data licence is named, and the data is not on the provincial open
+  data portal (`publications.saskatchewan.ca`'s Crown copyright and
+  non-commercial reproduction terms, which ruled out the Bureau of Statistics,
+  belong to saskatchewan.ca and are not stated on elections.sk.ca).
+
+Nothing prohibits automated access, but nothing licenses reuse either. The
+project owner accepted that risk; it is recorded in the module docstring, in the
+module notes and on every Saskatchewan response (`provenance.limits`).
+
+**How the files read.** Header spellings differ by year (`Row Order` and `Row
+Ordering`, `Poll Name` and `PollName`, `Rejected` and `RejectedBallots`, `BPSK`
+and `BP`) and are matched with spaces removed. The 2024 and 2016 files are
+Windows-1252, the 2020 file is UTF-8 with a byte order mark. The 2024 file
+writes "Last, First", the others "First Last". Vote counts and registered voters
+carry a thousands comma in the 2020 file (`"1,489"`); blank means zero.
+Candidate names repeat on every poll row. Registered voters repeat across split
+polls (`2 A/B`), so electors and turnout are not given. The 2011 workbook has a
+header row starting `Poll`, candidate names, party codes on the next row, poll
+rows, then a `Totals` row of formulas (summed here from the poll rows), and one
+sheet is named `Sasktoon Nutana`. A party column with no candidate and no votes
+in a constituency is skipped.
+
+**Smoke test** (`scripts/smoke_test_elections_provincial.py sk`, run
+2026-10-02): winners equal seats in all four (61, 61, 61, 58), and seats by
+party match the legislature: Saskatchewan Party 34 and NDP 27 (2024), 48 and 13
+(2020), 51 and 10 (2016), 49 and 9 (2011). Valid votes: 466,930, 441,736,
+433,030 and 398,486; Saskatchewan Party shares 52.3%, 61.1%, 62.5% and 64.2%.
