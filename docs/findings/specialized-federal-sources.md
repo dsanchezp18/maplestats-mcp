@@ -1869,6 +1869,83 @@ allocations (a separate weekly CSV; the weekly file's Producer Cars
 worksheet has the shipments), elevator charge summaries, varieties by
 acreage insured, grain quality data, and the Excel-only weekly reports.
 
+## National Forestry Database
+
+**Status:** Shipped.
+
+Checked and shipped 2026-10-02 as `modules/nfd/` (`nfd_list_tables`,
+`nfd_describe_table`, `nfd_query_table`, `nfd_table_comments`). The
+Canadian Council of Forest Ministers' National Forestry Database
+(nfdp.ccfm.org, with the Canadian Forest Service) pairs with `cwfis_` and
+`nrcan_nbac_`. Federal CKAN only links a Zenodo record, not these files.
+
+**Terms.** `terms.php`: "made available for public use under the Open
+Government Licence - Canada version 2.0". `robots.txt` is
+`User-agent: *` / `Disallow:` (everything allowed).
+
+**Reaching it.** Port 80 answers; port 443 timed out on every attempt from
+the build machine (curl and httpx, several minutes apart), although the
+brief gave https URLs. The site's own pages link its files as
+`http://nfdp.ccfm.org/...`, so the module uses http and follows a redirect
+if the host later moves to https. Re-test https before treating this as
+permanent.
+
+**Catalogue.** The Download page (`/en/download.php`, `/fr/download.php`) has
+25 tables, not 37 (25 CSV, 25 XLSX, 25 dictionaries, 19 comments files;
+the 6 fire tables 3.1.1 to 3.2.3 have no comments, HTTP 404). Table
+numbers are the NFD's own: 2, 3.1.1 to 3.1.3, 3.2.1 to 3.2.3, 3.3, 4, 5.1,
+5.2, 6.1 to 6.6, 7, 8.1.1 to 8.1.4, 8.2.1 to 8.2.3. File names contain
+spaces, commas and parentheses and must be percent-encoded. One table's
+dictionary link is single-quoted in the HTML; the French page is
+Windows-1252 with HTML entities.
+
+**Files.** One bilingual CSV per table (UTF-8 with BOM, CRLF): English and
+French columns for year, jurisdiction, each category and the value. Last
+modified 2026-07-30 on all; the dictionaries are dated 2026-04-17 to
+2026-06-19. Years: 1940 to 2024 for harvest, 1970 for property losses,
+1975 for regeneration and insects, 1988 or 1992 for pest control, 1990 for
+wood supply, fires (to 2025) and revenues. All 25 tables were downloaded
+and parsed; the module was run against every one (describe, a BC query,
+comments).
+
+- Property losses (3.3) has six columns with a combined `Year / Année`
+  heading and no category pairs; every other table has the same
+  `Year, Année, ISO, Jurisdiction, Juridiction, <pairs>, <value>, qualifier,
+  <valeur>, qualifier` shape (the two value columns matched in the files
+  compared).
+- Values are blank where the agency gave none; the qualifier then says why.
+  Nine codes, identical in all dictionaries and case-sensitive (`E` is
+  estimated by Statistics Canada or the CFS, `e` by the provincial agency;
+  `U` is not available and large, `u` not available and very small): `a`
+  actual, `p` preliminary, `r` revised, `n` not applicable, `s` too small.
+  One harvest row has a value and no code.
+- Labels carry footnote markers (`Prescribed burning*b`, `Fuelwood*b and
+  firewood*c`); the text is in the comments workbook (sheets `21_EN` and
+  `21_FR`, with ISO, jurisdiction, year, comment, footnotes; property
+  losses adds Protection Zone).
+- Yukon is `YK` in table 6.2 and `YT` elsewhere; wood supply has `GC`
+  ("Canada", the federal government, 59 rows); property losses has `NP`
+  (national parks); Nunavut appears only in some tables.
+- Keys repeat: 110 groups in wood supply, 10 in roundwood harvest, 3 or 4
+  in each fire table and 1 in property losses (for example Prince Edward
+  Island 2007 human-caused fires: two rows, 0.02 and 18 ha; New Brunswick
+  2005 other roundwood, federal land: one `u` row and one `E` row of
+  30,009 m3). They are kept as published.
+- 8.1.4 and 8.2.3 put rates (kg/ha, BIU/ha, PIB/ha) and totals in one value
+  column, told apart by `Unit of Measure`; summing across them is wrong, so
+  the tool refuses a `group_by` that would.
+- Spelling slips in the files: `Renenues` (table 7 heading), `Valuer (en
+  dollar)`, `julliet` in a dictionary, `Douglas-Fir` and `Douglas-fir` in
+  6.5, an untranslated `Other` in a French treatment column, French month
+  names in both capitalizations in 3.2.2, and `2 Billion Trees` with an
+  empty French label.
+
+**Checks.** Area burned 2023 summed over causes and the 12 reporting
+jurisdictions: 17.6 million ha; British Columbia 2.84 million ha.
+
+**Not built.** The XLSX copies (same data as the CSV) and the NFD profile
+and glossary pages.
+
 ## Agriculture and Agri-Food Canada (AAFC)
 
 **Status:** Covered (via `ckan_*`).
@@ -2737,3 +2814,74 @@ document id" from the page (the example pattern with `Id=0` returns 404);
 votes, debates and committee evidence, which the `parliament_` tools already
 cover through OpenParliament.ca; and LEGISinfo's bills JSON, also covered. Person ids
 are the House's own, not OpenParliament slugs.
+
+## StatCan merchandise trade by commodity (CIMT)
+
+**Status:** Shipped 2026-10-02 as `modules/statcan/cimt/` (7 `cimt_*` tools).
+
+WDS has no commodity-level trade: table 12-10-0011-01 stops at principal
+trading partners and sections. The Canadian International Merchandise Trade
+web application (`www150.statcan.gc.ca/n1/pub/71-607-x/2021004/exp-eng.htm`
+for exports, `imp-eng.htm` for imports) draws on a JSON REST service that is
+not documented anywhere. Its methods were read from the page's JavaScript
+(`js/cimt4.min.js`) and each was then called live: `getPeriods`,
+`getReport`, `getTopPartners`, `getTopCommodities`, `getProvinces`,
+`getChapterChart`, `getCommodityChart` and `getCommodity` (not wrapped: it
+returns every province and partner for one commodity and month, about 5 KB
+per call, without names). Code lists are static JavaScript files next to the
+page: `countriesF.js` (279 entries, some repeated, with the months each was
+used), `states_codr.js` (US states), `provinces.js`, `uom.js`, `chaptersF.js`,
+`hs4F.js`, `hs6F_X.js` (exports) and `hs6F.js` (imports), `hs8F.js` and
+`hs10F.js` (16 MB). Terms: StatCan Open Licence; `robots.txt` blocks neither
+`/t1/` nor `/n1/pub/`, and asks for a 2 second crawl delay, which the rate
+limit (0.5 per second) keeps. The pages carry no terms against automated use.
+
+Path parameters, confirmed live: `getReport/(origin)/country/state/hs/hs6flag/
+maxRows/tradeType/annualize/from/to`. `origin` is a parenthesised province
+list, `(1)` is Canada. Country 1000 is all countries, 9 the United States;
+state 100 is "no state split". `tradeType` 0 is exports, 1 imports. Rows are
+`{T period, H code, C country, S state, P province, Q quantity, V value}`.
+Other methods take a single month, province, country, state and an optional
+2-digit chapter, and return the top 15 partners, about 25 commodities, or
+every province.
+
+Quirks, each handled in the client:
+
+- Without a `Referer` from the 71-607-x pages every method answers HTTP 404
+  with an HTML error page (`Accept` alone or `X-Requested-With` alone does not help).
+- Exports are published at 8 digits and imports at 10; `hs6flag=1`
+  aggregates both to 6. A code matches by prefix only at the level the flag
+  selects: `27090010` with `hs6flag=1` gives no rows, and `27090010` for
+  imports gives none because import codes have 10 digits. A 1-digit,
+  9-digit or non-numeric code answers 406, as does an unknown trade type.
+- A month after the latest answers 500; an inverted range answers 200 with
+  no rows; an unmatched filter answers 200 with `{"count": 0}`.
+- `maxRows` cuts silently: `count` is the full number of rows and `trade`
+  holds the first rows in no order. The client reports `truncated`.
+- `(1,35)` returns Canada only; `(35,24)` returns one row per province.
+- Exports include re-exports. In the chart methods the flag `E` splits them:
+  exports 1 domestic value, 2 re-export value, 3 domestic quantity, 4
+  re-export quantity (inferred, the application never uses it); imports 1
+  value, 2 quantity. The report adds domestic and re-export value together
+  (HS 710812, 2026-07: 6,621,013,002 + 203,533 = 6,621,216,535).
+- `countriesF.js` repeats an id (Virgin Islands) and has no plain "United
+  States" (it is "United States of America"); `provinces.js` writes French
+  names with en dashes; `uom.js` repeats `CCI`; the files start with a
+  byte-order mark and have trailing commas, so they are parsed with a regex
+  rather than as JSON. Goods without a quantity unit carry the unit `BLANK`.
+- Exports are attributed to the province of origin, imports to the province
+  of clearance, which StatCan says overstates provinces with ports and
+  warehouses.
+
+Reconciliation (live, 2026-10-02): the 4,476 HS6 export rows for 2026-07
+sum to 73,175,629,507 dollars, the same as the all-partner total of
+`getTopPartners` and as WDS table 12-10-0011-01 (customs basis, unadjusted,
+all countries, 73,175.6 million). Imports: `getTopPartners` 71,965,730,064,
+WDS 71,965.7 million. The 2025 calendar-year crude oil exports to the United
+States (HS 270900) are 126,777,839,232 dollars both as the sum of twelve
+monthly rows and as the annualized row. Alberta's crude to the US in 2026-07
+(11,314,036,747) is the same in `getReport` and `getTopCommodities`.
+
+Not built: HS10 export detail does not exist (exports stop at 8 digits);
+the all-commodity import month has more than 5,000 HS6 rows (the cap truncated it), past the tool's
+5,000-row cap, so full-month import totals come from `cimt_get_top_partners`.

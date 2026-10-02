@@ -265,10 +265,13 @@ async def test_get_cube_metadata_raises_invalid_input_on_406(httpx_mock):
     """Confirmed live: WDS returns 406, not 404, for a nonexistent
     productId."""
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}getCubeMetadata", method="POST", status_code=406
+        url=f"{constants.BASE_URL}getCubeMetadata",
+        method="POST",
+        status_code=406,
+        json={"message": "ProductId value must be 8 numbers long without any characters"},
     )
-    with pytest.raises(InvalidInput):
-        await client.get_cube_metadata(999999999)
+    with pytest.raises(InvalidInput, match="8 numbers long"):
+        await client.get_cube_metadata(12345678)
 
 
 async def test_timeout_raises_upstream_unavailable_with_clear_message(httpx_mock):

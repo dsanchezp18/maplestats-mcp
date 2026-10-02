@@ -7,7 +7,27 @@ from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
-AgencyKey = Literal["ttc", "stm", "oc_transpo", "calgary"]
+AgencyKey = Literal[
+    "ttc",
+    "stm",
+    "oc_transpo",
+    "calgary",
+    "via_rail",
+    "go_transit",
+    "up_express",
+    "bct_victoria",
+    "bct_kelowna",
+    "bct_kamloops",
+    "bct_nanaimo",
+    "bct_prince_george",
+    "bct_fraser_valley",
+    "bct_north_okanagan",
+    "bct_comox_valley",
+    "bct_cowichan_valley",
+    "bct_campbell_river",
+    "bct_squamish",
+    "bct_whistler",
+]
 
 
 class AgencyFeed(BaseModel):
@@ -25,7 +45,10 @@ class AgencyFeed(BaseModel):
     attribution: str = Field(description="Credit line to show when republishing the data.")
     update_cadence: str
     notes: str | None
-    reachable: bool | None = Field(description="Whether the zip answered a HEAD request now.")
+    reachable: bool | None = Field(
+        description="Whether the zip answered a HEAD request now; null when the host "
+        "builds the zip on request and is not probed."
+    )
     zip_bytes: int | None = Field(description="Size of the zip, from Content-Length.")
     last_modified: datetime | None = Field(description="Last-Modified header of the zip.")
 

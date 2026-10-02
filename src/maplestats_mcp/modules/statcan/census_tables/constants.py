@@ -40,3 +40,14 @@ CATALOGUE_TTL_SECONDS = 7 * 24 * 60 * 60
 MAX_PAGES_PER_THEME = 60
 SEARCH_LIMIT_DEFAULT = 25
 SEARCH_LIMIT_MAX = 200
+
+# Checked 2026-10-02: every www12.statcan.gc.ca path, the table lists and the
+# download links alike, answers scripts with a Cloudflare managed challenge
+# (HTTP 403). MapleStats does not try to pass it; it reports the block.
+BLOCKED_NOTE = (
+    "Statistics Canada's www12 host, which serves these census tables, is currently behind "
+    "a Cloudflare bot challenge that scripts cannot pass (a browser can still open the "
+    "pages). Other routes to census data: 2021 tables are WDS tables (wds_search_cubes, "
+    "98-10-xxxx); 2016 indicator profiles are WDS tables 17100122 and 17100123; copies of "
+    "older tables are on Borealis (borealis_search_ivt)."
+)

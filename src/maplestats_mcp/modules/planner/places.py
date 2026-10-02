@@ -30,7 +30,11 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "ontario": ("Ontario", (_ckan("on"), _arcgis("ontario_geohub"))),
     "british columbia": (
         "British Columbia",
-        (_ckan("bc"), PlanStep("bcgw_query_layer", "BC Geographic Warehouse layers")),
+        (
+            _ckan("bc"),
+            PlanStep("bcgw_query_layer", "BC Geographic Warehouse layers"),
+            _arcgis("bc_energy_regulator"),
+        ),
     ),
     "alberta": (
         "Alberta",

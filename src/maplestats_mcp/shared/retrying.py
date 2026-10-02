@@ -1,11 +1,11 @@
 """Retrying GET for modules that own their client (`shared.http.new_client`).
 
-`shared.http.api_get`/`get_raw` retry transient failures, but a module with
-its own cookie jar or redirect handling (statcan reference, surveys) calls
-its client directly and used to skip that layer. This helper gives them the
-same rules plus one the shared layer lacks: a 429/503 `Retry-After` header is
-honoured (capped), and StatCan hosts get the `Connection: close` header that
-`shared.http` adds so a retry can land on a healthy backend.
+Same retry rules and Retry-After cap as `shared.http.send_with_retry`, with the
+three differences reference and surveys need: query `params`, a configurable
+set of retryable statuses (IMDB's unknown-survey 500 is a deterministic
+answer), and returning the last response when attempts run out instead of
+raising, so the caller keeps its own error mapping. StatCan hosts get the
+`Connection: close` header so a retry can reach a healthy backend.
 """
 
 from __future__ import annotations
@@ -14,12 +14,17 @@ import asyncio
 
 import httpx
 
-from maplestats_mcp.shared.http import _request_headers, is_retryable
+from maplestats_mcp.shared.http import (
+    _RETRY_AFTER_CAP_SECONDS,
+    _RETRYABLE_STATUSES,
+    _request_headers,
+    is_retryable,
+)
 
 RETRY_ATTEMPTS = 4
 RETRY_BASE_SECONDS = 2.0
-RETRY_MAX_SECONDS = 30.0
-RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+RETRY_MAX_SECONDS = _RETRY_AFTER_CAP_SECONDS
+RETRY_STATUSES = _RETRYABLE_STATUSES
 
 
 def retry_delay(response: httpx.Response | None, attempt: int) -> float:

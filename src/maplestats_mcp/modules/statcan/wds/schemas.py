@@ -30,11 +30,23 @@ class CubeSummary(BaseModel):
     subject_codes: list[str] = Field(default_factory=list)
     survey_codes: list[str] = Field(default_factory=list)
     dimension_count: int | None = None
+    real_time: bool = Field(
+        default=False,
+        description=(
+            "True for StatCan's real-time tables: revision-history (vintage) tables that "
+            "keep every past release of a series. They are ordinary WDS tables, read like "
+            "any other."
+        ),
+    )
 
 
 class CubeSummaryList(BaseModel):
     cubes: list[CubeSummary]
-    total_count: int
+    total_count: int = Field(
+        description="Tables matching the query (or all tables) before limit/offset."
+    )
+    returned_count: int = Field(default=0, description="Tables in `cubes`.")
+    offset: int = 0
     provenance: Provenance
 
 
@@ -53,7 +65,13 @@ class CubeDimension(BaseModel):
     dimension_name_en: str
     dimension_name_fr: str
     has_uom: bool
-    members: list[DimensionMember]
+    member_count: int = Field(default=0, description="All members of this dimension.")
+    members_matched: int = Field(
+        default=0, description="Members matching `member_query` (all when none was given)."
+    )
+    members: list[DimensionMember] = Field(
+        description="The members returned, capped by `member_limit` (see provenance.limits)."
+    )
 
 
 class Footnote(BaseModel):
@@ -82,6 +100,7 @@ class CubeMetadata(BaseModel):
     subject_codes: list[str] = Field(default_factory=list)
     survey_codes: list[str] = Field(default_factory=list)
     footnotes: list[Footnote] = Field(default_factory=list)
+    footnote_count: int = 0
     dimensions: list[CubeDimension]
     provenance: Provenance
 
@@ -90,31 +109,56 @@ class SeriesInfo(BaseModel):
     product_id: int
     coordinate: str
     vector_id: int
+    series_title_en: str | None = None
+    series_title_fr: str | None = None
+    frequency_code: int | None = None
+    scalar_factor_code: int | None = None
+    decimals: int | None = None
+    terminated: bool | None = None
+    member_uom_code: int | None = None
     provenance: Provenance
 
 
 class ObservationRow(BaseModel):
     """One data point. `value`/`decimals` already reflect StatCan's own
     rounding; `scalar_factor_code` is deliberately NOT applied to `value`
-    here — WDS never auto-applies it either. Call apply_scalar_factor()
-    with the matching CodeSet entry if a scaled value is needed.
+    here — WDS never auto-applies it either. Multiply `value` by
+    `scale_multiplier` (10 ** scalar_factor_code) for the scaled figure.
     """
 
     ref_period: date
     value: float | None
     decimals: int
     scalar_factor_code: int
+    scale_multiplier: int = 1
     symbol_code: int
     status_code: int
     security_level_code: int
     release_time: datetime | None = None
 
 
-class VectorData(BaseModel):
+class VectorSeries(BaseModel):
     product_id: int
     coordinate: str
     vector_id: int
     observations: list[ObservationRow]
+
+
+class VectorData(VectorSeries):
+    provenance: Provenance
+
+
+class FailedVector(BaseModel):
+    vector_id: int
+    reason: str
+
+
+class VectorDataSet(BaseModel):
+    """Several series from one call, one provenance for all of them. Vectors
+    WDS could not serve are listed in `failed` instead of failing the call."""
+
+    series: list[VectorSeries]
+    failed: list[FailedVector] = Field(default_factory=list)
     provenance: Provenance
 
 
@@ -127,6 +171,9 @@ class CodeSetEntry(BaseModel):
 
 
 class CodeSets(BaseModel):
+    counts: dict[str, int] = Field(
+        default_factory=dict, description="Total entries per category before `limit`."
+    )
     scalar: list[CodeSetEntry]
     frequency: list[CodeSetEntry]
     symbol: list[CodeSetEntry]

@@ -82,6 +82,7 @@ PortalKey = Literal[
     "penticton",
     "orangeville",
     "canmore",
+    "bc_energy_regulator",
     "toronto_police",
     "ottawa_police",
     "conservation_halton",

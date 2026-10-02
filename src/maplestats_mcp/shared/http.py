@@ -32,9 +32,16 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryCallState,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from maplestats_mcp import __version__
+from maplestats_mcp.shared.errors import CloudflareChallenge
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 # Built from the package version so the User-Agent upstreams see (and can
@@ -180,6 +187,34 @@ def is_retryable(exc: BaseException) -> bool:
     return isinstance(exc, (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError))
 
 
+def is_cloudflare_challenge(response: httpx.Response) -> bool:
+    """True when Cloudflare answered with its managed bot challenge.
+
+    Confirmed live 2026-10-02 for www12.statcan.gc.ca: HTTP 403 with
+    `Server: cloudflare`, `Cf-Mitigated: challenge` and a "Just a moment..."
+    interstitial for every path. The challenge needs a browser to solve;
+    this project does not try to defeat it (no spoofed headers, no
+    automation), it only recognises it so a caller gets a clear
+    "unavailable" error instead of a misleading 403 or "not found".
+    """
+    if response.status_code not in (403, 429, 503):
+        return False
+    if response.headers.get("cf-mitigated", "").lower() == "challenge":
+        return True
+    return response.status_code == 403 and b"Just a moment" in response.content[:4096]
+
+
+def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
+    if is_cloudflare_challenge(response):
+        host = response.request.url.host
+        raise CloudflareChallenge(
+            f"{host} is behind a Cloudflare bot challenge (HTTP {response.status_code}, "
+            "Cf-Mitigated: challenge) that automated clients cannot pass, so this "
+            "service is unavailable from MapleStats until StatCan lifts it. MapleStats "
+            "does not try to bypass it."
+        )
+
+
 def decode_json(response: httpx.Response, url: str = "") -> Any:
     try:
         return response.json()
@@ -205,6 +240,7 @@ async def api_get(
     response = await _client.get(
         url, params=params, headers=_request_headers(url, headers), timeout=timeout
     )
+    raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return decode_json(response, url=url)
 
@@ -240,6 +276,7 @@ async def get_raw(
     )
     if response.status_code in _PASSTHROUGH_STATUSES:
         return response
+    raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return response
 
@@ -266,6 +303,7 @@ async def post_form_raw(
     response = await _client.post(
         url, data=data, headers=_request_headers(url, headers), timeout=timeout
     )
+    raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return response
 
@@ -286,5 +324,54 @@ async def api_post(
     response = await _client.post(
         url, json=json_body, headers=_request_headers(url, headers), timeout=timeout
     )
+    raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return decode_json(response, url=url)
+
+
+_RETRY_AFTER_CAP_SECONDS = 30.0
+_backoff = wait_exponential(multiplier=1, min=1, max=10)
+
+
+def _wait_honouring_retry_after(state: RetryCallState) -> float:
+    """Exponential backoff, or the server's Retry-After (capped) when it sent one."""
+    wait = _backoff(state)
+    exc = state.outcome.exception() if state.outcome else None
+    if isinstance(exc, httpx.HTTPStatusError):
+        header = exc.response.headers.get("retry-after", "")
+        if header.isdigit():
+            return max(wait, min(float(header), _RETRY_AFTER_CAP_SECONDS))
+    return wait
+
+
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=_wait_honouring_retry_after,
+    reraise=True,
+)
+async def send_with_retry(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    timeout: float = 30.0,
+) -> httpx.Response:
+    """Send one request on a module-owned client (see `new_client`) with the
+    shared retry rules, request headers and Cloudflare-challenge check.
+
+    For sources that must keep their own client (HEAD with redirects, cookie
+    jars) but should not lose what `api_get` gives every other source:
+    retries on 429/5xx and transient network errors with backoff that honours
+    a Retry-After header, and `Connection: close` on StatCan hosts. Any other
+    status (404 included) is returned for the caller to interpret; only the
+    retryable ones raise, once the attempts are used up.
+    """
+    response = await client.request(
+        method, url, headers=_request_headers(url, headers), timeout=timeout
+    )
+    raise_if_cloudflare_challenge(response)
+    if response.status_code in _RETRYABLE_STATUSES:
+        response.raise_for_status()
+    return response

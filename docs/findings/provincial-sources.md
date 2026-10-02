@@ -128,16 +128,12 @@ rather than assumed to match.
 open.alberta.ca, CKAN Action API: `ckan_*` (`portal="ab"`), 8 tools (added
 `ckan_datastore_search` 2026-09-20). Dataset, organization, resource,
 license, and tag responses were verified against live responses; the portal
-does not expose useful groups in the tested catalogue. **Real portal-side
-bug found while adding datastore_search**: every DataStore-active resource
-tried (the `datastore_active` flag itself is correctly `true`) returns HTTP
-500 "Internal Server Error" from `datastore_search`, confirmed across
-multiple unrelated resources and with a plain `curl` outside this client too
-— a genuine backend issue on Alberta's own deployment, not a bug here.
-
-The tool is still shipped and correctly surfaces this as `UpstreamError`
-(verified by the live smoke test) rather than silently failing; re-test if
-Alberta's DataStore is ever fixed. A second, genuinely separate Alberta
+does not expose useful groups in the tested catalogue. **Alberta has no DataStore.** When `datastore_search` was added (2026-09-20),
+every DataStore-active resource returned HTTP 500. Checked again on
+2026-10-02: none of the 37,487 packages has `datastore_active` set, so the
+resources are file-only and `ckan_datastore_search` cannot read them. The
+tool still surfaces the portal's errors as `UpstreamError`.
+A second, genuinely separate Alberta
 platform is now also shipped, per the same 2026-09-22 competitive-coverage
 request as the BC row above: the Alberta Energy Regulator's statistical
 reports (`www.aer.ca`, not open.alberta.ca -- a different agency, different
@@ -184,6 +180,70 @@ on-demand-rendered Tableau export rather than a static file.
 All three shipped tools confirmed live end-to-end 2026-09-22 (a real ST1
 Tuesday report parsed to 2026-09-15, a real 2023 archive link resolving to
 the pre-"prd" path, and a real ST3 Oil link with a live last-modified date).
+
+### Alberta Wildfire live status
+
+Shipped 2026-10-02 as `modules/ab_wildfire/` (7 tools), the provincial
+counterpart of `cwfis` (national hotspots, FWI stations and situation
+reports, which it does not duplicate). Alberta Wildfire's status map and
+dashboard read from anonymous ArcGIS Online feature services owned by
+`WMBappServices` (`services.arcgis.com/Eb8P5h4CJk8utIBz`, 63 items, no key).
+
+**Licence.** The ArcGIS items carry only a no-warranty disclaimer, but the
+open.alberta.ca dataset `alberta-wildfire-status-map` (licence id OGLA)
+points at the same map under the Open Government Licence - Alberta: a
+"worldwide, royalty-free, perpetual, non-exclusive licence to use the
+Information, including for commercial purposes", attribution "Contains
+information licensed under the Open Government Licence - Alberta."
+`services.arcgis.com/robots.txt` answers 403 (an API host with no robots
+file); `www.arcgis.com/robots.txt` disallows nothing. The dataset's CKAN
+record lists only the map URL as a resource, so the services themselves are
+the machine-readable path.
+
+**Layers used** (all `maxRecordCount` 2000, checked 2026-10-02):
+
+| Service / layer | Rows | Used for |
+| --- | --- | --- |
+| `Wildfire_year_to_date/0` | 823 | `ab_wildfire_get_fires`, `_summarize_fires` (current) |
+| `wildfire_prev5_ytd/1` | 6,821 | same, `dataset="previous_5_years"` |
+| `Wildfire_Perimeter_Extinguished_(PROD)/3`, `Wildfire_Perimeter_Active_(PROD)/3` | 118, 0 | `_get_fire_perimeters` |
+| `fire_danger_rating/0` | 807 | `_get_fire_danger`, `_summarize_fire_danger` |
+| `Wildfire_Statistics_Prod_View/0`, `5_year_summary_on_this_day_prod_view/2` | 5, 6 | `_get_season_statistics` |
+| `alberta_fire_ban_system/1-4`, `off_highway_vehicle_ohv_restriction/0` | 63 + 11 + 0 + 0, 0 | `_get_fire_restrictions` |
+
+**Quirks confirmed live.** `Wildfire_year_to_date` is the union of the map's
+separate "active" and "non active" point layers (its item says "all the
+active and extinguished wildfire locations"), so one query covers both; the
+active layer was empty on 2026-10-02, normal off-season, and the dashboard's
+active count still read 1 (a "Turned Over" fire), so the two disagree. The
+dashboard's 753 wildfires and 17,771.48 ha equal the layer's
+`FIRE_TYPE='Wildfire'` rows with `FIRE_YEAR=2026` exactly; the layer also
+holds 54 mutual-aid fires (no cause) and 17 carry-over fires from 2025 (one
+of 138,581 ha). The previous-five-years layer is each year cut at today's
+date, not a history, and spells "Assistance Ended" as "Assisstance Ended" in
+211 of its rows (the client folds the two). `FIRE_STATUS_DATE` is text
+`YYYY/MM/DD HH:MM:SS` with no zone; the assessment date is a true date. Size
+classes follow A to 0.1 ha, B to 4, C to 40, D to 200, E above (the data's
+ranges agree). Layer attribute domains are empty, so labels are free text.
+`editingInfo.dataLastEditDate` of each layer gives a usable as-of time
+(minutes old on 2026-10-02). The fire danger layer covers the whole province
+(Edmonton and Calgary are rated), its `Last_Updated` stamp read about five
+hours ahead of the clock, and its `Shape__Area` is in Web Mercator, so
+polygon counts, not areas, are reported. The map's own "Extinguished
+Wildfire Perimeter" service holds 2 polygons while the `(PROD)` service holds
+118 (refreshed 2026-09-24), so the PROD ones are used. Fire bans have no end
+date: entries from 2023 and 2025 were still listed, and a jurisdiction can be
+several polygons (Special Areas Board is three), so the tool merges them and
+warns about entries over a year old. Perimeter queries use `f=geojson` with
+`maxAllowableOffset` 0.0005 degrees (about 50 m), which cut one perimeter to
+about 9 kB.
+
+**Not built.** Evacuation orders: no layer in the owner's 63 items; the
+municipal and emergency-management evacuation maps are separate systems.
+Municipal-reported wildfires (`Extinguished_Municipal_Wildfire_Prod`, 252
+rows with local government and contact fields) and fire centre and forest
+area boundaries are available on the same host and could be added. Provincial
+parks fire-ban markers (`provincial_parks_fire_ban_markers`) were not checked.
 
 ## Manitoba
 
@@ -357,7 +417,8 @@ licence. Labour force and CPI tables on the same page repeat StatCan.
 ## Provincial general election results
 
 **Status:** Shipped 2026-10-01 for Quebec, Alberta and British Columbia as
-`modules/elections_provincial/` (3 tools); Ontario not built (terms of use).
+`modules/elections_provincial/` (3 tools), with Saskatchewan added 2026-10-02 (see
+the Saskatchewan section below); Ontario not built (terms of use).
 Each source's terms and robots rules were read before any data was requested.
 
 | Province | Source | Terms (wording) | Decision |
@@ -388,3 +449,119 @@ seats for all 25 elections (Quebec 110, 122 or 125; Alberta 83 in 2008 and 87 af
 85, 85, 87, 87, 93), party seats add up, and the newest election of each province matches
 known results (Quebec 2022 CAQ 90, PLQ 21, QS 11, PQ 3; Alberta 2023 UCP 49, NDP 38; BC 2024
 NDP 47, Conservative 44, Green 2).
+
+### Saskatchewan (added 2026-10-02)
+
+**Source.** Elections Saskatchewan (the Chief Electoral Officer's office, a
+legislative office, not part of the provincial government's saskatchewan.ca
+site). `elections.sk.ca/reports-data/election-results/` links one
+poll-by-poll file per general election on `cdn.elections.sk.ca`: CSV for 2024
+(`/upload/2024-GE-POLL-BY-POLL-RESULTS-v1.0.csv`), 2020
+(`.../2020-GE-POLL-BY-POLL-RESULTS-v2.0.csv`) and 2016
+(`/reports/2016 GE Poll by Poll Results.csv`), and an Excel workbook for 2011
+(`/upload/statementofvotes-2011-pollresults.xlsx`, one sheet per
+constituency). Earlier elections (1905 to 2007) are PDFs only. The ten
+by-elections since 2014 each have a CSV; they are not read. The results of the
+2024 election are also on `results.election.sk.ca`, which did not answer.
+
+**Terms: none found.** Read before any data was requested, on 2026-10-02:
+
+- `elections.sk.ca/robots.txt` and the CDN's `/robots.txt` return 404 (the CDN
+  answers an Azure XML error), so there is no crawl rule.
+- The footer links are Accessibility, Privacy policy, Legislation and News
+  releases, and the only text is "Copyright (c) 2025 Elections Saskatchewan".
+  `/terms-of-use`, `/copyright` and `/privacy` are 404s; the Privacy policy
+  page covers personal information, cookies and Google Analytics only; the
+  Legislation, FAQ, Links, Media and Accessibility pages and the results page
+  itself carry no licence, reuse or scraping wording.
+- No open-data licence is named, and the data is not on the provincial open
+  data portal (`publications.saskatchewan.ca`'s Crown copyright and
+  non-commercial reproduction terms, which ruled out the Bureau of Statistics,
+  belong to saskatchewan.ca and are not stated on elections.sk.ca).
+
+Nothing prohibits automated access, but nothing licenses reuse either. The
+project owner accepted that risk; it is recorded in the module docstring, in the
+module notes and on every Saskatchewan response (`provenance.limits`).
+
+**How the files read.** Header spellings differ by year (`Row Order` and `Row
+Ordering`, `Poll Name` and `PollName`, `Rejected` and `RejectedBallots`, `BPSK`
+and `BP`) and are matched with spaces removed. The 2024 and 2016 files are
+Windows-1252, the 2020 file is UTF-8 with a byte order mark. The 2024 file
+writes "Last, First", the others "First Last". Vote counts and registered voters
+carry a thousands comma in the 2020 file (`"1,489"`); blank means zero.
+Candidate names repeat on every poll row. Registered voters repeat across split
+polls (`2 A/B`), so electors and turnout are not given. The 2011 workbook has a
+header row starting `Poll`, candidate names, party codes on the next row, poll
+rows, then a `Totals` row of formulas (summed here from the poll rows), and one
+sheet is named `Sasktoon Nutana`. A party column with no candidate and no votes
+in a constituency is skipped.
+
+**Smoke test** (`scripts/smoke_test_elections_provincial.py sk`, run
+2026-10-02): winners equal seats in all four (61, 61, 61, 58), and seats by
+party match the legislature: Saskatchewan Party 34 and NDP 27 (2024), 48 and 13
+(2020), 51 and 10 (2016), 49 and 9 (2011). Valid votes: 466,930, 441,736,
+433,030 and 398,486; Saskatchewan Party shares 52.3%, 61.1%, 62.5% and 64.2%.
+
+## British Columbia lobbyists registry (Office of the Registrar of Lobbyists)
+
+**Status:** Shipped 2026-10-02 as `modules/bc_lobbyists/` (5 tools:
+`bc_lobbyists_search_registrations`, `bc_lobbyists_get_registration`,
+`bc_lobbyists_search_activity_reports`, `bc_lobbyists_summarize_activity`,
+`bc_lobbyists_list_codes`).
+
+**Access and licence (checked live 2026-10-02).** `robots.txt` on
+lobbyistsregistrar.bc.ca disallows only `/sitemap/`. The open data page
+(`/the-registry/open-data/`) links two zips and two XLSX data dictionaries, all
+at `/app/secure/orl/lrs/do/mssDtstRprt?file=...` (a plain GET answers 200
+`application/octet-stream`; the session cookie is not needed):
+`ORL_Registration_Data.zip` (28 MB, 16 CSVs, 260 MB unpacked, members dated
+2026-09-20), `ORL_LAR_Data.zip` (5.5 MB, 5 CSVs, 39 MB unpacked),
+`ORL_data_dictionary_registrations.xlsx` and `ORL_data_dictionary_LARs.xlsx`.
+Updated monthly. Licence: Open Data Licence for the Office of the Registrar of
+Lobbyists for British Columbia, version 1.0 (PDF under `/media/1285/`): worldwide,
+royalty-free, perpetual, non-exclusive, commercial use included (terms 2 and 3);
+attribution required, "Contains information licensed under the Open Data Licence
+for the Office of the Registrar of Lobbyists for British Columbia." when the ORL
+names none (term 4); term 6(a) grants no right to Personal Information (FOIPPA
+Schedule 1). Nothing forbids automated access, so it is built; every result
+carries the attribution.
+
+**Personal Information.** FOIPPA's definition excludes "contact information"
+(name, position or title, business address and telephone of a person in a business
+capacity), so lobbyist, designated filer and office-holder names with titles and
+organizations are kept: they are what a lobbying registry is for. Dropped, and
+never read from the zip: street addresses (consultants often file from home:
+`FILER_ADDRESS`, `FIRM_ADDRESS`, `CLIENT_ORG_ADDRESS`), telephone numbers,
+political, sponsorship and recall contribution flags, `Registration_Gifts`
+(named office holders with values), `Registration_PublicOffice` (a lobbyist's
+earlier career), POH and exemption-decision fields, code-of-conduct rows,
+beneficiaries (affiliate and coalition members, with addresses, may be people),
+government funding, and the legacy `Registration_Target_Contacts` (94 MB) and
+`Registration_Target_Agencies` (50 MB) files. A test builds zips holding all of
+these and checks none reaches any result. Reading names and titles as contact information is a
+judgement call; it is stated in the module docstring and
+every result's `omitted` field.
+
+**How the data reads.** UTF-8 with a byte order mark; absent values are the text
+`null` (LAR_SPOH `BRANCH` is sometimes empty instead). Registrations are
+versioned: 26,925 REG_IDs are versions, chained by `PREVIOUS_VERSION_REG_ID`;
+the ones nobody names as a predecessor are the 6,661 current registrations
+(1,265 active, 5,396 ended; a superseded version always has an end date). The
+third number of `REG_NUM` counts versions, and the earliest start in a chain is
+when the registration began. Lobbyists sit in separate consultant and in-house
+files (98,791 in-house rows), topics repeat once per detail id, and ministries
+are a comma-separated id list resolved through `BC_Public_Agencies` (409 entries).
+Activity reports start 2020-05-04: 75,083 `LAR_Primary` rows are 49,586 reports
+(one row per in-house lobbyist), 110,334 office-holder rows; the original of an
+amended report is no longer in the file. `REG_TYPE` holds `Cons` or `Org` although
+the dictionary says 1 and 3. "Member(s) of the BC Legislative Assembly" is a
+ministry-level agency with the member named. The 2020 Act's subject matters (SM-xx,
+56) and intended outcomes (BC-01 to BC-07, plus legacy IO-01 to IO-06) are the same
+in both zips.
+
+**Smoke test** (`scripts/smoke_test_bc_lobbyists.py`, run 2026-10-02, both zips
+about 25 s): 469 active Health registrations (308 in-house, 161 consultant); BC
+Dental Association is registration 9997-443-56; 1,187 activity reports naming the
+Health ministry since 2025-01-01; the Member(s) of the Legislative Assembly (11,771
+reports), Office of the Premier (4,929) and Health (3,838) are the most-named
+agencies; Deputy Minister appears in 13,767 reports.

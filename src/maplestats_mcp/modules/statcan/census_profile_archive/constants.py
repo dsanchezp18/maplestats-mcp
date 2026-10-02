@@ -137,3 +137,16 @@ YEAR_CONFIG: dict[int, dict] = {
         },
     },
 }
+
+# These downloads sit on www12.statcan.gc.ca. Checked 2026-10-02 it answers
+# scripts with a Cloudflare managed challenge (HTTP 403); a browser passes it.
+# MapleStats only builds the URLs and reports the block, it does not try to
+# get past it.
+REACHABILITY_URL = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/index.cfm?Lang=E"
+PROBE_TTL_SECONDS = 15 * 60
+BLOCKED_NOTE = (
+    "StatCan's www12 host currently answers scripts with a Cloudflare bot challenge, so this "
+    "URL can be opened in a browser but not downloaded by a script (curl, R, Python). Table "
+    "versions of the same data: WDS tables 17100122 / 17100123 (2016 indicator profile) via "
+    "wds_search_cubes; 2021 figures via statcan_census_profile_*."
+)

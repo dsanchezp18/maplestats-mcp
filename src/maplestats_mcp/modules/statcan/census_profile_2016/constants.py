@@ -76,3 +76,16 @@ TOPICS = {
 
 STATISTIC_TO_CODE = {"counts": 0, "rate": 1}
 LANG_TO_CODE = {"en": "E", "fr": "F"}
+
+# Checked 2026-10-02: www12.statcan.gc.ca answers every path, this REST API
+# included, with HTTP 403 and a Cloudflare managed challenge ("Just a
+# moment..."), which only a browser can pass. MapleStats does not try to get
+# past it; the tools report the block and point to the same data elsewhere.
+BLOCKED_NOTE = (
+    "Statistics Canada's www12 host, which serves the 2016 Census Profile service, is "
+    "currently behind a Cloudflare bot challenge that scripts cannot pass. The same 2016 "
+    "figures are in WDS: wds_search_cubes for 'Census indicator profile' (17100122 short "
+    "form, 17100123 long form) read with wds_get_data_from_cube_coord; 2021 figures are "
+    "in statcan_census_profile_*. Bulk 2016 files: statcan_census_profile_archive_* "
+    "(download in a browser)."
+)

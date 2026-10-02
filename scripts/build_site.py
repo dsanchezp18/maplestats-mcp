@@ -264,6 +264,16 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="provincial_agency",
     ),
+    "ab_wildfire": Source(
+        "Alberta Wildfire: live status",
+        "Alberta Wildfire : état des feux en direct",
+        "provincial",
+        "Alberta Wildfire",
+        "Alberta Wildfire",
+        places=("AB",),
+        row="provincial_agency",
+        domain="environment",
+    ),
     "aer": Source(
         "Alberta Energy Regulator",
         "Alberta Energy Regulator",
@@ -274,6 +284,16 @@ SOURCES: dict[str, Source] = {
         row="provincial_agency",
     ),
     "arcgis_hub": Source("ArcGIS Hub portals", "Portails ArcGIS Hub", "catalogue", "ArcGIS Hub"),
+    "bc_lobbyists": Source(
+        "BC Registrar of Lobbyists: registrations and activity reports",
+        "Registraire des lobbyistes de la C.-B. : inscriptions et rapports d'activité",
+        "provincial",
+        "BC Registrar of Lobbyists",
+        "Registraire des lobbyistes (C.-B.)",
+        domain="government",
+        places=("BC",),
+        row="provincial_agency",
+    ),
     "bc_stats": Source(
         "BC Stats Excel tables",
         "Tableaux Excel de BC Stats",
@@ -294,8 +314,8 @@ SOURCES: dict[str, Source] = {
     ),
     "boc": Source("Bank of Canada", "Banque du Canada", "national", domain="money"),
     "borealis": Source(
-        "Borealis: Beyond 20/20 tables",
-        "Borealis : tableaux Beyond 20/20",
+        "Borealis: Beyond 20/20 tables and ODESI",
+        "Borealis : tableaux Beyond 20/20 et ODESI",
         "national",
         "Borealis",
         "Borealis",
@@ -402,12 +422,12 @@ SOURCES: dict[str, Source] = {
         domain="government",
     ),
     "elections_provincial": Source(
-        "Provincial general election results: Quebec, Alberta, British Columbia",
-        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique",
+        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan",
+        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique, Saskatchewan",
         "provincial",
-        "Elections Quebec, Elections Alberta, Elections BC",
-        "Élections Québec, Elections Alberta, Elections BC",
-        places=("QC", "AB", "BC"),
+        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan",
+        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan",
+        places=("QC", "AB", "BC", "SK"),
         row="provincial_agency",
     ),
     "elections_financial_returns": Source(
@@ -451,7 +471,7 @@ SOURCES: dict[str, Source] = {
         "municipal",
         "Transit schedules",
         "Horaires de transport",
-        places=("ON", "QC", "AB"),
+        places=("ON", "QC", "AB", "BC"),
         row="municipal_feed",
     ),
     "fcac": Source(
@@ -548,6 +568,14 @@ SOURCES: dict[str, Source] = {
         "RNCan feux de végétation",
         domain="environment",
     ),
+    "nfd": Source(
+        "National Forestry Database (CCFM)",
+        "Base nationale de données forestières (CCMF)",
+        "national",
+        "National Forestry Database",
+        "Base nationale de données forestières",
+        domain="environment",
+    ),
     "nrcan_nbac": Source(
         "Natural Resources Canada: burned areas",
         "Ressources naturelles Canada : zones brûlées",
@@ -606,6 +634,14 @@ SOURCES: dict[str, Source] = {
         "Rappels",
         domain="health",
     ),
+    "represent": Source(
+        "Elected officials and districts, via Open North Represent",
+        "Élus et circonscriptions, par Open North Represent",
+        "national",
+        "Represent",
+        "Represent",
+        domain="government",
+    ),
     "reproduce": Source("Reproduction code", "Code de reproduction", "utility"),
     "senate": Source(
         "Senate of Canada votes",
@@ -649,6 +685,7 @@ FAMILIES: dict[str, tuple[str, str]] = {
     "ised/corporations": ("Federal corporations", "Sociétés fédérales"),
     "ised/ip_horizons": ("Patents and IP bulk data", "Brevets et données de PI"),
     "ised/spectrum": ("Spectrum licences", "Licences de spectre"),
+    "statcan/cimt": ("Merchandise trade by commodity", "Commerce de marchandises par produit"),
     "statcan/census_profile": ("2021 Census Profile", "Profil du recensement de 2021"),
     "statcan/census_profile_2016": ("2016 Census Profile", "Profil du recensement de 2016"),
     "statcan/census_profile_archive": (
@@ -787,6 +824,7 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "penticton": ("BC", _M),
         "orangeville": ("ON", _M),
         "canmore": ("AB", _M),
+        "bc_energy_regulator": ("BC", _P),
         "toronto_police": ("ON", _M),
         "ottawa_police": ("ON", _M),
         "conservation_halton": ("ON", _M),
@@ -3090,7 +3128,11 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
 # Every statcan/<family>/ folder in one group, for the family list at the
 # end of the post; statcan_context() fails the build when one is missing.
 STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("Tables and time series", "Tableaux et séries chronologiques", ("wds", "sdmx", "delta")),
+    (
+        "Tables and time series",
+        "Tableaux et séries chronologiques",
+        ("wds", "sdmx", "delta", "cimt"),
+    ),
     (
         "Census",
         "Recensement",
@@ -3328,7 +3370,12 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         raise SystemExit("the coordinate call and the CPI call no longer name the same vector")
 
     # The CPI call from the demos: its latest month in full.
-    series = macro["response"][0]
+    # wds_get_data_from_vectors now answers {"series": [...], "failed": [], "provenance"};
+    # the recorded call may predate that and be a bare list of series.
+    recorded = macro["response"]
+    series = recorded[0] if isinstance(recorded, list) else recorded["series"][0]
+    if not isinstance(recorded, list):
+        series = {**series, "provenance": recorded["provenance"]}
     obs = series["observations"]
     earlier = len(obs) - 1
     data_shown = [

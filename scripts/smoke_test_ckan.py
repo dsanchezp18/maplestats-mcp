@@ -11,8 +11,8 @@ from maplestats_mcp.modules.ckan import client, constants
 from maplestats_mcp.shared.errors import NotFound
 
 # One DataStore-active resource per portal, confirmed live when each
-# portal was added. Alberta's DataStore is disabled: it returns HTTP 500
-# for every resource (re-test with f660db62-5687-4614-8f53-327652856f80).
+# portal was added. Alberta has no DataStore-active resources (checked
+# 2026-10-02: 0 of 37,487 packages), so it has no entry here.
 DATASTORE_RESOURCES = {
     "federal": "3eb35dcd-9b0c-4ae9-a45c-e5e481567c23",
     "on": "ea9dc29c-b4f1-4426-b1f2-974ce995aca1",

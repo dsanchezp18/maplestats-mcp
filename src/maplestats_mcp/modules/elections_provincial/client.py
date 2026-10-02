@@ -14,6 +14,7 @@ from maplestats_mcp.modules.elections_provincial import (
     british_columbia,
     constants,
     quebec,
+    saskatchewan,
 )
 from maplestats_mcp.modules.elections_provincial.common import District, fold
 from maplestats_mcp.modules.elections_provincial.schemas import (
@@ -32,7 +33,7 @@ from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
 
-_DETAIL = {"qc": "candidate", "bc": "candidate", "ab": "party"}
+_DETAIL = {"qc": "candidate", "bc": "candidate", "ab": "party", "sk": "candidate"}
 
 _NOTES = {
     "en": [
@@ -49,6 +50,13 @@ _NOTES = {
         (
             "British Columbia, 2005 to 2024: every candidate, summed from the poll-level open "
             "data (Elections BC Open Data Licence). By-elections are in that data but not read."
+        ),
+        (
+            "Saskatchewan, 2011 to 2024: every candidate, summed from Elections Saskatchewan's "
+            "poll-by-poll files. The site publishes no terms of use or licence for them (only "
+            "'Copyright (c) 2025 Elections Saskatchewan' in the footer), so they are read at the "
+            "project owner's risk. Registered voters are not summed (split polls repeat them), "
+            "so there is no turnout."
         ),
         (
             "Ontario is not covered: its terms of use forbid scraping and limit copying to "
@@ -75,6 +83,14 @@ _NOTES = {
             "Les élections partielles sont dans ces données mais ne sont pas lues."
         ),
         (
+            "Saskatchewan, 2011 à 2024 : tous les candidats, additionnés à partir des fichiers de "
+            "résultats par bureau de vote d'Elections Saskatchewan. Le site ne publie ni conditions "
+            "d'utilisation ni licence pour ces fichiers (seulement « Copyright © 2025 Elections "
+            "Saskatchewan » en pied de page) : ils sont lus aux risques du propriétaire du projet. "
+            "Les électeurs inscrits ne sont pas additionnés (les bureaux divisés les répètent) : "
+            "pas de taux de participation."
+        ),
+        (
             "L'Ontario n'est pas couvert : ses conditions d'utilisation interdisent le moissonnage "
             "et limitent la copie à un usage personnel (voir « blocked »). Les résultats fédéraux "
             "sont dans elections_results_."
@@ -89,6 +105,8 @@ def _source_url(election: constants.Election) -> str:
         return quebec.file_url(election.source_key)
     if election.province == "ab":
         return alberta.results_url(election.source_key)
+    if election.province == "sk":
+        return saskatchewan.file_url(election.source_key)
     return constants.BC_DATASET_PAGE
 
 
@@ -97,7 +115,16 @@ def _attribution(province: str) -> str:
         "qc": constants.QC_ATTRIBUTION,
         "ab": constants.AB_ATTRIBUTION,
         "bc": constants.BC_ATTRIBUTION,
+        "sk": constants.SK_ATTRIBUTION,
     }[province]
+
+
+def _limits(province: str, limit: str | None) -> str | None:
+    """The response's limits, with Saskatchewan's missing-terms notice added."""
+    if province != "sk":
+        return limit
+    notice = constants.SK_TERMS_NOTICE
+    return f"{limit} {notice}" if limit else notice
 
 
 def _province(code: str) -> str:
@@ -135,6 +162,8 @@ async def _load(election: constants.Election) -> tuple[list[District], bool]:
     async def fetch() -> list[District]:
         if election.province == "qc":
             return await quebec.fetch(election.source_key)
+        if election.province == "sk":
+            return await saskatchewan.fetch(election.source_key)
         return await alberta.fetch(election.source_key)
 
     return await cached_fetch(
@@ -177,7 +206,7 @@ def list_elections(province: str | None = None, lang: Lang = "en") -> ElectionLi
             cached=False,
             schema_name="elections_provincial.ElectionList",
             coverage="General elections: Quebec 1973-2022, Alberta 2008-2023, British "
-            "Columbia 2005-2024.",
+            "Columbia 2005-2024, Saskatchewan 2011-2024.",
         ),
     )
 
@@ -273,10 +302,11 @@ async def get_results(
             freshness="Official results are final; by-elections are not included.",
             coverage=f"{constants.PROVINCES[code][0]} general election of {edition.date}, "
             f"{edition.seats} districts.",
-            limits=(
+            limits=_limits(
+                code,
                 f"Showing rows {offset + 1} to {offset + len(page)} of {total}."
                 if truncated
-                else None
+                else None,
             ),
         ),
     )
@@ -326,6 +356,6 @@ async def get_seats(province: str, election: str | None = None) -> SeatSummary:
             schema_name="elections_provincial.SeatSummary",
             freshness="Computed from the district rows; by-elections are not included.",
             coverage=f"{constants.PROVINCES[code][0]} general election of {edition.date}.",
-            limits="Independent candidates appear under the label each source uses.",
+            limits=_limits(code, "Independent candidates appear under the label each source uses."),
         ),
     )

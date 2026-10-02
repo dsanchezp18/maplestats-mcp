@@ -17,9 +17,13 @@ import httpx
 
 from maplestats_mcp.modules.statcan.census_profile_archive import client
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.http import is_cloudflare_challenge
 
 
-async def _check_url_serves_a_file(url: str) -> bool:
+async def _check_url_serves_a_file(url: str, note: str | None) -> bool:
+    """The URL must serve a file, or (blocked) www12 must be behind the Cloudflare
+    challenge *and* the link must say so in provenance.limits. Nothing here
+    tries to get past the challenge."""
     # Confirmed live: 2016's GetFile.cfm resolver sometimes answers with
     # Content-Type: application/unknown instead of application/zip (e.g.
     # GEONO=050, aggregate dissemination areas) even though the file is
@@ -29,6 +33,12 @@ async def _check_url_serves_a_file(url: str) -> bool:
         httpx.AsyncClient(timeout=30.0) as http_client,
         http_client.stream("GET", url) as response,
     ):
+        if is_cloudflare_challenge(response):
+            blocked = note is not None and "Cloudflare" in note
+            print(
+                f"  {'OK' if blocked else 'FAIL'}: {url} -> Cloudflare challenge, noted={blocked}"
+            )
+            return blocked
         if response.status_code != 200:
             print(f"  FAIL: {url} -> HTTP {response.status_code}")
             return False
@@ -46,7 +56,7 @@ async def main() -> int:
         ok &= len(levels.levels) > 0
         sample_level = min(levels.levels)
         link = await client.get_download_link(year, sample_level, "csv")
-        ok &= await _check_url_serves_a_file(link.url)
+        ok &= await _check_url_serves_a_file(link.url, link.provenance.limits)
 
     try:
         await client.list_geography_levels(1996)

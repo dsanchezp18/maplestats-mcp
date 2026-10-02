@@ -293,6 +293,56 @@ STEPS: list[Step] = [
         _non_empty("ballots"),
     ),
     Step("senate", "senate_list_votes", {"session": "44-1", "bill": "C-69", "lang": "fr"}),
+    # Open North Represent (elected officials and districts). Calls are paced to
+    # 1 a second, so keep the postal codes and points to a spread across provinces.
+    Step(
+        "represent",
+        "represent_lookup_postcode",
+        {"postcode": "T5J0N3"},
+        lambda d: bool(d["representatives"]) and bool(d["boundary_sets"]),
+    ),
+    Step(
+        "represent",
+        "represent_lookup_postcode",
+        {"postcode": "H3B 4W8", "lang": "fr"},
+        _non_empty("boundaries"),
+    ),
+    Step(
+        "represent",
+        "represent_lookup_postcode",
+        {"postcode": "V6B1A1", "sets": "federal-electoral-districts", "include_set_details": False},
+        _non_empty("boundaries"),
+    ),
+    Step(
+        "represent",
+        "represent_lookup_point",
+        {"latitude": 45.524, "longitude": -73.596},
+        lambda d: any(r["level"] == "federal" for r in d["representatives"]),
+    ),
+    Step(
+        "represent",
+        "represent_search_representatives",
+        {"name": "Bendayan", "limit": 5},
+        _non_empty("representatives"),
+    ),
+    Step(
+        "represent",
+        "represent_search_representatives",
+        {"level": "provincial", "office": "MLA", "limit": 5},
+        _non_empty("representatives"),
+    ),
+    Step(
+        "represent",
+        "represent_list_boundary_sets",
+        {"domain": "Canada", "limit": 3},
+        lambda d: all(s["licence_url"] for s in d["sets"]) and bool(d["sets"]),
+    ),
+    Step(
+        "represent",
+        "represent_list_representative_sets",
+        {"level": "federal"},
+        _non_empty("sets"),
+    ),
     # Query planner (no network; checks registration through the server)
     Step(
         "planner",

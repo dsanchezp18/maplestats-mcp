@@ -20,9 +20,14 @@ CACHE_TTL_OBSERVATIONS_SECONDS = 60 * 60  # 1h
 # WDS coordinates are always exactly this many dot-separated dimensions.
 COORDINATE_DIMENSIONS = 10
 
-# StatCan's documented daily lock window: no reliable data 12am-8:30am ET.
-LOCK_WINDOW_START_HOUR_ET = 0
-LOCK_WINDOW_END_HOUR_ET = 8.5
+# Response caps. Uncapped, wds_search_cubes with no query was 4.4 MB, one census
+# table's metadata 1.25 MB and getCodeSets 309 kB (checked 2026-10-02).
+SEARCH_LIMIT_DEFAULT = 25
+SEARCH_LIMIT_MAX = 500
+MEMBER_LIMIT_DEFAULT = 100
+MEMBER_LIMIT_MAX = 2000
+FOOTNOTE_LIMIT_DEFAULT = 25
+CODE_SET_LIMIT_DEFAULT = 100
 
 # The cube list is about 5 MB. Probed 2026-09-27 from GitHub runners: usually
 # under a second, but one runner took 31-70 s on every try, past the shared
