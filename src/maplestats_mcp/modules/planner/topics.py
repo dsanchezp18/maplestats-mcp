@@ -405,6 +405,12 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("nrcan_nbac_query_fires", "burned area by year (national)"),
             PlanStep("bcgw_get_active_wildfires", "current BC wildfires"),
             PlanStep("cwfis_get_hotspots", "satellite fire hotspots, last 24 hours or archive"),
+            PlanStep(
+                "ab_wildfire_get_fires",
+                "Alberta fires by status, cause and size (provincial status map)",
+            ),
+            PlanStep("ab_wildfire_get_fire_danger", "Alberta fire danger rating at a point"),
+            PlanStep("ab_wildfire_get_fire_restrictions", "Alberta fire bans and restrictions"),
             PlanStep("cwfis_get_weather_stations", "Fire Weather Index by station or point"),
             PlanStep("cwfis_get_situation_report", "national wildfire situation and season totals"),
             PlanStep("earthquakes_search", "earthquakes by area and date"),

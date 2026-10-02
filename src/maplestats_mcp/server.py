@@ -223,7 +223,8 @@ Sources, by tool-name prefix:
   Columbia, Saskatchewan): elections_provincial_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
-  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. National Forestry Database (provincial fires,
+  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. Alberta Wildfire live
+  status (fires, perimeters, fire danger, fire bans): ab_wildfire_. National Forestry Database (provincial fires,
   harvest, planting, pests, timber revenues): nfd_. CanadaBuys federal tenders and contract awards: canadabuys_.
   BC Registrar of Lobbyists (registrations, lobbying activity reports):
   bc_lobbyists_. DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:

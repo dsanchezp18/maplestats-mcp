@@ -264,6 +264,16 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="provincial_agency",
     ),
+    "ab_wildfire": Source(
+        "Alberta Wildfire: live status",
+        "Alberta Wildfire : état des feux en direct",
+        "provincial",
+        "Alberta Wildfire",
+        "Alberta Wildfire",
+        places=("AB",),
+        row="provincial_agency",
+        domain="environment",
+    ),
     "aer": Source(
         "Alberta Energy Regulator",
         "Alberta Energy Regulator",
