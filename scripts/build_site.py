@@ -3043,6 +3043,226 @@ def case_context(lang: Lang, modules: list[ModuleDoc]) -> dict[str, str]:
 
 
 # --------------------------------------------------------------------------
+# The Alberta post (site/demo-alberta.html): one question across four
+# agencies, a year-by-year table joined from the recorded calls in
+# site/_data/cases/alberta.json (scripts/capture_cases.py alberta).
+# --------------------------------------------------------------------------
+
+
+def alberta_years(case: dict[str, Any]) -> list[dict[str, Any]]:
+    """One row per complete year, 2016 on, joined from the four agencies' calls.
+
+    Population is Statistics Canada's July 1 estimate and its growth over the
+    year before; net migration is the Alberta dashboard's four quarters of the
+    same year to July (a year counts only with all four); permanent residents are IRCC's year
+    (complete only with twelve months of cells); vacancy and rent are CMHC's
+    October survey, all unit sizes.
+    """
+    calls = {i: c["response"] for i, c in enumerate(case["calls"])}
+    population = {
+        o["ref_period"][:4]: o["value"]
+        for o in calls[1][0]["observations"]
+        if o["ref_period"][5:7] == "07"
+    }
+    migration: dict[str, dict[str, float]] = {}
+    for row in calls[2]["rows"]:
+        migration.setdefault(row["Type"], {})[row["Date"][:7]] = row["Value"]
+
+    def year_to_july(kind: str, year: str) -> float | None:
+        """Four quarters, July of the year before to June: the population estimate's year."""
+        before = str(int(year) - 1)
+        months = [f"{before}-07", f"{before}-10", f"{year}-01", f"{year}-04"]
+        values = [migration[kind].get(month) for month in months]
+        return None if None in values else sum(values)  # type: ignore[arg-type]
+
+    residents = {r["period"]: r for r in calls[3]["rows"]}
+
+    def october(response: dict[str, Any]) -> dict[str, float]:
+        return {
+            r["period"][:4]: r["values"]["Total"]["value"]
+            for r in response["rows"]
+            if "October" in r["period"]
+        }
+
+    vacancy, rent = october(calls[4]), october(calls[5])
+    rows: list[dict[str, Any]] = []
+    for year in sorted(population):
+        # Growth and rent change look one year back, so the first row is 2016.
+        if str(int(year) - 1) not in population:
+            continue
+        if year_to_july("Total migration", year) is None:
+            continue
+        if year not in vacancy or year not in rent or residents.get(year, {}).get("cells", 0) < 12:
+            continue
+        rows.append(
+            {
+                "year": year,
+                "population": population[year],
+                "growth": population[year] - population[str(int(year) - 1)],
+                "net": year_to_july("Total migration", year),
+                "international": year_to_july("International", year),
+                "interprovincial": year_to_july("Interprovincial", year),
+                "residents": residents[year]["value"],
+                "vacancy": vacancy[year],
+                "rent": rent[year],
+                "rent_change": 100 * (rent[year] / rent[str(int(year) - 1)] - 1),
+            }
+        )
+    return rows
+
+
+ALBERTA_COLUMNS: dict[Lang, tuple[str, ...]] = {
+    "en": (
+        "Year",
+        "Population (July 1)",
+        "Growth",
+        "Net migration",
+        "Permanent residents",
+        "Vacancy rate",
+        "Average rent",
+        "Rent change",
+    ),
+    "fr": (
+        "Année",
+        "Population (1er juillet)",
+        "Croissance",
+        "Migration nette",
+        "Résidents permanents",
+        "Taux d'inoccupation",
+        "Loyer moyen",
+        "Variation du loyer",
+    ),
+}
+ALBERTA_CAPTION: dict[Lang, str] = {
+    "en": (
+        "Alberta by year: people (Statistics Canada and the Alberta Economic Dashboard, "
+        "both for the year to July 1; IRCC, calendar year) and the rental market "
+        "(CMHC, October survey)"
+    ),
+    "fr": (
+        "Alberta par année : population (Statistique Canada et Tableau de bord économique de "
+        "l'Alberta, pour l'année terminée le 1er juillet; IRCC, année civile) et marché "
+        "locatif (SCHL, enquête d'octobre)"
+    ),
+}
+
+
+def alberta_context(lang: Lang) -> dict[str, str]:
+    case = load_case("alberta")
+    rows = alberta_years(case)
+    by_year = {r["year"]: r for r in rows}
+    minus = "−"
+
+    def n(value: float) -> str:
+        return number(value, lang)
+
+    def signed(value: float) -> str:
+        return (minus if value < 0 else "+") + n(abs(value))
+
+    def dollars(value: float) -> str:
+        return f"{n(value)}{NBSP}$" if lang == "fr" else f"${n(value)}"
+
+    def pct(value: float) -> str:
+        return percent(value, lang)
+
+    def signed_pct(value: float) -> str:
+        return (minus if value < 0 else "+") + pct(abs(value))
+
+    num = ' class="num"'
+    heads = "".join(
+        f'<th scope="col"{"" if i == 0 else num}>{esc(c)}</th>'
+        for i, c in enumerate(ALBERTA_COLUMNS[lang])
+    )
+    body = "".join(
+        f'<tr><th scope="row">{r["year"]}</th>'
+        + "".join(
+            f'<td class="num">{cell}</td>'
+            for cell in (
+                n(r["population"]),
+                signed(r["growth"]),
+                signed(r["net"]),
+                n(r["residents"]),
+                pct(r["vacancy"]),
+                dollars(r["rent"]),
+                signed_pct(r["rent_change"]),
+            )
+        )
+        + "</tr>"
+        for r in rows
+    )
+    table = (
+        f'<div class="table-wrap post-wide"><table class="chart-table">'
+        f"<caption>{esc(ALBERTA_CAPTION[lang])}</caption>"
+        f"<thead><tr>{heads}</tr></thead><tbody>{body}</tbody></table></div>"
+    )
+
+    # Where the boom and the squeeze fall, found in the data rather than typed.
+    growth_peak = max(rows, key=lambda r: r["growth"])
+    tight = min((r for r in rows if int(r["year"]) >= 2021), key=lambda r: r["vacancy"])
+    next_year = by_year.get(str(int(tight["year"]) + 1), tight)
+    last, before = rows[-1], by_year["2021"]
+
+    plan = case["calls"][0]["response"]
+    plan_items = "".join(
+        f"<li><strong>{esc(topic['label'])}</strong><ol>"
+        + "".join(
+            f"<li><code>{esc(step['tool'])}</code>: {esc(step['purpose'])}</li>"
+            for step in topic["steps"]
+        )
+        + "</ol></li>"
+        for topic in plan["topics"]
+    )
+    data_calls = case["calls"][1:]
+    sources = "".join(f"<li>{call_source(c['response'], lang)}</li>" for c in data_calls)
+    request_label = "Request" if lang == "en" else "Requête"
+    summary = (
+        "The calls behind this table" if lang == "en" else "Les appels à l'origine de ce tableau"
+    )
+    panels = []
+    for i, call in enumerate(data_calls):
+        request = json.dumps(
+            {"name": call["name"], "arguments": call["arguments"]}, ensure_ascii=False
+        )
+        panels.append(
+            f'<figure class="panel"><figcaption class="panel-bar"><span>{request_label}</span>'
+            f"<code>call_tool</code></figcaption><pre><code>{highlight_json(request)}</code></pre></figure>"
+            f'<figure class="panel">{script_tabs(list(call["scripts"].items()), f"alberta{i}")}</figure>'
+        )
+    how = (
+        f'<details class="how"><summary>{summary}</summary><div class="how-body">'
+        + "".join(panels)
+        + "</div></details>"
+    )
+    return {
+        "alberta_table": table,
+        "alberta_captured": long_date(case["captured"], lang),
+        "alberta_question": esc(case["calls"][0]["arguments"]["question"]),
+        "alberta_plan": en_span(f'<ol class="plan-steps">{plan_items}</ol>', lang),
+        "alberta_sources": f"<ul>{sources}</ul>",
+        "alberta_how": how,
+        "alberta_first": rows[0]["year"],
+        "alberta_last": last["year"],
+        "alberta_growth_peak_year": growth_peak["year"],
+        "alberta_growth_peak": n(growth_peak["growth"]),
+        "alberta_net_peak": n(growth_peak["net"]),
+        "alberta_intl_peak": n(growth_peak["international"]),
+        "alberta_inter_peak": n(growth_peak["interprovincial"]),
+        "alberta_pr_peak": n(growth_peak["residents"]),
+        "alberta_net_before": n(before["net"]),
+        "alberta_tight_year": tight["year"],
+        "alberta_vac_tight": pct(tight["vacancy"]),
+        "alberta_vac_before": pct(before["vacancy"]),
+        "alberta_rent_tight": pct(tight["rent_change"]),
+        "alberta_rent_next": pct(next_year["rent_change"]),
+        "alberta_next_year": next_year["year"],
+        "alberta_vac_last": pct(last["vacancy"]),
+        "alberta_rent_last": pct(last["rent_change"]),
+        "alberta_rent_before": dollars(before["rent"]),
+        "alberta_rent_now": dollars(last["rent"]),
+    }
+
+
+# --------------------------------------------------------------------------
 # The Statistics Canada page (site/statcan.html): a post that walks through
 # recorded calls (site/_data/cases/statcan.json, macro.json and pumf.json),
 # with counts from the registry and variance methods from the PUMF module.
@@ -3874,6 +4094,7 @@ def _write_site(
         target_dir = out if lang == "en" else out / "fr"
         target_dir.mkdir(parents=True, exist_ok=True)
         statcan = statcan_context(modules, lang, root, statcan_searched[lang])
+        alberta = alberta_context(lang)
         for page in pages:
             context = {
                 **shared,
@@ -3881,6 +4102,7 @@ def _write_site(
                 **install_context(lang),
                 **cases[lang],
                 **statcan,
+                **alberta,
                 "lang": lang,
                 "root": root,
                 "page": page.name,
@@ -4020,6 +4242,7 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         f"- [Sources]({page_url('sources.html', 'en')}): which agencies and portals cover where",
         f"- [Statistics Canada]({page_url('statcan.html', 'en')}): tables, census and microdata",
         f"- [Demos]({page_url('cases.html', 'en')}): recorded calls behind real questions",
+        f"- [Alberta demo]({page_url('demo-alberta.html', 'en')}): population and rental market across four agencies",
         f"- [FAQ and licences]({page_url('faq.html', 'en')}): whether queries are saved, and what applies to the data",
         f"- [About]({page_url('about.html', 'en')}): what MapleStats is, who builds it, alternatives",
         f"- [Contributing]({page_url('contributing.html', 'en')}): report a number, suggest a source, add code",

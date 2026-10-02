@@ -15,7 +15,9 @@ from maplestats_mcp.shared.security import (
     with_health_endpoint,
     with_http_security,
     with_icon_routes,
+    with_stats_endpoint,
 )
+from maplestats_mcp.shared.usage import STATS
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 
@@ -40,7 +42,10 @@ def build_asgi_app():
             "/favicon.svg": (svg, "image/svg+xml"),
         },
     )
-    return with_health_endpoint(iconed, version=__version__)
+    healthy = with_health_endpoint(iconed, version=__version__)
+    if not config.get_usage_stats_enabled():
+        return healthy
+    return with_stats_endpoint(healthy, snapshot=STATS.snapshot)
 
 
 app = build_asgi_app()

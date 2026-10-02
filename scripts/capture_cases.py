@@ -193,6 +193,54 @@ CASES: dict[str, list[dict[str, Any]]] = {
             "arguments": {"series_names": ["V39079"], "recent": 3},
         },
     ],
+    # Demos post (site/cases.html, "alberta"): one question, the plan plan_query
+    # gives for it, then the calls that answer it across agencies, each with
+    # its reproduce_code scripts. Did Alberta's population boom tighten its
+    # rental market? StatCan's quarterly population estimate (vector 15,
+    # Alberta), Alberta's Economic Dashboard for net migration by type, IRCC's
+    # permanent residents destined for Alberta (by province and gender, summed
+    # over gender: the CMA table suppresses small cells), and CMHC's October
+    # Rental Market Survey for Alberta.
+    "alberta": [
+        {
+            "name": "plan_query",
+            "arguments": {"question": "Did Alberta's population boom tighten its rental market?"},
+        },
+        {"name": "wds_get_data_from_vectors", "arguments": {"vector_ids": [15], "latest_n": 48}},
+        {
+            "name": "ab_economic_get_data",
+            "arguments": {
+                "table": "NetMigration_17100040_17100020",
+                "filters": {"GeoName": "Alberta"},
+                "start_date": "2015-01-01",
+                "limit": 1000,
+            },
+        },
+        {
+            "name": "ircc_monthly_query",
+            "arguments": {
+                "table_id": "ODP-PR-Gender",
+                "filters": {"province_territory": "Alberta"},
+                "period": "year",
+                "year_from": 2015,
+                "group_by": ["province_territory"],
+            },
+        },
+        *(
+            {
+                "name": "cmhc_get_table_data",
+                "arguments": {
+                    "category_level_1": "Primary Rental Market",
+                    "category_level_2": category,
+                    "column_field": "2",
+                    "row_field": "TIMESERIES",
+                    "geography_type": "Province",
+                    "geography_id": "48",
+                },
+            }
+            for category in ("Vacancy Rate (%)", "Average Rent ($)")
+        ),
+    ],
     # Wealth managers: who puts money into an RRSP. Statistics Canada table
     # 11-10-0044 (built from Canada Revenue Agency tax records): Canada, the
     # last three tax years, for contributors, dollars, the median and the
@@ -320,7 +368,9 @@ async def _record(client: Client, call: dict[str, Any], with_scripts: bool) -> d
 
 
 def _wants_scripts(key: str, n: int, call: dict[str, Any]) -> bool:
-    """A case's first call has scripts."""
+    """A case's first call has scripts; the post's every data call does."""
+    if key == "alberta":
+        return call["name"] != "plan_query"
     return n == 0 and key not in ("counts", "prompts")
 
 

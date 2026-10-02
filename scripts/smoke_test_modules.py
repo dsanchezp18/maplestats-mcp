@@ -55,12 +55,7 @@ DOWN_MODULES = {
 }
 
 # Single tools whose upstream is down while the rest of their module works.
-DOWN_TOOLS = {
-    # www12.statcan.gc.ca answers its 'temporarily offline for updating' page for
-    # the census table indexes of 2006, 2011 and 2016, in a browser too (2026-09-30).
-    "statcan_census_tables_search": "StatCan's census table pages are offline",
-    "statcan_census_tables_get_downloads": "StatCan's census table pages are offline",
-}
+DOWN_TOOLS: dict[str, str] = {}
 
 STEPS: list[Step] = [
     # Alberta Economic Dashboard
@@ -331,20 +326,6 @@ STEPS: list[Step] = [
         },
         _non_empty("cells"),
     ),
-    # Census data tables 2006-2016
-    Step(
-        "statcan",
-        "statcan_census_tables_search",
-        {"query": "income household", "release": "2016"},
-        _non_empty("tables"),
-    ),
-    Step(
-        "statcan",
-        "statcan_census_tables_get_downloads",
-        lambda ctx: {"pid": ctx["statcan_census_tables_search"]["tables"][0]["pid"]},
-        _non_empty("downloads"),
-    ),
-    Step("statcan", "statcan_census_tables_search", {"query": "language", "release": "2006"}),
     # Reproduction code (argument-based and provenance-based)
     Step(
         "reproduce",

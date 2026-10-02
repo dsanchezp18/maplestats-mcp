@@ -29,6 +29,7 @@ from mcp.types import Icon, ToolAnnotations
 from maplestats_mcp import __version__, config
 from maplestats_mcp.shared import search
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
+from maplestats_mcp.shared.usage import STATS, UsageMiddleware
 
 MODULES_ROOT = Path(__file__).parent / "modules"
 _COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
@@ -313,6 +314,8 @@ def build_server() -> FastMCP:
         if module_dir.is_dir() and not module_dir.name.startswith("_"):
             mcp.add_provider(ModuleProvider(root=module_dir))
     mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
+    if config.get_usage_stats_enabled():
+        mcp.add_middleware(UsageMiddleware(STATS))
     mcp.add_transform(
         AnnotatedBM25SearchTransform(
             max_results=5,

@@ -1,0 +1,40 @@
+name: uptime
+
+# keepalive.yml only checks that /health answers, which stays true when the MCP
+# endpoint itself is broken. This runs what a client does (initialize, list the
+# tools, search them) and fails when any step does, so GitHub emails the repo
+# owner about the failed run. It sends no real question: the search phrase is
+# fixed and the server counts it by tool name only.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+jobs:
+  mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL: https://maplestats-mcp.onrender.com
+    steps:
+      - name: Handshake, tool list and a search
+        run: |
+          set -euo pipefail
+          # A cold start of the free host takes up to a minute; retry once before failing.
+          call() {
+            curl --fail --silent --show-error --max-time 120 --retry 1 --retry-all-errors \
+              -H 'Content-Type: application/json' \
+              -H 'Accept: application/json, text/event-stream' "$@"
+          }
+          call -D headers.txt -o init.txt "$URL/mcp" -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"uptime-check","version":"1"}}}'
+          grep -q '"name":"maplestats-mcp"' init.txt
+          session=$(grep -i '^mcp-session-id:' headers.txt | tr -d '\r' | cut -d' ' -f2)
+          call -H "mcp-session-id: $session" "$URL/mcp" -d '{"jsonrpc":"2.0","method":"notifications/initialized"}' > /dev/null
+          call -H "mcp-session-id: $session" -o tools.txt "$URL/mcp" -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+          grep -q 'search_tools' tools.txt
+          call -H "mcp-session-id: $session" -o search.txt "$URL/mcp" -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_tools","arguments":{"query":"bank of canada policy rate"}}}'
+          grep -q 'boc_' search.txt
+      - name: Usage so far (tool names only)
+        # Fails until a deploy that has /stats is live; not worth an alert on its own.
+        continue-on-error: true
+        run: curl --fail --silent --show-error --max-time 60 "$URL/stats"

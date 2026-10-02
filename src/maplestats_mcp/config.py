@@ -35,6 +35,12 @@ def get_auth_token() -> str | None:
     return raw or None
 
 
+def get_usage_stats_enabled() -> bool:
+    """Whether tool calls are counted (names and outcomes only) and /stats is served."""
+    raw = os.environ.get("MAPLE_USAGE_STATS", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def get_require_auth() -> bool:
     raw = os.environ.get("MAPLE_REQUIRE_AUTH", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}

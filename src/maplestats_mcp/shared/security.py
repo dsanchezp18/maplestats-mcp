@@ -210,6 +210,36 @@ def with_health_endpoint(inner_app: ASGIApp, *, version: str) -> ASGIApp:
     return app
 
 
+def with_stats_endpoint(inner_app: ASGIApp, *, snapshot: Callable[[], dict]) -> ASGIApp:
+    """Add a public /stats route with the aggregate usage counts, bypassing security.
+
+    The counts are tool names and outcomes only (shared/usage.py); nothing a
+    caller typed is in them, so the route needs no token.
+    """
+
+    async def app(scope: dict, receive: Callable, send: Callable) -> None:
+        if (
+            scope.get("type") == "http"
+            and scope.get("path") == "/stats"
+            and scope.get("method") in ("GET", "HEAD")
+        ):
+            body = json.dumps(snapshot()).encode("utf-8")
+            headers = [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode("utf-8")),
+                (b"cache-control", b"no-store"),
+            ]
+            await send({"type": "http.response.start", "status": 200, "headers": headers})
+            await send(
+                {"type": "http.response.body", "body": b"" if scope["method"] == "HEAD" else body}
+            )
+            return
+
+        await inner_app(scope, receive, send)
+
+    return app
+
+
 def with_icon_routes(inner_app: ASGIApp, *, icons: dict[str, tuple[bytes, str]]) -> ASGIApp:
     """Serve static icon files by path, bypassing security.
 

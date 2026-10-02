@@ -7,7 +7,7 @@ any narrower or broader source list implied elsewhere.
 **State at 2026-09-30:** 241 tools in 51 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
 `Not built`). Local coverage is 69 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
-Opendatasoft. What is left is launch work (hosted endpoint, blog post, clients, outreach)
+Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
 and the candidates listed at the end of this file.
 
 Per-source findings (what was checked live, quirks, limits) live in
@@ -271,7 +271,7 @@ CKAN/portal coverage — each needs its own adaptor design.
 | DFO (Fisheries and Oceans Canada) tides and water levels | Shipped | Shipped 2026-09-23: `modules/dfo_iwls/` (3 tools) on the IWLS API (api-iwls.dfo-mpo.gc.ca): station search over ~1,575 stations, station detail with datum offsets, and `wlp-hilo`/`wlp`/`wlo` series. [Details](findings/specialized-federal-sources.md#dfo-fisheries-and-oceans-canada-tides-and-water-levels) |
 | Alberta Economic Dashboard | Shipped | Shipped 2026-09-23, reworked the same day around the dashboard's published API: `modules/ab_economic/` (5 tools). [Details](findings/specialized-federal-sources.md#alberta-economic-dashboard) |
 | StatCan public use microdata files (PUMFs) | Shipped | Shipped 2026-09-24: `statcan_pumf_` (5 tools): search, ZIP listings, codebooks read by HTTP range request (LFS CSV, Stata, SPSS, SAS formats; EN/FR) and `statcan_pumf_tabulate` (weighted totals … [Details](findings/specialized-federal-sources.md#statcan-public-use-microdata-files-pumfs) |
-| Census data tables 2006-2016 (Beyond 20/20) | Shipped | Checked 2026-09-25: StatCan has retired the 2011 Census tabulations (index and downloads redirect to its page-not-found notice; 2011 NHS, 2006 and 2016 still work), so the tools point to the Borealis … [Details](findings/specialized-federal-sources.md#census-data-tables-2006-2016-beyond-2020) **2026-09-30:** StatCan has taken the 2006, 2011 and 2016 census table indexes and the 2016 Census Profile service (`/rest/census-recensement`) offline (its 'temporarily offline for updating' page, in a browser too); the live smoke checks for them are skipped until they return (`DOWN_TOOLS` in `scripts/smoke_test_modules.py`, `SERVICE_DOWN` in `scripts/smoke_test_statcan_census_profile_2016.py`). |
+| Census data tables 2006-2016 (Beyond 20/20) | Shipped | Checked 2026-09-25: StatCan has retired the 2011 Census tabulations (index and downloads redirect to its page-not-found notice; 2011 NHS, 2006 and 2016 still work), so the tools point to the Borealis … [Details](findings/specialized-federal-sources.md#census-data-tables-2006-2016-beyond-2020) **2026-09-30, re-checked 2026-10-01:** StatCan has taken the 2006, 2011 and 2016 census table indexes and the 2016 Census Profile service (`/rest/census-recensement`) offline (its 'temporarily offline for updating' page, in a browser too). The tools stay; their live smoke checks were deleted on 2026-10-01 rather than kept as skips, so re-add them if StatCan restores the services. |
 | Cross-source planning and reproducible code | Shipped | Shipped 2026-09-24: `plan_query` (always visible; topic and place routing across agencies) and `reproduce_code` (R, Python, Stata and Julia scripts that fetch and clean the same data; cansim and … [Details](findings/specialized-federal-sources.md#cross-source-planning-and-reproducible-code) |
 | PMPRB (Patented Medicine Prices Review Board) | Shipped | Shipped 2026-09-27: `modules/pmprb/` (3 tools) reads the HTML tables of the 2018-2024 annual reports on canada.ca, each chart's data table included (Patented Medicines Price Index against CPI since 2005, foreign-to-Canadian price ratios, sales since 1990, R&D-to-sales by company and province), EN/FR with numbers parsed, and the 2020 and 2021 patented medicines lists (about 1,200 DINs a year with price review status). Still no data files; NPDUIS studies are not covered. [Details](findings/specialized-federal-sources.md#pmprb-patented-medicine-prices-review-board) |
 | Competition Bureau Canada | Shipped | Shipped 2026-09-25: `modules/competition_bureau/` (`competition_bureau_search_mergers`) over both merger-review reports (2,554 reviews). [Details](findings/specialized-federal-sources.md#competition-bureau-canada) |
@@ -312,14 +312,34 @@ From the Notion canonical page; the hosted endpoint, blog post, per-language cli
 
 | Item | Status | Notes |
 |---|---|---|
-| Hosted MCP endpoint | Not started | Launch gate: a stable hosted server (Azure Container Apps recipe discussed 2026-09-24: one replica, Azure Files volume for the PUMF cache, bearer token). |
+| Hosted MCP endpoint | Started (beta) | Live on Render's free tier at `https://maplestats-mcp.onrender.com/mcp` (`render.yaml`, Docker, `/health`; checked 2026-10-01: HTTP 200, 35 s on a cold start). No token; 60 requests a minute per client; `statcan_pumf_tabulate` off. `keepalive.yml` pings it every 10 minutes, which reduces but does not remove the free tier's idle sleep. Launch gate: decide whether this instance is the launch endpoint or moves to an always-on host (Azure Container Apps recipe discussed 2026-09-24: one replica, Azure Files volume for the PUMF cache). |
+| ChatGPT app (OpenAI app directory) | Not started | Separate from ChatGPT developer mode. Developer mode (documented in the README) lets a user add the hosted URL as their own custom connector; it works today and is not a listing. Publishing a ChatGPT app means a submission to OpenAI's app directory (checked 2026-10-01): a verified OpenAI organization, HTTPS product, support, privacy and terms pages, five positive and three negative test cases, a video walkthrough and release notes. It assumes an always-on endpoint. |
+| Uptime and usage monitoring | Built, not yet deployed | `uptime.yml` (hourly) runs a real MCP handshake, tool list and search against the hosted URL and fails, so GitHub emails the owner, when any step does; `keepalive.yml` still pings `/health`. `shared/usage.py` counts calls by tool name, day and outcome in memory, public at `/stats` (`MAPLE_USAGE_STATS`, on by default); it never stores arguments or client addresses, and a restart resets it, so it is a recent-activity view, not a history. The FAQ was updated to say so. |
 | Public website | Shipped | Live at dsanchezp18.github.io/maplestats-mcp (checked 2026-09-28, HTTP 200): home, sources, tools, connect, StatCan page, about, contributing; English and French. The demos page was removed 2026-09-29. |
 | Launch blog post "One MCP to Rule Them All" | Not started | Narrative drafted on the Notion page. |
 | Cross-source demos | Removed | Shipped 2026-09-27 as a site page (Alberta's population boom and rental market; what the rate hikes did to new housing), then archived and removed 2026-09-29. `plan_query` and the recorded cases on the demos page cover the same ground. |
-| MCP registries | Shipped (official, Glama, Smithery) | `io.github.dsanchezp18/maplestats-mcp` 0.1.1 is the latest version on the official MCP Registry (checked live 2026-09-28; 0.1.0 is superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Glama and Smithery listing pages resolve (badges in the README). Checked in a browser 2026-09-28: not listed on PulseMCP (new submissions are paused by them) or mcp.so (no listing found; submission form exists). Since then badges were added for Mcprush, LobeHub, piwheels, M8ven and MCPLookup (README and site), and every tool got a human-readable title, which Claude's connector directory requires (2026-09-30). |
+| MCP registries | Shipped (official, Glama, Smithery) | `io.github.dsanchezp18/maplestats-mcp` 0.1.1 is the latest version on the official MCP Registry (checked live 2026-09-28; 0.1.0 is superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Glama and Smithery listing pages resolve (badges in the README). Since then badges were added for Mcprush, LobeHub, piwheels, M8ven and MCPLookup (README and site), and every tool got a human-readable title, which Claude's connector directory requires (2026-09-30). See Directories below. |
 | PyPI package | Shipped | `maplestats-mcp` 0.1.1 is on PyPI (0.1.0 also available). Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). |
 | Per-language clients | Not started | Lightweight R, Python and Julia clients over the hosted core; `reproduce_code` already generates per-language scripts. |
 | Ecosystem outreach | Not started | cansim maintainers, MountainMath (CMHC, canivt), OSI Data Analyst Network, Edmonton Data Society, Vancouver group, NRCan (Torben), SFU Economics. |
+
+## Directories
+
+Where MapleStats is listed or could be (checked 2026-10-01 unless stated).
+
+| Directory | Status | Notes |
+|---|---|---|
+| Official MCP Registry | Listed | `io.github.dsanchezp18/maplestats-mcp`, published by `release.yml` after PyPI. |
+| PyPI | Listed | `maplestats-mcp`; piwheels builds Raspberry Pi wheels. |
+| Glama, Smithery, Mcprush, LobeHub, M8ven, MCPLookup | Listed | Badges in the README and site. |
+| mcp.so | Not listed | Submit at mcp.so/submit?type=server (posts under the owner's name). |
+| PulseMCP | Not listed | New submissions are paused by PulseMCP; revisit at pulsemcp.com/submit when it reopens. |
+| awesome-mcp-servers (punkpeye) | Not submitted | Pull request on GitHub. |
+| mcpservers.org | Not submitted | Curated list; has a submit form. |
+| mcplist.ai | Not submitted | Submit at mcplist.ai/submit. |
+| Cursor MCP directory | Not submitted | Listed through Cursor's own submission. |
+| Claude connectors directory | Not submitted | Needs a human-readable title on every tool (done 2026-09-30); check Anthropic's current requirements. |
+| ChatGPT app directory | Not started | See the Launch table; not the same as developer mode. |
 
 ## Open candidates
 

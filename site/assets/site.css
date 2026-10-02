@@ -4781,3 +4781,16 @@ details.how > summary,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* The demos page's pointer to the longer Alberta post. */
+.post-teaser {
+  margin-block: 56px;
+}
+
+.post-teaser h2 {
+  margin-block: 0.25em 0.4em;
+}
+
+.post-teaser p:last-child {
+  max-width: 60ch;
+}
