@@ -1730,11 +1730,13 @@ by financial institutions and that additional fees may apply.
 
 ## CAPP Statistics Handbook (Canadian Association of Petroleum Producers)
 
-**Status:** Investigated, deferred.
+**Status:** Not built.
 
 Checked 2026-09-25: 76 Excel tables (reserves, production by field, value of
 producer sales from 1947, expenditures, demand), updated each December;
-industry copyright, use allowed with attribution. See
+industry copyright, use allowed with attribution. Re-checked 2026-10-02: the
+site Terms of Use prohibit robots, spiders and other automatic retrieval, so
+it is not built without written permission from CAPP. See
 `docs/findings/capp-statistics-handbook.md`.
 
 ## Office of the Commissioner of Lobbying (Registry of Lobbyists)
