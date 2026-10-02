@@ -1,4 +1,4 @@
-"""MCP tools for static GTFS transit schedules (TTC, STM, OC Transpo, Calgary)."""
+"""MCP tools for static GTFS transit schedules (TTC, STM, OC Transpo, Calgary, VIA Rail, GO/UP Express, BC Transit)."""
 
 from __future__ import annotations
 
@@ -24,19 +24,22 @@ Lang = Literal["en", "fr"]
 async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     """The transit agencies whose published static GTFS schedule this
     server reads (TTC Toronto, STM Montreal buses, OC Transpo Ottawa,
-    Calgary Transit), with each feed's URL, licence, required attribution
+    Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, VIA Rail, GO Transit, UP Express and twelve BC Transit
+    systems such as Victoria, Kelowna and Kamloops), with each feed's URL, licence, required attribution
     line, update cadence and a live check that the zip answers.
 
     The key of each agency is what the other transit_ tools take as
     `agency`. TransLink (Vancouver) is not offered: its terms require
-    users to identify themselves to TransLink first.
+    users to identify themselves to TransLink first. BC Transit zips are built
+    on request by BC Transit and downloaded whole, so a first call to one of
+    its systems takes 5 to 30 seconds.
     Use for: which transit schedules are available, licence and credit
     line for a transit feed, is the agency's GTFS zip reachable.
     Keywords: transit, GTFS, static schedule, TTC, STM, OC Transpo,
-    Calgary Transit, agencies, licence, attribution, bus, timetable
+    Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, agencies, licence, attribution, bus, timetable
     data.
     Mots-clés : transport en commun, GTFS, horaire statique, TTC, STM,
-    OC Transpo, Calgary Transit, organismes, licence, attribution,
+    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, organismes, licence, attribution,
     autobus, données d'horaires.
     """
     return await client.list_agencies(lang=lang)
@@ -53,11 +56,11 @@ async def transit_get_feed_info(agency: AgencyKey, lang: Lang = "en") -> FeedInf
     Use for: how current is a transit schedule, how many routes and stops
     an agency has, what a GTFS feed contains.
     Keywords: transit, GTFS, feed info, schedule validity, feed version,
-    routes count, stops count, TTC, STM, OC Transpo, Calgary Transit,
+    routes count, stops count, TTC, STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit,
     static schedule.
     Mots-clés : transport en commun, GTFS, métadonnées du flux, validité
     de l'horaire, version du flux, nombre de lignes, nombre d'arrêts,
-    TTC, STM, OC Transpo, Calgary Transit, horaire statique.
+    TTC, STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, horaire statique.
     """
     return await client.get_feed_info(agency, lang=lang)
 
@@ -81,10 +84,10 @@ async def transit_search_routes(
     Use for: find a bus route number or name, list the LRT or subway
     lines, get the route_id for transit_get_route_summary.
     Keywords: transit, route, bus route, line number, LRT, subway,
-    streetcar, GTFS routes, TTC, STM, OC Transpo, Calgary Transit.
+    streetcar, GTFS routes, TTC, STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit.
     Mots-clés : transport en commun, ligne, ligne d'autobus, numéro de
     ligne, train léger, métro, tramway, lignes GTFS, TTC, STM, OC
-    Transpo, Calgary Transit.
+    Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit.
     """
     return await client.search_routes(agency, query, route_type=route_type, limit=limit, lang=lang)
 
@@ -111,10 +114,10 @@ async def transit_search_stops(
     accessible stops, the stop number for a departures lookup.
     Keywords: transit, stop, bus stop, station, stops near me, nearest
     stop, coordinates, wheelchair accessible, GTFS stops, TTC, STM, OC
-    Transpo, Calgary Transit.
+    Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit.
     Mots-clés : transport en commun, arrêt, arrêt d'autobus, station,
     arrêts à proximité, arrêt le plus proche, coordonnées, accessible en
-    fauteuil roulant, arrêts GTFS, TTC, STM, OC Transpo, Calgary Transit.
+    fauteuil roulant, arrêts GTFS, TTC, STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit.
     """
     return await client.search_stops(
         agency,
@@ -152,10 +155,10 @@ async def transit_get_stop_departures(
     date, how often a stop is served, first and last service.
     Keywords: transit, schedule, timetable, departures, next bus, stop
     times, GTFS stop_times, service date, TTC, STM, OC Transpo, Calgary
-    Transit, scheduled arrival.
+    Transit, VIA Rail, GO Transit, UP Express, BC Transit, scheduled arrival.
     Mots-clés : transport en commun, horaire, passages prévus, prochain
     autobus, heures de passage, stop_times GTFS, date de service, TTC,
-    STM, OC Transpo, Calgary Transit, heure d'arrivée prévue.
+    STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, heure d'arrivée prévue.
     """
     return await client.get_stop_departures(
         agency,
@@ -189,9 +192,9 @@ async def transit_get_route_summary(
     trips a route runs per day, how many stops a line has.
     Keywords: transit, route summary, frequency, headway, service hours,
     trips per day, stops served, GTFS, TTC, STM, OC Transpo, Calgary
-    Transit, bus frequency.
+    Transit, VIA Rail, GO Transit, UP Express, BC Transit, bus frequency.
     Mots-clés : transport en commun, résumé de ligne, fréquence,
     intervalle entre passages, heures de service, voyages par jour,
-    arrêts desservis, GTFS, TTC, STM, OC Transpo, Calgary Transit.
+    arrêts desservis, GTFS, TTC, STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit.
     """
     return await client.get_route_summary(agency, route, service_date=service_date, lang=lang)

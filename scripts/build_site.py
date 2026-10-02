@@ -461,7 +461,7 @@ SOURCES: dict[str, Source] = {
         "municipal",
         "Transit schedules",
         "Horaires de transport",
-        places=("ON", "QC", "AB"),
+        places=("ON", "QC", "AB", "BC"),
         row="municipal_feed",
     ),
     "fcac": Source(

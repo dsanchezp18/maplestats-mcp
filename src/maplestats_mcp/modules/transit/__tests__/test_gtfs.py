@@ -84,3 +84,11 @@ def test_filter_stop_times_by_trip_and_argument_guard():
     assert [r.stop_id for r in rows] == ["1"]
     with pytest.raises(ValueError, match="exactly one"):
         gtfs.filter_stop_times(lines, indexes)
+
+
+def test_windows_1252_feed_is_decoded_not_replaced():
+    # VIA Rail's routes.txt arrives as cp1252: 'Montr' + 0xE9 + 'al'.
+    data = "route_id,route_long_name\nR1,Montr\u00e9al - Toronto\n".encode("cp1252")
+    assert gtfs.parse_table(data)[0]["route_long_name"] == "Montr\u00e9al - Toronto"
+    utf8 = "route_id,route_long_name\nR1,Montr\u00e9al\n".encode("utf-8-sig")
+    assert gtfs.parse_table(utf8)[0]["route_long_name"] == "Montr\u00e9al"

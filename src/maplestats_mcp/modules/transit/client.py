@@ -39,7 +39,14 @@ from maplestats_mcp.modules.transit.schemas import (
     StopRecord,
     StopSearch,
 )
-from maplestats_mcp.modules.transit.zipstream import head, stream_member_lines, total_bytes
+from maplestats_mcp.modules.transit.zipstream import (
+    download_whole,
+    head,
+    members_of,
+    read_blob_member,
+    stream_member_lines,
+    total_bytes,
+)
 from maplestats_mcp.shared.cache import cached_fetch, forget
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -55,6 +62,8 @@ class FeedDirectory:
     total_bytes: int
     last_modified: datetime | None
     members: dict[str, ZipMember]
+    # The whole zip, held only for hosts that cannot serve byte ranges.
+    blob: bytes | None = None
 
 
 class TripRecord(NamedTuple):
@@ -106,6 +115,16 @@ async def _directory(key: str) -> tuple[FeedDirectory, bool]:
     agency = _agency(key)
 
     async def fetch() -> FeedDirectory:
+        if not agency.range_requests:
+            blob, whole = await download_whole(agency.feed_url)
+            blob_members = members_of(blob, agency.feed_url)
+            return FeedDirectory(
+                str(whole.url),
+                len(blob),
+                _last_modified(whole.headers.get("last-modified")),
+                {m.name.rsplit("/", 1)[-1].lower(): m for m in blob_members},
+                blob,
+            )
         response = await head(agency.feed_url)
         final_url = str(response.url)
         members, total = await list_members(final_url)
@@ -138,6 +157,14 @@ def _member(directory: FeedDirectory, key: str, name: str) -> ZipMember | None:
     return directory.members.get(name)
 
 
+async def _read_table_bytes(directory: FeedDirectory, member: ZipMember) -> bytes:
+    if directory.blob is not None:
+        return await asyncio.to_thread(
+            read_blob_member, directory.blob, member, max_bytes=constants.TABLE_MAX_BYTES
+        )
+    return await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
+
+
 async def _table(
     key: str, name: str, *, required: bool = True
 ) -> tuple[list[dict[str, str]], bool]:
@@ -151,7 +178,7 @@ async def _table(
                 if required:
                     raise UpstreamError(f"{key}: the feed has no {name}.")
                 return []
-            data = await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
+            data = await _read_table_bytes(directory, member)
             return await asyncio.to_thread(gtfs.parse_table, data)
 
         return await _with_fresh_directory(key, once)
@@ -175,7 +202,7 @@ async def _scan_stop_times(
         rows: list[gtfs.StopTimeRow] = []
         indexes: dict[str, int] | None = None
         async with _SCANS:
-            async for batch in stream_member_lines(directory.url, member):
+            async for batch in stream_member_lines(directory.url, member, blob=directory.blob):
                 if indexes is None:
                     indexes = gtfs.column_indexes(batch[0])
                     batch = batch[1:]
@@ -204,7 +231,7 @@ async def _trips(
         member = _member(directory, key, "trips.txt")
         if member is None:
             raise UpstreamError(f"{key}: the feed has no trips.txt.")
-        data = await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
+        data = await _read_table_bytes(directory, member)
         rows = await asyncio.to_thread(gtfs.parse_table, data)
         return [
             TripRecord(
@@ -300,6 +327,12 @@ def _agency_feed(
 
 
 async def _probe(agency: Agency, lang: str) -> tuple[AgencyFeed, bool]:
+    if not agency.range_requests:
+        # BC Transit's host builds the whole zip (5 to 25 s) before it sends
+        # any header, so listing the agencies does not poke twelve of them;
+        # reachability stays unknown until a tool has downloaded the feed.
+        return _agency_feed(agency, lang), False
+
     async def fetch() -> tuple[bool, int | None, datetime | None]:
         try:
             response = await head(agency.feed_url)
@@ -320,7 +353,8 @@ async def _probe(agency: Agency, lang: str) -> tuple[AgencyFeed, bool]:
 
 
 async def list_agencies(*, lang: str = "en") -> AgencyList:
-    """Every configured agency, with a live HEAD check of its zip."""
+    """Every configured agency, with a live HEAD check of its zip (not for hosts
+    that build the zip on request: their `reachable` stays null)."""
     probed = await asyncio.gather(*(_probe(a, lang) for a in constants.AGENCIES.values()))
     return AgencyList(
         total_matches=len(probed),
@@ -348,7 +382,18 @@ async def get_feed_info(agency_key: str, *, lang: str = "en") -> FeedInfo:
     routes, _ = await _table(agency_key, "routes.txt")
     stops, _ = await _table(agency_key, "stops.txt")
     info = feed_info[0] if feed_info else {}
-    feed, _ = await _probe(agency, lang)
+    if directory.blob is None:
+        feed, _ = await _probe(agency, lang)
+    else:
+        # The zip was just downloaded whole; a second request would make the
+        # host build it again, so its size and date come from that download.
+        feed = _agency_feed(
+            agency,
+            lang,
+            reachable=True,
+            zip_bytes=directory.total_bytes,
+            modified=directory.last_modified,
+        )
     return FeedInfo(
         agency=feed,
         publisher_name=info.get("feed_publisher_name") or None,

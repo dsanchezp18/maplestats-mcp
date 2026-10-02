@@ -5,6 +5,16 @@ no key: an agency is one entry in `constants.AGENCIES`, not a new
 module (the same rule as the ArcGIS Hub, Socrata and CKAN families).
 Edmonton's real-time feeds stay in `ets_*`.
 
+Added 2026-10-02: VIA Rail (Open Government Licence - Canada), GO Transit and
+UP Express (Open Government Licence - Ontario - Metrolinx) and twelve BC
+Transit systems (BC Transit's open-data terms: limited, revocable,
+non-exclusive licence to use, reproduce and redistribute, with attribution).
+BC Transit's host builds each zip on request and answers neither HEAD nor
+Range, so those agencies set `range_requests=False` and are read from a whole
+download held in memory; its robots.txt disallows crawling, which this
+on-demand single-file download from the link BC Transit publishes for
+developers is not (see docs/findings/municipal-sources.md).
+
 Terms checked live 2026-10-01: TTC (Open Government Licence - Toronto),
 STM (CC BY 4.0), OC Transpo (City of Ottawa open data terms) and Calgary
 Transit (Open Government Licence - City of Calgary) permit reuse and
@@ -14,7 +24,7 @@ impose conditions, which a public server cannot satisfy (docs/ROADMAP.md).
 
 Confirmed live 2026-10-01 (see docs/ROADMAP.md for the full table):
 
-1. Every included zip answers `Accept-Ranges: bytes` and HTTP 206, so
+1. Every included zip except BC Transit's answers HTTP 206, so
    the central directory and any one file can be read without
    downloading the archive. `stop_times.txt` is the exception in size
    (tens of MB compressed) and is the only
@@ -32,16 +42,20 @@ Confirmed live 2026-10-01 (see docs/ROADMAP.md for the full table):
 MODULE_NAME = "transit"
 MODULE_DESCRIPTION = (
     "Static GTFS schedules of open Canadian transit agencies (TTC, STM bus, OC "
-    "Transpo, Calgary Transit): list agencies and feeds, search "
-    "routes and stops, a stop's scheduled departures on a date, and a route's trips "
-    "and frequency by hour. Read on demand from the agency's own zip by HTTP range; "
-    "nothing is stored."
+    "Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit "
+    "systems): list agencies and feeds, search routes and stops, a stop's scheduled "
+    "departures on a date, and a route's trips and frequency by hour. Read on demand "
+    "from the agency's own zip by HTTP range (BC Transit's host cannot serve ranges, "
+    "so its zips are downloaded whole and held in memory for ten minutes); nothing is "
+    "written to disk."
 )
 MODULE_DESCRIPTION_FR = (
     "Horaires GTFS statiques d'organismes de transport en commun canadiens à données "
-    "ouvertes (TTC, STM autobus, OC Transpo, Calgary Transit) : "
+    "ouvertes (TTC, STM autobus, OC Transpo, Calgary Transit, VIA Rail, GO Transit, "
+    "UP Express et 12 réseaux de BC Transit) : "
     "liste des organismes et des flux, recherche de lignes et d'arrêts, passages "
     "prévus à un arrêt à une date donnée, et nombre de voyages et fréquence horaire "
-    "d'une ligne. Lus à la demande dans le zip de l'organisme, par plages HTTP; rien "
-    "n'est conservé."
+    "d'une ligne. Lus à la demande dans le zip de l'organisme, par plages HTTP (l'hôte "
+    "de BC Transit n'offre pas les plages : ses zips sont téléchargés en entier et "
+    "gardés en mémoire dix minutes); rien n'est écrit sur le disque."
 )

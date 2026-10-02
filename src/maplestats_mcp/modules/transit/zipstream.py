@@ -11,7 +11,9 @@ servers: each answers 206 with exactly the requested bytes.
 
 from __future__ import annotations
 
+import io
 import struct
+import zipfile
 import zlib
 from collections.abc import AsyncIterator
 
@@ -70,6 +72,67 @@ async def head(url: str) -> httpx.Response:
         raise UpstreamUnavailable(f"{url} could not be reached.") from exc
 
 
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
+    reraise=True,
+)
+async def _get_whole(url: str) -> tuple[bytes, httpx.Response]:
+    await _LIMITER.acquire()
+    limit = constants.WHOLE_MAX_BYTES
+    async with _client.stream("GET", url) as response:
+        response.raise_for_status()
+        declared = response.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > limit:
+            raise UpstreamError(f"{url} is {int(declared):,} bytes, over the {limit:,}-byte limit.")
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            body.extend(chunk)
+            if len(body) > limit:
+                raise UpstreamError(f"{url} is over the {limit:,}-byte limit.")
+    return bytes(body), response
+
+
+async def download_whole(url: str) -> tuple[bytes, httpx.Response]:
+    """The whole zip and its response, for hosts that cannot serve byte ranges."""
+    try:
+        return await _get_whole(url)
+    except httpx.HTTPStatusError as exc:
+        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+    except httpx.HTTPError as exc:
+        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+
+
+def members_of(blob: bytes, url: str) -> list[ZipMember]:
+    """Members of an in-memory zip, with the same offsets the range reader uses."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+            return [
+                ZipMember(
+                    i.filename, i.compress_size, i.file_size, i.compress_type, i.header_offset
+                )
+                for i in archive.infolist()
+                if not i.is_dir()
+            ]
+    except zipfile.BadZipFile as exc:
+        raise UpstreamError(f"{url} is not a valid ZIP file.") from exc
+
+
+def read_blob_member(blob: bytes, member: ZipMember, *, max_bytes: int) -> bytes:
+    """One member of an in-memory zip, bounded on its inflated size."""
+    if member.size > max_bytes:
+        raise UpstreamError(
+            f"{member.name} is {member.size:,} bytes inflated, over this reader's "
+            f"{max_bytes:,}-byte limit."
+        )
+    with zipfile.ZipFile(io.BytesIO(blob)) as archive, archive.open(member.name) as handle:
+        data = handle.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise UpstreamError(f"{member.name} inflates past the {max_bytes:,}-byte limit.")
+    return data
+
+
 def total_bytes(response: httpx.Response) -> int | None:
     """Size of the whole file from Content-Range (a ranged reply) or Content-Length."""
     total = response.headers.get("content-range", "").rpartition("/")[2]
@@ -96,15 +159,25 @@ async def fetch_range(url: str, start: int, end: int) -> bytes:
     return response.content
 
 
-async def stream_member_lines(url: str, member: ZipMember) -> AsyncIterator[list[bytes]]:
+async def stream_member_lines(
+    url: str, member: ZipMember, *, blob: bytes | None = None
+) -> AsyncIterator[list[bytes]]:
     """Yield batches of the member's complete lines, line endings removed.
 
     The first line of the first batch is the CSV header. Raises
     UpstreamError when the member is over the configured bounds, uses an
     unsupported compression method, or the archive changed under the
     stored offsets (a replaced feed): callers should drop their cached
-    directory and retry once.
+    directory and retry once. With `blob` (a zip already held in memory,
+    for hosts without range support) the same offsets are sliced from it
+    instead of fetched.
     """
+
+    async def read_range(start: int, stop: int) -> bytes:
+        if blob is None:
+            return await fetch_range(url, start, stop)
+        return blob[start : stop + 1]
+
     if member.compressed_size > constants.SCAN_MAX_COMPRESSED_BYTES:
         raise UpstreamError(
             f"{member.name} is {member.compressed_size:,} bytes compressed, over the "
@@ -112,7 +185,7 @@ async def stream_member_lines(url: str, member: ZipMember) -> AsyncIterator[list
         )
     if member.method not in (0, 8):
         raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
-    header = await fetch_range(url, member.header_offset, member.header_offset + 29)
+    header = await read_range(member.header_offset, member.header_offset + 29)
     if header[:4] != _LOCAL:
         raise UpstreamError(f"{url}: the feed changed while it was being read; retry.")
     name_len, extra_len = struct.unpack("<HH", header[26:30])
@@ -123,7 +196,7 @@ async def stream_member_lines(url: str, member: ZipMember) -> AsyncIterator[list
     produced = 0
     while position < end:
         stop = min(position + constants.SCAN_CHUNK_BYTES, end) - 1
-        raw = await fetch_range(url, position, stop)
+        raw = await read_range(position, stop)
         position = stop + 1
         pieces: list[bytes] = []
         if inflater is None:

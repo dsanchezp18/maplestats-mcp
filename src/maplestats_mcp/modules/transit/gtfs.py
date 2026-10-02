@@ -19,8 +19,16 @@ _TIME = re.compile(r"^\s*(\d{1,3}):([0-5]\d)(?::([0-5]\d))?\s*$")
 
 
 def parse_table(data: bytes) -> list[dict[str, str]]:
-    """Rows of a GTFS CSV as dicts; tolerant of a BOM and stray spaces in headers."""
-    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
+    """Rows of a GTFS CSV as dicts; tolerant of a BOM and stray spaces in headers.
+
+    VIA Rail's feed is Windows-1252, not UTF-8 (an accented e arrives as a
+    lone 0xE9 byte), so a file that is not valid UTF-8 is read as cp1252.
+    """
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = data.decode("cp1252", errors="replace")
+    reader = csv.DictReader(io.StringIO(text))
     reader.fieldnames = [name.strip() for name in reader.fieldnames or []]
     return [{key: (value or "").strip() for key, value in row.items() if key} for row in reader]
 

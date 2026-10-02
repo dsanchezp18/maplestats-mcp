@@ -521,7 +521,8 @@ TOPICS: tuple[Topic, ...] = (
         (
             PlanStep("tc_recalls_search", "Transport Canada vehicle recalls"),
             PlanStep(
-                "transit_search_stops", "TTC, STM, OC Transpo or Calgary Transit stops by name"
+                "transit_search_stops",
+                "TTC, STM, OC Transpo, Calgary, VIA Rail, GO, UP Express or BC Transit stops by name",
             ),
             PlanStep(
                 "transit_get_stop_departures", "scheduled departures at a stop on a given date"
