@@ -441,3 +441,67 @@ in a constituency is skipped.
 party match the legislature: Saskatchewan Party 34 and NDP 27 (2024), 48 and 13
 (2020), 51 and 10 (2016), 49 and 9 (2011). Valid votes: 466,930, 441,736,
 433,030 and 398,486; Saskatchewan Party shares 52.3%, 61.1%, 62.5% and 64.2%.
+
+## British Columbia lobbyists registry (Office of the Registrar of Lobbyists)
+
+**Status:** Shipped 2026-10-02 as `modules/bc_lobbyists/` (5 tools:
+`bc_lobbyists_search_registrations`, `bc_lobbyists_get_registration`,
+`bc_lobbyists_search_activity_reports`, `bc_lobbyists_summarize_activity`,
+`bc_lobbyists_list_codes`).
+
+**Access and licence (checked live 2026-10-02).** `robots.txt` on
+lobbyistsregistrar.bc.ca disallows only `/sitemap/`. The open data page
+(`/the-registry/open-data/`) links two zips and two XLSX data dictionaries, all
+at `/app/secure/orl/lrs/do/mssDtstRprt?file=...` (a plain GET answers 200
+`application/octet-stream`; the session cookie is not needed):
+`ORL_Registration_Data.zip` (28 MB, 16 CSVs, 260 MB unpacked, members dated
+2026-09-20), `ORL_LAR_Data.zip` (5.5 MB, 5 CSVs, 39 MB unpacked),
+`ORL_data_dictionary_registrations.xlsx` and `ORL_data_dictionary_LARs.xlsx`.
+Updated monthly. Licence: Open Data Licence for the Office of the Registrar of
+Lobbyists for British Columbia, version 1.0 (PDF under `/media/1285/`): worldwide,
+royalty-free, perpetual, non-exclusive, commercial use included (terms 2 and 3);
+attribution required, "Contains information licensed under the Open Data Licence
+for the Office of the Registrar of Lobbyists for British Columbia." when the ORL
+names none (term 4); term 6(a) grants no right to Personal Information (FOIPPA
+Schedule 1). Nothing forbids automated access, so it is built; every result
+carries the attribution.
+
+**Personal Information.** FOIPPA's definition excludes "contact information"
+(name, position or title, business address and telephone of a person in a business
+capacity), so lobbyist, designated filer and office-holder names with titles and
+organizations are kept: they are what a lobbying registry is for. Dropped, and
+never read from the zip: street addresses (consultants often file from home:
+`FILER_ADDRESS`, `FIRM_ADDRESS`, `CLIENT_ORG_ADDRESS`), telephone numbers,
+political, sponsorship and recall contribution flags, `Registration_Gifts`
+(named office holders with values), `Registration_PublicOffice` (a lobbyist's
+earlier career), POH and exemption-decision fields, code-of-conduct rows,
+beneficiaries (affiliate and coalition members, with addresses, may be people),
+government funding, and the legacy `Registration_Target_Contacts` (94 MB) and
+`Registration_Target_Agencies` (50 MB) files. A test builds zips holding all of
+these and checks none reaches any result. Reading names and titles as contact information is a
+judgement call; it is stated in the module docstring and
+every result's `omitted` field.
+
+**How the data reads.** UTF-8 with a byte order mark; absent values are the text
+`null` (LAR_SPOH `BRANCH` is sometimes empty instead). Registrations are
+versioned: 26,925 REG_IDs are versions, chained by `PREVIOUS_VERSION_REG_ID`;
+the ones nobody names as a predecessor are the 6,661 current registrations
+(1,265 active, 5,396 ended; a superseded version always has an end date). The
+third number of `REG_NUM` counts versions, and the earliest start in a chain is
+when the registration began. Lobbyists sit in separate consultant and in-house
+files (98,791 in-house rows), topics repeat once per detail id, and ministries
+are a comma-separated id list resolved through `BC_Public_Agencies` (409 entries).
+Activity reports start 2020-05-04: 75,083 `LAR_Primary` rows are 49,586 reports
+(one row per in-house lobbyist), 110,334 office-holder rows; the original of an
+amended report is no longer in the file. `REG_TYPE` holds `Cons` or `Org` although
+the dictionary says 1 and 3. "Member(s) of the BC Legislative Assembly" is a
+ministry-level agency with the member named. The 2020 Act's subject matters (SM-xx,
+56) and intended outcomes (BC-01 to BC-07, plus legacy IO-01 to IO-06) are the same
+in both zips.
+
+**Smoke test** (`scripts/smoke_test_bc_lobbyists.py`, run 2026-10-02, both zips
+about 25 s): 469 active Health registrations (308 in-house, 161 consultant); BC
+Dental Association is registration 9997-443-56; 1,187 activity reports naming the
+Health ministry since 2025-01-01; the Member(s) of the Legislative Assembly (11,771
+reports), Office of the Premier (4,929) and Health (3,838) are the most-named
+agencies; Deputy Minister appears in 13,767 reports.
