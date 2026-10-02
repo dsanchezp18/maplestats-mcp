@@ -299,7 +299,7 @@ Finance is `ab_economic`).
 | Agency | What it publishes | Reachable now | Verdict |
 |---|---|---|---|
 | BC Stats | `bc-stats` on BC CKAN: 99 datasets, CSV and XLSX, about half with DataStore; OGL-BC | Yes, `ckan_*` (`portal="bc"`) | Covered. Gap: XLSX-only tables (LFS, GDP, tourism, population projections) have no DataStore. |
-| Saskatchewan Bureau of Statistics | XLSX and PDF on `publications.saskatchewan.ca` (Provincial Economic Accounts, Labour Force Statistics, Monthly Statistical Review) | No | Marginal: format ids change each issue, no open licence found, LFS repeats StatCan. |
+| Saskatchewan Bureau of Statistics | XLSX and PDF on `publications.saskatchewan.ca` (Provincial Economic Accounts, Labour Force Statistics, Monthly Statistical Review) | No | **Not built (2026-10-01)**: Crown copyright with non-commercial reproduction only, no open licence; see the section below. |
 | Manitoba Bureau of Statistics | Only the Economic Dashboard CSV (`gov.mb.ca/finance/economicdashboard/_asset/api/first_layer.csv`): 22 latest values, mostly StatCan | No | Small; the site's robots.txt disallows ClaudeBot and anthropic-ai. Not built. |
 | Ontario Ministry of Finance | HTML tables on ontario.ca (quarterly demographics); datasets on data.ontario.ca | `ckan_*` (`portal="on"`) | data.ontario.ca answered HTTP 429 (Azure WAF) on four attempts from one IP: re-test the shipped `portal="on"` client. |
 | Nova Scotia Finance | Daily Stats commentary and chart images, no data files; Socrata copies archived in 2020 | Partly | Skip. |
@@ -324,3 +324,32 @@ is 53 MB because a footnote repeats on every row, so `footnotes` is dropped;
 Yukon community names carry suffixes (`Whitehorse - City`).
 
 Ontario re-test: `data.ontario.ca` answered HTTP 429 to every request from the development machine for part of 2026-09-30, including the home page and a plain `package_list`, with both a browser User-Agent and `maplestats-mcp`; the project client failed the same way (`UpstreamUnavailable`). A fetch from outside that network succeeded at the same time, so the block was on the address. It cleared later the same day: the live smoke test for `portal="on"` passed. If it returns, it is the site's WAF, not the client.
+
+### Saskatchewan Bureau of Statistics: not built (2026-10-01)
+
+Re-checked live. The Bureau's page
+`saskatchewan.ca/government/government-data/bureau-of-statistics/economic-reports-and-statistics`
+lists the current Provincial Economic Accounts (2024 edition, PDF, and a
+tables file) as `publications.saskatchewan.ca/api/v1/products/86383/formats/<id>/download`;
+the format ids change each issue. `publications.saskatchewan.ca` is an
+Angular app with a JSON API (`/api/v1/products/86383` answers) and its
+`/robots.txt` is a 404, so a build would be technically possible. The terms
+are the obstacle:
+
+- `saskatchewan.ca/copyright`: "Materials on this website are owned by the
+  Government of Saskatchewan and protected by Crown copyright." Materials
+  "may be reproduced for non-commercial purposes", reproduced accurately and
+  not as an official version; "Reproduction of any materials for commercial
+  purposes requires the advance written permission of the Government of
+  Saskatchewan."
+- `saskatchewan.ca/terms-of-use` (last modified 2025-12-31): do not "access
+  them using a method other than in the manner, and with the interface, we
+  provide"; content is "subject to copyright protection".
+- No open-government licence is named on the Bureau page or the Publications
+  Centre. The Centre's own copyright page is a client-side route with no
+  text in the served bundle.
+
+A publicly hosted server cannot restrict its users to non-commercial use,
+and the terms grant no permission for automated reuse, so nothing was built.
+Revisit only with written permission from the Bureau or a published open
+licence. Labour force and CPI tables on the same page repeat StatCan.
