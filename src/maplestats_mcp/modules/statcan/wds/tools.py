@@ -45,7 +45,8 @@ async def wds_search_cubes(
     keyword or table number, or list every table when `query` is omitted.
 
     Use for: finding a StatCan table's productId when you only know a
-    topic (GDP by industry, CPI) or a number such as "18-10-0004",
+    topic (GDP by industry, CPI, the monthly unemployment rate for Alberta) or a
+    number such as "18-10-0004",
     discovering which StatCan tables cover a subject before requesting
     metadata or data. Every word must
     be in a title, else the best partial matches come back. `limit`
@@ -57,7 +58,7 @@ async def wds_search_cubes(
     list, tables, labour force, monthly unemployment rate, employment,
     GDP by industry, CPI, consumer price index, population estimates
     quarterly, retail trade, wages, trade, interprovincial migration,
-    time series, real-time table.
+    time series, real-time table, Alberta, by province, which table has.
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
     productId, numéro de tableau, découverte, wds, catalogue, parcourir,
     liste, inventaire, population active, taux de chômage mensuel,
