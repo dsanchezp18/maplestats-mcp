@@ -563,9 +563,15 @@ TOPICS: tuple[Topic, ...] = (
         (
             PlanStep("elections_financial_returns_list_elections", "elections with returns"),
             PlanStep("elections_financial_returns_search_candidates", "a candidate's return"),
+            PlanStep("elections_results_get_table", "federal results by riding, 2004 to 2025"),
+            PlanStep(
+                "elections_provincial_get_results",
+                "provincial results by riding: province qc, ab or bc",
+            ),
+            PlanStep("elections_provincial_get_seats", "seats and votes by party, provincial"),
             PlanStep(
                 "ckan_search_datasets",
-                "results by riding: portal='federal', fq='organization:elections'",
+                "poll-by-poll results: portal='federal', fq='organization:elections'",
             ),
         ),
     ),

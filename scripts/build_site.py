@@ -401,6 +401,15 @@ SOURCES: dict[str, Source] = {
         "Élections Canada; Borealis et Harvard Dataverse (historique)",
         domain="government",
     ),
+    "elections_provincial": Source(
+        "Provincial general election results: Quebec, Alberta, British Columbia",
+        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique",
+        "provincial",
+        "Elections Quebec, Elections Alberta, Elections BC",
+        "Élections Québec, Elections Alberta, Elections BC",
+        places=("QC", "AB", "BC"),
+        row="provincial_agency",
+    ),
     "elections_financial_returns": Source(
         "Elections Canada: candidate financial returns",
         "Élections Canada : rapports financiers des candidats",

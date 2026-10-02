@@ -102,6 +102,15 @@ CASES = [
         "candidats élections fédérales 1997 et 2000 par circonscription",
         "elections_results_get_historical_candidates",
     ),
+    (
+        "résultats élection provinciale Québec CAQ circonscription",
+        "elections_provincial_get_results",
+    ),
+    ("sièges par parti élection générale Québec", "elections_provincial_get_seats"),
+    (
+        "élections provinciales disponibles Alberta Colombie-Britannique",
+        "elections_provincial_list_elections",
+    ),
     ("qui représente la circonscription député actuel", "ourcommons_list_members"),
     ("répartition des sièges par parti Chambre des communes", "ourcommons_get_party_standings"),
     ("Conseil des ministres ordre de préséance", "ourcommons_get_ministry"),

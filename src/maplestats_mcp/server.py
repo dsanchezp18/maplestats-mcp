@@ -217,7 +217,9 @@ Sources, by tool-name prefix:
   medicines lists: pmprb_.
 - IRCC: ircc_ (Express Entry draws), ircc_monthly_ (monthly permanent and
   temporary residents, permits, asylum claims). Elections Canada candidate financial
-  returns: elections_financial_returns_. CRA digital economy platform
+  returns: elections_financial_returns_. Federal general election results by riding:
+  elections_results_. Provincial election results (Quebec, Alberta, British
+  Columbia): elections_provincial_. CRA digital economy platform
   operators registry: cra_digital_economy_registry_. Alberta Energy
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
   nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. CanadaBuys federal tenders and contract awards: canadabuys_.

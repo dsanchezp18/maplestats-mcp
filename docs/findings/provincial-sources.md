@@ -353,3 +353,38 @@ A publicly hosted server cannot restrict its users to non-commercial use,
 and the terms grant no permission for automated reuse, so nothing was built.
 Revisit only with written permission from the Bureau or a published open
 licence. Labour force and CPI tables on the same page repeat StatCan.
+
+## Provincial general election results
+
+**Status:** Shipped 2026-10-01 for Quebec, Alberta and British Columbia as
+`modules/elections_provincial/` (3 tools); Ontario not built (terms of use).
+Each source's terms and robots rules were read before any data was requested.
+
+| Province | Source | Terms (wording) | Decision |
+|---|---|---|---|
+| Quebec | `donnees.electionsquebec.qc.ca/production/provincial/resultats/archives/gen<date>/resultats.json`, the files the result pages read (found in `historiqueResultatsGen.js`); 14 general elections, 1973-10-29 to 2022-10-03 | https://www.electionsquebec.qc.ca/notre-institution/conditions-dutilisation/: "Vous pouvez télécharger et reproduire tout élément de notre site Web à des fins non lucratives. Dans ce contexte, aucune autorisation n'est requise et c'est gratuit. Vous devez cependant mentionner la source et notre droit d'auteur (©)." Other uses need written permission. `robots.txt` on www: `Crawl-delay: 10`; the data host answers 403 to `/robots.txt` and `/production/` | Built; paced at one request per 10 seconds, cached a day, attribution on every response. Non-profit use only. |
+| Alberta | `officialresults.elections.ab.ca/orResultsPGE.cfm?EventId=N` (all divisions) and `orWinningCandidates.cfm?EventId=N`; events 12 (2008), 21 (2012), 31 (2015), 60 (2019), 101 (2023) | https://www.elections.ab.ca/terms-conditions/ ("Terms of Use - Non-Commercial or Educational Reproduction"): may be reproduced "without charge or further permission" if the materials are not modified, users exercise due diligence, Elections Alberta is identified as the source, and the reproduction is not represented as an official version. Commercial reproduction of multiple copies is prohibited. No robots.txt (404) | Built; attribution and a "not an official version" statement on every response; non-commercial use only. Per-division pages name every candidate (87 requests per election) and are not read. |
+| British Columbia | BC Data Catalogue dataset `provincial-voting-results` (two CSVs: by voting area 2005-2020, 30 MB, Windows-1252; by voting place from 2022, 1.6 MB, UTF-8) | Elections BC Open Data Licence (https://www.elections.bc.ca/docs/EBC-Open-Data-Licence.pdf): "a worldwide, royalty-free, perpetual, non-exclusive licence to use the Information, including for commercial purposes"; attribution "Contains information licenced under the Elections BC Open Data Licence". `elections.bc.ca/robots.txt` is `User-agent: * Disallow: /`, so only the catalogue's download URLs are used (its robots.txt disallows `/api/` and asks for a 10 second crawl delay) | Built; resource URLs are fixed, not found through the CKAN API. |
+| Ontario | `results.elections.on.ca` Election Explorer (`/api/election-explorer/candidates`, POST, returns every candidate with party, votes and winner flag, 1867 onward) and its CSV download | https://www.elections.on.ca/en/terms-of-use.html: users must not "use software, devices, scripts, robots or any other means or processes (including crawlers, browser plugins and add-ons or any other technology) to scrape the sites or services or otherwise copy data from the sites or services"; content "may not be copied, downloaded, reproduced, republished ... except for personal use, without the prior written consent of Elections Ontario". `robots.txt` on www.elections.on.ca allows everything, but the terms cover "any other websites owned by Elections Ontario" | Not built. data.ontario.ca has no provincial general election dataset (one search hit, municipal election results). |
+
+How the files read:
+
+- Quebec: `circonscriptions[]` with `nbElecteurInscrit`, `nbVoteValide`, `nbVoteRejete`,
+  `tauxParticipation` and `candidats[]` (name, party abbreviation, votes, share), sorted by
+  votes; `statistiques.partisPolitiques[]` gives party names. No winner flag, so the top
+  candidate is the elected one. Files before 2014 lack candidate and party ids.
+- Alberta: unbalanced upper-case HTML (unclosed cells, bare `&`), read with regular
+  expressions. A cell can hold several numbers when independents ran in one division
+  (Fort McMurray-Wood Buffalo 2023: 625 and 331), so each becomes its own row. A party with
+  no candidate cannot be told from zero votes, so zero cells are dropped.
+- British Columbia: one row per candidate and voting opportunity; summing `VOTES_CONSIDERED`
+  for `VOTE_CATEGORY = Valid` by district, candidate and party gives the district totals, and
+  `Rejected` rows give rejected ballots. The by-voting-area file's byte order mark survives a
+  Windows-1252 decode as three characters and has to be removed. By-elections are in both
+  files and are skipped.
+
+Smoke test (`scripts/smoke_test_elections_provincial.py`, run 2026-10-01): winners equal
+seats for all 25 elections (Quebec 110, 122 or 125; Alberta 83 in 2008 and 87 after; BC 79,
+85, 85, 87, 87, 93), party seats add up, and the newest election of each province matches
+known results (Quebec 2022 CAQ 90, PLQ 21, QS 11, PQ 3; Alberta 2023 UCP 49, NDP 38; BC 2024
+NDP 47, Conservative 44, Green 2).
