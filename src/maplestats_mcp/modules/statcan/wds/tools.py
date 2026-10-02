@@ -53,7 +53,7 @@ async def wds_search_cubes(
     (default 25, max 500) and `offset` page the tables; total_count is
     the number matching. `real_time` marks real-time (revision-history)
     tables.
-    Keywords: statcan, statistics canada, table, cube, search, productId,
+    Keywords: statcan, find a StatCan table, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, monthly unemployment rate, employment,
     GDP by industry, CPI, consumer price index, population estimates

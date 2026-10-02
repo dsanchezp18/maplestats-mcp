@@ -195,6 +195,8 @@ Sources, by tool-name prefix:
   (survey directory + IMDB metadata, RDC and RTRA microdata holdings), statcan_geo_ (census geography),
   statcan_sdg_ (Sustainable Development Goals hub), statcan_pumf_ (public
   use microdata files: find, list downloads, read codebooks),
+  statcan_lode_ (open databases: healthcare, sports, buildings, schools,
+  addresses, remoteness, proximity; query by place/type/bbox),
   statcan_census_tables_ (2006-2016 census cross-tabulations: CSV, SDMX,
   Beyond 20/20 IVT), cimt_ (exports and imports by HS commodity,
   partner, US state and province, monthly from 1988).
