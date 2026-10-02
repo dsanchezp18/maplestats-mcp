@@ -47,8 +47,8 @@ async def wds_search_cubes(
     Without `query`: the full list (`lite=False` for the non-lite
     inventory); `limit` optionally truncates it. `lite=False` is only
     valid without `query`.
-    Keywords: statcan, statistics canada, table, cube, search, productId,
-    discover, wds, catalogue, browse, list, inventory, all cubes, full
+    Keywords: statcan, find a StatCan table, statistics canada, table, cube,
+    search, productId, discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, unemployment rate, employment, GDP by
     industry, CPI, population estimates, retail trade, wages, trade,
     interprovincial migration, time series.
