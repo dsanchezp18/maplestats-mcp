@@ -113,6 +113,8 @@ CASES = [
     ("loyer et taux d'inoccupation Yukon Whitehorse", "yukon_stats_query_table"),
     ("fichiers Excel et CSV des données ouvertes de l'Alberta", "ab_opendata_search_datasets"),
     ("lire les lignes d'un fichier Excel Open Alberta", "ab_opendata_read_resource"),
+    ("lire le fichier Excel d'une ressource CKAN sans DataStore", "ckan_read_resource"),
+    ("feuilles et colonnes du fichier d'une ressource CKAN", "ckan_describe_resource"),
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
     ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
     ("résultats historiques par circonscription depuis 1867", "elections_results_get_historical"),

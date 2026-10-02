@@ -14,11 +14,17 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.ckan import client
-from maplestats_mcp.modules.ckan.constants import DATASTORE_ROWS_DEFAULT, SEARCH_ROWS_DEFAULT
+from maplestats_mcp.modules.ckan import client, files
+from maplestats_mcp.modules.ckan.constants import (
+    DATASTORE_ROWS_DEFAULT,
+    FILE_ROWS_DEFAULT,
+    SEARCH_ROWS_DEFAULT,
+)
 from maplestats_mcp.modules.ckan.schemas import (
     CollectionDetail,
     DatastoreSearchResult,
+    FileRows,
+    FileStructure,
     GroupDetail,
     GroupList,
     LicenseList,
@@ -234,7 +240,8 @@ async def ckan_datastore_search(
     Use for: reading actual records from a table on any CKAN portal
     except Yukon and Alberta (neither has DataStore-active resources).
     Only resources with
-    `datastore_active: true` work. `filters` is exact-match per column,
+    `datastore_active: true` work; for a file-only resource use
+    ckan_read_resource. `filters` is exact-match per column,
     e.g. {"Year": "2024"}; `query` is full-text (rejected on federal
     resources over 100,000 rows — use `filters`). `sort` e.g.
     "Year desc"; `fields` a comma-separated column list; `limit` ≤ 1000.
@@ -253,4 +260,98 @@ async def ckan_datastore_search(
         fields=fields,
         limit=limit,
         offset=offset,
+    )
+
+
+@tool
+async def ckan_describe_resource(
+    portal: PortalKey, resource_id: str, sheet: str | None = None, lang: Lang = "en"
+) -> FileStructure:
+    """List the sheets and columns of the Excel or CSV file behind a CKAN resource.
+
+    Use for: looking inside a file-only dataset before reading it, on federal
+    (open.canada.ca), Ontario, BC, Toronto, Québec, Montréal, NWT, Yukon,
+    Regina and Alberta portals. Most of their tabular datasets have no
+    DataStore (`datastore_active` false), so the file is the only route to
+    the numbers: ECCC water quality and wastewater, CRA tax statistics and
+    benefits by FSA, DFO salmon escapement, ESDC temporary foreign workers,
+    ISED insolvency, Finance budget tables, Ontario tourism, education and
+    agriculture workbooks, BC treasury and local-government finance, Toronto
+    open data files, NWT traffic counts. `resource_id` comes from
+    ckan_get_dataset; no URL is accepted, the file link is taken from the
+    portal's own record and only the portal's known data hosts are downloaded.
+    Returns every sheet with declared rows and columns, the guessed header
+    row, other rows that look like headers (`header_row_candidates`), the
+    column names and a short preview, plus the licence (a plain warning when
+    it is not an open licence), organization, landing page, last-modified
+    date and source URL. Reads .xlsx, legacy .xls and CSV/TSV (UTF-8 or
+    Windows-1252, delimiter detected); the real format is sniffed from the
+    bytes because labels are often wrong. Files over 40 MB are refused.
+    Cached 2 hours; the portal's robots.txt crawl delay applies to API calls.
+    Keywords: CKAN, resource file, Excel, xlsx, xls, CSV, sheets, columns, header
+    row, file-only dataset, open.canada.ca, Ontario, BC, Toronto, licence.
+    Mots-clés : CKAN, ressource, fichier Excel, xlsx, xls, CSV, feuilles, colonnes,
+    ligne d'en-tête, jeu de données sans DataStore, ouvert.canada.ca, Ontario,
+    Colombie-Britannique, licence.
+    """
+    return await files.describe_resource(portal, resource_id, sheet, lang)
+
+
+@tool
+async def ckan_read_resource(
+    portal: PortalKey,
+    resource_id: str,
+    sheet: str | None = None,
+    header_row: int | None = None,
+    header_rows: int = 1,
+    filters: dict[str, str] | None = None,
+    contains: str | None = None,
+    columns: list[str] | None = None,
+    limit: int = FILE_ROWS_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> FileRows:
+    """Read rows of the Excel or CSV file behind a CKAN resource, from any CKAN portal.
+
+    Use for: getting the numbers of a file-only dataset (no DataStore) on
+    federal (open.canada.ca), Ontario, BC, Toronto, Québec, Montréal, NWT,
+    Yukon, Regina or Alberta: ECCC water quality and wastewater, tax filer
+    statistics and child benefits by FSA, DFO salmon escapement, ESDC
+    temporary foreign worker data, ISED insolvency statistics, Finance
+    budget tables, Ontario tourism, education and farm finance workbooks, BC
+    treasury-board and municipal finance, Toronto and NWT files. `resource_id`
+    comes from ckan_get_dataset (no URL is accepted). When the DataStore is
+    active the rows come from it (like ckan_datastore_search) and a 404 falls
+    back to the file; otherwise the file is downloaded and read: .xlsx, legacy
+    .xls, CSV/TSV (UTF-8 or Windows-1252, delimiter detected), format sniffed
+    from the bytes. In a multi-sheet workbook name the `sheet`; without it the
+    sheet list and sizes come back with no rows, unless one sheet holds 80% of
+    the cells (a notes sheet beside the table), which is then read (use
+    ckan_describe_resource first). `header_row` (1-based) overrides the guessed
+    header and `header_rows` (1 to 5) joins several rows into the column names.
+    `columns` selects columns, `filters` keeps rows whose column equals the
+    value (case-insensitive), `contains` keeps rows with that text in any cell,
+    `limit` (up to 1000) and `offset` page the result; values are text as
+    published. Every result carries the licence, organization, landing page,
+    last-modified date, source URL and a citation line, with a plain warning
+    when the licence is not open (BC Access Only, Ontario terms of use, no
+    licence stated). Files over 40 MB are refused.
+    Keywords: CKAN, read file, Excel, xlsx, xls, CSV, rows, filter, file-only dataset,
+    water quality, tax statistics, FSA, salmon, insolvency, budget, tourism.
+    Mots-clés : CKAN, lire un fichier, Excel, xlsx, xls, CSV, lignes, filtre, jeu de
+    données sans DataStore, qualité de l'eau, statistiques fiscales, RTA, saumon,
+    insolvabilité, budget, tourisme.
+    """
+    return await files.read_resource(
+        portal,
+        resource_id,
+        sheet=sheet,
+        header_row=header_row,
+        header_rows=header_rows,
+        filters=filters,
+        contains=contains,
+        columns=columns,
+        limit=limit,
+        offset=offset,
+        lang=lang,
     )

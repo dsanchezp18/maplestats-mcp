@@ -15,9 +15,7 @@ import re
 from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
-import httpx
-
-from maplestats_mcp.modules.ab_opendata import constants, tables
+from maplestats_mcp.modules.ab_opendata import constants
 from maplestats_mcp.modules.ab_opendata.schemas import (
     DatasetDetail,
     DatasetEntry,
@@ -29,11 +27,12 @@ from maplestats_mcp.modules.ab_opendata.schemas import (
     ResourceStructure,
     SheetInfo,
 )
+from maplestats_mcp.shared import file_download
+from maplestats_mcp.shared import file_tables as tables
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action, excerpt
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -365,27 +364,27 @@ async def _context(url: str, lang: Lang) -> tuple[DatasetEntry, ResourceEntry]:
     return entry, resource
 
 
+def _allow_host(host: str) -> bool:
+    return host == constants.DOMAIN
+
+
 async def _body(url: str, size_hint: int | None) -> tuple[bytes, bool]:
     if size_hint and size_hint > constants.MAX_FILE_BYTES:
         raise UpstreamError(f"ab_opendata: {url} is larger than this tool reads.")
 
-    async def fetch() -> bytes:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"ab_opendata: no file at {url}.") from exc
-            raise UpstreamError(
-                f"ab_opendata: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"ab_opendata: {url} did not respond in time.") from exc
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"ab_opendata: {url} is larger than this tool reads.")
-        return response.content
+    async def fetch() -> file_download.Downloaded:
+        return await file_download.download(
+            url,
+            allow_host=_allow_host,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="ab_opendata",
+        )
 
-    return await cached_fetch(f"ab_opendata:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+    downloaded, cached = await file_download.cached_download(
+        f"ab_opendata:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch
+    )
+    return downloaded.body, cached
 
 
 def _choose_sheet(sizes: list[tuple[str, int, int]], sheet: str | None) -> str:
@@ -452,8 +451,8 @@ async def describe_resource(
             freshness=_freshness(entry, resource),
             coverage=attribution or entry.licence_note,
             limits=(
-                f"Described the first {constants.MAX_DESCRIBED_SHEETS} of {total} sheets."
-                if total > constants.MAX_DESCRIBED_SHEETS and not only
+                f"Described the first {tables.MAX_DESCRIBED_SHEETS} of {total} sheets."
+                if total > tables.MAX_DESCRIBED_SHEETS and not only
                 else None
             ),
         ),
@@ -506,7 +505,7 @@ async def read_resource(
     more = offset + limit < result.total_rows
     notes = []
     if result.capped:
-        notes.append(f"the file was scanned only up to {constants.MAX_SCAN_ROWS} rows")
+        notes.append(f"the file was scanned only up to {tables.MAX_SCAN_ROWS} rows")
     if more:
         notes.append(
             f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}"

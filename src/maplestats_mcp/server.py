@@ -254,7 +254,8 @@ Sources, by tool-name prefix:
 - CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
   NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
   argument -- ckan_list_portals lists the keys. ckan_datastore_search
-  runs row-level queries on DataStore-active resources.
+  runs row-level queries on DataStore-active resources; ckan_describe_resource
+  and ckan_read_resource read the Excel and CSV files of file-only resources.
 - ArcGIS Hub portals (80 provinces, cities, regions): arcgis_hub_, with a
   `portal` argument -- arcgis_hub_list_portals lists the keys.
 - Socrata portals (Nova Scotia, New Brunswick, Calgary, Edmonton,

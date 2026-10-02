@@ -7,6 +7,7 @@ import sys
 import pytest
 from tenacity import BaseRetrying, wait_none
 
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 
@@ -31,6 +32,12 @@ def cloudflare_challenge() -> dict:
             '<meta http-equiv="refresh" content="360"></head><body></body></html>'
         ),
     }
+
+
+@pytest.fixture(autouse=True)
+def _empty_file_cache() -> None:
+    """Downloaded files are cached by URL; a test must not see another test's bytes."""
+    file_download.clear_cache()
 
 
 @pytest.fixture(autouse=True)

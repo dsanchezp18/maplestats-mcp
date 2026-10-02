@@ -280,6 +280,59 @@ tax), Energy and Minerals (oil sands royalty data, royalty revenue), Municipal A
 Transportation and Economic Corridors (traffic volumes), Service Alberta (births, deaths),
 Health (indicator tables), Advanced Education (enrolment), CSV files (collisions, natural gas price, wildlife carcasses, the 10.4 MB wildfire file) and a legacy .xls (oil sands project data).
 
+## CKAN file reader (ckan_read_resource)
+
+**Status:** Shipped 2026-10-02 (`ckan_describe_resource`, `ckan_read_resource` in `modules/ckan/`).
+
+Most tabular datasets on the CKAN portals have no DataStore rows, only a file: the federal
+portal (about 93% of its tabular datasets), Ontario (43%), BC (about half beyond the
+`bc_stats_` workbooks), Toronto (35%), and leftovers on NWT, Yukon, Regina, Montreal and
+Quebec. The reader takes a portal and a resource id, never a URL: `resource_show` and
+`package_show` give the file link, the licence and the organization; a relative federal link is
+resolved against open.canada.ca. The table code is shared with `ab_opendata`
+(`shared/file_tables.py`), and the streaming download with its host check, redirect re-check and
+byte cap is `shared/file_download.py` (the shared `get_raw` buffers the whole body and does not
+follow redirects, so it cannot enforce a cap).
+
+Data hosts seen live (2026-10-02): federal links go to open.canada.ca and 302 to
+opencanada.blob.core.windows.net, or sit on `*.canada.ca` and `*.gc.ca` (www.canada.ca CRA and
+ECCC files, ised-isde.canada.ca, budget.canada.ca, DFO's api-proxy.edh-cde.dfo-mpo.gc.ca);
+Ontario on data.ontario.ca and files.ontario.ca; BC on catalogue.data.gov.bc.ca (older records
+point to defunct `www.cscd.gov.bc.ca`, which no longer answers); NWT, Yukon and Regina on their
+own hosts; Montreal files (listed on both the montreal and qc portals) 302 from
+donnees.montreal.ca to montreal-prod.storage.googleapis.com. Each portal has an allow-list
+(`Portal.file_hosts`); a record that points elsewhere (airqualityontario.com, GitHub raw files on
+Yukon) is refused with the URL to open by hand. Plain `http://` links to an allowed host are
+fetched over https.
+
+Pacing: robots.txt sets `Crawl-Delay` 20 on open.canada.ca and 10 on Ontario, BC, Alberta,
+Quebec, NWT, Yukon, Montreal and Regina; Toronto's CKAN host sets none. The two API calls of a
+read follow the crawl delay (a bucket of two, refilled at one per delay), downloads go at one
+per second per portal, and Alberta shares the `ab-opendata` bucket (10 seconds). A first read on
+the federal portal therefore takes about 20 to 40 seconds. Toronto's CKAN robots.txt disallows
+`/dataset/*/resource/*/download/*`; the owner decided to include Toronto anyway, as with the
+earlier ISQ override, and every Toronto response says so in `provenance.limits`.
+
+Quirks confirmed live: labels and file names lie (Montreal's "XLSX" library workbook is
+.xls; a BC "csv" is an .xlsx; DFO's NuSEDS "CSV" is a 9.8 MB zip; Ontario's OMAFRA ".xls" is a
+web page), so the format is read from the bytes and a file name or label that plainly is not a
+table (pdf, zip, json) is refused before any download; ECCC's French CSVs are Windows-1252;
+header rows sit under one or two title rows; the ISED insolvency workbooks, Ontario's farm
+financial analysis files, Montreal's budget (85 sheets), the 2016 federal budget (37 sheets)
+and NWT's traffic workbooks have several comparable sheets, so the sheet list comes back until
+`sheet` is named. NWT's 2024 traffic workbook declares one sheet as 65,536 rows by 16,217
+columns for about 9,800 by 109; openpyxl padded every row and a pass took 250 seconds, so
+implausible dimensions are reset (7.5 seconds) and are never used to pick a sheet. Files over
+40 MB are refused: DFO's 55 and 61 MB NuSEDS files, Yukon's 53 MB population file. Toronto's API
+answered 502 and read timeouts in some runs; file downloads from its CKAN host were fine.
+
+Licences: ids differ per portal (federal `ca-ogl-lgo`, Ontario `OGL-ON-1.0`, BC numeric,
+Montreal and Quebec Creative Commons), so `licences.classify` reads id and title together into
+open, non-commercial, restricted, not stated or unrecognised. BC "22" (Access Only, 163 CSV and
+59 XLSX datasets), Ontario `ministry-tou` (the regional tourism profiles), `other-closed`,
+`*-tou`, `public-sector-sda` and `queens-printers-on`, and Toronto's `notspecified` all come
+back with a plain warning in `source.licence_warning` and `provenance.licence`.
+
 ## Manitoba
 
 **Status:** Shipped.

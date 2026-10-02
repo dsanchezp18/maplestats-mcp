@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from maplestats_mcp.modules.ab_opendata import tables
+from maplestats_mcp.shared import file_tables as tables
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
 
@@ -171,7 +171,7 @@ def test_xlsx_sheets_largest_sheet_is_default_and_dates_are_text():
     assert total == 2
     assert summaries[1].header_row == 1
     assert summaries[1].column_names == ["Project", "Year", "Revenue"]
-    assert len(summaries[1].preview) == tables.constants.PREVIEW_ROWS
+    assert len(summaries[1].preview) == tables.PREVIEW_ROWS
 
 
 def test_wrong_dimension_in_a_sheet_does_not_hide_rows():
@@ -207,3 +207,36 @@ def test_wrong_dimension_in_a_sheet_does_not_hide_rows():
 def test_broken_workbook_is_an_upstream_error():
     with pytest.raises(UpstreamError, match="could not"):
         tables.sheet_sizes(b"PK\x03\x04 not really a zip", "xlsx")
+
+
+def test_inflated_dimensions_from_blank_formatting_do_not_make_a_pass_take_minutes():
+    # NWT traffic workbooks declare 65,536 x 16,217 for ~9,800 x 109; openpyxl pads
+    # every row to the declared width. The dimensions are reset when implausible.
+    import re
+    import zipfile
+
+    body = _xlsx({"S": [["a", "b", "c"], [1, 2, 3], [4, 5, 6]]})
+    src = zipfile.ZipFile(io.BytesIO(body))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as dst:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                data = re.sub(
+                    rb'<dimension ref="[^"]*"/>', b'<dimension ref="A1:XFD1048576"/>', data
+                )
+            dst.writestr(item, data)
+    result = tables.scan(
+        out.getvalue(),
+        "xlsx",
+        "S",
+        header_row=None,
+        header_rows=1,
+        columns=None,
+        filters=None,
+        contains=None,
+        offset=0,
+        limit=10,
+    )
+    assert result.total_rows == 2
+    assert result.all_columns == ["a", "b", "c"]

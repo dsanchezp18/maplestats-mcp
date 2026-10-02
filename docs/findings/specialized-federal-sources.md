@@ -840,7 +840,10 @@ account creation, no payment).
 
 ISED's free, open, *aggregate* insolvency statistics (monthly/annual
 bankruptcy and receivership counts by NAICS industry or Forward Sortation
-Area) remain covered above via the `ic` organization's CKAN datasets.
+Area) remain covered above via the `ic` organization's CKAN datasets; since
+2026-10-02 `ckan_read_resource` reads their workbooks (the yearly Insolvency
+Statistics in Canada .xlsx files have four comparable sheets, so a `sheet` is
+named after `ckan_describe_resource` lists them).
 Re-checked 2026-09-21 per a direct "check again" request. Found and
 confirmed one more account-gated capability, correctly out of scope for the
 same reason as OSB above: ISED's own "Director information now available on
@@ -2226,7 +2229,7 @@ repeated in the script.
 
 ## CRA individual tax statistics and benefit statistics
 
-**Status:** Covered (via `ckan_*`).
+**Status:** Covered (via `ckan_*` + `ckan_read_resource`).
 
 Checked 2026-09-25. Individual Income Tax Return Statistics (formerly T1
 Final Statistics) appear as one dataset per tax year, 2011 to 2022, each
@@ -2237,8 +2240,10 @@ File names and table numbering change between editions (`t01ca.csv`,
 per edition. CRA also publishes benefit statistics by forward sortation
 area (Canada Child Benefit by benefit year, Canada Carbon Rebate
 recipients). None is DataStore-active; `ckan_get_dataset` gives the
-files. A dedicated module would only be worth it to harmonize T1 tables
-across editions.
+files, and since 2026-10-02 `ckan_read_resource` reads them (checked live:
+Table 1a by FSA for the 2020 tax year, `tbl1a-en.csv`, 1,679 FSA rows, and its
+French `tbl1a-fr.csv`; both under the Open Government Licence - Canada). A
+dedicated module would only be worth it to harmonize T1 tables across editions.
 
 ## Parliamentary Budget Officer
 

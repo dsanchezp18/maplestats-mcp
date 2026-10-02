@@ -63,6 +63,18 @@ class Portal:
     resource_extra_fields: tuple[str, ...] = ()
     note: str | None = None
     note_fr: str | None = None
+    # File reader (ckan_describe_resource / ckan_read_resource). `file_hosts`
+    # are exact hosts or "*.suffix" patterns a resource URL and every
+    # redirect target must match. `crawl_delay_seconds` is the portal's
+    # robots.txt Crawl-Delay (checked live 2026-10-02), applied to the
+    # resource_show and package_show calls the reader makes; downloads use
+    # `download_delay_seconds`. `shared_bucket` reuses another module's
+    # bucket so two tools over one site cannot double its pace.
+    file_hosts: tuple[str, ...] = ()
+    crawl_delay_seconds: float = 10.0
+    download_delay_seconds: float = 1.0
+    shared_bucket: str | None = None
+    robots_override: str | None = None
 
 
 PORTALS: dict[str, Portal] = {
@@ -88,6 +100,13 @@ PORTALS: dict[str, Portal] = {
             "La recherche plein texte DataStore (`query`) est refusée au-delà de "
             "100 000 lignes; utilisez plutôt `filters`."
         ),
+        file_hosts=(
+            "open.canada.ca",
+            "opencanada.blob.core.windows.net",
+            "*.gc.ca",
+            "*.canada.ca",
+        ),
+        crawl_delay_seconds=20.0,
     ),
     "on": Portal(
         base_url="https://data.ontario.ca/api/3/action/",
@@ -108,6 +127,7 @@ PORTALS: dict[str, Portal] = {
             "maintainer_email",
         ),
         resource_extra_fields=("data_last_updated", "data_range_start", "data_range_end"),
+        file_hosts=("data.ontario.ca", "files.ontario.ca", "*.gov.on.ca"),
     ),
     "bc": Portal(
         base_url="https://catalogue.data.gov.bc.ca/api/3/action/",
@@ -127,6 +147,7 @@ PORTALS: dict[str, Portal] = {
             "Les listes d'organisations et de groupes ne comprennent que ceux qui "
             "ont au moins un jeu de données (construites à partir des facettes)."
         ),
+        file_hosts=("catalogue.data.gov.bc.ca", "*.gov.bc.ca"),
     ),
     "ab": Portal(
         base_url="https://open.alberta.ca/api/3/action/",
@@ -163,6 +184,9 @@ PORTALS: dict[str, Portal] = {
             "vérifiée (15 sur 15, en septembre 2026); les requêtes de lignes sont "
             "donc désactivées. Téléchargez plutôt les ressources."
         ),
+        file_hosts=("open.alberta.ca",),
+        download_delay_seconds=10.0,
+        shared_bucket="ab-opendata",
     ),
     "qc": Portal(
         base_url="https://www.donneesquebec.ca/recherche/api/3/action/",
@@ -182,6 +206,14 @@ PORTALS: dict[str, Portal] = {
         extra_fields=("language", "update_frequency", "spatial_data", "methodologie", "temporal"),
         note="Provincial and municipal Quebec datasets; content is in French.",
         note_fr="Jeux de données provinciaux et municipaux du Québec, en français.",
+        file_hosts=(
+            "www.donneesquebec.ca",
+            "donnees.montreal.ca",
+            "montreal-prod.storage.googleapis.com",
+            "stqc380donopppdtce01.blob.core.windows.net",
+            "*.gouv.qc.ca",
+            "donneesouvertes.affmunqc.net",
+        ),
     ),
     "nt": Portal(
         base_url="https://opendata.gov.nt.ca/api/3/action/",
@@ -193,6 +225,7 @@ PORTALS: dict[str, Portal] = {
         rate_per_second=1.0,
         rate_capacity=3.0,
         extra_fields=("geographic_range", "source", "topic", "update_frequency"),
+        file_hosts=("opendata.gov.nt.ca", "*.gov.nt.ca"),
     ),
     "yt": Portal(
         base_url="https://open.yukon.ca/api/3/action/",
@@ -207,6 +240,7 @@ PORTALS: dict[str, Portal] = {
         extra_fields=("custodian", "update_frequency", "homepage_url"),
         note="No DataStore extension: row-level queries are unavailable.",
         note_fr="Aucune extension DataStore : pas de requêtes au niveau des lignes.",
+        file_hosts=("open.yukon.ca",),
     ),
     "montreal": Portal(
         base_url="https://donnees.montreal.ca/api/3/action/",
@@ -220,6 +254,7 @@ PORTALS: dict[str, Portal] = {
         extra_fields=("update_frequency",),
         note="Content is in French; an unknown `sort` field is silently ignored.",
         note_fr="Contenu en français; un champ `sort` inconnu est ignoré sans erreur.",
+        file_hosts=("donnees.montreal.ca", "montreal-prod.storage.googleapis.com"),
     ),
     "toronto": Portal(
         base_url="https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/",
@@ -239,6 +274,13 @@ PORTALS: dict[str, Portal] = {
             "refresh_rate",
         ),
         resource_extra_fields=("record_count",),
+        file_hosts=("ckan0.cf.opendata.inter.prod-toronto.ca", "open.toronto.ca"),
+        crawl_delay_seconds=1.0,
+        robots_override=(
+            "This overrides the site's robots.txt on the project owner's decision: the "
+            "Toronto CKAN host disallows /dataset/*/resource/*/download/* for all crawlers, "
+            "and this reader downloads those paths anyway, one request per second."
+        ),
     ),
     "regina": Portal(
         base_url="https://openregina.ca/api/3/action/",
@@ -247,6 +289,7 @@ PORTALS: dict[str, Portal] = {
         dataset_url="https://openregina.ca/dataset/{id}",
         organization_url="https://openregina.ca/organization/{id}",
         group_url="https://openregina.ca/group/{id}",
+        file_hosts=("openregina.ca", "0pendatafiles.blob.core.windows.net"),
     ),
 }
 
@@ -270,6 +313,16 @@ NOTES_EXCERPT_LENGTH = 300
 # an unfiltered listing is capped client-side.
 TAG_LIST_MAX = 200
 FACET_LIMIT = 500
+
+# File reader: a file larger than this is refused (declared length) or the
+# download aborted (undeclared). Cached for 2 hours inside a total byte budget.
+FILE_MAX_BYTES = 40 * 1024 * 1024
+FILE_CACHE_TTL_SECONDS = 2 * 60 * 60
+FILE_ROWS_DEFAULT = 100
+FILE_ROWS_MAX = 1000
+# Two API calls (resource_show, package_show) make one read; the bucket holds
+# both, then refills at the portal's crawl delay.
+RESOLVE_BUCKET_CAPACITY = 2.0
 
 # datastore_search's own cap is far higher (32,000 rows on federal).
 DATASTORE_ROWS_DEFAULT = 20

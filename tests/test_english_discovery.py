@@ -56,6 +56,8 @@ CASES = [
     ("BC Stats Excel workbook list British Columbia", "bc_stats_list_files"),
     ("Open Alberta Excel CSV dataset files AISH caseload", "ab_opendata_search_datasets"),
     ("read rows of an Open Alberta xlsx file", "ab_opendata_read_resource"),
+    ("read the Excel file of an open.canada.ca resource with no DataStore", "ckan_read_resource"),
+    ("sheets and columns of the xlsx file behind a CKAN resource", "ckan_describe_resource"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
     ("TTC scheduled departures at a stop", "transit_get_stop_departures"),
     ("bus route frequency headway by hour", "transit_get_route_summary"),
