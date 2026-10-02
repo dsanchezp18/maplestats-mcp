@@ -273,7 +273,7 @@ async def ckan_describe_resource(
     (open.canada.ca), Ontario, BC, Toronto, Québec, Montréal, NWT, Yukon,
     Regina and Alberta portals. Most of their tabular datasets have no
     DataStore (`datastore_active` false), so the file is the only route to
-    the numbers: ECCC water quality and wastewater, CRA tax statistics and
+    the numbers: ECCC wastewater indicators, CRA tax statistics and
     benefits by FSA, DFO salmon escapement, ESDC temporary foreign workers,
     ISED insolvency, Finance budget tables, Ontario tourism, education and
     agriculture workbooks, BC treasury and local-government finance, Toronto
@@ -315,7 +315,7 @@ async def ckan_read_resource(
 
     Use for: getting the numbers of a file-only dataset (no DataStore) on
     federal (open.canada.ca), Ontario, BC, Toronto, Québec, Montréal, NWT,
-    Yukon, Regina or Alberta: ECCC water quality and wastewater, tax filer
+    Yukon, Regina or Alberta: ECCC wastewater indicators, tax filer
     statistics and child benefits by FSA, DFO salmon escapement, ESDC
     temporary foreign worker data, ISED insolvency statistics, Finance
     budget tables, Ontario tourism, education and farm finance workbooks, BC
@@ -337,9 +337,9 @@ async def ckan_read_resource(
     when the licence is not open (BC Access Only, Ontario terms of use, no
     licence stated). Files over 40 MB are refused.
     Keywords: CKAN, read file, Excel, xlsx, xls, CSV, rows, filter, file-only dataset,
-    water quality, tax statistics, FSA, salmon, insolvency, budget, tourism.
+    wastewater, tax statistics, FSA, salmon, insolvency, budget, tourism.
     Mots-clés : CKAN, lire un fichier, Excel, xlsx, xls, CSV, lignes, filtre, jeu de
-    données sans DataStore, qualité de l'eau, statistiques fiscales, RTA, saumon,
+    données sans DataStore, eaux usées, statistiques fiscales, RTA, saumon,
     insolvabilité, budget, tourisme.
     """
     return await files.read_resource(

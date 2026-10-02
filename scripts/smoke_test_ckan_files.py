@@ -52,6 +52,13 @@ async def expect_error(
 
 
 async def federal() -> None:
+    datastore = await files.read_resource(
+        "federal", "3eb35dcd-9b0c-4ae9-a45c-e5e481567c23", limit=1
+    )
+    check(
+        datastore.read_via == "datastore" and datastore.total_rows > 1000,
+        f"federal DataStore-active resource -> read_via {datastore.read_via}",
+    )
     rows = await files.read_resource("federal", "915fa192-d4df-4e97-81c0-482c025dec2d", limit=2)
     check(
         rows.format == "csv" and rows.total_rows > 1000 and rows.rows[0]["FSA"] == "A0A",
@@ -91,6 +98,10 @@ async def federal() -> None:
 
 
 async def on() -> None:
+    datastore = await files.read_resource("on", "ea9dc29c-b4f1-4426-b1f2-974ce995aca1", limit=1)
+    check(
+        datastore.read_via == "datastore", f"on DataStore-active resource -> {datastore.total_rows}"
+    )
     started = time.monotonic()
     legacy = await files.read_resource("on", "8f707fda-3dca-4134-a3a7-b3cd4a80987d", limit=2)
     check(

@@ -24,7 +24,7 @@ from typing import Any, Literal
 from urllib.parse import unquote, urljoin, urlparse
 
 from maplestats_mcp.modules.ckan import client, constants, licences
-from maplestats_mcp.modules.ckan.constants import PORTALS, Portal
+from maplestats_mcp.modules.ckan.constants import Portal
 from maplestats_mcp.modules.ckan.schemas import (
     FileRows,
     FileSheet,
@@ -466,6 +466,15 @@ async def _read_datastore(
     )
 
 
+def _sheet_sizes(
+    sizes: list[tuple[str, int, int]], fmt: file_tables.FileFormat, width: int
+) -> list[SheetSize]:
+    """Declared sheet sizes; a CSV declares none, so only its column count is known."""
+    if fmt == "csv":
+        return [SheetSize(name=name, rows=None, columns=width) for name, _, _ in sizes]
+    return [SheetSize(name=n, rows=r, columns=c) for n, r, c in sizes]
+
+
 def _sheet_list(
     resolved: _Resolved,
     url: str,
@@ -570,7 +579,7 @@ async def read_resource(
         source=source,
         read_via="file",
         format=fmt,
-        sheets=[SheetSize(name=n, rows=r, columns=c) for n, r, c in sizes],
+        sheets=_sheet_sizes(sizes, fmt, len(result.all_columns)),
         sheet=chosen,
         sheet_chosen_by=how,
         header_row=result.header_row,
@@ -595,8 +604,3 @@ async def read_resource(
             licence=_licence_line(source),
         ),
     )
-
-
-def file_portals() -> list[str]:
-    """Portal keys that can read files."""
-    return [k for k, p in PORTALS.items() if p.file_hosts]

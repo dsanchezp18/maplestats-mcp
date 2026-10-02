@@ -161,6 +161,8 @@ async def test_federal_relative_url_redirects_to_blob_and_reads_cp1252_csv(httpx
     assert result.read_via == "file" and result.format == "csv"
     assert result.rows == [{"FSA": "H2X", "Province": "Québec", "Montant": "1 200"}]
     assert result.source.source_url == FED_FILE
+    # A CSV declares no row count; only its width is known.
+    assert [(s.name, s.rows, s.columns) for s in result.sheets] == [("csv", None, 3)]
     assert result.source.licence_status == "open" and result.source.licence_warning is None
     assert result.source.organization == "Canada Revenue Agency"
     assert result.source.landing_page and "open.canada.ca" in result.source.landing_page
