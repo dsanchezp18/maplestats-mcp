@@ -120,6 +120,11 @@ CASES = [
     ("find the HS code for a product", "cimt_search_commodities"),
     ("top export markets for Canadian lumber", "cimt_get_top_partners"),
     ("StatCan boundary files census divisions map", "statcan_geo_list_services"),
+    (
+        "Canadian index of multiple deprivation dissemination area",
+        "statcan_geo_query_spatial_layer",
+    ),
+    ("national road network road segments by province", "statcan_geo_query_spatial_layer"),
     ("active wildfires in British Columbia right now", "bcgw_get_active_wildfires"),
     ("mining claims BC", "bcgw_get_mining_tenure"),
     ("credit card interest rate comparison", "fcac_search_credit_cards"),

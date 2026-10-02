@@ -11,9 +11,14 @@ from maplestats_mcp.modules.statcan.geo.schemas import (
     GeoLayerDetail,
     GeoQueryResult,
     GeoServiceList,
+    GeoSpatialLayerDetail,
+    GeoSpatialLayerList,
+    GeoSpatialQueryResult,
 )
+from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
+Dataset = Literal["infc", "hna", "qol", "nrn"]
 
 
 @tool
@@ -77,13 +82,24 @@ async def statcan_geo_query_layer(
     out_sr: int = constants.DEFAULT_OUT_SR,
     result_offset: int = 0,
     result_record_count: int = constants.QUERY_RECORD_COUNT_DEFAULT,
+    lat: float | None = None,
+    lon: float | None = None,
+    bbox: str | None = None,
+    distance_m: float | None = None,
     lang: Lang = "en",
 ) -> GeoQueryResult:
-    """Query one geography layer's features by attribute, optionally with geometry.
+    """Query one geography layer's features by attribute or location, optionally with geometry.
 
     Use for: finding a geography's DGUID/UID by name (e.g.
-    `where="CSDNAME='Toronto'"`), or retrieving boundary polygons for
-    mapping. `where` is a standard SQL-style predicate against the
+    `where="CSDNAME='Toronto'"`), finding which area contains a point
+    ("which census tract / dissemination area / CSD is at this lat/lon":
+    pass `lat` and `lon`, WGS84 degrees, and pick the layer for the
+    level wanted), listing the areas touching a rectangle (`bbox` =
+    "min_lon,min_lat,max_lon,max_lat"), or retrieving boundary polygons
+    for mapping. `distance_m` widens a point to a radius in metres. A
+    spatial filter combines with `where` and `out_fields` (e.g.
+    `out_fields="CTUID,DGUID"` keeps the answer small) and is echoed back
+    in `spatial_filter`. `where` is a standard SQL-style predicate against the
     layer's own field names from statcan_geo_get_layer_detail (e.g.
     "PRUID='35' AND CSDNAME LIKE '%Toronto%'"); leave the default
     "1=1" to match every feature in the layer. Leave `return_geometry`
@@ -104,9 +120,11 @@ async def statcan_geo_query_layer(
     not a malformed request. The language comes from `service`, so
     `lang` has no effect here.
     Keywords: statcan, geography, query, boundary, dguid, csd, da,
-    fsa, cma, arcgis, geospatial, polygon, geojson.
+    fsa, cma, arcgis, geospatial, polygon, geojson, point in polygon,
+    latitude longitude, census tract lookup, bounding box.
     Mots-clés : statcan, géographie, requête, limites, dguid, sdr, ad,
-    rta, rmr, arcgis, géospatial, polygone, geojson.
+    rta, rmr, arcgis, géospatial, polygone, geojson, point dans polygone,
+    latitude longitude, secteur de recensement, rectangle englobant.
     """
     del lang
     return await client.query_layer_features(
@@ -119,4 +137,140 @@ async def statcan_geo_query_layer(
         out_sr=out_sr,
         result_offset=result_offset,
         result_record_count=result_record_count,
+        lat=lat,
+        lon=lon,
+        bbox=bbox,
+        distance_m=distance_m,
+    )
+
+
+@tool
+async def statcan_geo_list_spatial_layers(
+    dataset: Dataset,
+    province: str | None = None,
+    road_class: str | None = None,
+    lang: Lang = "en",
+) -> GeoSpatialLayerList:
+    """List the layers of a StatCan map-app dataset or of the National Road Network.
+
+    Use for: finding the `layer_id` to query. `dataset` picks the service:
+    "infc" (Index of Neighbourhood Characteristics / CSGE app: Canadian
+    Index of Multiple Deprivation 2021 by dissemination area, Proximity
+    Measures, Spatial Access Measures 2022, CanBICS, CanALE, and Linkable
+    Open Data Environment facilities: cultural, educational, recreational,
+    infrastructure, transit stops), "hna" (Housing Needs Assessment by
+    province and census subdivision, change in stock 2021-2023), "qol"
+    (Quality of Life indicators 2025 by province, CSD, CMA and census
+    division) or "nrn" (National Road Network: one layer per province and
+    road class, plus ferry connections, toll points and blocked
+    passages). For "nrn", `province` ("ON") and `road_class` ("Local
+    roads") narrow the list. Group layers are listed (is_group=true) but
+    hold no rows. The infc/hna/qol service addresses are undocumented and
+    read from StatCan's map-app config file at runtime; a clear error
+    says so if StatCan changes it. Free under the Statistics Canada Open
+    Licence. The tool's text is English only, so `lang` has no effect.
+    Keywords: statcan, geoanalytics, infc, hna, qol, national road
+    network, nrn, housing needs assessment, quality of life, deprivation
+    index, proximity measures, transit stops, layers.
+    Mots-clés : statcan, géoanalytique, indice de défavorisation
+    multiple, évaluation des besoins en logement, qualité de vie, réseau
+    routier national, mesures de proximité, arrêts de transport en
+    commun, couches.
+    """
+    del lang
+    return await client.list_spatial_layers(dataset, province=province, road_class=road_class)
+
+
+@tool
+async def statcan_geo_get_spatial_layer_detail(
+    dataset: Dataset, layer_id: int, lang: Lang = "en"
+) -> GeoSpatialLayerDetail:
+    """Get one layer's field list, geometry type and record cap (infc, hna, qol, nrn).
+
+    Use for: reading the queryable field names of a layer before building
+    a `where` clause for statcan_geo_query_spatial_layer, e.g. the
+    dissemination-area fields (DAUID, DGUID, csdname, cmaname and
+    indicator columns named AA###) of the infc Census_DA_2021 layer, or the
+    roadclass, route name and number fields of an NRN road layer. Take
+    `layer_id` from statcan_geo_list_spatial_layers. The tool's text is
+    English only, so `lang` has no effect.
+    Keywords: statcan, layer schema, fields, geoanalytics, infc, hna,
+    qol, national road network, nrn, attribute names, max record count.
+    Mots-clés : statcan, schéma de couche, champs, géoanalytique,
+    réseau routier national, noms d'attributs, indice de défavorisation,
+    qualité de vie, besoins en logement.
+    """
+    del lang
+    return await client.get_spatial_layer_detail(dataset, layer_id)
+
+
+@tool
+async def statcan_geo_query_spatial_layer(
+    dataset: Dataset,
+    layer_id: int | None = None,
+    province: str | None = None,
+    road_class: str | None = None,
+    where: str = "1=1",
+    out_fields: str = "*",
+    return_geometry: bool = False,
+    out_sr: int = constants.DEFAULT_OUT_SR,
+    result_offset: int = 0,
+    result_record_count: int = constants.QUERY_RECORD_COUNT_DEFAULT,
+    lat: float | None = None,
+    lon: float | None = None,
+    bbox: str | None = None,
+    distance_m: float | None = None,
+    lang: Lang = "en",
+) -> GeoSpatialQueryResult:
+    """Query rows from the StatCan map-app datasets (infc, hna, qol) or the National Road Network.
+
+    Use for: neighbourhood deprivation (Canadian Index of Multiple
+    Deprivation) or proximity/access measures for the dissemination area
+    at a lat/lon, the transit stops or facilities within `distance_m`
+    metres of a point, housing-need and change-in-stock indicators for a
+    municipality (hna), quality-of-life indicators by province, CMA, CSD or
+    census division (qol), and road segments of a province by road class
+    (nrn). `layer_id` comes from statcan_geo_list_spatial_layers; for
+    "nrn" you can give `province` ("ON") and `road_class` ("Local roads")
+    instead. Filter by attribute with `where`, by location with `lat` and
+    `lon` (WGS84; the row whose area contains the point) or `bbox`
+    ("min_lon,min_lat,max_lon,max_lat"), optionally `distance_m` as a
+    radius around the point, and cut the columns with `out_fields`
+    ("DAUID,DGUID"). Geometry is off by default. At most 2,000 rows come
+    back per call (the services allow 2,000 to 50,000); page with
+    `result_offset` while `exceeded_transfer_limit` is true. Undocumented
+    infc/hna/qol endpoints, read from StatCan's map-app config at runtime
+    (see provenance.limits); the NRN host answers HTTP 500 now and then
+    and the client retries. Statistics Canada Open Licence. The tool's
+    text is English only, so `lang` has no effect.
+    Keywords: statcan, deprivation index, cimd, proximity measures,
+    spatial access, housing needs assessment, quality of life, transit
+    stops, national road network, nrn, road segments, lat lon lookup,
+    point in polygon, geoanalytics.
+    Mots-clés : statcan, indice de défavorisation multiple, mesures de
+    proximité, accès spatial, évaluation des besoins en logement,
+    qualité de vie, arrêts de transport en commun, réseau routier
+    national, segments routiers, latitude longitude, point dans polygone.
+    """
+    del lang
+    if layer_id is None:
+        if dataset != "nrn" or not province or not road_class:
+            raise InvalidInput(
+                "Give layer_id (from statcan_geo_list_spatial_layers), or for dataset 'nrn' "
+                "both province and road_class."
+            )
+        layer_id = await client.resolve_nrn_layer(province, road_class)
+    return await client.query_spatial_layer(
+        dataset,
+        layer_id,
+        where=where,
+        out_fields=out_fields,
+        return_geometry=return_geometry,
+        out_sr=out_sr,
+        result_offset=result_offset,
+        result_record_count=result_record_count,
+        lat=lat,
+        lon=lon,
+        bbox=bbox,
+        distance_m=distance_m,
     )

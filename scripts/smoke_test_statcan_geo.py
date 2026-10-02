@@ -81,6 +81,76 @@ async def main() -> int:
     except InvalidInput:
         print("OK: malformed where clause raises InvalidInput as expected")
 
+    # Point-in-polygon on the boundary service: Bay and Queen, Toronto.
+    contains = await client.query_layer_features(
+        "2021",
+        "Cartographic_boundary_files",
+        12,
+        lat=43.65,
+        lon=-79.38,
+        out_fields="DAUID,DGUID",
+    )
+    print(f"OK: query_layer(DA containing 43.65,-79.38) -> {contains.features[0].attributes}")
+    ok &= contains.returned_count == 1
+    ok &= contains.features[0].attributes.get("DAUID") == "35200855"
+
+    # geoanalytics MapServers: URLs come from the CSGE app's config at runtime.
+    for dataset, expected_cap in (("infc", 50000), ("hna", 2000), ("qol", 2000)):
+        listing = await client.list_spatial_layers(dataset)
+        print(f"OK: list_spatial_layers({dataset!r}) -> {len(listing.layers)} layers")
+        ok &= listing.max_record_count == expected_cap and len(listing.layers) >= 4
+
+    detail = await client.get_spatial_layer_detail("infc", 3)
+    print(f"OK: get_spatial_layer_detail('infc', 3) -> {detail.name}, {len(detail.fields)} fields")
+    ok &= "dauid" in [f.name for f in detail.fields]
+
+    cimd = await client.query_spatial_layer("infc", 3, lat=43.65, lon=-79.38)
+    print(f"OK: CIMD at 43.65,-79.38 -> DA {cimd.features[0].attributes.get('dauid')}")
+    ok &= cimd.returned_count == 1 and cimd.features[0].attributes.get("dauid") == "35200855"
+
+    stops = await client.query_spatial_layer(
+        "infc",
+        15,
+        lat=43.65,
+        lon=-79.38,
+        distance_m=300,
+        out_fields="stop_name",
+        result_record_count=5,
+    )
+    print(f"OK: transit stops within 300 m -> {stops.returned_count}")
+    ok &= stops.returned_count == 5
+
+    csd_stock = await client.query_spatial_layer("hna", 4, result_record_count=3)
+    ok &= csd_stock.returned_count == 3
+    qol_pr = await client.query_spatial_layer("qol", 0, result_record_count=3)
+    print(
+        f"OK: hna layer 4 -> {csd_stock.returned_count} rows, qol layer 0 -> {qol_pr.returned_count}"
+    )
+    ok &= qol_pr.returned_count == 3
+
+    try:
+        await client.query_spatial_layer("infc", 14)
+        print("FAIL: expected InvalidInput for a group layer")
+        ok = False
+    except InvalidInput:
+        print("OK: group layer raises InvalidInput as expected")
+
+    # National Road Network: one layer per province and road class.
+    local_roads = await client.resolve_nrn_layer("ON", "Local roads")
+    roads = await client.query_spatial_layer(
+        "nrn",
+        local_roads,
+        lat=43.65,
+        lon=-79.38,
+        distance_m=100,
+        out_fields="roadclass,l_stname_c",
+        result_record_count=3,
+    )
+    print(
+        f"OK: NRN Ontario local roads within 100 m -> layer {local_roads}, {roads.returned_count}"
+    )
+    ok &= local_roads == 84 and roads.returned_count == 3
+
     print("\nSTATCAN GEO SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 
