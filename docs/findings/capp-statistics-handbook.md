@@ -1,6 +1,6 @@
 # CAPP Statistics Handbook
 
-Checked 2026-09-25. Status: investigated, not built (deferred).
+Checked 2026-09-25. Status: not built. Terms re-checked 2026-10-02: automated retrieval prohibited.
 
 ## What it is
 
@@ -47,7 +47,19 @@ number or URL. CAPP gives no warranty of accuracy. The page shows an
 "I acknowledge" disclaimer overlay, but the Excel files download
 directly.
 
-## If built
+## Site Terms of Use (checked 2026-10-02)
+
+The site terms (https://www.capp.ca/en/terms-of-use/, section 2) bar users
+from using "any robot, spider, site search/retrieval application or other
+manual or automatic device to retrieve, index, 'scrape', 'data mine'" the
+site. The only exception is a revocable licence for public search engines
+to build indices, not caches or archives. `robots.txt` blocks only
+`/wp-json/` and `/?rest_route=`. The attribution permission on the
+handbook page does not lift this, so listing the tables and fetching the
+Excel files from a server would breach the terms. Revisit only with
+written permission from CAPP.
+
+## If built (only with permission)
 
 Two tools: `capp_list_tables` (the 76 tables from the handbook page)
 and `capp_get_table` (one table as tidy rows: year, series, value,
