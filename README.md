@@ -154,7 +154,7 @@ About 250 tools. Run `docs://catalogue` for the full, bilingual list.
 | Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `ab_economic_`, `isq_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, Alberta Economic Dashboard, Institut de la statistique du Québec, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
-| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the TTC, STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit systems: stops, routes, scheduled departures, frequency by hour |
+| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the TTC, STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit systems, plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
 
 Other federal series (CRA, OSFI, ISED insolvency) are ordinary
 open.canada.ca datasets, reachable with

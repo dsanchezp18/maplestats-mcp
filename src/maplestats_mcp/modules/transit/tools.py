@@ -1,4 +1,5 @@
-"""MCP tools for static GTFS transit schedules (TTC, STM, OC Transpo, Calgary, VIA Rail, GO/UP Express, BC Transit)."""
+"""MCP tools for static GTFS transit schedules: live agency feeds (TTC, STM, OC Transpo,
+Calgary, VIA Rail, GO/UP Express, BC Transit) and StatCan's national database (2025)."""
 
 from __future__ import annotations
 
@@ -8,8 +9,8 @@ from fastmcp.tools import tool
 
 from maplestats_mcp.modules.transit import client, constants
 from maplestats_mcp.modules.transit.schemas import (
-    AgencyKey,
     AgencyList,
+    AgencyRef,
     FeedInfo,
     RouteSearch,
     RouteSummary,
@@ -30,7 +31,9 @@ async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
 
     The key of each agency is what the other transit_ tools take as
     `agency`. TransLink (Vancouver) is not offered: its terms require
-    users to identify themselves to TransLink first. BC Transit zips are built
+    users to identify themselves to TransLink first. For some 100 further
+    agencies across Canada (a 2025 snapshot) use
+    transit_list_national_agencies. BC Transit zips are built
     on request by BC Transit and downloaded whole, so a first call to one of
     its systems takes 5 to 30 seconds.
     Use for: which transit schedules are available, licence and credit
@@ -46,7 +49,50 @@ async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
 
 
 @tool
-async def transit_get_feed_info(agency: AgencyKey, lang: Lang = "en") -> FeedInfo:
+async def transit_list_national_agencies(
+    query: str | None = None,
+    province: str | None = None,
+    status: Literal["available", "overlaps_live", "excluded"] | None = None,
+    lang: Lang = "en",
+) -> AgencyList:
+    """The transit agencies in Statistics Canada's Canadian Public Transit
+    Network Database (23-26-0003, a compilation of GTFS feeds from over 100
+    agencies in every province and territory, version 1.0 released
+    2025-01-31): name, province, the feed's service window, validator error
+    and warning counts, and the licence page and attribution line StatCan
+    recorded for each.
+
+    The key to pass as `agency` to the other transit_ tools is
+    'statcan:<id>'. status says how a feed is handled: 'available' (read
+    from the national archive), 'overlaps_live' (TTC, STM, OC Transpo,
+    Calgary, VIA, GO, UP Express and BC Transit systems already read live:
+    use live_agency_key) or 'excluded' (TransLink, and feeds with no
+    licence or attribution recorded). This is a 2025 snapshot compiled by
+    StatCan: most service windows end in 2025, so pass a service_date inside
+    the window. The compilation is under the Statistics Canada Open Licence;
+    each feed also carries its own agency's terms (licence_url,
+    attribution). The first call reads the archive's directory (about 15
+    seconds, one request per two seconds as the host asks); a first feed
+    download takes a few seconds more. Filter with query (name or id),
+    province (two letters, for example ON) and status.
+    Use for: Canadian transit agencies beyond the live feeds, small-town and
+    regional transit, which agencies a national transit database covers,
+    transit licence and attribution lookup.
+    Keywords: transit, public transit, GTFS, national database, Statistics
+    Canada, 23-26-0003, Canadian Public Transit Network Database, agencies,
+    regional transit, small town bus, licence, attribution, 2025 snapshot.
+    Mots-clés : transport en commun, GTFS, base de données nationale,
+    Statistique Canada, 23-26-0003, Base de données du réseau de transport
+    en commun canadien, organismes, transport régional, autobus, licence,
+    attribution, instantané 2025.
+    """
+    return await client.list_national_agencies(
+        query=query, province=province, status=status, lang=lang
+    )
+
+
+@tool
+async def transit_get_feed_info(agency: AgencyRef, lang: Lang = "en") -> FeedInfo:
     """One agency's GTFS feed: publisher, version, the dates the schedule
     covers, the number of routes and stops, and the size of each file in
     the zip.
@@ -67,7 +113,7 @@ async def transit_get_feed_info(agency: AgencyKey, lang: Lang = "en") -> FeedInf
 
 @tool
 async def transit_search_routes(
-    agency: AgencyKey,
+    agency: AgencyRef,
     query: str | None = None,
     route_type: int | None = None,
     limit: int = constants.LIMIT_DEFAULT,
@@ -94,7 +140,7 @@ async def transit_search_routes(
 
 @tool
 async def transit_search_stops(
-    agency: AgencyKey,
+    agency: AgencyRef,
     query: str | None = None,
     near_latitude: float | None = None,
     near_longitude: float | None = None,
@@ -132,7 +178,7 @@ async def transit_search_stops(
 
 @tool
 async def transit_get_stop_departures(
-    agency: AgencyKey,
+    agency: AgencyRef,
     stop: str,
     service_date: str | None = None,
     start_time: str | None = None,
@@ -173,7 +219,7 @@ async def transit_get_stop_departures(
 
 @tool
 async def transit_get_route_summary(
-    agency: AgencyKey,
+    agency: AgencyRef,
     route: str,
     service_date: str | None = None,
     lang: Lang = "en",

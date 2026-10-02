@@ -256,6 +256,70 @@ a single timezone, so BC Transit needs the operator id as an argument, the
 same system keys as the static agencies, and a decision on how to cache an
 810 KB trip-updates feed per system. Left for a separate change.
 
+### Added 2026-10-02: StatCan's Canadian Public Transit Network Database
+
+Product 23-26-0003 (www150.statcan.gc.ca/n1/pub/23-26-0003/232600032025001-eng.htm),
+produced by StatCan's Urban Data Lab; version 1.0 released 2025-01-31, corrected
+2025-05-07 (custom ids in the GeoPackage, URL typos, two validation columns).
+One 443,590,902-byte zip (`.../2025001/zip/canadian_public_transit_network_database.zip`,
+206 to ranges), 286 entries: `gtfs/<custom_id>/gtfs.zip` for 138 feeds (393 MB
+compressed in all, 0.004 to 78 MB each), `data_sources.csv`,
+`validation_summary.csv`, two column-description CSVs, a metadata report PDF and
+a 485 MB `stops_and_routes.gpkg` that this module does not read.
+
+**Terms (read live 2026-10-02).** The product page: "The Canadian Public Transit
+Network Database was produced by the Urban Data Lab at Statistics Canada and is
+available under the Open Government License - Canada". The metadata report:
+"The data are released under an Open Government Licence as supported by the
+Directive on Open Government", and that data quality is "as is" with no fixes
+applied. The Statistics Canada Open Licence (statcan.gc.ca/en/reference/licence)
+grants a worldwide, royalty-free licence to "use, reproduce, publish, freely
+distribute, or sell the Information" and requires the notice "Adapted from
+Statistics Canada, name of product, reference date. This does not constitute an
+endorsement by Statistics Canada of this product" on value-added products; it
+also says "Intellectual property rights that third parties may have in the
+Information shall remain their property". The Credits say the database rests on
+organizations that "have either given permission to include their publicly
+available data or directly provided their data for release as open data". So
+the compilation is open for automated reuse with attribution, and each agency's
+own licence stays in force: `data_sources.csv` records a `license_url` and an
+`attribution` line per feed (OGL variants, CC BY 4.0, Données Québec, Metrolinx,
+BC Transit, Trillium, several city licences), and every response carries both.
+robots.txt on www150.statcan.gc.ca: `Crawl-delay: 2`, `Disallow: /*.csv$` and
+`/*.xlsx$`, nothing against `.zip`; the module sends at most one request every
+two seconds to that host (the catalogue takes about six requests, a feed two to
+six).
+
+Left out by design: the 19 feeds that duplicate a live agency (TTC, STM, OC
+Transpo, Calgary, VIA, GO, UP Express, 12 BC Transit systems) are listed with
+status `overlaps_live` and refused with the live key; TransLink (same terms as
+above, though StatCan's attribution says it is "provided by permission of
+TransLink", a permission that does not clearly pass on to a public server);
+and 14 feeds for which the database records neither a licence page nor an
+attribution line (Aquabus, Denman Island, Gabriola, Hornby Island, West Coast
+Trail Express, Medicine Hat, Miramichi, Midland, North Bay, Ontario Northland,
+Quinte, Ride CK, MRC Haut-Saint-Laurent, Saint-Hyacinthe). That leaves 104
+served.
+
+Quirks found live:
+
+- A feed is a zip inside a deflated member, so it cannot be read by range:
+  the member is fetched in 16 MB ranges, inflated into memory (bounded at 60 MB
+  compressed and inflated; the largest served feed is 34 MB inflated) and then
+  read through the same in-memory path as BC Transit. OC Transpo (99 MB
+  inflated) would break that bound and is a live agency anyway.
+- `data_sources.csv` is Windows-1252, not UTF-8, and a few attribution lines
+  are already mojibake in the database itself (they are passed through).
+- Service windows are old: nearly all end in 2025 (Yellowknife's in 2024), so
+  "today" is outside them. The date check uses `feed_info.txt` when it has
+  dates, otherwise the validator window from `validation_summary.csv` (Barrie,
+  Saskatoon and Yellowknife have no `feed_info.txt` dates), and the error names
+  the window.
+- Zones: a province table gives a first guess, then the feed's own `agency.txt`
+  `agency_timezone` is used (Saskatchewan keeps Regina time all year).
+- `bc_ferries`, `roam_transit` and `t3_transit` come through Trillium Transit's
+  maintenance terms of service; their licence page is recorded as such.
+
 **TransLink (Metro Vancouver) is not built.** The zip itself
 (gtfs-static.translink.ca/gtfs/google_transit.zip, 16 MB) is open and
 range-readable, but the terms at

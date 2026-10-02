@@ -23,7 +23,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from maplestats_mcp.modules.transit import constants
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import is_retryable, new_client
-from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 _LOCAL = b"PK\x03\x04"
@@ -32,6 +32,11 @@ _LIMITER = get_limiter(
     constants.SOURCE,
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
+)
+# www150.statcan.gc.ca asks for a two-second crawl delay (robots.txt), so the
+# national database has its own bucket: one request every two seconds.
+STATCAN_LIMITER = get_limiter(
+    f"{constants.SOURCE}_statcan", rate=constants.NATIONAL_RATE_PER_SECOND, capacity=1.0
 )
 _client = new_client(timeout=90.0, follow_redirects=True)
 
@@ -42,8 +47,10 @@ _client = new_client(timeout=90.0, follow_redirects=True)
     wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
     reraise=True,
 )
-async def _get_range(url: str, start: int, end: int) -> httpx.Response:
-    await _LIMITER.acquire()
+async def _get_range(
+    url: str, start: int, end: int, limiter: TokenBucket | None = None
+) -> httpx.Response:
+    await (limiter or _LIMITER).acquire()
     response = await _client.get(url, headers={"Range": f"bytes={start}-{end}"})
     response.raise_for_status()
     return response
@@ -142,10 +149,12 @@ def total_bytes(response: httpx.Response) -> int | None:
     return int(length) if length and length.isdigit() else None
 
 
-async def fetch_range(url: str, start: int, end: int) -> bytes:
+async def fetch_range(
+    url: str, start: int, end: int, *, limiter: TokenBucket | None = None
+) -> bytes:
     """Bytes `start..end` inclusive, exactly, or a typed error."""
     try:
-        response = await _get_range(url, start, end)
+        response = await _get_range(url, start, end, limiter)
     except httpx.HTTPStatusError as exc:
         raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
     except httpx.HTTPError as exc:
@@ -225,3 +234,58 @@ async def stream_member_lines(
             yield [line.rstrip(b"\r") for line in lines]
     if carry.strip():
         yield [carry.rstrip(b"\r")]
+
+
+async def read_nested_zip(url: str, member: ZipMember) -> bytes:
+    """A whole ZIP stored inside the remote ZIP, inflated into memory.
+
+    The national database keeps each feed as gtfs/<id>/gtfs.zip inside one
+    archive. A deflated member cannot be read at random, so the member is
+    fetched in `NATIONAL_CHUNK_BYTES` ranges (one request per two seconds,
+    per the host's crawl delay), inflated incrementally and returned for
+    the same in-memory path the BC Transit feeds use. Bounded on both the
+    compressed and the actual inflated size.
+    """
+    if member.compressed_size > constants.NATIONAL_MAX_COMPRESSED_BYTES:
+        raise UpstreamError(
+            f"{member.name} is {member.compressed_size:,} bytes compressed, over the "
+            f"{constants.NATIONAL_MAX_COMPRESSED_BYTES:,}-byte limit."
+        )
+    if member.method not in (0, 8):
+        raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
+    header = await fetch_range(
+        url, member.header_offset, member.header_offset + 29, limiter=STATCAN_LIMITER
+    )
+    if header[:4] != _LOCAL:
+        raise UpstreamError(f"{url}: malformed ZIP local header for {member.name}.")
+    name_len, extra_len = struct.unpack("<HH", header[26:30])
+    position = member.header_offset + 30 + name_len + extra_len
+    end = position + member.compressed_size
+    inflater = zlib.decompressobj(-15) if member.method == 8 else None
+    limit = constants.NATIONAL_MAX_INFLATED_BYTES
+    out = bytearray()
+    while position < end:
+        stop = min(position + constants.NATIONAL_CHUNK_BYTES, end) - 1
+        raw = await fetch_range(url, position, stop, limiter=STATCAN_LIMITER)
+        position = stop + 1
+        if inflater is None:
+            out.extend(raw)
+        else:
+            try:
+                pending = raw
+                while pending:
+                    out.extend(inflater.decompress(pending, _INFLATE_STEP))
+                    pending = inflater.unconsumed_tail
+                    if len(out) > limit:
+                        break
+            except zlib.error as exc:
+                raise UpstreamError(f"{member.name} is not valid deflate data ({exc}).") from exc
+        if len(out) > limit:
+            raise UpstreamError(f"{member.name} inflates past the {limit:,}-byte limit.")
+    if inflater is not None:
+        out.extend(inflater.flush())
+        if not inflater.eof:
+            raise UpstreamError(f"{member.name}: deflate stream is truncated.")
+    if len(out) > limit:
+        raise UpstreamError(f"{member.name} inflates past the {limit:,}-byte limit.")
+    return bytes(out)

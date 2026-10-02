@@ -11,6 +11,7 @@ docs/ROADMAP.md for what was checked and what was left out.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 
 SOURCE = "transit"
 
@@ -63,6 +64,104 @@ class Agency:
     # False when the host answers neither HEAD nor Range (BC Transit builds each
     # zip on request), so the whole zip is downloaded and held in memory.
     range_requests: bool = True
+    # Set only for agencies of the StatCan national database (national.py).
+    database: str = "live"
+    # "available", "overlaps_live" (served by a live agency instead) or "excluded".
+    status: str = "available"
+    status_reason: str = ""
+    live_agency_key: str | None = None
+    window_start: date | None = None
+    window_end: date | None = None
+    validator_errors: int | None = None
+    validator_warnings: int | None = None
+
+
+# -- StatCan Canadian Public Transit Network Database (23-26-0003) ----------
+# Confirmed live 2026-10-02: one 443,590,902-byte zip (HTTP 206, Last-Modified
+# 2025-05-07) holding gtfs/<custom_id>/gtfs.zip for 138 feeds, data_sources.csv
+# (per-feed licence_url and attribution), validation_summary.csv and a
+# 485 MB GeoPackage this module does not read. Each inner zip is a plain GTFS
+# feed. www150.statcan.gc.ca/robots.txt sets Crawl-delay 2 for all agents.
+NATIONAL_PREFIX = "statcan:"
+NATIONAL_URL = (
+    "https://www150.statcan.gc.ca/n1/pub/23-26-0003/2025001/zip/"
+    "canadian_public_transit_network_database.zip"
+)
+NATIONAL_PAGE = "https://www150.statcan.gc.ca/n1/pub/23-26-0003/232600032025001-eng.htm"
+NATIONAL_ROOT = "canadian_public_transit_network_database/"
+NATIONAL_LICENCE = (
+    "Statistics Canada Open Licence / Open Government Licence - Canada for the compilation; "
+    "each feed also carries its transit agency's own licence (see licence_url)"
+)
+NATIONAL_LICENCE_URL = "https://www.statcan.gc.ca/en/reference/licence"
+NATIONAL_NOTICE = (
+    "Adapted from Statistics Canada, Canadian Public Transit Network Database, 2025. "
+    "This does not constitute an endorsement by Statistics Canada of this product."
+)
+# Last-Modified of the zip, read 2026-10-02 (the release of 2025-01-31 was
+# corrected on 2025-05-07). A new release gets a new URL (2025001 in the path).
+NATIONAL_AS_OF = datetime(2025, 5, 7, 20, 45, 12, tzinfo=UTC)
+NATIONAL_FRESHNESS = (
+    "Snapshot compiled by Statistics Canada's Urban Data Lab, version 1.0 released "
+    "2025-01-31 (corrected 2025-05-07); not updated since. Each feed's own service "
+    "window (coverage) is mostly in 2025, so recent dates fall outside it."
+)
+# Crawl-delay 2 in robots.txt: one request every two seconds to www150.
+NATIONAL_RATE_PER_SECOND = 0.5
+NATIONAL_CHUNK_BYTES = 16 * 1024 * 1024
+# One nested feed is inflated into memory; the largest feed this module
+# serves is 34 MB inflated (OC Transpo, 99 MB, is served live instead).
+NATIONAL_MAX_COMPRESSED_BYTES = 60 * 1024 * 1024
+NATIONAL_MAX_INFLATED_BYTES = 60 * 1024 * 1024
+NATIONAL_CATALOG_TTL_SECONDS = 24 * 60 * 60
+
+# Database id -> live agency key, for the feeds this module already reads
+# from the agency's own site. They are listed but not served from the zip.
+NATIONAL_OVERLAPS: dict[str, str] = {
+    "toronto_transit_commission": "ttc",
+    "societe_transport_montreal": "stm",
+    "oc_transpo": "oc_transpo",
+    "calgary_transit": "calgary",
+    "via_rail": "via_rail",
+    "go_transit": "go_transit",
+    "union_pearson_express": "up_express",
+    "bc_transit_victoria": "bct_victoria",
+    "bc_transit_kelowna": "bct_kelowna",
+    "bc_transit_kamloops": "bct_kamloops",
+    "bc_transit_nanaimo": "bct_nanaimo",
+    "bc_transit_prince_george": "bct_prince_george",
+    "bc_transit_fraser_valley_region": "bct_fraser_valley",
+    "bc_transit_north_okanagan": "bct_north_okanagan",
+    "bc_transit_comox_valley": "bct_comox_valley",
+    "bc_transit_cowichan_valley": "bct_cowichan_valley",
+    "bc_transit_campbell_river": "bct_campbell_river",
+    "bc_transit_squamish": "bct_squamish",
+    "bc_transit_whistler": "bct_whistler",
+}
+# Feeds left out for their own terms.
+NATIONAL_EXCLUDED: dict[str, str] = {
+    "translink_vancouver": (
+        "TransLink's terms require users to identify themselves to TransLink and let it "
+        "impose conditions, which a public server cannot do (the same reason its own feed "
+        "is not offered)."
+    ),
+}
+# Province or territory code -> IANA zone, used until the feed's agency.txt is read.
+PROVINCE_TIMEZONES: dict[str, str] = {
+    "bc": "America/Vancouver",
+    "ab": "America/Edmonton",
+    "sk": "America/Regina",
+    "mb": "America/Winnipeg",
+    "on": "America/Toronto",
+    "qc": "America/Toronto",
+    "nb": "America/Halifax",
+    "ns": "America/Halifax",
+    "pe": "America/Halifax",
+    "nl": "America/St_Johns",
+    "yt": "America/Whitehorse",
+    "nt": "America/Yellowknife",
+    "nu": "America/Iqaluit",
+}
 
 
 def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agency:
