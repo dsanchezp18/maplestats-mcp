@@ -53,6 +53,7 @@ CASES = [
     ("cross-tabulate PUMF microdata", "statcan_pumf_tabulate"),
     ("generate R code to reproduce this query", "reproduce_code"),
     ("Alberta economic dashboard unemployment", "ab_economic_get_data"),
+    ("BC Stats Excel workbook list British Columbia", "bc_stats_list_files"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
     ("Edmonton crime occurrences", "eps_list_occurrences"),
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
