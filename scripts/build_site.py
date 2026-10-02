@@ -712,6 +712,10 @@ FAMILIES: dict[str, tuple[str, str]] = {
     ),
     "statcan/geo": ("Census geography", "Géographie du recensement"),
     "statcan/indicators": ("Indicators", "Indicateurs"),
+    "statcan/lode": (
+        "Open databases (LODE): facilities, buildings, addresses",
+        "Bases de données ouvertes (ECDO) : installations, immeubles, adresses",
+    ),
     "statcan/pumf": (
         "Public use microdata files (PUMF)",
         "Fichiers de microdonnées à grande diffusion (FMGD)",
@@ -3160,6 +3164,7 @@ STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables", "geo"),
     ),
     ("Microdata", "Microdonnées", ("pumf",)),
+    ("Open databases", "Bases de données ouvertes", ("lode",)),
     ("Classifications", "Classifications", ("rdaas",)),
     ("Indicators", "Indicateurs", ("indicators", "sdg")),
     (

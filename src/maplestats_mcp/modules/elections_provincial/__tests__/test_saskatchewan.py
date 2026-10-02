@@ -94,7 +94,7 @@ def test_unreadable_files_raise():
     with pytest.raises(UpstreamError, match="expected columns"):
         saskatchewan.parse_csv(b"a,b\n1,2\n")
     with pytest.raises(UpstreamError, match="no rows"):
-        saskatchewan.parse_csv(_bytes("sk_2016.csv").split(b"\r\n")[0] + b"\r\n")
+        saskatchewan.parse_csv(_bytes("sk_2016.csv").splitlines()[0] + b"\r\n")
 
 
 async def test_get_results_and_seats_over_the_mocked_download(httpx_mock):

@@ -190,11 +190,14 @@ Sources, by tool-name prefix:
   series), rdaas_ (classifications, e.g. NAICS), statcan_census_profile_
   (2021), statcan_census_profile_2016_, statcan_census_profile_archive_
   (2001-2016 bulk links), statcan_daily_ (The Daily releases, release calendar),
-  statcan_indicators_, statcan_delta_ (daily bulk-update files),
+  statcan_indicators_, statcan_delta_ (daily bulk-update files: list a
+  day's changed cubes, read one cube's rows, real-time/vintage tables),
   statcan_reference_ (definitions/methods, analysis), statcan_surveys_
   (survey directory + IMDB metadata, RDC and RTRA microdata holdings), statcan_geo_ (census geography),
   statcan_sdg_ (Sustainable Development Goals hub), statcan_pumf_ (public
   use microdata files: find, list downloads, read codebooks),
+  statcan_lode_ (open databases: healthcare, sports, buildings, schools,
+  addresses, remoteness, proximity; query by place/type/bbox),
   statcan_census_tables_ (2006-2016 census cross-tabulations: CSV, SDMX,
   Beyond 20/20 IVT), cimt_ (exports and imports by HS commodity,
   partner, US state and province, monthly from 1988).

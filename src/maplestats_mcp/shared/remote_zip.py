@@ -8,8 +8,10 @@ member can be fetched without downloading the archive: listing the
 Census zip took 12 KB.
 
 Only stored (0) and deflated (8) members are supported, which is what
-every StatCan PUMF zip sampled uses. ZIP64 archives are rejected with a
-clear error rather than misread.
+every StatCan PUMF zip sampled uses. ZIP64 is supported (end-of-directory
+locator and record, and the 0x0001 extra field of each directory entry):
+StatCan's Delta File of 2026-10-01 is a 3.87 GB zip whose CSV inflates to
+29 GB, so its directory entry carries 0xFFFFFFFF in the 32-bit size field.
 """
 
 from __future__ import annotations
@@ -27,6 +29,10 @@ from maplestats_mcp.shared.http import is_retryable, new_client
 _EOCD = b"PK\x05\x06"
 _CENTRAL = b"PK\x01\x02"
 _LOCAL = b"PK\x03\x04"
+_EOCD64 = b"PK\x06\x06"
+_LOCATOR64 = b"PK\x06\x07"
+_MAX32 = 0xFFFFFFFF
+_MAX16 = 0xFFFF
 _TAIL_BYTES = 256 * 1024
 _client = new_client(timeout=60.0, follow_redirects=True)
 
@@ -79,6 +85,11 @@ async def _range(url: str, start: int, end: int) -> bytes:
     return response.content
 
 
+async def fetch_range(url: str, start: int, end: int) -> bytes:
+    """Bytes `start..end` inclusive, exactly, or a typed error (for streaming readers)."""
+    return await _range(url, start, end)
+
+
 async def _size(url: str) -> int:
     # HEAD first; some hosts answer it with a 502 far more often than a
     # ranged GET (Toronto's open-data host, 2026-10-01), so any HEAD
@@ -116,8 +127,8 @@ async def list_members(url: str) -> tuple[list[ZipMember], int]:
     if eocd < 0:
         raise UpstreamError(f"{url} is not a ZIP file (no end-of-directory record).")
     _, _, _, _, count, cd_size, cd_offset, _ = struct.unpack("<4sHHHHIIH", tail[eocd : eocd + 22])
-    if cd_offset == 0xFFFFFFFF or count == 0xFFFF:
-        raise UpstreamError(f"{url} is a ZIP64 archive, which this reader does not support.")
+    if _MAX32 in (cd_offset, cd_size) or count == _MAX16:
+        count, cd_size, cd_offset = await _zip64_directory(url, tail, tail_start, eocd)
     if cd_offset >= tail_start:
         directory = tail[cd_offset - tail_start : cd_offset - tail_start + cd_size]
     else:
@@ -135,9 +146,60 @@ async def list_members(url: str) -> tuple[list[ZipMember], int]:
             directory[pos + 4 : pos + 46],
         )
         name = _decode_name(directory[pos + 46 : pos + 46 + name_len], flags)
+        extra = directory[pos + 46 + name_len : pos + 46 + name_len + extra_len]
+        usize, csize, offset = _zip64_sizes(extra, usize, csize, offset)
         members.append(ZipMember(name, csize, usize, method, offset))
         pos += 46 + name_len + extra_len + comment_len
     return members, total
+
+
+async def _zip64_directory(
+    url: str, tail: bytes, tail_start: int, eocd: int
+) -> tuple[int, int, int]:
+    """Entry count, directory size and offset from the ZIP64 end record."""
+    locator = tail[max(0, eocd - 20) : eocd]
+    if len(locator) != 20 or locator[:4] != _LOCATOR64:
+        raise UpstreamError(f"{url} is a ZIP64 archive without a ZIP64 end-of-directory locator.")
+    record_offset = struct.unpack("<4xIQI", locator)[1]
+    if record_offset >= tail_start:
+        record = tail[record_offset - tail_start : record_offset - tail_start + 56]
+    else:
+        record = await _range(url, record_offset, record_offset + 55)
+    if len(record) != 56 or record[:4] != _EOCD64:
+        raise UpstreamError(f"{url}: malformed ZIP64 end-of-directory record.")
+    # signature, record size, versions (2 + 2), disk numbers (4 + 4), entries
+    # on this disk, total entries, directory size, directory offset.
+    _, _, _, _, _, _, _, count, cd_size, cd_offset = struct.unpack("<4sQHHIIQQQQ", record)
+    return count, cd_size, cd_offset
+
+
+def _zip64_sizes(extra: bytes, usize: int, csize: int, offset: int) -> tuple[int, int, int]:
+    """Replace each 0xFFFFFFFF field by its value from the 0x0001 extra field.
+
+    The extra field lists, in this fixed order, only the values whose 32-bit
+    slot holds 0xFFFFFFFF: uncompressed size, compressed size, header offset.
+    """
+    if _MAX32 not in (usize, csize, offset):
+        return usize, csize, offset
+    pos = 0
+    while pos + 4 <= len(extra):
+        tag, length = struct.unpack("<HH", extra[pos : pos + 4])
+        if tag == 1:
+            body = extra[pos + 4 : pos + 4 + length]
+            values = [struct.unpack("<Q", body[i : i + 8])[0] for i in range(0, len(body) - 7, 8)]
+            take = iter(values)
+            try:
+                if usize == _MAX32:
+                    usize = next(take)
+                if csize == _MAX32:
+                    csize = next(take)
+                if offset == _MAX32:
+                    offset = next(take)
+            except StopIteration as exc:
+                raise UpstreamError("A ZIP64 extra field is shorter than its sizes need.") from exc
+            return usize, csize, offset
+        pos += 4 + length
+    raise UpstreamError("A ZIP entry marks a size as ZIP64 but has no ZIP64 extra field.")
 
 
 async def read_member(url: str, member: ZipMember, *, max_bytes: int = 20_000_000) -> bytes:
