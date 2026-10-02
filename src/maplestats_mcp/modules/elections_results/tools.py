@@ -6,7 +6,12 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.elections_results import client, constants, historical
+from maplestats_mcp.modules.elections_results import (
+    candidates,
+    client,
+    constants,
+    historical,
+)
 from maplestats_mcp.modules.elections_results.schemas import ElectionList, ElectionTable, TableName
 
 Lang = Literal["en", "fr"]
@@ -94,8 +99,9 @@ async def elections_results_get_historical(
     `party` (a mnemonic such as Lib, C, NDP, BQ, or part of a party name)
     are accent-insensitive filters. Source: the Winer and Ferris data set on
     Scholars Portal Dataverse (CC0), which holds party totals, not candidate
-    names, and ends in 2015; use elections_results_get_table for official
-    Elections Canada results of the 38th to 45th.
+    names (use elections_results_get_historical_candidates for those), and
+    ends in 2015; use elections_results_get_table for official Elections
+    Canada results of the 38th to 45th.
     Keywords: historical election results, federal, Confederation, 1867,
     riding, constituency, party, Liberal, Conservative, CCF, Progressive
     Conservative, Social Credit, Bloc, votes, turnout, history.
@@ -108,6 +114,55 @@ async def elections_results_get_historical(
         province=province,
         constituency=constituency,
         party=party,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@tool
+async def elections_results_get_historical_candidates(
+    election: int | None = None,
+    year: int | None = None,
+    province: str | None = None,
+    riding: str | None = None,
+    candidate: str | None = None,
+    party: str | None = None,
+    winners_only: bool = False,
+    election_type: candidates.ElectionType = "general",
+    limit: int = candidates.ROWS_LIMIT_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> candidates.HistoricalCandidates:
+    """Get every candidate's name, party and votes by riding for federal elections since 1867.
+
+    Use for: who ran and who won in a riding before 2004 (the 36th and 37th
+    general elections, 1997 and 2000, have no Elections Canada data files),
+    candidate names, party, votes and share of votes, incumbents, gender and
+    occupation, tracking one person across elections by candidate_id, and
+    by-elections. `election` is the parliament number (1 = 1867, 35 = 1993,
+    36 = 1997, 37 = 2000, 44 = 2021) and `year` the election year; leave both
+    out to search every election. `province`, `riding`, `candidate` (name) and
+    `party` are accent-insensitive substring filters. `election_type` is
+    general (default), by-election or all. Source: Sevi's "Who Runs?" data set
+    on Harvard Dataverse (CC0), compiled from ParlInfo; it is not an official
+    publication, so use elections_results_get_table for the official 38th to
+    45th and elections_results_get_historical for party totals by riding.
+    Keywords: historical candidates, federal election, 1997, 2000, 1993,
+    candidate names, riding, winner, elected, party, votes, incumbent,
+    by-election, MP, Reform, Canadian Alliance, Progressive Conservative.
+    Mots-clés : candidats historiques, élection fédérale, 1997, 2000, 1993,
+    noms des candidats, circonscription, gagnant, élu, parti, votes, sortant,
+    élection partielle, député, Réforme, Alliance canadienne.
+    """
+    return await candidates.get_candidates(
+        election=election,
+        year=year,
+        province=province,
+        riding=riding,
+        candidate=candidate,
+        party=party,
+        winners_only=winners_only,
+        election_type=election_type,
         limit=limit,
         offset=offset,
     )

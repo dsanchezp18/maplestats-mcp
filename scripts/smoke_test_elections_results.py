@@ -5,7 +5,12 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from maplestats_mcp.modules.elections_results import client, constants, historical
+from maplestats_mcp.modules.elections_results import (
+    candidates,
+    client,
+    constants,
+    historical,
+)
 from maplestats_mcp.shared.http import new_client
 
 
@@ -60,6 +65,20 @@ async def main() -> int:
             print("FAIL: first general election has too few ridings")
             failures += 1
         print("OK: historical ridings reconcile with seat counts (41st, 42nd)")
+
+        # Candidate names before 2004: winners must match the seats of each election.
+        for number, seats in {35: 295, 36: 301, 37: 301, 38: 308}.items():
+            winners = await candidates.get_candidates(election=number, winners_only=True, limit=1)
+            if winners.total_candidates != seats:
+                print(
+                    f"FAIL: election {number} has {winners.total_candidates} winners, want {seats}"
+                )
+                failures += 1
+        named = await candidates.get_candidates(election=37, riding="st. john's", limit=50)
+        if named.total_candidates < 4 or not all(c.candidate_name for c in named.candidates):
+            print("FAIL: 2000 candidates for St. John's are missing")
+            failures += 1
+        print("OK: candidate names reconcile with seats (35th to 38th)")
     print("ELECTIONS RESULTS SMOKE TEST", "FAILED" if failures else "PASSED")
     return 1 if failures else 0
 

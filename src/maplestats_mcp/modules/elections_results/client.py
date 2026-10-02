@@ -36,9 +36,15 @@ _NOT_COVERED = {
             "data files on elections.ca, and the Library of Parliament's ParlInfo answers "
             "automated requests with a Cloudflare challenge. For the 1st to 42nd general "
             "elections (1867 to 2015) by riding, use elections_results_get_historical (party "
-            "totals from a CC0 research data set, no candidate names)."
+            "totals from a CC0 research data set), and for candidate names, parties and "
+            "votes in any election since 1867 use elections_results_get_historical_candidates "
+            "(a CC0 research data set compiled from ParlInfo, not an official publication)."
         ),
-        "By-elections (elections.ca lists them as web pages, not data files).",
+        (
+            "Official by-election tables (elections.ca lists them as web pages, not data "
+            "files); elections_results_get_historical_candidates has by-election candidates "
+            "since 1867."
+        ),
         (
             "Poll-by-poll results: use ckan_search_datasets with organization 'elections' "
             "(38th to 44th) or the 45th's per-district files linked from its 'Poll-by-poll' page."
@@ -52,9 +58,15 @@ _NOT_COVERED = {
             "du Parlement répond aux requêtes automatisées par un défi Cloudflare. Pour les 1re "
             "à 42e élections générales (1867 à 2015) par circonscription, utiliser "
             "elections_results_get_historical (totaux par parti d'un jeu de données de recherche "
-            "CC0, sans noms de candidats)."
+            "CC0), et pour les noms des candidats, partis et votes de toute élection depuis 1867 "
+            "elections_results_get_historical_candidates (jeu de données de recherche CC0 "
+            "compilé à partir de ParlInfo, non officiel)."
         ),
-        "Élections partielles (elections.ca les présente en pages web, sans fichiers).",
+        (
+            "Tableaux officiels des élections partielles (elections.ca les présente en pages "
+            "web) ; elections_results_get_historical_candidates couvre les candidats aux "
+            "partielles depuis 1867."
+        ),
         (
             "Résultats par bureau de scrutin : utiliser ckan_search_datasets avec l'organisation "
             "« elections » (38e à 44e) ou les fichiers par circonscription de la 45e."

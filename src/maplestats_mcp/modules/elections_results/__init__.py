@@ -7,8 +7,11 @@ MODULE_DESCRIPTION = (
     "valid votes by party and province, riding-level turnout with the elected "
     "candidate, and returning officers, straight from the official CSV tables. elections_results_get_historical adds "
     "every general election from 1867 to 2015 by riding (party totals from the Winer and "
-    "Ferris CC0 data set on Scholars Portal Dataverse). By-elections are not covered ("
-    "the Library of Parliament's history site blocks automated access). Poll-by-poll results stay on ckan_ (organization "
+    "Ferris CC0 data set on Scholars Portal Dataverse), and "
+    "elections_results_get_historical_candidates gives every candidate's name, party and votes "
+    "by riding for general elections and by-elections since 1867 (Sevi's CC0 'Who Runs?' data "
+    "set on Harvard Dataverse, compiled from ParlInfo). Official by-election tables are not "
+    "covered (the Library of Parliament's history site blocks automated access). Poll-by-poll results stay on ckan_ (organization "
     "'elections') and candidate finance is in elections_financial_returns_."
 )
 MODULE_DESCRIPTION_FR = (
@@ -20,8 +23,11 @@ MODULE_DESCRIPTION_FR = (
     "circonscription avec le candidat élu, et directeurs du scrutin, à partir des "
     "tableaux CSV officiels. elections_results_get_historical ajoute toutes les élections "
     "générales de 1867 à 2015 par circonscription (totaux par parti du jeu de données "
-    "CC0 de Winer et Ferris, Scholars Portal Dataverse). Les élections partielles ne sont "
-    "pas couvertes. Les résultats par bureau de scrutin restent dans ckan_ "
+    "CC0 de Winer et Ferris, Scholars Portal Dataverse), et "
+    "elections_results_get_historical_candidates donne le nom, le parti et les votes de chaque "
+    "candidat par circonscription, élections générales et partielles depuis 1867 (jeu de "
+    "données CC0 « Who Runs? » de Sevi, Harvard Dataverse, compilé à partir de ParlInfo). Les "
+    "tableaux officiels des élections partielles ne sont pas couverts. Les résultats par bureau de scrutin restent dans ckan_ "
     "(organisation « elections ») et le financement des candidats dans "
     "elections_financial_returns_."
 )

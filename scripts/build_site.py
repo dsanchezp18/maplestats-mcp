@@ -388,8 +388,8 @@ SOURCES: dict[str, Source] = {
         "Elections Canada: federal general election results",
         "Élections Canada : résultats des élections générales fédérales",
         "national",
-        "Elections Canada",
-        "Élections Canada",
+        "Elections Canada; Borealis and Harvard Dataverse (historical)",
+        "Élections Canada; Borealis et Harvard Dataverse (historique)",
         domain="government",
     ),
     "elections_financial_returns": Source(

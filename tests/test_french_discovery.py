@@ -98,6 +98,10 @@ CASES = [
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
     ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
     ("résultats historiques par circonscription depuis 1867", "elections_results_get_historical"),
+    (
+        "candidats élections fédérales 1997 et 2000 par circonscription",
+        "elections_results_get_historical_candidates",
+    ),
     ("qui représente la circonscription député actuel", "ourcommons_list_members"),
     ("répartition des sièges par parti Chambre des communes", "ourcommons_get_party_standings"),
     ("Conseil des ministres ordre de préséance", "ourcommons_get_ministry"),
