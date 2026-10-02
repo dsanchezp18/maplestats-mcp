@@ -714,28 +714,3 @@ def test_stylesheets_close_every_block():
                 line = text[: match.start()].count("\n") + 1
                 assert depth == 0, f"{sheet.name}: section at line {line} opens inside a block"
         assert depth == 0, sheet.name
-
-
-def test_alberta_post_joins_four_agencies_year_by_year():
-    """The post's table is built from the recorded calls, complete years only."""
-    case = site.load_case("alberta")
-    assert case["calls"][0]["name"] == "plan_query"
-    # Every data call has scripts, so a reader can fetch each column again.
-    assert all({"r", "python"} <= set(call["scripts"]) for call in case["calls"][1:])
-    rows = site.alberta_years(case)
-    years = [row["year"] for row in rows]
-    assert years == sorted(years) and years[0] == "2016"
-    for row in rows:
-        # Net migration is part of population growth, not more than it plus natural increase.
-        assert row["international"] + row["interprovincial"] == row["net"]
-        assert 0 < row["vacancy"] < 20 and row["rent"] > 0
-
-
-def test_alberta_post_builds_in_both_languages(built_site: Path):
-    english = (built_site / "demo-alberta.html").read_text(encoding="utf-8")
-    french = (built_site / "fr" / "demo-alberta.html").read_text(encoding="utf-8")
-    assert '<th scope="row">2024</th>' in english and '<th scope="row">2024</th>' in french
-    assert "{{" not in english and "{{" not in french
-    # French numbers: a comma for decimals, a narrow no-break space before %.
-    assert re.search(r'<td class="num">\d+,\d %</td>', french)
-    assert re.search(r'<td class="num">\$[\d,]+</td>', english)

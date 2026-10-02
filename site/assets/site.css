@@ -4672,9 +4672,45 @@ html:not(.js) .chips {
 
 .faq {
   display: grid;
+  gap: clamp(32px, 4vw, 48px);
+  padding-bottom: clamp(32px, 4vw, 56px);
+}
+
+.faq-group {
+  display: grid;
   gap: 12px;
   max-width: 72ch;
-  padding-bottom: clamp(32px, 4vw, 56px);
+  scroll-margin-top: 80px;
+}
+
+.faq-h {
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.faq-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.faq-jump a {
+  padding: 6px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.faq-jump a:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
 }
 
 .faq p {
@@ -4682,10 +4718,21 @@ html:not(.js) .chips {
   color: var(--ink-2);
 }
 
+.faq .faq-short {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .faq h3 {
   margin: 12px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
   font-family: var(--font-display);
   font-size: 1.25rem;
+}
+
+#licences {
+  scroll-margin-top: 80px;
 }
 
 .faq-item {
@@ -4780,17 +4827,4 @@ details.how > summary,
 #hosted-1 {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-/* The demos page's pointer to the longer Alberta post. */
-.post-teaser {
-  margin-block: 56px;
-}
-
-.post-teaser h2 {
-  margin-block: 0.25em 0.4em;
-}
-
-.post-teaser p:last-child {
-  max-width: 60ch;
 }

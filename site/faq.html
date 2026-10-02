@@ -12,13 +12,22 @@
 <section class="wrap page-head">
   <p class="label">{en}FAQ and licences{fr}FAQ et licences{/}</p>
   <h1>{en}Questions people ask{fr}Les questions qu'on nous pose{/}</h1>
-  <p class="lede">{en}Short answers about your queries, the data and what you may do with it. Last updated 29 September 2026.{fr}De courtes réponses sur vos requêtes, sur les données et sur ce que vous pouvez en faire. Dernière mise à jour : 29 septembre 2026.{/}</p>
+  <p class="lede">{en}Short answers about your queries, the data and what you may do with it. Last updated 1 October 2026.{fr}De courtes réponses sur vos requêtes, sur les données et sur ce que vous pouvez en faire. Dernière mise à jour : 1er octobre 2026.{/}</p>
+  <nav class="faq-jump" aria-label="{en}On this page{fr}Sur cette page{/}">
+    <a href="#privacy">{en}Privacy and hosting{fr}Confidentialité et hébergement{/}</a>
+    <a href="#data">{en}The data{fr}Les données{/}</a>
+    <a href="#using">{en}Using it{fr}Utilisation{/}</a>
+    <a href="#licences">{en}Licences and reuse{fr}Licences et réutilisation{/}</a>
+  </nav>
 </section>
 
 <section class="wrap faq" id="faq">
+<div class="faq-group" id="privacy">
+  <h2 class="faq-h">{en}Privacy and hosting{fr}Confidentialité et hébergement{/}</h2>
   <details class="faq-item" id="queries" open>
     <summary>{en}Does MapleStats save my queries?{fr}MapleStats conserve-t-il mes requêtes ?{/}</summary>
-    <p>{en}No. The code stores no queries and has no account, and it sends nothing to any analytics service. The one thing it keeps is a count of how many times each tool has run, by the tool's name, the day and whether the call worked; the counts sit in memory and are public at <code>/stats</code> on the hosted server. The server does see the tool calls your AI agent makes, such as a search phrase or a table number, because it has to run them, but never your conversation, and it writes none of them down: its console log shows only start-up messages. This is about the code; if you use the hosted server, read the answer on it below.{fr}Non. Le code ne conserve aucune requête, n'a aucun compte et n'envoie rien à un service d'analytique. Il garde seulement un compte du nombre d'exécutions de chaque outil, par nom d'outil, par jour et selon que l'appel a réussi; ces comptes restent en mémoire et sont publics à <code>/stats</code> sur le serveur hébergé. Le serveur voit bien les appels d'outils que fait votre agent IA, comme une expression de recherche ou un numéro de tableau, puisqu'il doit les exécuter, mais jamais votre conversation, et il n'en note aucun : son journal de console ne montre que des messages de démarrage. Cela concerne le code; si vous utilisez le serveur hébergé, lisez la réponse qui le concerne plus bas.{/}</p>
+    <p class="faq-short">{en}No. The code stores no queries, has no accounts and sends nothing to any analytics service.{fr}Non. Le code ne conserve aucune requête, n'a aucun compte et n'envoie rien à un service d'analytique.{/}</p>
+    <p>{en}The one thing it keeps is a count of how many times each tool has run, by the tool's name, the day and whether the call worked; the counts sit in memory and are public at <code>/stats</code> on the hosted server. The server does see the tool calls your AI agent makes, such as a search phrase or a table number, because it has to run them, but never your conversation, and it writes none of them down: its console log shows start-up messages and, over HTTP, the method, path and status of each request, never what is in them. This is about the code; if you use the hosted server, read the answer on it below.{fr}Il garde seulement un compte du nombre d'exécutions de chaque outil, par nom d'outil, par jour et selon que l'appel a réussi; ces comptes restent en mémoire et sont publics à <code>/stats</code> sur le serveur hébergé. Le serveur voit bien les appels d'outils que fait votre agent IA, comme une expression de recherche ou un numéro de tableau, puisqu'il doit les exécuter, mais jamais votre conversation, et il n'en note aucun : son journal de console montre les messages de démarrage et, en HTTP, la méthode, le chemin et l'état de chaque requête, jamais leur contenu. Cela concerne le code; si vous utilisez le serveur hébergé, lisez la réponse qui le concerne plus bas.{/}</p>
     <p>{en}Two things are kept to save time: an in-memory copy of recent responses, gone when the server stops, and the microdata and patent tables you download, kept in a cache folder you choose. Neither holds your questions.{fr}Deux choses sont conservées pour gagner du temps : une copie en mémoire des réponses récentes, qui disparaît à l'arrêt du serveur, et les tableaux de microdonnées et de brevets que vous téléchargez, gardés dans un dossier de cache que vous choisissez. Aucune ne contient vos questions.{/}</p>
   </details>
 
@@ -29,20 +38,32 @@
 
   <details class="faq-item" id="hosted">
     <summary>{en}Is there a hosted MapleStats I can connect to?{fr}Existe-t-il un MapleStats hébergé auquel me connecter ?{/}</summary>
-    <p>{en}Yes. A public endpoint runs at <code>https://maplestats-mcp.onrender.com/mcp</code>, with no account or API key. It is a free instance, so it can take about a minute to wake after sitting idle, each client is limited to 60 requests a minute, and the public use microdata tabulation tools are switched off there because they download whole files. For those, or for anything you would rather keep on your own machine, run MapleStats locally.{fr}Oui. Un point d'accès public fonctionne à l'adresse <code>https://maplestats-mcp.onrender.com/mcp</code>, sans compte ni clé d'API. C'est une instance gratuite : elle peut mettre environ une minute à se réveiller après une période d'inactivité, chaque client est limité à 60 requêtes par minute, et les outils de tabulation des fichiers de microdonnées à grande diffusion y sont désactivés, car ils téléchargent des fichiers entiers. Pour ceux-là, ou pour tout ce que vous préférez garder sur votre machine, exécutez MapleStats en local.{/}</p>
+    <p>{en}Yes. A public endpoint runs at <code>https://maplestats-mcp.onrender.com/mcp</code>, with no account or API key. It is a free instance, so it can take about a minute to wake after sitting idle, each client is limited to 60 requests a minute, and the public use microdata tabulation tool (<code>statcan_pumf_tabulate</code>) is switched off there because it downloads whole files. For those, or for anything you would rather keep on your own machine, run MapleStats locally.{fr}Oui. Un point d'accès public fonctionne à l'adresse <code>https://maplestats-mcp.onrender.com/mcp</code>, sans compte ni clé d'API. C'est une instance gratuite : elle peut mettre environ une minute à se réveiller après une période d'inactivité, chaque client est limité à 60 requêtes par minute, et l'outil de tabulation des fichiers de microdonnées à grande diffusion (<code>statcan_pumf_tabulate</code>) y est désactivé, car il télécharge des fichiers entiers. Pour ceux-là, ou pour tout ce que vous préférez garder sur votre machine, exécutez MapleStats en local.{/}</p>
     <p>{en}On the hosted endpoint your tool calls do reach the server, since it has to run them. The server code does not store or log them: its access log records the method, path and status of each request, not what is in it, the usage counts hold tool names only (never arguments or client addresses), and the rate limiter keeps a client's address in memory for a minute to count requests. Render, the host, keeps its own request logs under its own terms, so read Render's <a href="https://render.com/terms">terms</a> and <a href="https://render.com/privacy">privacy policy</a> before you rely on it. If you want full privacy, run MapleStats locally: then nothing leaves your computer except the requests to the publishers.{fr}Sur le point d'accès hébergé, vos appels d'outils arrivent bien jusqu'au serveur, puisqu'il doit les exécuter. Le code du serveur ne les conserve ni ne les journalise : son journal d'accès note la méthode, le chemin et l'état de chaque requête, pas leur contenu, les comptes d'utilisation ne contiennent que des noms d'outils (jamais d'arguments ni d'adresses de clients), et le limiteur de débit garde l'adresse d'un client en mémoire pendant une minute pour compter les requêtes. Render, l'hébergeur, tient ses propres journaux de requêtes selon ses propres conditions : lisez les <a href="https://render.com/terms">conditions</a> et la <a href="https://render.com/privacy">politique de confidentialité</a> de Render avant de vous y fier. Pour une confidentialité totale, exécutez MapleStats en local : rien ne quitte alors votre ordinateur, hormis les requêtes envoyées aux éditeurs.{/}</p>
   </details>
+</div>
 
+<div class="faq-group" id="data">
+  <h2 class="faq-h">{en}The data{fr}Les données{/}</h2>
   <details class="faq-item" id="fresh">
     <summary>{en}How fresh is the data?{fr}Les données sont-elles à jour ?{/}</summary>
     <p>{en}It comes live from the publisher, kept for a short time in memory. Each result says where it came from, when it was queried and any limits, in its <code>provenance</code> block.{fr}Elles viennent en direct de l'éditeur et sont gardées un court moment en mémoire. Chaque résultat indique sa provenance, le moment de la requête et ses limites, dans son bloc <code>provenance</code>.{/}</p>
+  </details>
+
+  <details class="faq-item" id="terms">
+    <summary>{en}Does MapleStats respect publishers' terms?{fr}MapleStats respecte-t-il les conditions des éditeurs ?{/}</summary>
+    <p class="faq-short">{en}Yes. Before a source is added, its terms of use are read, and a source whose terms ban automated use is left out.{fr}Oui. Avant d'ajouter une source, on lit ses conditions d'utilisation, et une source dont les conditions interdisent l'usage automatisé est écartée.{/}</p>
+    <p>{en}Some useful portals are therefore not covered. Examples are Canada's Business Registries, SEDAR+ and Payments Canada, whose terms forbid automated tools, scraping or bulk use. Sites that block automated requests are also left alone. Each skipped source and the reason are recorded in the <a href="{{repo}}/blob/main/docs/ROADMAP.md">roadmap</a>. Where a source asks for credit or a notice, the result's <code>provenance</code> block names the publisher so you can give it.{fr}Certains portails utiles ne sont donc pas couverts. C'est le cas du Registre des entreprises du Canada, de SEDAR+ et de Paiements Canada, dont les conditions interdisent les outils automatisés, le moissonnage ou l'usage en bloc. Les sites qui bloquent les requêtes automatisées sont aussi laissés de côté. Chaque source écartée et la raison figurent dans la <a href="{{repo}}/blob/main/docs/ROADMAP.md">feuille de route</a>. Quand une source demande une mention ou un avis, le bloc <code>provenance</code> du résultat nomme l'éditeur pour que vous puissiez la donner.{/}</p>
   </details>
 
   <details class="faq-item" id="check">
     <summary>{en}Can I check a number without trusting the agent?{fr}Puis-je vérifier un chiffre sans faire confiance à l'agent ?{/}</summary>
     <p>{en}Yes, for most data calls. Ask for the script: <code>reproduce_code</code> writes R, Python, Stata or Julia code that fetches the same data straight from the source, and every result names its source with a link.{fr}Oui, pour la plupart des appels de données. Demandez le script : <code>reproduce_code</code> écrit du code R, Python, Stata ou Julia qui va chercher les mêmes données directement à la source, et chaque résultat nomme sa source avec un lien.{/}</p>
   </details>
+</div>
 
+<div class="faq-group" id="using">
+  <h2 class="faq-h">{en}Using it{fr}Utilisation{/}</h2>
   <details class="faq-item" id="clients">
     <summary>{en}Which AI tools work with it?{fr}Avec quels outils IA fonctionne-t-il ?{/}</summary>
     <p>{en}Any client that speaks MCP, including Claude, Codex and Cursor. The <a href="{{root}}connect.html">Connect</a> page has the steps.{fr}Tout client qui parle MCP, dont Claude, Codex et Cursor. La page <a href="{{root}}connect.html">Installation</a> donne les étapes.{/}</p>
@@ -52,10 +73,12 @@
     <summary>{en}Something is wrong or missing. What do I do?{fr}Il y a une erreur ou un oubli. Que faire ?{/}</summary>
     <p>{en}Open an issue on <a href="{{repo}}/issues">GitHub</a> with the question and the source URL from the result. The <a href="{{root}}contributing.html">Contribute</a> page explains what helps most.{fr}Ouvrez un ticket sur <a href="{{repo}}/issues">GitHub</a> avec la question et l'URL de la source du résultat. La page <a href="{{root}}contributing.html">Contribuer</a> explique ce qui aide le plus.{/}</p>
   </details>
+</div>
 </section>
 
 <section class="wrap faq" id="licences">
-  <h2 class="contrib-h">{en}Licences and reuse{fr}Licences et réutilisation{/}</h2>
+<div class="faq-group">
+  <h2 class="faq-h">{en}Licences and reuse{fr}Licences et réutilisation{/}</h2>
   <p>{en}MapleStats MCP is independent. It is not affiliated with or endorsed by Statistics Canada, the Bank of Canada, CMHC or any government.{fr}MapleStats MCP est indépendant. Il n'est ni affilié à Statistique Canada, à la Banque du Canada, à la SCHL ou à un gouvernement, ni approuvé par eux.{/}</p>
 
   <h3>{en}The code{fr}Le code{/}</h3>
@@ -65,10 +88,11 @@
   <p>{en}The MIT licence covers the code, not the data. The data belongs to the agencies and portals that publish it, and their terms apply to it. Many publish under an open government licence, such as the Open Government Licence – Canada or the Statistics Canada Open Licence, but the terms differ by publisher and dataset, and a few sources carry their own conditions: Hydro-Québec's electricity data is CC BY-NC 4.0 (credit Hydro-Québec, non-commercial use only), IESO requires its copyright notice, and some Government of Canada pages fall under the Canada.ca terms, which allow non-commercial reproduction with the title, author and source URL. Each result's <code>provenance</code> block names the publisher and links to the source, so you can read the terms that apply before you reuse a number.{fr}La licence MIT couvre le code, pas les données. Les données appartiennent aux organismes et aux portails qui les publient, et leurs conditions s'y appliquent. Beaucoup publient sous une licence gouvernementale ouverte, comme la Licence du gouvernement ouvert – Canada ou la Licence ouverte de Statistique Canada, mais les conditions varient selon l'éditeur et le jeu de données, et quelques sources ont leurs propres conditions : les données d'électricité d'Hydro-Québec sont sous CC BY-NC 4.0 (mentionner Hydro-Québec, usage non commercial seulement), la SIERE exige son avis de droit d'auteur, et certaines pages du gouvernement du Canada relèvent des conditions de Canada.ca, qui permettent la reproduction non commerciale avec le titre, l'auteur et l'URL de la source. Le bloc <code>provenance</code> de chaque résultat nomme l'éditeur et renvoie à la source, pour que vous lisiez les conditions applicables avant de réutiliser un chiffre.{/}</p>
 
   <h3>{en}Crediting{fr}Citer{/}</h3>
-  <p>{en}When you publish a number, credit the publisher named in the result, not MapleStats. A mention of MapleStats as the route you took is welcome but not required.{fr}Quand vous publiez un chiffre, citez l'éditeur nommé dans le résultat, pas MapleStats. Mentionner MapleStats comme le chemin emprunté est bienvenu, mais pas obligatoire.{/}</p>
+  <p>{en}When you publish a number, credit the publisher named in the result, not MapleStats. A mention of MapleStats as the route you took is welcome.{fr}Quand vous publiez un chiffre, citez l'éditeur nommé dans le résultat, pas MapleStats. Mentionner MapleStats comme le chemin emprunté est bienvenu.{/}</p>
 
   <h3>{en}Questions{fr}Questions{/}</h3>
   <p>{en}If something here is unclear or you want to do something it does not cover, open an issue on <a href="{{repo}}/issues">GitHub</a>.{fr}Si un point est peu clair ou si vous voulez faire quelque chose qui n'est pas couvert, ouvrez un ticket sur <a href="{{repo}}/issues">GitHub</a>.{/}</p>
+</div>
 </section>
 
 </main>
