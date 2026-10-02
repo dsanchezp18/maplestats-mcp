@@ -488,3 +488,67 @@ were probed (several guessed domains) and none answered; Calgary and Winnipeg
 police data already sit on their cities' Socrata portals. Other conservation
 authorities (Grand River, Toronto and Region, Lake Simcoe, Rideau Valley and
 others) did not turn up a public Hub site in that search.
+
+## More municipal portals, rechecked 2026-10-02
+
+Method: an ArcGIS Online search for public Hub Site Applications titled with each
+city (also Web Mapping Applications and Feature Services for the named targets),
+web searches for each target's own open-data page, then for every host found
+`/api/search/v1/collections/dataset/items` (a real Hub answers with
+`numberMatched`), the site's `robots.txt` (all Hub sites serve the platform
+default: `Crawl-delay: 60`, `/api` not disallowed) and the licence text on
+sampled items and on the city's terms page. Added config-only; the Hub smoke
+test (search, detail, feature query, CSV link, error paths) passed for all
+twelve. Penticton's CSV link answered HTTP 400 once for one layer and 302 on
+the rerun, so treat its download links as occasionally flaky.
+
+Added (datasets, licence):
+
+- Delta, `opendata-deltabc.hub.arcgis.com` (16): Open Government Licence; the
+  city moved to this ArcGIS Hub from its older catalogue in January 2026.
+- Yellowknife, `opendata.yellowknife.ca` (6): the city's Open Data Licence v1
+  allows commercial reuse with attribution. Portal is a classic Hub Open Data
+  site.
+- Cambridge ON, `opendata-cityofcambridge.hub.arcgis.com` (48): Open Data
+  Licence v2.1, commercial reuse with attribution. A second site,
+  `data-cityofcambridge.opendata.arcgis.com` (425), is a personal-account site
+  using Region of Waterloo licence text, so it was not used.
+- Maple Ridge, `gis-mapleridge.opendata.arcgis.com` (61): Open Government
+  Licence. `opengov2-mapleridge.opendata.arcgis.com` (88) is a second site.
+- Pickering, `data-cityofpickering.hub.arcgis.com` (268): City of Pickering
+  Open Data Licence v1 (commercial reuse); many items are Central Lake Ontario
+  Conservation layers under that authority's own licence.
+- Sarnia (14), Saint John NB `catalogue-saintjohn.opendata.arcgis.com` (233,
+  bilingual titles), Port Moody `data.portmoody.ca` (104), White Rock
+  `data.whiterockcity.ca` (59), Penticton `open.penticton.ca` (136),
+  Orangeville (18), Canmore (19): each has an Open Government Licence style
+  licence that permits reuse.
+
+Not added:
+
+- Richmond BC, Vaughan, Richmond Hill, North Vancouver (city), St. John's,
+  Sault Ste. Marie, Wood Buffalo, Charlottetown: not found. No Hub Site
+  Application, web page or guessed domain (`opendata.<city>`, `data-<city>.
+  opendata.arcgis.com`, 401, 400 or no DNS) turned up a public portal. The
+  ArcGIS Online hits for "Richmond" are Richmond, Virginia.
+- Nanaimo: `data.nanaimo.ca` redirects to nanaimo.ca's Open Data Catalogue, the
+  City's own Open Data Publisher with a REST API; different platform with no
+  adaptor.
+- Whitehorse: `data.whitehorse.ca` is a static download page, not a platform
+  with an API; different platform with no adaptor.
+- District of North Vancouver: `geoweb.dnv.org/data` is the district's custom
+  GEOweb (the City of North Vancouver is a separate municipality); no adaptor.
+- Langley (City): `data-langleycity.opendata.arcgis.com` answers 404 on the
+  search API; unchanged from the earlier finding.
+- Belleville (43 datasets): the item licence limits use to personal,
+  non-commercial purposes. Terms.
+- Welland (32): the licence points to a terms-of-use page that is rendered by
+  JavaScript, so its text could not be verified. Terms.
+- Drummondville (6), Caledon (5), Haldimand (10), Cobourg (13), Edmundston (18),
+  Chatham-Kent (11 and a 100-item census site), Fort St. John (55): small
+  catalogues or no licence stated; not added, could be revisited.
+- Corner Brook, Brantford, Innisfil, Scugog, Campbell River: the site found
+  answered 404, 401 or 400 on the search API. Clarington and North Bay's
+  `explore.northbay.ca` and Leduc's `data.leduc.ca` answer but list no
+  datasets in the dataset collection.
+- Hamilton stays out (blocks automated requests, see the roadmap).
