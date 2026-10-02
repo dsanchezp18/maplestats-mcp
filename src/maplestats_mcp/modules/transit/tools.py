@@ -1,5 +1,5 @@
 """MCP tools for static GTFS transit schedules: live agency feeds (TTC, STM, OC Transpo,
-Calgary, VIA Rail, GO/UP Express, BC Transit) and StatCan's national database (2025)."""
+Calgary, VIA Rail, GO/UP Express, BC Transit) and Statistics Canada's national database (2025)."""
 
 from __future__ import annotations
 
@@ -59,16 +59,16 @@ async def transit_list_national_agencies(
     Network Database (23-26-0003, a compilation of GTFS feeds from over 100
     agencies in every province and territory, version 1.0 released
     2025-01-31): name, province, the feed's service window, validator error
-    and warning counts, and the licence page and attribution line StatCan
+    and warning counts, and the licence page and attribution line Statistics Canada
     recorded for each.
 
     The key to pass as `agency` to the other transit_ tools is
-    'statcan:<id>'. status says how a feed is handled: 'available' (read
+    'national:<id>'. status says how a feed is handled: 'available' (read
     from the national archive), 'overlaps_live' (TTC, STM, OC Transpo,
     Calgary, VIA, GO, UP Express and BC Transit systems already read live:
     use live_agency_key) or 'excluded' (TransLink, and feeds with no
     licence or attribution recorded). This is a 2025 snapshot compiled by
-    StatCan: most service windows end in 2025, so pass a service_date inside
+    Statistics Canada: most service windows end in 2025, so pass a service_date inside
     the window. The compilation is under the Statistics Canada Open Licence;
     each feed also carries its own agency's terms (licence_url,
     attribution). The first call reads the archive's directory (about 15

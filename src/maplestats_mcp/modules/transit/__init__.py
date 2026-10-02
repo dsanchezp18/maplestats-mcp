@@ -20,7 +20,7 @@ Network Database (23-26-0003, version 1.0 released 2025-01-31, corrected
 2025-05-07), 138 feeds compiled from the agencies' own open data. The archive
 is one 443 MB zip with a nested `gtfs/<id>/gtfs.zip` per feed, so a feed is
 fetched in 16 MB ranges, inflated into memory (bounded at 60 MB) and then
-read like a BC Transit zip; the agency key is `statcan:<id>`. Terms read live:
+read like a BC Transit zip; the agency key is `national:<id>`. Terms read live:
 the product page says the database "is available under the Open Government
 License - Canada" and the metadata report that "the data are released under an
 Open Government Licence"; the Statistics Canada Open Licence grants a

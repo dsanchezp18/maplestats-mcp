@@ -24,7 +24,7 @@ check the answers against something other than the code under test:
 
 Pass agency keys as arguments to run only those (the independent
 reconciliations run for the keys that have one); pass `national` to run
-only the national part, or `statcan:<id>` keys for single national feeds.
+only the national part, or `national:<id>` keys for single national feeds.
 
 The first scan of each agency streams tens of MB, so the run takes a few
 minutes; the City of Toronto's host answers some requests with a transient
@@ -48,7 +48,7 @@ import httpx
 
 from maplestats_mcp.modules.transit import client, constants, national
 from maplestats_mcp.shared.errors import InvalidInput
-from maplestats_mcp.shared.remote_zip import list_members
+from maplestats_mcp.shared.remote_zip import ZipMember
 
 # A point in each core, a search radius in metres, and the least routes and
 # stops a real feed has (a sanity floor, not a count to match).
@@ -145,22 +145,23 @@ def _mid_window_wednesday(start: date, end: date) -> date:
     return day if day <= end else day - timedelta(days=7)
 
 
-def _independent_national(custom_id: str, day: date) -> dict[str, str | int]:
+def _independent_national(member: ZipMember, day: date) -> dict[str, str | int]:
     """Counts from the nested zip fetched with httpx ranges and read with zipfile.
 
     Shares nothing with the module under test except the outer archive's
     central directory offsets.
     """
-    members, _ = asyncio.run(list_members(constants.NATIONAL_URL))
-    member = next(m for m in members if m.name.endswith(f"gtfs/{custom_id}/gtfs.zip"))
     url = constants.NATIONAL_URL
-    header = httpx.get(
+    # StatCan's network drops the TLS handshake of a client that does not offer
+    # HTTP/2 in ALPN (AGENTS.md, "Three things that look removable").
+    web = httpx.Client(http2=True, timeout=300)
+    header = web.get(
         url, headers={"Range": f"bytes={member.header_offset}-{member.header_offset + 29}"}
     ).content
     name_len, extra_len = struct.unpack("<HH", header[26:30])
     start = member.header_offset + 30 + name_len + extra_len
-    body = httpx.get(
-        url, headers={"Range": f"bytes={start}-{start + member.compressed_size - 1}"}, timeout=300
+    body = web.get(
+        url, headers={"Range": f"bytes={start}-{start + member.compressed_size - 1}"}
     ).content
     archive = zipfile.ZipFile(io.BytesIO(zlib.decompress(body, -15)))
     names = archive.namelist()
@@ -218,21 +219,21 @@ async def national_checks(check: Callable[[bool, str], None], keys: list[str]) -
     )
     check(
         statuses["overlaps_live"] == len(constants.NATIONAL_OVERLAPS)
-        and all(by_key[f"statcan:{k}"].live_agency_key for k in constants.NATIONAL_OVERLAPS),
+        and all(by_key[f"national:{k}"].live_agency_key for k in constants.NATIONAL_OVERLAPS),
         "every configured overlap is in the catalogue and names its live agency",
     )
     check(
-        by_key["statcan:translink_vancouver"].status == "excluded",
+        by_key["national:translink_vancouver"].status == "excluded",
         "TransLink is excluded from the national feeds",
     )
     check(
         all(a.licence_url and a.attribution for a in result.agencies if a.status == "available"),
         "every available feed carries a licence page and an attribution line",
     )
-    sample = keys or [f"statcan:{k}" for k in NATIONAL_SAMPLE]
+    sample = keys or [f"national:{k}" for k in NATIONAL_SAMPLE]
     catalog = await client._load_national()
     for key in sample:
-        member = catalog.members[national.member_path(key.removeprefix("statcan:"))]
+        member = catalog.members[national.member_path(key.removeprefix("national:"))]
         small = member.compressed_size <= NATIONAL_MAX_MEMBER_BYTES
         check(small, f"{key}: nested zip {member.compressed_size:,} bytes is within the smoke cap")
         if not small:
@@ -276,23 +277,24 @@ async def national_checks(check: Callable[[bool, str], None], keys: list[str]) -
             f"{key}: provenance names the StatCan compilation and the agency's own terms",
         )
     try:
-        await client.search_routes("statcan:toronto_transit_commission")
+        await client.search_routes("national:toronto_transit_commission")
         check(False, "an overlapping national feed is refused")
     except InvalidInput as exc:
         check("agency='ttc'" in str(exc), "an overlapping national feed points to the live key")
-    if "statcan:barrie_transit" in sample:
-        barrie = by_key["statcan:barrie_transit"]
+    if "national:barrie_transit" in sample:
+        barrie = by_key["national:barrie_transit"]
         assert barrie.service_window_start and barrie.service_window_end
         day = _mid_window_wednesday(barrie.service_window_start, barrie.service_window_end)
-        truth = await asyncio.to_thread(_independent_national, "barrie_transit", day)
-        info = await client.get_feed_info("statcan:barrie_transit")
+        barrie_zip = catalog.members[national.member_path("barrie_transit")]
+        truth = await asyncio.to_thread(_independent_national, barrie_zip, day)
+        info = await client.get_feed_info("national:barrie_transit")
         check(
             (info.route_count, info.stop_count) == (truth["routes"], truth["stops"]),
             f"barrie_transit: {info.route_count} routes / {info.stop_count} stops equal the "
             "independent read",
         )
         stop = await client.get_stop_departures(
-            "statcan:barrie_transit",
+            "national:barrie_transit",
             str(truth["stop_id"]),
             service_date=str(day),
             start_time="00:00",
@@ -314,9 +316,9 @@ async def main() -> int:
         failures += not ok
 
     args = sys.argv[1:]
-    national_keys = [a for a in args if a.startswith("statcan:")]
+    national_keys = [a for a in args if a.startswith("national:")]
     only_national = "national" in args or bool(national_keys)
-    keys = [a for a in args if a != "national" and not a.startswith("statcan:")]
+    keys = [a for a in args if a != "national" and not a.startswith("national:")]
     if not args:
         keys = list(CORES)
     agencies = await client.list_agencies()

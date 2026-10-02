@@ -82,7 +82,7 @@ class Agency:
 # (per-feed licence_url and attribution), validation_summary.csv and a
 # 485 MB GeoPackage this module does not read. Each inner zip is a plain GTFS
 # feed. www150.statcan.gc.ca/robots.txt sets Crawl-delay 2 for all agents.
-NATIONAL_PREFIX = "statcan:"
+NATIONAL_PREFIX = "national:"
 NATIONAL_URL = (
     "https://www150.statcan.gc.ca/n1/pub/23-26-0003/2025001/zip/"
     "canadian_public_transit_network_database.zip"

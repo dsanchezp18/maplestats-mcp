@@ -85,7 +85,7 @@ def build_agencies(
     validation: list[dict[str, str]],
     archive_names: set[str],
 ) -> dict[str, Agency]:
-    """One `Agency` per row of data_sources.csv, keyed `statcan:<custom_id>`."""
+    """One `Agency` per row of data_sources.csv, keyed `national:<custom_id>`."""
     checks = {row.get("custom_id", ""): row for row in validation}
     agencies: dict[str, Agency] = {}
     for source in sources:

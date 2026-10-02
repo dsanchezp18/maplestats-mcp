@@ -81,7 +81,7 @@ class StopCall(NamedTuple):
 
 
 # The agencies of StatCan's national database, filled by `_load_national` the
-# first time a "statcan:<id>" key is used (a fixed snapshot, so kept for the
+# first time a "national:<id>" key is used (a fixed snapshot, so kept for the
 # life of the process; the catalogue fetch itself is cached for a day).
 _NATIONAL: dict[str, Agency] = {}
 
@@ -490,7 +490,7 @@ async def list_national_agencies(
     """The feeds of StatCan's Canadian Public Transit Network Database.
 
     Each is 'available' (read from the national archive with agency
-    'statcan:<id>'), 'overlaps_live' (the agency is read live instead) or
+    'national:<id>'), 'overlaps_live' (the agency is read live instead) or
     'excluded' (terms or missing licence information; see status_reason).
     """
     if status is not None and status not in ("available", "overlaps_live", "excluded"):
@@ -505,7 +505,7 @@ async def list_national_agencies(
         and (wanted is None or agency.province == wanted)
         and (
             needle is None
-            or needle in gtfs.fold(f"{agency.name_en} {agency.key.removeprefix('statcan:')}")
+            or needle in gtfs.fold(f"{agency.name_en} {agency.key.removeprefix('national:')}")
         )
     ]
     feeds.sort(key=lambda f: (f.province, f.name_en.casefold()))

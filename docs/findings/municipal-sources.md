@@ -301,6 +301,16 @@ Trail Express, Medicine Hat, Miramichi, Midland, North Bay, Ontario Northland,
 Quinte, Ride CK, MRC Haut-Saint-Laurent, Saint-Hyacinthe). That leaves 104
 served.
 
+Checked live 2026-10-02: all 104 served feeds were opened (feed info) with no
+error and every one has stops, routes, trips and stop_times at the zip root; a
+capped sample of eight (Barrie, Winnipeg, Halifax, Saskatoon, Edmonton,
+Yellowknife, Whitehorse, exo L'Assomption) ran through every tool, each
+route's trips on the date equal to the trips found in the streamed
+stop_times, and Barrie's route and stop counts and its busiest stop's 633
+departures equal an independent read (plain HTTP ranges, zlib, zipfile). One
+request in the sweep stalled for 27 minutes (London Transit Commission, a 2 MB
+member that then fetched in 1.4 s); retries are the shared six.
+
 Quirks found live:
 
 - A feed is a zip inside a deflated member, so it cannot be read by range:

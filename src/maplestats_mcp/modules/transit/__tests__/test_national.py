@@ -131,7 +131,7 @@ async def test_catalogue_statuses_and_terms(httpx_mock):
     result = await client.list_national_agencies()
     by_key = {a.key: a for a in result.agencies}
     assert result.total_matches == 6
-    regina = by_key["statcan:regina_transit"]
+    regina = by_key["national:regina_transit"]
     assert regina.status == "available"
     assert regina.province == "SK"
     assert regina.licence_url == "https://open.regina.ca/pages/terms-of-use"
@@ -142,18 +142,18 @@ async def test_catalogue_statuses_and_terms(httpx_mock):
         date(2025, 3, 31),
     )
     # The cp1252 byte in data_sources.csv arrives as the accented letter.
-    assert "Données Québec" in by_key["statcan:exo_l'assomption"].attribution
-    assert by_key["statcan:exo_l'assomption"].validator_errors == 1
-    overlap = by_key["statcan:calgary_transit"]
+    assert "Données Québec" in by_key["national:exo_l'assomption"].attribution
+    assert by_key["national:exo_l'assomption"].validator_errors == 1
+    overlap = by_key["national:calgary_transit"]
     assert (overlap.status, overlap.live_agency_key) == ("overlaps_live", "calgary")
-    assert by_key["statcan:ride_ck"].status == "excluded"
+    assert by_key["national:ride_ck"].status == "excluded"
     assert "neither a licence page nor an attribution" in (
-        by_key["statcan:ride_ck"].status_reason or ""
+        by_key["national:ride_ck"].status_reason or ""
     )
-    assert "TransLink" in (by_key["statcan:translink_vancouver"].status_reason or "")
+    assert "TransLink" in (by_key["national:translink_vancouver"].status_reason or "")
     # In data_sources.csv but missing from the archive.
-    assert by_key["statcan:ghost_transit"].status == "excluded"
-    assert "absent from the archive" in (by_key["statcan:ghost_transit"].status_reason or "")
+    assert by_key["national:ghost_transit"].status == "excluded"
+    assert "absent from the archive" in (by_key["national:ghost_transit"].status_reason or "")
     assert result.provenance.as_of == constants.NATIONAL_AS_OF
     assert "Statistics Canada Open Licence" in (result.provenance.limits or "")
 
@@ -161,9 +161,9 @@ async def test_catalogue_statuses_and_terms(httpx_mock):
 async def test_catalogue_filters(httpx_mock):
     _serve(httpx_mock)
     sk = await client.list_national_agencies(province="sk")
-    assert [a.key for a in sk.agencies] == ["statcan:regina_transit"]
+    assert [a.key for a in sk.agencies] == ["national:regina_transit"]
     named = await client.list_national_agencies(query="assomption", status="available")
-    assert [a.key for a in named.agencies] == ["statcan:exo_l'assomption"]
+    assert [a.key for a in named.agencies] == ["national:exo_l'assomption"]
     with pytest.raises(InvalidInput, match="status"):
         await client.list_national_agencies(status="bogus")
 
@@ -171,18 +171,18 @@ async def test_catalogue_filters(httpx_mock):
 async def test_overlapping_and_excluded_agencies_are_not_served(httpx_mock):
     _serve(httpx_mock)
     with pytest.raises(InvalidInput, match="agency='calgary'"):
-        await client.search_routes("statcan:calgary_transit")
+        await client.search_routes("national:calgary_transit")
     with pytest.raises(InvalidInput, match="neither a licence page"):
-        await client.search_stops("statcan:ride_ck", "x")
+        await client.search_stops("national:ride_ck", "x")
     with pytest.raises(InvalidInput, match="TransLink"):
-        await client.get_feed_info("statcan:translink_vancouver")
+        await client.get_feed_info("national:translink_vancouver")
     with pytest.raises(InvalidInput, match="Unknown agency"):
-        await client.search_routes("statcan:nowhere")
+        await client.search_routes("national:nowhere")
 
 
 async def test_feed_info_reads_the_nested_zip(httpx_mock):
     _serve(httpx_mock)
-    info = await client.get_feed_info("statcan:exo_l'assomption")
+    info = await client.get_feed_info("national:exo_l'assomption")
     assert (info.route_count, info.stop_count) == (1, 1)
     assert info.feed_end_date == date(2025, 3, 31)
     assert info.agency.database == "statcan"
@@ -196,22 +196,22 @@ async def test_feed_info_reads_the_nested_zip(httpx_mock):
 
 async def test_tools_work_on_a_national_agency(httpx_mock):
     _serve(httpx_mock)
-    routes = await client.search_routes("statcan:exo_l'assomption", "elephant")
+    routes = await client.search_routes("national:exo_l'assomption", "elephant")
     assert [r.route_id for r in routes.routes] == ["9"]
-    stops = await client.search_stops("statcan:regina_transit", "rochdale")
+    stops = await client.search_stops("national:regina_transit", "rochdale")
     assert [s.stop_id for s in stops.stops] == ["S2"]
     # 2025-02-11 is a Tuesday; the trip runs only through calendar_dates.txt.
     stop = await client.get_stop_departures(
-        "statcan:regina_transit", "S1", service_date="2025-02-11", start_time="00:00"
+        "national:regina_transit", "S1", service_date="2025-02-11", start_time="00:00"
     )
     assert [(d.trip_id, d.local_time) for d in stop.departures] == [("T1", "08:00:00")]
     summary = await client.get_route_summary(
-        "statcan:regina_transit", "1", service_date="2025-02-11"
+        "national:regina_transit", "1", service_date="2025-02-11"
     )
     assert summary.trips_on_date == 1
     # The after-midnight trip of the previous service day (Monday 2025-01-06 -> Tuesday).
     night = await client.get_stop_departures(
-        "statcan:exo_l'assomption", "S1", service_date="2025-01-07", start_time="00:00"
+        "national:exo_l'assomption", "S1", service_date="2025-01-07", start_time="00:00"
     )
     # The trip of the day itself (25:10 on the 7th is 01:10 on the 8th) and the
     # one that began on the 6th and runs past midnight into the 7th.
@@ -225,18 +225,18 @@ async def test_date_outside_the_snapshot_window_names_the_window(httpx_mock):
     _serve(httpx_mock)
     # No feed_info.txt: the validator window from validation_summary.csv applies.
     with pytest.raises(InvalidInput, match="2025-01-01 to 2025-03-31.*2025 snapshot"):
-        await client.get_stop_departures("statcan:regina_transit", "S1", service_date="2026-10-02")
+        await client.get_stop_departures("national:regina_transit", "S1", service_date="2026-10-02")
     with pytest.raises(InvalidInput, match="2025-01-06 to 2025-03-31"):
-        await client.get_route_summary("statcan:exo_l'assomption", "9", service_date="2026-10-02")
+        await client.get_route_summary("national:exo_l'assomption", "9", service_date="2026-10-02")
 
 
 async def test_timezone_comes_from_the_feed_with_a_province_fallback(httpx_mock):
     _serve(httpx_mock)
     # exo's agency.txt names a zone other than the province table's (the
     # fixture says Halifax for a Quebec feed): the feed's own value is used.
-    await client._resolve("statcan:exo_l'assomption")
-    assert await client._timezone("statcan:exo_l'assomption") == "America/Halifax"
-    assert await client._timezone("statcan:regina_transit") == "America/Regina"
+    await client._resolve("national:exo_l'assomption")
+    assert await client._timezone("national:exo_l'assomption") == "America/Halifax"
+    assert await client._timezone("national:regina_transit") == "America/Regina"
     assert await client._timezone("ttc") == "America/Toronto"
 
 
@@ -255,7 +255,7 @@ def test_build_agencies_tolerates_blank_columns():
         [],
         {national.member_path("via_rail")},
     )
-    agency = agencies["statcan:via_rail"]
+    agency = agencies["national:via_rail"]
     assert agency.province == "CA"
     assert agency.name_en == "Via Rail"
     assert agency.status == "overlaps_live"

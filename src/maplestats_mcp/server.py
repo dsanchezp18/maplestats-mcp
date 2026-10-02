@@ -264,7 +264,7 @@ Sources, by tool-name prefix:
   Static transit timetables (TTC, STM buses, OC Transpo, Calgary Transit,
   VIA Rail, GO/UP Express, 12 BC Transit systems):
   transit_, with an `agency` argument -- transit_list_agencies. About 100
-  more agencies (StatCan's 2025 snapshot, agency "statcan:<id>"):
+  more agencies (StatCan's 2025 snapshot, agency "national:<id>"):
   transit_list_national_agencies.
   Electricity demand, generation and prices: electricity_ontario_ (IESO),
   electricity_quebec_ (Hydro-Quebec).
