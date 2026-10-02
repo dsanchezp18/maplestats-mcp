@@ -6,7 +6,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.census_tables import client
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import CloudflareChallenge, NotFound, UpstreamUnavailable
 
 BASE = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/dt-td/"
 
@@ -106,6 +106,29 @@ async def test_retired_release_points_to_borealis(httpx_mock):
     )
     with pytest.raises(NotFound, match="borealis_search_ivt"):
         await client.search("language", release="2011")
+
+
+async def test_search_during_cloudflare_challenge_is_unavailable(httpx_mock, cloudflare_challenge):
+    """www12 answers every page with a managed challenge (live 2026-10-02)."""
+    httpx_mock.add_response(**cloudflare_challenge)
+    with pytest.raises(CloudflareChallenge, match="borealis_search_ivt"):
+        await client.search("income")
+
+
+async def test_downloads_during_cloudflare_challenge_are_not_reported_missing(
+    httpx_mock, cloudflare_challenge
+):
+    """Was a misleading NotFound ("No downloads found for PID") because the HEAD
+    403 was read as 'no such file'."""
+    httpx_mock.add_response(is_reusable=True, **cloudflare_challenge)
+    with pytest.raises(UpstreamUnavailable, match="Cloudflare"):
+        await client.get_downloads("110192")
+
+
+async def test_plain_403_on_a_page_is_unavailable(httpx_mock):
+    httpx_mock.add_response(url=BASE + "index-eng.cfm", status_code=403)
+    with pytest.raises(UpstreamUnavailable, match="HTTP 403"):
+        await client.search("income")
 
 
 async def test_a_theme_that_never_answers_is_skipped_not_fatal(httpx_mock):

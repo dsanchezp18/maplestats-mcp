@@ -47,6 +47,13 @@ async def statcan_census_profile_archive_get_download_link(
 ) -> DownloadLink:
     """Get the direct bulk-download URL for one archived census year/level/format.
 
+    STATUS (checked 2026-10-02): the URL is built, not fetched, and it points
+    at StatCan's www12 host, which currently answers scripts with a
+    Cloudflare bot challenge. The link opens in a browser but a script
+    (curl, R, Python) cannot download it; provenance.limits says so while it
+    holds. Table versions: WDS 17100122 / 17100123 (2016 indicator profile),
+    statcan_census_profile_* (2021).
+
     Use for: resolving the actual downloadable file (a compressed
     CSV or TAB archive covering every geography at that level, for all
     topics) for a pre-2021 census, given a level key from

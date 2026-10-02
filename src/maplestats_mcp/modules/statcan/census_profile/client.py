@@ -107,6 +107,11 @@ async def _fetch_codelist(codelist_id: str, lang: str = "en") -> tuple[list[dict
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             detail = exc.response.text[:200]
+            if status == 429 or status >= 500:
+                raise UpstreamUnavailable(
+                    f"statcan_census_profile:_fetch_codelist({codelist_id}) failed with HTTP "
+                    f"{status} after retries. Try again shortly."
+                ) from exc
             raise UpstreamError(
                 f"statcan_census_profile:_fetch_codelist({codelist_id}) returned HTTP {status}: {detail}"
             ) from exc
@@ -251,6 +256,11 @@ async def get_data(
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             detail = exc.response.text[:200]
+            if status == 429 or status >= 500:
+                raise UpstreamUnavailable(
+                    f"statcan_census_profile:get_data failed with HTTP {status} after "
+                    "retries. Try again shortly."
+                ) from exc
             if 400 <= status < 500:
                 raise InvalidInput(
                     f"statcan_census_profile:get_data returned HTTP {status}: {detail}"

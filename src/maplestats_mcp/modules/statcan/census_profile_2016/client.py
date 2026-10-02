@@ -27,7 +27,12 @@ from maplestats_mcp.modules.statcan.census_profile_2016.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    CloudflareChallenge,
+    InvalidInput,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -82,8 +87,22 @@ async def list_geographies(
             return await api_get(url, params=params, headers=_JSON_ACCEPT)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
+            if status == 429 or status >= 500:
+                raise UpstreamUnavailable(
+                    f"statcan_census_profile_2016:list_geographies failed with HTTP {status} "
+                    "after retries. Try again shortly."
+                ) from exc
+            if status == 403:
+                raise UpstreamUnavailable(
+                    "statcan_census_profile_2016:list_geographies was refused (HTTP 403). "
+                    + constants.BLOCKED_NOTE
+                ) from exc
             raise UpstreamError(
                 f"statcan_census_profile_2016:list_geographies returned HTTP {status}."
+            ) from exc
+        except CloudflareChallenge as exc:
+            raise CloudflareChallenge(
+                f"statcan_census_profile_2016:list_geographies: {exc} " + constants.BLOCKED_NOTE
             ) from exc
         except httpx.DecodingError as exc:
             # A 200 whose body is not JSON (e.g. the XML this service sends
@@ -167,8 +186,22 @@ async def get_data(
             return await api_get(url, params=params, headers=_JSON_ACCEPT)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
+            if status == 429 or status >= 500:
+                raise UpstreamUnavailable(
+                    f"statcan_census_profile_2016:get_data failed with HTTP {status} "
+                    "after retries. Try again shortly."
+                ) from exc
+            if status == 403:
+                raise UpstreamUnavailable(
+                    "statcan_census_profile_2016:get_data was refused (HTTP 403). "
+                    + constants.BLOCKED_NOTE
+                ) from exc
             raise UpstreamError(
                 f"statcan_census_profile_2016:get_data returned HTTP {status}."
+            ) from exc
+        except CloudflareChallenge as exc:
+            raise CloudflareChallenge(
+                f"statcan_census_profile_2016:get_data: {exc} " + constants.BLOCKED_NOTE
             ) from exc
         except httpx.DecodingError as exc:
             # A 200 whose body is not JSON (e.g. the XML this service sends
