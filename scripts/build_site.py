@@ -294,8 +294,8 @@ SOURCES: dict[str, Source] = {
     ),
     "boc": Source("Bank of Canada", "Banque du Canada", "national", domain="money"),
     "borealis": Source(
-        "Borealis: Beyond 20/20 tables",
-        "Borealis : tableaux Beyond 20/20",
+        "Borealis: Beyond 20/20 tables and ODESI",
+        "Borealis : tableaux Beyond 20/20 et ODESI",
         "national",
         "Borealis",
         "Borealis",

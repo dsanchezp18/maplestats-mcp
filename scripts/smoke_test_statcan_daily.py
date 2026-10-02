@@ -66,6 +66,26 @@ async def main() -> int:
     except InvalidInput:
         print("OK: bogus start_date raises InvalidInput as expected")
 
+    upcoming = await client.get_release_calendar("labour force survey", limit=3)
+    print(
+        f"OK: get_release_calendar('labour force survey') -> {upcoming.total_matched} upcoming, "
+        f"schedule reaches {upcoming.latest_scheduled_date}"
+    )
+    ok &= upcoming.total_matched > 0
+    ok &= all(e.scheduled and e.url is None for e in upcoming.entries)
+    ok &= upcoming.entries == sorted(upcoming.entries, key=lambda e: e.release_date)
+    print("  next:", upcoming.entries[0].model_dump(mode="json") if upcoming.entries else None)
+
+    fr_cal = await client.get_release_calendar("population active", lang="fr", limit=1)
+    print(f"OK: get_release_calendar('population active', fr) -> {fr_cal.total_matched}")
+    ok &= fr_cal.total_matched > 0
+
+    products = await client.get_release_calendar(
+        "62-013-X", kind="products", upcoming_only=False, limit=2
+    )
+    print(f"OK: get_release_calendar('62-013-X', products) -> {products.total_matched} releases")
+    ok &= products.total_matched > 0 and all(e.catalogue_number for e in products.entries)
+
     print("\nSTATCAN DAILY SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 
