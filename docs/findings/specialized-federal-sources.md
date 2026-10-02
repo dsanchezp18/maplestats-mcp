@@ -2737,3 +2737,74 @@ document id" from the page (the example pattern with `Id=0` returns 404);
 votes, debates and committee evidence, which the `parliament_` tools already
 cover through OpenParliament.ca; and LEGISinfo's bills JSON, also covered. Person ids
 are the House's own, not OpenParliament slugs.
+
+## StatCan merchandise trade by commodity (CIMT)
+
+**Status:** Shipped 2026-10-02 as `modules/statcan/cimt/` (7 `cimt_*` tools).
+
+WDS has no commodity-level trade: table 12-10-0011-01 stops at principal
+trading partners and sections. The Canadian International Merchandise Trade
+web application (`www150.statcan.gc.ca/n1/pub/71-607-x/2021004/exp-eng.htm`
+for exports, `imp-eng.htm` for imports) draws on a JSON REST service that is
+not documented anywhere. Its methods were read from the page's JavaScript
+(`js/cimt4.min.js`) and each was then called live: `getPeriods`,
+`getReport`, `getTopPartners`, `getTopCommodities`, `getProvinces`,
+`getChapterChart`, `getCommodityChart` and `getCommodity` (not wrapped: it
+returns every province and partner for one commodity and month, about 5 KB
+per call, without names). Code lists are static JavaScript files next to the
+page: `countriesF.js` (279 entries, some repeated, with the months each was
+used), `states_codr.js` (US states), `provinces.js`, `uom.js`, `chaptersF.js`,
+`hs4F.js`, `hs6F_X.js` (exports) and `hs6F.js` (imports), `hs8F.js` and
+`hs10F.js` (16 MB). Terms: StatCan Open Licence; `robots.txt` blocks neither
+`/t1/` nor `/n1/pub/`, and asks for a 2 second crawl delay, which the rate
+limit (0.5 per second) keeps. The pages carry no terms against automated use.
+
+Path parameters, confirmed live: `getReport/(origin)/country/state/hs/hs6flag/
+maxRows/tradeType/annualize/from/to`. `origin` is a parenthesised province
+list, `(1)` is Canada. Country 1000 is all countries, 9 the United States;
+state 100 is "no state split". `tradeType` 0 is exports, 1 imports. Rows are
+`{T period, H code, C country, S state, P province, Q quantity, V value}`.
+Other methods take a single month, province, country, state and an optional
+2-digit chapter, and return the top 15 partners, about 25 commodities, or
+every province.
+
+Quirks, each handled in the client:
+
+- Without a `Referer` from the 71-607-x pages every method answers HTTP 404
+  with an HTML error page (`Accept` alone or `X-Requested-With` alone does not help).
+- Exports are published at 8 digits and imports at 10; `hs6flag=1`
+  aggregates both to 6. A code matches by prefix only at the level the flag
+  selects: `27090010` with `hs6flag=1` gives no rows, and `27090010` for
+  imports gives none because import codes have 10 digits. A 1-digit,
+  9-digit or non-numeric code answers 406, as does an unknown trade type.
+- A month after the latest answers 500; an inverted range answers 200 with
+  no rows; an unmatched filter answers 200 with `{"count": 0}`.
+- `maxRows` cuts silently: `count` is the full number of rows and `trade`
+  holds the first rows in no order. The client reports `truncated`.
+- `(1,35)` returns Canada only; `(35,24)` returns one row per province.
+- Exports include re-exports. In the chart methods the flag `E` splits them:
+  exports 1 domestic value, 2 re-export value, 3 domestic quantity, 4
+  re-export quantity (inferred, the application never uses it); imports 1
+  value, 2 quantity. The report adds domestic and re-export value together
+  (HS 710812, 2026-07: 6,621,013,002 + 203,533 = 6,621,216,535).
+- `countriesF.js` repeats an id (Virgin Islands) and has no plain "United
+  States" (it is "United States of America"); `provinces.js` writes French
+  names with en dashes; `uom.js` repeats `CCI`; the files start with a
+  byte-order mark and have trailing commas, so they are parsed with a regex
+  rather than as JSON. Goods without a quantity unit carry the unit `BLANK`.
+- Exports are attributed to the province of origin, imports to the province
+  of clearance, which StatCan says overstates provinces with ports and
+  warehouses.
+
+Reconciliation (live, 2026-10-02): the 4,476 HS6 export rows for 2026-07
+sum to 73,175,629,507 dollars, the same as the all-partner total of
+`getTopPartners` and as WDS table 12-10-0011-01 (customs basis, unadjusted,
+all countries, 73,175.6 million). Imports: `getTopPartners` 71,965,730,064,
+WDS 71,965.7 million. The 2025 calendar-year crude oil exports to the United
+States (HS 270900) are 126,777,839,232 dollars both as the sum of twelve
+monthly rows and as the annualized row. Alberta's crude to the US in 2026-07
+(11,314,036,747) is the same in `getReport` and `getTopCommodities`.
+
+Not built: HS10 export detail does not exist (exports stop at 8 digits);
+the all-commodity import month has more than 5,000 HS6 rows (the cap truncated it), past the tool's
+5,000-row cap, so full-month import totals come from `cimt_get_top_partners`.
