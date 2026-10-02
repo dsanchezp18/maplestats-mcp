@@ -48,7 +48,6 @@ PORTALS: dict[str, Portal] = {
         "Portail de données ouvertes de l'Île-du-Prince-Édouard",
         bilingual_content=True,
     ),
-    "hamilton": Portal("open.hamilton.ca", "Open Hamilton", "Open Hamilton"),
     "london": Portal(
         "opendata.london.ca", "City of London (Ontario) Open Data", "Ville de London (Ontario)"
     ),

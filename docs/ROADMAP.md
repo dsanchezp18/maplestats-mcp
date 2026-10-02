@@ -6,7 +6,7 @@ any narrower or broader source list implied elsewhere.
 
 **State at 2026-10-02:** 253 tools in 54 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
-`Not built`). Local coverage is 69 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
+`Not built`). Local coverage is 68 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
 and the candidates listed at the end of this file.
 
@@ -123,7 +123,7 @@ portal is confirmed to exist and be reachable.
 | Sherbrooke | Shipped (via `ckan_*` (`portal="qc"`)) | Checked 2026-09-24: organizations `ville-de-sherbrooke` (7 datasets) and `ville-de-sherbrooke-donnees-geomatiques` on Données Québec. |
 | Trois-Rivières | Shipped (via `ckan_*` (`portal="qc"`)) | Checked 2026-09-24: organization `ville-de-trois-rivieres` on Données Québec (40 datasets). |
 | Regina | Shipped | openregina.ca, CKAN Action API: `ckan_*` (`portal="regina"`), 10 tools (search, dataset/organization/resource/license detail, tags, curated thematic groups, and -- added 2026-09-20 -- `ckan_datastore_search`, confirmed live against a real … [Details](findings/municipal-sources.md#regina) |
-| Hamilton | Shipped | open.hamilton.ca (Open Hamilton), ArcGIS Hub: `arcgis_hub_*` (`portal="hamilton"`), 3 tools, same shape as the provincial ArcGIS Hub modules (search, item detail with download links, direct FeatureServer/MapServer row queries). English-only. |
+| Hamilton | Removed | Shipped 2026-09-18 as `arcgis_hub_*` (`portal="hamilton"`), removed 2026-10-01: open.hamilton.ca now answers automated requests with a Cloudflare challenge (HTTP 403 "Just a moment"). Left out in line with the rule not to cover sources that block automated use. The Hamilton Conservation Authority portal is unaffected. |
 | London | Shipped | opendata.london.ca (City of London Open Data), ArcGIS Hub: `arcgis_hub_*` (`portal="london"`), 3 tools, same shape. English-only. |
 | Kitchener | Shipped | open-kitchenergis.opendata.arcgis.com (Kitchener GeoHub), ArcGIS Hub: `arcgis_hub_*` (`portal="kitchener"`), 3 tools, same shape. English-only. |
 | Windsor | Shipped | open-data-portal-citywindsor.hub.arcgis.com (Windsor Open Data Portal), ArcGIS Hub: `arcgis_hub_*` (`portal="windsor"`), 3 tools, same shape. English-only; confirmed live this catalogue has zero datasets matching "water" despite 177 total datasets — not every catalogue matches every test keyword. |

@@ -721,7 +721,6 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "sk": ("SK", _P),
         "pe": ("PE", _P),
         "alberta_geological_survey": ("AB", _P),
-        "hamilton": ("ON", _M),
         "london": ("ON", _M),
         "kitchener": ("ON", _M),
         "windsor": ("ON", _M),

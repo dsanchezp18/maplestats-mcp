@@ -15,7 +15,6 @@ PortalKey = Literal[
     "mb",
     "sk",
     "pe",
-    "hamilton",
     "london",
     "kitchener",
     "windsor",

@@ -101,7 +101,6 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     ),
     "ottawa": ("Ottawa", (_arcgis("ottawa"), _arcgis("ottawa_police"))),
     "halifax": ("Halifax", (_arcgis("halifax"),)),
-    "hamilton": ("Hamilton", (_arcgis("hamilton"),)),
     "london": ("London (Ontario)", (_arcgis("london"),)),
     "kitchener": ("Kitchener", (_arcgis("kitchener"), _arcgis("waterloo_region"))),
     "waterloo": ("Region of Waterloo", (_arcgis("waterloo_region"),)),

@@ -33,7 +33,7 @@ async def arcgis_hub_list_portals(lang: Lang = "en") -> PortalList:
 
     Use for: finding the `portal` key the other arcgis_hub_ tools need,
     and portal-specific caveats. Covers Manitoba (mb), Saskatchewan
-    (sk), Prince Edward Island (pe), Hamilton, London, Kitchener,
+    (sk), Prince Edward Island (pe), London, Kitchener,
     Windsor, Saskatoon, Victoria, Surrey, Ottawa, Halifax, Mississauga,
     Peel, Durham, Waterloo Region, Metro Vancouver, York, Markham,
     Newmarket, Aurora, Medicine Hat, Grande Prairie, Grande Prairie
@@ -59,7 +59,7 @@ async def arcgis_hub_search_datasets(
     """Search one Canadian ArcGIS Hub open-data catalogue (city, region, or province).
 
     Use for: finding datasets by topic, tag, item type, or free-text
-    query on Manitoba, Saskatchewan, Prince Edward Island, Hamilton,
+    query on Manitoba, Saskatchewan, Prince Edward Island,
     London, Kitchener, Windsor, Saskatoon, Victoria, Surrey, Ottawa,
     Halifax, Mississauga, Peel, Durham, Waterloo Region, Metro
     Vancouver, York, Markham, Newmarket, Aurora, Medicine Hat, Grande
