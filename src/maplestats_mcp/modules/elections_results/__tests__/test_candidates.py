@@ -23,7 +23,7 @@ _HEADER = (
 
 
 def _line(**values: str) -> str:
-    row = dict.fromkeys(_HEADER.split("\t"), "")
+    row: dict[str, str] = {name: "" for name in _HEADER.split("\t")}
     row.update(values)
     return "\t".join(row[c] for c in _HEADER.split("\t"))
 
