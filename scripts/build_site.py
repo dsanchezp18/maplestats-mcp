@@ -264,6 +264,15 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="provincial_agency",
     ),
+    "ab_opendata": Source(
+        "Open Alberta files",
+        "Fichiers d'Open Alberta",
+        "provincial",
+        "Open Alberta",
+        "Open Alberta",
+        places=("AB",),
+        row="provincial_agency",
+    ),
     "aer": Source(
         "Alberta Energy Regulator",
         "Alberta Energy Regulator",
