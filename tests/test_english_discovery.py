@@ -65,6 +65,8 @@ CASES = [
     ("Ontario generation mix nuclear wind gas", "electricity_ontario_get_supply_by_fuel"),
     ("wildfire burned area by year", "nrcan_nbac_query_fires"),
     ("patented medicine prices", "pmprb_search_patented_medicines"),
+    ("who lobbied the BC minister of health", "bc_lobbyists_search_activity_reports"),
+    ("British Columbia lobbyist registration for a company", "bc_lobbyists_search_registrations"),
     ("Parliamentary Budget Officer cost estimate", "pbo_search_publications"),
     (
         "federal election candidate financial returns",

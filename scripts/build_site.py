@@ -274,6 +274,16 @@ SOURCES: dict[str, Source] = {
         row="provincial_agency",
     ),
     "arcgis_hub": Source("ArcGIS Hub portals", "Portails ArcGIS Hub", "catalogue", "ArcGIS Hub"),
+    "bc_lobbyists": Source(
+        "BC Registrar of Lobbyists: registrations and activity reports",
+        "Registraire des lobbyistes de la C.-B. : inscriptions et rapports d'activité",
+        "provincial",
+        "BC Registrar of Lobbyists",
+        "Registraire des lobbyistes (C.-B.)",
+        domain="government",
+        places=("BC",),
+        row="provincial_agency",
+    ),
     "bc_stats": Source(
         "BC Stats Excel tables",
         "Tableaux Excel de BC Stats",
