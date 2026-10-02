@@ -39,7 +39,7 @@ def _by_language(result) -> dict[str, str]:
 async def test_table_all_languages_with_house_layout():
     result = await client.reproduce("wds_get_cube_metadata", {"product_id": 1810000401})
     code = _by_language(result)
-    assert set(code) == {"r", "python", "stata", "julia"}
+    assert set(code) == {"r", "python", "stata", "julia", "excel"}
     assert result.source_url == "https://www150.statcan.gc.ca/n1/tbl/csv/18100004-eng.zip"
     assert 'get_cansim("18-10-0004-01")' in code["r"] and "val_norm" in code["r"]
     assert "http2=True" in code["python"]  # StatCan rejects HTTP/1.1-only clients
@@ -48,7 +48,7 @@ async def test_table_all_languages_with_house_layout():
     assert "@clean_names" in code["julia"]
     # House layout: header block, then numbered sections in order.
     for language, text in code.items():
-        assert text.lstrip().startswith(("# ====", "* ====")), language
+        assert text.lstrip().startswith(("# ====", "* ====", "// ====")), language
         marks = ["0. Setup", "1. Read inputs", "2. Check inputs", "3. Prepare data"]
         positions = [text.index(mark) for mark in marks]
         assert positions == sorted(positions), language

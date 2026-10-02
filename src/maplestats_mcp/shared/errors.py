@@ -26,6 +26,15 @@ class UpstreamUnavailable(ValueError):
     """The upstream API is temporarily unreachable (network/5xx/timeout)."""
 
 
+class CloudflareChallenge(UpstreamUnavailable):
+    """The host answered with a Cloudflare bot challenge, which only a browser can pass.
+
+    A kind of UpstreamUnavailable (so callers handling that keep working);
+    modules catch this one to add where else the same data can be had.
+    MapleStats never tries to defeat the challenge.
+    """
+
+
 class DataLocked(ValueError):
     """StatCan's WDS returns HTTP 409 during its 12am-8:30am ET update window.
 

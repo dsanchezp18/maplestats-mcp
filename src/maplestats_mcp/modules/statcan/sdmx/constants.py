@@ -17,7 +17,28 @@ RATE_LIMIT_SOURCE = "statcan-wds"  # same host as WDS (www150.statcan.gc.ca)
 RATE_LIMIT_PER_SECOND = 20.0
 RATE_LIMIT_CAPACITY = 20.0
 
+# Per-series cap on observations returned (the newest are kept).
 MAX_ROWS = 500
+# Observations per series when the caller gives no period filter at all. Before
+# this default, an unfiltered key returned the OLDEST 500 observations (1914-01
+# to 1955-08 for CPI), the opposite of what a caller wants.
+DEFAULT_LAST_N = 100
+# Cap on series per response (a wildcarded key can match thousands).
+MAX_SERIES = 200
+
+# Structure browsing: codes per dimension in one response. Table 98100002's
+# full structure is 3.5 MB of XML (466k characters of JSON).
+DEFAULT_CODE_LIMIT = 100
+MAX_CODE_LIMIT = 1000
+
+# Cached parsed structures and per-table dimension counts (they change only
+# when StatCan revises a table's classification).
+CACHE_TTL_STRUCTURE_SECONDS = 24 * 60 * 60
+
+# SDMX time-period syntax accepted by StatCan: 2026, 2026-03, 2026-03-15,
+# 2026-Q1, 2026-S1, 2026-W12 (the live API answers 406 "Wrong date format or
+# value" for anything else, e.g. 2026/03).
+PERIOD_PATTERN = r"^\d{4}(-(\d{2}(-\d{2})?|[QSW]\d{1,2}))?$"
 
 SDMX_NS = {
     "mes": "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message",

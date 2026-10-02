@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
-from maplestats_mcp.modules.transit import constants, gtfs
+from maplestats_mcp.modules.transit import constants, gtfs, national
 from maplestats_mcp.modules.transit.constants import Agency
 from maplestats_mcp.modules.transit.schemas import (
     AgencyFeed,
@@ -39,7 +39,15 @@ from maplestats_mcp.modules.transit.schemas import (
     StopRecord,
     StopSearch,
 )
-from maplestats_mcp.modules.transit.zipstream import head, stream_member_lines, total_bytes
+from maplestats_mcp.modules.transit.zipstream import (
+    download_whole,
+    head,
+    members_of,
+    read_blob_member,
+    read_nested_zip,
+    stream_member_lines,
+    total_bytes,
+)
 from maplestats_mcp.shared.cache import cached_fetch, forget
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -55,6 +63,8 @@ class FeedDirectory:
     total_bytes: int
     last_modified: datetime | None
     members: dict[str, ZipMember]
+    # The whole zip, held only for hosts that cannot serve byte ranges.
+    blob: bytes | None = None
 
 
 class TripRecord(NamedTuple):
@@ -70,11 +80,55 @@ class StopCall(NamedTuple):
     trip: TripRecord
 
 
+# The agencies of StatCan's national database, filled by `_load_national` the
+# first time a "national:<id>" key is used (a fixed snapshot, so kept for the
+# life of the process; the catalogue fetch itself is cached for a day).
+_NATIONAL: dict[str, Agency] = {}
+
+
 def _agency(key: str) -> Agency:
+    if key.startswith(constants.NATIONAL_PREFIX):
+        agency = _NATIONAL.get(key)
+        if agency is None:
+            raise InvalidInput(
+                f"Unknown agency '{key}'. Use transit_list_national_agencies for the keys of "
+                "StatCan's national database."
+            )
+        if agency.status != "available":
+            raise InvalidInput(
+                f"{key} is not served from the national database: {agency.status_reason}"
+            )
+        return agency
     agency = constants.AGENCIES.get(key)
     if agency is None:
-        raise InvalidInput(f"Unknown agency '{key}'. Use one of: {', '.join(constants.AGENCIES)}.")
+        raise InvalidInput(
+            f"Unknown agency '{key}'. Use one of: {', '.join(constants.AGENCIES)}, or "
+            f"'{constants.NATIONAL_PREFIX}<id>' from transit_list_national_agencies."
+        )
     return agency
+
+
+async def _national_catalog() -> tuple[national.Catalog, bool]:
+    async def fetch() -> national.Catalog:
+        return await national.load_catalog()
+
+    catalog, was_cached = await cached_fetch(
+        "transit:national:catalog", constants.NATIONAL_CATALOG_TTL_SECONDS, fetch
+    )
+    _NATIONAL.clear()
+    _NATIONAL.update(catalog.agencies)
+    return catalog, was_cached
+
+
+async def _load_national() -> national.Catalog:
+    return (await _national_catalog())[0]
+
+
+async def _resolve(key: str) -> Agency:
+    """`_agency`, after loading the national catalogue when the key needs it."""
+    if key.startswith(constants.NATIONAL_PREFIX):
+        await _load_national()
+    return _agency(key)
 
 
 def _is_excluded(agency: Agency, row: dict[str, str]) -> bool:
@@ -103,9 +157,35 @@ def _last_modified(value: str | None) -> datetime | None:
 
 
 async def _directory(key: str) -> tuple[FeedDirectory, bool]:
-    agency = _agency(key)
+    agency = await _resolve(key)
 
     async def fetch() -> FeedDirectory:
+        if agency.database == "statcan":
+            # The inner zip is read whole (a deflated member cannot be read at
+            # random) and then served from memory like a BC Transit feed.
+            catalog = await _load_national()
+            custom_id = key.removeprefix(constants.NATIONAL_PREFIX)
+            member = catalog.members.get(national.member_path(custom_id))
+            if member is None:
+                raise UpstreamError(f"{key}: the feed is not in the national archive.")
+            blob = await read_nested_zip(constants.NATIONAL_URL, member)
+            return FeedDirectory(
+                constants.NATIONAL_URL,
+                len(blob),
+                constants.NATIONAL_AS_OF,
+                {m.name.rsplit("/", 1)[-1].lower(): m for m in members_of(blob, key)},
+                blob,
+            )
+        if not agency.range_requests:
+            blob, whole = await download_whole(agency.feed_url)
+            blob_members = members_of(blob, agency.feed_url)
+            return FeedDirectory(
+                str(whole.url),
+                len(blob),
+                _last_modified(whole.headers.get("last-modified")),
+                {m.name.rsplit("/", 1)[-1].lower(): m for m in blob_members},
+                blob,
+            )
         response = await head(agency.feed_url)
         final_url = str(response.url)
         members, total = await list_members(final_url)
@@ -138,6 +218,14 @@ def _member(directory: FeedDirectory, key: str, name: str) -> ZipMember | None:
     return directory.members.get(name)
 
 
+async def _read_table_bytes(directory: FeedDirectory, member: ZipMember) -> bytes:
+    if directory.blob is not None:
+        return await asyncio.to_thread(
+            read_blob_member, directory.blob, member, max_bytes=constants.TABLE_MAX_BYTES
+        )
+    return await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
+
+
 async def _table(
     key: str, name: str, *, required: bool = True
 ) -> tuple[list[dict[str, str]], bool]:
@@ -151,7 +239,7 @@ async def _table(
                 if required:
                     raise UpstreamError(f"{key}: the feed has no {name}.")
                 return []
-            data = await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
+            data = await _read_table_bytes(directory, member)
             return await asyncio.to_thread(gtfs.parse_table, data)
 
         return await _with_fresh_directory(key, once)
@@ -175,7 +263,7 @@ async def _scan_stop_times(
         rows: list[gtfs.StopTimeRow] = []
         indexes: dict[str, int] | None = None
         async with _SCANS:
-            async for batch in stream_member_lines(directory.url, member):
+            async for batch in stream_member_lines(directory.url, member, blob=directory.blob):
                 if indexes is None:
                     indexes = gtfs.column_indexes(batch[0])
                     batch = batch[1:]
@@ -204,7 +292,7 @@ async def _trips(
         member = _member(directory, key, "trips.txt")
         if member is None:
             raise UpstreamError(f"{key}: the feed has no trips.txt.")
-        data = await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
+        data = await _read_table_bytes(directory, member)
         rows = await asyncio.to_thread(gtfs.parse_table, data)
         return [
             TripRecord(
@@ -235,6 +323,11 @@ async def _provenance(
     start = gtfs.parse_gtfs_date(feed_info[0].get("feed_start_date")) if feed_info else None
     end = gtfs.parse_gtfs_date(feed_info[0].get("feed_end_date")) if feed_info else None
     coverage = f"Schedule valid {start} to {end}." if start and end else None
+    if agency.database == "statcan":
+        coverage = (
+            f"{coverage or 'No feed_info.txt dates.'} StatCan validator window "
+            f"{agency.window_start} to {agency.window_end}."
+        )
     return make_provenance(
         source=f"transit:{key}",
         url=directory.url,
@@ -246,24 +339,57 @@ async def _provenance(
         limits=(
             f"Licence: {agency.licence}. Attribution: {agency.attribution}"
             + (f" {agency.notes_en}" if agency.excluded_route_types else "")
+            + (
+                f" Compiled by Statistics Canada under {constants.NATIONAL_LICENCE}; "
+                f"licence page: {agency.licence_url}. Data quality is taken as is "
+                "(no fixes applied by StatCan)."
+                if agency.database == "statcan"
+                else ""
+            )
         ),
     )
 
 
 async def _check_date(key: str, day: date) -> None:
     feed_info, _ = await _table(key, "feed_info.txt", required=False)
-    if not feed_info:
-        return
-    start = gtfs.parse_gtfs_date(feed_info[0].get("feed_start_date"))
-    end = gtfs.parse_gtfs_date(feed_info[0].get("feed_end_date"))
+    start = end = None
+    if feed_info:
+        start = gtfs.parse_gtfs_date(feed_info[0].get("feed_start_date"))
+        end = gtfs.parse_gtfs_date(feed_info[0].get("feed_end_date"))
+    agency = _agency(key)
+    if agency.database == "statcan" and not (start and end):
+        # Feeds without feed_info.txt dates: StatCan's validator window instead.
+        start, end = agency.window_start, agency.window_end
     if start and end and not start <= day <= end:
-        raise InvalidInput(f"{key}: the schedule covers {start} to {end}; {day} is outside it.")
+        hint = (
+            " This is a 2025 snapshot compiled by Statistics Canada: pass a service_date "
+            "inside that window."
+            if agency.database == "statcan"
+            else ""
+        )
+        raise InvalidInput(
+            f"{key}: the schedule covers {start} to {end}; {day} is outside it.{hint}"
+        )
 
 
-def _service_day(agency: Agency, day: str | None) -> date:
+async def _timezone(key: str) -> str:
+    """The zone for "today" and local times: a national feed's own agency.txt, else the config."""
+    agency = _agency(key)
+    if agency.database != "statcan":
+        return agency.timezone
+    rows, _ = await _table(key, "agency.txt", required=False)
+    zone = rows[0].get("agency_timezone", "") if rows else ""
+    try:
+        ZoneInfo(zone)
+    except (ValueError, KeyError, OSError):
+        return agency.timezone
+    return zone
+
+
+def _service_day(zone: str, day: str | None) -> date:
     if day:
         return gtfs.parse_iso_date(day)
-    return datetime.now(ZoneInfo(agency.timezone)).date()
+    return datetime.now(ZoneInfo(zone)).date()
 
 
 # -- agencies and feed info ---------------------------------------------
@@ -296,10 +422,24 @@ def _agency_feed(
         reachable=reachable,
         zip_bytes=zip_bytes,
         last_modified=modified,
+        database=agency.database,
+        status=agency.status,
+        status_reason=agency.status_reason or None,
+        live_agency_key=agency.live_agency_key,
+        service_window_start=agency.window_start,
+        service_window_end=agency.window_end,
+        validator_errors=agency.validator_errors,
+        validator_warnings=agency.validator_warnings,
     )
 
 
 async def _probe(agency: Agency, lang: str) -> tuple[AgencyFeed, bool]:
+    if not agency.range_requests:
+        # BC Transit's host builds the whole zip (5 to 25 s) before it sends
+        # any header, so listing the agencies does not poke twelve of them;
+        # reachability stays unknown until a tool has downloaded the feed.
+        return _agency_feed(agency, lang), False
+
     async def fetch() -> tuple[bool, int | None, datetime | None]:
         try:
             response = await head(agency.feed_url)
@@ -320,7 +460,8 @@ async def _probe(agency: Agency, lang: str) -> tuple[AgencyFeed, bool]:
 
 
 async def list_agencies(*, lang: str = "en") -> AgencyList:
-    """Every configured agency, with a live HEAD check of its zip."""
+    """Every configured agency, with a live HEAD check of its zip (not for hosts
+    that build the zip on request: their `reachable` stays null)."""
     probed = await asyncio.gather(*(_probe(a, lang) for a in constants.AGENCIES.values()))
     return AgencyList(
         total_matches=len(probed),
@@ -339,16 +480,76 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
     )
 
 
+async def list_national_agencies(
+    *,
+    query: str | None = None,
+    province: str | None = None,
+    status: str | None = None,
+    lang: str = "en",
+) -> AgencyList:
+    """The feeds of StatCan's Canadian Public Transit Network Database.
+
+    Each is 'available' (read from the national archive with agency
+    'national:<id>'), 'overlaps_live' (the agency is read live instead) or
+    'excluded' (terms or missing licence information; see status_reason).
+    """
+    if status is not None and status not in ("available", "overlaps_live", "excluded"):
+        raise InvalidInput("status must be 'available', 'overlaps_live' or 'excluded'.")
+    _, was_cached = await _national_catalog()
+    needle = gtfs.fold(query) if query else None
+    wanted = province.strip().upper() if province else None
+    feeds = [
+        _agency_feed(agency, lang)
+        for agency in _NATIONAL.values()
+        if (status is None or agency.status == status)
+        and (wanted is None or agency.province == wanted)
+        and (
+            needle is None
+            or needle in gtfs.fold(f"{agency.name_en} {agency.key.removeprefix('national:')}")
+        )
+    ]
+    feeds.sort(key=lambda f: (f.province, f.name_en.casefold()))
+    return AgencyList(
+        total_matches=len(feeds),
+        agencies=feeds,
+        provenance=make_provenance(
+            source="transit:statcan",
+            url=constants.NATIONAL_URL,
+            cached=was_cached,
+            schema_name="transit.AgencyList",
+            as_of=constants.NATIONAL_AS_OF,
+            freshness=constants.NATIONAL_FRESHNESS,
+            coverage=f"{len(_NATIONAL)} feeds in the database; product page {constants.NATIONAL_PAGE}.",
+            limits=(
+                f"Compiled by Statistics Canada under {constants.NATIONAL_LICENCE}. "
+                f"{constants.NATIONAL_NOTICE} Each feed's licence_url and attribution are the "
+                "ones StatCan recorded for it; check them before republishing."
+            ),
+        ),
+    )
+
+
 async def get_feed_info(agency_key: str, *, lang: str = "en") -> FeedInfo:
     """The feed's own metadata, file sizes and counts of routes and stops."""
-    agency = _agency(agency_key)
+    agency = await _resolve(agency_key)
     directory, dir_cached = await _directory(agency_key)
     feed_info, _ = await _table(agency_key, "feed_info.txt", required=False)
     agency_rows, _ = await _table(agency_key, "agency.txt", required=False)
     routes, _ = await _table(agency_key, "routes.txt")
     stops, _ = await _table(agency_key, "stops.txt")
     info = feed_info[0] if feed_info else {}
-    feed, _ = await _probe(agency, lang)
+    if directory.blob is None:
+        feed, _ = await _probe(agency, lang)
+    else:
+        # The zip was just downloaded whole; a second request would make the
+        # host build it again, so its size and date come from that download.
+        feed = _agency_feed(
+            agency,
+            lang,
+            reachable=True,
+            zip_bytes=directory.total_bytes,
+            modified=directory.last_modified,
+        )
     return FeedInfo(
         agency=feed,
         publisher_name=info.get("feed_publisher_name") or None,
@@ -392,7 +593,7 @@ async def search_routes(
 ) -> RouteSearch:
     """Routes whose id, short name, long name or description contain `query`."""
     del lang
-    agency = _agency(agency_key)
+    agency = await _resolve(agency_key)
     _check_limit(limit)
     directory, dir_cached = await _directory(agency_key)
     rows, _ = await _table(agency_key, "routes.txt")
@@ -496,7 +697,7 @@ async def search_stops(
 ) -> StopSearch:
     """Stops by name, code or id, and/or within `radius_m` of a point."""
     del lang
-    _agency(agency_key)
+    await _resolve(agency_key)
     _check_limit(limit)
     if (near_latitude is None) != (near_longitude is None):
         raise InvalidInput("Pass near_latitude and near_longitude together.")
@@ -573,13 +774,14 @@ async def get_stop_departures(
 ) -> StopDepartures:
     """Scheduled departures at a stop (and a station's platforms) on a date."""
     del lang
-    agency = _agency(agency_key)
+    agency = await _resolve(agency_key)
     _check_limit(limit)
-    day = _service_day(agency, service_date)
+    zone = await _timezone(agency_key)
+    day = _service_day(zone, service_date)
     if start_time:
         from_seconds = gtfs.parse_start_time(start_time)
-    elif day == datetime.now(ZoneInfo(agency.timezone)).date():
-        now = datetime.now(ZoneInfo(agency.timezone))
+    elif day == datetime.now(ZoneInfo(zone)).date():
+        now = datetime.now(ZoneInfo(zone))
         from_seconds = now.hour * 3600 + now.minute * 60
     else:
         from_seconds = 0
@@ -674,8 +876,8 @@ async def get_route_summary(
 ) -> RouteSummary:
     """Trips, first/last departures, stops served and frequency by hour on a date."""
     del lang
-    agency = _agency(agency_key)
-    day = _service_day(agency, service_date)
+    await _resolve(agency_key)
+    day = _service_day(await _timezone(agency_key), service_date)
     await _check_date(agency_key, day)
     directory, dir_cached = await _directory(agency_key)
     record = await _resolve_route(agency_key, route)

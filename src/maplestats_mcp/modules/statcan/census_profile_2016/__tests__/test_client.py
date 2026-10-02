@@ -4,7 +4,12 @@ import pytest
 
 from maplestats_mcp.modules.statcan.census_profile_2016 import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import (
+    CloudflareChallenge,
+    InvalidInput,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -131,7 +136,7 @@ async def test_get_data_invalid_statistic_raises():
         await client.get_data("2016A000011124", statistic="not_a_stat")
 
 
-async def test_get_data_upstream_5xx_becomes_upstream_error(httpx_mock):
+async def test_get_data_upstream_5xx_becomes_upstream_unavailable(httpx_mock):
     for _ in range(3):
         httpx_mock.add_response(
             url=(
@@ -140,8 +145,29 @@ async def test_get_data_upstream_5xx_becomes_upstream_error(httpx_mock):
             ),
             status_code=500,
         )
-    with pytest.raises(UpstreamError):
+    with pytest.raises(UpstreamUnavailable):
         await client.get_data("2016A000011124")
+
+
+async def test_cloudflare_challenge_is_unavailable_with_alternatives(
+    httpx_mock, cloudflare_challenge
+):
+    """www12 serves every path a 403 managed challenge (live 2026-10-02): the
+    error must say so and point to WDS, not read as a generic 403 failure."""
+    httpx_mock.add_response(**cloudflare_challenge)
+    with pytest.raises(CloudflareChallenge) as raised:
+        await client.get_data("2016A000011124")
+    assert "Cloudflare" in str(raised.value)
+    assert "17100123" in str(raised.value)
+    assert len(httpx_mock.get_requests()) == 1  # a challenge is not retried
+
+
+async def test_plain_403_is_unavailable_too(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/CR2016Geo.json?lang=E&geos=PR&cpt=00", status_code=403
+    )
+    with pytest.raises(UpstreamUnavailable):
+        await client.list_geographies("canada_provinces_territories")
 
 
 async def test_requests_ask_for_json(httpx_mock):

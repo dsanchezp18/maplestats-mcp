@@ -37,7 +37,12 @@ from maplestats_mcp.modules.statcan.rdaas.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -51,21 +56,56 @@ def _limiter():
     )
 
 
+def _say(lang: str, en: str, fr: str) -> str:
+    return fr if lang == "fr" else en
+
+
 async def _get(
-    path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None
+    path: str,
+    *,
+    params: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    lang: str = "en",
 ) -> Any:
     await _limiter().acquire()
     url = f"{constants.BASE_URL}{path}"
     try:
-        return await api_get(url, params=params, headers=headers)
+        return await api_get(url, params=params, headers=headers, timeout=60.0)
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
+        status = exc.response.status_code
+        if status == 404:
             # Confirmed live: a well-formed but nonexistent id raises here
             # before any caller-side `if not obj.get("@id")` check ever
             # runs — api_get already calls raise_for_status(). Translate
             # once, centrally, rather than per detail-fetch function.
-            raise NotFound(f"No RDaaS resource found at {path!r}") from exc
+            raise NotFound(
+                _say(
+                    lang,
+                    f"No RDaaS resource found at {path!r}",
+                    f"Aucune ressource RDaaS trouvée à {path!r}",
+                )
+            ) from exc
+        if status in (429, 500, 502, 503, 504):
+            raise UpstreamUnavailable(
+                _say(
+                    lang,
+                    f"RDaaS answered HTTP {status} (already retried). Try again shortly.",
+                    f"RDaaS a répondu HTTP {status} (déjà réessayé). Réessayez sous peu.",
+                )
+            ) from exc
+        raise UpstreamError(
+            _say(lang, f"RDaaS answered HTTP {status}.", f"RDaaS a répondu HTTP {status}.")
+        ) from exc
+    except httpx.DecodingError:
         raise
+    except httpx.HTTPError as exc:
+        raise UpstreamUnavailable(
+            _say(
+                lang,
+                "RDaaS did not respond in time (already retried). Try again shortly.",
+                "RDaaS n'a pas répondu à temps (déjà réessayé). Réessayez sous peu.",
+            )
+        ) from exc
 
 
 _VALID_RESOURCE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -90,8 +130,9 @@ def _resource_id(rdaas_url_or_id: str) -> str:
 
 
 def _facets_from_json(obj: dict[str, Any]) -> SearchFacets:
-    facets = obj.get("facets", {})
-    return SearchFacets(status=facets.get("status", {}), audience=facets.get("audience", {}))
+    # `.get(key, {})` crashes on an explicit JSON null (see shared/json_utils.py).
+    facets = obj.get("facets") or {}
+    return SearchFacets(status=facets.get("status") or {}, audience=facets.get("audience") or {})
 
 
 def _classification_summary(entry: dict[str, Any]) -> ClassificationSummary:
@@ -109,15 +150,18 @@ def _classification_summary(entry: dict[str, Any]) -> ClassificationSummary:
     )
 
 
-async def search_classifications(
-    query: str = "",
+async def _search(
+    kind: str,
+    query: str,
     *,
-    start: int = 0,
-    limit: int = constants.DEFAULT_SEARCH_LIMIT,
-    audience: list[str] | None = None,
-    status: list[str] | None = None,
-    lang: str = "en",
-) -> ClassificationSearchResult:
+    start: int,
+    limit: int,
+    audience: list[str] | None,
+    status: list[str] | None,
+    lang: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Shared search call for classifications and concordances (`kind` is the path
+    segment). Returns the raw response and its @graph entries."""
     params: dict[str, Any] = {
         "start": start,
         "limit": min(limit, constants.MAX_SEARCH_LIMIT),
@@ -129,10 +173,29 @@ async def search_classifications(
         params["audience"] = audience
     if status:
         params["status"] = status
+    obj = await _get(f"/search/{kind}", params=params, lang=lang)
+    results_obj = obj.get("results") or obj
+    return obj, list_or_empty(results_obj, "@graph")
 
-    obj = await _get("/search/classifications", params=params)
-    results_obj = obj.get("results", obj)
-    entries = list_or_empty(results_obj, "@graph")
+
+async def search_classifications(
+    query: str = "",
+    *,
+    start: int = 0,
+    limit: int = constants.DEFAULT_SEARCH_LIMIT,
+    audience: list[str] | None = None,
+    status: list[str] | None = None,
+    lang: str = "en",
+) -> ClassificationSearchResult:
+    obj, entries = await _search(
+        "classifications",
+        query,
+        start=start,
+        limit=limit,
+        audience=audience,
+        status=status,
+        lang=lang,
+    )
     return ClassificationSearchResult(
         results=[_classification_summary(e) for e in entries],
         found=obj.get("found", len(entries)),
@@ -148,17 +211,21 @@ async def search_classifications(
     )
 
 
-async def get_classification_search_filters() -> SearchFilters:
-    entries = await _get("/search/classifications/filters")
+async def _search_filters(kind: str) -> SearchFilters:
+    entries = await _get(f"/search/{kind}/filters")
     return SearchFilters(
         filters=[FilterOption(parameter=e["parameter"], values=e["values"]) for e in entries],
         provenance=make_provenance(
             source="statcan-rdaas",
-            url=f"{constants.BASE_URL}/search/classifications/filters",
+            url=f"{constants.BASE_URL}/search/{kind}/filters",
             cached=False,
             schema_name="statcan.rdaas.SearchFilters",
         ),
     )
+
+
+async def get_classification_search_filters() -> SearchFilters:
+    return await _search_filters("classifications")
 
 
 async def get_classification(classification_id: str, *, lang: str = "en") -> ClassificationDetail:
@@ -166,7 +233,7 @@ async def get_classification(classification_id: str, *, lang: str = "en") -> Cla
     cache_key = f"rdaas:classification:{resource_id}:{lang}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"/classification/{resource_id}", params={"lang": lang})
+        return await _get(f"/classification/{resource_id}", params={"lang": lang}, lang=lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     if not obj.get("@id"):
@@ -206,7 +273,9 @@ async def get_classification(classification_id: str, *, lang: str = "en") -> Cla
     )
 
 
-async def _get_or_empty(path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
+async def _get_or_empty(
+    path: str, *, params: dict[str, Any] | None = None, lang: str = "en"
+) -> dict[str, Any]:
     """GET, treating a 200-with-empty-body response as "no data" (`{}`).
 
     Verified live: `/classification/{id}/categories/detailed` returns
@@ -229,7 +298,7 @@ async def _get_or_empty(path: str, *, params: dict[str, Any] | None = None) -> d
     as an unrelated parsing exception.
     """
     try:
-        return await _get(path, params=params)
+        return await _get(path, params=params, lang=lang)
     except httpx.DecodingError:
         return {}
 
@@ -264,14 +333,56 @@ def _index_entry_from_json(e: dict[str, Any]) -> ClassificationIndexEntry:
     )
 
 
-async def get_classification_categories_detailed(
-    classification_id: str, *, lang: str = "en"
-) -> ClassificationCategoriesDetailed:
-    resource_id = _resource_id(classification_id)
-    obj = await _get_or_empty(
-        f"/classification/{resource_id}/categories/detailed", params={"lang": lang}
+def _check_page(limit: int, offset: int, lang: str) -> None:
+    if limit < 1 or limit > constants.MAX_LIST_LIMIT:
+        raise InvalidInput(
+            _say(
+                lang,
+                f"limit must be between 1 and {constants.MAX_LIST_LIMIT}, got {limit}.",
+                f"limit doit être entre 1 et {constants.MAX_LIST_LIMIT}, reçu {limit}.",
+            )
+        )
+    if offset < 0:
+        raise InvalidInput(_say(lang, "offset must be >= 0.", "offset doit être >= 0."))
+
+
+def _page_note(returned: int, total: int, offset: int) -> str | None:
+    if offset + returned >= total:
+        return None
+    return (
+        f"returned {returned} of {total} matching entries; use limit/offset or query for the rest"
     )
-    entries = _graph_entries(obj)
+
+
+async def get_classification_categories_detailed(
+    classification_id: str,
+    *,
+    lang: str = "en",
+    query: str = "",
+    limit: int = constants.DEFAULT_LIST_LIMIT,
+    offset: int = 0,
+) -> ClassificationCategoriesDetailed:
+    _check_page(limit, offset, lang)
+    resource_id = _resource_id(classification_id)
+    path = f"/classification/{resource_id}/categories/detailed"
+
+    async def fetch() -> list[dict[str, Any]]:
+        return _graph_entries(await _get_or_empty(path, params={"lang": lang}, lang=lang))
+
+    # The upstream list is 0.4 MB for NAICS 2017 and ignores start/limit, so it
+    # is cached whole and paged here.
+    all_entries, was_cached = await cached_fetch(
+        f"rdaas:categories:{resource_id}:{lang}", constants.CACHE_TTL_SECONDS, fetch
+    )
+    needle = query.strip().lower()
+    matching = [
+        e
+        for e in all_entries
+        if not needle
+        or needle in str(e.get("code", "")).lower()
+        or needle in str(e.get("descriptor", "")).lower()
+    ]
+    entries = matching[offset : offset + limit]
     categories = [
         ClassificationCategory(
             id=e.get("@id", ""),
@@ -287,11 +398,14 @@ async def get_classification_categories_detailed(
     return ClassificationCategoriesDetailed(
         classification_id=resource_id,
         categories=categories,
+        total_count=len(matching),
+        offset=offset,
         provenance=make_provenance(
             source="statcan-rdaas",
-            url=f"{constants.BASE_URL}/classification/{resource_id}/categories/detailed",
-            cached=False,
+            url=f"{constants.BASE_URL}{path}",
+            cached=was_cached,
             schema_name="statcan.rdaas.ClassificationCategoriesDetailed",
+            limits=_page_note(len(categories), len(matching), offset),
             coverage=(
                 "empty: RDaaS itself returns no category data for this classification id "
                 "(confirmed for the current released NAICS 2022.1.0 specifically -- retired "
@@ -301,7 +415,7 @@ async def get_classification_categories_detailed(
                 "2022.1.0' concordance instead -- its target_code/target_descriptor fields are "
                 "the same current-NAICS codes and descriptions."
             )
-            if not entries
+            if not all_entries
             else None,
         ),
     )
@@ -311,7 +425,9 @@ async def get_classification_exclusions(
     classification_id: str, *, lang: str = "en"
 ) -> ClassificationExclusions:
     resource_id = _resource_id(classification_id)
-    obj = await _get_or_empty(f"/classification/{resource_id}/exclusions", params={"lang": lang})
+    obj = await _get_or_empty(
+        f"/classification/{resource_id}/exclusions", params={"lang": lang}, lang=lang
+    )
     entries = _graph_entries(obj)
     exclusions = [_exclusion_from_json(e) for e in entries]
     return ClassificationExclusions(
@@ -335,24 +451,49 @@ async def get_classification_exclusions(
 
 
 async def get_classification_indexes(
-    classification_id: str, *, lang: str = "en"
+    classification_id: str,
+    *,
+    lang: str = "en",
+    query: str = "",
+    limit: int = constants.DEFAULT_LIST_LIMIT,
+    offset: int = 0,
 ) -> ClassificationIndexes:
+    _check_page(limit, offset, lang)
     resource_id = _resource_id(classification_id)
+    path = f"/classification/{resource_id}/indexes"
 
-    # Index endpoints ignore the `lang` query parameter every other RDaaS
-    # route honours; confirmed live 2026-09-23 that only Accept-Language
-    # switches primaryTerm/indexCodeDescriptor to French.
-    obj = await _get(f"/classification/{resource_id}/indexes", headers={"Accept-Language": lang})
-    entries = _graph_entries(obj)
-    index_entries = [_index_entry_from_json(e) for e in entries]
+    async def fetch() -> list[dict[str, Any]]:
+        # Index endpoints ignore the `lang` query parameter every other RDaaS
+        # route honours; confirmed live 2026-09-23 that only Accept-Language
+        # switches primaryTerm/indexCodeDescriptor to French. They also ignore
+        # start/limit (verified live 2026-10-02: 8.3 MB for NAICS 2022 whatever
+        # is asked, ~15 s cold), so the full list is cached and paged here.
+        return _graph_entries(await _get(path, headers={"Accept-Language": lang}, lang=lang))
+
+    all_entries, was_cached = await cached_fetch(
+        f"rdaas:indexes:{resource_id}:{lang}", constants.CACHE_TTL_SECONDS, fetch
+    )
+    needle = query.strip().lower()
+    matching = [
+        e
+        for e in all_entries
+        if not needle
+        or needle in str(e.get("primaryTerm", "")).lower()
+        or needle in str(e.get("indexCodeDescriptor", "")).lower()
+        or needle == str(e.get("indexCodeValue", "")).lower()
+    ]
+    page = matching[offset : offset + limit]
     return ClassificationIndexes(
         classification_id=resource_id,
-        entries=index_entries,
+        entries=[_index_entry_from_json(e) for e in page],
+        total_count=len(matching),
+        offset=offset,
         provenance=make_provenance(
             source="statcan-rdaas",
-            url=f"{constants.BASE_URL}/classification/{resource_id}/indexes",
-            cached=False,
+            url=f"{constants.BASE_URL}{path}",
+            cached=was_cached,
             schema_name="statcan.rdaas.ClassificationIndexes",
+            limits=_page_note(len(page), len(matching), offset),
         ),
     )
 
@@ -364,6 +505,7 @@ async def get_classification_index_entry(
     obj = await _get(
         f"/classification/{resource_id}/indexes/entry/{index_id}",
         headers={"Accept-Language": lang},
+        lang=lang,
     )
     if not obj.get("@id"):
         raise NotFound(f"No index entry {index_id!r} for classification {resource_id!r}")
@@ -372,7 +514,7 @@ async def get_classification_index_entry(
 
 async def get_term_exclusion(term_exclusion_id: str, *, lang: str = "en") -> TermExclusion:
     resource_id = _resource_id(term_exclusion_id)
-    obj = await _get(f"/termexclusion/{resource_id}", params={"lang": lang})
+    obj = await _get(f"/termexclusion/{resource_id}", params={"lang": lang}, lang=lang)
     if not obj.get("@id"):
         raise NotFound(f"No term exclusion found for id {resource_id!r}")
     return TermExclusion(
@@ -417,21 +559,15 @@ async def search_concordances(
     status: list[str] | None = None,
     lang: str = "en",
 ) -> ConcordanceSearchResult:
-    params: dict[str, Any] = {
-        "start": start,
-        "limit": min(limit, constants.MAX_SEARCH_LIMIT),
-        "lang": lang,
-    }
-    if query:
-        params["q"] = query
-    if audience:
-        params["audience"] = audience
-    if status:
-        params["status"] = status
-
-    obj = await _get("/search/concordances", params=params)
-    results_obj = obj.get("results", obj)
-    entries = list_or_empty(results_obj, "@graph")
+    obj, entries = await _search(
+        "concordances",
+        query,
+        start=start,
+        limit=limit,
+        audience=audience,
+        status=status,
+        lang=lang,
+    )
     return ConcordanceSearchResult(
         results=[_concordance_summary(e) for e in entries],
         found=obj.get("found", len(entries)),
@@ -448,16 +584,7 @@ async def search_concordances(
 
 
 async def get_concordance_search_filters() -> SearchFilters:
-    entries = await _get("/search/concordances/filters")
-    return SearchFilters(
-        filters=[FilterOption(parameter=e["parameter"], values=e["values"]) for e in entries],
-        provenance=make_provenance(
-            source="statcan-rdaas",
-            url=f"{constants.BASE_URL}/search/concordances/filters",
-            cached=False,
-            schema_name="statcan.rdaas.SearchFilters",
-        ),
-    )
+    return await _search_filters("concordances")
 
 
 async def get_concordance(concordance_id: str, *, lang: str = "en") -> ConcordanceDetail:
@@ -465,7 +592,7 @@ async def get_concordance(concordance_id: str, *, lang: str = "en") -> Concordan
     cache_key = f"rdaas:concordance:{resource_id}:{lang}"
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"/concordance/{resource_id}", params={"lang": lang})
+        return await _get(f"/concordance/{resource_id}", params={"lang": lang}, lang=lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     if not obj.get("@id"):
@@ -492,7 +619,7 @@ async def get_concordance(concordance_id: str, *, lang: str = "en") -> Concordan
 
 async def get_concordance_maps(concordance_id: str, *, lang: str = "en") -> CodeMapList:
     resource_id = _resource_id(concordance_id)
-    obj = await _get(f"/concordance/{resource_id}/maps", params={"lang": lang})
+    obj = await _get(f"/concordance/{resource_id}/maps", params={"lang": lang}, lang=lang)
     entries = list_or_empty(obj, "@graph")
     maps = [
         CodeMapEntry(

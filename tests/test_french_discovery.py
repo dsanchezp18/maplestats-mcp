@@ -27,9 +27,15 @@ CASES = [
     ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
     ("appels d'offres du gouvernement fédéral", "canadabuys_search_tenders"),
     ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),
+    ("danger d'incendie Alberta cote extrême", "ab_wildfire_get_fire_danger"),
+    ("interdiction de feu restriction Alberta comté", "ab_wildfire_get_fire_restrictions"),
     ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
     ("horaire des autobus de la STM passages prévus à un arrêt", "transit_get_stop_departures"),
+    (
+        "organismes de transport en commun base de données nationale GTFS",
+        "transit_list_national_agencies",
+    ),
     ("demande d'électricité Ontario par heure", "electricity_ontario_get_hourly_demand"),
     ("production hydroélectrique Hydro-Québec par source", "electricity_quebec_get_generation"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
@@ -41,8 +47,15 @@ CASES = [
     # Plurals and missing accents, fixed by shared/search.py (2026-09-24).
     ("loyers", "cmhc_get_table_data"),
     ("code R reproductible script Stata", "reproduce_code"),
+    (
+        "rencontres de lobbyistes avec les ministères en Colombie-Britannique",
+        "bc_lobbyists_search_activity_reports",
+    ),
     ("tableaux de données du recensement de 2016", "statcan_census_tables_search"),
     ("fichiers de microdonnées à grande diffusion", "statcan_pumf_search"),
+    ("exportations par code SH vers les États-Unis", "cimt_get_trade"),
+    ("chercher le code SH d'un produit", "cimt_search_commodities"),
+    ("principaux partenaires commerciaux du Canada", "cimt_get_top_partners"),
     ("dictionnaire de données poids bootstrap", "statcan_pumf_get_codebook"),
     ("hôpitaux", "cihi_search_indicators"),
     ("hopital", "cihi_search_indicators"),
@@ -69,6 +82,8 @@ CASES = [
     ("surdoses d'opioïdes décès par province", "phac_infobase_query"),
     ("charge virale eaux usées", "phac_infobase_list_datasets"),
     ("livraisons de canola aux silos primaires", "cgc_weekly_query"),
+    ("volume de bois récolté par province", "nfd_query_table"),
+    ("tableaux de la Base nationale de données forestières", "nfd_list_tables"),
     ("exportations de blé par pays de destination", "cgc_exports_query"),
     ("prix des composants du lait classes spéciales", "cdc_get_component_prices"),
     ("quota total cible nationale de production laitière", "cdc_get_national_quota"),
@@ -96,6 +111,8 @@ CASES = [
     ("population trimestrielle Terre-Neuve-et-Labrador feuille Excel", "nl_stats_read_file"),
     ("tableaux du Bureau de la statistique du Yukon", "yukon_stats_list_tables"),
     ("loyer et taux d'inoccupation Yukon Whitehorse", "yukon_stats_query_table"),
+    ("fichiers Excel et CSV des données ouvertes de l'Alberta", "ab_opendata_search_datasets"),
+    ("lire les lignes d'un fichier Excel Open Alberta", "ab_opendata_read_resource"),
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
     ("élections générales fédérales résultats officiels", "elections_results_list_elections"),
     ("résultats historiques par circonscription depuis 1867", "elections_results_get_historical"),
@@ -126,6 +143,9 @@ CASES = [
     ("grippe aviaire lieux infectés", "cfia_avian_influenza"),
     ("influenza aviaire hautement pathogène par province", "cfia_avian_influenza"),
     ("éclosion de grippe aviaire dans les élevages de volailles", "cfia_avian_influenza"),
+    # StatCan misses found in the 2026-10-02 review.
+    ("taux de chômage mensuel en Alberta", "wds_search_cubes"),
+    ("communiqués du Quotidien aujourd'hui", "statcan_daily_get_releases"),
 ]
 
 

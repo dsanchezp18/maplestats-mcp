@@ -12,7 +12,8 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.statcan.wds import client
+from maplestats_mcp.modules.statcan.wds import client, constants
+from maplestats_mcp.modules.statcan.wds.client import CodeSetCategory
 from maplestats_mcp.modules.statcan.wds.schemas import (
     ChangedCubeList,
     ChangedSeriesList,
@@ -22,80 +23,103 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     FullTableDownloadLink,
     SeriesInfo,
     VectorData,
+    VectorDataSet,
 )
 from maplestats_mcp.shared.envelope import raise_error
 from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
+# An 8-digit productId, or the table number as StatCan prints it.
+ProductId = int | str
 
 
 @tool
 async def wds_search_cubes(
     query: str | None = None,
-    limit: int | None = None,
+    limit: int = constants.SEARCH_LIMIT_DEFAULT,
+    offset: int = 0,
     lite: bool = True,
     lang: Lang = "en",
 ) -> CubeSummaryList:
     """Search Statistics Canada's ~8,000 data tables (cubes) by title
-    keyword, or list every table when `query` is omitted.
+    keyword or table number, or list every table when `query` is omitted.
 
     Use for: finding a StatCan table's productId when you only know a
-    topic (find a table on GDP by industry), discovering which tables cover a subject before requesting
-    metadata or data; with no `query`, a full inventory scan, building a
-    local index, or checking the total table count.
-    With `query`: case-insensitive title match, `limit` defaults to 25.
-    Without `query`: the full list (`lite=False` for the non-lite
-    inventory); `limit` optionally truncates it. `lite=False` is only
-    valid without `query`. Revision history: 19 statistics also have a
-    real-time (vintage) table; statcan_delta_list_real_time_tables pairs
-    each with its regular table.
-    Keywords: statcan, statistics canada, table, cube, search, productId,
+    topic (GDP by industry, CPI, the monthly unemployment rate for Alberta) or a
+    number such as "18-10-0004",
+    discovering which StatCan tables cover a subject before requesting
+    metadata or data. Every word must
+    be in a title, else the best partial matches come back. `limit`
+    (default 25, max 500) and `offset` page the tables; total_count is
+    the number matching. `real_time` marks real-time (revision-history)
+    tables; statcan_delta_list_real_time_tables pairs the 19 with their regular tables.
+    Keywords: statcan, find a StatCan table, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse, list, inventory, all cubes, full
-    list, tables, labour force, unemployment rate, employment, GDP by
-    industry, CPI, population estimates, retail trade, wages, trade,
-    interprovincial migration, time series.
+    list, tables, labour force, monthly unemployment rate, employment,
+    GDP by industry, CPI, consumer price index, population estimates
+    quarterly, retail trade, wages, trade, interprovincial migration,
+    time series, real-time table, Alberta, by province, which table has.
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
-    productId, découverte, wds, catalogue, parcourir, liste, inventaire,
-    tous les cubes, liste complète, tableaux, population active, taux de
-    chômage, emploi, PIB par industrie, IPC, estimations de population,
-    commerce de détail, salaires, commerce, migration interprovinciale,
-    séries chronologiques.
+    productId, numéro de tableau, découverte, wds, catalogue, parcourir,
+    liste, inventaire, population active, taux de chômage mensuel,
+    emploi, PIB par industrie, IPC, indice des prix à la consommation,
+    estimations de population trimestrielles, commerce de détail,
+    salaires, commerce, migration interprovinciale, séries
+    chronologiques, tableau en temps réel, révisions.
     """
-    if query is not None:
-        if not lite:
-            raise_error(
-                InvalidInput,
-                "error.invalid_input",
-                lang,
-                detail="wds_search_cubes: lite=False is only valid when query is omitted.",
-            )
-        return await client.search_cubes(query, limit=25 if limit is None else limit)
-    result = await client.get_all_cubes_list(lite=lite)
-    if limit is not None:
-        cubes = result.cubes[:limit]
-        return result.model_copy(update={"cubes": cubes, "total_count": len(cubes)})
-    return result
+    client.use_lang(lang)
+    if query is not None and query.strip() and not lite:
+        raise_error(
+            InvalidInput,
+            "error.invalid_input",
+            lang,
+            detail="wds_search_cubes: lite=False is only valid when query is omitted.",
+        )
+    return await client.search_cubes(query, limit=limit, offset=offset, lite=lite)
 
 
 @tool
-async def wds_get_cube_metadata(product_id: int, lang: Lang = "en") -> CubeMetadata:
-    """Get full metadata for one StatCan table: dimensions, member trees,
+async def wds_get_cube_metadata(
+    product_id: ProductId,
+    dimension: int | None = None,
+    member_query: str | None = None,
+    member_limit: int = constants.MEMBER_LIMIT_DEFAULT,
+    member_offset: int = 0,
+    footnote_limit: int = constants.FOOTNOTE_LIMIT_DEFAULT,
+    lang: Lang = "en",
+) -> CubeMetadata:
+    """Get metadata for one StatCan table: dimensions, member trees,
     frequency, date range, and footnotes.
 
     Use for: understanding a table's structure before requesting data,
-    finding the coordinate/member IDs needed for a data query.
+    finding the member IDs that make up a coordinate. `product_id` is
+    the 8-digit productId or the table number (18-10-0004,
+    18-10-0004-01). Large tables have thousands of members, so each
+    dimension returns at most `member_limit` members (default 100) and
+    footnotes are capped at `footnote_limit`; provenance.limits says what
+    was cut. Narrow with `dimension` (a position, e.g. 1 for geography),
+    `member_query` (words in a member name) and `member_offset`.
     Keywords: statcan, metadata, dimensions, members, productId, cube,
-    structure, footnotes, wds.
+    structure, footnotes, wds, coordinate, table number.
     Mots-clés : statcan, métadonnées, dimensions, membres, productId,
-    cube, structure, notes de bas de page, wds.
+    cube, structure, notes de bas de page, wds, coordonnée, numéro de
+    tableau.
     """
-    return await client.get_cube_metadata(product_id)
+    client.use_lang(lang)
+    return await client.get_cube_metadata(
+        product_id,
+        dimension=dimension,
+        member_query=member_query,
+        member_limit=member_limit,
+        member_offset=member_offset,
+        footnote_limit=footnote_limit,
+    )
 
 
 def _vector_or_coord(
     tool_name: str,
     vector_id: int | None,
-    product_id: int | None,
+    product_id: ProductId | None,
     coordinate: str | None,
     lang: str,
 ) -> None:
@@ -117,7 +141,7 @@ def _vector_or_coord(
 @tool
 async def wds_get_series_info(
     vector_id: int | None = None,
-    product_id: int | None = None,
+    product_id: ProductId | None = None,
     coordinate: str | None = None,
     lang: Lang = "en",
 ) -> SeriesInfo:
@@ -127,12 +151,15 @@ async def wds_get_series_info(
     Use for: figuring out which table and dimension-position a known
     vector belongs to, or converting a table/dimension-position pair
     (from wds_get_cube_metadata) into a vector ID for later reuse. Pass
-    exactly one form: `vector_id`, or `product_id` + `coordinate`.
+    exactly one form: `vector_id`, or `product_id` + `coordinate`. Also
+    returns the series title, frequency, decimals, scalar factor and
+    unit-of-measure codes.
     Keywords: statcan, vector, coordinate, resolve, productId, series
     info, wds, Statistics Canada, conversion, identifier.
     Mots-clés : statcan, vecteur, coordonnée, résoudre, conversion,
     productId, information de série, identifiant, wds.
     """
+    client.use_lang(lang)
     _vector_or_coord("wds_get_series_info", vector_id, product_id, coordinate, lang)
     if vector_id is not None:
         return await client.get_series_info_from_vector(vector_id)
@@ -143,24 +170,26 @@ async def wds_get_series_info(
 @tool
 async def wds_get_data_from_vectors(
     vector_ids: list[int], latest_n: int = 12, lang: Lang = "en"
-) -> list[VectorData]:
+) -> VectorDataSet:
     """Get the latest N observations for one or more StatCan vectors.
 
     Use for: fetching recent values of one or more known time series.
-    Note: scalarFactorCode in each observation is NOT pre-applied to
-    value — see statcan.wds.apply_scalar_factor if a scaled figure is
-    needed.
+    Vectors WDS cannot serve are listed in `failed`; the others still
+    come back. Note: scalarFactorCode in each observation is NOT
+    pre-applied to value: multiply `value` by the observation's
+    `scale_multiplier` if a scaled figure is needed.
     Keywords: statcan, vector, observations, latest, data, time series,
     wds, values.
     Mots-clés : statcan, vecteur, observations, dernières données,
     données, série chronologique, wds, valeurs.
     """
+    client.use_lang(lang)
     return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
 
 
 @tool
 async def wds_get_data_from_cube_coord(
-    product_id: int, coordinate: str, latest_n: int = 12, lang: Lang = "en"
+    product_id: ProductId, coordinate: str, latest_n: int = 12, lang: Lang = "en"
 ) -> VectorData:
     """Get the latest N observations for a table + coordinate pair.
 
@@ -171,6 +200,7 @@ async def wds_get_data_from_cube_coord(
     Mots-clés : statcan, coordonnée, observations, dernières données,
     données, wds, productId, tableau.
     """
+    client.use_lang(lang)
     return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
         product_id, coordinate, latest_n
     )
@@ -182,19 +212,21 @@ async def wds_get_bulk_vector_data_by_range(
     start_release_datetime: str,
     end_release_datetime: str,
     lang: Lang = "en",
-) -> list[VectorData]:
+) -> VectorDataSet:
     """Get observations for multiple vectors released within a date range.
 
     Use for: bulk historical retrieval across several series at once,
     filtered by release date (not reference period).
-    `start_release_datetime`/`end_release_datetime` must be full
-    "YYYY-MM-DDTHH:MM" (e.g. "2024-01-01T08:30") — WDS rejects a bare
-    date with HTTP 406.
+    `start_release_datetime`/`end_release_datetime` are
+    "YYYY-MM-DDTHH:MM" (e.g. "2024-01-01T08:30"); a bare date is widened
+    to the start/end of that day. Vectors WDS cannot serve are listed in
+    `failed`.
     Keywords: statcan, bulk, vectors, date range, release date, history,
     wds, Statistics Canada.
     Mots-clés : statcan, en masse, vecteurs, vecteurs multiples, plage de
     dates, date de diffusion, historique, wds.
     """
+    client.use_lang(lang)
     return await client.get_bulk_vector_data_by_range(
         vector_ids, start_release_datetime, end_release_datetime
     )
@@ -203,18 +235,22 @@ async def wds_get_bulk_vector_data_by_range(
 @tool
 async def wds_get_data_by_reference_period_range(
     vector_ids: list[int], start_ref_period: str, end_ref_period: str, lang: Lang = "en"
-) -> list[VectorData]:
-    """Get observations for vectors within a reference-period range.
+) -> VectorDataSet:
+    """Get observations for vectors between two dates (a time series for a
+    vector over a reference-period range).
 
     Use for: retrieving a specific historical window (e.g. 2015-01-01 to
     2020-12-01) rather than "latest N." `start_ref_period`/`end_ref_period`
-    must be full "YYYY-MM-DD" — WDS rejects an abbreviated "YYYY-MM"
-    with HTTP 406.
-    Keywords: statcan, reference period, range, history, vectors, wds, date
-    range, Statistics Canada.
+    are "YYYY-MM-DD"; a "YYYY-MM" month is widened to its first/last
+    day. Vectors WDS cannot serve are listed in `failed`.
+    Keywords: statcan, reference period, range, between two dates, time
+    series for a vector, history, vectors, wds, date range, Statistics
+    Canada.
     Mots-clés : statcan, période de référence, plage, plage de dates,
-    historique, vecteurs, données historiques, wds.
+    historique, vecteurs, données historiques, série chronologique
+    entre deux dates, wds.
     """
+    client.use_lang(lang)
     return await client.get_data_from_vector_by_reference_period_range(
         vector_ids, start_ref_period, end_ref_period
     )
@@ -232,6 +268,7 @@ async def wds_get_changed_series_list(lang: Lang = "en") -> ChangedSeriesList:
     Mots-clés : statcan, modifié, mis à jour, série, diffusion,
     aujourd'hui, wds, actualisation.
     """
+    client.use_lang(lang)
     return await client.get_changed_series_list()
 
 
@@ -240,19 +277,20 @@ async def wds_get_changed_cube_list(date: str | None = None, lang: Lang = "en") 
     """List StatCan tables (cubes) that changed on a given date.
 
     Use for: detecting which tables were updated, e.g. after the daily
-    8:30am ET release.
+    8:30am ET release. `date` is YYYY-MM-DD (default: today, Eastern).
     Keywords: statcan, changed, updated, cube, table, release, today,
     wds.
     Mots-clés : statcan, modifié, mis à jour, cube, tableau, diffusion,
     aujourd'hui, wds.
     """
+    client.use_lang(lang)
     return await client.get_changed_cube_list(date)
 
 
 @tool
 async def wds_get_changed_series_data(
     vector_id: int | None = None,
-    product_id: int | None = None,
+    product_id: ProductId | None = None,
     coordinate: str | None = None,
     lang: Lang = "en",
 ) -> VectorData:
@@ -261,12 +299,15 @@ async def wds_get_changed_series_data(
 
     Use for: fetching only what changed rather than the full latest-N
     window, after wds_get_changed_series_list flags a vector. Pass
-    exactly one form: `vector_id`, or `product_id` + `coordinate`.
+    exactly one form: `vector_id`, or `product_id` + `coordinate` (resolved
+    to its vector first, so the series always belongs to that table). A
+    series that did not change today gives a "nothing found" error.
     Keywords: statcan, changed, vector, coordinate, delta, updated data,
     wds, Statistics Canada, revisions.
     Mots-clés : statcan, modifié, vecteur, coordonnée, écart, données
     mises à jour, série, changements, tableau, wds.
     """
+    client.use_lang(lang)
     _vector_or_coord("wds_get_changed_series_data", vector_id, product_id, coordinate, lang)
     if vector_id is not None:
         return await client.get_changed_series_data_from_vector(vector_id)
@@ -276,7 +317,7 @@ async def wds_get_changed_series_data(
 
 @tool
 async def wds_get_full_table_download(
-    product_id: int,
+    product_id: ProductId,
     format: Literal["csv", "sdmx"] = "csv",
     lang: Lang = "en",
 ) -> FullTableDownloadLink:
@@ -285,28 +326,40 @@ async def wds_get_full_table_download(
 
     Use for: bulk/offline analysis of an entire table rather than
     individual series, in CSV or SDMX format — hands back a URL, does
-    not fetch the file. `lang` picks the CSV language edition.
+    not fetch the file. `lang` picks the CSV language edition. An
+    unknown table number is an error, not a dead link.
     Keywords: statcan, csv, sdmx, xml, download, full table, bulk,
     export, wds, Statistics Canada.
     Mots-clés : statcan, csv, sdmx, xml, téléchargement, tableau complet,
     en masse, exportation, wds, données complètes.
     """
+    client.use_lang(lang)
     if format == "sdmx":
         return await client.get_full_table_download_sdmx(product_id)
     return await client.get_full_table_download_csv(product_id, lang)
 
 
 @tool
-async def wds_get_code_sets(lang: Lang = "en") -> CodeSets:
+async def wds_get_code_sets(
+    category: CodeSetCategory | None = None,
+    query: str | None = None,
+    limit: int = constants.CODE_SET_LIMIT_DEFAULT,
+    lang: Lang = "en",
+) -> CodeSets:
     """Get StatCan's code-set descriptions: scalar factors, frequency,
     symbol, status, unit of measure, survey, subject, classification
     type, security level, and terminated codes.
 
     Use for: decoding any numeric code returned by another WDS tool,
-    e.g. applying a scalarFactorCode multiplier to a raw value.
+    e.g. a scalarFactorCode, frequencyCode or subject code. The full set
+    is ~300 kB, so each category returns at most `limit` entries (default
+    100); pick one `category` and/or filter descriptions with `query`.
+    `counts` gives each category's full size.
     Keywords: statcan, code sets, decode, scalar factor, frequency,
-    symbol, status, uom, wds, lookup.
+    symbol, status, uom, subject, survey, wds, lookup.
     Mots-clés : statcan, ensembles de codes, décoder, facteur d'échelle,
-    fréquence, symbole, statut, unité de mesure, wds, référence.
+    fréquence, symbole, statut, unité de mesure, sujet, enquête, wds,
+    référence.
     """
-    return await client.get_code_sets()
+    client.use_lang(lang)
+    return await client.get_code_sets(category=category, query=query, limit=limit)

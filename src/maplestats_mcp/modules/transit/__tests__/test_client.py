@@ -115,10 +115,9 @@ def test_agency_keys_match_the_schema_literal():
 
 async def test_list_agencies_reports_reachability(httpx_mock):
     _serve(httpx_mock, "calgary")
-    for key in ("ttc", "stm", "oc_transpo"):
-        httpx_mock.add_response(
-            url=constants.AGENCIES[key].feed_url, status_code=404, is_reusable=True
-        )
+    for key, agency in constants.AGENCIES.items():
+        if key != "calgary" and agency.range_requests:
+            httpx_mock.add_response(url=agency.feed_url, status_code=404, is_reusable=True)
     result = await client.list_agencies(lang="fr")
     by_key = {a.key: a for a in result.agencies}
     assert by_key["calgary"].reachable is True
@@ -309,3 +308,73 @@ async def test_head_failures_fall_back_to_a_one_byte_range(httpx_mock):
     info = await client.get_feed_info("ttc")
     assert (info.route_count, info.stop_count) == (2, 4)
     assert info.agency.zip_bytes == len(body)
+
+
+# -- feeds from hosts without byte ranges (BC Transit) --------------------
+
+
+def _serve_whole(httpx_mock, agency: str, files: dict[str, str] | None = None) -> None:
+    """Serve the zip the way BC Transit's host does: GET only, Range ignored."""
+    body = _zip(files or FILES)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.method != "GET":
+            return httpx.Response(405, headers={"allow": "GET"})
+        return httpx.Response(
+            200,
+            content=body,
+            headers={"last-modified": "Fri, 02 Oct 2026 20:15:04 GMT"},
+        )
+
+    httpx_mock.add_callback(respond, url=constants.AGENCIES[agency].feed_url, is_reusable=True)
+
+
+def test_bc_transit_agencies_are_read_whole():
+    bc = [a for k, a in constants.AGENCIES.items() if k.startswith("bct_")]
+    assert len(bc) == 12
+    assert all(not a.range_requests and a.province == "BC" for a in bc)
+    assert all("operatorIds=" in a.feed_url for a in bc)
+    assert len({a.feed_url for a in bc}) == 12
+    assert all(a.range_requests for k, a in constants.AGENCIES.items() if not k.startswith("bct_"))
+
+
+async def test_feed_without_range_support_is_read_from_a_whole_download(httpx_mock):
+    _serve_whole(httpx_mock, "bct_victoria")
+    info = await client.get_feed_info("bct_victoria")
+    assert (info.route_count, info.stop_count) == (2, 4)
+    assert info.agency.licence.startswith("BC Transit Open Data Terms")
+    assert info.provenance.as_of is not None
+    result = await client.get_stop_departures(
+        "bct_victoria", "S1", service_date="2026-10-06", start_time="08:00"
+    )
+    assert [(d.trip_id, d.local_time) for d in result.departures] == [
+        ("T1", "08:00:00"),
+        ("T6", "08:05:00"),
+        ("T2", "08:30:00"),
+        ("T3", "17:00:00"),
+        ("T5", "01:10:00"),
+    ]
+    summary = await client.get_route_summary("bct_victoria", "R1", service_date="2026-10-06")
+    assert summary.trips_on_date == 4
+    # One download served the tables and the stop_times scans alike.
+    gets = [r for r in httpx_mock.get_requests() if r.method == "GET"]
+    assert len(gets) == 1
+    assert all("range" not in r.headers for r in gets)
+
+
+async def test_listing_does_not_probe_hosts_that_build_the_zip_on_request(httpx_mock):
+    for agency in constants.AGENCIES.values():
+        if agency.range_requests:
+            httpx_mock.add_response(url=agency.feed_url, status_code=404, is_reusable=True)
+    result = await client.list_agencies()
+    kelowna = next(a for a in result.agencies if a.key == "bct_kelowna")
+    assert kelowna.reachable is None
+    assert kelowna.zip_bytes is None
+    assert not [r for r in httpx_mock.get_requests() if "tmix" in str(r.url)]
+
+
+async def test_whole_download_over_the_limit_is_refused(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "WHOLE_MAX_BYTES", 100)
+    _serve_whole(httpx_mock, "bct_victoria")
+    with pytest.raises(UpstreamError, match="limit"):
+        await client.get_feed_info("bct_victoria")

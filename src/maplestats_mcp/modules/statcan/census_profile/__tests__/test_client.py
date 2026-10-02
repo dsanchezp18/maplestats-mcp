@@ -4,7 +4,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.census_profile import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 
 
 @pytest.fixture(autouse=True)
@@ -193,11 +193,11 @@ async def test_get_data_invalid_gender_raises():
         )
 
 
-async def test_get_data_upstream_5xx_becomes_upstream_error(httpx_mock):
+async def test_get_data_upstream_5xx_becomes_upstream_unavailable(httpx_mock):
     for _ in range(3):
         httpx_mock.add_response(
             url=f"{constants.BASE_URL}/data/{constants.AGENCY},DF_PR/A5.2021A000235.1.1.1?format=jsondata",
             status_code=500,
         )
-    with pytest.raises(UpstreamError):
+    with pytest.raises(UpstreamUnavailable):
         await client.get_data("canada_provinces_territories", ["2021A000235"], ["1"])

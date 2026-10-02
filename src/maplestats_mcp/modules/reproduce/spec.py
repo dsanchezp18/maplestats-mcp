@@ -97,6 +97,6 @@ class Spec:
     prepare: dict[str, Code] = field(default_factory=dict)
     # Extra header lines: provenance such as the dataset id and query.
     details: list[str] = field(default_factory=list)
-    languages: tuple[str, ...] = ("r", "python", "stata", "julia")
+    languages: tuple[str, ...] = ("r", "python", "stata", "julia", "excel")
     notes: list[str] = field(default_factory=list)
     source: str = ""  # key into cleaning.SPECIFIC

@@ -54,9 +54,12 @@ CASES = [
     ("generate R code to reproduce this query", "reproduce_code"),
     ("Alberta economic dashboard unemployment", "ab_economic_get_data"),
     ("BC Stats Excel workbook list British Columbia", "bc_stats_list_files"),
+    ("Open Alberta Excel CSV dataset files AISH caseload", "ab_opendata_search_datasets"),
+    ("read rows of an Open Alberta xlsx file", "ab_opendata_read_resource"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
     ("TTC scheduled departures at a stop", "transit_get_stop_departures"),
     ("bus route frequency headway by hour", "transit_get_route_summary"),
+    ("small town transit agencies Canada national GTFS database", "transit_list_national_agencies"),
     ("Edmonton crime occurrences", "eps_list_occurrences"),
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
     ("Ontario electricity demand by hour", "electricity_ontario_get_hourly_demand"),
@@ -64,7 +67,12 @@ CASES = [
     ("Quebec electricity exports to New York", "electricity_quebec_get_trade"),
     ("Ontario generation mix nuclear wind gas", "electricity_ontario_get_supply_by_fuel"),
     ("wildfire burned area by year", "nrcan_nbac_query_fires"),
+    ("Alberta wildfires out of control by cause", "ab_wildfire_get_fires"),
+    ("Alberta fire danger rating extreme near Hinton", "ab_wildfire_get_fire_danger"),
+    ("is there a fire ban in my Alberta county", "ab_wildfire_get_fire_restrictions"),
     ("patented medicine prices", "pmprb_search_patented_medicines"),
+    ("who lobbied the BC minister of health", "bc_lobbyists_search_activity_reports"),
+    ("British Columbia lobbyist registration for a company", "bc_lobbyists_search_registrations"),
     ("Parliamentary Budget Officer cost estimate", "pbo_search_publications"),
     (
         "federal election candidate financial returns",
@@ -76,6 +84,8 @@ CASES = [
     ("which provincial elections have results available", "elections_provincial_list_elections"),
     ("compare bank account fees FCAC", "fcac_search_bank_accounts"),
     ("grain deliveries by province", "cgc_weekly_query"),
+    ("timber harvest volume by province", "nfd_query_table"),
+    ("seedlings planted forestry data comments", "nfd_table_comments"),
     ("milk class prices dairy", "cdc_get_component_prices"),
     ("animal disease cases CFIA", "cfia_disease_detections"),
     ("chronic disease prevalence public health", "phac_infobase_list_datasets"),
@@ -112,7 +122,15 @@ CASES = [
     ("population density by province", "statcan_census_profile_search_geography"),
     ("what surveys does Statistics Canada run", "statcan_surveys_search_surveys"),
     ("sustainable development goals indicator Canada", "statcan_sdg_search_indicators"),
+    ("crude oil exports to the US by HS code", "cimt_get_trade"),
+    ("find the HS code for a product", "cimt_search_commodities"),
+    ("top export markets for Canadian lumber", "cimt_get_top_partners"),
     ("StatCan boundary files census divisions map", "statcan_geo_list_services"),
+    (
+        "Canadian index of multiple deprivation dissemination area",
+        "statcan_geo_query_spatial_layer",
+    ),
+    ("national road network road segments by province", "statcan_geo_query_spatial_layer"),
     ("active wildfires in British Columbia right now", "bcgw_get_active_wildfires"),
     ("mining claims BC", "bcgw_get_mining_tenure"),
     ("credit card interest rate comparison", "fcac_search_credit_cards"),
@@ -139,6 +157,12 @@ CASES = [
     # Gaps found and fixed 2026-09-28: BoC mortgage rates, WDS
     # interprovincial migration and Borealis as a research repository
     # were each missing from the top 3 before their keywords were added.
+    # StatCan misses found in the 2026-10-02 review (no StatCan tool in the top
+    # 5, or the wrong one first).
+    ("population estimates by province quarterly", "wds_search_cubes"),
+    ("monthly unemployment rate for Alberta", "wds_search_cubes"),
+    ("time series for a vector between two dates", "wds_get_data_by_reference_period_range"),
+    ("NOC occupation classification", "rdaas_search_classifications"),
 ]
 
 

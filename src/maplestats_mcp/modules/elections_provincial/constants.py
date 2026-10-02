@@ -21,6 +21,18 @@ dataset on the BC Data Catalogue. elections.bc.ca itself answers robots.txt with
 "Disallow: /" for unknown agents, so only the catalogue's CSV downloads are used
 (its robots.txt asks for a 10 second crawl delay and disallows only /api/).
 
+Saskatchewan: Elections Saskatchewan (the Chief Electoral Officer's office, a legislative
+office separate from the provincial government) links one poll-by-poll file per general
+election on its results page; the files sit on cdn.elections.sk.ca. Checked 2026-10-02: the
+site has no robots.txt (404), no terms of use, copyright or licence page (the footer links
+are Accessibility, Privacy policy, Legislation and News releases; the privacy policy covers
+personal information only) and no licence line on the results page; the footer reads
+"Copyright (c) 2025 Elections Saskatchewan". Nothing found prohibits automated access or
+restricts use, and nothing grants an open licence either, so the files are read at the
+project owner's risk and every response says so. The Crown copyright of saskatchewan.ca that
+ruled out the Saskatchewan Bureau of Statistics is a different body's website and does not
+appear on elections.sk.ca. By-elections have their own files and are not read.
+
 Ontario is deliberately absent: see BLOCKED.
 """
 
@@ -32,6 +44,7 @@ PROVINCES: dict[str, tuple[str, str]] = {
     "qc": ("Quebec", "Québec"),
     "ab": ("Alberta", "Alberta"),
     "bc": ("British Columbia", "Colombie-Britannique"),
+    "sk": ("Saskatchewan", "Saskatchewan"),
 }
 
 QC_BASE = "https://donnees.electionsquebec.qc.ca/production/provincial/resultats/archives"
@@ -60,6 +73,26 @@ BC_FILE_BY_PLACE = (
 BC_ATTRIBUTION = "Contains information licenced under the Elections BC Open Data Licence"
 BC_LICENCE_URL = "https://www.elections.bc.ca/docs/EBC-Open-Data-Licence.pdf"
 BC_MAX_BYTES = 45 * 1024 * 1024
+
+SK_PAGE = "https://www.elections.sk.ca/reports-data/election-results/"
+SK_FILES: dict[str, str] = {
+    "2024": "https://cdn.elections.sk.ca/upload/2024-GE-POLL-BY-POLL-RESULTS-v1.0.csv",
+    "2020": "https://cdn.elections.sk.ca/upload/2020-GE-POLL-BY-POLL-RESULTS-v2.0.csv",
+    "2016": "https://cdn.elections.sk.ca/reports/2016%20GE%20Poll%20by%20Poll%20Results.csv",
+    "2011": "https://cdn.elections.sk.ca/upload/statementofvotes-2011-pollresults.xlsx",
+}
+SK_ATTRIBUTION = (
+    "Source: Elections Saskatchewan, poll-by-poll results (Chief Electoral Officer's "
+    "statements of votes), summed by constituency. Elections Saskatchewan publishes no "
+    "terms of use or licence for these files; the site footer reads 'Copyright (c) 2025 "
+    "Elections Saskatchewan'. Not an official version of the results."
+)
+SK_TERMS_NOTICE = (
+    "Elections Saskatchewan publishes no terms of use or licence for these files and no "
+    "robots.txt (checked 2026-10-02); they are read at the project owner's risk. Registered "
+    "voters are not summed (split polls repeat them), so there is no turnout."
+)
+SK_MAX_BYTES = 10 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -101,6 +134,11 @@ ELECTIONS: tuple[Election, ...] = (
     Election("bc", "2013-05-14", 85, "2013"),
     Election("bc", "2009-05-12", 85, "2009"),
     Election("bc", "2005-05-17", 79, "2005"),
+    # Saskatchewan's source_key is the year keying SK_FILES.
+    Election("sk", "2024-10-28", 61, "2024"),
+    Election("sk", "2020-10-26", 61, "2020"),
+    Election("sk", "2016-04-04", 61, "2016"),
+    Election("sk", "2011-11-07", 58, "2011"),
 )
 
 # Years in the by-voting-place file (the by-voting-area file ends in 2020).

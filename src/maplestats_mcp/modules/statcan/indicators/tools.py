@@ -31,9 +31,12 @@ async def statcan_indicators_get_indicators(
     tracked indicator (2,362 confirmed live). Each result carries its
     reference period, a growth-rate summary versus the prior period,
     and a link to the Daily article that released it. geo_code filters
-    to one geography (0 = Canada, province/territory codes otherwise
-    -- call with a wide query first to see which codes exist in this
-    dataset). Keywords: StatCan, indicator, current value, latest
+    to one geography using the feed's own numbering: 0 Canada, 1 NL,
+    2 PEI, 3 NS, 4 NB, 5 QC, 6 ON, 7 MB, 8 SK, 9 AB, 10 BC, 11 YT,
+    12 NT, 13 NU (so BC is 10, not the SGC code 59). A province SGC code
+    the feed does not use (24, 35, 46, 47, 48, 59-62) is mapped for you
+    and noted in provenance.limits; any other code is rejected with the
+    valid list. Keywords: StatCan, indicator, current value, latest
     statistics, growth rate, population, CPI, GDP, unemployment.
     Mots-clés : Statistique Canada, indicateur, valeur actuelle,
     dernières statistiques, taux de croissance, population, IPC, PIB,

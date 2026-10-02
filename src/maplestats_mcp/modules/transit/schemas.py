@@ -1,13 +1,43 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
-AgencyKey = Literal["ttc", "stm", "oc_transpo", "calgary"]
+AgencyKey = Literal[
+    "ttc",
+    "stm",
+    "oc_transpo",
+    "calgary",
+    "via_rail",
+    "go_transit",
+    "up_express",
+    "bct_victoria",
+    "bct_kelowna",
+    "bct_kamloops",
+    "bct_nanaimo",
+    "bct_prince_george",
+    "bct_fraser_valley",
+    "bct_north_okanagan",
+    "bct_comox_valley",
+    "bct_cowichan_valley",
+    "bct_campbell_river",
+    "bct_squamish",
+    "bct_whistler",
+]
+
+# A live agency key (AgencyKey) or "national:<id>" from the Statistics Canada national database.
+AgencyRef = Annotated[
+    str,
+    Field(
+        description="Agency key from transit_list_agencies (for example 'ttc', 'calgary', "
+        "'bct_victoria'), or 'national:<id>' for an agency of the 2025 Statistics Canada national "
+        "database (ids from transit_list_national_agencies)."
+    ),
+]
 
 
 class AgencyFeed(BaseModel):
@@ -25,9 +55,39 @@ class AgencyFeed(BaseModel):
     attribution: str = Field(description="Credit line to show when republishing the data.")
     update_cadence: str
     notes: str | None
-    reachable: bool | None = Field(description="Whether the zip answered a HEAD request now.")
+    reachable: bool | None = Field(
+        description="Whether the zip answered a HEAD request now; null when the host "
+        "builds the zip on request and is not probed."
+    )
     zip_bytes: int | None = Field(description="Size of the zip, from Content-Length.")
     last_modified: datetime | None = Field(description="Last-Modified header of the zip.")
+    database: str = Field(
+        default="live",
+        description="'live' for a feed read from the agency's own site, 'national' for an "
+        "agency inside Statistics Canada's Canadian Public Transit Network Database (key 'national:<id>').",
+    )
+    status: str = Field(
+        default="available",
+        description="'available', 'overlaps_live' (listed only: use live_agency_key) or "
+        "'excluded' (see status_reason).",
+    )
+    status_reason: str | None = None
+    live_agency_key: str | None = Field(
+        default=None, description="For 'overlaps_live': the live key that serves the same agency."
+    )
+    service_window_start: date | None = Field(
+        default=None,
+        description="First service date the Statistics Canada validator found in the feed.",
+    )
+    service_window_end: date | None = Field(
+        default=None,
+        description="Last service date the Statistics Canada validator found in the feed.",
+    )
+    validator_errors: int | None = Field(
+        default=None,
+        description="ERROR notices from MobilityData's GTFS validator (Statistics Canada run).",
+    )
+    validator_warnings: int | None = Field(default=None, description="WARNING notices, same run.")
 
 
 class AgencyList(BaseModel):

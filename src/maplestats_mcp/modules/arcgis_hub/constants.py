@@ -454,6 +454,12 @@ PORTALS: dict[str, Portal] = {
         "Portail de données ouvertes de la Ville de Canmore",
         note="Alberta. 19 datasets confirmed live 2026-10-02; Town of Canmore Open Data Licence.",
     ),
+    "bc_energy_regulator": Portal(
+        "data-bc-er.opendata.arcgis.com",
+        "BC Energy Regulator Open Data",
+        "Données ouvertes de la BC Energy Regulator",
+        note="British Columbia, provincial energy regulator. 42 datasets confirmed live 2026-10-02 (wells, orphan sites, incidents, facilities); BCER Open Data Licence, based on OGL-BC 2.0, commercial use allowed. The IRIS bulk files (iris.bcogc.ca) are not covered.",
+    ),
     "toronto_police": Portal(
         "data.torontopolice.on.ca",
         "Toronto Police Service Public Safety Data Portal",

@@ -4,6 +4,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.reference import client, constants
 from maplestats_mcp.shared import cache as cache_module
+from maplestats_mcp.shared import retrying
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
 
@@ -126,9 +127,11 @@ async def test_search_documents_missing_results_container_raises(httpx_mock):
         await client.search_documents("housing")
 
 
-async def test_search_documents_upstream_5xx_becomes_upstream_error(httpx_mock):
+async def test_search_documents_upstream_5xx_becomes_upstream_error(httpx_mock, no_sleep):
     httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")
-    httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=housing", status_code=500)
+    httpx_mock.add_response(
+        url=f"{_BASE_URL_EN}?count=10&text=housing", status_code=500, is_reusable=True
+    )
     with pytest.raises(UpstreamError):
         await client.search_documents("housing")
 
@@ -212,7 +215,7 @@ def no_sleep(monkeypatch):
     async def fake_sleep(seconds: float) -> None:
         waits.append(seconds)
 
-    monkeypatch.setattr(client.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(retrying.asyncio, "sleep", fake_sleep)
     return waits
 
 
@@ -234,4 +237,4 @@ async def test_persistent_rate_limit_still_raises(httpx_mock, no_sleep):
     httpx_mock.add_response(url=search_url, status_code=429, is_reusable=True)
     with pytest.raises(UpstreamError, match="429"):
         await client.search_documents("housing")
-    assert len(no_sleep) == client._RETRY_ATTEMPTS - 1
+    assert len(no_sleep) == retrying.RETRY_ATTEMPTS - 1

@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
-ProvinceCode = Literal["qc", "ab", "bc"]
+ProvinceCode = Literal["qc", "ab", "bc", "sk"]
 
 
 class ElectionInfo(BaseModel):
-    province: str = Field(description="Province code: qc, ab or bc.")
+    province: str = Field(description="Province code: qc, ab, bc or sk.")
     province_name: str
     date: str = Field(description="Polling day, YYYY-MM-DD.")
     seats: int = Field(description="Electoral districts (seats) contested.")
@@ -43,7 +43,7 @@ class ResultRow(BaseModel):
     district: str = Field(description="Electoral district (riding, electoral division) name.")
     district_number: str | None = Field(
         description="The source's district number or code (Quebec number, Alberta ED, "
-        "BC abbreviation)."
+        "BC abbreviation, Saskatchewan code)."
     )
     candidate: str | None = Field(
         description="Candidate name as 'First Last'. Null for Alberta rows other than the "
@@ -51,7 +51,7 @@ class ResultRow(BaseModel):
     )
     party: str | None = Field(description="Party name (Quebec: the abbreviation if no name).")
     party_code: str | None = Field(
-        description="Party abbreviation as published (Quebec, Alberta); null for BC."
+        description="Party abbreviation as published (Quebec, Alberta, Saskatchewan); null for BC."
     )
     votes: int
     vote_share: float | None = Field(description="Percent of the district's valid votes.")
@@ -62,7 +62,7 @@ class DistrictSummary(BaseModel):
     district: str
     electors: int | None = Field(description="Registered electors (Quebec only).")
     valid_votes: int | None
-    rejected_ballots: int | None = Field(description="Quebec and British Columbia only.")
+    rejected_ballots: int | None = Field(description="Quebec, British Columbia and Saskatchewan.")
     turnout: float | None = Field(description="Percent of electors who voted (Quebec, Alberta).")
     winner: str | None = Field(description="Winning candidate, or the winning party if unnamed.")
 

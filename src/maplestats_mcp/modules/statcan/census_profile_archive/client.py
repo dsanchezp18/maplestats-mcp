@@ -16,8 +16,35 @@ from maplestats_mcp.modules.statcan.census_profile_archive.schemas import (
     DownloadLink,
     GeographyLevelList,
 )
+from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import CloudflareChallenge, InvalidInput
+from maplestats_mcp.shared.http import get_raw
+
+
+async def _blocked_note() -> str | None:
+    """A provenance.limits note while www12 serves its Cloudflare challenge.
+
+    These tools only build URLs, and every URL points at www12, so a success
+    would otherwise hide that scripts cannot download the files (checked
+    2026-10-02: 403 managed challenge). One cheap page request, cached for
+    15 minutes, tells whether that still holds; any other failure adds no note
+    (the tool has not claimed the files are fetchable).
+    """
+
+    async def probe() -> bool:
+        try:
+            await get_raw(constants.REACHABILITY_URL, timeout=15.0)
+        except CloudflareChallenge:
+            return True
+        except Exception:  # noqa: BLE001 - only the challenge matters here
+            return False
+        return False
+
+    blocked, _ = await cached_fetch(
+        "statcan-census-profile-archive:www12-blocked", constants.PROBE_TTL_SECONDS, probe
+    )
+    return constants.BLOCKED_NOTE if blocked else None
 
 
 async def list_geography_levels(year: int) -> GeographyLevelList:
@@ -37,6 +64,7 @@ async def list_geography_levels(year: int) -> GeographyLevelList:
             url=config["base_url"],
             cached=False,
             schema_name="statcan_census_profile_archive.GeographyLevelList",
+            limits=await _blocked_note(),
         ),
     )
 
@@ -86,5 +114,6 @@ async def get_download_link(
             url=config["base_url"],
             cached=False,
             schema_name="statcan_census_profile_archive.DownloadLink",
+            limits=await _blocked_note(),
         ),
     )

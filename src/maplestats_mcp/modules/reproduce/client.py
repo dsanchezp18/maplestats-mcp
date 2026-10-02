@@ -1,5 +1,5 @@
 """reproduce_code: the same data, fetched and cleaned by an R, Python, Stata
-or Julia script the server writes.
+or Julia script, or an Excel Power Query (M) query, the server writes.
 
 Three routes, most exact first:
 
@@ -28,7 +28,8 @@ import json
 from typing import Any
 
 from maplestats_mcp.modules.reproduce import builders, ip_horizons, probe
-from maplestats_mcp.modules.reproduce.render import RENDERERS
+from maplestats_mcp.modules.reproduce.excel import render_excel
+from maplestats_mcp.modules.reproduce.render import RENDERERS as SCRIPT_RENDERERS
 from maplestats_mcp.modules.reproduce.schemas import (
     Language,
     LanguageChoice,
@@ -56,6 +57,9 @@ _DOCUMENTS = (
     "parliament_get_committee_meeting",
 )
 _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents")
+# excel is a Power Query M query (excel.py), rendered from the same Spec.
+RENDERERS = {**SCRIPT_RENDERERS, "excel": render_excel}
+ALL_LANGUAGES: list[Language] = ["r", "python", "stata", "julia", "excel"]
 
 
 async def _run_tool(
@@ -142,7 +146,7 @@ async def reproduce(
     tool: str, arguments: dict[str, Any], language: LanguageChoice = "all"
 ) -> ReproductionCode:
     requested: list[Language] = (
-        ["r", "python", "stata", "julia"] if language == "all" else [language]  # type: ignore[list-item]
+        list(ALL_LANGUAGES) if language == "all" else [language]  # type: ignore[list-item]
     )
     if any(lang not in RENDERERS for lang in requested):
         raise InvalidInput(
@@ -178,6 +182,11 @@ async def reproduce(
             "html_table": "Julia has no maintained HTML table reader",
             "feed": "Julia has no maintained RSS/Atom reader",
         }.get(spec.kind, "this language cannot read the source")
+        if skipped == ["excel"]:
+            reason = (
+                "Power Query cannot repeat this source's steps (they run in Python or R in "
+                "the other scripts, or the download is not a table)"
+            )
         notes.append(f"No {', '.join(skipped)} script: {reason}.")
     if spec.kind == "zip":
         notes.append("The script unzips the archive; pick the data file inside it.")

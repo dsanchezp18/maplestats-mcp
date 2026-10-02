@@ -29,7 +29,8 @@ async def statcan_delta_get_file_link(date: str, lang: Lang = "en") -> DeltaFile
     time. date is "YYYY-MM-DD". A Delta File only exists for business
     days that had a release (weekends and holidays will report
     exists=False); check exists before treating the url as
-    downloadable. The ZIP carries both English and French metadata, so
+    downloadable. Files can be very large (20261001.zip is 3.9 GB):
+    read size_bytes before downloading. The ZIP carries both English and French metadata, so
     `lang` has no effect. Keywords: StatCan, delta file, bulk update, daily
     update, all tables, full refresh, changed data, download.
     Mots-clés : Statistique Canada, fichier delta, mise à jour en bloc, mise

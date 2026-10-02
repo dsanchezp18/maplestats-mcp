@@ -177,8 +177,8 @@ schedule stays on data.edmonton.ca via `socrata_*`.
 
 ## Transit schedules (static GTFS)
 
-**Status:** Shipped for the TTC, STM (buses), OC Transpo and Calgary Transit;
-TransLink not built.
+**Status:** Shipped for the TTC, STM (buses), OC Transpo, Calgary Transit,
+VIA Rail, GO Transit, UP Express and 12 BC Transit systems; TransLink not built.
 
 New module `modules/transit/` (`transit_*`, 6 tools, one `agency` argument:
 `transit_list_agencies`, `transit_get_feed_info`, `transit_search_routes`,
@@ -197,6 +197,138 @@ Checked live 2026-10-01 (all answer 206 to a `Range` request without a key):
 | STM | www.stm.info/sites/default/files/gtfs/gtfs_stm.zip | 43 MB | CC BY 4.0 per STM's "Terms of use for GTFS and API". The same page says "Metro schedules are for information purposes only ... and cannot be used to develop an application on metro schedules", so metro lines (route_type 1) are excluded from route and departure results; buses are included. |
 | OC Transpo | oct-gtfs-emasagcnfmcgeham.z01.azurefd.net/public-access/GTFSExport.zip (OC Transpo's own host) | 45 MB | OC Transpo's developer terms say the data is "separately licensed under the City of Ottawa Open Data Terms of Use", a worldwide, royalty-free licence to use, modify and distribute "for any lawful purpose". The City catalogue still lists octranspo.com/files/google_transit.zip, which returns 404; the Azure host needs no key (only real-time needs an account). |
 | Calgary Transit | data.calgary.ca/download/npk7-z3bj/application%2Fzip (redirects to a CDN) | 18 MB | Open Government Licence - City of Calgary v2.1 (the "Open Calgary Terms of Use"): use, copy, publish, distribute for any lawful purpose including commercial, with attribution. |
+
+### Added 2026-10-02: VIA Rail, GO Transit, UP Express, BC Transit
+
+Licences and robots.txt re-read live on 2026-10-02.
+
+| Agency | Zip | Size | Licence and terms |
+|---|---|---|---|
+| VIA Rail | www.viarail.ca/sites/all/files/gtfs/viarail.zip (206 to ranges) | 1 MB | The developer page says "By downloading our GTFS data, you agree to be bound to the Open Government Licence - Canada version 2"; last updated 2026-08-17. robots.txt does not mention the path. |
+| GO Transit | assets.metrolinx.com/raw/upload/Documents/Metrolinx/Open%20Data/GO-GTFS.zip (206 to ranges) | 19 MB | metrolinx.com/en/about-us/open-data: "made available under the Open Government Licence - Ontario - Metrolinx". The current link comes from gotransit.com/en/information-resources/software-developers. assets.metrolinx.com robots.txt allows everything. |
+| UP Express | same folder, UP-GTFS.zip | 0.9 MB | Same licence and page as GO. Separate feed, so a separate agency (`up_express`). |
+| BC Transit (12 systems) | bct.tmix.se/Tmix.Cap.TdExport.WebApi/gtfs/?operatorIds=N, the links on bctransit.com/open-data | 0.1 to 17 MB | Terms of Use (bctransit.com/open-data/terms-of-use/): "a limited, revocable and non-exclusive license to use, reproduce, and redistribute the Data", BC Transit must be named as the source, its domain name and trade-marks may not be used, no warranty. No registration or key. |
+
+BC Transit operator ids (from the open-data page, each feed verified by its
+route names): Victoria 48, Kelowna 47, Kamloops 46, Nanaimo 41, Prince George
+22 (also Bulkley-Nechako), Fraser Valley 13 (Chilliwack, Hope, Agassiz-Harrison,
+Central Fraser Valley), North Okanagan 14 (Vernon, Shuswap), Comox Valley 45,
+Cowichan Valley 10, Campbell River 12, Squamish 43, Whistler 44. The page lists
+about 25 distinct ids (35 to 40 communities); the other systems are one
+`_bc_transit(...)` line each in `constants.py`.
+
+Things that differ from the other agencies:
+
+- **BC Transit has no HEAD and no byte ranges.** The host builds each zip on
+  request (0.7 to 25 s; Victoria's 17 MB took 23 s), answers HEAD with 405 and
+  ignores `Range`, so the module downloads the whole zip (bounded at 60 MB) and
+  reads the tables and `stop_times.txt` from memory, using the same offsets as
+  the range reader. The directory is cached ten minutes, so a first call to a
+  system can take up to half a minute and later ones are instant.
+  `transit_list_agencies` does not probe these hosts (it would trigger twelve
+  builds); their `reachable` is null until a tool has fetched the feed.
+- **robots.txt on bct.tmix.se is `Disallow: /`.** The same host is what
+  bctransit.com/open-data links for "3rd party application development", and
+  the terms grant a licence to reproduce and redistribute, so a single
+  on-demand download of the published link is used. It is not a crawl: one file
+  per query, cached. If BC Transit objects, delete the `bct_*` entries.
+- BC Transit's zips have no `calendar.txt` (service comes from
+  `calendar_dates.txt`) and every system's `agency.txt` says "BCTransit"; the
+  system is identified only by the operator id.
+- VIA Rail's files are Windows-1252, not UTF-8, so `gtfs.parse_table` falls
+  back to cp1252 when UTF-8 decoding fails. VIA's times are local to each
+  stop (`stop_timezone` in `stops.txt`), not to the agency's America/Toronto
+  zone, and a route's short name is "VIA Rail" for all routes.
+
+Smoke test (`scripts/smoke_test_transit.py`, live): every new agency passes
+feed validity, route and stop search, a stop's departures, and a route's
+trips-on-date equal to the trips found in the streamed `stop_times.txt`.
+Victoria's route and stop counts and one stop's departure count (485) equal an
+independent `zipfile` read of the same download.
+
+**BC Transit real-time is not built.** The open-data page also links GTFS-RT
+for every system: `bct.tmix.se/gtfs-realtime/alerts.pb`, `tripupdates.pb` and
+`vehiclepositions.pb`, each with `?operatorIds=N`. They answer 200 with
+`application/x-protobuf` and no key (Victoria on 2026-10-02: alerts 8 KB,
+vehicle positions 28 KB, trip updates 810 KB). Adding it is not a copy of the
+`ets_*` pattern: that module is written for one agency's three fixed URLs and
+a single timezone, so BC Transit needs the operator id as an argument, the
+same system keys as the static agencies, and a decision on how to cache an
+810 KB trip-updates feed per system. Left for a separate change.
+
+### Added 2026-10-02: StatCan's Canadian Public Transit Network Database
+
+Product 23-26-0003 (www150.statcan.gc.ca/n1/pub/23-26-0003/232600032025001-eng.htm),
+produced by StatCan's Urban Data Lab; version 1.0 released 2025-01-31, corrected
+2025-05-07 (custom ids in the GeoPackage, URL typos, two validation columns).
+One 443,590,902-byte zip (`.../2025001/zip/canadian_public_transit_network_database.zip`,
+206 to ranges), 286 entries: `gtfs/<custom_id>/gtfs.zip` for 138 feeds (393 MB
+compressed in all, 0.004 to 78 MB each), `data_sources.csv`,
+`validation_summary.csv`, two column-description CSVs, a metadata report PDF and
+a 485 MB `stops_and_routes.gpkg` that this module does not read.
+
+**Terms (read live 2026-10-02).** The product page: "The Canadian Public Transit
+Network Database was produced by the Urban Data Lab at Statistics Canada and is
+available under the Open Government License - Canada". The metadata report:
+"The data are released under an Open Government Licence as supported by the
+Directive on Open Government", and that data quality is "as is" with no fixes
+applied. The Statistics Canada Open Licence (statcan.gc.ca/en/reference/licence)
+grants a worldwide, royalty-free licence to "use, reproduce, publish, freely
+distribute, or sell the Information" and requires the notice "Adapted from
+Statistics Canada, name of product, reference date. This does not constitute an
+endorsement by Statistics Canada of this product" on value-added products; it
+also says "Intellectual property rights that third parties may have in the
+Information shall remain their property". The Credits say the database rests on
+organizations that "have either given permission to include their publicly
+available data or directly provided their data for release as open data". So
+the compilation is open for automated reuse with attribution, and each agency's
+own licence stays in force: `data_sources.csv` records a `license_url` and an
+`attribution` line per feed (OGL variants, CC BY 4.0, Données Québec, Metrolinx,
+BC Transit, Trillium, several city licences), and every response carries both.
+robots.txt on www150.statcan.gc.ca: `Crawl-delay: 2`, `Disallow: /*.csv$` and
+`/*.xlsx$`, nothing against `.zip`; the module sends at most one request every
+two seconds to that host (the catalogue takes about six requests, a feed two to
+six).
+
+Left out by design: the 19 feeds that duplicate a live agency (TTC, STM, OC
+Transpo, Calgary, VIA, GO, UP Express, 12 BC Transit systems) are listed with
+status `overlaps_live` and refused with the live key; TransLink (same terms as
+above, though StatCan's attribution says it is "provided by permission of
+TransLink", a permission that does not clearly pass on to a public server);
+and 14 feeds for which the database records neither a licence page nor an
+attribution line (Aquabus, Denman Island, Gabriola, Hornby Island, West Coast
+Trail Express, Medicine Hat, Miramichi, Midland, North Bay, Ontario Northland,
+Quinte, Ride CK, MRC Haut-Saint-Laurent, Saint-Hyacinthe). That leaves 104
+served.
+
+Checked live 2026-10-02: all 104 served feeds were opened (feed info) with no
+error and every one has stops, routes, trips and stop_times at the zip root; a
+capped sample of eight (Barrie, Winnipeg, Halifax, Saskatoon, Edmonton,
+Yellowknife, Whitehorse, exo L'Assomption) ran through every tool, each
+route's trips on the date equal to the trips found in the streamed
+stop_times, and Barrie's route and stop counts and its busiest stop's 633
+departures equal an independent read (plain HTTP ranges, zlib, zipfile). One
+request in the sweep stalled for 27 minutes (London Transit Commission, a 2 MB
+member that then fetched in 1.4 s); retries are the shared six.
+
+Quirks found live:
+
+- A feed is a zip inside a deflated member, so it cannot be read by range:
+  the member is fetched in 16 MB ranges, inflated into memory (bounded at 60 MB
+  compressed and inflated; the largest served feed is 34 MB inflated) and then
+  read through the same in-memory path as BC Transit. OC Transpo (99 MB
+  inflated) would break that bound and is a live agency anyway.
+- `data_sources.csv` is Windows-1252, not UTF-8, and a few attribution lines
+  are already mojibake in the database itself (they are passed through).
+- Service windows are old: nearly all end in 2025 (Yellowknife's in 2024), so
+  "today" is outside them. The date check uses `feed_info.txt` when it has
+  dates, otherwise the validator window from `validation_summary.csv` (Barrie,
+  Saskatoon and Yellowknife have no `feed_info.txt` dates), and the error names
+  the window.
+- Zones: a province table gives a first guess, then the feed's own `agency.txt`
+  `agency_timezone` is used (Saskatchewan keeps Regina time all year).
+- `bc_ferries`, `roam_transit` and `t3_transit` come through Trillium Transit's
+  maintenance terms of service; their licence page is recorded as such.
 
 **TransLink (Metro Vancouver) is not built.** The zip itself
 (gtfs-static.translink.ca/gtfs/google_transit.zip, 16 MB) is open and

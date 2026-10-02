@@ -1,7 +1,7 @@
 """Client for StatCan's Delta File bulk daily-update archive.
 
 Confirmed live 2026-09-21. Existence is checked with a HEAD request
-(not a full download -- these files run several megabytes) against a
+(not a full download -- these files are large: 20261001.zip is 3.9 GB) against a
 dedicated `httpx.AsyncClient` with `http2=True` and
 `follow_redirects=True`: `www150.statcan.gc.ca` needs HTTP/2 offered
 in the handshake (see `shared/http.py`'s own docstring for the
@@ -19,7 +19,7 @@ from maplestats_mcp.modules.statcan.delta import constants
 from maplestats_mcp.modules.statcan.delta.schemas import DeltaFileLink
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
-from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.http import new_client, send_with_retry
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -56,8 +56,10 @@ async def get_file_link(date: str) -> DeltaFileLink:
     url = constants.BASE_URL.format(date=parsed.strftime("%Y%m%d"))
 
     await _LIMITER.acquire()
+    # Retried like every other StatCan call: one live HEAD timed out after
+    # 15.5 s and the next answered in 0.3 s (2026-10-02).
     try:
-        response = await _client.head(url)
+        response = await send_with_retry(_client, "HEAD", url, timeout=15.0)
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
             "statcan_delta:get_file_link did not respond in time. Try again shortly."

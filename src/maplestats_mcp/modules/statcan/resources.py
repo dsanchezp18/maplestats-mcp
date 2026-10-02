@@ -13,9 +13,12 @@ _ADDRESSING_DOC = """\
 
 StatCan identifies data three ways, all resolvable into each other:
 
-- **productId (PID)**: 10-digit table identifier. Digits 1-2 = subject
-  code, 3-4 = product type, 5-8 = sequential number, 9-10 = optional
-  simple-view identifier.
+- **productId (PID)**: 8-digit table identifier (18100004 is table
+  18-10-0004). Digits 1-2 = subject code, 3-4 = product type, 5-8 =
+  sequential number. StatCan prints table numbers as 18-10-0004-01; the
+  trailing 2 digits are a view suffix that WDS does not accept, so the
+  wds_ tools take 18100004, 18-10-0004, 18-10-0004-01 or 1810000401 and
+  cut them to 8 digits.
 - **vectorId**: a stable "V" + up to 10 digits, identifying one time
   series. Carried over from legacy CANSIM table numbers for backward
   compatibility.
@@ -34,8 +37,13 @@ _GOTCHAS_DOC = """\
 
 - **scalarFactorCode is never auto-applied.** A raw observation `value`
   is NOT multiplied by its scalarFactorCode (e.g. "thousands"). Call
-  wds_get_code_sets to see the scalar codes, or use
-  maplestats_mcp.modules.statcan.wds.schemas.apply_scalar_factor.
+  wds_get_code_sets to see the scalar codes, or multiply by the
+  observation's scale_multiplier (10 ** scalar_factor_code).
+- **Real-time tables.** StatCan's real-time data tables (revision
+  histories such as "Historical (real-time) releases of Consumer Price
+  Index statistics", 18100259) are ordinary tables in WDS. wds_search_cubes
+  marks them real_time=true. MapleStats reads them through WDS only; the
+  separate real-time viewer service is disallowed by StatCan's robots.txt.
 - **12am-8:30am ET daily lock window.** WDS returns HTTP 409 for some
   methods during this window while data updates. This surfaces as a
   DataLocked error here, not a generic failure — it means "try again

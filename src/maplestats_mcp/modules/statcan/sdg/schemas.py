@@ -58,4 +58,7 @@ class SdgIndicatorData(BaseModel):
     framework: str
     observations: list[SdgObservation] = Field(default_factory=list)
     returned_count: int
+    # Rows matching the filters before limit/offset paging.
+    total_matched: int | None = None
+    offset: int = 0
     provenance: Provenance

@@ -44,6 +44,13 @@ class Provenance(BaseModel):
     schema_name: str = Field(
         description="Name of this result's schema, e.g. 'statcan.CubeSummary'."
     )
+    licence: str | None = Field(
+        default=None,
+        description=(
+            "Licence and attribution the upstream publisher requires, when it has one "
+            "(set for every Statistics Canada result)."
+        ),
+    )
     reproduce: str = Field(
         default=(
             "For R, Python, Stata and Julia scripts that fetch and clean this data, call "

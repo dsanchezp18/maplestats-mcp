@@ -81,3 +81,29 @@ async def test_replaced_archive_is_reported(httpx_mock):
     httpx_mock.add_callback(_serve(garbage), url=URL, is_reusable=True)
     with pytest.raises(UpstreamError, match="changed"):
         await _lines(member)
+
+
+@pytest.mark.parametrize("method", [zipfile.ZIP_DEFLATED, zipfile.ZIP_STORED])
+async def test_streams_from_a_zip_held_in_memory_without_requests(httpx_mock, monkeypatch, method):
+    rows = [f"T{i},08:00:00,08:00:00,{i},1" for i in range(2000)]
+    text = "trip_id,arrival_time,departure_time,stop_id,stop_sequence\n" + "\n".join(rows)
+    body, _ = _archive(text, method)
+    [member] = zipstream.members_of(body, URL)
+    monkeypatch.setattr(constants, "SCAN_CHUNK_BYTES", 1024)
+    lines = [
+        line
+        async for batch in zipstream.stream_member_lines(URL, member, blob=body)
+        for line in batch
+    ]
+    assert lines[1:] == [r.encode() for r in rows]
+    assert httpx_mock.get_requests() == []
+
+
+def test_blob_member_read_is_bounded():
+    body, _ = _archive("a,b\n" + "1,2\n" * 1000)
+    [member] = zipstream.members_of(body, URL)
+    assert zipstream.read_blob_member(body, member, max_bytes=10_000).startswith(b"a,b")
+    with pytest.raises(UpstreamError, match="limit"):
+        zipstream.read_blob_member(body, member, max_bytes=100)
+    with pytest.raises(UpstreamError, match="not a valid ZIP"):
+        zipstream.members_of(b"not a zip", URL)

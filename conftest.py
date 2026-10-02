@@ -10,6 +10,29 @@ from tenacity import BaseRetrying, wait_none
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 
+@pytest.fixture
+def cloudflare_challenge() -> dict:
+    """`httpx_mock.add_response` kwargs for Cloudflare's managed challenge.
+
+    Headers and title as served live by www12.statcan.gc.ca on 2026-10-02
+    (every path, project and browser User-Agent alike): HTTP 403,
+    `Server: cloudflare`, `Cf-Mitigated: challenge`, a "Just a moment..." page.
+    """
+    return {
+        "status_code": 403,
+        "headers": {
+            "Content-Type": "text/html; charset=UTF-8",
+            "Server": "cloudflare",
+            "Cf-Mitigated": "challenge",
+            "Critical-Ch": "Sec-CH-UA-Bitness, Sec-CH-UA-Arch",
+        },
+        "text": (
+            '<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title>'
+            '<meta http-equiv="refresh" content="360"></head><body></body></html>'
+        ),
+    }
+
+
 @pytest.fixture(autouse=True)
 def _no_retry_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
     """Drop tenacity's exponential backoff so retry tests don't really sleep.

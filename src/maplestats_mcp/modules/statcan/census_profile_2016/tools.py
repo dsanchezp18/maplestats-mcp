@@ -70,6 +70,12 @@ async def statcan_census_profile_2016_list_geographies(
 ) -> Census2016GeographyList:
     """List 2016 Census geographies (with their DGUIDs) for one geography level.
 
+    STATUS (checked 2026-10-02): unavailable. StatCan's www12 host answers
+    scripts with a Cloudflare bot challenge (HTTP 403), so this tool returns
+    an "unavailable" error that names the alternatives: WDS tables 17100122
+    and 17100123 (census indicator profile, 2016) and statcan_census_profile_*
+    (2021). It works again if StatCan lifts the challenge.
+
     Use for: finding a geography's DGUID code (needed by
     statcan_census_profile_2016_get_data) for the 2016 census, at a
     chosen level (province, census division, census subdivision,
@@ -95,6 +101,11 @@ async def statcan_census_profile_2016_get_data(
     lang: Literal["en", "fr"] = "en",
 ) -> Census2016DataResult:
     """Get 2016 Census Profile data for one geography (by DGUID).
+
+    STATUS (checked 2026-10-02): unavailable, same Cloudflare challenge on
+    www12 as statcan_census_profile_2016_list_geographies. Use WDS tables
+    17100122 / 17100123 (census indicator profile, 2016) or the 2021 profile
+    (statcan_census_profile_*) meanwhile.
 
     Use for: retrieving 2016 census values (counts or rates) for a
     geography found via statcan_census_profile_2016_list_geographies,
