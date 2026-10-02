@@ -113,6 +113,11 @@ CASES = [
     ("what surveys does Statistics Canada run", "statcan_surveys_search_surveys"),
     ("sustainable development goals indicator Canada", "statcan_sdg_search_indicators"),
     ("StatCan boundary files census divisions map", "statcan_geo_list_services"),
+    (
+        "Canadian index of multiple deprivation dissemination area",
+        "statcan_geo_query_spatial_layer",
+    ),
+    ("national road network road segments by province", "statcan_geo_query_spatial_layer"),
     ("active wildfires in British Columbia right now", "bcgw_get_active_wildfires"),
     ("mining claims BC", "bcgw_get_mining_tenure"),
     ("credit card interest rate comparison", "fcac_search_credit_cards"),

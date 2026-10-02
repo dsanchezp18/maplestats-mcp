@@ -4,7 +4,7 @@ Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
-**State at 2026-10-02:** 253 tools in 54 modules. Every source in the tables below is
+**State at 2026-10-02:** 253 tools in 54 modules (+3 `statcan_geo_*` tools). Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
 `Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
@@ -46,6 +46,7 @@ Census and specialized federal agencies section below).
 | Source | Status | Notes |
 |---|---|---|
 | Statistics Canada (StatCan) | Shipped | WDS + SDMX + RDaaS: table/cube discovery, metadata, series retrieval, change detection, classifications; the 2021 Census Profile SDMX API and its pre-2021 archived bulk-download equivalent (see the Census row below); and The Daily's official Atom feeds (release bulletin, see below). |
+| StatCan geography services (`statcan_geo_*`) | Shipped | Shipped 2026-10-02: `statcan_geo_query_layer` takes a point (`lat`/`lon`, optional `distance_m`) or `bbox` filter plus `out_fields`, so "which dissemination area contains this lat/lon" works. Three new tools (`statcan_geo_list_spatial_layers`, `statcan_geo_get_spatial_layer_detail`, `statcan_geo_query_spatial_layer`) read the geoanalytics.cloud.statcan.ca MapServers behind StatCan's CSGE/GAIA apps: `infc` (Canadian Index of Multiple Deprivation 2021 by DA, proximity and spatial access measures, CanBICS, CanALE, LODE facilities and transit stops), `hna` (Housing Needs Assessment by province and CSD) and `qol` (Quality of Life 2025 by PR, CSD, CMA, CD); and the National Road Network MapServer (`nrn`, one layer per province and road class). The three geoanalytics URLs are undocumented, so they are read from the apps' `urls-prod.json` at runtime and a changed file raises a clear error. No robots.txt on any of the three hosts (HTTP 404, 2026-10-02); Statistics Canada Open Licence. Verified live: DA 35200855 at Bay and Queen, five transit stops within 300 m, Ontario local-road layer 84. |
 | Bank of Canada | Shipped | Valet API: exchange rates, interest rates, commodity prices, CPI/inflation, series metadata. |
 | Federal Open Data (CKAN, open.canada.ca) | Shipped | ~48K-dataset catalogue: search, dataset details, organizations, resources, licenses. |
 | IRCC Immigration | Shipped | Express Entry rounds of invitations (tools prefixed `ircc_`): draw history, CRS cutoffs, invitations issued, and candidate-pool CRS score distribution, from a static JSON feed at … [Details](findings/federal-sources.md#ircc-immigration) |
