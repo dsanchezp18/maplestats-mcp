@@ -127,7 +127,7 @@ async def test_forecast_parses_rows(httpx_mock):
     httpx_mock.add_response(
         url=WFS,
         json=_collection(
-            {"id": "YLW", "name": "KELOWNA", "rep_date": "2026-09-29T12:00:00Z", "fwi": 2.2}
+            {"wmo": 71203, "name": "KELOWNA", "rep_date": "2026-09-29T12:00:00Z", "fwi": 2.2}
         ),
     )
     result = await client.get_forecast(station_name="kelow")

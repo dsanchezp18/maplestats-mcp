@@ -13,7 +13,7 @@ HOTSPOTS_CURRENT = "public:hotspots_last24hrs"
 HOTSPOTS_ARCHIVE = "public:hotspots"
 PERIMETERS = "public:m3_polygons_current"
 STATIONS = "public:firewx_stns_current"
-FORECAST = "public:firewx_scribe_fcst"
+FORECAST = "public:firewx_scribe"
 DANGER = "public:fdr_current_shp"
 NFDB = "public:NFDB_point"
 

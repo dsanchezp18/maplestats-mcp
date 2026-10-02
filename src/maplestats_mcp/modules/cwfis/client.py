@@ -425,7 +425,7 @@ async def get_stations(
 
 # --------------------------------------------------------------- forecast
 
-_FORECAST_FIELDS = "id,name,rep_date,elevation,temp,rh,ws,wdir,precip,ffmc,dmc,dc,isi,bui,fwi,dsr"
+_FORECAST_FIELDS = "wmo,name,rep_date,elevation,temp,rh,ws,wdir,precip,ffmc,dmc,dc,isi,bui,fwi,dsr"
 
 
 async def get_forecast(*, station_name: str, limit: int = 100) -> ForecastResult:
@@ -445,7 +445,7 @@ async def get_forecast(*, station_name: str, limit: int = 100) -> ForecastResult
     )
     rows = [
         ForecastDay(
-            station_id=p.get("id"),
+            station_id=str(p["wmo"]) if p.get("wmo") is not None else None,
             station_name=(p.get("name") or "").strip(),
             valid_at=_dt(p.get("rep_date")) or datetime.min.replace(tzinfo=UTC),
             elevation_m=p.get("elevation"),
