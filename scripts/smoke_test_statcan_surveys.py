@@ -55,6 +55,30 @@ async def main() -> int:
     except InvalidInput:
         print("OK: bogus lang raises InvalidInput as expected")
 
+    rdc = await client.search_rdc_holdings()
+    print(f"OK: search_rdc_holdings() -> {rdc.total_matched} holdings")
+    ok &= rdc.total_matched > 300  # confirmed live 2026-10-02: 352
+    cchs = await client.search_rdc_holdings("community health survey", limit=3)
+    ok &= cchs.total_matched > 0
+    print("  sample:", cchs.holdings[0].model_dump())
+    rdc_fr = await client.search_rdc_holdings("enquête", lang="fr", limit=2)
+    print(f"OK: search_rdc_holdings('enquête', fr) -> {rdc_fr.total_matched}")
+    ok &= rdc_fr.total_matched > 0
+
+    rtra = await client.search_rtra_datasets()
+    print(f"OK: search_rtra_datasets() -> {rtra.total_matched} datasets")
+    ok &= rtra.total_matched > 300  # confirmed live 2026-10-02: 357
+    ok &= all(d.tag_name for d in rtra.datasets)
+    cchs_rtra = await client.search_rtra_datasets("canadian community health", limit=2)
+    ok &= cchs_rtra.total_matched > 20
+    ok &= any(
+        link.sdds_id or link.instance_id for d in cchs_rtra.datasets for link in d.survey_links
+    )
+    print("  sample:", cchs_rtra.datasets[0].model_dump(exclude={"survey_links"}))
+    rtra_fr = await client.search_rtra_datasets("décès", lang="fr", limit=2)
+    print(f"OK: search_rtra_datasets('décès', fr) -> {rtra_fr.total_matched}")
+    ok &= rtra_fr.total_matched > 0
+
     print("\nSTATCAN SURVEYS SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 

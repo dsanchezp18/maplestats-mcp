@@ -87,3 +87,21 @@ SUBJECT_TO_CODE = {
 }
 
 LANG_TO_SUFFIX = {"en": "eng", "fr": "fra"}
+
+# Forward release calendar. Two sibling files next to the archive above, listed
+# on StatCan's Developers page and confirmed live 2026-10-02 (open licence,
+# www150 robots.txt: Crawl-delay 2, /n1/dai-quo/ssi/ is not under the
+# disallowed root /ssi/):
+# - key indicators: 2,882 rows, 2012-03-16 to 2027-03-31, 97 dated after
+#   2026-10-02 (title, reference period, empty url until the release is out);
+# - products: 10,188 catalogue-number releases 2012-04-02 to the file's own
+#   build day, none in the future (so it answers "when was", not "when will").
+KEY_INDICATORS_URL = (
+    "https://www150.statcan.gc.ca/n1/dai-quo/ssi/homepage/schedule-key_indicators-{suffix}.json"
+)
+PRODUCTS_URL = (
+    "https://www150.statcan.gc.ca/n1/dai-quo/ssi/homepage/schedule-products-{suffix}.json"
+)
+CALENDAR_TIMEZONE = "America/Toronto"
+CALENDAR_LIMIT_DEFAULT = 20
+CALENDAR_LIMIT_MAX = 200
