@@ -62,6 +62,7 @@ CASES = [
     ("small town transit agencies Canada national GTFS database", "transit_list_national_agencies"),
     ("Edmonton crime occurrences", "eps_list_occurrences"),
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
+    ("MLS home price index CREA download", "crea_get_hpi_links"),
     ("Ontario electricity demand by hour", "electricity_ontario_get_hourly_demand"),
     ("Hydro-Quebec electricity demand right now", "electricity_quebec_get_demand"),
     ("Quebec electricity exports to New York", "electricity_quebec_get_trade"),

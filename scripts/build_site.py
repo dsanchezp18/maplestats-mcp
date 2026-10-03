@@ -395,6 +395,14 @@ SOURCES: dict[str, Source] = {
         "ARC",
         domain="business",
     ),
+    "crea": Source(
+        "The Canadian Real Estate Association: MLS® Home Price Index links",
+        "L'Association canadienne de l'immeuble : liens vers l'IPP MLS®",
+        "national",
+        "CREA",
+        "ACI",
+        domain="housing",
+    ),
     "dfo_iwls": Source(
         "Fisheries and Oceans Canada: tides and water levels",
         "Pêches et Océans Canada : marées et niveaux d'eau",

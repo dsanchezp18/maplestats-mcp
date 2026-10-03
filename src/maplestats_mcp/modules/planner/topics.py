@@ -182,6 +182,9 @@ TOPICS: tuple[Topic, ...] = (
             "permis de construire",
             "habitation",
             "inoccupation",
+            "mls",
+            "crea",
+            "prix des maisons",
         ),
         (
             PlanStep(
@@ -211,6 +214,12 @@ TOPICS: tuple[Topic, ...] = (
                 "boc_search_series",
                 "Bank of Canada mortgage and policy rates",
                 ("mortgage", "hypothe*"),
+            ),
+            PlanStep(
+                "crea_get_hpi_links",
+                "CREA MLS® Home Price Index (resale prices): download link, attribution and "
+                "terms only; no values, since CREA's terms forbid publishing them",
+                ("mls", "crea", "resale", "home price", "house price", "prix des maisons"),
             ),
             PlanStep(
                 "statcan_census_profile_get_data",
