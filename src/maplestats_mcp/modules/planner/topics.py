@@ -443,8 +443,6 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("pbo_search_publications", "PBO costings and fiscal analysis"),
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
-            PlanStep("canadabuys_search_contracts", "federal contracts by supplier or buyer"),
-            PlanStep("canadabuys_search_tenders", "open federal tenders"),
             PlanStep("ckan_search_datasets", "grants and contributions: portal='federal'"),
         ),
         ("Federal fiscal years run April to March; match them to calendar-year data explicitly.",),
@@ -475,13 +473,16 @@ TOPICS: tuple[Topic, ...] = (
             "reglement",
         ),
         (
-            PlanStep("parliament_search_bills", "find the bill and its status"),
-            PlanStep("parliament_get_bill", "sponsor, status and House votes"),
             PlanStep("senate_list_votes", "Senate votes on the bill"),
-            PlanStep("parliament_search_hansard", "what was said about it"),
+            PlanStep("senate_get_vote", "how each senator voted"),
+            PlanStep("ourcommons_list_members", "current MPs by province, party or riding"),
+            PlanStep("ourcommons_get_member_roles", "one MP's roles, committees and history"),
             PlanStep("gazette_list_issues", "resulting regulations and notices"),
         ),
-        ("OpenParliament.ca is unofficial; confirm key facts on parl.ca.",),
+        (
+            "House of Commons bill status, recorded votes and Hansard are not covered; "
+            "check parl.ca and ourcommons.ca.",
+        ),
     ),
     Topic(
         "business",
@@ -532,7 +533,7 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("tc_recalls_search", "Transport Canada vehicle recalls"),
             PlanStep(
                 "transit_search_stops",
-                "TTC, STM, OC Transpo, Calgary, VIA Rail, GO, UP Express or BC Transit stops by name",
+                "STM, OC Transpo, Calgary, VIA Rail, GO, UP Express or BC Transit stops by name",
             ),
             PlanStep(
                 "transit_get_stop_departures", "scheduled departures at a stop on a given date"
@@ -929,7 +930,7 @@ TOPICS = (*TOPICS, DAIRY)
 
 COMMITTEES = Topic(
     "committees",
-    "House of Commons committees: meetings, witnesses and testimony",
+    "House of Commons committees: who sits on them",
     (
         "committee",
         "committee meeting",
@@ -946,21 +947,13 @@ COMMITTEES = Topic(
         "huis clos",
     ),
     (
-        PlanStep("parliament_list_committees", "find the committee and its slug"),
-        PlanStep("parliament_get_committee", "acronym, subcommittees and recent meetings"),
-        PlanStep(
-            "parliament_search_committee_meetings",
-            "meetings by committee, session or date range, and which were in camera",
-        ),
-        PlanStep(
-            "parliament_get_committee_meeting",
-            "one meeting's witnesses, transcript, minutes and notice",
-        ),
+        PlanStep("ourcommons_list_members", "find the MP and their person id"),
+        PlanStep("ourcommons_get_member_roles", "the MP's committee memberships with dates"),
     ),
     (
         (
-            "Committee data starts with session 39-1 (2006) and comes from OpenParliament.ca, "
-            "which is unofficial; in camera meetings have no transcript."
+            "Committee meetings, witnesses and transcripts are not covered; "
+            "check ourcommons.ca."
         ),
     ),
 )

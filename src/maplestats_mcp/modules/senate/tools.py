@@ -23,7 +23,7 @@ async def senate_list_votes(
     Use for: Senate votes on a bill (bill like 'C-6' or 'S-205'), votes
     whose title contains a word, or all votes in a session (like '45-1',
     default current; sessions from 42-1), with yeas, nays, abstentions
-    and result. House of Commons votes are parliament_search_votes.
+    and result.
     Keywords: Senate vote, senators, recorded division, Senate of Canada,
     upper chamber, third reading, bill, adopted.
     Mots-clés : vote au Sénat, sénateurs, appel nominal, Sénat du Canada,

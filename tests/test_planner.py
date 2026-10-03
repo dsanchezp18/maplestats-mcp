@@ -121,8 +121,9 @@ def test_committee_questions_route_to_committee_tools():
     english = client.plan("Which witnesses appeared at the finance committee meeting last week?")
     assert english.topics[0].topic == "committees"
     tools = [s.tool for s in english.topics[0].steps]
-    assert tools[0] == "parliament_list_committees"
-    assert "parliament_get_committee_meeting" in tools
+    assert tools == ["ourcommons_list_members", "ourcommons_get_member_roles"]
+    # Meetings and testimony have no tool; the caveat says so.
+    assert "not covered" in english.topics[0].caveats[0]
     french = client.plan("Qui a témoigné devant le comité de la santé ?")
     assert french.topics[0].topic == "committees"
     assert {"temoign", "comite"} <= set(french.topics[0].matched_terms)

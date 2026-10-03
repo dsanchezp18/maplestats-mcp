@@ -231,7 +231,7 @@ Sources, by tool-name prefix:
   Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
   nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. Alberta Wildfire live
   status (fires, perimeters, fire danger, fire bans): ab_wildfire_. National Forestry Database (provincial fires,
-  harvest, planting, pests, timber revenues): nfd_. CanadaBuys federal tenders and contract awards: canadabuys_.
+  harvest, planting, pests, timber revenues): nfd_.
   BC Registrar of Lobbyists (registrations, lobbying activity reports):
   bc_lobbyists_. DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
   ab_economic_. Open Alberta Excel and CSV files (search, sheets, rows): ab_opendata_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
@@ -250,9 +250,9 @@ Sources, by tool-name prefix:
   animal diseases (yearly counts, detections, avian influenza infected
   premises): cfia_.
   Canada Gazette notices and regulations: gazette_.
-  Earthquakes Canada event catalogue: earthquakes_. House of Commons bills,
-  votes, MPs and Hansard (unofficial OpenParliament.ca): parliament_.
-  Senate of Canada recorded votes: senate_. Who represents a postal code or
+  Earthquakes Canada event catalogue: earthquakes_. House of Commons MPs,
+  roles, party standings and Cabinet: ourcommons_. Senate of Canada
+  recorded votes: senate_. Who represents a postal code or
   point (MP, MLA, mayor) and electoral districts with licences (unofficial
   Open North Represent): represent_.
 - CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
@@ -267,7 +267,7 @@ Sources, by tool-name prefix:
 - Vancouver (Opendatasoft): opendatasoft_vancouver_. Newfoundland and
   Labrador: nl_opendata_. Edmonton: eps_ (police
   occurrences), ets_ (real-time transit), epcor_ (water quality).
-  Static transit timetables (TTC, STM buses, OC Transpo, Calgary Transit,
+  Static transit timetables (STM buses, OC Transpo, Calgary Transit,
   VIA Rail, GO/UP Express, 12 BC Transit systems):
   transit_, with an `agency` argument -- transit_list_agencies. About 100
   more agencies (StatCan's 2025 snapshot, agency "national:<id>"):
