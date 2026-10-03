@@ -7,6 +7,7 @@ so a docstring edit that drops one fails here rather than silently.
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 import pytest
@@ -154,10 +155,26 @@ CASES = [
 ]
 
 
+@pytest.fixture(scope="module")
+def top_names() -> dict[str, list[str]]:
+    """search_tools's top names for every query, asked over one client session.
+
+    One session serves every case instead of one session per case.
+    """
+
+    async def search_all() -> dict[str, list[str]]:
+        found = {}
+        async with Client(mcp) as client:
+            for query, _ in CASES:
+                result = await client.call_tool("search_tools", {"query": query})
+                text = " ".join(getattr(block, "text", "") for block in result.content)
+                found[query] = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+        return found
+
+    return asyncio.run(search_all())
+
+
 @pytest.mark.parametrize(("query", "expected"), CASES)
-async def test_french_query_finds_tool(query: str, expected: str):
-    async with Client(mcp) as client:
-        result = await client.call_tool("search_tools", {"query": query})
-    text = " ".join(getattr(block, "text", "") for block in result.content)
-    names = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+def test_french_query_finds_tool(query: str, expected: str, top_names: dict[str, list[str]]):
+    names = top_names[query]
     assert expected in names, f"{query!r} -> {names}"
