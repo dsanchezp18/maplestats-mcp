@@ -143,6 +143,9 @@ NATIONAL_EXCLUDED: dict[str, str] = {
         "impose conditions, which a public server cannot do (the same reason its own feed "
         "is not offered)."
     ),
+    "toronto_transit_commission": (
+        "The TTC feed is not offered by this server, in the national database or on its own."
+    ),
 }
 # Province or territory code -> IANA zone, used until the feed's agency.txt is read.
 PROVINCE_TIMEZONES: dict[str, str] = {
