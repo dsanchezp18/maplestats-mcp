@@ -110,6 +110,21 @@ STEPS: list[Step] = [
         "cer_query_file",
         lambda ctx: {"url": ctx["cer_list_datasets"]["datasets"][0]["files"][0]["url"], "limit": 3},
     ),
+    # A year-only end covers the whole year: Keystone has monthly rows for
+    # several key points, so 2024 alone gives more than the January rows.
+    Step(
+        "cer",
+        "cer_query_file",
+        {
+            "url": "https://www.cer-rec.gc.ca/open/energy/throughput-capacity/"
+            "keystone-throughput-and-capacity.csv",
+            "start": "2024",
+            "end": "2024",
+            "columns": ["Date"],
+            "limit": 1000,
+        },
+        lambda data: {r["Date"][:7] for r in data["rows"]} >= {"2024-01", "2024-12"},
+    ),
     # CIHI
     Step("cihi", "cihi_search_indicators", {"query": "readmission"}, _non_empty("indicators")),
     Step(

@@ -39,6 +39,19 @@ async def test_query_filters_dates_and_returns_most_recent(httpx_mock):
     assert latest.rows == [{"Date": "2026-06-01", "Product": "crude oil-light"}]
 
 
+async def test_year_and_month_end_cover_the_whole_period(httpx_mock):
+    # Live 2026-10-03: start="2024", end="2024" on Keystone kept only the
+    # 2024-01-01 rows, because end="2024" meant January 1st.
+    body = b"Date,Key Point,Throughput\n" + b"".join(
+        f"2024-{m:02d}-01,Haskett,{m}\n".encode() for m in range(1, 13)
+    )
+    httpx_mock.add_response(url=_URL, content=body, is_reusable=True)
+    year = await client.query_file(_URL, start="2024", end="2024", limit=100)
+    assert year.matching_rows == 12
+    month = await client.query_file(_URL, start="2024-03", end="2024-04", limit=100)
+    assert [r["Date"] for r in month.rows] == ["2024-03-01", "2024-04-01"]
+
+
 async def test_french_file_decodes_cp1252_and_strips_headers(httpx_mock):
     httpx_mock.add_response(url=_FRENCH_URL, content=_FRENCH)
     result = await client.query_file(_FRENCH_URL, {"Flux": "importation"}, start="2023")
