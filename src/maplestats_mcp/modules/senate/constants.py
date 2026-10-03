@@ -15,6 +15,10 @@ DETAIL_PATHS = {
     "fr": "/fr/dans-la-chambre/votes/details/",
 }
 
+# Earliest session with a votes table (41-2 and earlier answer HTTP 200 with
+# no table, confirmed live 2026-10-03).
+FIRST_SESSION = "42-1"
+
 RATE_LIMIT_SOURCE = "senate"
 RATE_LIMIT_PER_SECOND = 1.0
 RATE_LIMIT_CAPACITY = 3.0

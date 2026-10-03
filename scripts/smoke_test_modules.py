@@ -40,6 +40,9 @@ class Step:
     tool: str
     args: Args
     check: Check = lambda data: True
+    # When set, the step passes only if the call is an error whose text
+    # contains this string (a bad input that must be refused, not answered).
+    expect_error: str | None = None
 
 
 def _non_empty(key: str) -> Check:
@@ -304,6 +307,22 @@ STEPS: list[Step] = [
         _non_empty("ballots"),
     ),
     Step("senate", "senate_list_votes", {"session": "44-1", "bill": "C-69", "lang": "fr"}),
+    # The French list says "Abstention" in the singular; every vote has a count.
+    Step(
+        "senate",
+        "senate_list_votes",
+        {"lang": "fr", "limit": 5, "keyword": "troisieme"},
+        lambda data: (
+            bool(data["votes"]) and all(v["abstentions"] is not None for v in data["votes"])
+        ),
+    ),
+    Step("senate", "senate_list_votes", {"session": "41-2"}, expect_error="42-1"),
+    Step(
+        "senate",
+        "senate_get_vote",
+        lambda ctx: {"vote_id": ctx["senate_list_votes"]["votes"][0]["vote_id"], "session": "44-1"},
+        expect_error="not in session",
+    ),
     # Open North Represent (elected officials and districts). Calls are paced to
     # 1 a second, so keep the postal codes and points to a spread across provinces.
     Step(
@@ -629,6 +648,13 @@ async def main(modules: set[str]) -> int:
                 "call_tool", {"name": step.tool, "arguments": args}, raise_on_error=False
             )
             text = _text(result)
+            if step.expect_error is not None:
+                if result.is_error and step.expect_error in text:
+                    print(f"OK   {label} {args} (refused as expected)")
+                else:
+                    failures.append(label)
+                    print(f"FAIL {label} {args}: expected an error with {step.expect_error!r}")
+                continue
             if result.is_error:
                 failures.append(label)
                 print(f"FAIL {label} {args}: {text[:300]}")

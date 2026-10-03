@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date
 from typing import Literal
 
@@ -31,7 +32,7 @@ _LIMITER = get_limiter(
 )
 _SESSION = re.compile(r"^\d{2}-\d$")
 _BILL = re.compile(r"\b([CS]-\d{1,4}[A-Z]?)\b")
-_COUNT = re.compile(r"(Yeas|Nays|Abstentions|Pour|Contre|Abstentions?)\s*:\s*(\d+)", re.IGNORECASE)
+_COUNT = re.compile(r"(Yeas|Nays|Pour|Contre|Abstentions?)\s*:\s*(\d+)", re.IGNORECASE)
 _FRESHNESS = "sencanada.ca, updated after each sitting; cached 1 hour"
 
 
@@ -57,6 +58,17 @@ def _clean(tag: Tag | None) -> str:
     return " ".join(tag.get_text(" ").split()) if tag else ""
 
 
+def _fold(text: str) -> str:
+    """Lower-case and drop accents, so "troisieme" finds "Troisième"."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def _session_key(session: str) -> tuple[int, int]:
+    parliament, number = session.split("-")
+    return int(parliament), int(number)
+
+
 def _check_session(session: str) -> str:
     if not _SESSION.match(session.strip()):
         raise InvalidInput(f"session must look like '45-1', got {session!r}.")
@@ -66,6 +78,13 @@ def _check_session(session: str) -> str:
 def parse_vote_list(
     html: str, session: str, lang: Lang
 ) -> tuple[list[SenateVoteSummary], list[str]]:
+    """Votes and the sessions linked from the page.
+
+    Confirmed live 2026-10-03: a session the site has no votes list for
+    (41-2 and earlier) still answers HTTP 200 with the session links but
+    no table (it even links itself), so a missing table on a session
+    before constants.FIRST_SESSION is a bad session, not a layout change.
+    """
     soup = BeautifulSoup(html, "html.parser")
     list_path = constants.LIST_PATHS[lang]
     hrefs = [str(a["href"]) for a in soup.find_all("a", href=True) if isinstance(a, Tag)]
@@ -73,6 +92,13 @@ def parse_vote_list(
     sessions = sorted({tail for tail in tails if _SESSION.match(tail)})
     table = soup.find("table", id="votes-table")
     if not isinstance(table, Tag):
+        if session and _session_key(session) < _session_key(constants.FIRST_SESSION):
+            first = _session_key(constants.FIRST_SESSION)
+            listed = [s for s in sessions if _session_key(s) >= first]
+            raise InvalidInput(
+                f"senate: sencanada.ca has no votes list for session {session}; "
+                f"sessions with votes: {', '.join(listed) or constants.FIRST_SESSION + ' on'}."
+            )
         raise UpstreamError("senate: votes page has no votes table; the layout may have changed.")
     votes = []
     for row in table.select("tbody tr"):
@@ -81,7 +107,9 @@ def parse_vote_list(
         if len(cells) < 4 or link is None:
             continue
         href = str(link["href"])
-        counts = {k.lower(): int(v) for k, v in _COUNT.findall(_clean(cells[1]))}
+        # The French cell says "Abstention: 3" (singular, confirmed live
+        # 2026-10-03), the English one "Abstentions: 3".
+        counts = {k.lower().removesuffix("s"): int(v) for k, v in _COUNT.findall(_clean(cells[1]))}
         title = _clean(link)
         bill = _clean(cells[2]) or None
         try:
@@ -96,9 +124,9 @@ def parse_vote_list(
                 title=title,
                 bill=bill,
                 result=_clean(cells[3]) or None,
-                yeas=counts.get("yeas", counts.get("pour")),
-                nays=counts.get("nays", counts.get("contre")),
-                abstentions=counts.get("abstentions"),
+                yeas=counts.get("yea", counts.get("pour")),
+                nays=counts.get("nay", counts.get("contre")),
+                abstentions=counts.get("abstention"),
                 url=f"{constants.BASE_URL}{href}",
             )
         )
@@ -124,8 +152,8 @@ async def list_votes(
     for vote in votes:
         vote.session = current
     if keyword:
-        needle = keyword.strip().lower()
-        votes = [v for v in votes if needle in v.title.lower()]
+        needle = _fold(keyword.strip())
+        votes = [v for v in votes if needle in _fold(v.title)]
     if bill:
         wanted = bill.strip().upper()
         votes = [v for v in votes if (v.bill or "").upper() == wanted]
@@ -164,7 +192,7 @@ def parse_vote(
             continue
         # The marked column sorts first: data-order="aaa" (confirmed live).
         marks = [c.get("data-order") == "aaa" for c in cells[3:6]]
-        vote = next((label for label, marked in zip(labels, marks, strict=True) if marked), "")
+        vote = next((label for label, marked in zip(labels, marks, strict=True) if marked), None)
         ballots.append(
             SenatorBallot(
                 senator=_clean(cells[0]),
@@ -205,6 +233,18 @@ def parse_vote(
 async def get_vote(vote_id: int, session: str, *, lang: Lang = "en") -> SenateVote:
     if vote_id < 1:
         raise InvalidInput(f"vote_id must be positive, got {vote_id}.")
-    path = f"{constants.DETAIL_PATHS[lang]}{vote_id}/{_check_session(session)}"
+    session = _check_session(session)
+    # sencanada.ca renders any id/session pair and prints the session from
+    # the URL (confirmed live 2026-10-03: vote 702799, a 45-1 vote, came back
+    # as "44th Parliament, 1st Session" under 44-1), so the pairing is
+    # checked against the session's own votes list.
+    list_html, _ = await _page(f"{constants.LIST_PATHS[lang]}{session}")
+    listed, _sessions = parse_vote_list(list_html, session, lang)
+    if not any(v.vote_id == vote_id for v in listed):
+        raise NotFound(
+            f"senate: vote {vote_id} is not in session {session}'s votes list; take the "
+            "vote_id and session together from senate_list_votes."
+        )
+    path = f"{constants.DETAIL_PATHS[lang]}{vote_id}/{session}"
     html, cached = await _page(path)
     return parse_vote(html, vote_id, session, f"{constants.BASE_URL}{path}", lang, cached)
