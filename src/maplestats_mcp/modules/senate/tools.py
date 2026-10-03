@@ -20,6 +20,8 @@ async def senate_list_votes(
 ) -> SenateVoteList:
     """List recorded votes in the Senate of Canada for one session, newest first.
 
+    Only Senate votes are covered: not Senate debates, committees or bills.
+
     Use for: Senate votes on a bill (bill like 'C-6' or 'S-205'), votes
     whose title contains a word, or all votes in a session (like '45-1',
     default current; sessions from 42-1), with yeas, nays, abstentions
@@ -39,6 +41,8 @@ async def senate_get_vote(
     vote_id: int, session: str, lang: Literal["en", "fr"] = "en"
 ) -> SenateVote:
     """Get how each senator voted on one Senate vote.
+
+    Only Senate votes are covered: not Senate debates, committees or bills.
 
     Use for: every senator's yea, nay or abstention, with their group
     (ISG, CSG, PSG, Conservative) and province. vote_id and session come

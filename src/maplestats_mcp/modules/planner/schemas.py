@@ -33,5 +33,10 @@ class QueryPlan(BaseModel):
     topics: list[TopicMatch] = Field(description="Best match first; at most 4.")
     places: list[PlaceMatch]
     fallback_steps: list[StepOut] = Field(description="Only when no topic matched.")
+    out_of_scope: str | None = Field(
+        default=None,
+        description="Set when the question is about a place outside Canada that this server "
+        "has no data for; topics and fallback steps are then empty.",
+    )
     guidance: list[str]
     provenance: Provenance

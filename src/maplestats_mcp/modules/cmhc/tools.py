@@ -37,7 +37,8 @@ async def cmhc_list_categories(
     """List CMHC housing-data categories available at a geography.
 
     Use for: discovering what CMHC covers before requesting data - new
-    housing construction (starts/completions), primary and secondary
+    housing construction (housing starts / mises en chantier, and
+    completions / achèvements), primary and secondary
     rental market (vacancy rates, rents), seniors' rental housing,
     population/households/housing stock, and core housing need. Read
     docs://cmhc/well-known-categories first - it already lists the
@@ -78,10 +79,10 @@ async def cmhc_get_table_options(
     option for will not resolve in cmhc_get_table_data either.
     Keywords: cmhc, housing, hmip, table options, column field, row
     field, breakdown, bedroom type, time series, historical, provinces,
-    discover.
+    discover, housing starts.
     Mots-clés : schl, logement, pimh, options de tableau, champ colonne,
     champ ligne, répartition, type de chambre, série chronologique,
-    historique, provinces, découvrir.
+    historique, provinces, découvrir, mises en chantier.
     """
     return await client.get_table_options(
         category_level_1,
@@ -123,7 +124,8 @@ async def cmhc_get_table_data(
     """Get CMHC housing data for a category as a table (time series or cross-tab).
 
     Use for: fetching actual CMHC Rental Market Survey vacancy rates/
-    rents, housing starts/completions, seniors' rental housing data, or
+    rents, housing starts/completions (mises en chantier, achèvements),
+    seniors' rental housing data, or
     any other category's numeric data - e.g. national historical rental
     vacancy rates by bedroom type, or current vacancy rates broken down
     by province. Pass `row_field="TIMESERIES"` for a historical time
