@@ -215,7 +215,8 @@ Sources, by tool-name prefix:
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit
   card and bank account comparisons), pbo_ (Parliamentary Budget Officer
-  publications and tables), pmprb_ (patented medicine prices), ircc_
+  publications and tables), pmprb_ (patented medicine prices), pmra_
+  (pesticide products, residue limits), ircc_
   (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
   cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),

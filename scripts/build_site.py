@@ -617,6 +617,15 @@ SOURCES: dict[str, Source] = {
         "DPB",
         domain="money",
     ),
+    "pmra": Source(
+        "Health Canada Pest Management Regulatory Agency: pesticide registry",
+        "Agence de réglementation de la lutte antiparasitaire de Santé Canada : "
+        "registre des pesticides",
+        "national",
+        "PMRA",
+        "ARLA",
+        domain="health",
+    ),
     "pmprb": Source(
         "Patented Medicine Prices Review Board",
         "Conseil d'examen du prix des médicaments brevetés",

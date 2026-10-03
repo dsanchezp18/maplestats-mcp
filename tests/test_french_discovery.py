@@ -147,6 +147,8 @@ CASES = [
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),
     # Sources fédérales ajoutées le 2026-10-03.
     ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
+    ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),
+    ("limite maximale de résidus de pesticides sur les pommes", "pmra_get_residue_limits"),
 ]
 
 

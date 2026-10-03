@@ -169,6 +169,9 @@ CASES = [
     ("browse dimensions and codes of an SDMX dataflow in CCEI", "sdmx_space_get_structure"),
     # Federal sources added 2026-10-03.
     ("border wait time at the Peace Bridge right now", "cbsa_border_wait_times"),
+    ("pesticide products registered with active ingredient glyphosate", "pmra_search_products"),
+    ("maximum residue limit for pesticide on apples ppm", "pmra_get_residue_limits"),
+    ("pesticide registration number details pests and sites of use", "pmra_get_product"),
 ]
 
 
