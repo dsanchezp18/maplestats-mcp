@@ -9,10 +9,13 @@ Confirmed live 2026-09-29:
 - Hourly Demand: `Demand/PUB_Demand_<year>.csv`, three `\\` comment lines,
   then `Date,Hour,Market Demand,Ontario Demand`. The current-year file ends
   about a day behind the clock (2026-09-28 hour 1 on 2026-09-29).
-- Generator output by fuel: one XML per year (6 MB for 2026), hours as
+- Generator output by fuel: one XML per year (7.9 MB for 2025), hours as
   `HourlyData/FuelTotal/EnergyValue/{OutputQuality,Output}`. OutputQuality is
-  the number of unavailable data points as a negative integer (0 to -6 seen);
-  `Output` is absent for 9 fuel-hours; a `CONTROL ACTIONS` fuel appears on 24.
+  the number of unavailable data points as a negative integer (0 to -30 in the
+  2025 file, about 7,500 of 59,000 values below 0). Those values come with an
+  `Output` (gas 3247 MW at quality -1), so a negative quality means "some
+  units not reported", not "no value"; `Output` itself is absent for a few
+  fuel-hours; a `CONTROL ACTIONS` fuel appears on 24.
 - Prices: HOEP ended with the 2025-05-01 market renewal (`DispUnconsHOEP` is
   an empty folder); its successor is the Ontario Zonal Price, published as
   `DAHourlyOntarioZonalPrice` (24 hours, tomorrow's file appears about 12:30
@@ -362,21 +365,25 @@ def parse_fuel_xml(text: str) -> list[FuelHour]:
         day_date = _date_from_text(_text(day, "Day"), "supply_by_fuel")
         for hourly in _children(day, "HourlyData"):
             output: dict[str, int | None] = {}
-            missing: list[str] = []
+            without_output: list[str] = []
+            unavailable: dict[str, int] = {}
             for total in _children(hourly, "FuelTotal"):
                 fuel = (_text(total, "Fuel") or "").lower().replace(" ", "_")
                 value = _child(total, "EnergyValue")
                 amount = _number(_text(value, "Output"))
                 output[fuel] = None if amount is None else int(amount)
                 quality = _number(_text(value, "OutputQuality"))
-                if amount is None or (quality is not None and quality < 0):
-                    missing.append(fuel)
+                if amount is None:
+                    without_output.append(fuel)
+                elif quality is not None and quality < 0:
+                    unavailable[fuel] = int(-quality)
             rows.append(
                 FuelHour(
                     date=day_date,
                     hour_ending=int(_number(_text(hourly, "Hour")) or 0),
                     output_mw=output,
-                    fuels_with_missing_data=missing,
+                    fuels_without_output=without_output,
+                    unavailable_data_points=unavailable,
                 )
             )
     if not rows:
@@ -412,13 +419,16 @@ async def get_supply_by_fuel(
     shown = matched[:limit] if (start or end) else matched[-limit:]
     sums: dict[str, int] = {}
     gaps: dict[str, int] = {}
+    partial: dict[str, int] = {}
     for row in matched:
         for fuel, amount in row.output_mw.items():
             if amount is not None:
                 # An hour's average MW over one hour is that hour's MWh.
                 sums[fuel] = sums.get(fuel, 0) + amount
-        for fuel in row.fuels_with_missing_data:
+        for fuel in row.fuels_without_output:
             gaps[fuel] = gaps.get(fuel, 0) + 1
+        for fuel in row.unavailable_data_points:
+            partial[fuel] = partial.get(fuel, 0) + 1
     generation = sum(v for f, v in sums.items() if f != constants.CONTROL_ACTIONS_FUEL)
     totals = [
         FuelTotal(
@@ -429,7 +439,8 @@ async def get_supply_by_fuel(
                 if generation and fuel != constants.CONTROL_ACTIONS_FUEL
                 else None
             ),
-            hours_with_missing_data=gaps.get(fuel, 0),
+            hours_without_output=gaps.get(fuel, 0),
+            hours_with_unavailable_points=partial.get(fuel, 0),
         )
         for fuel, amount in sorted(sums.items(), key=lambda item: -item[1])
     ]

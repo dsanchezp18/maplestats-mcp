@@ -160,6 +160,14 @@ STEPS: list[Step] = [
         "dfo_iwls_get_water_levels",
         lambda ctx: {"station_code": ctx["dfo_iwls_search_stations"]["stations"][0]["code"]},
     ),
+    # Electricity (the rest is in smoke_test_electricity.py): the latest Quebec
+    # trade hour must carry published exports, not a zero placeholder.
+    Step(
+        "electricity",
+        "electricity_quebec_get_trade",
+        {"limit": 3},
+        lambda data: len(data["points"]) == 3 and bool(data["points"][-1]["exports_total_mw"]),
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(

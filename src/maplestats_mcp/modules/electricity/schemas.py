@@ -54,8 +54,16 @@ class FuelHour(BaseModel):
     output_mw: dict[str, int | None] = Field(
         description="Metered output per fuel (nuclear, gas, hydro, wind, solar, biofuel, other)."
     )
-    fuels_with_missing_data: list[str] = Field(
-        description="Fuels whose hour has unavailable data points (OutputQuality below 0)."
+    fuels_without_output: list[str] = Field(
+        description="Fuels with no Output value for the hour (output_mw is null)."
+    )
+    unavailable_data_points: dict[str, int] = Field(
+        default_factory=dict,
+        description=(
+            "Fuels whose Output is reported but IESO's OutputQuality flag is below 0: "
+            "the number of data points (units) not available for the hour, so the "
+            "value may be understated."
+        ),
     )
 
 
@@ -63,7 +71,10 @@ class FuelTotal(BaseModel):
     fuel: str
     energy_mwh: int = Field(description="Sum of hourly output over the matched hours.")
     share_percent: float | None
-    hours_with_missing_data: int
+    hours_without_output: int = Field(description="Matched hours with no Output for the fuel.")
+    hours_with_unavailable_points: int = Field(
+        description="Matched hours with an Output but some data points unavailable."
+    )
 
 
 class SupplyByFuel(BaseModel):

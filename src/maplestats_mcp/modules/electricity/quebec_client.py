@@ -14,7 +14,9 @@ Confirmed live 2026-09-29 against the Explore API v2.1, no key:
 - `historique-production-electricite-quebec`: hourly, 2019-01-01 to 2026-01-01.
 - `importations-exportations-avec-transits`: hourly, 48 rows, exports per market
   (negative = net import) and imports per market and source. Future hours are
-  placeholders with zeros, so a date cutoff at "now" is applied. On 48 live rows
+  placeholders with zeros, so a date cutoff at "now" is applied; exports are
+  published a few hours late, so the latest zero-export hours are dropped too
+  (see `_drop_unpublished_hours`). On 48 live rows
   `exportations_total` equalled the sum of the positive market values.
 - All timestamps are UTC instants (local midnight EDT appears as 04:00Z).
 - `/records` caps `limit` at 100 and `offset + limit` at 10000 (HTTP 400 past
@@ -290,6 +292,27 @@ async def get_generation(
     )
 
 
+# Hydro-Quebec fills the trade dataset ahead of time with zero rows and
+# publishes the exports one to a few hours late: at 20:00Z on 2026-10-03 the
+# 17:00-20:00Z rows had exportations_total 0.0 (import sources trickled in
+# first), while every earlier hour exported about 600 MW. A zero export
+# total occurs in the dataset almost only on such hours (11 rows of the whole
+# history, live count), so recent trailing zero-export hours are dropped.
+_TRADE_LAG_HOURS = 12
+
+
+def _drop_unpublished_hours(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Drop trailing rows (oldest-first list) of the last day with no exports yet."""
+    recent = datetime.now(UTC) - timedelta(days=1)
+    kept = list(rows)
+    while kept:
+        last = kept[-1]
+        if _timestamp(last, "quebec_trade") < recent or _value(last, "exportations_total"):
+            break
+        kept.pop()
+    return kept, len(rows) - len(kept)
+
+
 async def get_trade(
     start_date: str | None = None,
     end_date: str | None = None,
@@ -302,15 +325,21 @@ async def get_trade(
     start, end = _range(start_date, end_date)
     where = _where(start, end, None, cutoff=True)
     latest = not (start or end)
+    # Extra rows so that dropping the unpublished hours below still fills limit.
+    fetch_limit = min(limit + _TRADE_LAG_HOURS, constants.MAX_LIMIT) if latest else limit
     rows, total, was_cached = await _fetch_rows(
         constants.QUEBEC_TRADE_DATASET,
         where,
         latest,
-        limit,
-        f"electricity:qc:trade:{where}:{latest}:{limit}",
+        fetch_limit,
+        f"electricity:qc:trade:{where}:{latest}:{fetch_limit}",
         constants.QUEBEC_CACHE_TTL_RECENT_SECONDS,
         "quebec_trade",
     )
+    rows, unpublished = _drop_unpublished_hours(rows)
+    total -= unpublished
+    if latest:
+        rows = rows[-limit:]
     points = [
         QuebecTradePoint(
             timestamp=_timestamp(r, "quebec_trade"),
@@ -337,7 +366,10 @@ async def get_trade(
             url=f"{constants.QUEBEC_DATASETS_URL}/{constants.QUEBEC_TRADE_DATASET}",
             cached=was_cached,
             schema_name="electricity.QuebecTrade",
-            freshness="hourly, about two local days; hours not yet reached are excluded",
+            freshness=(
+                "hourly, about two local days; hours not yet reached, and the latest "
+                "hours whose exports are not yet published (still zero), are excluded"
+            ),
             coverage="markets: New England, New Brunswick, New York, Ontario; includes wheel-through",
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Start/end are UTC days."
