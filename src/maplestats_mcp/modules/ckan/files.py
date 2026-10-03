@@ -17,7 +17,6 @@ portals' format labels and file names are unreliable: confirmed live
 
 from __future__ import annotations
 
-import asyncio
 import re
 from collections.abc import Callable
 from typing import Any, Literal
@@ -37,6 +36,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action, to_bool
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
 SheetChoice = Literal["request", "largest", "only", "none"]
@@ -349,9 +349,9 @@ async def describe_resource(
     downloaded, cached = await _fetch_file(resolved, url)
     body = downloaded.body
     fmt = _sniff(body, resolved, url)
-    sizes = await asyncio.to_thread(file_tables.sheet_sizes, body, fmt)
+    sizes = await run_parse(file_tables.sheet_sizes, body, fmt)
     only = _choose_sheet(sizes, sheet, fmt)[0] if sheet is not None else None
-    total, summaries = await asyncio.to_thread(file_tables.describe, body, fmt, only)
+    total, summaries = await run_parse(file_tables.describe, body, fmt, only)
     source = resolved.source(url)
     datastore = resolved.resource.get("datastore_active")
     shown = 1 if only else total
@@ -540,13 +540,13 @@ async def read_resource(
     downloaded, cached = await _fetch_file(resolved, url)
     body = downloaded.body
     fmt = _sniff(body, resolved, url)
-    sizes = await asyncio.to_thread(file_tables.sheet_sizes, body, fmt)
+    sizes = await run_parse(file_tables.sheet_sizes, body, fmt)
     if not sizes:
         raise UpstreamError(f"ckan_read_resource: {url} has no sheets.")
     chosen, how = _choose_sheet(sizes, sheet, fmt)
     if chosen is None:
         return _sheet_list(resolved, url, sizes, fmt, cached and api_cached, offset)
-    result = await asyncio.to_thread(
+    result = await run_parse(
         file_tables.scan,
         body,
         fmt,

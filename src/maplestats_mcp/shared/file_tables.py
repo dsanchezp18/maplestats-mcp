@@ -26,6 +26,7 @@ from itertools import chain, islice
 from typing import Any, Literal
 
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.executor import check_deadline
 from maplestats_mcp.shared.xlsx_sheets import cell_text as _shared_cell_text
 
 FileFormat = Literal["xlsx", "xls", "csv"]
@@ -44,6 +45,10 @@ ROWS_LIMIT_DEFAULT = 50
 HEADER_CANDIDATES_MAX = 5
 # Declared sheet sizes above this are formatting, not data (see _fix_dimensions).
 SUSPICIOUS_SHEET_CELLS = 10_000_000
+# Rows between checks of the parse budget (shared/executor.py): often enough
+# that a 16,000-column row cannot run long between checks, rare enough to cost
+# nothing on a plain CSV.
+_DEADLINE_EVERY = 100
 
 _XLSX_MAGIC = b"PK\x03\x04"
 _XLS_MAGIC = b"\xd0\xcf\x11\xe0"
@@ -276,7 +281,9 @@ def _csv_rows(body: bytes) -> Iterator[list[str]]:
     text = decode(body)
     first = next((line for line in text[:20000].splitlines()[:20] if line.strip()), "")
     delimiter = max(_DELIMITERS, key=first.count) if first else ","
-    for row in csv.reader(io.StringIO(text), delimiter=delimiter):
+    for index, row in enumerate(csv.reader(io.StringIO(text), delimiter=delimiter)):
+        if index % _DEADLINE_EVERY == 0:
+            check_deadline()
         yield [cell.strip() for cell in row]
 
 
@@ -295,7 +302,9 @@ def _trim(row: list[str]) -> list[str]:
 
 
 def _xlsx_rows(sheet: Any) -> Iterator[list[str]]:
-    for raw in sheet.iter_rows(values_only=True):
+    for index, raw in enumerate(sheet.iter_rows(values_only=True)):
+        if index % _DEADLINE_EVERY == 0:
+            check_deadline()
         yield _trim([cell_text(c) for c in raw])
 
 
@@ -338,6 +347,8 @@ def _xls_rows(book: Any, sheet: Any) -> Iterator[list[str]]:
     import xlrd
 
     for r in range(min(sheet.nrows, MAX_SCAN_ROWS + 1)):
+        if r % _DEADLINE_EVERY == 0:
+            check_deadline()
         row: list[str] = []
         for c in range(sheet.ncols):
             cell = sheet.cell(r, c)

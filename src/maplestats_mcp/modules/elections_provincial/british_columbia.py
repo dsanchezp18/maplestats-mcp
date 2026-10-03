@@ -19,7 +19,6 @@ neither is needed. By-elections are in the files but not read here.
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 from collections import defaultdict
@@ -33,6 +32,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 
 _REQUIRED = {
     "EVENT_NAME",
@@ -137,7 +137,7 @@ async def fetch(year: str) -> tuple[list[District], bool]:
         body = await fetch_bytes(
             url, context=f"elections_provincial:bc:{year}", max_bytes=constants.BC_MAX_BYTES
         )
-        return await asyncio.to_thread(parse, body)
+        return await run_parse(parse, body)
 
     by_year, cached = await cached_fetch(
         f"elections_provincial:bc-file:{url}", constants.CACHE_TTL_SECONDS, load

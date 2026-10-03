@@ -105,6 +105,30 @@ def get_tool_timeout_seconds() -> float:
     return min(1800.0, max(5.0, value))
 
 
+def get_parse_workers() -> int:
+    """Threads in shared/executor.py's file-parsing pool.
+
+    Kept small: parsing is CPU-bound and the free hosting tier has a
+    fraction of one CPU, so more threads only add memory.
+    """
+    raw = os.environ.get("MAPLE_PARSE_WORKERS", "4")
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 4
+    return min(32, max(1, value))
+
+
+def get_parse_timeout_seconds() -> float:
+    """Wall-clock budget for one file parse, including the wait for a worker."""
+    raw = os.environ.get("MAPLE_PARSE_TIMEOUT_SECONDS", "60")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 60.0
+    return min(1800.0, max(1.0, value))
+
+
 def get_pumf_cache_dir() -> Path:
     """Where PUMF data files are downloaded and extracted for tabulation.
 
@@ -156,6 +180,33 @@ def get_ip_horizons_cache_max_bytes() -> int:
     except ValueError:
         value = 3.0
     return int(max(0.5, value) * 1024**3)
+
+
+DEFAULT_ALLOWED_ORIGINS = (
+    "https://dsanchezp18.github.io",
+    "http://localhost:*",
+    "https://localhost:*",
+    "http://127.0.0.1:*",
+    "https://127.0.0.1:*",
+    "http://[::1]:*",
+    "https://[::1]:*",
+)
+
+
+def get_allowed_origins() -> tuple[str, ...]:
+    """Browser origins allowed to call /mcp (CORS and Origin validation).
+
+    MAPLE_ALLOWED_ORIGINS is a comma-separated list that replaces the
+    defaults: the project website plus localhost on any port. Entries may
+    use a port wildcard (`http://localhost:*`), a subdomain wildcard
+    (`https://*.office.com`, needed for an Office add-in task pane), or
+    `*` for any origin. Requests that send no Origin header (desktop
+    clients, scripts) are allowed whatever this says.
+    """
+    raw = os.environ.get("MAPLE_ALLOWED_ORIGINS", "").strip()
+    if not raw:
+        return DEFAULT_ALLOWED_ORIGINS
+    return tuple(entry.strip() for entry in raw.split(",") if entry.strip())
 
 
 def get_trust_proxy_headers() -> bool:
