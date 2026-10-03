@@ -146,7 +146,10 @@ CASES = [
     ("émissions de gaz à effet de serre par province inventaire", "sdmx_space_get_data"),
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),
     ("comparaison internationale du Canada avec les pays de l'OCDE", "worldbank_get_canada_series"),
-    ("indicateurs du développement dans le monde de la Banque mondiale", "worldbank_search_indicators"),
+    (
+        "indicateurs du développement dans le monde de la Banque mondiale",
+        "worldbank_search_indicators",
+    ),
 ]
 
 
