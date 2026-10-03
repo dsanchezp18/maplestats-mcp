@@ -243,6 +243,20 @@ STEPS: list[Step] = [
         {"table_id": "3.2.1", "province": "BC", "group_by": ["year"], "limit": 3},
         lambda data: bool(data["rows"]) and all(r["iso"] == "BC" for r in data["rows"]),
     ),
+    # Alberta wildfire (the rest is in smoke_test_ab_wildfire.py): every
+    # timestamp is UTC, the status date included.
+    Step(
+        "ab_wildfire",
+        "ab_wildfire_get_fires",
+        {"limit": 3},
+        lambda data: (
+            bool(data["fires"])
+            and all(
+                f["status_changed"] is None or f["status_changed"].endswith(("Z", "+00:00"))
+                for f in data["fires"]
+            )
+        ),
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(

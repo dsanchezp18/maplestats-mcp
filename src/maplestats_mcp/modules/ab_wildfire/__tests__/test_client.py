@@ -172,8 +172,9 @@ async def test_list_fires_parses_a_row_and_uses_layer_edit_time(server):
     fire = result.fires[0]
     assert fire.fire_number == "CWF-001-2026"
     assert fire.status_changed is not None
-    assert fire.status_changed.isoformat() == "2026-01-14T12:57:00"
-    assert fire.status_changed.tzinfo is None
+    # Alberta local text (MST in January, UTC-7) converted to UTC, like
+    # assessed_at; it used to be a naive local time beside a UTC one.
+    assert fire.status_changed.isoformat() == "2026-01-14T19:57:00+00:00"
     assert fire.assessed_at is not None
     assert fire.assessed_at.isoformat() == "2026-01-06T16:31:00+00:00"
     assert fire.carryover is False
@@ -854,7 +855,8 @@ async def test_live_shaped_fire_row_parses_dates_and_nulls(server):
     assert fire.fire_number == "PWF-069-2026"
     # The status date is local text with no zone; the assessment date is UTC epoch ms.
     assert fire.status_changed is not None
-    assert fire.status_changed.isoformat() == "2026-10-01T14:00:00"
+    # MDT (UTC-6) on 2026-10-01.
+    assert fire.status_changed.isoformat() == "2026-10-01T20:00:00+00:00"
     assert fire.assessed_at is not None
     assert fire.assessed_at.isoformat() == "2026-09-03T20:01:00+00:00"
     assert fire.carryover is False
