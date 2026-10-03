@@ -37,12 +37,13 @@ async def _resume_step(date: str, product_id: int) -> bool:
                     starts.append(data.scan_started_at_byte)
                     break
                 except UpstreamError as exc:
-                    outcomes.append(str(exc)[:160])
+                    outcomes.append(str(exc))
                     starts.append(1 if "a saved resume point" in str(exc) else 0)
         finally:
             del os.environ["MAPLE_DELTA_INDEX_DIR"], os.environ["MAPLE_DELTA_MAX_SCAN_MB"]
             scan_index.clear()
-    print(f"OK: read_table({date}, {product_id}) capped at 8 MB -> {outcomes}")
+    shown = [outcome[:200] for outcome in outcomes]
+    print(f"OK: read_table({date}, {product_id}) capped at 8 MB -> {shown}")
     # Either the table sits in the first 8 MB, or the second call resumed.
     return len(outcomes) == 1 or (starts[-1] > 0 and "Progress is saved" in outcomes[0])
 
@@ -58,6 +59,14 @@ async def main() -> int:
         recent_weekday -= timedelta(days=1)
 
     existing = await client.get_file_link(recent_weekday.isoformat())
+    # A holiday (2026-09-30) has no file either: step back to the last release.
+    for _ in range(5):
+        if existing.exists:
+            break
+        recent_weekday -= timedelta(days=1)
+        while recent_weekday.weekday() >= 5:
+            recent_weekday -= timedelta(days=1)
+        existing = await client.get_file_link(recent_weekday.isoformat())
     print(f"OK: get_file_link({recent_weekday}) -> exists={existing.exists} url={existing.url}")
     ok &= existing.exists
     ok &= existing.size_bytes is not None and existing.size_bytes > 0
