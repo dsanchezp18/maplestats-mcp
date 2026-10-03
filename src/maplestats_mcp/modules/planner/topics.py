@@ -1023,7 +1023,7 @@ TOPICS: tuple[Topic, ...] = (
             ),
             PlanStep(
                 "elections_provincial_get_results",
-                "provincial results by riding: province='qc', 'ab', 'bc' or 'sk' "
+                "provincial results by riding: province='qc', 'ab', 'bc', 'sk' or 'mb' "
                 "(elections_provincial_list_elections lists what is covered)",
                 _PROVINCIAL_TERMS,
             ),
