@@ -83,7 +83,9 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "northwest territories": (
         "Northwest Territories",
         (
-            PlanStep("nwt_stats_search_files", "NWT Bureau of Statistics Excel tables"),
+            PlanStep(
+                "nwt_stats_search_files", "NWT Bureau of Statistics Excel tables (query by words)"
+            ),
             _ckan("nt"),
         ),
     ),

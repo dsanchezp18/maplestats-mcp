@@ -211,7 +211,8 @@ Sources, by tool-name prefix:
 - Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 tables from
   university libraries; ODESI DDI metadata, public files only).
 - Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
-  (Excel data tables). ECCC weather, climate, hydrometric: eccc_.
+  (Excel data tables). CREA MLS Home Price Index: crea_ (links, terms and
+  attribution only, no values). ECCC weather, climate, hydrometric: eccc_.
 - World Bank WDI, Canada and G7/OECD peers: worldbank_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
