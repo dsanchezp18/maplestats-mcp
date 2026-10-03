@@ -285,6 +285,13 @@ STEPS: list[Step] = [
         lambda ctx: {"event_id": ctx["earthquakes_search"]["earthquakes"][0]["event_id"]},
         lambda data: data["returned_count"] == 1,
     ),
+    # Five years at limit 2: only limit + 1 rows travel (it was all 34,973).
+    Step(
+        "earthquakes",
+        "earthquakes_search",
+        {"start": "2021-01-01", "end": "2025-12-31", "limit": 2},
+        lambda data: data["returned_count"] == 2 and data["has_more"],
+    ),
     # Elections Canada financial returns
     Step(
         "elections_financial_returns",

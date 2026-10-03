@@ -177,6 +177,10 @@ async def search(
             params.update(
                 minlatitude=south, maxlatitude=north, minlongitude=west, maxlongitude=east
             )
+        # The service honours FDSN `limit` (newest first, confirmed live
+        # 2026-10-03). Without it, limit=2 over 2021-2025 downloaded all
+        # 34,973 events; one extra row says whether more match.
+        params["limit"] = limit + 1
     text, cached = await _fetch(params)
     quakes = parse_text(text, lang)
     if event_id and len(event_id) > 13:
@@ -184,9 +188,11 @@ async def search(
     if event_id and not quakes:
         raise NotFound(f"No Earthquakes Canada event {event_id!r}.")
     kept = quakes[:limit]
+    has_more = len(quakes) > limit
     return EarthquakeSearchResult(
         earthquakes=kept,
-        total_matches=len(quakes),
+        total_matches=None if has_more else len(quakes),
+        has_more=has_more,
         returned_count=len(kept),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
