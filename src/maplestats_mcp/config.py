@@ -137,6 +137,42 @@ def get_pumf_cache_max_bytes() -> int:
     return int(max(0.5, value) * 1024**3)
 
 
+def get_delta_max_scan_bytes() -> int:
+    """Compressed bytes one statcan_delta_read_table call may stream.
+
+    Measured 2026-10-03 from a home connection: about 2.5 MB/s per range
+    request and 5 to 7 MB/s with two or three in flight, so 400 MB fits the
+    scan's time ceiling. A host with a faster link can raise it.
+    """
+    raw = os.environ.get("MAPLE_DELTA_MAX_SCAN_MB", "400")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 400.0
+    return int(min(4096.0, max(1.0, value)) * 1024 * 1024)
+
+
+def get_delta_max_scan_seconds() -> float:
+    """Seconds one Delta scan may run, kept 30 s under the tool timeout."""
+    raw = os.environ.get("MAPLE_DELTA_MAX_SCAN_SECONDS", "75")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 75.0
+    return max(5.0, min(value, get_tool_timeout_seconds() - 30.0))
+
+
+def get_delta_index_dir() -> Path | None:
+    """Where Delta File scan indexes (resume points) are saved; None keeps them in memory.
+
+    Defaults to the system temp folder; "off" disables the disk copy.
+    """
+    raw = os.environ.get("MAPLE_DELTA_INDEX_DIR", "").strip()
+    if raw.lower() in {"0", "off", "false", "no"}:
+        return None
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "delta"
+
+
 def get_ip_horizons_cache_dir() -> Path:
     """Where CIPO IP Horizons patent tables are kept as Parquet for queries.
 
