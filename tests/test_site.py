@@ -580,6 +580,19 @@ def test_sitemap_robots_and_not_found_page(built_site: Path):
     assert not re.findall(r'(?:href|src)="(?!/|https://)', missing)
 
 
+def test_internal_links_resolve(built_site: Path):
+    """Every link to a page, an asset or an #id of this site lands on something."""
+    spec = importlib.util.spec_from_file_location(
+        "check_site_links", ROOT / "scripts" / "check_site_links.py"
+    )
+    assert spec and spec.loader
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    broken, external = checker.scan(built_site)
+    assert not broken, "Broken links:\n" + "\n".join(broken[:25])
+    assert external  # the scan saw the outside links too
+
+
 def test_scrolling_boxes_take_keyboard_focus(built_site: Path):
     """Every code block and every table box can be reached, and scrolled, by keyboard."""
     for page in _pages(built_site):

@@ -248,7 +248,12 @@ notes) goes on a French page inside a `lang="en"` element;
 ```bash
 uv run python scripts/build_site.py
 uv run python -m http.server --directory build/site 8080
+uv run python scripts/check_site_links.py --external   # live check of outside links
 ```
+
+`tests/test_site.py` checks the internal links (pages, assets and
+`#ids`) of every build; the external check needs the network, so it is a
+script to run by hand after editing a page's links.
 
 ## Style
 
