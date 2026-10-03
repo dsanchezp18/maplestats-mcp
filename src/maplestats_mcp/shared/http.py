@@ -177,6 +177,12 @@ def _request_headers(url: str, headers: dict[str, str] | None) -> dict[str, str]
     return {**_DEFAULT_HEADERS, **fresh, **(headers or {})}
 
 
+# Public names for sources that keep their own client and retry policy (HEAD,
+# range reads, streamed downloads) but should send the same headers and honour
+# the same Retry-After as the main HTTP path.
+request_headers = _request_headers
+
+
 def is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in _RETRYABLE_STATUSES
@@ -224,10 +230,28 @@ def decode_json(response: httpx.Response, url: str = "") -> Any:
         ) from exc
 
 
+_RETRY_AFTER_CAP_SECONDS = 30.0
+_backoff = wait_exponential(multiplier=1, min=1, max=10)
+
+
+def _wait_honouring_retry_after(state: RetryCallState) -> float:
+    """Exponential backoff, or the server's Retry-After (capped) when it sent one."""
+    wait = _backoff(state)
+    exc = state.outcome.exception() if state.outcome else None
+    if isinstance(exc, httpx.HTTPStatusError):
+        header = exc.response.headers.get("retry-after", "")
+        if header.isdigit():
+            return max(wait, min(float(header), _RETRY_AFTER_CAP_SECONDS))
+    return wait
+
+
+wait_honouring_retry_after = _wait_honouring_retry_after
+
+
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
+    wait=_wait_honouring_retry_after,
     reraise=True,
 )
 async def api_get(
@@ -251,7 +275,7 @@ _PASSTHROUGH_STATUSES = frozenset({406, 409})
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
+    wait=_wait_honouring_retry_after,
     reraise=True,
 )
 async def get_raw(
@@ -284,7 +308,7 @@ async def get_raw(
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
+    wait=_wait_honouring_retry_after,
     reraise=True,
 )
 async def post_form_raw(
@@ -311,7 +335,7 @@ async def post_form_raw(
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
+    wait=_wait_honouring_retry_after,
     reraise=True,
 )
 async def api_post(
@@ -327,21 +351,6 @@ async def api_post(
     raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return decode_json(response, url=url)
-
-
-_RETRY_AFTER_CAP_SECONDS = 30.0
-_backoff = wait_exponential(multiplier=1, min=1, max=10)
-
-
-def _wait_honouring_retry_after(state: RetryCallState) -> float:
-    """Exponential backoff, or the server's Retry-After (capped) when it sent one."""
-    wait = _backoff(state)
-    exc = state.outcome.exception() if state.outcome else None
-    if isinstance(exc, httpx.HTTPStatusError):
-        header = exc.response.headers.get("retry-after", "")
-        if header.isdigit():
-            return max(wait, min(float(header), _RETRY_AFTER_CAP_SECONDS))
-    return wait
 
 
 @retry(

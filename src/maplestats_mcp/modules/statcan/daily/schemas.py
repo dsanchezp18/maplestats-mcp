@@ -27,7 +27,13 @@ class DailyArchiveEntry(BaseModel):
     release_date: date
     title: str
     reference_period: str | None = None
-    url: str
+    scheduled: bool = Field(
+        description="True when the release date is today (Toronto) or later: not yet published."
+    )
+    url: str | None = Field(
+        default=None,
+        description="Daily article URL; null for an upcoming release, which has no article yet.",
+    )
 
 
 class DailyArchiveSearchResult(BaseModel):

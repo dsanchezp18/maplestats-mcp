@@ -48,6 +48,6 @@ BLOCKED_NOTE = (
     "Statistics Canada's www12 host, which serves these census tables, is currently behind "
     "a Cloudflare bot challenge that scripts cannot pass (a browser can still open the "
     "pages). Other routes to census data: 2021 tables are WDS tables (wds_search_cubes, "
-    "98-10-xxxx); 2016 indicator profiles are WDS tables 17100122 and 17100123; copies of "
+    "98-10-xxxx); an indicator subset of the 2016 profile (down to health regions) is in WDS tables 17100122 and 17100123; copies of "
     "older tables are on Borealis (borealis_search_ivt)."
 )

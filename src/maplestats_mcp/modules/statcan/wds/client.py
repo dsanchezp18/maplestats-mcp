@@ -234,8 +234,19 @@ def _unwrap_one(item: dict[str, Any], method: str) -> Any:
         detail = item.get("object")
         text = str(detail)
         if "does not exist" in text or "NOT_AVAILABLE" in text:
-            raise NotFound(f"{method}: {text}")
-        raise UpstreamError(f"{method} returned status={item.get('status')!r}: {detail!r}")
+            raise NotFound(
+                _m(
+                    f"{method}: {text}",
+                    f"{method} : l'identifiant demandé n'existe pas ou n'est pas disponible "
+                    "dans le Service de données Web.",
+                )
+            )
+        raise UpstreamError(
+            _m(
+                f"{method} returned status={item.get('status')!r}: {detail!r}",
+                f"{method} a renvoyé le statut {item.get('status')!r} : {detail!r}",
+            )
+        )
     obj = item["object"]
     if isinstance(obj, dict) and obj.get("responseStatusCode") not in (None, 0):
         raise NotFound(
@@ -253,12 +264,21 @@ def _pad_coordinate(coordinate: str) -> str:
     parts = coordinate.split(".")
     if len(parts) > constants.COORDINATE_DIMENSIONS:
         raise InvalidInput(
-            f"Coordinate {coordinate!r} has {len(parts)} dimensions; "
-            f"WDS coordinates have at most {constants.COORDINATE_DIMENSIONS}."
+            _m(
+                f"Coordinate {coordinate!r} has {len(parts)} dimensions; "
+                f"WDS coordinates have at most {constants.COORDINATE_DIMENSIONS}.",
+                f"La coordonnée {coordinate!r} compte {len(parts)} dimensions; "
+                f"les coordonnées du SDW en comptent au plus {constants.COORDINATE_DIMENSIONS}.",
+            )
         )
     for part in parts:
         if not part.isdigit():
-            raise InvalidInput(f"Coordinate part {part!r} is not numeric in {coordinate!r}")
+            raise InvalidInput(
+                _m(
+                    f"Coordinate part {part!r} is not numeric in {coordinate!r}",
+                    f"La partie {part!r} de la coordonnée {coordinate!r} n'est pas numérique.",
+                )
+            )
     while len(parts) < constants.COORDINATE_DIMENSIONS:
         parts.append("0")
     return ".".join(parts)
@@ -631,7 +651,12 @@ async def get_series_info_from_vector(vector_id: int) -> SeriesInfo:
 def _observation_from_json(dp: dict[str, Any]) -> ObservationRow:
     ref_period_raw = dp.get("refPer") or dp.get("refPerRaw")
     if not ref_period_raw:
-        raise UpstreamError(f"Observation is missing refPer/refPerRaw: {dp!r}")
+        raise UpstreamError(
+            _m(
+                f"Observation is missing refPer/refPerRaw: {dp!r}",
+                f"Il manque refPer/refPerRaw dans l'observation : {dp!r}",
+            )
+        )
     release_time = dp.get("releaseTime")
     # `.get(key, 0)` only applies its default when the key is absent —
     # WDS sends these as explicit JSON null on some cubes (the same

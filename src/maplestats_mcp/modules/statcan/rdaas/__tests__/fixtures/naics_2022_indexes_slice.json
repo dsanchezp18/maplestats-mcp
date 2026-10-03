@@ -1,0 +1,230 @@
+{
+ "@context": [
+  "https://api.statcan.gc.ca/rdaas/context/index-entry",
+  {
+   "@language": "en"
+  }
+ ],
+ "@graph": [
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/nDJuafeBmgLKvvat",
+   "indexId": 1,
+   "primaryTerm": "general partners (managing), except portfolio management",
+   "otherExamples": [
+    "general partners (managing), except portfolio management"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/zSbWEnYeffYO9zMQ",
+   "indexCodeValue": "551114",
+   "indexCodeDescriptor": "Corporate, regional and subsidiary management offices and companies"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/ybjjazT99Ndr7gQK",
+   "indexId": 2,
+   "primaryTerm": "cotton-type fibre spun yarns made from purchased fibre",
+   "illustrativeExamples": [
+    "cotton-type fibre spun yarns made from purchased fibre"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/ahZKEDjX4PvUtkIo",
+   "indexCodeValue": "313110",
+   "indexCodeDescriptor": "Fibre, yarn and thread mills"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/vYO3edBSpa9QgTme",
+   "indexId": 3,
+   "primaryTerm": "navigational instruments, manufacturing",
+   "otherExamples": [
+    "navigational instruments, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/jxH3b7e6w88reK7q",
+   "indexCodeValue": "334511",
+   "indexCodeDescriptor": "Navigational and guidance instruments manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/YXXm0sstgQ74YpQG",
+   "indexId": 4,
+   "primaryTerm": "audio and video recordings retailers",
+   "otherExamples": [
+    "audio and video recordings retailers"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/Rmthk8dJiEsLUZlC",
+   "indexCodeValue": "449214",
+   "indexCodeDescriptor": "Audio and video recording retailers"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/uWeOQSnJAva5ONSm",
+   "indexId": 7,
+   "primaryTerm": "cloud hosting",
+   "otherExamples": [
+    "cloud hosting"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/R9atOnPn2RLN2uPA",
+   "indexCodeValue": "518210",
+   "indexCodeDescriptor": "Computing infrastructure providers, data processing, web hosting, and related services"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/jnqSTZvUUm3Dq6H4",
+   "indexId": 8,
+   "primaryTerm": "bubble packaging materials, plastics, manufacturing",
+   "otherExamples": [
+    "bubble packaging materials, plastics, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/Uo5zEReusTgxOmmC",
+   "indexId": 10,
+   "primaryTerm": "building materials (e.g., fascia, panels, siding, soffits), plastics, manufacturing",
+   "otherExamples": [
+    "building materials (e.g., fascia, panels, siding, soffits), plastics, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/YwvXwi5lnkYYgmma",
+   "indexId": 12,
+   "primaryTerm": "bowls and bowl covers, plastics, manufacturing",
+   "otherExamples": [
+    "bowls and bowl covers, plastics, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/dY3ErX1qBrnWIfPy",
+   "indexId": 13,
+   "primaryTerm": "boxes and cases, plastic, manufacturing",
+   "otherExamples": [
+    "boxes and cases, plastic, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/jzTGiL2PzXhSBZEN",
+   "indexId": 16,
+   "primaryTerm": "bolts, nuts and rivets, plastics, manufacturing",
+   "otherExamples": [
+    "bolts, nuts and rivets, plastics, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/pIMjQndh2AAXoRnO",
+   "indexId": 18,
+   "primaryTerm": "bottle caps and lids, plastics, manufacturing",
+   "otherExamples": [
+    "bottle caps and lids, plastics, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/HhFJj7Hspin0BMJe",
+   "indexId": 20,
+   "primaryTerm": "packaging, plastics (e.g., blister, bubble), manufacturing",
+   "illustrativeExamples": [
+    "packaging, plastics (e.g., blister, bubble), manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/q67ZAUqM3PpvKH67",
+   "indexCodeValue": "326198",
+   "indexCodeDescriptor": "All other plastic product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/CSoAACQdTS1sdr0W",
+   "indexId": 13944,
+   "primaryTerm": "home delivery (house-to-house) of purchased bakery goods by breadman, retail",
+   "otherExamples": [
+    "home delivery (house-to-house) of purchased bakery goods by breadman, retail"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/OOANlsZYxypZKX5k",
+   "indexCodeValue": "445291",
+   "indexCodeDescriptor": "Baked goods retailers"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/bpOiMDTOqGslX7rR",
+   "indexId": 20883,
+   "primaryTerm": "frozen desserts (except bakery), manufacturing",
+   "illustrativeExamples": [
+    "frozen desserts (except bakery), manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/fCD4MBTFDFABJxci",
+   "indexCodeValue": "311520",
+   "indexCodeDescriptor": "Ice cream and frozen dessert manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/pwwpD5EUHnprMLyu",
+   "indexId": 21221,
+   "primaryTerm": "bakery products, fresh, made in commercial bakeries",
+   "otherExamples": [
+    "bakery products, fresh, made in commercial bakeries"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/qBGiLny33W7m7qCo",
+   "indexCodeValue": "311814",
+   "indexCodeDescriptor": "Commercial bakeries and frozen bakery product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/yDreAQyFtwlQ1PPS",
+   "indexId": 21255,
+   "primaryTerm": "desserts, frozen bakery, manufacturing",
+   "otherExamples": [
+    "desserts, frozen bakery, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/qBGiLny33W7m7qCo",
+   "indexCodeValue": "311814",
+   "indexCodeDescriptor": "Commercial bakeries and frozen bakery product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/PE4gYA7eINxuAOeU",
+   "indexId": 27781,
+   "primaryTerm": "bakery machinery and equipment, manufacturing",
+   "otherExamples": [
+    "bakery machinery and equipment, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/F9wMBpBGCQokb2rN",
+   "indexCodeValue": "333248",
+   "indexCodeDescriptor": "All other industrial machinery manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/Ubi93n9kxMxUsLJm",
+   "indexId": 27844,
+   "primaryTerm": "ovens, bakery, manufacturing",
+   "otherExamples": [
+    "ovens, bakery, manufacturing"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/F9wMBpBGCQokb2rN",
+   "indexCodeValue": "333248",
+   "indexCodeDescriptor": "All other industrial machinery manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/Iy3GtG1kkzs8avHm",
+   "indexId": 36969,
+   "primaryTerm": "bakery products, frozen, made in commercial bakeries",
+   "illustrativeExamples": [
+    "bakery products, frozen, made in commercial bakeries"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/qBGiLny33W7m7qCo",
+   "indexCodeValue": "311814",
+   "indexCodeDescriptor": "Commercial bakeries and frozen bakery product manufacturing"
+  },
+  {
+   "@id": "https://api.statcan.gc.ca/rdaas/indexentry/OapwcJwQAwHJhqfE",
+   "indexId": 37512,
+   "primaryTerm": "bakery products, selling for immediate consumption",
+   "otherExamples": [
+    "bakery products, selling for immediate consumption"
+   ],
+   "indexCode": "https://api.statcan.gc.ca/rdaas/code/auDjMNXHXv5WpVw8",
+   "indexCodeValue": "722512",
+   "indexCodeDescriptor": "Limited-service eating places"
+  }
+ ]
+}

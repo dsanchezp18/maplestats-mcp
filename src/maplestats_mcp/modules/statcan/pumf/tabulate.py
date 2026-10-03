@@ -39,7 +39,7 @@ from maplestats_mcp.modules.statcan.pumf.schemas import (
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.http import new_client, request_headers
 
 Statistic = Literal["total", "share", "mean"]
 
@@ -94,7 +94,7 @@ async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Pat
     target.parent.mkdir(parents=True, exist_ok=True)
     zip_path = target.parent / "archive.zip.part"
     try:
-        async with _client.stream("GET", url) as response:
+        async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
             response.raise_for_status()
             with zip_path.open("wb") as handle:
                 async for chunk in response.aiter_bytes(1 << 20):

@@ -95,8 +95,9 @@ async def statcan_daily_search_archive(
     those dates (inclusive); omit either to leave that side open.
     Results are returned most-recent-first. The archive also holds UPCOMING
     releases (entries of type "meeting", dated in the future): search with
-    start_date set to today to see what StatCan has scheduled. Those entries
-    link only to the www150.statcan.gc.ca home page, not to an article.
+    start_date set to today to see what StatCan has scheduled. Each entry
+    has scheduled (true when the release date is today or later, Toronto
+    time); an upcoming one has url null because its article does not exist yet.
     Keywords: The Daily, historical,
     archive, past releases, release history, when was, Statistics Canada,
     release date, upcoming releases, release schedule, release calendar.

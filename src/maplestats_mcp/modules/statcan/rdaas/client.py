@@ -111,7 +111,7 @@ async def _get(
 _VALID_RESOURCE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
-def _resource_id(rdaas_url_or_id: str) -> str:
+def _resource_id(rdaas_url_or_id: str, lang: str = "en") -> str:
     """RDaaS accepts either a bare id or its full resource URL; normalize
     to the bare id since that's what the path template expects.
 
@@ -125,7 +125,13 @@ def _resource_id(rdaas_url_or_id: str) -> str:
     """
     resource_id = rdaas_url_or_id.rsplit("/", 1)[-1]
     if not _VALID_RESOURCE_ID.match(resource_id):
-        raise InvalidInput(f"{rdaas_url_or_id!r} is not a valid RDaaS resource id or URL.")
+        raise InvalidInput(
+            _say(
+                lang,
+                f"{rdaas_url_or_id!r} is not a valid RDaaS resource id or URL.",
+                f"{rdaas_url_or_id!r} n'est pas un identifiant ni une URL de ressource RDaaS valide.",
+            )
+        )
     return resource_id
 
 
@@ -229,7 +235,7 @@ async def get_classification_search_filters() -> SearchFilters:
 
 
 async def get_classification(classification_id: str, *, lang: str = "en") -> ClassificationDetail:
-    resource_id = _resource_id(classification_id)
+    resource_id = _resource_id(classification_id, lang)
     cache_key = f"rdaas:classification:{resource_id}:{lang}"
 
     async def fetch() -> dict[str, Any]:
@@ -237,7 +243,13 @@ async def get_classification(classification_id: str, *, lang: str = "en") -> Cla
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     if not obj.get("@id"):
-        raise NotFound(f"No classification found for id {resource_id!r}")
+        raise NotFound(
+            _say(
+                lang,
+                f"No classification found for id {resource_id!r}",
+                f"Aucune classification trouvée pour l'identifiant {resource_id!r}.",
+            )
+        )
 
     levels = [
         ClassificationLevel(
@@ -363,7 +375,7 @@ async def get_classification_categories_detailed(
     offset: int = 0,
 ) -> ClassificationCategoriesDetailed:
     _check_page(limit, offset, lang)
-    resource_id = _resource_id(classification_id)
+    resource_id = _resource_id(classification_id, lang)
     path = f"/classification/{resource_id}/categories/detailed"
 
     async def fetch() -> list[dict[str, Any]]:
@@ -424,7 +436,7 @@ async def get_classification_categories_detailed(
 async def get_classification_exclusions(
     classification_id: str, *, lang: str = "en"
 ) -> ClassificationExclusions:
-    resource_id = _resource_id(classification_id)
+    resource_id = _resource_id(classification_id, lang)
     obj = await _get_or_empty(
         f"/classification/{resource_id}/exclusions", params={"lang": lang}, lang=lang
     )
@@ -459,7 +471,7 @@ async def get_classification_indexes(
     offset: int = 0,
 ) -> ClassificationIndexes:
     _check_page(limit, offset, lang)
-    resource_id = _resource_id(classification_id)
+    resource_id = _resource_id(classification_id, lang)
     path = f"/classification/{resource_id}/indexes"
 
     async def fetch() -> list[dict[str, Any]]:
@@ -501,22 +513,34 @@ async def get_classification_indexes(
 async def get_classification_index_entry(
     classification_id: str, index_id: int, *, lang: str = "en"
 ) -> ClassificationIndexEntry:
-    resource_id = _resource_id(classification_id)
+    resource_id = _resource_id(classification_id, lang)
     obj = await _get(
         f"/classification/{resource_id}/indexes/entry/{index_id}",
         headers={"Accept-Language": lang},
         lang=lang,
     )
     if not obj.get("@id"):
-        raise NotFound(f"No index entry {index_id!r} for classification {resource_id!r}")
+        raise NotFound(
+            _say(
+                lang,
+                f"No index entry {index_id!r} for classification {resource_id!r}",
+                f"Aucune entrée d'index {index_id!r} pour la classification {resource_id!r}.",
+            )
+        )
     return _index_entry_from_json(obj)
 
 
 async def get_term_exclusion(term_exclusion_id: str, *, lang: str = "en") -> TermExclusion:
-    resource_id = _resource_id(term_exclusion_id)
+    resource_id = _resource_id(term_exclusion_id, lang)
     obj = await _get(f"/termexclusion/{resource_id}", params={"lang": lang}, lang=lang)
     if not obj.get("@id"):
-        raise NotFound(f"No term exclusion found for id {resource_id!r}")
+        raise NotFound(
+            _say(
+                lang,
+                f"No term exclusion found for id {resource_id!r}",
+                f"Aucune exclusion de terme trouvée pour l'identifiant {resource_id!r}.",
+            )
+        )
     return TermExclusion(
         id=obj.get("@id", ""),
         source_id=obj.get("source", ""),
@@ -588,7 +612,7 @@ async def get_concordance_search_filters() -> SearchFilters:
 
 
 async def get_concordance(concordance_id: str, *, lang: str = "en") -> ConcordanceDetail:
-    resource_id = _resource_id(concordance_id)
+    resource_id = _resource_id(concordance_id, lang)
     cache_key = f"rdaas:concordance:{resource_id}:{lang}"
 
     async def fetch() -> dict[str, Any]:
@@ -596,7 +620,13 @@ async def get_concordance(concordance_id: str, *, lang: str = "en") -> Concordan
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     if not obj.get("@id"):
-        raise NotFound(f"No concordance found for id {resource_id!r}")
+        raise NotFound(
+            _say(
+                lang,
+                f"No concordance found for id {resource_id!r}",
+                f"Aucune concordance trouvée pour l'identifiant {resource_id!r}.",
+            )
+        )
 
     return ConcordanceDetail(
         id=obj.get("@id", ""),
@@ -618,7 +648,7 @@ async def get_concordance(concordance_id: str, *, lang: str = "en") -> Concordan
 
 
 async def get_concordance_maps(concordance_id: str, *, lang: str = "en") -> CodeMapList:
-    resource_id = _resource_id(concordance_id)
+    resource_id = _resource_id(concordance_id, lang)
     obj = await _get(f"/concordance/{resource_id}/maps", params={"lang": lang}, lang=lang)
     entries = list_or_empty(obj, "@graph")
     maps = [

@@ -25,12 +25,17 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.modules.statcan.lode import constants
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import is_retryable, new_client
+from maplestats_mcp.shared.http import (
+    is_retryable,
+    new_client,
+    request_headers,
+    wait_honouring_retry_after,
+)
 
 _client = new_client(timeout=600.0, follow_redirects=True)
 _downloads: dict[str, asyncio.Task[Path]] = {}
@@ -71,7 +76,7 @@ async def _download(url: str, member: str, target: Path) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     archive = target.parent / "archive.zip.part"
     try:
-        async with _client.stream("GET", url) as response:
+        async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
             response.raise_for_status()
             with archive.open("wb") as handle:
                 async for chunk in response.aiter_bytes(1 << 20):
@@ -117,11 +122,13 @@ async def local_member(url: str, member: str) -> tuple[Path, bool]:
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
+    wait=wait_honouring_retry_after,
     reraise=True,
 )
 async def _get_range(url: str, start: int, end: int) -> httpx.Response:
-    response = await _client.get(url, headers={"Range": f"bytes={start}-{end}"})
+    response = await _client.get(
+        url, headers=request_headers(url, {"Range": f"bytes={start}-{end}"})
+    )
     response.raise_for_status()
     return response
 
@@ -141,7 +148,7 @@ async def _range(url: str, start: int, end: int) -> bytes:
 async def head_size(url: str) -> tuple[int | None, str | None]:
     """(size in bytes, Last-Modified) from a HEAD request; None where the server omits them."""
     try:
-        response = await _client.head(url)
+        response = await _client.head(url, headers=request_headers(url, None))
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
         raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc

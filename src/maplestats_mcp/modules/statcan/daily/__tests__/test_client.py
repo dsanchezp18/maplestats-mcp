@@ -169,6 +169,33 @@ async def test_search_archive_resolves_relative_url(httpx_mock):
     )
 
 
+async def test_search_archive_marks_upcoming_entries_scheduled_without_url(httpx_mock):
+    # Live 2026-10-02: upcoming "meeting" rows have url == "" and a future date.
+    httpx_mock.add_response(
+        url=_ARCHIVE_URL,
+        json=[
+            *_ARCHIVE_BODY,
+            {
+                "rid": "1",
+                "date": "2099-01-06 00:00:01",
+                "type": "meeting",
+                "title": "Consumer Price Index",
+                "description": "December 2098",
+                "url": "",
+            },
+        ],
+    )
+    result = await client.search_archive("")
+    upcoming = result.entries[0]
+    assert (upcoming.title, upcoming.scheduled, upcoming.url) == (
+        "Consumer Price Index",
+        True,
+        None,
+    )
+    published = [entry for entry in result.entries if entry.title != upcoming.title]
+    assert all(not entry.scheduled and entry.url for entry in published)
+
+
 async def test_search_archive_invalid_date_raises():
     with pytest.raises(InvalidInput):
         await client.search_archive("", start_date="not-a-date")

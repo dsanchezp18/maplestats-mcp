@@ -83,9 +83,11 @@ LANG_TO_CODE = {"en": "E", "fr": "F"}
 # past it; the tools report the block and point to the same data elsewhere.
 BLOCKED_NOTE = (
     "Statistics Canada's www12 host, which serves the 2016 Census Profile service, is "
-    "currently behind a Cloudflare bot challenge that scripts cannot pass. The same 2016 "
-    "figures are in WDS: wds_search_cubes for 'Census indicator profile' (17100122 short "
-    "form, 17100123 long form) read with wds_get_data_from_cube_coord; 2021 figures are "
+    "currently behind a Cloudflare bot challenge that scripts cannot pass. WDS "
+    "holds the indicator subset of the 2016 profile at those levels only (Canada, provinces "
+    "and territories, health regions; no census subdivisions, tracts or dissemination "
+    "areas): wds_search_cubes for 'Census indicator profile' (17100122 short form, "
+    "17100123 long form) read with wds_get_data_from_cube_coord; 2021 figures are "
     "in statcan_census_profile_*. Bulk 2016 files: statcan_census_profile_archive_* "
     "(download in a browser)."
 )

@@ -146,7 +146,8 @@ REACHABILITY_URL = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/pr
 PROBE_TTL_SECONDS = 15 * 60
 BLOCKED_NOTE = (
     "StatCan's www12 host currently answers scripts with a Cloudflare bot challenge, so this "
-    "URL can be opened in a browser but not downloaded by a script (curl, R, Python). Table "
-    "versions of the same data: WDS tables 17100122 / 17100123 (2016 indicator profile) via "
+    "URL can be opened in a browser but not downloaded by a script (curl, R, Python). For "
+    "the indicator subset of the 2016 profile at Canada, province/territory and health-region "
+    "level, see WDS tables 17100122 / 17100123 via "
     "wds_search_cubes; 2021 figures via statcan_census_profile_*."
 )

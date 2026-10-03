@@ -167,6 +167,9 @@ def _parse_archive_entry_date(value: str | None) -> date | None:
         return None
 
 
+_ARCHIVE_HOST = "https://www150.statcan.gc.ca"
+
+
 async def search_archive(
     query: str = "",
     *,
@@ -186,6 +189,9 @@ async def search_archive(
 
     suffix = constants.LANG_TO_SUFFIX.get(lang, "eng")
     url = constants.FULL_ARCHIVE_URL.format(suffix=suffix)
+    # Same reference timezone as the release calendar: a release dated today
+    # in Toronto is still "scheduled" until its article exists.
+    today = datetime.now(ZoneInfo(constants.CALENDAR_TIMEZONE)).date()
 
     async def fetch() -> Any:
         await _LIMITER.acquire()
@@ -225,13 +231,16 @@ async def search_archive(
             and (not reference_period or query_lower not in reference_period.lower())
         ):
             continue
+        # Upcoming "meeting" entries carry url == "": no article yet, so no link
+        # (prefixing the host would yield the bare home page).
         relative_url = item.get("url") or ""
         matched.append(
             DailyArchiveEntry(
                 release_date=entry_date,
                 title=title,
                 reference_period=reference_period,
-                url=f"https://www150.statcan.gc.ca{relative_url}",
+                scheduled=entry_date >= today,
+                url=f"{_ARCHIVE_HOST}{relative_url}" if relative_url else None,
             )
         )
 

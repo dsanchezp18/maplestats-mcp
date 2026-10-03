@@ -535,6 +535,24 @@ async def test_code_sets_are_capped_per_category(httpx_mock):
 # L3 ---------------------------------------------------------------------
 
 
+async def test_remaining_errors_follow_lang(httpx_mock):
+    client.use_lang("fr")
+    try:
+        with pytest.raises(InvalidInput, match="n'est pas numérique"):
+            await client.get_series_info_from_cube_pid_coord(18100004, "2.x")
+        with pytest.raises(InvalidInput, match="compte 11 dimensions"):
+            await client.get_series_info_from_cube_pid_coord(18100004, "1.2.3.4.5.6.7.8.9.10.11")
+        httpx_mock.add_response(
+            url=f"{BASE}getCubeMetadata",
+            method="POST",
+            json=[{"status": "FAILED", "object": "The cube product ID 99999999 does not exist."}],
+        )
+        with pytest.raises(NotFound, match="n'existe pas ou n'est pas disponible"):
+            await client.get_cube_metadata(99999999)
+    finally:
+        client.use_lang("en")
+
+
 async def test_error_text_follows_lang(httpx_mock):
     client.use_lang("fr")
     try:

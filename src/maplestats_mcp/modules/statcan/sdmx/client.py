@@ -166,15 +166,21 @@ def _check_period(value: str | None, name: str, lang: str) -> None:
         )
 
 
-def _dataflow_id_from_structure(root: Element) -> str:
+def _dataflow_id_from_structure(root: Element, lang: str = "en") -> str:
     dataflow = root.find(f".//{_qn('str', 'Dataflow')}")
     if dataflow is None:
-        raise NotFound("No Dataflow found in SDMX structure response.")
+        raise NotFound(
+            _say(
+                lang,
+                "No Dataflow found in SDMX structure response.",
+                "Aucun Dataflow dans la réponse de structure SDMX.",
+            )
+        )
     return dataflow.get("id", "")
 
 
-def _parse_structure(root: Element) -> tuple[str, list[SdmxDimension]]:
-    dataflow_id = _dataflow_id_from_structure(root)
+def _parse_structure(root: Element, lang: str = "en") -> tuple[str, list[SdmxDimension]]:
+    dataflow_id = _dataflow_id_from_structure(root, lang)
 
     codelists: dict[str, dict[str, SdmxCode]] = {}
     for codelist_el in root.findall(f".//{_qn('str', 'Codelist')}"):
@@ -184,10 +190,10 @@ def _parse_structure(root: Element) -> tuple[str, list[SdmxDimension]]:
             code_id = code_el.get("id", "")
             name_en, name_fr = "", ""
             for name_el in code_el.findall(_qn("com", "Name")):
-                lang = name_el.get("{http://www.w3.org/XML/1998/namespace}lang")
-                if lang == "en":
+                name_lang = name_el.get("{http://www.w3.org/XML/1998/namespace}lang")
+                if name_lang == "en":
                     name_en = name_el.text or ""
-                elif lang == "fr":
+                elif name_lang == "fr":
                     name_fr = name_el.text or ""
             parent_el = code_el.find(f"{_qn('str', 'Parent')}/Ref")
             parent_id = parent_el.get("id") if parent_el is not None else None
@@ -279,7 +285,7 @@ async def _load_structure(product_id: int, lang: str) -> tuple[str, list[SdmxDim
         url = f"{constants.BASE_URL}structure/Data_Structure_{product_id}"
         try:
             root = await _fetch_xml(url, lang=lang)
-            dataflow_id, dimensions = _parse_structure(root)
+            dataflow_id, dimensions = _parse_structure(root, lang)
         except InvalidInput as exc:
             # The structure endpoint's only 406 means an unknown table id.
             raise _no_table(product_id, lang) from exc

@@ -51,7 +51,7 @@ async def statcan_census_profile_archive_get_download_link(
     at StatCan's www12 host, which currently answers scripts with a
     Cloudflare bot challenge. The link opens in a browser but a script
     (curl, R, Python) cannot download it; provenance.limits says so while it
-    holds. Table versions: WDS 17100122 / 17100123 (2016 indicator profile),
+    holds. The indicator subset at Canada, province and health-region level: WDS 17100122 / 17100123 (2016),
     statcan_census_profile_* (2021).
 
     Use for: resolving the actual downloadable file (a compressed

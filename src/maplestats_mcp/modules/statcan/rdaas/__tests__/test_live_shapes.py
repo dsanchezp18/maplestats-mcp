@@ -5,6 +5,9 @@ as raw httpx errors."""
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from maplestats_mcp.modules.statcan.rdaas import client, constants
@@ -12,6 +15,7 @@ from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
 
 _BASE = constants.BASE_URL
+_FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture(autouse=True)
@@ -21,50 +25,49 @@ def _clear_cache():
     cache_module._caches.clear()
 
 
-def _index_graph(n: int) -> dict:
-    return {
-        "@graph": [
-            {
-                "@id": f"{_BASE}/index/{i}",
-                "indexId": i,
-                "primaryTerm": "Bakery" if i % 10 == 0 else f"Term {i}",
-                "indexCodeValue": f"{311000 + i}",
-                "indexCodeDescriptor": "Food manufacturing",
-            }
-            for i in range(n)
-        ]
-    }
+def _live_index_graph() -> dict:
+    """A 20-entry slice of the live NAICS 2022.1.0 `/indexes` response (captured
+    2026-10-02 from api.statcan.gc.ca): the first 12 entries plus 8 whose primary
+    term contains "bakery". Real keys, real `@context`, real optional fields
+    (`otherExamples`, `illustrativeExamples` present on some entries only)."""
+    return json.loads((_FIXTURES / "naics_2022_indexes_slice.json").read_text(encoding="utf-8"))
 
 
 async def test_indexes_are_paged_and_report_truncation(httpx_mock):
     httpx_mock.add_response(
-        url=f"{_BASE}/classification/MJRdRiFsfmJAprtT/indexes", json=_index_graph(450)
+        url=f"{_BASE}/classification/MJRdRiFsfmJAprtT/indexes", json=_live_index_graph()
     )
-    result = await client.get_classification_indexes("MJRdRiFsfmJAprtT")
-    assert len(result.entries) == constants.DEFAULT_LIST_LIMIT
-    assert result.total_count == 450
-    assert "100 of 450" in (result.provenance.limits or "")
+    result = await client.get_classification_indexes("MJRdRiFsfmJAprtT", limit=5)
+    assert len(result.entries) == 5
+    assert result.total_count == 20
+    assert "5 of 20" in (result.provenance.limits or "")
+    first = result.entries[0]
+    assert first.index_id == 1
+    assert first.primary_term == "general partners (managing), except portfolio management"
+    assert first.index_code_value == "551114"
+    assert first.other_examples == ["general partners (managing), except portfolio management"]
 
 
 async def test_indexes_query_and_offset(httpx_mock):
     httpx_mock.add_response(
-        url=f"{_BASE}/classification/MJRdRiFsfmJAprtT/indexes", json=_index_graph(450)
+        url=f"{_BASE}/classification/MJRdRiFsfmJAprtT/indexes", json=_live_index_graph()
     )
     result = await client.get_classification_indexes(
-        "MJRdRiFsfmJAprtT", query="bakery", limit=10, offset=40
+        "MJRdRiFsfmJAprtT", query="bakery", limit=5, offset=5
     )
-    assert result.total_count == 45
-    assert len(result.entries) == 5
+    assert result.total_count == 8
+    assert len(result.entries) == 3
     assert result.provenance.limits is None
 
 
 async def test_indexes_second_page_is_served_from_cache(httpx_mock):
     httpx_mock.add_response(
-        url=f"{_BASE}/classification/MJRdRiFsfmJAprtT/indexes", json=_index_graph(30)
+        url=f"{_BASE}/classification/MJRdRiFsfmJAprtT/indexes", json=_live_index_graph()
     )
     await client.get_classification_indexes("MJRdRiFsfmJAprtT", limit=10)
     second = await client.get_classification_indexes("MJRdRiFsfmJAprtT", limit=10, offset=10)
     assert second.provenance.cached is True
+    assert len(second.entries) == 10
 
 
 async def test_index_limit_is_validated():
@@ -124,6 +127,17 @@ async def test_5xx_is_unavailable_not_raw_httpx(httpx_mock):
     )
     with pytest.raises(UpstreamUnavailable, match="503"):
         await client.get_classification("MJRdRiFsfmJAprtT")
+
+
+async def test_invalid_id_and_empty_detail_follow_lang(httpx_mock):
+    with pytest.raises(InvalidInput, match="n'est pas un identifiant"):
+        await client.get_classification("bad id?", lang="fr")
+    with pytest.raises(InvalidInput, match="n'est pas un identifiant"):
+        await client.get_concordance("bad id?", lang="fr")
+    # A 200 whose object has no "@id" is how RDaaS reports an unknown id.
+    httpx_mock.add_response(url=f"{_BASE}/classification/zzzz?lang=fr", json={})
+    with pytest.raises(NotFound, match="Aucune classification trouvée"):
+        await client.get_classification("zzzz", lang="fr")
 
 
 async def test_not_found_message_follows_lang(httpx_mock):

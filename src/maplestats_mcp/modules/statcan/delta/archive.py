@@ -33,7 +33,7 @@ from xml.etree.ElementTree import Element
 
 import httpx
 from defusedxml import ElementTree
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.modules.statcan.delta import constants
 from maplestats_mcp.modules.statcan.delta.archive_schemas import (
@@ -52,7 +52,13 @@ from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw, is_retryable, new_client
+from maplestats_mcp.shared.http import (
+    get_raw,
+    is_retryable,
+    new_client,
+    request_headers,
+    wait_honouring_retry_after,
+)
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.remote_zip import ZipMember
 from maplestats_mcp.shared.zip_stream import MemberStream, ScanLimitExceeded
@@ -111,12 +117,12 @@ def _parse_date(date: str) -> tuple[date_cls, str]:
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(4),
-    wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
+    wait=wait_honouring_retry_after,
     reraise=True,
 )
 async def _head_once(url: str) -> httpx.Response:
     await _LIMITER.acquire()
-    response = await _client.head(url)
+    response = await _client.head(url, headers=request_headers(url, None))
     if response.status_code != 404:
         response.raise_for_status()
     return response

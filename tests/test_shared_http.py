@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import inspect
+from concurrent.futures import Future
+
 import httpx
 import pytest
+from tenacity import RetryCallState
 
 from maplestats_mcp import __version__
+from maplestats_mcp.shared import http as http_module
 from maplestats_mcp.shared.errors import CloudflareChallenge, UpstreamUnavailable
 from maplestats_mcp.shared.http import (
     api_get,
@@ -12,7 +17,9 @@ from maplestats_mcp.shared.http import (
     is_cloudflare_challenge,
     is_retryable,
     new_client,
+    post_form_raw,
     send_with_retry,
+    wait_honouring_retry_after,
 )
 
 
@@ -148,3 +155,54 @@ async def test_send_with_retry_retries_503_and_returns_404(httpx_mock):
         response = await send_with_retry(client, "HEAD", url)
     assert response.status_code == 404  # not raised: the caller decides what 404 means
     assert len(httpx_mock.get_requests()) == 2
+
+
+def _retry_state(response_headers: dict[str, str], status: int = 429) -> RetryCallState:
+    request = httpx.Request("GET", "https://www150.statcan.gc.ca/x")
+    response = httpx.Response(status, headers=response_headers, request=request)
+    error = httpx.HTTPStatusError("busy", request=request, response=response)
+    state = RetryCallState(retry_object=None, fn=None, args=(), kwargs={})  # type: ignore[arg-type]
+    state.attempt_number = 1
+    future: Future[None] = Future()
+    future.set_exception(error)
+    state.outcome = future  # type: ignore[assignment]
+    return state
+
+
+def test_retry_after_is_honoured_and_capped():
+    assert wait_honouring_retry_after(_retry_state({"retry-after": "7"})) == 7.0
+    assert wait_honouring_retry_after(_retry_state({"retry-after": "9999"}, 503)) == 30.0
+    # No header, or an HTTP-date form: plain exponential backoff (1s on attempt 1).
+    assert wait_honouring_retry_after(_retry_state({})) == 1.0
+    assert wait_honouring_retry_after(_retry_state({"retry-after": "Wed, 21 Oct 2026"})) == 1.0
+
+
+def test_every_main_path_helper_uses_the_retry_after_wait():
+    # conftest swaps each decorated function's wait for wait_none, so the
+    # wiring is checked on the source: api_get, get_raw, post_form_raw,
+    # api_post and send_with_retry, with no plain exponential wait left.
+    source = inspect.getsource(http_module)
+    assert source.count("wait=_wait_honouring_retry_after,") == 5
+    assert "wait=wait_exponential(" not in source
+
+
+async def test_get_raw_retries_429_with_retry_after(httpx_mock):
+    url = "https://www150.statcan.gc.ca/n1/x"
+    httpx_mock.add_response(url=url, status_code=429, headers={"Retry-After": "3"})
+    httpx_mock.add_response(url=url, text="ok")
+    assert (await get_raw(url)).text == "ok"
+    assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_every_main_path_helper_sends_connection_close_to_www150(httpx_mock):
+    url = "https://www150.statcan.gc.ca/n1/x"
+    httpx_mock.add_response(url=url, json={}, is_reusable=True)
+    await api_get(url)
+    await get_raw(url)
+    await api_post(url, json_body={})
+    await post_form_raw(url, data={"a": "b"})
+    async with new_client() as client:
+        await send_with_retry(client, "GET", url)
+    sent = httpx_mock.get_requests()
+    assert len(sent) == 5
+    assert all(request.headers["Connection"] == "close" for request in sent)

@@ -74,15 +74,24 @@ def test_every_statcan_sub_api_has_its_own_live_smoke_test():
 
 
 # Sub-APIs where every tool, not only one, needs its own live step.
-STATCAN_TOOL_LEVEL_SUB_APIS = ("sdmx", "rdaas")
+STATCAN_TOOL_LEVEL_SUB_APIS = ("wds", "sdmx", "rdaas")
 
 
-def test_statcan_sdmx_and_rdaas_tools_each_have_a_live_step():
+def test_statcan_wds_sdmx_and_rdaas_tools_each_have_a_live_step():
     stepped = {step.tool for step in _load_smoke_table().STEPS}
     missing: list[str] = []
     for sub in STATCAN_TOOL_LEVEL_SUB_APIS:
         source = (MODULES / "statcan" / sub / "tools.py").read_text(encoding="utf-8")
         tools = re.findall(r"@tool\s+async def (\w+)\(", source)
         assert tools, f"no tools found in statcan/{sub}/tools.py"
-        missing += [name for name in tools if name not in stepped]
+        # A step is a row in smoke_test_modules.py or, for a sub-API with its own
+        # script (wds), a block of smoke_test_statcan_<sub>*.py headed by the
+        # tool's name (those scripts call the client functions behind each tool).
+        own = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in SCRIPTS.glob(f"smoke_test_statcan_{sub}*.py")
+        )
+        missing += [
+            name for name in tools if name not in stepped and not re.search(rf"\b{name}\b", own)
+        ]
     assert not missing, f"StatCan tools without a live smoke step: {missing}"
