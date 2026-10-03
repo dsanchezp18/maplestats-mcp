@@ -24,6 +24,7 @@ CASES = [
     ("classification des industries SCIAN", "rdaas_get_classification"),
     ("mises en chantier", "cmhc_list_categories"),
     ("taux directeur", "boc_search_series"),
+    ("projections climatiques température future 2050 scénario", "eccc_coverages_get_data"),
     ("recherche de marques de commerce", "ised_cipo_search_trademarks"),
     ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
     ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),

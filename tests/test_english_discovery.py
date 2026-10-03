@@ -109,6 +109,11 @@ CASES = [
     ("is it going to snow tomorrow in Winnipeg forecast", "eccc_query_items"),
     ("air quality health index Toronto", "eccc_query_items"),
     ("historical daily temperature climate station", "eccc_query_items"),
+    (
+        "projected temperature in Edmonton in 2050 under a high emissions scenario",
+        "eccc_coverages_get_data",
+    ),
+    ("which climate projection datasets have SSP5-8.5 scenarios", "eccc_coverages_search"),
     ("is this company incorporated federally", "ised_corporations_get_corporation"),
     ("spectrum licences held by Rogers", "ised_spectrum_query_licences"),
     ("patent search by keyword", "ised_ip_horizons_search_patents"),

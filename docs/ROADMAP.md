@@ -4,7 +4,7 @@ Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
-**State at 2026-10-03:** 297 tools in 57 modules. Every source in the tables below is
+**State at 2026-10-03:** 300 tools in 57 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
 `Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
@@ -52,6 +52,7 @@ Census and specialized federal agencies section below).
 | Federal Open Data (CKAN, open.canada.ca) | Shipped | ~48K-dataset catalogue: search, dataset details, organizations, resources, licenses. |
 | IRCC Immigration | Shipped | Express Entry rounds of invitations (tools prefixed `ircc_`): draw history, CRS cutoffs, invitations issued, and candidate-pool CRS score distribution, from a static JSON feed at … [Details](findings/federal-sources.md#ircc-immigration) |
 | Weather / Climate (Environment Canada MSC GeoMet) | Shipped | api.weather.gc.ca, MSC GeoMet-OGC-API (OGC API - Features): `eccc_*`, 4 generic tools (search/list/get collection, query items) covering all ~100 published collections — weather alerts, current … [Details](findings/federal-sources.md#weather--climate-environment-canada-msc-geomet) |
+| ECCC climate projection coverages (`eccc_coverages_*`) | Shipped | Shipped 2026-10-03: three tools (`eccc_coverages_search`, `eccc_coverages_describe`, `eccc_coverages_get_data`) read the 49 gridded `climate:*` collections on api.weather.gc.ca through OGC API - Coverages (CoverageJSON): CanDCS-U6 (CMIP6, SSP1-2.6/2-4.5/5-8.5, 1/12 degree), CMIP5 (RCP, 1 degree), DCS, downscaled climate indices, SPEI-1/3/12 and CanGRD. Data comes back as tidy rows (time, value, unit, variable, scenario, percentile, season, 20/30-year window, cell lat/lon) for a point (nearest cell with data) or a bbox. Every request names each axis, because the server silently uses the first scenario and lowest percentile otherwise; one request per variable (CMIP5 answers HTTP 500 to several); unknown scenarios, percentiles and out-of-range years are refused before the call (the server answers HTTP 500). Values are read time-major and, for CanDCS-U6, DCS and CanGRD, with rows reversed against the declared y axis; both were checked cell by cell. SPEI gives only first and last timestamps, so months are numbered from the first. CanGRD is on a polar stereographic grid (converted to lat/lon) and takes one year per request. Limits: 40 upstream requests and about 250,000 grid values per call, `max_rows` up to 10,000. ECCC Data Services End-use Licence in `provenance.licence`. Not read: the `weather:rdpa:*` and `weather:cansips:*` coverages (RDPA answers with an unnamed projected grid, CanSIPS with range names that differ from its schema). Checked live at Edmonton, Iqaluit, Vancouver, Halifax, Regina, Saskatoon, Winnipeg, Whitehorse and Calgary. |
 
 ## Provincial (all 10)
 
