@@ -31,6 +31,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -211,7 +212,8 @@ async def get_data(
         return (not start or when.date() >= start) and (not end or when.date() <= end)
 
     matching = sorted((r for r in rows if in_range(r)), key=lambda r: str(r.get("Date") or ""))
-    kept = matching[-limit:]
+    # Newest rows first into the byte budget, then back to oldest first.
+    kept = fit_to_budget(matching[-limit:][::-1])[::-1]
     dates = [d for r in kept if (d := _row_date(r))]
     return TableData(
         table=name,
@@ -223,11 +225,23 @@ async def get_data(
         last_date=max(dates) if dates else None,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.BASE_URL}/data?table={name}",
+            url=str(httpx.URL(f"{constants.BASE_URL}/data", params=params)),
             cached=cached,
             schema_name="ab_economic.TableData",
             coverage=f"{len(kept)} most recent of {len(matching)} matching rows",
-            limits=f"at most {constants.ROWS_MAX} rows per call; filter to one series",
+            limits=join_limits(
+                truncation_note(
+                    returned=len(kept),
+                    total=len(matching),
+                    unit="matching rows",
+                    order="latest",
+                    how_to_get_more="filter to one series, set start_date/end_date, or raise "
+                    f"limit (max {constants.ROWS_MAX}; responses are capped near 200 KB)",
+                ),
+                "dates are filtered here, after the upstream returns the filtered table"
+                if start or end
+                else None,
+            ),
         ),
     )
 

@@ -31,6 +31,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -138,6 +139,13 @@ async def search_mergers(
     for name, value in (("concluded_from", concluded_from), ("concluded_to", concluded_to)):
         if value is not None and not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", value):
             raise InvalidInput(f"competition_bureau: {name} must be YYYY-MM or YYYY-MM-DD.")
+    # Month precision (the archive has no day), so a same-month pair is fine.
+    check_range(
+        (concluded_from or "")[:7] or None,
+        (concluded_to or "")[:7] or None,
+        "concluded_from",
+        "concluded_to",
+    )
     reviews, cached = await _all_reviews()
     words = party.lower().split()
     prefix = (naics or "").strip()

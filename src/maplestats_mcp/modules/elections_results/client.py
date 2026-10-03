@@ -19,6 +19,7 @@ from maplestats_mcp.modules.elections_results.schemas import (
 from maplestats_mcp.shared.csv_files import Columns, fetch_rows
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -200,8 +201,24 @@ async def get_table(
         rows = [r for r in rows if r.get(column, "").strip()]
 
     total = len(rows)
-    page = rows[offset : offset + limit]
-    truncated = offset + limit < total
+    page = fit_to_budget(rows[offset : offset + limit])
+    truncated = offset + len(page) < total
+    given = {
+        "province": province,
+        "district": district,
+        "party": party,
+        "winners_only": winners_only or None,
+    }
+    used = {k: v for k, v in given.items() if v}
+    # Filters that each match on their own can still exclude each other (a
+    # district outside the province given); say so rather than return a
+    # bare empty table.
+    no_match = (
+        f"No row matched all of {used}; check each filter on its own (a district or party "
+        "outside the province given matches nothing)."
+        if total == 0 and used
+        else None
+    )
     return ElectionTable(
         election=election,
         date=edition.date,
@@ -220,10 +237,12 @@ async def get_table(
             schema_name="elections_results.ElectionTable",
             freshness="Official results are final; the 45th general election is the newest.",
             coverage=f"General election {election} ({edition.date}), table {number}.",
-            limits=(
-                f"Showing rows {offset + 1} to {offset + len(page)} of {total}."
+            limits=join_limits(
+                f"Showing rows {offset + 1} to {offset + len(page)} of {total}; page with "
+                "offset (responses are capped near 200 KB)"
                 if truncated
-                else None
+                else None,
+                no_match,
             ),
         ),
     )

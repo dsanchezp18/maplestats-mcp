@@ -20,7 +20,8 @@ PAGE_TTL_SECONDS = 24 * 60 * 60
 # The largest page, the 2020 medicines list, was 593 KB.
 MAX_PAGE_BYTES = 4 * 1024 * 1024
 
-MEDICINES_DEFAULT_LIMIT = 100
+# 100 medicines came to about 275 KB.
+MEDICINES_DEFAULT_LIMIT = 25
 MEDICINES_MAX_LIMIT = 1000
 
 # Price review status in the medicines lists, as spelled in English and

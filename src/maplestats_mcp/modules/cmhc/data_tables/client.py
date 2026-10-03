@@ -350,7 +350,7 @@ async def get_download_url(
         edition_id=edition_id,
         provenance=make_provenance(
             source="cmhc-dt",
-            url=constants.GET_FILE_DETAILS_URL,
+            url=str(httpx.URL(constants.GET_FILE_DETAILS_URL, params=params)),
             cached=was_cached,
             schema_name="cmhc.data_tables.DownloadLink",
         ),

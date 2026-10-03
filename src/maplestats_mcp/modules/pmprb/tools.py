@@ -6,7 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.pmprb import client
+from maplestats_mcp.modules.pmprb import client, constants
 from maplestats_mcp.modules.pmprb.schemas import (
     MedicineStatus,
     PmprbMedicineList,
@@ -75,7 +75,7 @@ async def pmprb_search_patented_medicines(
     atc: str = "",
     status: MedicineStatus | None = None,
     year: Literal[2020, 2021] = 2021,
-    limit: int = 100,
+    limit: int = constants.MEDICINES_DEFAULT_LIMIT,
     lang: Lang = "en",
 ) -> PmprbMedicineList:
     """Search the list of patented medicines reported to PMPRB (2020 or 2021).

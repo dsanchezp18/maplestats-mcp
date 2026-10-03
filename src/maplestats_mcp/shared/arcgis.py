@@ -396,6 +396,38 @@ async def query_layer(
     that need them; it is merged last and absent for every other caller.
     """
     _require_arcgis_rest_url(config, "query_layer", service_url)
+    url, params = _query_request(
+        service_url,
+        layer_index,
+        where=where,
+        out_fields=out_fields,
+        order_by=order_by,
+        return_geometry=return_geometry,
+        limit=limit,
+        offset=offset,
+        output_format=output_format,
+        out_sr=out_sr,
+        extra_params=extra_params,
+    )
+    body = await _get(config, f"{config.source}:query_layer:{layer_index}", url, params)
+    _raise_if_embedded_error(config.source, "query_layer", body)
+    return body
+
+
+def _query_request(
+    service_url: str,
+    layer_index: int,
+    *,
+    where: str = "1=1",
+    out_fields: str = "*",
+    order_by: str | None = None,
+    return_geometry: bool = False,
+    limit: int = 10,
+    offset: int = 0,
+    output_format: str = "json",
+    out_sr: int | None = None,
+    extra_params: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any]]:
     params: dict[str, Any] = {
         "where": where,
         "outFields": out_fields,
@@ -410,10 +442,13 @@ async def query_layer(
         params["outSR"] = out_sr
     if extra_params:
         params.update(extra_params)
-    url = f"{_service_root(service_url)}/{layer_index}/query"
-    body = await _get(config, f"{config.source}:query_layer:{layer_index}", url, params)
-    _raise_if_embedded_error(config.source, "query_layer", body)
-    return body
+    return f"{_service_root(service_url)}/{layer_index}/query", params
+
+
+def query_url(service_url: str, layer_index: int, **kwargs: Any) -> str:
+    """The full URL `query_layer` requests with the same arguments, for provenance."""
+    url, params = _query_request(service_url, layer_index, **kwargs)
+    return str(httpx.URL(url, params=params))
 
 
 def parse_epoch_millis(value: object) -> datetime | None:

@@ -20,6 +20,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import httpx
+
 from maplestats_mcp.modules.ckan import constants
 from maplestats_mcp.modules.ckan.constants import PORTALS, Portal
 from maplestats_mcp.modules.ckan.schemas import (
@@ -89,13 +91,32 @@ async def _call(
     return await cached_fetch(f"ckan:{key}:{method}:{cache_suffix}", ttl, fetch)
 
 
-def _provenance(key: str, path: str, cached: bool, schema: str, **kwargs: Any):
+def _provenance(
+    key: str,
+    path: str,
+    cached: bool,
+    schema: str,
+    *,
+    params: dict[str, Any] | None = None,
+    **kwargs: Any,
+):
+    """Provenance whose URL is the action call made, query string included."""
     return make_provenance(
         source=f"ckan-{key}",
-        url=f"{PORTALS[key].base_url}{path}",
+        url=str(httpx.URL(f"{PORTALS[key].base_url}{path}", params=params or None)),
         cached=cached,
         schema_name=f"ckan.{schema}",
         **kwargs,
+    )
+
+
+def _dataset_licence(title: str | None, url: str | None, is_open: bool | None) -> str:
+    """The dataset's own licence, as the portal records it."""
+    named = title or "no licence stated"
+    where = f" ({url})" if url else ""
+    status = {True: " The portal marks it open.", False: " The portal marks it not open."}
+    return (
+        f"Dataset licence: {named}{where}.{status.get(is_open, '') if is_open is not None else ''}"
     )
 
 
@@ -310,6 +331,7 @@ async def search_datasets(
             "package_search",
             cached,
             "PackageSearchResult",
+            params=params,
             coverage=f"{len(packages)} of {total} total matches returned",
             limits=f"rows capped at {constants.SEARCH_ROWS_MAX} per request",
         ),
@@ -350,7 +372,18 @@ async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> Package
         resources=[_resource(r, info, lang) for r in resources],
         extras=_extras(obj, info.extra_fields, lang),
         landing_page_url=_dataset_url(info, obj, lang),
-        provenance=_provenance(portal, "package_show", cached, "PackageDetail"),
+        provenance=_provenance(
+            portal,
+            "package_show",
+            cached,
+            "PackageDetail",
+            params={"id": dataset_id},
+            licence=_dataset_licence(
+                _translated(obj, "license_title", lang),
+                _text(obj.get("license_url")),
+                _is_open(obj),
+            ),
+        ),
     )
 
 
@@ -690,6 +723,7 @@ async def datastore_search(
             "datastore_search",
             cached,
             "DatastoreSearchResult",
+            params=params,
             limits=f"rows capped at {constants.DATASTORE_ROWS_MAX} per request",
         ),
     )

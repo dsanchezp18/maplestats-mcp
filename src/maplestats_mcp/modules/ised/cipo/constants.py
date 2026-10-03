@@ -12,7 +12,6 @@ MAX_RETURN_DEFAULT = 20
 MAX_RETURN_MAX = 500
 
 MEDIA_BASE_URL = "https://ised-isde.canada.ca/cipo/trademark-search"
-LANDING_PAGE_URL = "https://ised-isde.canada.ca/cipo/trademark-search/srch"
 
 # Confirmed live 2026-09-20 from the search UI's "Select a search field"
 # dropdown -- these are the only searchfield1 values the API accepts.

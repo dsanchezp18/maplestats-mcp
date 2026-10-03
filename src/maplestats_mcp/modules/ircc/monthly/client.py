@@ -52,6 +52,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -415,6 +416,7 @@ async def query_table(
         )
     if sort not in ("period", "value_desc"):
         raise InvalidInput("ircc_monthly: sort must be 'period' or 'value_desc'.")
+    check_range(year_from, year_to, "year_from", "year_to")
     table = await _find(table_id, lang)
     parsed, cached = await _load(table)
     if period is not None and period not in parsed.periods:

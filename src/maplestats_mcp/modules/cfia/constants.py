@@ -167,7 +167,8 @@ DETECTION_TTL_SECONDS = 12 * 60 * 60
 # The French premises page was 614 KB on 2026-09-26.
 MAX_PAGE_BYTES = 4 * 1024 * 1024
 
-HPAI_DEFAULT_LIMIT = 100
+# 100 detections came to about 280 KB.
+HPAI_DEFAULT_LIMIT = 25
 HPAI_MAX_LIMIT = 1000
 
 REFERENCE_TZ = "America/Toronto"

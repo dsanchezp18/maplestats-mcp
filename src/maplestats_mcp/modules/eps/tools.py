@@ -41,7 +41,7 @@ async def eps_list_occurrences(
     "Traffic"), group, and type_group match exact upstream labels -- run
     eps_summarize_occurrences first to see them. start_date/end_date are
     inclusive YYYY-MM-DD. intersection_contains is a case-insensitive
-    substring (e.g. "JASPER AV"). limit is 1-2000; page with offset.
+    substring (e.g. "JASPER AV"). limit is 1-500; page with offset.
     Use for: crime incidents near a street, recent assaults or break-ins
     in Edmonton, building a crime map.
     Keywords: Edmonton, police, EPS, crime, occurrences, incidents,
@@ -84,7 +84,7 @@ async def eps_summarize_occurrences(
     server over every matching row, not a sample.
 
     Months come back in date order; other groupings largest first, up
-    to top groups (1-2000). Also the way to discover the exact category/
+    to top groups (1-500). Also the way to discover the exact category/
     group/type labels to filter on (upstream has near-duplicates such as
     "Drug Violation" vs "Drug Violations").
     Use for: crime trends by month, most common offence types, crime

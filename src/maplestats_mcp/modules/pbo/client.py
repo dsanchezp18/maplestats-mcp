@@ -64,6 +64,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -414,6 +415,9 @@ async def search_information_requests(
             f"pbo: unknown disposition {disposition!r}; use {list(constants.DISPOSITIONS)}."
         )
     since, until = _date_arg(since, "since"), _date_arg(until, "until")
+    # Compare at the shorter precision: since="2024-06" and until="2024" overlap.
+    shared = min(len(since), len(until))
+    check_range(since[:shared] or None, until[:shared] or None, "since", "until")
 
     rows, cached = await _register()
     words = _fold(query).split()

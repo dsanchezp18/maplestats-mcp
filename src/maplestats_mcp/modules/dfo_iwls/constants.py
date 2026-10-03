@@ -27,3 +27,6 @@ SEARCH_LIMIT_MAX = 200
 
 # Series whose values are tide events, not a regular time grid.
 EVENT_SERIES = frozenset({"wlp-hilo"})
+
+# Step used when no resolution is given and the window is longer than a day.
+LONG_WINDOW_RESOLUTION = "FIFTEEN_MINUTES"

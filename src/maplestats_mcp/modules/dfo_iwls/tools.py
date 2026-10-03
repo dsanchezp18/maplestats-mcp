@@ -75,7 +75,8 @@ async def dfo_iwls_get_water_levels(
     metres above chart datum. `start`/`end` are ISO dates or UTC
     datetimes (default: now to +24 h); the window is capped at 7 days.
     Set `resolution` (e.g. "SIXTY_MINUTES") to thin minute-level
-    series; it is ignored for high/low tides.
+    series; it is ignored for high/low tides (default past one day:
+    FIFTEEN_MINUTES).
     Keywords: tides, tide table, high tide, low tide, water level,
     prediction, observed, DFO, harbour, marine forecast.
     Mots-clés : marées, table des marées, pleine mer, basse mer, niveau

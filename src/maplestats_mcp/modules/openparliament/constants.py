@@ -22,6 +22,8 @@ PAGE_SIZE = 500
 MAX_ROWS = 5000
 LIMIT_DEFAULT = 50
 LIMIT_MAX = 500
+# OpenParliament's records start with the 35th Parliament (1994).
+FIRST_PARLIAMENT = 35
 
 # Committee rosters change a few times a session. Confirmed live
 # 2026-09-26: /committees/ lists only top-level committees (subcommittees

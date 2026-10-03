@@ -37,7 +37,7 @@ from maplestats_mcp.modules.bcgw.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
-from maplestats_mcp.shared.wfs import WfsConfig, get_features
+from maplestats_mcp.shared.wfs import WfsConfig, feature_url, get_features
 
 CONFIG = WfsConfig(
     source=constants.RATE_LIMIT_SOURCE,
@@ -115,17 +115,17 @@ async def get_active_wildfires(
 
     property_names = None if include_geometry else constants.WILDFIRE_ATTRIBUTE_FIELDS
 
+    request: dict[str, Any] = {
+        "cql_filter": cql_filter,
+        "property_names": property_names,
+        "srs_name": constants.DEFAULT_SRS,
+        "sort_by": constants.DEFAULT_SORT_FIELD,
+        "count": limit,
+        "start_index": offset,
+    }
+
     async def fetch() -> dict[str, Any]:
-        return await get_features(
-            CONFIG,
-            constants.WILDFIRE_TYPE_NAME,
-            cql_filter=cql_filter,
-            property_names=property_names,
-            srs_name=constants.DEFAULT_SRS,
-            sort_by=constants.DEFAULT_SORT_FIELD,
-            count=limit,
-            start_index=offset,
-        )
+        return await get_features(CONFIG, constants.WILDFIRE_TYPE_NAME, **request)
 
     cache_key = f"bcgw:wildfires:{cql_filter}:{include_geometry}:{limit}:{offset}"
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_WILDFIRE_SECONDS, fetch)
@@ -141,7 +141,7 @@ async def get_active_wildfires(
         offset=offset,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.BASE_URL}?typeName={constants.WILDFIRE_TYPE_NAME}",
+            url=feature_url(CONFIG, constants.WILDFIRE_TYPE_NAME, **request),
             cached=was_cached,
             schema_name="bcgw.WildfireQueryResult",
             coverage=f"{len(wildfires)} of {total_matched} total matching fires returned",
@@ -211,17 +211,17 @@ async def get_mining_tenure(
 
     property_names = None if include_geometry else constants.MINING_TENURE_ATTRIBUTE_FIELDS
 
+    request: dict[str, Any] = {
+        "cql_filter": cql_filter,
+        "property_names": property_names,
+        "srs_name": constants.DEFAULT_SRS,
+        "sort_by": constants.DEFAULT_SORT_FIELD,
+        "count": limit,
+        "start_index": offset,
+    }
+
     async def fetch() -> dict[str, Any]:
-        return await get_features(
-            CONFIG,
-            constants.MINING_TENURE_TYPE_NAME,
-            cql_filter=cql_filter,
-            property_names=property_names,
-            srs_name=constants.DEFAULT_SRS,
-            sort_by=constants.DEFAULT_SORT_FIELD,
-            count=limit,
-            start_index=offset,
-        )
+        return await get_features(CONFIG, constants.MINING_TENURE_TYPE_NAME, **request)
 
     cache_key = f"bcgw:mining-tenure:{cql_filter}:{include_geometry}:{limit}:{offset}"
     body, was_cached = await cached_fetch(
@@ -239,7 +239,7 @@ async def get_mining_tenure(
         offset=offset,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.BASE_URL}?typeName={constants.MINING_TENURE_TYPE_NAME}",
+            url=feature_url(CONFIG, constants.MINING_TENURE_TYPE_NAME, **request),
             cached=was_cached,
             schema_name="bcgw.MiningTenureQueryResult",
             coverage=f"{len(tenures)} of {total_matched} total matching tenures returned",
@@ -285,17 +285,17 @@ async def query_layer(
         raise InvalidInput("type_name must not be empty.")
     effective_sort_by = sort_by if sort_by is not None else constants.DEFAULT_SORT_FIELD
 
+    request: dict[str, Any] = {
+        "cql_filter": cql_filter,
+        "property_names": property_names,
+        "srs_name": constants.DEFAULT_SRS if include_geometry else None,
+        "sort_by": effective_sort_by,
+        "count": limit,
+        "start_index": offset,
+    }
+
     async def fetch() -> dict[str, Any]:
-        return await get_features(
-            CONFIG,
-            type_name,
-            cql_filter=cql_filter,
-            property_names=property_names,
-            srs_name=constants.DEFAULT_SRS if include_geometry else None,
-            sort_by=effective_sort_by,
-            count=limit,
-            start_index=offset,
-        )
+        return await get_features(CONFIG, type_name, **request)
 
     cache_key = f"bcgw:layer:{type_name}:{cql_filter}:{property_names}:{include_geometry}:{sort_by}:{limit}:{offset}"
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_GENERIC_SECONDS, fetch)
@@ -318,7 +318,7 @@ async def query_layer(
         cql_filter=cql_filter,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.BASE_URL}?typeName={type_name}",
+            url=feature_url(CONFIG, type_name, **request),
             cached=was_cached,
             schema_name="bcgw.LayerQueryResult",
             coverage=f"{len(records)} of {total_matched} total matching records returned",

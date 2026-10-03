@@ -11,7 +11,7 @@ from __future__ import annotations
 import html
 import re
 import unicodedata
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
 import httpx
@@ -49,8 +49,10 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 Lang = Literal["en", "fr"]
 
@@ -159,14 +161,30 @@ def _check_limit(limit: int) -> None:
 
 
 def _date_param(value: str, name: str) -> str:
+    return _parse_day(value, name).isoformat()
+
+
+def _parse_day(value: str, name: str) -> date:
     parsed = _date(value.strip())
     if parsed is None:
         raise InvalidInput(f"{name} must be YYYY-MM-DD, got {value!r}.")
-    return parsed.isoformat()
+    return parsed
+
+
+def _day_range(date_from: str | None, date_to: str | None) -> tuple[date | None, date | None]:
+    start = _parse_day(date_from, "date_from") if date_from else None
+    end = _parse_day(date_to, "date_to") if date_to else None
+    check_range(start, end, "date_from", "date_to")
+    return start, end
 
 
 def _provenance(
-    path: str, params: dict[str, Any], cached: bool, schema: str, coverage: str | None = None
+    path: str,
+    params: dict[str, Any],
+    cached: bool,
+    schema: str,
+    coverage: str | None = None,
+    limits: str | None = None,
 ) -> Provenance:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
@@ -175,8 +193,38 @@ def _provenance(
         schema_name=f"openparliament.{schema}",
         freshness=_FRESHNESS,
         coverage=coverage,
-        limits=_NOTE,
+        limits=join_limits(limits, _NOTE),
     )
+
+
+async def _check_known_session(session: str) -> str:
+    """An unknown session answers an empty list, not an error, so check it here.
+
+    OpenParliament covers the 35th Parliament (1994) on; the newest is the
+    session of the most recent vote.
+    """
+    cleaned = _check_session(session)
+    parliament = int(cleaned.split("-")[0])
+    newest = int((await current_session()).split("-")[0])
+    if not constants.FIRST_PARLIAMENT <= parliament <= newest:
+        raise InvalidInput(
+            f"session {cleaned!r} is outside the parliaments OpenParliament covers "
+            f"({constants.FIRST_PARLIAMENT} to {newest}, e.g. '{newest}-1')."
+        )
+    return cleaned
+
+
+async def _known_politician(slug: str) -> str:
+    """An unknown politician filter answers an empty list, so resolve the slug first."""
+    cleaned = _check_slug(slug)
+    try:
+        await _get(f"/politicians/{cleaned}/", ttl=constants.ROSTER_TTL_SECONDS)
+    except NotFound as exc:
+        raise NotFound(
+            f"openparliament: no politician {cleaned!r}; find the slug with "
+            "openparliament_search_politicians."
+        ) from exc
+    return cleaned
 
 
 async def current_session() -> str:
@@ -200,10 +248,10 @@ async def search_bills(
 ) -> BillSearchResult:
     _check_limit(limit)
     params: dict[str, Any] = {
-        "session": _check_session(session) if session else await current_session()
+        "session": await _check_known_session(session) if session else await current_session()
     }
     if sponsor:
-        params["sponsor_politician"] = f"/politicians/{_check_slug(sponsor)}/"
+        params["sponsor_politician"] = f"/politicians/{await _known_politician(sponsor)}/"
     if private_member is not None:
         params["private_member_bill"] = str(private_member)
     if introduced_from:
@@ -286,16 +334,17 @@ async def search_votes(
 ) -> VoteSearchResult:
     _check_limit(limit)
     params: dict[str, Any] = {}
+    start, end = _day_range(date_from, date_to)
     if session:
-        params["session"] = _check_session(session)
+        params["session"] = await _check_known_session(session)
     if bill:
         if not session:
             raise InvalidInput("bill needs session too, e.g. session='45-1', bill='C-2'.")
         params["bill"] = f"/bills/{params['session']}/{_check_bill(bill)}/"
-    if date_from:
-        params["date__gte"] = _date_param(date_from, "date_from")
-    if date_to:
-        params["date__lte"] = _date_param(date_to, "date_to")
+    if start:
+        params["date__gte"] = start.isoformat()
+    if end:
+        params["date__lte"] = end.isoformat()
     if result:
         if result not in ("Passed", "Failed", "Tie"):
             raise InvalidInput("result must be 'Passed', 'Failed' or 'Tie'.")
@@ -536,27 +585,44 @@ async def search_speeches(
 ) -> SpeechSearchResult:
     _check_limit(limit)
     params: dict[str, Any] = {}
+    start, end = _day_range(date_from, date_to)
     if politician:
-        params["politician"] = f"/politicians/{_check_slug(politician)}/"
+        params["politician"] = f"/politicians/{await _known_politician(politician)}/"
     if debate_date:
         day = _date(debate_date.strip())
         if day is None:
             raise InvalidInput(f"debate_date must be YYYY-MM-DD, got {debate_date!r}.")
         # Debate URLs drop leading zeros (/debates/2026/9/23/), confirmed live.
         params["document"] = f"/debates/{day.year}/{day.month}/{day.day}/"
-    if date_from:
-        params["time__gte"] = _date_param(date_from, "date_from")
-    if date_to:
-        params["time__lt"] = f"{_date_param(date_to, 'date_to')} 23:59:59"
+    if start:
+        params["time__gte"] = start.isoformat()
+    if end:
+        # Strictly before the next midnight, so the whole of date_to counts
+        # (a bound of 23:59:59 left out the last second of the day).
+        params["time__lt"] = (end + timedelta(days=1)).isoformat()
     if not params:
         raise InvalidInput("Give politician, debate_date, or a date range.")
     page, cached = await _get("/speeches/", {**params, "limit": limit})
-    speeches = [_speech(row, lang) for row in page.get("objects") or []]
+    received = [_speech(row, lang) for row in page.get("objects") or []]
+    # Full speech texts reach about 800 bytes each (500 came to ~400 KB).
+    speeches = fit_to_budget(received)
+    more_upstream = bool((page.get("pagination") or {}).get("next_url"))
     return SpeechSearchResult(
         speeches=speeches,
         returned_count=len(speeches),
-        has_more=bool((page.get("pagination") or {}).get("next_url")),
-        provenance=_provenance("/speeches/", params, cached, "SpeechSearchResult"),
+        has_more=more_upstream or len(speeches) < len(received),
+        provenance=_provenance(
+            "/speeches/",
+            {**params, "limit": limit},
+            cached,
+            "SpeechSearchResult",
+            limits=(
+                f"Returned the first {len(speeches)} of {len(received)} speeches received, "
+                "cut to about 200 KB; lower limit or narrow the dates"
+                if len(speeches) < len(received)
+                else None
+            ),
+        ),
     )
 
 
@@ -748,14 +814,15 @@ async def search_committee_meetings(
 ) -> CommitteeMeetingSearchResult:
     _check_limit(limit)
     params: dict[str, Any] = {}
+    start, end = _day_range(date_from, date_to)
     if committee:
         params["committee"] = _check_committee(committee)
     if session:
-        params["session"] = _check_session(session)
-    if date_from:
-        params["date__gte"] = _date_param(date_from, "date_from")
-    if date_to:
-        params["date__lte"] = _date_param(date_to, "date_to")
+        params["session"] = await _check_known_session(session)
+    if start:
+        params["date__gte"] = start.isoformat()
+    if end:
+        params["date__lte"] = end.isoformat()
     if in_camera is not None:
         params["in_camera"] = "true" if in_camera else "false"
     page, cached = await _get("/committees/meetings/", {**params, "limit": limit})

@@ -97,15 +97,28 @@ async def test_bill_keyword_ignores_accents_case_and_apostrophe_style(httpx_mock
         assert [b.number for b in result.bills] == numbers, keyword
 
 
+def _current_session(httpx_mock, session: str = "45-1") -> None:
+    """The newest-vote lookup a session check makes (shape of the live /votes/ list)."""
+    httpx_mock.add_response(
+        url="https://api.openparliament.ca/votes/?limit=1",
+        json={"objects": [{**_vote(1), "session": session}], "pagination": _NO_MORE},
+    )
+
+
 async def test_bill_list_follows_pagination(httpx_mock):
     row = {"session": "44-1", "name": {"en": "x"}, "number": "C-1", "url": "/bills/44-1/C-1/"}
+    _current_session(httpx_mock)
     httpx_mock.add_response(
         json={"objects": [row], "pagination": {"next_url": "/bills/?offset=500"}}
     )
     httpx_mock.add_response(json={"objects": [row], "pagination": _NO_MORE})
     result = await client.search_bills(session="44-1")
     assert result.total_matches == 2
-    offsets = [parse_qs(urlparse(str(r.url)).query)["offset"] for r in httpx_mock.get_requests()]
+    offsets = [
+        parse_qs(urlparse(str(r.url)).query)["offset"]
+        for r in httpx_mock.get_requests()
+        if "/bills/" in str(r.url)
+    ]
     assert offsets == [["0"], ["1"]]
 
 
@@ -385,6 +398,7 @@ async def test_get_committee_tolerates_null_lists(httpx_mock):
 
 
 async def test_search_committee_meetings_maps_filters(httpx_mock):
+    _current_session(httpx_mock)
     httpx_mock.add_response(
         json={
             "objects": [_meeting_row("finance", 47)],
@@ -400,7 +414,7 @@ async def test_search_committee_meetings_maps_filters(httpx_mock):
         limit=1,
     )
     assert result.has_more and result.meetings[0].session == "45-1"
-    query = parse_qs(urlparse(str(httpx_mock.get_request().url)).query)
+    query = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
     assert query == {
         "committee": ["finance"],
         "session": ["45-1"],
@@ -549,3 +563,26 @@ async def test_french_ourcommons_links(httpx_mock):
     assert english.minutes_url == viewer + "minutes"
     # A link of another shape is kept rather than guessed at.
     assert client._ourcommons("https://example.org/x", "fr") == "https://example.org/x"
+
+
+async def test_inverted_dates_unknown_session_and_politician_raise(httpx_mock):
+    with pytest.raises(InvalidInput, match="date_from"):
+        await client.search_speeches(date_from="2026-06-30", date_to="2026-06-01")
+    with pytest.raises(InvalidInput, match="date_from"):
+        await client.search_votes(date_from="2026-06-30", date_to="2026-06-01")
+    _current_session(httpx_mock)
+    with pytest.raises(InvalidInput, match="outside the parliaments"):
+        await client.search_votes(session="99-1")
+    httpx_mock.add_response(
+        url="https://api.openparliament.ca/politicians/no-such-mp/", status_code=404
+    )
+    with pytest.raises(NotFound, match="no politician"):
+        await client.search_speeches(politician="no-such-mp")
+
+
+async def test_speech_date_to_covers_the_whole_day(httpx_mock):
+    httpx_mock.add_response(json={"objects": [], "pagination": _NO_MORE})
+    await client.search_speeches(date_from="2026-06-01", date_to="2026-06-30")
+    query = parse_qs(urlparse(str(httpx_mock.get_request().url)).query)
+    assert query["time__lt"] == ["2026-07-01"]
+    assert query["time__gte"] == ["2026-06-01"]

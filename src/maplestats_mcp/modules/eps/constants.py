@@ -24,7 +24,8 @@ CACHE_TTL_LOAD_DATE_SECONDS = 60 * 60
 
 # The layer's maxRecordCount is 2000 (confirmed live).
 LIMIT_DEFAULT = 50
-LIMIT_MAX = 2000
+# 2,000 rows came to about 400 KB; 500 keeps a page near 100 KB.
+LIMIT_MAX = 500
 
 GROUP_BY_FIELDS = {
     "category": ["Occurrence_Category"],

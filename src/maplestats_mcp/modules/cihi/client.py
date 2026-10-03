@@ -27,6 +27,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -229,6 +230,7 @@ async def get_indicator_data(
     place: str | None = None,
     filters: dict[str, str] | None = None,
     table: str | None = None,
+    columns: list[str] | None = None,
     limit: int = constants.ROWS_DEFAULT,
     lang: str = "en",
 ) -> IndicatorData:
@@ -272,23 +274,39 @@ async def get_indicator_data(
             return False
         return all(cells[i].lower() == v for i, v in wanted)
 
+    chosen = [header[index(c)] for c in columns] if columns else header
     matching = [r for r in data if keep(r)]
-    kept = matching[-limit:]
+
+    def as_row(row: list[str]) -> dict[str, str]:
+        full = dict(zip(header, row + [""] * (len(header) - len(row)), strict=True))
+        return {c: full[c] for c in chosen}
+
+    # The latest rows come last in the file: fill the byte budget newest
+    # first, then put them back in file order.
+    rows = fit_to_budget([as_row(r) for r in matching[-limit:]][::-1])[::-1]
     return IndicatorData(
         slug=detail.slug,
         table=title or sheet,
         tables=list(tables),
-        columns=header,
-        rows=[dict(zip(header, r + [""] * (len(header) - len(r)), strict=True)) for r in kept],
+        columns=chosen,
+        rows=rows,
         total_rows=len(data),
         matching_rows=len(matching),
-        returned_count=len(kept),
+        returned_count=len(rows),
         data_file_url=detail.data_file_url,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=detail.data_file_url,
             cached=detail.provenance.cached and tables_cached,
             schema_name="cihi.IndicatorData",
-            coverage=f"last {len(kept)} of {len(matching)} matching rows",
+            coverage=f"last {len(rows)} of {len(matching)} matching rows",
+            limits=truncation_note(
+                returned=len(rows),
+                total=len(matching),
+                unit="matching rows",
+                order="latest",
+                how_to_get_more="filter by place or column values, pick fewer columns, or raise "
+                f"limit (max {constants.ROWS_MAX}; responses are capped near 200 KB)",
+            ),
         ),
     )

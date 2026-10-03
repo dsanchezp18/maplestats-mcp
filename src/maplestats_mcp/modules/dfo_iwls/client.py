@@ -26,6 +26,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -135,6 +136,10 @@ async def search_stations(
             url=f"{constants.BASE_URL}/stations",
             cached=cached,
             schema_name="dfo_iwls.StationSearchResult",
+            limits=(
+                f"Request: GET {constants.BASE_URL}/stations (the full list); the name "
+                "filter, operating_only and series_code are applied here."
+            ),
             freshness="station list cached 24h",
         ),
     )
@@ -215,6 +220,16 @@ async def get_water_levels(
         "to": _iso(end_dt),
     }
     effective_resolution = None if series_code in constants.EVENT_SERIES else resolution
+    defaulted = False
+    if (
+        effective_resolution is None
+        and series_code not in constants.EVENT_SERIES
+        and end_dt - start_dt > timedelta(days=1)
+    ):
+        # Minute data over a week came to about 770 KB; past one day the
+        # default is a coarser step, and limits says so.
+        effective_resolution = constants.LONG_WINDOW_RESOLUTION
+        defaulted = True
     if effective_resolution:
         params["resolution"] = effective_resolution
 
@@ -225,6 +240,18 @@ async def get_water_levels(
         f"dfo-iwls:data:{station['id']}:{params}", constants.CACHE_TTL_DATA_SECONDS, fetch
     )
     name_key = "nameFr" if lang == "fr" else "nameEn"
+    points = [
+        WaterLevelPoint(
+            time=datetime.fromisoformat(row["eventDate"]),
+            value=row["value"],
+            qc_flag=row.get("qcFlagCode"),
+            reviewed=row.get("reviewed"),
+        )
+        for row in rows
+        if row.get("value") is not None
+    ]
+    # Points run oldest first; over the byte budget, keep the most recent.
+    kept = fit_to_budget(points[::-1])[::-1]
     return WaterLevelSeries(
         station_code=station["code"],
         station_name=station.get("officialName") or station["code"],
@@ -233,21 +260,27 @@ async def get_water_levels(
         start=start_dt,
         end=end_dt,
         resolution=effective_resolution,
-        points=[
-            WaterLevelPoint(
-                time=datetime.fromisoformat(row["eventDate"]),
-                value=row["value"],
-                qc_flag=row.get("qcFlagCode"),
-                reviewed=row.get("reviewed"),
-            )
-            for row in rows
-            if row.get("value") is not None
-        ],
+        points=kept,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.BASE_URL}/stations/{station['id']}/data",
+            url=str(
+                httpx.URL(f"{constants.BASE_URL}/stations/{station['id']}/data", params=params)
+            ),
             cached=cached,
             schema_name="dfo_iwls.WaterLevelSeries",
-            limits=f"windows capped at {constants.MAX_WINDOW_DAYS} days per request",
+            limits=join_limits(
+                f"windows capped at {constants.MAX_WINDOW_DAYS} days per request",
+                f"no resolution was given for a window over one day, so "
+                f"{constants.LONG_WINDOW_RESOLUTION} was used; pass resolution to choose"
+                if defaulted
+                else None,
+                truncation_note(
+                    returned=len(kept),
+                    total=len(points),
+                    unit="points (about 200 KB)",
+                    order="latest",
+                    how_to_get_more="shorten the window or pass a coarser resolution",
+                ),
+            ),
         ),
     )

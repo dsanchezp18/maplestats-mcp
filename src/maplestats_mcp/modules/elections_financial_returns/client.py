@@ -75,6 +75,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.parse import urlencode
 
 import httpx
 from bs4 import BeautifulSoup
@@ -496,7 +497,18 @@ async def get_financial_return_part(
                 "elections_financial_returns:get_financial_return_part returned an "
                 "unexpected response shape."
             )
-        return {"body": body, "download_url": download_url}
+        return {
+            "body": body,
+            "download_url": download_url,
+            # The queryId in download_url belongs to this session and expires
+            # with it, so the request chain is spelled out for provenance.
+            "request": (
+                f"Request (session-bound; the queryId in url expires with the session): GET "
+                f"{search_url} to start a session, POST the same URL with form fields "
+                f"{urlencode(select_form)}, GET the redirect it returns ({detail_url}), then "
+                "GET the Download URL with a fresh queryId."
+            ),
+        }
 
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     body = result["body"]
@@ -522,5 +534,6 @@ async def get_financial_return_part(
             url=str(result["download_url"]),
             cached=was_cached,
             schema_name="elections_financial_returns.FinancialReturnPart",
+            limits=str(result.get("request") or "") or None,
         ),
     )

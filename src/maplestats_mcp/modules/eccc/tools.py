@@ -5,13 +5,11 @@ derives outputSchema/structuredContent from the return-type annotation
 automatically. A raised exception (see shared/errors.py) becomes a real
 MCP isError:true result; tools never return an error-shaped dict.
 
-`lang` is accepted on every tool for consistency with the rest of this
-project, but MSC GeoMet has no language query parameter - bilingual
-content is already split into separate `_en`/`_fr` suffixed properties
-within a single response (e.g. weather-alerts' alert_text_en/
-alert_text_fr), not toggled by a request parameter, so `lang` has no
-effect on the upstream request. Kept purely so a French-language query
-isn't ruled out by BM25 search.
+`lang` is passed to GeoMet as its `lang` query parameter, which sets the
+language of collection titles and descriptions (confirmed live
+2026-10-03). Item properties are not translated by it: bilingual content
+comes as separate `_en`/`_fr` properties in every response (e.g.
+weather-alerts' alert_text_en/alert_text_fr).
 """
 
 from __future__ import annotations
@@ -41,7 +39,7 @@ async def eccc_search_collections(query: str, limit: int = 25, lang: Lang = "en"
     collection, recherche, trouver, découvrir, jeu de données,
     catalogue.
     """
-    return await client.search_collections(query, limit=limit)
+    return await client.search_collections(query, limit=limit, lang=lang)
 
 
 @tool
@@ -58,7 +56,7 @@ async def eccc_list_collections(lang: Lang = "en") -> CollectionList:
     Mots-clés : environnement canada, smc, geomet, météo, climat, liste,
     inventaire, toutes les collections, catalogue, liste complète.
     """
-    return await client.list_collections()
+    return await client.list_collections(lang)
 
 
 @tool
@@ -76,7 +74,7 @@ async def eccc_get_collection(collection_id: str, lang: Lang = "en") -> Collecti
     Mots-clés : environnement canada, smc, geomet, collection, détail,
     métadonnées, propriétés interrogeables, schéma, étendue.
     """
-    return await client.get_collection(collection_id)
+    return await client.get_collection(collection_id, lang)
 
 
 @tool
@@ -134,4 +132,5 @@ async def eccc_query_items(
         sortby=sortby,
         limit=limit,
         offset=offset,
+        lang=lang,
     )

@@ -458,7 +458,7 @@ async def test_premises_filters(httpx_mock):
     assert [(c.key, c.total) for c in bc.counts] == [("2024-11", 1)]
     capped = await client.get_avian_influenza(limit=5, counts_by="year")
     assert (capped.returned_count, capped.total_matched) == (5, 30)
-    assert capped.provenance.limits == "premises capped at 5"
+    assert (capped.provenance.limits or "").startswith("Returned the most recent 5 of")
     assert capped.counts[0].key == "2026"
 
 

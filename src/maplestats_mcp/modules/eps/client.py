@@ -10,6 +10,8 @@ import json
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+import httpx
+
 from maplestats_mcp.modules.eps import constants
 from maplestats_mcp.modules.eps.schemas import (
     Dataset,
@@ -24,6 +26,7 @@ from maplestats_mcp.shared import arcgis
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
+from maplestats_mcp.shared.limits import join_limits
 
 _CONFIG = arcgis.ArcGISHubConfig(
     source=constants.SOURCE,
@@ -146,23 +149,21 @@ async def list_occurrences(
         intersection_contains=intersection_contains,
     )
 
+    request: dict[str, Any] = {
+        "where": where,
+        "out_fields": (
+            "Reported_Date,Occurrence_Category,Occurrence_Group,Occurrence_Type_Group,Intersection"
+        ),
+        "order_by": "Reported_Date DESC, OBJECTID DESC",
+        "return_geometry": True,
+        "limit": limit,
+        "offset": offset,
+        "out_sr": 4326,
+    }
+
     async def fetch() -> tuple[int, list[dict[str, Any]]]:
         total = await _count(layer_url, where)
-        body = await arcgis.query_layer(
-            _CONFIG,
-            layer_url,
-            0,
-            where=where,
-            out_fields=(
-                "Reported_Date,Occurrence_Category,Occurrence_Group,"
-                "Occurrence_Type_Group,Intersection"
-            ),
-            order_by="Reported_Date DESC, OBJECTID DESC",
-            return_geometry=True,
-            limit=limit,
-            offset=offset,
-            out_sr=4326,
-        )
+        body = await arcgis.query_layer(_CONFIG, layer_url, 0, **request)
         return total, body.get("features") or []
 
     cache_key = f"eps:list:{dataset}:{where}:{limit}:{offset}"
@@ -177,12 +178,21 @@ async def list_occurrences(
         occurrences=[_to_occurrence(feature) for feature in features],
         provenance=make_provenance(
             source=constants.SOURCE,
-            url=f"{layer_url}/query",
+            url=arcgis.query_url(layer_url, 0, **request),
             cached=was_cached,
             schema_name="eps.OccurrenceList",
             freshness=_FRESHNESS,
             coverage=constants.DATASET_COVERAGE[dataset],
-            limits="location is the nearest intersection only; no time of day",
+            limits=join_limits(
+                (
+                    f"Returned occurrences {offset + 1} to {offset + len(features)} of "
+                    f"{total:,}, newest first; page with offset, narrow the filters, or use "
+                    "eps_summarize_occurrences for counts"
+                    if features and offset + len(features) < total
+                    else None
+                ),
+                "location is the nearest intersection only; no time of day",
+            ),
         ),
     )
 
@@ -229,20 +239,17 @@ async def summarize_occurrences(
         }
     ]
 
+    params = {
+        "where": where,
+        "groupByFieldsForStatistics": ",".join(fields),
+        "outStatistics": json.dumps(statistics),
+        "orderByFields": order_by,
+        "resultRecordCount": top,
+    }
+
     async def fetch() -> tuple[int, list[dict[str, Any]]]:
         total = await _count(layer_url, where)
-        body = await arcgis.get_json(
-            _CONFIG,
-            "summarize",
-            f"{layer_url}/query",
-            params={
-                "where": where,
-                "groupByFieldsForStatistics": ",".join(fields),
-                "outStatistics": json.dumps(statistics),
-                "orderByFields": order_by,
-                "resultRecordCount": top,
-            },
-        )
+        body = await arcgis.get_json(_CONFIG, "summarize", f"{layer_url}/query", params=params)
         return total, body.get("features") or []
 
     cache_key = f"eps:summary:{dataset}:{group_by}:{where}:{top}"
@@ -266,7 +273,7 @@ async def summarize_occurrences(
         groups=groups,
         provenance=make_provenance(
             source=constants.SOURCE,
-            url=f"{layer_url}/query",
+            url=str(httpx.URL(f"{layer_url}/query", params=params)),
             cached=was_cached,
             schema_name="eps.OccurrenceSummary",
             freshness=_FRESHNESS,
@@ -309,7 +316,7 @@ async def get_last_load_date(*, lang: str = "en") -> LoadDate:
         raw_value=raw,
         provenance=make_provenance(
             source=constants.SOURCE,
-            url=f"{constants.LOAD_DATE_URL}/query",
+            url=arcgis.query_url(constants.LOAD_DATE_URL, 0, limit=1),
             cached=was_cached,
             schema_name="eps.LoadDate",
         ),

@@ -108,8 +108,8 @@ async def cfia_avian_influenza(
     (YYYY, YYYY-MM or YYYY-MM-DD) and `premises_type`; `counts` gives
     current and released premises by province, month, year or premises
     type. The result also carries the CFIA's status-by-province table
-    with the estimated birds impacted. Newest first, up to `limit`
-    (max 1000). `lang="fr"` gives French municipalities, zones (ZCP) and
+    with the estimated birds impacted. Newest first, up to `limit` (default 25,
+    max 1000). `lang="fr"` gives French municipalities, zones (ZCP) and
     labels; dates follow the English page.
     Keywords: avian influenza, bird flu, HPAI, H5N1, infected premises,
     poultry outbreak, CFIA, quarantine, control zone, birds impacted,

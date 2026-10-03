@@ -63,6 +63,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.http import api_get, is_retryable, new_client
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -519,6 +520,7 @@ async def search_patents(
         raise InvalidInput(f"{context}: give at least one of party_name, ipc, title or a date.")
     if limit < 1 or limit > _MAX_LIMIT:
         raise InvalidInput(f"{context}: limit must be between 1 and {_MAX_LIMIT}, got {limit}.")
+    check_range(filed_from, filed_to, "filed_from", "filed_to")
     party_key = party_type.lower() if party_type else None
     if party_key and party_key not in _PARTY_TYPES:
         raise InvalidInput(f"{context}: party_type must be one of {sorted(_PARTY_TYPES)}.")

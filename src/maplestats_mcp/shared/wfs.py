@@ -92,7 +92,7 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
     raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
 
 
-async def get_features(
+def feature_url(
     config: WfsConfig,
     type_name: str,
     *,
@@ -102,8 +102,23 @@ async def get_features(
     sort_by: str | None = None,
     count: int = 10,
     start_index: int = 0,
+) -> str:
+    """The full GetFeature URL `get_features` requests, for provenance."""
+    params = _feature_params(
+        type_name, cql_filter, property_names, srs_name, sort_by, count, start_index
+    )
+    return str(httpx.URL(config.base_url, params=params))
+
+
+def _feature_params(
+    type_name: str,
+    cql_filter: str | None,
+    property_names: str | None,
+    srs_name: str | None,
+    sort_by: str | None,
+    count: int,
+    start_index: int,
 ) -> dict[str, Any]:
-    """Run a WFS 2.0 GetFeature request against one feature type, as GeoJSON."""
     params: dict[str, Any] = {
         "service": "WFS",
         "version": "2.0.0",
@@ -121,7 +136,24 @@ async def get_features(
         params["srsName"] = srs_name
     if sort_by:
         params["sortBy"] = sort_by
+    return params
 
+
+async def get_features(
+    config: WfsConfig,
+    type_name: str,
+    *,
+    cql_filter: str | None = None,
+    property_names: str | None = None,
+    srs_name: str | None = None,
+    sort_by: str | None = None,
+    count: int = 10,
+    start_index: int = 0,
+) -> dict[str, Any]:
+    """Run a WFS 2.0 GetFeature request against one feature type, as GeoJSON."""
+    params = _feature_params(
+        type_name, cql_filter, property_names, srs_name, sort_by, count, start_index
+    )
     await _limiter(config).acquire()
     context = f"{config.source}:get_features:{type_name}"
     try:

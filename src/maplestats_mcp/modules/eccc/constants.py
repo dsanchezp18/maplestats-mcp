@@ -41,6 +41,7 @@ CACHE_TTL_ITEMS_SECONDS = 5 * 60  # 5 min
 # reasonable.
 ITEMS_LIMIT_DEFAULT = 10
 ITEMS_LIMIT_MAX = 1000
+ITEMS_MAX_BYTES = 200_000
 
 # /collections?f=json itself has no limit/offset - the full list is
 # fetched once per CACHE_TTL_COLLECTIONS_SECONDS window and paginated

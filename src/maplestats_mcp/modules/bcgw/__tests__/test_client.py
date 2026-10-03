@@ -90,12 +90,16 @@ async def test_get_active_wildfires_parses_records(httpx_mock):
 
 async def test_get_active_wildfires_builds_cql_from_filters(httpx_mock):
     httpx_mock.add_response(json=_WILDFIRE_COLLECTION)
-    await client.get_active_wildfires(status="Out of Control", fire_year=2026, min_size_hectares=10)
+    result = await client.get_active_wildfires(
+        status="Out of Control", fire_year=2026, min_size_hectares=10
+    )
     request = httpx_mock.get_requests()[0]
     cql = request.url.params["CQL_FILTER"]
     assert "FIRE_STATUS='Out of Control'" in cql
     assert "FIRE_YEAR=2026" in cql
     assert "FIRE_SIZE_HECTARES>=10" in cql
+    # The provenance URL is the request actually sent, filters included.
+    assert result.provenance.url == str(request.url)
 
 
 async def test_get_active_wildfires_include_geometry_omits_property_name(httpx_mock):

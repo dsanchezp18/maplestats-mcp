@@ -102,6 +102,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _MAX_KEYS_IN_ERROR = 25
@@ -181,12 +182,22 @@ def _collection_summary(obj: dict[str, Any]) -> CollectionSummary:
     )
 
 
-async def _all_collections() -> tuple[list[CollectionSummary], bool]:
+def _url(path: str, params: dict[str, Any]) -> str:
+    """The request URL with its query string, so provenance reproduces the call."""
+    return str(httpx.URL(f"{constants.BASE_URL}{path}", params=params))
+
+
+async def _all_collections(lang: str = "en") -> tuple[list[CollectionSummary], bool]:
+    # GeoMet answers `lang` with titles and descriptions in that language
+    # (confirmed live 2026-10-03: climate-stations is "Climat - Stations" with
+    # lang=fr); item properties carry both languages either way.
     async def fetch() -> list[CollectionSummary]:
-        obj = await _get("/collections", params={"f": "json"})
+        obj = await _get("/collections", params={"f": "json", "lang": lang})
         return [_collection_summary(c) for c in list_or_empty(obj, "collections")]
 
-    return await cached_fetch("eccc:collections", constants.CACHE_TTL_COLLECTIONS_SECONDS, fetch)
+    return await cached_fetch(
+        f"eccc:collections:{lang}", constants.CACHE_TTL_COLLECTIONS_SECONDS, fetch
+    )
 
 
 def _filter_collections(
@@ -205,14 +216,14 @@ def _filter_collections(
     ][:limit]
 
 
-async def list_collections() -> CollectionList:
-    collections, was_cached = await _all_collections()
+async def list_collections(lang: str = "en") -> CollectionList:
+    collections, was_cached = await _all_collections(lang)
     return CollectionList(
         collections=collections,
         total_count=len(collections),
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections?f=json",
+            url=_url("/collections", {"f": "json", "lang": lang}),
             cached=was_cached,
             schema_name="eccc.CollectionList",
         ),
@@ -220,17 +231,17 @@ async def list_collections() -> CollectionList:
 
 
 async def search_collections(
-    query: str, *, limit: int = constants.COLLECTIONS_SEARCH_LIMIT_DEFAULT
+    query: str, *, limit: int = constants.COLLECTIONS_SEARCH_LIMIT_DEFAULT, lang: str = "en"
 ) -> CollectionList:
     """Client-side substring search over the cached collection inventory."""
-    all_collections = await list_collections()
+    all_collections = await list_collections(lang)
     matches = _filter_collections(all_collections.collections, query, limit)
     return CollectionList(
         collections=matches,
         total_count=len(matches),
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections?f=json",
+            url=_url("/collections", {"f": "json", "lang": lang}),
             cached=all_collections.provenance.cached,
             schema_name="eccc.CollectionList",
             coverage=f"top {limit} matches of {len(all_collections.collections)} collections searched",
@@ -269,15 +280,18 @@ def _find_link_href(links: list[dict[str, Any]], rel: str) -> str | None:
     return None
 
 
-async def get_collection(collection_id: str) -> CollectionDetail:
+async def get_collection(collection_id: str, lang: str = "en") -> CollectionDetail:
     collection_id = _require_id(collection_id, "collection_id")
     segment = _path_segment(collection_id)
+    params = {"f": "json", "lang": lang}
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"/collections/{segment}", params={"f": "json"})
+        return await _get(f"/collections/{segment}", params=params)
 
     detail, was_cached = await cached_fetch(
-        f"eccc:collection:{collection_id}", constants.CACHE_TTL_COLLECTION_DETAIL_SECONDS, fetch
+        f"eccc:collection:{collection_id}:{lang}",
+        constants.CACHE_TTL_COLLECTION_DETAIL_SECONDS,
+        fetch,
     )
     queryables, _ = await _queryables(collection_id)
     bbox_list = (detail.get("extent") or {}).get("spatial", {}).get("bbox") or []
@@ -294,7 +308,7 @@ async def get_collection(collection_id: str) -> CollectionDetail:
         download_url=_find_link_href(links, "download"),
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections/{collection_id}?f=json",
+            url=_url(f"/collections/{segment}", params),
             cached=was_cached,
             schema_name="eccc.CollectionDetail",
         ),
@@ -336,6 +350,7 @@ async def query_items(
     sortby: str | None = None,
     limit: int = constants.ITEMS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: str = "en",
 ) -> ItemsResult:
     collection_id = _require_id(collection_id, "collection_id")
     if limit < 1 or limit > constants.ITEMS_LIMIT_MAX:
@@ -357,7 +372,13 @@ async def query_items(
             collection_id, queryables, names_to_check, "filters/fields/sortby"
         )
 
-    params: dict[str, Any] = {"f": "json", "limit": limit, "offset": offset, **filters}
+    params: dict[str, Any] = {
+        "f": "json",
+        "lang": lang,
+        "limit": limit,
+        "offset": offset,
+        **filters,
+    }
     if bbox is not None:
         params["bbox"] = ",".join(str(v) for v in bbox)
     if datetime_filter is not None:
@@ -377,21 +398,32 @@ async def query_items(
         )
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ITEMS_SECONDS, fetch)
-    features = [_feature_from_json(f) for f in list_or_empty(obj, "features")]
-    number_matched = obj.get("numberMatched", len(features))
+    received = [_feature_from_json(f) for f in list_or_empty(obj, "features")]
+    # Some collections (SWOB observations, about 8 KB an item) pass 400 KB
+    # at 50 items; the byte budget keeps a page usable.
+    features = fit_to_budget(received, constants.ITEMS_MAX_BYTES)
+    number_matched = obj.get("numberMatched", len(received))
     return ItemsResult(
         collection_id=collection_id,
         items=features,
         number_matched=number_matched,
-        number_returned=obj.get("numberReturned", len(features)),
+        number_returned=len(features),
         limit=limit,
         offset=offset,
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections/{collection_id}/items",
+            url=_url(f"/collections/{segment}/items", params),
             cached=was_cached,
             schema_name="eccc.ItemsResult",
             coverage=f"{len(features)} of {number_matched} matching items returned",
-            limits=f"limit capped at {constants.ITEMS_LIMIT_MAX} per request",
+            limits=join_limits(
+                f"limit capped at {constants.ITEMS_LIMIT_MAX} per request",
+                truncation_note(
+                    returned=len(features),
+                    total=len(received),
+                    unit=f"items received (cut to about {constants.ITEMS_MAX_BYTES // 1000} KB)",
+                    how_to_get_more="select fewer `fields`, lower limit and page with offset",
+                ),
+            ),
         ),
     )

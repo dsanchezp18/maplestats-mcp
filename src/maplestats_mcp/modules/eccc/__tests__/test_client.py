@@ -51,7 +51,7 @@ def _collections_payload():
 
 async def test_list_collections_parses_collections_list(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}/collections?f=json", json=_collections_payload()
+        url=f"{constants.BASE_URL}/collections?f=json&lang=en", json=_collections_payload()
     )
     result = await client.list_collections()
     assert result.total_count == 2
@@ -62,7 +62,7 @@ async def test_list_collections_parses_collections_list(httpx_mock):
 
 async def test_search_collections_filters_client_side(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}/collections?f=json", json=_collections_payload()
+        url=f"{constants.BASE_URL}/collections?f=json&lang=en", json=_collections_payload()
     )
     result = await client.search_collections("air quality", limit=10)
     assert result.total_count == 1
@@ -71,7 +71,7 @@ async def test_search_collections_filters_client_side(httpx_mock):
 
 async def test_get_collection_parses_detail_bbox_and_queryables(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}/collections/weather-alerts?f=json",
+        url=f"{constants.BASE_URL}/collections/weather-alerts?f=json&lang=en",
         json={
             "id": "weather-alerts",
             "title": "Weather Alerts",
@@ -108,7 +108,7 @@ async def test_get_collection_raises_not_found_on_404(httpx_mock):
     """Confirmed live: an unknown collection id returns HTTP 404 with a
     JSON body {"code": "NotFound", "description": "Collection not found"}."""
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}/collections/not-a-real-collection?f=json",
+        url=f"{constants.BASE_URL}/collections/not-a-real-collection?f=json&lang=en",
         status_code=404,
         json={"code": "NotFound", "description": "Collection not found"},
     )
@@ -138,7 +138,7 @@ async def test_query_items_applies_property_filters(httpx_mock):
     httpx_mock.add_response(
         url=(
             f"{constants.BASE_URL}/collections/weather-alerts/items"
-            "?f=json&limit=10&offset=0&province=SK"
+            "?f=json&lang=en&limit=10&offset=0&province=SK"
         ),
         json={
             "type": "FeatureCollection",
@@ -175,7 +175,7 @@ async def test_query_items_maps_datetime_500_to_invalid_input(httpx_mock):
         httpx_mock.add_response(
             url=(
                 f"{constants.BASE_URL}/collections/weather-alerts/items"
-                "?f=json&limit=10&offset=0&datetime=2026-09-19"
+                "?f=json&lang=en&limit=10&offset=0&datetime=2026-09-19"
             ),
             status_code=500,
             json={"code": "NoApplicableCode", "description": "query error (check logs)"},
@@ -204,7 +204,7 @@ async def test_query_items_treats_null_features_as_empty(httpx_mock):
     the null-vs-absent-list handling this project already relies on for
     other government JSON APIs (see shared/json_utils.py)."""
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}/collections/weather-alerts/items?f=json&limit=10&offset=0",
+        url=f"{constants.BASE_URL}/collections/weather-alerts/items?f=json&lang=en&limit=10&offset=0",
         json={"type": "FeatureCollection", "features": None, "numberMatched": 0},
     )
     result = await client.query_items("weather-alerts")

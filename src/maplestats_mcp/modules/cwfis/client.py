@@ -51,6 +51,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 from maplestats_mcp.shared.wfs import WfsConfig, get_features
 
 CONFIG = WfsConfig(
@@ -194,6 +195,7 @@ async def get_hotspots(
     if sort_by not in ("latest", "frp"):
         raise InvalidInput("sort_by must be 'latest' or 'frp'.")
     start, end = _parse_day(start_date, "start_date"), _parse_day(end_date, "end_date")
+    check_range(start, end, "start_date", "end_date")
     archive = start is not None or end is not None
     if archive and not (start and end):
         # One open-ended side would scan up to 18.5M rows.
@@ -544,6 +546,7 @@ async def search_large_fires(
     _check_page(limit, offset)
     if sort_by not in ("size", "date"):
         raise InvalidInput("sort_by must be 'size' or 'date'.")
+    check_range(year_from, year_to, "year_from", "year_to")
     clauses: list[str] = []
     if year_from is not None:
         clauses.append(f"YEAR >= {int(year_from)}")
@@ -680,6 +683,12 @@ async def list_situation_reports(
     if report_type not in ("all", "end_of_season"):
         raise InvalidInput("report_type must be 'all' or 'end_of_season'.")
     params: dict[str, Any] = {"limit": limit, "offset": offset}
+    check_range(
+        _parse_day(start_date, "start_date"),
+        _parse_day(end_date, "end_date"),
+        "start_date",
+        "end_date",
+    )
     for key, value in (("start_date", start_date), ("end_date", end_date)):
         parsed = _parse_day(value, key)
         if parsed:

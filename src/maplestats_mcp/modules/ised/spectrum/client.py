@@ -24,11 +24,12 @@ from typing import Any
 
 from maplestats_mcp.modules.ised.spectrum import constants
 from maplestats_mcp.modules.ised.spectrum.schemas import LicenceQueryResult
-from maplestats_mcp.shared.arcgis import ArcGISHubConfig, query_layer
+from maplestats_mcp.shared.arcgis import ArcGISHubConfig, query_layer, query_url
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 
 CONFIG = ArcGISHubConfig(
     source=constants.RATE_LIMIT_SOURCE,
@@ -55,23 +56,25 @@ async def query_licences(
         raise InvalidInput(f"offset must be >= 0, got {offset}.")
     where_clause = where or "1=1"
 
+    request: dict[str, Any] = {
+        "where": where_clause,
+        "out_fields": out_fields,
+        "order_by": order_by,
+        "return_geometry": False,
+        "limit": limit,
+        "offset": offset,
+    }
+
     async def fetch() -> dict[str, Any]:
-        return await query_layer(
-            CONFIG,
-            constants.SERVICE_URL,
-            constants.LAYER_INDEX,
-            where=where_clause,
-            out_fields=out_fields,
-            order_by=order_by,
-            return_geometry=False,
-            limit=limit,
-            offset=offset,
-        )
+        return await query_layer(CONFIG, constants.SERVICE_URL, constants.LAYER_INDEX, **request)
 
     cache_key = f"ised-spectrum:query:{where_clause}:{out_fields}:{order_by}:{limit}:{offset}"
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ROWS_SECONDS, fetch)
     features = list_or_empty(body, "features")
-    rows = [dict(feature.get("attributes") or {}) for feature in features]
+    received = [dict(feature.get("attributes") or {}) for feature in features]
+    # Rows carry 30+ fields (about 750 bytes each); the byte budget keeps a
+    # large page usable, and out_fields narrows it further.
+    rows = fit_to_budget(received)
     exceeded = bool(body.get("exceededTransferLimit", False))
     return LicenceQueryResult(
         rows=rows,
@@ -82,13 +85,17 @@ async def query_licences(
         exceeded_transfer_limit=exceeded,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.SERVICE_URL}/{constants.LAYER_INDEX}/query",
+            url=query_url(constants.SERVICE_URL, constants.LAYER_INDEX, **request),
             cached=was_cached,
             schema_name="ised_spectrum.LicenceQueryResult",
             coverage="~840,000 licence site records total, refreshed monthly by ISED",
-            limits=(
+            limits=join_limits(
                 f"rows capped at {constants.ROWS_LIMIT_MAX} per request"
-                + (" (upstream layer's own transfer limit reached first)" if exceeded else "")
+                + (" (upstream layer's own transfer limit reached first)" if exceeded else ""),
+                f"returned {len(rows)} of {len(received)} rows received, cut to about 200 KB; "
+                "name fewer out_fields or page with offset"
+                if len(rows) < len(received)
+                else None,
             ),
         ),
     )

@@ -1486,7 +1486,13 @@ async def get_avian_influenza(
             as_of=_as_datetime(modified),
             freshness="as detections are confirmed or premises released; cached 1 hour",
             coverage=f"{len(matched)} of {len(premises)} infected premises since December 2021",
-            limits=f"premises capped at {limit}" if len(matched) > limit else None,
+            limits=(
+                f"Returned the most recent {len(shown)} of {len(matched)} matching premises "
+                f"(counts cover all of them); raise limit (max {constants.HPAI_MAX_LIMIT}) or "
+                "narrow by province, dates or status"
+                if len(matched) > limit
+                else None
+            ),
         ),
     )
 

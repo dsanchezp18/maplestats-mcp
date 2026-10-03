@@ -607,6 +607,7 @@ async def get_table_data(
             "rows": rows,
             "notes": notes,
             "available_filters": available_filters,
+            "export_params": export_params,
         }
 
     parsed, was_cached = await cached_fetch(
@@ -630,5 +631,12 @@ async def get_table_data(
             url=export_url,
             cached=was_cached,
             schema_name="cmhc.TableDataResult",
+            # The export is a form POST, so a URL alone cannot reproduce it;
+            # the table is resolved first by a GET to TableMatchingCriteria.
+            limits=(
+                f"Request: GET {match_url}?{urlencode(match_params)} to resolve the table, "
+                f"then POST {export_url} with form fields "
+                f"{urlencode(parsed.get('export_params') or {})}."
+            ),
         ),
     )

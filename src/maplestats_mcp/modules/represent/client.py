@@ -35,6 +35,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -180,10 +181,13 @@ def _provenance(
     schema_name: str,
     lang: Lang,
     coverage: str | None = None,
+    params: dict[str, Any] | None = None,
+    request: str | None = None,
 ) -> Provenance:
+    """`url` is the main request with its query string; `request` names any other."""
     return make_provenance(
         source="represent",
-        url=f"{constants.BASE_URL}{path}",
+        url=str(httpx.URL(f"{constants.BASE_URL}{path}", params=params or None)),
         cached=cached,
         schema_name=schema_name,
         freshness=(
@@ -194,7 +198,7 @@ def _provenance(
             "limites sont mises à jour quelques fois par an; résultats en cache 1 h (ensembles 24 h)"
         ),
         coverage=coverage,
-        limits=_LIMITS[lang],
+        limits=join_limits(request, _LIMITS[lang]),
     )
 
 
@@ -405,6 +409,7 @@ async def lookup_postcode(
             cached and details_cached,
             "represent.PostcodeLookup",
             lang,
+            params=params,
             coverage=(
                 "boundary licences and dates not loaded (include_set_details=false)"
                 if not include_set_details
@@ -465,10 +470,21 @@ async def lookup_point(
         oldest_boundary_update=_oldest(infos),
         notes=notes,
         provenance=_provenance(
-            f"/representatives/?point={point}",
+            "/representatives/",
             cached_b and cached_r and details_cached,
             "represent.PointLookup",
             lang,
+            params={"point": point, "limit": constants.LIMIT_MAX},
+            request=(
+                "Request: also GET "
+                + str(
+                    httpx.URL(
+                        f"{constants.BASE_URL}/boundaries/",
+                        params={"contains": point, "limit": constants.LIMIT_MAX},
+                    )
+                )
+                + " for the boundaries"
+            ),
         ),
     )
 
@@ -514,7 +530,11 @@ async def list_representative_sets(
             )
         ],
         provenance=_provenance(
-            "/representative-sets/", cached, "represent.RepresentativeSetList", lang
+            "/representative-sets/",
+            cached,
+            "represent.RepresentativeSetList",
+            lang,
+            params={"limit": constants.PAGE_SIZE},
         ),
     )
 
@@ -560,7 +580,12 @@ async def search_representatives(
     cached = True
     rows: list[dict[str, Any]]
     total: int
+    path = "/representatives/"
+    sent: dict[str, Any] = {**params, "limit": limit, "offset": offset}
+    request: str | None = None
     if set_slug:
+        path = f"/representatives/{set_slug}/"
+        sent = {**params, "limit": constants.PAGE_SIZE}
         if level and level_of(set_slug) != level:
             raise InvalidInput(f"represent: set {set_slug} is {level_of(set_slug)}, not {level}.")
         # An unknown set slug answers 200 with an empty list, so check it exists.
@@ -581,6 +606,12 @@ async def search_representatives(
             merged.extend(part)
         total = len(merged)
         rows = merged[offset : offset + limit]
+        path = f"/representatives/{slugs[0]}/"
+        sent = {**params, "limit": constants.PAGE_SIZE}
+        request = (
+            f"Request: one GET /representatives/<set>/ per {level} set ({len(slugs)} sets) "
+            "with the filters shown in url, merged and paged here"
+        )
     elif level == "municipal":
         # Represent has no level filter, so scan the (filtered) list and drop
         # federal and provincial rows here.
@@ -608,6 +639,11 @@ async def search_representatives(
             page_offset += len(objects)
         total = len(merged)
         rows = merged[offset : offset + limit]
+        sent = {**params, "limit": constants.PAGE_SIZE, "offset": 0}
+        request = (
+            "Request: GET /representatives/ pages from offset 0 with the filters shown in "
+            "url; federal and provincial rows are dropped here, then paged"
+        )
     else:
         raw, cached = await _get("/representatives/", {**params, "limit": limit, "offset": offset})
         rows = [r for r in list_or_empty(raw, "objects") if isinstance(r, dict)]
@@ -622,10 +658,12 @@ async def search_representatives(
         has_more=offset + len(rows) < total,
         notes=notes,
         provenance=_provenance(
-            "/representatives/" if not set_slug else f"/representatives/{set_slug}/",
+            path,
             cached,
             "represent.RepresentativeSearchResult",
             lang,
+            params=sent,
+            request=request,
             coverage=(
                 "representative records are a scrape of official sites and some sets are stale"
             ),
@@ -689,5 +727,7 @@ async def list_boundary_sets(
         has_more=bool(meta.get("next")),
         oldest_last_updated=_oldest(sets),
         notes=notes,
-        provenance=_provenance("/boundary-sets/", cached, "represent.BoundarySetList", lang),
+        provenance=_provenance(
+            "/boundary-sets/", cached, "represent.BoundarySetList", lang, params=params
+        ),
     )

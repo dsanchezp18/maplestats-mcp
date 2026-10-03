@@ -27,5 +27,7 @@ CACHE_TTL_DATA_SECONDS = 24 * 60 * 60
 
 LIBRARY_MAX_PAGES = 30
 MAX_FILE_BYTES = 30 * 1024 * 1024
-ROWS_DEFAULT = 100
+# 2,000 rows of a wide table came to 2.7 MB and 100 rows to 135 KB; the
+# default is smaller and every response is also held to a byte budget.
+ROWS_DEFAULT = 40
 ROWS_MAX = 2000

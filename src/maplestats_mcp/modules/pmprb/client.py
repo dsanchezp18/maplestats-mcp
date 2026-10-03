@@ -61,6 +61,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -99,7 +100,13 @@ async def _fetch(url: str) -> str:
     return response.text
 
 
-def _provenance(url: str, cached: bool, schema: str, coverage: str | None = None) -> Any:
+def _provenance(
+    url: str,
+    cached: bool,
+    schema: str,
+    coverage: str | None = None,
+    limits: str | None = None,
+) -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
@@ -107,6 +114,7 @@ def _provenance(url: str, cached: bool, schema: str, coverage: str | None = None
         schema_name=f"pmprb.{schema}",
         freshness="once a year (each annual report)",
         coverage=coverage,
+        limits=limits,
     )
 
 
@@ -450,7 +458,7 @@ async def search_patented_medicines(
     counts: dict[str, int] = {}
     for m in matched:
         counts[m.status or "other"] = counts.get(m.status or "other", 0) + 1
-    shown = matched[:limit]
+    shown = fit_to_budget(matched[:limit])
     return PmprbMedicineList(
         report=report,
         medicines=shown,
@@ -458,6 +466,16 @@ async def search_patented_medicines(
         total_matched=len(matched),
         by_status=dict(sorted(counts.items(), key=lambda kv: -kv[1])),
         provenance=_provenance(
-            report.url, cached, "PmprbMedicineList", f"{len(medicines)} medicines reported"
+            report.url,
+            cached,
+            "PmprbMedicineList",
+            f"{len(medicines)} medicines reported",
+            truncation_note(
+                returned=len(shown),
+                total=len(matched),
+                unit="matching medicines",
+                how_to_get_more="narrow with query, company, atc or status, or raise limit "
+                f"(max {constants.MEDICINES_MAX_LIMIT}; responses are capped near 200 KB)",
+            ),
         ),
     )

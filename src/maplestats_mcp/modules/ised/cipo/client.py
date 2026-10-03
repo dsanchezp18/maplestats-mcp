@@ -26,6 +26,7 @@ quirks found and handled:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -124,7 +125,9 @@ async def search_trademarks(
             url=constants.BASE_URL,
             cached=was_cached,
             schema_name="ised_cipo.TrademarkSearchResult",
+            # The search is a JSON POST, so the URL alone cannot reproduce it.
             limits=(
+                f"Request: POST {constants.BASE_URL} with JSON body {json.dumps(body)}. "
                 "No pagination beyond max_return -- results ranked past the "
                 "requested count are not reachable through this endpoint."
             ),
