@@ -705,12 +705,18 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "Census data tables, 2006-2016",
         "Tableaux de données du recensement, 2006-2016",
     ),
-    "statcan/daily": ("The Daily", "Le Quotidien"),
+    "statcan/daily": (
+        "The Daily and the release calendar",
+        "Le Quotidien et le calendrier des diffusions",
+    ),
     "statcan/delta": (
         "Delta files: daily bulk updates",
         "Fichiers delta : mises à jour quotidiennes",
     ),
-    "statcan/geo": ("Census geography", "Géographie du recensement"),
+    "statcan/geo": (
+        "Geography: census boundaries, road network and map layers",
+        "Géographie : limites du recensement, réseau routier et couches cartographiques",
+    ),
     "statcan/indicators": ("Indicators", "Indicateurs"),
     "statcan/lode": (
         "Open databases (LODE): facilities, buildings, addresses",
@@ -728,7 +734,10 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "SDMX spaces: energy information and shared data",
         "Espaces SDMX : information sur l'énergie et données partagées",
     ),
-    "statcan/surveys": ("Surveys and metadata", "Enquêtes et métadonnées"),
+    "statcan/surveys": (
+        "Surveys, metadata and microdata holdings (RDC, RTRA)",
+        "Enquêtes, métadonnées et fonds de microdonnées (CDR, ATR)",
+    ),
     "statcan/wds": (
         "Web Data Service: tables and vectors",
         "Service de données Web : tableaux et vecteurs",
@@ -3165,10 +3174,10 @@ STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "Census",
         "Recensement",
-        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables", "geo"),
+        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables"),
     ),
     ("Microdata", "Microdonnées", ("pumf",)),
-    ("Open databases", "Bases de données ouvertes", ("lode",)),
+    ("Geography and open databases", "Géographie et bases de données ouvertes", ("geo", "lode")),
     ("Classifications", "Classifications", ("rdaas",)),
     ("Indicators", "Indicateurs", ("indicators", "sdg")),
     (
@@ -3205,7 +3214,7 @@ STATCAN_SEARCH_PICK = "wds_search_cubes"
 
 # Names in <code> that look like StatCan tools. The first mention of each
 # real tool becomes a link to it; one the server does not have fails the build.
-_STATCAN_PREFIXES = ("wds_", "sdmx_", "rdaas_", "statcan_")
+_STATCAN_PREFIXES = ("wds_", "sdmx_", "rdaas_", "statcan_", "cimt_")
 _CODE_NAME = re.compile(r"<code>([a-z][a-z0-9_]*[a-z0-9])</code>")
 
 
