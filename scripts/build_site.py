@@ -412,6 +412,16 @@ SOURCES: dict[str, Source] = {
         "ECCC",
         domain="environment",
     ),
+    "drivebc": Source(
+        "DriveBC: road events on BC highways",
+        "DriveBC : événements routiers sur les routes de la C.-B.",
+        "provincial",
+        "DriveBC",
+        "DriveBC",
+        places=("BC",),
+        row="provincial_agency",
+        domain="transport",
+    ),
     "electricity": Source(
         "Electricity: Ontario (IESO) and Quebec (Hydro-Québec)",
         "Électricité : Ontario (SIERE) et Québec (Hydro-Québec)",

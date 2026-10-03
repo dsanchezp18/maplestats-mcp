@@ -233,7 +233,8 @@ Sources, by tool-name prefix:
   represent_ (who represents a postal code; unofficial Open North).
 - Provincial and municipal sources: aer_ (Alberta Energy Regulator),
   ab_wildfire_ (Alberta wildfire status), bcgw_ (BC Geographic
-  Warehouse), bc_lobbyists_ (BC Registrar of Lobbyists), nl_opendata_,
+  Warehouse), bc_lobbyists_ (BC Registrar of Lobbyists), drivebc_ (BC
+  highway road events and closures), nl_opendata_,
   opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
   electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec).

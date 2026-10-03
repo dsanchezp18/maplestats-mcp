@@ -892,6 +892,10 @@ TOPICS: tuple[Topic, ...] = (
             "train schedule",
             "departure",
             "horaire",
+            "road closure",
+            "highway",
+            "road work",
+            "fermeture de route",
         ),
         (
             PlanStep(
@@ -911,6 +915,11 @@ TOPICS: tuple[Topic, ...] = (
                 "ets_get_service_alerts",
                 "Edmonton transit, when the question is Edmonton",
                 _TRANSIT_TERMS,
+            ),
+            PlanStep(
+                "drivebc_search_events",
+                "BC highway closures, road work and incidents now: road, area or severity",
+                ("road closure", "highway", "road work", "drivebc", "fermeture de route"),
             ),
             PlanStep(
                 "tc_recalls_search",
