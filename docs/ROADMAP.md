@@ -6,7 +6,7 @@ any narrower or broader source list implied elsewhere.
 
 **State at 2026-10-03:** 303 tools in 58 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
-`Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
+`Not built`). Local coverage is 82 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
 and the candidates listed at the end of this file.
 
@@ -99,6 +99,7 @@ are out of scope unless they are later promoted explicitly.
 | Territory | Status | Portal (reference) |
 |---|---|---|
 | Northwest Territories | Shipped | opendata.gov.nt.ca, CKAN Action API: `ckan_*` (`portal="nt"`), 9 tools (added `ckan_datastore_search` 2026-09-20; also added a `datastore_active` field to `ResourceInfo`, which this module had never tracked at all before). English-only. Small catalogue (341 datasets). |
+| Northwest Territories Geological Survey (NTGS) | Shipped | Shipped 2026-10-03: two ArcGIS Hub sites, config-only in `arcgis_hub_*`: `portal="ntgs"` (ntgs-open-data-ntgs.hub.arcgis.com, 49 datasets: open reports and files, bedrock geology, airborne geophysics, till geochemistry) and `portal="ntgs_datahub"` (datahub-ntgs.opendata.arcgis.com, 20 feature services: geological compilations, kimberlite indicator data, map indexes). Item licences read from each item's metadata: most carry the NTGS terms (GNWT copyright; no commercial use or reproduction without the NTGS's prior written consent; non-commercial reuse must acknowledge the GNWT copyright), 10 carry the Open Government Licence - Canada, one (GSC Map D1860A) a CD-ROM licence for the licensee's sole use, and two state none. Smoke test passed for both (search, detail, download links, feature query). |
 | Yukon | Shipped | open.yukon.ca, CKAN Action API: `ckan_*` (`portal="yt"`), 8 tools. English-only (site UI is bilingual-chrome only; dataset content is not). 3,841 datasets. [Details](findings/territorial-sources.md#yukon) |
 | Nunavut | Blocked | Investigated 2026-09-19, re-checked 2026-09-27 (gov.nu.ca still answers a Cloudflare challenge, HTTP 403): no dedicated open-data portal exists (`opendata.gov.nu.ca`/`data.gov.nu.ca` don't resolve). [Details](findings/territorial-sources.md#nunavut) |
 

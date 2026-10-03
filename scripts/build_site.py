@@ -850,6 +850,8 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "penticton": ("BC", _M),
         "orangeville": ("ON", _M),
         "canmore": ("AB", _M),
+        "ntgs": ("NT", _P),
+        "ntgs_datahub": ("NT", _P),
         "bc_energy_regulator": ("BC", _P),
         "toronto_police": ("ON", _M),
         "ottawa_police": ("ON", _M),
