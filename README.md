@@ -193,7 +193,10 @@ server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 | `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | In-flight request cap; the excess waits 5 s, then gets 503 |
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS in-process |
 | `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it |
+| `MAPLE_ALLOWED_ORIGINS` | project website, localhost | Browser origins allowed on `/mcp` (comma-separated, `*.` and `:*` wildcards); others get 403, clients without an Origin are allowed |
 | `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Response cache size per TTL bucket |
+| `MAPLE_CACHE_MAX_MB` | `128` | Estimated memory cap for the response cache, all buckets together |
+| `MAPLE_PARSE_WORKERS` / `MAPLE_PARSE_TIMEOUT_SECONDS` | `4` / `60` | Threads for parsing Excel and CSV files, and the time one parse may take |
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
