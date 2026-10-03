@@ -430,12 +430,16 @@ SOURCES: dict[str, Source] = {
         domain="government",
     ),
     "elections_provincial": Source(
-        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan",
-        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique, Saskatchewan",
+        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan, "
+        "Manitoba",
+        "Résultats des élections générales provinciales : Québec, Alberta, "
+        "Colombie-Britannique, Saskatchewan, Manitoba",
         "provincial",
-        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan",
-        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan",
-        places=("QC", "AB", "BC", "SK"),
+        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan, "
+        "Elections Manitoba",
+        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan, "
+        "Élections Manitoba",
+        places=("QC", "AB", "BC", "SK", "MB"),
         row="provincial_agency",
     ),
     "elections_financial_returns": Source(

@@ -230,7 +230,7 @@ Sources, by tool-name prefix:
   (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
 - Elections and Parliament: elections_results_ (federal results by
   riding), elections_financial_returns_ (candidate returns),
-  elections_provincial_ (QC, AB, BC, SK results), ourcommons_ (official
+  elections_provincial_ (QC, AB, BC, SK, MB results), ourcommons_ (official
   House of Commons MPs, roles, party standings), senate_ (Senate votes),
   represent_ (who represents a postal code; unofficial Open North).
 - Provincial and municipal sources: aer_ (Alberta Energy Regulator),
