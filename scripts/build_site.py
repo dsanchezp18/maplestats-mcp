@@ -543,6 +543,15 @@ SOURCES: dict[str, Source] = {
         places=("YT",),
         row="provincial_agency",
     ),
+    "nwt_stats": Source(
+        "NWT Bureau of Statistics",
+        "Bureau de la statistique des Territoires du Nord-Ouest",
+        "provincial",
+        "NWT Statistics",
+        "Statistique T.N.-O.",
+        places=("NT",),
+        row="provincial_agency",
+    ),
     "ourcommons": Source(
         "House of Commons open data",
         "Données ouvertes de la Chambre des communes",

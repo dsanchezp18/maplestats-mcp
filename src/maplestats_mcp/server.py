@@ -205,7 +205,8 @@ Sources, by tool-name prefix:
 - Provincial and territorial statistics agencies: bc_stats_ (BC Stats
   Excel tables), isq_ (Institut de la statistique du Quebec),
   nl_stats_ (Newfoundland and Labrador Statistics Agency workbooks),
-  yukon_stats_ (Yukon Bureau of Statistics tables), ab_economic_ (Alberta
+  yukon_stats_ (Yukon Bureau of Statistics tables), nwt_stats_ (NWT
+  Bureau of Statistics workbooks), ab_economic_ (Alberta
   Economic Dashboard), ab_opendata_ (Open Alberta Excel and CSV files).
 - Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 tables from
   university libraries; ODESI DDI metadata, public files only).
