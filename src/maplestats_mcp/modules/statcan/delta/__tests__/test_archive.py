@@ -16,7 +16,8 @@ import zipfile
 import httpx
 import pytest
 
-from maplestats_mcp.modules.statcan.delta import archive, client, realtime
+from maplestats_mcp import config
+from maplestats_mcp.modules.statcan.delta import archive, client, realtime, scan_index
 from maplestats_mcp.shared import cache
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.remote_zip import ZipMember
@@ -174,8 +175,13 @@ def _serve(body: bytes, *, requests: list[tuple[str, str]] | None = None):
 
 
 @pytest.fixture(autouse=True)
-def _fresh_cache() -> None:
+def _fresh_cache(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     cache._caches.clear()
+    scan_index.clear()
+    monkeypatch.setenv("MAPLE_DELTA_INDEX_DIR", str(tmp_path / "delta-index"))
+    # The 2 s spacing between range requests is real time; tests
+    # check it separately with a short interval.
+    monkeypatch.setattr(archive, "SCAN_REQUEST_INTERVAL_SECONDS", 0.0)
 
 
 @pytest.fixture
@@ -327,13 +333,157 @@ async def test_read_table_past_the_scan_ceiling_points_to_wds(
     httpx_mock, small_chunks, monkeypatch
 ):
     _mock_day(httpx_mock)
-    monkeypatch.setattr(archive, "SCAN_MAX_COMPRESSED_BYTES", 3000)
+    monkeypatch.setattr(config, "get_delta_max_scan_bytes", lambda: 3000)
     with pytest.raises(UpstreamError) as caught:
         await archive.read_table(DAY, 40000001)
     message = str(caught.value)
     assert "wds_get_changed_series_data" in message
     assert "wds_get_full_table_download" in message
-    assert "3,000" in message
+    assert "was not reached" in message
+    assert "up to productId 20000001" in message
+    assert "No resume point" in message
+
+
+# Large enough for several deflate blocks (about 600 KB compressed).
+DEEP_BLOCKS = {10100001: 30000, 20000001: 30000, 30000001: 30000, 40000001: 1500}
+
+
+def _deep_metadata() -> str:
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cubes>'
+        + "".join(_cube(pid, f"Table {pid}", cansim=None) for pid in DEEP_BLOCKS)
+        + "</cubes>"
+    )
+
+
+@pytest.fixture
+def deep_day(httpx_mock, monkeypatch):
+    """A day whose last table lies past several calls' ceiling."""
+    text = _csv(DEEP_BLOCKS)
+    body = _zip(text, metadata=_deep_metadata())
+    requests: list[tuple[str, str]] = []
+    httpx_mock.add_callback(_serve(body, requests=requests), url=URL, is_reusable=True)
+    monkeypatch.setattr(archive, "SCAN_CHUNK_BYTES", 32 * 1024)
+    monkeypatch.setattr(archive, "SCAN_POINT_SPACING", 24 * 1024)
+    monkeypatch.setattr(config, "get_delta_max_scan_bytes", lambda: 150 * 1024)
+    return text, requests
+
+
+async def _read_resuming(product_id: int, calls: int = 20, **kwargs):
+    messages = []
+    for _ in range(calls):
+        try:
+            return await archive.read_table(DAY, product_id, **kwargs), messages
+        except UpstreamError as exc:
+            messages.append(str(exc))
+    raise AssertionError(f"not reached after {calls} calls: {messages[-1]}")
+
+
+async def test_a_deep_table_is_reached_by_calling_again(deep_day, monkeypatch):
+    text, _ = deep_day
+    result, messages = await _read_resuming(40000001, max_rows=5000)
+    assert messages, "the ceiling should have stopped the first call"
+    assert "Progress is saved" in messages[0]
+    assert "up to productId" in messages[0]
+    assert "a saved resume point" in messages[-1]
+    assert result.row_count == 1500
+    assert result.block_complete is True
+    assert result.scan_started_at_byte > 0
+    assert any("resume point saved by an earlier scan" in note for note in result.notes)
+    # Exactly the rows a plain read of the CSV gives.
+    expected = [line.split(",")[2] for line in text.splitlines() if line.startswith("40000001,")]
+    assert [str(row.vector_id) for row in result.rows] == expected
+    assert result.rows[3].value is None
+
+    # The next read of a nearby table starts near it, not at byte 0.
+    again = await archive.read_table(DAY, 40000001, max_rows=5000)
+    assert again.scan_started_at_byte == result.scan_started_at_byte
+    assert again.compressed_bytes_scanned < 150 * 1024
+
+
+async def test_saved_points_survive_a_restart_and_a_new_etag_starts_over(deep_day, tmp_path):
+    await _read_resuming(40000001, max_rows=5000)
+    files = list((tmp_path / "delta-index").glob("2026-10-02_*.json"))
+    assert len(files) == 1
+    scan_index.clear()
+    cache._caches.clear()
+    reloaded = scan_index.load(DAY, '"1636a-65cdab285a80b"')
+    assert reloaded.header is not None
+    assert reloaded.header.startswith("productId,")
+    assert len(reloaded.points) >= 3
+    assert [p.product_id for p in reloaded.points] == sorted(p.product_id for p in reloaded.points)
+    result = await archive.read_table(DAY, 40000001, max_rows=5000)
+    assert result.scan_started_at_byte > 0
+    # Another file version (ETag) has no points.
+    assert scan_index.load(DAY, '"other"').points == []
+
+
+async def test_a_damaged_index_file_is_ignored(deep_day, tmp_path):
+    await _read_resuming(10100001, max_rows=10)
+    scan_index.clear()
+    folder = tmp_path / "delta-index"
+    folder.mkdir(exist_ok=True)
+    for path in folder.glob("*.json"):
+        path.write_text("{not json", encoding="utf-8")
+    key_file = folder / "2026-10-02_x.json"
+    key_file.write_text("{not json", encoding="utf-8")
+    result = await archive.read_table(DAY, 10100001, max_rows=10)
+    assert result.scan_started_at_byte == 0
+    assert result.row_count == 10
+
+
+async def test_the_ceiling_inside_a_table_returns_its_first_rows(deep_day, monkeypatch):
+    # 20000001's block is far longer than one call may read.
+    monkeypatch.setattr(config, "get_delta_max_scan_bytes", lambda: 40 * 1024)
+    result, _ = await _read_resuming(20000001, vector_ids=[200000010 + 29_999], max_rows=10)
+    assert result.block_complete is False
+    assert result.row_count == 0
+    assert any(note.startswith("Incomplete") for note in result.notes)
+    assert any("wds_get_full_table_download" in note for note in result.notes)
+
+
+async def test_live_shaped_rows_of_20261001(httpx_mock, small_chunks):
+    """Lines copied from 20261001.csv (read live by range 2026-10-03): no BOM, LF
+    endings; 35100027 republishes its history with the original release
+    time (2013-06-13T08:30) and fiscal years as refPer/refPer2; daily FX
+    rates (33100036) with an empty value and status 1."""
+    lines = [
+        HEADER,
+        "10100139,1.12.0.0.0.0.0.0.0.0,39050,2026-09-25,,0,0,0,2.2802,2026-10-01T08:30,0,4,1",
+        "33100036,1.1.0.0.0.0.0.0.0.0,111666224,2026-09-26,,0,1,0,,2026-10-01T08:30,0,4,1",
+        "35100027,9.20.4.2.2.1.0.0.0.0,55452564,2007,2008,0,0,0,58,2013-06-13T08:30,0,0,12",
+        "35100027,9.39.1.4.1.3.0.0.0.0,55471610,2014,2015,0,1,0,,2026-10-01T08:30,0,0,12",
+    ]
+    metadata = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cubes>'
+        + "".join(_cube(pid, "t", cansim=None) for pid in (10100139, 33100036, 35100027))
+        + "</cubes>"
+    )
+    body = _zip("\n".join(lines) + "\n", metadata=metadata)
+    httpx_mock.add_callback(_serve(body), url=URL, is_reusable=True)
+    courts = await archive.read_table(DAY, 35100027)
+    assert [r.ref_period for r in courts.rows] == ["2007", "2014"]
+    assert [r.ref_period_end for r in courts.rows] == ["2008", "2015"]
+    assert courts.rows[0].release_time == "2013-06-13T08:30"
+    assert courts.rows[1].value is None
+    assert courts.rows[1].status_code == 1
+    assert courts.rows[0].frequency_code == 12
+    fx = await archive.read_table(DAY, 33100036)
+    assert fx.rows[0].ref_period == "2026-09-26"
+    assert fx.rows[0].value is None
+
+
+async def test_every_delta_request_opens_a_fresh_connection(httpx_mock, small_chunks):
+    """www150 pins a connection to one backend (shared/http.py), so the HEAD,
+    the directory read and every CSV range carry Connection: close."""
+    _mock_day(httpx_mock)
+    await archive.read_table(DAY, 20000001)
+    sent = httpx_mock.get_requests()
+    assert {r.method for r in sent} == {"HEAD", "GET"}
+    assert len(sent) > 5
+    assert all(r.headers["connection"] == "close" for r in sent)
+    assert all(r.headers["user-agent"].startswith("maplestats") for r in sent)
+    assert all("range" in r.headers for r in sent if r.method == "GET")
 
 
 async def test_unsorted_csv_is_an_error(httpx_mock, small_chunks):
