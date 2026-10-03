@@ -80,7 +80,13 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
             PlanStep("nl_opendata_search_datasets", "provincial open-data catalogue"),
         ),
     ),
-    "northwest territories": ("Northwest Territories", (_ckan("nt"),)),
+    "northwest territories": (
+        "Northwest Territories",
+        (
+            PlanStep("nwt_stats_search_files", "NWT Bureau of Statistics Excel tables"),
+            _ckan("nt"),
+        ),
+    ),
     "yukon": (
         "Yukon",
         (

@@ -1,0 +1,27 @@
+MODULE_NAME = "nwt_stats"
+MODULE_DESCRIPTION = (
+    "NWT Bureau of Statistics (statsnwt.ca), tools prefixed nwt_stats_: about 630 Excel "
+    "files (.xlsx and legacy .xls) on 49 topic pages (GDP, exports and imports, business "
+    "conditions, labour force, earnings and wages, income, consumer price index, community "
+    "price indexes, population estimates by community, projections, vital statistics, "
+    "housing, police-reported crime, health, language, alcohol and cannabis, traditional "
+    "activities, the 1996 to 2021 censuses, NWT Community Survey tables and a statistical "
+    "profile of each community), listed with the agency's own titles and headings, "
+    "searched across topics, and read sheet by sheet with a guessed header row, column "
+    "filters and paging. Sheets keep the agency's layout. The Bureau's entries on "
+    "opendata.gov.nt.ca only link these pages; they carry the Open Government Licence - "
+    "Northwest Territories."
+)
+MODULE_DESCRIPTION_FR = (
+    "Bureau de la statistique des T.N.-O. (statsnwt.ca), outils préfixés nwt_stats_ : "
+    "environ 630 fichiers Excel (.xlsx et .xls) sur 49 pages thématiques (PIB, "
+    "exportations et importations, conditions des entreprises, population active, "
+    "rémunération, revenu, indice des prix à la consommation, indices des prix des "
+    "collectivités, estimations de la population par collectivité, projections, état "
+    "civil, logement, criminalité, santé, langues, alcool et cannabis, activités "
+    "traditionnelles, recensements de 1996 à 2021, tableaux de l'Enquête sur les "
+    "collectivités et profil statistique de chaque collectivité), listés avec les titres "
+    "de l'organisme, cherchés dans tous les sujets et lus feuille par feuille avec ligne "
+    "d'en-tête devinée, filtres de colonnes et pagination. Titres en anglais seulement. "
+    "Licence du gouvernement ouvert - Territoires du Nord-Ouest."
+)
