@@ -1,7 +1,9 @@
 """Typed exceptions every module raises instead of returning a fake-success dict.
 
-Each maps to a distinct MCP error code in envelope.make_error's isError
-response. A bare ValueError (including json.JSONDecodeError and
+Raised from a tool (directly, or with a bilingual message through
+envelope.raise_error), each becomes an MCP `isError: true` result whose
+text is the exception message; the class tells the reader whether to fix
+the arguments, try another query, or retry later. A bare ValueError (including json.JSONDecodeError and
 pydantic.ValidationError, which subclass it) is treated as UpstreamError,
 not InvalidInput — the caller's input was fine, the upstream response was
 not shaped as documented.

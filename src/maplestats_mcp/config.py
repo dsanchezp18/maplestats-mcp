@@ -90,6 +90,20 @@ def get_cache_max_entries() -> int:
     return max(1, value)
 
 
+def get_cache_max_bytes() -> int:
+    """Cap on the estimated memory of shared/cache.py's entries, all buckets together.
+
+    MAPLE_CACHE_MAX_MB, default 128: a quarter of a 512 MB free hosting
+    instance, leaving room for the interpreter, parsing and file downloads.
+    """
+    raw = os.environ.get("MAPLE_CACHE_MAX_MB", "128")
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 128.0
+    return int(max(1.0, value) * 1024**2)
+
+
 def get_tool_timeout_seconds() -> float:
     """Longest a single tool call may run before it fails with a clear error.
 

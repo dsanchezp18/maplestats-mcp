@@ -16,6 +16,7 @@ StatCan's Delta File of 2026-10-01 is a 3.87 GB zip whose CSV inflates to
 
 from __future__ import annotations
 
+import ipaddress
 import struct
 import zlib
 from dataclasses import dataclass
@@ -39,7 +40,72 @@ _LOCATOR64 = b"PK\x06\x07"
 _MAX32 = 0xFFFFFFFF
 _MAX16 = 0xFFFF
 _TAIL_BYTES = 256 * 1024
+
+# Object-storage hosts a publisher's link may hand off to (federal download
+# links answer 302 to an Azure blob, Montreal's to Google Cloud Storage,
+# confirmed 2026-10-02 in shared/file_download.py). Any other redirect must
+# stay on the same site as the URL that issued it.
+ALLOWED_REDIRECT_SUFFIXES = (
+    ".blob.core.windows.net",
+    ".storage.googleapis.com",
+    "storage.googleapis.com",
+    ".amazonaws.com",
+    ".cloudfront.net",
+)
+
+
+def _site(host: str) -> str:
+    """The registrable part of a host: statcan.gc.ca, gov.bc.ca, ttc.ca."""
+    labels = host.lower().rstrip(".").split(".")
+    keep = 2
+    if (
+        len(labels) >= 3
+        and labels[-1] == "ca"
+        and (labels[-2] in {"gc", "gov"} or len(labels[-2]) == 2)
+    ):
+        keep = 3
+    return ".".join(labels[-keep:])
+
+
+def redirect_allowed(source: httpx.URL, target: httpx.URL) -> bool:
+    """Whether a redirect from `source` may be followed to `target`.
+
+    Never to plain http from https, never to an IP address or localhost
+    (a redirect is how a public link would reach a private network), and
+    only to the same site or a known object-storage host.
+    """
+    host = (target.host or "").lower()
+    if not host or host == "localhost" or host.endswith(".localhost"):
+        return False
+    try:
+        ipaddress.ip_address(host.strip("[]"))
+        return False
+    except ValueError:
+        pass
+    if target.scheme != "https" and not (source.scheme == "http" and target.scheme == "http"):
+        return False
+    if _site(host) == _site(source.host or ""):
+        return True
+    return any(host == s.lstrip(".") or host.endswith(s) for s in ALLOWED_REDIRECT_SUFFIXES)
+
+
+async def _check_redirect(response: httpx.Response) -> None:
+    if not response.is_redirect:
+        return
+    location = response.headers.get("location", "")
+    target = response.request.url.join(location)
+    if not redirect_allowed(response.request.url, target):
+        raise UpstreamError(
+            f"{response.request.url} redirected to {target.host or location!r}, which is not "
+            "the same site or a known file host, so the redirect was not followed."
+        )
+
+
 _client = new_client(timeout=60.0, follow_redirects=True)
+_client.event_hooks = {
+    "request": _client.event_hooks["request"],
+    "response": [*_client.event_hooks["response"], _check_redirect],
+}
 
 
 @dataclass(frozen=True)
