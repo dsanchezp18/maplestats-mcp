@@ -213,6 +213,25 @@ STEPS: list[Step] = [
         {"name": "NO SUCH STATION ZZ"},
         lambda data: not data["stations"] and "layer currently holds" in (data["note"] or ""),
     ),
+    # NBAC (the rest is in smoke_test_nrcan_nbac.py): the five largest 2023 BC
+    # fires with polygons were 32.9 MB before the geometry budget.
+    Step(
+        "nrcan_nbac",
+        "nrcan_nbac_query_fires",
+        {
+            "cql_filter": "admin_area = 'BC' AND year = 2023",
+            "include_geometry": True,
+            "sort_by": "adj_ha D",
+            "limit": 5,
+        },
+        lambda data: len(json.dumps(data)) < 3_000_000 and len(data["fires"]) == 5,
+    ),
+    Step(
+        "nrcan_nbac",
+        "nrcan_nbac_query_fires",
+        {"cql_filter": "year = 2999"},
+        lambda data: not data["fires"] and (data["latest_year"] or 0) >= 2024,
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(

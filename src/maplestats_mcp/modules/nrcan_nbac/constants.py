@@ -11,6 +11,12 @@ CACHE_TTL_QUERY_SECONDS = 24 * 60 * 60  # 24h: NBAC is compiled annually, not li
 
 ROWS_LIMIT_DEFAULT = 20
 ROWS_LIMIT_MAX = 1000
+# NBAC polygons are huge: five 2023 BC fires with geometry were 32.9 MB
+# (live 2026-10-03). With geometry, at most this many rows are requested and
+# the returned polygons stop at GEOMETRY_BYTES_MAX; a single polygon larger
+# than that comes back without its geometry.
+GEOMETRY_ROWS_MAX = 10
+GEOMETRY_BYTES_MAX = 2_000_000
 
 # The full set of confirmed-live NBAC attribute fields, minus geometry --
 # used as the default propertyName list when a caller doesn't request

@@ -13,6 +13,19 @@ def _clear_cache():
     yield
 
 
+_REAL_LATEST_YEAR = client.latest_year
+
+
+@pytest.fixture(autouse=True)
+def _latest_year(monkeypatch):
+    # Every query also looks up the latest fire year (one cached request),
+    # tested on its own below through _REAL_LATEST_YEAR.
+    async def fake() -> int:
+        return 2024
+
+    monkeypatch.setattr(client, "latest_year", fake)
+
+
 _FEATURE = {
     "type": "Feature",
     "id": "nbac.6024",
@@ -91,12 +104,14 @@ async def test_query_fires_include_geometry_omits_property_name(httpx_mock):
         url=(
             f"{constants.BASE_URL}?service=WFS&version=2.0.0&request=GetFeature"
             f"&typeName={constants.TYPE_NAME}&outputFormat=application%2Fjson"
-            f"&count=20&startIndex=0&srsName={constants.DEFAULT_SRS}"
+            f"&count={constants.GEOMETRY_ROWS_MAX}&startIndex=0&srsName={constants.DEFAULT_SRS}"
         ),
         json=_FEATURE_COLLECTION,
     )
+    # The default limit of 20 is clamped to the geometry row cap, with a note.
     result = await client.query_fires(include_geometry=True)
     assert result.returned_count == 1
+    assert result.note is not None and "at most" in result.note
 
 
 async def test_malformed_cql_filter_raises_invalid_input(httpx_mock):
@@ -285,3 +300,38 @@ async def test_404_is_not_found(httpx_mock):
     httpx_mock.add_response(status_code=404, text="<html>HTTP Status 404 - Not Found</html>")
     with pytest.raises(NotFound):
         await client.query_fires()
+
+
+async def test_latest_year_reads_the_newest_feature(httpx_mock):
+    httpx_mock.add_response(
+        json={"type": "FeatureCollection", "features": [{"properties": {"year": 2024}}]}
+    )
+    assert await _REAL_LATEST_YEAR() == 2024
+    request = httpx_mock.get_requests()[0]
+    assert "sortBy=year+D" in str(request.url) or "sortBy=year%20D" in str(request.url)
+
+
+async def test_empty_result_names_the_latest_year(httpx_mock):
+    httpx_mock.add_response(json={"type": "FeatureCollection", "features": [], "numberMatched": 0})
+    result = await client.query_fires(cql_filter="year = 2025")
+    assert result.latest_year == 2024
+    assert result.note is not None and "2024" in result.note
+
+
+async def test_geometry_limit_and_byte_budget(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "GEOMETRY_BYTES_MAX", 200)
+    ring = [[-120.0 + i / 100, 55.0] for i in range(8)]
+    small = {"type": "Polygon", "coordinates": [ring]}
+    large = {"type": "Polygon", "coordinates": [ring * 3]}
+    features = [
+        {**_FEATURE, "geometry": small},
+        {**_FEATURE, "geometry": large},
+    ]
+    httpx_mock.add_response(
+        json={"type": "FeatureCollection", "features": features, "numberMatched": 2}
+    )
+    result = await client.query_fires(include_geometry=True, limit=2)
+    assert result.fires[0].geometry == small
+    assert result.fires[1].geometry is None
+    assert result.geometry_omitted == 1
+    assert result.note is not None
