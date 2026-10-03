@@ -145,6 +145,10 @@ CASES = [
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("émissions de gaz à effet de serre par province inventaire", "sdmx_space_get_data"),
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),
+    # Ontario Energy Board open data, 2026-10-03.
+    ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
+    ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
+    ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
 ]
 
 

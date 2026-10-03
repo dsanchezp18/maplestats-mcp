@@ -552,6 +552,15 @@ SOURCES: dict[str, Source] = {
         places=("NL",),
         row="provincial_catalogue",
     ),
+    "oeb": Source(
+        "Ontario Energy Board",
+        "Commission de l'énergie de l'Ontario",
+        "provincial",
+        "OEB",
+        "CEO",
+        places=("ON",),
+        row="provincial_agency",
+    ),
     "nrcan_energy_use": Source(
         "Natural Resources Canada: energy use",
         "Ressources naturelles Canada : consommation d'énergie",
