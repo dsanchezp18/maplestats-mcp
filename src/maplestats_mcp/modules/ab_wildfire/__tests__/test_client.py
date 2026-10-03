@@ -8,6 +8,7 @@ responses carrying an embedded error.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -18,7 +19,7 @@ from maplestats_mcp.modules.ab_wildfire import client
 from maplestats_mcp.modules.ab_wildfire import constants as c
 from maplestats_mcp.modules.ab_wildfire.client import FireFilters
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 # Handlers are keyed by a distinctive piece of the layer URL.
 Handler = Callable[[dict[str, str]], dict[str, Any]]
@@ -688,3 +689,339 @@ async def test_orders_limit_trims_after_merging(server):
 async def test_orders_reject_bad_arguments(kwargs):
     with pytest.raises(InvalidInput):
         await client.get_fire_control_orders(**kwargs)
+
+
+# ------------------------------------------------------- live-shaped bodies
+
+# Trimmed from live responses captured 2026-10-03 (services.arcgis.com,
+# org Eb8P5h4CJk8utIBz): the same query parameters the client sends, with the
+# `fields` metadata list cut down and only the first features kept.
+
+# GET .../Wildfire_year_to_date/FeatureServer/0/query?outFields=<_FIRE_FIELDS_CURRENT>
+#     &orderByFields=FIRE_STATUS_DATE DESC, OBJECTID DESC&resultRecordCount=3&f=json
+_LIVE_FIRES = {
+    "objectIdFieldName": "OBJECTID",
+    "geometryType": "esriGeometryPoint",
+    "spatialReference": {"wkid": 102100, "latestWkid": 3857},
+    "fields": [
+        {"name": "FIRE_STATUS_DATE", "type": "esriFieldTypeString", "length": 19},
+        {"name": "ASSESSMENT_ASSISTANCE_DATE", "type": "esriFieldTypeDate", "length": 8},
+    ],
+    "exceededTransferLimit": True,
+    "features": [
+        {
+            "attributes": {
+                "LABEL": "PWF-069-2026",
+                "FIRE_YEAR": 2026,
+                "FIRE_TYPE": "Wildfire",
+                "FIRE_STATUS": "Extinguished",
+                "FIRE_STATUS_DATE": "2026/10/01 14:00:00",
+                "ASSESSMENT_ASSISTANCE_DATE": 1788465660000,
+                "AREA_ESTIMATE": 0.99,
+                "SIZE_CLASS": "B",
+                "GENERAL_CAUSE": "Human",
+                "RESP_AREA": "Peace River Forest Area",
+                "CO_FLAG": "N",
+                "FIRE_COMPLEX_NUMBER": None,
+                "FIRE_COMPLEX_NAME": None,
+                "INCIDENT_TYPE": None,
+                "RESPONSE_TYPE": None,
+                "LATITUDE": 57.9084,
+                "LONGITUDE": -117.774717,
+            }
+        }
+    ],
+}
+
+# GET .../Wildfire_Statistics_Prod_View/FeatureServer/0/query?outFields=*&f=json
+# The field is esriFieldTypeDouble, yet whole values arrive as JSON integers
+# (1, 753, 0), not 753.0 as the hand-written fixture above assumed.
+_LIVE_STATISTICS = {
+    "objectIdFieldName": "OBJECTID",
+    "fields": [{"name": "statistic_value", "type": "esriFieldTypeDouble"}],
+    "features": [
+        {"attributes": {"OBJECTID": oid, "statistic_name": name, "statistic_value": value}}
+        for oid, name, value in [
+            (1, "Wildfire_Active_Area", 0.05),
+            (2, "Wildfire_Active_Count", 1),
+            (3, "YTD_Wildfire_Total_Area", 17771.48),
+            (4, "YTD_Wildfire_Total_Count", 753),
+            (5, "New_Wildfire_24h", 0),
+        ]
+    ],
+}
+
+# GET .../5_year_summary_on_this_day_prod_view/FeatureServer/2/query?outFields=*
+#     &orderByFields=FireStatusYear&f=json (first two of six rows). OBJECTID is
+# the date as a number and the layer's real id field is ESRI_OID.
+_LIVE_THIS_DAY = {
+    "objectIdFieldName": "ESRI_OID",
+    "features": [
+        {
+            "attributes": {
+                "OBJECTID": 20211003,
+                "FireStatusDate": "2021-10-03",
+                "FireStatusYear": 2021,
+                "FireStatusMonth": 10,
+                "FireStatusDay": 3,
+                "TotalNumberOfWildfiresPerDay": 3,
+                "TotalNumberOfWildfiresToDate": 1266,
+                "FiveYearAvgCnt": 1100.6,
+                "TenYearAvgCnt": 1252.1,
+                "TwentyfiveYearAvgCnt": None,
+                "TotalDailyHaBurned": 0.62,
+                "TotalHaBurned": 52860.87,
+                "FiveYearAvgHa": 320644.13,
+                "TenYearAvgHa": 345842.03,
+                "TwentyfiveYearAvgHa": None,
+                "ESRI_OID": 1,
+            }
+        },
+        {
+            "attributes": {
+                "OBJECTID": 20221003,
+                "FireStatusDate": "2022-10-03",
+                "FireStatusYear": 2022,
+                "FireStatusMonth": 10,
+                "FireStatusDay": 3,
+                "TotalNumberOfWildfiresPerDay": 3,
+                "TotalNumberOfWildfiresToDate": 1140,
+                "FiveYearAvgCnt": 1072,
+                "TenYearAvgCnt": 1267.9,
+                "TwentyfiveYearAvgCnt": None,
+                "TotalDailyHaBurned": 15.13,
+                "TotalHaBurned": 144739.4,
+                "FiveYearAvgHa": 208925.47,
+                "TenYearAvgHa": 257078.51,
+                "TwentyfiveYearAvgHa": None,
+                "ESRI_OID": 2,
+            }
+        },
+    ],
+}
+
+# GET .../Wildfire_Perimeter_Extinguished_(PROD)/FeatureServer/3/query
+#     ?outFields=<_PERIMETER_FIELDS>&resultRecordCount=2&f=geojson&returnGeometry=false
+# With f=geojson the transfer-limit flag moves under a top-level "properties",
+# and a whole-number area arrives as an integer (1116).
+_LIVE_PERIMETERS = {
+    "type": "FeatureCollection",
+    "properties": {"exceededTransferLimit": True},
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": None,
+            "properties": {
+                "FireNumber": "LWF-060-2026",
+                "FIRE_TYPE": "Wildfire",
+                "FIRE_STATUS": "Extinguished",
+                "FIRE_STATUS_DATE": "2026/07/10 13:47:00",
+                "AREA_ESTIMATE": 1116,
+                "SIZE_CLASS": "E",
+                "GENERAL_CAUSE": "Lightning",
+                "RESP_AREA": "Lac La Biche Forest Area",
+                "CaptreDate": 1781023620000,
+                "DataSource": "GPS",
+                "SourceKeys": "Unknown",
+                "CreatMethd": "Direct from source",
+                "SumAreaHa": 1093.56,
+                "GISFeatureLastUpdated": 1790302276000,
+            },
+        }
+    ],
+}
+
+# GET .../Wildfire_year_to_date/FeatureServer/0/query?where=NO_SUCH_FIELD = 1&f=json
+# answered HTTP 200 with this body.
+_LIVE_BAD_FIELD_ERROR = {
+    "error": {
+        "code": 400,
+        "message": "Cannot perform query. Invalid query parameters.",
+        "details": ["'Invalid field: NO_SUCH_FIELD' parameter is invalid"],
+    }
+}
+
+
+async def test_live_shaped_fire_row_parses_dates_and_nulls(server):
+    def handler(params: dict[str, str]) -> dict[str, Any]:
+        if params.get("returnCountOnly") == "true":
+            return {"count": 823}
+        return _LIVE_FIRES
+
+    server.on(c.FIRES_CURRENT, handler)
+    result = await client.list_fires(limit=1)
+    fire = result.fires[0]
+    assert fire.fire_number == "PWF-069-2026"
+    # The status date is local text with no zone; the assessment date is UTC epoch ms.
+    assert fire.status_changed is not None
+    assert fire.status_changed.isoformat() == "2026-10-01T14:00:00"
+    assert fire.assessed_at is not None
+    assert fire.assessed_at.isoformat() == "2026-09-03T20:01:00+00:00"
+    assert fire.carryover is False
+    assert (fire.complex_number, fire.incident_type, fire.response_type) == (None, None, None)
+    assert (fire.latitude, fire.longitude) == (57.9084, -117.774717)
+    # exceededTransferLimit is true on any page shorter than the layer; without a
+    # radius it must not trip the near-a-point "too many fires" refusal.
+    assert result.total_matches == 823
+
+
+async def test_live_shaped_statistics_with_integer_values(server):
+    server.on(c.STATISTICS, lambda _p: _LIVE_STATISTICS)
+    server.on(c.THIS_DAY, lambda _p: _LIVE_THIS_DAY)
+    result = await client.get_season_statistics()
+    headline = result.headline
+    assert headline.active_wildfires == 1
+    assert headline.year_to_date_wildfires == 753
+    assert headline.new_wildfires_24h == 0  # a real zero, not a missing value
+    assert headline.year_to_date_area_ha == 17771.48
+    assert [r.year for r in result.same_day_comparison] == [2021, 2022]
+    assert result.same_day_comparison[1].five_year_avg_wildfires == 1072
+    assert result.same_day_comparison[0].twentyfive_year_avg_area_ha is None
+    assert result.comparison_date is not None
+    assert result.comparison_date.isoformat() == "2022-10-03"
+
+
+async def test_live_shaped_geojson_perimeter_with_integer_area(server):
+    def handler(params: dict[str, str]) -> dict[str, Any]:
+        if params.get("returnCountOnly") == "true":
+            return {"count": 118}
+        return _LIVE_PERIMETERS
+
+    server.on(c.PERIMETERS["extinguished"], handler)
+    result = await client.get_perimeters("extinguished", limit=1)
+    perimeter = result.perimeters[0]
+    assert perimeter.area_ha == 1116.0
+    assert perimeter.mapped_area_ha == 1093.56
+    assert perimeter.geometry is None
+    assert perimeter.captured_at is not None
+    assert perimeter.captured_at.isoformat() == "2026-06-09T16:47:00+00:00"
+    assert result.note is None  # 118 rows exist, so no off-season note
+
+
+# ------------------------------------------------------------ error paths
+
+_ANY_QUERY = re.compile(re.escape(c.SERVICES_ROOT) + r"/.+/query\?.*")
+
+
+@pytest.mark.parametrize(
+    "body, error",
+    [
+        (_LIVE_BAD_FIELD_ERROR, InvalidInput),
+        ({"error": {"code": 404, "message": "Layer not found", "details": []}}, NotFound),
+        ({"error": {"code": 499, "message": "Token Required", "details": []}}, UpstreamError),
+        ({"error": {"code": 500, "message": "Unable to complete operation."}}, UpstreamError),
+    ],
+)
+async def test_embedded_error_codes_map_to_typed_errors(httpx_mock, body, error):
+    # ArcGIS answers HTTP 200 and puts the failure in the body, so the HTTP
+    # status layer never sees it.
+    httpx_mock.add_response(url=_ANY_QUERY, json=body)
+    with pytest.raises(error) as caught:
+        await client.list_fires()
+    if body is _LIVE_BAD_FIELD_ERROR:
+        assert "Invalid field: NO_SUCH_FIELD" in str(caught.value)
+    assert len(httpx_mock.get_requests()) == 1  # an embedded error is not retried
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        # Found 2026-10-03: shared/arcgis.py::_raise_for_status_error maps every
+        # 4xx, 429 included, to InvalidInput ("rejected the request"), so a rate
+        # limit that outlasts the retries reads as the caller's fault. Fix belongs
+        # in shared/arcgis.py; non-strict so that fix does not break this suite.
+        pytest.param(
+            429,
+            marks=pytest.mark.xfail(reason="shared/arcgis.py maps 429 to InvalidInput"),
+        ),
+        500,
+        502,
+        503,
+        504,
+    ],
+)
+async def test_transient_status_is_retried_three_times_then_upstream_error(httpx_mock, status):
+    httpx_mock.add_response(
+        url=_ANY_QUERY, status_code=status, text="Service Unavailable", is_reusable=True
+    )
+    with pytest.raises(UpstreamError, match=f"HTTP {status}"):
+        await client.summarize_fires()
+    assert len(httpx_mock.get_requests()) == 3
+
+
+@pytest.mark.parametrize(
+    "status, error", [(404, NotFound), (400, InvalidInput), (403, InvalidInput)]
+)
+async def test_client_error_status_is_typed_and_not_retried(httpx_mock, status, error):
+    httpx_mock.add_response(
+        url=_ANY_QUERY, status_code=status, json={"message": "nope", "statusCode": status}
+    )
+    with pytest.raises(error, match="nope"):
+        await client.get_fire_danger(53.5, -113.5)
+    assert len(httpx_mock.get_requests()) == 1
+
+
+@pytest.mark.parametrize(
+    "content_type, text",
+    [
+        ("text/html", "<!DOCTYPE html><html><body><h1>502 Bad Gateway</h1></body></html>"),
+        ("application/json", '{"features": [{"attributes": '),
+    ],
+)
+async def test_non_json_body_with_http_200_is_a_typed_error(httpx_mock, content_type, text):
+    httpx_mock.add_response(url=_ANY_QUERY, headers={"Content-Type": content_type}, text=text)
+    # shared/arcgis.py reports an undecodable body as UpstreamUnavailable; what
+    # matters here is that no raw httpx/JSON exception reaches the tool layer.
+    with pytest.raises((UpstreamError, UpstreamUnavailable)):
+        await client.get_perimeters("extinguished")
+
+
+async def test_null_count_features_and_attributes_are_empty_not_errors(server):
+    # `"features": null` and `"attributes": null` instead of absent keys.
+    server.on(c.FIRES_CURRENT, lambda p: {"count": None, "features": None})
+    fires = await client.list_fires()
+    assert (fires.total_matches, fires.fires) == (0, [])
+
+    server.on(c.DANGER, lambda p: {"features": [{"attributes": None}]})
+    danger = await client.get_fire_danger(53.5, -113.5)
+    assert danger.danger_class is None
+    assert danger.rating_timestamp is None
+
+    server.on(c.FIRES_HISTORY, lambda p: {"features": None})
+    summary = await client.summarize_fires("previous_5_years", "cause")
+    assert (summary.total_fires, summary.groups) == (0, [])
+
+
+@pytest.mark.parametrize(
+    "status, body",
+    [
+        (404, {"message": "Not Found", "statusCode": 404}),
+        (200, {"error": {"code": 400, "message": "Invalid URL"}}),
+        (429, {"message": "Too Many Requests"}),
+    ],
+)
+async def test_layer_info_failure_only_drops_as_of(httpx_mock, status, body):
+    # The layer document is only a freshness hint: any typed failure there
+    # (404 -> NotFound, embedded 400 -> InvalidInput, 429 -> UpstreamError
+    # after retries) must leave an already-successful data query intact.
+    fake = Server()
+    fake.on(c.DANGER, lambda p: {"features": [{"attributes": {"Fire_Danger": "Low"}}]})
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if "/query" in str(request.url):
+            return fake(request)
+        return httpx.Response(status, json=body)
+
+    httpx_mock.add_callback(route, is_reusable=True)
+    result = await client.get_fire_danger(53.5, -113.5)
+    assert result.danger_class == "Low"
+    assert result.provenance.as_of is None
+
+
+async def test_one_failing_order_layer_fails_the_whole_listing_with_a_typed_error(server):
+    # The five layers are queried together; a half-empty list would read as
+    # "no fire ban here", so one failed layer must fail the call.
+    _orders_server(server)
+    server.on(c.FIRE_CONTROL_ORDERS["Fire Ban"], lambda p: _LIVE_BAD_FIELD_ERROR)
+    with pytest.raises(InvalidInput):
+        await client.get_fire_control_orders()

@@ -24,6 +24,8 @@ async def check_portal(portal: str) -> bool:
     print(f"OK: query_dataset_rows -> {rows.returned_count} rows")
     categories = await client.list_categories(portal)
     print(f"OK: list_categories -> {len(categories.categories)}")
+    tags = await client.list_tags(portal)
+    print(f"OK: list_tags -> {len(tags.tags)}")
 
     try:
         await client.get_dataset(portal, "zzzz-zzzz")

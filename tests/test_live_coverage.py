@@ -1,4 +1,4 @@
-"""Every source module must have a live smoke test.
+"""Every source module, and every tool in it, must have a live smoke test.
 
 Mocked unit tests share the assumptions of the code they test, so they
 cannot catch a wrong assumption about a live API; the Earthquakes Canada
@@ -9,6 +9,7 @@ or by a step in scripts/smoke_test_modules.py.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import re
 import sys
@@ -73,25 +74,91 @@ def test_every_statcan_sub_api_has_its_own_live_smoke_test():
     assert not missing, f"StatCan sub-APIs with no live smoke test of their own: {missing}"
 
 
-# Sub-APIs where every tool, not only one, needs its own live step.
-STATCAN_TOOL_LEVEL_SUB_APIS = ("wds", "sdmx", "rdaas")
+# A module-level script used to satisfy the check for every tool of its module,
+# even tools it never called: on 2026-10-03, socrata_list_tags and
+# elections_financial_returns_get_financial_return_part had no live call
+# anywhere. Every tool now needs one of its own.
+
+# Tools that answer from constants and never call a source, so a live call
+# would check nothing the unit tests do not.
+LOCAL_TOOLS = frozenset(
+    {
+        "arcgis_hub_list_portals",
+        "ckan_list_portals",
+        "socrata_list_portals",
+        "elections_results_list_elections",
+    }
+)
 
 
-def test_statcan_wds_sdmx_and_rdaas_tools_each_have_a_live_step():
+def _tool_calls(tools_py: Path) -> dict[str, set[str]]:
+    """Each @tool function in a tools.py and the imported functions it calls.
+
+    `client.search_cubes(...)` counts, `", ".join(...)` does not: only calls
+    on a name the file imports (its client module, mostly) are kept.
+    """
+    tree = ast.parse(tools_py.read_text(encoding="utf-8"))
+    imported = {
+        alias.asname or alias.name.split(".")[0]
+        for node in tree.body
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        for alias in node.names
+    }
+    tools: dict[str, set[str]] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef):
+            continue
+        decorators = [d.func if isinstance(d, ast.Call) else d for d in node.decorator_list]
+        if not any(isinstance(d, ast.Name) and d.id == "tool" for d in decorators):
+            continue
+        tools[node.name] = {
+            call.func.attr
+            for call in ast.walk(node)
+            if isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Attribute)
+            and isinstance(call.func.value, ast.Name)
+            and call.func.value.id in imported
+        }
+    return tools
+
+
+def _own_scripts(module: str, sub: str) -> str:
+    """The text of the smoke scripts that belong to a module or StatCan sub-API."""
+    prefix = f"smoke_test_statcan_{sub}" if module == "statcan" else f"smoke_test_{module}"
+    paths = [p for p in SCRIPTS.glob("smoke_test*.py") if p.stem.startswith(prefix)]
+    if module == "statcan":
+        # smoke_test.py is the original StatCan check (WDS, SDMX, RDaaS).
+        paths.append(SCRIPTS / "smoke_test.py")
+    return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+
+def test_every_tool_has_a_live_step():
+    """Every tool is a step in smoke_test_modules.py or is called by its module's script.
+
+    A script calls the client function behind a tool, so the tool counts as
+    covered when its name or a client function it calls appears in one of
+    its own module's (or StatCan sub-API's) smoke scripts.
+    """
     stepped = {step.tool for step in _load_smoke_table().STEPS}
     missing: list[str] = []
-    for sub in STATCAN_TOOL_LEVEL_SUB_APIS:
-        source = (MODULES / "statcan" / sub / "tools.py").read_text(encoding="utf-8")
-        tools = re.findall(r"@tool\s+async def (\w+)\(", source)
-        assert tools, f"no tools found in statcan/{sub}/tools.py"
-        # A step is a row in smoke_test_modules.py or, for a sub-API with its own
-        # script (wds), a block of smoke_test_statcan_<sub>*.py headed by the
-        # tool's name (those scripts call the client functions behind each tool).
-        own = "\n".join(
-            path.read_text(encoding="utf-8")
-            for path in SCRIPTS.glob(f"smoke_test_statcan_{sub}*.py")
-        )
-        missing += [
-            name for name in tools if name not in stepped and not re.search(rf"\b{name}\b", own)
-        ]
-    assert not missing, f"StatCan tools without a live smoke step: {missing}"
+    checked = 0
+    for tools_py in sorted(MODULES.glob("*/**/tools.py")):
+        parts = tools_py.relative_to(MODULES).parts
+        if parts[0].startswith(("_", ".")) or "__tests__" in parts:
+            continue
+        module, sub = parts[0], parts[1] if len(parts) > 2 else ""
+        own = _own_scripts(module, sub)
+        for tool, calls in _tool_calls(tools_py).items():
+            checked += 1
+            if tool in stepped or tool in LOCAL_TOOLS or re.search(rf"\b{tool}\b", own):
+                continue
+            if not any(re.search(rf"\b{call}\b", own) for call in calls):
+                missing.append(tool)
+    assert checked > 300, f"found only {checked} tools; the tools.py scan is broken"
+    assert not missing, f"Tools without a live smoke step: {missing}"
+
+
+def test_local_tools_exist():
+    """A renamed tool must not linger in LOCAL_TOOLS, exempting nothing."""
+    names = {tool for tools_py in MODULES.glob("*/**/tools.py") for tool in _tool_calls(tools_py)}
+    assert LOCAL_TOOLS <= names, sorted(LOCAL_TOOLS - names)

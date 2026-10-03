@@ -152,6 +152,11 @@ async def _download(url: str, context: str) -> httpx.Response:
                 f"{context}: nfdp.ccfm.org did not answer for {current} "
                 f"({type(exc).__name__}); try again shortly."
             ) from exc
+        # get_raw returns 406/409 unraised (StatCan uses them); without this
+        # check a 409 error page was parsed as data and reported as NotFound
+        # "returned a web page" (test_client_edges, 2026-10-03).
+        if response.is_error:
+            raise UpstreamError(f"{context}: {current} returned HTTP {response.status_code}.")
         if len(response.content) > constants.MAX_FILE_BYTES:
             raise UpstreamError(f"{context}: {current} is larger than this tool reads.")
         return response

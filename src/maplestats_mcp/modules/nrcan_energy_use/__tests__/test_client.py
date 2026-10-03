@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.nrcan_energy_use import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 
 @pytest.fixture(autouse=True)
@@ -88,3 +89,66 @@ async def test_get_table_rejects_foreign_keys_and_missing_table(httpx_mock):
     httpx_mock.add_response(text="<html><body>no table</body></html>")
     with pytest.raises(NotFound):
         await client.get_table("type=SH&rn=999")
+
+
+# oee.nrcan.gc.ca refused or timed out every connection from here on 2026-10-03
+# (five polite GETs: ConnectError, then ConnectTimeout), so no new live shape was
+# captured; the tests below cover the client's error paths with mocked transports.
+
+_MENU_URL = constants.EN_ROOT + "menus/sheu/2019/tables.cfm"
+
+
+async def test_upstream_5xx_is_retried_then_upstream_error(httpx_mock):
+    # get_raw retries 5xx three times before the client maps the status.
+    for _ in range(3):
+        httpx_mock.add_response(
+            url=_MENU_URL, status_code=503, text="<html>Service Unavailable</html>"
+        )
+    with pytest.raises(UpstreamError, match="HTTP 503"):
+        await client.list_tables("sheu_2019")
+    assert len(httpx_mock.get_requests()) == 3
+
+
+async def test_rate_limited_429_is_retried_and_can_recover(httpx_mock):
+    httpx_mock.add_response(url=_MENU_URL, status_code=429, headers={"Retry-After": "0"})
+    httpx_mock.add_response(url=_MENU_URL, text=_MENU)
+    result = await client.list_tables("sheu_2019")
+    assert [t.table_number for t in result.tables] == ["Table 1.1a"]
+    assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_unpublished_menu_404_is_not_found(httpx_mock):
+    httpx_mock.add_response(url=_MENU_URL, status_code=404, text="<html>Page not found</html>")
+    with pytest.raises(NotFound, match="nothing published"):
+        await client.list_tables("sheu_2019")
+
+
+async def test_connection_failures_become_upstream_unavailable(httpx_mock):
+    # The failure seen live on 2026-10-03: the host drops or never accepts the connection.
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"), url=_MENU_URL)
+    with pytest.raises(UpstreamUnavailable):
+        await client.list_tables("sheu_2019")
+    assert len(httpx_mock.get_requests()) == 3
+
+
+async def test_menu_page_without_table_links_is_not_found(httpx_mock):
+    # A maintenance or redesigned page answers 200 with no showTable.cfm links; an
+    # empty TableList would read as "this survey has no tables".
+    httpx_mock.add_response(
+        url=_MENU_URL,
+        text='<html><body><h1>Maintenance</h1><a href="/home.cfm">Home</a></body></html>',
+    )
+    with pytest.raises(NotFound, match="No tables listed"):
+        await client.list_tables("sheu_2019")
+
+
+async def test_get_table_normalises_key_order_and_serves_repeat_from_cache(httpx_mock):
+    canonical = "type=SH&sector=aaa&juris=ca&year=2019&rn=1&page=1"
+    httpx_mock.add_response(url=f"{constants.EN_ROOT}showTable.cfm?{canonical}", text=_TABLE)
+    first = await client.get_table("?page=1&rn=1&year=2019&juris=ca&sector=aaa&type=SH")
+    second = await client.get_table(canonical)
+    assert first.table_key == second.table_key == canonical
+    assert first.provenance.cached is False
+    assert second.provenance.cached is True
+    assert len(httpx_mock.get_requests()) == 1
