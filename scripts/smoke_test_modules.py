@@ -217,6 +217,29 @@ STEPS: list[Step] = [
     ),
     # Canada Gazette
     Step("gazette", "gazette_list_issues", {"limit": 2}, _non_empty("issues")),
+    # Part II's feed leads with non-issue items (the Consolidated Index); the
+    # default must open a real issue, never the site's not-found page.
+    Step(
+        "gazette",
+        "gazette_get_issue",
+        {"part": 2},
+        lambda data: (
+            bool(data["notices"])
+            and not any("404" in (n.get("section") or "") for n in data["notices"])
+        ),
+    ),
+    Step(
+        "gazette",
+        "gazette_get_issue",
+        {"part": 1, "issue_date": "2026-09-24"},
+        expect_error="nothing published",
+    ),
+    Step(
+        "gazette",
+        "gazette_get_notice",
+        {"url": "https://gazette.gc.ca/rp-pr/p1/2026/2026-10-03/html/zzz-eng.html"},
+        expect_error="nothing published",
+    ),
     Step("gazette", "gazette_get_issue", {"part": 1}),
     Step(
         "gazette",

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
-from email.utils import parsedate_to_datetime
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
@@ -30,6 +30,14 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _TEXT_TAGS = ("h3", "h4", "h5", "p", "li", "td", "th", "dd", "dt")
+# An issue's table of contents: /rp-pr/p1/2026/2026-09-26/html/index-eng.html.
+# The feeds also carry other items, such as the Consolidated Index of
+# Statutory Instruments at /rp-pr/p2/2026/2026-06-30-c2/index-eng.html
+# (live 2026-10-03), which are not issues and have no html/index page.
+_ISSUE_LINK = re.compile(r"/rp-pr/p[12]/\d{4}/(\d{4}-\d{2}-\d{2})/html/index-(?:eng|fra)\.html$")
+# gazette.gc.ca answers a missing page with HTTP 200 and the Canada.ca error
+# template, titled "... (Erreur 404) ... / ... (Error 404) ..." (live 2026-10-03).
+_SOFT_404 = re.compile(r"<title>[^<]*\((?:Error|Erreur) 404\)", re.IGNORECASE)
 
 
 def _lang(lang: str) -> str:
@@ -42,11 +50,11 @@ def _part(part: int) -> int:
     return part
 
 
-async def _fetch(url: str, ttl: int) -> bytes:
+async def _fetch(url: str, ttl: int) -> tuple[bytes, bool]:
     async def fetch() -> bytes:
         await _LIMITER.acquire()
         try:
-            return (await get_raw(url, timeout=60.0)).content
+            content = (await get_raw(url, timeout=60.0)).content
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 raise NotFound(f"gazette: nothing published at {url}.") from exc
@@ -55,9 +63,11 @@ async def _fetch(url: str, ttl: int) -> bytes:
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(f"gazette: {url} did not respond in time.") from exc
+        if _SOFT_404.search(content[:4000].decode("utf-8", "replace")):
+            raise NotFound(f"gazette: nothing published at {url} (the site's not-found page).")
+        return content
 
-    body, _ = await cached_fetch(f"gazette:{url}", ttl, fetch)
-    return body
+    return await cached_fetch(f"gazette:{url}", ttl, fetch)
 
 
 def _clean(text: str) -> str:
@@ -65,12 +75,13 @@ def _clean(text: str) -> str:
 
 
 def _issue_date(link: str) -> date | None:
-    for segment in urlparse(link).path.split("/"):
-        try:
-            return date.fromisoformat(segment)
-        except ValueError:
-            continue
-    return None
+    match = _ISSUE_LINK.search(urlparse(link).path)
+    if match is None:
+        return None
+    try:
+        return date.fromisoformat(match.group(1))
+    except ValueError:
+        return None
 
 
 async def list_issues(
@@ -80,14 +91,15 @@ async def list_issues(
     if limit < 1 or limit > constants.ISSUES_MAX:
         raise InvalidInput(f"limit must be between 1 and {constants.ISSUES_MAX}, got {limit}.")
     url = constants.FEED_URL.format(part=part, lang=_lang(lang))
-    root = ElementTree.fromstring(await _fetch(url, constants.CACHE_TTL_FEED_SECONDS))
+    feed, cached = await _fetch(url, constants.CACHE_TTL_FEED_SECONDS)
+    root = ElementTree.fromstring(feed)
     issues: list[Issue] = []
     for item in root.findall("./channel/item"):
         link = (item.findtext("link") or "").strip()
+        # Only issue tables of contents: the pubDate of a non-issue item (the
+        # Consolidated Index) is not a publication day, and get_issue would
+        # open a page that does not exist for it.
         issued = _issue_date(link)
-        if issued is None:
-            published = item.findtext("pubDate")
-            issued = parsedate_to_datetime(published).date() if published else None
         if issued is None:
             continue
         issues.append(
@@ -99,7 +111,7 @@ async def list_issues(
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="gazette.IssueList",
             freshness="Part I every Saturday; Part II every second Wednesday",
         ),
@@ -155,7 +167,8 @@ async def get_issue(part: int = 1, issue_date: str | None = None, lang: str = "e
     url = constants.ISSUE_URL.format(
         part=part, year=when.year, date=when.isoformat(), lang=_lang(lang)
     )
-    html = (await _fetch(url, constants.CACHE_TTL_PAGE_SECONDS)).decode("utf-8-sig", "replace")
+    page, cached = await _fetch(url, constants.CACHE_TTL_PAGE_SECONDS)
+    html = page.decode("utf-8-sig", "replace")
     return IssueNotices(
         part=part,
         date=when,
@@ -164,7 +177,7 @@ async def get_issue(part: int = 1, issue_date: str | None = None, lang: str = "e
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="gazette.IssueNotices",
         ),
     )
@@ -197,7 +210,8 @@ async def get_notice(url: str, lang: str = "en") -> NoticeText:
     if parsed.scheme != "https" or parsed.hostname not in constants.ALLOWED_HOSTS:
         raise InvalidInput("url must be a gazette.gc.ca link from gazette_get_issue.")
     page, fragment = urldefrag(url)
-    html = (await _fetch(page, constants.CACHE_TTL_PAGE_SECONDS)).decode("utf-8-sig", "replace")
+    body, cached = await _fetch(page, constants.CACHE_TTL_PAGE_SECONDS)
+    html = body.decode("utf-8-sig", "replace")
     title, text = _notice_text(BeautifulSoup(html, "html.parser"), fragment)
     truncated = len(text) > constants.NOTICE_TEXT_MAX
     return NoticeText(
@@ -208,7 +222,7 @@ async def get_notice(url: str, lang: str = "en") -> NoticeText:
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="gazette.NoticeText",
             limits="unofficial text extract; the published Gazette is authoritative",
         ),
