@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any, cast
 
 from maplestats_mcp import config
 from maplestats_mcp.shared import security
@@ -227,7 +228,7 @@ def test_hosted_app_answers_preflight_and_rejects_foreign_origin():
 
     from maplestats_mcp.asgi import build_asgi_app
 
-    with TestClient(build_asgi_app()) as client:
+    with TestClient(cast(Any, build_asgi_app())) as client:
         preflight = client.options(
             "/mcp",
             headers={

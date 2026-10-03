@@ -79,7 +79,10 @@ async def run_in_pool[**P, T](
     that DNS lookups need, but is not cut off at the parse budget.
     """
     context = contextvars.copy_context()
-    call = functools.partial(context.run, func, *args, **kwargs)
+
+    def call() -> T:
+        return context.run(func, *args, **kwargs)
+
     return await asyncio.get_running_loop().run_in_executor(get_executor(), call)
 
 
@@ -99,7 +102,10 @@ async def run_parse[**P, T](
     # Copy contextvars the way asyncio.to_thread does, so code that reads
     # them inside the parser behaves the same.
     context = contextvars.copy_context()
-    call = functools.partial(context.run, func, *args, **kwargs)
+
+    def call() -> T:
+        return context.run(func, *args, **kwargs)
+
     loop = asyncio.get_running_loop()
     future = loop.run_in_executor(
         get_executor(), functools.partial(_run_with_deadline, deadline, call)

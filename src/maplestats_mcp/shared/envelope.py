@@ -19,22 +19,20 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import NoReturn
 
-from maplestats_mcp.shared.i18n import t
+from maplestats_mcp.shared.i18n import ERROR_KEYS, normalize_lang, t
 from maplestats_mcp.shared.models import Provenance
 
 # Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence):
 # attribution is required, and adapted data must not imply StatCan endorsed the
-# adaptation. Added to every result whose source or URL is a StatCan service.
-STATCAN_LICENCE = (
-    "Source: Statistics Canada. Contains information licensed under the Statistics Canada "
-    "Open Licence (https://www.statcan.gc.ca/en/reference/licence). Adapted or summarised "
-    "data must not be presented as endorsed by Statistics Canada."
-)
+# adaptation. Added to every result whose source or URL is a StatCan service,
+# in French for a call made with lang="fr".
+STATCAN_LICENCE = t("provenance.statcan_licence", "en")
+STATCAN_LICENCE_FR = t("provenance.statcan_licence", "fr")
 
 
-def _licence_for(source: str, url: str) -> str | None:
+def _licence_for(source: str, url: str, lang: str = "en") -> str | None:
     if source.lower().startswith("statcan") or "statcan.gc.ca" in url.lower():
-        return STATCAN_LICENCE
+        return t("provenance.statcan_licence", lang)
     return None
 
 
@@ -49,8 +47,15 @@ def make_provenance(
     coverage: str | None = None,
     limits: str | None = None,
     licence: str | None = None,
+    lang: str = "en",
 ) -> Provenance:
-    """Build the Provenance block every response model embeds."""
+    """Build the Provenance block every response model embeds.
+
+    `lang="fr"` gives the shared phrases (the reproduce_code note and the
+    Statistics Canada licence) in French; the caller's own freshness,
+    coverage and limits text is used as given.
+    """
+    lang = normalize_lang(lang)
     return Provenance(
         source=source,
         url=url,
@@ -61,7 +66,8 @@ def make_provenance(
         limits=limits,
         cached=cached,
         schema_name=schema_name,
-        licence=licence or _licence_for(source, url),
+        licence=licence or _licence_for(source, url, lang),
+        reproduce=t("provenance.reproduce", lang),
     )
 
 
@@ -73,8 +79,23 @@ def raise_error(
 ) -> NoReturn:
     """Format the bilingual message for `key` and raise `exc_cls` with it.
 
-    Raising (not returning) is deliberate: FastMCP turns this into a real
-    MCP `isError: true` result, which is what lets an agent distinguish
-    "the query failed" from "the query succeeded with an empty result."
+    `key` is an i18n template (see shared/i18n.LABELS, or one a module
+    added with i18n.register()); `lang` picks its French text. Raising
+    (not returning) is deliberate: FastMCP turns this into a real MCP
+    `isError: true` result, which is what lets an agent distinguish "the
+    query failed" from "the query succeeded with an empty result."
     """
     raise exc_cls(t(key, lang, **kwargs))
+
+
+def raise_typed(exc_cls: type[ValueError], detail: str, lang: str = "en") -> NoReturn:
+    """Raise `exc_cls` with its own template ("Invalid input: ...", "Entrée invalide : ...").
+
+    The shortest path for a module: the class picks the template, so only
+    the detail and the call's `lang` are needed.
+    """
+    key = next(
+        (ERROR_KEYS[cls.__name__] for cls in exc_cls.__mro__ if cls.__name__ in ERROR_KEYS),
+        None,
+    )
+    raise exc_cls(t(key, lang, detail=detail) if key else detail)
