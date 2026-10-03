@@ -724,6 +724,10 @@ FAMILIES: dict[str, tuple[str, str]] = {
     "statcan/reference": ("Definitions, methods and analysis", "Définitions, méthodes et analyses"),
     "statcan/sdg": ("Sustainable Development Goals", "Objectifs de développement durable"),
     "statcan/sdmx": ("SDMX API: filtered series", "API SDMX : séries filtrées"),
+    "statcan/sdmx_spaces": (
+        "SDMX spaces: energy information and shared data",
+        "Espaces SDMX : information sur l'énergie et données partagées",
+    ),
     "statcan/surveys": ("Surveys and metadata", "Enquêtes et métadonnées"),
     "statcan/wds": (
         "Web Data Service: tables and vectors",
@@ -3156,7 +3160,7 @@ STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "Tables and time series",
         "Tableaux et séries chronologiques",
-        ("wds", "sdmx", "delta", "cimt"),
+        ("wds", "sdmx", "sdmx_spaces", "delta", "cimt"),
     ),
     (
         "Census",

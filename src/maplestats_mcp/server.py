@@ -187,7 +187,8 @@ for a bilingual one-line description of every module.
 
 Sources, by tool-name prefix:
 - Statistics Canada: wds_ (tables/cubes, vectors), sdmx_ (filtered
-  series), rdaas_ (classifications, e.g. NAICS), statcan_census_profile_
+  series), sdmx_space_ (the extra SDMX spaces: energy information CCEI with
+  ECCC emissions and NRCan indicators, and the shared space), rdaas_ (classifications, e.g. NAICS), statcan_census_profile_
   (2021), statcan_census_profile_2016_, statcan_census_profile_archive_
   (2001-2016 bulk links), statcan_daily_ (The Daily releases, release calendar),
   statcan_indicators_, statcan_delta_ (daily bulk-update files: list a
