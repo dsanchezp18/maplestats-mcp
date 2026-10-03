@@ -271,6 +271,13 @@ STEPS: list[Step] = [
     # NRCan geocoding and place names
     Step("nrcan_geo", "nrcan_geo_locate", {"query": "Ottawa"}, _non_empty("locations")),
     Step("nrcan_geo", "nrcan_geo_search_names", {"query": "Lake Louise", "province": "AB"}),
+    # A float radius was a 404 upstream until 2026-10-03.
+    Step(
+        "nrcan_geo",
+        "nrcan_geo_search_names",
+        {"latitude": 51.05, "longitude": -114.07, "radius_km": 5.0, "limit": 3},
+        _non_empty("names"),
+    ),
     # House of Commons (OpenParliament.ca)
     Step("openparliament", "parliament_search_bills", {"limit": 3}, _non_empty("bills")),
     Step(

@@ -21,7 +21,9 @@ async def nrcan_geo_locate(
     Use for: turning "111 Wellington St Ottawa", "K1A 0A9", or
     "Parliament Hill" into latitude/longitude, province, and bounding
     box, e.g. before a spatial query elsewhere. `lang="fr"` returns
-    French names and categories.
+    French names and categories. The Geolocator matches loosely and has
+    no relevance score: a query it cannot match still returns nearby
+    spellings or unrelated places, so check the returned name.
     Keywords: geocode, geolocation, address lookup, postal code, FSA,
     coordinates, latitude longitude, NRCan, geo.ca, place search.
     Mots-clés : géocodage, géolocalisation, adresse, code postal, RTA,
@@ -47,9 +49,10 @@ async def nrcan_geo_search_names(
     Use for: official names and locations of cities, towns, lakes,
     rivers, mountains, parks and other features. Combine `query` (name
     text), `province` ("AB" or SGC code "48"), `feature_type` (e.g.
-    "CITY", "TOWN", "LAKE", "RIV", "MTN"), a point with `radius_km`, or
+    "CITY", "TOWN", "LAKE", "RIV", "MTN"), a point with `radius_km`
+    (whole kilometres; default 10), or
     `bbox` [west, south, east, north]. `lang="fr"` returns French feature
-    types.
+    types. `province` in results is the SGC code ("48" for Alberta).
     Keywords: place names, toponymy, gazetteer, geographical names, lake,
     river, mountain, official name, NRCan, CGNDB.
     Mots-clés : noms géographiques, toponymie, répertoire toponymique,
