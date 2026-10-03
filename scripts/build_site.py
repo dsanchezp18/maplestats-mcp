@@ -412,6 +412,14 @@ SOURCES: dict[str, Source] = {
         "ECCC",
         domain="environment",
     ),
+    "eccc_datamart": Source(
+        "ECCC Data Catalogue files (NPRI, GHGRP, NAPS)",
+        "Fichiers du Catalogue de données d'ECCC (INRP, PDGES, SNPA)",
+        "national",
+        "ECCC Data Catalogue",
+        "Catalogue de données d'ECCC",
+        domain="environment",
+    ),
     "electricity": Source(
         "Electricity: Ontario (IESO) and Quebec (Hydro-Québec)",
         "Électricité : Ontario (SIERE) et Québec (Hydro-Québec)",

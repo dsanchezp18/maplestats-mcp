@@ -4,7 +4,7 @@ Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
-**State at 2026-10-03:** 297 tools in 57 modules. Every source in the tables below is
+**State at 2026-10-03:** 303 tools in 58 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
 `Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
@@ -52,6 +52,7 @@ Census and specialized federal agencies section below).
 | Federal Open Data (CKAN, open.canada.ca) | Shipped | ~48K-dataset catalogue: search, dataset details, organizations, resources, licenses. |
 | IRCC Immigration | Shipped | Express Entry rounds of invitations (tools prefixed `ircc_`): draw history, CRS cutoffs, invitations issued, and candidate-pool CRS score distribution, from a static JSON feed at … [Details](findings/federal-sources.md#ircc-immigration) |
 | Weather / Climate (Environment Canada MSC GeoMet) | Shipped | api.weather.gc.ca, MSC GeoMet-OGC-API (OGC API - Features): `eccc_*`, 4 generic tools (search/list/get collection, query items) covering all ~100 published collections — weather alerts, current … [Details](findings/federal-sources.md#weather--climate-environment-canada-msc-geomet) |
+| ECCC Data Catalogue files (`eccc_datamart_*`) | Shipped | Shipped 2026-10-03: `modules/eccc_datamart/` (6 tools: `eccc_datamart_browse`, `_search`, `_describe_file`, `_read_file`, `_npri_facilities`, `_ghgrp_facilities`) reads the ECCC Data Catalogue file tree at data-donnees.az.ec.gc.ca through the `api/path_contents` and `api/file` endpoints its web page uses (undocumented, stated in provenance). Browse folders with rounded sizes and modified dates; search about 500 dataset folders (three levels, bilingual titles) from an index built from about 60 listings and kept a day; describe and read CSV, TSV, TXT, XLSX and XLS files up to 40 MB (UTF-8 or Windows-1252) with read-me and data dictionary files of the folder; ZIP archives, Word, PDF and files above the cap are refused with their download link. NPRI lookups read the single-year facility CSVs (2020-2024, 34-38 MB; 1993-2019 are only in bulk files of 50-375 MB and a 175 MB ZIP, not read); GHGRP lookups read the 2004-present facility CSV (updated 2026-07-24) without the public contact columns. Open Government Licence - Canada (root `license-en.txt`), attribution in every result. Paced at 4 requests per second (no published limit). |
 
 ## Provincial (all 10)
 
