@@ -166,6 +166,10 @@ CASES = [
     ("produit intérieur brut par province", "wds_search_cubes"),
     ("permis de construire", "wds_search_cubes"),
     ("salaire minimum", "nl_stats_list_files"),
+    # Ontario Energy Board open data, 2026-10-03.
+    ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
+    ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
+    ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
 ]
 
 
