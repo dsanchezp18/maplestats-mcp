@@ -149,6 +149,7 @@ CASES = [
     ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
     ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),
     ("limite maximale de résidus de pesticides sur les pommes", "pmra_get_residue_limits"),
+    ("production minérale par province valeur des expéditions", "nrcan_minerals_get_production"),
 ]
 
 

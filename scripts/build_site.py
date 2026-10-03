@@ -600,6 +600,14 @@ SOURCES: dict[str, Source] = {
         "RNCan zones brûlées",
         domain="environment",
     ),
+    "nrcan_minerals": Source(
+        "Natural Resources Canada: mineral production",
+        "Ressources naturelles Canada : production minérale",
+        "national",
+        "NRCan minerals",
+        "RNCan minéraux",
+        domain="energy",
+    ),
     "opendatasoft_vancouver": Source(
         "City of Vancouver Open Data",
         "Données ouvertes de la Ville de Vancouver",

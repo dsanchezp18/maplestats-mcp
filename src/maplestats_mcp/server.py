@@ -221,7 +221,8 @@ Sources, by tool-name prefix:
   cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
   nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
-  (burned areas), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
+  (burned areas), nrcan_minerals_ (annual mineral production by
+  province), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
   Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
   safety alerts), cbsa_ (current border wait times), gazette_ (Canada

@@ -172,6 +172,8 @@ CASES = [
     ("pesticide products registered with active ingredient glyphosate", "pmra_search_products"),
     ("maximum residue limit for pesticide on apples ppm", "pmra_get_residue_limits"),
     ("pesticide registration number details pests and sites of use", "pmra_get_product"),
+    ("gold production by province mining statistics", "nrcan_minerals_get_production"),
+    ("value of mineral production in Canada since 1990 time series", "nrcan_minerals_get_series"),
 ]
 
 
