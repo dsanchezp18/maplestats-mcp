@@ -480,8 +480,10 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("gazette_list_issues", "resulting regulations and notices"),
         ),
         (
-            "House of Commons bill status, recorded votes and Hansard are not covered; "
-            "check parl.ca and ourcommons.ca.",
+            (
+                "House of Commons bill status, recorded votes and Hansard are not covered; "
+                "check parl.ca and ourcommons.ca."
+            ),
         ),
     ),
     Topic(
@@ -950,12 +952,7 @@ COMMITTEES = Topic(
         PlanStep("ourcommons_list_members", "find the MP and their person id"),
         PlanStep("ourcommons_get_member_roles", "the MP's committee memberships with dates"),
     ),
-    (
-        (
-            "Committee meetings, witnesses and transcripts are not covered; "
-            "check ourcommons.ca."
-        ),
-    ),
+    (("Committee meetings, witnesses and transcripts are not covered; check ourcommons.ca."),),
 )
 TOPICS = (*TOPICS, COMMITTEES)
 

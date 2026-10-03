@@ -123,7 +123,7 @@ async def test_list_agencies_reports_reachability(httpx_mock):
     assert by_key["calgary"].reachable is True
     assert by_key["calgary"].zip_bytes
     assert by_key["calgary"].last_modified
-    assert by_key["ttc"].reachable is False
+    assert by_key["oc_transpo"].reachable is False
     assert by_key["stm"].name.startswith("Société de transport")
     assert "métro" in (by_key["stm"].notes or "")
 
@@ -291,7 +291,7 @@ async def test_missing_required_table_is_an_upstream_error(httpx_mock):
 
 
 async def test_head_failures_fall_back_to_a_one_byte_range(httpx_mock):
-    # Toronto's host answered HEAD with 502 while ranged GETs worked.
+    # An agency host answered HEAD with 502 while ranged GETs worked.
     body = _zip(FILES)
 
     def respond(request: httpx.Request) -> httpx.Response:
@@ -304,8 +304,10 @@ async def test_head_failures_fall_back_to_a_one_byte_range(httpx_mock):
             headers={"content-range": f"bytes {start}-{end}/{len(body)}"},
         )
 
-    httpx_mock.add_callback(respond, url=constants.AGENCIES["ttc"].feed_url, is_reusable=True)
-    info = await client.get_feed_info("ttc")
+    httpx_mock.add_callback(
+        respond, url=constants.AGENCIES["oc_transpo"].feed_url, is_reusable=True
+    )
+    info = await client.get_feed_info("oc_transpo")
     assert (info.route_count, info.stop_count) == (2, 4)
     assert info.agency.zip_bytes == len(body)
 

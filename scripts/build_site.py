@@ -330,7 +330,6 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
-    "canadabuys": Source("CanadaBuys", "AchatsCanada", "national", domain="money"),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
@@ -601,14 +600,6 @@ SOURCES: dict[str, Source] = {
         "Vancouver",
         places=("BC",),
         row="municipal_catalogue",
-    ),
-    "openparliament": Source(
-        "House of Commons, via OpenParliament.ca",
-        "Chambre des communes, par OpenParliament.ca",
-        "national",
-        "OpenParliament",
-        "OpenParliament",
-        domain="government",
     ),
     "pbo": Source(
         "Parliamentary Budget Officer",
@@ -2771,7 +2762,7 @@ def square_places(lang: Lang) -> list[str]:
 
 
 def chat_demo_context(lang: Lang) -> dict[str, str]:
-    """The prompt on the home page: five questions to five different publishers,
+    """The prompt on the home page: four questions to four different publishers,
     each answered from a recorded call (site/_data/cases), played by assets/site.js."""
     en = lang == "en"
     prompts = {call["name"]: call["response"] for call in load_case("prompts")["calls"]}
@@ -2868,22 +2859,6 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
             f"pour {this_year[0]}."
         )
 
-    # One federal contract award.
-    award = prompts["canadabuys_search_awards"]["awards"][0]
-    value = award["total_contract_value"]
-    if en:
-        award_html = (
-            f"<strong>{esc(award['supplier_name'])}</strong> of {esc(award['supplier_city'])}, "
-            f"{esc(award['supplier_province'])}, won the {esc(award['title'])} for "
-            f"${number(value, lang)} on {long_date(award['award_date'], lang)}."
-        )
-    else:
-        award_html = (
-            f"<strong>{esc(award['supplier_name'])}</strong>, de {esc(award['supplier_city'])} "
-            f"({esc(award['supplier_province'])}), a remporté le contrat « {esc(award['title'])} » "
-            f"pour {number(value, lang)} $ le {long_date(award['award_date'], lang)}."
-        )
-
     examples = [
         {
             "label": "Meat prices" if en else "Prix de la viande",
@@ -2950,26 +2925,6 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
             "cite": "source · Parliamentary Budget Officer"
             if en
             else "source · Directeur parlementaire du budget",
-        },
-        {
-            "label": "Contracts" if en else "Contrats",
-            "client": "VS Code",
-            "user": "Who won the National Research Council's window replacement contract?"
-            if en
-            else "Qui a remporté le contrat de remplacement des fenêtres du Conseil national de recherches ?",
-            "tool": "canadabuys_search_awards",
-            "html": award_html,
-            "code": rows(
-                [
-                    (
-                        "value" if en else "valeur",
-                        f"${number(value, lang)}" if en else f"{number(value, lang)} $",
-                    ),
-                    ("awarded" if en else "attribué", award["award_date"]),
-                    ("buyer" if en else "acheteur", "NRC"),
-                ]
-            ),
-            "cite": "source · CanadaBuys" if en else "source · AchatsCanada",
         },
     ]
     payload = json.dumps(examples, ensure_ascii=False).replace("</", "<" + chr(92) + "/")
