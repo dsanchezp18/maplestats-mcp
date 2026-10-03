@@ -145,6 +145,8 @@ CASES = [
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("émissions de gaz à effet de serre par province inventaire", "sdmx_space_get_data"),
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),
+    # Sources fédérales ajoutées le 2026-10-03.
+    ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
 ]
 
 

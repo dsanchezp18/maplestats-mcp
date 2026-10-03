@@ -223,7 +223,8 @@ Sources, by tool-name prefix:
   (burned areas), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
   Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
-  safety alerts), gazette_ (Canada Gazette), earthquakes_, dfo_iwls_
+  safety alerts), cbsa_ (current border wait times), gazette_ (Canada
+  Gazette), earthquakes_, dfo_iwls_
   (tides, water levels), nfd_
   (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
 - Elections and Parliament: elections_results_ (federal results by

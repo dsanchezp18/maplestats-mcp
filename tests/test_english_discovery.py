@@ -167,6 +167,8 @@ CASES = [
     ("find a dataflow in the energy information space", "sdmx_space_list_flows"),
     ("air pollutants black carbon emissions inventory", "sdmx_space_search"),
     ("browse dimensions and codes of an SDMX dataflow in CCEI", "sdmx_space_get_structure"),
+    # Federal sources added 2026-10-03.
+    ("border wait time at the Peace Bridge right now", "cbsa_border_wait_times"),
 ]
 
 

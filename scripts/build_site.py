@@ -330,6 +330,14 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
+    "cbsa": Source(
+        "Canada Border Services Agency: border wait times",
+        "Agence des services frontaliers du Canada : temps d'attente à la frontière",
+        "national",
+        "CBSA",
+        "ASFC",
+        domain="transport",
+    ),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
