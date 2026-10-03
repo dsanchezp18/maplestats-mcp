@@ -396,3 +396,65 @@ async def test_every_portal_routes_to_its_own_base_url(portal, httpx_mock):
     result = await client.search_datasets(portal)
     assert str(httpx_mock.get_request().url).startswith(constants.PORTALS[portal].base_url)
     assert result.provenance.source == f"ckan-{portal}"
+
+
+async def test_all_fields_rosters_are_paged_past_the_25_cap(httpx_mock):
+    # CKAN returns at most 25 entries per all_fields call: Open Alberta's 405
+    # organizations and Yukon's 27 both came back as 25 (live 2026-10-03).
+    names = [f"org-{i:03d}" for i in range(27)]
+    pages = [names[:25], names[25:]]
+    for page in pages:
+        httpx_mock.add_response(
+            json=_ok([{"id": n, "name": n, "title": n, "package_count": 1} for n in page])
+        )
+    result = await client.list_organizations("yt")
+    assert result.total_count == 27
+    assert [o.name for o in result.organizations] == names
+    offsets = [_query(r)["offset"] for r in httpx_mock.get_requests()]
+    assert offsets == [["0"], ["25"]]
+
+
+async def test_roster_paging_stops_when_offset_is_ignored(httpx_mock):
+    page = [{"id": f"g{i}", "name": f"g{i}", "title": "G", "package_count": 0} for i in range(25)]
+    httpx_mock.add_response(json=_ok(page), is_reusable=True)
+    result = await client.list_groups("regina")
+    assert result.total_count == 25
+
+
+async def test_datastore_unknown_filter_column_is_rejected(httpx_mock):
+    httpx_mock.add_response(
+        json=_ok(
+            {
+                "records": [{"_id": 1, "Year": "2024"}],
+                "fields": [{"id": "_id", "type": "int"}, {"id": "Year", "type": "text"}],
+                "total": 57,
+            }
+        )
+    )
+    with pytest.raises(InvalidInput, match="unknown filter column"):
+        await client.datastore_search("federal", "res1", filters={"Yeer": "2024"})
+
+
+async def test_unsuccessful_envelope_message_is_short(httpx_mock):
+    httpx_mock.add_response(
+        json={"success": False, "error": {"message": "x" * 5000, "__type": "Validation Error"}}
+    )
+    with pytest.raises(UpstreamError) as caught:
+        await client.get_dataset("regina", "anything")
+    assert len(str(caught.value)) < 400
+
+
+async def test_html_404_body_is_reduced_to_its_title(httpx_mock):
+    # Toronto's CKAN answers a 404 with an HTML page, not a CKAN envelope.
+    page = "<html><head><title>404 Not Found</title></head><body>" + "y" * 4000 + "</body></html>"
+    httpx_mock.add_response(status_code=404, text=page)
+    with pytest.raises(NotFound) as caught:
+        await client.get_dataset("toronto", "missing")
+    assert "404 Not Found" in str(caught.value) and "<" not in str(caught.value)
+
+
+async def test_network_failure_names_the_exception(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectError("connection refused"))
+    with pytest.raises(UpstreamUnavailable, match="ConnectError"):
+        await client.get_dataset("regina", "anything")

@@ -128,12 +128,31 @@ async def test_invalid_input_and_not_found_are_typed(httpx_mock):
         await client.query_dataset_rows(PORTAL, "abcd-1234", limit=0)
 
     httpx_mock.add_response(
-        url=f"https://{DOMAIN}/api/views/unknown.json",
+        url=f"https://{DOMAIN}/api/views/zzzz-9999.json",
         status_code=404,
         json={"code": "dataset.missing", "error": True, "message": "Not found", "data": {}},
     )
     with pytest.raises(NotFound):
-        await client.get_dataset(PORTAL, "unknown")
+        await client.get_dataset(PORTAL, "zzzz-9999")
+
+
+@pytest.mark.parametrize("bad", ["../../api/views", "abcd-1234?$where=1", "unknown", "abc-1234"])
+async def test_dataset_ids_that_are_not_four_by_four_are_rejected(bad):
+    with pytest.raises(InvalidInput, match="abcd-1234"):
+        await client.get_dataset(PORTAL, bad)
+    with pytest.raises(InvalidInput, match="abcd-1234"):
+        await client.query_dataset_rows(PORTAL, bad)
+
+
+async def test_html_404_body_is_reduced_to_its_title(httpx_mock):
+    # Socrata domains answer some 404s with a whole HTML page (live 2026-10-03).
+    page = "<!DOCTYPE html><html><head><title>Page not found</title></head><body>" + "x" * 5000
+    httpx_mock.add_response(
+        url=f"https://{DOMAIN}/api/views/zzzz-9999.json", status_code=404, text=page
+    )
+    with pytest.raises(NotFound) as caught:
+        await client.get_dataset(PORTAL, "zzzz-9999")
+    assert "Page not found" in str(caught.value) and "<" not in str(caught.value)
 
 
 def test_portal_key_literal_matches_registry():

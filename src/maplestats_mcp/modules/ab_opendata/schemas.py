@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
@@ -122,7 +124,15 @@ class ResourceRows(BaseModel):
     dataset: str
     dataset_title: str
     sheets: list[str] = Field(description="Every sheet name (one entry, 'csv', for a CSV).")
-    sheet: str
+    sheet: str | None = Field(
+        description="The sheet read; null when the workbook has several comparable sheets "
+        "and none was requested (no rows are read: pass one of `sheets` as `sheet`)."
+    )
+    sheet_chosen_by: Literal["request", "largest", "only", "none"] = Field(
+        default="only",
+        description="How the sheet was picked: requested, the dominant largest sheet, the "
+        "only sheet, or none (choose one).",
+    )
     header_row: int | None = Field(
         description="1-based row holding the column names: the one requested, else guessed; "
         "null when none looks like a header (columns are then column_1, column_2...)."
