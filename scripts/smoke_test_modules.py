@@ -179,6 +179,42 @@ STEPS: list[Step] = [
             "election_id": ctx["elections_financial_returns_list_elections"]["elections"][0]["id"],
         },
     ),
+    # Paging past the first 300 of an unfiltered general-election search.
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_search_candidates",
+        {"election_id": "62", "offset": 300, "limit": 50},
+        lambda data: data["returned_count"] == 50 and data["has_more"],
+    ),
+    # Accented names decode (they came back as U+FFFD before 2026-10-03).
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        {"candidate_client_id": "56572", "part": "3A", "election_id": "62"},
+        lambda data: (
+            "�" not in json.dumps(data, ensure_ascii=False)
+            and "é" in json.dumps(data["sections"], ensure_ascii=False)
+        ),
+    ),
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        {"candidate_client_id": "56572", "part": "1", "election_id": "62", "lang": "fr"},
+        lambda data: bool(data["export_header"]) and bool(data["sections"]),
+    ),
+    # A candidate under an election they did not run in, and an unknown election.
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        {"candidate_client_id": "56572", "part": "1", "election_id": "53"},
+        expect_error="did not run",
+    ),
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_search_candidates",
+        {"election_id": "9999"},
+        expect_error="no election",
+    ),
     # Canada Gazette
     Step("gazette", "gazette_list_issues", {"limit": 2}, _non_empty("issues")),
     Step("gazette", "gazette_get_issue", {"part": 1}),
