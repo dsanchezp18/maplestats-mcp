@@ -313,6 +313,18 @@ async def _trips(
     return await _with_fresh_directory(key, once)
 
 
+async def _frequency_trips(key: str) -> frozenset[str]:
+    """Trips described by frequencies.txt, which this module leaves out.
+
+    Their stop_times are a template (Salaberry-de-Valleyfield's Communobus
+    trips, checked 2026-10-03, start at 00:10:00 and repeat every 30 or 60
+    minutes from frequencies.txt), so reporting them as listed would give
+    wrong times. Most feeds ship the file empty or not at all.
+    """
+    rows, _ = await _table(key, "frequencies.txt", required=False)
+    return frozenset(r["trip_id"] for r in rows if r.get("trip_id"))
+
+
 # -- provenance --------------------------------------------------------
 
 
@@ -803,6 +815,9 @@ async def get_stop_departures(
         constants.CACHE_TTL_SCAN_SECONDS,
         fetch,
     )
+    templated = await _frequency_trips(agency_key)
+    if templated:
+        calls = [c for c in calls if c.trip.trip_id not in templated]
     calendar, _ = await _table(agency_key, "calendar.txt", required=False)
     calendar_dates, _ = await _table(agency_key, "calendar_dates.txt", required=False)
     today = gtfs.active_services(calendar, calendar_dates, day)
@@ -882,7 +897,10 @@ async def get_route_summary(
     await _check_date(agency_key, day)
     directory, dir_cached = await _directory(agency_key)
     record = await _resolve_route(agency_key, route)
-    all_trips = await _trips(agency_key, route_id=record.route_id)
+    templated = await _frequency_trips(agency_key)
+    all_trips = [
+        t for t in await _trips(agency_key, route_id=record.route_id) if t.trip_id not in templated
+    ]
     calendar, _ = await _table(agency_key, "calendar.txt", required=False)
     calendar_dates, _ = await _table(agency_key, "calendar_dates.txt", required=False)
     services = gtfs.active_services(calendar, calendar_dates, day)

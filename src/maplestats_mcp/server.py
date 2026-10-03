@@ -244,8 +244,9 @@ Sources, by tool-name prefix:
   city and regional ArcGIS Hub portals), socrata_ (Nova Scotia, New
   Brunswick, Calgary, Edmonton, Winnipeg).
 - Static transit timetables: transit_, with an `agency` argument --
-  transit_list_agencies, and transit_list_national_agencies for about 100
-  more from StatCan's snapshot.
+  transit_list_agencies (including exo, RTC, STL, STS and STQ ferries in
+  Quebec), and transit_list_national_agencies for about 100 more from
+  StatCan's snapshot.
 
 Routing hints: many federal administrative series (IRCC permits beyond
 ircc_monthly_, CRA tax statistics and charities, OSFI bank returns, ISED

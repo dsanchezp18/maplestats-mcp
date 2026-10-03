@@ -337,7 +337,12 @@ def test_bc_transit_agencies_are_read_whole():
     assert all(not a.range_requests and a.province == "BC" for a in bc)
     assert all("operatorIds=" in a.feed_url for a in bc)
     assert len({a.feed_url for a in bc}) == 12
-    assert all(a.range_requests for k, a in constants.AGENCIES.items() if not k.startswith("bct_"))
+    whole = {"stq_ferries"}  # STQ host: no byte ranges either
+    assert all(
+        a.range_requests
+        for k, a in constants.AGENCIES.items()
+        if not k.startswith("bct_") and k not in whole
+    )
 
 
 async def test_feed_without_range_support_is_read_from_a_whole_download(httpx_mock):
@@ -380,3 +385,47 @@ async def test_whole_download_over_the_limit_is_refused(httpx_mock, monkeypatch)
     _serve_whole(httpx_mock, "bct_victoria")
     with pytest.raises(UpstreamError, match="limit"):
         await client.get_feed_info("bct_victoria")
+
+
+async def test_frequency_template_trips_are_left_out(httpx_mock):
+    # Salaberry-de-Valleyfield's Communobus trips (live, 2026-10-03) carry
+    # template times from 00:10:00 and repeat through frequencies.txt with
+    # exact_times=1; listing them as published would give wrong times.
+    files = dict(FILES)
+    files["frequencies.txt"] = (
+        "trip_id,start_time,end_time,headway_secs,exact_times\nT2,05:20:00,11:59:00,1800,1\n"
+    )
+    _serve(httpx_mock, "stsv_valleyfield", files)
+    result = await client.get_stop_departures(
+        "stsv_valleyfield", "S1", service_date="2026-10-06", start_time="00:00"
+    )
+    assert "T2" not in {d.trip_id for d in result.departures}
+    assert {d.trip_id for d in result.departures} >= {"T1", "T3"}
+    summary = await client.get_route_summary("stsv_valleyfield", "10", service_date="2026-10-06")
+    assert summary.trips_on_date == 3  # T1, T3, T5; T2 is a frequency template
+    assert sum(h.trips for h in summary.hourly) == 3
+
+
+async def test_whole_download_feed_for_a_host_without_ranges(httpx_mock):
+    # The STQ host answered a Range request with the whole 71 KB zip (HTTP 200).
+    _serve_whole(httpx_mock, "stq_ferries")
+    info = await client.get_feed_info("stq_ferries")
+    assert info.route_count == 2
+
+
+def test_quebec_feeds_state_their_terms():
+    stl = constants.AGENCIES["stl_laval"]
+    assert "commercial" in stl.licence and "commercial" in stl.notes_en
+    assert "mises à jour le" in constants.AGENCIES["rtc_quebec"].attribution
+    quebec = [a for a in constants.AGENCIES.values() if a.province == "QC" and a.key != "stm"]
+    assert len(quebec) == 19
+    assert all("CC BY 4.0" in a.licence or "Creative Commons" in a.licence for a in quebec)
+    # The Quebec agencies also in StatCan's 2025 snapshot are served live.
+    assert set(constants.NATIONAL_OVERLAPS.values()) >= {
+        "exo_trains",
+        "rtc_quebec",
+        "stl_laval",
+        "sttr_trois_rivieres",
+        "rimouski",
+        "rouyn_noranda",
+    }

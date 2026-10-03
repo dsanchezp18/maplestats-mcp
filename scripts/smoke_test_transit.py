@@ -415,7 +415,7 @@ async def main() -> int:
         # Rail and small-town feeds have non-numeric names and few routes, so
         # the first routes that run on the date are tried instead of a numbered bus.
         # STQ's crossings are ferries (route_type 4).
-        candidates = [r for r in routes.routes if r.route_type in (2, 3, 4)][:5]
+        candidates = [r for r in routes.routes if r.route_type in (2, 3, 4)][:10]
         route = candidates[0]
         summary = await client.get_route_summary(key, route.route_id, service_date=service_date)
         for route in candidates[1:]:
@@ -425,7 +425,7 @@ async def main() -> int:
         scanned = sum(h.trips for h in summary.hourly)
         check(
             summary.trips_on_date > 0 and scanned == summary.trips_on_date,
-            f"{key}: route {route.short_name or route.long_name} runs "
+            f"{key}: route {summary.route.short_name or summary.route.long_name} runs "
             f"{summary.trips_on_date} trips {day_label} ({scanned} found in stop_times)",
         )
 

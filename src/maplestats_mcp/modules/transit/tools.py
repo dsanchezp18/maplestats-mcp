@@ -201,7 +201,8 @@ async def transit_get_stop_departures(
     the agency's local calendar (default today); start_time is HH:MM
     (default now when the date is today, else midnight); route filters to
     one route number or id. Trips that began the previous service day and
-    run past midnight are included and flagged. The first call for a stop
+    run past midnight are included and flagged; trips described only by
+    frequencies.txt (template times) are left out. The first call for a stop
     streams the agency's stop_times file (tens of MB) and can take
     from several seconds to a minute; later calls for it are cached. limit is 1-500.
     Use for: when is the next bus at a stop, the timetable of a stop on a

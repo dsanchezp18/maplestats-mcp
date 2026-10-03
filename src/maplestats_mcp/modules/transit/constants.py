@@ -234,7 +234,9 @@ def _exo(
         province="QC",
         timezone="America/Toronto",
         feed_url=f"https://exo.quebec/xdata/{code}/google_transit.zip",
-        source_page=f"{_DQ}{dataset}" if dataset else "https://exo.quebec/fr/a-propos/donnees-ouvertes",
+        source_page=f"{_DQ}{dataset}"
+        if dataset
+        else "https://exo.quebec/fr/a-propos/donnees-ouvertes",
         licence=QC_CC_BY,
         licence_url=QC_LICENCE_URL,
         attribution="Source: exo (Réseau de transport métropolitain), CC BY 4.0.",
@@ -629,13 +631,11 @@ AGENCIES: dict[str, Agency] = {
         "Each season; the feed checked 2026-10-03 (autumn 2026) runs to 2026-12-26.",
         (
             "The STTR renames the file each season; Données Québec serves the resource by its id "
-            "whatever the file name, so this URL keeps working. Some trips are given as "
-            "frequencies (frequencies.txt), which this module does not expand."
+            "whatever the file name, so this URL keeps working."
         ),
         (
             "La STTR renomme le fichier à chaque saison; Données Québec sert la ressource par son "
-            "identifiant quel que soit le nom du fichier. Certains voyages sont décrits par "
-            "fréquences (frequencies.txt), que ce module ne développe pas."
+            "identifiant quel que soit le nom du fichier."
         ),
     ),
     "rimouski": _quebec(
@@ -669,8 +669,16 @@ AGENCIES: dict[str, Agency] = {
         "gtfs-stsv",
         "Source: Société de transport de Salaberry-de-Valleyfield, Données Québec, CC BY 4.0.",
         "Twice a year per the Données Québec record; the feed checked 2026-10-03 runs to 2026-12-31.",
-        "Some trips are given as frequencies (frequencies.txt), which this module does not expand.",
-        "Certains voyages sont décrits par fréquences (frequencies.txt), que ce module ne développe pas.",
+        (
+            "The Communobus routes (route ids Com_1 to Com_6, on-demand service) are described "
+            "by frequencies.txt; this module does not expand frequencies, so their trips are left "
+            "out of departures and route summaries. The regular lines are complete."
+        ),
+        (
+            "Les lignes Communobus (Com_1 à Com_6, transport sur demande) sont décrites par "
+            "frequencies.txt; ce module ne développe pas les fréquences, leurs voyages sont donc "
+            "exclus des passages et des résumés de ligne. Les lignes régulières sont complètes."
+        ),
     ),
 }
 
