@@ -12,7 +12,6 @@ party and vote pairs (k1/v1 to k13/v13, largest first), and whose sheet
 
 from __future__ import annotations
 
-import asyncio
 import io
 import unicodedata
 import warnings
@@ -24,6 +23,7 @@ from pydantic import BaseModel, Field
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -145,7 +145,7 @@ async def _dataset() -> tuple[tuple[list[dict[str, object]], dict[str, str]], bo
                 "elections_results: the historical workbook is larger than expected."
             )
         try:
-            return await asyncio.to_thread(_parse, response.content)
+            return await run_parse(_parse, response.content)
         except Exception as exc:  # openpyxl raises several unrelated types
             raise UpstreamError(f"elections_results: could not read the workbook: {exc}") from exc
 

@@ -32,3 +32,10 @@ services:
       # PUMF tabulation downloads whole ZIPs; the free disk does not persist.
       - key: MAPLE_PUMF_TABULATE
         value: "0"
+      # StatCan open-database (LODE) archives are unpacked to the system temp
+      # folder (MAPLE_LODE_CACHE_DIR unset): the free plan has no persistent
+      # disk, so they are downloaded again after each restart or deploy. On a
+      # paid plan, attach a Render disk and point MAPLE_LODE_CACHE_DIR (and the
+      # PUMF and IP Horizons cache directories) at it.
+      # MAPLE_ALLOWED_ORIGINS is left unset: browser clients from the project
+      # website and localhost may call /mcp; other browser origins get 403.

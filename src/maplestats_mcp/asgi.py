@@ -1,4 +1,4 @@
-"""Compose the hosted ASGI app: health check -> security middleware -> FastMCP's app.
+"""Compose the hosted ASGI app: health check -> CORS -> security -> FastMCP's app.
 
 `FastMCP.http_app()` (confirmed this session, fastmcp==4.0.3) returns a
 Starlette ASGI app exposing the MCP endpoint at /mcp — exactly the
@@ -12,6 +12,7 @@ from pathlib import Path
 from maplestats_mcp import __version__, config
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.security import (
+    with_cors,
     with_health_endpoint,
     with_http_security,
     with_icon_routes,
@@ -32,10 +33,11 @@ def build_asgi_app():
         rate_limit_window_seconds=config.get_rate_limit_window_seconds(),
         trust_proxy_headers=config.get_trust_proxy_headers(),
     )
+    cors = with_cors(secured, allowed_origins=config.get_allowed_origins())
     png = (ASSETS_DIR / "favicon.png").read_bytes()
     svg = (ASSETS_DIR / "mark.svg").read_bytes()
     iconed = with_icon_routes(
-        secured,
+        cors,
         icons={
             "/favicon.ico": (png, "image/png"),
             "/favicon.png": (png, "image/png"),

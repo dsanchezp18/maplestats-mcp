@@ -9,7 +9,6 @@ robots.txt crawl delay). Sheet and CSV parsing lives in tables.py.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 from typing import Any, Literal
@@ -33,6 +32,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action, excerpt
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -416,9 +416,9 @@ async def describe_resource(
     entry, resource = await _context(url, lang)
     body, cached = await _body(url, resource.size_bytes)
     fmt = tables.detect_format(body, resource.format)
-    sizes = await asyncio.to_thread(tables.sheet_sizes, body, fmt)
+    sizes = await run_parse(tables.sheet_sizes, body, fmt)
     only = _choose_sheet(sizes, sheet) if sheet is not None else None
-    total, summaries = await asyncio.to_thread(tables.describe, body, fmt, only)
+    total, summaries = await run_parse(tables.describe, body, fmt, only)
     attribution = _attribution(entry)
     return ResourceStructure(
         url=url,
@@ -484,12 +484,12 @@ async def read_resource(
     entry, resource = await _context(url, lang)
     body, cached = await _body(url, resource.size_bytes)
     fmt = tables.detect_format(body, resource.format)
-    sizes = await asyncio.to_thread(tables.sheet_sizes, body, fmt)
+    sizes = await run_parse(tables.sheet_sizes, body, fmt)
     names = [n for n, _, _ in sizes]
     if not names:
         raise UpstreamError(f"ab_opendata: {url} has no sheets.")
     chosen = tables.CSV_SHEET if fmt == "csv" else _choose_sheet(sizes, sheet)
-    result = await asyncio.to_thread(
+    result = await run_parse(
         tables.scan,
         body,
         fmt,

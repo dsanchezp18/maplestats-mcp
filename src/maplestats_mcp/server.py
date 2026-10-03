@@ -31,6 +31,7 @@ from maplestats_mcp.shared import search
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware
+from maplestats_mcp.shared.validation import ValidationErrorMiddleware
 
 MODULES_ROOT = Path(__file__).parent / "modules"
 _COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
@@ -183,106 +184,75 @@ plain-language query (English or French). Then call_tool with the name.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
 and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns
-the rows as a formatted Excel workbook. Read docs://catalogue
-for a bilingual one-line description of every module.
+the rows as a formatted Excel workbook. Read docs://catalogue for a
+bilingual one-line description of every module.
 
 Sources, by tool-name prefix:
 - Statistics Canada: wds_ (tables/cubes, vectors), sdmx_ (filtered
-  series), sdmx_space_ (the extra SDMX spaces: energy information CCEI with
-  ECCC emissions and NRCan indicators, and the shared space), rdaas_ (classifications, e.g. NAICS), statcan_census_profile_
-  (2021), statcan_census_profile_2016_, statcan_census_profile_archive_
-  (2001-2016 bulk links), statcan_daily_ (The Daily releases, release calendar),
-  statcan_indicators_, statcan_delta_ (daily bulk-update files: list a
-  day's changed cubes, read one cube's rows, real-time/vintage tables),
-  statcan_reference_ (definitions/methods, analysis), statcan_surveys_
-  (survey directory + IMDB metadata, RDC and RTRA microdata holdings), statcan_geo_ (census geography),
-  statcan_sdg_ (Sustainable Development Goals hub), statcan_pumf_ (public
-  use microdata files: find, list downloads, read codebooks),
-  statcan_lode_ (open databases: healthcare, sports, buildings, schools,
-  addresses, remoteness, proximity; query by place/type/bbox),
-  statcan_census_tables_ (2006-2016 census cross-tabulations: CSV, SDMX,
-  Beyond 20/20 IVT), cimt_ (exports and imports by HS commodity,
-  partner, US state and province, monthly from 1988).
-- Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 IVT tables from
-  university libraries: historical censuses, Business Patterns, LFS review;
-  ODESI DDI metadata for StatCan PUMFs and polls, public files only).
-- Bank of Canada Valet: boc_ (rates, FX, CPI, commodity prices).
-- CMHC housing: cmhc_ (HMIP rental/starts tables), cmhc_dt_ (Excel data
-  tables).
-- ECCC weather/climate/hydrometric: eccc_.
-- ISED: ised_corporations_ (federal corporations), ised_spectrum_
-  (spectrum licences), ised_cipo_ (trademarks), ised_ip_horizons_
-  (CIPO patent lookup and search, bulk IP files and data dictionaries),
-  ised_clean_growth_ (federal cleantech investment 2016-2024).
-- Competition Bureau merger reviews: competition_bureau_.
-- FCAC credit card and bank account comparison tools (fees, interest
-  rates, rewards, low-cost accounts): fcac_.
-- Parliamentary Budget Officer publications and their tables (costings of
-  bills and measures, economic and fiscal outlooks) and its information
-  requests to departments: pbo_.
-- Patented Medicine Prices Review Board annual report tables (patented
-  drug price index, international price ratios, sales, R&D) and patented
-  medicines lists: pmprb_.
-- IRCC: ircc_ (Express Entry draws), ircc_monthly_ (monthly permanent and
-  temporary residents, permits, asylum claims). Elections Canada candidate financial
-  returns: elections_financial_returns_. Federal general election results by riding:
-  elections_results_. Provincial election results (Quebec, Alberta, British
-  Columbia, Saskatchewan): elections_provincial_. CRA digital economy platform
-  operators registry: cra_digital_economy_registry_. Alberta Energy
-  Regulator: aer_. BC Geographic Warehouse: bcgw_. NRCan burned areas:
-  nrcan_nbac_. Wildfire hotspots, perimeters, fire weather (FWI), large fires and situation reports: cwfis_. Alberta Wildfire live
-  status (fires, perimeters, fire danger, fire bans): ab_wildfire_. National Forestry Database (provincial fires,
-  harvest, planting, pests, timber revenues): nfd_.
-  BC Registrar of Lobbyists (registrations, lobbying activity reports):
-  bc_lobbyists_. DFO tides and water levels: dfo_iwls_. Alberta Economic Dashboard:
-  ab_economic_. Open Alberta Excel and CSV files (search, sheets, rows): ab_opendata_. Institut de la statistique du Quebec tables: isq_. NRCan energy use (Comprehensive Energy Use Database,
-  household/commercial/industrial energy surveys): nrcan_energy_use_.
-  Canada Energy Regulator (pipeline throughput, energy exports, tolls):
-  cer_. Canadian Grain Commission (weekly grain deliveries, stocks and
-  terminal exports; monthly grain exports by destination): cgc_. GC
-  InfoBase federal spending and results (Estimates, Public Accounts,
-  program spending and FTEs): gc_infobase_. CIHI health-system
-  indicators (Indicator Library): cihi_. PHAC Health Infobase surveillance
-  files (FluWatch+, wastewater, opioid harms, measles, TB): phac_infobase_.
-  NRCan geocoding and official place names: nrcan_geo_. Transport Canada vehicle recalls: tc_recalls_.
-  Recalls and safety alerts (Health Canada, CFIA food, all agencies): recalls_.
-  Canadian Dairy Commission (milk component and butter support prices,
-  total quota, milk production and class sales): cdc_. CFIA reportable
-  animal diseases (yearly counts, detections, avian influenza infected
-  premises): cfia_.
-  Canada Gazette notices and regulations: gazette_.
-  Earthquakes Canada event catalogue: earthquakes_. House of Commons MPs,
-  roles, party standings and Cabinet: ourcommons_. Senate of Canada
-  recorded votes: senate_. Who represents a postal code or
-  point (MP, MLA, mayor) and electoral districts with licences (unofficial
-  Open North Represent): represent_.
-- CKAN catalogues (federal open.canada.ca, Ontario, BC, Alberta, Quebec,
-  NWT, Yukon, Montreal, Toronto, Regina): ckan_, with a `portal`
-  argument -- ckan_list_portals lists the keys. ckan_datastore_search
-  runs row-level queries on DataStore-active resources; ckan_describe_resource
-  and ckan_read_resource read the Excel and CSV files of file-only resources.
-- ArcGIS Hub portals (80 provinces, cities, regions): arcgis_hub_, with a
-  `portal` argument -- arcgis_hub_list_portals lists the keys.
-- Socrata portals (Nova Scotia, New Brunswick, Calgary, Edmonton,
-  Winnipeg): socrata_, with a `portal` argument -- socrata_list_portals.
-- Vancouver (Opendatasoft): opendatasoft_vancouver_. Newfoundland and
-  Labrador: nl_opendata_. Edmonton: eps_ (police
-  occurrences), ets_ (real-time transit), epcor_ (water quality).
-  Static transit timetables (STM buses, OC Transpo, Calgary Transit,
-  VIA Rail, GO/UP Express, 12 BC Transit systems):
-  transit_, with an `agency` argument -- transit_list_agencies. About 100
-  more agencies (StatCan's 2025 snapshot, agency "national:<id>"):
-  transit_list_national_agencies.
-  Electricity demand, generation and prices: electricity_ontario_ (IESO),
-  electricity_quebec_ (Hydro-Quebec).
+  series), sdmx_space_ (extra SDMX spaces: CCEI energy with ECCC emissions
+  and NRCan indicators, and the shared space), rdaas_ (classifications,
+  e.g. NAICS), statcan_census_profile_ (2021),
+  statcan_census_profile_2016_, statcan_census_profile_archive_ (2001-2016
+  bulk links), statcan_census_tables_ (2006-2016 cross-tabulations),
+  statcan_daily_ (The Daily, release calendar), statcan_indicators_,
+  statcan_delta_ (daily bulk-update files, vintage tables),
+  statcan_reference_ (definitions, methods, analysis), statcan_surveys_
+  (survey directory, IMDB metadata, RDC/RTRA holdings), statcan_geo_
+  (census geography), statcan_sdg_ (SDG hub), statcan_pumf_ (public use
+  microdata: find, downloads, codebooks), statcan_lode_ (open databases:
+  healthcare, schools, buildings, addresses, proximity), cimt_ (trade by
+  HS commodity, partner, province, monthly from 1988).
+- Provincial and territorial statistics agencies: bc_stats_ (BC Stats
+  Excel tables), isq_ (Institut de la statistique du Quebec),
+  nl_stats_ (Newfoundland and Labrador Statistics Agency workbooks),
+  yukon_stats_ (Yukon Bureau of Statistics tables), ab_economic_ (Alberta
+  Economic Dashboard), ab_opendata_ (Open Alberta Excel and CSV files).
+- Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 tables from
+  university libraries; ODESI DDI metadata, public files only).
+- Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
+  (Excel data tables). ECCC weather, climate, hydrometric: eccc_.
+- ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
+  ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
+- Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit
+  card and bank account comparisons), pbo_ (Parliamentary Budget Officer
+  publications and tables), pmprb_ (patented medicine prices), ircc_
+  (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
+  cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
+  cihi_ (health-system indicators), phac_infobase_ (surveillance files),
+  nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
+  (burned areas), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
+  Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
+  diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
+  safety alerts), gazette_ (Canada Gazette), earthquakes_, dfo_iwls_
+  (tides, water levels), nfd_
+  (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
+- Elections and Parliament: elections_results_ (federal results by
+  riding), elections_financial_returns_ (candidate returns),
+  elections_provincial_ (QC, AB, BC, SK results), ourcommons_ (official
+  House of Commons MPs, roles, party standings), senate_ (Senate votes),
+  represent_ (who represents a postal code; unofficial Open North).
+- Provincial and municipal sources: aer_ (Alberta Energy Regulator),
+  ab_wildfire_ (Alberta wildfire status), bcgw_ (BC Geographic
+  Warehouse), bc_lobbyists_ (BC Registrar of Lobbyists), nl_opendata_,
+  opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
+  (Edmonton real-time transit), epcor_ (Edmonton water quality),
+  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec).
+- Portal families, each with a `portal` argument and a list_portals tool:
+  ckan_ (open.canada.ca, provincial and city CKAN catalogues;
+  ckan_datastore_search for rows, ckan_describe_resource and
+  ckan_read_resource for Excel and CSV files), arcgis_hub_ (provincial,
+  city and regional ArcGIS Hub portals), socrata_ (Nova Scotia, New
+  Brunswick, Calgary, Edmonton, Winnipeg).
+- Static transit timetables: transit_, with an `agency` argument --
+  transit_list_agencies, and transit_list_national_agencies for about 100
+  more from StatCan's snapshot.
 
-Routing hints: many federal administrative series (IRCC permits, CRA
-tax statistics and charities, OSFI bank returns, ISED insolvency data)
-(beyond ircc_monthly_) are ordinary open.canada.ca datasets -- use ckan_search_datasets with
-portal="federal" and fq="organization:<org>" (cic for IRCC, cra-arc, osfi-bsif, ic).
-AAFC market data (red meat, poultry and eggs, dairy, horticulture prices) and
-CFIA rabies, aquatic animal disease and food testing data are there too:
-aafc-aac, cfia-acia (terrestrial reportable diseases and avian influenza: cfia_).
+Routing hints: many federal administrative series (IRCC permits beyond
+ircc_monthly_, CRA tax statistics and charities, OSFI bank returns, ISED
+insolvency data, AAFC market prices, CFIA food testing) are ordinary
+open.canada.ca datasets -- use ckan_search_datasets with portal="federal"
+and fq="organization:<org>" (cic, cra-arc, osfi-bsif, ic, aafc-aac,
+cfia-acia).
 
 Language: most tools accept lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's
@@ -338,6 +308,7 @@ def build_server() -> FastMCP:
     for module_dir in sorted(MODULES_ROOT.iterdir()):
         if module_dir.is_dir() and not module_dir.name.startswith("_"):
             mcp.add_provider(ModuleProvider(root=module_dir))
+    mcp.add_middleware(ValidationErrorMiddleware())
     mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
     if config.get_usage_stats_enabled():
         mcp.add_middleware(UsageMiddleware(STATS))

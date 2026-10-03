@@ -18,6 +18,7 @@ same way modules/statcan/wds/client.py calls its own `_get`/`_post`.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, NoReturn
@@ -53,17 +54,35 @@ def _limiter(config: CkanConfig):
     )
 
 
-def _error_detail(exc: httpx.HTTPStatusError) -> str:
-    try:
-        body = exc.response.json()
-    except ValueError:
-        return exc.response.text[:200]
+_DETAIL_CHARS = 200
+
+
+def _plain(text: str) -> str:
+    """Short one-line text from an error body: an HTML error page's markup
+    and whitespace runs would otherwise fill the message."""
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = " ".join(text.split())
+    return text[:_DETAIL_CHARS] + ("…" if len(text) > _DETAIL_CHARS else "")
+
+
+def _envelope_detail(body: object) -> str | None:
     err = body.get("error") if isinstance(body, dict) else None
     if isinstance(err, dict):
         detail = err.get("message") or err.get("__type")
         if detail:
-            return str(detail)
-    return exc.response.text[:200]
+            # Validation errors carry the message per field, e.g. {"q": ["..."]}.
+            fields = {k: v for k, v in err.items() if k not in ("message", "__type")}
+            extra = "; ".join(f"{k}: {v}" for k, v in fields.items())
+            return _plain(f"{detail} ({extra})" if extra else str(detail))
+    return None
+
+
+def _error_detail(exc: httpx.HTTPStatusError) -> str:
+    try:
+        body = exc.response.json()
+    except ValueError:
+        return _plain(exc.response.text) or f"HTTP {exc.response.status_code}"
+    return _envelope_detail(body) or _plain(exc.response.text)
 
 
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -95,10 +114,12 @@ async def action(config: CkanConfig, method: str, params: dict[str, Any] | None 
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
+            f"{context}: the portal did not respond ({type(exc).__name__}) after three "
+            "attempts. Try again shortly."
         ) from exc
     if not isinstance(data, dict) or not data.get("success") or "result" not in data:
-        raise UpstreamError(f"{context} returned an unsuccessful envelope: {data!r}")
+        detail = _envelope_detail(data) or _plain(repr(data))
+        raise UpstreamError(f"{context}: the portal reported a failure: {detail}")
     return data["result"]
 
 

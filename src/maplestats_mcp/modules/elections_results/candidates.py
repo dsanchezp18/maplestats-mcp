@@ -12,7 +12,6 @@ Parliament's ParlInfo and, for 2021, from Elections Canada.
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 from typing import Literal
@@ -24,6 +23,7 @@ from maplestats_mcp.modules.elections_results.historical import _fold
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -122,7 +122,7 @@ async def _dataset() -> tuple[list[dict[str, str]], bool]:
             raise UpstreamError("elections_results: Harvard Dataverse redirected too many times.")
         if len(response.content) > MAX_FILE_BYTES:
             raise UpstreamError("elections_results: the candidate file is larger than expected.")
-        return await asyncio.to_thread(_parse, response.content)
+        return await run_parse(_parse, response.content)
 
     return await cached_fetch("elections_results:candidates", CACHE_TTL_SECONDS, fetch)
 

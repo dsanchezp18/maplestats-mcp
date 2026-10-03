@@ -166,7 +166,11 @@ class _ByteCache:
     def __init__(self, budget: int) -> None:
         self._budget = budget
         self._items: OrderedDict[str, tuple[float, Downloaded]] = OrderedDict()
-        self._locks: dict[str, asyncio.Lock] = {}
+        # key -> (lock, number of callers holding or waiting on it). An entry
+        # is dropped when its last user leaves, so one-off keys (every
+        # distinct URL ever downloaded) do not accumulate for the life of
+        # the process.
+        self._locks: dict[str, tuple[asyncio.Lock, int]] = {}
 
     def clear(self) -> None:
         self._items.clear()
@@ -191,7 +195,23 @@ class _ByteCache:
             self._items.popitem(last=False)
 
     def lock(self, key: str) -> asyncio.Lock:
-        return self._locks.setdefault(key, asyncio.Lock())
+        """The lock for `key`; every call must be paired with release_lock()."""
+        lock, users = self._locks.get(key, (asyncio.Lock(), 0))
+        self._locks[key] = (lock, users + 1)
+        return lock
+
+    def release_lock(self, key: str) -> None:
+        entry = self._locks.get(key)
+        if entry is None:  # clear() ran while this caller held the lock
+            return
+        lock, users = entry
+        if users <= 1:
+            del self._locks[key]
+        else:
+            self._locks[key] = (lock, users - 1)
+
+    def lock_count(self) -> int:
+        return len(self._locks)
 
 
 _CACHE = _ByteCache(CACHE_BUDGET_BYTES)
@@ -211,10 +231,14 @@ async def cached_download(
     hit = _CACHE.get(key)
     if hit is not None:
         return hit, True
-    async with _CACHE.lock(key):
-        hit = _CACHE.get(key)
-        if hit is not None:
-            return hit, True
-        value = await fetch()
-        _CACHE.put(key, ttl, value)
-        return value, False
+    lock = _CACHE.lock(key)
+    try:
+        async with lock:
+            hit = _CACHE.get(key)
+            if hit is not None:
+                return hit, True
+            value = await fetch()
+            _CACHE.put(key, ttl, value)
+            return value, False
+    finally:
+        _CACHE.release_lock(key)

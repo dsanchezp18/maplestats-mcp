@@ -10,7 +10,6 @@ layout; see shared/xlsx_sheets.py.
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Literal
 from urllib.parse import urlparse
 
@@ -23,6 +22,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -219,7 +219,7 @@ async def _body(url: str) -> tuple[bytes, bool]:
 async def _sheets(url: str, body: bytes) -> list[SheetInfo]:
     async def fetch() -> list[SheetInfo]:
         try:
-            dims = await asyncio.to_thread(xlsx_sheets.sheet_dimensions, body)
+            dims = await run_parse(xlsx_sheets.sheet_dimensions, body)
         except Exception as exc:  # openpyxl raises several unrelated types
             raise UpstreamError(f"bc_stats: could not read {url}: {exc}") from exc
         return [SheetInfo(name=n, rows=r, columns=c) for n, r, c in dims]
@@ -233,7 +233,7 @@ async def _sheets(url: str, body: bytes) -> list[SheetInfo]:
 async def _rows(url: str, body: bytes, sheet: str) -> tuple[list[list[str]], bool]:
     async def fetch() -> tuple[list[list[str]], bool]:
         try:
-            return await asyncio.to_thread(
+            return await run_parse(
                 xlsx_sheets.read_sheet, body, sheet, constants.MAX_ROWS_PER_SHEET
             )
         except InvalidInput:

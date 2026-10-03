@@ -39,6 +39,7 @@ from maplestats_mcp.modules.statcan.pumf.schemas import (
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import new_client, request_headers
 
 Statistic = Literal["total", "share", "mean"]
@@ -115,7 +116,7 @@ async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Pat
         zip_path.unlink(missing_ok=True)
         _enforce_cache_cap(config.get_pumf_cache_dir(), target)
 
-    await asyncio.to_thread(extract)
+    await run_in_pool(extract)
     return target
 
 
@@ -444,7 +445,7 @@ async def tabulate(
     if missing_replicates:
         raise UpstreamError(f"Replicate weights {missing_replicates[:3]} are not in the codebook.")
 
-    result_rows, total_n, total_weight = await asyncio.to_thread(
+    result_rows, total_n, total_weight = await run_in_pool(
         _run_query,
         DataSource(path, fixed_width, by_name),
         upper_rows,
