@@ -52,13 +52,17 @@ def _non_empty(key: str) -> Check:
 _TODAY = datetime.now(UTC).date()
 
 # Modules whose upstream is down; remove an entry once the source responds.
-DOWN_MODULES = {
-    # oee.nrcan.gc.ca fails the TLS handshake from CI and locally (2026-09-29).
-    "nrcan_energy_use": "oee.nrcan.gc.ca does not complete a TLS handshake",
-}
+DOWN_MODULES: dict[str, str] = {}
 
 # Single tools whose upstream is down while the rest of their module works.
-DOWN_TOOLS: dict[str, str] = {}
+# oee.nrcan.gc.ca times out at TCP connect on port 443 (2026-10-03; it failed
+# the TLS handshake on 2026-09-29). nrcan_energy_use_list_products still
+# answers from its fixed survey list, so it keeps its step.
+_OEE_DOWN = "oee.nrcan.gc.ca does not accept a TCP connection"
+DOWN_TOOLS: dict[str, str] = {
+    "nrcan_energy_use_list_tables": _OEE_DOWN,
+    "nrcan_energy_use_get_table": _OEE_DOWN,
+}
 
 STEPS: list[Step] = [
     # Alberta Economic Dashboard

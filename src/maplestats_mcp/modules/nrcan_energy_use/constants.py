@@ -112,4 +112,11 @@ RATE_LIMIT_PER_SECOND = 2.0
 RATE_LIMIT_CAPACITY = 4.0
 
 CACHE_TTL_MENU_SECONDS = 7 * 24 * 60 * 60
+# oee.nrcan.gc.ca has been unreachable for days at a time (TCP connect
+# timeout, 2026-10-03). A plain TCP connect with this timeout runs before
+# each fetch, so tools fail in seconds instead of after the 60 s read
+# timeout and two retries (about 67 s per call, measured live).
+HOST = "oee.nrcan.gc.ca"
+CONNECT_TIMEOUT_SECONDS = 8.0
+UNREACHABLE_TTL_SECONDS = 5 * 60
 CACHE_TTL_TABLE_SECONDS = 24 * 60 * 60

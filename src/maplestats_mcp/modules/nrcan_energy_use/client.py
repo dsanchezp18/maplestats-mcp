@@ -8,7 +8,9 @@ unchanged against the English and French roots.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 from urllib.parse import parse_qsl, urlencode, urlparse
 
 import httpx
@@ -38,8 +40,32 @@ _VALUE = re.compile(r"^[A-Za-z0-9]{1,12}$")
 _MENU = re.compile(r"trends_([a-z]+)_([a-z]+)\.cfm")
 
 
+_unreachable_until = 0.0
+
+
+async def _check_reachable() -> None:
+    """Fail fast when the host does not accept a TCP connection."""
+    global _unreachable_until
+    if time.monotonic() < _unreachable_until:
+        raise UpstreamUnavailable(
+            f"nrcan_energy_use: {constants.HOST} is not accepting connections; try again later."
+        )
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(constants.HOST, 443), constants.CONNECT_TIMEOUT_SECONDS
+        )
+    except (TimeoutError, OSError) as exc:
+        _unreachable_until = time.monotonic() + constants.UNREACHABLE_TTL_SECONDS
+        raise UpstreamUnavailable(
+            f"nrcan_energy_use: {constants.HOST} did not accept a connection within "
+            f"{constants.CONNECT_TIMEOUT_SECONDS:g} s; try again later."
+        ) from exc
+    writer.close()
+
+
 async def _html(url: str, ttl: int) -> tuple[str, bool]:
     async def fetch() -> str:
+        await _check_reachable()
         await _LIMITER.acquire()
         try:
             response = await get_raw(url, timeout=60.0)
@@ -75,9 +101,27 @@ def _table_key(href: str) -> str | None:
 
 async def list_products(lang: str = "en") -> ProductList:
     index = 1 if lang == "fr" else 0
-    html, cached = await _html(
-        constants.EN_ROOT + constants.COMPREHENSIVE_LIST, constants.CACHE_TTL_MENU_SECONDS
-    )
+    surveys = [Product(product=k, name=v[index]) for k, v in constants.SURVEYS.items()]
+    try:
+        html, cached = await _html(
+            constants.EN_ROOT + constants.COMPREHENSIVE_LIST, constants.CACHE_TTL_MENU_SECONDS
+        )
+    except UpstreamUnavailable as exc:
+        # The survey products are fixed; only the comprehensive menu is read live.
+        return ProductList(
+            surveys=surveys,
+            comprehensive=[],
+            note=(
+                f"The comprehensive tables menu could not be read ({exc}); the survey "
+                "products are listed, but their tables need the site to answer."
+            ),
+            provenance=make_provenance(
+                source=constants.RATE_LIMIT_SOURCE,
+                url=constants.EN_ROOT + constants.COMPREHENSIVE_LIST,
+                cached=False,
+                schema_name="nrcan_energy_use.ProductList",
+            ),
+        )
     pairs = sorted(set(_MENU.findall(html)))
     menus = [
         ComprehensiveMenu(
@@ -89,7 +133,7 @@ async def list_products(lang: str = "en") -> ProductList:
         for sector, juris in pairs
     ]
     return ProductList(
-        surveys=[Product(product=k, name=v[index]) for k, v in constants.SURVEYS.items()],
+        surveys=surveys,
         comprehensive=menus,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,

@@ -16,6 +16,19 @@ def _clear_cache():
     yield
 
 
+_REAL_CHECK = client._check_reachable
+
+
+@pytest.fixture(autouse=True)
+def _host_reachable(monkeypatch):
+    # The real check opens a TCP socket; tests of it call _REAL_CHECK directly.
+    async def reachable() -> None:
+        return None
+
+    monkeypatch.setattr(client, "_check_reachable", reachable)
+    monkeypatch.setattr(client, "_unreachable_until", 0.0)
+
+
 _MENU = """<html><body><div class="table">
 <div class="row"><div class="col-xs-4"><a title="Table 1.1a"
  href="/corporate/statistics/neud/dpa/showTable.cfm?type=SH&sector=aaa&juris=ca&year=2019&rn=1&page=1">Table 1.1a</a></div>
@@ -152,3 +165,32 @@ async def test_get_table_normalises_key_order_and_serves_repeat_from_cache(httpx
     assert first.provenance.cached is False
     assert second.provenance.cached is True
     assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_unreachable_host_fails_fast_and_is_remembered(monkeypatch):
+    # Live 2026-10-03: TCP connects to oee.nrcan.gc.ca:443 time out; each tool
+    # used to wait about 67 s (60 s read timeout plus retries) before failing.
+    calls = 0
+
+    async def never_connects(host: str, port: int):
+        nonlocal calls
+        calls += 1
+        raise TimeoutError
+
+    monkeypatch.setattr(client.asyncio, "open_connection", never_connects)
+    with pytest.raises(UpstreamUnavailable, match="did not accept a connection"):
+        await _REAL_CHECK()
+    with pytest.raises(UpstreamUnavailable, match="not accepting connections"):
+        await _REAL_CHECK()
+    assert calls == 1
+
+
+async def test_list_products_keeps_the_static_surveys_when_the_site_is_down(monkeypatch):
+    async def down() -> None:
+        raise UpstreamUnavailable("nrcan_energy_use: host down")
+
+    monkeypatch.setattr(client, "_check_reachable", down)
+    result = await client.list_products()
+    assert len(result.surveys) == len(constants.SURVEYS)
+    assert result.comprehensive == []
+    assert result.note is not None and "comprehensive" in result.note
