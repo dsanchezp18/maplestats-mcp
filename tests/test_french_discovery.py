@@ -153,6 +153,13 @@ CASES = [
         "indicateurs du développement dans le monde de la Banque mondiale",
         "worldbank_search_indicators",
     ),
+    # French stop words in shared/search.py (2026-10-03): "de" and "par" no
+    # longer decide the ranking.
+    ("taux de chômage par province", "statcan_indicators_get_indicators"),
+    ("météo prévisions Québec", "eccc_query_items"),
+    ("produit intérieur brut par province", "wds_search_cubes"),
+    ("permis de construire", "wds_search_cubes"),
+    ("salaire minimum", "nl_stats_list_files"),
 ]
 
 

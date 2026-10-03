@@ -3024,7 +3024,7 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             micro["unweighted_n"],
             "census records in one tabulation"
             if en
-            else "fiches du recensement dans une tabulation",
+            else "fiches du recensement dans une totalisation",
         ),
         (
             counts["boc_search_series"]["total_count"],
@@ -3785,7 +3785,9 @@ _SPACED = (
     (re.compile(r"(^|\S)\s?(:)(?=\s|$)"), NBSP),
     (re.compile(r"(^|\S)\s?(»)"), NBSP),
 )
-_OPEN_QUOTE = re.compile(r"«\s?(?=\S)")
+# A « that ends a text is followed by an element, as in "« <span>": it
+# needs its space too.
+_OPEN_QUOTE = re.compile(r"«\s?(?=\S|$)")
 _PERCENT = re.compile(r"(\d)\s?%")
 
 

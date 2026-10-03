@@ -140,7 +140,7 @@ the same data straight from the source. Most tools accept `lang: "en"|"fr"`
 
 ## What it covers
 
-About 250 tools. Run `docs://catalogue` for the full, bilingual list.
+About 300 tools. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -210,9 +210,8 @@ MIT
 
 MapleStats owes its architecture to
 [EcuDataMCP](https://github.com/DweskZ/EcuDataMCP), my MCP server for
-Ecuador's open data, and its module pattern to ReyemTech's `mcp-canada`.
-Its approach to Canadian data owes much to the R developers who got there
-first: Jens von Bergmann
+Ecuador's open data. Its approach to Canadian data owes much to the R
+developers who got there first: Jens von Bergmann
 ([mountainMath](https://github.com/mountainMath)) and his co-authors,
 Thierry Warin ([statcanR](https://github.com/warint/statcanR)), Valentin
 Lucet ([rgovcan](https://github.com/VLucet/rgovcan)), and others. Thanks

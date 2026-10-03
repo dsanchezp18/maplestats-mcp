@@ -231,8 +231,9 @@ uv run python scripts/smoke_test.py
 `site/` holds the website's templates and assets;
 `scripts/build_site.py` renders them into `build/site/` (gitignored),
 English at the root and French under `fr/`, and
-`.github/workflows/pages.yml` publishes that on every push to `main`
-that touches `site/`, `src/` or the script. The tool atlas, the counts,
+`.github/workflows/pages.yml` rebuilds and publishes it after every
+push to `main` that passes CI (it runs on CI's `workflow_run`, which has
+no path filter). The tool atlas, the counts,
 the worked examples and the search index come from the running server,
 so there is nothing to update by hand when a tool changes. The search
 in the page is the server's own BM25 index shipped as JSON, with the
@@ -294,5 +295,4 @@ script to run by hand after editing a page's links.
 
 ## Acknowledgments
 
-See [`README.md`](README.md#acknowledgments) for credit to the prior
-open-source work this architecture draws on.
+See [`README.md`](README.md#acknowledgments).
