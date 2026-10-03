@@ -236,6 +236,13 @@ STEPS: list[Step] = [
         {"cql_filter": "year = 2999"},
         lambda data: not data["fires"] and (data["latest_year"] or 0) >= 2024,
     ),
+    # NFD (the rest is in smoke_test_nfd.py): a one-province group keeps its name.
+    Step(
+        "nfd",
+        "nfd_query_table",
+        {"table_id": "3.2.1", "province": "BC", "group_by": ["year"], "limit": 3},
+        lambda data: bool(data["rows"]) and all(r["iso"] == "BC" for r in data["rows"]),
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(

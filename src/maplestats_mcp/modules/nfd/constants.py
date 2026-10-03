@@ -12,7 +12,6 @@ from __future__ import annotations
 BASE_URL = "http://nfdp.ccfm.org"
 PAGE_EN = f"{BASE_URL}/en/download.php"
 PAGE_FR = f"{BASE_URL}/fr/download.php"
-TERMS_URL = f"{BASE_URL}/en/terms.php"
 
 RATE_LIMIT_SOURCE = "nfd"
 RATE_LIMIT_PER_SECOND = 2.0
