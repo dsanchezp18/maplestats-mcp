@@ -40,6 +40,8 @@ async def cwfis_get_hotspots(
     (YYYY-MM-DD): the archive since 1994. Filter by agency (province code such as
     'BC'), bbox [min_lon, min_lat, max_lon, max_lat] or minimum fire radiative
     power. Canada only by default (the source also carries US/Mexico detections).
+    sort_by='frp' ranks detections by FRP, then lists those with no FRP (most
+    archive rows before 2024 have none; without_frp counts them).
     Use for: where fires are burning right now, active fire detections in a
     province, hotspot counts on a past date, fire intensity (FRP, HFI) and FWI.
     Keywords: hotspots, active fires, satellite fire detection, VIIRS, MODIS,
@@ -74,7 +76,8 @@ async def cwfis_get_fire_perimeters(
 
     Not agency-mapped perimeters: polygons modelled from clustered hotspots this
     season (first/last detection date, hotspot count, area). Set
-    include_geometry for GeoJSON polygons. For final burned area by year use
+    include_geometry for GeoJSON polygons; those rows stop at about 400 KB of
+    geometry (note and has_more say so; page on with offset). For final burned area by year use
     nrcan_nbac_query_fires; for BC agency fires use bcgw_get_active_wildfires.
     Use for: biggest fires this season, current fire footprint in a region.
     Keywords: fire perimeter, wildfire polygon, current season, M3, active fire
@@ -104,8 +107,10 @@ async def cwfis_get_weather_stations(
 ) -> StationResult:
     """Fire weather stations with the latest Fire Weather Index (FWI) system values.
 
-    Search by province code (SK and NL work), by name fragment, or by point
-    (latitude + longitude + radius_km up to 200, nearest first). Each station
+    Search by province code (SK and NL map to the layer's own codes), by name
+    fragment, or by point (latitude + longitude + radius_km up to 200, nearest
+    first). Stations report during the fire season; off season the layer holds
+    only a few, and an empty result's note says how many and where. Each station
     has one noon observation plus FFMC, DMC, DC, ISI, BUI, FWI and DSR.
     Use for: today's fire weather index near a town, FWI by station, drought
     code and fine fuel moisture, wildfire risk indices for a province.

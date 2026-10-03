@@ -186,6 +186,33 @@ STEPS: list[Step] = [
         {"limit": 3},
         lambda data: len(data["points"]) == 3 and bool(data["points"][-1]["exports_total_mw"]),
     ),
+    # CWFIS (the rest is in smoke_test_cwfis.py): an FRP sort keeps detections
+    # without FRP (2023 archive rows have none), geometry stays within budget.
+    Step(
+        "cwfis",
+        "cwfis_get_hotspots",
+        {
+            "agency": "BC",
+            "start_date": "2023-08-18",
+            "end_date": "2023-08-18",
+            "sort_by": "frp",
+            "limit": 2,
+        },
+        lambda data: data["total_matched"] > 1000 and data["returned_count"] == 2,
+    ),
+    Step("cwfis", "cwfis_get_hotspots", {"agency": "ZZ"}, expect_error="agency"),
+    Step(
+        "cwfis",
+        "cwfis_get_fire_perimeters",
+        {"include_geometry": True, "limit": 20},
+        lambda data: len(json.dumps(data)) < 600_000,
+    ),
+    Step(
+        "cwfis",
+        "cwfis_get_weather_stations",
+        {"name": "NO SUCH STATION ZZ"},
+        lambda data: not data["stations"] and "layer currently holds" in (data["note"] or ""),
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(
