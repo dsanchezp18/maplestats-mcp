@@ -7,10 +7,9 @@ Licences by dataset: Open Government Licence - British Columbia (37),
 Statistics Canada Open Licence (52, StatCan-derived tables), Open Government
 Licence - Canada (7), Access Only (3, geographic layers, no Excel). Files sit
 at /dataset/<id>/resource/<id>/download/<name>.xlsx on the catalogue host and
-download directly (no redirect). robots.txt disallows /api/ and sets
-Crawl-Delay 10 for all agents; discovery goes through the shipped CKAN
-helper (its own `ckan-bc` bucket) and file downloads wait 10 s between
-requests.
+download directly (no redirect). The host asks for 10 seconds between
+requests, so discovery (one package_search through the shared CKAN helper)
+and file downloads share one bucket paced at one request per 10 seconds.
 
 The catalogue's `datastore_active` flag is not reliable for these files: two
 of the five .xlsx resources flagged true (LFS earnings and employment
@@ -31,7 +30,8 @@ CKAN_PORTAL = PORTALS[PORTAL]
 
 RATE_LIMIT_SOURCE = "bc-stats-files"
 RATE_LIMIT_PER_SECOND = 0.1
-RATE_LIMIT_CAPACITY = 2.0
+RATE_LIMIT_CAPACITY = 1.0
+CATALOGUE_TIMEOUT_SECONDS = 60.0
 
 CACHE_TTL_LIST_SECONDS = 6 * 60 * 60
 CACHE_TTL_FILE_SECONDS = 6 * 60 * 60

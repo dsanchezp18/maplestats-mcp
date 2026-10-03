@@ -367,7 +367,8 @@ async def test_only_current_versions_are_registrations(httpx_mock):
     assert "3 of 4 versions" in result.note
     assert result.provenance.as_of is not None
     assert result.provenance.as_of.date() == date(2026, 9, 20)
-    assert constants.ATTRIBUTION in (result.provenance.limits or "")
+    assert constants.ATTRIBUTION in (result.provenance.licence or "")
+    assert "registrar" not in (result.provenance.limits or "").lower()
     assert result.attribution == constants.ATTRIBUTION
 
 
@@ -447,6 +448,10 @@ async def test_registration_period_overlap(httpx_mock):
     assert ids(await client.search_registrations(date_from="2026-09-20")) == ["R-2", "R-3"]
     with pytest.raises(InvalidInput):
         await client.search_registrations(date_from="last year")
+    with pytest.raises(InvalidInput, match="after date_to"):
+        await client.search_registrations(date_from="2025-12-31", date_to="2025-01-01")
+    with pytest.raises(InvalidInput, match="after date_to"):
+        await client.search_activity_reports(date_from="2025-12-31", date_to="2025-01-01")
 
 
 async def test_search_truncates_topics_but_get_returns_all(httpx_mock):

@@ -59,6 +59,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.licences import IESO_TERMS
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -94,8 +95,11 @@ async def _get_text(path: str, context: str) -> str:
     return response.text
 
 
-def _limits(extra: str = "") -> str:
-    return f"{extra} {constants.COPYRIGHT}".strip()
+_LICENCE = IESO_TERMS  # every reproduction must carry the IESO copyright notice
+
+
+def _limits(extra: str = "") -> str | None:
+    return extra or None
 
 
 # -------------------------------------------------------------- XML helpers
@@ -288,6 +292,7 @@ async def get_hourly_demand(
             schema_name="electricity.HourlyDemand",
             freshness="current-year file refreshed daily; lags the clock by about a day",
             coverage="Ontario only (IESO-controlled grid)",
+            licence=_LICENCE,
             limits=_limits(
                 f"Rows capped at {limit}; peak and average cover all {len(matched)} matched hours."
             ),
@@ -346,6 +351,7 @@ async def get_realtime_demand(
             cached=was_cached,
             schema_name="electricity.RealtimeDemand",
             freshness="updated about every hour with 12 five-minute intervals",
+            licence=_LICENCE,
             limits=_limits("One delivery hour per call; dated files are kept about three months."),
         ),
     )
@@ -447,6 +453,7 @@ async def get_supply_by_fuel(
             schema_name="electricity.SupplyByFuel",
             freshness="current-year file refreshed daily; ends about a day behind the clock",
             coverage="IESO-metered generators; embedded (distribution-connected) supply excluded",
+            licence=_LICENCE,
             limits=_limits(
                 f"Rows capped at {limit}; totals cover all {len(matched)} matched hours. "
                 "Shares exclude the control_actions series."
@@ -545,6 +552,7 @@ async def get_zonal_prices(
                 else "one file per delivery hour, 12 five-minute intervals"
             ),
             coverage="Ontario Zonal Price only, the settlement price since 2025-05-01",
+            licence=_LICENCE,
             limits=_limits(
                 "Prices in CAD/MWh, capped values as published; dated files kept about "
                 "three months. HOEP no longer exists after 2025-04."
@@ -597,6 +605,7 @@ async def get_hoep_history(year: int | None = None, *, lang: str = "en") -> Hoep
             cached=was_cached,
             schema_name="electricity.HoepHistory",
             freshness="closed series; the final year, 2025, is partial (to April)",
+            licence=_LICENCE,
             limits=_limits(),
         ),
     )
@@ -662,6 +671,7 @@ async def get_adequacy_outlook(
             cached=was_cached,
             schema_name="electricity.AdequacyOutlook",
             freshness="one file per delivery day, revised through the day; about 34 days ahead",
+            licence=_LICENCE,
             limits=_limits(
                 "Future days leave many series empty (null). Per-fuel, zonal and area detail "
                 "in the XML is not returned."
@@ -734,6 +744,7 @@ async def get_intertie_flows(date_text: str | None = None, *, lang: str = "en") 
             cached=was_cached,
             schema_name="electricity.IntertieFlows",
             freshness="updated through the day; hourly schedules, 5-minute actual flows",
+            licence=_LICENCE,
             limits=_limits("Means are over the 5-minute intervals reported so far that day."),
         ),
     )

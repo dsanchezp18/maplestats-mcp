@@ -51,7 +51,7 @@ _CONFIG = arcgis.ArcGISHubConfig(
     rate_limit_per_second=c.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=c.RATE_LIMIT_CAPACITY,
 )
-_LICENCE = f"Licence: Open Government Licence - Alberta ({c.LICENCE_URL}). {c.ATTRIBUTION}"
+_LICENCE = f"Open Government Licence - Alberta ({c.LICENCE_URL}). Attribution: '{c.ATTRIBUTION}'"
 _FIRE_FIELDS_CURRENT = (
     "LABEL,FIRE_YEAR,FIRE_TYPE,FIRE_STATUS,FIRE_STATUS_DATE,ASSESSMENT_ASSISTANCE_DATE,"
     "AREA_ESTIMATE,SIZE_CLASS,GENERAL_CAUSE,RESP_AREA,CO_FLAG,FIRE_COMPLEX_NUMBER,"
@@ -207,7 +207,8 @@ def _prov(
         as_of=as_of,
         freshness=freshness,
         coverage=coverage,
-        limits=f"{limits.rstrip('.')}. {_LICENCE}" if limits else _LICENCE,
+        limits=limits,
+        licence=_LICENCE,
     )
 
 

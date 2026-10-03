@@ -1,10 +1,5 @@
 SOURCE = "electricity"
 BASE_URL = "https://reports-public.ieso.ca/public"
-COPYRIGHT = (
-    "Copyright 2004-2022 Independent Electricity System Operator, all rights reserved. "
-    "This information is subject to the Terms of Use set out in the IESO's website "
-    "(www.ieso.ca)."
-)
 
 # IESO reports use Eastern Standard Time all year round: hour-ending 1..24, with
 # 24 rows on both daylight-saving change days (confirmed live 2026-09-29 in

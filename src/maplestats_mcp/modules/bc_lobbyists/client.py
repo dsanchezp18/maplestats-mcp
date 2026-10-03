@@ -88,8 +88,10 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -580,7 +582,13 @@ async def _activity() -> tuple[_ActivityStore, bool]:
 
 
 def _provenance(
-    name: str, schema: str, cached: bool, as_of: datetime | None, coverage: str, lang: str
+    name: str,
+    schema: str,
+    cached: bool,
+    as_of: datetime | None,
+    coverage: str,
+    lang: str,
+    limits: str | None = None,
 ) -> Provenance:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
@@ -594,7 +602,10 @@ def _provenance(
             "mensuelle (jeux de données massifs du registraire)",
         ),
         coverage=coverage,
-        limits=f"{constants.ATTRIBUTION} Licence: {constants.LICENCE_URL}",
+        limits=limits,
+        licence=f"Open Data Licence for the Office of the Registrar of Lobbyists for British "
+        f"Columbia ({constants.LICENCE_URL}). Attribution: '{constants.ATTRIBUTION}' The licence "
+        "grants no rights to personal information.",
     )
 
 
@@ -612,6 +623,12 @@ def _parse_date(value: str | None, name: str) -> date | None:
         return date.fromisoformat(value.strip())
     except ValueError as exc:
         raise InvalidInput(f"bc_lobbyists: {name} must be YYYY-MM-DD, got {value!r}.") from exc
+
+
+def _date_range(date_from: str | None, date_to: str | None) -> tuple[date | None, date | None]:
+    start, end = _parse_date(date_from, "date_from"), _parse_date(date_to, "date_to")
+    check_range(start, end, "date_from", "date_to")
+    return start, end
 
 
 def _words(text: str) -> list[str]:
@@ -728,7 +745,7 @@ async def search_registrations(
     _check_kind(kind)
     if status is not None and status not in ("active", "ended"):
         raise InvalidInput("bc_lobbyists: status must be 'active' or 'ended'.")
-    start, end = _parse_date(date_from, "date_from"), _parse_date(date_to, "date_to")
+    start, end = _date_range(date_from, date_to)
     store, cached = await _registrations()
     words, client_words = _words(query), _words(client)
     lobbyist_words, firm_words = _words(lobbyist), _words(firm)
@@ -760,10 +777,12 @@ async def search_registrations(
     matched.sort(
         key=lambda r: (not r.active, -(r.version_start or date.min).toordinal(), r.registration_id)
     )
-    shown = matched[:limit]
+    models = fit_to_budget(
+        [_registration_model(r, store, lang, full=False) for r in matched[:limit]]
+    )
     return OrlRegistrationList(
-        registrations=[_registration_model(r, store, lang, full=False) for r in shown],
-        returned_count=len(shown),
+        registrations=models,
+        returned_count=len(models),
         total_matched=len(matched),
         by_status=dict(Counter("active" if r.active else "ended" for r in matched)),
         by_kind=dict(Counter(r.kind for r in matched)),
@@ -788,6 +807,13 @@ async def search_registrations(
                 f"déclarations d'inscription depuis 2010, {len(store.registrations)} inscriptions",
             ),
             lang,
+            truncation_note(
+                returned=len(models),
+                total=len(matched),
+                unit="matching registrations (active first, then most recently changed)",
+                how_to_get_more="narrow the filters or raise limit "
+                f"(max {constants.SEARCH_MAX_LIMIT}; responses are also capped near 200 KB)",
+            ),
         ),
     )
 
@@ -879,7 +905,7 @@ def _filter_reports(
     arranged_only: bool | None,
 ) -> list[_Report]:
     _check_kind(kind)
-    start, end = _parse_date(date_from, "date_from"), _parse_date(date_to, "date_to")
+    start, end = _date_range(date_from, date_to)
     words, client_words = _words(query), _words(client)
     lobbyist_words, holder_words = _words(lobbyist), _words(office_holder)
     agency_words = _words(agency)
@@ -948,6 +974,7 @@ async def search_activity_reports(
 ) -> OrlActivityReportList:
     """Activity reports matching every filter given, newest meeting first."""
     _check_limit(limit, constants.SEARCH_MAX_LIMIT)
+    _date_range(date_from, date_to)  # fail before the download
     store, cached = await _activity()
     matched = _filter_reports(
         store,
@@ -963,11 +990,11 @@ async def search_activity_reports(
         arranged_only=arranged_only,
     )
     matched.sort(key=lambda r: ((r.meeting or date.min).toordinal(), r.report_id), reverse=True)
-    shown = matched[:limit]
+    reports = fit_to_budget([_report_model(r, store) for r in matched[:limit]])
     first, last = _span(matched)
     return OrlActivityReportList(
-        reports=[_report_model(r, store) for r in shown],
-        returned_count=len(shown),
+        reports=reports,
+        returned_count=len(reports),
         total_matched=len(matched),
         first_meeting=first,
         last_meeting=last,
@@ -980,6 +1007,14 @@ async def search_activity_reports(
             store.as_of,
             _activity_coverage(store, lang),
             lang,
+            truncation_note(
+                returned=len(reports),
+                total=len(matched),
+                unit="matching reports",
+                order="latest",
+                how_to_get_more="narrow the dates or filters or raise limit "
+                f"(max {constants.SEARCH_MAX_LIMIT}; responses are also capped near 200 KB)",
+            ),
         ),
     )
 

@@ -33,3 +33,13 @@ CACHE_TTL_DETAIL_SECONDS = 24 * 60 * 60  # 24h
 # Observations update at most once per business day for any series
 # covered here (FX, policy rate, CPI, commodity prices).
 CACHE_TTL_OBSERVATIONS_SECONDS = 60 * 60  # 1h
+
+# Response sizes measured live 2026-10-03: the full series inventory is
+# about 2.2 MB and the group inventory about 1 MB, and FX_RATES_DAILY with no
+# date window about 1.2 MB. Lists default to a page, searches to the top
+# matches, and observations keep the most recent dates within a byte budget.
+SEARCH_LIMIT_DEFAULT = 25
+SEARCH_LIMIT_MAX = 200
+LIST_LIMIT_DEFAULT = 50
+LIST_LIMIT_MAX = 1000
+OBSERVATIONS_MAX_BYTES = 200_000

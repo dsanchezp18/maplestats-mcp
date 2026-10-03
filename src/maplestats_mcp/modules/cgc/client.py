@@ -65,8 +65,10 @@ from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.licences import OGL_CANADA
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 Lang = Literal["en", "fr"]
 Filter = str | Sequence[str] | None
@@ -482,10 +484,9 @@ def _weekly_provenance(table: WeeklyTable, cached: bool, schema: str, **extra: A
             "Weekly: the crop year's file is replaced each Thursday with the grain week "
             "that ended the previous Sunday"
             + (f" (file Last-Modified: {table.last_modified})" if table.last_modified else "")
-            + ". Licence: "
-            + constants.LICENCE
             + "."
         ),
+        licence=OGL_CANADA,
         **extra,
     )
 
@@ -582,6 +583,7 @@ def query_weekly_table(
         raise InvalidInput(f"cgc: limit must be between 1 and {constants.ROWS_MAX}.")
     if not worksheet.strip():
         raise InvalidInput("cgc: worksheet is required; cgc_weekly_describe lists them.")
+    check_range(week_from, week_to, "week_from", "week_to")
     sheet_codes = _resolve(table, "worksheet", [worksheet], set(table.by_worksheet))
     candidates = sorted(r for code in sheet_codes for r in table.by_worksheet[code])
     filters = {
@@ -791,10 +793,9 @@ def _exports_provenance(table: ExportsTable, cached: bool, schema: str, **extra:
         freshness=(
             "Monthly, a few weeks after the month ends"
             + (f" (file Last-Modified: {table.last_modified})" if table.last_modified else "")
-            + ". Exports from licensed facilities, by destination. Licence: "
-            + constants.LICENCE
-            + "."
+            + ". Exports from licensed facilities, by destination."
         ),
+        licence=OGL_CANADA,
         **extra,
     )
 
@@ -858,6 +859,7 @@ def query_exports_table(
         raise InvalidInput(f"cgc: limit must be between 1 and {constants.ROWS_MAX}.")
     if frequency not in ("month", "year", "crop_year"):
         raise InvalidInput("cgc: frequency must be 'month', 'year' or 'crop_year'.")
+    check_range(year_from, year_to, "year_from", "year_to")
     if group_by is not None:
         unknown = [d for d in group_by if d not in EXPORT_DIMENSIONS]
         if unknown:

@@ -51,6 +51,8 @@ from maplestats_mcp.modules.transit.zipstream import (
 from maplestats_mcp.shared.cache import cached_fetch, forget
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.licences import derived_from_statcan
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.remote_zip import ZipMember, list_members, read_member
 
@@ -337,17 +339,26 @@ async def _provenance(
         freshness=agency.update_cadence,
         coverage=coverage,
         limits=(
-            f"Licence: {agency.licence}. Attribution: {agency.attribution}"
-            + (f" {agency.notes_en}" if agency.excluded_route_types else "")
+            (agency.notes_en if agency.excluded_route_types else "")
             + (
-                f" Compiled by Statistics Canada under {constants.NATIONAL_LICENCE}; "
-                f"licence page: {agency.licence_url}. Data quality is taken as is "
-                "(no fixes applied by StatCan)."
+                " Data quality is taken as is (no fixes applied by StatCan)."
                 if agency.database == "statcan"
                 else ""
             )
-        ),
+        ).strip()
+        or None,
+        licence=_feed_licence(agency),
     )
+
+
+def _feed_licence(agency: Agency) -> str:
+    """The feed's own terms; a national-database feed also carries StatCan's."""
+    own = f"{agency.licence} ({agency.licence_url}). Attribution: '{agency.attribution}'"
+    if agency.database == "statcan":
+        return derived_from_statcan(
+            f"{own} Compiled by Statistics Canada ({constants.NATIONAL_LICENCE})."
+        )
+    return own
 
 
 async def _check_date(key: str, day: date) -> None:
@@ -463,18 +474,23 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
     """Every configured agency, with a live HEAD check of its zip (not for hosts
     that build the zip on request: their `reachable` stays null)."""
     probed = await asyncio.gather(*(_probe(a, lang) for a in constants.AGENCIES.values()))
+    feeds = [feed for feed, _ in probed]
     return AgencyList(
         total_matches=len(probed),
-        agencies=[feed for feed, _ in probed],
+        agencies=feeds,
         provenance=make_provenance(
             source="transit",
-            url="see agencies[].feed_url",
+            # No single URL lists these feeds: the result is one HEAD request
+            # per feed, so the URL given is the first feed and limits says so.
+            url=feeds[0].feed_url,
             cached=all(cached for _, cached in probed),
             schema_name="transit.AgencyList",
             freshness="Each agency's zip is checked with a HEAD request (cached 10 minutes).",
             limits=(
-                "Only agencies with an open static GTFS zip, no key, and range support are "
-                "configured; see agencies[].licence and attribution for reuse terms."
+                f"Request: one HEAD request to each of the {len(feeds)} agencies' feed_url "
+                "(provenance url is the first of them; hosts that build the zip on request "
+                "are not probed). Only agencies with an open static GTFS zip and no key are "
+                "configured."
             ),
         ),
     )
@@ -485,6 +501,8 @@ async def list_national_agencies(
     query: str | None = None,
     province: str | None = None,
     status: str | None = None,
+    limit: int = constants.NATIONAL_LIMIT_DEFAULT,
+    offset: int = 0,
     lang: str = "en",
 ) -> AgencyList:
     """The feeds of StatCan's Canadian Public Transit Network Database.
@@ -495,6 +513,10 @@ async def list_national_agencies(
     """
     if status is not None and status not in ("available", "overlaps_live", "excluded"):
         raise InvalidInput("status must be 'available', 'overlaps_live' or 'excluded'.")
+    if not 1 <= limit <= constants.NATIONAL_LIMIT_MAX:
+        raise InvalidInput(f"limit must be between 1 and {constants.NATIONAL_LIMIT_MAX}.")
+    if offset < 0:
+        raise InvalidInput("offset must be 0 or more.")
     _, was_cached = await _national_catalog()
     needle = gtfs.fold(query) if query else None
     wanted = province.strip().upper() if province else None
@@ -509,9 +531,10 @@ async def list_national_agencies(
         )
     ]
     feeds.sort(key=lambda f: (f.province, f.name_en.casefold()))
+    page = feeds[offset : offset + limit]
     return AgencyList(
         total_matches=len(feeds),
-        agencies=feeds,
+        agencies=page,
         provenance=make_provenance(
             source="transit:statcan",
             url=constants.NATIONAL_URL,
@@ -520,10 +543,19 @@ async def list_national_agencies(
             as_of=constants.NATIONAL_AS_OF,
             freshness=constants.NATIONAL_FRESHNESS,
             coverage=f"{len(_NATIONAL)} feeds in the database; product page {constants.NATIONAL_PAGE}.",
-            limits=(
-                f"Compiled by Statistics Canada under {constants.NATIONAL_LICENCE}. "
-                f"{constants.NATIONAL_NOTICE} Each feed's licence_url and attribution are the "
-                "ones StatCan recorded for it; check them before republishing."
+            limits=join_limits(
+                "Each feed's licence_url and attribution are the ones StatCan recorded for it; "
+                "check them before republishing",
+                (
+                    f"Returned feeds {offset + 1} to {offset + len(page)} of {len(feeds)} "
+                    "matching; page with offset or narrow with query, province or status"
+                    if page and len(page) < len(feeds)
+                    else None
+                ),
+            ),
+            licence=derived_from_statcan(
+                f"Canadian Public Transit Network Database compilation ({constants.NATIONAL_NOTICE}); "
+                "each feed also carries its agency's own terms (licence_url, attribution)."
             ),
         ),
     )

@@ -16,7 +16,7 @@ Lang = Literal["en", "fr"]
 async def yukon_stats_list_tables(
     query: str | None = None,
     dataset: str | None = None,
-    limit: int = constants.TABLES_LIMIT_MAX,
+    limit: int = constants.TABLES_LIMIT_DEFAULT,
     lang: Lang = "en",
 ) -> TableList:
     """List the CSV tables of the Yukon Bureau of Statistics (about 100, incl. three Census profiles).

@@ -39,6 +39,10 @@ MAX_CONCURRENT_SCANS = 2
 
 LIMIT_DEFAULT = 20
 LIMIT_MAX = 500
+# The national list has some 140 feeds at about 1.5 KB each; a page keeps
+# the default response small.
+NATIONAL_LIMIT_DEFAULT = 25
+NATIONAL_LIMIT_MAX = 200
 STOP_FAMILY_MAX = 50
 
 

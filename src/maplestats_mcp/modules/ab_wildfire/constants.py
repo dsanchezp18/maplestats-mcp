@@ -4,7 +4,6 @@ for what was confirmed live about each layer."""
 SOURCE = "ab_wildfire"
 DOMAIN = "services.arcgis.com"
 SERVICES_ROOT = "https://services.arcgis.com/Eb8P5h4CJk8utIBz/arcgis/rest/services"
-MAP_URL = "https://experience.arcgis.com/experience/0e45bd0ef9814d5e9ec3f87900a4cfe9"
 LICENCE_URL = "https://open.alberta.ca/licence"
 ATTRIBUTION = (
     "Contains information licensed under the Open Government Licence - Alberta "
@@ -53,7 +52,6 @@ STATUS_SPELLING_FIX = {"Assisstance Ended": "Assistance Ended"}
 
 FIRE_TYPES = ("Wildfire", "Mutual Aid")
 SIZE_CLASSES = ("A", "B", "C", "D", "E")
-SIZE_CLASS_MEANING = "A up to 0.1 ha, B to 4 ha, C to 40 ha, D to 200 ha, E over 200 ha"
 
 # group_by keyword -> upstream field
 FIRE_GROUP_FIELDS = {

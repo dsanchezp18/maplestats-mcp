@@ -474,8 +474,12 @@ async def test_limit_caps_rows_and_says_so(httpx_mock):
     httpx_mock.add_response(url=_url(CAUSE_CSV_PATH), content=CAUSE_CSV)
     result = await client.query_table("3.2.1", limit=2)
     assert (result.returned_count, result.matched_count) == (2, 7)
-    assert result.provenance.limits == "rows capped at 2"
-    assert [r.year for r in result.rows] == [2022, 2022]
+    assert (result.provenance.limits or "").startswith("Returned the most recent 2 of 7 rows")
+    full = await client.query_table("3.2.1", limit=7)
+    newest = sorted((r.year or 0 for r in full.rows), reverse=True)[:2]
+    assert sorted(r.year or 0 for r in result.rows) == sorted(newest)
+    assert "Open Government Licence - Canada" in (result.provenance.licence or "")
+    assert "Licence" not in (result.provenance.freshness or "")
 
 
 async def test_unexpected_columns_are_an_upstream_error(httpx_mock):

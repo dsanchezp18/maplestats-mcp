@@ -2,7 +2,7 @@
 
 Discovery asks the BC CKAN catalogue for the `bc-stats` organization's
 datasets (one `package_search` per 100 datasets, through the shared CKAN
-action helper and the `bc` portal's own rate-limit bucket) and keeps every
+action helper, paced in the same bucket as the downloads) and keeps every
 resource whose URL ends in `.xlsx`. A file is read only if the catalogue
 lists it, so the tool never fetches arbitrary URLs. Sheets keep the agency's
 layout; see shared/xlsx_sheets.py.
@@ -25,6 +25,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.licences import OGL_BC, OGL_CANADA, STATCAN_LICENCE
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 Lang = Literal["en", "fr"]
@@ -47,14 +48,29 @@ LICENCE_NOTE = {
 
 
 def _config() -> CkanConfig:
-    portal = constants.CKAN_PORTAL
+    # Same bucket as the file downloads: the catalogue host is paced at one
+    # request per 10 seconds whatever is asked of it.
     return CkanConfig(
-        source=f"ckan-{constants.PORTAL}",
-        base_url=portal.base_url,
-        rate_limit_per_second=portal.rate_per_second,
-        rate_limit_capacity=portal.rate_capacity,
-        timeout=portal.timeout_seconds,
+        source=constants.RATE_LIMIT_SOURCE,
+        base_url=constants.CKAN_PORTAL.base_url,
+        rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
+        rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
+        timeout=constants.CATALOGUE_TIMEOUT_SECONDS,
     )
+
+
+def _file_licence(entry: FileEntry) -> str:
+    """The dataset's own licence, with Statistics Canada's attribution for its tables."""
+    title = (entry.licence or "").casefold()
+    if "statistics canada" in title:
+        return f"{STATCAN_LICENCE} Table compiled by BC Stats from Statistics Canada data."
+    if "british columbia" in title:
+        return OGL_BC
+    if "open government licence - canada" in title:
+        return OGL_CANADA
+    named = entry.licence or "no licence stated"
+    where = f" ({entry.licence_url})" if entry.licence_url else ""
+    return f"{named}{where}: check these terms before reusing the file."
 
 
 def _clean(value: Any) -> str | None:
@@ -193,7 +209,15 @@ def check_file_url(url: str) -> None:
         )
 
 
-async def _body(url: str) -> tuple[bytes, bool]:
+async def _body(url: str, declared_size: int | None = None) -> tuple[bytes, bool]:
+    # The catalogue states each file's size; refuse an oversized file before
+    # spending a paced request and the download on it.
+    if declared_size is not None and declared_size > constants.MAX_FILE_BYTES:
+        raise InvalidInput(
+            f"bc_stats: {url} is {declared_size / 1_048_576:.1f} MB, larger than the "
+            f"{constants.MAX_FILE_BYTES // 1_048_576} MB this tool reads."
+        )
+
     async def fetch() -> bytes:
         await _LIMITER.acquire()
         try:
@@ -269,7 +293,7 @@ async def read_file(
     if entry is None:
         raise NotFound(f"bc_stats: {url} is not an Excel file of the BC Stats organization.")
 
-    body, cached = await _body(url)
+    body, cached = await _body(url, entry.size_bytes)
     sheets = await _sheets(url, body)
     if not sheets:
         raise UpstreamError(f"bc_stats: {url} has no sheets.")
@@ -286,7 +310,14 @@ async def read_file(
     rows, capped = await _rows(url, body, chosen)
     if header_row is not None:
         if header_row > len(rows):
-            raise InvalidInput(f"bc_stats: sheet {chosen!r} has only {len(rows)} rows.")
+            # The sheet's declared size counts trailing blank rows that are not
+            # read, so name both counts rather than contradict the sheet listing.
+            declared = next((s.rows for s in sheets if s.name == chosen), None)
+            raise InvalidInput(
+                f"bc_stats: header_row {header_row} is past the last row with content "
+                f"(row {len(rows)}) of sheet {chosen!r}"
+                + (f"; the file declares {declared} rows, the rest blank." if declared else ".")
+            )
         header_index: int | None = header_row - 1
     else:
         header_index = xlsx_sheets.guess_header(rows)
@@ -327,5 +358,6 @@ async def read_file(
                 else f"{entry.title}, feuille {chosen!r} sur {len(sheets)}."
             ),
             limits="; ".join(notes) or None,
+            licence=_file_licence(entry),
         ),
     )

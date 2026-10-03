@@ -25,9 +25,10 @@ Lang = Literal["en", "fr"]
 async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     """The transit agencies whose published static GTFS schedule this
     server reads (TTC Toronto, STM Montreal buses, OC Transpo Ottawa,
-    Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, VIA Rail, GO Transit, UP Express and twelve BC Transit
-    systems such as Victoria, Kelowna and Kamloops), with each feed's URL, licence, required attribution
-    line, update cadence and a live check that the zip answers.
+    Calgary Transit, VIA Rail, GO Transit, UP Express and twelve BC Transit
+    systems such as Victoria, Kelowna and Kamloops), with each feed's URL,
+    licence, required attribution line, update cadence and a live check
+    that the zip answers.
 
     The key of each agency is what the other transit_ tools take as
     `agency`. TransLink (Vancouver) is not offered: its terms require
@@ -53,6 +54,8 @@ async def transit_list_national_agencies(
     query: str | None = None,
     province: str | None = None,
     status: Literal["available", "overlaps_live", "excluded"] | None = None,
+    limit: int = constants.NATIONAL_LIMIT_DEFAULT,
+    offset: int = 0,
     lang: Lang = "en",
 ) -> AgencyList:
     """The transit agencies in Statistics Canada's Canadian Public Transit
@@ -74,7 +77,8 @@ async def transit_list_national_agencies(
     attribution). The first call reads the archive's directory (about 15
     seconds, one request per two seconds as the host asks); a first feed
     download takes a few seconds more. Filter with query (name or id),
-    province (two letters, for example ON) and status.
+    province (two letters, for example ON) and status; page with limit
+    (default 25, max 200) and offset.
     Use for: Canadian transit agencies beyond the live feeds, small-town and
     regional transit, which agencies a national transit database covers,
     transit licence and attribution lookup.
@@ -87,7 +91,7 @@ async def transit_list_national_agencies(
     attribution, instantané 2025.
     """
     return await client.list_national_agencies(
-        query=query, province=province, status=status, lang=lang
+        query=query, province=province, status=status, limit=limit, offset=offset, lang=lang
     )
 
 

@@ -4,17 +4,16 @@ Ontario (`electricity_ontario_*`): the Independent Electricity System
 Operator's public reports (reports-public.ieso.ca/public), keyless CSV and XML
 files. Terms (ieso.ca/en/Terms-of-Use, read 2026-09-29): a limited licence to
 use and reproduce content provided every reproduction carries the IESO
-copyright notice, which each response's provenance limits repeats.
+copyright notice, which each response's provenance licence repeats.
 
 Quebec (`electricity_quebec_*`): Hydro-Quebec open data
 (donnees.hydroquebec.com, Opendatasoft Explore API v2.1), keyless: 15-minute
 demand, generation by source, and hourly imports/exports, each with a recent
 two-day window and, for demand and generation, an archive that stops in
 2025-2026. Licence CC BY-NC 4.0 on every dataset: credit Hydro-Quebec,
-non-commercial use only. The project owner accepted that licence; each
-response repeats the attribution and the non-commercial notice in provenance
-limits, and anyone redistributing the output commercially must not rely on
-this source.
+non-commercial use only. Each response repeats the attribution and the
+non-commercial notice in provenance licence, and anyone redistributing the
+output commercially must not rely on this source.
 
 Other provinces were checked live on 2026-09-29 and left out:
 

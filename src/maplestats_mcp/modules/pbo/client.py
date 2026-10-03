@@ -122,7 +122,6 @@ def _provenance(url: str, cached: bool, schema: str, coverage: str | None = None
         schema_name=f"pbo.{schema}",
         freshness="as PBO publishes (several a week)",
         coverage=coverage,
-        limits="PBO materials: personal and non-commercial use, unaltered, with attribution",
     )
 
 

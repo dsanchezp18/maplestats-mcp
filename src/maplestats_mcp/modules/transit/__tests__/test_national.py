@@ -155,7 +155,7 @@ async def test_catalogue_statuses_and_terms(httpx_mock):
     assert by_key["national:ghost_transit"].status == "excluded"
     assert "absent from the archive" in (by_key["national:ghost_transit"].status_reason or "")
     assert result.provenance.as_of == constants.NATIONAL_AS_OF
-    assert "Statistics Canada Open Licence" in (result.provenance.limits or "")
+    assert "Statistics Canada Open Licence" in (result.provenance.licence or "")
 
 
 async def test_catalogue_filters(httpx_mock):
@@ -189,7 +189,8 @@ async def test_feed_info_reads_the_nested_zip(httpx_mock):
     assert info.provenance.url == constants.NATIONAL_URL
     assert info.provenance.as_of == constants.NATIONAL_AS_OF
     limits = info.provenance.limits or ""
-    assert "Données Québec" in limits and "Statistics Canada Open Licence" in limits
+    licence = info.provenance.licence or ""
+    assert "Données Québec" in licence and "Statistics Canada Open Licence" in licence
     assert "taken as is" in limits
     assert "StatCan validator window 2025-01-01 to 2025-03-31" in (info.provenance.coverage or "")
 

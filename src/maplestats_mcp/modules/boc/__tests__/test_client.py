@@ -264,3 +264,20 @@ async def test_timeout_raises_upstream_unavailable(httpx_mock):
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
     with pytest.raises(UpstreamUnavailable):
         await client.get_series("FXEURCAD")
+
+
+async def test_observations_url_reproduces_the_query_and_keeps_latest(httpx_mock, monkeypatch):
+    """The provenance URL carries the query string sent, and a history over the
+    byte budget keeps its most recent dates (Valet lists oldest first)."""
+    rows = [{"d": f"2026-01-{day:02d}", "FXUSDCAD": {"v": "1.35"}} for day in range(1, 31)]
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}observations/FXUSDCAD/json?start_date=2026-01-01",
+        json={"seriesDetail": {"FXUSDCAD": {"label": "USD/CAD"}}, "observations": rows},
+    )
+    monkeypatch.setattr(constants, "OBSERVATIONS_MAX_BYTES", 500)
+    result = await client.get_observations(["FXUSDCAD"], start_date="2026-01-01")
+    assert result.provenance.url.endswith("observations/FXUSDCAD/json?start_date=2026-01-01")
+    assert 0 < len(result.observations) < 30
+    assert str(result.observations[-1].ref_date) == "2026-01-30"
+    assert (result.provenance.limits or "").startswith("Returned the most recent")
+    assert "Bank of Canada" in (result.provenance.licence or "")

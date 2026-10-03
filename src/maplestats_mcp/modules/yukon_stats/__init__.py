@@ -7,8 +7,8 @@ MODULE_DESCRIPTION = (
     "estate, aircraft movements, businesses and workers, employment insurance benefits, "
     "crime, school enrolment, and the 2011, 2016 and 2021 Census profiles by community), "
     "listed from the portal and read row by row with exact-value filters and column "
-    "selection. Open Government Licence - Yukon. The portal's robots.txt sets a 10 "
-    "second crawl delay, so file reads are paced accordingly."
+    "selection. Open Government Licence - Yukon. The portal asks for 10 seconds between "
+    "requests, so file reads are paced accordingly."
 )
 MODULE_DESCRIPTION_FR = (
     "Tableaux du Bureau de la statistique du Yukon sur open.yukon.ca, outils préfixés "
@@ -20,5 +20,5 @@ MODULE_DESCRIPTION_FR = (
     "criminalité, effectifs scolaires et profils du recensement de 2011, 2016 et 2021 par "
     "collectivité), listés à partir du portail et lus ligne par ligne avec filtres sur "
     "valeurs exactes et choix de colonnes. Licence du gouvernement ouvert - Yukon. Le "
-    "fichier robots.txt du portail demande un délai de 10 secondes entre requêtes."
+    "portail demande un délai de 10 secondes entre requêtes."
 )

@@ -84,6 +84,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 
@@ -243,9 +244,7 @@ async def _cached_inventory[Entry: _NamedEntry](
     return await cached_fetch(cache_key, constants.CACHE_TTL_LISTS_SECONDS, fetch)
 
 
-def _filter_inventory[Entry: _NamedEntry](
-    items: list[Entry], query: str, limit: int
-) -> list[Entry]:
+def _filter_inventory[Entry: _NamedEntry](items: list[Entry], query: str) -> list[Entry]:
     needle = query.lower()
     return [
         item
@@ -253,7 +252,33 @@ def _filter_inventory[Entry: _NamedEntry](
         if needle in item.name.lower()
         or needle in item.label.lower()
         or needle in item.description.lower()
-    ][:limit]
+    ]
+
+
+def _check_limit(limit: int, maximum: int) -> None:
+    if not 1 <= limit <= maximum:
+        raise InvalidInput(f"limit must be between 1 and {maximum}, got {limit}.")
+
+
+def _url(path: str, params: dict[str, Any] | None = None) -> str:
+    """The request URL with its query string, so provenance reproduces the call."""
+    return str(httpx.URL(f"{constants.BASE_URL}{path}", params=params or None))
+
+
+def _keep_latest(observations: list[Observation]) -> list[Observation]:
+    """Valet lists oldest first; when the byte budget cuts, keep the newest dates."""
+    kept = fit_to_budget(observations[::-1], constants.OBSERVATIONS_MAX_BYTES)
+    return kept[::-1]
+
+
+def _observation_limits(returned: int, total: int) -> str | None:
+    return truncation_note(
+        returned=returned,
+        total=total,
+        unit="observation dates",
+        order="latest",
+        how_to_get_more="pass start_date/end_date or recent_* to choose the window",
+    )
 
 
 async def list_series() -> SeriesList:
@@ -272,20 +297,44 @@ async def list_series() -> SeriesList:
     )
 
 
-async def search_series(query: str, *, limit: int = 25) -> SeriesList:
+async def search_series(query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT) -> SeriesList:
     """Client-side substring search over the cached series inventory."""
+    _check_limit(limit, constants.SEARCH_LIMIT_MAX)
     all_series = await list_series()
-    matches = _filter_inventory(all_series.series, query, limit)
+    matches = _filter_inventory(all_series.series, query)
     return SeriesList(
-        series=matches,
+        series=matches[:limit],
         total_count=len(matches),
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}lists/series/json",
+            url=_url("lists/series/json"),
             cached=all_series.provenance.cached,
             schema_name="boc.SeriesList",
-            coverage=f"top {limit} matches of {len(all_series.series)} series searched",
+            coverage=f"substring search over {len(all_series.series)} series",
+            limits=truncation_note(
+                returned=min(limit, len(matches)),
+                total=len(matches),
+                unit="matching series",
+                how_to_get_more="refine the query or raise limit "
+                f"(max {constants.SEARCH_LIMIT_MAX})",
+            ),
         ),
+    )
+
+
+def page_series(result: SeriesList, limit: int) -> SeriesList:
+    """The first `limit` series of the full inventory, with the cut recorded."""
+    _check_limit(limit, constants.LIST_LIMIT_MAX)
+    series = result.series[:limit]
+    note = truncation_note(
+        returned=len(series),
+        total=len(result.series),
+        unit="series",
+        how_to_get_more=f"search with query, or raise limit (max {constants.LIST_LIMIT_MAX})",
+    )
+    provenance = result.provenance.model_copy(update={"limits": note})
+    return result.model_copy(
+        update={"series": series, "total_count": len(result.series), "provenance": provenance}
     )
 
 
@@ -305,20 +354,44 @@ async def list_groups() -> GroupList:
     )
 
 
-async def search_groups(query: str, *, limit: int = 25) -> GroupList:
+async def search_groups(query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT) -> GroupList:
     """Client-side substring search over the cached group inventory."""
+    _check_limit(limit, constants.SEARCH_LIMIT_MAX)
     all_groups = await list_groups()
-    matches = _filter_inventory(all_groups.groups, query, limit)
+    matches = _filter_inventory(all_groups.groups, query)
     return GroupList(
-        groups=matches,
+        groups=matches[:limit],
         total_count=len(matches),
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}lists/groups/json",
+            url=_url("lists/groups/json"),
             cached=all_groups.provenance.cached,
             schema_name="boc.GroupList",
-            coverage=f"top {limit} matches of {len(all_groups.groups)} groups searched",
+            coverage=f"substring search over {len(all_groups.groups)} groups",
+            limits=truncation_note(
+                returned=min(limit, len(matches)),
+                total=len(matches),
+                unit="matching groups",
+                how_to_get_more="refine the query or raise limit "
+                f"(max {constants.SEARCH_LIMIT_MAX})",
+            ),
         ),
+    )
+
+
+def page_groups(result: GroupList, limit: int) -> GroupList:
+    """The first `limit` groups of the full inventory, with the cut recorded."""
+    _check_limit(limit, constants.LIST_LIMIT_MAX)
+    groups = result.groups[:limit]
+    note = truncation_note(
+        returned=len(groups),
+        total=len(result.groups),
+        unit="groups",
+        how_to_get_more=f"search with query, or raise limit (max {constants.LIST_LIMIT_MAX})",
+    )
+    provenance = result.provenance.model_copy(update={"limits": note})
+    return result.model_copy(
+        update={"groups": groups, "total_count": len(result.groups), "provenance": provenance}
     )
 
 
@@ -400,14 +473,17 @@ async def get_observations(
         return await _get(path, params=params)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
+    observations = _observations_from_json(list_or_empty(obj, "observations"))
+    kept = _keep_latest(observations)
     return ObservationsResult(
         series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
-        observations=_observations_from_json(list_or_empty(obj, "observations")),
+        observations=kept,
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}{path}",
+            url=_url(path, params),
             cached=was_cached,
             schema_name="boc.ObservationsResult",
+            limits=_observation_limits(len(kept), len(observations)),
         ),
     )
 
@@ -439,6 +515,8 @@ async def get_group_observations(
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     group_detail = obj.get("groupDetail", {}) or {}
+    observations = _observations_from_json(list_or_empty(obj, "observations"))
+    kept = _keep_latest(observations)
     return GroupObservationsResult(
         # "groupDetail" (unlike GroupDetail's "groupDetails") has no
         # "name" field - see this module's docstring and schemas.py's.
@@ -449,11 +527,12 @@ async def get_group_observations(
             link=group_detail.get("link"),
         ),
         series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
-        observations=_observations_from_json(list_or_empty(obj, "observations")),
+        observations=kept,
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}{path}",
+            url=_url(path, params),
             cached=was_cached,
             schema_name="boc.GroupObservationsResult",
+            limits=_observation_limits(len(kept), len(observations)),
         ),
     )

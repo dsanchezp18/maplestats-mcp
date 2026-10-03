@@ -185,7 +185,8 @@ async def test_read_xlsx_filters_and_attribution(httpx_mock, show):
         result.attribution
         == "Contains information licensed under the Open Government Licence – Alberta."
     )
-    assert result.provenance.coverage and "Open Government Licence" in result.provenance.coverage
+    assert "Open Government Licence - Alberta" in (result.provenance.licence or "")
+    assert "Licence" not in (result.provenance.coverage or "")
 
 
 async def test_describe_workbook_with_many_sheets(httpx_mock):

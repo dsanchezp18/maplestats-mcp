@@ -30,7 +30,6 @@ ROWS_DEFAULT = 200
 ROWS_MAX = 5000
 VALUES_LISTED_MAX = 60
 
-LICENCE = "Open Government Licence - Canada, version 2.0"
 SOURCE_NAME = "national-forestry-database"
 
 # Identical in all 25 data dictionaries (English and French sheets compared

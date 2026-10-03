@@ -20,7 +20,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.boc import client
+from maplestats_mcp.modules.boc import client, constants
 from maplestats_mcp.modules.boc.schemas import (
     GroupDetail,
     GroupList,
@@ -43,9 +43,10 @@ async def boc_search_series(
     exchange rates, interest rates (policy rate, prime rate), CPI/
     inflation measures, commodity prices, and hundreds of other
     monetary/financial series. Pass `query` for a keyword search (top
-    `limit` matches, default 25). Omit `query` to list the entire
-    catalogue (`limit` then keeps only the first N) - a full inventory
-    scan or building a local index.
+    `limit` matches, default 25, max 200). Omit `query` to page through
+    the catalogue in name order (`limit` default 50, max 1000);
+    `total_count` is the full number and provenance.limits says what was
+    cut.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
     rate, interest rate, policy rate, prime rate, five-year mortgage
     rate, bond yield, cpi, inflation, commodity price, discover, list,
@@ -57,13 +58,13 @@ async def boc_search_series(
     catalogue, liste complète, parcourir.
     """
     if query is not None:
-        return await client.search_series(query, limit=25 if limit is None else limit)
-    result = await client.list_series()
-    if limit is not None:
-        # model_copy so the cached full list is not trimmed in place.
-        series = result.series[:limit]
-        return result.model_copy(update={"series": series, "total_count": len(series)})
-    return result
+        return await client.search_series(
+            query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit
+        )
+    # page_series copies, so the cached full list is not trimmed in place.
+    return client.page_series(
+        await client.list_series(), constants.LIST_LIMIT_DEFAULT if limit is None else limit
+    )
 
 
 @tool
@@ -76,8 +77,8 @@ async def boc_search_groups(
     exchange rates, the CPI family including CPI-trim/median/common,
     weekly/monthly/annual commodity price indexes) when you want several
     related series at once rather than one series name. Pass `query`
-    for a keyword search (top `limit` matches, default 25). Omit `query`
-    to list every group (`limit` then keeps only the first N) - a full inventory scan.
+    for a keyword search (top `limit` matches, default 25, max 200). Omit
+    `query` to page through the groups (`limit` default 50, max 1000).
     Keywords: bank of canada, boc, valet, group, series group, search,
     find, cpi, exchange rates, commodity prices, discover, list, groups,
     inventory, catalogue, full list.
@@ -87,12 +88,12 @@ async def boc_search_groups(
     parcourir.
     """
     if query is not None:
-        return await client.search_groups(query, limit=25 if limit is None else limit)
-    result = await client.list_groups()
-    if limit is not None:
-        groups = result.groups[:limit]
-        return result.model_copy(update={"groups": groups, "total_count": len(groups)})
-    return result
+        return await client.search_groups(
+            query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit
+        )
+    return client.page_groups(
+        await client.list_groups(), constants.LIST_LIMIT_DEFAULT if limit is None else limit
+    )
 
 
 @tool
@@ -151,7 +152,9 @@ async def boc_get_observations(
     publication frequency; mixing frequencies (e.g. a daily FX rate
     with monthly CPI) returns separate rows, each carrying only its own
     series - check each row's `values` keys rather than assuming every
-    requested series appears in every row.
+    requested series appears in every row. With no window, the full
+    history comes back trimmed to the most recent dates (about 200 KB);
+    provenance.limits says how many dates were left out.
     Keywords: bank of canada, boc, valet, observations, data, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, time series, history, recent, date range.
@@ -190,6 +193,9 @@ async def boc_get_group_observations(
     series name individually.
     `start_date`/`end_date` and `recent`/`recent_weeks`/`recent_months`/
     `recent_years` are mutually exclusive, same as boc_get_observations.
+    With no window, the most recent dates are kept within about 200 KB
+    (FX_RATES_DAILY's full history is over 1 MB); provenance.limits says
+    how many dates were left out.
     Keywords: bank of canada, boc, valet, group, observations, data,
     exchange rates, cpi, inflation, commodity prices, time series,
     history, recent, date range.

@@ -179,7 +179,7 @@ async def test_list_fires_parses_a_row_and_uses_layer_edit_time(server):
     assert fire.carryover is False
     assert result.provenance.as_of is not None
     assert result.provenance.as_of.isoformat() == "2026-10-02T21:09:09.776000+00:00"
-    assert "Open Government Licence - Alberta" in (result.provenance.limits or "")
+    assert "Open Government Licence - Alberta" in (result.provenance.licence or "")
     query = server.queries[-1][1]
     assert query["orderByFields"] == "FIRE_STATUS_DATE DESC, OBJECTID DESC"
     assert query["returnGeometry"] == "false"

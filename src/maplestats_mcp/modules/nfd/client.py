@@ -64,8 +64,12 @@ from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.licences import OGL_CANADA
+from maplestats_mcp.shared.limits import truncation_note
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
+
+_LICENCE = f"{OGL_CANADA} NFD terms of use: {constants.TERMS_URL}"
 
 Lang = Literal["en", "fr"]
 Filter = str | Sequence[str] | None
@@ -306,13 +310,11 @@ def _provenance(
         cached=cached,
         schema_name=schema,
         freshness=freshness
-        or (
-            "Updated a few times a year by the NFD (data dictionaries dated April to June 2026). "
-            f"Licence: {constants.LICENCE}."
-        ),
+        or "Updated a few times a year by the NFD (data dictionaries dated April to June 2026).",
         as_of=as_of,
         coverage=coverage,
         limits=limits,
+        licence=_LICENCE,
     )
 
 
@@ -833,9 +835,23 @@ async def query_table(
             f"{dataset.duplicate_groups} year/jurisdiction/category combinations repeat in the "
             "file and are kept as published."
         )
-    shown = rows[: min(limit, constants.ROWS_MAX)]
+    # Rows run oldest year first; when the cap cuts, keep the most recent
+    # years (the file starts in 1940 for some tables, so the first rows are
+    # rarely the ones wanted), still listed oldest first.
+    if matched > limit:
+        newest_first = sorted(range(matched), key=lambda i: -(rows[i].year or 0))
+        kept = sorted(newest_first[:limit])
+        shown = [rows[i] for i in kept]
+    else:
+        shown = rows
     used = {q for row in shown for q in row.qualifiers}
-    limits = f"rows capped at {limit}" if matched > limit else None
+    limits = truncation_note(
+        returned=len(shown),
+        total=matched,
+        unit="rows",
+        order="latest",
+        how_to_get_more=f"narrow year_from/year_to or filters, or raise limit (max {constants.ROWS_MAX})",
+    )
     return NfdQueryResult(
         table_id=entry.table_id,
         title=_title(entry, lang),
@@ -858,7 +874,7 @@ async def query_table(
                     if dataset.last_modified
                     else ""
                 )
-                + f". Licence: {constants.LICENCE}."
+                + "."
             ),
             limits=limits,
         ),

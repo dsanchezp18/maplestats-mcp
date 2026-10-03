@@ -56,8 +56,11 @@ _LIMITER = get_limiter(
 )
 
 
-def _limits(extra: str = "") -> str:
-    return f"{extra} {constants.QUEBEC_LICENCE}".strip()
+_LICENCE = constants.QUEBEC_LICENCE
+
+
+def _limits(extra: str = "") -> str | None:
+    return extra or None
 
 
 async def _get_json(url: str, params: dict[str, Any], context: str) -> Any:
@@ -211,6 +214,7 @@ async def get_demand(
                 else "archive ends 2025-01-01, not kept current"
             ),
             coverage="Quebec (Hydro-Quebec system) only",
+            licence=_LICENCE,
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Start/end dates are UTC days."
             ),
@@ -282,6 +286,7 @@ async def get_generation(
                 else "archive ends 2026-01-01, not kept current"
             ),
             coverage="Hydro-Quebec system generation by source group",
+            licence=_LICENCE,
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Shares use the mean of the "
                 "returned rows."
@@ -339,6 +344,7 @@ async def get_trade(
             schema_name="electricity.QuebecTrade",
             freshness="hourly, about two local days; hours not yet reached are excluded",
             coverage="markets: New England, New Brunswick, New York, Ontario; includes wheel-through",
+            licence=_LICENCE,
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Start/end are UTC days."
             ),

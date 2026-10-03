@@ -141,7 +141,7 @@ async def test_read_population_projections_header_override(httpx_mock, catalogue
     by_year = {r[1]: r for r in data.rows if r[0] == "Estimate"}
     # Matches Statistics Canada table 17-10-0005-01, BC, July 1 1971: 2,240,470.
     assert by_year["1971"][2] == "2240.5"
-    with pytest.raises(InvalidInput, match="only"):
+    with pytest.raises(InvalidInput, match="past the last row with content"):
         await client.read_file(url, sheet="Table 1", header_row=5000)
 
 

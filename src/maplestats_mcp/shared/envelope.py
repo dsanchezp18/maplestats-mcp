@@ -20,22 +20,12 @@ from datetime import UTC, datetime
 from typing import NoReturn
 
 from maplestats_mcp.shared.i18n import t
+from maplestats_mcp.shared.licences import STATCAN_LICENCE, licence_for
 from maplestats_mcp.shared.models import Provenance
 
-# Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence):
-# attribution is required, and adapted data must not imply StatCan endorsed the
-# adaptation. Added to every result whose source or URL is a StatCan service.
-STATCAN_LICENCE = (
-    "Source: Statistics Canada. Contains information licensed under the Statistics Canada "
-    "Open Licence (https://www.statcan.gc.ca/en/reference/licence). Adapted or summarised "
-    "data must not be presented as endorsed by Statistics Canada."
-)
-
-
-def _licence_for(source: str, url: str) -> str | None:
-    if source.lower().startswith("statcan") or "statcan.gc.ca" in url.lower():
-        return STATCAN_LICENCE
-    return None
+# STATCAN_LICENCE is re-exported here because StatCan modules import it from
+# this module; the licence texts themselves live in shared/licences.py.
+__all__ = ["STATCAN_LICENCE", "make_provenance", "raise_error"]
 
 
 def make_provenance(
@@ -61,7 +51,7 @@ def make_provenance(
         limits=limits,
         cached=cached,
         schema_name=schema_name,
-        licence=licence or _licence_for(source, url),
+        licence=licence or licence_for(source, url),
     )
 
 

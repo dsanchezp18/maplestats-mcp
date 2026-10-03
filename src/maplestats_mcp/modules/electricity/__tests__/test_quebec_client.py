@@ -48,8 +48,8 @@ async def test_demand_recent_returns_oldest_first_with_summary(httpx_mock):
     assert result.peak_demand_mw == 18382.0
     assert result.average_demand_mw == 18321.0
     assert result.rows_matched == 96
-    assert "CC BY-NC 4.0" in (result.provenance.limits or "")
-    assert "non-commercial" in (result.provenance.limits or "")
+    assert "CC BY-NC 4.0" in (result.provenance.licence or "")
+    assert "non-commercial" in (result.provenance.licence or "")
     url = unquote_plus(str(httpx_mock.get_requests()[0].url))
     # The not-null filter keeps future null slots out of "latest".
     assert "valeurs_demandetotal is not null" in url

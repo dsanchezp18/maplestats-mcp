@@ -337,6 +337,10 @@ async def test_exports_crop_year_and_covered_months(httpx_mock):
     # year_from cuts crop year 2024-25 to January-March 2025.
     bounded = await client.query_exports(frequency="crop_year", year_from=2025)
     assert [(r.period, r.months) for r in bounded.rows] == [("2024-25", 3)]
+    assert "Open Government Licence - Canada" in (bounded.provenance.licence or "")
+    assert "Licence" not in (bounded.provenance.freshness or "")
+    with pytest.raises(InvalidInput, match="year_from"):
+        await client.query_exports(frequency="year", year_from=2025, year_to=2024)
 
 
 async def test_exports_filters_and_limits(httpx_mock):

@@ -107,7 +107,6 @@ def _provenance(url: str, cached: bool, schema: str, coverage: str | None = None
         schema_name=f"pmprb.{schema}",
         freshness="once a year (each annual report)",
         coverage=coverage,
-        limits="Canada.ca terms: non-commercial reproduction with attribution to PMPRB",
     )
 
 

@@ -137,7 +137,7 @@ async def test_feed_info_counts_and_provenance(httpx_mock):
     assert info.agency_names == ["Test Transit"]
     assert {f.name for f in info.files} >= {"stop_times.txt", "trips.txt"}
     assert "Schedule valid 2026-10-01 to 2026-10-31" in (info.provenance.coverage or "")
-    assert "Open Government Licence" in (info.provenance.limits or "")
+    assert "Open Government Licence" in (info.provenance.licence or "")
 
 
 async def test_unknown_agency_and_bad_limit_are_input_errors():

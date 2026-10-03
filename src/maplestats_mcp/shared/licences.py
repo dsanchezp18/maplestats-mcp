@@ -1,0 +1,330 @@
+"""Licence and attribution text for `provenance.licence`, one constant per publisher's terms.
+
+`make_provenance` fills `provenance.licence` from `licence_for(source, url)`
+when a module does not pass one, so a reader always finds the terms in the
+same field rather than in `limits`, `freshness` or `coverage`. A module
+whose terms vary by record (a catalogue's datasets, a transit feed, a BC
+Stats file built from Statistics Canada tables) passes the record's own
+licence explicitly instead.
+
+Each text names the licence or terms, links them, and gives the
+attribution the publisher asks for. Wording and URLs were read from each
+publisher's terms page on 2026-10-03. Where a publisher states no terms
+for the data, the text says so (`terms_not_stated`) rather than assuming
+an open licence.
+"""
+
+from __future__ import annotations
+
+# Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence):
+# attribution is required, and adapted data must not imply StatCan endorsed the
+# adaptation.
+STATCAN_LICENCE = (
+    "Source: Statistics Canada. Contains information licensed under the Statistics Canada "
+    "Open Licence (https://www.statcan.gc.ca/en/reference/licence). Adapted or summarised "
+    "data must not be presented as endorsed by Statistics Canada."
+)
+
+OGL_CANADA = (
+    "Open Government Licence - Canada 2.0 (https://open.canada.ca/en/open-government-licence-canada). "
+    "Attribution: 'Contains information licensed under the Open Government Licence - Canada.'"
+)
+
+OGL_ALBERTA = (
+    "Open Government Licence - Alberta (https://open.alberta.ca/licence). "
+    "Attribution: 'Contains information licensed under the Open Government Licence - Alberta.'"
+)
+
+OGL_BC = (
+    "Open Government Licence - British Columbia 2.0 "
+    "(https://www2.gov.bc.ca/gov/content/data/policy-standards/open-data/open-government-licence-bc). "
+    "Attribution: 'Contains information licensed under the Open Government Licence - British "
+    "Columbia.'"
+)
+
+OGL_YUKON = (
+    "Open Government Licence - Yukon (https://open.yukon.ca/open-government-licence-yukon). "
+    "Attribution: 'Contains information licensed under the Open Government Licence - Yukon.'"
+)
+
+OGL_NL = (
+    "Open Government Licence - Newfoundland and Labrador 1.0 "
+    "(https://opendata.gov.nl.ca/public/opendata/page/?page-id=licence). Attribution: 'Contains "
+    "information licensed under the Open Government Licence - Newfoundland and Labrador.'"
+)
+
+BOC_TERMS = (
+    "Bank of Canada Terms of Use (https://www.bankofcanada.ca/terms/): attribute the Bank of "
+    "Canada as the source and indicate if changes were made, without implying the Bank endorses "
+    "the use; content passed on through paid services must be identified as obtained from the "
+    "Bank's website."
+)
+
+ECCC_LICENCE = (
+    "Environment and Climate Change Canada Data Servers End-use Licence "
+    "(https://eccc-msc.github.io/open-data/licence/readme_en/). "
+    "Attribution: 'Data Source: Environment and Climate Change Canada.'"
+)
+
+# Federal web pages that are not published on open.canada.ca fall under the
+# Canada.ca terms, which are narrower than the Open Government Licence.
+CANADA_CA_TERMS = (
+    "Government of Canada website terms (https://www.canada.ca/en/transparency/terms.html): "
+    "non-commercial reproduction is allowed without permission, with the title, author and "
+    "source URL cited; commercial redistribution needs written permission."
+)
+
+CIHI_TERMS = (
+    "CIHI Terms of Use (https://www.cihi.ca/en/terms-of-use): free use for education, "
+    "non-commercial research, internal reference and private study, crediting CIHI as the "
+    "source; commercial use needs CIHI's written authorization."
+)
+
+CMHC_TERMS = (
+    "CMHC Terms and Conditions (https://www.cmhc-schl.gc.ca/about-us/terms-conditions): content "
+    "may be copied, downloaded and printed for personal use; redistribution or republication "
+    "needs CMHC's written consent. Credit Canada Mortgage and Housing Corporation (CMHC)."
+)
+
+HOUSE_OF_COMMONS_TERMS = (
+    "House of Commons Speaker's permission (https://www.ourcommons.ca/en/important-notices): "
+    "reproduction of proceedings is permitted if accurate and not presented as official; it "
+    "does not extend to commercial use or financial gain."
+)
+
+SENATE_TERMS = (
+    "Senate of Canada intellectual property terms (https://sencanada.ca/en/intellectual-property/): "
+    "reproduction of proceedings is permitted if accurate and not for financial gain; identify "
+    "the Senate as author with the title and source URL."
+)
+
+OPENPARLIAMENT_TERMS = (
+    "openparliament.ca holds no copyright on its data (https://openparliament.ca/api/); the "
+    "underlying parliamentary data are under the House of Commons Speaker's permission "
+    "(https://www.ourcommons.ca/en/important-notices): accurate, not presented as official, no "
+    "commercial use. A link back to openparliament.ca is requested."
+)
+
+ELECTIONS_CANADA_TERMS = (
+    "Elections Canada terms (https://www.elections.ca/content.aspx?section=pri&document=index&lang=e): "
+    "non-commercial reproduction is allowed, citing the title, author and source URL; "
+    "commercial redistribution needs written permission."
+)
+
+PBO_TERMS = (
+    "Parliamentary Budget Officer terms (https://www.pbo-dpb.ca): PBO materials may be used and "
+    "reproduced for personal and non-commercial use without permission, unaltered and with "
+    "attribution to the PBO."
+)
+
+IESO_TERMS = (
+    "IESO Terms of Use (https://www.ieso.ca/en/Terms-of-Use): limited licence to use and "
+    "reproduce provided every reproduction carries the notice 'Copyright 2004-2022 Independent "
+    "Electricity System Operator, all rights reserved. This information is subject to the Terms "
+    "of Use set out in the IESO's website (www.ieso.ca).'"
+)
+
+# statistique.quebec.ca links its reuse terms to the Québec government's
+# copyright page, which requires prior authorization (no open licence).
+ISQ_LICENCE = (
+    "Gouvernement du Québec copyright (https://www.quebec.ca/en/copyright): reproduction, "
+    "adaptation or publication needs prior authorization from the Québec government. Credit: "
+    "'Source: Institut de la statistique du Québec.'"
+)
+
+EDMONTON_TERMS = (
+    "City of Edmonton Open Data Terms of Use "
+    "(https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/). "
+    "Credit: City of Edmonton."
+)
+
+REPRESENT_TERMS = (
+    "Open North's Represent API (https://represent.opennorth.ca) states no licence of its own. "
+    "Boundary sets carry their publisher's licence (licence_url on each set); representative "
+    "records are gathered from official sites and their reuse terms are not stated."
+)
+
+TERMS_NOT_STATED = (
+    "Terms not stated by the publisher: no licence or terms of use were found for this data. "
+    "Do not assume it is openly licensed; check with the publisher before redistributing."
+)
+
+PER_RECORD_LICENCE = (
+    "Licences differ by dataset on this platform: each dataset's own licence is in its "
+    "licence fields. Check it before reusing."
+)
+
+
+def terms_not_stated(publisher: str, url: str) -> str:
+    """`TERMS_NOT_STATED` naming the publisher and the page that was checked."""
+    return (
+        f"Terms not stated by the publisher ({publisher}): no licence or terms of use were found "
+        f"at {url}. Do not assume it is openly licensed; check with the publisher before "
+        "redistributing."
+    )
+
+
+def derived_from_statcan(own_licence: str) -> str:
+    """Licence text for a file an agency builds from Statistics Canada data.
+
+    Both apply: the agency's own terms for its compilation, and the
+    Statistics Canada Open Licence (with its attribution) for the
+    underlying data.
+    """
+    return f"{own_licence} Underlying data from Statistics Canada: {STATCAN_LICENCE}"
+
+
+NL_STATS_TERMS = derived_from_statcan(
+    "Government of Newfoundland and Labrador website terms (https://www.gov.nl.ca/disclaimer/): "
+    "the public may use the information on its sites. Credit: Newfoundland and Labrador "
+    "Statistics Agency."
+)
+
+AB_ECONOMIC_TERMS = (
+    f"{OGL_ALBERTA} Indicators the dashboard builds from Statistics Canada tables (the source "
+    f"field names the table) also fall under: {STATCAN_LICENCE}"
+)
+
+
+# Source name (exactly as passed to make_provenance) -> licence. A module
+# whose source name is not here, and whose URL is not a StatCan one, gets
+# no licence text: tests/test_shared_licences.py fails for that case, so a
+# new module has to add its entry.
+SOURCE_LICENCES: dict[str, str] = {
+    # Alberta
+    "ab-economic": AB_ECONOMIC_TERMS,
+    "ab-opendata": OGL_ALBERTA,
+    "open-alberta": OGL_ALBERTA,
+    "ab_wildfire": OGL_ALBERTA + " Credit: Alberta Wildfire, Government of Alberta.",
+    "aer": (
+        "Alberta Energy Regulator copyright terms (https://www.aer.ca/copyright-disclaimer): "
+        "non-commercial reproduction is allowed without permission, identifying the AER as "
+        "the source and not presenting it as official; commercial redistribution needs the "
+        "AER's written permission."
+    ),
+    "epcor": terms_not_stated("EPCOR", "https://apps.epcor.ca"),
+    "eps": terms_not_stated(
+        "Edmonton Police Service", "https://communitysafetydataportal.edmontonpolice.ca"
+    ),
+    "ets": EDMONTON_TERMS,
+    "provincial-election-results": (
+        "Terms differ by election agency; see the per-province licence notes in limits."
+    ),
+    "elections-provincial": (
+        "Terms differ by election agency; see the per-province licence notes in limits."
+    ),
+    # British Columbia, Yukon, Newfoundland and Labrador
+    "bc_lobbyists": (
+        "Open Data Licence for the Office of the Registrar of Lobbyists for British Columbia "
+        "(https://www.lobbyistsregistrar.bc.ca/media/1285/open-data-licence-for-the-office-of-"
+        "the-registrar-of-lobbyists-for-british-columbia.pdf). Attribution: 'Contains "
+        "information licensed under the Open Data Licence for the Office of the Registrar of "
+        "Lobbyists for British Columbia.' The licence grants no rights to personal information."
+    ),
+    "bc-stats": PER_RECORD_LICENCE,
+    "bc-stats-files": PER_RECORD_LICENCE,
+    "bcgw": OGL_BC
+    + " Some BC Geographic Warehouse layers carry other terms; check the layer's record.",
+    "yukon-stats": OGL_YUKON,
+    "yukon-bureau-of-statistics": OGL_YUKON,
+    "nl-opendata": OGL_NL,
+    "nl-stats": NL_STATS_TERMS,
+    "nl-statistics-agency": NL_STATS_TERMS,
+    # Quebec
+    "isq": ISQ_LICENCE,
+    # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
+    "canadabuys": OGL_CANADA,
+    "cdc": OGL_CANADA,
+    "cer": OGL_CANADA,
+    "cgc": OGL_CANADA,
+    "cgc-grain-statistics-weekly": OGL_CANADA,
+    "cgc-exports-licensed-facilities": OGL_CANADA,
+    "cwfis": OGL_CANADA,
+    "cwfis-sitrep": OGL_CANADA,
+    "earthquakes-canada": OGL_CANADA,
+    "gc-infobase": OGL_CANADA,
+    "ircc-monthly": OGL_CANADA,
+    "ised-corporations": OGL_CANADA,
+    "ised-spectrum": OGL_CANADA,
+    "ised-ip-horizons": OGL_CANADA,
+    "ised-clean-growth": OGL_CANADA,
+    "national-forestry-database": OGL_CANADA,
+    "nfd": OGL_CANADA,
+    "nrcan-geo": OGL_CANADA,
+    "nrcan-nbac": OGL_CANADA,
+    "phac-infobase": OGL_CANADA,
+    "recalls": OGL_CANADA,
+    "tc-recalls": OGL_CANADA,
+    # Federal web pages and services outside open.canada.ca
+    "competition-bureau": CANADA_CA_TERMS,
+    "cra_digital_economy_registry": CANADA_CA_TERMS,
+    "cfia": CANADA_CA_TERMS,
+    "fcac": CANADA_CA_TERMS,
+    "gazette": CANADA_CA_TERMS,
+    "ircc-express-entry": CANADA_CA_TERMS,
+    "ised-cipo": CANADA_CA_TERMS,
+    "nrcan-energy-use": CANADA_CA_TERMS,
+    "pmprb": CANADA_CA_TERMS,
+    "dfo-iwls": terms_not_stated(
+        "Fisheries and Oceans Canada, Canadian Hydrographic Service",
+        "https://api-iwls.dfo-mpo.gc.ca",
+    ),
+    # Federal agencies with their own terms
+    "boc": BOC_TERMS,
+    "valet": BOC_TERMS,
+    "cihi": CIHI_TERMS,
+    "cmhc": CMHC_TERMS,
+    "cmhc-dt": CMHC_TERMS,
+    "eccc": ECCC_LICENCE,
+    "pbo": PBO_TERMS,
+    "electricity": "Terms differ by operator; see the operator's terms in this result.",
+    # Parliament and elections
+    "ourcommons": HOUSE_OF_COMMONS_TERMS,
+    "house-of-commons-open-data": HOUSE_OF_COMMONS_TERMS,
+    "senate": SENATE_TERMS,
+    "openparliament": OPENPARLIAMENT_TERMS,
+    "represent": REPRESENT_TERMS,
+    "elections_financial_returns": ELECTIONS_CANADA_TERMS,
+    "elections-results": ELECTIONS_CANADA_TERMS,
+    "elections-canada-official-voting-results": OGL_CANADA,
+    "harvard-dataverse-who-runs-federal-candidates": (
+        "Harvard Dataverse dataset terms: see the dataset page for its licence "
+        "(Dataverse defaults to CC0 1.0 unless the depositor sets other terms)."
+    ),
+    "borealis-winer-ferris-federal-elections": (
+        "Borealis dataset terms: see the dataset page for its licence and terms of use."
+    ),
+    # Catalogue families and repositories: terms are per dataset or per feed
+    "borealis": PER_RECORD_LICENCE,
+    "ckan": PER_RECORD_LICENCE,
+    "arcgis-hub": PER_RECORD_LICENCE,
+    "socrata": PER_RECORD_LICENCE,
+    "opendatasoft-vancouver": PER_RECORD_LICENCE,
+    "transit": (
+        "Each transit feed carries its agency's own licence and attribution (licence and "
+        "attribution fields on each agency)."
+    ),
+    "transit:statcan": derived_from_statcan(
+        "Canadian Public Transit Network Database compilation; each feed also carries its "
+        "agency's own terms (licence_url, attribution)."
+    ),
+}
+
+
+# Platform families name their source after the portal ("ckan-on",
+# "arcgis-halifax", "socrata-calgary") or the feed ("transit:stm").
+_FAMILY_PREFIXES = ("arcgis-", "ckan-", "socrata-")
+
+
+def licence_for(source: str, url: str) -> str | None:
+    """The licence text for a source name, falling back on a StatCan URL check."""
+    known = SOURCE_LICENCES.get(source)
+    if known is not None:
+        return known
+    if source.startswith(_FAMILY_PREFIXES):
+        return PER_RECORD_LICENCE
+    if ":" in source and source.split(":", 1)[0] in SOURCE_LICENCES:
+        return SOURCE_LICENCES[source.split(":", 1)[0]]
+    if source.lower().startswith("statcan") or "statcan.gc.ca" in url.lower():
+        return STATCAN_LICENCE
+    return None

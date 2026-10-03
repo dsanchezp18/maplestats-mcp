@@ -34,6 +34,7 @@ from maplestats_mcp.shared.ckan import CkanConfig, action, excerpt
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.licences import OGL_ALBERTA
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 Lang = Literal["en", "fr"]
@@ -343,6 +344,7 @@ async def get_dataset(dataset: str, lang: Lang = "en") -> DatasetDetail:
             f"modified {entry.date_modified or 'date not stated'}.",
             coverage="Every resource of the dataset; only .xlsx, .xls and .csv files hosted "
             "on open.alberta.ca are readable with ab_opendata_read_resource.",
+            licence=_dataset_licence(entry),
         ),
     )
 
@@ -449,14 +451,23 @@ async def describe_resource(
             cached=cached,
             schema_name="ab_opendata.ResourceStructure",
             freshness=_freshness(entry, resource),
-            coverage=attribution or entry.licence_note,
             limits=(
                 f"Described the first {tables.MAX_DESCRIBED_SHEETS} of {total} sheets."
                 if total > tables.MAX_DESCRIBED_SHEETS and not only
                 else None
             ),
+            licence=_dataset_licence(entry),
         ),
     )
+
+
+def _dataset_licence(entry: DatasetEntry) -> str:
+    """OGL - Alberta for most datasets; otherwise the dataset's own terms and the warning."""
+    if entry.ogl_alberta:
+        return OGL_ALBERTA
+    named = entry.licence or entry.licence_id or "no licence stated"
+    where = f" ({entry.licence_url})" if entry.licence_url else ""
+    return f"{named}{where}. {entry.licence_note or ''}".strip()
 
 
 async def read_resource(
@@ -536,10 +547,8 @@ async def read_resource(
             cached=cached,
             schema_name="ab_opendata.ResourceRows",
             freshness=_freshness(entry, resource),
-            coverage=(
-                f"{entry.title}: {resource.name}, sheet {chosen!r} of {len(names)}. "
-                + (attribution or entry.licence_note or "")
-            ).strip(),
+            coverage=f"{entry.title}: {resource.name}, sheet {chosen!r} of {len(names)}.",
             limits="; ".join(notes) or None,
+            licence=_dataset_licence(entry),
         ),
     )

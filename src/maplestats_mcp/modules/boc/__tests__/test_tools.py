@@ -70,8 +70,9 @@ async def test_boc_search_series_without_query_lists(monkeypatch):
     mock_search = AsyncMock(return_value="some")
     monkeypatch.setattr(tools.client, "list_series", mock_list)
     monkeypatch.setattr(tools.client, "search_series", mock_search)
+    monkeypatch.setattr(tools.client, "page_series", lambda result, limit: (result, limit))
 
-    assert await tools.boc_search_series() == "all"
+    assert await tools.boc_search_series() == ("all", 50)
     assert await tools.boc_search_series("cpi") == "some"
     mock_search.assert_awaited_once_with("cpi", limit=25)
 
@@ -81,8 +82,9 @@ async def test_boc_search_groups_without_query_lists(monkeypatch):
     mock_search = AsyncMock(return_value="some")
     monkeypatch.setattr(tools.client, "list_groups", mock_list)
     monkeypatch.setattr(tools.client, "search_groups", mock_search)
+    monkeypatch.setattr(tools.client, "page_groups", lambda result, limit: (result, limit))
 
-    assert await tools.boc_search_groups() == "all"
+    assert await tools.boc_search_groups() == ("all", 50)
     assert await tools.boc_search_groups("fx", limit=5) == "some"
     mock_search.assert_awaited_once_with("fx", limit=5)
 
@@ -102,5 +104,6 @@ async def test_boc_limit_without_query_trims_list(monkeypatch):
     monkeypatch.setattr(tools.client, "list_series", AsyncMock(return_value=full))
     result = await tools.boc_search_series(limit=2)
     assert [s.name for s in result.series] == ["S0", "S1"]
-    assert result.total_count == 2
+    assert result.total_count == 3
+    assert (result.provenance.limits or "").startswith("Returned the first 2 of 3 series")
     assert full.total_count == 3  # the cached list is left whole
