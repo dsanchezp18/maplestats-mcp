@@ -21,7 +21,7 @@ import json
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastmcp import Client
@@ -181,6 +181,30 @@ STEPS: list[Step] = [
         "dfo_iwls",
         "dfo_iwls_get_water_levels",
         lambda ctx: {"station_code": ctx["dfo_iwls_search_stations"]["stations"][0]["code"]},
+    ),
+    # One whole day by date (start = end used to be refused), and a week of
+    # predictions at the hourly default rather than one-minute points.
+    Step(
+        "dfo_iwls",
+        "dfo_iwls_get_water_levels",
+        {
+            "station_code": "07120",
+            "series_code": "wlp",
+            "start": _TODAY.isoformat(),
+            "end": _TODAY.isoformat(),
+        },
+        lambda data: len(data["points"]) >= 20,
+    ),
+    Step(
+        "dfo_iwls",
+        "dfo_iwls_get_water_levels",
+        {
+            "station_code": "07120",
+            "series_code": "wlp",
+            "start": _TODAY.isoformat(),
+            "end": (_TODAY + timedelta(days=6)).isoformat(),
+        },
+        lambda data: data["resolution"] == "SIXTY_MINUTES" and len(data["points"]) <= 7 * 24 + 1,
     ),
     # Electricity (the rest is in smoke_test_electricity.py): the latest Quebec
     # trade hour must carry published exports, not a zero placeholder.

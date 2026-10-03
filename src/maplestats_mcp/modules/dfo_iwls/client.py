@@ -165,13 +165,22 @@ async def get_station(station_code: str, lang: str = "en") -> StationDetail:
     )
 
 
-def _parse_time(value: str | None, name: str, default: datetime) -> datetime:
+def _parse_time(
+    value: str | None, name: str, default: datetime, *, end_of_day: bool = False
+) -> datetime:
+    """Parse a bound; a date-only `end` means the end of that UTC day.
+
+    end="2026-10-03" used to mean midnight at its start, so start=end on
+    one date was refused and end="2026-10-02" left out all of October 2.
+    """
     if not value:
         return default
     try:
         parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise InvalidInput(f"{name} must be an ISO date or datetime, got {value!r}.") from exc
+    if end_of_day and len(value.strip()) == 10:
+        parsed += timedelta(days=1)
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
@@ -203,10 +212,15 @@ async def get_water_levels(
 
     now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
     start_dt = _parse_time(start, "start", now)
-    end_dt = _parse_time(end, "end", start_dt + timedelta(days=1))
+    end_dt = _parse_time(end, "end", start_dt + timedelta(days=1), end_of_day=True)
     if end_dt <= start_dt:
         raise InvalidInput(f"end ({end_dt}) must be after start ({start_dt}).")
-    if end_dt - start_dt > timedelta(days=constants.MAX_WINDOW_DAYS):
+    cap = timedelta(days=constants.MAX_WINDOW_DAYS)
+    whole_day_end = bool(end) and len((end or "").strip()) == 10
+    if whole_day_end and cap < end_dt - start_dt <= cap + timedelta(days=1):
+        # A date-only end one day past the cap is read as "up to that date".
+        end_dt = start_dt + cap
+    if end_dt - start_dt > cap:
         raise InvalidInput(f"The window must be {constants.MAX_WINDOW_DAYS} days or less.")
 
     params: dict[str, Any] = {
@@ -215,6 +229,12 @@ async def get_water_levels(
         "to": _iso(end_dt),
     }
     effective_resolution = None if series_code in constants.EVENT_SERIES else resolution
+    if (
+        effective_resolution is None
+        and series_code not in constants.EVENT_SERIES
+        and end_dt - start_dt > timedelta(days=1)
+    ):
+        effective_resolution = constants.LONG_WINDOW_RESOLUTION
     if effective_resolution:
         params["resolution"] = effective_resolution
 

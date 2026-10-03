@@ -73,9 +73,12 @@ async def dfo_iwls_get_water_levels(
     Use for: high and low tide times ("wlp-hilo", the default),
     predicted levels ("wlp"), or official observed levels ("wlo") in
     metres above chart datum. `start`/`end` are ISO dates or UTC
-    datetimes (default: now to +24 h); the window is capped at 7 days.
-    Set `resolution` (e.g. "SIXTY_MINUTES") to thin minute-level
-    series; it is ignored for high/low tides.
+    datetimes (default: now to +24 h); a date-only end includes that
+    whole day (start="2026-10-03", end="2026-10-03" is one day); the
+    window is capped at 7 days. Set `resolution` (e.g. "ONE_MINUTE",
+    "SIXTY_MINUTES"); for wlo/wlp over more than one day it defaults to
+    SIXTY_MINUTES (minute data for a week is about 800 KB). It is
+    ignored for high/low tides.
     Keywords: tides, tide table, high tide, low tide, water level,
     prediction, observed, DFO, harbour, marine forecast.
     Mots-clés : marées, table des marées, pleine mer, basse mer, niveau

@@ -108,6 +108,38 @@ async def test_get_water_levels_sends_resolution_for_regular_series(httpx_mock):
     assert params["resolution"] == ["SIXTY_MINUTES"]
 
 
+async def test_date_only_end_covers_that_whole_day(httpx_mock):
+    # Live 2026-10-03: start=end="2026-10-03" was refused ("end must be after
+    # start") because a date-only end meant midnight at its start.
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    result = await client.get_water_levels(
+        "07120", "wlp", start="2026-10-03", end="2026-10-03", resolution="ONE_MINUTE"
+    )
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["from"] == ["2026-10-03T00:00:00Z"]
+    assert params["to"] == ["2026-10-04T00:00:00Z"]
+    assert result.resolution == "ONE_MINUTE"
+
+
+async def test_long_minute_series_default_to_hourly(httpx_mock):
+    # Live: wlo over 2026-09-25..2026-10-02 at the default one-minute step was 767 KB.
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    result = await client.get_water_levels("07120", "wlo", start="2026-09-25", end="2026-10-01")
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["resolution"] == ["SIXTY_MINUTES"]
+    assert result.resolution == "SIXTY_MINUTES"
+
+
+async def test_date_only_end_one_day_past_the_cap_is_clamped(httpx_mock):
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    await client.get_water_levels("07120", "wlp", start="2026-09-01", end="2026-09-08")
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["to"] == ["2026-09-08T00:00:00Z"]
+
+
 async def test_window_over_seven_days_is_rejected_before_calling(httpx_mock):
     httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
     with pytest.raises(InvalidInput, match="7 days"):

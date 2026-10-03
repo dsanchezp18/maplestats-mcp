@@ -27,3 +27,6 @@ SEARCH_LIMIT_MAX = 200
 
 # Series whose values are tide events, not a regular time grid.
 EVENT_SERIES = frozenset({"wlp-hilo"})
+# Minute series over a week are large (wlo for 7 days was 767 KB live,
+# 2026-10-03), so a window over one day defaults to hourly points.
+LONG_WINDOW_RESOLUTION = "SIXTY_MINUTES"
