@@ -563,6 +563,24 @@ def test_every_page_has_canonical_and_social_metadata(built_site: Path):
     assert image.stat().st_size < 150_000
 
 
+def test_home_pages_carry_structured_data(built_site: Path):
+    """The home page, in each language, describes the site and the server as JSON-LD."""
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', text, re.DOTALL)
+        if page.name != "index.html":
+            assert not blocks, page
+            continue
+        assert len(blocks) == 1, page
+        graph = {node["@type"]: node for node in json.loads(blocks[0])["@graph"]}
+        lang = "fr" if page.parent.name == "fr" else "en"
+        assert graph["WebSite"]["url"] == site.page_url("index.html", lang)
+        app = graph["SoftwareApplication"]
+        description = re.search(r'<meta name="description" content="([^"]*)">', text)
+        assert description and app["description"] == html.unescape(description.group(1))
+        assert app["softwareVersion"] == site.__version__
+
+
 def test_sitemap_robots_and_not_found_page(built_site: Path):
     sitemap = (built_site / "sitemap.xml").read_text(encoding="utf-8")
     locs = re.findall(r"<loc>([^<]+)</loc>", sitemap)

@@ -3722,7 +3722,59 @@ def social_meta(html_text: str) -> str:
     if not title or not description:
         raise SystemExit("every page needs a <title> and a meta description")
     plain_title = html.escape(html.unescape(title.group(1).strip()), quote=True)
-    return html_text.replace(OG_TITLE, plain_title).replace(OG_DESCRIPTION, description.group(1))
+    # In JSON-LD the description is a JSON string, not an HTML attribute.
+    ld_description = _json_in_script(html.unescape(description.group(1)))
+    return (
+        html_text.replace(OG_TITLE, plain_title)
+        .replace(OG_DESCRIPTION, description.group(1))
+        .replace(json.dumps(LD_DESCRIPTION), ld_description)
+    )
+
+
+# schema.org data for search engines, on the home page only: the site
+# (WebSite) and the server it documents (SoftwareApplication). The other
+# pages are documentation of the same thing and add nothing a crawler needs.
+LD_DESCRIPTION = "\x00ld-description"
+
+
+def _json_in_script(value: Any) -> str:
+    """JSON safe inside <script>: no "</" can close the element early."""
+    return json.dumps(value, ensure_ascii=False).replace("</", "<\\/")
+
+
+def structured_data(page: str, lang: Lang) -> str:
+    if page != "index.html":
+        return ""
+    url = page_url(page, lang)
+    data = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": f"{url}#website",
+                "url": url,
+                "name": "MapleStats MCP",
+                "inLanguage": "en-CA" if lang == "en" else "fr-CA",
+            },
+            {
+                "@type": "SoftwareApplication",
+                "@id": f"{url}#software",
+                "name": "MapleStats MCP",
+                "description": LD_DESCRIPTION,
+                "url": url,
+                "sameAs": [REPO, "https://pypi.org/project/maplestats-mcp/"],
+                "applicationCategory": "DeveloperApplication",
+                "operatingSystem": "Windows, macOS, Linux",
+                "softwareVersion": __version__,
+                "license": "https://opensource.org/licenses/MIT",
+                "isAccessibleForFree": True,
+                "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CAD"},
+                "author": {"@type": "Person", "name": "Daniel Sánchez Pazmiño"},
+                "image": f"{SITE_URL}assets/og.png",
+            },
+        ],
+    }
+    return f'<script type="application/ld+json">{_json_in_script(data)}</script>\n'
 
 
 # French typography, as Canadian French usage sets it: a narrow no-break
@@ -4006,6 +4058,7 @@ def _write_site(
                 "url_fr": page_url(page.name, "fr"),
                 "og_title": OG_TITLE,
                 "og_description": OG_DESCRIPTION,
+                "structured_data": structured_data(page.name, lang),
                 "search_query": esc(SEARCH_EXAMPLE[lang]),
                 "agent_prompt": esc(AGENT_PROMPT[lang]),
                 "search_suggestions": suggestion_buttons(lang),

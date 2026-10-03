@@ -364,6 +364,21 @@
  * undrawn). On paper every mark shows at its final state, and a figure
  * stays on one page. */
 @media print {
+  /* Paper takes the light series colours, as site.css gives it the light
+     inks, whatever the screen theme. */
+  :root,
+  :root[data-theme],
+  :root:not([data-theme="light"]) {
+    --chart-1: #c8221a;
+    --chart-2: #3b6fb6;
+  }
+
+  :root .square,
+  :root[data-theme] .square,
+  :root:not([data-theme="light"]) .square {
+    --sq-seg-ink: #ffffff;
+  }
+
   .js .chart *,
   .js .square * {
     transition: none !important;
