@@ -293,6 +293,17 @@ SOURCES: dict[str, Source] = {
         row="provincial_agency",
     ),
     "arcgis_hub": Source("ArcGIS Hub portals", "Portails ArcGIS Hub", "catalogue", "ArcGIS Hub"),
+    "bc_environment": Source(
+        "BC Ministry of Environment: air quality, snow, groundwater and streamflow",
+        "Ministère de l'Environnement de la C.-B. : qualité de l'air, neige, eaux "
+        "souterraines et débits",
+        "provincial",
+        "BC Environment",
+        "Environnement C.-B.",
+        domain="environment",
+        places=("BC",),
+        row="provincial_agency",
+    ),
     "bc_lobbyists": Source(
         "BC Registrar of Lobbyists: registrations and activity reports",
         "Registraire des lobbyistes de la C.-B. : inscriptions et rapports d'activité",
