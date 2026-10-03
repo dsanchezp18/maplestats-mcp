@@ -115,8 +115,8 @@ Both repos were cloned and inspected directly (not just their READMEs).
 
 ## Implication for MapleStats's StatCan module
 
-- **RDaaS is a genuine, confirmed gap** across every benchmark reviewed
-  (ReyemTech, Aryan's, pipeworx-io's). Building it is real new coverage,
+- **RDaaS is a genuine, confirmed gap** across every benchmark
+  reviewed here. Building it is real new coverage,
   not duplicated effort, and it is the most direct way to deliver the
   "StatCan documentation/classifications as a first-class source" goal
   from the project guide — as a structured API, not scraped

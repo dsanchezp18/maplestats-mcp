@@ -29,6 +29,14 @@
   // Cyrillic letters, which no docstring here uses.
   const CASEFOLD = { "ß": "ss", "ς": "σ", "\u0345": "ι" };
 
+  // search.py's STOP_WORDS: French function words, without accents.
+  const STOP_WORDS = new Set(
+    (
+      "au aux avec ce ces cette dans de des du en est et la le les ou par pour " +
+      "quel quelle quelles quels que qui sur un une"
+    ).split(" "),
+  );
+
   function tokenize(text) {
     // Like search.py: NFKD leaves the ligatures whole, so fold them first.
     // casefold turns the iota subscript inside a letter into an iota too
@@ -40,7 +48,7 @@
       .normalize("NFD")
       .replace(/[ßς\u0345]/g, (c) => CASEFOLD[c]);
     const plain = folded.normalize("NFKD").replace(/\p{M}/gu, "");
-    return (plain.match(/[\p{L}\p{N}]{2,}/gu) || []).map(fold);
+    return (plain.match(/[\p{L}\p{N}]{2,}/gu) || []).filter((w) => !STOP_WORDS.has(w)).map(fold);
   }
 
   /* ---------- Ranking ---------- */

@@ -145,6 +145,13 @@ CASES = [
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("émissions de gaz à effet de serre par province inventaire", "sdmx_space_get_data"),
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),
+    # French stop words in shared/search.py (2026-10-03): "de" and "par" no
+    # longer decide the ranking.
+    ("taux de chômage par province", "statcan_indicators_get_indicators"),
+    ("météo prévisions Québec", "eccc_query_items"),
+    ("produit intérieur brut par province", "wds_search_cubes"),
+    ("permis de construire", "wds_search_cubes"),
+    ("salaire minimum", "nl_stats_list_files"),
 ]
 
 

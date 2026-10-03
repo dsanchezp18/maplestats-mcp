@@ -21,6 +21,43 @@ from fastmcp.server.transforms.search import bm25
 
 _WORD = re.compile(r"[^\W_]{2,}")
 
+# French function words, without accents. Every Mots-clés line is full of
+# them, so a query like "taux de chômage par province" was won by the tool
+# with the most "de" and "par" (phac_infobase_query, 2026-10-03) rather than
+# the one about unemployment. site/assets/site.js keeps the same list.
+STOP_WORDS = frozenset(
+    [
+        "au",
+        "aux",
+        "avec",
+        "ce",
+        "ces",
+        "cette",
+        "dans",
+        "de",
+        "des",
+        "du",
+        "en",
+        "est",
+        "et",
+        "la",
+        "le",
+        "les",
+        "ou",
+        "par",
+        "pour",
+        "quel",
+        "quelle",
+        "quelles",
+        "quels",
+        "que",
+        "qui",
+        "sur",
+        "un",
+        "une",
+    ]
+)
+
 
 def _fold(word: str) -> str:
     # hôpitaux -> hopital, journaux -> journal.
@@ -39,7 +76,7 @@ def tokenize(text: str) -> list[str]:
     text = text.casefold().replace("œ", "oe").replace("æ", "ae")
     decomposed = unicodedata.normalize("NFKD", text)
     plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-    return [_fold(word) for word in _WORD.findall(plain)]
+    return [_fold(word) for word in _WORD.findall(plain) if word not in STOP_WORDS]
 
 
 def install() -> None:
