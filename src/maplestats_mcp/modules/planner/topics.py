@@ -616,6 +616,11 @@ TOPICS: tuple[Topic, ...] = (
                 ("electricity", "electricite", "power demand"),
             ),
             PlanStep(
+                "electricity_quebec_list_facilities",
+                "water flows at Hydro-Quebec dams and generating stations",
+                ("dam", "water flow", "spillway", "debit", "barrage", "reservoir"),
+            ),
+            PlanStep(
                 "aer_get_production_volumes_link",
                 "Alberta production volumes: product='oil', 'gas'...",
                 ("oil", "natural gas", "gas production", "wells", "puits", "petrole"),

@@ -237,7 +237,8 @@ Sources, by tool-name prefix:
   highway road events and closures), nl_opendata_,
   opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
-  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec).
+  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including water flows at its
+  dams).
 - Portal families, each with a `portal` argument and a list_portals tool:
   ckan_ (open.canada.ca, provincial and city CKAN catalogues;
   ckan_datastore_search for rows, ckan_describe_resource and
