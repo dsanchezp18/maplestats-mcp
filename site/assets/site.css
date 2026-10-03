@@ -1885,6 +1885,8 @@ mark {
 }
 
 .snippet .copy {
+  /* 28px tall: at least the 24px target WCAG 2.2 (2.5.8) asks for. */
+  min-height: 28px;
   padding: 4px 9px;
   border: 1px solid var(--rule);
   border-radius: 0;
@@ -4252,6 +4254,55 @@ h2.sub {
    (nav, language and theme switches, copy buttons) go. Charts are handled
    in charts.css. */
 @media print {
+  /* Paper is white and browsers drop backgrounds when printing, so a page
+     in dark mode would print light ink on white. Print always takes the
+     light inks, and the footer's dark panel turns into plain paper. These
+     selectors match the dark ones above with equal weight, and win by
+     coming later. */
+  :root,
+  :root[data-theme],
+  :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --ground: #ffffff;
+    --ground-2: #f3f3f1;
+    --surface: #ffffff;
+    --ink: #111111;
+    --ink-2: #3d3d3d;
+    --ink-3: #5e5e5e;
+    --rule: #d9d9d6;
+    --rule-2: #111111;
+    --accent: #c8221a;
+    --accent-hover: #93150f;
+    --accent-soft: #fbe4e1;
+    --on-accent: #ffffff;
+    --amber: #c8221a;
+    --mark: #ffddd8;
+    --mark-ink: #5c0d08;
+    --panel: #ffffff;
+    --panel-2: #ffffff;
+    --panel-ink: #111111;
+    --panel-mute: #3d3d3d;
+    --panel-rule: #d9d9d6;
+    --panel-link: #c8221a;
+    --code-key: #111111;
+    --code-str: #b01e16;
+    --code-num: #b01e16;
+    --code-lit: #5e5e5e;
+    --c1: #fde2df;
+    --c1-ink: #5c0d08;
+    --c2: #f5a39a;
+    --c2-ink: #3d0805;
+    --c3: #d23a2d;
+    --c3-ink: #ffffff;
+    --c4: #9c160f;
+    --c4-ink: #ffffff;
+  }
+
+  .foot {
+    border-top: 2px solid var(--rule-2);
+    padding-block: 24px 0;
+  }
+
   .top {
     position: static;
   }
@@ -4768,6 +4819,16 @@ html:not(.js) .chips {
 
 .lang-ask a {
   color: var(--ink-2);
+}
+
+/* In the footer the line sits on the dark panel, where the page inks
+   (2.9:1 and 1.7:1 on light pages) fall short of AA. */
+.foot .lang-ask {
+  color: var(--panel-mute);
+}
+
+.foot .lang-ask a {
+  color: var(--panel-ink);
 }
 
 /* The pause control and the question buttons of the home prompt. */

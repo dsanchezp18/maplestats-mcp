@@ -1124,117 +1124,31 @@ Elections Canada publishes 54 datasets under the `elections` organization
 
 ## CanadaBuys (PSPC procurement)
 
-**Status:** Shipped.
+**Status:** Removed.
 
-`modules/canadabuys/` (3 tools): `canadabuys_search_tenders` (open or
-today's new tender notices, filter by keyword, category, region, buyer),
-`canadabuys_search_awards` (award notices per fiscal year 2022-2023 onward,
-filter by supplier, buyer, category), `canadabuys_get_notice` (full notice
-by reference number). Built 2026-09-22 on the daily open-data CSVs under
-`canadabuys.canada.ca/opendata/pub/` (listed as resources of the
-open.canada.ca "CanadaBuys tender notices"/"award notices" packages, not
-DataStore-active), downloaded and filtered in-process with a 4h cache.
-
-Quirks confirmed live: UTF-8 BOM, bilingual `-eng`/`-fra` column pairs,
-`*A`/`*B` multi-value cells, HTML in descriptions, `totalContractValue` of
-`0.00` meaning not reported (returned as None), and the "open" file still
-listing some tenders whose closing date has passed (sorted first by soonest
-closing). Extended the same day with `canadabuys_search_contracts` (contract
-history per fiscal year back to 2009-2010, plus the partial "2009-jan-Mar"
-file; up to 113MB per year, so only needed columns are cached and past years
-are kept 24h; one row per amendment upstream, merged here into one record
-per contract with original amount, total value and amendment count) and
-`canadabuys_list_bulk_files` (links, sizes and dates for the whole-history
-and pre-CanadaBuys legacy files, 57MB to 833MB each, too large to query per
-call).
-
-Legacy (pre-2023) contract rows carry titles shaped "SUPPLIER
-(reference~amendment)" and often lack award dates; amendments made in a
-different fiscal year sit in that year's file, so an original amount can be
-missing.
-
-`modules/canadabuys/` (3 tools): `canadabuys_search_tenders` (open or
-today's new tender notices, filter by keyword, category, region, buyer),
-`canadabuys_search_awards` (award notices per fiscal year 2022-2023 onward,
-filter by supplier …
+`modules/canadabuys/` (5 tools: tender notices, award notices, contract
+history, one notice by reference number, and the bulk-file links) was built
+2026-09-22 on the daily open-data CSVs under canadabuys.canada.ca and
+removed 2026-10-03: the source is not available for automated access under
+its terms. See git history if this is revisited.
 
 ## House of Commons (OpenParliament.ca)
 
-**Status:** Shipped.
+**Status:** Removed.
 
-Shipped 2026-09-24: `modules/openparliament/` (7 `parliament_` tools) over
-api.openparliament.ca, an unofficial JSON API by OpenParliament.ca/Open
-North that re-publishes LEGISinfo, House votes, Hansard and committee
-evidence (no official Parliament JSON API covers all four). Bill and MP
-search filter locally because the API ignores `q` and matches `name=` only
-exactly; list endpoints page at 500 via `next_url`; unknown objects answer
-404 with an HTML page; debate paths drop leading zeros
-(`/debates/2026/9/3/`).
-
-Every response notes the source is unofficial. Added 2026-09-24:
-`parliament_search_hansard`, full-text search over debates and committee
-evidence, read from openparliament.ca/search (HTML, 15 hits per page)
-because the JSON API ignores `q` on /speeches/.
-
-Shipped 2026-09-24: `modules/openparliament/` (7 `parliament_` tools) over
-api.openparliament.ca, an unofficial JSON API by OpenParliament.ca/Open
-North that re-publishes LEGISinfo, House votes, Hansard and committee
-evidence (no official …
+`modules/openparliament/` (12 `parliament_` tools: bills, House votes, MPs,
+Hansard and speeches, and committees) was built 2026-09-24 on
+api.openparliament.ca, an unofficial API, and removed 2026-10-03: the source
+is not available for automated access under its terms. Official member data
+(MPs, roles, party standings, Cabinet) remains in `ourcommons_`, and Senate
+votes in `senate_`.
 
 ## OpenParliament committees
 
-**Status:** Shipped.
+**Status:** Removed.
 
-Shipped 2026-09-26 in the existing `modules/openparliament/` (no new
-module): `parliament_list_committees`, `parliament_get_committee`,
-`parliament_search_committee_meetings` and
-`parliament_get_committee_meeting`, over the same api.openparliament.ca
-JSON API, headers (`Accept: application/json`, `API-Version: v1`) and rate
-limiter as the other `parliament_` tools.
-
-Verified live 2026-09-26:
-
-- `/committees/` returns the current session's 30 top-level committees
-  by default (20 per page unless `limit` is set) and takes `session`.
-  Subcommittees never appear in it, only in a committee's
-  `subcommittees`. Committee data starts with session 39-1 (2006); an
-  earlier or unknown session returns an empty list rather than 404, so
-  the tool raises NotFound for it.
-- `/committees/<slug>/` gives bilingual `name` and `short_name`,
-  `parent_url`, `subcommittees` (paths) and `sessions` (session,
-  House acronym such as FINA, ourcommons.ca `source_url`).
-- `/committees/meetings/` filters on `committee` (slug or path),
-  `session`, `date`, `date__gte`, `date__lte` and `in_camera`, newest
-  first. It silently ignores `has_evidence` and `ordering`, and an
-  unknown committee returns an empty list, so the tool checks the
-  committee's detail page when a committee filter matches nothing. List
-  rows carry no `session`; it is read from the meeting URL. Meetings on
-  notice appear with future dates and `has_evidence` false.
-- `/committees/<slug>/<session>/<number>/` adds start and end times and
-  ourcommons.ca minutes, notice and webcast links (`webcast_url` null
-  for in camera meetings). An unknown meeting returns 404 (HTML).
-- All ourcommons.ca links are English. Their French pages are on
-  noscommunes.ca with French path words (`Committees/fr/FINA?...`,
-  `DocumentViewer/fr/45-1/FINA/reunion-47/proces-verbal` and
-  `.../avis-convocation`; checked back to 39-1); only swapping `en` for
-  `fr` in a DocumentViewer link lands on an error page. With `lang="fr"`
-  the tools return those French links.
-- A meeting's transcript is `/speeches/?document=<meeting path>`, in
-  spoken order, typically 50 to 300 speeches; in camera meetings return
-  none. An unknown document path returns HTTP 400 "Invalid meeting URL"
-  as text/plain. `/speeches/` ignores `committee=`, and
-  `document__startswith` returns 400, so there is no committee-wide
-  speech search in the JSON API (full-text search over committee
-  evidence stays with `parliament_search_hansard`).
-- Witnesses have no `politician_url`. Their first attribution is
-  "Name (Title, Organization)", later ones the bare name; the English
-  form sometimes puts an honorific in the name ("National Chief ...")
-  where the French form puts it in the role. House officers ("The Clerk
-  of the Committee (...)", "Some hon. members") also lack
-  `politician_url` and are excluded from the witness list.
-- Committee studies exist only as HTML pages on openparliament.ca
-  (`/committees/activities/<id>/`, 404 on the API host), so they are
-  not exposed.
+The four committee tools added 2026-09-26 to `modules/openparliament/` were
+removed with that module on 2026-10-03 (see above).
 
 ## Senate of Canada votes
 
@@ -1463,7 +1377,7 @@ and ~35 got one that dropped the tool's filters, misread the format or sent
 GET to a POST endpoint: the tool now runs once while `shared/http.py`
 records its upstream requests (every parameter, POST body, Accept header),
 the data request is replayed to find its format and rows, tools that filter
-a downloaded file (CanadaBuys, CER, GC InfoBase, CIHI, IRCC, StatCan
+a downloaded file (CER, GC InfoBase, CIHI, IRCC, StatCan
 indicators, IP Horizons patents) get the same filters in the script, and
 scripts follow the house layout (header, numbered sections, packages in
 setup).
@@ -2816,9 +2730,8 @@ list gives. A bad person id answers 302 to an error page.
 
 Not built: the members' expenditure reports, whose URL needs a "dynamic
 document id" from the page (the example pattern with `Id=0` returns 404);
-votes, debates and committee evidence, which the `parliament_` tools already
-cover through OpenParliament.ca; and LEGISinfo's bills JSON, also covered. Person ids
-are the House's own, not OpenParliament slugs.
+House votes, debates and committee evidence; and LEGISinfo's bills JSON.
+Person ids are the House's own.
 
 ## StatCan merchandise trade by commodity (CIMT)
 

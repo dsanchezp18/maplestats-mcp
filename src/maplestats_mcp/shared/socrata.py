@@ -36,10 +36,11 @@ from typing import Any, NoReturn
 
 import httpx
 
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.upstream_text import clean_detail, network_error
 
 CATALOG_BASE_URL = "https://api.us.socrata.com/api/catalog/v1"
 
@@ -64,15 +65,15 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     try:
         body = exc.response.json()
     except ValueError:
-        return exc.response.text[:200]
+        return clean_detail(exc.response.text)
     if isinstance(body, dict):
         message = body.get("message")
         if isinstance(message, str) and message:
-            return message
+            return clean_detail(message)
         error = body.get("error")
         if isinstance(error, str) and error:
-            return error
-    return exc.response.text[:200]
+            return clean_detail(error)
+    return clean_detail(exc.response.text)
 
 
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -92,9 +93,7 @@ async def _get(config: SocrataConfig, context: str, url: str, params: dict[str, 
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
-        ) from exc
+        raise network_error(context, exc) from exc
 
 
 async def catalog_search(

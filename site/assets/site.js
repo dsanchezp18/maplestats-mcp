@@ -92,6 +92,7 @@
       offline: "The search index did not load. Open the Tools page instead.",
       tools: (n) => `${n} ${n === 1 ? "tool" : "tools"}`,
       matches: (n) => `${n} ${n === 1 ? "match" : "matches"}`,
+      first: (n) => `First ${n} matches`,
       cut: (n) => `Beyond the top ${n}: search_tools would not return these.`,
     },
     fr: {
@@ -103,8 +104,10 @@
         `${n} des ${total} outils indexés ${n === 1 ? "correspond" : "correspondent"}, classés par le même index BM25 que search_tools.`,
       none: "Aucun outil ne correspond. Essayez un terme plus large ou le nom de l'organisme.",
       offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
-      tools: (n) => `${n} ${n === 1 ? "outil" : "outils"}`,
-      matches: (n) => `${n} ${n === 1 ? "résultat" : "résultats"}`,
+      // French counts 0 and 1 as singular.
+      tools: (n) => `${n} ${n <= 1 ? "outil" : "outils"}`,
+      matches: (n) => `${n} ${n <= 1 ? "résultat" : "résultats"}`,
+      first: (n) => `Les ${n} premiers résultats`,
       cut: (n) => `Au-delà des ${n} premiers : search_tools ne les renverrait pas.`,
     },
   }[lang];
@@ -417,6 +420,21 @@
   /* ---------- Copy buttons ---------- */
 
   feature("copy buttons", () => {
+    // A screen reader is not reliably told when a focused button's text
+    // changes, so the outcome also goes to one polite live region.
+    let said = null;
+    const say = (text) => {
+      if (!said) {
+        said = document.createElement("p");
+        said.className = "sr";
+        said.setAttribute("role", "status");
+        document.body.append(said);
+      }
+      said.textContent = "";
+      setTimeout(() => {
+        said.textContent = text;
+      }, 50);
+    };
     document.querySelectorAll("[data-copy-target]").forEach((button) => {
       const label = button.textContent;
       button.addEventListener("click", async () => {
@@ -426,6 +444,7 @@
         try {
           await navigator.clipboard.writeText(text);
           button.textContent = T.copied;
+          say(T.copied);
         } catch {
           const range = document.createRange();
           range.selectNodeContents(target);
@@ -433,6 +452,7 @@
           selection.removeAllRanges();
           selection.addRange(range);
           button.textContent = T.selected;
+          say(T.selected);
         }
         setTimeout(() => {
           button.textContent = label;
@@ -457,6 +477,8 @@
     const homes = new Map();
     let level = "all";
     let asked = "";
+    // The most tools the atlas lists for one query.
+    const LIMIT = 60;
 
     atlas.querySelectorAll("details.tool").forEach((el) => {
       const name = el.dataset.tool;
@@ -528,7 +550,7 @@
         badge.textContent = String(shown);
         el.querySelector("summary .t-name").before(badge);
         results.append(el);
-        if (shown >= 60) break;
+        if (shown >= LIMIT) break;
       }
       if (!shown) {
         const none = document.createElement("p");
@@ -536,7 +558,8 @@
         none.textContent = T.none;
         results.append(none);
       }
-      status.textContent = T.matches(shown);
+      // At the limit there are usually more matches than shown; say so.
+      status.textContent = shown >= LIMIT ? T.first(shown) : T.matches(shown);
     };
 
     input.addEventListener("input", debounce(apply, 80));

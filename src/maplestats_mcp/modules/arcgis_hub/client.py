@@ -25,20 +25,30 @@ from maplestats_mcp.modules.arcgis_hub.schemas import (
     PortalList,
 )
 from maplestats_mcp.shared.arcgis import (
-    DOWNLOAD_FORMATS,
+    ITEM_ID_PATTERN,
+    SEARCH_WINDOW_MAX,
     ArcGISHubConfig,
     collection_url,
     default_layer_index,
     download_url,
     excerpt,
+    file_format,
     get_item,
+    item_data_url,
+    item_kind,
     parse_epoch_millis,
     query_layer,
     search_items,
+    supported_download_formats,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 
 
@@ -53,6 +63,19 @@ def _config(portal: str) -> ArcGISHubConfig:
         rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
         collection=info.collection,
     )
+
+
+def _item_id(item_id: str) -> str:
+    """The item id, checked before it goes into a URL path (see shared/arcgis.py)."""
+    cleaned = item_id.strip()
+    if not cleaned:
+        raise InvalidInput("item_id must not be empty.")
+    if not ITEM_ID_PATTERN.match(cleaned):
+        raise InvalidInput(
+            f"item_id must be an ArcGIS item id (32 hex digits, optionally '_<layer id>') "
+            f"as returned by arcgis_hub_search_datasets, got {item_id!r}."
+        )
+    return cleaned
 
 
 def list_portals(lang: str = "en") -> PortalList:
@@ -118,6 +141,11 @@ async def search_datasets(
         )
     if offset < 0:
         raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    if offset + limit > SEARCH_WINDOW_MAX:
+        raise InvalidInput(
+            f"offset + limit must be at most {SEARCH_WINDOW_MAX} (the catalogue search does "
+            f"not page further), got {offset + limit}; narrow the query, tag or item_type."
+        )
 
     async def fetch() -> dict[str, Any]:
         return await search_items(
@@ -148,43 +176,68 @@ async def search_datasets(
     )
 
 
-async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail:
-    """Get one dataset item's metadata and download links; ``lang`` is a documented no-op."""
-    del lang
-    config = _config(portal)
-    if not item_id.strip():
-        raise InvalidInput("item_id must not be empty.")
-
+async def _item_feature(config: ArcGISHubConfig, item_id: str) -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
         return await get_item(config, item_id)
 
-    feature, was_cached = await cached_fetch(
+    return await cached_fetch(
         f"{config.source}:get_item:{item_id}", constants.CACHE_TTL_ITEM_SECONDS, fetch
     )
-    props = feature.get("properties") or {}
-    canonical_id = props.get("id") or item_id
-    service_url = props.get("url") or None
+
+
+async def _download_links(
+    config: ArcGISHubConfig, canonical_id: str, item_type: str, service_url: str | None
+) -> list[DownloadLink]:
+    """Links that answer, chosen by item kind (see shared/arcgis.py's item_kind)."""
     # Checked live 2026-09-27 (Cochrane, Okotoks, Ottawa): a layer-level item's
     # id is "<item id>_<layer id>", which the download API rejects with HTTP 400;
     # it wants the bare item id and the layer's own id, which is not always 0
     # (Cochrane's "Parks" is layer 18 and 404s with layers=0).
     download_id, _, suffix = canonical_id.partition("_")
-    layer_index = 0
-    if suffix.isdigit():
-        layer_index = int(suffix)
-    elif constants.PORTALS[portal].downloads and service_url and "/rest/services/" in service_url:
-        # A secured or broken service cannot be downloaded either way, so its
-        # detail still returns, with the old default.
+    kind = item_kind(item_type, service_url)
+    if kind == "file":
+        return [DownloadLink(format=file_format(item_type), url=item_data_url(download_id))]
+    if kind == "none" or service_url is None:
+        return []
+    layer_index = int(suffix) if suffix.isdigit() else None
+    if layer_index is None:
+        # The layer lookup is optional: a secured, broken or misconfigured
+        # service (Orangeville's cc70cff5..., whose service answers "Invalid
+        # URL", live 2026-10-03) still returns its detail, without links.
         try:
             layer_index = await default_layer_index(config, service_url)
-        except UpstreamError:
-            layer_index = 0
+        except (InvalidInput, NotFound, UpstreamUnavailable, UpstreamError):
+            return []
+    formats = await supported_download_formats(config, download_id, layer_index)
+    return [
+        DownloadLink(
+            format=fmt, url=download_url(config, download_id, fmt, layer_index=layer_index)
+        )
+        for fmt in formats
+    ]
+
+
+async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail:
+    """Get one dataset item's metadata and download links; ``lang`` is a documented no-op."""
+    del lang
+    config = _config(portal)
+    item_id = _item_id(item_id)
+    feature, was_cached = await _item_feature(config, item_id)
+    props = feature.get("properties") or {}
+    canonical_id = props.get("id") or item_id
+    service_url = props.get("url") or None
+    item_type = props.get("type") or "unknown"
+    download_urls = (
+        await _download_links(config, canonical_id, item_type, service_url)
+        if constants.PORTALS[portal].downloads
+        else []
+    )
     return ItemDetail(
         portal=portal,
         id=canonical_id,
         title=props.get("title") or canonical_id,
         description=props.get("description") or props.get("snippet") or "",
-        item_type=props.get("type") or "unknown",
+        item_type=item_type,
         tags=list_or_empty(props, "tags"),
         categories=list_or_empty(props, "categories"),
         owner=props.get("owner") or None,
@@ -196,14 +249,7 @@ async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail
         spatial_reference_wkid=props.get("spatialReference") or None,
         service_url=service_url,
         landing_page_url=f"{constants.landing_page_url(portal)}{canonical_id}",
-        download_urls=[]
-        if not constants.PORTALS[portal].downloads
-        else [
-            DownloadLink(
-                format=fmt, url=download_url(config, download_id, fmt, layer_index=layer_index)
-            )
-            for fmt in DOWNLOAD_FORMATS
-        ],
+        download_urls=download_urls,
         provenance=make_provenance(
             source=config.source,
             url=f"{collection_url(config)}/items/{item_id}",
@@ -235,20 +281,35 @@ async def query_feature_layer(
     """
     del lang
     config = _config(portal)
-    if not item_id.strip():
-        raise InvalidInput("item_id must not be empty.")
+    item_id = _item_id(item_id)
     if limit < 1 or limit > constants.ROWS_LIMIT_MAX:
         raise InvalidInput(f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.")
     if offset < 0:
         raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    # A negative id reached the service, which answered an empty, "successful"
+    # page (live 2026-10-03).
+    if layer_index is not None and layer_index < 0:
+        raise InvalidInput(f"layer_index must be >= 0, got {layer_index}.")
     where_clause = where or "1=1"
 
-    item = await get_dataset(portal, item_id)
-    service_url = item.service_url
-    if not service_url:
+    feature, _ = await _item_feature(config, item_id)
+    props = feature.get("properties") or {}
+    canonical_id = props.get("id") or item_id
+    item_type = props.get("type") or "unknown"
+    service_url = props.get("url") or None
+    if (
+        service_url
+        and item_kind(item_type, service_url) == "none"
+        and "/ImageServer" in service_url
+    ):
         raise InvalidInput(
-            f"item {item_id!r} ({item.item_type}) has no queryable FeatureServer/MapServer "
-            "service_url; use its download_urls instead."
+            f"item {item_id!r} is an Image Service (raster imagery), which has no rows to "
+            "query; open its service_url in a GIS or use another item."
+        )
+    if not service_url or "/rest/services/" not in service_url:
+        raise InvalidInput(
+            f"item {item_id!r} ({item_type}) has no queryable FeatureServer/MapServer "
+            "service_url; use its download_urls (arcgis_hub_get_dataset) instead."
         )
     resolved_layer_index = (
         layer_index if layer_index is not None else await default_layer_index(config, service_url)
@@ -274,15 +335,15 @@ async def query_feature_layer(
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ROWS_SECONDS, fetch)
     features = list_or_empty(body, "features")
     rows: list[dict[str, Any]] = []
-    for feature in features:
-        row = dict(feature.get("attributes") or {})
-        if return_geometry and feature.get("geometry") is not None:
-            row["_geometry"] = feature["geometry"]
+    for record in features:
+        row = dict(record.get("attributes") or {})
+        if return_geometry and record.get("geometry") is not None:
+            row["_geometry"] = record["geometry"]
         rows.append(row)
     exceeded = bool(body.get("exceededTransferLimit", False))
     return FeatureQueryResult(
         portal=portal,
-        item_id=item.id,
+        item_id=canonical_id,
         layer_index=resolved_layer_index,
         rows=rows,
         returned_count=len(rows),

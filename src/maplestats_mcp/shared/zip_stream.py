@@ -313,15 +313,28 @@ class MemberStream:
                 next_start = stop + 1
                 chunk = min(chunk * 2, self.chunk_bytes)
 
+        chunk_out = 0  # bytes inflated from the range being processed
+
         def inflate(piece: bytes) -> bytes:
-            nonlocal window
+            nonlocal window, chunk_out
             if inflater is None:
                 return piece
             pieces: list[bytes] = []
             try:
                 pending_input = piece
                 while pending_input:
-                    pieces.append(inflater.decompress(pending_input, _INFLATE_STEP))
+                    # Never inflate more than one byte past the ceiling: a
+                    # deflate bomb in one range is stopped here, before the
+                    # whole range's output is held in memory.
+                    room = self.max_inflated_bytes - self.inflated - chunk_out + 1
+                    out_piece = inflater.decompress(pending_input, max(1, min(_INFLATE_STEP, room)))
+                    pieces.append(out_piece)
+                    chunk_out += len(out_piece)
+                    if self.inflated + chunk_out > self.max_inflated_bytes:
+                        raise ScanLimitExceeded(
+                            f"{member.name} inflated past {self.max_inflated_bytes:,} bytes.",
+                            self.scanned,
+                        )
                     pending_input = inflater.unconsumed_tail
             except zlib.error as exc:
                 raise UpstreamError(
@@ -334,7 +347,8 @@ class MemberStream:
 
         def process(raw: bytes, last: bool) -> bytes:
             """Re-align, record a due access point and inflate one range (in a thread)."""
-            nonlocal logical, last_point, out_offset
+            nonlocal logical, last_point, out_offset, chunk_out
+            chunk_out = 0
             aligned = shifter.feed(raw)
             if last:
                 aligned += shifter.flush()

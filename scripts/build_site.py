@@ -330,7 +330,6 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
-    "canadabuys": Source("CanadaBuys", "AchatsCanada", "national", domain="money"),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
@@ -602,14 +601,6 @@ SOURCES: dict[str, Source] = {
         places=("BC",),
         row="municipal_catalogue",
     ),
-    "openparliament": Source(
-        "House of Commons, via OpenParliament.ca",
-        "Chambre des communes, par OpenParliament.ca",
-        "national",
-        "OpenParliament",
-        "OpenParliament",
-        domain="government",
-    ),
     "pbo": Source(
         "Parliamentary Budget Officer",
         "Directeur parlementaire du budget",
@@ -705,12 +696,18 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "Census data tables, 2006-2016",
         "Tableaux de données du recensement, 2006-2016",
     ),
-    "statcan/daily": ("The Daily", "Le Quotidien"),
+    "statcan/daily": (
+        "The Daily and the release calendar",
+        "Le Quotidien et le calendrier des diffusions",
+    ),
     "statcan/delta": (
         "Delta files: daily bulk updates",
         "Fichiers delta : mises à jour quotidiennes",
     ),
-    "statcan/geo": ("Census geography", "Géographie du recensement"),
+    "statcan/geo": (
+        "Geography: census boundaries, road network and map layers",
+        "Géographie : limites du recensement, réseau routier et couches cartographiques",
+    ),
     "statcan/indicators": ("Indicators", "Indicateurs"),
     "statcan/lode": (
         "Open databases (LODE): facilities, buildings, addresses",
@@ -728,7 +725,10 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "SDMX spaces: energy information and shared data",
         "Espaces SDMX : information sur l'énergie et données partagées",
     ),
-    "statcan/surveys": ("Surveys and metadata", "Enquêtes et métadonnées"),
+    "statcan/surveys": (
+        "Surveys, metadata and microdata holdings (RDC, RTRA)",
+        "Enquêtes, métadonnées et fonds de microdonnées (CDR, ATR)",
+    ),
     "statcan/wds": (
         "Web Data Service: tables and vectors",
         "Service de données Web : tableaux et vecteurs",
@@ -772,7 +772,6 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
     },
     "arcgis_hub": {
         "mb": ("MB", _P),
-        "sk": ("SK", _P),
         "pe": ("PE", _P),
         "alberta_geological_survey": ("AB", _P),
         "london": ("ON", _M),
@@ -2762,7 +2761,7 @@ def square_places(lang: Lang) -> list[str]:
 
 
 def chat_demo_context(lang: Lang) -> dict[str, str]:
-    """The prompt on the home page: five questions to five different publishers,
+    """The prompt on the home page: four questions to four different publishers,
     each answered from a recorded call (site/_data/cases), played by assets/site.js."""
     en = lang == "en"
     prompts = {call["name"]: call["response"] for call in load_case("prompts")["calls"]}
@@ -2859,22 +2858,6 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
             f"pour {this_year[0]}."
         )
 
-    # One federal contract award.
-    award = prompts["canadabuys_search_awards"]["awards"][0]
-    value = award["total_contract_value"]
-    if en:
-        award_html = (
-            f"<strong>{esc(award['supplier_name'])}</strong> of {esc(award['supplier_city'])}, "
-            f"{esc(award['supplier_province'])}, won the {esc(award['title'])} for "
-            f"${number(value, lang)} on {long_date(award['award_date'], lang)}."
-        )
-    else:
-        award_html = (
-            f"<strong>{esc(award['supplier_name'])}</strong>, de {esc(award['supplier_city'])} "
-            f"({esc(award['supplier_province'])}), a remporté le contrat « {esc(award['title'])} » "
-            f"pour {number(value, lang)} $ le {long_date(award['award_date'], lang)}."
-        )
-
     examples = [
         {
             "label": "Meat prices" if en else "Prix de la viande",
@@ -2941,26 +2924,6 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
             "cite": "source · Parliamentary Budget Officer"
             if en
             else "source · Directeur parlementaire du budget",
-        },
-        {
-            "label": "Contracts" if en else "Contrats",
-            "client": "VS Code",
-            "user": "Who won the National Research Council's window replacement contract?"
-            if en
-            else "Qui a remporté le contrat de remplacement des fenêtres du Conseil national de recherches ?",
-            "tool": "canadabuys_search_awards",
-            "html": award_html,
-            "code": rows(
-                [
-                    (
-                        "value" if en else "valeur",
-                        f"${number(value, lang)}" if en else f"{number(value, lang)} $",
-                    ),
-                    ("awarded" if en else "attribué", award["award_date"]),
-                    ("buyer" if en else "acheteur", "NRC"),
-                ]
-            ),
-            "cite": "source · CanadaBuys" if en else "source · AchatsCanada",
         },
     ]
     payload = json.dumps(examples, ensure_ascii=False).replace("</", "<" + chr(92) + "/")
@@ -3165,10 +3128,10 @@ STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "Census",
         "Recensement",
-        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables", "geo"),
+        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables"),
     ),
     ("Microdata", "Microdonnées", ("pumf",)),
-    ("Open databases", "Bases de données ouvertes", ("lode",)),
+    ("Geography and open databases", "Géographie et bases de données ouvertes", ("geo", "lode")),
     ("Classifications", "Classifications", ("rdaas",)),
     ("Indicators", "Indicateurs", ("indicators", "sdg")),
     (
@@ -3205,7 +3168,7 @@ STATCAN_SEARCH_PICK = "wds_search_cubes"
 
 # Names in <code> that look like StatCan tools. The first mention of each
 # real tool becomes a link to it; one the server does not have fails the build.
-_STATCAN_PREFIXES = ("wds_", "sdmx_", "rdaas_", "statcan_")
+_STATCAN_PREFIXES = ("wds_", "sdmx_", "rdaas_", "statcan_", "cimt_")
 _CODE_NAME = re.compile(r"<code>([a-z][a-z0-9_]*[a-z0-9])</code>")
 
 
@@ -3722,7 +3685,59 @@ def social_meta(html_text: str) -> str:
     if not title or not description:
         raise SystemExit("every page needs a <title> and a meta description")
     plain_title = html.escape(html.unescape(title.group(1).strip()), quote=True)
-    return html_text.replace(OG_TITLE, plain_title).replace(OG_DESCRIPTION, description.group(1))
+    # In JSON-LD the description is a JSON string, not an HTML attribute.
+    ld_description = _json_in_script(html.unescape(description.group(1)))
+    return (
+        html_text.replace(OG_TITLE, plain_title)
+        .replace(OG_DESCRIPTION, description.group(1))
+        .replace(json.dumps(LD_DESCRIPTION), ld_description)
+    )
+
+
+# schema.org data for search engines, on the home page only: the site
+# (WebSite) and the server it documents (SoftwareApplication). The other
+# pages are documentation of the same thing and add nothing a crawler needs.
+LD_DESCRIPTION = "\x00ld-description"
+
+
+def _json_in_script(value: Any) -> str:
+    """JSON safe inside <script>: no "</" can close the element early."""
+    return json.dumps(value, ensure_ascii=False).replace("</", "<\\/")
+
+
+def structured_data(page: str, lang: Lang) -> str:
+    if page != "index.html":
+        return ""
+    url = page_url(page, lang)
+    data = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": f"{url}#website",
+                "url": url,
+                "name": "MapleStats MCP",
+                "inLanguage": "en-CA" if lang == "en" else "fr-CA",
+            },
+            {
+                "@type": "SoftwareApplication",
+                "@id": f"{url}#software",
+                "name": "MapleStats MCP",
+                "description": LD_DESCRIPTION,
+                "url": url,
+                "sameAs": [REPO, "https://pypi.org/project/maplestats-mcp/"],
+                "applicationCategory": "DeveloperApplication",
+                "operatingSystem": "Windows, macOS, Linux",
+                "softwareVersion": __version__,
+                "license": "https://opensource.org/licenses/MIT",
+                "isAccessibleForFree": True,
+                "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CAD"},
+                "author": {"@type": "Person", "name": "Daniel Sánchez Pazmiño"},
+                "image": f"{SITE_URL}assets/og.png",
+            },
+        ],
+    }
+    return f'<script type="application/ld+json">{_json_in_script(data)}</script>\n'
 
 
 # French typography, as Canadian French usage sets it: a narrow no-break
@@ -4006,6 +4021,7 @@ def _write_site(
                 "url_fr": page_url(page.name, "fr"),
                 "og_title": OG_TITLE,
                 "og_description": OG_DESCRIPTION,
+                "structured_data": structured_data(page.name, lang),
                 "search_query": esc(SEARCH_EXAMPLE[lang]),
                 "agent_prompt": esc(AGENT_PROMPT[lang]),
                 "search_suggestions": suggestion_buttons(lang),

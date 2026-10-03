@@ -43,7 +43,16 @@ async def _get_text(url: str, context: str, params: dict[str, str] | None = None
     try:
         response = await get_raw(url, params=params)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"epcor:{context} returned HTTP {exc.response.status_code}.") from exc
+        status = exc.response.status_code
+        # get_raw already retried 429/5xx three times; what is left is an outage,
+        # not a changed page. Mapping it to UpstreamError told callers the page
+        # had changed shape (found 2026-10-03 by a mocked 503 test; errors.py
+        # and statcan/census_profile treat 429/5xx as UpstreamUnavailable).
+        if status == 429 or status >= 500:
+            raise UpstreamUnavailable(
+                f"epcor:{context} failed with HTTP {status} after retries. Try again shortly."
+            ) from exc
+        raise UpstreamError(f"epcor:{context} returned HTTP {status}.") from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(f"epcor:{context} did not respond in time.") from exc
     return response.text
@@ -99,14 +108,19 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
     if plant not in constants.PLANTS:
         raise InvalidInput(f"plant must be one of {sorted(constants.PLANTS)}, got {plant!r}.")
     params = {"zone": constants.PLANTS[plant]}
+    today = datetime.now(ZoneInfo(constants.TIMEZONE)).date()
 
     async def fetch() -> str:
-        return await _get_text(constants.DAILY_URL, "daily_water_quality", params)
+        page = await _get_text(constants.DAILY_URL, "daily_water_quality", params)
+        # Parse before caching so a 200 error or maintenance page raises here and
+        # is not cached for an hour (confirmed 2026-10-03 with a mocked error page:
+        # every call kept failing after the page recovered).
+        parse_daily_page(page, today)
+        return page
 
     page, was_cached = await cached_fetch(
         f"epcor:daily:{plant}", constants.CACHE_TTL_DAILY_SECONDS, fetch
     )
-    today = datetime.now(ZoneInfo(constants.TIMEZONE)).date()
     return DailyWaterQuality(
         plant=plant,
         plant_name=constants.PLANT_NAMES[plant],

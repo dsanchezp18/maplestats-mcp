@@ -5,7 +5,7 @@ the M code sends (Web.Contents), makes the same request, and repeats in
 Python the M steps that are easy to get wrong without Excel: the ZIP
 central-directory reader (offsets and raw deflate), WDS's
 object/vectorDataPoint nesting, SDMX GenericData's element and attribute
-names, Valet's nested {v} cells, and the CSV header names the filters use.
+names, and Valet's nested {v} cells.
 
     uv run python scripts/verify_excel_queries.py
 """
@@ -135,24 +135,6 @@ def check_valet(http: httpx.Client) -> str:
     return f"Valet: {first}"
 
 
-def check_csv_columns(http: httpx.Client) -> str:
-    code = asyncio.run(query("canadabuys_search_tenders", {"query": "software"}))
-    with http.stream("GET", m_url(code)) as response:
-        response.raise_for_status()
-        head = b""
-        for chunk in response.iter_bytes():
-            head += chunk
-            if len(head) > 20000:
-                break
-    header = next(csv.reader(io.StringIO(head.decode("utf-8-sig", errors="replace"))))
-    used = set(re.findall(r'Record\.Field\(_, "([^"]+)"\)', code))
-    missing = used - set(header)
-    assert not missing, missing
-    return (
-        f"CanadaBuys: the {len(used)} filter columns exist; BOM={head.startswith(b'\xef\xbb\xbf')}"
-    )
-
-
 def check_socrata(http: httpx.Client) -> str:
     code = asyncio.run(
         query(
@@ -167,7 +149,7 @@ def check_socrata(http: httpx.Client) -> str:
 
 
 def main() -> int:
-    checks = [check_table, check_vectors, check_sdmx, check_valet, check_csv_columns, check_socrata]
+    checks = [check_table, check_vectors, check_sdmx, check_valet, check_socrata]
     failures = 0
     with httpx.Client(http2=True, timeout=180, follow_redirects=True, headers=_HEADERS) as http:
         for check in checks:

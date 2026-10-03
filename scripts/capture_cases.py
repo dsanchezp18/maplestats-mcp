@@ -204,7 +204,7 @@ CASES: dict[str, list[dict[str, Any]]] = {
         }
         for member in (4, 21, 22, 27, 28, 29, 30, 31, 32)
     ],
-    # The home page's prompt card: five plain questions, five different
+    # The home page's prompt card: four plain questions, four different
     # publishers. The credit-card answer is worked out from the "cards" case.
     "prompts": [
         # retail price of ground beef, per kilogram, Canada (coordinate 11.4)
@@ -214,10 +214,6 @@ CASES: dict[str, list[dict[str, Any]]] = {
         },
         {"name": "ircc_get_latest_express_entry_round", "arguments": {}},
         {"name": "pbo_get_publication", "arguments": {"publication_id": "RP-2627-002-S"}},
-        {
-            "name": "canadabuys_search_awards",
-            "arguments": {"query": "window replacement", "buyer": "National Research Council"},
-        },
     ],
     # The counts in the verse: how much each audience can reach.
     "counts": [
@@ -279,11 +275,6 @@ def _trim(name: str, arguments: dict[str, Any], response: Any) -> Any:
         # The fiscal outlook's summary table is all the page quotes.
         tables = [t for t in response["tables"] if t["reference"] == "Table 2"]
         return {**{k: v for k, v in response.items() if k != "tables"}, "tables": tables}
-    if name == "canadabuys_search_awards":
-        return {
-            **{k: v for k, v in response.items() if k != "awards"},
-            "awards": response["awards"][:1],
-        }
     return response
 
 

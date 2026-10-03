@@ -27,6 +27,9 @@ class Portal:
     # False when the site's download API is broken for every item, so
     # get_dataset does not hand out dead links (rows stay queryable).
     downloads: bool = True
+    # Service hosts known to fail from some networks; the live smoke test skips
+    # their items instead of failing the whole portal.
+    unreliable_hosts: tuple[str, ...] = ()
 
 
 PORTALS: dict[str, Portal] = {
@@ -34,12 +37,6 @@ PORTALS: dict[str, Portal] = {
         "geoportal.gov.mb.ca",
         "Data MB (Manitoba)",
         "Data MB (Manitoba)",
-        bilingual_content=True,
-    ),
-    "sk": Portal(
-        "geohub.saskatchewan.ca",
-        "Saskatchewan GeoHub",
-        "Saskatchewan GeoHub",
         bilingual_content=True,
     ),
     "pe": Portal(
@@ -118,6 +115,10 @@ PORTALS: dict[str, Portal] = {
         "data-markham.opendata.arcgis.com",
         "City of Markham Open Data",
         "Données ouvertes de la Ville de Markham",
+        note=(
+            "307 of the 321 items (checked 2026-10-03) are York Region's layers "
+            "(owner YorkMunicipalGovt), shown on Markham's site; 14 are the city's own."
+        ),
     ),
     "newmarket": Portal(
         "navigate-newmarket.hub.arcgis.com",
@@ -227,7 +228,13 @@ PORTALS: dict[str, Portal] = {
         "portal-exploreoakville.opendata.arcgis.com",
         "Town of Oakville Open Data Portal",
         "Portail de données ouvertes de la Ville d'Oakville",
-        note="Halton Region, Ontario (the region itself has no open-data portal).",
+        note=(
+            "Halton Region, Ontario (the region itself has no open-data portal). The 14 "
+            "of 157 items served from the town's own maps.oakville.ca reset every "
+            "connection from some networks (checked 2026-10-03); the rest, on "
+            "services5.arcgis.com, answer normally."
+        ),
+        unreliable_hosts=("maps.oakville.ca",),
     ),
     "burlington": Portal(
         "navburl-burlington.opendata.arcgis.com",
@@ -409,7 +416,7 @@ PORTALS: dict[str, Portal] = {
         "data-cityofpickering.hub.arcgis.com",
         "City of Pickering Open Data",
         "Données ouvertes de la Ville de Pickering",
-        note="Durham Region, Ontario. 268 datasets confirmed live 2026-10-02, many of them Central Lake Ontario Conservation layers; City of Pickering Open Data Licence v1 allows commercial reuse.",
+        note="Durham Region, Ontario. 268 datasets confirmed live 2026-10-02. Licences vary by item (checked 2026-10-03): 124 state an Open Data License, 109 state none, and 26 Central Lake Ontario Conservation layers carry the CLOCA Open Data License v1; check each item's license_info.",
     ),
     "sarnia": Portal(
         "city-of-sarnia.hub.arcgis.com",
@@ -461,10 +468,10 @@ PORTALS: dict[str, Portal] = {
         note="British Columbia, provincial energy regulator. 42 datasets confirmed live 2026-10-02 (wells, orphan sites, incidents, facilities); BCER Open Data Licence, based on OGL-BC 2.0, commercial use allowed. The IRIS bulk files (iris.bcogc.ca) are not covered.",
     ),
     "toronto_police": Portal(
-        "data.torontopolice.on.ca",
+        "data.tps.ca",
         "Toronto Police Service Public Safety Data Portal",
         "Portail de données sur la sécurité publique du Service de police de Toronto",
-        note="Ontario. 71 datasets confirmed live 2026-09-30 (reported crimes, shootings, victims, personnel, budget). The older torontops.hub.arcgis.com lists 111 items, mostly map layers.",
+        note="Ontario. 71 datasets confirmed live 2026-09-30 (reported crimes, shootings, victims, personnel, budget). The site moved from data.torontopolice.on.ca, which now redirects here (checked 2026-10-03). The older torontops.hub.arcgis.com lists 111 items, mostly map layers.",
     ),
     "ottawa_police": Portal(
         "data.ottawapolice.ca",

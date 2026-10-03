@@ -6,8 +6,8 @@ Three routes, most exact first:
 1. builders.py: the request is rebuilt from the tool's arguments (StatCan
    tables and vectors, Valet, Socrata, CKAN DataStore, PUMF, census
    tables), or the tool downloads a whole file and filters it itself, so
-   the script repeats those filters (CanadaBuys, CER, GC InfoBase, CIHI,
-   IRCC, StatCan indicators, PHAC Health Infobase in phac_infobase.py).
+   the script repeats those filters (CER, GC InfoBase, CIHI, IRCC,
+   StatCan indicators, PHAC Health Infobase in phac_infobase.py).
    IP Horizons patents join bulk files (ip_horizons.py); the CFIA tools
    parse HTML tables, which cfia.py's scripts parse the same way.
 2. Every other tool runs once while shared/http.py records its upstream
@@ -43,7 +43,7 @@ from maplestats_mcp.shared.http import RecordedRequest, recording
 
 _NOT_DATA = ("reproduce_code", "plan_query", "search_tools", "call_tool")
 # Tools that return documents or text (articles, release notices,
-# regulations, debates), not data: no script is written for them.
+# regulations), not data: no script is written for them.
 _DOCUMENTS = (
     "statcan_reference_search_documents",
     "statcan_reference_search_analysis",
@@ -52,9 +52,6 @@ _DOCUMENTS = (
     "gazette_list_issues",
     "gazette_get_issue",
     "gazette_get_notice",
-    "parliament_search_hansard",
-    "parliament_search_speeches",
-    "parliament_get_committee_meeting",
 )
 _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents")
 # excel is a Power Query M query (excel.py), rendered from the same Spec.
@@ -100,8 +97,8 @@ async def _spec(tool: str, args: dict[str, Any]) -> Spec:
         return await builder(args, payload)
     chosen, pages = probe.choose(requests, str(payload.get("provenance", {}).get("url") or ""))
     if chosen is None and requests and all(r.method == "HEAD" for r in requests):
-        # canadabuys_list_bulk_files only checks that each file exists
-        # (HEAD); its base URL is a directory that answers 404.
+        # A tool that only checks that each file exists (HEAD) lists links;
+        # there is no data request to replay.
         return Spec(
             kind="none",
             url=str(payload.get("provenance", {}).get("url") or ""),

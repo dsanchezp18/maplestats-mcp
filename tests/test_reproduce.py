@@ -119,22 +119,6 @@ async def test_ivt_only_table_gets_r_only():
     assert any("canivt" in note for note in result.notes)
 
 
-async def test_canadabuys_script_repeats_the_tools_filters():
-    result = await client.reproduce(
-        "canadabuys_search_awards",
-        {"query": "snow removal", "buyer": "Public Works", "fiscal_year": "2024-2025"},
-    )
-    code = _by_language(result)
-    assert result.source_url.endswith("/2024-2025-awardNotice-avisAttribution.csv")
-    # Every query word must match somewhere, as in the tool.
-    assert code["python"].count(".str.contains('snow'") == 1
-    assert ".str.contains('removal'" in code["python"]
-    assert "`contractingEntityName-nomEntitContractante-eng`" in code["r"]
-    assert 'occursin("public works"' in code["julia"]
-    # Stata filters inside its Python block, before long names are truncated.
-    assert "python:" in code["stata"] and "data.filter(" in code["stata"]
-
-
 async def test_bad_requests():
     with pytest.raises(InvalidInput):
         await client.reproduce("plan_query", {})
@@ -176,6 +160,27 @@ def test_filters_run_on_source_names_in_every_language():
     assert 'startswith(coalesce(string(row["Fiscal Year"]), ""), "2023")' in code["julia"]
     # Filters come before name cleaning, so they use the source's names.
     assert code["r"].index("filter(") < code["r"].index("clean_names()")
+
+
+def test_terms_filter_needs_every_word_somewhere():
+    spec = Spec(
+        kind="csv",
+        url="https://x.ca/f.csv",
+        file_name="f.csv",
+        method="exact",
+        filters=[
+            Filter("terms", ["title-titre-eng", "description-eng"], "snow removal"),
+            Filter("contains", ["buyerName-nomAcheteur-eng"], "Public Works"),
+        ],
+    )
+    code = _render(spec)
+    # Every query word must match somewhere, as in the tools that filter files.
+    assert code["python"].count(".str.contains('snow'") == 1
+    assert ".str.contains('removal'" in code["python"]
+    assert "`buyerName-nomAcheteur-eng`" in code["r"]
+    assert 'occursin("public works"' in code["julia"]
+    # Stata filters inside its Python block, before long names are truncated.
+    assert "python:" in code["stata"] and "data.filter(" in code["stata"]
 
 
 def test_json_record_field_and_post_form():

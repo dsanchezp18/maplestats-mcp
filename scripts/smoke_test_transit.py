@@ -56,7 +56,6 @@ CORES: dict[str, tuple[float, float, int, int, int]] = {
     "calgary": (51.0447, -114.0719, 400, 50, 1000),
     "stm": (45.5088, -73.5540, 400, 50, 1000),
     "oc_transpo": (45.4215, -75.6972, 400, 50, 1000),
-    "ttc": (43.6532, -79.3832, 400, 50, 1000),
     "via_rail": (43.6453, -79.3806, 1000, 5, 100),
     "go_transit": (43.6453, -79.3806, 1000, 10, 100),
     "up_express": (43.6453, -79.3806, 1000, 1, 3),
@@ -277,10 +276,10 @@ async def national_checks(check: Callable[[bool, str], None], keys: list[str]) -
             f"{key}: provenance names the StatCan compilation and the agency's own terms",
         )
     try:
-        await client.search_routes("national:toronto_transit_commission")
+        await client.search_routes("national:calgary_transit")
         check(False, "an overlapping national feed is refused")
     except InvalidInput as exc:
-        check("agency='ttc'" in str(exc), "an overlapping national feed points to the live key")
+        check("agency='calgary'" in str(exc), "an overlapping national feed points to the live key")
     if "national:barrie_transit" in sample:
         barrie = by_key["national:barrie_transit"]
         assert barrie.service_window_start and barrie.service_window_end
@@ -364,7 +363,7 @@ async def main() -> int:
         check(bool(near.stops), f"{key}: {near.total_matches} stops within {radius} m of the core")
 
         # One stop only: each stop is a full pass over stop_times.txt
-        # (71 MB compressed for the TTC), so scanning more is slow.
+        # (tens of MB compressed for the large agencies), so scanning more is slow.
         best_stop = near.stops[0]
         best = await client.get_stop_departures(
             key, best_stop.stop_id, start_time="00:00", limit=500

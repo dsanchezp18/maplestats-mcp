@@ -88,6 +88,7 @@ dev = [
     "ruff>=0.14.0",
     "pyright",
     "types-pyyaml>=6.0.12.20260906",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.pytest.ini_options]

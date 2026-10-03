@@ -147,14 +147,14 @@ About 250 tools. Run `docs://catalogue` for the full, bilingual list.
 | Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Tables and series, classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), The Daily, indicators, surveys, census geography |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
-| Federal agencies | `eccc_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `cihi_`, `phac_infobase_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `canadabuys_` | Weather and climate, corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, health, spending, energy, oceans, grain, immigration, budgets, tenders |
+| Federal agencies | `eccc_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `cihi_`, `phac_infobase_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_` | Weather and climate, corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, health, spending, energy, oceans, grain, immigration, budgets, earthquakes |
 | Wildland fire | `cwfis_` | NRCan's Canadian Wildland Fire Information System: satellite hotspots, fire danger and weather stations |
 | Electricity | `electricity_ontario_`, `electricity_quebec_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only) |
-| Parliament | `parliament_`, `senate_` | Bills, votes, MPs, Hansard, committees |
+| Parliament | `ourcommons_`, `senate_` | MPs and their roles, party standings, Cabinet, Senate votes |
 | Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `ab_economic_`, `isq_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, Alberta Economic Dashboard, Institut de la statistique du Québec, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
-| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the TTC, STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit systems, plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
+| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit systems, plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
 
 Other federal series (CRA, OSFI, ISED insolvency) are ordinary
 open.canada.ca datasets, reachable with
@@ -193,7 +193,10 @@ server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 | `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | In-flight request cap; the excess waits 5 s, then gets 503 |
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS in-process |
 | `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it |
+| `MAPLE_ALLOWED_ORIGINS` | project website, localhost | Browser origins allowed on `/mcp` (comma-separated, `*.` and `:*` wildcards); others get 403, clients without an Origin are allowed |
 | `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Response cache size per TTL bucket |
+| `MAPLE_CACHE_MAX_MB` | `128` | Estimated memory cap for the response cache, all buckets together |
+| `MAPLE_PARSE_WORKERS` / `MAPLE_PARSE_TIMEOUT_SECONDS` | `4` / `60` | Threads for parsing Excel and CSV files, and the time one parse may take |
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |

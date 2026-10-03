@@ -405,7 +405,7 @@ def _py_fetch(spec: Spec) -> str:
         call = f"client.post({spec.url!r}, data={spec.post_form!r}{headers})"
     else:
         call = f"client.get({spec.url!r}{headers})"
-    # CanadaBuys answers 403 to httpx's default User-Agent (checked 2026-09-25).
+    # Some government file servers answer 403 to httpx's default User-Agent.
     return (
         "with httpx.Client(\n"
         "    http2=True,\n"

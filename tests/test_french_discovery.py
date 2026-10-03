@@ -7,6 +7,7 @@ so a docstring edit that drops one fails here rather than silently.
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 import pytest
@@ -25,7 +26,6 @@ CASES = [
     ("taux directeur", "boc_search_series"),
     ("recherche de marques de commerce", "ised_cipo_search_trademarks"),
     ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
-    ("appels d'offres du gouvernement fédéral", "canadabuys_search_tenders"),
     ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),
     ("danger d'incendie Alberta cote extrême", "ab_wildfire_get_fire_danger"),
     ("interdiction de feu restriction Alberta comté", "ab_wildfire_get_fire_restrictions"),
@@ -41,8 +41,6 @@ CASES = [
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
     ("données économiques Alberta taux de chômage", "ab_economic_get_data"),
     ("avis de la Gazette du Canada projets de règlement", "gazette_get_issue"),
-    ("projet de loi Chambre des communes état", "parliament_search_bills"),
-    ("interventions au hansard période des questions", "parliament_search_speeches"),
     ("vote au Sénat sénateurs projet de loi", "senate_list_votes"),
     # Plurals and missing accents, fixed by shared/search.py (2026-09-24).
     ("loyers", "cmhc_get_table_data"),
@@ -68,11 +66,7 @@ CASES = [
     ("rappel alimentaire", "recalls_search"),
     ("rappel de jouets", "recalls_search"),
     ("produits visés par le rappel numéro de lot", "recalls_get"),
-    ("comités de la Chambre des communes", "parliament_list_committees"),
-    ("sous-comités et sigle du comité", "parliament_get_committee"),
-    ("réunions du comité à huis clos", "parliament_search_committee_meetings"),
-    ("témoins comité des finances", "parliament_get_committee_meeting"),
-    ("qui a témoigné devant le comité", "parliament_get_committee_meeting"),
+    ("comités dont un député est membre", "ourcommons_get_member_roles"),
     ("séisme tremblement de terre magnitude", "earthquakes_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),
     ("taux de réadmission à l'hôpital ICIS", "cihi_get_indicator_data"),
@@ -154,10 +148,26 @@ CASES = [
 ]
 
 
+@pytest.fixture(scope="module")
+def top_names() -> dict[str, list[str]]:
+    """search_tools's top names for every query, asked over one client session.
+
+    One session serves every case instead of one session per case.
+    """
+
+    async def search_all() -> dict[str, list[str]]:
+        found = {}
+        async with Client(mcp) as client:
+            for query, _ in CASES:
+                result = await client.call_tool("search_tools", {"query": query})
+                text = " ".join(getattr(block, "text", "") for block in result.content)
+                found[query] = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+        return found
+
+    return asyncio.run(search_all())
+
+
 @pytest.mark.parametrize(("query", "expected"), CASES)
-async def test_french_query_finds_tool(query: str, expected: str):
-    async with Client(mcp) as client:
-        result = await client.call_tool("search_tools", {"query": query})
-    text = " ".join(getattr(block, "text", "") for block in result.content)
-    names = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+def test_french_query_finds_tool(query: str, expected: str, top_names: dict[str, list[str]]):
+    names = top_names[query]
     assert expected in names, f"{query!r} -> {names}"

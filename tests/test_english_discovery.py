@@ -10,6 +10,7 @@ than StatCan) because either answers the question.
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 import pytest
@@ -40,11 +41,8 @@ CASES = [
     ("Calgary open data building permits", "socrata_search_datasets"),
     ("Vancouver open data street trees", "opendatasoft_vancouver_search_datasets"),
     ("Ottawa open data GIS layer", "arcgis_hub_search_datasets"),
-    ("federal government tenders construction", "canadabuys_search_tenders"),
     ("federal corporation lookup by name", "ised_corporations_get_corporation"),
     ("trademark search", "ised_cipo_search_trademarks"),
-    ("bill status in the House of Commons", "parliament_search_bills"),
-    ("what did MPs say about housing in the House", "parliament_search_hansard"),
     ("Senate votes", "senate_list_votes"),
     ("Canada Gazette proposed regulations", "gazette_get_issue"),
     ("hospital wait times indicator", "cihi_search_indicators"),
@@ -59,7 +57,7 @@ CASES = [
     ("read the Excel file of an open.canada.ca resource with no DataStore", "ckan_read_resource"),
     ("sheets and columns of the xlsx file behind a CKAN resource", "ckan_describe_resource"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
-    ("TTC scheduled departures at a stop", "transit_get_stop_departures"),
+    ("STM scheduled departures at a stop", "transit_get_stop_departures"),
     ("bus route frequency headway by hour", "transit_get_route_summary"),
     ("small town transit agencies Canada national GTFS database", "transit_list_national_agencies"),
     ("Edmonton crime occurrences", "eps_list_occurrences"),
@@ -111,11 +109,10 @@ CASES = [
     ("is it going to snow tomorrow in Winnipeg forecast", "eccc_query_items"),
     ("air quality health index Toronto", "eccc_query_items"),
     ("historical daily temperature climate station", "eccc_query_items"),
-    ("which companies won federal contracts", "canadabuys_search_awards"),
     ("is this company incorporated federally", "ised_corporations_get_corporation"),
     ("spectrum licences held by Rogers", "ised_spectrum_query_licences"),
     ("patent search by keyword", "ised_ip_horizons_search_patents"),
-    ("how did my MP vote on a bill", "parliament_get_vote"),
+    ("which committees does my MP sit on", "ourcommons_get_member_roles"),
     (
         "who ran in the 1997 and 2000 federal elections candidate names",
         "elections_results_get_historical_candidates",
@@ -173,10 +170,26 @@ CASES = [
 ]
 
 
+@pytest.fixture(scope="module")
+def top_names() -> dict[str, list[str]]:
+    """search_tools's top names for every query, asked over one client session.
+
+    One session serves every case instead of one session per case.
+    """
+
+    async def search_all() -> dict[str, list[str]]:
+        found = {}
+        async with Client(mcp) as client:
+            for query, _ in CASES:
+                result = await client.call_tool("search_tools", {"query": query})
+                text = " ".join(getattr(block, "text", "") for block in result.content)
+                found[query] = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+        return found
+
+    return asyncio.run(search_all())
+
+
 @pytest.mark.parametrize(("query", "expected"), CASES)
-async def test_english_query_finds_tool(query: str, expected: str):
-    async with Client(mcp) as client:
-        result = await client.call_tool("search_tools", {"query": query})
-    text = " ".join(getattr(block, "text", "") for block in result.content)
-    names = re.findall(r'"name":\s*"([a-z0-9_]+)"', text)[:TOP_N]
+def test_english_query_finds_tool(query: str, expected: str, top_names: dict[str, list[str]]):
+    names = top_names[query]
     assert expected in names, f"{query!r} -> {names}"

@@ -10,7 +10,6 @@ are reported alongside the rows rather than silently dropped.
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 import json
@@ -40,6 +39,7 @@ from maplestats_mcp.modules.phac_infobase.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -257,7 +257,7 @@ async def load(dataset: Dataset, lang: str) -> tuple[Table, bool, str, str]:
         if len(body) > constants.MAX_FILE_BYTES:
             raise UpstreamError(f"phac_infobase: {url} is larger than this tool reads.")
         if dataset.kind == "api":
-            columns, rows = await asyncio.to_thread(parse_api, body, url)
+            columns, rows = await run_parse(parse_api, body, url)
             return Table(columns, rows, "json", await _api_updated_at(url))
 
         def parse() -> tuple[list[str], list[dict[str, str]], str]:
@@ -266,7 +266,7 @@ async def load(dataset: Dataset, lang: str) -> tuple[Table, bool, str, str]:
 
         # The 20 MB survey files take about a second to parse; keep it off
         # the event loop so other requests are not stalled.
-        columns, rows, used = await asyncio.to_thread(parse)
+        columns, rows, used = await run_parse(parse)
         return Table(columns, rows, used, response.headers.get("last-modified"))
 
     table, cached = await cached_fetch(

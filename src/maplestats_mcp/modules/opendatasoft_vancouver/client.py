@@ -12,7 +12,9 @@ Opendatasoft deployment this client relies on.
 
 from __future__ import annotations
 
+import re
 from typing import Any
+from urllib.parse import quote
 
 from maplestats_mcp.modules.opendatasoft_vancouver import constants
 from maplestats_mcp.modules.opendatasoft_vancouver.schemas import (
@@ -49,6 +51,24 @@ CONFIG = OpendatasoftConfig(
     rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
 )
+
+
+# Opendatasoft dataset ids are lowercase slugs ("street-trees"). Checked before
+# the id goes into a URL path, and quoted there as well.
+_DATASET_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,199}$")
+
+
+def _dataset_id(dataset_id: str) -> str:
+    cleaned = dataset_id.strip()
+    if not cleaned:
+        raise InvalidInput("dataset_id must not be empty.")
+    if not _DATASET_ID.match(cleaned):
+        raise InvalidInput(
+            "dataset_id must be a Vancouver dataset id such as 'street-trees' (lowercase "
+            "letters, digits, hyphens), as returned by opendatasoft_vancouver_search_datasets; "
+            f"got {dataset_id!r}."
+        )
+    return quote(cleaned, safe="")
 
 
 def _dataset_summary(entry: dict[str, Any]) -> DatasetSummary:
@@ -123,8 +143,7 @@ async def search_datasets(
 async def get_dataset(dataset_id: str, lang: str = "en") -> DatasetDetail:
     """Get one Vancouver dataset's metadata, fields, and download links; ``lang`` is a documented no-op."""
     del lang
-    if not dataset_id.strip():
-        raise InvalidInput("dataset_id must not be empty.")
+    dataset_id = _dataset_id(dataset_id)
 
     async def fetch() -> dict[str, Any]:
         return await _fetch_dataset(CONFIG, dataset_id)
@@ -182,8 +201,7 @@ async def query_records(
     both are given, ``where`` wins -- see shared/opendatasoft.py.
     """
     del lang
-    if not dataset_id.strip():
-        raise InvalidInput("dataset_id must not be empty.")
+    dataset_id = _dataset_id(dataset_id)
     if limit < 1 or limit > constants.RECORDS_LIMIT_MAX:
         raise InvalidInput(
             f"limit must be between 1 and {constants.RECORDS_LIMIT_MAX}, got {limit}."

@@ -199,3 +199,11 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
         )
     with pytest.raises(UpstreamError):
         await client.get_dataset("broken")
+
+
+@pytest.mark.parametrize("bad", ["../../catalog/datasets", "street-trees?select=*", "Street Trees"])
+async def test_dataset_ids_that_are_not_slugs_are_rejected(bad):
+    with pytest.raises(InvalidInput, match="street-trees"):
+        await client.get_dataset(bad)
+    with pytest.raises(InvalidInput, match="street-trees"):
+        await client.query_records(bad)

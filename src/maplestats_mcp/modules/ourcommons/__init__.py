@@ -5,8 +5,7 @@ MODULE_DESCRIPTION = (
     "member's roles and history by person id (every seat with dates, caucus changes, "
     "parliamentary positions, committee memberships, parliamentary associations, and the "
     "election candidate record with results, going back to 1997 for former members); party "
-    "standings by province; and the Ministry (Cabinet) in order of precedence. Official "
-    "counterpart to the unofficial parliament_ tools on OpenParliament.ca. Terms: House of "
+    "standings by province; and the Ministry (Cabinet) in order of precedence. Terms: House of "
     "Commons open data disclaimer. Not covered: members' expenditure reports (they need a "
     "document id from the page) and the Library of Parliament's ParlInfo, which blocks "
     "automated access."
@@ -18,7 +17,7 @@ MODULE_DESCRIPTION_FR = (
     "caucus, postes parlementaires, comités, associations parlementaires et dossier de "
     "candidat aux élections avec résultats, depuis 1997 pour les anciens députés); "
     "répartition des sièges par parti et province; et le Conseil des ministres par ordre de "
-    "préséance. Pendant officiel des outils parliament_ (OpenParliament.ca, non officiel). "
+    "préséance. "
     "Non couverts : rapports de dépenses des députés (identifiant de document requis) et "
     "ParlInfo de la Bibliothèque du Parlement, inaccessible aux requêtes automatisées."
 )

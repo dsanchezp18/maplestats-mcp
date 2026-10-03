@@ -136,11 +136,13 @@ def _fields(line: bytes) -> list[str]:
 def _row_from(line: bytes, indexes: dict[str, int]) -> StopTimeRow | None:
     fields = _fields(line)
     try:
+        # Ids are stripped like parse_table strips stops.txt and trips.txt, so
+        # a feed written "T1, 08:00:00, ..., P1" still joins to its stops.
         return StopTimeRow(
-            trip_id=fields[indexes["trip_id"]],
+            trip_id=fields[indexes["trip_id"]].strip(),
             arrival=fields[indexes["arrival_time"]].strip(),
             departure=fields[indexes["departure_time"]].strip(),
-            stop_id=fields[indexes["stop_id"]],
+            stop_id=fields[indexes["stop_id"]].strip(),
             stop_sequence=int(fields[indexes["stop_sequence"]]),
         )
     except (IndexError, KeyError, ValueError):
@@ -162,16 +164,24 @@ def filter_stop_times(
     """
     if (stop_ids is None) == (trip_ids is None):
         raise ValueError("Pass exactly one of stop_ids or trip_ids.")
+    # Spaces around a field are allowed here because the header and the other
+    # tables tolerate them; without this a padded stop_times.txt matched no
+    # stop at all (found by a unit test, 2026-10-03; no configured feed was
+    # seen padded).
     needle = (
         re.compile(
-            b'(?:^|,)"?(?:'
+            b'(?:^|,)[ \t]*"?(?:'
             + b"|".join(re.escape(s.encode()) for s in sorted(stop_ids))
-            + b')"?(?:,|$)'
+            + b')"?[ \t]*(?:,|$)'
         )
         if stop_ids
         else None
     )
     trip_bytes = {t.encode() for t in trip_ids} if trip_ids else set()
+    # The prefix shortcut assumes trip_id is the first column, as in every
+    # feed checked (UP Express live, 2026-10-03), but GTFS does not fix the
+    # column order: otherwise each line is parsed and its trip_id checked.
+    trip_first = indexes.get("trip_id") == 0
     found: list[StopTimeRow] = []
     for line in lines:
         if not line:
@@ -179,7 +189,9 @@ def filter_stop_times(
         if needle is not None:
             if not needle.search(line):
                 continue
-        elif not trip_bytes or line.partition(b",")[0].strip(b'"') not in trip_bytes:
+        elif not trip_bytes or (
+            trip_first and line.partition(b",")[0].strip().strip(b'"') not in trip_bytes
+        ):
             continue
         row = _row_from(line, indexes)
         if row is None:

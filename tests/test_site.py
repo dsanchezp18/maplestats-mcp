@@ -40,6 +40,26 @@ def _load_builder():
 
 site = _load_builder()
 
+
+@pytest.fixture(scope="module")
+def modules() -> list[Any]:
+    """The registry as the site sees it, read once: each read imports every tools.py again."""
+    return asyncio.run(site.collect_modules())
+
+
+@pytest.fixture(scope="module")
+def site_build(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, dict[str, int]]:
+    """One full build shared by every test that reads its output, and its stats."""
+    out = tmp_path_factory.mktemp("built") / "site"
+    stats = asyncio.run(site.build(out))
+    return out, stats
+
+
+@pytest.fixture(scope="module")
+def built_site(site_build: tuple[Path, dict[str, int]]) -> Path:
+    return site_build[0]
+
+
 # English and French queries, including accents, plurals and ties.
 QUERIES = [
     "rental vacancy rates",
@@ -128,17 +148,19 @@ def test_family_titles_match_folders():
         assert (MODULES / module / family / "tools.py").exists(), f"stale FAMILIES entry {key!r}"
 
 
-async def test_site_search_ranks_like_search_tools():
-    modules = await site.collect_modules()
+def test_site_search_ranks_like_search_tools(modules: list[Any]):
     index = site.build_index(modules)
-    for query in QUERIES:
+
+    async def server_ranks() -> list[list[str]]:
+        return [await site.server_search(query) for query in QUERIES]
+
+    for query, expected in zip(QUERIES, asyncio.run(server_ranks()), strict=True):
         ranked = site.rank(index, query)[: index["top"]]
-        assert [index["tools"][i][0] for i in ranked] == await site.server_search(query), query
+        assert [index["tools"][i][0] for i in ranked] == expected, query
 
 
-async def test_site_builds(tmp_path: Path):
-    out = tmp_path / "site"
-    stats = await site.build(out)
+def test_site_builds(site_build: tuple[Path, dict[str, int]]):
+    out, stats = site_build
     templates = sorted(p.name for p in (ROOT / "site").glob("*.html"))
     assert stats["pages"] == 2 * len(templates)
     for name in templates:
@@ -149,20 +171,14 @@ async def test_site_builds(tmp_path: Path):
     assert (out / "llms.txt").is_file()
 
 
-async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
+def test_statcan_page_counts_come_from_the_registry(modules: list[Any], built_site: Path):
     """statcan.html builds in both languages and shows the registry's StatCan counts.
 
     Every family is listed once, every tool link names a real tool, and every
     trimmed JSON box is still JSON once its // comment lines are dropped.
     """
-    import html
-    import json
-    import re
-
-    modules = await site.collect_modules()
     statcan = next(m for m in modules if m.key == "statcan")
     families = {t.family for t in statcan.tools}
-    await site.build(tmp_path / "site")
     tool_names = {t.name for m in modules for t in m.tools}
     count_tables = next(
         call["response"]["total_count"]
@@ -170,8 +186,8 @@ async def test_statcan_page_counts_come_from_the_registry(tmp_path: Path):
         if call["name"] == "wds_search_cubes"
     )
     pages = {
-        "en": tmp_path / "site" / "statcan.html",
-        "fr": tmp_path / "site" / "fr" / "statcan.html",
+        "en": built_site / "statcan.html",
+        "fr": built_site / "fr" / "statcan.html",
     }
     for lang, page in pages.items():
         text = page.read_text(encoding="utf-8")
@@ -257,7 +273,9 @@ def test_build_refuses_an_output_that_holds_sources(tmp_path: Path):
     assert site.safe_out(tmp_path / "site") == (tmp_path / "site").resolve()
 
 
-async def test_failed_build_keeps_the_last_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_failed_build_keeps_the_last_output(
+    modules: list[Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     out = tmp_path / "site"
     out.mkdir()
     (out / "index.html").write_text("old", encoding="utf-8")
@@ -266,9 +284,13 @@ async def test_failed_build_keeps_the_last_output(tmp_path: Path, monkeypatch: p
         (stage / "index.html").write_text("half", encoding="utf-8")
         raise RuntimeError("render failed")
 
+    async def collected() -> list[Any]:
+        return modules
+
+    monkeypatch.setattr(site, "collect_modules", collected)
     monkeypatch.setattr(site, "_write_site", broken)
     with pytest.raises(RuntimeError):
-        await site.build(out)
+        asyncio.run(site.build(out))
     assert (out / "index.html").read_text(encoding="utf-8") == "old"
     assert [p.name for p in tmp_path.iterdir()] == ["site"]
 
@@ -367,13 +389,6 @@ def french_text(page: Path) -> list[str]:
     parser = _FrenchText()
     parser.feed(page.read_text(encoding="utf-8"))
     return parser.chunks
-
-
-@pytest.fixture(scope="module")
-def built_site(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    out = tmp_path_factory.mktemp("built") / "site"
-    asyncio.run(site.build(out))
-    return out
 
 
 def test_french_pages_have_no_unmarked_english(built_site: Path):
@@ -563,6 +578,24 @@ def test_every_page_has_canonical_and_social_metadata(built_site: Path):
     assert image.stat().st_size < 150_000
 
 
+def test_home_pages_carry_structured_data(built_site: Path):
+    """The home page, in each language, describes the site and the server as JSON-LD."""
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', text, re.DOTALL)
+        if page.name != "index.html":
+            assert not blocks, page
+            continue
+        assert len(blocks) == 1, page
+        graph = {node["@type"]: node for node in json.loads(blocks[0])["@graph"]}
+        lang = "fr" if page.parent.name == "fr" else "en"
+        assert graph["WebSite"]["url"] == site.page_url("index.html", lang)
+        app = graph["SoftwareApplication"]
+        description = re.search(r'<meta name="description" content="([^"]*)">', text)
+        assert description and app["description"] == html.unescape(description.group(1))
+        assert app["softwareVersion"] == site.__version__
+
+
 def test_sitemap_robots_and_not_found_page(built_site: Path):
     sitemap = (built_site / "sitemap.xml").read_text(encoding="utf-8")
     locs = re.findall(r"<loc>([^<]+)</loc>", sitemap)
@@ -578,6 +611,19 @@ def test_sitemap_robots_and_not_found_page(built_site: Path):
     assert f'href="{base}fr/"' in missing and '<section lang="fr">' in missing
     # Every link and asset is absolute: the page is served at any depth.
     assert not re.findall(r'(?:href|src)="(?!/|https://)', missing)
+
+
+def test_internal_links_resolve(built_site: Path):
+    """Every link to a page, an asset or an #id of this site lands on something."""
+    spec = importlib.util.spec_from_file_location(
+        "check_site_links", ROOT / "scripts" / "check_site_links.py"
+    )
+    assert spec and spec.loader
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    broken, external = checker.scan(built_site)
+    assert not broken, "Broken links:\n" + "\n".join(broken[:25])
+    assert external  # the scan saw the outside links too
 
 
 def test_scrolling_boxes_take_keyboard_focus(built_site: Path):
