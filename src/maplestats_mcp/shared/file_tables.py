@@ -378,6 +378,48 @@ def largest_sheet(sizes: list[tuple[str, int, int]]) -> str:
     return max(sizes, key=lambda s: s[1] * s[2])[0]
 
 
+SheetChoice = Literal["request", "largest", "only", "none"]
+# A sheet is read unasked only when it holds this share of the declared cells.
+DOMINANT_SHEET_SHARE = 0.8
+
+
+def choose_sheet(
+    sizes: list[tuple[str, int, int]], sheet: str | None, fmt: FileFormat, context: str
+) -> tuple[str | None, SheetChoice]:
+    """(sheet name, how it was chosen); a None name means the caller must choose.
+
+    One policy for every file reader (ckan_read_resource, ab_opendata):
+    with several sheets and none requested, a sheet is read only when it
+    holds at least 80% of the workbook's declared cells (a notes sheet beside
+    the table). Otherwise guessing would read an arbitrary sheet of a
+    multi-table workbook (Montreal's budget has 85), so the sheet list comes
+    back. A CSV has no sheets: `sheet` must be left unset (or be "csv").
+    """
+    names = [n for n, _, _ in sizes]
+    if fmt == "csv":
+        if sheet is not None and sheet.strip().casefold() != CSV_SHEET:
+            raise InvalidInput(
+                f"{context}: this file is a CSV, which has no sheets; leave sheet unset "
+                f"(got {sheet!r})."
+            )
+        return CSV_SHEET, "only"
+    if sheet is None:
+        if len(names) == 1:
+            return names[0], "only"
+        cells = [rows * cols for _, rows, cols in sizes]
+        # A declared size above this is formatting, not data, so it says nothing
+        # about which sheet holds the table (NWT's traffic workbooks).
+        trusted = max(cells) <= SUSPICIOUS_SHEET_CELLS
+        if trusted and sum(cells) and max(cells) >= DOMINANT_SHEET_SHARE * sum(cells):
+            return largest_sheet(sizes), "largest"
+        return None, "none"
+    wanted = sheet.strip().casefold()
+    for name in names:
+        if name.casefold() == wanted:
+            return name, "request"
+    raise InvalidInput(f"{context}: no sheet {sheet!r}; sheets are {names}.")
+
+
 def _summary(name: str, declared: tuple[int | None, int | None], rows: Iterator[list[str]]):
     head = list(islice(rows, PREVIEW_SCAN_ROWS))
     index = guess_header(head, csv_like=False)

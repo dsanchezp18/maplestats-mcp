@@ -13,7 +13,6 @@ from maplestats_mcp.shared.models import Provenance
 # puts the valid portal keys into each tool's JSON schema.
 PortalKey = Literal[
     "mb",
-    "sk",
     "pe",
     "london",
     "kitchener",

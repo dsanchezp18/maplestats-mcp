@@ -8,7 +8,7 @@ from maplestats_mcp.modules.arcgis_hub import client, constants
 from maplestats_mcp.modules.arcgis_hub.schemas import PortalKey
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.arcgis import LayerNotQueryable
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 
 @pytest.fixture(autouse=True)
@@ -18,6 +18,7 @@ def _clear_cache():
 
 
 PORTAL = "ottawa"
+_MISSING = "0123456789abcdef0123456789abcdef"
 _COLLECTION_URL = f"https://{constants.PORTALS[PORTAL].domain}/api/search/v1/collections/dataset"
 
 _SEARCH_FEATURE = {
@@ -59,6 +60,18 @@ _ITEM_DETAIL_FEATURE = {
 }
 
 
+_SUPPORTED_ALL = "Unsupported file format. Supported file formats are csv, shapefile, geojson, kml"
+
+
+def _formats_probe(httpx_mock, item_id: str, layer: int, message: str = _SUPPORTED_ALL) -> None:
+    """The download API's answer to an unknown format, which lists the ones it accepts."""
+    httpx_mock.add_response(
+        url=f"https://{constants.PORTALS[PORTAL].domain}/api/download/v1/items/{item_id}/_?layers={layer}",
+        status_code=400,
+        json={"message": message, "error": "Bad Request", "statusCode": 400},
+    )
+
+
 async def test_search_parses_hub_search_fields(httpx_mock):
     httpx_mock.add_response(
         url=f"{_COLLECTION_URL}/items?limit=10&startindex=1&q=test",
@@ -93,11 +106,12 @@ async def test_get_dataset_maps_item_detail_and_download_links(httpx_mock):
         url=f"{_ITEM_DETAIL_FEATURE['properties']['url']}?f=json",
         json={"layers": [{"id": 18, "name": "Parks"}], "tables": []},
     )
+    _formats_probe(httpx_mock, "14cca5b087f74d2d9eadc018c261d1b3", 18)
     result = await client.get_dataset(PORTAL, "14cca5b087f74d2d9eadc018c261d1b3")
     assert result.id == "14cca5b087f74d2d9eadc018c261d1b3"
     assert result.service_url is not None
     assert result.service_url.endswith(("FeatureServer", "MapServer/129"))
-    assert {link.format for link in result.download_urls} == {"csv", "shapefile", "geojson", "kml"}
+    assert [link.format for link in result.download_urls] == ["csv", "shapefile", "geojson", "kml"]
     assert all(link.url.endswith("?layers=18") for link in result.download_urls)
     # The detail's id carries a layer suffix ("_0" here), which the download API
     # rejects; links use the bare item id.
@@ -120,6 +134,7 @@ async def test_layer_level_item_downloads_use_bare_id_and_its_layer(httpx_mock):
     httpx_mock.add_response(
         url=f"{_COLLECTION_URL}/items/93d9602d6f7a40beae96106397ee3a83_18", json=feature
     )
+    _formats_probe(httpx_mock, "93d9602d6f7a40beae96106397ee3a83", 18)
     result = await client.get_dataset(PORTAL, "93d9602d6f7a40beae96106397ee3a83_18")
     assert result.id == "93d9602d6f7a40beae96106397ee3a83_18"
     assert result.download_urls[0].url == (
@@ -153,20 +168,22 @@ async def test_query_feature_layer_returns_attributes(httpx_mock):
 
 async def test_query_feature_layer_without_service_url_raises_invalid_input(httpx_mock):
     csv_item = {
-        "id": "abc123_0",
+        "id": "abc1230000000000000000000000abcd_0",
         "type": "Feature",
         "geometry": None,
         "properties": {
-            "id": "abc123",
+            "id": "abc1230000000000000000000000abcd",
             "title": "A plain CSV dataset",
             "type": "CSV",
             "tags": [],
             "categories": [],
         },
     }
-    httpx_mock.add_response(url=f"{_COLLECTION_URL}/items/abc123", json=csv_item)
-    with pytest.raises(InvalidInput):
-        await client.query_feature_layer(PORTAL, "abc123")
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/abc1230000000000000000000000abcd", json=csv_item
+    )
+    with pytest.raises(InvalidInput, match="no queryable"):
+        await client.query_feature_layer(PORTAL, "abc1230000000000000000000000abcd")
 
 
 async def test_feature_service_embedded_error_becomes_invalid_input(httpx_mock):
@@ -197,8 +214,7 @@ async def test_token_required_service_is_not_queryable(httpx_mock):
         json=_ITEM_DETAIL_FEATURE,
     )
     service_url = "https://services.arcgis.com/G6F8XLCl5KtAlZ2G/arcgis/rest/services/2025_Contracts_Awarded_greater_than_25000_Jan_-_Jun/FeatureServer"
-    # Read twice: the item detail (for download links) tolerates it, then the
-    # query raises. A failed read is never cached.
+    # A failed read is never cached.
     httpx_mock.add_response(
         url=f"{service_url}?f=json",
         json={"error": {"code": 499, "message": "Token Required", "details": []}},
@@ -263,10 +279,10 @@ async def test_invalid_input_and_not_found_are_typed(httpx_mock):
     with pytest.raises(InvalidInput):
         await client.get_dataset(PORTAL, " ")
     with pytest.raises(InvalidInput):
-        await client.query_feature_layer(PORTAL, "abcd", limit=0)
+        await client.query_feature_layer(PORTAL, _MISSING, limit=0)
 
     httpx_mock.add_response(
-        url=f"{_COLLECTION_URL}/items/unknown",
+        url=f"{_COLLECTION_URL}/items/{_MISSING}",
         status_code=404,
         json={
             "message": "Cannot find item with recordId unknown in collection Data",
@@ -275,7 +291,7 @@ async def test_invalid_input_and_not_found_are_typed(httpx_mock):
         },
     )
     with pytest.raises(NotFound):
-        await client.get_dataset(PORTAL, "unknown")
+        await client.get_dataset(PORTAL, _MISSING)
 
 
 async def test_over_limit_search_raises_invalid_input_with_list_message(httpx_mock):
@@ -297,17 +313,19 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
     # sees the final failure, so the mock needs a response for each attempt.
     for _ in range(3):
         httpx_mock.add_response(
-            url=f"{_COLLECTION_URL}/items/broken",
+            url=f"{_COLLECTION_URL}/items/{_MISSING}",
             status_code=500,
             json={"message": "internal error", "error": "Internal Server Error", "statusCode": 500},
         )
     with pytest.raises(UpstreamError):
-        await client.get_dataset(PORTAL, "broken")
+        await client.get_dataset(PORTAL, _MISSING)
 
 
 def test_portal_key_literal_matches_registry():
     assert set(get_args(PortalKey)) == set(constants.PORTALS)
-    assert len(constants.PORTALS) == 81
+    assert len(get_args(PortalKey)) == len(constants.PORTALS)
+    # The Saskatchewan GeoHub portal was removed on 2026-10-03.
+    assert "sk" not in constants.PORTALS
 
 
 async def test_unknown_portal_raises_invalid_input():
@@ -399,3 +417,135 @@ async def test_portal_without_working_downloads_gives_no_links(httpx_mock):
     )
     result = await client.get_dataset("red_deer", "14cca5b087f74d2d9eadc018c261d1b3")
     assert result.download_urls == [] and result.service_url is not None
+
+
+def _detail(item_id: str, item_type: str, url: str | None) -> dict:
+    props = {"id": item_id, "title": "An item", "type": item_type, "tags": [], "categories": []}
+    if url:
+        props["url"] = url
+    return {"id": item_id, "type": "Feature", "geometry": None, "properties": props}
+
+
+async def test_file_item_gets_one_stored_file_link(httpx_mock):
+    # Manitoba's File Geodatabase items answer the download API with HTTP 500;
+    # the item's /data resource redirects to the file (live 2026-10-03).
+    item_id = "0f7bc05a7c694714aca4abf79a15efa8"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}", json=_detail(item_id, "File Geodatabase", None)
+    )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert [(link.format, link.url) for link in result.download_urls] == [
+        ("filegdb", f"https://www.arcgis.com/sharing/rest/content/items/{item_id}/data")
+    ]
+
+
+async def test_csv_collection_item_link_is_a_zip(httpx_mock):
+    item_id = "f6b1b5c8b68845b8afefdd1110c6d906"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}", json=_detail(item_id, "CSV Collection", None)
+    )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert [link.format for link in result.download_urls] == ["zip"]
+
+
+async def test_image_service_has_no_links_and_no_layer_lookup(httpx_mock):
+    # Burnaby's orthophoto ImageServer took about 90 s and then failed the layer
+    # lookup (live 2026-10-03); no request beyond the item detail is made.
+    item_id = "005809859fd349e3868b79ddf9a15544"
+    url = "https://webmap.burnaby.ca/arcgis/rest/services/OpenData/Burnaby_SID_2016/ImageServer"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}",
+        json=_detail(item_id, "Image Service", url),
+        is_reusable=True,
+    )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert result.download_urls == [] and result.service_url == url
+    with pytest.raises(InvalidInput, match="Image Service"):
+        await client.query_feature_layer(PORTAL, item_id)
+
+
+async def test_links_follow_the_formats_the_download_api_lists(httpx_mock):
+    # Surrey's plan layers export only filegdb, geojson and kml; their csv and
+    # shapefile links answered HTTP 400 (live 2026-10-03).
+    item_id = "d440a761c86c4cb98e6597e8e107915c"
+    url = "https://services5.arcgis.com/YRpe0VKTJytZSSIB/arcgis/rest/services/Plan/FeatureServer/0"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}", json=_detail(item_id, "Feature Layer", url)
+    )
+    _formats_probe(
+        httpx_mock,
+        item_id,
+        0,
+        "Unsupported file format. Supported file formats are filegdb, geojson, kml",
+    )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert [link.format for link in result.download_urls] == ["geojson", "kml", "filegdb"]
+
+
+async def test_broken_download_api_gives_no_links(httpx_mock):
+    item_id = "d440a761c86c4cb98e6597e8e107915c"
+    url = "https://services5.arcgis.com/YRpe0VKTJytZSSIB/arcgis/rest/services/Plan/FeatureServer/0"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}", json=_detail(item_id, "Feature Layer", url)
+    )
+    for _ in range(3):
+        httpx_mock.add_response(
+            url=f"https://{constants.PORTALS[PORTAL].domain}/api/download/v1/items/{item_id}/_?layers=0",
+            status_code=500,
+            json={"message": "domain record not found"},
+        )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert result.download_urls == []
+
+
+async def test_failed_layer_lookup_still_returns_the_detail(httpx_mock):
+    # Orangeville's cc70cff5... points at a service that answers an embedded
+    # 400 "Invalid URL" (live 2026-10-03); the metadata must still come back.
+    item_id = "cc70cff5589147c5b3c6b8f31c15bddb"
+    url = "https://services3.arcgis.com/pCmV4YWmyIH9CmGq/arcgis/rest/services/Facility_Site_Point/FeatureServer"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}", json=_detail(item_id, "Feature Service", url)
+    )
+    httpx_mock.add_response(
+        url=f"{url}?f=json",
+        json={"error": {"code": 400, "message": "Invalid URL", "details": ["Invalid URL"]}},
+    )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert result.title == "An item" and result.download_urls == []
+
+
+@pytest.mark.parametrize("bad", ["../../../collections", "x?f=html", "abc", "ABCDEF" * 6])
+async def test_item_ids_that_are_not_hub_ids_are_rejected(bad):
+    with pytest.raises(InvalidInput, match="32 hex digits"):
+        await client.get_dataset(PORTAL, bad)
+    with pytest.raises(InvalidInput, match="32 hex digits"):
+        await client.query_feature_layer(PORTAL, bad)
+
+
+async def test_negative_layer_index_is_rejected():
+    with pytest.raises(InvalidInput, match="layer_index"):
+        await client.query_feature_layer(PORTAL, _MISSING, layer_index=-1)
+
+
+async def test_search_past_the_ten_thousand_window_is_rejected():
+    # Upstream answers HTTP 500 "Result window is too large" (live 2026-10-03).
+    with pytest.raises(InvalidInput, match="10000"):
+        await client.search_datasets(PORTAL, offset=9_995, limit=10)
+
+
+async def test_network_failure_names_the_exception(httpx_mock):
+    import httpx
+
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectError("connection reset by peer"))
+    with pytest.raises(UpstreamUnavailable, match="ConnectError"):
+        await client.search_datasets(PORTAL)
+
+
+async def test_non_json_answer_is_an_upstream_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items?limit=10&startindex=1",
+        text="<html><title>Maintenance</title></html>",
+    )
+    with pytest.raises(UpstreamError, match="not with JSON"):
+        await client.search_datasets(PORTAL)

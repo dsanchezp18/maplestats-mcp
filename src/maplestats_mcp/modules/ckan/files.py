@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any
 from urllib.parse import unquote, urljoin, urlparse
 
 from maplestats_mcp.modules.ckan import client, constants, licences
@@ -39,7 +39,6 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
-SheetChoice = Literal["request", "largest", "only", "none"]
 _RESOURCE_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _TABULAR_FORMATS = frozenset(
     {"csv", "tsv", "xls", "xlsx", "xlsm", "excel", "spreadsheet", "txt", "text", "text/csv"}
@@ -54,7 +53,6 @@ _NOT_TABULAR_FORMATS = frozenset(
     }
 )  # fmt: skip
 _DATASTORE_HIDDEN = ("_id", "_full_text")
-DOMINANT_SHEET_SHARE = 0.8
 
 
 def host_matcher(portal: Portal) -> Callable[[str], bool]:
@@ -276,39 +274,18 @@ async def _fetch_file(resolved: _Resolved, url: str) -> tuple[file_download.Down
             context="ckan_read_resource",
         )
 
+    # One key per URL across modules: ab_opendata reads the same open.alberta.ca
+    # files, and two keys would hold two copies in the shared byte budget.
     return await file_download.cached_download(
-        f"ckan:{resolved.key}:file:{url}", constants.FILE_CACHE_TTL_SECONDS, fetch
+        file_download.cache_key(url), constants.FILE_CACHE_TTL_SECONDS, fetch
     )
 
 
 def _choose_sheet(
     sizes: list[tuple[str, int, int]], sheet: str | None, fmt: file_tables.FileFormat
-) -> tuple[str | None, SheetChoice]:
-    """(sheet name, how it was chosen); a None name means the caller must choose.
-
-    With several sheets and none requested, a sheet is read only when it holds
-    at least 80% of the workbook's declared cells (a notes sheet beside the
-    table). Otherwise guessing would read an arbitrary sheet of a multi-table
-    agency workbook (Montreal's budget has 85), so the sheet list comes back.
-    """
-    names = [n for n, _, _ in sizes]
-    if fmt == "csv":
-        return file_tables.CSV_SHEET, "only"
-    if sheet is None:
-        if len(names) == 1:
-            return names[0], "only"
-        cells = [rows * cols for _, rows, cols in sizes]
-        # A declared size above this is formatting, not data, so it says nothing
-        # about which sheet holds the table (NWT's traffic workbooks).
-        trusted = max(cells) <= file_tables.SUSPICIOUS_SHEET_CELLS
-        if trusted and sum(cells) and max(cells) >= DOMINANT_SHEET_SHARE * sum(cells):
-            return file_tables.largest_sheet(sizes), "largest"
-        return None, "none"
-    wanted = sheet.strip().casefold()
-    for name in names:
-        if name.casefold() == wanted:
-            return name, "request"
-    raise InvalidInput(f"ckan_read_resource: no sheet {sheet!r}; sheets are {names}.")
+) -> tuple[str | None, file_tables.SheetChoice]:
+    """The shared sheet policy (shared/file_tables.py), also used by ab_opendata."""
+    return file_tables.choose_sheet(sizes, sheet, fmt, "ckan_read_resource")
 
 
 def _prepare(resolved: _Resolved, declared_check: bool = True) -> str:
@@ -455,7 +432,8 @@ async def _read_datastore(
             coverage=source.licence_warning or source.citation,
             limits=resolved.limits(
                 "DataStore rows (sheet, header_row and header_rows do not apply; filters are "
-                "case-sensitive exact matches)",
+                "case-sensitive exact matches, and `contains` is the DataStore's full-text "
+                "search on whole words, not the file reader's substring match)",
                 f"showing rows {offset + 1} to {offset + result.returned_count} of "
                 f"{result.total_count}"
                 if more
