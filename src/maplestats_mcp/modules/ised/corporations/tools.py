@@ -23,8 +23,10 @@ async def ised_corporations_get_corporation(
     limits, annual-return filing history, and incorporation/by-law
     activities, given its numeric corporation id or 9-digit business
     number (as found in another dataset or a filing). This is a
-    single-record lookup, not a name search -- there is no documented
-    endpoint to search by corporation name. Keywords: Corporations
+    single-record lookup, not a name search: it accepts only a numeric
+    corporation id or business number and rejects a company name, and
+    there is no name search in this server (Corporations Canada has no
+    documented endpoint for one). Keywords: Corporations
     Canada, ISED, ISDE, federal corporation, business number, BN,
     corporate registry, director, annual return, incorporation,
     by-laws, company status.
