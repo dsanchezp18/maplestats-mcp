@@ -42,7 +42,8 @@ MODULE_DESCRIPTION = (
     "real-time 5-minute; successor to HOEP since 2025-05-01) and HOEP monthly "
     "averages to 2025, the daily adequacy outlook and intertie schedules and "
     "flows; plus Quebec (Hydro-Quebec, CC BY-NC 4.0, non-commercial): 15-minute "
-    "demand, generation by source, imports and exports. Other provinces are not covered."
+    "demand, generation by source, imports and exports. Ontario (IESO) and Québec "
+    "(Hydro-Québec) only; Alberta is not covered, nor are other provinces."
 )
 MODULE_DESCRIPTION_FR = (
     "Données du réseau d'électricité de l'Ontario (rapports publics de la SIERE) : "
@@ -52,5 +53,6 @@ MODULE_DESCRIPTION_FR = (
     "le 2025-05-01), moyennes mensuelles du PHEO jusqu'en 2025, perspective "
     "quotidienne de suffisance et échanges aux interconnexions. Ainsi que le "
     "Québec (Hydro-Québec, CC BY-NC 4.0, usage non commercial) : demande aux 15 minutes, "
-    "production par source, importations et exportations. Les autres provinces ne sont pas couvertes."
+    "production par source, importations et exportations. Ontario (SIERE) et Québec "
+    "(Hydro-Québec) seulement; l'Alberta n'est pas couverte, ni les autres provinces."
 )

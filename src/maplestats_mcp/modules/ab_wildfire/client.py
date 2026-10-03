@@ -37,7 +37,12 @@ from maplestats_mcp.modules.ab_wildfire.schemas import (
 from maplestats_mcp.shared import arcgis
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.models import Provenance
 
 _CONFIG = arcgis.ArcGISHubConfig(
@@ -169,8 +174,13 @@ async def _layer_as_of(layer_url: str) -> datetime | None:
     async def fetch() -> datetime | None:
         try:
             body = await _get("layer_info", layer_url, {})
-        except (UpstreamError, UpstreamUnavailable):
+        except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable):
             # Only a freshness hint; the data query itself will report real failures.
+            # NotFound and InvalidInput were missing here: shared/arcgis.py maps an
+            # HTTP 404 to NotFound, and an embedded {"error": {"code": 400}} or an
+            # HTTP 429 that outlasts the retries to InvalidInput, so a metadata hiccup
+            # failed a tool whose data query had already succeeded (shown 2026-10-03
+            # by test_layer_info_failure_only_drops_as_of, all three cases).
             return None
         info = body.get("editingInfo") or {}
         return _utc(info.get("dataLastEditDate") or info.get("lastEditDate"))

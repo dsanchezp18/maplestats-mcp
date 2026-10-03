@@ -29,6 +29,7 @@ from pathlib import Path
 from maplestats_mcp import config
 from maplestats_mcp.modules.ised.ip_horizons.schemas import IpHorizonsFile
 from maplestats_mcp.shared.errors import NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _DOWNLOAD_ATTEMPTS = 3
@@ -131,7 +132,7 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
             zip_path.unlink(missing_ok=True)
         _enforce_cache_cap(config.get_ip_horizons_cache_dir(), target)
 
-    await asyncio.to_thread(extract_and_convert)
+    await run_in_pool(extract_and_convert)
     return target
 
 

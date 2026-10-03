@@ -117,8 +117,20 @@ class MemberStream:
             else:
                 try:
                     pending = raw
+                    produced = 0
                     while pending:
-                        pieces.append(inflater.decompress(pending, _INFLATE_STEP))
+                        # Never inflate more than one byte past the ceiling: a
+                        # deflate bomb in one chunk is stopped here, before the
+                        # whole chunk's output is held in memory.
+                        room = self.max_inflated_bytes - self.inflated - produced + 1
+                        piece = inflater.decompress(pending, max(1, min(_INFLATE_STEP, room)))
+                        pieces.append(piece)
+                        produced += len(piece)
+                        if self.inflated + produced > self.max_inflated_bytes:
+                            raise ScanLimitExceeded(
+                                f"{member.name} inflated past {self.max_inflated_bytes:,} bytes.",
+                                self.scanned,
+                            )
                         pending = inflater.unconsumed_tail
                 except zlib.error as exc:
                     raise UpstreamError(

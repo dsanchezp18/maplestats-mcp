@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from maplestats_mcp.shared.models import Provenance
 
 AgencyKey = Literal[
-    "ttc",
     "stm",
     "oc_transpo",
     "calgary",
@@ -52,7 +51,7 @@ AgencyKey = Literal[
 AgencyRef = Annotated[
     str,
     Field(
-        description="Agency key from transit_list_agencies (for example 'ttc', 'calgary', "
+        description="Agency key from transit_list_agencies (for example 'stm', 'calgary', "
         "'bct_victoria'), or 'national:<id>' for an agency of the 2025 Statistics Canada national "
         "database (ids from transit_list_national_agencies)."
     ),

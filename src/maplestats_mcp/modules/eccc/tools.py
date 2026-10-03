@@ -120,10 +120,13 @@ async def eccc_query_items(
     conditions, swob, observation, aqhi, air quality, climate
     normal, hydrometric, water level, flow, marine forecast, query,
     data, filter, bbox, station.
-    Mots-clés : environnement canada, smc, geomet, alerte météo,
-    conditions actuelles, observation, cote air santé, qualité de
-    l'air, normale climatique, hydrométrique, niveau d'eau, débit,
-    prévision maritime, requête, données, filtre, station.
+    Mots-clés : environnement canada, Environnement et Changement
+    climatique Canada, ECCC, smc, geomet, météo, prévisions météo,
+    prévisions, alerte météo, alertes météorologiques, conditions
+    actuelles, observation, cote air santé, qualité de l'air, normale
+    climatique, hydrométrique, rivière, cours d'eau, hydrogramme, niveau
+    d'eau, débit, débit journalier, prévision maritime, requête, données,
+    filtre, station.
     """
     return await client.query_items(
         collection_id,

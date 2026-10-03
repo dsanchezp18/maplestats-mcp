@@ -58,18 +58,26 @@ def _file(table: str) -> IpHorizonsFile:
     )
 
 
-@pytest.fixture
-def tables(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+@pytest.fixture(scope="module")
+def parquet_tables(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    """The three tables converted once: each DuckDB conversion takes about a second."""
+    folder = tmp_path_factory.mktemp("patents")
     paths: dict[str, Path] = {}
     for table, text in (
         ("main", _MAIN),
         ("interested_party", _PARTY),
         ("ipc_classification", _IPC),
     ):
-        csv_path = tmp_path / f"{table}.csv"
+        csv_path = folder / f"{table}.csv"
         csv_path.write_text(text, encoding="utf-8")
-        paths[table] = tmp_path / f"{table}.parquet"
+        paths[table] = folder / f"{table}.parquet"
         store.convert_csv(csv_path, paths[table])
+    return paths
+
+
+@pytest.fixture
+def tables(parquet_tables: dict[str, Path], monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+    paths = parquet_tables
 
     async def patent_files(table: str) -> list[IpHorizonsFile]:
         return [_file(table)]

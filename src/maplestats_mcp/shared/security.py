@@ -1,6 +1,7 @@
 """ASGI middleware protecting a hosted MCP endpoint. Adds: Bearer-token
-auth, a per-client sliding-window rate limit, and a concurrency-limiting
-semaphore — plus a /health endpoint that bypasses all of it.
+auth, a per-client sliding-window rate limit, a concurrency-limiting
+semaphore, CORS with Origin validation for browser clients — plus a
+/health endpoint that bypasses all of it.
 
 Dependency-free by design (stdlib asyncio/hmac/time only) so it has no
 opinion about which ASGI framework sits underneath — it wraps whatever
@@ -14,7 +15,7 @@ import hmac
 import json
 import math
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 
 ASGIApp = Callable[[dict, Callable, Callable], Awaitable[None]]
@@ -101,7 +102,15 @@ def with_http_security(
     rate_lock = asyncio.Lock()
 
     async def app(scope: dict, receive: Callable, send: Callable) -> None:
-        if scope.get("type") != "http" or scope.get("path") not in _MCP_PATHS:
+        # OPTIONS is a CORS preflight: browsers send it without credentials
+        # and before every cross-origin POST, so it must not need a token
+        # or spend the caller's rate-limit budget. with_cors() answers it;
+        # without that wrapper the inner app's 405 passes through.
+        if (
+            scope.get("type") != "http"
+            or scope.get("path") not in _MCP_PATHS
+            or scope.get("method") == "OPTIONS"
+        ):
             await inner_app(scope, receive, send)
             return
 
@@ -182,6 +191,113 @@ def with_http_security(
             slots.release()
 
     return app
+
+
+def origin_allowed(origin: str, allowed_origins: Sequence[str]) -> bool:
+    """Whether a browser Origin header matches one allow-list entry.
+
+    Entries are exact origins (`https://example.org`), `*` for any origin,
+    a port wildcard (`http://localhost:*`), or a subdomain wildcard
+    (`https://*.example.org`, which does not match the bare domain).
+    Comparison ignores case and a trailing slash.
+    """
+    origin = origin.strip().rstrip("/").lower()
+    for entry in allowed_origins:
+        entry = entry.strip().rstrip("/").lower()
+        if entry == "*" or entry == origin:
+            return True
+        if entry.endswith(":*"):
+            base = entry[:-2]
+            if origin == base or (
+                origin.startswith(base + ":") and origin[len(base) + 1 :].isdigit()
+            ):
+                return True
+        if "://*." in entry:
+            scheme, _, domain = entry.partition("://*.")
+            prefix = scheme + "://"
+            host = origin[len(prefix) :] if origin.startswith(prefix) else ""
+            if host.endswith("." + domain) and "/" not in host:
+                return True
+    return False
+
+
+def with_cors(inner_app: ASGIApp, *, allowed_origins: Sequence[str]) -> ASGIApp:
+    """CORS and Origin validation for the /mcp endpoint.
+
+    The MCP Streamable HTTP transport requires servers to validate the
+    Origin header to stop a web page the user happens to visit from
+    driving a local server (DNS rebinding). A request with no Origin is a
+    non-browser client (a desktop app, curl, an agent runtime) and is
+    allowed; a request whose Origin is not in `allowed_origins` gets 403.
+    Allowed browser origins get the headers a browser-based MCP client
+    needs: preflight answers, and Mcp-Session-Id exposed to scripts so
+    the client can resume its session.
+
+    Wrap this outside with_http_security() so preflights are answered
+    before auth and rate limiting, and so 401/429/503 responses still
+    carry the headers a browser needs to read them.
+    """
+    allowed = tuple(allowed_origins)
+
+    async def app(scope: dict, receive: Callable, send: Callable) -> None:
+        if scope.get("type") != "http" or scope.get("path") not in _MCP_PATHS:
+            await inner_app(scope, receive, send)
+            return
+
+        origin = _header(scope, b"origin")
+        if origin is not None and not origin_allowed(origin, allowed):
+            await _json_response(
+                send, 403, {"error": "Origin not allowed for /mcp."}, [(b"vary", b"Origin")]
+            )
+            return
+
+        if scope.get("method") == "OPTIONS":
+            headers = [(b"allow", _CORS_METHODS), (b"content-length", b"0")]
+            if origin is not None:
+                headers += _cors_headers(origin)
+                headers += [
+                    (b"access-control-allow-methods", _CORS_METHODS),
+                    (b"access-control-allow-headers", _CORS_ALLOW_HEADERS),
+                    (b"access-control-max-age", b"600"),
+                ]
+            await send({"type": "http.response.start", "status": 204, "headers": headers})
+            await send({"type": "http.response.body", "body": b""})
+            return
+
+        if origin is None:
+            await inner_app(scope, receive, send)
+            return
+
+        async def send_with_cors(message: dict) -> None:
+            if message.get("type") == "http.response.start":
+                kept = [
+                    (key, value)
+                    for key, value in message.get("headers", [])
+                    if not key.lower().startswith(b"access-control-")
+                ]
+                message = {**message, "headers": kept + _cors_headers(origin)}
+            await send(message)
+
+        await inner_app(scope, receive, send_with_cors)
+
+    return app
+
+
+_CORS_METHODS = b"GET, POST, DELETE, OPTIONS"
+_CORS_ALLOW_HEADERS = (
+    b"Content-Type, Accept, Authorization, Mcp-Session-Id, MCP-Protocol-Version, Last-Event-ID"
+)
+_CORS_EXPOSE_HEADERS = b"Mcp-Session-Id, MCP-Protocol-Version, WWW-Authenticate, Retry-After"
+
+
+def _cors_headers(origin: str) -> list[tuple[bytes, bytes]]:
+    # Echo the caller's origin rather than "*": a wildcard cannot be used
+    # with the Authorization header the token feature relies on.
+    return [
+        (b"access-control-allow-origin", origin.encode("latin-1")),
+        (b"access-control-expose-headers", _CORS_EXPOSE_HEADERS),
+        (b"vary", b"Origin"),
+    ]
 
 
 def with_health_endpoint(inner_app: ASGIApp, *, version: str) -> ASGIApp:

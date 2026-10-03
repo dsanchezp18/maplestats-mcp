@@ -24,9 +24,10 @@ from typing import Any, NoReturn
 
 import httpx
 
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.upstream_text import clean_detail, network_error
 
 
 @dataclass(frozen=True)
@@ -53,17 +54,25 @@ def _limiter(config: CkanConfig):
     )
 
 
-def _error_detail(exc: httpx.HTTPStatusError) -> str:
-    try:
-        body = exc.response.json()
-    except ValueError:
-        return exc.response.text[:200]
+def _envelope_detail(body: object) -> str | None:
+    """The error part of a CKAN envelope as one short line, naming the invalid fields."""
     err = body.get("error") if isinstance(body, dict) else None
     if isinstance(err, dict):
         detail = err.get("message") or err.get("__type")
         if detail:
-            return str(detail)
-    return exc.response.text[:200]
+            # Validation errors carry the message per field, e.g. {"rows": ["Must be int"]}.
+            fields = {k: v for k, v in err.items() if k not in ("message", "__type")}
+            extra = "; ".join(f"{k}: {v}" for k, v in fields.items())
+            return clean_detail(f"{detail} ({extra})" if extra else str(detail))
+    return None
+
+
+def _error_detail(exc: httpx.HTTPStatusError) -> str:
+    try:
+        body = exc.response.json()
+    except ValueError:
+        return clean_detail(exc.response.text)
+    return _envelope_detail(body) or clean_detail(exc.response.text)
 
 
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -94,11 +103,16 @@ async def action(config: CkanConfig, method: str, params: dict[str, Any] | None 
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
-        ) from exc
+        raise network_error(context, exc) from exc
     if not isinstance(data, dict) or not data.get("success") or "result" not in data:
-        raise UpstreamError(f"{context} returned an unsuccessful envelope: {data!r}")
+        # Only the error part, shortened: the whole envelope can be a full page.
+        error = data.get("error") if isinstance(data, dict) else None
+        detail = (
+            error.get("message") or error.get("__type") if isinstance(error, dict) else None
+        ) or repr(data)
+        raise UpstreamError(
+            f"{context} returned an unsuccessful envelope: {clean_detail(str(detail))}"
+        )
     return data["result"]
 
 

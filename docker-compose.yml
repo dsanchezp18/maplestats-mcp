@@ -22,17 +22,27 @@ services:
       MAPLE_PUMF_CACHE_MAX_GB: "${MAPLE_PUMF_CACHE_MAX_GB:-5}"
       MAPLE_IP_HORIZONS_CACHE_DIR: "/data/ip_horizons"
       MAPLE_IP_HORIZONS_CACHE_MAX_GB: "${MAPLE_IP_HORIZONS_CACHE_MAX_GB:-3}"
+      MAPLE_LODE_CACHE_DIR: "/data/lode"
+      MAPLE_LODE_CACHE_MAX_GB: "${MAPLE_LODE_CACHE_MAX_GB:-3}"
+      # Browser origins allowed to call /mcp; unset keeps the defaults (the
+      # project website and localhost). Add https://*.office.com for an
+      # Office add-in. Clients that send no Origin are always allowed.
+      MAPLE_ALLOWED_ORIGINS: "${MAPLE_ALLOWED_ORIGINS:-}"
       MAPLE_SSL_CERTFILE: "${MAPLE_SSL_CERTFILE:-}"
       MAPLE_SSL_KEYFILE: "${MAPLE_SSL_KEYFILE:-}"
     # Health check is defined in the Dockerfile (it picks http/https from
-    # MAPLE_SSL_CERTFILE). The pumf and ip-horizons volumes keep downloaded
-    # PUMF microdata and CIPO patent tables across restarts; everything
-    # else is in memory.
+    # MAPLE_SSL_CERTFILE). The named volumes keep downloaded files across
+    # restarts: pumf-cache holds PUMF microdata, ip-horizons-cache the CIPO
+    # patent tables, and lode-cache the StatCan open-database (LODE) files
+    # unpacked from their archives (without it every restart downloads them
+    # again). Everything else is in memory.
     volumes:
       - pumf-cache:/data/pumf
       - ip-horizons-cache:/data/ip_horizons
+      - lode-cache:/data/lode
     restart: unless-stopped
 
 volumes:
   pumf-cache:
   ip-horizons-cache:
+  lode-cache:

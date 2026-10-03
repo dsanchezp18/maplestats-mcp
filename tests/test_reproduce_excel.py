@@ -151,8 +151,6 @@ def test_hostile_filter_values_stay_text():
             {"portal": "calgary", "dataset_id": "848s-4m4z", "limit": 10},
         ),
         ("ckan_datastore_search", {"portal": "on", "resource_id": "abc-123", "limit": 5}),
-        ("canadabuys_search_tenders", {"query": "software", "region": "Ontario"}),
-        ("canadabuys_search_contracts", {"query": "snow", "min_value": 10000}),
     ],
 )
 async def test_queries_are_well_formed(tool, arguments):
@@ -205,11 +203,20 @@ async def test_sdmx_data_reads_the_key_not_the_table():
     assert any("SDMX" in note for note in result.notes)
 
 
-async def test_filters_and_sort_repeat_the_tool():
-    result = await client.reproduce(
-        "canadabuys_search_contracts", {"query": "snow removal", "min_value": 10000}, "excel"
+def test_filters_and_sort_repeat_the_tool():
+    spec = _spec(
+        title="Contract history",
+        filters=[
+            Filter("terms", ["title-titre-eng", "description-eng"], "snow removal"),
+            Filter("ge", ["totalContractValue-valeurTotaleContrat"], 10000.0),
+        ],
+        sort_by="totalContractValue-valeurTotaleContrat",
+        sort_descending=True,
     )
-    code = result.scripts[0].code
+    rendered = render_excel(spec, "tool")
+    assert rendered is not None
+    code = rendered[0]
+    check_m(code)
     assert "Text.Contains(Text.Lower(Text.Combine({" in code and '"snow")' in code
     assert "n >= 10000.0" in code
     assert '{{"totalContractValue-valeurTotaleContrat", Order.Descending}}' in code
