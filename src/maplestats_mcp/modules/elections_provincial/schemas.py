@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
-ProvinceCode = Literal["qc", "ab", "bc", "sk"]
+ProvinceCode = Literal["qc", "ab", "bc", "sk", "mb"]
 
 
 class ElectionInfo(BaseModel):
-    province: str = Field(description="Province code: qc, ab, bc or sk.")
+    province: str = Field(description="Province code: qc, ab, bc, sk or mb.")
     province_name: str
     date: str = Field(description="Polling day, YYYY-MM-DD.")
     seats: int = Field(description="Electoral districts (seats) contested.")
@@ -43,7 +43,7 @@ class ResultRow(BaseModel):
     district: str = Field(description="Electoral district (riding, electoral division) name.")
     district_number: str | None = Field(
         description="The source's district number or code (Quebec number, Alberta ED, "
-        "BC abbreviation, Saskatchewan code)."
+        "BC abbreviation, Saskatchewan code); null for Manitoba."
     )
     candidate: str | None = Field(
         description="Candidate name as 'First Last'. Null for Alberta rows other than the "
@@ -51,7 +51,8 @@ class ResultRow(BaseModel):
     )
     party: str | None = Field(description="Party name (Quebec: the abbreviation if no name).")
     party_code: str | None = Field(
-        description="Party abbreviation as published (Quebec, Alberta, Saskatchewan); null for BC."
+        description="Party abbreviation as published (Quebec, Alberta, Saskatchewan, Manitoba); "
+        "null for BC."
     )
     votes: int
     vote_share: float | None = Field(description="Percent of the district's valid votes.")
@@ -60,10 +61,14 @@ class ResultRow(BaseModel):
 
 class DistrictSummary(BaseModel):
     district: str
-    electors: int | None = Field(description="Registered electors (Quebec only).")
+    electors: int | None = Field(description="Registered electors (Quebec, Manitoba).")
     valid_votes: int | None
-    rejected_ballots: int | None = Field(description="Quebec, British Columbia and Saskatchewan.")
-    turnout: float | None = Field(description="Percent of electors who voted (Quebec, Alberta).")
+    rejected_ballots: int | None = Field(
+        description="Quebec, British Columbia, Saskatchewan, Manitoba."
+    )
+    turnout: float | None = Field(
+        description="Percent of electors who voted (Quebec, Alberta, Manitoba)."
+    )
     winner: str | None = Field(description="Winning candidate, or the winning party if unnamed.")
 
 
@@ -96,5 +101,47 @@ class SeatSummary(BaseModel):
     seats_decided: int = Field(description="Districts with a winner; equals seats_contested.")
     total_valid_votes: int
     parties: list[PartySummary] = Field(description="By seats, then votes.")
+    attribution: str
+    provenance: Provenance
+
+
+class VotingAreaRow(BaseModel):
+    district: str
+    voting_area: str = Field(
+        description="Voting area number as published, or a special poll's label (advance, "
+        "absentee, homebound, write-in ballots)."
+    )
+    voting_place: str | None = Field(description="Polling place; null where not given (2023).")
+    candidate: str | None = Field(description="Candidate name as 'First Last'.")
+    party: str | None
+    party_code: str | None
+    votes: int
+
+
+class VotingAreaSummary(BaseModel):
+    voting_area: str
+    voting_place: str | None
+    electors: int | None = Field(description="Registered voters; 0 or null for special polls.")
+    valid_votes: int
+    rejected_ballots: int
+    declined_ballots: int
+
+
+class VotingAreaResults(BaseModel):
+    province: str
+    election_date: str
+    district: str
+    rows: list[VotingAreaRow]
+    areas: list[VotingAreaSummary] = Field(description="Every voting area of the district.")
+    total_rows: int = Field(description="Rows matching the filters, before offset and limit.")
+    offset: int
+    truncated: bool
+    district_valid_votes: int = Field(
+        description="The district's valid votes in the official summary of votes received."
+    )
+    areas_valid_votes: int = Field(
+        description="Valid votes summed over the voting areas; differs from "
+        "district_valid_votes where the source's voting-area file does."
+    )
     attribution: str
     provenance: Provenance
