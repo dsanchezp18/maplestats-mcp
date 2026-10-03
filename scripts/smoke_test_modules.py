@@ -80,9 +80,27 @@ STEPS: list[Step] = [
         lambda ctx: {"table": ctx["ab_economic_list_tables"]["tables"][0]["table"], "limit": 5},
     ),
     # Alberta Energy Regulator
-    Step("aer", "aer_get_well_licences_daily", {}, _non_empty("raw_text")),
-    Step("aer", "aer_get_well_licence_archive_link", {"year": _TODAY.year - 1}),
-    Step("aer", "aer_get_production_volumes_link", {"product": "oil"}),
+    # The default (yesterday) is the latest posted list, so it carries no stale note.
+    Step(
+        "aer",
+        "aer_get_well_licences_daily",
+        {},
+        lambda data: bool(data["raw_text"]) and data["note"] is None,
+    ),
+    # Sizes come back only when the HEAD asks for identity encoding.
+    Step(
+        "aer",
+        "aer_get_well_licence_archive_link",
+        {"year": _TODAY.year - 1},
+        lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
+    ),
+    Step("aer", "aer_get_well_licence_archive_link", {"year": 1850}, expect_error="2017"),
+    Step(
+        "aer",
+        "aer_get_production_volumes_link",
+        {"product": "oil"},
+        lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
+    ),
     # BC Geographic Warehouse
     Step("bcgw", "bcgw_get_active_wildfires", {"limit": 3}, _non_empty("wildfires")),
     Step("bcgw", "bcgw_get_mining_tenure", {"limit": 3}),
