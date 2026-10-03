@@ -8,7 +8,10 @@ MODULE_DESCRIPTION = (
     "(water level/flow) stations and real-time/historical data, marine "
     "forecasts, and long-term climate extremes. One generic OGC API - "
     "Features client covers all ~100 collections this server publishes "
-    "rather than a bespoke tool per dataset."
+    "rather than a bespoke tool per dataset. The eccc_coverages_ tools "
+    "read the gridded climate projections (CanDCS-U6 CMIP6 SSP scenarios, "
+    "CMIP5 and DCS RCP scenarios, climate indices, SPEI drought index, "
+    "CanGRD anomalies) as tidy rows for a point or area."
 )
 MODULE_DESCRIPTION_FR = (
     "Environnement et Changement climatique Canada / Service "
@@ -21,5 +24,9 @@ MODULE_DESCRIPTION_FR = (
     "prévisions maritimes, et extrêmes climatiques à long terme. Un "
     "client générique de type API OGC - Entités couvre la centaine de "
     "collections publiées par ce serveur plutôt qu'un outil distinct par "
-    "jeu de données."
+    "jeu de données. Les outils eccc_coverages_ lisent les projections "
+    "climatiques en grille (CanDCS-U6 et scénarios SSP du CMIP6, scénarios "
+    "RCP du CMIP5 et DCS, indices climatiques, indice de sécheresse SPEI, "
+    "anomalies CanGRD) sous forme de lignes ordonnées pour un point ou une "
+    "zone."
 )

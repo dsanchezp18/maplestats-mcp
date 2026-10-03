@@ -212,7 +212,8 @@ Sources, by tool-name prefix:
   university libraries; ODESI DDI metadata, public files only).
 - Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
   (Excel data tables). CREA MLS Home Price Index: crea_ (links, terms and
-  attribution only, no values). ECCC weather, climate, hydrometric: eccc_.
+  attribution only, no values). ECCC weather, climate, hydrometric: eccc_;
+  gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_.
   ECCC Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP
   facility lookups): eccc_datamart_.
 - World Bank WDI, Canada and G7/OECD peers: worldbank_.

@@ -724,6 +724,8 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "Portail de l'information sur le marché de l'habitation",
     ),
     "cmhc/data_tables": ("Data tables (Excel)", "Tableaux de données (Excel)"),
+    "eccc/": ("Weather, water and climate observations", "Observations météo, eau et climat"),
+    "eccc/coverages": ("Climate projections (gridded)", "Projections climatiques (grilles)"),
     "ircc/": ("Express Entry rounds", "Rondes d'invitations Entrée express"),
     "ircc/monthly": ("Monthly IRCC Updates", "Mises à jour mensuelles d'IRCC"),
     "ised/cipo": ("Trademarks (CIPO)", "Marques de commerce (OPIC)"),
