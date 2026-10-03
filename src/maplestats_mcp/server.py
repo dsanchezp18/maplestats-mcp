@@ -211,6 +211,7 @@ Sources, by tool-name prefix:
   university libraries; ODESI DDI metadata, public files only).
 - Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
   (Excel data tables). ECCC weather, climate, hydrometric: eccc_.
+- World Bank WDI, Canada and G7/OECD peers: worldbank_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit

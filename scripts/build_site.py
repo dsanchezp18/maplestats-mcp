@@ -526,6 +526,14 @@ SOURCES: dict[str, Source] = {
         places=("NL",),
         row="provincial_agency",
     ),
+    "worldbank": Source(
+        "World Bank World Development Indicators (Canada and peers)",
+        "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",
+        "national",
+        "World Bank WDI",
+        "Banque mondiale (WDI)",
+        domain="statistics",
+    ),
     "yukon_stats": Source(
         "Yukon Bureau of Statistics",
         "Bureau de la statistique du Yukon",

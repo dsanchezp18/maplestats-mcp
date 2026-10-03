@@ -167,6 +167,8 @@ CASES = [
     ("find a dataflow in the energy information space", "sdmx_space_list_flows"),
     ("air pollutants black carbon emissions inventory", "sdmx_space_search"),
     ("browse dimensions and codes of an SDMX dataflow in CCEI", "sdmx_space_get_structure"),
+    ("how does Canada compare with G7 countries on GDP per capita", "worldbank_get_canada_series"),
+    ("World Bank development indicator code search", "worldbank_search_indicators"),
 ]
 
 
