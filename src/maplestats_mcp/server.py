@@ -28,6 +28,7 @@ from mcp.types import Icon, ToolAnnotations
 
 from maplestats_mcp import __version__, config
 from maplestats_mcp.shared import search
+from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware
 
@@ -299,7 +300,11 @@ def build_server() -> FastMCP:
         instructions=SERVER_INSTRUCTIONS,
         website_url="https://dsanchezp18.github.io/maplestats-mcp/",
         icons=[icon],
+        # Replaced by CachedDereferenceMiddleware below: same output, but each
+        # schema is dereferenced once instead of on every search_tools/call_tool.
+        dereference_schemas=False,
     )
+    mcp.add_middleware(CachedDereferenceMiddleware())
     for module_dir in sorted(MODULES_ROOT.iterdir()):
         if module_dir.is_dir() and not module_dir.name.startswith("_"):
             mcp.add_provider(ModuleProvider(root=module_dir))

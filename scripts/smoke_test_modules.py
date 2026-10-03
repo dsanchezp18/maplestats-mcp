@@ -165,6 +165,17 @@ STEPS: list[Step] = [
             "last_name": "Smith",
         },
     ),
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        lambda ctx: {
+            "candidate_client_id": ctx["elections_financial_returns_search_candidates"][
+                "candidates"
+            ][0]["client_id"],
+            "part": "1",
+            "election_id": ctx["elections_financial_returns_list_elections"]["elections"][0]["id"],
+        },
+    ),
     # Canada Gazette
     Step("gazette", "gazette_list_issues", {"limit": 2}, _non_empty("issues")),
     Step("gazette", "gazette_get_issue", {"part": 1}),
