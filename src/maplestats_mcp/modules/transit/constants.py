@@ -3,7 +3,7 @@
 Adding an agency is adding an `Agency` here (and its key to
 `AgencyKey` in schemas.py; a unit test keeps the two in sync). Every
 entry below was checked live on 2026-10-01 (VIA Rail, GO/UP Express and
-BC Transit on 2026-10-02): the URL answers without a
+BC Transit on 2026-10-02, the Quebec regional feeds on 2026-10-03): the URL answers without a
 key, supports HTTP range requests, and the licence page was read. See
 docs/ROADMAP.md for what was checked and what was left out.
 """
@@ -137,6 +137,24 @@ NATIONAL_OVERLAPS: dict[str, str] = {
     "bc_transit_campbell_river": "bct_campbell_river",
     "bc_transit_squamish": "bct_squamish",
     "bc_transit_whistler": "bct_whistler",
+    # Quebec feeds read live since 2026-10-03: the agencies' current files are
+    # newer than the 2025 snapshot (exo's sectors run to 2027-01-03).
+    "exo": "exo_trains",
+    "exo_chambly_richelieu_carignan": "exo_chambly_richelieu_carignan",
+    "exo_laurentides": "exo_laurentides",
+    "exo_la_presqu'ile": "exo_la_presquile",
+    "exo_sorel_varennes": "exo_sorel_varennes",
+    "exo_sud_ouest": "exo_sud_ouest",
+    "exo_richelieu": "exo_vallee_du_richelieu",
+    "exo_l'assomption": "exo_lassomption",
+    "exo_terrebonne_mascouche": "exo_terrebonne_mascouche",
+    "exo_sainte_julie": "exo_sainte_julie",
+    "exo_le_richelain_roussillon": "exo_le_richelain_roussillon",
+    "reseau_transport_capitale": "rtc_quebec",
+    "societe_transport_laval": "stl_laval",
+    "societe_de_transport_de_trois_rivieres": "sttr_trois_rivieres",
+    "societe_transport_rimouski": "rimouski",
+    "ville_de_rouyn_noranda": "rouyn_noranda",
 }
 # Feeds left out for their own terms.
 NATIONAL_EXCLUDED: dict[str, str] = {
@@ -194,6 +212,78 @@ def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agen
             "l'usage de son nom de domaine et de ses marques de commerce."
         ).replace("  ", " "),
         range_requests=False,
+    )
+
+
+QC_CC_BY = "Creative Commons Attribution 4.0 (CC BY 4.0), per the Données Québec record"
+QC_LICENCE_URL = "https://www.donneesquebec.ca/licence/#cc-by"
+_DQ = "https://www.donneesquebec.ca/recherche/dataset/"
+
+
+def _exo(
+    key: str, code: str, sector_en: str, sector_fr: str, city: str, dataset: str | None
+) -> Agency:
+    """One exo GTFS feed (exo.quebec/fr/a-propos/donnees-ouvertes, CC BY).
+
+    `dataset` is the Données Québec record; Le Richelain/Roussillon has none,
+    so exo's own open data page stands in.
+    """
+    return Agency(
+        key=key,
+        name_en=f"exo - {sector_en}",
+        name_fr=f"exo - {sector_fr}",
+        city=city,
+        province="QC",
+        timezone="America/Toronto",
+        feed_url=f"https://exo.quebec/xdata/{code}/google_transit.zip",
+        source_page=f"{_DQ}{dataset}" if dataset else "https://exo.quebec/fr/a-propos/donnees-ouvertes",
+        licence=QC_CC_BY,
+        licence_url=QC_LICENCE_URL,
+        attribution="Source: exo (Réseau de transport métropolitain), CC BY 4.0.",
+        update_cadence="At each service change; exo's sector feeds checked 2026-10-03 run to 2027-01-03.",
+        notes_en=(
+            f"exo publishes one feed per bus sector and one for its trains (code {code}). Names "
+            "are French. Some routes use GTFS extended route_type 1501 (on-demand taxi)."
+        ),
+        notes_fr=(
+            f"exo publie un flux par secteur d'autobus et un pour ses trains (code {code}). "
+            "Certaines lignes utilisent le route_type étendu 1501 (taxi collectif)."
+        ),
+    )
+
+
+def _quebec(
+    key: str,
+    name: str,
+    city: str,
+    feed_url: str,
+    dataset: str,
+    attribution: str,
+    update_cadence: str,
+    notes_en: str = "",
+    notes_fr: str = "",
+    *,
+    licence: str = QC_CC_BY,
+    licence_url: str = QC_LICENCE_URL,
+    range_requests: bool = True,
+) -> Agency:
+    """A Quebec feed listed on Données Québec."""
+    return Agency(
+        key=key,
+        name_en=name,
+        name_fr=name,
+        city=city,
+        province="QC",
+        timezone="America/Toronto",
+        feed_url=feed_url,
+        source_page=f"{_DQ}{dataset}",
+        licence=licence,
+        licence_url=licence_url,
+        attribution=attribution,
+        update_cadence=update_cadence,
+        notes_en=notes_en,
+        notes_fr=notes_fr,
+        range_requests=range_requests,
     )
 
 
@@ -379,6 +469,239 @@ AGENCIES: dict[str, Agency] = {
     "bct_campbell_river": _bc_transit("bct_campbell_river", "Campbell River", 12),
     "bct_squamish": _bc_transit("bct_squamish", "Squamish", 43),
     "bct_whistler": _bc_transit("bct_whistler", "Whistler", 44),
+    # -- Quebec regional and ferry feeds (Données Québec, checked 2026-10-03) --
+    "exo_trains": _exo(
+        "exo_trains",
+        "trains",
+        "commuter trains (exo1 to exo6)",
+        "trains de banlieue (exo1 à exo6)",
+        "Greater Montreal",
+        "exo-trains-gtfs",
+    ),
+    "exo_chambly_richelieu_carignan": _exo(
+        "exo_chambly_richelieu_carignan",
+        "citcrc",
+        "Chambly-Richelieu-Carignan buses",
+        "autobus Chambly-Richelieu-Carignan",
+        "Chambly",
+        "chambly-richelieu-carignan-gtfs",
+    ),
+    "exo_laurentides": _exo(
+        "exo_laurentides",
+        "citla",
+        "Laurentides buses",
+        "autobus Laurentides",
+        "Saint-Jérôme",
+        "laurentides-gtfs",
+    ),
+    "exo_la_presquile": _exo(
+        "exo_la_presquile",
+        "citpi",
+        "La Presqu'île buses",
+        "autobus La Presqu'île",
+        "Vaudreuil-Dorion",
+        "presquile-gtfs",
+    ),
+    "exo_sorel_varennes": _exo(
+        "exo_sorel_varennes",
+        "citsv",
+        "Sorel-Varennes buses",
+        "autobus Sorel-Varennes",
+        "Varennes",
+        "sorel-varennes-gtfs",
+    ),
+    "exo_sud_ouest": _exo(
+        "exo_sud_ouest",
+        "citso",
+        "Sud-Ouest buses",
+        "autobus Sud-Ouest",
+        "Châteauguay",
+        "sud-ouest-gtfs",
+    ),
+    "exo_vallee_du_richelieu": _exo(
+        "exo_vallee_du_richelieu",
+        "citvr",
+        "Vallée du Richelieu buses",
+        "autobus Vallée du Richelieu",
+        "Beloeil",
+        "vallee-du-richelieu-gtfs",
+    ),
+    "exo_lassomption": _exo(
+        "exo_lassomption",
+        "mrclasso",
+        "L'Assomption buses",
+        "autobus L'Assomption",
+        "Repentigny",
+        "lassomption-gtfs",
+    ),
+    "exo_terrebonne_mascouche": _exo(
+        "exo_terrebonne_mascouche",
+        "mrclm",
+        "Terrebonne-Mascouche buses",
+        "autobus Terrebonne-Mascouche",
+        "Terrebonne",
+        "terrebonne-mascouche-gtfs",
+    ),
+    "exo_sainte_julie": _exo(
+        "exo_sainte_julie",
+        "omitsju",
+        "Sainte-Julie buses",
+        "autobus Sainte-Julie",
+        "Sainte-Julie",
+        "sainte-julie-gtfs",
+    ),
+    "exo_le_richelain_roussillon": _exo(
+        "exo_le_richelain_roussillon",
+        "lrrs",
+        "Le Richelain and Roussillon buses",
+        "autobus Le Richelain et Roussillon",
+        "La Prairie",
+        None,
+    ),
+    "rtc_quebec": _quebec(
+        "rtc_quebec",
+        "Réseau de transport de la Capitale (RTC)",
+        "Québec City",
+        "https://cdn.rtcquebec.ca/Site_Internet/DonneesOuvertes/googletransit.zip",
+        "rtc-gtfs-arrets-et-les-parcours",
+        (
+            "Application, produit ou service, intégrant les Informations publiques du Réseau de "
+            "transport de la Capitale, mises à jour le [date of the feed]."
+        ),
+        "At each service change; the zip checked 2026-10-03 was dated 2026-10-02.",
+        (
+            "The RTC's own terms (rtcquebec.ca/donnees-ouvertes) allow personal and commercial "
+            "use, require the credit line above with the feed's update date, and bar altering "
+            "the data in a way that misleads. The zip is 32 MB."
+        ),
+        (
+            "Les conditions du RTC (rtcquebec.ca/donnees-ouvertes) permettent l'usage personnel "
+            "et commercial, exigent la mention ci-dessus avec la date de mise à jour et "
+            "interdisent d'altérer les données de façon trompeuse. Le zip fait 32 Mo."
+        ),
+        licence=(
+            "RTC open data terms of use (Creative Commons Attribution 4.0 on its Données Québec "
+            "record)"
+        ),
+        licence_url="https://www.rtcquebec.ca/donnees-ouvertes",
+    ),
+    "stl_laval": _quebec(
+        "stl_laval",
+        "Société de transport de Laval (STL)",
+        "Laval",
+        "https://stlaval.ca/datas/opendata/GTF_STL.zip",
+        "https-www-stlaval-ca-datas-opendata-gtf_stl-zip",
+        "Source: Société de transport de Laval (STL).",
+        "Quarterly per the Données Québec record; the feed checked 2026-10-03 runs to 2026-10-30.",
+        (
+            "The Données Québec record says CC BY 4.0, but the STL's own GTFS terms grant a "
+            "non-exclusive, limited and revocable licence, bar any commercial or "
+            "quasi-commercial use without the STL's prior written permission, and bar use of its "
+            "marks. Treat the data as non-commercial."
+        ),
+        (
+            "La fiche de Données Québec indique CC BY 4.0, mais les conditions GTFS de la STL "
+            "accordent un droit non exclusif, limité et révocable, interdisent toute utilisation "
+            "commerciale ou quasi commerciale sans l'autorisation écrite préalable de la STL et "
+            "interdisent l'usage de ses marques. Usage non commercial seulement."
+        ),
+        licence=(
+            "STL GTFS terms of use: limited, revocable licence; no commercial use without the "
+            "STL's written permission (CC BY 4.0 on its Données Québec record)"
+        ),
+        licence_url="https://stlaval.ca/affaires/donnees-ouvertes",
+    ),
+    "sts_sherbrooke": _quebec(
+        "sts_sherbrooke",
+        "Société de transport de Sherbrooke (STS)",
+        "Sherbrooke",
+        "https://gtfs.sts.qc.ca:8443/gtfs/client/GTFS_clients.zip",
+        "transport-sts",
+        "Source: Société de transport de Sherbrooke (STS), Données Québec, CC BY 4.0.",
+        "At each service change; the feed checked 2026-10-03 runs to 2026-12-20.",
+        (
+            "The Données Québec record points to a directory listing; this module reads the zip "
+            "in it (GTFS_clients.zip). The feed has no feed_info.txt."
+        ),
+        (
+            "La fiche de Données Québec renvoie à un répertoire; ce module lit le zip qu'il "
+            "contient (GTFS_clients.zip). Le flux n'a pas de feed_info.txt."
+        ),
+    ),
+    "stq_ferries": _quebec(
+        "stq_ferries",
+        "Société des traversiers du Québec (STQ)",
+        "Quebec-wide (ferries)",
+        "https://gtfs.traversiers.com/api/gtfs.zip",
+        "stq-gtfs-pour-les-traverses",
+        "Source: Société des traversiers du Québec, Données Québec, CC BY 4.0.",
+        "Daily per the Données Québec record.",
+        (
+            "Ferry crossings (route_type 4), for example Québec-Lévis and Sorel-Tracy-"
+            "Saint-Ignace-de-Loyola. The host serves no byte ranges, so the 71 KB zip is "
+            "downloaded whole."
+        ),
+        (
+            "Traverses (route_type 4), par exemple Québec-Lévis et Sorel-Tracy-Saint-Ignace-de-"
+            "Loyola. L'hôte ne sert pas de plages d'octets; le zip de 71 Ko est téléchargé en "
+            "entier."
+        ),
+        range_requests=False,
+    ),
+    "sttr_trois_rivieres": _quebec(
+        "sttr_trois_rivieres",
+        "Société de transport de Trois-Rivières (STTR)",
+        "Trois-Rivières",
+        f"{_DQ}a2d3c9de-4045-41e3-b2ea-5bb64bd8c50f/resource/"
+        "71d94f75-5a36-4789-b581-a21d49dcd5f5/download/gtfs.zip",
+        "gtsf",
+        "Source: Société de transport de Trois-Rivières (STTR), Données Québec, CC BY 4.0.",
+        "Each season; the feed checked 2026-10-03 (autumn 2026) runs to 2026-12-26.",
+        (
+            "The STTR renames the file each season; Données Québec serves the resource by its id "
+            "whatever the file name, so this URL keeps working. Some trips are given as "
+            "frequencies (frequencies.txt), which this module does not expand."
+        ),
+        (
+            "La STTR renomme le fichier à chaque saison; Données Québec sert la ressource par son "
+            "identifiant quel que soit le nom du fichier. Certains voyages sont décrits par "
+            "fréquences (frequencies.txt), que ce module ne développe pas."
+        ),
+    ),
+    "rimouski": _quebec(
+        "rimouski",
+        "Société des transports de Rimouski (Citébus)",
+        "Rimouski",
+        f"{_DQ}d2d92b84-4361-42f0-81eb-3c395bc54597/resource/"
+        "bd4021ba-d3ae-4d3b-b8fd-016405166761/download/gtfsrimouskibus.zip",
+        "transport-collectif",
+        "Source: Ville de Rimouski, Données Québec, CC BY 4.0.",
+        "As needed; the feed checked 2026-10-03 runs to 2027-02-14.",
+        "Published by the Ville de Rimouski. The feed has no feed_info.txt.",
+        "Publié par la Ville de Rimouski. Le flux n'a pas de feed_info.txt.",
+    ),
+    "rouyn_noranda": _quebec(
+        "rouyn_noranda",
+        "Ville de Rouyn-Noranda (transport en commun)",
+        "Rouyn-Noranda",
+        f"{_DQ}41ae2192-51ec-4e20-9a1a-6dd1ffd43777/resource/"
+        "c08636e0-5ce0-4bcf-9fb3-e3be76665c84/download/gtfs.zip",
+        "transport-en-commun-gtfs",
+        "Source: Ville de Rouyn-Noranda, Données Québec, CC BY 4.0.",
+        "As needed; the feed checked 2026-10-03 was published 2026-02-05.",
+    ),
+    "stsv_valleyfield": _quebec(
+        "stsv_valleyfield",
+        "Société de transport de Salaberry-de-Valleyfield (STSV)",
+        "Salaberry-de-Valleyfield",
+        f"{_DQ}2c84537c-0a2f-4e6f-aae8-1664bd92d90b/resource/"
+        "0e4c9cb4-7ab3-40d2-a3d8-a0ecf5d3165c/download/gtfs.zip",
+        "gtfs-stsv",
+        "Source: Société de transport de Salaberry-de-Valleyfield, Données Québec, CC BY 4.0.",
+        "Twice a year per the Données Québec record; the feed checked 2026-10-03 runs to 2026-12-31.",
+        "Some trips are given as frequencies (frequencies.txt), which this module does not expand.",
+        "Certains voyages sont décrits par fréquences (frequencies.txt), que ce module ne développe pas.",
+    ),
 }
 
 # GTFS route_type values (basic and the common extended codes).
