@@ -257,6 +257,26 @@ STEPS: list[Step] = [
             )
         ),
     ),
+    # ECCC GeoMet (the rest is in smoke_test_eccc.py): French search text,
+    # a local datetime check, and a byte budget on heavy swob rows.
+    Step(
+        "eccc",
+        "eccc_search_collections",
+        {"query": "alerte", "lang": "fr"},
+        lambda data: any(c["id"] == "weather-alerts" for c in data["collections"]),
+    ),
+    Step(
+        "eccc",
+        "eccc_query_items",
+        {"collection_id": "hydrometric-realtime", "datetime_filter": "notadate"},
+        expect_error="RFC 3339",
+    ),
+    Step(
+        "eccc",
+        "eccc_query_items",
+        {"collection_id": "swob-realtime", "limit": 1000},
+        lambda data: len(json.dumps(data)) < 1_500_000 and bool(data["items"]),
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(

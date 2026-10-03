@@ -5,13 +5,10 @@ derives outputSchema/structuredContent from the return-type annotation
 automatically. A raised exception (see shared/errors.py) becomes a real
 MCP isError:true result; tools never return an error-shaped dict.
 
-`lang` is accepted on every tool for consistency with the rest of this
-project, but MSC GeoMet has no language query parameter - bilingual
-content is already split into separate `_en`/`_fr` suffixed properties
-within a single response (e.g. weather-alerts' alert_text_en/
-alert_text_fr), not toggled by a request parameter, so `lang` has no
-effect on the upstream request. Kept purely so a French-language query
-isn't ruled out by BM25 search.
+`lang="fr"` returns French collection titles and descriptions (GeoMet's
+`lang` parameter on /collections). Item rows are the same in both
+languages: bilingual content sits in `_en`/`_fr` suffixed properties
+(e.g. weather-alerts' alert_text_en/alert_text_fr).
 """
 
 from __future__ import annotations
@@ -32,16 +29,17 @@ async def eccc_search_collections(query: str, limit: int = 25, lang: Lang = "en"
 
     Use for: finding a collection id when you only know a topic - e.g.
     "alert", "aqhi", "climate normal", "hydrometric", "swob", "marine",
-    "snowfall". Read docs://eccc/well-known-collections first - it
-    already lists the collection ids that matter most, with example
-    filters for each.
+    "snowfall". The query matches English and French text ("alerte"
+    finds weather-alerts); lang="fr" returns French titles. Read
+    docs://eccc/well-known-collections first - it already lists the
+    collection ids that matter most, with example filters for each.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     collection, search, find, discover, dataset, catalogue.
     Mots-clés : environnement canada, smc, geomet, météo, climat,
     collection, recherche, trouver, découvrir, jeu de données,
     catalogue.
     """
-    return await client.search_collections(query, limit=limit)
+    return await client.search_collections(query, limit=limit, lang=lang)
 
 
 @tool
@@ -58,7 +56,7 @@ async def eccc_list_collections(lang: Lang = "en") -> CollectionList:
     Mots-clés : environnement canada, smc, geomet, météo, climat, liste,
     inventaire, toutes les collections, catalogue, liste complète.
     """
-    return await client.list_collections()
+    return await client.list_collections(lang)
 
 
 @tool
@@ -76,7 +74,7 @@ async def eccc_get_collection(collection_id: str, lang: Lang = "en") -> Collecti
     Mots-clés : environnement canada, smc, geomet, collection, détail,
     métadonnées, propriétés interrogeables, schéma, étendue.
     """
-    return await client.get_collection(collection_id)
+    return await client.get_collection(collection_id, lang)
 
 
 @tool
@@ -100,8 +98,9 @@ async def eccc_query_items(
     every collection (see docs://eccc/well-known-collections for good
     starting `collection_id` values and example filters).
     `bbox` is `[west, south, east, north]` in decimal degrees (WGS84).
-    `datetime_filter` accepts a single RFC3339 datetime or an interval
-    (`"start/end"`, `".."` for an open end) - support genuinely varies
+    `datetime_filter` accepts a single RFC3339 date or datetime or an
+    interval (`"start/end"`, `".."` for an open end; a malformed value is
+    refused before sending) - support genuinely varies
     by collection and is not predictable from the collection's own
     metadata (confirmed: hydrometric-realtime supports it,
     weather-alerts does not and raises an error) - omit it and filter
@@ -111,9 +110,10 @@ async def eccc_query_items(
     with AND. `fields` limits which properties come back (omit for
     all). `sortby` is a property name, prefixed with `-` for descending
     (e.g. `"-publication_datetime"`). `limit` is capped at 1000 per
-    request - several collections here have hundreds of thousands of
-    rows, so page with `offset` rather than requesting everything at
-    once. Read docs://eccc/gotchas before relying on `datetime_filter`
+    request, and rows stop at about 1 MB (swob rows are ~8 KB each;
+    `note` says where to continue) - several collections here have
+    hundreds of thousands of rows, so page with `offset` rather than
+    requesting everything at once. Read docs://eccc/gotchas before relying on `datetime_filter`
     or on `climate-stations`' LATITUDE/LONGITUDE properties.
     Keywords: environment canada, eccc, msc, geomet, weather alert,
     weather forecast, snow, rain, temperature, tomorrow, current

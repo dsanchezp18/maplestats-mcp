@@ -79,10 +79,17 @@ alone):
 - No numeric rate limit is published, and no X-RateLimit-*/Retry-After
   style header was present on any live response checked this session -
   see constants.py for the conservative default used in its place.
+- `lang=fr` on `/collections` and `/collections/{id}` returns French
+  titles and descriptions ("Alertes météo" for weather-alerts, confirmed
+  live 2026-10-03); item properties are the same in both languages, with
+  bilingual content in `_en`/`_fr` suffixed properties.
 """
 
 from __future__ import annotations
 
+import json
+import re
+from datetime import date, datetime
 from typing import Any, NoReturn
 from urllib.parse import quote
 
@@ -181,12 +188,14 @@ def _collection_summary(obj: dict[str, Any]) -> CollectionSummary:
     )
 
 
-async def _all_collections() -> tuple[list[CollectionSummary], bool]:
+async def _all_collections(lang: str = "en") -> tuple[list[CollectionSummary], bool]:
     async def fetch() -> list[CollectionSummary]:
-        obj = await _get("/collections", params={"f": "json"})
+        obj = await _get("/collections", params={"f": "json", "lang": lang})
         return [_collection_summary(c) for c in list_or_empty(obj, "collections")]
 
-    return await cached_fetch("eccc:collections", constants.CACHE_TTL_COLLECTIONS_SECONDS, fetch)
+    return await cached_fetch(
+        f"eccc:collections:{lang}", constants.CACHE_TTL_COLLECTIONS_SECONDS, fetch
+    )
 
 
 def _filter_collections(
@@ -205,14 +214,14 @@ def _filter_collections(
     ][:limit]
 
 
-async def list_collections() -> CollectionList:
-    collections, was_cached = await _all_collections()
+async def list_collections(lang: str = "en") -> CollectionList:
+    collections, was_cached = await _all_collections(lang)
     return CollectionList(
         collections=collections,
         total_count=len(collections),
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections?f=json",
+            url=f"{constants.BASE_URL}/collections?f=json&lang={lang}",
             cached=was_cached,
             schema_name="eccc.CollectionList",
         ),
@@ -220,17 +229,25 @@ async def list_collections() -> CollectionList:
 
 
 async def search_collections(
-    query: str, *, limit: int = constants.COLLECTIONS_SEARCH_LIMIT_DEFAULT
+    query: str, *, limit: int = constants.COLLECTIONS_SEARCH_LIMIT_DEFAULT, lang: str = "en"
 ) -> CollectionList:
-    """Client-side substring search over the cached collection inventory."""
-    all_collections = await list_collections()
-    matches = _filter_collections(all_collections.collections, query, limit)
+    """Client-side substring search over the cached collection inventory.
+
+    Matches the English and the French titles, descriptions and keywords
+    (an "alerte" search found nothing when only English text was read),
+    and returns the collections in `lang`.
+    """
+    all_collections = await list_collections(lang)
+    other, _ = await _all_collections("fr" if lang == "en" else "en")
+    hit_ids = {c.id for c in _filter_collections(other, query, len(other))}
+    hit_ids |= {c.id for c in _filter_collections(all_collections.collections, query, 10**6)}
+    matches = [c for c in all_collections.collections if c.id in hit_ids][:limit]
     return CollectionList(
         collections=matches,
         total_count=len(matches),
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections?f=json",
+            url=f"{constants.BASE_URL}/collections?f=json&lang={lang}",
             cached=all_collections.provenance.cached,
             schema_name="eccc.CollectionList",
             coverage=f"top {limit} matches of {len(all_collections.collections)} collections searched",
@@ -269,15 +286,17 @@ def _find_link_href(links: list[dict[str, Any]], rel: str) -> str | None:
     return None
 
 
-async def get_collection(collection_id: str) -> CollectionDetail:
+async def get_collection(collection_id: str, lang: str = "en") -> CollectionDetail:
     collection_id = _require_id(collection_id, "collection_id")
     segment = _path_segment(collection_id)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"/collections/{segment}", params={"f": "json"})
+        return await _get(f"/collections/{segment}", params={"f": "json", "lang": lang})
 
     detail, was_cached = await cached_fetch(
-        f"eccc:collection:{collection_id}", constants.CACHE_TTL_COLLECTION_DETAIL_SECONDS, fetch
+        f"eccc:collection:{lang}:{collection_id}",
+        constants.CACHE_TTL_COLLECTION_DETAIL_SECONDS,
+        fetch,
     )
     queryables, _ = await _queryables(collection_id)
     bbox_list = (detail.get("extent") or {}).get("spatial", {}).get("bbox") or []
@@ -294,7 +313,7 @@ async def get_collection(collection_id: str) -> CollectionDetail:
         download_url=_find_link_href(links, "download"),
         provenance=make_provenance(
             source="eccc",
-            url=f"{constants.BASE_URL}/collections/{collection_id}?f=json",
+            url=f"{constants.BASE_URL}/collections/{collection_id}?f=json&lang={lang}",
             cached=was_cached,
             schema_name="eccc.CollectionDetail",
         ),
@@ -316,6 +335,42 @@ def _validate_known_properties(
         f"(confirmed live), so this is checked first. Known properties include: {valid_preview}"
         f"{', ...' if len(known) > _MAX_KEYS_IN_ERROR else ''}."
     )
+
+
+_INSTANT = re.compile(r"^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$")
+
+
+def _check_datetime(value: str) -> str:
+    """Check an OGC datetime (an instant, or "start/end" with ".." open).
+
+    A malformed value used to reach the server, whose HTTP 500 was then
+    read as "this collection does not support datetime filtering" even on
+    collections that do (hydrometric-realtime, live 2026-10-03).
+    """
+    value = value.strip()
+    parts = value.split("/")
+    if not value or len(parts) > 2:
+        raise InvalidInput(_DATETIME_HELP.format(value=value))
+    for part in parts:
+        if len(parts) == 2 and part in ("", ".."):
+            continue
+        if not _INSTANT.match(part):
+            raise InvalidInput(_DATETIME_HELP.format(value=value))
+        try:
+            if "T" in part:
+                datetime.fromisoformat(part)
+            else:
+                date.fromisoformat(part)
+        except ValueError as exc:
+            raise InvalidInput(_DATETIME_HELP.format(value=value)) from exc
+    return value
+
+
+_DATETIME_HELP = (
+    "datetime_filter must be an RFC 3339 date or date-time such as 2026-09-19 or "
+    "2026-09-19T00:00:00Z, or an interval start/end with .. for an open end "
+    "(2026-09-19T00:00:00Z/..), got {value!r}."
+)
 
 
 def _feature_from_json(obj: dict[str, Any]) -> Feature:
@@ -346,6 +401,8 @@ async def query_items(
         raise InvalidInput(
             f"bbox must have exactly 4 values [west, south, east, north], got {len(bbox)}."
         )
+    if datetime_filter is not None:
+        datetime_filter = _check_datetime(datetime_filter)
 
     filters = filters or {}
     names_to_check = list(filters.keys()) + list(fields or [])
@@ -377,15 +434,30 @@ async def query_items(
         )
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ITEMS_SECONDS, fetch)
-    features = [_feature_from_json(f) for f in list_or_empty(obj, "features")]
+    raw = list_or_empty(obj, "features")
+    features: list[Feature] = []
+    used = 0
+    for item in raw:
+        used += len(json.dumps(item, separators=(",", ":")))
+        if features and used > constants.ITEMS_BYTES_MAX:
+            break
+        features.append(_feature_from_json(item))
     number_matched = obj.get("numberMatched", len(features))
+    note = None
+    if len(features) < len(raw):
+        note = (
+            f"Stopped at {len(features)} of the {len(raw)} rows fetched: they reach the "
+            f"{constants.ITEMS_BYTES_MAX // 1_000_000} MB response budget. Continue with "
+            f"offset={offset + len(features)}, or pass fields to return fewer properties."
+        )
     return ItemsResult(
         collection_id=collection_id,
         items=features,
         number_matched=number_matched,
-        number_returned=obj.get("numberReturned", len(features)),
+        number_returned=len(features),
         limit=limit,
         offset=offset,
+        note=note,
         provenance=make_provenance(
             source="eccc",
             url=f"{constants.BASE_URL}/collections/{collection_id}/items",
