@@ -2890,3 +2890,58 @@ monthly rows and as the annualized row. Alberta's crude to the US in 2026-07
 Not built: HS10 export detail does not exist (exports stop at 8 digits);
 the all-commodity import month has more than 5,000 HS6 rows (the cap truncated it), past the tool's
 5,000-row cap, so full-month import totals come from `cimt_get_top_partners`.
+
+## StatCan extra SDMX spaces (CCEI and stcshared)
+
+**Status:** Shipped 2026-10-02 (`modules/statcan/sdmx_spaces/`, tools
+`sdmx_space_*`).
+
+Checked live 2026-10-02. StatCan runs two more .Stat Suite spaces beside the
+table service behind `sdmx_get_data`: `https://api.statcan.gc.ca/ccei-ccie/sdmx/rest`
+(245 flows: 119 StatCan table mirrors under agency STC, 114 under CA1.CCEI, 8
+ECCC and NRCan flows under CCEI, 4 others) and
+`https://api.statcan.gc.ca/stcshared-partagestc/sdmx/rest` (238 flows: CITH 98,
+QOL 60, PCEIP 44, MEA 18, RURAL 13, QOL.ECCC 3, QOL.ISC 1, CA1 1). Keyless.
+Every one of the 483 flows has a `NonProductionDataflow` annotation, so
+responses say the flows may change or disappear.
+
+- Formats: structures only as SDMX-JSON 1.0 (the v2 structure types answer 406);
+  data as SDMX-CSV 2.0 (SDMX-JSON 2.0 also works). `references=all` gives the
+  flow, DSD, codelists, concepts and constraints in one document.
+- Quirks handled: a key with more segments than dimensions is accepted and the
+  extras ignored (HTTP 200), so the count is checked; `lastNObservations`
+  returns newest first and can be combined with period filters (unlike the main
+  service); the data URL needs an explicit version (`latest` answers 400) so it is
+  resolved from the structure; `Accept-Language: fr` turns the CSV into
+  semicolon text; a key matching nothing is 404 `NoRecordsFound`, a bad period 422;
+  `all` is 32 MB and 6 s on the 451,360-observation inventory flow, and `all`
+  with `lastNObservations=1` timed out at 100 s, so wildcard-only keys are
+  refused for flows over 20,000 observations. A flow can carry an `Allowed`
+  constraint on one dimension and the `Actual` availability constraint
+  (`CR_A_<flow>`, all dimensions, observation count, period range); only the
+  latter says which codes have data. DF_RURAL_12100138, 12100139 and 14100453
+  have a structure but no mapping set, so their data answers 404.
+- Search (`sdmx-sfs.statcan.gc.ca/api/search?tenant=...`, POST JSON): tenants
+  `statcan-ccei-public` (122 of 245 flows), `statcan-stcshared-rural-public`,
+  `-cith-public` and `-pceip-public`; QOL and MEA flows are in no tenant, so
+  `sdmx_space_list_flows` (the REST list) covers them. Facet filtering is a
+  `facets` object of facet name to raw values; `filters`, `constraints` and `fq`
+  are silently ignored. A response is 0.7 to 1.6 MB whatever `rows` is.
+- Content confirmed: `GHG_IPCC_TABLE` 2.0 (451,360 observations, 1990-2024, key
+  FREQ.REF_AREA.IPCC_CATEGORY.GHG_ECCC; Alberta total CO2EQ 2024 =
+  260,143.6 kt); `GHG_IPCC_PROJ_TABLE` (scenarios NIR 2025, 2025 With Measures,
+  2025 With Additional Measures); air pollutants, black carbon, `DF_NRCAN_EE`;
+  `DF_WATER_ADVISORY` (ISC): 31 in 2023, 29 in 2024, 37 in 2025.
+- Walk of every flow (all 483 structures parsed; data for 476 of 483 (a series per flow, 33 found only after widening the first dimension); no data mapping for 3 RURAL flows; DF_EDUC_37100302 holds no data; the two DF_36100478 mirrors time out on a wide key).
+- Licence: no licence text in any dataflow annotation, description or structure.
+  The explorers' copyright link goes to StatCan's terms and conditions (the
+  footer licence text concerns the explorer's source code). The Open Licence says
+  third parties keep their rights in the Information. The ECCC, NRCan and ISC
+  source datasets are listed on open.canada.ca under the Open Government
+  Licence - Canada (checked by search for the inventory, projections, air
+  pollutant, black carbon, energy use and drinking water advisory datasets); a
+  per-flow licence is not published by the service. Responses carry the StatCan
+  Open Licence, plus a caveat for CCEI-agency and ECCC/ISC flows.
+- robots.txt: HTTP 404 on api.statcan.gc.ca, sdmx-sfs.statcan.gc.ca,
+  de-ccei.statcan.gc.ca and de-rural.statcan.gc.ca. The explorer pages carry
+  `<meta name="robots" content="noindex, nofollow">`, a search-engine hint.
