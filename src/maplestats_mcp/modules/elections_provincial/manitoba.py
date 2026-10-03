@@ -25,8 +25,9 @@ Each general election's page links, under /downloads/:
 Summing the candidate rows gives NDP 32, PC 24 and Liberal 1 in 1999, 35, 20 and 2 in 2003,
 36, 19 and 2 in 2007, 37, 19 and 1 in 2011, PC 40, NDP 14 and Liberal 3 in 2016, 36, 18 and
 3 in 2019, and NDP 34, PC 22 and Liberal 1 in 2023: the seats the legislature was sworn in
-with. The voting-area rows of every division add up to the division's votes in the summary of
-votes received. Candidate names keep the capitals the files use ("Stu BRIESE" in 2011).
+with. The voting-area rows add up to the division's votes in the summary of votes received
+for 387 of the 399 divisions; in the other twelve (three in 2003, six in 2007, two in 2016,
+one in 2019) the voting-area file itself differs, so responses give both sums. Candidate names keep the capitals the files use ("Stu BRIESE" in 2011).
 """
 
 from __future__ import annotations
