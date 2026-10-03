@@ -335,6 +335,11 @@ class MemberStream:
                             f"{member.name} inflated past {self.max_inflated_bytes:,} bytes.",
                             self.scanned,
                         )
+                    # Past the final block, zlib keeps any bytes left (the
+                    # re-aligned stream's last partial byte) as unconsumed
+                    # input when max_length is given; they are not data.
+                    if inflater.eof:
+                        break
                     pending_input = inflater.unconsumed_tail
             except zlib.error as exc:
                 raise UpstreamError(

@@ -21,7 +21,7 @@ from itertools import pairwise
 import httpx
 import pytest
 
-from maplestats_mcp.shared import remote_zip
+from maplestats_mcp.shared import remote_zip, zip_stream
 from maplestats_mcp.shared.remote_zip import ZipMember
 from maplestats_mcp.shared.zip_stream import (
     AccessPoint,
@@ -286,3 +286,22 @@ async def test_a_slow_range_does_not_outlive_the_deadline(httpx_mock):
     with pytest.raises(ScanLimitExceeded, match="passed"):
         await _read_all(stream)
     assert time.monotonic() - started < 1.5
+
+
+async def test_bytes_after_the_final_block_do_not_stall_the_stream(httpx_mock, monkeypatch):
+    # Found live 2026-10-03 resuming 20261001.csv at bit 7 of a byte: the
+    # re-aligned stream ends with a partial byte; when the last range's
+    # output took more than one inflate step, zlib kept that byte as
+    # unconsumed input after the final block and the loop never ended.
+    text = _delta_text(3000)
+    body, member = _member_zip(text)
+    padded = ZipMember(
+        member.name, member.compressed_size + 1, member.size, member.method, member.header_offset
+    )
+    monkeypatch.setattr(zip_stream, "_INFLATE_STEP", 4096)
+    httpx_mock.add_callback(_serve(body), url=URL, is_reusable=True)
+    stream = MemberStream(
+        URL, padded, chunk_bytes=10**6, max_scan_bytes=10**9, max_inflated_bytes=10**9
+    )
+    out = await asyncio.wait_for(_read_all(stream), 10)
+    assert out.decode() == text.rstrip("\n")
