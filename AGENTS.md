@@ -172,8 +172,9 @@ assumption shared by the code and its tests.
 7. Add live steps for every tool to `scripts/smoke_test_modules.py`
    (or write a dedicated `scripts/smoke_test_<module>.py`), and run
    them. `tests/test_live_coverage.py` fails for a module with
-   neither: the Earthquakes Canada module passed all its mocked tests
-   while every live call failed.
+   neither, and for any tool that no step and no client call in the
+   module's own script reaches: the Earthquakes Canada module passed
+   all its mocked tests while every live call failed.
 8. Add the module to `SOURCES` in `scripts/build_site.py` (display
    name in English and French, level, provinces), and a `FAMILIES`
    title for each sub-API folder. The website's tool atlas is generated
@@ -191,12 +192,23 @@ uv run ruff check src tests      # lint
 uv run ruff format src tests     # format
 uv run pyright                   # type check — must be 0 errors
 uv run pytest                    # unit tests, all mocked, no network
+uv run pytest -n 4 --dist loadfile   # the same in parallel (pytest-xdist), as CI runs it
 ```
 
 The root `conftest.py` removes tenacity's retry backoff and the
 per-source rate-limit waits in tests (retry counts and rules are
-unchanged), which keeps the mocked suite at seconds rather than
-minutes. Don't add real `sleep`s to tests to compensate.
+unchanged), and empties the response and file caches before each test,
+which keeps the mocked suite fast and independent of test order. Don't
+add real `sleep`s to tests to compensate.
+
+On 2026-10-03 the whole suite took about 2.5 minutes in one process and
+about 1 minute with 4 workers. More workers than about 4 or 8 is slower
+on Windows, because every worker imports the whole server (about 13 s).
+Expensive setup belongs in a module-scoped fixture: `tests/test_site.py`
+builds the website once, and the discovery tests ask every query over one
+client session. Keep tests independent of order (each one mocks or
+resets the module-level state it reads), so a run with
+`uv run --with pytest-randomly pytest` passes too.
 
 **Before merging a change touching a client.py**, also run the live
 smoke test — mocked tests cannot catch a real API's actual quirks

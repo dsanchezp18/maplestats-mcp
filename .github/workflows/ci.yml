@@ -21,4 +21,8 @@ jobs:
       - run: uv run ruff check src tests scripts
       - run: uv run ruff format --check src tests scripts
       - run: uv run pyright
-      - run: uv run pytest -q
+      # pytest-xdist, one worker per core (4 on a standard runner). loadfile
+      # keeps each test file on one worker, so a module-scoped fixture (the
+      # built website, one search session for the discovery queries) is set
+      # up once rather than once per worker.
+      - run: uv run pytest -q -n auto --dist loadfile

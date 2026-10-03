@@ -7,7 +7,7 @@ import sys
 import pytest
 from tenacity import BaseRetrying, wait_none
 
-from maplestats_mcp.shared import file_download
+from maplestats_mcp.shared import cache, file_download
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 
@@ -38,6 +38,18 @@ def cloudflare_challenge() -> dict:
 def _empty_file_cache() -> None:
     """Downloaded files are cached by URL; a test must not see another test's bytes."""
     file_download.clear_cache()
+
+
+@pytest.fixture(autouse=True)
+def _empty_response_cache() -> None:
+    """cached_fetch results live for minutes; a test must not see another test's response.
+
+    Most test files cleared it themselves, but not all: in random order,
+    statcan/wds's 409 test got cube 18100004's metadata cached by an
+    earlier test instead of its mocked error (2026-10-03).
+    """
+    cache._caches.clear()
+    cache._inflight.clear()
 
 
 @pytest.fixture(autouse=True)

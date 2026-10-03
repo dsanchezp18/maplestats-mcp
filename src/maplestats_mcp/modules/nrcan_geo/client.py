@@ -37,6 +37,11 @@ async def _get(url: str, params: dict[str, Any], ttl: int) -> tuple[Any, bool]:
                 # Geonames answers a malformed parameter with a Tomcat 404 page.
                 raise InvalidInput(f"nrcan_geo: {url} rejected the request ({status}).") from exc
             raise UpstreamError(f"nrcan_geo: {url} returned HTTP {status}.") from exc
+        except httpx.DecodingError as exc:
+            # DecodingError is an httpx.HTTPError, so without this branch a 200 HTML
+            # page was reported as "did not respond in time" (confirmed by
+            # test_html_or_non_list_body_is_upstream_error, 2026-10-03).
+            raise UpstreamError(f"nrcan_geo: {url} did not return JSON.") from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(f"nrcan_geo: {url} did not respond in time.") from exc
 
