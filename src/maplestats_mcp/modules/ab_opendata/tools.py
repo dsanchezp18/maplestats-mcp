@@ -152,8 +152,11 @@ async def ab_opendata_read_resource(
     Health indicators by zone, population projections, post-secondary enrolment,
     municipal financial returns and tax rates, oil sands royalty and project data,
     highway traffic volumes, live births and deaths, wildfire records. `url` is a
-    resource URL from ab_opendata_search_datasets. The largest sheet (most cells; indexes and notes are skipped) is read unless
-    `sheet` names another (all names come back). `header_row` is guessed (the first
+    resource URL from ab_opendata_search_datasets. With several sheets and no
+    `sheet`, the largest is read only when it holds most of the workbook (a notes
+    sheet beside the table); otherwise no rows come back, only the sheet list, so
+    pick one (same rule as ckan_read_resource). A CSV has no sheets: leave `sheet`
+    unset. `header_row` is guessed (the first
     row with three filled cells) and can be set as a 1-based row number;
     `header_rows` (1 to 5) joins that many rows into the column names when a
     header spans several rows (years above labels, as in highway traffic

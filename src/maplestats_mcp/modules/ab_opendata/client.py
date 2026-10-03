@@ -381,21 +381,19 @@ async def _body(url: str, size_hint: int | None) -> tuple[bytes, bool]:
             context="ab_opendata",
         )
 
+    # The same key as ckan_read_resource (portal="ab") uses for this URL, so one
+    # copy of the file sits in the shared byte budget.
     downloaded, cached = await file_download.cached_download(
-        f"ab_opendata:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch
+        file_download.cache_key(url), constants.CACHE_TTL_FILE_SECONDS, fetch
     )
     return downloaded.body, cached
 
 
-def _choose_sheet(sizes: list[tuple[str, int, int]], sheet: str | None) -> str:
-    names = [n for n, _, _ in sizes]
-    if sheet is None:
-        return tables.largest_sheet(sizes)
-    wanted = sheet.strip().casefold()
-    for name in names:
-        if name.casefold() == wanted:
-            return name
-    raise InvalidInput(f"ab_opendata: no sheet {sheet!r}; sheets are {names}.")
+def _choose_sheet(
+    sizes: list[tuple[str, int, int]], sheet: str | None, fmt: tables.FileFormat
+) -> tuple[str | None, tables.SheetChoice]:
+    """The sheet policy shared with ckan_read_resource (shared/file_tables.py)."""
+    return tables.choose_sheet(sizes, sheet, fmt, "ab_opendata")
 
 
 def _attribution(entry: DatasetEntry) -> str | None:
@@ -417,7 +415,7 @@ async def describe_resource(
     body, cached = await _body(url, resource.size_bytes)
     fmt = tables.detect_format(body, resource.format)
     sizes = await run_parse(tables.sheet_sizes, body, fmt)
-    only = _choose_sheet(sizes, sheet) if sheet is not None else None
+    only = _choose_sheet(sizes, sheet, fmt)[0] if sheet is not None else None
     total, summaries = await run_parse(tables.describe, body, fmt, only)
     attribution = _attribution(entry)
     return ResourceStructure(
@@ -488,7 +486,41 @@ async def read_resource(
     names = [n for n, _, _ in sizes]
     if not names:
         raise UpstreamError(f"ab_opendata: {url} has no sheets.")
-    chosen = tables.CSV_SHEET if fmt == "csv" else _choose_sheet(sizes, sheet)
+    chosen, how = _choose_sheet(sizes, sheet, fmt)
+    attribution = _attribution(entry)
+    if chosen is None:
+        return ResourceRows(
+            url=url,
+            format=fmt,
+            resource_name=resource.name,
+            dataset=entry.name,
+            dataset_title=entry.title,
+            sheets=names,
+            sheet=None,
+            sheet_chosen_by="none",
+            header_row=None,
+            all_columns=[],
+            columns=[],
+            rows=[],
+            total_rows=0,
+            offset=offset,
+            truncated=False,
+            licence=entry.licence,
+            ogl_alberta=entry.ogl_alberta,
+            attribution=attribution,
+            licence_note=entry.licence_note,
+            provenance=make_provenance(
+                source=constants.PROVENANCE_SOURCE,
+                url=url,
+                cached=cached,
+                schema_name="ab_opendata.ResourceRows",
+                freshness=_freshness(entry, resource),
+                coverage=attribution or entry.licence_note,
+                limits=f"the workbook has {len(names)} sheets of similar size and none was "
+                "requested, so no rows were read: pick one from `sheets` and pass it as "
+                "`sheet` (ab_opendata_describe_resource shows each sheet's header).",
+            ),
+        )
     result = await run_parse(
         tables.scan,
         body,
@@ -504,6 +536,11 @@ async def read_resource(
     )
     more = offset + limit < result.total_rows
     notes = []
+    if how == "largest":
+        notes.append(
+            f"the workbook has {len(names)} sheets and none was requested, so the largest "
+            f"({chosen!r}) was read; pass sheet= for another"
+        )
     if result.capped:
         notes.append(f"the file was scanned only up to {tables.MAX_SCAN_ROWS} rows")
     if more:
@@ -519,6 +556,7 @@ async def read_resource(
         dataset_title=entry.title,
         sheets=names,
         sheet=chosen,
+        sheet_chosen_by=how,
         header_row=result.header_row,
         all_columns=result.all_columns,
         columns=result.columns,

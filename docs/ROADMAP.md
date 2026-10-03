@@ -6,7 +6,7 @@ any narrower or broader source list implied elsewhere.
 
 **State at 2026-10-03:** 297 tools in 57 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
-`Not built`). Local coverage is 81 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
+`Not built`). Local coverage is 80 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
 and the candidates listed at the end of this file.
 
@@ -74,7 +74,7 @@ are out of scope unless they are later promoted explicitly.
 | Sequence | Adaptor | Provincial coverage | Reason |
 |---|---|---|---|
 | 1 | Socrata | Nova Scotia, New Brunswick | Shipped 2026-09-18: `socrata_*` (`portal="ns"`)/`socrata_*` (`portal="nb"`), verified live against `api.us.socrata.com`'s catalog API, the per-domain Views API, and the SODA row-query API for both … [Details](findings/provincial-sources.md#sequence-1-socrata) |
-| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Saskatchewan, Prince Edward Island | Shipped 2026-09-18: `arcgis_hub_*` (`portal="mb"`)/`arcgis_hub_*` (`portal="sk"`)/`arcgis_hub_*` (`portal="pe"`), verified live against all three portals' Hub Search API v3 … [Details](findings/provincial-sources.md#sequence-2-arcgis-hub--arcgis-rest) |
+| 2 | ArcGIS Hub / ArcGIS REST | Manitoba, Prince Edward Island | Shipped 2026-09-18: `arcgis_hub_*` (`portal="mb"`)/`arcgis_hub_*` (`portal="pe"`) (the Saskatchewan GeoHub portal was removed 2026-10-03), verified live against the portals' Hub Search API v3 … [Details](findings/provincial-sources.md#sequence-2-arcgis-hub--arcgis-rest) |
 | 3 | Newfoundland and Labrador custom portal | Newfoundland and Labrador | The provincial open-data catalogue has its own page-based interface and downloadable tabular/spatial files. [Details](findings/provincial-sources.md#sequence-3-newfoundland-and-labrador-custom-portal) |
 
 | Province | Status | Portal (reference) |
@@ -87,7 +87,7 @@ are out of scope unless they are later promoted explicitly.
 | Alberta | Shipped | open.alberta.ca, CKAN Action API: `ckan_*` (`portal="ab"`), 8 tools (added `ckan_datastore_search` 2026-09-20). [Details](findings/provincial-sources.md#alberta) |
 | Alberta Wildfire live status | Shipped | Shipped 2026-10-02: `modules/ab_wildfire/` (7 tools, `ab_wildfire_*`) over Alberta Wildfire's public status-map feature services (services.arcgis.com/Eb8P5h4CJk8utIBz, no key): fire points with status, cause, size class, area and forest area (this year plus carry-over, active and extinguished, mutual aid included; a same-date comparison set for the previous five years), mapped fire perimeters (GeoJSON on request), fire danger rating by point or box, fire bans, restrictions, advisories and forest closures by point or name, and the season dashboard against 5, 10 and 25-year averages. Open Government Licence - Alberta (open.alberta.ca dataset `alberta-wildfire-status-map`); each response repeats the attribution. Active layers are empty off-season. Not built: evacuation orders (no open layer found) and the municipal-reported wildfire layers. [Details](findings/provincial-sources.md#alberta-wildfire-live-status) |
 | Manitoba | Shipped | geoportal.gov.mb.ca (Data MB), ArcGIS Hub: `arcgis_hub_*` (`portal="mb"`), 3 tools (dataset search, item detail with download links, direct FeatureServer/MapServer row queries). [Details](findings/provincial-sources.md#manitoba) |
-| Saskatchewan | Shipped | geohub.saskatchewan.ca (Saskatchewan GeoHub), ArcGIS Hub: `arcgis_hub_*` (`portal="sk"`), 3 tools, same shape as Manitoba's. [Details](findings/provincial-sources.md#saskatchewan) |
+| Saskatchewan | Removed | The Saskatchewan GeoHub portal (geohub.saskatchewan.ca) was removed from `arcgis_hub_*` on 2026-10-03. Saskatoon (`arcgis_hub_*`, `portal="saskatoon"`) and Regina (`ckan_*`, `portal="regina"`) are still covered. [Details](findings/provincial-sources.md#saskatchewan) |
 | Nova Scotia | Shipped | data.novascotia.ca, Socrata (SODA): `socrata_*` (`portal="ns"`), 5 tools (catalogue search, dataset detail, categories, tags, direct SoQL row queries). English-only. Verified against live discovery/Views/SODA responses. |
 | New Brunswick | Shipped | gnb.socrata.com, Socrata (SODA): `socrata_*` (`portal="nb"`), 5 tools (catalogue search, dataset detail, categories, tags, direct SoQL row queries). [Details](findings/provincial-sources.md#new-brunswick) |
 | Newfoundland and Labrador | Shipped | `opendata.gov.nl.ca`, custom HTML catalogue: local search/pagination over tabular and spatial listings, tag discovery, dataset metadata, and official CSV/XLS/TXT/KMZ/shapefile download links. [Details](findings/provincial-sources.md#newfoundland-and-labrador) |

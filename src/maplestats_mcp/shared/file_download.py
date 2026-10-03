@@ -221,6 +221,13 @@ def clear_cache() -> None:
     _CACHE.clear()
 
 
+def cache_key(url: str) -> str:
+    """The cache key for a downloaded file: the URL alone, so every module reading
+    the same file (ckan_read_resource and ab_opendata both read open.alberta.ca)
+    shares one copy in the byte budget."""
+    return f"file:{url}"
+
+
 async def cached_download(
     key: str, ttl: float, fetch: Callable[[], Awaitable[Downloaded]]
 ) -> tuple[Downloaded, bool]:

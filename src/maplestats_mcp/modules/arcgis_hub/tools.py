@@ -32,12 +32,23 @@ async def arcgis_hub_list_portals(lang: Lang = "en") -> PortalList:
     """List every ArcGIS Hub open-data portal (province, city, region) and its portal key.
 
     Use for: finding the `portal` key the other arcgis_hub_ tools need,
-    and portal-specific caveats. Covers Manitoba (mb), Saskatchewan
-    (sk), Prince Edward Island (pe), London, Kitchener,
+    and portal-specific caveats. Covers Manitoba (mb), Prince Edward Island (pe), London, Kitchener,
     Windsor, Saskatoon, Victoria, Surrey, Ottawa, Halifax, Mississauga,
     Peel, Durham, Waterloo Region, Metro Vancouver, York, Markham,
     Newmarket, Aurora, Medicine Hat, Grande Prairie, Grande Prairie
-    County, St. Albert, Lethbridge, Airdrie, Strathcona County.
+    County, St. Albert, Lethbridge, Airdrie, Strathcona County, Parkland
+    County, Sturgeon County, Edmonton Metropolitan Region Board, Alberta
+    Geological Survey, Red Deer, Cochrane, Okotoks, Oakville, Burlington,
+    Milton, Brampton, Kingston, Kelowna, Barrie, Burnaby, Fredericton,
+    Greater Sudbury, Guelph, Moncton, Abbotsford, Whitby, Oshawa, Niagara
+    Falls, Niagara Region, St. Catharines, Thunder Bay, Peterborough,
+    Coquitlam, Saanich, Kamloops, Prince George, Delta, Yellowknife,
+    Cambridge, Maple Ridge, Pickering, Sarnia, Saint John, Port Moody,
+    White Rock, Penticton, Orangeville, Canmore, BC Energy Regulator,
+    Toronto Police Service, Ottawa Police Service, Conservation Halton,
+    Credit Valley, Niagara Peninsula, Hamilton and Central Lake Ontario
+    conservation authorities, Quinte Conservation, Ontario GeoHub (Land
+    Information Ontario) and Parks Canada.
     Keywords: ArcGIS Hub, open data portal, municipal, city, region,
     province, GIS, geospatial, list portals.
     Mots-clés : ArcGIS Hub, portail de données ouvertes, municipal,
@@ -59,17 +70,17 @@ async def arcgis_hub_search_datasets(
     """Search one Canadian ArcGIS Hub open-data catalogue (city, region, or province).
 
     Use for: finding datasets by topic, tag, item type, or free-text
-    query on Manitoba, Saskatchewan, Prince Edward Island,
-    London, Kitchener, Windsor, Saskatoon, Victoria, Surrey, Ottawa,
-    Halifax, Mississauga, Peel, Durham, Waterloo Region, Metro
-    Vancouver, York, Markham, Newmarket, Aurora, Medicine Hat, Grande
-    Prairie, Grande Prairie County, St. Albert, Lethbridge, Airdrie, or
-    Strathcona County open data. Keywords: ArcGIS Hub, open data,
-    dataset search, catalogue, municipal, city, region, province, GIS,
-    geospatial.
+    query (zoning, trails, parks, police shootings, crime, roads,
+    addresses, boundaries) on a city, region, province, police service,
+    conservation authority or federal agency portal: see
+    arcgis_hub_list_portals for the full list (Ottawa, Toronto Police,
+    Parks Canada, Yellowknife, Manitoba, Halifax, Surrey, Burnaby,
+    Kelowna and more). Offset plus limit stops at 10,000.
+    Keywords: ArcGIS Hub, open data, dataset search, catalogue,
+    municipal, city, region, province, GIS, geospatial, zoning, trails.
     Mots-clés : ArcGIS Hub, données ouvertes, recherche de jeux de
     données, catalogue, municipal, ville, région, province, SIG,
-    géospatial.
+    géospatial, zonage, sentiers.
     """
     return await client.search_datasets(
         portal, query, tag=tag, item_type=item_type, limit=limit, offset=offset, lang=lang
@@ -82,8 +93,10 @@ async def arcgis_hub_get_dataset(portal: PortalKey, item_id: str, lang: Lang = "
 
     Use for: inspecting a dataset found with arcgis_hub_search_datasets
     (same `portal`) before querying its rows or downloading it — Ottawa,
-    Halifax, Manitoba, Saskatchewan, PEI, and every other arcgis_hub
-    portal. Keywords: ArcGIS Hub, dataset detail, FeatureServer,
+    Halifax, Manitoba, PEI, and every other arcgis_hub portal. Download
+    links depend on the item: export links in the formats the service
+    allows, one stored-file link for a file item, none for an Image
+    Service. Keywords: ArcGIS Hub, dataset detail, FeatureServer,
     MapServer, metadata, licence, download, CSV, shapefile, GeoJSON, KML.
     Mots-clés : ArcGIS Hub, détail du jeu de données, FeatureServer,
     MapServer, métadonnées, licence, téléchargement, CSV, shapefile,

@@ -772,7 +772,6 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
     },
     "arcgis_hub": {
         "mb": ("MB", _P),
-        "sk": ("SK", _P),
         "pe": ("PE", _P),
         "alberta_geological_survey": ("AB", _P),
         "london": ("ON", _M),

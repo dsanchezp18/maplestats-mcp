@@ -56,7 +56,20 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
         ),
     ),
     "manitoba": ("Manitoba", (_arcgis("mb"),)),
-    "saskatchewan": ("Saskatchewan", (_arcgis("sk"),)),
+    # No provincial catalogue is covered; the two largest cities publish their own.
+    "saskatchewan": (
+        "Saskatchewan",
+        (
+            PlanStep(
+                "arcgis_hub_search_datasets",
+                "search with portal='saskatoon' (city data; no provincial portal is covered)",
+            ),
+            PlanStep(
+                "ckan_search_datasets",
+                "search with portal='regina' (city data; no provincial portal is covered)",
+            ),
+        ),
+    ),
     "prince edward island": ("Prince Edward Island", (_arcgis("pe"),)),
     "nova scotia": ("Nova Scotia", (_socrata("ns"),)),
     "new brunswick": ("New Brunswick", (_socrata("nb"),)),
