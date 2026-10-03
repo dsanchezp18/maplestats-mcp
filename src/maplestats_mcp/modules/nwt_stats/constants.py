@@ -216,12 +216,20 @@ TITLE_MAX_CHARS = 300
 
 PROVENANCE_SOURCE = "nwt-bureau-of-statistics"
 LICENCE_URL = "https://www.gov.nt.ca/en/open-government-licence-northwest-territories"
+TERMS_URL = "http://www.fin.gov.nt.ca/terms-use"
 LICENCE = {
-    "en": "Open Government Licence - Northwest Territories (reuse allowed, including "
+    "en": "Two statements apply. (1) Open Government Licence - Northwest Territories, which "
+    "the territory's open data catalogue lists for these files (reuse allowed, including "
     "commercial, with attribution). Attribution: Contains information licensed under the "
-    f"Open Government Licence - Northwest Territories. {LICENCE_URL}",
-    "fr": "Licence du gouvernement ouvert - Territoires du Nord-Ouest (réutilisation "
-    "permise, y compris commerciale, avec attribution). Attribution : Contient des "
-    "renseignements visés par la licence du gouvernement ouvert des Territoires du "
-    f"Nord-Ouest. {LICENCE_URL}",
+    f"Open Government Licence - Northwest Territories. {LICENCE_URL} "
+    "(2) The general terms of use linked from statsnwt.ca ask users to request permission "
+    f"before commercial use. {TERMS_URL} Check which applies to your use.",
+    "fr": "Deux énoncés s'appliquent. (1) Licence du gouvernement ouvert - Territoires du "
+    "Nord-Ouest, que le catalogue de données ouvertes du territoire indique pour ces "
+    "fichiers (réutilisation permise, y compris commerciale, avec attribution). "
+    "Attribution : Contient des renseignements visés par la licence du gouvernement "
+    f"ouvert des Territoires du Nord-Ouest. {LICENCE_URL} "
+    "(2) Les conditions d'utilisation générales liées à statsnwt.ca demandent d'obtenir "
+    f"une permission avant tout usage commercial. {TERMS_URL} Vérifiez lequel s'applique "
+    "à votre usage.",
 }
