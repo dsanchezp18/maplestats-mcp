@@ -34,6 +34,17 @@ module makes one request every two seconds to that host. Feeds that overlap a
 live agency are listed but refused, TransLink is excluded for its terms, and
 feeds with neither a licence page nor an attribution line are excluded.
 
+Quebec regional and ferry feeds (2026-10-03), all listed on Données Québec
+under CC BY 4.0: exo's commuter trains and ten bus sectors (exo's eleventh,
+citrous, still publishes a 2023 schedule and is left out), RTC Québec City,
+STL Laval, STS Sherbrooke, STQ ferries, Trois-Rivières, Rimouski,
+Rouyn-Noranda and Salaberry-de-Valleyfield. The agencies' own terms add to
+that record in two cases: the RTC asks for a credit line naming the feed's
+update date, and the STL's GTFS terms bar commercial use without its written
+permission. Their current files are newer than StatCan's 2025 snapshot, so the
+same agencies in the national database are marked as served live. The STQ host
+serves no byte ranges (a 71 KB zip, read whole).
+
 Terms checked live 2026-10-01: STM (CC BY 4.0), OC Transpo (City of
 Ottawa open data terms) and Calgary Transit (Open Government Licence - City
 of Calgary) permit reuse and redistribution with attribution. TransLink is
@@ -65,8 +76,9 @@ Confirmed live 2026-10-01 (see docs/ROADMAP.md for the full table):
 MODULE_NAME = "transit"
 MODULE_DESCRIPTION = (
     "Static GTFS schedules of open Canadian transit agencies (STM bus, OC "
-    "Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit "
-    "systems, plus about 100 more agencies from Statistics Canada's 2025 Canadian Public "
+    "Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, 12 BC Transit "
+    "systems, and in Quebec exo trains and buses, RTC, STL, STS, STQ ferries and five "
+    "smaller networks, plus about 100 more agencies from Statistics Canada's 2025 Canadian Public "
     "Transit Network Database): list agencies and feeds, search routes and stops, a stop's scheduled "
     "departures on a date, and a route's trips and frequency by hour. Read on demand "
     "from the agency's own zip by HTTP range (BC Transit's host cannot serve ranges, "
@@ -76,7 +88,8 @@ MODULE_DESCRIPTION = (
 MODULE_DESCRIPTION_FR = (
     "Horaires GTFS statiques d'organismes de transport en commun canadiens à données "
     "ouvertes (STM autobus, OC Transpo, Calgary Transit, VIA Rail, GO Transit, "
-    "UP Express et 12 réseaux de BC Transit, plus une centaine d'autres organismes de la "
+    "UP Express, 12 réseaux de BC Transit et, au Québec, les trains et autobus d'exo, le "
+    "RTC, la STL, la STS, les traversiers de la STQ et cinq réseaux régionaux, plus une centaine d'autres organismes de la "
     "Base de données du réseau de transport en commun canadien de Statistique Canada, 2025) : "
     "liste des organismes et des flux, recherche de lignes et d'arrêts, passages "
     "prévus à un arrêt à une date donnée, et nombre de voyages et fréquence horaire "

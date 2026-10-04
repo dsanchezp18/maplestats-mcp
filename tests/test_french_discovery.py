@@ -66,6 +66,10 @@ CASES = [
     ("statistiques de rappels par année", "recalls_summarize"),
     ("rappel d'aliments allergènes", "recalls_search"),
     ("rappel alimentaire", "recalls_search"),
+    ("numéro d'identification du médicament DIN", "hc_drug_get_product"),
+    ("produits de santé naturels homologués numéro NPN", "hc_nhp_search_products"),
+    ("homologation des instruments médicaux", "hc_device_search_licences"),
+    ("déclarations d'effets indésirables Canada Vigilance", "hc_vigilance_search_reactions"),
     ("rappel de jouets", "recalls_search"),
     ("produits visés par le rappel numéro de lot", "recalls_get"),
     ("comités dont un député est membre", "ourcommons_get_member_roles"),
@@ -171,6 +175,13 @@ CASES = [
     ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
     ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
     ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
+    # Sources fédérales ajoutées le 2026-10-03.
+    ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
+    ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),
+    ("limite maximale de résidus de pesticides sur les pommes", "pmra_get_residue_limits"),
+    ("production minérale par province valeur des expéditions", "nrcan_minerals_get_production"),
+    ("historique de la dette fédérale tableaux de référence financiers", "finance_frt_list_tables"),
+    ("revue financière déficit fédéral cumulatif mensuel", "finance_fiscal_monitor_get_tables"),
 ]
 
 

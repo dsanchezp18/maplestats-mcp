@@ -17,6 +17,7 @@ Kind = Literal[
     "zip",  # a ZIP whose contents the user picks
     "xlsx",
     "json",
+    "sdmx",  # SDMX-ML GenericData (StatCan's SDMX service): one row per observation
     "html_table",
     "feed",  # RSS or Atom
     "ivt",  # Beyond 20/20, read only by canivt in R
@@ -83,9 +84,12 @@ class Spec:
     # CSV that is not metadata).
     member_pattern: str = ""
     html_table_index: int = 0
-    # xlsx: the sheet to read and how many rows sit above its header.
+    # xlsx and csv: the sheet to read and how many rows sit above its header
+    # (CMHC's CSV exports start with title lines).
     sheet: str = ""
     skip_rows: int = 0
+    # csv: the data ends at the first blank line; notes follow it (CMHC).
+    stop_at_blank: bool = False
     filters: list[Filter] = field(default_factory=list)
     sort_by: str = ""
     sort_descending: bool = False

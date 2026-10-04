@@ -146,8 +146,10 @@ def _r_filter(item: Filter) -> str:
     if item.op == "starts":
         return f"str_starts(as.character({columns[0]}), fixed({_quote(str(item.value))}))"
     symbol = {"eq": "==", "ge": ">=", "le": "<="}[item.op]
-    value = item.value if isinstance(item.value, int | float) else _quote(str(item.value))
-    return f"{columns[0]} {symbol} {value}"
+    if isinstance(item.value, int | float) and not isinstance(item.value, bool):
+        # Delimited files are read as text, so numbers are compared as numbers.
+        return f"suppressWarnings(as.numeric({columns[0]})) {symbol} {item.value}"
+    return f"as.character({columns[0]}) {symbol} {_quote(str(item.value))}"
 
 
 def _r_json(value: Any) -> str:
@@ -183,6 +185,16 @@ def _r_download(spec: Spec, path: str) -> str:
     return f'{request} |>\n  req_perform(path = "{path}")\n'
 
 
+def _trim_comment(prefix: str, spec: Spec) -> str:
+    """Why a delimited file is cut before reading (title lines, trailing notes)."""
+    parts = []
+    if spec.skip_rows:
+        parts.append(f"opens with {spec.skip_rows} title line(s) above its header")
+    if spec.stop_at_blank:
+        parts.append("ends with notes below a blank line")
+    return f"{prefix} The file {' and '.join(parts)}; read the table between.\n\n"
+
+
 def _r_read(spec: Spec) -> tuple[list[str], str]:
     path = f"data/raw/{spec.file_name}"
     na = (
@@ -190,9 +202,27 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
         if spec.na_values
         else ""
     )
-    read_args = f"delim = {_quote(spec.delimiter)}{na}, show_col_types = FALSE"
+    # Every column is read as text: guessing at read time turns codes into
+    # numbers ("000000001" -> 1, coordinate "2.10" -> 2.1); the standard
+    # cleaning converts the columns that are really numbers.
+    read_args = (
+        f"delim = {_quote(spec.delimiter)}{na},\n  col_types = cols(.default = col_character())"
+    )
     download = _r_download(spec, path)
     fetch_packages = ["httr2"] if _needs_request(spec) else []
+    if spec.kind == "csv" and (spec.skip_rows or spec.stop_at_blank):
+        stop = (
+            'lines <- lines[seq_len(match(TRUE, str_trim(lines) == "", nomatch = length(lines) + 1) - 1)]\n'
+            if spec.stop_at_blank
+            else ""
+        )
+        read = (
+            f"{_trim_comment('#', spec)}"
+            f'lines <- read_lines("{path}", skip = {spec.skip_rows})\n'
+            f"{stop}"
+            f'data <- read_delim(I(str_c(lines, collapse = "\\n")), {read_args})\n'
+        )
+        return ["readr", "stringr", *fetch_packages], f"{download}\n{read}"
     if spec.kind == "csv":
         read = f'data <- read_delim("{path}", {read_args})\n'
         return ["readr", *fetch_packages], f"{download}\n{read}"
@@ -271,9 +301,26 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
                 "  bind_rows()\n"
             )
         elif spec.each_item:
-            packages.append("dplyr")
-            walk = "".join(f"[[{_quote(k)}]]" for k in spec.records_path)
-            body = f'payload <- fromJSON("{path}")\ndata <- bind_rows(payload{walk})\n'
+            packages += ["dplyr", "purrr"]
+            parent = "".join(f"[[{_quote(k)}]]" for k in spec.records_path[:-1])
+            last = _quote(spec.records_path[-1])
+            body = (
+                "# One object per requested item; its rows also get the item's own\n"
+                "# fields (for WDS: vectorId, productId, coordinate).\n\n"
+                f'payload <- fromJSON("{path}", simplifyVector = FALSE)\n'
+                "data <- payload |>\n"
+                "  map(\\(item) {\n"
+                f"    parent <- item{parent}\n"
+                "    scalars <- keep(parent, \\(value) length(value) == 1 && !is.list(value))\n"
+                f"    parent[[{last}]] |>\n"
+                "      map(\\(row) {\n"
+                "        row <- compact(row)\n"
+                "        as_tibble(c(scalars[setdiff(names(scalars), names(row))], row))\n"
+                "      }) |>\n"
+                "      list_rbind()\n"
+                "  }) |>\n"
+                "  list_rbind()\n"
+            )
         elif spec.record_field:
             keys = [*spec.records_path, spec.record_field]
             walk = "".join(f"[[{_quote(k)}]]" for k in keys)
@@ -284,6 +331,44 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
                 f'payload <- fromJSON("{path}", flatten = TRUE)\ndata <- as_tibble(payload{walk})\n'
             )
         return packages, request + save + body
+    if spec.kind == "sdmx":
+        return (
+            ["httr2", "purrr", "tibble", "xml2"],
+            (
+                f"request({_quote(spec.url)}) |>\n"
+                f'  req_perform(path = "{path}")\n\n'
+                "# SDMX-ML: each Series holds its key and attributes as <Value id= value=/>,\n"
+                "# then one Obs per period. One row per observation. local-name() finds\n"
+                "# the elements whatever their namespace prefix (generic:, message:).\n\n"
+                f'document <- read_xml("{path}")\n'
+                "id_values <- \\(node, path) {\n"
+                "  values <- xml_find_all(node, path)\n"
+                '  set_names(as.list(xml_attr(values, "value")), xml_attr(values, "id"))\n'
+                "}\n"
+                "data <- xml_find_all(document, \"//*[local-name()='Series']\") |>\n"
+                "  map(\\(series) {\n"
+                "    series_fields <- c(\n"
+                "      id_values(series, \"./*[local-name()='SeriesKey']/*[local-name()='Value']\"),\n"
+                "      id_values(series, \"./*[local-name()='Attributes']/*[local-name()='Value']\")\n"
+                "    )\n"
+                "    xml_find_all(series, \"./*[local-name()='Obs']\") |>\n"
+                "      map(\\(obs) as_tibble(c(\n"
+                "        series_fields,\n"
+                "        id_values(obs, \"./*[local-name()='Attributes']/*[local-name()='Value']\"),\n"
+                "        list(\n"
+                "          TIME_PERIOD = xml_attr(\n"
+                '            xml_find_first(obs, "./*[local-name()=\'ObsDimension\']"), "value"\n'
+                "          ),\n"
+                "          OBS_VALUE = xml_attr(\n"
+                '            xml_find_first(obs, "./*[local-name()=\'ObsValue\']"), "value"\n'
+                "          )\n"
+                "        )\n"
+                "      ))) |>\n"
+                "      list_rbind()\n"
+                "  }) |>\n"
+                "  list_rbind()\n"
+            ),
+        )
     if spec.kind == "html_table":
         return (
             ["rvest", "xml2"],
@@ -338,8 +423,14 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
         prepare.append(spec.prepare["r"].body)
     if spec.sort_by:
         packages.append("dplyr")
-        order = f"desc(`{spec.sort_by}`)" if spec.sort_descending else f"`{spec.sort_by}`"
-        prepare.append(f"data <- data |>\n  arrange({order})\n")
+        column = f"`{spec.sort_by}`"
+        keys = [f"suppressWarnings(as.numeric({column}))", column]
+        if spec.sort_descending:
+            keys = [f"desc({key})" for key in keys]
+        prepare.append(
+            "# Numbers sort as numbers, other text as text (columns are read as text).\n\n"
+            f"data <- data |>\n  arrange({', '.join(keys)})\n"
+        )
     if spec.kind not in ("zip", "file"):
         packages.append("janitor")
         prepare.append("data <- data |>\n  clean_names()\n")
@@ -422,10 +513,47 @@ def _py_fetch(spec: Spec) -> str:
 def py_read(spec: Spec) -> tuple[list[str], str]:
     imports = ["from pathlib import Path", "import httpx", "import polars as pl"]
     null = f", null_values={spec.na_values!r}" if spec.na_values else ""
-    read_args = f"separator={spec.delimiter!r}, infer_schema_length=100_000{null}"
+    # infer_schema=False reads every column as text, so codes keep their
+    # form ("000000001", coordinate "2.10"); the standard cleaning converts
+    # the columns that are really numbers.
+    read_args = f"separator={spec.delimiter!r}, infer_schema=False{null}"
     fetch = _py_fetch(spec)
+    if spec.kind == "csv" and (spec.skip_rows or spec.stop_at_blank):
+        imports.append("import io")
+        stop = (
+            "lines = lines[: next((i for i, line in enumerate(lines) if not line.strip()), len(lines))]\n"
+            if spec.stop_at_blank
+            else ""
+        )
+        return imports, (
+            f"{fetch}\n"
+            f"{_trim_comment('#', spec)}"
+            f'lines = raw_path.read_text(encoding="utf-8", errors="replace").splitlines()[{spec.skip_rows}:]\n'
+            f"{stop}"
+            f'data = pl.read_csv(io.StringIO("\\n".join(lines)), {read_args})\n'
+        )
     if spec.kind == "csv":
         return imports, f"{fetch}\ndata = pl.read_csv(raw_path, {read_args})\n"
+    if spec.kind == "sdmx":
+        imports.append("import xml.etree.ElementTree as ET")
+        return imports, (
+            f"{fetch}\n"
+            "# SDMX-ML: each Series holds its key and attributes as <Value id= value=/>,\n"
+            "# then one Obs per period. One row per observation.\n\n"
+            "root = ET.fromstring(raw_path.read_bytes())\n"
+            "records = [\n"
+            "    {\n"
+            '        **{v.get("id"): v.get("value") for v in series.findall("{*}SeriesKey/{*}Value")},\n'
+            '        **{v.get("id"): v.get("value") for v in series.findall("{*}Attributes/{*}Value")},\n'
+            '        **{v.get("id"): v.get("value") for v in obs.findall("{*}Attributes/{*}Value")},\n'
+            '        **{"TIME_PERIOD": v.get("value") for v in obs.findall("{*}ObsDimension")},\n'
+            '        **{"OBS_VALUE": v.get("value") for v in obs.findall("{*}ObsValue")},\n'
+            "    }\n"
+            '    for series in root.findall(".//{*}Series")\n'
+            '    for obs in series.findall("{*}Obs")\n'
+            "]\n"
+            "data = pl.DataFrame(records, infer_schema_length=None)\n"
+        )
     if spec.kind in ("zip", "zip_csv"):
         imports.append("import zipfile")
         if spec.kind == "zip":
@@ -476,7 +604,23 @@ def py_read(spec: Spec) -> tuple[list[str], str]:
                 "]\n"
             )
         elif spec.each_item:
-            records = f"records = [row for item in payload for row in item{walk}]\n"
+            parent = "".join(f"[{k!r}]" for k in spec.records_path[:-1])
+            records = (
+                "# One object per requested item; its rows also get the item's own\n"
+                "# fields (for WDS: vectorId, productId, coordinate).\n\n"
+                "records = [\n"
+                "    {\n"
+                f"        **{{\n"
+                f"            key: value\n"
+                f"            for key, value in item{parent}.items()\n"
+                "            if not isinstance(value, (dict, list))\n"
+                "        },\n"
+                "        **row,\n"
+                "    }\n"
+                "    for item in payload\n"
+                f"    for row in item{walk}\n"
+                "]\n"
+            )
         elif spec.record_field:
             records = f"records = [row[{spec.record_field!r}] for row in payload{walk}]\n"
         else:
@@ -534,8 +678,14 @@ def py_prepare(spec: Spec) -> list[str]:
     if "python" in spec.prepare:
         blocks.append(spec.prepare["python"].body)
     if spec.sort_by:
+        column = f"pl.col({spec.sort_by!r})"
         blocks.append(
-            f"data = data.sort({spec.sort_by!r}, descending={spec.sort_descending}, nulls_last=True)\n"
+            "# Numbers sort as numbers, other text as text (columns are read as text).\n\n"
+            "data = data.sort(\n"
+            f"    [{column}.cast(pl.Float64, strict=False), {column}.cast(pl.Utf8)],\n"
+            f"    descending={spec.sort_descending},\n"
+            "    nulls_last=True,\n"
+            ")\n"
         )
     return blocks
 
@@ -775,6 +925,16 @@ def _stata_python_block(spec: Spec, csv_name: str) -> tuple[str, list[str]]:
     return f"python:\n{stata_statements(body)}end\n", packages
 
 
+# stringcols(_all): every column comes in as text, so codes keep their form
+# ("000000001", coordinate "2.10"); the standard cleaning destrings the rest.
+# bindquote(strict) and maxquotedrows(unlimited): a quoted cell holding line
+# breaks stays one cell (an Ottawa ArcGIS layer gave 18 rows for 10 without).
+_STATA_IMPORT = (
+    'clear varnames(1) encoding("utf-8") stringcols(_all) bindquote(strict) '
+    "maxquotedrows(unlimited)"
+)
+
+
 def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
     spec = _safe_spec(spec)
     path = f"data/raw/{spec.file_name}"
@@ -785,6 +945,8 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
         or "python" in spec.prepare
         or spec.na_values
         or spec.sort_by
+        or spec.stop_at_blank
+        or (spec.kind == "csv" and spec.skip_rows)
         or _needs_request(spec)
         or "statcan.gc.ca" in spec.url
         # A sheet name Stata's parser would act on goes through Python instead.
@@ -794,7 +956,7 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
     if spec.kind == "csv" and simple:
         read = (
             f'copy "{spec.url}" "{path}", replace\n'
-            f'import delimited "{path}", clear varnames(1) encoding("utf-8"){delimiters}\n'
+            f'import delimited "{path}", {_STATA_IMPORT}{delimiters}\n'
         )
     elif spec.kind == "zip_csv" and simple:
         folder = f"data/raw/{spec.file_name.removesuffix('.zip')}"
@@ -812,8 +974,7 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
             "        local data_csv `file'\n"
             "    }\n"
             "}\n"
-            "import delimited \"`folder'/`data_csv'\", clear varnames(1) "
-            f'encoding("utf-8"){delimiters}\n'
+            f"import delimited \"`folder'/`data_csv'\", {_STATA_IMPORT}{delimiters}\n"
         )
     elif spec.kind == "zip" and simple:
         folder = f"data/raw/{spec.file_name.removesuffix('.zip')}"
@@ -843,7 +1004,7 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
             + (
                 ""
                 if spec.kind in ("zip", "file")
-                else f'\nimport delimited "data/raw/{csv_name}", clear varnames(1) encoding("utf-8")\n'
+                else f'\nimport delimited "data/raw/{csv_name}", {_STATA_IMPORT}\n'
             )
         )
         packages.append("python: " + ", ".join(python_packages))
@@ -899,10 +1060,11 @@ def _jl_filter(item: Filter) -> str:
         return f"startswith({cell(item.columns[0])}, {jl_quote(str(item.value))})"
     symbol = {"eq": "==", "ge": ">=", "le": "<="}[item.op]
     column = f"row[{jl_quote(item.columns[0])}]"
-    value = item.value if isinstance(item.value, int | float) else jl_quote(str(item.value))
-    if not isinstance(item.value, int | float):
-        column = f"string({column})"
-    return f"!ismissing(row[{jl_quote(item.columns[0])}]) && {column} {symbol} {value}"
+    if isinstance(item.value, int | float) and not isinstance(item.value, bool):
+        # Delimited files are read as text, so numbers are parsed to compare.
+        number = f"something(tryparse(Float64, string({column})), NaN)"
+        return f"!ismissing({column}) && {number} {symbol} {item.value}"
+    return f"!ismissing({column}) && string({column}) {symbol} {jl_quote(str(item.value))}"
 
 
 def _jl_request(spec: Spec, path: str) -> str:
@@ -929,9 +1091,54 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
     download = _jl_request(spec, path)
     missing = f", missingstring = {jl_quote(['', *spec.na_values])}" if spec.na_values else ""
     delim = f", delim = {jl_quote(spec.delimiter)}" if spec.delimiter != "," else ""
+    # types = String reads every column as text, so codes keep their form
+    # ("000000001", coordinate "2.10"); the standard cleaning converts the
+    # columns that are really numbers. CSV.jl is what TidierFiles reads with.
+    csv_args = f"DataFrame{delim}, types = String{missing}"
+    if spec.kind == "csv" and (spec.skip_rows or spec.stop_at_blank):
+        stop = (
+            "stop = something(findfirst(line -> isempty(strip(line)), lines), length(lines) + 1)\n"
+            "lines = lines[1:(stop - 1)]\n"
+            if spec.stop_at_blank
+            else ""
+        )
+        return ["CSV", "DataFrames", "Downloads"], (
+            f"{download}\n{_trim_comment('#', spec)}"
+            f'lines = readlines("{path}")[({spec.skip_rows} + 1):end]\n'
+            f"{stop}"
+            f'data = CSV.read(IOBuffer(join(lines, "\\n")), {csv_args})\n'
+        )
     if spec.kind == "csv":
-        read = f'data = read_csv("{path}"{delim}{missing})\n'
-        return ["Downloads", "TidierFiles"], download + read
+        read = f'data = CSV.read("{path}", {csv_args})\n'
+        return ["CSV", "DataFrames", "Downloads"], download + read
+    if spec.kind == "sdmx":
+        return ["DataFrames", "Downloads", "EzXML", "Tables"], (
+            download
+            + "\n# SDMX-ML: each Series holds its key and attributes as <Value id= value=/>,\n"
+            "# then one Obs per period. One row per observation.\n\n"
+            f'document = readxml("{path}")\n'
+            "records = Dict{String, Any}[]\n"
+            "for series in findall(\"//*[local-name()='Series']\", document)\n"
+            "    fields = Dict{String, Any}()\n"
+            '    for part in ("SeriesKey", "Attributes")\n'
+            "        for value in findall(\"./*[local-name()='$part']/*[local-name()='Value']\", series)\n"
+            '            fields[value["id"]] = value["value"]\n'
+            "        end\n"
+            "    end\n"
+            "    for obs in findall(\"./*[local-name()='Obs']\", series)\n"
+            "        row = copy(fields)\n"
+            "        for value in findall(\"./*[local-name()='Attributes']/*[local-name()='Value']\", obs)\n"
+            '            row[value["id"]] = value["value"]\n'
+            "        end\n"
+            '        for (tag, column) in (("ObsDimension", "TIME_PERIOD"), ("ObsValue", "OBS_VALUE"))\n'
+            "            node = findfirst(\"./*[local-name()='$tag']\", obs)\n"
+            '            row[column] = node === nothing ? missing : node["value"]\n'
+            "        end\n"
+            "        push!(records, row)\n"
+            "    end\n"
+            "end\n"
+            "data = DataFrame(Tables.dictrowtable(records))\n"
+        )
     if spec.kind == "zip_csv":
         test = (
             f"occursin({jl_quote(spec.member_pattern)}, f.name)"
@@ -941,14 +1148,14 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
                 '    !occursin("metadata", lowercase(f.name))'
             )
         )
-        return ["Downloads", "TidierFiles", "ZipFile"], (
+        return ["CSV", "DataFrames", "Downloads", "ZipFile"], (
             f"{download}"
             f'archive = ZipFile.Reader("{path}")\n\n'
             "# The ZIP may also hold a metadata file; read the data file.\n\n"
             f"data_file = first(f for f in archive.files if {test})\n"
             'write("data/raw/table.csv", read(data_file))\n'
             "close(archive)\n"
-            f'data = read_csv("data/raw/table.csv"{delim}{missing})\n'
+            f'data = CSV.read("data/raw/table.csv", {csv_args})\n'
         )
     if spec.kind in ("zip", "file"):
         return ["Downloads"], download
@@ -982,13 +1189,31 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
                 "]\n"
             )
         elif spec.each_item:
-            records = f"records = reduce(vcat, [collect(item{walk}) for item in payload])\n"
+            parent = "".join(f"[{jl_quote(k)}]" for k in spec.records_path[:-1])
+            last = jl_quote(spec.records_path[-1])
+            records = (
+                "# One object per requested item; its rows also get the item's own\n"
+                "# fields (for WDS: vectorId, productId, coordinate).\n\n"
+                "records = [\n"
+                "    merge(\n"
+                f"        Dict(k => v for (k, v) in item{parent} if !(v isa JSON3.Object || v isa JSON3.Array)),\n"
+                "        Dict(row),\n"
+                "    )\n"
+                f"    for item in payload for row in item{parent}[{last}]\n"
+                "]\n"
+            )
         elif spec.record_field:
             records = f"records = [row[{jl_quote(spec.record_field)}] for row in payload{walk}]\n"
         else:
             records = f"records = payload{walk}\n"
+        # JSON null reads as nothing; DataFrames and the cleaning expect missing.
+        to_missing = "data = mapcols(col -> [x === nothing ? missing : x for x in col], data)\n"
         return ["DataFrames", "Downloads", "JSON3", "Tables"], (
-            fetch + payload + records + "data = DataFrame(Tables.dictrowtable(records))\n"
+            fetch
+            + payload
+            + records
+            + "data = DataFrame(Tables.dictrowtable(records))\n"
+            + to_missing
         )
     return None  # HTML tables and feeds: no maintained Julia reader to rely on
 
@@ -1017,10 +1242,23 @@ def render_julia(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
         prepare.append(spec.prepare["julia"].body)
     if spec.sort_by:
         rev = str(spec.sort_descending).lower()
-        prepare.append(f"sort!(data, {jl_quote(spec.sort_by)}; rev = {rev})\n")
+        column = jl_quote(spec.sort_by)
+        prepare.append(
+            "# Numbers sort as numbers, other text as text (columns are read as text).\n\n"
+            "numeric_sort = all(\n"
+            f"    v -> ismissing(v) || tryparse(Float64, string(v)) !== nothing, data[!, {column}]\n"
+            ")\n"
+            "sort!(\n"
+            "    data,\n"
+            f"    {column};\n"
+            f"    rev = {rev},\n"
+            "    by = v -> numeric_sort && !ismissing(v) ? parse(Float64, string(v)) : v,\n"
+            ")\n"
+        )
     if spec.kind not in ("zip", "file"):
         specific = cleaning.specific("julia", spec.source)
         if specific:
+            packages += specific.imports
             prepare.append(specific.body)
         packages += cleaning.GENERIC["julia"].imports
         prepare.append(cleaning.GENERIC["julia"].body)

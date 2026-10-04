@@ -216,3 +216,55 @@ class QuebecTrade(BaseModel):
     points: list[QuebecTradePoint]
     rows_matched: int
     provenance: Provenance
+
+
+class QuebecFlowSeriesInfo(BaseModel):
+    measure: str = Field(
+        description="Hydro-Quebec's label, e.g. 'Débit total', 'Débit turbiné - Manic-2', "
+        "'Débit déversé - Manic-2', 'Apport filtré'."
+    )
+    kind: str = Field(
+        description="total (all water released), turbined (through the turbines), spilled "
+        "(through spillways or dams), inflow (filtered natural inflow) or other."
+    )
+    time_step: str = Field(description="hourly or daily.")
+    statistic: str = Field(description="Hydro-Quebec's 'type_mesure', e.g. 'Moyenne' (mean).")
+    unit: str
+    points: int
+    first: datetime | None
+    last: datetime | None
+    latest_value: float | None
+
+
+class QuebecFacility(BaseModel):
+    facility_id: str = Field(description="Hydro-Quebec site id, e.g. '3-130'.")
+    name: str
+    region: str
+    region_code: str | None
+    latitude: float | None
+    longitude: float | None
+    records_since: str | None = Field(description="Site's 'date debut' as published.")
+    series: list[QuebecFlowSeriesInfo]
+
+
+class QuebecFacilityList(BaseModel):
+    total_facilities: int
+    total_matches: int
+    facilities: list[QuebecFacility]
+    provenance: Provenance
+
+
+class QuebecFlowPoint(BaseModel):
+    time: datetime = Field(description="UTC; daily values are stamped 00:00Z.")
+    value: float
+
+
+class QuebecFlowSeries(BaseModel):
+    info: QuebecFlowSeriesInfo
+    values: list[QuebecFlowPoint]
+
+
+class QuebecFacilityFlows(BaseModel):
+    facility: QuebecFacility
+    series: list[QuebecFlowSeries]
+    provenance: Provenance

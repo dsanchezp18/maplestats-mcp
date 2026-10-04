@@ -215,6 +215,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "bc-stats-files": PER_RECORD_LICENCE,
     "bcgw": OGL_BC
     + " Some BC Geographic Warehouse layers carry other terms; check the layer's record.",
+    "drivebc": OGL_BC + " The Open511 API is also under the BC Government API Terms of Use.",
     "yukon-stats": OGL_YUKON,
     "yukon-bureau-of-statistics": OGL_YUKON,
     "nl-opendata": OGL_NL,
@@ -274,6 +275,9 @@ SOURCE_LICENCES: dict[str, str] = {
     "ised-cipo": CANADA_CA_TERMS,
     "nrcan-energy-use": CANADA_CA_TERMS,
     "pmprb": CANADA_CA_TERMS,
+    "health_products": OGL_CANADA,
+    "finance_canada": CANADA_CA_TERMS,
+    "nrcan_minerals": CANADA_CA_TERMS,
     "dfo-iwls": terms_not_stated(
         "Fisheries and Oceans Canada, Canadian Hydrographic Service",
         "https://api-iwls.dfo-mpo.gc.ca",

@@ -60,9 +60,35 @@ def table_spec(product_id: Any, lang: str) -> Spec:
     )
 
 
-def vector_spec(vector_ids: list[Any], latest_n: int) -> Spec:
-    ids = [int(str(v).lstrip("vV")) for v in vector_ids]
+def _vector_id(value: Any) -> int:
+    """A WDS vector id from 41690973, "41690973" or "v41690973"."""
+    text = str(value).strip().lstrip("vV")
+    if not text.isdigit() or int(text) < 1:
+        raise InvalidInput(f"vector ids must look like 41690973 or v41690973, got {value!r}.")
+    return int(text)
+
+
+def _count(value: Any, name: str) -> int:
+    try:
+        count = int(value)
+    except (TypeError, ValueError) as exc:
+        raise InvalidInput(f"{name} must be a whole number, got {value!r}.") from exc
+    if count < 1:
+        raise InvalidInput(f"{name} must be >= 1, got {count}.")
+    return count
+
+
+def vector_spec(vector_ids: Any, latest_n: int) -> Spec:
+    if not isinstance(vector_ids, list) or not vector_ids:
+        raise InvalidInput("vector_ids must be a non-empty list of vector ids.")
+    ids = [_vector_id(v) for v in vector_ids]
     r_ids = ", ".join(f'"v{i}"' for i in ids)
+    # get_cansim_vector() alone returns each vector's whole history (1,960
+    # rows for two monthly vectors, checked 2026-10-03); the tool keeps the
+    # latest periods only.
+    r_code = (
+        f"data <- get_cansim_vector_for_latest_periods(\n  c({r_ids}),\n  periods = {latest_n}\n)\n"
+    )
     return Spec(
         kind="json",
         url=_WDS + "getDataFromVectorsAndLatestNPeriods",
@@ -72,7 +98,7 @@ def vector_spec(vector_ids: list[Any], latest_n: int) -> Spec:
         records_path=["object", "vectorDataPoint"],
         each_item=True,
         post_json=[{"vectorId": i, "latestN": latest_n} for i in ids],
-        native={"r": Code(["cansim"], f"data <- get_cansim_vector(c({r_ids}))\n")},
+        native={"r": Code(["cansim"], r_code)},
         notes=["WDS returns one object per vector; values are under vectorDataPoint."],
         source="statcan_vectors",
     )
@@ -83,39 +109,77 @@ async def _table(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 
 async def _vectors(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    return vector_spec(args["vector_ids"], int(args.get("latest_n", 12)))
+    return vector_spec(args["vector_ids"], _count(args.get("latest_n", 12), "latest_n"))
+
+
+def sdmx_spec(data_url: str, args: dict[str, Any], title: str) -> Spec:
+    """The SDMX data request the tool makes: its key, its periods, and the
+    latest-N default it applies when no period is given."""
+    from maplestats_mcp.modules.statcan.sdmx.constants import DEFAULT_LAST_N, MAX_ROWS, MAX_SERIES
+
+    start, end = args.get("start_period"), args.get("end_period")
+    last_n = args.get("last_n_observations")
+    if last_n not in (None, "") and (start or end):
+        raise InvalidInput("last_n_observations cannot be combined with start_period/end_period.")
+    params: dict[str, Any] = {}
+    if start:
+        params["startPeriod"] = start
+    if end:
+        params["endPeriod"] = end
+    if last_n not in (None, ""):
+        params["lastNObservations"] = _count(last_n, "last_n_observations")
+    elif not start and not end:
+        params["lastNObservations"] = DEFAULT_LAST_N
+    url = f"{data_url}?{urlencode(params)}"
+    return Spec(
+        kind="sdmx",
+        url=url,
+        file_name="sdmx_data.xml",
+        method="exact: the SDMX data request rebuilt from the tool's arguments",
+        title=title,
+        notes=[
+            (
+                "StatCan's SDMX service answers in SDMX-ML (XML); the script makes one row per "
+                "observation, with the series key and attributes as columns."
+            ),
+            (
+                f"The tool keeps at most {MAX_SERIES} series and the newest {MAX_ROWS} "
+                "observations per series; the script keeps every row StatCan returns."
+            ),
+        ],
+    )
 
 
 async def _sdmx_data(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.reproduce.excel import sdmx_generic_steps
-    from maplestats_mcp.modules.reproduce.render import safe_url
+    from maplestats_mcp.modules.statcan.sdmx.client import _KEY
 
-    spec = table_spec(args["product_id"], str(args.get("lang", "en")))
-    params = {
-        name: args[key]
-        for key, name in (
-            ("start_period", "startPeriod"),
-            ("end_period", "endPeriod"),
-            ("last_n_observations", "lastNObservations"),
-        )
-        if args.get(key) not in (None, "")
-    }
-    query = f"?{urlencode(params)}" if params else ""
     pid = str(args["product_id"]).replace("-", "")[:8]
-    url = safe_url(f"{_SDMX}data/DF_{pid}/{args['key']}{query}")
-    # Power Query reads SDMX-ML, so the Excel query fetches only the key's
-    # series, as the tool does; the scripts read the full table instead.
-    spec.native["excel"] = Code([url], sdmx_generic_steps(url))
-    spec.notes.append(
-        "The Excel (Power Query) query reads only this key's series from StatCan's SDMX "
-        "service, as the tool does; the other scripts download the full table."
-    )
-    return spec
+    if not pid.isdigit() or len(pid) != 8:
+        raise InvalidInput(
+            f"product_id must be an 8- or 10-digit StatCan table id, got {args['product_id']!r}."
+        )
+    key = str(args["key"])
+    if not _KEY.match(key):
+        raise InvalidInput(f"key {key!r} may only contain member ids, '.', and '+'.")
+    dashed = f"{pid[:2]}-{pid[2:4]}-{pid[4:8]}-01"
+    return sdmx_spec(f"{_SDMX}data/DF_{pid}/{key}", args, f"StatCan table {dashed}, SDMX key {key}")
 
 
 async def _sdmx_vector(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    # The SDMX-ML the tool reads is XML; WDS serves the same vector as JSON.
-    spec = vector_spec([args["vector_id"]], int(args.get("last_n_observations") or 12))
+    from maplestats_mcp.modules.statcan.sdmx.constants import DEFAULT_LAST_N
+
+    if args.get("start_period") or args.get("end_period"):
+        # A period range needs the vector's SDMX key, which the tool looked
+        # up through WDS; its result names the data URL.
+        data_url = str(result.get("provenance", {}).get("url") or "")
+        if not data_url.startswith(_SDMX):
+            raise InvalidInput("sdmx_get_vector_data returned no SDMX data URL to reproduce.")
+        return sdmx_spec(data_url, args, f"StatCan vector {args['vector_id']}")
+    # Without periods the tool reads the latest N observations, which WDS
+    # serves for the same vector as JSON.
+    latest = args.get("last_n_observations")
+    latest_n = DEFAULT_LAST_N if latest in (None, "") else _count(latest, "last_n_observations")
+    spec = vector_spec([args["vector_id"]], latest_n)
     spec.notes.append("Fetched through WDS, which serves the same vector as JSON.")
     return spec
 
@@ -190,40 +254,62 @@ async def _census_table(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 
 async def _socrata(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.socrata.constants import PORTALS
+    from maplestats_mcp.modules.socrata.constants import PORTALS, ROWS_LIMIT_DEFAULT
 
     portal = PORTALS.get(str(args.get("portal")))
     if portal is None:
         raise InvalidInput(f"Unknown Socrata portal {args.get('portal')!r}.")
+    # The tool always sends $limit (default 10); SODA's own default is 1,000
+    # rows, so the script sends the tool's limit too.
+    values = {"limit": ROWS_LIMIT_DEFAULT, **{k: v for k, v in args.items() if v is not None}}
     soql = {
-        f"${key}": args[key]
+        f"${key}": values[key]
         for key in ("select", "where", "order", "q", "limit", "offset")
-        if args.get(key) not in (None, "")
+        if values.get(key) not in (None, "")
     }
-    query = f"?{urlencode(soql)}" if soql else ""
     return Spec(
         kind="csv",
-        url=f"https://{portal.domain}/resource/{args['dataset_id']}.csv{query}",
+        url=f"https://{portal.domain}/resource/{args['dataset_id']}.csv?{urlencode(soql)}",
         file_name=f"{args['dataset_id']}.csv",
         method="exact: SODA query rebuilt from the tool's arguments",
         title=f"Socrata dataset {args['dataset_id']} ({portal.domain})",
-        notes=["Remove $limit to download every row (SODA's default page is 1,000 rows)."],
+        notes=[
+            (
+                f"The URL's $limit={soql['$limit']} matches the tool; raise it (SODA allows "
+                "50,000 per request) or page with $offset for every row."
+            )
+        ],
     )
 
 
 async def _ckan(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.ckan.constants import PORTALS
+    from maplestats_mcp.modules.ckan import client as ckan_client
+    from maplestats_mcp.modules.ckan.constants import DATASTORE_ROWS_DEFAULT, PORTALS
 
     portal = PORTALS.get(str(args.get("portal")))
     if portal is None:
         raise InvalidInput(f"Unknown CKAN portal {args.get('portal')!r}.")
+    limit = _count(args.get("limit") or DATASTORE_ROWS_DEFAULT, "limit")
+    offset = int(args.get("offset") or 0)  # the client rejects a negative offset
+    # A resource that does not exist would give a script that fails on its
+    # first run, so the tool's own request runs first (it raises NotFound).
+    await ckan_client.datastore_search(
+        str(args["portal"]),
+        str(args["resource_id"]),
+        filters=args.get("filters") or None,
+        query=args.get("query") or None,
+        sort=args.get("sort") or None,
+        fields=args.get("fields") or None,
+        limit=limit,
+        offset=offset,
+    )
     params: dict[str, Any] = {"resource_id": args["resource_id"]}
     for key, name in (("query", "q"), ("sort", "sort"), ("fields", "fields")):
         if args.get(key) not in (None, ""):
             params[name] = args[key]
-    for key in ("limit", "offset"):
-        if args.get(key) not in (None, ""):
-            params[key] = args[key]
+    # The tool sends limit (default 20) and offset; CKAN's own default is 100.
+    params["limit"] = limit
+    params["offset"] = offset
     if args.get("filters"):
         params["filters"] = json.dumps(args["filters"])
     return Spec(
@@ -237,9 +323,17 @@ async def _ckan(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 
 async def _boc(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    names = ",".join(args["series_names"])
+    from maplestats_mcp.modules.boc import client as boc_client
+
+    series = args["series_names"]
+    if not isinstance(series, list) or not series:
+        raise InvalidInput("series_names must be a non-empty list of Valet series names.")
+    names = ",".join(str(name) for name in series)
     keys = ("start_date", "end_date", "recent", "recent_weeks", "recent_months", "recent_years")
     params = {key: args[key] for key in keys if args.get(key) not in (None, "")}
+    # An unknown series would give a script that fails on its first run, so
+    # the tool's own request runs first (Valet answers 404, raised as NotFound).
+    await boc_client.get_observations([str(name) for name in series], **params)
     query = f"?{urlencode(params)}" if params else ""
     return Spec(
         kind="json",
@@ -507,6 +601,8 @@ def builder_for(tool: str, args: dict[str, Any]) -> Builder | None:
 
 
 def argument_only(tool: str, args: dict[str, Any]) -> bool:
+    if tool == "sdmx_get_vector_data" and (args.get("start_period") or args.get("end_period")):
+        return False  # the SDMX key comes from the tool's WDS lookup
     if tool in ARGUMENT_ONLY:
         return True
     if "product_id" in args and tool.startswith(("wds_", "sdmx_")):

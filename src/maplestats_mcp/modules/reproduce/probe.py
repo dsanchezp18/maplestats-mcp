@@ -132,11 +132,33 @@ def find_records(payload: Any) -> dict[str, Any]:
     return {"single_object": True}
 
 
-def _delimiter(sample: str) -> str:
-    header = sample.lstrip("﻿").splitlines()[0] if sample.strip() else ""
-    counts = {d: header.count(d) for d in (",", "|", "\t", ";")}
-    best = max(counts, key=lambda d: counts[d])
-    return best if counts[best] else ","
+def _layout(sample: str) -> tuple[str, int, bool]:
+    """The delimiter, the header's line index, and whether the data ends at a
+    blank line with notes after it.
+
+    The busiest of the first ten lines decides the delimiter: CMHC's CSV
+    exports (checked live 2026-10-03) open with two title lines that hold no
+    comma, so reading only the first line classed them as fixed-width text.
+    The header is the first line with as many fields as the busiest one.
+    """
+    lines = sample.lstrip("﻿").splitlines()
+    head = [line for line in lines[:10] if line.strip()]
+    if not head:
+        return ",", 0, False
+    delimiters = (",", "|", "\t", ";")
+    counts = {d: max(line.count(d) for line in head) for d in delimiters}
+    delimiter = max(delimiters, key=lambda d: counts[d])
+    if not counts[delimiter]:
+        return ",", 0, False
+    widths = [len(next(csv.reader([line], delimiter=delimiter), [])) for line in lines[:10]]
+    # A first line with fields is the header (a quoted cell's line breaks can
+    # make a later physical line look wider); title lines have one field.
+    header = 0 if widths[0] > 1 else widths.index(max(widths))
+    # Parsed as records, so a blank line inside a quoted cell is not the end.
+    records = list(csv.reader(io.StringIO("\n".join(lines[header:])), delimiter=delimiter))
+    blank = next((i for i, row in enumerate(records) if not any(c.strip() for c in row)), None)
+    notes_after = blank is not None and any(any(c.strip() for c in row) for row in records[blank:])
+    return delimiter, header, notes_after
 
 
 def _request_fields(request: RecordedRequest) -> dict[str, Any]:
@@ -276,15 +298,22 @@ async def spec_from_request(request: RecordedRequest, pages: int) -> Spec:
             "output as the raw input."
         )
         return Spec(kind="none", file_name="", **base)
-    delimiter = _delimiter(text[:5000])
-    sample = list(csv.reader(io.StringIO(text[:5000]), delimiter=delimiter))
+    delimiter, header, stop_at_blank = _layout(text[:20000])
+    lines = text[:20000].lstrip("﻿").splitlines()[header:]
+    sample = list(csv.reader(io.StringIO("\n".join(lines)), delimiter=delimiter))
     if truncated or (sample and len(sample[0]) > 1):
         header_prefix = "#" if text.lstrip("﻿").startswith("#") else ""
+        if header:
+            notes.append(f"The file opens with {header} title line(s) above its header; skipped.")
+        if stop_at_blank:
+            notes.append("The data ends at the first blank line; the notes below it are dropped.")
         return Spec(
             kind="csv",
             file_name=_file_name(request.url, "csv"),
             delimiter=delimiter,
             header_prefix=header_prefix,
+            skip_rows=header,
+            stop_at_blank=stop_at_blank,
             **base,
         )
     notes.append("Fixed-width or free text: read it with read_fwf (R) or by column positions.")
@@ -297,10 +326,21 @@ def _largest_table(text: str) -> int:
     return rows.index(max(rows)) if rows else 0
 
 
-def unsent_arguments(arguments: dict[str, Any], request: RecordedRequest) -> list[str]:
-    """Arguments whose values never reached the source, so the tool applied them."""
+def unsent_arguments(
+    arguments: dict[str, Any], requests: RecordedRequest | list[RecordedRequest]
+) -> list[str]:
+    """Arguments whose values never reached the source, so the tool applied them.
+
+    Every request the tool made counts, not only the replayed one: CMHC's
+    tool sends the category names to a lookup that answers with the table id
+    the data request then uses (checked live 2026-10-03), so those names
+    shaped the data request and were not applied afterwards.
+    """
     ignored = {"lang", "limit", "offset", "page", "max_return", "include_geometry"}
-    sent = unquote_plus(request.url).lower() + request.body.decode("utf-8", "replace").lower()
+    made = requests if isinstance(requests, list) else [requests]
+    sent = " ".join(
+        unquote_plus(r.url).lower() + " " + r.body.decode("utf-8", "replace").lower() for r in made
+    )
     unsent = []
     for key, value in arguments.items():
         if key in ignored or value in (None, "", [], {}):

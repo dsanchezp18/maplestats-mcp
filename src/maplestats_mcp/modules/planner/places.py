@@ -87,6 +87,8 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
                 "nwt_stats_search_files", "NWT Bureau of Statistics Excel tables (query by words)"
             ),
             _ckan("nt"),
+            _arcgis("ntgs"),
+            _arcgis("ntgs_datahub"),
         ),
     ),
     "yukon": (

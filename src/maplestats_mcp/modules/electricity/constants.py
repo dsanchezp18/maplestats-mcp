@@ -43,5 +43,16 @@ QUEBEC_TRADE_DATASET = "importations-exportations-avec-transits"
 QUEBEC_TRADE_MARKETS = ("newengland", "newbrunswick", "newyork", "ontario")
 QUEBEC_TRADE_SOURCES = ("gas", "nuclear", "unknown", "wind", "hydro")
 
+# Flows at generating stations and control structures: one JSON file on
+# hydroquebec.com (Donnees Quebec record `donnees-hydrometriques`, CC BY-NC 4.0).
+QUEBEC_FLOWS_URL = (
+    "https://www.hydroquebec.com/data/documents-donnees/donnees-ouvertes/json/"
+    "Donnees_VUE_CENTRALES_ET_OUVRAGES.json"
+)
+QUEBEC_FLOWS_PAGE = "https://www.donneesquebec.ca/recherche/dataset/donnees-hydrometriques"
+# 2.8 MB, rewritten about hourly (Last-Modified 20:45 UTC on a 20:48 read).
+QUEBEC_FLOWS_TTL_SECONDS = 30 * 60
+QUEBEC_FLOWS_MAX_FACILITIES = 200
+
 QUEBEC_CACHE_TTL_RECENT_SECONDS = 5 * 60
 QUEBEC_CACHE_TTL_HISTORY_SECONDS = 6 * 60 * 60

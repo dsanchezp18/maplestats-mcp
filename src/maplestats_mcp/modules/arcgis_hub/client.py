@@ -36,6 +36,7 @@ from maplestats_mcp.shared.arcgis import (
     get_item,
     item_data_url,
     item_kind,
+    layer_query_url,
     parse_epoch_millis,
     query_layer,
     search_items,
@@ -353,7 +354,7 @@ async def query_feature_layer(
         exceeded_transfer_limit=exceeded,
         provenance=make_provenance(
             source=config.source,
-            url=f"{service_url}/{resolved_layer_index}/query",
+            url=layer_query_url(service_url, resolved_layer_index),
             cached=was_cached,
             schema_name="arcgis_hub.FeatureQueryResult",
             limits=(

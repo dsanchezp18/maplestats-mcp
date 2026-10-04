@@ -219,17 +219,25 @@ Sources, by tool-name prefix:
 - World Bank WDI, Canada and G7/OECD peers: worldbank_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
-- Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit
+- Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
+  provincial revenue, spending, deficits, debt), finance_fiscal_monitor_
+  (monthly federal results), competition_bureau_ (merger reviews), fcac_ (credit
   card and bank account comparisons), pbo_ (Parliamentary Budget Officer
-  publications and tables), pmprb_ (patented medicine prices), ircc_
+  publications and tables), pmprb_ (patented medicine prices), pmra_
+  (pesticide products, residue limits), Health Canada health products:
+  hc_drug_ (Drug Product Database, DIN lookup), hc_nhp_ (licensed natural
+  health products), hc_device_ (medical device licences), hc_vigilance_
+  (adverse reaction reports), ircc_
   (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
   cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
   nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
-  (burned areas), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
+  (burned areas), nrcan_minerals_ (annual mineral production by
+  province), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
   Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
-  safety alerts), gazette_ (Canada Gazette), earthquakes_, dfo_iwls_
+  safety alerts), cbsa_ (current border wait times), gazette_ (Canada
+  Gazette), earthquakes_, dfo_iwls_
   (tides, water levels), nfd_
   (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
 - Elections and Parliament: elections_results_ (federal results by
@@ -240,10 +248,12 @@ Sources, by tool-name prefix:
 - Provincial and municipal sources: aer_ (Alberta Energy Regulator),
   ab_wildfire_ (Alberta wildfire status), bc_env_ (BC air quality,
   AQHI, snow, groundwater wells, provincial streamflow), bcgw_ (BC Geographic
-  Warehouse),bc_lobbyists_ (BC Registrar of Lobbyists), nl_opendata_,
+  Warehouse), bc_lobbyists_ (BC Registrar of Lobbyists), drivebc_ (BC
+  highway road events and closures), nl_opendata_,
   opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
-  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec), oeb_
+  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including water flows at its
+  dams), oeb_
   (Ontario Energy Board: utility RRR filings, reliability, rates).
 - Portal families, each with a `portal` argument and a list_portals tool:
   ckan_ (open.canada.ca, provincial and city CKAN catalogues;
@@ -252,8 +262,9 @@ Sources, by tool-name prefix:
   city and regional ArcGIS Hub portals), socrata_ (Nova Scotia, New
   Brunswick, Calgary, Edmonton, Winnipeg).
 - Static transit timetables: transit_, with an `agency` argument --
-  transit_list_agencies, and transit_list_national_agencies for about 100
-  more from StatCan's snapshot.
+  transit_list_agencies (including exo, RTC, STL, STS and STQ ferries in
+  Quebec), and transit_list_national_agencies for about 100 more from
+  StatCan's snapshot.
 
 Routing hints: many federal administrative series (IRCC permits beyond
 ircc_monthly_, CRA tax statistics and charities, OSFI bank returns, ISED

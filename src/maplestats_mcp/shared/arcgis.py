@@ -319,6 +319,12 @@ def _service_root(service_url: str) -> str:
     return head if tail.isdigit() else trimmed
 
 
+def layer_query_url(service_url: str, layer_index: int) -> str:
+    """The layer's query endpoint, also when service_url already names a layer
+    (.../MapServer/28 gives .../MapServer/28/query, not .../28/28/query)."""
+    return f"{_service_root(service_url)}/{layer_index}/query"
+
+
 def _feature_service_error_detail(body: dict[str, Any]) -> str:
     error = body.get("error")
     if isinstance(error, dict):
@@ -540,7 +546,7 @@ def _query_request(
         params["outSR"] = out_sr
     if extra_params:
         params.update(extra_params)
-    return f"{_service_root(service_url)}/{layer_index}/query", params
+    return layer_query_url(service_url, layer_index), params
 
 
 def query_url(service_url: str, layer_index: int, **kwargs: Any) -> str:

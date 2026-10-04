@@ -341,6 +341,14 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
+    "cbsa": Source(
+        "Canada Border Services Agency: border wait times",
+        "Agence des services frontaliers du Canada : temps d'attente à la frontière",
+        "national",
+        "CBSA",
+        "ASFC",
+        domain="transport",
+    ),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
@@ -431,6 +439,16 @@ SOURCES: dict[str, Source] = {
         "ECCC",
         domain="environment",
     ),
+    "drivebc": Source(
+        "DriveBC: road events on BC highways",
+        "DriveBC : événements routiers sur les routes de la C.-B.",
+        "provincial",
+        "DriveBC",
+        "DriveBC",
+        places=("BC",),
+        row="provincial_agency",
+        domain="transport",
+    ),
     "eccc_datamart": Source(
         "ECCC Data Catalogue files (NPRI, GHGRP, NAPS)",
         "Fichiers du Catalogue de données d'ECCC (INRP, PDGES, SNPA)",
@@ -519,6 +537,14 @@ SOURCES: dict[str, Source] = {
         "national",
         "FCAC",
         "ACFC",
+        domain="money",
+    ),
+    "finance_canada": Source(
+        "Department of Finance Canada",
+        "Ministère des Finances Canada",
+        "national",
+        "Finance Canada",
+        "Finances Canada",
         domain="money",
     ),
     "gazette": Source("Canada Gazette", "Gazette du Canada", "national", domain="government"),
@@ -649,6 +675,14 @@ SOURCES: dict[str, Source] = {
         "RNCan zones brûlées",
         domain="environment",
     ),
+    "nrcan_minerals": Source(
+        "Natural Resources Canada: mineral production",
+        "Ressources naturelles Canada : production minérale",
+        "national",
+        "NRCan minerals",
+        "RNCan minéraux",
+        domain="energy",
+    ),
     "opendatasoft_vancouver": Source(
         "City of Vancouver Open Data",
         "Données ouvertes de la Ville de Vancouver",
@@ -658,6 +692,15 @@ SOURCES: dict[str, Source] = {
         places=("BC",),
         row="municipal_catalogue",
     ),
+    "health_products": Source(
+        "Health Canada: drugs, natural health products, medical devices and adverse reactions",
+        "Santé Canada : médicaments, produits de santé naturels, instruments médicaux et "
+        "effets indésirables",
+        "national",
+        "Health Canada",
+        "Santé Canada",
+        domain="health",
+    ),
     "pbo": Source(
         "Parliamentary Budget Officer",
         "Directeur parlementaire du budget",
@@ -665,6 +708,15 @@ SOURCES: dict[str, Source] = {
         "PBO",
         "DPB",
         domain="money",
+    ),
+    "pmra": Source(
+        "Health Canada Pest Management Regulatory Agency: pesticide registry",
+        "Agence de réglementation de la lutte antiparasitaire de Santé Canada : "
+        "registre des pesticides",
+        "national",
+        "PMRA",
+        "ARLA",
+        domain="health",
     ),
     "pmprb": Source(
         "Patented Medicine Prices Review Board",
@@ -737,6 +789,22 @@ FAMILIES: dict[str, tuple[str, str]] = {
     "cmhc/data_tables": ("Data tables (Excel)", "Tableaux de données (Excel)"),
     "eccc/": ("Weather, water and climate observations", "Observations météo, eau et climat"),
     "eccc/coverages": ("Climate projections (gridded)", "Projections climatiques (grilles)"),
+    "health_products/dpd": (
+        "Drug Product Database",
+        "Base de données sur les produits pharmaceutiques",
+    ),
+    "health_products/lnhpd": (
+        "Licensed natural health products",
+        "Produits de santé naturels homologués",
+    ),
+    "health_products/mdall": (
+        "Medical device licences",
+        "Homologations d'instruments médicaux",
+    ),
+    "health_products/vigilance": (
+        "Canada Vigilance adverse reaction reports",
+        "Déclarations d'effets indésirables de Canada Vigilance",
+    ),
     "ircc/": ("Express Entry rounds", "Rondes d'invitations Entrée express"),
     "ircc/monthly": ("Monthly IRCC Updates", "Mises à jour mensuelles d'IRCC"),
     "ised/cipo": ("Trademarks (CIPO)", "Marques de commerce (OPIC)"),
@@ -899,6 +967,8 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "penticton": ("BC", _M),
         "orangeville": ("ON", _M),
         "canmore": ("AB", _M),
+        "ntgs": ("NT", _P),
+        "ntgs_datahub": ("NT", _P),
         "bc_energy_regulator": ("BC", _P),
         "toronto_police": ("ON", _M),
         "ottawa_police": ("ON", _M),
@@ -3335,7 +3405,7 @@ def _more_fields(count: int, lang: Lang) -> str:
     return f"+ {count} autre{'s' if count > 1 else ''} champ{'s' if count > 1 else ''}"
 
 
-def _excerpt(code: str, start: str, end: str) -> str:
+def _excerpt(code: str, start: str, end: str | tuple[str, ...]) -> str:
     """The lines of a recorded script from the one starting with `start`
     through the next one starting with `end`; the build fails if either is gone."""
     lines = code.split("\n")
@@ -3499,7 +3569,9 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         + _excerpt(scripts["python"], "# scalarFactorCode is", ")")
     )
     r_code = (
-        _excerpt(scripts["r"], "data <- get_cansim_vector(", "data <- get_cansim_vector(")
+        # A capture from before 2026-10-03 calls get_cansim_vector() on one line;
+        # later ones call get_cansim_vector_for_latest_periods() over several.
+        _excerpt(scripts["r"], "data <- get_cansim_vector", ("data <- get_cansim_vector(c(", ")"))
         + "\n\n# …\n\n"
         + _excerpt(scripts["r"], "# cansim adds val_norm", "  filter(")
     )
