@@ -92,7 +92,7 @@ def _item_id(item_id: str, lang: str = "en") -> str:
             f"as returned by arcgis_hub_search_datasets, got {item_id!r}.",
             "item_id doit être un identifiant d'élément ArcGIS (32 chiffres hexadécimaux, "
             "suivis au besoin de « _<id de couche> »), comme ceux que renvoie "
-            f"arcgis_hub_search_datasets; reçu {item_id!r}.",
+            f"arcgis_hub_search_datasets ; reçu {item_id!r}.",
             lang,
         )
     return cleaned
@@ -110,7 +110,7 @@ def _check_page(limit: int, offset: int, limit_max: int, lang: str) -> None:
         raise_localized(
             InvalidInput,
             f"offset must be >= 0, got {offset}.",
-            f"offset doit être supérieur ou égal à 0; reçu {offset}.",
+            f"offset doit être supérieur ou égal à 0 ; reçu {offset}.",
             lang,
         )
 
@@ -183,7 +183,7 @@ async def search_datasets(
             f"offset + limit must be at most {SEARCH_WINDOW_MAX} (the catalogue search does "
             f"not page further), got {offset + limit}; narrow the query, tag or item_type.",
             f"offset + limit doit être d'au plus {SEARCH_WINDOW_MAX} (la recherche dans le "
-            f"catalogue ne va pas plus loin); reçu {offset + limit}. Précisez query, tag ou "
+            f"catalogue ne va pas plus loin) ; reçu {offset + limit}. Précisez query, tag ou "
             "item_type.",
             lang,
         )
@@ -348,7 +348,7 @@ async def query_feature_layer(
         raise_localized(
             InvalidInput,
             f"layer_index must be >= 0, got {layer_index}.",
-            f"layer_index doit être supérieur ou égal à 0; reçu {layer_index}.",
+            f"layer_index doit être supérieur ou égal à 0 ; reçu {layer_index}.",
             lang,
         )
     where_clause = where or "1=1"
@@ -368,7 +368,7 @@ async def query_feature_layer(
             f"item {item_id!r} is an Image Service (raster imagery), which has no rows to "
             "query; open its service_url in a GIS or use another item.",
             f"l'élément {item_id!r} est un Image Service (imagerie matricielle), qui n'a pas "
-            "de lignes à interroger; ouvrez son service_url dans un SIG ou choisissez un autre "
+            "de lignes à interroger ; ouvrez son service_url dans un SIG ou choisissez un autre "
             "élément.",
             lang,
         )
@@ -378,7 +378,7 @@ async def query_feature_layer(
             f"item {item_id!r} ({item_type}) has no queryable FeatureServer/MapServer "
             "service_url; use its download_urls (arcgis_hub_get_dataset) instead.",
             f"l'élément {item_id!r} ({item_type}) n'a pas de service_url FeatureServer/"
-            "MapServer interrogeable; utilisez plutôt ses download_urls "
+            "MapServer interrogeable ; utilisez plutôt ses download_urls "
             "(arcgis_hub_get_dataset).",
             lang,
         )

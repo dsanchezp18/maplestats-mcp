@@ -679,7 +679,7 @@ async def list_national_agencies(
             coverage=pick(
                 lang,
                 f"{len(_NATIONAL)} feeds in the database; product page {constants.NATIONAL_PAGE}.",
-                f"{len(_NATIONAL)} flux dans la base de données; page du produit "
+                f"{len(_NATIONAL)} flux dans la base de données ; page du produit "
                 f"{constants.NATIONAL_PAGE_FR}.",
             ),
             limits=join_limits(
@@ -688,7 +688,7 @@ async def list_national_agencies(
                     "Each feed's licence_url and attribution are the ones StatCan recorded for "
                     "it; check them before republishing",
                     "Les champs licence_url et attribution de chaque flux sont ceux que "
-                    "Statistique Canada a consignés; vérifiez-les avant toute rediffusion",
+                    "Statistique Canada a consignés ; vérifiez-les avant toute rediffusion",
                 ),
                 (
                     pick(
@@ -696,7 +696,7 @@ async def list_national_agencies(
                         f"Returned feeds {offset + 1} to {offset + len(page)} of {len(feeds)} "
                         "matching; page with offset or narrow with query, province or status",
                         f"Flux {offset + 1} à {offset + len(page)} sur {len(feeds)} "
-                        "correspondants; paginez avec offset ou précisez avec query, province "
+                        "correspondants ; paginez avec offset ou précisez avec query, province "
                         "ou status",
                     )
                     if page and len(page) < len(feeds)
@@ -712,7 +712,7 @@ async def list_national_agencies(
                 ),
                 derived_from_statcan_fr(
                     f"Compilation de la {constants.NATIONAL_NAME_FR} "
-                    f"({constants.NATIONAL_NOTICE_FR}); chaque flux porte aussi les conditions "
+                    f"({constants.NATIONAL_NOTICE_FR}) ; chaque flux porte aussi les conditions "
                     "de son organisme (licence_url, attribution)."
                 ),
             ),

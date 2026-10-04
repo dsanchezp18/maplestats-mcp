@@ -18,7 +18,7 @@ MODULE_DESCRIPTION_FR = (
     "Vancouver et de l'industrie (PM2,5, ozone, NO2, SO2, SRT, CO et autres, valeurs brutes "
     "et déclarées), cote air santé (CAS) actuelle et prévisions pour 27 secteurs, stations "
     "nivométéorologiques automatiques (équivalent en eau de la neige, épaisseur de neige, "
-    "précipitations, température; saison en cours et archive horaire depuis 2003), relevés "
+    "précipitations, température ; saison en cours et archive horaire depuis 2003), relevés "
     "nivométriques manuels depuis 1935, niveaux des puits d'observation des eaux "
     "souterraines (profondeur de l'eau, moyennes quotidiennes depuis les années 1960) et "
     "débit et niveau du réseau hydrométrique provincial (une soixantaine de stations hors du "

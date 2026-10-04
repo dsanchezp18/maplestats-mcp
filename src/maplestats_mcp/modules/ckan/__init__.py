@@ -27,7 +27,7 @@ MODULE_DESCRIPTION_FR = (
     "licences, mots-clés, groupes, requêtes DataStore au niveau des "
     "lignes et lecture des fichiers Excel (.xlsx, .xls) et CSV des "
     "ressources sans DataStore (environ la moitié des jeux de données "
-    "tabulaires des portails fédéral, ontarien et britanno-colombien; pas "
+    "tabulaires des portails fédéral, ontarien et britanno-colombien ; pas "
     "Toronto, dont le portail ne permet pas le téléchargement automatisé des fichiers) : feuilles, ligne d'en-tête devinée, filtres et pagination, "
     "avec la licence, la source et un avertissement quand la licence n'est "
     "pas ouverte. Les portails sont choisis au moyen d'une clé `portal`."

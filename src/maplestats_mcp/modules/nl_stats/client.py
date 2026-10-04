@@ -223,7 +223,7 @@ async def list_files(
                 lang,
                 "Excel files only (each topic page also links PDFs); census, "
                 "environment and justice topics publish no Excel files.",
-                "Fichiers Excel seulement (chaque page thématique renvoie aussi à des PDF); "
+                "Fichiers Excel seulement (chaque page thématique renvoie aussi à des PDF) ; "
                 "les sujets recensement, environnement et justice ne publient aucun fichier "
                 "Excel. Titres et descriptions des fichiers en anglais seulement, comme sur le "
                 "site de l'agence.",

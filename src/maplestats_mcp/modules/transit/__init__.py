@@ -93,5 +93,5 @@ MODULE_DESCRIPTION_FR = (
     "prévus à un arrêt à une date donnée, et nombre de voyages et fréquence horaire "
     "d'une ligne. Lus à la demande dans le zip de l'organisme, par plages HTTP (l'hôte "
     "de BC Transit n'offre pas les plages : ses zips sont téléchargés en entier et "
-    "gardés en mémoire dix minutes); rien n'est écrit sur le disque."
+    "gardés en mémoire dix minutes) ; rien n'est écrit sur le disque."
 )

@@ -292,7 +292,7 @@ def list_portals(lang: str = "en") -> PortalList:
             has_tags=p.has_tags,
             has_groups=p.groups != "none",
             has_datastore=p.has_datastore,
-            note=(p.note_fr or p.note) if lang == "fr" else p.note,
+            note=pick(lang, p.note or "", p.note_fr or p.note or "") or None,
         )
         for key, p in PORTALS.items()
     ]
@@ -543,7 +543,7 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
             freshness=pick(
                 lang,
                 "organization roster changes infrequently; cached 24h",
-                "la liste des organisations change rarement; mise en cache 24 h",
+                "la liste des organisations change rarement ; mise en cache 24 h",
             ),
         ),
     )
@@ -785,7 +785,7 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
             freshness=pick(
                 lang,
                 "group roster changes infrequently; cached 24h",
-                "la liste des groupes change rarement; mise en cache 24 h",
+                "la liste des groupes change rarement ; mise en cache 24 h",
             ),
         ),
     )
@@ -840,7 +840,7 @@ async def datastore_search(
         raise_localized(
             InvalidInput,
             f"The {portal!r} portal has no DataStore extension; download the resource URL instead.",
-            f"le portail {portal!r} n'a pas d'extension DataStore; téléchargez plutôt le fichier "
+            f"le portail {portal!r} n'a pas d'extension DataStore ; téléchargez plutôt le fichier "
             "de la ressource.",
             lang,
         )

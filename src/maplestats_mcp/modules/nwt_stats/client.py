@@ -90,7 +90,7 @@ def normalize_url(url: str, lang: Lang = "en") -> str:
             f"nwt_stats: url must be a link on {constants.DOMAIN} (see nwt_stats_list_files); "
             f"got {url!r}.",
             f"nwt_stats : url doit être un lien sur {constants.DOMAIN} (voir "
-            f"nwt_stats_list_files); reçu {url!r}.",
+            f"nwt_stats_list_files) ; reçu {url!r}.",
             lang,
         )
     path = quote(unquote(parsed.path), safe=_PATH_SAFE)
@@ -333,7 +333,7 @@ def _file_list(
                 lang,
                 "Pages cached up to 6 hours; the Bureau updates tables monthly, "
                 "quarterly or yearly as each release comes out.",
-                "Pages en cache jusqu'à 6 heures; le Bureau met ses tableaux à jour chaque "
+                "Pages en cache jusqu'à 6 heures ; le Bureau met ses tableaux à jour chaque "
                 "mois, chaque trimestre ou chaque année, au fil des diffusions.",
             ),
             coverage=coverage,
@@ -547,7 +547,7 @@ async def read_file(
             InvalidInput,
             f"nwt_stats: url must be an .xlsx or .xls link (see nwt_stats_list_files); got {url!r}.",
             "nwt_stats : url doit être un lien vers un fichier .xlsx ou .xls (voir "
-            f"nwt_stats_list_files); reçu {url!r}.",
+            f"nwt_stats_list_files) ; reçu {url!r}.",
             lang,
         )
     downloaded, cached = await _download(url)
@@ -581,7 +581,7 @@ async def read_file(
             freshness=pick(
                 lang,
                 "As published by the NWT Bureau of Statistics; files cached up to 6 hours.",
-                "Tel que publié par le Bureau de la statistique des Territoires du Nord-Ouest; "
+                "Tel que publié par le Bureau de la statistique des Territoires du Nord-Ouest ; "
                 "fichiers en cache jusqu'à 6 heures.",
             ),
             coverage=coverage,
@@ -650,7 +650,7 @@ async def read_file(
                 f"the workbook has {len(sizes)} sheets and none was requested, so the largest "
                 f"({chosen!r}) was read; pass sheet= for another",
                 f"le classeur compte {len(sizes)} feuilles et aucune n'a été demandée, donc la "
-                f"plus grande ({chosen!r}) a été lue; passez sheet= pour une autre",
+                f"plus grande ({chosen!r}) a été lue ; passez sheet= pour une autre",
             )
         )
     if result.capped:

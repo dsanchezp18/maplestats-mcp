@@ -101,7 +101,7 @@ PORTALS: dict[str, Portal] = {
             "de Santé Canada, d'EDSC, du CRTC et d'Élections Canada. Aucun mot-clé "
             "ni groupe CKAN : les thèmes figurent dans le champ bilingue `keywords`. "
             "La recherche plein texte DataStore (`query`) est refusée au-delà de "
-            "100 000 lignes; utilisez plutôt `filters`."
+            "100 000 lignes ; utilisez plutôt `filters`."
         ),
         file_hosts=(
             "open.canada.ca",
@@ -184,7 +184,7 @@ PORTALS: dict[str, Portal] = {
         note_fr=(
             "Le DataStore est défaillant du côté du portail : datastore_search et "
             "datastore_info renvoient une erreur HTTP 500 pour chaque ressource "
-            "vérifiée (15 sur 15, en septembre 2026); les requêtes de lignes sont "
+            "vérifiée (15 sur 15, en septembre 2026) ; les requêtes de lignes sont "
             "donc désactivées. Téléchargez plutôt les ressources."
         ),
         file_hosts=("open.alberta.ca",),
@@ -256,7 +256,7 @@ PORTALS: dict[str, Portal] = {
         landing_uses_name=True,
         extra_fields=("update_frequency",),
         note="Content is in French; an unknown `sort` field is silently ignored.",
-        note_fr="Contenu en français; un champ `sort` inconnu est ignoré sans erreur.",
+        note_fr="Contenu en français ; un champ `sort` inconnu est ignoré sans erreur.",
         file_hosts=("donnees.montreal.ca", "montreal-prod.storage.googleapis.com"),
     ),
     "toronto": Portal(

@@ -494,7 +494,7 @@ async def test_french_citation_freshness_and_limits(httpx_mock):
     assert result.source.citation.startswith("Source : Canada Revenue Agency, « ")
     assert "Licence : Open Government Licence - Canada" in result.source.citation
     assert "modifié le 2026-08-01" in result.source.citation
-    assert (result.provenance.freshness or "").startswith("Fichier modifié le 2026-08-01;")
+    assert (result.provenance.freshness or "").startswith("Fichier modifié le 2026-08-01 ;")
     assert result.provenance.limits == "lignes 1 à 1 sur 3"
     assert "feuille 'csv' sur 1" in (result.provenance.coverage or "")
 

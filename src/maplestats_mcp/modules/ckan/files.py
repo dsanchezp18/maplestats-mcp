@@ -148,7 +148,7 @@ def _check_tabular(declared: str | None, url: str, landing: str | None, lang: st
         f"ckan_read_resource reads CSV, TSV, XLS and XLSX files; this resource is {shown!r}"
         f" (portal format {declared!r}), which is not parsed"
         + (f" (dataset page: {landing})." if landing else "."),
-        f"ckan_read_resource lit les fichiers CSV, TSV, XLS et XLSX; cette ressource est "
+        f"ckan_read_resource lit les fichiers CSV, TSV, XLS et XLSX ; cette ressource est "
         f"{shown!r} (format indiqué par le portail : {declared!r}), qui n'est pas lu"
         + (f" (page du jeu de données : {landing})." if landing else "."),
         lang,
@@ -233,7 +233,7 @@ class _Resolved:
                 pick(
                     self.lang,
                     "the portal lists a plain-http link; it was fetched over https",
-                    "le portail donne un lien en http simple; le fichier a été téléchargé en https",
+                    "le portail donne un lien en http simple ; le fichier a été téléchargé en https",
                 )
             )
         return "; ".join(parts) or None
@@ -266,7 +266,7 @@ async def _resolve(portal_key: str, resource_id: str, lang: str) -> tuple[_Resol
             "taken from the portal's own record.",
             "ckan_read_resource : resource_id doit être l'identifiant d'une ressource obtenu "
             "avec ckan_get_dataset ou ckan_get_resource (lettres, chiffres, traits d'union), "
-            "et non une URL; le lien du fichier est tiré de la fiche du portail.",
+            "et non une URL ; le lien du fichier est tiré de la fiche du portail.",
             lang,
         )
     config, _ = _buckets(portal_key, portal)
@@ -469,7 +469,7 @@ def _file_freshness(source: FileSource, lang: str) -> str:
     return pick(
         lang,
         f"File modified date not stated; cached up to {hours} hours.",
-        f"Date de modification du fichier non indiquée; mis en cache jusqu'à {hours} heures.",
+        f"Date de modification du fichier non indiquée ; mis en cache jusqu'à {hours} heures.",
     )
 
 
@@ -539,7 +539,7 @@ async def _read_datastore(
             freshness=pick(
                 lang,
                 "DataStore rows; the portal's DataStore may differ from its file.",
-                "Lignes du DataStore; le DataStore du portail peut différer de son fichier.",
+                "Lignes du DataStore ; le DataStore du portail peut différer de son fichier.",
             ),
             coverage=source.licence_warning or source.citation,
             limits=resolved.limits(
@@ -548,7 +548,7 @@ async def _read_datastore(
                     "DataStore rows (sheet, header_row and header_rows do not apply; filters are "
                     "case-sensitive exact matches, and `contains` is the DataStore's full-text "
                     "search on whole words, not the file reader's substring match)",
-                    "lignes du DataStore (sheet, header_row et header_rows ne s'appliquent pas; "
+                    "lignes du DataStore (sheet, header_row et header_rows ne s'appliquent pas ; "
                     "les filtres sont des correspondances exactes sensibles à la casse, et "
                     "`contains` est la recherche plein texte du DataStore sur des mots entiers, "
                     "et non la recherche de sous-chaîne du lecteur de fichiers)",
@@ -692,7 +692,7 @@ async def read_resource(
                 f"the workbook has {len(sizes)} sheets and none was requested, so the largest "
                 f"({chosen!r}) was read; pass sheet= for another",
                 f"le classeur compte {len(sizes)} feuilles et aucune n'a été demandée, donc la "
-                f"plus grande ({chosen!r}) a été lue; passez sheet= pour une autre",
+                f"plus grande ({chosen!r}) a été lue ; passez sheet= pour une autre",
             )
         )
     if result.capped:

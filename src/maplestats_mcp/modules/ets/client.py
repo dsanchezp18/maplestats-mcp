@@ -35,7 +35,7 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _FRESHNESS = "real-time; ETS regenerates each feed about every 30 seconds"
-_FRESHNESS_FR = "temps réel; ETS régénère chaque flux environ toutes les 30 secondes"
+_FRESHNESS_FR = "temps réel ; ETS régénère chaque flux environ toutes les 30 secondes"
 
 
 async def _fetch_feed(feed: str, ttl: int, *, lang: str = "en") -> tuple[Any, bool]:

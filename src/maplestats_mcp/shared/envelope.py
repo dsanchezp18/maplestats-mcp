@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import NoReturn
 
-from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing, normalize_lang, t
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing, french_text, normalize_lang, t
 from maplestats_mcp.shared.licences import licence_for, licence_in
 from maplestats_mcp.shared.models import Provenance
 
@@ -119,4 +119,5 @@ def raise_localized(exc_cls: type[ValueError], en: str, fr: str, lang: str = "en
         (ERROR_KEYS[cls.__name__] for cls in exc_cls.__mro__ if cls.__name__ in ERROR_KEYS),
         None,
     )
-    raise exc_cls(french_spacing(t(key, "fr", detail=fr) if key else fr))
+    detail = french_text(fr)
+    raise exc_cls(french_spacing(t(key, "fr", detail=detail) if key else detail))

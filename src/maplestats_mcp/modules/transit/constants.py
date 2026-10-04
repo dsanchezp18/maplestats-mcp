@@ -248,7 +248,7 @@ def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agen
         notes_fr=(
             f"Identifiant d'exploitant {operator_id}. {also} L'hôte de BC Transit construit "
             "chaque zip à la demande (5 à 25 s) et ne prend en charge ni HEAD ni les plages "
-            "d'octets; ce module télécharge donc le zip complet et le garde en mémoire dix "
+            "d'octets ; ce module télécharge donc le zip complet et le garde en mémoire dix "
             "minutes. Les conditions exigent d'indiquer BC Transit comme source et interdisent "
             "l'usage de son nom de domaine et de ses marques de commerce."
         ).replace("  ", " "),
@@ -289,7 +289,7 @@ def _exo(
         licence_fr=QC_CC_BY_FR,
         attribution_fr="Source : exo (Réseau de transport métropolitain), CC BY 4.0.",
         update_cadence_fr=(
-            "À chaque changement de service; les flux des secteurs d'exo vérifiés le 2026-10-03 "
+            "À chaque changement de service ; les flux des secteurs d'exo vérifiés le 2026-10-03 "
             "vont jusqu'au 2027-01-03."
         ),
         notes_en=(
@@ -378,7 +378,7 @@ AGENCIES: dict[str, Agency] = {
         ),
         notes_fr=(
             "Les conditions de la STM précisent que les horaires du métro sont donnés à titre "
-            "informatif et ne peuvent servir à développer une application; les lignes de métro "
+            "informatif et ne peuvent servir à développer une application ; les lignes de métro "
             "(route_type 1) sont donc exclues des résultats de lignes et de passages, mais "
             "les lignes d'autobus sont incluses. La STM interdit l'utilisation de son logo "
             "sans permission. Les noms d'arrêts et de lignes sont en français."
@@ -403,7 +403,7 @@ AGENCIES: dict[str, Agency] = {
         update_cadence="At each service change; release notes published per update.",
         licence_fr="Licence de données ouvertes de la Ville d'Ottawa, version 2.0",
         update_cadence_fr=(
-            "À chaque changement de service; des notes de version accompagnent chaque mise à jour."
+            "À chaque changement de service ; des notes de version accompagnent chaque mise à jour."
         ),
         notes_en=(
             "The City's catalogue still lists www.octranspo.com/files/google_transit.zip, "
@@ -413,7 +413,7 @@ AGENCIES: dict[str, Agency] = {
         ),
         notes_fr=(
             "Le catalogue de la Ville indique encore www.octranspo.com/files/google_transit.zip, "
-            "qui renvoie une erreur 404; ce module lit le fichier servi par l'hôte Azure Front "
+            "qui renvoie une erreur 404 ; ce module lit le fichier servi par l'hôte Azure Front "
             "Door d'OC Transpo, ouvert sans clé. Seul le flux temps réel exige un compte."
         ),
     ),
@@ -436,7 +436,7 @@ AGENCIES: dict[str, Agency] = {
             "City of Calgary, conditions d'utilisation d'Open Calgary), version 2.1"
         ),
         update_cadence_fr=(
-            "Irrégulière (selon la fiche d'Open Calgary); suit les changements de service de "
+            "Irrégulière (selon la fiche d'Open Calgary) ; suit les changements de service de "
             "Calgary Transit."
         ),
     ),
@@ -492,7 +492,7 @@ AGENCIES: dict[str, Agency] = {
         city_fr="Région du grand Toronto et de Hamilton",
         licence_fr="Licence du gouvernement ouvert – Ontario – Metrolinx",
         update_cadence_fr=(
-            "À chaque changement de service; le flux vérifié le 2026-10-02 avait été publié le "
+            "À chaque changement de service ; le flux vérifié le 2026-10-02 avait été publié le "
             "2026-10-01."
         ),
         notes_en="GO train and GO bus services. UP Express has its own feed (up_express).",
@@ -661,7 +661,7 @@ AGENCIES: dict[str, Agency] = {
             "4.0 sur sa fiche de Données Québec)"
         ),
         update_cadence_fr=(
-            "À chaque changement de service; le zip vérifié le 2026-10-03 était daté du 2026-10-02."
+            "À chaque changement de service ; le zip vérifié le 2026-10-03 était daté du 2026-10-02."
         ),
     ),
     "stl_laval": _quebec(
@@ -690,12 +690,12 @@ AGENCIES: dict[str, Agency] = {
         ),
         licence_url="https://stlaval.ca/affaires/donnees-ouvertes",
         licence_fr=(
-            "Conditions d'utilisation GTFS de la STL : licence limitée et révocable; aucun usage "
+            "Conditions d'utilisation GTFS de la STL : licence limitée et révocable ; aucun usage "
             "commercial sans l'autorisation écrite de la STL (CC BY 4.0 sur sa fiche de Données "
             "Québec)"
         ),
         update_cadence_fr=(
-            "Trimestrielle selon la fiche de Données Québec; le flux vérifié le 2026-10-03 va "
+            "Trimestrielle selon la fiche de Données Québec ; le flux vérifié le 2026-10-03 va "
             "jusqu'au 2026-10-30."
         ),
     ),
@@ -712,11 +712,11 @@ AGENCIES: dict[str, Agency] = {
             "in it (GTFS_clients.zip). The feed has no feed_info.txt."
         ),
         (
-            "La fiche de Données Québec renvoie à un répertoire; ce module lit le zip qu'il "
+            "La fiche de Données Québec renvoie à un répertoire ; ce module lit le zip qu'il "
             "contient (GTFS_clients.zip). Le flux n'a pas de feed_info.txt."
         ),
         update_cadence_fr=(
-            "À chaque changement de service; le flux vérifié le 2026-10-03 va jusqu'au 2026-12-20."
+            "À chaque changement de service ; le flux vérifié le 2026-10-03 va jusqu'au 2026-12-20."
         ),
     ),
     "stq_ferries": _quebec(
@@ -734,7 +734,7 @@ AGENCIES: dict[str, Agency] = {
         ),
         (
             "Traverses (route_type 4), par exemple Québec-Lévis et Sorel-Tracy-Saint-Ignace-de-"
-            "Loyola. L'hôte ne sert pas de plages d'octets; le zip de 71 Ko est téléchargé en "
+            "Loyola. L'hôte ne sert pas de plages d'octets ; le zip de 71 Ko est téléchargé en "
             "entier."
         ),
         range_requests=False,
@@ -755,11 +755,11 @@ AGENCIES: dict[str, Agency] = {
             "whatever the file name, so this URL keeps working."
         ),
         (
-            "La STTR renomme le fichier à chaque saison; Données Québec sert la ressource par son "
+            "La STTR renomme le fichier à chaque saison ; Données Québec sert la ressource par son "
             "identifiant quel que soit le nom du fichier."
         ),
         update_cadence_fr=(
-            "À chaque saison; le flux vérifié le 2026-10-03 (automne 2026) va jusqu'au 2026-12-26."
+            "À chaque saison ; le flux vérifié le 2026-10-03 (automne 2026) va jusqu'au 2026-12-26."
         ),
     ),
     "rimouski": _quebec(
@@ -773,7 +773,7 @@ AGENCIES: dict[str, Agency] = {
         "As needed; the feed checked 2026-10-03 runs to 2027-02-14.",
         "Published by the Ville de Rimouski. The feed has no feed_info.txt.",
         "Publié par la Ville de Rimouski. Le flux n'a pas de feed_info.txt.",
-        update_cadence_fr=("Au besoin; le flux vérifié le 2026-10-03 va jusqu'au 2027-02-14."),
+        update_cadence_fr=("Au besoin ; le flux vérifié le 2026-10-03 va jusqu'au 2027-02-14."),
     ),
     "rouyn_noranda": _quebec(
         "rouyn_noranda",
@@ -785,7 +785,7 @@ AGENCIES: dict[str, Agency] = {
         "Source: Ville de Rouyn-Noranda, Données Québec, CC BY 4.0.",
         "As needed; the feed checked 2026-10-03 was published 2026-02-05.",
         update_cadence_fr=(
-            "Au besoin; le flux vérifié le 2026-10-03 avait été publié le 2026-02-05."
+            "Au besoin ; le flux vérifié le 2026-10-03 avait été publié le 2026-02-05."
         ),
     ),
     "stsv_valleyfield": _quebec(
@@ -804,11 +804,11 @@ AGENCIES: dict[str, Agency] = {
         ),
         (
             "Les lignes Communobus (Com_1 à Com_6, transport sur demande) sont décrites par "
-            "frequencies.txt; ce module ne développe pas les fréquences, leurs voyages sont donc "
+            "frequencies.txt ; ce module ne développe pas les fréquences, leurs voyages sont donc "
             "exclus des passages et des résumés de ligne. Les lignes régulières sont complètes."
         ),
         update_cadence_fr=(
-            "Deux fois par année selon la fiche de Données Québec; le flux vérifié le 2026-10-03 "
+            "Deux fois par année selon la fiche de Données Québec ; le flux vérifié le 2026-10-03 "
             "va jusqu'au 2026-12-31."
         ),
     ),

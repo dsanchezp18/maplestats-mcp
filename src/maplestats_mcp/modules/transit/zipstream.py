@@ -272,7 +272,7 @@ async def stream_member_lines(
         raise_localized(
             UpstreamError,
             f"{url}: the feed changed while it was being read; retry.",
-            f"{url} : le flux a changé pendant sa lecture; réessayez.",
+            f"{url} : le flux a changé pendant sa lecture ; réessayez.",
             lang,
         )
     name_len, extra_len = struct.unpack("<HH", header[26:30])

@@ -44,7 +44,7 @@ MODULE_DESCRIPTION_FR = (
     "Colombie-Britannique (API Open511, Licence du gouvernement ouvert – "
     "Colombie-Britannique) : travaux et entretien en cours, incidents et état des "
     "routes avec gravité, route, direction, état des voies, horaire et emplacement, "
-    "filtrés par type, gravité, district, route, zone ou texte; un événement complet "
-    "avec sa géométrie; décomptes par type, gravité, district ou route; et les 11 "
+    "filtrés par type, gravité, district, route, zone ou texte ; un événement complet "
+    "avec sa géométrie ; décomptes par type, gravité, district ou route ; et les 11 "
     "districts du ministère. Contenu en anglais seulement."
 )

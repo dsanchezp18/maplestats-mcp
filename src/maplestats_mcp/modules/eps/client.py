@@ -162,7 +162,7 @@ def _parse_iso_date(value: str, name: str, lang: str = "en") -> date:
         raise_localized(
             InvalidInput,
             f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.",
-            f"{name} doit être une date ISO (AAAA-MM-JJ); reçu {value!r}.",
+            f"{name} doit être une date ISO (AAAA-MM-JJ) ; reçu {value!r}.",
             lang,
         )
 
@@ -263,7 +263,7 @@ async def list_occurrences(
         raise_localized(
             InvalidInput,
             f"offset must be >= 0, got {offset}.",
-            f"offset doit être supérieur ou égal à 0; reçu {offset}.",
+            f"offset doit être supérieur ou égal à 0 ; reçu {offset}.",
             lang,
         )
     layer_url = _layer_url(dataset, lang)
@@ -326,7 +326,7 @@ async def list_occurrences(
                         f"Incidents {offset + 1} à {offset + len(features)} sur {total:,}".replace(
                             ",", "\u00a0"
                         )
-                        + ", du plus récent au plus ancien; paginez avec offset, resserrez "
+                        + ", du plus récent au plus ancien ; paginez avec offset, resserrez "
                         "les filtres ou utilisez eps_summarize_occurrences pour les "
                         "dénombrements",
                     )
@@ -336,7 +336,7 @@ async def list_occurrences(
                 pick(
                     lang,
                     "location is the nearest intersection only; no time of day",
-                    "le lieu se limite à l'intersection la plus proche; aucune heure n'est "
+                    "le lieu se limite à l'intersection la plus proche ; aucune heure n'est "
                     "indiquée",
                 ),
             ),

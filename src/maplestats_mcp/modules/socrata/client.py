@@ -75,7 +75,7 @@ def _dataset_id(dataset_id: str, lang: str = "en") -> str:
             f"letters or digits), as returned by socrata_search_datasets; got {dataset_id!r}.",
             "dataset_id doit être un identifiant Socrata de la forme « abcd-1234 » (deux "
             "groupes de quatre lettres ou chiffres), comme ceux que renvoie "
-            f"socrata_search_datasets; reçu {dataset_id!r}.",
+            f"socrata_search_datasets ; reçu {dataset_id!r}.",
             lang,
         )
     return cleaned
@@ -93,7 +93,7 @@ def _check_page(limit: int, offset: int, limit_max: int, lang: str) -> None:
         raise_localized(
             InvalidInput,
             f"offset must be >= 0, got {offset}.",
-            f"offset doit être supérieur ou égal à 0; reçu {offset}.",
+            f"offset doit être supérieur ou égal à 0 ; reçu {offset}.",
             lang,
         )
 
@@ -319,7 +319,7 @@ async def query_dataset_rows(
             limits=pick(
                 lang,
                 f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
-                f"lignes plafonnées à {constants.ROWS_LIMIT_MAX} par requête; noms de "
+                f"lignes plafonnées à {constants.ROWS_LIMIT_MAX} par requête ; noms de "
                 "colonnes et valeurs tels que publiés par le portail",
             ),
             lang=lang,

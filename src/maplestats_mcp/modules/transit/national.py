@@ -91,7 +91,7 @@ def _status(
             ),
             (
                 "La base de données n'indique ni page de licence ni mention de source pour ce "
-                "flux; ses conditions de réutilisation ne peuvent donc pas être confirmées."
+                "flux ; ses conditions de réutilisation ne peuvent donc pas être confirmées."
             ),
             None,
         )
@@ -159,7 +159,7 @@ def build_agencies(
             ),
             notes_fr=(
                 f"Identifiant {custom_id} dans la {constants.NATIONAL_NAME_FR} de Statistique "
-                "Canada; téléchargement de l'organisme : "
+                "Canada ; téléchargement de l'organisme : "
                 f"{source.get('direct_url', '').strip() or 'non indiqué'}. La compilation est "
                 "sous la Licence ouverte de Statistique Canada / Licence du gouvernement "
                 "ouvert – Canada; chaque flux porte aussi la licence de son organisme "

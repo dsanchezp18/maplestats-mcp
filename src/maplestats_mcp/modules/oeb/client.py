@@ -391,7 +391,7 @@ async def _resolve(dataset: str, lang: str) -> tuple[pages.DatasetPage, pages.Li
     raise_localized(
         InvalidInput,
         f"{dataset!r} matches {len(candidates)} datasets; pass one slug: {names}.",
-        f"{dataset!r} correspond à {len(candidates)} jeux de données; donnez un "
+        f"{dataset!r} correspond à {len(candidates)} jeux de données ; donnez un "
         f"identifiant : {names}.",
         lang,
     )
@@ -447,7 +447,7 @@ async def _download(file: OebFile, lang: str) -> tuple[bytes, bool]:
             InvalidInput,
             f"{file.name} is a {file.format} file whose rows are not read here; download it "
             f"from {file.url}.",
-            f"{file.name} est un fichier {file.format} dont les lignes ne sont pas lues ici; "
+            f"{file.name} est un fichier {file.format} dont les lignes ne sont pas lues ici ; "
             f"téléchargez-le à {file.url}.",
             lang,
         )
@@ -856,7 +856,7 @@ async def get_rates(
         raise_localized(
             InvalidInput,
             "The Regulated Price Plan tables are province-wide; drop distributor.",
-            "les grilles tarifaires réglementées valent pour toute la province; retirez "
+            "les grilles tarifaires réglementées valent pour toute la province ; retirez "
             "distributor.",
             lang,
         )

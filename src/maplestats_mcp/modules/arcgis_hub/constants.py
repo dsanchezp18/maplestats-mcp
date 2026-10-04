@@ -564,16 +564,16 @@ PORTALS: dict[str, Portal] = {
 # every portal with a note has one here.
 NOTES_FR: dict[str, str] = {
     "durham": (
-        "Les éléments pointent vers une couche d'un MapServer commun de plus de 200 couches; "
+        "Les éléments pointent vers une couche d'un MapServer commun de plus de 200 couches ; "
         "laissez layer_index vide pour que l'id de couche propre à l'élément soit utilisé."
     ),
     "markham": (
         "307 des 321 éléments (vérifié le 2026-10-03) sont des couches de la région de York "
-        "(propriétaire YorkMunicipalGovt) affichées sur le site de Markham; 14 sont celles "
+        "(propriétaire YorkMunicipalGovt) affichées sur le site de Markham ; 14 sont celles "
         "de la Ville."
     ),
     "aurora": (
-        "opendata-cityofaurora.hub.arcgis.com est Aurora, en Illinois, une autre ville; ce "
+        "opendata-cityofaurora.hub.arcgis.com est Aurora, en Illinois, une autre ville ; ce "
         "portail est celui d'Aurora, en Ontario."
     ),
     "grande_prairie_county": (
@@ -591,7 +591,7 @@ NOTES_FR: dict[str, str] = {
     ),
     "cochrane": (
         "Ville de Cochrane, Alberta. A quitté data-cochranegis.opendata.arcgis.com, dont l'API "
-        "refuse maintenant l'accès anonyme (GWM_0003); le nouveau domaine répond (vérifié le "
+        "refuse maintenant l'accès anonyme (GWM_0003) ; le nouveau domaine répond (vérifié le "
         "2026-09-27)."
     ),
     "okotoks": (
@@ -603,7 +603,7 @@ NOTES_FR: dict[str, str] = {
     "oakville": (
         "Région de Halton, Ontario (la région n'a pas son propre portail de données ouvertes). "
         "Les 14 éléments sur 157 servis depuis maps.oakville.ca, le serveur de la Ville, "
-        "coupent toute connexion depuis certains réseaux (vérifié le 2026-10-03); les autres, "
+        "coupent toute connexion depuis certains réseaux (vérifié le 2026-10-03) ; les autres, "
         "sur services5.arcgis.com, répondent normalement."
     ),
     "burlington": (
@@ -616,9 +616,9 @@ NOTES_FR: dict[str, str] = {
         "Organisation AGOL de la Ville de Red Deer (8EWx42uKeMSu9Wcl), environ 170 éléments : "
         "orthophotos, sentiers, parcs et de nombreuses couches de formulaires Survey123. Le "
         "catalogue choisi par la Ville, data.reddeer.ca, est un site ASP.NET sur mesure (sans "
-        "API); data-reddeer.opendata.arcgis.com répond 401. Son API de téléchargement répond "
+        "API) ; data-reddeer.opendata.arcgis.com répond 401. Son API de téléchargement répond "
         "HTTP 500 « domain record not found » pour chaque élément (vérifié le 2026-09-27) : "
-        "les éléments n'ont donc pas de liens de téléchargement; interrogez plutôt les lignes."
+        "les éléments n'ont donc pas de liens de téléchargement ; interrogez plutôt les lignes."
     ),
     "brampton": (
         "Région de Peel, Ontario. 352 jeux de données confirmés le 2026-09-29 (GTFS du "
@@ -645,32 +645,32 @@ NOTES_FR: dict[str, str] = {
     "kamloops": "Colombie-Britannique. 156 jeux de données confirmés le 2026-09-29.",
     "prince_george": "Colombie-Britannique. 175 jeux de données confirmés le 2026-09-29.",
     "delta": (
-        "Colombie-Britannique. 16 jeux de données confirmés le 2026-10-02; Open Government "
+        "Colombie-Britannique. 16 jeux de données confirmés le 2026-10-02 ; Open Government "
         "Licence de la Ville."
     ),
     "yellowknife": (
         "Territoires du Nord-Ouest. 6 jeux de données confirmés le 2026-10-02 (limites, rues, "
-        "zonage, adresses municipales); la licence de données ouvertes v1 de la Ville permet "
+        "zonage, adresses municipales) ; la licence de données ouvertes v1 de la Ville permet "
         "la réutilisation commerciale avec mention de la source."
     ),
     "cambridge": (
-        "Région de Waterloo, Ontario. 48 jeux de données confirmés le 2026-10-02; la licence de "
+        "Région de Waterloo, Ontario. 48 jeux de données confirmés le 2026-10-02 ; la licence de "
         "données ouvertes v2.1 de la Ville permet la réutilisation commerciale avec mention de "
         "la source."
     ),
     "maple_ridge": (
         "Colombie-Britannique. 61 jeux de données confirmés le 2026-10-02 (photographies "
-        "aériennes, couches SIG); Open Government Licence de la Ville. Un second site, "
+        "aériennes, couches SIG) ; Open Government Licence de la Ville. Un second site, "
         "opengov2-mapleridge.opendata.arcgis.com, en compte 88."
     ),
     "pickering": (
         "Région de Durham, Ontario. 268 jeux de données confirmés le 2026-10-02. Les licences "
         "varient selon l'élément (vérifié le 2026-10-03) : 124 indiquent une Open Data "
         "License, 109 n'en indiquent aucune et 26 couches de Central Lake Ontario Conservation "
-        "relèvent de la CLOCA Open Data License v1; vérifiez le license_info de chaque élément."
+        "relèvent de la CLOCA Open Data License v1 ; vérifiez le license_info de chaque élément."
     ),
     "sarnia": (
-        "Ontario. 14 jeux de données confirmés le 2026-10-02; licence fondée sur la Licence du "
+        "Ontario. 14 jeux de données confirmés le 2026-10-02 ; licence fondée sur la Licence du "
         "gouvernement ouvert – Canada 2.0."
     ),
     "saint_john": (
@@ -678,11 +678,11 @@ NOTES_FR: dict[str, str] = {
         "2026-10-02; titres bilingues; Open Government Licence – City of Saint John."
     ),
     "port_moody": (
-        "Colombie-Britannique. 104 jeux de données confirmés le 2026-10-02; la licence de la "
+        "Colombie-Britannique. 104 jeux de données confirmés le 2026-10-02 ; la licence de la "
         "Ville permet la réutilisation commerciale avec mention de la source."
     ),
     "white_rock": (
-        "Colombie-Britannique. 59 jeux de données confirmés le 2026-10-02; White Rock Open "
+        "Colombie-Britannique. 59 jeux de données confirmés le 2026-10-02 ; White Rock Open "
         "Government License."
     ),
     "penticton": (
@@ -690,7 +690,7 @@ NOTES_FR: dict[str, str] = {
         "Open Government Licence."
     ),
     "orangeville": (
-        "Ontario. 18 jeux de données confirmés le 2026-10-02; Open Government Licence – "
+        "Ontario. 18 jeux de données confirmés le 2026-10-02 ; Open Government Licence – "
         "Orangeville."
     ),
     "canmore": (
@@ -701,8 +701,8 @@ NOTES_FR: dict[str, str] = {
         "géoscientifiques ouverts (géologie du substratum, géophysique aéroportée, indices "
         "minéralisés). 49 jeux de données confirmés le 2026-10-03. Les conditions varient "
         "selon l'élément : la plupart relèvent des conditions de la NTGS (droit d'auteur du "
-        "GTNO; aucun usage commercial ni reproduction sans le consentement écrit préalable de "
-        "la NTGS; toute réutilisation non commerciale doit mentionner le droit d'auteur du "
+        "GTNO ; aucun usage commercial ni reproduction sans le consentement écrit préalable de "
+        "la NTGS ; toute réutilisation non commerciale doit mentionner le droit d'auteur du "
         "GTNO), certains de la Licence du gouvernement ouvert – Canada, et un (carte GSC "
         "D1860A) d'une licence de CD-ROM réservée au seul usage du titulaire. Vérifiez la "
         "licence de chaque élément avant de le réutiliser."
@@ -711,15 +711,15 @@ NOTES_FR: dict[str, str] = {
         "Carrefour de données de la Commission géologique des Territoires du Nord-Ouest "
         "(GTNO) : 20 services d'entités confirmés le 2026-10-03 (compilations géologiques, "
         "données sur les minéraux indicateurs de kimberlite, index cartographiques). La "
-        "plupart des éléments relèvent des conditions de la NTGS (droit d'auteur du GTNO; "
-        "aucun usage commercial sans le consentement écrit préalable de la NTGS; toute "
-        "réutilisation non commerciale doit mentionner le droit d'auteur du GTNO); quatre "
+        "plupart des éléments relèvent des conditions de la NTGS (droit d'auteur du GTNO ; "
+        "aucun usage commercial sans le consentement écrit préalable de la NTGS ; toute "
+        "réutilisation non commerciale doit mentionner le droit d'auteur du GTNO) ; quatre "
         "relèvent de la Licence du gouvernement ouvert – Canada. Vérifiez la licence de chaque "
         "élément avant de le réutiliser."
     ),
     "bc_energy_regulator": (
         "Colombie-Britannique, organisme provincial de réglementation de l'énergie. 42 jeux de "
-        "données confirmés le 2026-10-02 (puits, sites orphelins, incidents, installations); "
+        "données confirmés le 2026-10-02 (puits, sites orphelins, incidents, installations) ; "
         "BCER Open Data Licence, fondée sur la Licence du gouvernement ouvert – "
         "Colombie-Britannique 2.0, usage commercial permis. Les fichiers en bloc IRIS "
         "(iris.bcogc.ca) ne sont pas couverts."
@@ -754,7 +754,7 @@ NOTES_FR: dict[str, str] = {
         "2026-09-30; titres bilingues."
     ),
     "parks_canada": (
-        "Fédéral. 25 jeux de données confirmés le 2026-09-30 (sentiers, lieux protégés); "
+        "Fédéral. 25 jeux de données confirmés le 2026-09-30 (sentiers, lieux protégés) ; "
         "titres bilingues."
     ),
 }

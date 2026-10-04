@@ -57,3 +57,11 @@ def test_french_licence_for_portal_families_and_feeds():
 def test_english_licence_unchanged():
     assert _licence("yukon-stats", "en").startswith("Open Government Licence - Yukon")
     assert _licence("epcor", "en").startswith("Terms not stated by the publisher (EPCOR)")
+
+
+def test_pick_adds_a_missing_space_but_leaves_urls():
+    text = pick("fr", "", "6 heures; le taux est de 12% (voir https://a.b/?q=1;x%20y).")
+    assert f"heures{NBSP}; le" in text
+    assert f"12{NBSP}%" in text
+    assert "https://a.b/?q=1;x%20y)." in text
+    assert pick("fr", "", text) == text

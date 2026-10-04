@@ -421,7 +421,7 @@ def parse_registrations(body: bytes, url: str, lang: str = "en") -> _Registratio
         raise_localized(
             UpstreamError,
             f"bc_lobbyists: {url} holds no current registrations; it changed.",
-            f"bc_lobbyists : {url} ne contient aucune inscription courante; le fichier a changé.",
+            f"bc_lobbyists : {url} ne contient aucune inscription courante ; le fichier a changé.",
             lang,
         )
     store = _RegistrationStore(
@@ -561,7 +561,7 @@ def parse_activity(body: bytes, url: str, lang: str = "en") -> _ActivityStore:
         raise_localized(
             UpstreamError,
             f"bc_lobbyists: {url} holds no activity reports; it changed.",
-            f"bc_lobbyists : {url} ne contient aucun rapport d'activité; le fichier a changé.",
+            f"bc_lobbyists : {url} ne contient aucun rapport d'activité ; le fichier a changé.",
             lang,
         )
     return _ActivityStore(
@@ -591,7 +591,7 @@ async def _download(name: str, lang: str = "en") -> bytes:
             raise_localized(
                 NotFound,
                 f"bc_lobbyists: {url} is gone (HTTP {status}); the file moved.",
-                f"bc_lobbyists : {url} n'existe plus (HTTP {status}); le fichier a été déplacé.",
+                f"bc_lobbyists : {url} n'existe plus (HTTP {status}) ; le fichier a été déplacé.",
                 lang,
             )
         raise_localized(
@@ -612,7 +612,7 @@ async def _download(name: str, lang: str = "en") -> bytes:
         raise_localized(
             UpstreamError,
             f"bc_lobbyists: {url} is much larger than expected; it changed.",
-            f"bc_lobbyists : {url} est beaucoup plus volumineux que prévu; le fichier a changé.",
+            f"bc_lobbyists : {url} est beaucoup plus volumineux que prévu ; le fichier a changé.",
             lang,
         )
     # An expired session or maintenance page answers 200 with HTML, not a zip.
@@ -687,7 +687,7 @@ def _limits_fr(returned: int, total: int, unit: str, how: str) -> str | None:
     """truncation_note() in French (shared/limits writes English only)."""
     if returned >= total:
         return None
-    return f"{returned} {unit} sur {total} renvoyés; {how}."
+    return f"{returned} {unit} sur {total} renvoyés ; {how}."
 
 
 # ----------------------------------------------------------------- filters
@@ -702,7 +702,7 @@ def _parse_date(value: str | None, name: str, lang: str = "en") -> date | None:
         raise_localized(
             InvalidInput,
             f"bc_lobbyists: {name} must be YYYY-MM-DD, got {value!r}.",
-            f"bc_lobbyists : {name} doit être au format AAAA-MM-JJ; reçu {value!r}.",
+            f"bc_lobbyists : {name} doit être au format AAAA-MM-JJ ; reçu {value!r}.",
             lang,
         )
 
@@ -717,7 +717,7 @@ def _date_range(
         raise_localized(
             InvalidInput,
             f"date_from ({start}) is after date_to ({end}); swap them or widen the range.",
-            f"date_from ({start}) est postérieure à date_to ({end}); inversez-les ou "
+            f"date_from ({start}) est postérieure à date_to ({end}) ; inversez-les ou "
             "élargissez l'intervalle.",
             lang,
         )
@@ -905,7 +905,7 @@ async def search_registrations(
             "Topics and lobbyists are shortened here; bc_lobbyists_get_registration gives all.",
             "Seule la version courante de chaque inscription est interrogée "
             f"({len(store.registrations)} versions sur {store.versions_total} dans le fichier). "
-            "Les sujets et les lobbyistes sont abrégés ici; bc_lobbyists_get_registration les "
+            "Les sujets et les lobbyistes sont abrégés ici ; bc_lobbyists_get_registration les "
             "donne au complet. Les noms, sujets et descriptions viennent du registre, en anglais "
             "seulement.",
         ),
@@ -1268,7 +1268,7 @@ async def summarize_activity(
             f"Rows are the {len(ordered)} most recent of {len(counts)} periods, oldest to "
             "newest (not the busiest); the latest period can be incomplete.",
             f"Les lignes sont les {len(ordered)} périodes les plus récentes sur {len(counts)}, "
-            "de la plus ancienne à la plus récente (pas les plus chargées); la dernière "
+            "de la plus ancienne à la plus récente (pas les plus chargées) ; la dernière "
             "période peut être incomplète.",
         )
     rows = [
