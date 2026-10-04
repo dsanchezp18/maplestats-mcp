@@ -303,6 +303,14 @@ STEPS: list[Step] = [
     Step(
         "ircc", "ircc_get_express_entry_round", {"draw_number": "abc"}, expect_error="draw_number"
     ),
+    # CMHC HMIP (the rest is in smoke_test_cmhc.py): an unknown province id is
+    # refused instead of answered with the national categories.
+    Step(
+        "cmhc",
+        "cmhc_list_categories",
+        {"geography_type": "Province", "geography_id": "999"},
+        expect_error="No province with id",
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(
