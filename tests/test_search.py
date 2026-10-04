@@ -30,3 +30,18 @@ def test_drops_french_stop_words():
         "ete",
         "noel",
     ]
+
+
+def test_site_js_keeps_the_same_stop_words():
+    import pathlib
+    import re
+
+    from maplestats_mcp.shared.search import STOP_WORDS
+
+    js = pathlib.Path(__file__).parents[1] / "site" / "assets" / "site.js"
+    block = re.search(
+        r"const STOP_WORDS = new Set\(\s*\((.*?)\)\.split", js.read_text("utf-8"), re.DOTALL
+    )
+    assert block is not None
+    words = set("".join(re.findall(r'"([^"]*)"', block.group(1))).split())
+    assert words == set(STOP_WORDS)

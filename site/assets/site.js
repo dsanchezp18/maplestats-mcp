@@ -32,8 +32,11 @@
   // search.py's STOP_WORDS: French function words, without accents.
   const STOP_WORDS = new Set(
     (
-      "au aux avec ce ces cette dans de des du en est et la le les ou par pour " +
-      "quel quelle quelles quels que qui sur un une"
+      "ainsi au autre autres aux avec avoir ce ces cette ceux chaque chez combien " +
+      "comment dans de des dont du elle elles en entre est et etre ils je la le " +
+      "les leur leurs lors mes mon nos notre nous ou par pas pour pourquoi qu " +
+      "quand que quel quelle quelles quels qui quoi sans ses sont sur tous tout " +
+      "toute toutes tres un une vers vos votre vous"
     ).split(" "),
   );
 
