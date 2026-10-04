@@ -112,6 +112,22 @@ async def test_party_filter_and_pagination(httpx_mock):
     assert result.provenance.limits and "of" in result.provenance.limits
 
 
+async def test_french_errors_and_provenance(httpx_mock):
+    httpx_mock.add_response(url=_url(45, 12), content=_bytes("candidates_45.csv"))
+    result = await client.get_table(45, "candidates", party="Conservative", limit=1, lang="fr")
+    prov = result.provenance
+    assert (prov.limits or "").startswith("Lignes 1 à 1 sur")
+    assert "tels que publiés" in (prov.limits or "")
+    assert prov.coverage == "45e élection générale (2025-04-28), tableau 12."
+    assert (prov.licence or "").startswith("Licence du gouvernement ouvert – Canada")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: elections_results\xa0: "):
+        await client.get_table(37, "candidates", lang="fr")
+    listing = client.list_elections("fr")
+    assert listing.provenance.coverage == "38e à 45e élections générales (2004 à 2025)."
+    with pytest.raises(InvalidInput, match=r"^elections_results: election must be one of"):
+        await client.get_table(37, "candidates")
+
+
 async def test_province_filter_needs_a_province_column(httpx_mock):
     httpx_mock.add_response(url=_url(45, 8), content=_bytes("votes_45.csv"))
     with pytest.raises(InvalidInput, match="province"):
