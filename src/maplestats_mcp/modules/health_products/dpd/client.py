@@ -159,9 +159,7 @@ async def _atc_map() -> dict[int, tuple[tuple[str, str], ...]]:
     return data
 
 
-def _summary(
-    row: Row, status: tuple[int | None, str] | None, lang: str
-) -> DrugProductSummary:
+def _summary(row: Row, status: tuple[int | None, str] | None, lang: str) -> DrugProductSummary:
     code, din, brand, descriptor, company, klass, n_ai, group, updated = row
     status_code = status[0] if status else None
     return DrugProductSummary(
@@ -341,7 +339,9 @@ async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") ->
             if part
         )
         if strength:
-            strengths.setdefault(ingredient, Counter())[f"{strength} / {per}" if per else strength] += 1
+            strengths.setdefault(ingredient, Counter())[
+                f"{strength} / {per}" if per else strength
+            ] += 1
     ranked = sorted(products, key=lambda k: (-len(products[k]), k))
     matches = [
         IngredientMatch(
@@ -394,7 +394,9 @@ async def _company(name: str | None, lang: str) -> DrugCompany | None:
     if not name:
         return None
     rows, _ = await cached_fetch(
-        "hc_dpd:companies", constants.TABLE_TTL_SECONDS, lambda: _fetch_table(constants.PATH_COMPANY)
+        "hc_dpd:companies",
+        constants.TABLE_TTL_SECONDS,
+        lambda: _fetch_table(constants.PATH_COMPANY),
     )
     wanted = _fold(name)
     match = next((r for r in rows if _fold(r.get("company_name") or "") == wanted), None)
@@ -505,9 +507,7 @@ async def get_product(
                 if api.text(r.get("ingredient_name"))
             ],
             schedules=[
-                name
-                for r in api.as_list(schedules)
-                if (name := api.text(r.get("schedule_name")))
+                name for r in api.as_list(schedules) if (name := api.text(r.get("schedule_name")))
             ],
             dosage_forms=[
                 name
@@ -530,9 +530,7 @@ async def get_product(
             packaging=packages,
             pharmaceutical_standard=next((x for x in standards if x), None),
             veterinary_species=[
-                name
-                for r in api.as_list(species)
-                if (name := api.text(r.get("vet_species_name")))
+                name for r in api.as_list(species) if (name := api.text(r.get("vet_species_name")))
             ],
             company=await _company(api.text(p.get("company_name")), lang),
             dpd_page=constants.SEARCH_PAGE,

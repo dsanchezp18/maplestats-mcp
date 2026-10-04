@@ -67,7 +67,8 @@ async def hc_vigilance_search_reactions(
     pharmacovigilance data, adverse event counts, drug safety signal.
     Mots-clés : recherche d'effets indésirables, effets secondaires
     déclarés, extrait de Canada Vigilance, terme privilégié MedDRA, classe
-    de systèmes d'organes, pharmacovigilance, nombre de déclarations.
+    de systèmes d'organes, pharmacovigilance, nombre de déclarations,
+    innocuité des médicaments.
     """
     return await client.search_reactions(
         reaction,

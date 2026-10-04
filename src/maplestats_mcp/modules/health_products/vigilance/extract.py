@@ -237,8 +237,21 @@ async def scan_reactions(
                     "extract."
                 )
             last_modified = response.headers.get("last-modified")
+            # The gzip layer is undone here rather than by httpx, so that the
+            # ceiling counts exactly the bytes received.
+            gunzip = (
+                zlib.decompressobj(16 + zlib.MAX_WBITS)
+                if "gzip" in response.headers.get("content-encoding", "")
+                else None
+            )
             pending = b""
-            async for chunk in response.aiter_bytes():
+            async for raw in response.aiter_raw():
+                try:
+                    chunk = gunzip.decompress(raw) if gunzip else raw
+                except zlib.error as exc:
+                    raise UpstreamError(
+                        f"The Canada Vigilance extract is not valid gzip data ({exc})."
+                    ) from exc
                 pending += chunk
                 if len(pending) < 1024 * 1024:
                     continue
@@ -257,7 +270,9 @@ async def scan_reactions(
                     complete = True
             scanned = response.num_bytes_downloaded
     except httpx.TimeoutException as exc:
-        raise UpstreamUnavailable("canada.ca stopped sending the Canada Vigilance extract.") from exc
+        raise UpstreamUnavailable(
+            "canada.ca stopped sending the Canada Vigilance extract."
+        ) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
             f"The Canada Vigilance extract could not be read ({type(exc).__name__})."

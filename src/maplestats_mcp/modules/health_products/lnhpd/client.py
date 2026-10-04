@@ -221,7 +221,9 @@ def _range(value: Any, low: Any, high: Any) -> str | None:
 async def get_product(npn: str, *, lang: str = "en") -> NhpProductDetail:
     cleaned = npn.strip().upper().removeprefix("NPN").removeprefix("DIN-HM").strip(" -:")
     if not _NPN.match(cleaned):
-        raise InvalidInput(f"'{npn}' is not an NPN: give the 8-digit licence number, e.g. 80000035.")
+        raise InvalidInput(
+            f"'{npn}' is not an NPN: give the 8-digit licence number, e.g. 80000035."
+        )
     cleaned = cleaned.zfill(8)
 
     async def fetch() -> NhpProductDetail:

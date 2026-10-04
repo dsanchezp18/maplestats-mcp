@@ -40,7 +40,10 @@ async def main() -> int:
         f"hc_drug_search_products ingredient -> {found.total_matched}",
     )
     found = await dpd.search_products(company="pfizer", schedule="narcotic", lang="fr")
-    check(found.total_matched >= 0, f"hc_drug_search_products company+schedule fr -> {found.by_status}")
+    check(
+        found.total_matched >= 0,
+        f"hc_drug_search_products company+schedule fr -> {found.by_status}",
+    )
     # hc_drug_get_product
     product = await dpd.get_product("02242705")
     check(
@@ -49,7 +52,10 @@ async def main() -> int:
         f"hc_drug_get_product -> {product.product.brand_name}, {product.schedules}",
     )
     product = await dpd.get_product(drug_code=1017, lang="fr")
-    check(product.veterinary_species == ["Chiens"], f"hc_drug_get_product vet fr -> {product.veterinary_species}")
+    check(
+        product.veterinary_species == ["Chiens"],
+        f"hc_drug_get_product vet fr -> {product.veterinary_species}",
+    )
     # hc_drug_search_ingredients
     ingredients = await dpd.search_ingredients("acetaminophen", limit=3)
     check(
@@ -80,7 +86,9 @@ async def main() -> int:
     devices = await mdall.search_devices("dexcom g7", limit=5)
     check(devices.total_matched >= 1, f"hc_device_search_devices -> {devices.total_matched}")
     devices = await mdall.search_devices(identifier="STE-FT-008", active_only=False)
-    check(devices.total_matched >= 1, f"hc_device_search_devices identifier -> {devices.devices[:1]}")
+    check(
+        devices.total_matched >= 1, f"hc_device_search_devices identifier -> {devices.devices[:1]}"
+    )
 
     # hc_vigilance_get_report
     report = await vigilance.get_report(195)
@@ -98,7 +106,10 @@ async def main() -> int:
         f"hc_vigilance_search_reactions -> {hits.reports_matched} reports, {hits.scanned_mb} MB",
     )
     partial = await vigilance.search_reactions("headache", max_scan_mb=20, limit=3)
-    check(not partial.complete, f"hc_vigilance_search_reactions ceiling -> {partial.provenance.coverage}")
+    check(
+        not partial.complete,
+        f"hc_vigilance_search_reactions ceiling -> {partial.provenance.coverage}",
+    )
 
     print(f"\n{failures} failure(s)")
     return 1 if failures else 0

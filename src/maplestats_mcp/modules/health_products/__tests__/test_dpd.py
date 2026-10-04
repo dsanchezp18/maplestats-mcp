@@ -109,15 +109,28 @@ async def test_get_product_folds_single_objects_and_404_sub_tables(httpx_mock):
     )  # fmt: skip
     httpx_mock.add_response(url=_url("status", r"id=66502"), json=STATUSES[0])
     httpx_mock.add_response(
-        url=_url("schedule", r"id=66502"), json=[{"drug_code": 66502, "schedule_name": "PRESCRIPTION"}]
+        url=_url("schedule", r"id=66502"),
+        json=[{"drug_code": 66502, "schedule_name": "PRESCRIPTION"}],
     )
     httpx_mock.add_response(
         url=_url("form", r"id=66502"),
-        json=[{"drug_code": 66502, "pharmaceutical_form_code": 81, "pharmaceutical_form_name": "Tablet"}],
+        json=[
+            {
+                "drug_code": 66502,
+                "pharmaceutical_form_code": 81,
+                "pharmaceutical_form_name": "Tablet",
+            }
+        ],
     )
     httpx_mock.add_response(
         url=_url("route", r"id=66502"),
-        json=[{"drug_code": 66502, "route_of_administration_code": 56, "route_of_administration_name": "Oral"}],
+        json=[
+            {
+                "drug_code": 66502,
+                "route_of_administration_code": 56,
+                "route_of_administration_name": "Oral",
+            }
+        ],
     )
     httpx_mock.add_response(url=_url("therapeuticclass", r"id=66502"), status_code=404)
     httpx_mock.add_response(
@@ -126,7 +139,8 @@ async def test_get_product_folds_single_objects_and_404_sub_tables(httpx_mock):
               "package_size": "", "product_information": "Pharmachoice [100 Capsule Bottle]"},
     )  # fmt: skip
     httpx_mock.add_response(
-        url=_url("pharmaceuticalstd", r"id=66502"), json={"drug_code": 66502, "pharmaceutical_std": "MFR"}
+        url=_url("pharmaceuticalstd", r"id=66502"),
+        json={"drug_code": 66502, "pharmaceutical_std": "MFR"},
     )
     httpx_mock.add_response(url=_url("veterinaryspecies", r"id=66502"), status_code=404)
     httpx_mock.add_response(
@@ -167,7 +181,9 @@ async def test_ingredient_names_are_grouped_with_strengths(httpx_mock):
         for i in range(1, 4)
     ] + [{"dosage_unit": "ML", "dosage_value": "5", "drug_code": 9,
           "ingredient_name": "ACETAMINOPHEN", "strength": "160", "strength_unit": "MG"}]  # fmt: skip
-    httpx_mock.add_response(url=_url("activeingredient", r"ingredientname=acetaminophen"), json=rows)
+    httpx_mock.add_response(
+        url=_url("activeingredient", r"ingredientname=acetaminophen"), json=rows
+    )
     result = await client.search_ingredients("acetaminophen")
     assert result.ingredients[0].product_count == 4
     assert result.ingredients[0].strengths == ["500 MG", "160 MG / 5 ML"]
@@ -184,7 +200,9 @@ def test_as_list_folds_every_answer_shape():
 
 async def test_bad_request_becomes_invalid_input(httpx_mock):
     httpx_mock.add_response(
-        url=_url("drugproduct", r"id=abc"), status_code=400, json={"Message": "The request is invalid."}
+        url=_url("drugproduct", r"id=abc"),
+        status_code=400,
+        json={"Message": "The request is invalid."},
     )
     with pytest.raises(InvalidInput):
         await api.get_json("drug/drugproduct", {"id": "abc"})

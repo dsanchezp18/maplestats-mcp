@@ -10,7 +10,9 @@ from maplestats_mcp.shared.models import Provenance
 class ReportDrug(BaseModel):
     drug_product_id: int | None = None
     drug_name: str | None = None
-    role: str | None = Field(default=None, description="Suspect, Concomitant, Drug used to treat AE...")
+    role: str | None = Field(
+        default=None, description="Suspect, Concomitant, Drug used to treat AE..."
+    )
     route: str | None = None
     dose: str | None = None
     frequency: str | None = None
@@ -21,14 +23,18 @@ class ReportDrug(BaseModel):
 
 class VigilanceReport(BaseModel):
     report_id: int
-    report_number: str | None = Field(default=None, description="Report number as published, e.g. 000000195 or E2B_08853423.")
+    report_number: str | None = Field(
+        default=None, description="Report number as published, e.g. 000000195 or E2B_08853423."
+    )
     version: int | None = None
     date_received: str | None = Field(default=None, description="Latest received date.")
     initial_date_received: str | None = None
     report_type: str | None = None
     source: str | None = None
     reporter_type: str | None = None
-    mah_number: str | None = Field(default=None, description="Market authorization holder's own number.")
+    mah_number: str | None = Field(
+        default=None, description="Market authorization holder's own number."
+    )
     sex: str | None = None
     age: str | None = None
     age_years: float | None = None
@@ -40,7 +46,9 @@ class VigilanceReport(BaseModel):
         default_factory=list,
         description="Death, disability, congenital anomaly, life threatening, hospitalization...",
     )
-    reactions: str | None = Field(default=None, description="MedDRA preferred terms, comma-separated.")
+    reactions: str | None = Field(
+        default=None, description="MedDRA preferred terms, comma-separated."
+    )
     system_organ_classes: str | None = None
     reaction_duration: str | None = None
     drugs: list[ReportDrug] = Field(default_factory=list)

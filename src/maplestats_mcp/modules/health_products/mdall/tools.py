@@ -44,7 +44,12 @@ async def hc_device_search_licences(
     diagnostic, implant, homologation de Santé Canada.
     """
     return await client.search_licences(
-        name, company=company, active_only=active_only, risk_class=risk_class, limit=limit, lang=lang
+        name,
+        company=company,
+        active_only=active_only,
+        risk_class=risk_class,
+        limit=limit,
+        lang=lang,
     )
 
 

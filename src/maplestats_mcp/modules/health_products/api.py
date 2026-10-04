@@ -85,10 +85,16 @@ async def get_json(
         if status == 404 and missing_ok:
             return []
         if status == 400:
-            raise InvalidInput(f"health-products.canada.ca rejected the request to {path}.") from exc
+            raise InvalidInput(
+                f"health-products.canada.ca rejected the request to {path}."
+            ) from exc
         if status == 404:
-            raise NotFound(f"health-products.canada.ca has no {path} matching the request.") from exc
-        raise UpstreamError(f"health-products.canada.ca answered HTTP {status} for {path}.") from exc
+            raise NotFound(
+                f"health-products.canada.ca has no {path} matching the request."
+            ) from exc
+        raise UpstreamError(
+            f"health-products.canada.ca answered HTTP {status} for {path}."
+        ) from exc
     except httpx.TimeoutException as exc:
         raise UpstreamUnavailable(
             f"health-products.canada.ca did not answer {path} within {timeout:.0f} s."
