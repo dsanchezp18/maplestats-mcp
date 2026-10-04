@@ -37,7 +37,12 @@ from maplestats_mcp.modules.bcgw.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
-from maplestats_mcp.shared.wfs import WfsConfig, feature_url, get_features
+from maplestats_mcp.shared.wfs import (
+    WfsConfig,
+    describe_feature_type,
+    feature_url,
+    get_features,
+)
 
 CONFIG = WfsConfig(
     source=constants.RATE_LIMIT_SOURCE,
@@ -247,6 +252,19 @@ async def get_mining_tenure(
     )
 
 
+async def _attribute_fields(type_name: str) -> str | None:
+    """The layer's non-geometry fields as a propertyName list (None if it has none)."""
+
+    async def fetch() -> list[tuple[str, str]]:
+        return await describe_feature_type(CONFIG, type_name)
+
+    fields, _ = await cached_fetch(
+        f"bcgw:describe:{type_name}", constants.CACHE_TTL_DESCRIBE_SECONDS, fetch
+    )
+    names = [name for name, kind in fields if not kind.startswith("gml:")]
+    return ",".join(names) or None
+
+
 async def query_layer(
     type_name: str,
     *,
@@ -264,10 +282,9 @@ async def query_layer(
     Discover a layer's type_name via ckan_* (portal="bc") -- a WFS/WMS-queryable
     dataset's package carries a resource whose URL embeds it right after
     "openmaps.gov.bc.ca/geo/pub/". `property_names` is a comma-separated
-    field list; when omitted (and `include_geometry` is false), no
-    property filter is sent and BCGW returns every field including
-    geometry, so pass `property_names` explicitly for a lightweight
-    attribute-only query on an unfamiliar layer.
+    field list; when omitted and `include_geometry` is false, the layer's
+    own non-geometry fields (from DescribeFeatureType, cached) are asked
+    for, so no geometry is downloaded.
 
     Confirmed live 2026-09-22: this GeoServer instance answers HTTP 400
     ("Cannot do natural order without a primary key") whenever a request
@@ -284,10 +301,16 @@ async def query_layer(
     if not type_name:
         raise InvalidInput("type_name must not be empty.")
     effective_sort_by = sort_by if sort_by is not None else constants.DEFAULT_SORT_FIELD
+    # Without a field list GeoServer sends every polygon, only for this function
+    # to drop it (live 2026-10-03: 25 mining tenures were 36 KB with geometry).
+    # Name the layer's own non-geometry fields instead, so none is downloaded.
+    requested_fields = property_names
+    if not property_names and not include_geometry:
+        requested_fields = await _attribute_fields(type_name)
 
     request: dict[str, Any] = {
         "cql_filter": cql_filter,
-        "property_names": property_names,
+        "property_names": requested_fields,
         "srs_name": constants.DEFAULT_SRS if include_geometry else None,
         "sort_by": effective_sort_by,
         "count": limit,

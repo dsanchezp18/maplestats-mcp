@@ -22,6 +22,10 @@ _MAIN = (
     "2000002|1989-10-02| 1994-09-27|LA|NON-PCT|ROLLER MASSAGING APPARATUS|MASSEUR A ROULEAU\n"
     "2000003|2016-05-01|NULL|DE|PCT|FUEL CELL STACK|EMPILEMENT DE PILES\n"
     "2000004|-1|-1|-2|NON-PCT|OLD ROLLER|NULL\n"
+    # "~" as it stands in the live file's French titles (2024-10-11 release).
+    "2000005|-1|-1|EX|NON-PCT|OPERATING TOOL|"
+    "OUTIL D~EXPLOITATION QU~UNE MAIN-D~OEUVRE, SYSTEME DE MAN~UVRE, N~UD ET MISE EN ~UVRE"
+    " D~UVRE, L~IL\n"
 )
 _PARTY = (
     "Patent Number - Numéro du brevet|Interested Party Type - Type de partie intéressée|"
@@ -116,6 +120,17 @@ async def test_unknown_codes_become_null(tables):
     # an unknown filing date never falls inside a date range
     result = await client.search_patents(title="roller", filed_to=date(2000, 1, 1))
     assert [p.patent_number for p in result.patents] == [2000002]
+
+
+async def test_tilde_for_an_elided_apostrophe_is_restored_and_oe_is_left(tables):
+    record = await client.get_patent(2000005)
+    assert record.patent.title_fr == (
+        "OUTIL D'EXPLOITATION QU'UNE MAIN-D'OEUVRE, SYSTEME DE MAN~UVRE, N~UD ET MISE EN "
+        "~UVRE D~UVRE, L~IL"
+    )
+    # A title search with an apostrophe also finds the "~" spelling.
+    found = await client.search_patents(title="d'exploitation")
+    assert [p.patent_number for p in found.patents] == [2000005]
 
 
 async def test_get_patent_without_classifications(tables):

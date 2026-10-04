@@ -547,5 +547,5 @@ async def test_non_json_answer_is_an_upstream_error(httpx_mock):
         url=f"{_COLLECTION_URL}/items?limit=10&startindex=1",
         text="<html><title>Maintenance</title></html>",
     )
-    with pytest.raises(UpstreamError, match="not with JSON"):
+    with pytest.raises(UpstreamError, match="did not return JSON"):
         await client.search_datasets(PORTAL)

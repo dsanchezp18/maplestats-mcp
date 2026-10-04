@@ -86,6 +86,18 @@ async def main() -> int:
     ok &= recent.total_matched > 0
     ok &= all((p.filing_date or "") >= "2020-01-01" for p in recent.patents)
 
+    # The source writes "~" for an elided apostrophe in some French titles
+    # (checked 2026-10-03); it is restored, and an apostrophe search finds them.
+    elided = await client.search_patents(
+        title="d'utilisation", filed_from=date(2020, 1, 1), limit=50
+    )
+    left = [p.title_fr for p in elided.patents if "D~U" in (p.title_fr or "")]
+    print(f"OK: search_patents(title d'utilisation) -> {elided.total_matched}, '~' left: {left}")
+    ok &= elided.total_matched > 0 and not left
+    oe = await client.get_patent(3182563)
+    print(f"OK: get_patent(3182563) -> {oe.patent.title_fr}")
+    ok &= "MAN~UVRE" in (oe.patent.title_fr or "")  # Œ lost upstream, left as is
+
     if "--ipc" in sys.argv:
         classed = await client.get_patent(2000001, include_classifications=True)
         print(f"OK: get_patent classes -> {[c.symbol for c in classed.classifications]}")

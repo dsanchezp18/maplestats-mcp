@@ -44,6 +44,9 @@ RATE_LIMIT_CAPACITY = 1.0
 
 CACHE_TTL_API_SECONDS = 6 * 60 * 60
 CACHE_TTL_FILE_SECONDS = 6 * 60 * 60
+# An unknown dataset name is remembered this long, so asking again does not
+# wait 10 seconds for the paced API to say no again.
+CACHE_TTL_MISSING_SECONDS = 5 * 60
 
 # Biggest files seen: a 10.4 MB wildfire CSV and 2.3 MB traffic workbooks.
 # Only raw bytes are cached; each call scans the file once.

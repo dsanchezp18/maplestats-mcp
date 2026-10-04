@@ -620,6 +620,28 @@ async def test_summaries_count_distinct_reports(httpx_mock):
         await client.summarize_activity("client", top=0)
 
 
+async def test_curly_apostrophe_in_utf8_files_survives(httpx_mock):
+    # Live 2026-10-03: every member is UTF-8 with a BOM, and LAR_SPOH_Export.csv
+    # spells one agency "Premier’s Special Advisor" with U+2019 (bytes E2 80 99).
+    spoh = _csv(
+        ["LAR_ID", "SPOH_LAST_NAME", "SPOH_FIRST_NAME", "SPOH_TITLE", "BRANCH", "BC_PUBLIC_AGENCY"],
+        [
+            {
+                "LAR_ID": "LAR-100",
+                "SPOH_LAST_NAME": "Doe",
+                "SPOH_FIRST_NAME": "Jo",
+                "SPOH_TITLE": "Advisor",
+                "BRANCH": "",
+                "BC_PUBLIC_AGENCY": "Premier’s Special Advisor",
+            },
+        ],
+    )
+    assert b"Premier\xe2\x80\x99s" in spoh
+    _mock_activity(httpx_mock, _activity_zip({"LAR_SPOH_Export.csv": spoh}))
+    ministries = await client.summarize_activity("ministry")
+    assert [r.key for r in ministries.rows] == ["Premier’s Special Advisor"]
+
+
 async def test_list_codes(httpx_mock):
     _mock_activity(httpx_mock)
     subjects = await client.list_codes("subject_matters", query="health")

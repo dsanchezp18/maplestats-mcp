@@ -44,5 +44,8 @@ MAX_ROWS_PER_SHEET = 20000
 ROWS_LIMIT_DEFAULT = 50
 ROWS_LIMIT_MAX = 500
 FILES_LIMIT_MAX = 200
+# All topics list about 160 files (43 KB of JSON, live 2026-10-03); a first
+# call shows one compact page, and topic, query or offset reach the rest.
+FILES_LIMIT_DEFAULT = 40
 
 PROVENANCE_SOURCE = "nl-statistics-agency"

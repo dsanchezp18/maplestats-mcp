@@ -55,6 +55,7 @@ _LIMITER = get_limiter(
 )
 _DOWNLOAD = re.compile(constants.DOWNLOAD_PATH_PATTERN)
 _SLUG = re.compile(r"^[a-z0-9_-]+$")
+_DATASET_NAME = re.compile(r"^[a-z0-9_-]{2,100}$")
 
 LICENCE_NOTE = {
     "en": "Almost every Open Alberta dataset is under the Open Government Licence - Alberta: "
@@ -320,13 +321,29 @@ def _dataset_id(dataset: str) -> str:
 
 
 async def _package(dataset_id: str) -> tuple[dict[str, Any], bool]:
-    try:
-        package, cached = await _api("package_show", {"id": dataset_id})
-    except NotFound as exc:
-        raise NotFound(f"ab_opendata: no dataset {dataset_id!r} on {constants.DOMAIN}.") from exc
+    missing = NotFound(f"ab_opendata: no dataset {dataset_id!r} on {constants.DOMAIN}.")
+    # Every API call waits its turn in the 10-second bucket, so a name CKAN
+    # could never hold (its names and ids are 2-100 of a-z, 0-9, - and _)
+    # is refused without asking, and an unknown one is remembered a while.
+    lowered = dataset_id.lower()
+    if not _DATASET_NAME.match(lowered):
+        raise missing
+
+    async def lookup() -> tuple[Any, bool] | None:
+        try:
+            return await _api("package_show", {"id": lowered})
+        except NotFound:
+            return None
+
+    found, probe_cached = await cached_fetch(
+        f"ab_opendata:package_lookup:{lowered}", constants.CACHE_TTL_MISSING_SECONDS, lookup
+    )
+    if found is None:
+        raise missing
+    package, cached = found
     if not isinstance(package, dict):
         raise UpstreamError(f"ab_opendata: package_show for {dataset_id!r} returned no object.")
-    return package, cached
+    return package, cached or probe_cached
 
 
 async def get_dataset(dataset: str, lang: Lang = "en") -> DatasetDetail:

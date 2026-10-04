@@ -12,7 +12,19 @@ from maplestats_mcp.shared.http import new_client
 async def main() -> int:
     failures = 0
     async with new_client():
-        listing = await client.list_files()
+        first = await client.list_files()
+        second = await client.list_files(offset=len(first.files))
+        if not (
+            first.truncated
+            and len(first.files) == constants.FILES_LIMIT_DEFAULT
+            and second.offset == len(first.files)
+            and {f.url for f in first.files}.isdisjoint(f.url for f in second.files)
+        ):
+            print("FAIL: default listing is not one compact page followed by a distinct page")
+            failures += 1
+        else:
+            print(f"OK: list_files pages {len(first.files)} of {first.total_files}, then offset")
+        listing = await client.list_files(limit=constants.FILES_LIMIT_MAX)
         print(f"OK: list_files -> {listing.total_files} files in {len(listing.topics)} topics")
         by_topic = {t: 0 for t in constants.TOPICS}
         for entry in listing.files:

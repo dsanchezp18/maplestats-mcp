@@ -59,7 +59,14 @@ class IpHorizonsDictionary(BaseModel):
 class PatentSummary(BaseModel):
     patent_number: int
     title_en: str | None = None
-    title_fr: str | None = None
+    title_fr: str | None = Field(
+        default=None,
+        description=(
+            "French title as filed, unaccented upper case. Where the source file has '~' "
+            "for an elided apostrophe (D~EXPLOITATION) it is restored; a '~' left in "
+            "place stands for a character lost upstream, usually Œ (MAN~UVRE)."
+        ),
+    )
     filing_date: str | None = None
     grant_date: str | None = None
     status_code: str | None = None

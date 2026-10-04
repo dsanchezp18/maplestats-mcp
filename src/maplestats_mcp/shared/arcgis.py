@@ -78,10 +78,10 @@ from typing import Any, Literal, NoReturn
 import httpx
 
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.upstream_text import clean_detail, network_error
+from maplestats_mcp.shared.upstream_text import clean_detail, is_backend_outage, network_error
 
 DOWNLOAD_FORMATS = ("csv", "shapefile", "geojson", "kml", "filegdb")
 # A Hub item id is 32 hex digits; a layer-level item adds "_<layer id>".
@@ -172,6 +172,14 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
     detail = _error_detail(exc)
     if status == 404:
         raise NotFound(f"{context}: no match found ({detail}).") from exc
+    if status == 429 or (400 <= status < 500 and is_backend_outage(detail)):
+        # A rate limit that outlasted shared/http.py's retries, or a 4xx naming the
+        # server's own database or pool, is the service being unavailable, not a
+        # mistake in the request (same rule as shared/wfs.py).
+        raise UpstreamUnavailable(
+            f"{context}: the service is temporarily unavailable (HTTP {status}: {detail}). "
+            "Try again shortly."
+        ) from exc
     if 400 <= status < 500:
         raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
     raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc

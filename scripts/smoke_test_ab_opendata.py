@@ -13,6 +13,7 @@ import asyncio
 import sys
 
 from maplestats_mcp.modules.ab_opendata import client
+from maplestats_mcp.shared.errors import NotFound
 from maplestats_mcp.shared.http import new_client
 
 
@@ -34,6 +35,21 @@ async def main() -> int:
         check(dataset.ogl_alberta, "AISH dataset is under the OGL-Alberta")
         detail = await client.get_dataset(dataset.name)
         check(detail.dataset.name == dataset.name, "get_dataset")
+        # An impossible name is refused without a paced call; an unknown one is
+        # remembered, so asking twice costs one wait.
+        started = asyncio.get_running_loop().time()
+        for name in (
+            "no such dataset!",
+            "no-such-dataset-maplestats",
+            "no-such-dataset-maplestats",
+        ):
+            try:
+                await client.get_dataset(name)
+                check(False, f"get_dataset({name!r}) should be NotFound")
+            except NotFound:
+                pass
+        waited = asyncio.get_running_loop().time() - started
+        check(waited < 15, f"unknown datasets answered NotFound in {waited:.1f}s")
 
         resource = next(r for r in dataset.resources if r.readable and r.format == "XLSX")
         structure = await client.describe_resource(resource.url)

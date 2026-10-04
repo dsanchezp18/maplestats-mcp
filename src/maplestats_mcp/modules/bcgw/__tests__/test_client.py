@@ -154,15 +154,55 @@ async def test_get_mining_tenure_escapes_single_quotes_in_owner_name(httpx_mock)
     assert "O''BRIEN" in cql
 
 
-async def test_query_layer_generic_layer(httpx_mock):
-    httpx_mock.add_response(json=_TENURE_COLLECTION)
+# Shape of BCGW's DescribeFeatureType JSON answer, live 2026-10-03 (abridged).
+_TENURE_DESCRIBE = {
+    "elementFormDefault": "qualified",
+    "targetPrefix": "pub",
+    "featureTypes": [
+        {
+            "typeName": "WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW",
+            "properties": [
+                {"name": "TENURE_NUMBER_ID", "type": "xsd:number", "localType": "number"},
+                {"name": "CLAIM_NAME", "type": "xsd:string", "localType": "string"},
+                {"name": "ISSUE_DATE", "type": "xsd:date", "localType": "date"},
+                {"name": "GEOMETRY", "type": "gml:Geometry", "localType": "Geometry"},
+                {"name": "OBJECTID", "type": "xsd:number", "localType": "number"},
+            ],
+        }
+    ],
+}
+
+
+def _is_describe(request) -> bool:
+    return request.url.params.get("request") == "DescribeFeatureType"
+
+
+async def test_query_layer_generic_layer_asks_only_for_attribute_fields(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.BASE_URL,
+        match_params={
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "DescribeFeatureType",
+            "typeName": constants.MINING_TENURE_TYPE_NAME,
+            "outputFormat": "application/json",
+        },
+        json=_TENURE_DESCRIBE,
+    )
+    httpx_mock.add_response(json=_TENURE_COLLECTION, is_reusable=True)
     result = await client.query_layer(constants.MINING_TENURE_TYPE_NAME)
     assert result.type_name == constants.MINING_TENURE_TYPE_NAME
     assert result.returned_count == 1
     assert result.records[0]["TENURE_NUMBER_ID"] == 217457
-    request = httpx_mock.get_requests()[0]
-    assert "propertyName" not in request.url.params
-    assert "srsName" not in request.url.params
+    get_feature = next(r for r in httpx_mock.get_requests() if not _is_describe(r))
+    # No geometry field asked for, so the server sends no polygons.
+    assert get_feature.url.params["propertyName"] == (
+        "TENURE_NUMBER_ID,CLAIM_NAME,ISSUE_DATE,OBJECTID"
+    )
+    assert "srsName" not in get_feature.url.params
+    # The field list is cached: a second page asks DescribeFeatureType no more.
+    await client.query_layer(constants.MINING_TENURE_TYPE_NAME, offset=20)
+    assert sum(_is_describe(r) for r in httpx_mock.get_requests()) == 1
 
 
 async def test_query_layer_include_geometry_reprojects(httpx_mock):
@@ -170,6 +210,8 @@ async def test_query_layer_include_geometry_reprojects(httpx_mock):
     await client.query_layer(constants.MINING_TENURE_TYPE_NAME, include_geometry=True)
     request = httpx_mock.get_requests()[0]
     assert request.url.params["srsName"] == constants.DEFAULT_SRS
+    assert "propertyName" not in request.url.params
+    assert len(httpx_mock.get_requests()) == 1  # no DescribeFeatureType needed
 
 
 async def test_query_layer_empty_type_name_raises():

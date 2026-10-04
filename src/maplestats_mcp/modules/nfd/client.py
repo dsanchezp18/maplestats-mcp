@@ -13,9 +13,11 @@ dictionaries and comments workbooks:
    Data qualifier,<valeur>,Qualificatifs"). The two value columns were
    identical in the files compared. Property losses (3.3) differs: six
    columns with a combined "Year / Année" and no label pairs.
-3. Values are numbers or blank; a blank comes with a qualifier code (u, U,
-   n). Codes are case-sensitive (E and e differ). One harvest row has a
-   value and no qualifier.
+3. Values are numbers or blank; a blank usually comes with a qualifier code
+   u, U or n, but not always: the area-burned-by-cause file has a blank
+   with qualifier "a" (1999 PE, live 2026-10-03). Every blank is read as
+   null whatever its code. Codes are case-sensitive (E and e differ). One
+   harvest row has a value and no qualifier.
 4. Labels carry footnote markers ("Prescribed burning*b", "Fuelwood*b and
    firewood*c"); the text is in the comments workbook.
 5. Yukon is "YK" in the scarification table and "YT" elsewhere; wood supply
@@ -676,7 +678,8 @@ def _quirks(dataset: Dataset) -> list[str]:
         )
     if any(r.value is None for r in dataset.records):
         quirks.append(
-            "Blank values have no figure (qualifier u, U or n); they are returned as null, not 0."
+            "Blank values have no figure (usually qualifier u, U or n, but a few carry "
+            "another code such as a); they are returned as null, not 0."
         )
     if _has_unit_dimension(dataset):
         quirks.append(
