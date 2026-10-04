@@ -254,8 +254,9 @@ in French.
 French pages must read as French. The build spaces French punctuation
 itself (`french_typography()`: no-break spaces before `: ; ? ! %` and
 inside « »), so write templates with plain spaces. Text the server has
-only in English (tool docstrings, the planner's plan, `reproduce_code`'s
-notes) goes on a French page inside a `lang="en"` element;
+only in English (tool docstrings) goes on a French page inside a
+`lang="en"` element; the planner's plan and `reproduce_code`'s notes are
+asked for with `lang="fr"` and shown in French;
 `tests/test_site.py` fails on English outside one.
 
 ```bash

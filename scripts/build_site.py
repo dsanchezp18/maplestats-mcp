@@ -53,6 +53,7 @@ from maplestats_mcp import __version__
 from maplestats_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
 from maplestats_mcp.modules.ckan.constants import PORTALS as CKAN_PORTALS
 from maplestats_mcp.modules.planner import client as planner
+from maplestats_mcp.modules.reproduce import french as reproduce_french
 from maplestats_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
 from maplestats_mcp.server import MODULES_ROOT, ModuleProvider, mcp
 from maplestats_mcp.shared.search import tokenize
@@ -2214,8 +2215,15 @@ def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
         tail = f'<figure class="panel">{script_tabs(list(first["scripts"].items()), f"{key}-rp")}</figure>'
     else:
         heading = "No script for this one" if lang == "en" else "Pas de script pour cet appel"
-        # reproduce_code explains itself in English only.
-        notes = en_span(" ".join(esc(n) for n in first.get("script_notes", [])), lang)
+        # The capture holds reproduce_code's English notes; French pages show
+        # its French notes (reproduce/french.py), and any note without one in
+        # a lang="en" span.
+        notes = " ".join(
+            esc(reproduce_french.note(n, lang))
+            if lang == "en" or reproduce_french.translate(n)
+            else en_span(esc(n), lang)
+            for n in first.get("script_notes", [])
+        )
         tail = f'<div class="how-note"><strong>{heading}.</strong> <code>reproduce_code</code>: {notes}</div>'
     return (
         f'<details class="how"><summary>{summary}</summary><div class="how-body">'
