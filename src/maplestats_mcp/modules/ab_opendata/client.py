@@ -526,10 +526,10 @@ async def read_resource(
                 cached=cached,
                 schema_name="ab_opendata.ResourceRows",
                 freshness=_freshness(entry, resource),
-                coverage=attribution or entry.licence_note,
                 limits=f"the workbook has {len(names)} sheets of similar size and none was "
                 "requested, so no rows were read: pick one from `sheets` and pass it as "
                 "`sheet` (ab_opendata_describe_resource shows each sheet's header).",
+                licence=_dataset_licence(entry),
             ),
         )
     result = await run_parse(
