@@ -1727,7 +1727,7 @@ def plan_panel(lang: Lang, root: str, heading: int = 4) -> str:
     # plan_query answers in the page's language: lang="fr" translates its
     # labels, purposes and caveats, and names places in French.
     plan = planner.plan(PLAN_QUESTION[lang], lang).model_dump(mode="json")
-    caveat = "Caveat" if lang == "en" else "Précaution"
+    caveat = "Caveat" if lang == "en" else "Mise en garde"
 
     def group(title: str, steps: list[dict[str, Any]], caveats: list[str]) -> str:
         items = "".join(
@@ -1898,7 +1898,7 @@ def long_date(iso: str, lang: Lang) -> str:
 # reader meets the same sentence wherever they start.
 AGENT_PROMPT: dict[Lang, str] = {
     "en": f"Connect the MapleStats MCP server to this agent. Follow the setup steps in {REPO}",
-    "fr": f"Connecte le serveur MCP MapleStats à cet agent. Suis les étapes de {REPO}",
+    "fr": f"Connectez le serveur MCP MapleStats à cet agent. Suivez les étapes de {REPO}",
 }
 
 # Shown next to the install snippets while the package is not on PyPI.
@@ -3967,7 +3967,13 @@ def french_typography(html_text: str) -> str:
         tag = match.group(0)
         if french():
             tag = _TEXT_ATTR.sub(lambda m: m.group(1) + fix(m.group(2), True) + m.group(3), tag)
-            if name == "meta" and 'name="description"' in tag:
+            # Text a reader sees: the description, and the title and
+            # description cards show when the page is shared.
+            if name == "meta" and re.search(
+                r'(name="description"|property="og:(title|description)"|'
+                r'name="twitter:(title|description)")',
+                tag,
+            ):
                 tag = _DESCRIPTION.sub(
                     lambda m: m.group(1) + fix(m.group(2), True) + m.group(3), tag
                 )
