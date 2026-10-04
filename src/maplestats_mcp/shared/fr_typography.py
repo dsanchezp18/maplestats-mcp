@@ -9,10 +9,17 @@ so a module's English output does not change.
 
 from __future__ import annotations
 
-from maplestats_mcp.shared.i18n import ERROR_KEYS, NBSP, french_spacing, t
+from maplestats_mcp.shared.i18n import ERROR_KEYS, NBSP, call_lang, french_spacing, t
 from maplestats_mcp.shared.limits import Order, truncation_note
 
-__all__ = ["NBSP", "fr_or_en", "french_spacing", "lang_error", "truncation_note_lang"]
+__all__ = [
+    "NBSP",
+    "call_error",
+    "fr_or_en",
+    "french_spacing",
+    "lang_error",
+    "truncation_note_lang",
+]
 
 
 def fr_or_en(lang: str, english: str, french: str) -> str:
@@ -33,6 +40,15 @@ def lang_error[E: Exception](exc_cls: type[E], lang: str, english: str, french: 
     key = next((ERROR_KEYS[c.__name__] for c in exc_cls.__mro__ if c.__name__ in ERROR_KEYS), None)
     # t() spaces the French template and its detail.
     return exc_cls(t(key, "fr", detail=french) if key else french_spacing(french))
+
+
+def call_error[E: Exception](exc_cls: type[E], english: str, french: str) -> E:
+    """lang_error in the language of the running tool call (i18n.call_lang()).
+
+    For shared helpers that have no `lang` parameter of their own; English
+    is the message as given, so English output does not change.
+    """
+    return lang_error(exc_cls, call_lang(), english, french)
 
 
 # Noun phrases, so the wording agrees with any unit ("lignes", "points").

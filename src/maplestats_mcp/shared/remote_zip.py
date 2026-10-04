@@ -25,12 +25,14 @@ import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import (
     is_retryable,
     new_client,
     request_headers,
     wait_honouring_retry_after,
 )
+from maplestats_mcp.shared.i18n import fr_number
 
 _EOCD = b"PK\x05\x06"
 _CENTRAL = b"PK\x01\x02"
@@ -95,9 +97,12 @@ async def _check_redirect(response: httpx.Response) -> None:
     location = response.headers.get("location", "")
     target = response.request.url.join(location)
     if not redirect_allowed(response.request.url, target):
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"{response.request.url} redirected to {target.host or location!r}, which is not "
-            "the same site or a known file host, so the redirect was not followed."
+            "the same site or a known file host, so the redirect was not followed.",
+            f"{response.request.url} a redirigé vers {target.host or location!r}, qui n'est "
+            "ni le même site ni un hôte de fichiers connu ; la redirection n'a pas été suivie.",
         )
 
 
@@ -142,18 +147,31 @@ async def _range(url: str, start: int, end: int) -> bytes:
     try:
         response = await _get_range(url, start, end)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        raise call_error(
+            UpstreamError,
+            f"{url} returned HTTP {exc.response.status_code}.",
+            f"{url} a renvoyé HTTP {exc.response.status_code}.",
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        raise call_error(
+            UpstreamUnavailable, f"{url} could not be reached.", f"{url} est injoignable."
+        ) from exc
     if response.status_code != 206:
-        raise UpstreamError(f"{url} does not support range requests (HTTP {response.status_code}).")
+        raise call_error(
+            UpstreamError,
+            f"{url} does not support range requests (HTTP {response.status_code}).",
+            f"{url} ne prend pas en charge les requêtes par plage (HTTP {response.status_code}).",
+        )
     # A 206 can still be short (a truncated transfer, or a server that
     # clamps the range); slicing ZIP structures out of a short body would
     # misread them silently, so the length is checked, not assumed.
     expected = end - start + 1
     if len(response.content) != expected:
-        raise UpstreamError(
-            f"{url} returned {len(response.content):,} bytes for a {expected:,}-byte range."
+        raise call_error(
+            UpstreamError,
+            f"{url} returned {len(response.content):,} bytes for a {expected:,}-byte range.",
+            f"{url} a renvoyé {fr_number(len(response.content))} octets pour une plage de "
+            f"{fr_number(expected)} octets.",
         )
     return response.content
 
@@ -178,10 +196,16 @@ async def _size(url: str) -> int:
     try:
         ranged = await _get_range(url, 0, 0)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        raise call_error(
+            UpstreamUnavailable, f"{url} could not be reached.", f"{url} est injoignable."
+        ) from exc
     total = ranged.headers.get("content-range", "").rpartition("/")[2]
     if not total.isdigit():
-        raise UpstreamError(f"{url} reports no size, so it cannot be read by range.")
+        raise call_error(
+            UpstreamError,
+            f"{url} reports no size, so it cannot be read by range.",
+            f"{url} n'indique pas sa taille ; il ne peut donc pas être lu par plages.",
+        )
     return int(total)
 
 
@@ -203,7 +227,11 @@ async def list_members(url: str) -> tuple[list[ZipMember], int]:
     tail = await _range(url, tail_start, total - 1)
     eocd = tail.rfind(_EOCD)
     if eocd < 0:
-        raise UpstreamError(f"{url} is not a ZIP file (no end-of-directory record).")
+        raise call_error(
+            UpstreamError,
+            f"{url} is not a ZIP file (no end-of-directory record).",
+            f"{url} n'est pas un fichier ZIP (aucun enregistrement de fin de répertoire).",
+        )
     _, _, _, _, count, cd_size, cd_offset, _ = struct.unpack("<4sHHHHIIH", tail[eocd : eocd + 22])
     if _MAX32 in (cd_offset, cd_size) or count == _MAX16:
         count, cd_size, cd_offset = await _zip64_directory(url, tail, tail_start, eocd)
@@ -216,7 +244,11 @@ async def list_members(url: str) -> tuple[list[ZipMember], int]:
     pos = 0
     for _ in range(count):
         if directory[pos : pos + 4] != _CENTRAL:
-            raise UpstreamError(f"{url}: malformed ZIP central directory.")
+            raise call_error(
+                UpstreamError,
+                f"{url}: malformed ZIP central directory.",
+                f"{url} : répertoire central ZIP mal formé.",
+            )
         (flags, method, csize, usize, name_len, extra_len, comment_len, offset) = struct.unpack(
             # versions (4), flags, method, time/date/crc (8), sizes, name/extra/
             # comment lengths, disk/attributes (8), local header offset.
@@ -237,14 +269,22 @@ async def _zip64_directory(
     """Entry count, directory size and offset from the ZIP64 end record."""
     locator = tail[max(0, eocd - 20) : eocd]
     if len(locator) != 20 or locator[:4] != _LOCATOR64:
-        raise UpstreamError(f"{url} is a ZIP64 archive without a ZIP64 end-of-directory locator.")
+        raise call_error(
+            UpstreamError,
+            f"{url} is a ZIP64 archive without a ZIP64 end-of-directory locator.",
+            f"{url} est une archive ZIP64 sans localisateur de fin de répertoire ZIP64.",
+        )
     record_offset = struct.unpack("<4xIQI", locator)[1]
     if record_offset >= tail_start:
         record = tail[record_offset - tail_start : record_offset - tail_start + 56]
     else:
         record = await _range(url, record_offset, record_offset + 55)
     if len(record) != 56 or record[:4] != _EOCD64:
-        raise UpstreamError(f"{url}: malformed ZIP64 end-of-directory record.")
+        raise call_error(
+            UpstreamError,
+            f"{url}: malformed ZIP64 end-of-directory record.",
+            f"{url} : enregistrement de fin de répertoire ZIP64 mal formé.",
+        )
     # signature, record size, versions (2 + 2), disk numbers (4 + 4), entries
     # on this disk, total entries, directory size, directory offset.
     _, _, _, _, _, _, _, count, cd_size, cd_offset = struct.unpack("<4sQHHIIQQQQ", record)
@@ -274,10 +314,18 @@ def _zip64_sizes(extra: bytes, usize: int, csize: int, offset: int) -> tuple[int
                 if offset == _MAX32:
                     offset = next(take)
             except StopIteration as exc:
-                raise UpstreamError("A ZIP64 extra field is shorter than its sizes need.") from exc
+                raise call_error(
+                    UpstreamError,
+                    "A ZIP64 extra field is shorter than its sizes need.",
+                    "Un champ supplémentaire ZIP64 est plus court que ses tailles ne l'exigent.",
+                ) from exc
             return usize, csize, offset
         pos += 4 + length
-    raise UpstreamError("A ZIP entry marks a size as ZIP64 but has no ZIP64 extra field.")
+    raise call_error(
+        UpstreamError,
+        "A ZIP entry marks a size as ZIP64 but has no ZIP64 extra field.",
+        "Une entrée ZIP indique une taille ZIP64 mais n'a pas de champ supplémentaire ZIP64.",
+    )
 
 
 async def read_member(url: str, member: ZipMember, *, max_bytes: int = 20_000_000) -> bytes:
@@ -287,15 +335,26 @@ async def read_member(url: str, member: ZipMember, *, max_bytes: int = 20_000_00
     deflate bomb, whose tiny compressed size the first check alone passes.
     """
     if member.compressed_size > max_bytes:
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"{member.name} is {member.compressed_size:,} bytes compressed, over this reader's "
-            f"{max_bytes:,}-byte limit."
+            f"{max_bytes:,}-byte limit.",
+            f"{member.name} fait {fr_number(member.compressed_size)} octets compressés, au-delà "
+            f"de la limite de {fr_number(max_bytes)} octets de ce lecteur.",
         )
     if member.method not in (0, 8):
-        raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
+        raise call_error(
+            UpstreamError,
+            f"{member.name} uses ZIP compression method {member.method}.",
+            f"{member.name} utilise la méthode de compression ZIP {member.method}.",
+        )
     header = await _range(url, member.header_offset, member.header_offset + 29)
     if header[:4] != _LOCAL:
-        raise UpstreamError(f"{url}: malformed ZIP local header for {member.name}.")
+        raise call_error(
+            UpstreamError,
+            f"{url}: malformed ZIP local header for {member.name}.",
+            f"{url} : en-tête local ZIP mal formé pour {member.name}.",
+        )
     name_len, extra_len = struct.unpack("<HH", header[26:30])
     start = member.header_offset + 30 + name_len + extra_len
     data = (
@@ -314,14 +373,29 @@ def _inflate(data: bytes, name: str, max_bytes: int) -> bytes:
     try:
         out = inflater.decompress(data, max_bytes + 1)
         if len(out) > max_bytes or inflater.unconsumed_tail:
-            raise UpstreamError(
-                f"{name} decompresses to over this reader's {max_bytes:,}-byte limit."
+            raise call_error(
+                UpstreamError,
+                f"{name} decompresses to over this reader's {max_bytes:,}-byte limit.",
+                f"{name} dépasse une fois décompressé la limite de {fr_number(max_bytes)} octets "
+                "de ce lecteur.",
             )
         out += inflater.flush()
     except zlib.error as exc:
-        raise UpstreamError(f"{name} is not valid deflate data: {exc}.") from exc
+        raise call_error(
+            UpstreamError,
+            f"{name} is not valid deflate data: {exc}.",
+            f"{name} n'est pas un flux deflate valide : {exc}.",
+        ) from exc
     if len(out) > max_bytes:
-        raise UpstreamError(f"{name} decompresses to over this reader's {max_bytes:,}-byte limit.")
+        raise call_error(
+            UpstreamError,
+            f"{name} decompresses to over this reader's {max_bytes:,}-byte limit.",
+            f"{name} dépasse une fois décompressé la limite de {fr_number(max_bytes)} octets de ce lecteur.",
+        )
     if not inflater.eof:
-        raise UpstreamError(f"{name}: deflate stream is truncated.")
+        raise call_error(
+            UpstreamError,
+            f"{name}: deflate stream is truncated.",
+            f"{name} : le flux deflate est tronqué.",
+        )
     return out

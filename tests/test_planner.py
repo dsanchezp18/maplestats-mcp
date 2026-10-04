@@ -209,7 +209,7 @@ def test_french_plan_is_in_french(question, topic, place):
             next(t.label for t in TOPICS if t.key == match.topic)
         )
     assert result.guidance[0].startswith("Exécutez")
-    assert "search_tools" in result.provenance.limits
+    assert "search_tools" in (result.provenance.limits or "")
     assert result.provenance.reproduce.startswith("Pour obtenir")
 
 

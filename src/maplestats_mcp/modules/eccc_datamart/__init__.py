@@ -30,7 +30,7 @@ MODULE_DESCRIPTION_FR = (
     "Programme de déclaration des gaz à effet de serre (PDGES) par gaz depuis 2004, filtrées "
     "par installation, entreprise, province, substance, SCIAN et année. Couvre les dossiers "
     "annuels du SNPA depuis 1974, la surveillance des sables bitumineux et les données de "
-    "recherche d'ECCC. Licence du gouvernement ouvert - Canada (usage commercial permis, "
+    "recherche d'ECCC. Licence du gouvernement ouvert – Canada (usage commercial permis, "
     "mention de la source exigée). Les points d'accès des dossiers et des fichiers sont ceux "
     "de la page Web du catalogue; ils ne sont pas documentés. Pour la météo, les stations "
     "climatologiques et l'hydrométrie, voir eccc_."

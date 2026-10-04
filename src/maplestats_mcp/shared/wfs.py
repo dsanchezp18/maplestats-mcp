@@ -42,6 +42,7 @@ from xml.etree import ElementTree
 import httpx
 
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.upstream_text import is_backend_outage, network_error
@@ -87,16 +88,31 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
     status = exc.response.status_code
     detail = _extract_exception_text(exc.response.content)
     if status == 404:
-        raise NotFound(f"{context}: no match found ({detail}).") from exc
+        raise call_error(
+            NotFound,
+            f"{context}: no match found ({detail}).",
+            f"{context} : aucune correspondance ({detail}).",
+        ) from exc
     if status == 429 or (400 <= status < 500 and is_backend_outage(detail)):
         # Some servers answer a database-pool failure (or throttling) with a 4xx; that
         # is the service being unavailable, not a mistake in the request.
-        raise UpstreamUnavailable(
-            f"{context}: the service is temporarily unavailable ({detail}). Try again shortly."
+        raise call_error(
+            UpstreamUnavailable,
+            f"{context}: the service is temporarily unavailable ({detail}). Try again shortly.",
+            f"{context} : le service est temporairement indisponible ({detail}). Réessayez "
+            "sous peu.",
         ) from exc
     if 400 <= status < 500:
-        raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise call_error(
+            InvalidInput,
+            f"{context}: rejected the request ({detail}).",
+            f"{context} : requête refusée ({detail}).",
+        ) from exc
+    raise call_error(
+        UpstreamError,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a renvoyé HTTP {status} : {detail}",
+    ) from exc
 
 
 def feature_url(
@@ -172,7 +188,11 @@ async def describe_feature_type(config: WfsConfig, type_name: str) -> list[tuple
         raise network_error(context, exc) from exc
     types = body.get("featureTypes") if isinstance(body, dict) else None
     if not isinstance(types, list) or not types or not isinstance(types[0], dict):
-        raise UpstreamError(f"{context}: the answer lists no feature type.")
+        raise call_error(
+            UpstreamError,
+            f"{context}: the answer lists no feature type.",
+            f"{context} : la réponse ne liste aucun type d'entité.",
+        )
     properties = types[0].get("properties") or []
     return [
         (str(p.get("name")), str(p.get("type") or ""))

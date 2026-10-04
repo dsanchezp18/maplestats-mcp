@@ -19,7 +19,7 @@ from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from pydantic import ValidationError
 
 from maplestats_mcp.shared.errors import InvalidInput
-from maplestats_mcp.shared.i18n import t
+from maplestats_mcp.shared.i18n import reset_call_lang, set_call_lang, t
 
 _TEMPLATES: dict[str, dict[str, str]] = {
     "literal": {
@@ -158,6 +158,34 @@ class ValidationErrorMiddleware(Middleware):
             separator = " : " if lang == "fr" else ": "
             detail = f"{name}{separator}{describe(validation, lang, parameters)}"
             raise InvalidArguments(t("error.invalid_input", lang, detail=detail)) from None
+
+
+def call_arguments(context: MiddlewareContext) -> tuple[str, dict[str, Any]]:
+    """The tool's name and arguments, unwrapped from the call_tool meta-tool."""
+    params = context.message
+    name = str(getattr(params, "name", "tool"))
+    arguments = getattr(params, "arguments", None) or {}
+    if name == "call_tool" and isinstance(arguments, dict):
+        name = str(arguments.get("name", name))
+        inner = arguments.get("arguments")
+        arguments = inner if isinstance(inner, dict) else {}
+    return name, arguments if isinstance(arguments, dict) else {}
+
+
+class CallLanguageMiddleware(Middleware):
+    """Set i18n.call_lang() from the call's `lang` argument while the tool runs.
+
+    Shared helpers (file downloads, ZIP and WFS readers, argument checks)
+    read it to raise their errors in French on a lang="fr" call.
+    """
+
+    async def on_call_tool(self, context: MiddlewareContext, call_next: CallNext) -> Any:
+        _, arguments = call_arguments(context)
+        token = set_call_lang(str(arguments.get("lang", "en")))
+        try:
+            return await call_next(context)
+        finally:
+            reset_call_lang(token)
 
 
 async def _parameter_names(context: MiddlewareContext, name: str) -> list[str] | None:

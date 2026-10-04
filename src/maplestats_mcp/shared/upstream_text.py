@@ -22,6 +22,7 @@ import re
 import httpx
 
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 
 _TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _TAG = re.compile(r"<[^>]+>")
@@ -72,17 +73,28 @@ def network_error(context: str, exc: httpx.HTTPError) -> UpstreamError | Upstrea
         # shared/http.py's decode_json keeps the start of the body on the error.
         start = clean_detail(getattr(exc, "body_start", ""), 120)
         seen = "" if start == _NO_DETAIL else f" (it starts: {start})"
-        return UpstreamError(
+        seen_fr = "" if start == _NO_DETAIL else f" (début : {start})"
+        return call_error(
+            UpstreamError,
             f"{context}: the service answered, but did not return JSON{seen}; often an HTML "
-            "error or maintenance page."
+            "error or maintenance page.",
+            f"{context} : le service a répondu, mais pas en JSON{seen_fr} ; c'est souvent une "
+            "page d'erreur ou de maintenance HTML.",
         )
     kind = type(exc).__name__
     if isinstance(exc, httpx.TimeoutException):
         reason = f"did not respond in time ({kind})"
+        reason_fr = f"n'a pas répondu à temps ({kind})"
     else:
         message = str(exc).strip()
         detail = f": {clean_detail(message, 120)}" if message else ", connection reset or closed"
+        detail_fr = (
+            f" : {clean_detail(message, 120)}" if message else ", connexion réinitialisée ou fermée"
+        )
         reason = f"could not be reached ({kind}{detail})"
-    return UpstreamUnavailable(
-        f"{context} {reason}; already retried by shared/http.py. Try again shortly."
+        reason_fr = f"est injoignable ({kind}{detail_fr})"
+    return call_error(
+        UpstreamUnavailable,
+        f"{context} {reason}; already retried by shared/http.py. Try again shortly.",
+        f"{context} {reason_fr} ; shared/http.py a déjà réessayé. Réessayez sous peu.",
     )

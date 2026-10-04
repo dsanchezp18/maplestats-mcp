@@ -34,5 +34,5 @@ MODULE_DESCRIPTION_FR = (
     "description d'un tableau (dimensions, unités, dictionnaire de données, codes "
     "de qualité), requête de lignes avec filtres par province, année et "
     "catégorie ou sommes, commentaires et renvois des organismes. Libellés en "
-    "français ou en anglais. Licence du gouvernement ouvert - Canada."
+    "français ou en anglais. Licence du gouvernement ouvert – Canada."
 )

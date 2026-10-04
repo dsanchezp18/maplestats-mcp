@@ -11,6 +11,7 @@ registers for itself with register().
 from __future__ import annotations
 
 import re
+from contextvars import ContextVar, Token
 from typing import Any
 
 LABELS: dict[str, dict[str, str]] = {
@@ -76,6 +77,29 @@ def normalize_lang(lang: str | None) -> str:
     return "fr" if (lang or "").strip().lower().startswith("fr") else "en"
 
 
+# The language of the tool call being run, set by
+# validation.CallLanguageMiddleware from the call's `lang` argument. Shared
+# helpers deep in a client (a file download, a ZIP read, a WFS query) raise
+# errors without a `lang` parameter of their own; they read this instead, so
+# a French call gets French errors without threading `lang` through every
+# client function. Outside a tool call it is "en", so English is unchanged.
+_CALL_LANG: ContextVar[str] = ContextVar("maplestats_call_lang", default="en")
+
+
+def call_lang() -> str:
+    """'fr' while a tool called with lang="fr" runs, else 'en'."""
+    return _CALL_LANG.get()
+
+
+def set_call_lang(lang: str | None) -> Token[str]:
+    """Set the call's language; pass the token to reset_call_lang() afterwards."""
+    return _CALL_LANG.set(normalize_lang(lang))
+
+
+def reset_call_lang(token: Token[str]) -> None:
+    _CALL_LANG.reset(token)
+
+
 NBSP = " "
 # French puts a space before : ; ? ! % and » and after «; the space must not
 # break. Only a space already there is changed, so URLs ("https://", "?q=")
@@ -113,6 +137,11 @@ def french_text(text: str) -> str:
 def _space_missing(text: str) -> str:
     text = _MISSING_BEFORE.sub(lambda m: " " + m.group(1), text)
     return _MISSING_PERCENT.sub(" %", text)
+
+
+def fr_number(value: int) -> str:
+    """1 234 567: a whole number with French no-break thousands spaces."""
+    return f"{value:,}".replace(",", NBSP)
 
 
 def pick(lang: str | None, en: str, fr: str) -> str:

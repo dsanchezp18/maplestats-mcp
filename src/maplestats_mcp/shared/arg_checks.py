@@ -14,6 +14,8 @@ from collections.abc import Iterable
 from typing import Any
 
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.fr_typography import call_error
+from maplestats_mcp.shared.i18n import pick
 
 # A long list of valid values is still useful, but past this many the
 # message stops being readable; the rest are counted, not printed.
@@ -34,17 +36,21 @@ def check_range(
     if start is None or end is None:
         return
     if start > end:
-        raise InvalidInput(
-            f"{start_name} ({start}) is after {end_name} ({end}); swap them or widen the range."
+        raise call_error(
+            InvalidInput,
+            f"{start_name} ({start}) is after {end_name} ({end}); swap them or widen the range.",
+            f"{start_name} ({start}) est postérieur à {end_name} ({end}) ; inversez-les ou "
+            "élargissez la plage.",
         )
 
 
-def format_choices(valid: Iterable[object]) -> str:
+def format_choices(valid: Iterable[object], lang: str = "en") -> str:
     """List valid values for an error message, capped so the message stays readable."""
     values = [str(value) for value in valid]
     shown = ", ".join(values[:_MAX_LISTED])
     if len(values) > _MAX_LISTED:
-        shown += f", ... ({len(values) - _MAX_LISTED} more)"
+        more = len(values) - _MAX_LISTED
+        shown += pick(lang, f", ... ({more} more)", f", ... ({more} de plus)")
     return shown
 
 
@@ -67,6 +73,9 @@ def check_choice(
     for option in options:
         if option == wanted or (not case_sensitive and option.casefold() == wanted.casefold()):
             return option
-    raise InvalidInput(
-        f"{name} {value!r} is not a known value. Valid values: {format_choices(options)}."
+    raise call_error(
+        InvalidInput,
+        f"{name} {value!r} is not a known value. Valid values: {format_choices(options)}.",
+        f"{name} {value!r} n'est pas une valeur connue. Valeurs valides : "
+        f"{format_choices(options, 'fr')}.",
     )

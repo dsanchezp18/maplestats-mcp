@@ -267,7 +267,7 @@ async def test_french_errors_notes_and_chart(hosted, monkeypatch):
     assert result.notes[0] == "Les 10 premières lignes sur 1 500 ont été écrites (max_rows)."
     assert result.notes[1].startswith("Décodez workbook_base64")
     assert result.chart is not None and result.chart.startswith("graphique à barres de montant")
-    assert result.provenance.limits.startswith("au plus 20 000 lignes")
+    assert (result.provenance.limits or "").startswith("au plus 20 000 lignes")
     assert result.provenance.reproduce.startswith("Pour obtenir")
     english = await workbook.export(None, None, rows, "Rows", "en", 10, "base64")
     assert english.notes[0] == "Wrote the first 10 of 1,500 rows (max_rows)."

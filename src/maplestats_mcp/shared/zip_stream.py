@@ -41,6 +41,7 @@ from dataclasses import dataclass
 
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 _LOCAL = b"PK\x03\x04"
@@ -276,10 +277,18 @@ class MemberStream:
         """
         member = self.member
         if member.method not in (0, 8):
-            raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
+            raise call_error(
+                UpstreamError,
+                f"{member.name} uses ZIP compression method {member.method}.",
+                f"{member.name} utilise la méthode de compression ZIP {member.method}.",
+            )
         header = await self._fetch(member.header_offset, member.header_offset + 29)
         if header[:4] != _LOCAL:
-            raise UpstreamError(f"{self.url}: the archive changed while it was being read; retry.")
+            raise call_error(
+                UpstreamError,
+                f"{self.url}: the archive changed while it was being read; retry.",
+                f"{self.url} : l'archive a changé pendant sa lecture ; réessayez.",
+            )
         name_len, extra_len = struct.unpack("<HH", header[26:30])
         data_start = member.header_offset + 30 + name_len + extra_len
         end = data_start + member.compressed_size
@@ -342,9 +351,12 @@ class MemberStream:
                         break
                     pending_input = inflater.unconsumed_tail
             except zlib.error as exc:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     f"{member.name} is not valid deflate data ({exc}); the archive may have "
-                    "been replaced while it was being read, retry."
+                    "been replaced while it was being read, retry.",
+                    f"{member.name} n'est pas un flux deflate valide ({exc}) ; l'archive a "
+                    "peut-être été remplacée pendant sa lecture, réessayez.",
                 ) from exc
             out = b"".join(pieces)
             window = (window + out[-WINDOW_BYTES:])[-WINDOW_BYTES:]
@@ -373,7 +385,11 @@ class MemberStream:
                     cut, point_out, point = found
                     head = inflate(aligned[:cut])
                     if len(head) != point_out:
-                        raise UpstreamError(f"{member.name}: inconsistent inflate at a block.")
+                        raise call_error(
+                            UpstreamError,
+                            f"{member.name}: inconsistent inflate at a block.",
+                            f"{member.name} : décompression incohérente au début d'un bloc.",
+                        )
                     produced.append(head)
                     consumed = cut
                     self.points.append(point)

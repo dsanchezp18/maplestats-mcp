@@ -31,7 +31,7 @@ from maplestats_mcp.shared import search
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware
-from maplestats_mcp.shared.validation import ValidationErrorMiddleware
+from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
 
 MODULES_ROOT = Path(__file__).parent / "modules"
 _COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
@@ -328,6 +328,7 @@ def build_server() -> FastMCP:
         if module_dir.is_dir() and not module_dir.name.startswith("_"):
             mcp.add_provider(ModuleProvider(root=module_dir))
     mcp.add_middleware(ValidationErrorMiddleware())
+    mcp.add_middleware(CallLanguageMiddleware())
     mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
     if config.get_usage_stats_enabled():
         mcp.add_middleware(UsageMiddleware(STATS))
