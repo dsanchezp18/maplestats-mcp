@@ -38,8 +38,9 @@ async def statcan_sdg_search_indicators(
     reachable through any other tool in this codebase.
     Keywords: statcan, SDG, sustainable development goals, indicator,
     UN, 2030 agenda, goal, target.
-    Mots-clés : statcan, ODD, objectifs de développement durable,
-    indicateur, ONU, programme 2030, objectif, cible.
+    Mots-clés : Statistique Canada, ODD, objectifs de développement durable,
+    indicateur, ONU, Programme 2030, objectif, cible, Carrefour de données
+    des ODD.
     """
     return await client.search_indicators(framework, query, lang=lang, limit=limit)
 
@@ -58,7 +59,7 @@ async def statcan_sdg_get_indicator_metadata(
     `framework` used to find it.
     Keywords: statcan, SDG, indicator metadata, goal, target,
     definition, source, sustainable development.
-    Mots-clés : statcan, ODD, métadonnées d'indicateur, objectif,
+    Mots-clés : Statistique Canada, ODD, métadonnées d'indicateur, objectif,
     cible, définition, source, développement durable.
     """
     return await client.get_indicator_metadata(framework, code, lang=lang)
@@ -89,9 +90,9 @@ async def statcan_sdg_get_indicator_data(
     does not report returns zero observations.
     Keywords: statcan, SDG, indicator data, time series, sustainable
     development goals, observations, Statistics Canada, indicator values.
-    Mots-clés : statcan, ODD, données d'indicateur, série chronologique,
-    objectifs de développement durable, observations, Statistique Canada,
-    valeurs de l'indicateur.
+    Mots-clés : ODD, données d'indicateur, série chronologique, objectifs de
+    développement durable, observations, Statistique Canada, valeurs de
+    l'indicateur, Programme 2030.
     """
     return await client.get_indicator_data(
         framework,

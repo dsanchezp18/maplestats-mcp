@@ -74,9 +74,9 @@ async def statcan_delta_list_tables(
     Keywords: delta file, released today, what changed, changed cubes,
     release calendar, daily release, new cubes, cube metadata, corrections,
     product id.
-    Mots-clés : fichier delta, publié aujourd'hui, quoi de neuf, cubes
+    Mots-clés : fichier delta, publié aujourd'hui, quoi de neuf, tableaux
     modifiés, calendrier de diffusion, diffusion quotidienne, nouveaux
-    cubes, métadonnées de cube, corrections, identifiant de produit.
+    tableaux, métadonnées de tableau, corrections, numéro de tableau.
     """
     return await archive.list_tables(
         date,
@@ -148,9 +148,9 @@ async def statcan_delta_list_files(
     statcan_delta_read_table with a listed date.
     Keywords: delta file, available dates, retention, release schedule,
     holidays, business days, file sizes, etag, last modified, archive.
-    Mots-clés : fichier delta, dates disponibles, conservation, calendrier
-    de diffusion, jours fériés, jours ouvrables, taille des fichiers, etag,
-    dernière modification, archives.
+    Mots-clés : fichier delta, dates disponibles, période de conservation,
+    calendrier de diffusion, jours fériés, jours ouvrables, taille des
+    fichiers, date de modification, archives.
     """
     return await archive.list_files(date=date, include_sizes=include_sizes, lang=lang)
 

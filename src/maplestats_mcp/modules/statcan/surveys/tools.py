@@ -115,9 +115,10 @@ async def statcan_surveys_search_rtra_datasets(
     base, weight variable, deleted variables, disclosure control,
     microdata, tag name, Canadian Community Health Survey, Canadian
     Cancer Registry.
-    Mots-clés : Accès en temps réel à distance, ADTR, accès à distance,
-    base d'arrondissement, variable de pondération, variables éliminées,
-    contrôle de la divulgation, microdonnées, préfixe, Statistique Canada.
+    Mots-clés : Système d'accès à distance en temps réel, ADTR, accès à
+    distance, base d'arrondissement, variable de pondération, variables
+    supprimées, contrôle de la divulgation, microdonnées, préfixe,
+    Statistique Canada.
     """
     return await client.search_rtra_datasets(
         query, lang=lang, deleted_variable=deleted_variable, limit=limit

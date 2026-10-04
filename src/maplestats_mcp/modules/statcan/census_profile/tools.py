@@ -51,9 +51,9 @@ async def statcan_census_profile_search_geography(
     query returns every geography at that level. Keywords: census,
     geography, DGUID, place name, municipality, province, census
     subdivision, census tract, forward sortation area, FSA.
-    Mots-clés : recensement, géographie, DGUID, nom de lieu,
-    municipalité, province, subdivision de recensement, secteur de
-    recensement, région de tri d'acheminement.
+    Mots-clés : recensement, profil du recensement, géographie, DGUID, nom
+    de lieu, municipalité, ville, province, subdivision de recensement,
+    secteur de recensement, région de tri d'acheminement, code géographique.
     """
     return await client.search_geography(level, query, limit=limit, lang=lang)
 
@@ -78,8 +78,9 @@ async def statcan_census_profile_search_characteristic(
     characteristic,
     variable, population, income, dwelling, age, language, education,
     housing, commuting.
-    Mots-clés : recensement, caractéristique, variable, population,
-    revenu, logement, âge, langue, éducation, navettage.
+    Mots-clés : recensement, profil du recensement, caractéristique,
+    variable, population, revenu, logement, âge, langue, scolarité,
+    éducation, navettage.
     """
     return await client.search_characteristic(query, limit=limit, lang=lang)
 
@@ -107,8 +108,9 @@ async def statcan_census_profile_get_data(
     interval-bounded value silently. Keywords: census, population,
     dwelling, income, age, demographics, statistics Canada, 2021
     census, SDMX.
-    Mots-clés : recensement, population, logement, revenu, âge,
-    démographie, Statistique Canada, recensement de 2021.
+    Mots-clés : profil du recensement, recensement de 2021, population,
+    logement, revenu, âge, démographie, données du recensement, Statistique
+    Canada.
     """
     return await client.get_data(
         level,

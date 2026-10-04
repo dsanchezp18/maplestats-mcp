@@ -49,9 +49,11 @@ async def rdaas_search_classifications(
     Keywords: statcan, naics, classification, search, rdaas, standard,
     geographical, occupational, codes, NOC, national occupational
     classification, occupation, SOC, industry classification.
-    Mots-clés : statcan, scian, classification, recherche, rdaas, norme,
-    géographique, professionnelle, codes, CNP, classification nationale
-    des professions, profession, métier.
+    Mots-clés : Statistique Canada, classification, recherche, SCIAN, codes
+    SCIAN, Système de classification des industries de l'Amérique du Nord,
+    CNP, codes de professions, Classification nationale des professions,
+    Classification géographique type, CGT, norme de classification,
+    profession, métier.
     """
     return await client.search_classifications(
         query, start=start, limit=limit, audience=audience, status=status, lang=lang
@@ -70,8 +72,9 @@ async def rdaas_get_search_filters(
     or rdaas_search_concordances.
     Keywords: statcan, rdaas, filters, search, audience, status,
     classification, concordance, Statistics Canada.
-    Mots-clés : statcan, rdaas, filtres, recherche, public cible, statut,
-    classification, concordance, valeurs valides.
+    Mots-clés : Statistique Canada, filtres de recherche, public cible,
+    statut, classification, concordance, valeurs valides, critères de
+    recherche, normes statistiques.
     """
     if kind == "concordance":
         return await client.get_concordance_search_filters()
@@ -89,8 +92,9 @@ async def rdaas_get_classification(
     into its categories.
     Keywords: statcan, classification, detail, naics, rdaas, levels,
     version, background.
-    Mots-clés : statcan, classification, détail, scian, rdaas, niveaux,
-    version, contexte.
+    Mots-clés : Statistique Canada, classification, détail, SCIAN, CNP,
+    niveaux hiérarchiques, version, structure de la classification, norme
+    statistique.
     """
     return await client.get_classification(classification_id, lang=lang)
 
@@ -119,8 +123,8 @@ async def rdaas_get_classification_categories_detailed(
     fields are the same current-NAICS codes and descriptions.
     Keywords: statcan, classification, categories, codes, naics, rdaas,
     tree, detailed.
-    Mots-clés : statcan, classification, catégories, codes, scian,
-    rdaas, arborescence, détaillé.
+    Mots-clés : Statistique Canada, classification, catégories, codes,
+    SCIAN, CNP, arborescence, hiérarchie, liste détaillée des codes.
     """
     return await client.get_classification_categories_detailed(
         classification_id, lang=lang, query=query, limit=limit, offset=offset
@@ -137,8 +141,8 @@ async def rdaas_get_classification_exclusions(
     classification rather than simply missing.
     Keywords: statcan, exclusions, classification, rdaas, excluded, terms,
     naics, Statistics Canada.
-    Mots-clés : statcan, exclusions, classification, rdaas, exclu, termes,
-    scian, non couvert.
+    Mots-clés : Statistique Canada, exclusions, classification, termes
+    exclus, activités exclues, SCIAN, CNP, non couvert.
     """
     return await client.get_classification_exclusions(classification_id, lang=lang)
 
@@ -160,8 +164,8 @@ async def rdaas_get_classification_indexes(
     provenance.limits say what was left out.
     Keywords: statcan, index, classification, rdaas, terms, alternate names,
     naics, Statistics Canada.
-    Mots-clés : statcan, index, classification, rdaas, termes, noms
-    alternatifs, scian, correspondance de termes.
+    Mots-clés : Statistique Canada, index, classification, termes,
+    appellations, titres d'index, SCIAN, CNP, correspondance de termes.
     """
     return await client.get_classification_indexes(
         classification_id, lang=lang, query=query, limit=limit, offset=offset
@@ -179,8 +183,8 @@ async def rdaas_get_classification_index_entry(
     via rdaas_get_classification_indexes.
     Keywords: statcan, index entry, classification, rdaas, term, code,
     Statistics Canada, NAICS.
-    Mots-clés : statcan, entrée d'index, classification, rdaas, terme, code,
-    correspondance, identifiant.
+    Mots-clés : Statistique Canada, entrée d'index, titre d'index,
+    classification, terme, code, correspondance, identifiant, appellation.
     """
     return await client.get_classification_index_entry(classification_id, index_id, lang=lang)
 
@@ -193,8 +197,9 @@ async def rdaas_get_term_exclusion(term_exclusion_id: str, lang: Lang = "en") ->
     elsewhere.
     Keywords: statcan, term exclusion, rdaas, excluded, definition,
     lookup, classification, reference data.
-    Mots-clés : statcan, exclusion de terme, rdaas, terme exclu,
-    définition, recherche, classification, données de référence.
+    Mots-clés : Statistique Canada, exclusion de terme, terme exclu,
+    activité exclue, définition, recherche, classification, données de
+    référence.
     """
     return await client.get_term_exclusion(term_exclusion_id, lang=lang)
 
@@ -216,8 +221,8 @@ async def rdaas_search_concordances(
     rdaas_get_search_filters.
     Keywords: statcan, concordance, correspondence, rdaas, naics, version,
     mapping, Statistics Canada.
-    Mots-clés : statcan, concordance, correspondance, rdaas, scian, version,
-    conversion, recherche.
+    Mots-clés : Statistique Canada, concordance, tableau de correspondance,
+    SCIAN, version, conversion de codes, recherche, passage entre versions.
     """
     return await client.search_concordances(
         query, start=start, limit=limit, audience=audience, status=status, lang=lang
@@ -232,8 +237,8 @@ async def rdaas_get_concordance(concordance_id: str, lang: Lang = "en") -> Conco
     connects before requesting its code maps.
     Keywords: statcan, concordance, detail, rdaas, source, target,
     classification, Statistics Canada.
-    Mots-clés : statcan, concordance, détail, rdaas, source, cible,
-    classification, connexion.
+    Mots-clés : Statistique Canada, concordance, détail, classification
+    source, classification cible, correspondance, versions, SCIAN.
     """
     return await client.get_concordance(concordance_id, lang=lang)
 
@@ -246,7 +251,8 @@ async def rdaas_get_concordance_maps(concordance_id: str, lang: Lang = "en") -> 
     equivalent(s) in another version.
     Keywords: statcan, code map, concordance, rdaas, mapping, convert,
     naics, Statistics Canada.
-    Mots-clés : statcan, correspondance de codes, concordance, rdaas,
-    conversion, scian, table de conversion, codes.
+    Mots-clés : Statistique Canada, correspondance de codes, concordance,
+    conversion, SCIAN, table de conversion, codes, passage d'une version à
+    l'autre.
     """
     return await client.get_concordance_maps(concordance_id, lang=lang)
