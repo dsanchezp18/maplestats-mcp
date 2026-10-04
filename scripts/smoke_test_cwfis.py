@@ -40,13 +40,25 @@ async def main() -> int:
         client.get_hotspots(agency="BC", start_date="2023-08-01", end_date="2023-08-01", limit=5),
     )
     _require(arc.total_matched > 100, f"low BC archive count {arc.total_matched}")
+    arc_two_days = await _check(
+        "get_hotspots(archive BC 2023-08-01..02)",
+        client.get_hotspots(agency="BC", start_date="2023-08-01", end_date="2023-08-02", limit=1),
+    )
     top = await _check(
         "get_hotspots(sort frp)",
         client.get_hotspots(
             agency="BC", start_date="2023-08-01", end_date="2023-08-02", sort_by="frp", limit=3
         ),
     )
-    _require(all(h.frp_mw is not None for h in top.hotspots), "sort by frp returned null FRP")
+    # 2023 archive rows have no FRP: the sort keeps them (after any ranked
+    # rows) instead of dropping them, so the totals agree.
+    _require(top.total_matched == arc_two_days.total_matched, "frp sort changed the total")
+    ranked = [h.frp_mw for h in top.hotspots if h.frp_mw is not None]
+    _require(ranked == sorted(ranked, reverse=True), "frp ranking not descending")
+    _require(
+        all(h.frp_mw is None for h in top.hotspots[len(ranked) :]),
+        "null-FRP rows came before ranked rows",
+    )
 
     per = await _check("get_perimeters", client.get_perimeters(limit=3))
     _require(per.total_matched > 0, "no current perimeters")

@@ -930,11 +930,14 @@ def _aggregate(
         values = [m.value for m in members if m.value is not None]
         first = members[0]
         by_key = dict(zip(keys, group_key, strict=True))
+        # A group from one jurisdiction (province="BC" with group_by=["year"])
+        # keeps its name; it used to come back null.
+        one_place = "jurisdiction" in by_key or len({m.iso for m in members}) == 1
         rows.append(
             NfdRow(
                 year=by_key.get("year"),
-                iso=by_key.get("jurisdiction"),
-                jurisdiction=_jurisdiction_name(first, lang) if "jurisdiction" in by_key else None,
+                iso=first.iso if one_place else None,
+                jurisdiction=_jurisdiction_name(first, lang) if one_place else None,
                 dimensions={
                     key: _label(first.labels[positions[key]], lang)
                     for key in keys

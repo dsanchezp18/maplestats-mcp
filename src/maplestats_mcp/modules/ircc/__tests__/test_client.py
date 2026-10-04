@@ -158,13 +158,44 @@ async def test_get_latest_round_returns_first_entry(httpx_mock):
     assert detail.round.draw_number == "444"
 
 
-async def test_french_feed_decoded_as_cp1252_not_utf8(httpx_mock):
-    # The French feed's bytes are Windows-1252 despite a bare
-    # "application/json" content type (no charset) -- encode a French
-    # program name with cp1252 to simulate the real upstream response and
-    # confirm the client decodes it correctly rather than mangling it as
-    # UTF-8 (see client.py's module docstring for how this was confirmed
-    # against the live feed).
+def _french_body() -> str:
+    fr_round = _round(
+        "447",
+        "2026-10-01",
+        "Métiers spécialisés 2026-Version 3",
+        "Programme des travailleurs qualifiés (fédéral)",
+        "250",
+        "389",
+    )
+    return json.dumps({"classes": "wb-tables", "rounds": [fr_round]}, ensure_ascii=False)
+
+
+async def test_french_feed_served_as_utf8_is_decoded_as_utf8(httpx_mock):
+    # Live 2026-10-03: the French feed is UTF-8 (b"M\xc3\xa9tiers sp\xc3\xa9cialis\xc3\xa9s")
+    # with no charset; decoding it as cp1252 gave "MÃ©tiers spÃ©cialisÃ©s".
+    httpx_mock.add_response(
+        url=constants.BASE_URL_FR,
+        content=_french_body().encode("utf-8"),
+        headers={"content-type": "application/json"},
+    )
+    result = await client.list_express_entry_rounds(lang="fr")
+    assert result.rounds[0].draw_name == "Métiers spécialisés 2026-Version 3"
+    assert "Ã" not in result.rounds[0].program
+
+
+async def test_french_feed_with_bom_is_decoded(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.BASE_URL_FR,
+        content=b"\xef\xbb\xbf" + _french_body().encode("utf-8"),
+        headers={"content-type": "application/json"},
+    )
+    result = await client.list_express_entry_rounds(lang="fr")
+    assert result.rounds[0].program == "Programme des travailleurs qualifiés (fédéral)"
+
+
+async def test_french_feed_decoded_as_cp1252_when_not_utf8(httpx_mock):
+    # Until September 2026 the French feed's bytes were Windows-1252 (with no
+    # charset); bytes that are not valid UTF-8 still fall back to cp1252.
     fr_round = _round(
         "444",
         "2026-09-16",
@@ -197,6 +228,9 @@ async def test_french_feed_uses_space_thousands_separator(httpx_mock):
 
 
 async def test_invalid_inputs_are_typed():
+    # A non-numeric draw number is a bad input, not a missing round.
+    with pytest.raises(InvalidInput):
+        await client.get_express_entry_round("abc")
     with pytest.raises(InvalidInput):
         await client.list_express_entry_rounds(limit=0)
     with pytest.raises(InvalidInput):

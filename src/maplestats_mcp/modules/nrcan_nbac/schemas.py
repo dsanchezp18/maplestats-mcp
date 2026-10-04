@@ -54,4 +54,12 @@ class FireQueryResult(BaseModel):
     limit: int
     offset: int
     cql_filter: str | None = None
+    latest_year: int | None = Field(
+        default=None, description="Most recent fire year in NBAC (later years return nothing)."
+    )
+    geometry_omitted: int = Field(
+        default=0,
+        description="Rows returned without their polygon because of the geometry byte budget.",
+    )
+    note: str | None = None
     provenance: Provenance

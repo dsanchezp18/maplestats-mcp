@@ -30,6 +30,67 @@ MAX_RADIUS_KM = 200.0
 
 # The hotspot layer also carries US and Mexican detections (agency 'TX', 'MX'...).
 CANADIAN_AGENCIES = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU")
+# Codes the hotspot layer uses outside Canada: US state codes and MX.
+OTHER_HOTSPOT_AGENCIES = (
+    "AK",
+    "AL",
+    "AR",
+    "AZ",
+    "CA",
+    "CO",
+    "CT",
+    "DC",
+    "DE",
+    "FL",
+    "GA",
+    "HI",
+    "IA",
+    "ID",
+    "IL",
+    "IN",
+    "KS",
+    "KY",
+    "LA",
+    "MA",
+    "MD",
+    "ME",
+    "MI",
+    "MN",
+    "MO",
+    "MS",
+    "MT",
+    "NC",
+    "ND",
+    "NE",
+    "NH",
+    "NJ",
+    "NM",
+    "NV",
+    "NY",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VA",
+    "VT",
+    "WA",
+    "WI",
+    "WV",
+    "WY",
+    "MX",
+)
+# The national fire database adds Parks Canada.
+LARGE_FIRE_AGENCIES = (*CANADIAN_AGENCIES, "PC")
+
+# A perimeter polygon can be hundreds of KB (20 perimeters with geometry were
+# 1.96 MB live, 2026-10-03), so geometry rows stop at this many bytes.
+GEOMETRY_BYTES_MAX = 400_000
 
 # The station layer uses legacy province codes: NF for NL, SA for SK (live).
 PROVINCE_TO_STATION_CODE = {"NL": "NF", "SK": "SA"}

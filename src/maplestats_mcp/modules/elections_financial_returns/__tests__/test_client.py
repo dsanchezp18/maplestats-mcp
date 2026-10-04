@@ -15,7 +15,12 @@ import pytest
 from maplestats_mcp.modules.elections_financial_returns import client, constants
 from maplestats_mcp.modules.elections_financial_returns.schemas import FilterOption
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +58,24 @@ _CANDIDATES_HTML = """
 </body></html>
 """
 
+_EVENTS_URL = f"{constants.HOME_URL}/RefreshEventList?selectedAct=CC_C76&selectedEntityCode=1"
+
+
+def _mock_events(httpx_mock) -> None:
+    httpx_mock.add_response(
+        url=_EVENTS_URL,
+        text=_EVENTS_BODY,
+        headers={"content-type": "application/json"},
+        is_reusable=True,
+    )
+
+
+def _mock_pairing_search(httpx_mock) -> None:
+    """The warm-up GET and the unfiltered search that checks the candidate's election."""
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
+    httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
+
+
 _DECLARATION_JSON = (
     '{"EXPORT_HEADER":[{"DATE":"Sep 21, 2026","TITLE":"Part 1 - Declaration",'
     '"RETURN_STATUS":"Data_as_submitted","ACTIVITY":"45th general election"}],'
@@ -88,6 +111,7 @@ async def test_list_elections_invalid_act_raises():
 
 
 async def test_search_candidates_warms_up_then_posts(httpx_mock):
+    _mock_events(httpx_mock)
     httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")  # warm-up
     httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
     result = await client.search_candidates("62", province_id="11")
@@ -104,16 +128,28 @@ async def test_search_candidates_warms_up_then_posts(httpx_mock):
 
 async def test_search_candidates_truncates_and_sets_coverage(httpx_mock, monkeypatch):
     monkeypatch.setattr(constants, "CANDIDATE_SEARCH_MAX", 1)
+    _mock_events(httpx_mock)
     httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
     httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
     result = await client.search_candidates("62")
     assert result.returned_count == 1
     assert result.total_found == 19
+    assert result.has_more
     assert result.provenance.coverage is not None
-    assert "1 of 19" in result.provenance.coverage
+    assert "offset=1" in result.provenance.coverage
+    second = await client.search_candidates("62", offset=1)
+    assert [c.client_id for c in second.candidates] == ["58701"]
+    assert not second.has_more
+
+
+async def test_search_candidates_unknown_election_is_not_found(httpx_mock):
+    _mock_events(httpx_mock)
+    with pytest.raises(NotFound, match="9999"):
+        await client.search_candidates("9999", last_name="Smith")
 
 
 async def test_search_candidates_only_warms_up_once(httpx_mock):
+    _mock_events(httpx_mock)
     httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
     httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
     httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
@@ -148,7 +184,8 @@ async def test_get_financial_return_part_full_flow(httpx_mock):
         "&selectedPart=1&currentReturnPage=0&totalReturnPages=0&downloadFormat=3"
         "&current200Page=0&total200Pages=0"
     )
-    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")  # warm-up
+    _mock_events(httpx_mock)
+    _mock_pairing_search(httpx_mock)
     httpx_mock.add_response(
         url=_SEARCH_URL, method="POST", status_code=302, headers={"location": detail_location}
     )
@@ -175,16 +212,25 @@ async def test_get_financial_return_part_varies_sections_by_part(httpx_mock):
         "&selectedPart=3A&currentReturnPage=0&totalReturnPages=0&downloadFormat=3"
         "&current200Page=0&total200Pages=0"
     )
-    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
+    _mock_events(httpx_mock)
+    _mock_pairing_search(httpx_mock)
     httpx_mock.add_response(
         url=_SEARCH_URL, method="POST", status_code=302, headers={"location": detail_location}
     )
     httpx_mock.add_response(url=detail_url, html="<html></html>")
-    httpx_mock.add_response(url=download_url, text=_EXPENSES_JSON)
+    # Live bytes are UTF-8 with no charset in the Content-Type (2026-10-03).
+    httpx_mock.add_response(
+        url=download_url,
+        content=_EXPENSES_JSON.replace(
+            "Bank of Montreal", "Association libérale provinciale Orléans"
+        ).encode("utf-8"),
+        headers={"content-type": "application/json"},
+    )
 
     result = await client.get_financial_return_part("56932", "3a", election_id="62")
     assert set(result.sections) == {"GROUP_DATA", "DETAIL_DATA", "TOTAL_DATA"}
-    assert result.sections["DETAIL_DATA"][0]["Supplier"] == "Bank of Montreal"
+    supplier = result.sections["DETAIL_DATA"][0]["Supplier"]
+    assert supplier == "Association libérale provinciale Orléans"
 
 
 async def test_get_financial_return_part_invalid_part_raises():
@@ -193,18 +239,36 @@ async def test_get_financial_return_part_invalid_part_raises():
 
 
 async def test_get_financial_return_part_no_redirect_after_select_raises(httpx_mock):
-    # One warm-up, a non-redirecting POST, a forced re-warm, and a second
-    # non-redirecting POST before giving up.
+    # After the pairing search: a non-redirecting POST, a forced re-warm, and
+    # a second non-redirecting POST before giving up.
+    _mock_events(httpx_mock)
+    _mock_pairing_search(httpx_mock)
     httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>", is_reusable=True)
     httpx_mock.add_response(
         url=_SEARCH_URL, method="POST", status_code=200, html="<html></html>", is_reusable=True
     )
     with pytest.raises(UpstreamError):
-        await client.get_financial_return_part("999999", "1", election_id="62")
+        await client.get_financial_return_part("56932", "1", election_id="62")
     assert _SEARCH_URL not in client._warmed
 
 
+async def test_get_financial_return_part_rejects_candidate_from_another_election(httpx_mock):
+    # Live 2026-10-03: client 56572 asked under election 53 came back with his
+    # 2025 return labelled as the 2021 election; he is not in 53's candidates.
+    _mock_events(httpx_mock)
+    _mock_pairing_search(httpx_mock)
+    with pytest.raises(NotFound, match="did not run"):
+        await client.get_financial_return_part("56572", "1", election_id="62")
+
+
+async def test_get_financial_return_part_unknown_election_is_not_found(httpx_mock):
+    _mock_events(httpx_mock)
+    with pytest.raises(NotFound, match="no election"):
+        await client.get_financial_return_part("56932", "1", election_id="9999")
+
+
 async def test_search_candidates_expired_session_rewarms_and_retries(httpx_mock):
+    _mock_events(httpx_mock)
     client._warmed.add(_SEARCH_URL)  # warmed earlier; server-side session since expired
     httpx_mock.add_response(url=_SEARCH_URL, method="POST", html="<html><form></form></html>")
     httpx_mock.add_response(url=_SEARCH_URL, method="GET", html="<html></html>")
@@ -214,6 +278,7 @@ async def test_search_candidates_expired_session_rewarms_and_retries(httpx_mock)
 
 
 async def test_search_candidates_empty_form_is_an_error_not_zero_results(httpx_mock):
+    _mock_events(httpx_mock)
     httpx_mock.add_response(url=_SEARCH_URL, method="GET", html="<html></html>", is_reusable=True)
     httpx_mock.add_response(
         url=_SEARCH_URL, method="POST", html="<html><form></form></html>", is_reusable=True
@@ -223,6 +288,7 @@ async def test_search_candidates_empty_form_is_an_error_not_zero_results(httpx_m
 
 
 async def test_search_candidates_genuine_zero_matches_is_not_an_error(httpx_mock):
+    _mock_events(httpx_mock)
     httpx_mock.add_response(url=_SEARCH_URL, method="GET", html="<html></html>")
     httpx_mock.add_response(
         url=_SEARCH_URL,
@@ -233,7 +299,7 @@ async def test_search_candidates_genuine_zero_matches_is_not_an_error(httpx_mock
     assert result.total_found == 0
 
 
-async def test_get_financial_return_part_expired_session_raises_not_found(httpx_mock):
+async def test_get_financial_return_part_lost_session_rewarms_then_raises(httpx_mock):
     detail_location = (
         "/WPAPPS/WPF/EN/CC/DetailedReport?act=C76&selectedEvent=62&returnStatus=1"
         "&selectedReportType=8&reportOption=2&queryId=deadbeef12&selectedPart=1"
@@ -245,15 +311,92 @@ async def test_get_financial_return_part_expired_session_raises_not_found(httpx_
         "&selectedPart=1&currentReturnPage=0&totalReturnPages=0&downloadFormat=3"
         "&current200Page=0&total200Pages=0"
     )
-    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
+    # A lost session redirects the Download back to the search form: the
+    # client re-warms, selects again, and only then gives up (AGENTS.md).
+    _mock_events(httpx_mock)
+    _mock_pairing_search(httpx_mock)
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>", is_reusable=True)
     httpx_mock.add_response(
-        url=_SEARCH_URL, method="POST", status_code=302, headers={"location": detail_location}
+        url=_SEARCH_URL,
+        method="POST",
+        status_code=302,
+        headers={"location": detail_location},
+        is_reusable=True,
     )
-    httpx_mock.add_response(url=detail_url, html="<html></html>")
+    httpx_mock.add_response(url=detail_url, html="<html></html>", is_reusable=True)
     httpx_mock.add_response(
         url=download_url,
         status_code=302,
         headers={"location": "/WPAPPS/WPF/EN/CC/Index?act=C76&selectedEvent=62"},
+        is_reusable=True,
     )
-    with pytest.raises(NotFound):
+    with pytest.raises(UpstreamUnavailable):
         await client.get_financial_return_part("56932", "1", election_id="62")
+    downloads = [r for r in httpx_mock.get_requests() if "/Download?" in str(r.url)]
+    assert len(downloads) == 2
+
+
+async def test_get_financial_return_part_lost_session_recovers(httpx_mock):
+    detail_location = (
+        "/WPAPPS/WPF/EN/CC/DetailedReport?act=C76&selectedEvent=62&returnStatus=1"
+        "&selectedReportType=8&reportOption=2&queryId=feed01&selectedPart=1"
+    )
+    download_url = (
+        f"{constants.BASE_URL}/Download?act=C76&selectedEvent=62&returnStatus=1"
+        "&reportOption=2&queryId=feed01&selectedClientId=56932"
+        "&selectedPart=1&currentReturnPage=0&totalReturnPages=0&downloadFormat=3"
+        "&current200Page=0&total200Pages=0"
+    )
+    _mock_events(httpx_mock)
+    _mock_pairing_search(httpx_mock)
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>", is_reusable=True)
+    httpx_mock.add_response(
+        url=_SEARCH_URL,
+        method="POST",
+        status_code=302,
+        headers={"location": detail_location},
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url=f"https://www.elections.ca{detail_location}", html="<html></html>", is_reusable=True
+    )
+    httpx_mock.add_response(url=download_url, status_code=302, headers={"location": "/x"})
+    httpx_mock.add_response(url=download_url, text=_DECLARATION_JSON)
+    result = await client.get_financial_return_part("56932", "1", election_id="62")
+    assert result.sections["DETAIL_DATA"][0]["Candidate_last_name"] == "Aylward"
+
+
+async def test_french_download_header_key(httpx_mock):
+    fr_search = client._search_url("C76", "62", "8", "1", "fr")
+    fr_events = (
+        "https://www.elections.ca/WPAPPS/WPF/FR/Home/RefreshEventList"
+        "?selectedAct=CC_C76&selectedEntityCode=1"
+    )
+    detail_location = (
+        "/WPAPPS/WPF/FR/CC/DetailedReport?act=C76&selectedEvent=62&returnStatus=1"
+        "&selectedReportType=8&reportOption=2&queryId=abc&selectedPart=1"
+    )
+    download_url = (
+        f"{constants.BASE_URLS['fr']}/Download?act=C76&selectedEvent=62&returnStatus=1"
+        "&reportOption=2&queryId=abc&selectedClientId=56932"
+        "&selectedPart=1&currentReturnPage=0&totalReturnPages=0&downloadFormat=3"
+        "&current200Page=0&total200Pages=0"
+    )
+    httpx_mock.add_response(url=fr_events, text=_EVENTS_BODY)
+    httpx_mock.add_response(url=fr_search, html="<html></html>")
+    httpx_mock.add_response(url=fr_search, method="POST", html=_CANDIDATES_HTML)
+    httpx_mock.add_response(
+        url=fr_search, method="POST", status_code=302, headers={"location": detail_location}
+    )
+    httpx_mock.add_response(url=f"https://www.elections.ca{detail_location}", html="<html/>")
+    # Key names from the live French download (2026-10-03).
+    httpx_mock.add_response(
+        url=download_url,
+        content=(
+            '{"RUBRIQUE_EXPORTER":[{"TITRE":"Partie 1 - Déclaration"}],'
+            '"DONNÉES_DÉTAIL":[{"Nom_de_famille_du_candidat":"Aylward"}]}'
+        ).encode(),
+    )
+    result = await client.get_financial_return_part("56932", "1", election_id="62", lang="fr")
+    assert result.export_header == {"TITRE": "Partie 1 - Déclaration"}
+    assert list(result.sections) == ["DONNÉES_DÉTAIL"]

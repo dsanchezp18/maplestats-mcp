@@ -353,6 +353,9 @@ async def test_repeated_keys_are_kept_and_summed_when_grouped(httpx_mock):
     grouped = await client.query_table("3.2.1", province="PE", group_by=["year", "cause"])
     assert grouped.rows[0].value == pytest.approx(18.02) and grouped.rows[0].n_rows == 2
     assert grouped.group_by == ["year", "cause"]
+    # Live 2026-10-03: province="BC", group_by=["year"] gave jurisdiction null
+    # on every row although only BC was summed.
+    assert grouped.rows[0].iso == "PE" and grouped.rows[0].jurisdiction
 
 
 async def test_group_by_year_sums_provinces_and_ignores_blank(httpx_mock):

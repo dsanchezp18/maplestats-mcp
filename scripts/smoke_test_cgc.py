@@ -137,6 +137,15 @@ async def main() -> int:
         len(french_exports.rows) == 1 and french_exports.rows[0].ktonnes > 100,
         f"fr wheat to Japan 2025: {[(r.period, r.ktonnes) for r in french_exports.rows]}",
     )
+    ok &= check(french_exports.unit == "milliers de tonnes", f"fr unit: {french_exports.unit!r}")
+    # "China" (the tool docstring's own example) reaches "China P.R.".
+    plain_china = await client.query_exports(
+        grain="Canola", destination="China", year_from=2025, year_to=2025, frequency="year"
+    )
+    ok &= check(
+        [r.ktonnes for r in plain_china.rows] == [r.ktonnes for r in canola.rows],
+        f"'China' alias: {[(r.period, r.ktonnes) for r in plain_china.rows]}",
+    )
 
     print("\nCGC SMOKE TEST PASSED" if ok else "\nCGC SMOKE TEST FAILED")
     return 0 if ok else 1

@@ -97,6 +97,23 @@ async def test_get_indicator_data_filters_place_and_columns(httpx_mock):
     ]
 
 
+async def test_columns_pick_and_blank_columns_drop(httpx_mock):
+    # Live rows have 33 columns, many blank for a given indicator.
+    header = [*_HEADER, "Level 2 breakdown", "Comparison"]
+    rows = [[*r, None, None] for r in _ROWS]
+    httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
+    httpx_mock.add_response(url=_EN_FILE, content=_workbook(header, rows))
+    data = await client.get_indicator_data(_SLUG, place="Ontario")
+    assert data.columns == _HEADER
+    assert data.empty_columns == ["Level 2 breakdown", "Comparison"]
+    picked = await client.get_indicator_data(
+        _SLUG, place="Ontario", columns=["time frame", "Risk-adjusted rate"]
+    )
+    assert picked.rows == [{"Time frame": "2025–2026", "Risk-adjusted rate": "11"}]
+    with pytest.raises(InvalidInput, match="Unknown column"):
+        await client.get_indicator_data(_SLUG, columns=["Nope"])
+
+
 async def test_french_data_follows_hreflang(httpx_mock):
     httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
     httpx_mock.add_response(url=_FR_PAGE_URL, text=_page(_FR_FILE, "Mortalité AVC"))

@@ -45,8 +45,9 @@ async def cer_query_file(
     {"Key Point": "International boundary at or near Haskett, Manitoba"}),
     export volumes by year, or tolls by pipeline. `url` comes from
     cer_list_datasets; `filters` match column values exactly
-    (case-insensitive); `start`/`end` are YYYY or YYYY-MM-DD on the
-    file's Date/Year column; the most recent `limit` rows come back.
+    (case-insensitive); `start`/`end` are YYYY, YYYY-MM or YYYY-MM-DD on
+    the file's Date/Year column, both inclusive (end="2024" runs to
+    December 31); the most recent `limit` rows come back.
     The file's own language decides the column names.
     Keywords: CER, pipeline throughput, capacity utilization, exports,
     volumes, tolls, time series, CSV, oil, natural gas.

@@ -35,6 +35,8 @@ class CandidateSearchResult(BaseModel):
     candidates: list[Candidate]
     returned_count: int
     total_found: int
+    offset: int = 0
+    has_more: bool = False
     available_parties: list[FilterOption]
     available_provinces: list[FilterOption]
     provenance: Provenance

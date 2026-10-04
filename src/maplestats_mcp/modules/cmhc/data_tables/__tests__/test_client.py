@@ -76,6 +76,8 @@ async def test_list_tables_dedupes_and_filters_by_category(httpx_mock):
     )
     result = await client.list_tables("rental-market")
     assert result.total_count == 2
+    # Doubled spaces in upstream titles are collapsed.
+    assert "Vacancy Rates" in {t.title for t in result.tables}
     slugs = {t.slug for t in result.tables}
     assert slugs == {
         "urban-rental-market-survey-data-vacancy-rates",
@@ -101,6 +103,7 @@ async def test_get_table_parses_detail_page(httpx_mock):
     )
     assert result.title == "Urban Rental Market Survey Data: Vacancy Rates"
     assert "Vacancy rates for rental" in result.description
+    assert result.data_source is not None
     assert result.data_source.endswith("urban-rental-market-survey-data-vacancy-rates")
     assert result.document_type == "Excel"
     assert result.date_published == "April 17, 2024"
@@ -137,6 +140,8 @@ async def test_get_download_url_resolves_default_edition(httpx_mock):
     assert result.edition_id == "{43CC6A09-EF7F-40D4-9CBB-3C3B1C6FBB41}"
     assert result.document_url.endswith("-2022-en.xlsx?rev=c42a7e1c")
     assert result.author == "CMHC"
+    # FileName is empty upstream; it comes from the URL instead.
+    assert result.file_name == "urban-rental-market-survey-data-vacancy-rates-2022-en.xlsx"
 
 
 async def test_get_download_url_rejects_unknown_edition_id(httpx_mock):
@@ -194,3 +199,99 @@ async def test_timeout_raises_upstream_unavailable(httpx_mock):
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
     with pytest.raises(UpstreamUnavailable):
         await client.list_tables("household-characteristics")
+
+
+# The single-file report template, trimmed from the live page
+# household-characteristics/home-equity-net-worth-tenure-canada-provinces
+# (2026-10-03): no #DataSource, no selects, a hidden #document-id.
+_REPORT_PATH = (
+    f"{constants.DATA_TABLES_PATH}/household-characteristics/"
+    "home-equity-net-worth-tenure-canada-provinces"
+)
+_REPORT_HTML = """
+<html><head>
+<link rel='alternate' hreflang='en' href='https://www.cmhc-schl.gc.ca/professionals/x' />
+<link rel='alternate' hreflang='fr' href='https://www.cmhc-schl.gc.ca/professionnels/avoir-foncier' />
+</head><body>
+<h1 id="publicationname" class="font-bold">Home Equity and Net Worth by Tenure: Canada and  Provinces</h1>
+<input id="document-id" name="document-id" type="hidden" value="2850a1fa-f31c-4d27-a6fd-75de56e2cecb" />
+<div class="pdf-landing"><div>
+<p>Home equity and net worth data for all homeowners, renters and for all households.</p>
+<dl><dt>Author:</dt><dd>CMHC</dd><dt>Document Type:</dt><dd>Excel</dd>
+<dt>Date Published:</dt><dd>March 31, 2018</dd></dl>
+<div class="button-panel"><a href="#" id="report-download"
+ onclick="dl_Downloads('March 31, 2018', this);">Download</a></div>
+</div></div>
+</body></html>
+"""
+_REPORT_HTML_FR = """
+<html><body>
+<h1>Avoir foncier et valeur nette selon le mode d'occupation : Canada et provinces</h1>
+<input id="document-id" type="hidden" value="2850a1fa-f31c-4d27-a6fd-75de56e2cecb" />
+<div class="pdf-landing"><div><p>Données sur l'avoir foncier.</p>
+<dl><dt>Auteur :</dt><dd>SCHL</dd><dt>Type de document :</dt><dd>Excel</dd>
+<dt>Date de publication :</dt><dd>31 mars 2018</dd></dl></div></div>
+</body></html>
+"""
+_REPORT_FILE = (
+    "https://assets.cmhc-schl.gc.ca/sf/project/cmhc/pubsandreports/excel/"
+    "table_23_homeequity_net_worth_canada_provinces_en_w.xls?rev=840c74ea"
+)
+
+
+async def test_single_file_report_page_resolves_its_download(httpx_mock):
+    # 52 of the 72 listed tables use this template and used to fail with
+    # "page had no #DataSource value".
+    httpx_mock.add_response(url=f"{constants.BASE_URL}{_REPORT_PATH}", text=_REPORT_HTML)
+    httpx_mock.add_response(
+        url=(
+            f"{constants.GET_REPORT_FILE_URL}?documentId=2850a1fa-f31c-4d27-a6fd-75de56e2cecb"
+            "&contextLanguage=en"
+        ),
+        json=_REPORT_FILE,
+    )
+    table = await client.get_table(
+        "household-characteristics", "home-equity-net-worth-tenure-canada-provinces"
+    )
+    assert table.title == "Home Equity and Net Worth by Tenure: Canada and Provinces"
+    assert table.data_source is None
+    assert table.document_id == "2850a1fa-f31c-4d27-a6fd-75de56e2cecb"
+    assert (table.author, table.document_type, table.date_published) == (
+        "CMHC",
+        "Excel",
+        "March 31, 2018",
+    )
+    assert table.default_download_url == _REPORT_FILE
+    link = await client.get_download_url(
+        "household-characteristics", "home-equity-net-worth-tenure-canada-provinces"
+    )
+    assert link.document_url == _REPORT_FILE
+    assert link.file_name == "table_23_homeequity_net_worth_canada_provinces_en_w.xls"
+    assert link.geography_id is None and link.edition_id is None
+    with pytest.raises(InvalidInput, match="single file"):
+        await client.get_download_url(
+            "household-characteristics",
+            "home-equity-net-worth-tenure-canada-provinces",
+            edition_id="{X}",
+        )
+
+
+async def test_french_table_reads_the_french_page(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.BASE_URL}{_REPORT_PATH}", text=_REPORT_HTML)
+    httpx_mock.add_response(
+        url="https://www.cmhc-schl.gc.ca/professionnels/avoir-foncier", text=_REPORT_HTML_FR
+    )
+    httpx_mock.add_response(
+        url=(
+            f"{constants.GET_REPORT_FILE_URL}?documentId=2850a1fa-f31c-4d27-a6fd-75de56e2cecb"
+            "&contextLanguage=fr"
+        ),
+        json=_REPORT_FILE.replace("rev=840c74ea", "rev=7818a06b"),
+    )
+    table = await client.get_table(
+        "household-characteristics", "home-equity-net-worth-tenure-canada-provinces", lang="fr"
+    )
+    assert table.title.startswith("Avoir foncier")
+    assert (table.author, table.date_published) == ("SCHL", "31 mars 2018")
+    assert table.default_download_url is not None
+    assert table.default_download_url.endswith("rev=7818a06b")

@@ -292,6 +292,36 @@ def _class_parts(value: str) -> set[str]:
     return {" ".join(_fold(p).replace("classe", "class").split()) for p in value.split(" - ")}
 
 
+# The classes the dumps use (EN "Class 1", FR "Classe 1"; "Type I" in both),
+# counted live 2026-10-03; anything else used to match nothing silently.
+_KNOWN_CLASSES = {"class 1", "class 2", "class 3", "type i", "type ii", "type iii"}
+
+
+def _class_label(part: str) -> str:
+    # "class 1" -> "Class 1", "type iii" -> "Type III".
+    first, *rest = part.split()
+    return " ".join([first.capitalize(), *(word.upper() for word in rest)])
+
+
+def _wanted_class(recall_class: str | None, records: list[_Record]) -> set[str] | None:
+    if not recall_class or not recall_class.strip():
+        return None
+    parts = _class_parts(recall_class)
+    # A known class absent from today's dump is a valid filter with no rows;
+    # anything else matched nothing and came back as an empty success.
+    known = _KNOWN_CLASSES | {
+        part for r in records if r.recall_class for part in _class_parts(r.recall_class)
+    }
+    unknown = sorted(parts - known)
+    if unknown:
+        raise InvalidInput(
+            f"recall_class {recall_class!r} has no match ({', '.join(unknown)}). "
+            f"Classes in the data: {format_choices(_class_label(k) for k in sorted(known))} "
+            "(Classe in French)."
+        )
+    return parts
+
+
 def _filter(
     records: Iterable[_Record],
     *,
@@ -314,17 +344,8 @@ def _filter(
         raise InvalidInput(f"updated_from {start} is after updated_to {end}.")
     words = _query_words(query)
     category_folded = _fold(category.strip()) if category and category.strip() else None
-    wanted_class = _class_parts(recall_class) if recall_class and recall_class.strip() else None
     records = list(records)
-    if wanted_class:
-        # An unknown class matched nothing and came back as an empty success.
-        known = {part for r in records if r.recall_class for part in _class_parts(r.recall_class)}
-        unknown = sorted(wanted_class - known)
-        if unknown:
-            raise InvalidInput(
-                f"recall_class {recall_class!r} has no match ({', '.join(unknown)}). "
-                f"Classes in the data: {format_choices(sorted(known))}."
-            )
+    wanted_class = _wanted_class(recall_class, records)
 
     matched = []
     for record in records:

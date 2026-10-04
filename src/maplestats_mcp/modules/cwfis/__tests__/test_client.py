@@ -62,18 +62,62 @@ async def test_hotspots_current_filters_canada_and_parses(httpx_mock):
 async def test_hotspots_archive_needs_both_dates_and_uses_archive_layer(httpx_mock):
     with pytest.raises(InvalidInput, match="both start_date and end_date"):
         await client.get_hotspots(start_date="2023-08-01")
-    httpx_mock.add_response(url=WFS, json=_collection())
+    # Live 2026-10-03: BC on 2023-08-18 had 9,813 detections and none with FRP;
+    # the FRP sort used to filter them all out and report total_matched 0.
+    httpx_mock.add_response(url=WFS, json=_collection(total=0))
+    httpx_mock.add_response(
+        url=WFS, json=_collection({"lat": 55.0, "lon": -122.0, "agency": "BC"}, total=9813)
+    )
     result = await client.get_hotspots(
-        agency="bc", start_date="2023-08-01", end_date="2023-08-02", sort_by="frp"
+        agency="bc", start_date="2023-08-01", end_date="2023-08-02", sort_by="frp", limit=1
     )
     assert result.layer == constants.HOTSPOTS_ARCHIVE
-    query = _query(httpx_mock.get_requests()[0])
-    cql = query["CQL_FILTER"]
-    assert "agency = 'BC'" in cql
-    assert "rep_date < '2023-08-03T00:00:00Z'" in cql
-    # Live quirk: DESC sort puts NULL FRP first, so NULLs must be excluded.
-    assert "frp IS NOT NULL" in cql
-    assert query["sortBy"] == "frp D"
+    assert result.total_matched == 9813
+    assert result.without_frp == 9813
+    assert result.returned_count == 1
+    ranked, unranked = (_query(r) for r in httpx_mock.get_requests())
+    assert "agency = 'BC'" in ranked["CQL_FILTER"]
+    assert "rep_date < '2023-08-03T00:00:00Z'" in ranked["CQL_FILTER"]
+    # Live quirk: DESC sort puts NULL FRP first, so the ranking excludes NULLs
+    # and the NULL rows follow in a second query.
+    assert "frp IS NOT NULL" in ranked["CQL_FILTER"]
+    assert ranked["sortBy"] == "frp D"
+    assert "frp IS NULL" in unranked["CQL_FILTER"]
+
+
+async def test_unknown_agency_is_invalid_input():
+    with pytest.raises(InvalidInput, match="agency"):
+        await client.get_hotspots(agency="ZZ")
+    with pytest.raises(InvalidInput, match="agency"):
+        await client.search_large_fires(agency="ZZ")
+
+
+async def test_perimeter_geometry_stops_at_the_byte_budget(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "GEOMETRY_BYTES_MAX", 300)
+    ring = [[-120.0 + i / 100, 55.0] for i in range(10)]
+    polygon = {"type": "Polygon", "coordinates": [ring]}
+    features = [
+        {"type": "Feature", "geometry": polygon, "properties": {"area": 1000.0 - i}}
+        for i in range(3)
+    ]
+    httpx_mock.add_response(
+        url=WFS, json={"type": "FeatureCollection", "features": features, "numberMatched": 50}
+    )
+    result = await client.get_perimeters(include_geometry=True, limit=3)
+    assert result.returned_count == 1
+    assert result.has_more
+    assert result.note is not None and "offset=1" in result.note
+
+
+async def test_empty_station_search_says_what_the_layer_holds(httpx_mock):
+    httpx_mock.add_response(url=WFS, json=_collection())
+    httpx_mock.add_response(
+        url=WFS, json=_collection({"prov": "NF"}, {"prov": "NF"}, {"prov": " "})
+    )
+    result = await client.get_stations(province="AB")
+    assert result.stations == []
+    assert result.note is not None
+    assert "3 stations" in result.note and "NL" in result.note
 
 
 async def test_bbox_uses_explicit_crs(httpx_mock):

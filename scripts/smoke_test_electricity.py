@@ -61,7 +61,14 @@ async def main() -> int:
     fuel = await client.get_supply_by_fuel(limit=24)
     ok &= _report(
         "supply_by_fuel latest 24",
-        len(fuel.rows) == 24 and any(t.fuel == "nuclear" for t in fuel.totals),
+        len(fuel.rows) == 24
+        and any(t.fuel == "nuclear" for t in fuel.totals)
+        # A fuel flagged with unavailable points still has its output.
+        and all(
+            row.output_mw.get(f) is not None
+            for row in fuel.rows
+            for f in row.unavailable_data_points
+        ),
         f"{fuel.first_date}..{fuel.last_date}, "
         + ", ".join(f"{t.fuel} {t.share_percent}%" for t in fuel.totals[:4]),
     )
@@ -153,7 +160,10 @@ async def main() -> int:
     qc_trade = await client_qc.get_trade(limit=6)
     ok &= _report(
         "quebec trade",
-        len(qc_trade.points) == 6 and "ontario" in qc_trade.points[-1].net_exports_mw,
+        len(qc_trade.points) == 6
+        and "ontario" in qc_trade.points[-1].net_exports_mw
+        # The latest hours used to be unpublished zero placeholders.
+        and bool(qc_trade.points[-1].exports_total_mw),
         f"latest {qc_trade.points[-1].timestamp}, "
         f"exports {qc_trade.points[-1].exports_total_mw} MW",
     )

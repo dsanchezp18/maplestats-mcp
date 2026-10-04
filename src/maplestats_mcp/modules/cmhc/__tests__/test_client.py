@@ -342,6 +342,31 @@ async def test_get_table_data_rejects_empty_arguments():
         await client.get_table_data("Primary Rental Market", "  ", "2", "TIMESERIES")
 
 
+async def test_unknown_province_id_is_refused_before_hmip(httpx_mock):
+    # Live 2026-10-03: geography_type Province with id "999" returned the
+    # national category list as if it were that province's.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+    )
+    with pytest.raises(InvalidInput, match="Nova Scotia"):
+        await client.list_categories(geography_type="Province", geography_id="999")
+    with pytest.raises(InvalidInput, match="Canada"):
+        await client.list_categories(geography_type="Country", geography_id="2")
+    with pytest.raises(InvalidInput, match="number"):
+        await client.get_table_options("a", "b", geography_type="Cma", geography_id="abc")
+
+
+def test_ysod_title_drops_markup():
+    body = (
+        "<html><head><title>First character of geography id is not a number."
+        "<br>Parameter name: 999</title></head></html>"
+    )
+    assert client._ysod_title(body) == (
+        "First character of geography id is not a number. Parameter name: 999"
+    )
+
+
 async def test_list_categories_rejects_bad_lang():
     with pytest.raises(InvalidInput):
         await client.list_categories(lang="de")

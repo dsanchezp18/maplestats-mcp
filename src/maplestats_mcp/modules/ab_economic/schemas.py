@@ -71,6 +71,7 @@ class IndicatorSeries(BaseModel):
     indicator: str
     page_url: str
     series: list[PublishedSeries]
+    note: str | None = None
     provenance: Provenance
 
 

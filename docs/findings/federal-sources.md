@@ -14,9 +14,11 @@ CRS cutoffs, invitations issued, and candidate-pool CRS score distribution,
 from a static JSON feed at
 `canada.ca/content/dam/ircc/documents/json/ee_rounds_123_{en,fr}.json` --
 confirmed live 2026-09-18 to be a different platform from CKAN, not an
-open.canada.ca dataset. Real quirks found and handled: the French feed's
-bytes are Windows-1252 despite a bare `application/json` content type with
-no charset (decoding as UTF-8 silently mangles accents instead of raising);
+open.canada.ca dataset. Real quirks found and handled: the French feed
+has no charset in its bare `application/json` content type, and its bytes
+were Windows-1252 on 2026-09-18 but UTF-8 by 2026-10-03, so it is decoded as
+UTF-8 with a Windows-1252 fallback (a wrong guess either way mangles accents
+silently instead of raising);
 numeric fields use a comma thousands separator in English vs. a literal
 space in French; and two rounds from 2018-05-30 are published as "91a"/"91b"
 instead of sequential numbers, so `draw_number` is a string, not an int.

@@ -42,7 +42,8 @@ _MENU = re.compile(r"trends_([a-z]+)_([a-z]+)\.cfm")
 
 # Monotonic time until which the host is treated as down. When the host
 # cannot be reached, a request used to spend about 67 s in connection
-# retries; after one such failure, calls fail at once for a few minutes.
+# retries; after one failed connect or request, calls fail at once for a
+# few minutes.
 _down_until = 0.0
 
 
@@ -53,11 +54,32 @@ def _unreachable(url: str) -> UpstreamUnavailable:
     )
 
 
+async def _check_reachable() -> None:
+    """Fail fast when the host does not accept a TCP connection."""
+    global _down_until
+    if time.monotonic() < _down_until:
+        raise UpstreamUnavailable(
+            f"nrcan_energy_use: {constants.HOST} is not accepting connections; try again later."
+        )
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(constants.HOST, 443), constants.CONNECT_TIMEOUT_SECONDS
+        )
+    except (TimeoutError, OSError) as exc:
+        _down_until = time.monotonic() + constants.DOWN_RETRY_SECONDS
+        raise UpstreamUnavailable(
+            f"nrcan_energy_use: {constants.HOST} did not accept a connection within "
+            f"{constants.CONNECT_TIMEOUT_SECONDS:g} s; try again later."
+        ) from exc
+    writer.close()
+
+
 async def _html(url: str, ttl: int) -> tuple[str, bool]:
     async def fetch() -> str:
         global _down_until
         if time.monotonic() < _down_until:
             raise _unreachable(url)
+        await _check_reachable()
         await _LIMITER.acquire()
         try:
             # The whole retry chain gets one budget, so an unreachable host
@@ -105,6 +127,7 @@ async def list_products(lang: str = "en") -> ProductList:
     whole call failing.
     """
     index = 1 if lang == "fr" else 0
+    surveys = [Product(product=k, name=v[index]) for k, v in constants.SURVEYS.items()]
     unreachable: str | None = None
     try:
         html, cached = await _html(
@@ -123,8 +146,15 @@ async def list_products(lang: str = "en") -> ProductList:
         for sector, juris in pairs
     ]
     return ProductList(
-        surveys=[Product(product=k, name=v[index]) for k, v in constants.SURVEYS.items()],
+        surveys=surveys,
         comprehensive=menus,
+        # The survey products are fixed; only the comprehensive menu is read live.
+        note=(
+            f"The comprehensive tables menu could not be read ({unreachable}); the survey "
+            "products are listed, but their tables need the site to answer."
+            if unreachable
+            else None
+        ),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=constants.EN_ROOT + constants.COMPREHENSIVE_LIST,

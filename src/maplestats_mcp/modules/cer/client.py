@@ -8,6 +8,7 @@ encoding and error-page quirks confirmed live.
 
 from __future__ import annotations
 
+import calendar
 from datetime import date
 from typing import Any
 
@@ -74,17 +75,30 @@ def _row_date(value: str) -> date | None:
     try:
         if len(value) == 4 and value.isdigit():
             return date(int(value), 1, 1)
+        if len(value) == 7 and value[4] == "-":
+            return date(int(value[:4]), int(value[5:7]), 1)
         return date.fromisoformat(value[:10])
     except ValueError:
         return None
 
 
-def _parse_bound(value: str | None, name: str) -> date | None:
+def _parse_bound(value: str | None, name: str, *, is_end: bool = False) -> date | None:
+    """A start or end bound; a year or month `end` covers the whole period.
+
+    end="2024" used to mean 2024-01-01, so a query for 2024 kept only
+    January (live 2026-10-03: 3 Keystone rows instead of 36).
+    """
     if not value:
         return None
+    value = value.strip()
     parsed = _row_date(value)
     if parsed is None:
-        raise InvalidInput(f"{name} must be YYYY or YYYY-MM-DD, got {value!r}.")
+        raise InvalidInput(f"{name} must be YYYY, YYYY-MM or YYYY-MM-DD, got {value!r}.")
+    if is_end and len(value) == 4:
+        return date(parsed.year, 12, 31)
+    if is_end and len(value) == 7:
+        days = calendar.monthrange(parsed.year, parsed.month)[1]
+        return date(parsed.year, parsed.month, days)
     return parsed
 
 
@@ -105,7 +119,7 @@ async def query_file(
     if limit < 1 or limit > constants.ROWS_MAX:
         raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
     start_date = _parse_bound(start, "start")
-    end_date = _parse_bound(end, "end")
+    end_date = _parse_bound(end, "end", is_end=True)
     rows, cached = await _download(url)
     columns_lookup = csv_files.Columns(rows)
     filtered = csv_files.exact_filter(rows, columns_lookup, filters)

@@ -59,6 +59,7 @@ from maplestats_mcp.modules.cgc.schemas import (
     ExportDimension,
     ExportFrequency,
     WeeklyDimension,
+    unit_for,
 )
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
@@ -188,6 +189,13 @@ def _suggest(value: str, labels: Iterable[str]) -> str:
     if not close:
         return ""
     return "; did you mean " + ", ".join(repr(v) for v in close[:10]) + "?"
+
+
+# Common names for destinations the exports file spells otherwise.
+DESTINATION_ALIASES = {
+    "china": "China P.R.",
+    "chine": "R.P. de Chine",
+}
 
 
 def _header_key(header: str) -> str:
@@ -548,6 +556,7 @@ def describe_weekly_table(table: WeeklyTable, cached: bool) -> CgcWeeklyDescript
     return CgcWeeklyDescription(
         crop_year=crop_year_label(table.crop_year),
         lang=table.lang,
+        unit=unit_for(table.lang),
         available_crop_years=available_crop_years(),
         weeks=[CgcWeek(week=w, week_ending=d) for w, d in table.week_ending.items()],
         latest_week=latest,
@@ -668,6 +677,7 @@ def query_weekly_table(
     return CgcWeeklyResult(
         crop_year=crop_year_label(table.crop_year),
         lang=table.lang,
+        unit=unit_for(table.lang),
         worksheet=names["worksheet"][min(sheet_codes)],
         filters={k: v for k, v in filters.items() if v},
         group_by=list(group_by) if group_by is not None else None,
@@ -807,6 +817,7 @@ def describe_exports_table(table: ExportsTable, cached: bool) -> CgcExportsDescr
     grades = values("grade")
     return CgcExportsDescription(
         lang=table.lang,
+        unit=unit_for(table.lang),
         first_month=_month_label(table.first),
         latest_month=_month_label(table.latest),
         row_count=len(table.records),
@@ -883,6 +894,11 @@ def query_exports_table(
         chosen: set[str] = set()
         for value in requested:
             hits = present.get(label_key(value))
+            if not hits and dim == "destination":
+                # The file names China "China P.R." / "R.P. de Chine", so the
+                # plain name used to fail (live 2026-10-03).
+                alias = DESTINATION_ALIASES.get(label_key(value))
+                hits = present.get(label_key(alias)) if alias else None
             if not hits:
                 raise InvalidInput(
                     f"cgc: no {dim} {value!r} in the exports file"
@@ -954,6 +970,7 @@ def query_exports_table(
     rows = keep_latest(rows, limit, lambda row: row.period)
     return CgcExportsResult(
         lang=table.lang,
+        unit=unit_for(table.lang),
         frequency=frequency,
         filters={k: v for k, v in filters.items() if v},
         group_by=list(group_by) if group_by is not None else None,

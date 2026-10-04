@@ -41,7 +41,11 @@ CACHE_TTL_ITEMS_SECONDS = 5 * 60  # 5 min
 # reasonable.
 ITEMS_LIMIT_DEFAULT = 10
 ITEMS_LIMIT_MAX = 1000
-ITEMS_MAX_BYTES = 200_000
+
+# Some collections carry hundreds of properties per row: swob-realtime is
+# about 8.3 KB a feature (50 rows were 415 KB live, 2026-10-03), so 1000
+# rows would be about 8 MB. Rows stop at this many bytes of features.
+ITEMS_BYTES_MAX = 1_000_000
 
 # /collections?f=json itself has no limit/offset - the full list is
 # fetched once per CACHE_TTL_COLLECTIONS_SECONDS window and paginated

@@ -112,12 +112,30 @@ def _resolve(mapping: dict[str, str], value: str, name: str) -> str:
         raise InvalidInput(f"{name} must be one of {sorted(mapping)}, got {value!r}.") from exc
 
 
-def _search_url(act_code: str, election_id: str, report_code: str, status_code: str) -> str:
+def _search_url(
+    act_code: str, election_id: str, report_code: str, status_code: str, lang: str = "en"
+) -> str:
     return (
-        f"{constants.BASE_URL}/Index?act={act_code}&selectedEvent={election_id}"
+        f"{constants.BASE_URLS[lang]}/Index?act={act_code}&selectedEvent={election_id}"
         f"&reportOption={constants.REPORT_OPTION_COMPLETE}&returnStatus={status_code}"
         f"&selectedReportType={report_code}&displayIntroduction=False&displayDescription=False"
     )
+
+
+def _decode(content: bytes) -> str:
+    """The Download JSON's bytes, decoded without trusting httpx's guess.
+
+    The response names no charset, and httpx's fallback turned accented
+    names into U+FFFD replacement characters (live 2026-10-03: the
+    "Association libérale provinciale Orléans" supplier in part 3A of
+    client 56572, election 62).
+    UTF-8 is tried first; other elections.ca files are Windows-1252, the
+    fallback when the bytes are not valid UTF-8.
+    """
+    try:
+        return content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return content.decode("cp1252")
 
 
 async def _warm_up(url: str, *, force: bool = False) -> None:
@@ -210,7 +228,7 @@ def _parse_candidates(
     return candidates, total_found, parties, provinces
 
 
-async def list_elections(*, act: str = "after_2019") -> ElectionList:
+async def list_elections(*, act: str = "after_2019", lang: str = "en") -> ElectionList:
     """List the general elections and by-elections available for a Candidates
     financial-return search under a given Canada Elections Act period.
 
@@ -220,10 +238,10 @@ async def list_elections(*, act: str = "after_2019") -> ElectionList:
     """
     act_code = _resolve(constants.ACT_PERIODS, act, "act")
     url = (
-        f"{constants.HOME_URL}/RefreshEventList"
+        f"{constants.HOME_URLS[lang]}/RefreshEventList"
         f"?selectedAct=CC_{act_code}&selectedEntityCode={constants.ENTITY_CODE_CANDIDATES}"
     )
-    cache_key = f"elections-financial-returns:events:{act_code}"
+    cache_key = f"elections-financial-returns:events:{lang}:{act_code}"
 
     async def fetch() -> list[ElectionOption]:
         await _LIMITER.acquire()
@@ -272,45 +290,24 @@ async def list_elections(*, act: str = "after_2019") -> ElectionList:
     )
 
 
-async def search_candidates(
-    election_id: str,
-    *,
-    act: str = "after_2019",
-    report_type: str = "campaign_returns",
-    return_status: str = "submitted",
-    last_name: str = "",
-    first_name: str = "",
-    party_id: str = "-1",
-    province_id: str = "-1",
-    district_id: str = "-1",
-) -> CandidateSearchResult:
-    """Search Candidates for one election under a given Act period, returning
-    each match's `client_id` for use with `get_financial_return_part`.
+async def _check_election(election_id: str, act: str, lang: str) -> None:
+    """Refuse an election id the act period does not list.
 
-    `available_parties`/`available_provinces` in the result are the
-    portal's own filter dropdown options for this act/election/report_type
-    combination, parsed from the same response -- use their `id` values for
-    `party_id`/`province_id` on a follow-up, narrower search.
+    The portal answers an unknown selectedEvent with an ordinary empty
+    result (live 2026-10-03: election "9999" gave "0 found"), which would
+    read as "no candidates" rather than "no such election".
     """
-    act_code = _resolve(constants.ACT_PERIODS, act, "act")
-    report_code = _resolve(constants.REPORT_TYPES, report_type, "report_type")
-    status_code = _resolve(constants.RETURN_STATUS, return_status, "return_status")
-    election_id = election_id.strip()
-    if not election_id:
-        raise InvalidInput("election_id must not be empty.")
+    elections = (await list_elections(act=act, lang=lang)).elections
+    if not any(e.id == election_id for e in elections):
+        known = ", ".join(f"{e.id} ({e.label})" for e in elections[:8])
+        raise NotFound(
+            f"elections_financial_returns: no election {election_id!r} under act {act!r}; "
+            f"see elections_financial_returns_list_elections (e.g. {known})."
+        )
 
-    url = _search_url(act_code, election_id, report_code, status_code)
-    form = {
-        "ReturnStatus": status_code,
-        "ReportOption": constants.REPORT_OPTION_COMPLETE,
-        "EntityLastName": last_name.strip(),
-        "EntityFirstName": first_name.strip(),
-        "SelectedPartyIds": party_id,
-        "SelectedProvinceId": province_id,
-        "SelectedDistrictId": district_id,
-        "EdaSelectedProvinceId": "-1",
-        "AddCandidates": "Find Candidates",
-    }
+
+async def _search_html(url: str, form: dict[str, str]) -> tuple[str, bool]:
+    """One candidate-search POST (cached), re-warming a lost session once."""
     cache_key = f"elections-financial-returns:search:{url}:{sorted(form.items())}"
 
     async def post_search() -> str:
@@ -346,21 +343,99 @@ async def search_candidates(
             )
         return html
 
-    html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    candidates, total_found, parties, provinces = _parse_candidates(html)
-    truncated = candidates[: constants.CANDIDATE_SEARCH_MAX]
-    coverage = None
-    if total_found > len(truncated):
-        coverage = (
-            f"first {len(truncated)} of {total_found} matching candidates -- "
-            "narrow with last_name/party_id/province_id"
+    return await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
+
+
+def _search_form(
+    status_code: str,
+    lang: str,
+    *,
+    last_name: str = "",
+    first_name: str = "",
+    party_id: str = "-1",
+    province_id: str = "-1",
+    district_id: str = "-1",
+) -> dict[str, str]:
+    return {
+        "ReturnStatus": status_code,
+        "ReportOption": constants.REPORT_OPTION_COMPLETE,
+        "EntityLastName": last_name.strip(),
+        "EntityFirstName": first_name.strip(),
+        "SelectedPartyIds": party_id,
+        "SelectedProvinceId": province_id,
+        "SelectedDistrictId": district_id,
+        "EdaSelectedProvinceId": "-1",
+        "AddCandidates": constants.FIND_BUTTON[lang],
+    }
+
+
+async def search_candidates(
+    election_id: str,
+    *,
+    act: str = "after_2019",
+    report_type: str = "campaign_returns",
+    return_status: str = "submitted",
+    last_name: str = "",
+    first_name: str = "",
+    party_id: str = "-1",
+    province_id: str = "-1",
+    district_id: str = "-1",
+    offset: int = 0,
+    limit: int | None = None,
+    lang: str = "en",
+) -> CandidateSearchResult:
+    """Search Candidates for one election under a given Act period, returning
+    each match's `client_id` for use with `get_financial_return_part`.
+
+    `available_parties`/`available_provinces` in the result are the
+    portal's own filter dropdown options for this act/election/report_type
+    combination, parsed from the same response -- use their `id` values for
+    `party_id`/`province_id` on a follow-up, narrower search. The portal
+    returns every match in one response (1,927 for the 45th general
+    election), so `offset`/`limit` page over that cached list.
+    """
+    act_code = _resolve(constants.ACT_PERIODS, act, "act")
+    report_code = _resolve(constants.REPORT_TYPES, report_type, "report_type")
+    status_code = _resolve(constants.RETURN_STATUS, return_status, "return_status")
+    election_id = election_id.strip()
+    if not election_id:
+        raise InvalidInput("election_id must not be empty.")
+    page_size = constants.CANDIDATE_SEARCH_MAX if limit is None else limit
+    if not 1 <= page_size <= constants.CANDIDATE_SEARCH_MAX:
+        raise InvalidInput(
+            f"limit must be between 1 and {constants.CANDIDATE_SEARCH_MAX}, got {limit}."
         )
+    if offset < 0:
+        raise InvalidInput(f"offset must be 0 or more, got {offset}.")
+    await _check_election(election_id, act, lang)
+
+    url = _search_url(act_code, election_id, report_code, status_code, lang)
+    form = _search_form(
+        status_code,
+        lang,
+        last_name=last_name,
+        first_name=first_name,
+        party_id=party_id,
+        province_id=province_id,
+        district_id=district_id,
+    )
+    html, was_cached = await _search_html(url, form)
+    candidates, total_found, parties, provinces = _parse_candidates(html)
+    page = candidates[offset : offset + page_size]
+    has_more = offset + len(page) < len(candidates)
+    coverage = None
+    if has_more or offset:
+        coverage = f"candidates {offset + 1}-{offset + len(page)} of {len(candidates)}"
+        if has_more:
+            coverage += f"; next page: offset={offset + len(page)}"
 
     return CandidateSearchResult(
         election_id=election_id,
-        candidates=truncated,
-        returned_count=len(truncated),
+        candidates=page,
+        returned_count=len(page),
         total_found=total_found,
+        offset=offset,
+        has_more=has_more,
         available_parties=parties,
         available_provinces=provinces,
         provenance=make_provenance(
@@ -373,6 +448,29 @@ async def search_candidates(
     )
 
 
+async def _check_candidate_in_election(
+    candidate_client_id: str, election_id: str, act_code: str, status_code: str, lang: str
+) -> None:
+    """Refuse a client id that is not a candidate in the requested election.
+
+    The portal serves a candidate's return under any selectedEvent and labels
+    it with that event (live 2026-10-03: client 56572 with election 53, the
+    2021 general election, returned his 2025 Nepean return headed "44th
+    general election"). The election's full candidate list (one cached
+    search) settles it.
+    """
+    report_code = constants.REPORT_TYPES["campaign_returns"]
+    url = _search_url(act_code, election_id, report_code, status_code, lang)
+    html, _ = await _search_html(url, _search_form(status_code, lang))
+    candidates, _total, _parties, _provinces = _parse_candidates(html)
+    if not any(c.client_id == candidate_client_id for c in candidates):
+        raise NotFound(
+            f"elections_financial_returns: candidate {candidate_client_id!r} did not run in "
+            f"election {election_id!r}; take client_id from "
+            "elections_financial_returns_search_candidates for the same election."
+        )
+
+
 async def get_financial_return_part(
     candidate_client_id: str,
     part: str,
@@ -380,6 +478,7 @@ async def get_financial_return_part(
     election_id: str,
     act: str = "after_2019",
     return_status: str = "submitted",
+    lang: str = "en",
 ) -> FinancialReturnPart:
     """Retrieve one part of a candidate's Complete Financial Return.
 
@@ -399,27 +498,30 @@ async def get_financial_return_part(
     election_id = election_id.strip()
     if not election_id:
         raise InvalidInput("election_id must not be empty.")
+    await _check_election(election_id, act, lang)
+    await _check_candidate_in_election(
+        candidate_client_id, election_id, act_code, status_code, lang
+    )
     # This tool always requests the "Campaign Returns" report type, since
     # that is the only one exposing the 13-part Complete Financial Return
     # this function covers -- see constants.py.
     report_code = constants.REPORT_TYPES["campaign_returns"]
+    base_url = constants.BASE_URLS[lang]
 
     cache_key = (
-        f"elections-financial-returns:part:{act_code}:{election_id}:{status_code}:"
+        f"elections-financial-returns:part:{lang}:{act_code}:{election_id}:{status_code}:"
         f"{candidate_client_id}:{part_code}"
     )
 
-    async def fetch() -> dict[str, object]:
-        search_url = _search_url(act_code, election_id, report_code, status_code)
-        await _LIMITER.acquire()
-        await _warm_up(search_url)
+    select_form = {
+        "ReturnStatus": status_code,
+        "ReportOption": constants.REPORT_OPTION_COMPLETE,
+        "SelectedClientIds": candidate_client_id,
+        "SearchSelected": constants.SELECT_BUTTON[lang],
+    }
 
-        select_form = {
-            "ReturnStatus": status_code,
-            "ReportOption": constants.REPORT_OPTION_COMPLETE,
-            "SelectedClientIds": candidate_client_id,
-            "SearchSelected": "Search Selected",
-        }
+    async def open_report(search_url: str) -> tuple[str, str]:
+        """Select the candidate and open the report; returns the Download and report URLs."""
 
         async def select_candidate() -> httpx.Response:
             try:
@@ -463,30 +565,46 @@ async def get_financial_return_part(
                 "in time while opening the report session."
             ) from exc
 
-        download_url = (
-            f"{constants.BASE_URL}/Download?act={act_code}&selectedEvent={election_id}"
+        return detail_url, (
+            f"{base_url}/Download?act={act_code}&selectedEvent={election_id}"
             f"&returnStatus={status_code}&reportOption={constants.REPORT_OPTION_COMPLETE}"
             f"&queryId={query_id}&selectedClientId={candidate_client_id}"
             f"&selectedPart={part_code}&currentReturnPage=0&totalReturnPages=0"
             f"&downloadFormat={constants.DOWNLOAD_FORMAT_JSON}&current200Page=0&total200Pages=0"
         )
+
+    async def download(download_url: str) -> httpx.Response:
         try:
-            download_response = await _client.get(download_url)
+            return await _client.get(download_url)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "elections_financial_returns:get_financial_return_part did not respond "
                 "in time while downloading the report."
             ) from exc
+
+    async def fetch() -> dict[str, object]:
+        search_url = _search_url(act_code, election_id, report_code, status_code, lang)
+        await _LIMITER.acquire()
+        await _warm_up(search_url)
+        detail_url, download_url = await open_report(search_url)
+        download_response = await download(download_url)
         if download_response.status_code != 200:
-            # Confirmed live: an invalid/expired queryId redirects (HTTP 302)
-            # back to the search form rather than erroring.
-            raise NotFound(
-                f"elections_financial_returns:get_financial_return_part: the report "
-                f"session expired or candidate {candidate_client_id!r} has no data for "
-                f"part {part_code!r}."
+            # Confirmed live: an expired session or queryId redirects (HTTP
+            # 302) back to the search form rather than erroring. The pairing
+            # was checked above, so this is a lost session: re-warm, select
+            # again and retry once before giving up.
+            await _warm_up(search_url, force=True)
+            detail_url, download_url = await open_report(search_url)
+            download_response = await download(download_url)
+        if download_response.status_code != 200:
+            _warmed.discard(search_url)
+            raise UpstreamUnavailable(
+                "elections_financial_returns:get_financial_return_part: the portal kept "
+                "sending the report download back to its search form after a fresh session "
+                f"(HTTP {download_response.status_code}). Try again shortly."
             )
         try:
-            body = json.loads(download_response.text)
+            body = json.loads(_decode(download_response.content))
         except json.JSONDecodeError as exc:
             raise UpstreamError(
                 "elections_financial_returns:get_financial_return_part returned a "
@@ -513,12 +631,13 @@ async def get_financial_return_part(
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     body = result["body"]
     assert isinstance(body, dict)
-    export_header_list = body.get("EXPORT_HEADER") or []
+    # The French download names its header RUBRIQUE_EXPORTER (and its row
+    # sections DONNÉES_DÉTAIL etc., confirmed live 2026-10-03).
+    header_key = "RUBRIQUE_EXPORTER" if "RUBRIQUE_EXPORTER" in body else "EXPORT_HEADER"
+    export_header_list = body.get(header_key) or []
     export_header = export_header_list[0] if export_header_list else {}
     sections = {
-        key: value
-        for key, value in body.items()
-        if key != "EXPORT_HEADER" and isinstance(value, list)
+        key: value for key, value in body.items() if key != header_key and isinstance(value, list)
     }
 
     return FinancialReturnPart(

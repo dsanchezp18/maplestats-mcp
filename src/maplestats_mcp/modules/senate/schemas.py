@@ -35,7 +35,11 @@ class SenatorBallot(BaseModel):
     senator: str = Field(description="'Last, First' as the Senate lists it.")
     affiliation: str | None = Field(default=None, description="Group, e.g. ISG, CSG, PSG, C.")
     province: str | None = None
-    vote: str = Field(description="Yea, Nay, Abstention, or '' when not recorded.")
+    vote: str | None = Field(
+        default=None,
+        description="Yea, Nay or Abstention (Pour, Contre, Abstention in French); "
+        "null when the senator has no recorded vote (absent).",
+    )
 
 
 class SenateVote(BaseModel):

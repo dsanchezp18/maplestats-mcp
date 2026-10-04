@@ -22,6 +22,12 @@ class Earthquake(BaseModel):
 
 class EarthquakeSearchResult(BaseModel):
     earthquakes: list[Earthquake] = Field(description="Most recent first.")
-    total_matches: int
+    total_matches: int | None = Field(
+        description=(
+            "Events matching the search; null when more than `limit` matched (only "
+            "limit + 1 events are fetched, so the full count is not known)."
+        )
+    )
+    has_more: bool = Field(default=False, description="More events match than were returned.")
     returned_count: int
     provenance: Provenance

@@ -11,6 +11,7 @@ directly, so `_parse_nbac_date` strips it first.
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any
 
@@ -61,6 +62,26 @@ def _fire_record(feature: dict[str, Any]) -> FireRecord:
     )
 
 
+async def latest_year() -> int | None:
+    """The most recent fire year in the layer (2024 on 2026-10-03; year=2025
+    returned nothing, with no hint that the data stop there)."""
+
+    async def fetch() -> dict[str, Any]:
+        return await get_features(
+            CONFIG,
+            constants.TYPE_NAME,
+            property_names="year",
+            srs_name=constants.DEFAULT_SRS,
+            sort_by="year D",
+            count=1,
+        )
+
+    body, _ = await cached_fetch("nrcan-nbac:latest-year", constants.CACHE_TTL_QUERY_SECONDS, fetch)
+    features = body.get("features") or []
+    year = (features[0].get("properties") or {}).get("year") if features else None
+    return int(year) if isinstance(year, int | float) else None
+
+
 async def query_fires(
     *,
     cql_filter: str | None = None,
@@ -83,6 +104,9 @@ async def query_fires(
         raise InvalidInput(f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.")
     if offset < 0:
         raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    requested = limit
+    if include_geometry:
+        limit = min(limit, constants.GEOMETRY_ROWS_MAX)
 
     property_names = None if include_geometry else constants.ATTRIBUTE_FIELDS
 
@@ -102,7 +126,34 @@ async def query_fires(
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_QUERY_SECONDS, fetch)
     features = body.get("features") or []
     fires = [_fire_record(feature) for feature in features]
+    omitted = 0
+    if include_geometry:
+        used = 0
+        for fire in fires:
+            if fire.geometry is None:
+                continue
+            size = len(json.dumps(fire.geometry, separators=(",", ":")))
+            if used + size > constants.GEOMETRY_BYTES_MAX:
+                fire.geometry = None
+                omitted += 1
+            else:
+                used += size
     total_matched = body.get("numberMatched") or body.get("totalFeatures") or len(fires)
+    last_year = await latest_year()
+    notes = []
+    if limit < requested:
+        notes.append(
+            f"With geometry, at most {limit} fires are returned per call (a single NBAC "
+            f"polygon can be several MB); continue with offset={offset + len(fires)}."
+        )
+    if omitted:
+        notes.append(
+            f"{omitted} polygon(s) left out: together they exceed the "
+            f"{constants.GEOMETRY_BYTES_MAX // 1_000_000} MB geometry budget. Ask for those "
+            "fires one at a time, or use the NBAC shapefile download."
+        )
+    if not fires and last_year is not None:
+        notes.append(f"No fires matched; NBAC currently runs to fire year {last_year}.")
     return FireQueryResult(
         fires=fires,
         returned_count=len(fires),
@@ -110,6 +161,9 @@ async def query_fires(
         limit=limit,
         offset=offset,
         cql_filter=cql_filter,
+        latest_year=last_year,
+        geometry_omitted=omitted,
+        note=" ".join(notes) or None,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=f"{constants.BASE_URL}?typeName={constants.TYPE_NAME}",
@@ -117,6 +171,9 @@ async def query_fires(
             schema_name="nrcan_nbac.FireQueryResult",
             coverage=f"{len(fires)} of {total_matched} total matching fires returned",
             limits=f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
-            freshness="NBAC is compiled annually, not updated in real time",
+            freshness=(
+                "NBAC is compiled annually, not updated in real time"
+                + (f"; latest fire year {last_year}" if last_year else "")
+            ),
         ),
     )

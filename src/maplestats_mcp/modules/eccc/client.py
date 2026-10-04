@@ -79,10 +79,16 @@ alone):
 - No numeric rate limit is published, and no X-RateLimit-*/Retry-After
   style header was present on any live response checked this session -
   see constants.py for the conservative default used in its place.
+- `lang=fr` on `/collections` and `/collections/{id}` returns French
+  titles and descriptions ("Alertes météo" for weather-alerts, confirmed
+  live 2026-10-03); item properties are the same in both languages, with
+  bilingual content in `_en`/`_fr` suffixed properties.
 """
 
 from __future__ import annotations
 
+import re
+from datetime import date, datetime
 from typing import Any, NoReturn
 from urllib.parse import quote
 
@@ -233,9 +239,17 @@ async def list_collections(lang: str = "en") -> CollectionList:
 async def search_collections(
     query: str, *, limit: int = constants.COLLECTIONS_SEARCH_LIMIT_DEFAULT, lang: str = "en"
 ) -> CollectionList:
-    """Client-side substring search over the cached collection inventory."""
+    """Client-side substring search over the cached collection inventory.
+
+    Matches the English and the French titles, descriptions and keywords
+    (an "alerte" search found nothing when only English text was read),
+    and returns the collections in `lang`.
+    """
     all_collections = await list_collections(lang)
-    matches = _filter_collections(all_collections.collections, query, limit)
+    other, _ = await _all_collections("fr" if lang == "en" else "en")
+    hit_ids = {c.id for c in _filter_collections(other, query, len(other))}
+    hit_ids |= {c.id for c in _filter_collections(all_collections.collections, query, 10**6)}
+    matches = [c for c in all_collections.collections if c.id in hit_ids][:limit]
     return CollectionList(
         collections=matches,
         total_count=len(matches),
@@ -332,6 +346,42 @@ def _validate_known_properties(
     )
 
 
+_INSTANT = re.compile(r"^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$")
+
+
+def _check_datetime(value: str) -> str:
+    """Check an OGC datetime (an instant, or "start/end" with ".." open).
+
+    A malformed value used to reach the server, whose HTTP 500 was then
+    read as "this collection does not support datetime filtering" even on
+    collections that do (hydrometric-realtime, live 2026-10-03).
+    """
+    value = value.strip()
+    parts = value.split("/")
+    if not value or len(parts) > 2:
+        raise InvalidInput(_DATETIME_HELP.format(value=value))
+    for part in parts:
+        if len(parts) == 2 and part in ("", ".."):
+            continue
+        if not _INSTANT.match(part):
+            raise InvalidInput(_DATETIME_HELP.format(value=value))
+        try:
+            if "T" in part:
+                datetime.fromisoformat(part)
+            else:
+                date.fromisoformat(part)
+        except ValueError as exc:
+            raise InvalidInput(_DATETIME_HELP.format(value=value)) from exc
+    return value
+
+
+_DATETIME_HELP = (
+    "datetime_filter must be an RFC 3339 date or date-time such as 2026-09-19 or "
+    "2026-09-19T00:00:00Z, or an interval start/end with .. for an open end "
+    "(2026-09-19T00:00:00Z/..), got {value!r}."
+)
+
+
 def _feature_from_json(obj: dict[str, Any]) -> Feature:
     return Feature(
         id=obj.get("id"),
@@ -361,6 +411,8 @@ async def query_items(
         raise InvalidInput(
             f"bbox must have exactly 4 values [west, south, east, north], got {len(bbox)}."
         )
+    if datetime_filter is not None:
+        datetime_filter = _check_datetime(datetime_filter)
 
     filters = filters or {}
     names_to_check = list(filters.keys()) + list(fields or [])
@@ -399,10 +451,18 @@ async def query_items(
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ITEMS_SECONDS, fetch)
     received = [_feature_from_json(f) for f in list_or_empty(obj, "features")]
-    # Some collections (SWOB observations, about 8 KB an item) pass 400 KB
-    # at 50 items; the byte budget keeps a page usable.
-    features = fit_to_budget(received, constants.ITEMS_MAX_BYTES)
+    # Some collections carry hundreds of properties per row (SWOB
+    # observations are about 8.3 KB an item, so 50 rows were 415 KB live,
+    # 2026-10-03); the byte budget keeps a page usable.
+    features = fit_to_budget(received, constants.ITEMS_BYTES_MAX)
     number_matched = obj.get("numberMatched", len(received))
+    note = None
+    if len(features) < len(received):
+        note = (
+            f"Stopped at {len(features)} of the {len(received)} rows fetched: they reach the "
+            f"{constants.ITEMS_BYTES_MAX // 1_000_000} MB response budget. Continue with "
+            f"offset={offset + len(features)}, or pass fields to return fewer properties."
+        )
     return ItemsResult(
         collection_id=collection_id,
         items=features,
@@ -410,6 +470,7 @@ async def query_items(
         number_returned=len(features),
         limit=limit,
         offset=offset,
+        note=note,
         provenance=make_provenance(
             source="eccc",
             url=_url(f"/collections/{segment}/items", params),
@@ -421,7 +482,7 @@ async def query_items(
                 truncation_note(
                     returned=len(features),
                     total=len(received),
-                    unit=f"items received (cut to about {constants.ITEMS_MAX_BYTES // 1000} KB)",
+                    unit=f"items received (cut to about {constants.ITEMS_BYTES_MAX // 1_000_000} MB)",
                     how_to_get_more="select fewer `fields`, lower limit and page with offset",
                 ),
             ),

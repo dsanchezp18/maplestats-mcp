@@ -1,16 +1,19 @@
 """HTTP client for IRCC's Express Entry rounds-of-invitations JSON feed.
 
-Two real quirks confirmed live 2026-09-18, both handled below:
+Two real quirks, both handled below:
 
 1. Neither feed declares a charset (`Content-Type: application/json` with
-   no `charset` parameter). The English feed is plain ASCII and decodes
-   correctly as UTF-8, but the French feed's bytes are actually
-   Windows-1252 -- decoding them as UTF-8 does not raise (the bytes
-   happen to form valid, just wrong, UTF-8 sequences), it silently
-   mangles every accented character (e.g. "supérieurs" becomes
-   "sup�rieurs"-style mojibake). `get_raw` is used instead of
-   `api_get` so the raw bytes are available to decode explicitly per
-   language rather than trusting httpx's default UTF-8 `.json()`.
+   no `charset` parameter), and the French feed's encoding has changed
+   over time. On 2026-09-18 its bytes were Windows-1252; by 2026-10-03
+   IRCC served it as UTF-8 (raw bytes b"M\\xc3\\xa9tiers sp\\xc3\\xa9cialis\\xc3\\xa9s",
+   confirmed by fetching ee_rounds_123_fr.json directly). Decoding the
+   UTF-8 feed as cp1252 never raises -- it silently turns "Métiers" into
+   "MÃ©tiers" -- so `_decode_feed` tries UTF-8 first (with BOM handling)
+   and falls back to cp1252 only when the bytes are not valid UTF-8.
+   Accented cp1252 text is almost never valid UTF-8, so the fallback is
+   reliable in that direction. `get_raw` is used instead of `api_get` so
+   the raw bytes are available to decode explicitly rather than trusting
+   httpx's default `.json()`.
 2. Numeric fields use a locale-specific thousands separator: a comma in
    the English feed ("20,784") and a literal ASCII space in the French
    feed ("20 784", confirmed to be U+0020, not a non-breaking space).
@@ -49,7 +52,10 @@ _LIMITER = get_limiter(
 )
 
 _URL_BY_LANG: dict[str, str] = {"en": constants.BASE_URL_EN, "fr": constants.BASE_URL_FR}
-_ENCODING_BY_LANG: dict[str, str] = {"en": "utf-8", "fr": "cp1252"}
+
+# Draw numbers are digits, with a letter suffix on a few same-day rounds
+# (2018-05-30 was published as "91a" and "91b", confirmed live 2026-09-18).
+_DRAW_NUMBER_RE = re.compile(r"\d+[a-z]?", re.IGNORECASE)
 
 # dd1-dd18 -> CrsScoreDistribution field order, confirmed live (see
 # schemas.py's CrsScoreDistribution docstring for the verification method).
@@ -116,9 +122,16 @@ def _round_from_json(obj: dict[str, Any]) -> ExpressEntryRound:
     )
 
 
+def _decode_feed(raw_bytes: bytes) -> str:
+    try:
+        return raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return raw_bytes.decode("cp1252")
+
+
 def _parse_feed(raw_bytes: bytes, lang: str) -> list[ExpressEntryRound]:
     try:
-        text = raw_bytes.decode(_ENCODING_BY_LANG[lang])
+        text = _decode_feed(raw_bytes)
         payload = json.loads(text)
         rounds = payload["rounds"]
         return [_round_from_json(obj) for obj in rounds]
@@ -201,9 +214,13 @@ async def get_express_entry_round(draw_number: str, lang: Lang = "en") -> Expres
     draw_number = draw_number.strip()
     if not draw_number:
         raise InvalidInput("draw_number must not be empty.")
+    if not _DRAW_NUMBER_RE.fullmatch(draw_number):
+        raise InvalidInput(
+            f"draw_number must be a round number such as '300' or '91a', got {draw_number!r}."
+        )
     rounds, was_cached = await _fetch_rounds(lang)
     for round_ in rounds:
-        if round_.draw_number == draw_number:
+        if round_.draw_number.casefold() == draw_number.casefold():
             return ExpressEntryRoundDetail(
                 round=round_,
                 provenance=make_provenance(

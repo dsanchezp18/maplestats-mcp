@@ -21,7 +21,7 @@ import json
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastmcp import Client
@@ -40,6 +40,9 @@ class Step:
     tool: str
     args: Args
     check: Check = lambda data: True
+    # When set, the step passes only if the call is an error whose text
+    # contains this string (a bad input that must be refused, not answered).
+    expect_error: str | None = None
 
 
 def _non_empty(key: str) -> Check:
@@ -52,12 +55,13 @@ _TODAY = datetime.now(UTC).date()
 DOWN_MODULES: dict[str, str] = {}
 
 # Single tools whose upstream is down while the rest of their module works.
-DOWN_TOOLS = {
-    # oee.nrcan.gc.ca accepts the TCP connection and then resets the TLS
-    # handshake (curl exit 35; httpx "All connection attempts failed"), checked
-    # 2026-10-03. list_products still answers from the static survey list.
-    "nrcan_energy_use_list_tables": "oee.nrcan.gc.ca resets the TLS handshake",
-    "nrcan_energy_use_get_table": "oee.nrcan.gc.ca resets the TLS handshake",
+# oee.nrcan.gc.ca times out at TCP connect on port 443 (2026-10-03; it failed
+# the TLS handshake on 2026-09-29). nrcan_energy_use_list_products still
+# answers from its fixed survey list, so it keeps its step.
+_OEE_DOWN = "oee.nrcan.gc.ca does not accept a TCP connection"
+DOWN_TOOLS: dict[str, str] = {
+    "nrcan_energy_use_list_tables": _OEE_DOWN,
+    "nrcan_energy_use_get_table": _OEE_DOWN,
 }
 
 STEPS: list[Step] = [
@@ -80,9 +84,27 @@ STEPS: list[Step] = [
         lambda ctx: {"table": ctx["ab_economic_list_tables"]["tables"][0]["table"], "limit": 5},
     ),
     # Alberta Energy Regulator
-    Step("aer", "aer_get_well_licences_daily", {}, _non_empty("raw_text")),
-    Step("aer", "aer_get_well_licence_archive_link", {"year": _TODAY.year - 1}),
-    Step("aer", "aer_get_production_volumes_link", {"product": "oil"}),
+    # The default (yesterday) is the latest posted list, so it carries no stale note.
+    Step(
+        "aer",
+        "aer_get_well_licences_daily",
+        {},
+        lambda data: bool(data["raw_text"]) and data["note"] is None,
+    ),
+    # Sizes come back only when the HEAD asks for identity encoding.
+    Step(
+        "aer",
+        "aer_get_well_licence_archive_link",
+        {"year": _TODAY.year - 1},
+        lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
+    ),
+    Step("aer", "aer_get_well_licence_archive_link", {"year": 1850}, expect_error="2017"),
+    Step(
+        "aer",
+        "aer_get_production_volumes_link",
+        {"product": "oil"},
+        lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
+    ),
     # BC Geographic Warehouse
     Step("bcgw", "bcgw_get_active_wildfires", {"limit": 3}, _non_empty("wildfires")),
     Step("bcgw", "bcgw_get_mining_tenure", {"limit": 3}),
@@ -97,6 +119,21 @@ STEPS: list[Step] = [
         "cer",
         "cer_query_file",
         lambda ctx: {"url": ctx["cer_list_datasets"]["datasets"][0]["files"][0]["url"], "limit": 3},
+    ),
+    # A year-only end covers the whole year: Keystone has monthly rows for
+    # several key points, so 2024 alone gives more than the January rows.
+    Step(
+        "cer",
+        "cer_query_file",
+        {
+            "url": "https://www.cer-rec.gc.ca/open/energy/throughput-capacity/"
+            "keystone-throughput-and-capacity.csv",
+            "start": "2024",
+            "end": "2024",
+            "columns": ["Date"],
+            "limit": 1000,
+        },
+        lambda data: {r["Date"][:7] for r in data["rows"]} >= {"2024-01", "2024-12"},
     ),
     # CIHI
     Step("cihi", "cihi_search_indicators", {"query": "readmission"}, _non_empty("indicators")),
@@ -133,6 +170,147 @@ STEPS: list[Step] = [
         "dfo_iwls_get_water_levels",
         lambda ctx: {"station_code": ctx["dfo_iwls_search_stations"]["stations"][0]["code"]},
     ),
+    # One whole day by date (start = end used to be refused), and a week of
+    # predictions at the hourly default rather than one-minute points.
+    Step(
+        "dfo_iwls",
+        "dfo_iwls_get_water_levels",
+        {
+            "station_code": "07120",
+            "series_code": "wlp",
+            "start": _TODAY.isoformat(),
+            "end": _TODAY.isoformat(),
+        },
+        lambda data: len(data["points"]) >= 20,
+    ),
+    Step(
+        "dfo_iwls",
+        "dfo_iwls_get_water_levels",
+        {
+            "station_code": "07120",
+            "series_code": "wlp",
+            "start": _TODAY.isoformat(),
+            "end": (_TODAY + timedelta(days=6)).isoformat(),
+        },
+        lambda data: data["resolution"] == "SIXTY_MINUTES" and len(data["points"]) <= 7 * 24 + 1,
+    ),
+    # Electricity (the rest is in smoke_test_electricity.py): the latest Quebec
+    # trade hour must carry published exports, not a zero placeholder.
+    Step(
+        "electricity",
+        "electricity_quebec_get_trade",
+        {"limit": 3},
+        lambda data: len(data["points"]) == 3 and bool(data["points"][-1]["exports_total_mw"]),
+    ),
+    # CWFIS (the rest is in smoke_test_cwfis.py): an FRP sort keeps detections
+    # without FRP (2023 archive rows have none), geometry stays within budget.
+    Step(
+        "cwfis",
+        "cwfis_get_hotspots",
+        {
+            "agency": "BC",
+            "start_date": "2023-08-18",
+            "end_date": "2023-08-18",
+            "sort_by": "frp",
+            "limit": 2,
+        },
+        lambda data: data["total_matched"] > 1000 and data["returned_count"] == 2,
+    ),
+    Step("cwfis", "cwfis_get_hotspots", {"agency": "ZZ"}, expect_error="agency"),
+    Step(
+        "cwfis",
+        "cwfis_get_fire_perimeters",
+        {"include_geometry": True, "limit": 20},
+        lambda data: len(json.dumps(data)) < 600_000,
+    ),
+    Step(
+        "cwfis",
+        "cwfis_get_weather_stations",
+        {"name": "NO SUCH STATION ZZ"},
+        lambda data: not data["stations"] and "layer currently holds" in (data["note"] or ""),
+    ),
+    # NBAC (the rest is in smoke_test_nrcan_nbac.py): the five largest 2023 BC
+    # fires with polygons were 32.9 MB before the geometry budget.
+    Step(
+        "nrcan_nbac",
+        "nrcan_nbac_query_fires",
+        {
+            "cql_filter": "admin_area = 'BC' AND year = 2023",
+            "include_geometry": True,
+            "sort_by": "adj_ha D",
+            "limit": 5,
+        },
+        lambda data: len(json.dumps(data)) < 3_000_000 and len(data["fires"]) == 5,
+    ),
+    Step(
+        "nrcan_nbac",
+        "nrcan_nbac_query_fires",
+        {"cql_filter": "year = 2999"},
+        lambda data: not data["fires"] and (data["latest_year"] or 0) >= 2024,
+    ),
+    # NFD (the rest is in smoke_test_nfd.py): a one-province group keeps its name.
+    Step(
+        "nfd",
+        "nfd_query_table",
+        {"table_id": "3.2.1", "province": "BC", "group_by": ["year"], "limit": 3},
+        lambda data: bool(data["rows"]) and all(r["iso"] == "BC" for r in data["rows"]),
+    ),
+    # Alberta wildfire (the rest is in smoke_test_ab_wildfire.py): every
+    # timestamp is UTC, the status date included.
+    Step(
+        "ab_wildfire",
+        "ab_wildfire_get_fires",
+        {"limit": 3},
+        lambda data: (
+            bool(data["fires"])
+            and all(
+                f["status_changed"] is None or f["status_changed"].endswith(("Z", "+00:00"))
+                for f in data["fires"]
+            )
+        ),
+    ),
+    # ECCC GeoMet (the rest is in smoke_test_eccc.py): French search text,
+    # a local datetime check, and a byte budget on heavy swob rows.
+    Step(
+        "eccc",
+        "eccc_search_collections",
+        {"query": "alerte", "lang": "fr"},
+        lambda data: any(c["id"] == "weather-alerts" for c in data["collections"]),
+    ),
+    Step(
+        "eccc",
+        "eccc_query_items",
+        {"collection_id": "hydrometric-realtime", "datetime_filter": "notadate"},
+        expect_error="RFC 3339",
+    ),
+    Step(
+        "eccc",
+        "eccc_query_items",
+        {"collection_id": "swob-realtime", "limit": 1000},
+        lambda data: len(json.dumps(data)) < 1_500_000 and bool(data["items"]),
+    ),
+    # IRCC Express Entry (the rest is in smoke_test_ircc.py): French text is
+    # decoded right, through the tool, and a non-numeric draw is refused.
+    Step(
+        "ircc",
+        "ircc_get_latest_express_entry_round",
+        {"lang": "fr"},
+        lambda data: (
+            "Ã" not in json.dumps(data, ensure_ascii=False)
+            and "é" in json.dumps(data["round"], ensure_ascii=False)
+        ),
+    ),
+    Step(
+        "ircc", "ircc_get_express_entry_round", {"draw_number": "abc"}, expect_error="draw_number"
+    ),
+    # CMHC HMIP (the rest is in smoke_test_cmhc.py): an unknown province id is
+    # refused instead of answered with the national categories.
+    Step(
+        "cmhc",
+        "cmhc_list_categories",
+        {"geography_type": "Province", "geography_id": "999"},
+        expect_error="No province with id",
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(
@@ -140,6 +318,13 @@ STEPS: list[Step] = [
         "earthquakes_search",
         lambda ctx: {"event_id": ctx["earthquakes_search"]["earthquakes"][0]["event_id"]},
         lambda data: data["returned_count"] == 1,
+    ),
+    # Five years at limit 2: only limit + 1 rows travel (it was all 34,973).
+    Step(
+        "earthquakes",
+        "earthquakes_search",
+        {"start": "2021-01-01", "end": "2025-12-31", "limit": 2},
+        lambda data: data["returned_count"] == 2 and data["has_more"],
     ),
     # Elections Canada financial returns
     Step(
@@ -166,6 +351,42 @@ STEPS: list[Step] = [
             "part": "1",
             "election_id": ctx["elections_financial_returns_list_elections"]["elections"][0]["id"],
         },
+    ),
+    # Paging past the first 300 of an unfiltered general-election search.
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_search_candidates",
+        {"election_id": "62", "offset": 300, "limit": 50},
+        lambda data: data["returned_count"] == 50 and data["has_more"],
+    ),
+    # Accented names decode (they came back as U+FFFD before 2026-10-03).
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        {"candidate_client_id": "56572", "part": "3A", "election_id": "62"},
+        lambda data: (
+            "�" not in json.dumps(data, ensure_ascii=False)
+            and "é" in json.dumps(data["sections"], ensure_ascii=False)
+        ),
+    ),
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        {"candidate_client_id": "56572", "part": "1", "election_id": "62", "lang": "fr"},
+        lambda data: bool(data["export_header"]) and bool(data["sections"]),
+    ),
+    # A candidate under an election they did not run in, and an unknown election.
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_get_financial_return_part",
+        {"candidate_client_id": "56572", "part": "1", "election_id": "53"},
+        expect_error="did not run",
+    ),
+    Step(
+        "elections_financial_returns",
+        "elections_financial_returns_search_candidates",
+        {"election_id": "9999"},
+        expect_error="no election",
     ),
     # Elections Canada official results (through the tools, not only the client)
     Step("elections_results", "elections_results_list_elections", {}, _non_empty("elections")),
@@ -214,6 +435,29 @@ STEPS: list[Step] = [
     ),
     # Canada Gazette
     Step("gazette", "gazette_list_issues", {"limit": 2}, _non_empty("issues")),
+    # Part II's feed leads with non-issue items (the Consolidated Index); the
+    # default must open a real issue, never the site's not-found page.
+    Step(
+        "gazette",
+        "gazette_get_issue",
+        {"part": 2},
+        lambda data: (
+            bool(data["notices"])
+            and not any("404" in (n.get("section") or "") for n in data["notices"])
+        ),
+    ),
+    Step(
+        "gazette",
+        "gazette_get_issue",
+        {"part": 1, "issue_date": "2026-09-24"},
+        expect_error="nothing published",
+    ),
+    Step(
+        "gazette",
+        "gazette_get_notice",
+        {"url": "https://gazette.gc.ca/rp-pr/p1/2026/2026-10-03/html/zzz-eng.html"},
+        expect_error="nothing published",
+    ),
     Step("gazette", "gazette_get_issue", {"part": 1}),
     Step(
         "gazette",
@@ -255,6 +499,13 @@ STEPS: list[Step] = [
     # NRCan geocoding and place names
     Step("nrcan_geo", "nrcan_geo_locate", {"query": "Ottawa"}, _non_empty("locations")),
     Step("nrcan_geo", "nrcan_geo_search_names", {"query": "Lake Louise", "province": "AB"}),
+    # A float radius was a 404 upstream until 2026-10-03.
+    Step(
+        "nrcan_geo",
+        "nrcan_geo_search_names",
+        {"latitude": 51.05, "longitude": -114.07, "radius_km": 5.0, "limit": 3},
+        _non_empty("names"),
+    ),
     # Senate of Canada votes
     Step("senate", "senate_list_votes", {"limit": 3}, _non_empty("votes")),
     Step(
@@ -267,6 +518,22 @@ STEPS: list[Step] = [
         _non_empty("ballots"),
     ),
     Step("senate", "senate_list_votes", {"session": "44-1", "bill": "C-69", "lang": "fr"}),
+    # The French list says "Abstention" in the singular; every vote has a count.
+    Step(
+        "senate",
+        "senate_list_votes",
+        {"lang": "fr", "limit": 5, "keyword": "troisieme"},
+        lambda data: (
+            bool(data["votes"]) and all(v["abstentions"] is not None for v in data["votes"])
+        ),
+    ),
+    Step("senate", "senate_list_votes", {"session": "41-2"}, expect_error="42-1"),
+    Step(
+        "senate",
+        "senate_get_vote",
+        lambda ctx: {"vote_id": ctx["senate_list_votes"]["votes"][0]["vote_id"], "session": "44-1"},
+        expect_error="not in session",
+    ),
     # Open North Represent (elected officials and districts). Calls are paced to
     # 1 a second, so keep the postal codes and points to a spread across provinces.
     Step(
@@ -595,6 +862,13 @@ async def main(modules: set[str]) -> int:
                 "call_tool", {"name": step.tool, "arguments": args}, raise_on_error=False
             )
             text = _text(result)
+            if step.expect_error is not None:
+                if result.is_error and step.expect_error in text:
+                    print(f"OK   {label} {args} (refused as expected)")
+                else:
+                    failures.append(label)
+                    print(f"FAIL {label} {args}: expected an error with {step.expect_error!r}")
+                continue
             if result.is_error:
                 failures.append(label)
                 print(f"FAIL {label} {args}: {text[:300]}")

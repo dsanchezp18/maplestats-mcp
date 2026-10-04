@@ -36,6 +36,14 @@ WELL_LICENCE_MONTHLY_ZIP_URL = (
 WELL_LICENCE_YEARLY_ZIP_URL_NEW = f"https://{WWW_DOMAIN}/prd/data/well-lic/dwll{{year}}.zip"
 WELL_LICENCE_YEARLY_ZIP_URL_OLD = f"https://{WWW_DOMAIN}/data/well-lic/dwll{{year}}.zip"
 WELL_LICENCE_YEARLY_URL_PATH_BOUNDARY_YEAR = 2024
+# The ST1 archive page links yearly ZIPs from 2017 on; 2016 and earlier
+# answer 404 on both path prefixes (checked live 2026-10-03).
+WELL_LICENCE_FIRST_YEAR = 2017
+
+# httpx asks for gzip by default, and static.aer.ca then answers HEAD with
+# content-encoding: gzip and no Content-Length (live 2026-10-03: size_bytes
+# was always null; with identity the 2025 ZIP reports 831951 bytes).
+HEAD_HEADERS = {"Accept-Encoding": "identity"}
 
 # ST3 monthly production volumes/prices -- confirmed live 2026-09-22
 # against every "_current.xlsx" link on the ST3 report page.

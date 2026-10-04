@@ -91,7 +91,9 @@ async def phac_infobase_query(
     opioid_stimulant_harms {"Source": "Deaths", "Specific_Measure":
     "Overall numbers", "Unit": "Number", "Time_Period": "By year"};
     `geography` accepts a province or territory name (English or
-    French), abbreviation (ON, QC) or PRUID code; `start`/`end` are
+    French), abbreviation (ON, QC) or PRUID code, or part of a place
+    name (wastewater sites); one that matches nothing is an error listing
+    the places the dataset has. `start`/`end` are
     YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn (or Tn) on the dataset's date
     column.
     The most recent `limit` matching rows come back, oldest first.

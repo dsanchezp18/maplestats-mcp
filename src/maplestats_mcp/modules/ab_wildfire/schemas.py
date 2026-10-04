@@ -38,8 +38,8 @@ class Fire(BaseModel):
     status_changed: datetime | None = Field(
         default=None,
         description=(
-            "When the status last changed. The source states no time zone "
-            "(it appears to be Alberta local time), so the value is naive."
+            "When the status last changed, in UTC (the source gives Alberta local "
+            "time with no zone; converted)."
         ),
     )
     assessed_at: datetime | None = Field(

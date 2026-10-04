@@ -24,6 +24,7 @@ class ProductList(BaseModel):
     comprehensive: list[ComprehensiveMenu] = Field(
         description="Sector/jurisdiction pairs for product='comprehensive'."
     )
+    note: str | None = None
     provenance: Provenance
 
 
