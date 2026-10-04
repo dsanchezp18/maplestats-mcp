@@ -224,7 +224,10 @@ Sources, by tool-name prefix:
   (monthly federal results), competition_bureau_ (merger reviews), fcac_ (credit
   card and bank account comparisons), pbo_ (Parliamentary Budget Officer
   publications and tables), pmprb_ (patented medicine prices), pmra_
-  (pesticide products, residue limits), ircc_
+  (pesticide products, residue limits), Health Canada health products:
+  hc_drug_ (Drug Product Database, DIN lookup), hc_nhp_ (licensed natural
+  health products), hc_device_ (medical device licences), hc_vigilance_
+  (adverse reaction reports), ircc_
   (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
   cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
