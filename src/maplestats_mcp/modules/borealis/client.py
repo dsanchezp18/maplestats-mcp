@@ -45,6 +45,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.licences import terms_not_stated
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -456,8 +457,17 @@ async def get_odesi_dataset(persistent_id: str) -> OdesiDatasetDetail:
             cached=False,
             schema_name="borealis.OdesiDatasetDetail",
             limits=(
-                "File 'public' means no Borealis login; the terms of use above can still limit "
+                "File 'public' means no Borealis login; the terms of use can still limit "
                 "redistribution or commercial use."
+            ),
+            # The dataset's own DDI terms, the same text as terms_of_use.
+            licence=(
+                f"Dataset terms of use (from its DDI record): {terms}"
+                if terms
+                else terms_not_stated(
+                    "the dataset's depositor on Borealis",
+                    f"https://doi.org/{pid.removeprefix('doi:')}",
+                )
             ),
         ),
     )

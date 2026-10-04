@@ -36,6 +36,7 @@ from maplestats_mcp.modules.phac_infobase.schemas import (
     QueryResult,
     TopicCount,
 )
+from maplestats_mcp.shared.arg_checks import format_choices
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -616,7 +617,16 @@ async def query(
                 f"Columns are {table.columns}."
             )
         matches_geo = geo_matcher(geography)
+        before = matching
         matching = [r for r in matching if matches_geo(r.get(geo_column, ""))]
+        if before and not matching:
+            # A geography the file does not have matched nothing and came
+            # back as an empty success; list the ones it has.
+            places = sorted({r.get(geo_column, "") for r in table.rows} - {""})
+            raise InvalidInput(
+                f"geography {geography!r} matches no {geo_column!r} value in {dataset.id}. "
+                f"Values: {format_choices(places)}."
+            )
 
     date_column = _first_present(table.columns, dataset.date_columns)
     if (start_date or end_date) and date_column is None:

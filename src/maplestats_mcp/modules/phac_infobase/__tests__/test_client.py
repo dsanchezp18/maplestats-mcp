@@ -89,6 +89,10 @@ async def test_harms_zip_filters_dates_geography_and_markers(httpx_mock):
     assert [r["Year_Quarter"] for r in recent.rows] == ["2026 Q1", "2026 (Jan to Mar)"]
     assert recent.matching_rows == 4
 
+    # A geography the file does not have is an error naming the ones it has.
+    with pytest.raises(InvalidInput, match="Values: .*Ontario"):
+        await client.query("opioid_stimulant_harms", geography="Atlantis")
+
 
 async def test_french_zip_member_with_accents_in_cp1252(httpx_mock):
     body = (

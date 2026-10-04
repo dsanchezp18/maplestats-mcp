@@ -33,6 +33,7 @@ from maplestats_mcp.modules.nl_opendata.schemas import (
     TagList,
     TagSummary,
 )
+from maplestats_mcp.shared.arg_checks import format_choices
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -351,6 +352,15 @@ async def search_datasets(
 
     if tag_id is not None:
         pages = [await _fetch_listing("all", sort=sort, tag_id=tag_id)]
+        if not pages[0][0]:
+            # An unknown tag id answers an empty listing, not an error.
+            known = {tag.id: tag.name for tag in (await list_tags()).tags}
+            if tag_id.strip() not in known:
+                raise InvalidInput(
+                    f"tag_id {tag_id!r} is not a tag on the portal. Tags (id: name): "
+                    + format_choices(f"{i}: {n}" for i, n in sorted(known.items()))
+                    + ". See nl_opendata_list_tags."
+                )
     else:
         requested_types = ["tabular", "spatial"] if dataset_type == "all" else [dataset_type]
         pages = [await _fetch_listing(kind, sort=sort) for kind in requested_types]
