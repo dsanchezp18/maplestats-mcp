@@ -113,3 +113,16 @@ ACCOUNTS_COVERAGE = (
     "Chequing and savings accounts that financial institutions submit to FCAC's Account "
     "Comparison Tool, not every account offered in Canada."
 )
+FRESHNESS_FR = (
+    "Lu en direct dans l'outil de comparaison de l'ACFC. Les institutions financières "
+    "fournissent et mettent à jour les renseignements sur les produits ; l'ACFC ne publie "
+    "aucun calendrier de mise à jour."
+)
+CARDS_COVERAGE_FR = (
+    "Cartes de crédit que les institutions financières soumettent à l'outil de comparaison "
+    "des cartes de crédit de l'ACFC, et non toutes les cartes offertes au Canada."
+)
+ACCOUNTS_COVERAGE_FR = (
+    "Comptes-chèques et comptes d'épargne que les institutions financières soumettent à "
+    "l'outil de comparaison des comptes de l'ACFC, et non tous les comptes offerts au Canada."
+)

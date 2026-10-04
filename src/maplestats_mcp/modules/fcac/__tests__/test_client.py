@@ -234,6 +234,9 @@ async def test_french_search_reads_french_numbers_and_accents(httpx_mock):
     assert bmo.institution == "BMO Banque de Montréal"
     assert bmo.annual_fee == 49.0 and bmo.purchase_rate == 21.99 and bmo.currency == "USD"
     assert result.provenance.url.endswith("CCCT-OCCC/SearchFilter-fra.aspx")
+    assert (result.provenance.freshness or "").startswith("Lu en direct dans l'outil")
+    assert (result.provenance.coverage or "").startswith("Cartes de crédit que les institutions")
+    assert (result.provenance.licence or "").startswith("Avis du site Web du gouvernement")
     search = _form(next(r for r in httpx_mock.get_requests() if r.method == "POST"))
     assert search[_P + "rblCurrency"] == ["15"]
     assert _P + "rblLookingForSecuredCard" not in search  # no optional-filters step
@@ -324,6 +327,17 @@ async def test_server_errors_become_typed_errors(httpx_mock):
         httpx_mock.add_exception(httpx.ConnectTimeout("slow"))
     with pytest.raises(UpstreamUnavailable):
         await client.search_bank_accounts("ON")
+
+
+async def test_french_errors_are_french(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_response(url=f"{_BASE}CCCT-OCCC/SearchFilter-fra.aspx", status_code=503)
+    with pytest.raises(UpstreamError, match="l'outil de comparaison de l'ACFC n'a pas pu"):
+        await client.search_credit_cards("ON", lang="fr")
+    with pytest.raises(InvalidInput, match="^Entrée invalide : sort doit valoir"):
+        await client.search_bank_accounts("ON", sort="cost", lang="fr")
+    with pytest.raises(InvalidInput, match="province doit valoir l'une de"):
+        await client.search_credit_cards("ZZ", lang="fr")
 
 
 # ------------------------------------------------------------------ details

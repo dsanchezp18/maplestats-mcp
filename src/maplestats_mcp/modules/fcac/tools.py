@@ -59,10 +59,10 @@ async def fcac_search_credit_cards(
     cash back, travel rewards, low interest card, FCAC, compare cards,
     bank fees, consumer finance.
     Mots-clés : carte de crédit, comparer les cartes de crédit, taux
-    d'intérêt, frais annuels, carte sans frais annuels, récompenses,
-    remise en argent, points de récompense, carte à faible taux, carte
-    étudiante, carte de crédit garantie, ACFC, Agence de la consommation
-    en matière financière, frais bancaires.
+    d'intérêt, frais annuels, carte sans frais annuels, récompenses, remise
+    en argent, points de récompense, carte à faible taux, carte étudiante,
+    carte de crédit garantie, Agence de la consommation en matière
+    financière du Canada (ACFC), frais bancaires.
     """
     return await client.search_credit_cards(
         province,
