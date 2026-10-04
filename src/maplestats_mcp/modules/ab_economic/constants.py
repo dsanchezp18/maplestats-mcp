@@ -25,11 +25,22 @@ KEY_INDICATORS_CODE = "c892fed7-6018-47b0-b437-d1a06d650d51"
 INDICATOR_PAGE_URL = "https://economicdashboard.alberta.ca/dashboard/{slug}/"
 
 # Indicator pages live at /dashboard/<slug>/, where the slug is the
-# indicator name in kebab case for 45 of 49 key indicators (checked live
-# 2026-09-23). Known exceptions are mapped here; an unknown page falls
-# back to the kebab-case name.
+# indicator name in kebab case for most key indicators. Known exceptions
+# are mapped here (checked live 2026-10-03 across all 49: the two export
+# pages carry an "international-" prefix, and wells-drilled answers 301 to
+# new-wells-drilled); an unknown page falls back to the kebab-case name.
 SLUG_OVERRIDES = {
     "Investment (Annual) - Construction": "investment-annual",
+    "Merchandise Exports": "international-merchandise-exports",
+    "Service Exports": "international-service-exports",
+    "Wells Drilled": "new-wells-drilled",
+}
+
+# Indicator pages with no "API Keys" section, and the data API table behind
+# the chart (the Active Drilling Rigs page lists none; its counts are the
+# RigActivity table's Type = Active rows, checked live 2026-10-03).
+TABLE_FALLBACKS: dict[str, tuple[str, str, list[str]]] = {
+    "Active Drilling Rigs": ("RigActivity", "Type", ["Active", "Inactive", "Total Rigs"]),
 }
 
 RATE_LIMIT_SOURCE = "ab-economic"

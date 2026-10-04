@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime
 from typing import Any, NoReturn
-from urllib.parse import parse_qsl, urlparse
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -39,7 +39,10 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _PID = re.compile(r"_(\d{8,10})$")
-_COLUMN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Column names can hold spaces: 21 of the 147 published series filter on
+# columns such as "NAICS Description" (live 2026-10-03), which the API
+# accepts URL-encoded.
+_COLUMN = re.compile(r"^[A-Za-z_][A-Za-z0-9_ ]*$")
 
 
 def _raise_for(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -283,7 +286,19 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
-            response = await get_raw(url, timeout=60.0)
+            try:
+                response = await get_raw(url, timeout=60.0)
+            except httpx.HTTPStatusError as exc:
+                # A renamed page answers 301 to its new address (wells-drilled
+                # moved to new-wells-drilled); follow one same-site redirect.
+                target = exc.response.headers.get("location", "")
+                moved = urljoin(url, target)
+                if exc.response.status_code not in (301, 302, 308) or (
+                    urlparse(moved).netloc != urlparse(url).netloc
+                ):
+                    raise
+                await _LIMITER.acquire()
+                response = await get_raw(moved, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 raise NotFound(
@@ -301,6 +316,23 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
         f"ab-economic:page:{url}", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch
     )
     series = _parse_api_links(html)
+    note = None
+    fallback = constants.TABLE_FALLBACKS.get(name)
+    if not series and fallback:
+        table, column, values = fallback
+        series = [
+            PublishedSeries(
+                name=f"{name}: {value}",
+                table=table,
+                filters={column: value},
+                api_url=f"{constants.BASE_URL}/data?{urlencode({'table': table, column: value})}",
+            )
+            for value in values
+        ]
+        note = (
+            f"The {name!r} page lists no API links; these series come from the data API "
+            f"table {table!r} that holds the chart's figures."
+        )
     if not series:
         raise NotFound(
             f"The {name!r} page publishes no API links; use ab_economic_list_tables instead."
@@ -309,6 +341,7 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
         indicator=name,
         page_url=url,
         series=series,
+        note=note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
