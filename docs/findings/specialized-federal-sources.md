@@ -770,8 +770,8 @@ reclassifications, departmental audit committees, briefing …
 
 **Status:** Shipped.
 
-Three modules, split like CMHC's dual-platform pattern
-(`modules/ised/{corporations,spectrum,cipo}/`):
+Five submodules, one per source, split like CMHC's dual-platform pattern
+(`modules/ised/{corporations,spectrum,cipo,ip_horizons,clean_growth}/`):
 
 1. Corporations Canada's federal corporation lookup API
    (`ised_corporations_*`, 1 tool) -- a single-record lookup by numeric
@@ -865,8 +865,8 @@ StatCan's own developers page documents -- so even setting the
 account-creation exclusion aside, there is currently no live host to reach
 for this capability regardless.
 
-Three modules, split like CMHC's dual-platform pattern
-(`modules/ised/{corporations,spectrum,cipo}/`): (1) Corporations Canada's
+Five submodules, one per source, split like CMHC's dual-platform pattern
+(`modules/ised/{corporations,spectrum,cipo,ip_horizons,clean_growth}/`): (1) Corporations Canada's
 federal corporation lookup API (`ised_corporations_*`, 1 tool) -- a
 single-record lookup by numeric …
 

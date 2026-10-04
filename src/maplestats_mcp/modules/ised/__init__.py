@@ -1,7 +1,7 @@
 MODULE_NAME = "ised"
 MODULE_DESCRIPTION = (
-    "Innovation, Science and Economic Development Canada (ISED), via four separate "
-    "platforms. Corporations Canada's federal corporation lookup API "
+    "Innovation, Science and Economic Development Canada (ISED), from five separate "
+    "sources. Corporations Canada's federal corporation lookup API "
     "(ised-isde.canada.ca/cc/lgcy/api/corporations, tools prefixed ised_corporations_): "
     "look up one federal corporation by its numeric corporation ID or 9-digit business "
     "number, returning current status, names, addresses, director limits, annual "
@@ -37,8 +37,8 @@ MODULE_DESCRIPTION = (
     "dedicated module needed for those."
 )
 MODULE_DESCRIPTION_FR = (
-    "Innovation, Sciences et Développement économique Canada (ISDE), via quatre "
-    "plateformes distinctes. L'API de recherche de sociétés fédérales de "
+    "Innovation, Sciences et Développement économique Canada (ISDE), à partir de cinq "
+    "sources distinctes. L'API de recherche de sociétés fédérales de "
     "Corporations Canada (ised-isde.canada.ca/cc/lgcy/api/corporations, outils "
     "préfixés ised_corporations_) : recherche d'une société fédérale "
     "par son numéro de société ou son numéro d'entreprise à 9 chiffres, "
@@ -64,7 +64,11 @@ MODULE_DESCRIPTION_FR = (
     "Ce point de terminaison n'est pas "
     "documenté publiquement, mais il s'agit d'une simple requête POST JSON non "
     "authentifiée, confirmée en direct, sans pagination au-delà du nombre "
-    "maximal demandé. Les jeux de données statistiques en vrac d'ISDE sont déjà "
+    "maximal demandé. Les investissements fédéraux en technologies propres de 2016 à "
+    "2024 du Carrefour de la croissance propre (outils préfixés ised_clean_growth_), "
+    "publiés seulement en page Web et en PDF, sont lus en chiffres : totaux, valeur par "
+    "année et sous-secteur, part des ententes par province. Les jeux de données "
+    "statistiques en vrac d'ISDE sont déjà "
     "accessibles via le module CKAN fédéral -- aucun module dédié n'est "
     "nécessaire pour ceux-ci."
 )
