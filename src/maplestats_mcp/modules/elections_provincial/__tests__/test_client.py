@@ -160,6 +160,32 @@ async def test_quebec_seat_summary_adds_up(httpx_mock):
     )
 
 
+async def test_french_notes_errors_and_provenance(httpx_mock):
+    listing = client.list_elections(lang="fr")
+    assert listing.blocked[0].reason.startswith("Les conditions d'utilisation")
+    assert not any("propriétaire du projet" in n for n in listing.notes)
+    assert (listing.provenance.coverage or "").startswith("Élections générales\xa0: Québec")
+    assert (listing.provenance.licence or "").startswith("Les conditions varient")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: elections_provincial\xa0: l'"):
+        await client.get_results("on", lang="fr")
+    with pytest.raises(InvalidInput, match="election doit être l'une de ces dates"):
+        await client.get_results("qc", "1999", lang="fr")
+    httpx_mock.add_response(url=QC_2022, content=_bytes("qc_2022.json"))
+    result = await client.get_results("qc", "2022", limit=2, lang="fr")
+    assert result.attribution.startswith("Source\xa0: Élections Québec")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Lignes 1 à 2 sur") and "tels qu'Élections Québec" in limits
+    assert (result.provenance.freshness or "").startswith("Les résultats officiels")
+    seats = await client.get_seats("qc", "2022", lang="fr")
+    assert (seats.provenance.coverage or "") == "Élection générale du 2022-10-03, Québec."
+
+
+async def test_french_frame_for_a_source_error(httpx_mock):
+    httpx_mock.add_response(url=QC_2012, status_code=404)
+    with pytest.raises(NotFound, match="la source provinciale n'a pas pu être lue"):
+        await client.get_results("qc", "2012", lang="fr")
+
+
 async def test_missing_file_is_not_found(httpx_mock):
     httpx_mock.add_response(url=QC_2012, status_code=404)
     with pytest.raises(NotFound):

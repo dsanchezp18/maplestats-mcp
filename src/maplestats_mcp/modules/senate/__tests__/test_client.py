@@ -156,3 +156,21 @@ async def test_layout_change_and_bad_input(httpx_mock):
         await client.get_vote(1, "45-1")
     with pytest.raises(InvalidInput):
         await client.get_vote(1, "45")
+
+
+async def test_french_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(url="https://sencanada.ca/fr/dans-la-chambre/votes/", text=_LIST_FR)
+    result = await client.list_votes(lang="fr")
+    assert result.provenance.freshness == (
+        "sencanada.ca, mis à jour après chaque séance\xa0; mis en cache 1 heure"
+    )
+    assert (result.provenance.licence or "").startswith("Propriété intellectuelle du Sénat")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: session doit avoir la forme"):
+        await client.get_vote(1, "45", lang="fr")
+    with pytest.raises(InvalidInput, match="limit doit être compris entre 1 et 500"):
+        await client.list_votes(limit=0, lang="fr")
+
+
+async def test_english_messages_are_unchanged():
+    with pytest.raises(InvalidInput, match=r"^session must look like '45-1', got '45'\.$"):
+        await client.get_vote(1, "45")

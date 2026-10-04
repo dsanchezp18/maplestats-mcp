@@ -210,6 +210,26 @@ async def test_french_dump_folds_accents_and_class_names(httpx_mock):
     assert (row.agency, row.product_types) == ("cfia", ["food"])
     classe = await client.search(recall_class="Class 3", lang="fr")
     assert [r.recall_id for r in classe.recalls] == [82667]
+    prov = classe.provenance
+    assert prov.freshness == "quotidienne\xa0; le fichier est régénéré vers 02:20 UTC"
+    assert (prov.coverage or "").startswith("avis archivés exclus")
+    assert (prov.licence or "").startswith("Licence du gouvernement ouvert – Canada")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: recall_class 'Class 9' ne"):
+        await client.search(recall_class="Class 9", lang="fr")
+    with pytest.raises(InvalidInput, match="est postérieur à updated_to"):
+        await client.search(updated_from="2026-02-01", updated_to="2026-01-01", lang="fr")
+    counts = await client.summarize("product_type", lang="fr")
+    assert "plusieurs types de produits" in (counts.provenance.limits or "")
+    with pytest.raises(InvalidInput, match="recall_id doit être le NID"):
+        await client.get_recall("abc", lang="fr")
+
+
+async def test_english_messages_are_unchanged(httpx_mock):
+    _dump(httpx_mock)
+    result = await client.search()
+    assert result.provenance.freshness == "daily; the dump is regenerated around 02:20 UTC"
+    with pytest.raises(InvalidInput, match=r"^offset must be >= 0, got -1\.$"):
+        await client.search(offset=-1)
 
 
 def _fr(nid, title, category, *, issue=None, cls=""):

@@ -157,6 +157,18 @@ async def test_year_that_contradicts_the_election_is_invalid(dataset):
         await candidates.get_candidates(election=37, year=2000, election_type="by-election")
 
 
+async def test_french_messages_and_provenance(dataset):
+    result = await candidates.get_candidates(election=37, lang="fr")
+    assert result.candidates[0].candidate_name == "DAY, Judy"
+    assert result.licence == "CC0 1.0 (dévouement au domaine public)"
+    assert "en anglais seulement" in (result.provenance.limits or "")
+    assert (result.provenance.coverage or "").startswith("Compilé par l'auteur")
+    with pytest.raises(InvalidInput, match="a eu lieu en 2000, pas en 1997"):
+        await candidates.get_candidates(election=37, year=1997, lang="fr")
+    with pytest.raises(InvalidInput, match="offset doit être 0 ou plus"):
+        await candidates.get_candidates(offset=-1, lang="fr")
+
+
 async def test_validation_errors():
     with pytest.raises(InvalidInput):
         await candidates.get_candidates(election=0)

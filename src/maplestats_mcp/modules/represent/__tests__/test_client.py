@@ -180,6 +180,25 @@ async def test_postcode_unknown_is_not_found_and_bad_format_invalid(httpx_mock):
         await client.lookup_postcode("T5J0N3", sets="Bad Slug!")
 
 
+async def test_french_errors(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("/postcodes/Z9Z9Z9/"),
+        status_code=404,
+        text=_HTML_404,
+        headers={"content-type": "text/html"},
+    )
+    with pytest.raises(NotFound, match=r"^Aucune correspondance trouvée\xa0: represent\xa0: le"):
+        await client.lookup_postcode("Z9Z9Z9", lang="fr")
+    with pytest.raises(InvalidInput, match="postcode doit avoir la forme"):
+        await client.lookup_postcode("12345", lang="fr")
+    with pytest.raises(InvalidInput, match="latitude doit être entre"):
+        await client.lookup_point(200, 0, lang="fr")
+    with pytest.raises(InvalidInput, match="donnez au moins"):
+        await client.search_representatives(lang="fr")
+    with pytest.raises(InvalidInput, match=r"^represent: offset must be 0 or more\.$"):
+        await client.search_representatives(name="x", offset=-1)
+
+
 async def test_point_lookup_reports_totals_and_empty_outside_canada(httpx_mock):
     httpx_mock.add_response(
         url=_url("/boundaries/?contains=0.0%2C0.0&limit=100"),
@@ -604,7 +623,10 @@ async def test_party_alias_without_level_merges_one_query_per_form(httpx_mock):
     result = await client.search_representatives(party="npd", lang="fr")
     assert [r.name for r in result.representatives] == ["Leah Gazan", "David Shepherd"]
     assert result.total_count == 2
-    assert any("« npd »" in n for n in result.notes)
+    # French notes carry no-break spaces inside the guillemets.
+    assert any("«\xa0npd\xa0»" in n for n in result.notes)
+    assert (result.provenance.coverage or "").startswith("les fiches d'élus sont extraites")
+    assert (result.provenance.licence or "").startswith("L'API Represent d'Open North")
 
 
 async def test_single_form_alias_goes_upstream(httpx_mock):

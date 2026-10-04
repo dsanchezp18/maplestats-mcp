@@ -99,10 +99,18 @@ STATION_CODE_TO_PROVINCE = {v: k for k, v in PROVINCE_TO_STATION_CODE.items()}
 # Legend of public:fdr_current_shp (WMS GetLegendGraphic): GRIDCODE 0-3 are
 # Low..Very High; 4 (Extreme) is inferred from the CWFIS five-class scale.
 DANGER_CLASSES = {0: "Low", 1: "Moderate", 2: "High", 3: "Very High", 4: "Extreme"}
+# The French class names CWFIS's French danger map uses.
+DANGER_CLASSES_FR = {0: "Bas", 1: "Modéré", 2: "Élevé", 3: "Très élevé", 4: "Extrême"}
 
 NFDB_CAUSES = {
     "N": "Natural",
     "H": "Human",
     "U": "Unknown",
     "H-PB": "Human (prescribed burn)",
+}
+NFDB_CAUSES_FR = {
+    "N": "Naturelle",
+    "H": "Humaine",
+    "U": "Inconnue",
+    "H-PB": "Humaine (brûlage dirigé)",
 }

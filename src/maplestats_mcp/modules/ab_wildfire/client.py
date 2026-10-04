@@ -44,6 +44,7 @@ from maplestats_mcp.shared.errors import (
     UpstreamError,
     UpstreamUnavailable,
 )
+from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.models import Provenance
 
 _CONFIG = arcgis.ArcGISHubConfig(
@@ -53,6 +54,16 @@ _CONFIG = arcgis.ArcGISHubConfig(
     rate_limit_capacity=c.RATE_LIMIT_CAPACITY,
 )
 _LICENCE = f"Open Government Licence - Alberta ({c.LICENCE_URL}). Attribution: '{c.ATTRIBUTION}'"
+_LICENCE_FR = french_spacing(
+    f"Licence du gouvernement ouvert – Alberta ({c.LICENCE_URL}). Attribution : « Contient des "
+    "informations visées par la Licence du gouvernement ouvert – Alberta (Alberta Wildfire, "
+    "gouvernement de l'Alberta). »"
+)
+# Alberta Wildfire publishes its layers in English only.
+_ENGLISH_ONLY_FR = (
+    "Les numéros, statuts, causes, types et noms de secteurs forestiers sont ceux qu'Alberta "
+    "Wildfire publie, en anglais seulement"
+)
 _FIRE_FIELDS_CURRENT = (
     "LABEL,FIRE_YEAR,FIRE_TYPE,FIRE_STATUS,FIRE_STATUS_DATE,ASSESSMENT_ASSISTANCE_DATE,"
     "AREA_ESTIMATE,SIZE_CLASS,GENERAL_CAUSE,RESP_AREA,CO_FLAG,FIRE_COMPLEX_NUMBER,"
@@ -79,11 +90,16 @@ def _quote(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def _parse_iso_date(value: str, name: str) -> date:
+def _parse_iso_date(value: str, name: str, lang: str = "en") -> date:
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
-        raise InvalidInput(f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.") from exc
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.",
+            f"{name} doit être une date ISO (AAAA-MM-JJ) ; reçu {value!r}.",
+        ) from exc
 
 
 _ALBERTA = ZoneInfo("America/Edmonton")
@@ -130,29 +146,57 @@ def _fix_status(value: object) -> str | None:
     return c.STATUS_SPELLING_FIX.get(value, value)
 
 
-def _check_page(limit: int, offset: int, maximum: int) -> None:
+def _check_page(limit: int, offset: int, maximum: int, lang: str = "en") -> None:
     if not 1 <= limit <= maximum:
-        raise InvalidInput(f"limit must be between 1 and {maximum}, got {limit}.")
+        raise _bad_limit(limit, maximum, lang)
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
-
-
-def _check_point(latitude: float, longitude: float) -> None:
-    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-        raise InvalidInput(
-            f"latitude must be within -90..90 and longitude within -180..180, "
-            f"got {latitude}, {longitude}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être positif ou nul ; reçu {offset}.",
         )
 
 
-def _check_bbox(bbox: list[float]) -> None:
+def _bad_limit(limit: int, maximum: int, lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        f"limit must be between 1 and {maximum}, got {limit}.",
+        f"limit doit être compris entre 1 et {maximum} ; reçu {limit}.",
+    )
+
+
+def _check_point(latitude: float, longitude: float, lang: str = "en") -> None:
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"latitude must be within -90..90 and longitude within -180..180, "
+            f"got {latitude}, {longitude}.",
+            f"latitude doit être entre -90 et 90 et longitude entre -180 et 180 ; reçu "
+            f"{latitude}, {longitude}.",
+        )
+
+
+def _check_bbox(bbox: list[float], lang: str = "en") -> None:
     if len(bbox) != 4:
-        raise InvalidInput("bbox must be [min_lon, min_lat, max_lon, max_lat].")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "bbox must be [min_lon, min_lat, max_lon, max_lat].",
+            "bbox doit être [min_lon, min_lat, max_lon, max_lat].",
+        )
     min_lon, min_lat, max_lon, max_lat = bbox
     if not (min_lon < max_lon and min_lat < max_lat):
-        raise InvalidInput(f"bbox must have min < max on both axes, got {bbox}.")
-    _check_point(min_lat, min_lon)
-    _check_point(max_lat, max_lon)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"bbox must have min < max on both axes, got {bbox}.",
+            f"bbox doit avoir min < max sur les deux axes ; reçu {bbox}.",
+        )
+    _check_point(min_lat, min_lon, lang)
+    _check_point(max_lat, max_lon, lang)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -211,6 +255,7 @@ def _prov(
     freshness: str,
     coverage: str | None = None,
     limits: str | None = None,
+    lang: str = "en",
 ) -> Provenance:
     return make_provenance(
         source=c.SOURCE,
@@ -221,12 +266,35 @@ def _prov(
         freshness=freshness,
         coverage=coverage,
         limits=limits,
-        licence=_LICENCE,
+        licence=_LICENCE_FR if lang == "fr" else _LICENCE,
+        lang=lang,
     )
 
 
 _FIRES_FRESHNESS = "updated by Alberta Wildfire through the day in fire season; cached 10 minutes"
 _SLOW_FRESHNESS = "refreshed daily or when orders change; cached 30 minutes"
+
+
+def _fires_freshness(lang: str) -> str:
+    return fr_or_en(
+        lang,
+        _FIRES_FRESHNESS,
+        "mis à jour par Alberta Wildfire au fil de la journée en saison des feux ; mis en "
+        "cache 10 minutes",
+    )
+
+
+def _slow_freshness(lang: str) -> str:
+    return fr_or_en(
+        lang,
+        _SLOW_FRESHNESS,
+        "actualisé chaque jour ou quand les ordonnances changent ; mis en cache 30 minutes",
+    )
+
+
+def _with_english_only(lang: str, limits: str) -> str:
+    """For lang="fr", add that the layer's text values are English-only."""
+    return french_spacing(f"{limits} ; {_ENGLISH_ONLY_FR}") if lang == "fr" else limits
 
 
 # ------------------------------------------------------------------- fires
@@ -252,7 +320,11 @@ class FireFilters:
 
 
 def build_fire_where(
-    filters: FireFilters, *, dataset: Dataset = "current", extra_bbox: list[float] | None = None
+    filters: FireFilters,
+    *,
+    dataset: Dataset = "current",
+    extra_bbox: list[float] | None = None,
+    lang: str = "en",
 ) -> str:
     """Build the SQL-92 `where` clause. Text filters are case-insensitive;
     `end_date` is inclusive, as a person reads a date range."""
@@ -272,16 +344,25 @@ def build_fire_where(
     if filters.fire_type:
         match = [t for t in c.FIRE_TYPES if t.lower() == filters.fire_type.strip().lower()]
         if not match:
-            raise InvalidInput(f"fire_type must be one of {list(c.FIRE_TYPES)}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"fire_type must be one of {list(c.FIRE_TYPES)}.",
+                f"fire_type doit être l'une des valeurs {list(c.FIRE_TYPES)}.",
+            )
         clauses.append(f"FIRE_TYPE = {_quote(match[0])}")
     if filters.cause:
         clauses.append(f"UPPER(GENERAL_CAUSE) = {_quote(filters.cause.strip().upper())}")
     if filters.size_class:
         letters = [p.strip().upper() for p in filters.size_class.split(",") if p.strip()]
         if not letters or any(letter not in c.SIZE_CLASSES for letter in letters):
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"size_class must be letters from {list(c.SIZE_CLASSES)}, comma separated "
-                f"(e.g. 'D,E'); got {filters.size_class!r}."
+                f"(e.g. 'D,E'); got {filters.size_class!r}.",
+                f"size_class doit être des lettres parmi {list(c.SIZE_CLASSES)}, séparées par "
+                f"des virgules (p. ex. « D,E ») ; reçu {filters.size_class!r}.",
             )
         clauses.append("SIZE_CLASS IN (" + ", ".join(_quote(x) for x in letters) + ")")
     if filters.forest_area and filters.forest_area.strip():
@@ -291,14 +372,24 @@ def build_fire_where(
         clauses.append(f"FIRE_YEAR = {int(filters.fire_year)}")
     if filters.carryover is not None:
         if dataset != "current":
-            raise InvalidInput("carryover is only recorded in the 'current' dataset.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                "carryover is only recorded in the 'current' dataset.",
+                "carryover n'est consigné que dans le jeu « current ».",
+            )
         clauses.append(f"CO_FLAG = '{'Y' if filters.carryover else 'N'}'")
     if filters.min_area_ha is not None:
         clauses.append(f"AREA_ESTIMATE >= {float(filters.min_area_ha)}")
-    start = _parse_iso_date(filters.start_date, "start_date") if filters.start_date else None
-    end = _parse_iso_date(filters.end_date, "end_date") if filters.end_date else None
+    start = _parse_iso_date(filters.start_date, "start_date", lang) if filters.start_date else None
+    end = _parse_iso_date(filters.end_date, "end_date", lang) if filters.end_date else None
     if start and end and start > end:
-        raise InvalidInput(f"start_date {start} is after end_date {end}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"start_date {start} is after end_date {end}.",
+            f"start_date ({start}) est postérieur à end_date ({end}).",
+        )
     if filters.date_basis == "assessed":
         if start:
             clauses.append(f"ASSESSMENT_ASSISTANCE_DATE >= DATE '{start.isoformat()}'")
@@ -314,7 +405,7 @@ def build_fire_where(
             clauses.append(f"FIRE_STATUS_DATE < '{after}'")
     for box in (filters.bbox, extra_bbox):
         if box:
-            _check_bbox(box)
+            _check_bbox(box, lang)
             clauses.append(
                 f"LONGITUDE >= {box[0]} AND LATITUDE >= {box[1]} "
                 f"AND LONGITUDE <= {box[2]} AND LATITUDE <= {box[3]}"
@@ -322,12 +413,17 @@ def build_fire_where(
     return " AND ".join(clauses) or "1=1"
 
 
-def _dataset_layer(dataset: Dataset) -> str:
+def _dataset_layer(dataset: Dataset, lang: str = "en") -> str:
     if dataset == "current":
         return c.FIRES_CURRENT
     if dataset == "previous_5_years":
         return c.FIRES_HISTORY
-    raise InvalidInput(f"dataset must be 'current' or 'previous_5_years', got {dataset!r}.")
+    raise lang_error(
+        InvalidInput,
+        lang,
+        f"dataset must be 'current' or 'previous_5_years', got {dataset!r}.",
+        f"dataset doit être « current » ou « previous_5_years » ; reçu {dataset!r}.",
+    )
 
 
 def _to_fire(attrs: dict[str, Any], distance: float | None = None) -> Fire:
@@ -354,15 +450,21 @@ def _to_fire(attrs: dict[str, Any], distance: float | None = None) -> Fire:
     )
 
 
-def _dataset_coverage(dataset: Dataset) -> str:
+def _dataset_coverage(dataset: Dataset, lang: str = "en") -> str:
     if dataset == "current":
-        return (
+        return fr_or_en(
+            lang,
             "fires of the current year plus carry-over fires, including mutual-aid fires; "
-            "the active set is empty off-season"
+            "the active set is empty off-season",
+            "feux de l'année en cours et feux reportés, y compris les feux d'aide mutuelle ; "
+            "l'ensemble des feux actifs est vide hors saison",
         )
-    return (
+    return fr_or_en(
+        lang,
         "fires of the last six fire years, each cut at today's calendar date "
-        "(a same-date comparison set, not a full history)"
+        "(a same-date comparison set, not a full history)",
+        "feux des six dernières saisons, chacune arrêtée à la date du jour (un ensemble de "
+        "comparaison à date égale, pas un historique complet)",
     )
 
 
@@ -380,22 +482,36 @@ async def list_fires(
 ) -> FireList:
     """List fire points, newest status change first or largest first; with a
     point and radius, the fires within it, nearest first."""
-    del lang
     filters = filters or FireFilters()
-    _check_page(limit, offset, c.LIMIT_MAX)
+    _check_page(limit, offset, c.LIMIT_MAX, lang)
     if sort_by not in ("latest", "largest"):
-        raise InvalidInput("sort_by must be 'latest' or 'largest'.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "sort_by must be 'latest' or 'largest'.",
+            "sort_by doit être « latest » ou « largest ».",
+        )
     circle: tuple[float, float, float] | None = None
     if latitude is not None or longitude is not None or radius_km is not None:
         if latitude is None or longitude is None or radius_km is None:
-            raise InvalidInput("latitude, longitude and radius_km must be given together.")
-        _check_point(latitude, longitude)
+            raise lang_error(
+                InvalidInput,
+                lang,
+                "latitude, longitude and radius_km must be given together.",
+                "latitude, longitude et radius_km doivent être fournis ensemble.",
+            )
+        _check_point(latitude, longitude, lang)
         if not 0 < radius_km <= c.MAX_RADIUS_KM:
-            raise InvalidInput(f"radius_km must be above 0 and at most {c.MAX_RADIUS_KM:g}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"radius_km must be above 0 and at most {c.MAX_RADIUS_KM:g}.",
+                f"radius_km doit être supérieur à 0 et d'au plus {c.MAX_RADIUS_KM:g}.",
+            )
         circle = (latitude, longitude, radius_km)
-    layer = _dataset_layer(dataset)
+    layer = _dataset_layer(dataset, lang)
     extra = _radius_bbox(*circle) if circle else None
-    where = build_fire_where(filters, dataset=dataset, extra_bbox=extra)
+    where = build_fire_where(filters, dataset=dataset, extra_bbox=extra, lang=lang)
     order = (
         "FIRE_STATUS_DATE DESC, OBJECTID DESC"
         if sort_by == "latest"
@@ -426,9 +542,13 @@ async def list_fires(
     if circle:
         centre_lat, centre_lon, radius = circle
         if truncated or total > c.LIMIT_MAX:
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"{total} fires fall inside the search box; narrow the radius or add filters "
-                f"(at most {c.LIMIT_MAX} can be searched around a point)."
+                f"(at most {c.LIMIT_MAX} can be searched around a point).",
+                f"{total} feux se trouvent dans la zone de recherche ; réduisez le rayon ou "
+                f"ajoutez des filtres (au plus {c.LIMIT_MAX} autour d'un point).",
             )
         scored = [
             (haversine_km(centre_lat, centre_lon, a["LATITUDE"], a["LONGITUDE"]), a)
@@ -453,12 +573,19 @@ async def list_fires(
             layer_url,
             was_cached,
             as_of=await _layer_as_of(layer),
-            freshness=_FIRES_FRESHNESS,
-            coverage=_dataset_coverage(dataset),
-            limits=(
-                f"{len(fires)} of {total} matching fires returned; "
-                "area is the agency's estimate in hectares"
+            freshness=_fires_freshness(lang),
+            coverage=_dataset_coverage(dataset, lang),
+            limits=_with_english_only(
+                lang,
+                fr_or_en(
+                    lang,
+                    f"{len(fires)} of {total} matching fires returned; "
+                    "area is the agency's estimate in hectares",
+                    f"{len(fires)} feux renvoyés sur {total} correspondants ; la superficie est "
+                    "l'estimation de l'organisme, en hectares",
+                ),
             ),
+            lang=lang,
         ),
     )
 
@@ -473,14 +600,17 @@ async def summarize_fires(
     """Count fires and sum their estimated area by status, cause, size class,
     forest area, fire type or fire year, computed server-side over every
     matching row."""
-    del lang
     filters = filters or FireFilters()
     if group_by not in c.FIRE_GROUP_FIELDS:
-        raise InvalidInput(
-            f"group_by must be one of {sorted(c.FIRE_GROUP_FIELDS)}, got {group_by!r}."
+        names = sorted(c.FIRE_GROUP_FIELDS)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"group_by must be one of {names}, got {group_by!r}.",
+            f"group_by doit être l'une des valeurs {names} ; reçu {group_by!r}.",
         )
-    layer = _dataset_layer(dataset)
-    where = build_fire_where(filters, dataset=dataset)
+    layer = _dataset_layer(dataset, lang)
+    where = build_fire_where(filters, dataset=dataset, lang=lang)
     field = c.FIRE_GROUP_FIELDS[group_by]
     statistics = [
         {"statisticType": "count", "onStatisticField": "OBJECTID", "outStatisticFieldName": "n"},
@@ -546,13 +676,21 @@ async def summarize_fires(
             f"{layer}/query",
             was_cached,
             as_of=await _layer_as_of(layer),
-            freshness=_FIRES_FRESHNESS,
-            coverage=_dataset_coverage(dataset),
-            limits=(
-                "counts and areas cover every matching row, mutual-aid fires and "
-                "carry-over fires included unless filtered; the dashboard headline "
-                "counts current-year wildfires only"
+            freshness=_fires_freshness(lang),
+            coverage=_dataset_coverage(dataset, lang),
+            limits=_with_english_only(
+                lang,
+                fr_or_en(
+                    lang,
+                    "counts and areas cover every matching row, mutual-aid fires and "
+                    "carry-over fires included unless filtered; the dashboard headline "
+                    "counts current-year wildfires only",
+                    "les décomptes et superficies couvrent toutes les lignes correspondantes, "
+                    "feux d'aide mutuelle et feux reportés compris sauf filtre ; les chiffres "
+                    "clés du tableau de bord ne comptent que les feux de l'année en cours",
+                ),
             ),
+            lang=lang,
         ),
     )
 
@@ -563,7 +701,6 @@ async def summarize_fires(
 async def get_season_statistics(*, lang: str = "en") -> SeasonStatistics:
     """The dashboard's five headline numbers plus season totals at today's
     date for the last six years against 5, 10 and 25-year averages."""
-    del lang
 
     async def fetch() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         headline = await _query(c.STATISTICS, "statistics", outFields="*", orderByFields="OBJECTID")
@@ -582,7 +719,12 @@ async def get_season_statistics(*, lang: str = "en") -> SeasonStatistics:
         for r in head_rows
     }
     if not values:
-        raise UpstreamError("ab_wildfire: the statistics view returned no rows.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "ab_wildfire: the statistics view returned no rows.",
+            "ab_wildfire : la vue des statistiques n'a renvoyé aucune ligne.",
+        )
     headline = Headline(
         active_wildfires=_whole(values.get("Wildfire_Active_Count")),
         active_area_ha=values.get("Wildfire_Active_Area"),
@@ -627,17 +769,29 @@ async def get_season_statistics(*, lang: str = "en") -> SeasonStatistics:
             f"{c.STATISTICS}/query",
             was_cached,
             as_of=await _layer_as_of(c.STATISTICS),
-            freshness="daily; cached 30 minutes",
-            coverage=(
+            freshness=fr_or_en(
+                lang, "daily; cached 30 minutes", "quotidienne ; mise en cache 30 minutes"
+            ),
+            coverage=fr_or_en(
+                lang,
                 "headline figures count current-year wildfires only (not mutual-aid or "
                 "carry-over fires); the comparison table holds the same calendar date in "
-                "each of the last six years"
+                "each of the last six years",
+                "les chiffres clés ne comptent que les feux de l'année en cours (pas les feux "
+                "d'aide mutuelle ni les feux reportés) ; le tableau de comparaison donne la "
+                "même date dans chacune des six dernières années",
             ),
-            limits=(
+            limits=fr_or_en(
+                lang,
                 "the 25-year averages and the current year's own averages are null; daily "
                 "area can be slightly negative when estimates are revised; the active "
-                "count can be above zero while the active-fire layer is empty"
+                "count can be above zero while the active-fire layer is empty",
+                "les moyennes sur 25 ans et les moyennes de l'année en cours sont nulles ; la "
+                "superficie quotidienne peut être légèrement négative quand les estimations "
+                "sont révisées ; le nombre de feux actifs peut dépasser zéro alors que la "
+                "couche des feux actifs est vide",
             ),
+            lang=lang,
         ),
     )
 
@@ -652,6 +806,7 @@ def build_perimeter_where(
     size_class: str | None,
     forest_area: str | None,
     min_area_ha: float | None,
+    lang: str = "en",
 ) -> str:
     clauses: list[str] = []
     if fire_number and fire_number.strip():
@@ -662,7 +817,12 @@ def build_perimeter_where(
     if size_class:
         letters = [p.strip().upper() for p in size_class.split(",") if p.strip()]
         if not letters or any(letter not in c.SIZE_CLASSES for letter in letters):
-            raise InvalidInput(f"size_class must be letters from {list(c.SIZE_CLASSES)}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"size_class must be letters from {list(c.SIZE_CLASSES)}.",
+                f"size_class doit être des lettres parmi {list(c.SIZE_CLASSES)}.",
+            )
         clauses.append("SIZE_CLASS IN (" + ", ".join(_quote(x) for x in letters) + ")")
     if forest_area and forest_area.strip():
         pattern = forest_area.strip().upper().replace("'", "''")
@@ -708,10 +868,14 @@ async def get_perimeters(
     lang: str = "en",
 ) -> PerimeterList:
     """List mapped fire perimeters of active or extinguished fires, largest first."""
-    del lang
     if state not in c.PERIMETERS:
-        raise InvalidInput(f"state must be 'active' or 'extinguished', got {state!r}.")
-    _check_page(limit, offset, c.LIMIT_GEOMETRY_MAX if include_geometry else c.LIMIT_MAX)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"state must be 'active' or 'extinguished', got {state!r}.",
+            f"state doit être « active » ou « extinguished » ; reçu {state!r}.",
+        )
+    _check_page(limit, offset, c.LIMIT_GEOMETRY_MAX if include_geometry else c.LIMIT_MAX, lang)
     layer = c.PERIMETERS[state]
     where = build_perimeter_where(
         fire_number=fire_number,
@@ -719,6 +883,7 @@ async def get_perimeters(
         size_class=size_class,
         forest_area=forest_area,
         min_area_ha=min_area_ha,
+        lang=lang,
     )
 
     async def fetch() -> tuple[int, list[dict[str, Any]]]:
@@ -744,8 +909,12 @@ async def get_perimeters(
     perimeters = [_to_perimeter(f, include_geometry) for f in features]
     note = None
     if total == 0 and where == "1=1":
-        note = "No perimeters are published right now" + (
-            " (normal outside the fire season)." if state == "active" else "."
+        note = fr_or_en(
+            lang,
+            "No perimeters are published right now"
+            + (" (normal outside the fire season)." if state == "active" else "."),
+            "Aucun périmètre n'est publié en ce moment"
+            + (" (c'est normal hors saison des feux)." if state == "active" else "."),
         )
     return PerimeterList(
         state=state,
@@ -761,20 +930,39 @@ async def get_perimeters(
             was_cached,
             as_of=await _layer_as_of(layer)
             or max((p.last_updated for p in perimeters if p.last_updated), default=None),
-            freshness=_FIRES_FRESHNESS,
-            coverage=(
+            freshness=_fires_freshness(lang),
+            coverage=fr_or_en(
+                lang,
                 "only some fires have a mapped perimeter (none for 'Turned Over' fires); "
-                "current-season fires"
+                "current-season fires",
+                "seuls certains feux ont un périmètre cartographié (aucun pour les feux "
+                "« Turned Over ») ; feux de la saison en cours",
             ),
-            limits=(
-                f"{len(perimeters)} of {total} matching perimeters returned"
-                + ("; geometry simplified to about 50 m" if include_geometry else "")
+            limits=_with_english_only(
+                lang,
+                fr_or_en(
+                    lang,
+                    f"{len(perimeters)} of {total} matching perimeters returned"
+                    + ("; geometry simplified to about 50 m" if include_geometry else ""),
+                    f"{len(perimeters)} périmètres renvoyés sur {total} correspondants"
+                    + (" ; géométrie simplifiée à environ 50 m" if include_geometry else ""),
+                ),
             ),
+            lang=lang,
         ),
     )
 
 
 # ------------------------------------------------------------ fire danger
+
+
+def _danger_freshness(lang: str) -> str:
+    return fr_or_en(
+        lang,
+        "the rating is refreshed daily from the Fire Weather Index system",
+        "la cote est actualisée chaque jour à partir de la Méthode canadienne de l'indice "
+        "forêt-météo",
+    )
 
 
 def _severity(danger_class: str | None) -> int:
@@ -783,8 +971,7 @@ def _severity(danger_class: str | None) -> int:
 
 async def get_fire_danger(latitude: float, longitude: float, *, lang: str = "en") -> DangerAtPoint:
     """The fire danger class of the rating polygon containing a point."""
-    del lang
-    _check_point(latitude, longitude)
+    _check_point(latitude, longitude, lang)
 
     async def fetch() -> list[dict[str, Any]]:
         body = await _query(
@@ -809,22 +996,43 @@ async def get_fire_danger(latitude: float, longitude: float, *, lang: str = "en"
         latitude=latitude,
         longitude=longitude,
         danger_class=danger_class,
-        meaning=c.DANGER_MEANING.get(danger_class) if danger_class else None,
+        meaning=(
+            (c.DANGER_MEANING_FR if lang == "fr" else c.DANGER_MEANING).get(danger_class)
+            if danger_class
+            else None
+        ),
         rating_timestamp=_utc(best.get("Last_Updated")) if best else None,
         note=(
-            None if best else "The point is outside the rating polygons, which cover Alberta only."
+            None
+            if best
+            else fr_or_en(
+                lang,
+                "The point is outside the rating polygons, which cover Alberta only.",
+                "Le point est hors des polygones de cote, qui ne couvrent que l'Alberta.",
+            )
         ),
         provenance=_prov(
             "DangerAtPoint",
             f"{c.DANGER}/query",
             was_cached,
             as_of=await _layer_as_of(c.DANGER),
-            freshness="the rating is refreshed daily from the Fire Weather Index system",
-            coverage="Alberta only; the polygons also cover the white area outside the forest zone",
-            limits=(
-                "general public information; regulated forest operations must use weather data "
-                "representative of the site"
+            freshness=_danger_freshness(lang),
+            coverage=fr_or_en(
+                lang,
+                "Alberta only; the polygons also cover the white area outside the forest zone",
+                "Alberta seulement ; les polygones couvrent aussi la zone blanche hors de la zone "
+                "forestière",
             ),
+            limits=fr_or_en(
+                lang,
+                "general public information; regulated forest operations must use weather data "
+                "representative of the site",
+                "information générale pour le public ; les activités forestières réglementées "
+                "doivent utiliser des données météo représentatives du site. La classe "
+                "(danger_class) est la valeur anglaise de la couche ; meaning la décrit en "
+                "français",
+            ),
+            lang=lang,
         ),
     )
 
@@ -833,10 +1041,9 @@ async def summarize_fire_danger(
     bbox: list[float] | None = None, *, lang: str = "en"
 ) -> DangerSummary:
     """Count the rating polygons of each danger class, province-wide or in a box."""
-    del lang
     params: dict[str, Any] = {}
     if bbox:
-        _check_bbox(bbox)
+        _check_bbox(bbox, lang)
         params = {
             "geometry": ",".join(str(v) for v in bbox),
             "geometryType": "esriGeometryEnvelope",
@@ -884,18 +1091,31 @@ async def summarize_fire_danger(
         classes=counts,
         total_polygons=sum(d.polygons for d in counts),
         rating_timestamp=updated,
-        note=(
+        note=fr_or_en(
+            lang,
             "Counts are rating polygons, not area: the polygons differ in size, so a class's "
-            "share of polygons is not its share of the land."
+            "share of polygons is not its share of the land.",
+            "Les décomptes portent sur les polygones de cote, pas sur la superficie : les "
+            "polygones n'ont pas la même taille, donc la part des polygones d'une classe n'est "
+            "pas sa part du territoire.",
         ),
         provenance=_prov(
             "DangerSummary",
             f"{c.DANGER}/query",
             was_cached,
             as_of=await _layer_as_of(c.DANGER),
-            freshness="the rating is refreshed daily from the Fire Weather Index system",
-            coverage="Alberta only (807 polygons province-wide)",
-            limits="a box counts every polygon it touches, including partly",
+            freshness=_danger_freshness(lang),
+            coverage=fr_or_en(
+                lang,
+                "Alberta only (807 polygons province-wide)",
+                "Alberta seulement (807 polygones dans la province)",
+            ),
+            limits=fr_or_en(
+                lang,
+                "a box counts every polygon it touches, including partly",
+                "une zone compte chaque polygone qu'elle touche, même en partie",
+            ),
+            lang=lang,
         ),
     )
 
@@ -939,20 +1159,29 @@ async def get_fire_control_orders(
 ) -> FireControlOrderList:
     """List fire bans, restrictions, advisories and forest closures (and OHV
     restrictions), province-wide or those covering a point."""
-    del lang
     if (latitude is None) != (longitude is None):
-        raise InvalidInput("latitude and longitude must be given together.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "latitude and longitude must be given together.",
+            "latitude et longitude doivent être fournies ensemble.",
+        )
     point = None
     if latitude is not None and longitude is not None:
-        _check_point(latitude, longitude)
+        _check_point(latitude, longitude, lang)
         point = (latitude, longitude)
     if not 1 <= limit <= c.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {c.LIMIT_MAX}, got {limit}.")
+        raise _bad_limit(limit, c.LIMIT_MAX, lang)
     layers = {**c.FIRE_CONTROL_ORDERS, c.OHV_LABEL: c.OHV_RESTRICTION}
     if alert_type:
         match = [k for k in layers if k.lower() == alert_type.strip().lower()]
         if not match:
-            raise InvalidInput(f"alert_type must be one of {list(layers)}, got {alert_type!r}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"alert_type must be one of {list(layers)}, got {alert_type!r}.",
+                f"alert_type doit être l'une des valeurs {list(layers)} ; reçu {alert_type!r}.",
+            )
         layers = {match[0]: layers[match[0]]}
     pattern = (name_contains or "").strip().upper().replace("'", "''")
 
@@ -1021,11 +1250,16 @@ async def get_fire_control_orders(
     ]
     note = None
     if stale:
-        note = (
+        note = fr_or_en(
+            lang,
             f"{len(stale)} entries started more than a year ago. The layer has no end date, so "
-            "an old entry may be stale; confirm with the issuing municipality or park."
+            "an old entry may be stale; confirm with the issuing municipality or park.",
+            f"{len(stale)} entrées ont commencé il y a plus d'un an. La couche n'a pas de date "
+            "de fin : une entrée ancienne peut être périmée ; vérifiez auprès de la "
+            "municipalité ou du parc émetteur.",
         )
     shown = orders[:limit]
+    # The echo of the query stays in English (it is a parameter summary).
     where_text = "point " + f"{latitude},{longitude}" if point else "province-wide"
     if pattern:
         where_text += f"; name contains {pattern}"
@@ -1040,14 +1274,22 @@ async def get_fire_control_orders(
             f"{c.SERVICES_ROOT}/alberta_fire_ban_system/FeatureServer",
             was_cached,
             as_of=await _layer_as_of(next(iter(layers.values()))),
-            freshness=_SLOW_FRESHNESS,
-            coverage=(
+            freshness=_slow_freshness(lang),
+            coverage=fr_or_en(
+                lang,
                 "orders mapped in the Alberta Fire Ban System; the issuing municipality "
-                "is the authority for what is allowed"
+                "is the authority for what is allowed",
+                "ordonnances cartographiées dans l'Alberta Fire Ban System ; la municipalité "
+                "émettrice fait autorité sur ce qui est permis",
             ),
-            limits=(
+            limits=fr_or_en(
+                lang,
                 f"{len(shown)} of {len(orders)} distinct entries returned; one entry can be "
-                "several map polygons (see `polygons`)"
+                "several map polygons (see `polygons`)",
+                f"{len(shown)} entrées distinctes renvoyées sur {len(orders)} ; une entrée peut "
+                "compter plusieurs polygones (voir `polygons`). Types, noms et administrations "
+                "sont ceux de la couche, en anglais seulement",
             ),
+            lang=lang,
         ),
     )

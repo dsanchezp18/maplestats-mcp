@@ -39,7 +39,7 @@ async def nrcan_nbac_query_fires(
     fire perimeter, fire season, prescribed burn.
     Mots-clés : Ressources naturelles Canada (RNCan), Composite national des
     zones brûlées, CNZB, feu de forêt, incendie, superficie brûlée, polygone
-    d'incendie, hectares brûlés, SCIF, périmètre d'incendie, saison des
+    d'incendie, hectares brûlés, SCIFV, périmètre d'incendie, saison des
     feux, brûlage dirigé.
     """
     return await client.query_fires(

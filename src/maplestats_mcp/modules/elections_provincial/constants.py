@@ -247,6 +247,56 @@ BLOCKED: tuple[Blocked, ...] = (
     ),
 )
 
+# French text for lang="fr": the attributions, licence notices, the label
+# for a blank party field and the Ontario reason above, in the same order.
+ATTRIBUTIONS_FR: dict[str, str] = {
+    "qc": "Source : Élections Québec, directeur général des élections du Québec. ©",
+    "ab": (
+        "Source : Elections Alberta. Reproduit à partir des résultats publiés sans modification "
+        "des chiffres ; il ne s'agit pas d'une version officielle des résultats."
+    ),
+    "bc": (
+        "Contient des renseignements visés par la licence de données ouvertes d'Elections BC "
+        "(Elections BC Open Data Licence)"
+    ),
+    "sk": (
+        "Source : Elections Saskatchewan, résultats par bureau de vote (relevés du scrutin du "
+        "directeur général des élections), additionnés par circonscription. Elections "
+        "Saskatchewan ne publie ni conditions d'utilisation ni licence pour ces fichiers ; le "
+        "pied de page du site indique « Copyright (c) 2025 Elections Saskatchewan ». Il ne "
+        "s'agit pas d'une version officielle des résultats."
+    ),
+    "mb": (
+        "Source : Elections Manitoba, résultats officiels (sommaire des votes obtenus, sommaire "
+        "des résultats et résultats par section de vote). Elections Manitoba ne publie ni "
+        "conditions d'utilisation ni licence pour ces fichiers ; le pied de page du site "
+        "indique « (c) 2026. All rights reserved. ». Il ne s'agit pas d'une version officielle "
+        "des résultats : selon Elections Manitoba, ses exemplaires imprimés font foi."
+    ),
+}
+TERMS_NOTICES_FR: dict[str, str] = {
+    "sk": (
+        "Elections Saskatchewan ne publie ni conditions d'utilisation ni licence pour ces "
+        "fichiers (vérifié le 2026-10-02) ; aucune licence n'est donc indiquée. Les électeurs "
+        "inscrits ne sont pas additionnés (les bureaux divisés les répètent) : pas de taux de "
+        "participation."
+    ),
+    "mb": (
+        "Elections Manitoba ne publie ni conditions d'utilisation ni licence pour ces fichiers "
+        "(vérifié le 2026-10-03 ; le pied de page indique seulement « (c) 2026. All rights "
+        "reserved. ») ; aucune licence n'est donc indiquée."
+    ),
+}
+NO_AFFILIATION_LABEL_FR = "Aucune appartenance (vide dans la source)"
+BLOCKED_REASONS_FR: dict[str, str] = {
+    "on": (
+        "Les conditions d'utilisation ne permettent pas l'accès automatisé pour copier les "
+        "données des sites et n'autorisent la copie du contenu « except for personal use » "
+        "(usage personnel) qu'avec un consentement écrit préalable. Un serveur public ne peut "
+        "pas respecter cela : l'Ontario n'est donc pas pris en charge."
+    ),
+}
+
 RATE_LIMIT_SOURCE = "elections-provincial"
 # One request per 10 seconds for Quebec and the BC catalogue.
 RATE_LIMIT_PER_SECOND = 0.1

@@ -74,6 +74,27 @@ PART_LABELS: dict[str, str] = {
     "6": "Part 6 - Campaign Bank Reconciliation",
 }
 
+# The same parts named in French, as on the candidate's electoral campaign
+# return (form EC 20121), for lang="fr".
+PART_LABELS_FR: dict[str, str] = {
+    "1": "Partie 1 – Déclaration",
+    "2A": "Partie 2a – État des contributions reçues",
+    "2B": "Partie 2b – État des prêts de fonctionnement",
+    "2C": "Partie 2c – État des contributions retournées aux donateurs ou remises au directeur "
+    "général des élections",
+    "2D": "Partie 2d – État des cessions reçues",
+    "2E": "Partie 2e – État des rentrées de fonds autres que les contributions, les prêts et les "
+    "cessions",
+    "2F": "Partie 2f – Sommaire des contributions, prêts, cessions et autres rentrées de fonds",
+    "3A": "Partie 3a – État des dépenses de campagne électorale et autres sorties de fonds",
+    "3B": "Partie 3b – État des frais de litige et des dépenses personnelles du candidat non "
+    "payés par la campagne",
+    "3C": "Partie 3c – Sommaire des dépenses de campagne électorale et autres sorties de fonds",
+    "4": "Partie 4 – État des cessions non monétaires envoyées aux entités politiques affiliées",
+    "5": "Partie 5 – État des prêts et créances impayés, tirés des parties 2b et 3a",
+    "6": "Partie 6 – Rapprochement bancaire de la campagne",
+}
+
 # "Complete Financial Return" -- confirmed live 2026-09-21 as the ReportOption
 # radio value that exposes the 13-part PART_LABELS breakdown above (the
 # other three ReportOption values -- Financial Return Summary, Summary by

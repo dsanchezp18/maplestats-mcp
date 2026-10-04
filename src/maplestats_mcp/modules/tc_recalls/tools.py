@@ -29,13 +29,16 @@ async def tc_recalls_search(
     model="Civic", year_from=2019, year_to=2020. Results are sorted by
     recall date, newest first (order="oldest" reverses it), with
     total_matched and has_more; page through with `page`. A make that
-    no recall lists is an error. The rows (numbers, names, dates) are
-    the same in both languages. Pass a recall number to tc_recalls_get
-    for details.
+    no recall lists is an error. The rows (recall numbers, manufacturer,
+    make and model names as Transport Canada publishes them, dates) are
+    identical with lang="fr": the source does not translate them, and
+    `note` says so in French. Pass a recall number to tc_recalls_get
+    for the French category, system and description.
     Keywords: vehicle recall, car recall, Transport Canada, safety
     recall, make, model, model year, defect, motor vehicle.
     Mots-clés : rappel de véhicule, rappel automobile, Transports
-    Canada, rappel de sécurité, marque, modèle, année-modèle, défaut.
+    Canada, rappel de sécurité, marque, modèle, année-modèle, défaut,
+    rappel de voiture, avis de rappel, véhicule défectueux.
     """
     return await client.search(
         make=make,
@@ -62,6 +65,6 @@ async def tc_recalls_get(recall_number: str, lang: Lang = "en") -> RecallDetail:
     affected, Transport Canada, vehicle defect, notification, recall.
     Mots-clés : détails du rappel, risque pour la sécurité, mesure
     corrective, unités touchées, Transports Canada, défaut du véhicule,
-    rappel, véhicule.
+    rappel, véhicule, numéro de rappel, avis au propriétaire.
     """
     return await client.get_recall(recall_number, lang)

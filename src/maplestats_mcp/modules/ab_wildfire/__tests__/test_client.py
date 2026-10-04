@@ -186,6 +186,27 @@ async def test_list_fires_parses_a_row_and_uses_layer_edit_time(server):
     assert query["returnGeometry"] == "false"
 
 
+async def test_french_provenance_licence_and_english_only_note(server):
+    server.on(c.FIRES_CURRENT, _rows([_fire()], total=823))
+    result = await client.list_fires(limit=1, lang="fr")
+    prov = result.provenance
+    assert (prov.licence or "").startswith("Licence du gouvernement ouvert – Alberta")
+    assert (prov.freshness or "").startswith("mis à jour par Alberta Wildfire")
+    assert "en anglais seulement" in (prov.limits or "")
+    assert (prov.coverage or "").startswith("feux de l'année en cours")
+    # The record values stay as Alberta Wildfire publishes them.
+    assert result.fires[0].status == "Extinguished"
+
+
+def test_french_errors():
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: size_class doit être"):
+        client.build_fire_where(FireFilters(size_class="F"), lang="fr")
+    with pytest.raises(InvalidInput, match="carryover n'est consigné"):
+        client.build_fire_where(FireFilters(carryover=True), dataset="previous_5_years", lang="fr")
+    with pytest.raises(InvalidInput, match=r"^carryover is only recorded in the 'current'"):
+        client.build_fire_where(FireFilters(carryover=True), dataset="previous_5_years")
+
+
 async def test_mutual_aid_fire_has_no_cause_and_history_layer_has_no_carryover(server):
     row = _fire(FIRE_TYPE="Mutual Aid", GENERAL_CAUSE=None, FIRE_STATUS="Assisstance Ended")
     for key in ("CO_FLAG", "FIRE_COMPLEX_NUMBER", "FIRE_COMPLEX_NAME", "INCIDENT_TYPE"):
@@ -530,6 +551,19 @@ async def test_danger_outside_alberta_is_a_null_class_with_a_note(server):
     assert result.danger_class is None
     assert result.note is not None
     assert "Alberta only" in result.note
+
+
+async def test_danger_meaning_and_note_in_french(server):
+    server.on(
+        c.DANGER,
+        lambda p: {
+            "features": [{"attributes": {"Fire_Danger": "High", "Last_Updated": 1790993128000}}]
+        },
+    )
+    result = await client.get_fire_danger(53.5461, -113.4938, lang="fr")
+    assert result.danger_class == "High"
+    assert (result.meaning or "").startswith("Les combustibles forestiers sont secs")
+    assert (result.provenance.freshness or "").startswith("la cote est actualisée")
 
 
 async def test_danger_summary_orders_classes_by_severity(server):

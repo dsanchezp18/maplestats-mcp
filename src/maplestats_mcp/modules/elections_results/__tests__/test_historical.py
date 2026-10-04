@@ -157,6 +157,15 @@ async def test_paging(workbook):
     assert first.provenance.limits
 
 
+async def test_french_paging_note_and_provenance(workbook):
+    first = await historical.get_historical(limit=1, lang="fr")
+    assert (first.provenance.limits or "").startswith("Lignes 1 à 1 sur 3.")
+    assert "en anglais seulement" in (first.provenance.limits or "")
+    assert (first.provenance.licence or "").startswith("Conditions du jeu de données Borealis")
+    with pytest.raises(InvalidInput, match="pour les résultats historiques"):
+        await historical.get_historical(election=45, lang="fr")
+
+
 async def test_out_of_range_election_is_invalid_input():
     for bad in (0, 43, 45):
         with pytest.raises(InvalidInput):

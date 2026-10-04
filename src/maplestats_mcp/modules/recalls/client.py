@@ -58,6 +58,7 @@ from maplestats_mcp.shared.arg_checks import format_choices
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import decode_json, get_raw, is_retryable, new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -76,6 +77,7 @@ _BLOCK_TAGS = frozenset(
     {"p", "li", "div", "tr", "h2", "h3", "h4", "h5", "dt", "dd", "ul", "ol", "table", "details"}
 )
 _FREQUENCY = "daily; the dump is regenerated around 02:20 UTC"
+_FREQUENCY_FR = "quotidienne ; le fichier est régénéré vers 02:20 UTC"
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,19 +253,42 @@ async def _load_dump(lang: str) -> tuple[_Dump, bool]:
             response = await get_raw(url, timeout=constants.DUMP_TIMEOUT_SECONDS)
             rows = decode_json(response, url)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"recalls: open-data file returned HTTP {exc.response.status_code}."
+            status = exc.response.status_code
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"recalls: open-data file returned HTTP {status}.",
+                f"recalls : le fichier de données ouvertes a renvoyé HTTP {status}.",
             ) from exc
         except httpx.DecodingError as exc:
-            raise UpstreamError("recalls: open-data file is not valid JSON.") from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "recalls: open-data file is not valid JSON.",
+                "recalls : le fichier de données ouvertes n'est pas un JSON valide.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable("recalls: open-data file could not be downloaded.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                "recalls: open-data file could not be downloaded.",
+                "recalls : le fichier de données ouvertes n'a pas pu être téléchargé.",
+            ) from exc
         if not isinstance(rows, list) or not rows:
-            raise UpstreamError("recalls: open-data file is not a non-empty JSON list.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "recalls: open-data file is not a non-empty JSON list.",
+                "recalls : le fichier de données ouvertes n'est pas une liste JSON non vide.",
+            )
         keys = constants.KEYS[lang]
         if not isinstance(rows[0], dict) or keys["title"] not in rows[0]:
-            raise UpstreamError(
-                f"recalls: open-data rows no longer carry {keys['title']!r}; the format changed."
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"recalls: open-data rows no longer carry {keys['title']!r}; the format changed.",
+                f"recalls : les lignes du fichier n'ont plus {keys['title']!r} ; le format a "
+                "changé.",
             )
         records = [r for r in (_record(row, keys) for row in rows if isinstance(row, dict)) if r]
         records.sort(key=_sort_key, reverse=True)
@@ -279,13 +304,18 @@ async def _load_dump(lang: str) -> tuple[_Dump, bool]:
     return await cached_fetch(f"recalls:dump:{lang}", constants.DUMP_CACHE_TTL_SECONDS, fetch)
 
 
-def _date_arg(value: str | None, name: str) -> date | None:
+def _date_arg(value: str | None, name: str, lang: str = "en") -> date | None:
     if value is None or not str(value).strip():
         return None
     try:
         return date.fromisoformat(str(value).strip())
     except ValueError as exc:
-        raise InvalidInput(f"{name} must be YYYY-MM-DD, got {value!r}.") from exc
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be YYYY-MM-DD, got {value!r}.",
+            f"{name} doit être au format AAAA-MM-JJ ; reçu {value!r}.",
+        ) from exc
 
 
 def _class_parts(value: str) -> set[str]:
@@ -303,7 +333,9 @@ def _class_label(part: str) -> str:
     return " ".join([first.capitalize(), *(word.upper() for word in rest)])
 
 
-def _wanted_class(recall_class: str | None, records: list[_Record]) -> set[str] | None:
+def _wanted_class(
+    recall_class: str | None, records: list[_Record], lang: str = "en"
+) -> set[str] | None:
     if not recall_class or not recall_class.strip():
         return None
     parts = _class_parts(recall_class)
@@ -314,10 +346,14 @@ def _wanted_class(recall_class: str | None, records: list[_Record]) -> set[str] 
     }
     unknown = sorted(parts - known)
     if unknown:
-        raise InvalidInput(
+        choices = format_choices(_class_label(k) for k in sorted(known))
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"recall_class {recall_class!r} has no match ({', '.join(unknown)}). "
-            f"Classes in the data: {format_choices(_class_label(k) for k in sorted(known))} "
-            "(Classe in French)."
+            f"Classes in the data: {choices} (Classe in French).",
+            f"recall_class {recall_class!r} ne correspond à rien ({', '.join(unknown)}). "
+            f"Classes présentes dans les données : {choices} (« Classe » en français).",
         )
     return parts
 
@@ -333,19 +369,37 @@ def _filter(
     updated_from: str | None,
     updated_to: str | None,
     include_archived: bool,
+    lang: str = "en",
 ) -> list[_Record]:
     if agency is not None and agency not in constants.AGENCIES:
-        raise InvalidInput(f"agency must be one of {', '.join(constants.AGENCIES)}.")
+        agencies = ", ".join(constants.AGENCIES)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"agency must be one of {agencies}.",
+            f"agency doit être l'une des valeurs {agencies}.",
+        )
     if product_type is not None and product_type not in constants.PRODUCT_TYPES:
-        raise InvalidInput(f"product_type must be one of {', '.join(constants.PRODUCT_TYPES)}.")
-    start = _date_arg(updated_from, "updated_from")
-    end = _date_arg(updated_to, "updated_to")
+        types = ", ".join(constants.PRODUCT_TYPES)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"product_type must be one of {types}.",
+            f"product_type doit être l'une des valeurs {types}.",
+        )
+    start = _date_arg(updated_from, "updated_from", lang)
+    end = _date_arg(updated_to, "updated_to", lang)
     if start and end and start > end:
-        raise InvalidInput(f"updated_from {start} is after updated_to {end}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"updated_from {start} is after updated_to {end}.",
+            f"updated_from ({start}) est postérieur à updated_to ({end}).",
+        )
     words = _query_words(query)
     category_folded = _fold(category.strip()) if category and category.strip() else None
     records = list(records)
-    wanted_class = _wanted_class(recall_class, records)
+    wanted_class = _wanted_class(recall_class, records, lang)
 
     matched = []
     for record in records:
@@ -373,10 +427,14 @@ def _filter(
     return matched
 
 
-def _coverage(include_archived: bool) -> str:
+def _coverage(include_archived: bool, lang: str = "en") -> str:
     if include_archived:
-        return "includes archived notices"
-    return "archived notices excluded, as on the site's own search; pass include_archived=True"
+        return fr_or_en(lang, "includes archived notices", "avis archivés compris")
+    return fr_or_en(
+        lang,
+        "archived notices excluded, as on the site's own search; pass include_archived=True",
+        "avis archivés exclus, comme dans la recherche du site ; passez include_archived=True",
+    )
 
 
 def _summary(record: _Record) -> RecallSummary:
@@ -413,9 +471,19 @@ async def search(
 ) -> RecallSearchResult:
     lang = _check_lang(lang)
     if limit < 1 or limit > constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX} ; reçu {limit}.",
+        )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être positif ou nul ; reçu {offset}.",
+        )
     dump, cached = await _load_dump(lang)
     matched = _filter(
         dump.records,
@@ -427,6 +495,7 @@ async def search(
         updated_from=updated_from,
         updated_to=updated_to,
         include_archived=include_archived,
+        lang=lang,
     )
     page = matched[offset : offset + limit]
     return RecallSearchResult(
@@ -441,12 +510,17 @@ async def search(
             cached=cached,
             schema_name="recalls.RecallSearchResult",
             as_of=dump.as_of,
-            freshness=_FREQUENCY,
-            coverage=_coverage(include_archived),
-            limits=(
+            freshness=fr_or_en(lang, _FREQUENCY, _FREQUENCY_FR),
+            coverage=_coverage(include_archived, lang),
+            limits=fr_or_en(
+                lang,
                 "newest 'last updated' first; dates filter on last updated (the dump has no "
-                "recall date); notices with no date sort last and drop out of date filters"
+                "recall date); notices with no date sort last and drop out of date filters",
+                "les plus récemment mis à jour d'abord ; les dates filtrent sur la dernière mise "
+                "à jour (le fichier n'a pas de date de rappel) ; les avis sans date viennent en "
+                "dernier et sont exclus des filtres de date",
             ),
+            lang=lang,
         ),
     )
 
@@ -481,9 +555,19 @@ async def summarize(
 ) -> RecallCountsResult:
     lang = _check_lang(lang)
     if group_by not in GROUP_BY:
-        raise InvalidInput(f"group_by must be one of {', '.join(GROUP_BY)}, got {group_by!r}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"group_by must be one of {', '.join(GROUP_BY)}, got {group_by!r}.",
+            f"group_by doit être l'une des valeurs {', '.join(GROUP_BY)} ; reçu {group_by!r}.",
+        )
     if top < 1 or top > constants.GROUPS_MAX:
-        raise InvalidInput(f"top must be between 1 and {constants.GROUPS_MAX}, got {top}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"top must be between 1 and {constants.GROUPS_MAX}, got {top}.",
+            f"top doit être compris entre 1 et {constants.GROUPS_MAX} ; reçu {top}.",
+        )
     dump, cached = await _load_dump(lang)
     matched = _filter(
         dump.records,
@@ -495,6 +579,7 @@ async def summarize(
         updated_from=updated_from,
         updated_to=updated_to,
         include_archived=include_archived,
+        lang=lang,
     )
     counts: Counter[str] = Counter()
     for record in matched:
@@ -509,12 +594,26 @@ async def summarize(
         ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
         shown = ordered[:top]
     groups = [RecallCount(key=k, count=v) for k, v in shown]
-    limits = "year is the 'last updated' year, which the site's own date facet also uses"
+    limits = fr_or_en(
+        lang,
+        "year is the 'last updated' year, which the site's own date facet also uses",
+        "l'année est celle de la dernière mise à jour, comme dans le filtre de date du site",
+    )
     if group_by == "product_type":
-        limits = "a notice can have several product types, so counts can sum past total_matched"
+        limits = fr_or_en(
+            lang,
+            "a notice can have several product types, so counts can sum past total_matched",
+            "un avis peut avoir plusieurs types de produits : la somme des décomptes peut "
+            "dépasser total_matched",
+        )
     if len(ordered) > top:
         which = "the most recent" if group_by == "year" else "the largest"
-        limits += f"; {which} {top} of {len(ordered)} groups (raise top to see more)"
+        which_fr = "les plus récents" if group_by == "year" else "les plus grands"
+        limits += fr_or_en(
+            lang,
+            f"; {which} {top} of {len(ordered)} groups (raise top to see more)",
+            f" ; {top} groupes {which_fr} sur {len(ordered)} (augmentez top pour en voir plus)",
+        )
     return RecallCountsResult(
         group_by=group_by,
         total_matched=len(matched),
@@ -526,9 +625,10 @@ async def summarize(
             cached=cached,
             schema_name="recalls.RecallCountsResult",
             as_of=dump.as_of,
-            freshness=_FREQUENCY,
-            coverage=_coverage(include_archived),
+            freshness=fr_or_en(lang, _FREQUENCY, _FREQUENCY_FR),
+            coverage=_coverage(include_archived, lang),
             limits=limits,
+            lang=lang,
         ),
     )
 
@@ -556,13 +656,27 @@ async def _fetch_page(nid: int, lang: str) -> tuple[tuple[str, str], bool]:
         try:
             response = await _get_page(url)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"No recall or alert with id {nid}.") from exc
-            raise UpstreamError(
-                f"recalls: {url} returned HTTP {exc.response.status_code}."
+            status = exc.response.status_code
+            if status == 404:
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    f"No recall or alert with id {nid}.",
+                    f"aucun rappel ni avis portant l'identifiant {nid}.",
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"recalls: {url} returned HTTP {status}.",
+                f"recalls : {url} a renvoyé HTTP {status}.",
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"recalls: {url} could not be reached.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"recalls: {url} could not be reached.",
+                f"recalls : {url} est injoignable.",
+            ) from exc
         return str(response.url), response.text
 
     return await cached_fetch(f"recalls:page:{lang}:{nid}", constants.PAGE_CACHE_TTL_SECONDS, fetch)
@@ -749,7 +863,12 @@ def parse_page(page_html: str, nid: int, url: str, lang: str) -> dict[str, Any]:
     soup = BeautifulSoup(page_html, "html.parser")
     main = soup.find("main")
     if not isinstance(main, Tag):
-        raise UpstreamError(f"recalls: page for {nid} has no <main> element.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"recalls: page for {nid} has no <main> element.",
+            f"recalls : la page de {nid} n'a pas d'élément <main>.",
+        )
     heading = main.select_one("h1#wb-cont") or main.find("h1")
     nav = main.select_one("#wb-cont-nav")
     archived = main.select_one("#block-archived, section#archived") is not None
@@ -761,7 +880,12 @@ def parse_page(page_html: str, nid: int, url: str, lang: str) -> dict[str, Any]:
         fields = _parse_legacy(legacy_body)
         layout = "legacy"
     else:
-        raise NotFound(f"Node {nid} is not a recall or safety alert page.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"Node {nid} is not a recall or safety alert page.",
+            f"la page {nid} n'est pas une page de rappel ni d'avis de sécurité.",
+        )
     fields.setdefault("alert_type", None)
     fields["alert_type"] = fields["alert_type"] or (_text(nav) or None)
     fields.update(
@@ -780,12 +904,21 @@ async def get_recall(recall_id: int | str, lang: str = "en") -> RecallDetail:
     lang = _check_lang(lang)
     text = str(recall_id).strip()
     if text.upper().startswith("RA-"):
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"{text!r} is an identification number, not a recall_id; recall_id is the NID "
-            "from recalls_search (for current pages it is the digits after 'RA-')."
+            "from recalls_search (for current pages it is the digits after 'RA-').",
+            f"{text!r} est un numéro d'identification, pas un recall_id ; recall_id est le NID "
+            "donné par recalls_search (pour les pages actuelles, les chiffres après « RA- »).",
         )
     if not text.isdigit():
-        raise InvalidInput(f"recall_id must be the numeric NID from recalls_search, got {text!r}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"recall_id must be the numeric NID from recalls_search, got {text!r}.",
+            f"recall_id doit être le NID numérique donné par recalls_search ; reçu {text!r}.",
+        )
     nid = int(text)
     (url, page_html), cached = await _fetch_page(nid, lang)
     fields = parse_page(page_html, nid, url, lang)
@@ -801,9 +934,13 @@ async def get_recall(recall_id: int | str, lang: str = "en") -> RecallDetail:
                 if fields.get("last_updated")
                 else None
             ),
-            limits=(
+            limits=fr_or_en(
+                lang,
                 f"section text capped at {constants.TEXT_MAX_CHARS} characters, tables at "
-                f"{constants.TABLE_ROWS_MAX} rows"
+                f"{constants.TABLE_ROWS_MAX} rows",
+                f"texte des sections plafonné à {constants.TEXT_MAX_CHARS} caractères, tableaux "
+                f"à {constants.TABLE_ROWS_MAX} lignes",
             ),
+            lang=lang,
         ),
     )

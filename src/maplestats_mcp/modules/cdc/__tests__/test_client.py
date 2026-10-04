@@ -446,3 +446,30 @@ def test_catalogue_is_bilingual():
     assert "Dairy Farmers of Ontario" in {r.name for r in french.related_sources}
     with pytest.raises(InvalidInput):
         client.catalogue("es")
+
+
+# --- French ----------------------------------------------------------------
+
+
+async def test_french_notes_provenance_and_errors(httpx_mock, today):
+    httpx_mock.add_response(url=constants.SUPPORT_PRICES_PAGE["en"], text=_text("support_en.html"))
+    httpx_mock.add_response(url=constants.SUPPORT_PRICES_PAGE["fr"], text=_text("support_fr.html"))
+    result = await client.get_butter_support_prices(lang="fr")
+    assert "programmes\xa0; elle" in result.notes[0]
+    assert result.provenance.freshness == "annuelle, annoncée à l'automne pour le 1er février"
+    assert "Licence du gouvernement ouvert – Canada" in (result.provenance.licence or "")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: cdc\xa0: year_from ne doit"):
+        await client.get_component_prices(year_from=2026, year_to=2025, lang="fr")
+    with pytest.raises(InvalidInput, match="region doit être"):
+        await client.query_market_data("production", region="Nord", lang="fr")
+    catalogue = client.catalogue("fr")
+    assert (catalogue.provenance.coverage or "").startswith("Liste établie à la main")
+
+
+async def test_english_messages_are_unchanged(httpx_mock, today):
+    with pytest.raises(InvalidInput, match=r"^cdc: year_from must not be after year_to\.$"):
+        await client.get_component_prices(year_from=2026, year_to=2025)
+    catalogue = client.catalogue("en")
+    assert catalogue.provenance.coverage == (
+        "Curated list, checked live 2026-09-26; no upstream call is made."
+    )

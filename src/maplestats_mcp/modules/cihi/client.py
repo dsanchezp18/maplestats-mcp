@@ -30,8 +30,9 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error, truncation_note_lang
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
+from maplestats_mcp.shared.limits import fit_to_budget
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -45,21 +46,37 @@ _SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 _XHTML_NS = "http://www.w3.org/1999/xhtml"
 
 
-async def _get(url: str) -> httpx.Response:
+async def _get(url: str, lang: str = "en") -> httpx.Response:
     await _LIMITER.acquire()
     try:
         return await get_raw(url, timeout=120.0)
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            raise NotFound(f"cihi: nothing published at {url}.") from exc
-        raise UpstreamError(f"cihi: {url} returned HTTP {exc.response.status_code}.") from exc
+        status = exc.response.status_code
+        if status == 404:
+            raise lang_error(
+                NotFound,
+                lang,
+                f"cihi: nothing published at {url}.",
+                f"cihi : rien n'est publié à {url}.",
+            ) from exc
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cihi: {url} returned HTTP {status}.",
+            f"cihi : {url} a renvoyé HTTP {status}.",
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"cihi: {url} did not respond in time.") from exc
+        raise lang_error(
+            UpstreamUnavailable,
+            lang,
+            f"cihi: {url} did not respond in time.",
+            f"cihi : {url} n'a pas répondu à temps.",
+        ) from exc
 
 
-async def _page(url: str) -> tuple[str, bool]:
+async def _page(url: str, lang: str = "en") -> tuple[str, bool]:
     async def fetch() -> str:
-        return (await _get(url)).text
+        return (await _get(url, lang)).text
 
     return await cached_fetch(f"cihi:page:{url}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
 
@@ -95,7 +112,7 @@ async def _library(lang: str = "en") -> tuple[list[IndicatorRef], bool]:
     async def fetch() -> list[IndicatorRef]:
         seen: dict[str, IndicatorRef] = {}
         for page in range(constants.LIBRARY_MAX_PAGES):
-            response = await _get(f"{library_url}?page={page}")
+            response = await _get(f"{library_url}?page={page}", lang)
             refs = _parse_library(response.text, path)
             new = [r for r in refs if r.slug not in seen]
             if not new:
@@ -130,18 +147,23 @@ def _sitemap_pairs(body: str) -> tuple[list[str], dict[str, str]]:
     return children, pairs
 
 
-async def _pairing() -> tuple[dict[str, str], bool]:
+async def _pairing(lang: str = "en") -> tuple[dict[str, str], bool]:
     """English slug -> French slug, as CIHI's own hreflang alternates pair them."""
 
     async def fetch() -> dict[str, str]:
         # A child sitemap is about 1 MB of XML: parse it off the event loop.
-        index = (await _get(constants.SITEMAP_URL)).text
+        index = (await _get(constants.SITEMAP_URL, lang)).text
         children, pairs = await run_parse(_sitemap_pairs, index)
         for url in children[: constants.SITEMAP_MAX_PAGES]:
-            page = (await _get(url)).text
+            page = (await _get(url, lang)).text
             pairs.update((await run_parse(_sitemap_pairs, page))[1])
         if not pairs:
-            raise UpstreamError(f"cihi: {constants.SITEMAP_URL} lists no indicator pages.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cihi: {constants.SITEMAP_URL} lists no indicator pages.",
+                f"cihi : {constants.SITEMAP_URL} ne liste aucune page d'indicateur.",
+            )
         return pairs
 
     return await cached_fetch("cihi:pairing", constants.CACHE_TTL_PAIRING_SECONDS, fetch)
@@ -167,15 +189,16 @@ async def _french_refs() -> tuple[list[IndicatorRef], str | None, bool]:
     """French library entries with their English twin, then English-only entries."""
     french, french_cached = await _library("fr")
     english, english_cached = await _library("en")
-    pairs, pairs_cached = await _pairing()
+    pairs, pairs_cached = await _pairing("fr")
     to_english = {fr: en for en, fr in pairs.items()}
+    # These refs answer a French search, so their notes are in French.
     refs = [
         r.model_copy(
             update={
                 "english_slug": to_english.get(r.slug),
                 "note": None
                 if r.slug in to_english
-                else "CIHI publishes no English page for this indicator.",
+                else "L'ICIS ne publie aucune page en anglais pour cet indicateur.",
             }
         )
         for r in french
@@ -186,13 +209,22 @@ async def _french_refs() -> tuple[list[IndicatorRef], str | None, bool]:
         r.model_copy(
             update={
                 "english_slug": r.slug,
-                "note": "No French page in CIHI's French library: English name and page.",
+                "note": fr_or_en(
+                    "fr",
+                    "",
+                    "Aucune page en français dans la bibliothèque française de l'ICIS : "
+                    "nom et page en anglais.",
+                ),
             }
         )
         for r in missing
     ]
     note = (
-        f"{len(missing)} indicator(s) have no French page and are listed by English name."
+        fr_or_en(
+            "fr",
+            "",
+            f"{len(missing)} indicateur(s) sans page en français, listé(s) sous leur nom anglais.",
+        )
         if missing
         else None
     )
@@ -219,22 +251,31 @@ async def search_indicators(query: str = "", lang: str = "en") -> IndicatorSearc
             url=url,
             cached=cached,
             schema_name="cihi.IndicatorSearchResult",
-            freshness="indicator lists cached 7 days, English-French pairing 1 day",
+            freshness=fr_or_en(
+                lang,
+                "indicator lists cached 7 days, English-French pairing 1 day",
+                "listes d'indicateurs mises en cache 7 jours, appariement anglais-français 1 jour",
+            ),
+            lang=lang,
         ),
     )
 
 
-def _slug(indicator: str) -> tuple[str, str | None]:
+def _slug(indicator: str, lang: str = "en") -> tuple[str, str | None]:
     """The slug, and "en"/"fr" when a page URL says which library it is from."""
     value = indicator.strip().rstrip("/").lower()
     kind = None
-    for path, lang in ((constants.INDICATOR_PATH, "en"), (constants.FR_INDICATOR_PATH, "fr")):
+    for path, library in ((constants.INDICATOR_PATH, "en"), (constants.FR_INDICATOR_PATH, "fr")):
         prefix = (constants.BASE_URL + path).lower()
         if value.startswith(prefix):
-            value, kind = value[len(prefix) :], lang
+            value, kind = value[len(prefix) :], library
     if not _SLUG.match(value):
-        raise InvalidInput(
-            f"indicator must be a slug from cihi_search_indicators, got {indicator!r}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"indicator must be a slug from cihi_search_indicators, got {indicator!r}.",
+            f"indicator doit être un identifiant (slug) tiré de cihi_search_indicators ; reçu "
+            f"{indicator!r}.",
         )
     return value, kind
 
@@ -254,37 +295,46 @@ async def _locate(indicator: str, lang: str) -> tuple[str, str, str | None, str 
     page's hreflang link. A French slug is turned into its English twin
     through the pairing, so either identifier works in either language.
     """
-    slug, kind = _slug(indicator)
+    slug, kind = _slug(indicator, lang)
     if kind is None:
         try:
-            await _page(_english_url(slug))
+            await _page(_english_url(slug), lang)
             kind = "en"
         except NotFound:
             kind = "fr"
     if kind == "en":
         if lang != "fr":
             return _english_url(slug), slug, None, None
-        html, _ = await _page(_english_url(slug))
+        html, _ = await _page(_english_url(slug), lang)
         alternate = BeautifulSoup(html, "html.parser").find("link", hreflang="fr")
         href = (
             str(alternate["href"]) if isinstance(alternate, Tag) and alternate.get("href") else ""
         )
         if not href or href.rstrip("/") == _english_url(slug):
-            note = "CIHI publishes no French page for this indicator; English page shown."
+            note = fr_or_en(
+                lang,
+                "",
+                "L'ICIS ne publie aucune page en français pour cet indicateur ; la page en "
+                "anglais est affichée.",
+            )
             return _english_url(slug), slug, None, note
         return href, slug, href.rstrip("/").rsplit("/", 1)[-1], None
-    pairs, _ = await _pairing()
+    pairs, _ = await _pairing(lang)
     to_english = {fr: en for en, fr in pairs.items()}
     english = to_english.get(slug)
     if english is None:
         try:
             # Neither an English page nor a paired French one: read it as a
             # French-only page if CIHI has one.
-            await _page(_french_url(slug))
+            await _page(_french_url(slug), lang)
         except NotFound as exc:
-            raise NotFound(
+            raise lang_error(
+                NotFound,
+                lang,
                 f"cihi: no indicator {slug!r} in the English or French library; "
-                "use a slug from cihi_search_indicators."
+                "use a slug from cihi_search_indicators.",
+                f"cihi : aucun indicateur {slug!r} dans la bibliothèque anglaise ou française ; "
+                "utilisez un identifiant tiré de cihi_search_indicators.",
             ) from exc
         note = None if lang == "fr" else "CIHI publishes no English page for this indicator."
         return _french_url(slug), slug, slug, note
@@ -303,7 +353,7 @@ def _data_file(soup: BeautifulSoup) -> str | None:
 
 async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
     url, slug, french_slug, note = await _locate(indicator, lang)
-    html, cached = await _page(url)
+    html, cached = await _page(url, lang)
     soup = BeautifulSoup(html, "html.parser")
     heading = soup.find("h1")
     summary = soup.find(class_="view-metadata-summary")
@@ -334,6 +384,7 @@ async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
             url=url,
             cached=cached,
             schema_name="cihi.IndicatorDetail",
+            lang=lang,
         ),
     )
 
@@ -370,20 +421,37 @@ def _parse_workbook(body: bytes) -> dict[str, tuple[str, list[str], list[list[st
     return tables
 
 
-async def _tables(url: str) -> tuple[dict[str, tuple[str, list[str], list[list[str]]]], bool]:
+async def _tables(
+    url: str, lang: str = "en"
+) -> tuple[dict[str, tuple[str, list[str], list[list[str]]]], bool]:
     if urlparse(url).hostname not in constants.ALLOWED_HOSTS:
-        raise UpstreamError(f"cihi: unexpected data file host in {url}.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cihi: unexpected data file host in {url}.",
+            f"cihi : hôte inattendu pour le fichier de données {url}.",
+        )
 
     async def fetch() -> dict[str, tuple[str, list[str], list[list[str]]]]:
-        response = await _get(url)
+        response = await _get(url, lang)
         if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"cihi: {url} is larger than this tool reads.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cihi: {url} is larger than this tool reads.",
+                f"cihi : {url} dépasse la taille que cet outil peut lire.",
+            )
         try:
             # Parsing a ~2 MB workbook held the event loop for ~1.8 s (measured
             # 2026-09-24), stalling every other request on the server meanwhile.
             return await run_parse(_parse_workbook, response.content)
         except Exception as exc:  # openpyxl raises several unrelated types
-            raise UpstreamError(f"cihi: {url} is not a readable XLSX file.") from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cihi: {url} is not a readable XLSX file.",
+                f"cihi : {url} n'est pas un fichier XLSX lisible.",
+            ) from exc
 
     return await cached_fetch(f"cihi:data:{url}", constants.CACHE_TTL_DATA_SECONDS, fetch)
 
@@ -400,23 +468,48 @@ async def get_indicator_data(
 ) -> IndicatorData:
     """Rows of an indicator's data table; the latest rows come last in the file."""
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX} ; reçu {limit}.",
+        )
     detail = await get_indicator(indicator, lang)
     if not detail.data_file_url:
-        raise NotFound(f"cihi: {detail.name!r} has no downloadable data table.")
-    tables, tables_cached = await _tables(detail.data_file_url)
+        raise lang_error(
+            NotFound,
+            lang,
+            f"cihi: {detail.name!r} has no downloadable data table.",
+            f"cihi : {detail.name!r} n'a aucun tableau de données téléchargeable.",
+        )
+    tables, tables_cached = await _tables(detail.data_file_url, lang)
     if not tables:
-        raise UpstreamError(f"cihi: {detail.data_file_url} has no data table sheets.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cihi: {detail.data_file_url} has no data table sheets.",
+            f"cihi : {detail.data_file_url} n'a aucune feuille de tableau de données.",
+        )
     sheet = table or next(iter(tables))
     if sheet not in tables:
-        raise InvalidInput(f"Unknown table {sheet!r}; tables are {list(tables)}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"Unknown table {sheet!r}; tables are {list(tables)}.",
+            f"tableau {sheet!r} inconnu ; les tableaux sont {list(tables)}.",
+        )
     title, header, data = tables[sheet]
     by_lower = {h.lower(): i for i, h in enumerate(header)}
 
     def index(name: str) -> int:
         position = by_lower.get(name.strip().lower())
         if position is None:
-            raise InvalidInput(f"Unknown column {name!r}; columns are {header}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"Unknown column {name!r}; columns are {header}.",
+                f"colonne {name!r} inconnue ; les colonnes sont {header}.",
+            )
         return position
 
     wanted = [(index(k), v.strip().lower()) for k, v in (filters or {}).items()]
@@ -430,7 +523,12 @@ async def get_indicator_data(
     )
     needle = (place or "").strip().lower()
     if needle and place_index is None:
-        raise InvalidInput(f"This table has no place column; columns are {header}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"This table has no place column; columns are {header}.",
+            f"ce tableau n'a pas de colonne de lieu ; les colonnes sont {header}.",
+        )
 
     def keep(row: list[str]) -> bool:
         cells = row + [""] * (len(header) - len(row))
@@ -472,14 +570,24 @@ async def get_indicator_data(
             url=detail.data_file_url,
             cached=detail.provenance.cached and tables_cached,
             schema_name="cihi.IndicatorData",
-            coverage=f"last {len(rows)} of {len(matching)} matching rows",
-            limits=truncation_note(
+            coverage=fr_or_en(
+                lang,
+                f"last {len(rows)} of {len(matching)} matching rows",
+                f"{len(rows)} dernières lignes sur {len(matching)} correspondantes",
+            ),
+            limits=truncation_note_lang(
+                lang,
                 returned=len(rows),
                 total=len(matching),
                 unit="matching rows",
+                unit_fr="lignes correspondantes",
                 order="latest",
                 how_to_get_more="filter by place or column values, pick fewer columns, or raise "
                 f"limit (max {constants.ROWS_MAX}; responses are capped near 200 KB)",
+                how_to_get_more_fr="filtrez par lieu ou par valeurs de colonne, choisissez moins "
+                f"de colonnes ou augmentez limit (max. {constants.ROWS_MAX} ; les réponses sont "
+                "plafonnées à environ 200 Ko)",
             ),
+            lang=lang,
         ),
     )

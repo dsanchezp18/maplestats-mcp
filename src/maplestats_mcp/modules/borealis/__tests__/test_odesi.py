@@ -174,3 +174,29 @@ async def test_bad_inputs_are_rejected():
         await client.search_odesi_datasets(collection="dli")
     with pytest.raises(InvalidInput):
         await client.search_odesi_variables(_PID, limit=0)
+
+
+async def test_french_detail_summary_period_and_licence(httpx_mock):
+    httpx_mock.add_response(url=_EXPORT, content=_OAI_DDI)
+    httpx_mock.add_response(url=_FILES, json=_FILES_MIXED)
+    detail = await client.get_odesi_dataset(_PID, lang="fr")
+    assert detail.time_period == "2023-10-10 au 2023-10-16"
+    assert detail.access_summary.startswith("1 fichiers sur 2 sont publics")
+    assert "restreints (licence de l'IDD)" in detail.access_summary
+    licence = detail.provenance.licence or ""
+    assert licence.startswith("Conditions d'utilisation du jeu de données (tirées de sa notice")
+    assert "Un fichier «\xa0public\xa0»" in (detail.provenance.limits or "")
+
+
+async def test_french_note_and_errors(httpx_mock):
+    httpx_mock.add_response(
+        url=_EXPORT, status_code=403, json={"status": "ERROR", "message": "Export Failed"}
+    )
+    result = await client.search_odesi_variables("doi:10.5683/SP3/TDQHW1", lang="fr")
+    assert (result.note or "").startswith("Borealis n'a pas de DDI au niveau des variables")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: borealis:odesi\xa0: "):
+        await client.get_odesi_dataset("not a doi", lang="fr")
+    with pytest.raises(InvalidInput, match="collection doit être"):
+        await client.search_odesi_datasets(collection="dli", lang="fr")
+    with pytest.raises(InvalidInput, match=r"^borealis:odesi: persistent_id must be a DOI"):
+        await client.get_odesi_dataset("not a doi")

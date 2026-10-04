@@ -30,6 +30,7 @@ from maplestats_mcp.modules.ourcommons.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -88,7 +89,9 @@ def _check_lang(lang: str) -> None:
         raise InvalidInput("ourcommons: lang must be 'en' or 'fr'.")
 
 
-async def _xml(url: str, context: str, ttl: int) -> tuple[Node, bool]:
+async def _xml(
+    url: str, context: str, ttl: int, lang: str = "en", context_fr: str = ""
+) -> tuple[Node, bool]:
     async def fetch() -> Node:
         await _LIMITER.acquire()
         try:
@@ -97,14 +100,34 @@ async def _xml(url: str, context: str, ttl: int) -> tuple[Node, bool]:
             status = exc.response.status_code
             if status in (301, 302, 404):
                 # An unknown person id answers 302 to an error page.
-                raise NotFound(f"ourcommons: {context} not found.") from exc
-            raise UpstreamError(f"ourcommons: {url} returned HTTP {status}.") from exc
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    f"ourcommons: {context} not found.",
+                    f"ourcommons : {context_fr} introuvable.",
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"ourcommons: {url} returned HTTP {status}.",
+                f"ourcommons : {url} a renvoyé HTTP {status}.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"ourcommons: {url} did not respond in time.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"ourcommons: {url} did not respond in time.",
+                f"ourcommons : {url} n'a pas répondu à temps.",
+            ) from exc
         try:
             return ElementTree.fromstring(response.content)
         except ElementTree.ParseError as exc:
-            raise NotFound(f"ourcommons: {context} returned no XML.") from exc
+            raise lang_error(
+                NotFound,
+                lang,
+                f"ourcommons: {context} returned no XML.",
+                f"ourcommons : {context_fr} : aucun XML renvoyé.",
+            ) from exc
 
     return await cached_fetch(f"ourcommons:{url}", ttl, fetch)
 
@@ -135,9 +158,16 @@ async def list_members(
 ) -> MemberList:
     _check_lang(lang)
     if not 1 <= limit <= constants.MEMBERS_LIMIT_MAX:
-        raise InvalidInput(f"ourcommons: limit must be 1 to {constants.MEMBERS_LIMIT_MAX}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"ourcommons: limit must be 1 to {constants.MEMBERS_LIMIT_MAX}.",
+            f"ourcommons : limit doit être compris entre 1 et {constants.MEMBERS_LIMIT_MAX}.",
+        )
     url = constants.MEMBERS_URL.format(lang=lang)
-    root, cached = await _xml(url, "the member list", constants.CACHE_TTL_LIST_SECONDS)
+    root, cached = await _xml(
+        url, "the member list", constants.CACHE_TTL_LIST_SECONDS, lang, "liste des députés"
+    )
     members = parse_members(root)
 
     # Province and party accept either language whatever the feed's lang.
@@ -170,19 +200,45 @@ async def list_members(
             url=url,
             cached=cached,
             schema_name="ourcommons.MemberList",
-            freshness="Current members; the House of Commons updates the feed as seats change.",
-            coverage="Sitting members only (vacant seats are absent). Use "
-            "ourcommons_get_member_roles for a former member's history.",
-            limits=f"Showing {limit} of {len(members)} members." if len(members) > limit else None,
+            freshness=fr_or_en(
+                lang,
+                "Current members; the House of Commons updates the feed as seats change.",
+                "Députés actuels ; la Chambre des communes met le fil à jour quand les sièges "
+                "changent.",
+            ),
+            coverage=fr_or_en(
+                lang,
+                "Sitting members only (vacant seats are absent). Use "
+                "ourcommons_get_member_roles for a former member's history.",
+                "Députés en fonction seulement (les sièges vacants sont absents). Utilisez "
+                "ourcommons_get_member_roles pour l'historique d'un ancien député.",
+            ),
+            limits=(
+                fr_or_en(
+                    lang,
+                    f"Showing {limit} of {len(members)} members.",
+                    f"{limit} députés affichés sur {len(members)}.",
+                )
+                if len(members) > limit
+                else None
+            ),
+            lang=lang,
         ),
     )
 
 
-def parse_roles(root: Node, person_id: int, source_url: str, cached: bool) -> MemberRoles:
+def parse_roles(
+    root: Node, person_id: int, source_url: str, cached: bool, lang: str = "en"
+) -> MemberRoles:
     seats_root = root.find("MemberOfParliamentRoles")
     seat_nodes = [] if seats_root is None else seats_root.findall("MemberOfParliamentRole")
     if not seat_nodes:
-        raise NotFound(f"ourcommons: no member with person id {person_id}.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"ourcommons: no member with person id {person_id}.",
+            f"ourcommons : aucun député avec l'identifiant de personne {person_id}.",
+        )
     first = seat_nodes[0]
 
     def section(name: str, item: str) -> list[Node]:
@@ -259,8 +315,15 @@ def parse_roles(root: Node, person_id: int, source_url: str, cached: bool) -> Me
             url=source_url,
             cached=cached,
             schema_name="ourcommons.MemberRoles",
-            coverage="All roles, current and past, that the House of Commons records for "
-            "this person; the feed's history starts in the 1990s for former members.",
+            coverage=fr_or_en(
+                lang,
+                "All roles, current and past, that the House of Commons records for "
+                "this person; the feed's history starts in the 1990s for former members.",
+                "Tous les rôles, actuels et passés, que la Chambre des communes consigne pour "
+                "cette personne ; l'historique du fil commence dans les années 1990 pour les "
+                "anciens députés.",
+            ),
+            lang=lang,
         ),
     )
 
@@ -268,16 +331,29 @@ def parse_roles(root: Node, person_id: int, source_url: str, cached: bool) -> Me
 async def get_member_roles(person_id: int, lang: Lang = "en") -> MemberRoles:
     _check_lang(lang)
     if person_id < 1:
-        raise InvalidInput("ourcommons: person_id must be a positive integer.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "ourcommons: person_id must be a positive integer.",
+            "ourcommons : person_id doit être un entier positif.",
+        )
     url = constants.ROLES_URL.format(lang=lang, person_id=person_id)
-    root, cached = await _xml(url, f"person id {person_id}", constants.CACHE_TTL_ROLES_SECONDS)
-    return parse_roles(root, person_id, url, cached)
+    root, cached = await _xml(
+        url,
+        f"person id {person_id}",
+        constants.CACHE_TTL_ROLES_SECONDS,
+        lang,
+        f"identifiant de personne {person_id}",
+    )
+    return parse_roles(root, person_id, url, cached, lang)
 
 
 async def get_party_standings(lang: Lang = "en") -> PartyStandings:
     _check_lang(lang)
     url = constants.STANDINGS_URL.format(lang=lang)
-    root, cached = await _xml(url, "party standings", constants.CACHE_TTL_LIST_SECONDS)
+    root, cached = await _xml(
+        url, "party standings", constants.CACHE_TTL_LIST_SECONDS, lang, "répartition des sièges"
+    )
     rows = [
         PartyStanding(
             province=_text(s, "ProvinceTerritoryName"),
@@ -301,7 +377,12 @@ async def get_party_standings(lang: Lang = "en") -> PartyStandings:
             url=url,
             cached=cached,
             schema_name="ourcommons.PartyStandings",
-            freshness="Current standings of sitting members.",
+            freshness=fr_or_en(
+                lang,
+                "Current standings of sitting members.",
+                "Répartition actuelle des députés en fonction.",
+            ),
+            lang=lang,
         ),
     )
 
@@ -309,7 +390,9 @@ async def get_party_standings(lang: Lang = "en") -> PartyStandings:
 async def get_ministry(lang: Lang = "en") -> Ministry:
     _check_lang(lang)
     url = constants.MINISTRY_URL.format(lang=lang)
-    root, cached = await _xml(url, "the Ministry", constants.CACHE_TTL_LIST_SECONDS)
+    root, cached = await _xml(
+        url, "the Ministry", constants.CACHE_TTL_LIST_SECONDS, lang, "le Conseil des ministres"
+    )
     return Ministry(
         ministers=[
             Minister(
@@ -330,6 +413,11 @@ async def get_ministry(lang: Lang = "en") -> Ministry:
             url=url,
             cached=cached,
             schema_name="ourcommons.Ministry",
-            freshness="The current Ministry (Cabinet), in order of precedence.",
+            freshness=fr_or_en(
+                lang,
+                "The current Ministry (Cabinet), in order of precedence.",
+                "Le Conseil des ministres actuel, par ordre de préséance.",
+            ),
+            lang=lang,
         ),
     )
