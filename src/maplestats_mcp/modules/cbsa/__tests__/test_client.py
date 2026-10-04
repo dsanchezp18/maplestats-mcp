@@ -108,4 +108,14 @@ async def test_french_file(httpx_mock):
     assert crossing.commercial_canada_bound is not None
     assert crossing.commercial_canada_bound.status == "not_applicable"
     assert result.longest_travellers_wait is None
-    assert result.historical_data.startswith("Historique")
+    assert result.historical_data.startswith("Historique :")
+    assert (result.provenance.coverage or "").startswith("une trentaine de postes")
+    assert "Agence des services frontaliers du Canada" in (result.provenance.licence or "")
+    assert "« location »" in (result.provenance.limits or "").replace(" ", " ")
+
+
+async def test_french_errors():
+    with pytest.raises(InvalidInput, match="province inconnue"):
+        await client.border_wait_times(province="Atlantis", lang="fr")
+    with pytest.raises(InvalidInput, match="^Entrée invalide : cbsa : direction"):
+        await client.border_wait_times(direction="sideways", lang="fr")

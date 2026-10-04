@@ -40,7 +40,7 @@ async def finance_frt_list_tables(
     Mots-clés : tableaux de référence financiers, historique du déficit
     fédéral, dette fédérale, dette nette provinciale, revenus et dépenses
     publics, frais de la dette publique, ratio dette-PIB, finances
-    publiques.
+    publiques, ministère des Finances Canada.
     """
     return await client.list_frt_tables(edition, query=query, lang=lang)
 
@@ -66,9 +66,9 @@ async def finance_frt_get_table(
     provincial deficit, net debt by province, federal revenue by source,
     program spending history, public accounts data, G7 government debt.
     Mots-clés : solde budgétaire fédéral par année, tableau historique du
-    déficit, déficit provincial, dette nette par province, revenus
-    fédéraux par source, dépenses de programmes, comptes publics, dette
-    publique du G7.
+    déficit, déficit provincial, dette nette par province, revenus fédéraux
+    par source, dépenses de programmes, comptes publics, dette publique du
+    G7, ministère des Finances Canada.
     """
     return await client.get_frt_table(table, edition=edition, last=last, lang=lang)
 
@@ -88,7 +88,8 @@ async def finance_fiscal_monitor_list_issues(lang: Lang = "en") -> MonitorIssueL
     Mots-clés : revue financière, résultats financiers mensuels, déficit
     fédéral cumulatif, solde budgétaire depuis le début de l'exercice,
     rapport mensuel des Finances, revenus fédéraux mensuels, finances du
-    gouvernement du Canada, mise à jour financière.
+    gouvernement du Canada, mise à jour financière, ministère des Finances
+    Canada.
     """
     return await monitor.list_issues(lang=lang)
 
@@ -113,9 +114,9 @@ async def finance_fiscal_monitor_get_tables(
     federal revenues and expenses, Fiscal Monitor tables, GST revenue,
     public debt charges monthly, Canada federal finances, financial
     requirement.
-    Mots-clés : déficit fédéral cumulatif, solde budgétaire mensuel,
-    revenus et charges fédéraux, tableaux de la revue financière, recettes
-    de TPS, frais de la dette publique, finances fédérales, besoins
-    financiers.
+    Mots-clés : déficit fédéral cumulatif, solde budgétaire mensuel, revenus
+    et charges fédéraux, tableaux de la revue financière, recettes de TPS,
+    frais de la dette publique, finances fédérales, besoins financiers,
+    ministère des Finances Canada.
     """
     return await monitor.get_tables(period, table=table, lang=lang)

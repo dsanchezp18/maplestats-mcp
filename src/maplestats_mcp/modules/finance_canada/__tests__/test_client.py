@@ -304,3 +304,17 @@ async def test_monitor_issue_selection(httpx_mock):
         await monitor.get_tables("July 2026")
     with pytest.raises(NotFound):
         await monitor.get_tables("2026-07", table="Table 9")
+
+
+async def test_monitor_french_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(url=constants.FEED_URL, content=json.dumps(_FEED).encode())
+    issues = await monitor.list_issues(lang="fr")
+    assert issues.provenance.freshness == "mensuelle, environ deux mois après le mois visé"
+    assert issues.provenance.coverage == "numéros depuis janvier 2021"
+    licence = issues.provenance.licence or ""
+    assert licence.startswith("Avis de Canada.ca (ministère des Finances Canada) :")
+    assert "« La revue financière" in licence
+    with pytest.raises(InvalidInput, match="^Entrée invalide : finance_canada : period"):
+        await monitor.get_tables("juillet 2026", lang="fr")
+    with pytest.raises(NotFound, match="aucune revue financière pour 2026-05"):
+        await monitor.get_tables("2026-05", lang="fr")

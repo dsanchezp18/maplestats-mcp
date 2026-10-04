@@ -109,6 +109,21 @@ def test_amount_reads_fees_and_no_fee_wording(text, lang, expected):
     assert client._amount(text, lang) == expected
 
 
+@pytest.mark.parametrize(
+    ("text", "lang", "expected"),
+    [
+        ("Not required", "en", 0.0),
+        ("Non requis", "fr", 0.0),
+        ("$80,000.00", "en", 80000.0),
+        ("35 000,00 $", "fr", 35000.0),
+        ("", "en", None),
+        ("Not available", "en", None),
+    ],
+)
+def test_minimum_income_reads_not_required_as_zero(text, lang, expected):
+    assert client._minimum_income(text, lang) == expected
+
+
 def test_section_keys_do_not_depend_on_language():
     assert client._section_key("MainContent_MainContent_lblInteresrRateTitle") == "interest_rate"
     assert client._section_key("MainContent_MainContent_lblNSFFeesTitle") == "nsf_fees"
@@ -219,6 +234,9 @@ async def test_french_search_reads_french_numbers_and_accents(httpx_mock):
     assert bmo.institution == "BMO Banque de Montréal"
     assert bmo.annual_fee == 49.0 and bmo.purchase_rate == 21.99 and bmo.currency == "USD"
     assert result.provenance.url.endswith("CCCT-OCCC/SearchFilter-fra.aspx")
+    assert (result.provenance.freshness or "").startswith("Lu en direct dans l'outil")
+    assert (result.provenance.coverage or "").startswith("Cartes de crédit que les institutions")
+    assert (result.provenance.licence or "").startswith("Avis du site Web du gouvernement")
     search = _form(next(r for r in httpx_mock.get_requests() if r.method == "POST"))
     assert search[_P + "rblCurrency"] == ["15"]
     assert _P + "rblLookingForSecuredCard" not in search  # no optional-filters step
@@ -311,6 +329,17 @@ async def test_server_errors_become_typed_errors(httpx_mock):
         await client.search_bank_accounts("ON")
 
 
+async def test_french_errors_are_french(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_response(url=f"{_BASE}CCCT-OCCC/SearchFilter-fra.aspx", status_code=503)
+    with pytest.raises(UpstreamError, match="l'outil de comparaison de l'ACFC n'a pas pu"):
+        await client.search_credit_cards("ON", lang="fr")
+    with pytest.raises(InvalidInput, match="^Entrée invalide : sort doit valoir"):
+        await client.search_bank_accounts("ON", sort="cost", lang="fr")
+    with pytest.raises(InvalidInput, match="province doit valoir l'une de"):
+        await client.search_credit_cards("ZZ", lang="fr")
+
+
 # ------------------------------------------------------------------ details
 
 
@@ -362,7 +391,8 @@ async def test_french_card_detail(httpx_mock):
     assert card.name == "Carte Visa* TD Dollars US" and card.currency == "USD"
     assert card.annual_fee == 39.0 and card.annual_fee_additional_card == 0.0  # "Sans frais"
     assert card.cash_advance_rate == 22.99 and card.balance_transfer_rate is None
-    assert card.minimum_personal_income is None and card.minimum_household_income == 35000.0
+    # "Non requis" is a minimum of zero, not an unknown (it read as null before).
+    assert card.minimum_personal_income == 0.0 and card.minimum_household_income == 35000.0
     rates = next(s for s in card.sections if s.key == "interest_rate")
     assert rates.title == "Taux d’intérêt" and rates.items[2].value == "Non disponible"
 

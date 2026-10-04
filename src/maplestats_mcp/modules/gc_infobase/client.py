@@ -8,14 +8,16 @@ the CSV through shared/csv_files.py.
 from __future__ import annotations
 
 import re
+from typing import NoReturn
 
 from maplestats_mcp.modules.ckan import client as ckan
 from maplestats_mcp.modules.ckan.schemas import ResourceInfo
 from maplestats_mcp.modules.gc_infobase import constants
 from maplestats_mcp.modules.gc_infobase.schemas import InfoBaseFile, InfoBaseFileList, InfoBaseRows
 from maplestats_mcp.shared import csv_files
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -26,10 +28,52 @@ _LIMITER = get_limiter(
 _YEAR = re.compile(r"(\d{4})")
 
 
-async def _csv_resources(lang: str) -> tuple[list[ResourceInfo], str]:
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+async def _csv_resources(lang: str) -> tuple[list[ResourceInfo], str, bool]:
     package = await ckan.get_dataset("federal", constants.PACKAGE_ID, lang)
     resources = [r for r in package.resources if (r.format or "").upper() == "CSV" and r.url]
-    return resources, package.provenance.url
+    # The CKAN provenance names the bare package_show action; the package
+    # id makes the link reproduce this listing.
+    url = package.provenance.url
+    if "?" not in url:
+        url = f"{url}?id={constants.PACKAGE_ID}"
+    return resources, url, package.provenance.cached
+
+
+# Columns whose numbers are identifiers or codes, not quantities: org_id,
+# Org_ID, OID, MID, program_id, vote_type_id, vote_number, dept_code
+# (names seen across the 35 English files, 2026-10-03). They stay text.
+_ID_COLUMN = re.compile(r"(?:^|_)(?:[a-z]{0,2}id|code|number|num)$", re.IGNORECASE)
+_NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
+
+
+def _numeric_columns(rows: list[dict[str, str]], names: list[str]) -> set[str]:
+    numeric = set()
+    for name in names:
+        if _ID_COLUMN.search(name):
+            continue
+        values = [v for r in rows if (v := (r.get(name) or "").strip())]
+        if values and all(_NUMBER.match(v) for v in values):
+            numeric.add(name)
+    return numeric
+
+
+def _number(value: str) -> int | float | None:
+    text = value.strip()
+    if not text:
+        return None
+    return float(text) if "." in text else int(text)
 
 
 def _file(resource: ResourceInfo) -> InfoBaseFile:
@@ -43,7 +87,7 @@ def _file(resource: ResourceInfo) -> InfoBaseFile:
 
 
 async def list_files(query: str | None = None, lang: str = "en") -> InfoBaseFileList:
-    resources, url = await _csv_resources(lang)
+    resources, url, cached = await _csv_resources(lang)
     needle = (query or "").strip().lower()
     files = [
         _file(r)
@@ -56,10 +100,55 @@ async def list_files(query: str | None = None, lang: str = "en") -> InfoBaseFile
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="gc_infobase.InfoBaseFileList",
+            lang=lang,
         ),
     )
+
+
+async def _own_language_name(resource: ResourceInfo, lang: str) -> tuple[str, str | None]:
+    """The file's name in its own language, and a note when `lang` differs.
+
+    CKAN translates a resource's name whatever the file's language: live
+    2026-10-03, tp_pt_en.csv asked for with lang="fr" came back named
+    "Comptes publics du Canada – Paiements de transfert" over English rows
+    and columns. The name is taken in the file's language instead, and the
+    note points to the file in the asked language when there is one.
+    """
+    if not resource.language or lang in resource.language:
+        return resource.name, None
+    own = resource.language[0]
+    own_resources, _, _ = await _csv_resources(own)
+    name = next((r.name for r in own_resources if r.id == resource.id), resource.name)
+    asked, _, _ = await _csv_resources(lang)
+    stem = (resource.url or "").rsplit("/", 1)[-1]
+    twin_stem = re.sub(rf"_{own}\.csv$", f"_{lang}.csv", stem)
+    twin = next(
+        (
+            r
+            for r in asked
+            if twin_stem != stem and (r.url or "").endswith(f"/{twin_stem}") and lang in r.language
+        ),
+        None,
+    )
+    note = _text(
+        f"This file is in {own.upper()} only; lang={lang!r} does not translate its rows.",
+        f"Ce fichier n'existe qu'en {_LANGUAGE_FR.get(own, own.upper())} ; lang={lang!r} ne "
+        "traduit pas ses lignes.",
+        lang,
+    )
+    if twin is not None:
+        note += _text(
+            f" The {lang.upper()} file is resource_id {twin.id!r} ({twin.name}).",
+            f" Le fichier en {_LANGUAGE_FR.get(lang, lang.upper())} est resource_id "
+            f"{twin.id!r} ({twin.name}).",
+            lang,
+        )
+    return name, note
+
+
+_LANGUAGE_FR = {"en": "anglais", "fr": "français"}
 
 
 def _start_year(value: str) -> str | None:
@@ -80,15 +169,31 @@ async def query(
     """Rows of one file. `organization` is a case-insensitive substring;
     `fiscal_year` matches on the start year ("2023", "2023-24")."""
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX}, reçu {limit}.",
+            lang,
+        )
     year = _start_year(fiscal_year) if fiscal_year else None
     if fiscal_year and year is None:
-        raise InvalidInput(f"fiscal_year must contain a year such as 2023, got {fiscal_year!r}.")
+        _raise(
+            InvalidInput,
+            f"fiscal_year must contain a year such as 2023, got {fiscal_year!r}.",
+            f"fiscal_year doit contenir une année comme 2023, reçu {fiscal_year!r}.",
+            lang,
+        )
 
-    resources, _ = await _csv_resources(lang)
+    resources, _, _ = await _csv_resources(lang)
     resource = next((r for r in resources if r.id == resource_id.strip()), None)
     if resource is None:
-        raise NotFound(f"No GC InfoBase file {resource_id!r}. Use gc_infobase_list_files.")
+        _raise(
+            NotFound,
+            f"No GC InfoBase file {resource_id!r}. Use gc_infobase_list_files.",
+            f"aucun fichier de l'InfoBase du GC {resource_id!r}. Utilisez gc_infobase_list_files.",
+            lang,
+        )
+    name, language_note = await _own_language_name(resource, lang)
     url = resource.url or ""
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "gc_infobase")
     rows, cached = await csv_files.fetch_rows(
@@ -100,20 +205,37 @@ async def query(
     org_column = lookup.first_of(constants.ORGANIZATION_COLUMNS)
     if organization:
         if org_column is None:
-            raise InvalidInput(f"This file has no organization column; columns are {lookup.names}.")
+            _raise(
+                InvalidInput,
+                f"This file has no organization column; columns are {lookup.names}.",
+                f"ce fichier n'a pas de colonne d'organisation ; ses colonnes sont {lookup.names}.",
+                lang,
+            )
         needle = organization.strip().lower()
         matching = [r for r in matching if needle in (r.get(org_column) or "").lower()]
     if year:
         if year_column is None:
-            raise InvalidInput(f"This file has no fiscal-year column; columns are {lookup.names}.")
+            _raise(
+                InvalidInput,
+                f"This file has no fiscal-year column; columns are {lookup.names}.",
+                f"ce fichier n'a pas de colonne d'exercice ; ses colonnes sont {lookup.names}.",
+                lang,
+            )
         matching = [r for r in matching if _start_year(r.get(year_column) or "") == year]
     kept = matching[:limit]
     selected, selected_rows = csv_files.select(kept, lookup, columns)
+    # Judged over the whole file so a column's type does not depend on
+    # which rows matched (live: "expenditures" came back as "390060074.49").
+    numeric = _numeric_columns(rows, selected)
+    typed_rows = [
+        {c: _number(v) if c in numeric else v for c, v in row.items()} for row in selected_rows
+    ]
     return InfoBaseRows(
         resource_id=resource.id,
-        name=resource.name,
+        name=name,
         columns=selected,
-        rows=selected_rows,
+        numeric_columns=[c for c in selected if c in numeric],
+        rows=typed_rows,
         total_rows=len(rows),
         matching_rows=len(matching),
         returned_count=len(kept),
@@ -124,7 +246,18 @@ async def query(
             url=url,
             cached=cached,
             schema_name="gc_infobase.InfoBaseRows",
-            coverage=f"{len(kept)} of {len(matching)} matching rows",
-            freshness="files refreshed with each Estimates and Public Accounts release",
+            coverage=_text(
+                f"{len(kept)} of {len(matching)} matching rows",
+                f"{len(kept)} lignes correspondantes sur {len(matching)}",
+                lang,
+            ),
+            freshness=_text(
+                "files refreshed with each Estimates and Public Accounts release",
+                "fichiers mis à jour à chaque publication des budgets des dépenses et des "
+                "Comptes publics",
+                lang,
+            ),
+            limits=language_note,
+            lang=lang,
         ),
     )

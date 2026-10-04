@@ -40,7 +40,7 @@ import re
 import unicodedata
 from collections import Counter
 from datetime import date, datetime
-from typing import Any
+from typing import Any, NoReturn
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -61,9 +61,10 @@ from maplestats_mcp.modules.pbo.schemas import (
 )
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -74,19 +75,47 @@ _LIMITER = get_limiter(
 _ID = re.compile(r"^[A-Z]{2,6}-\d{4}-\d{3}(-[A-Z])?$")
 
 
-async def _get(path: str, params: dict[str, Any] | None = None) -> Any:
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+async def _get(path: str, params: dict[str, Any] | None = None, lang: str = "en") -> Any:
     await _LIMITER.acquire()
     try:
         return await api_get(constants.API + path, params=params, timeout=60.0)
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            raise NotFound(f"pbo: {path} does not exist.") from exc
-        raise UpstreamError(f"pbo: {path} returned HTTP {exc.response.status_code}.") from exc
-    except httpx.DecodingError as exc:
+        status = exc.response.status_code
+        if status == 404:
+            _raise(NotFound, f"pbo: {path} does not exist.", f"pbo : {path} n'existe pas.", lang)
+        _raise(
+            UpstreamError,
+            f"pbo: {path} returned HTTP {status}.",
+            f"pbo : {path} a renvoyé HTTP {status}.",
+            lang,
+        )
+    except httpx.DecodingError:
         # The API answers some unknown paths with the website's HTML page.
-        raise NotFound(f"pbo: {path} did not return JSON.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"pbo: {path} did not respond in time.") from exc
+        _raise(
+            NotFound,
+            f"pbo: {path} did not return JSON.",
+            f"pbo : {path} n'a pas renvoyé de JSON.",
+            lang,
+        )
+    except httpx.HTTPError:
+        _raise(
+            UpstreamUnavailable,
+            f"pbo: {path} did not respond in time.",
+            f"pbo : {path} n'a pas répondu à temps.",
+            lang,
+        )
 
 
 def _pick(value: Any, lang: str) -> str:
@@ -115,14 +144,21 @@ def summary(record: dict[str, Any], lang: str) -> PboPublicationSummary:
     )
 
 
-def _provenance(url: str, cached: bool, schema: str, coverage: str | None = None) -> Any:
+def _provenance(
+    url: str, cached: bool, schema: str, coverage: str | None = None, lang: str = "en"
+) -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
         cached=cached,
         schema_name=f"pbo.{schema}",
-        freshness="as PBO publishes (several a week)",
+        freshness=_text(
+            "as PBO publishes (several a week)",
+            "au fil des publications du DPB (plusieurs par semaine)",
+            lang,
+        ),
         coverage=coverage,
+        lang=lang,
     )
 
 
@@ -135,17 +171,27 @@ async def search_publications(
 ) -> PboSearchResult:
     """Newest publications, or those matching `query`, optionally of some types."""
     if page < 1:
-        raise InvalidInput("pbo: page must be >= 1.")
+        _raise(InvalidInput, "pbo: page must be >= 1.", "pbo : page doit être >= 1.", lang)
     unknown = [t for t in types or [] if t not in constants.TYPES]
     if unknown:
-        raise InvalidInput(f"pbo: unknown types {unknown}; use {list(constants.TYPES)}.")
+        _raise(
+            InvalidInput,
+            f"pbo: unknown types {unknown}; use {list(constants.TYPES)}.",
+            f"pbo : types inconnus {unknown} ; utilisez {list(constants.TYPES)}.",
+            lang,
+        )
 
     if query.strip():
 
         async def fetch_search() -> list[dict[str, Any]]:
-            found = await _get("search", {"query": query.strip()})
+            found = await _get("search", {"query": query.strip()}, lang)
             if not isinstance(found, list):
-                raise UpstreamError("pbo: search returned an unexpected shape.")
+                _raise(
+                    UpstreamError,
+                    "pbo: search returned an unexpected shape.",
+                    "pbo : la recherche a renvoyé une forme inattendue.",
+                    lang,
+                )
             return [r["payload"] for r in found if r.get("type") == "Publication"]
 
         records, cached = await cached_fetch(
@@ -162,7 +208,11 @@ async def search_publications(
             page=page,
             last_page=last_page,
             provenance=_provenance(
-                constants.API + "search", cached, "PboSearchResult", "ranked by PBO's search"
+                constants.API + "search",
+                cached,
+                "PboSearchResult",
+                _text("ranked by PBO's search", "classés par la recherche du DPB", lang),
+                lang,
             ),
         )
 
@@ -171,7 +221,7 @@ async def search_publications(
         params["types"] = ",".join(types)
 
     async def fetch_list() -> dict[str, Any]:
-        return await _get("publications", params)
+        return await _get("publications", params, lang)
 
     listing, cached = await cached_fetch(
         f"pbo:list:{params}", constants.LIST_TTL_SECONDS, fetch_list
@@ -185,7 +235,11 @@ async def search_publications(
         page=int(meta.get("current_page") or page),
         last_page=int(meta.get("last_page") or page),
         provenance=_provenance(
-            constants.API + "publications", cached, "PboSearchResult", "newest first"
+            constants.API + "publications",
+            cached,
+            "PboSearchResult",
+            _text("newest first", "les plus récentes d'abord", lang),
+            lang,
         ),
     )
 
@@ -193,14 +247,19 @@ async def search_publications(
 # ------------------------------------------------------------------ PBOML
 
 
-def decode_pboml(record: dict[str, Any]) -> dict[str, Any] | None:
+def decode_pboml(record: dict[str, Any], lang: str = "en") -> dict[str, Any] | None:
     url = (record.get("pboml_document") or {}).get("data-url")
     if not url or "," not in url:
         return None
     try:
         document = yaml.safe_load(base64.b64decode(url.split(",", 1)[1]))
-    except (ValueError, yaml.YAMLError) as exc:
-        raise UpstreamError("pbo: the publication's PBOML document does not parse.") from exc
+    except (ValueError, yaml.YAMLError):
+        _raise(
+            UpstreamError,
+            "pbo: the publication's PBOML document does not parse.",
+            "pbo : le document PBOML de la publication ne peut pas être lu.",
+            lang,
+        )
     return document if isinstance(document, dict) else None
 
 
@@ -254,16 +313,21 @@ async def get_publication(publication_id: str, *, lang: str = "en") -> PboPublic
     """One publication with its tables and text, from its PBOML document."""
     publication_id = publication_id.strip().upper()
     if not _ID.match(publication_id):
-        raise InvalidInput(f"pbo: {publication_id!r} is not a PBO id like 'LEG-2526-012-S'.")
+        _raise(
+            InvalidInput,
+            f"pbo: {publication_id!r} is not a PBO id like 'LEG-2526-012-S'.",
+            f"pbo : {publication_id!r} n'est pas un identifiant du DPB comme 'LEG-2526-012-S'.",
+            lang,
+        )
 
     async def fetch() -> dict[str, Any]:
-        record = await _get(f"publications/{publication_id}")
+        record = await _get(f"publications/{publication_id}", lang=lang)
         return record.get("data", record) if isinstance(record, dict) else {}
 
     record, cached = await cached_fetch(
         f"pbo:publication:{publication_id}", constants.PUBLICATION_TTL_SECONDS, fetch
     )
-    document = decode_pboml(record)
+    document = decode_pboml(record, lang)
     tables: list[PboTable] = []
     text_parts: list[str] = []
     for slice_ in (document or {}).get("slices") or []:
@@ -285,7 +349,7 @@ async def get_publication(publication_id: str, *, lang: str = "en") -> PboPublic
         text=text[: constants.TEXT_MAX_CHARS] or None,
         text_truncated=len(text) > constants.TEXT_MAX_CHARS,
         provenance=_provenance(
-            constants.API + f"publications/{publication_id}", cached, "PboPublication"
+            constants.API + f"publications/{publication_id}", cached, "PboPublication", lang=lang
         ),
     )
 
@@ -344,17 +408,17 @@ def request_summary(
     )
 
 
-async def _register() -> tuple[list[dict[str, Any]], bool]:
+async def _register(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     """Every information request, newest first, read page by page."""
 
     async def fetch() -> list[dict[str, Any]]:
-        first = await _get("information-requests", {"page": 1})
+        first = await _get("information-requests", {"page": 1}, lang)
         last_page = int((first.get("meta") or {}).get("last_page") or 1)
         gate = asyncio.Semaphore(constants.IR_FETCH_CONCURRENCY)
 
         async def one(page: int) -> list[dict[str, Any]]:
             async with gate:
-                listing = await _get("information-requests", {"page": page})
+                listing = await _get("information-requests", {"page": page}, lang)
             return list(listing.get("data") or [])
 
         rest = await asyncio.gather(*(one(p) for p in range(2, last_page + 1)))
@@ -362,7 +426,12 @@ async def _register() -> tuple[list[dict[str, Any]], bool]:
         for page_rows in rest:
             rows.extend(page_rows)
         if not rows:
-            raise UpstreamError("pbo: the information-request register came back empty.")
+            _raise(
+                UpstreamError,
+                "pbo: the information-request register came back empty.",
+                "pbo : le registre des demandes d'information est revenu vide.",
+                lang,
+            )
         return rows
 
     return await cached_fetch("pbo:information-requests", constants.REGISTER_TTL_SECONDS, fetch)
@@ -382,12 +451,17 @@ def _department_matches(record: dict[str, Any], wanted: str) -> bool:
     return wanted in names
 
 
-def _date_arg(value: str, name: str) -> str:
+def _date_arg(value: str, name: str, lang: str = "en") -> str:
     value = value.strip()
     if not value:
         return ""
     if not re.fullmatch(r"\d{4}(-\d{2}(-\d{2})?)?", value):
-        raise InvalidInput(f"pbo: {name} must be YYYY, YYYY-MM or YYYY-MM-DD, not {value!r}.")
+        _raise(
+            InvalidInput,
+            f"pbo: {name} must be YYYY, YYYY-MM or YYYY-MM-DD, not {value!r}.",
+            f"pbo : {name} doit être au format AAAA, AAAA-MM ou AAAA-MM-JJ, pas {value!r}.",
+            lang,
+        )
     return value
 
 
@@ -404,22 +478,38 @@ async def search_information_requests(
 ) -> PboInformationRequestList:
     """Filter PBO's register of information requests, newest first, with counts."""
     if page < 1:
-        raise InvalidInput("pbo: page must be >= 1.")
+        _raise(InvalidInput, "pbo: page must be >= 1.", "pbo : page doit être >= 1.", lang)
     if status and status not in constants.REQUEST_STATUSES and status != "open":
-        raise InvalidInput(
-            f"pbo: unknown status {status!r}; use 'open' or one of "
-            f"{list(constants.REQUEST_STATUSES)}."
+        statuses = list(constants.REQUEST_STATUSES)
+        _raise(
+            InvalidInput,
+            f"pbo: unknown status {status!r}; use 'open' or one of {statuses}.",
+            f"pbo : statut inconnu {status!r} ; utilisez 'open' ou l'un de {statuses}.",
+            lang,
         )
     if disposition and disposition not in constants.DISPOSITIONS:
-        raise InvalidInput(
-            f"pbo: unknown disposition {disposition!r}; use {list(constants.DISPOSITIONS)}."
+        dispositions = list(constants.DISPOSITIONS)
+        _raise(
+            InvalidInput,
+            f"pbo: unknown disposition {disposition!r}; use {dispositions}.",
+            f"pbo : issue inconnue {disposition!r} ; utilisez {dispositions}.",
+            lang,
         )
-    since, until = _date_arg(since, "since"), _date_arg(until, "until")
+    since, until = _date_arg(since, "since", lang), _date_arg(until, "until", lang)
     # Compare at the shorter precision: since="2024-06" and until="2024" overlap.
     shared = min(len(since), len(until))
+    # The shared range check words its error in English only.
+    if lang == "fr" and shared and since[:shared] > until[:shared]:
+        _raise(
+            InvalidInput,
+            "",
+            f"since ({since}) est postérieur à until ({until}) ; inversez-les ou élargissez "
+            "la plage.",
+            lang,
+        )
     check_range(since[:shared] or None, until[:shared] or None, "since", "until")
 
-    rows, cached = await _register()
+    rows, cached = await _register(lang)
     words = _fold(query).split()
     wanted_department = _fold(department.strip())
     matched: list[dict[str, Any]] = []
@@ -464,7 +554,12 @@ async def search_information_requests(
             constants.API + "information-requests",
             cached,
             "PboInformationRequestList",
-            f"{len(rows)} requests since December 2008, newest first",
+            _text(
+                f"{len(rows)} requests since December 2008, newest first",
+                f"{len(rows)} demandes depuis décembre 2008, les plus récentes d'abord",
+                lang,
+            ),
+            lang,
         ),
     )
 
@@ -490,14 +585,24 @@ async def get_information_request(request_id: str, *, lang: str = "en") -> PboIn
     """One information request with its letters."""
     wanted = request_id.strip().upper()
     if not re.fullmatch(r"[A-Z]{2}\d{3,5}[A-Z]?", wanted):
-        raise InvalidInput(f"pbo: {request_id!r} is not a PBO request number like 'IR0959'.")
-    rows, _ = await _register()
+        _raise(
+            InvalidInput,
+            f"pbo: {request_id!r} is not a PBO request number like 'IR0959'.",
+            f"pbo : {request_id!r} n'est pas un numéro de demande du DPB comme 'IR0959'.",
+            lang,
+        )
+    rows, _ = await _register(lang)
     found = next((r for r in rows if str(r.get("internal_id") or "").upper() == wanted), None)
     if found is None:
-        raise NotFound(f"pbo: no information request {wanted}.")
+        _raise(
+            NotFound,
+            f"pbo: no information request {wanted}.",
+            f"pbo : aucune demande d'information {wanted}.",
+            lang,
+        )
 
     async def fetch() -> dict[str, Any]:
-        record = await _get(f"information-requests/{found['id']}")
+        record = await _get(f"information-requests/{found['id']}", lang=lang)
         return record.get("data", record) if isinstance(record, dict) else {}
 
     record, cached = await cached_fetch(
@@ -510,5 +615,6 @@ async def get_information_request(request_id: str, *, lang: str = "en") -> PboIn
             constants.API + f"information-requests/{found['id']}",
             cached,
             "PboInformationRequest",
+            lang=lang,
         ),
     )

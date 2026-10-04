@@ -31,7 +31,7 @@ from typing import Any
 from bs4 import BeautifulSoup, Tag
 
 from maplestats_mcp.modules.finance_canada import constants
-from maplestats_mcp.modules.finance_canada.client import feed, fetch, fold
+from maplestats_mcp.modules.finance_canada.client import _raise, _say, feed, fetch, fold
 from maplestats_mcp.modules.finance_canada.schemas import (
     MonitorIssue,
     MonitorIssueList,
@@ -74,18 +74,27 @@ def _provenance(url: str, cached: bool, schema: str, lang: str) -> Any:
         url=url,
         cached=cached,
         schema_name=f"finance_canada.{schema}",
-        freshness="monthly, about two months after the month it covers",
-        coverage="issues since January 2021",
-        licence=constants.MONITOR_TERMS,
+        freshness=_say(
+            "monthly, about two months after the month it covers",
+            "mensuelle, environ deux mois après le mois visé",
+            lang,
+        ),
+        coverage=_say("issues since January 2021", "numéros depuis janvier 2021", lang),
+        licence=_say(constants.MONITOR_TERMS, constants.MONITOR_TERMS_FR, lang),
         lang=lang,
     )
 
 
 async def list_issues(*, lang: str = "en") -> MonitorIssueList:
-    entries, cached = await feed()
+    entries, cached = await feed(lang)
     issues = issues_from_feed(entries, lang)
     if not issues:
-        raise UpstreamError("finance_canada: the feed lists no Fiscal Monitor issue.")
+        _raise(
+            UpstreamError,
+            "finance_canada: the feed lists no Fiscal Monitor issue.",
+            "finance_canada : le fil ne liste aucun numéro de La revue financière.",
+            lang,
+        )
     return MonitorIssueList(
         issues=issues,
         provenance=_provenance(constants.FEED_URL, cached, "MonitorIssueList", lang),
@@ -223,20 +232,35 @@ async def get_tables(period: str = "", *, table: str = "", lang: str = "en") -> 
     issues = (await list_issues(lang=lang)).issues
     wanted = period.strip()
     if wanted and not re.fullmatch(r"\d{4}-\d{2}", wanted):
-        raise InvalidInput("finance_canada: period is YYYY-MM, e.g. '2026-07'.")
+        _raise(
+            InvalidInput,
+            "finance_canada: period is YYYY-MM, e.g. '2026-07'.",
+            "finance_canada : period est au format AAAA-MM, p. ex. '2026-07'.",
+            lang,
+        )
     issue = issues[0] if not wanted else next((i for i in issues if i.period == wanted), None)
     if issue is None:
         nearby = [i.period for i in issues if i.period[:4] == wanted[:4]]
-        raise NotFound(
+        _raise(
+            NotFound,
             f"finance_canada: no Fiscal Monitor for {wanted}; that year has {nearby or 'none'} "
-            "(two-month issues are listed under their first month)."
+            "(two-month issues are listed under their first month).",
+            f"finance_canada : aucune revue financière pour {wanted} ; cette année compte "
+            f"{nearby or 'aucun numéro'} (les numéros de deux mois sont listés sous leur "
+            "premier mois).",
+            lang,
         )
 
     async def load() -> list[MonitorTable]:
-        response = await fetch(issue.url, constants.MAX_PAGE_BYTES)
+        response = await fetch(issue.url, constants.MAX_PAGE_BYTES, lang)
         found = parse_issue(response.text, lang)
         if not found:
-            raise UpstreamError(f"finance_canada: {issue.url} has no tables; the page changed.")
+            _raise(
+                UpstreamError,
+                f"finance_canada: {issue.url} has no tables; the page changed.",
+                f"finance_canada : {issue.url} n'a aucun tableau ; la page a changé.",
+                lang,
+            )
         return found
 
     tables, cached = await cached_fetch(
@@ -256,9 +280,13 @@ async def get_tables(period: str = "", *, table: str = "", lang: str = "en") -> 
             )
         ]
         if not chosen:
-            raise NotFound(
-                f"finance_canada: no {table!r} in the {issue.period} issue; tables are "
-                f"{[t.label for t in tables]}."
+            labels = [t.label for t in tables]
+            _raise(
+                NotFound,
+                f"finance_canada: no {table!r} in the {issue.period} issue; tables are {labels}.",
+                f"finance_canada : aucun {table!r} dans le numéro {issue.period} ; les "
+                f"tableaux sont {labels}.",
+                lang,
             )
     return MonitorTables(
         issue=issue,

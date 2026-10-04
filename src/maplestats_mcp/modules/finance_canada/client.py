@@ -36,7 +36,7 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 
@@ -49,10 +49,11 @@ from maplestats_mcp.modules.finance_canada.schemas import (
     Value,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import check_deadline, run_parse
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -66,40 +67,80 @@ _NUMERIC = re.compile(r"^-?\d+(?:\.\d+)?$")
 _EMPTY_VALUES = {"-", "–", "—", "..", "...", "n/a", "s.o."}
 
 
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _say(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
 def fold(text: str) -> str:
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
 
 
-async def fetch(url: str, max_bytes: int) -> httpx.Response:
+async def fetch(url: str, max_bytes: int, lang: str = "en") -> httpx.Response:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status in (301, 302, 404, 410):
-            raise NotFound(f"finance_canada: nothing at {url} (HTTP {status}).") from exc
-        raise UpstreamError(f"finance_canada: {url} returned HTTP {status}.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"finance_canada: {url} did not respond in time.") from exc
+            _raise(
+                NotFound,
+                f"finance_canada: nothing at {url} (HTTP {status}).",
+                f"finance_canada : rien à {url} (HTTP {status}).",
+                lang,
+            )
+        _raise(
+            UpstreamError,
+            f"finance_canada: {url} returned HTTP {status}.",
+            f"finance_canada : {url} a renvoyé HTTP {status}.",
+            lang,
+        )
+    except httpx.HTTPError:
+        _raise(
+            UpstreamUnavailable,
+            f"finance_canada: {url} did not respond in time.",
+            f"finance_canada : {url} n'a pas répondu à temps.",
+            lang,
+        )
     if len(response.content) > max_bytes:
-        raise UpstreamError(f"finance_canada: {url} is much larger than expected.")
+        _raise(
+            UpstreamError,
+            f"finance_canada: {url} is much larger than expected.",
+            f"finance_canada : {url} est beaucoup plus volumineux que prévu.",
+            lang,
+        )
     return response
 
 
-async def feed() -> tuple[list[dict[str, Any]], bool]:
+async def feed(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     """Every entry of the Finance publications feed."""
 
     async def load() -> list[dict[str, Any]]:
-        body = (await fetch(constants.FEED_URL, constants.FEED_MAX_BYTES)).content
+        body = (await fetch(constants.FEED_URL, constants.FEED_MAX_BYTES, lang)).content
         try:
             entries = json.loads(body.decode("utf-8-sig"))["data"]
-        except (ValueError, KeyError, TypeError) as exc:
-            raise UpstreamError(
-                "finance_canada: the publications feed is not the expected JSON."
-            ) from exc
+        except (ValueError, KeyError, TypeError):
+            _raise(
+                UpstreamError,
+                "finance_canada: the publications feed is not the expected JSON.",
+                "finance_canada : le fil des publications n'est pas le JSON attendu.",
+                lang,
+            )
         if not isinstance(entries, list) or not entries:
-            raise UpstreamError("finance_canada: the publications feed is empty.")
+            _raise(
+                UpstreamError,
+                "finance_canada: the publications feed is empty.",
+                "finance_canada : le fil des publications est vide.",
+                lang,
+            )
         return [e for e in entries if isinstance(e, dict)]
 
     return await cached_fetch("finance_canada:feed", constants.FEED_TTL_SECONDS, load)
@@ -330,31 +371,50 @@ def parse_workbook(body: bytes, lang: str) -> list[ParsedTable]:
 
 
 async def _edition(edition: int | None, lang: str) -> FrtEdition:
-    entries, _ = await feed()
+    entries, _ = await feed(lang)
     editions = frt_editions(entries, lang)
     if not editions:
-        raise UpstreamError("finance_canada: the feed lists no Fiscal Reference Tables.")
+        _raise(
+            UpstreamError,
+            "finance_canada: the feed lists no Fiscal Reference Tables.",
+            "finance_canada : le fil ne liste aucun Tableau de référence financier.",
+            lang,
+        )
     if edition is None:
         return editions[0]
     for item in editions:
         if item.edition == edition:
             return item
-    raise NotFound(
+    known = [e.edition for e in editions]
+    _raise(
+        NotFound,
         f"finance_canada: no Fiscal Reference Tables workbook for {edition}; editions are "
-        f"{[e.edition for e in editions]} (earlier ones are PDF only)."
+        f"{known} (earlier ones are PDF only).",
+        f"finance_canada : aucun classeur des Tableaux de référence financiers pour {edition} ; "
+        f"les éditions sont {known} (les plus anciennes n'existent qu'en PDF).",
+        lang,
     )
 
 
 async def _tables(edition: FrtEdition, lang: str) -> tuple[list[ParsedTable], bool]:
     async def load() -> list[ParsedTable]:
-        response = await fetch(edition.workbook_url, constants.MAX_WORKBOOK_BYTES)
+        response = await fetch(edition.workbook_url, constants.MAX_WORKBOOK_BYTES, lang)
         if not response.content.startswith(b"PK"):
-            raise UpstreamError(f"finance_canada: {edition.workbook_url} is not an Excel file.")
+            _raise(
+                UpstreamError,
+                f"finance_canada: {edition.workbook_url} is not an Excel file.",
+                f"finance_canada : {edition.workbook_url} n'est pas un fichier Excel.",
+                lang,
+            )
         tables = await run_parse(parse_workbook, response.content, lang)
         if len(tables) < 20:
-            raise UpstreamError(
+            _raise(
+                UpstreamError,
                 f"finance_canada: only {len(tables)} tables read from the {edition.edition} "
-                "workbook; its layout changed."
+                "workbook; its layout changed.",
+                f"finance_canada : seulement {len(tables)} tableaux lus dans le classeur "
+                f"{edition.edition} ; sa structure a changé.",
+                lang,
             )
         return tables
 
@@ -369,9 +429,13 @@ def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | 
         url=url,
         cached=cached,
         schema_name=f"finance_canada.{schema}",
-        freshness="one edition a year (autumn), after the Annual Financial Report",
+        freshness=_say(
+            "one edition a year (autumn), after the Annual Financial Report",
+            "une édition par année (à l'automne), après le Rapport financier annuel",
+            lang,
+        ),
         coverage=coverage,
-        licence=constants.TERMS,
+        licence=_say(constants.TERMS, constants.TERMS_FR, lang),
         lang=lang,
     )
 
@@ -381,7 +445,7 @@ async def list_frt_tables(
 ) -> FrtTableList:
     """The editions, and the tables of one edition matching `query`."""
     chosen = await _edition(edition, lang)
-    entries, _ = await feed()
+    entries, _ = await feed(lang)
     tables, cached = await _tables(chosen, lang)
     words = fold(query).split()
     found = [
@@ -398,7 +462,11 @@ async def list_frt_tables(
         tables=found,
         total_matched=len(found),
         provenance=_provenance(
-            chosen.workbook_url, cached, "FrtTableList", lang, f"{len(tables)} tables"
+            chosen.workbook_url,
+            cached,
+            "FrtTableList",
+            lang,
+            _say(f"{len(tables)} tables", f"{len(tables)} tableaux", lang),
         ),
     )
 
@@ -412,7 +480,12 @@ async def get_frt_table(
 ) -> FrtTable:
     """One table of an edition by number, optionally only its last `last` rows."""
     if last is not None and last < 1:
-        raise InvalidInput("finance_canada: last must be 1 or more.")
+        _raise(
+            InvalidInput,
+            "finance_canada: last must be 1 or more.",
+            "finance_canada : last doit valoir 1 ou plus.",
+            lang,
+        )
     chosen = await _edition(edition, lang)
     tables, cached = await _tables(chosen, lang)
     for parsed in tables:
@@ -428,11 +501,21 @@ async def get_frt_table(
                     cached,
                     "FrtTable",
                     lang,
-                    f"last {len(rows)} of {parsed.info.row_count} rows" if last else None,
+                    _say(
+                        f"last {len(rows)} of {parsed.info.row_count} rows",
+                        f"les {len(rows)} dernières lignes sur {parsed.info.row_count}",
+                        lang,
+                    )
+                    if last
+                    else None,
                 ),
             )
     numbers = sorted(t.info.number for t in tables)
-    raise NotFound(
+    _raise(
+        NotFound,
         f"finance_canada: no table {table} in the {chosen.edition} edition; tables are "
-        f"{numbers[0]}-{numbers[-1]} (see finance_frt_list_tables)."
+        f"{numbers[0]}-{numbers[-1]} (see finance_frt_list_tables).",
+        f"finance_canada : aucun tableau {table} dans l'édition {chosen.edition} ; les "
+        f"tableaux vont de {numbers[0]} à {numbers[-1]} (voir finance_frt_list_tables).",
+        lang,
     )

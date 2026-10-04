@@ -40,7 +40,7 @@ async def nwt_stats_list_files(
     des Territoires du Nord-Ouest, statistiques territoriales, tableaux
     Excel, sujets, recensement, profil des collectivités, Yellowknife,
     estimations de la population, population active, produit intérieur brut,
-    indice des prix à la consommation, état civil.
+    IPC, état civil.
     """
     return await client.list_files(topic=topic, limit=limit, offset=offset, lang=lang)
 

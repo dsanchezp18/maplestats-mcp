@@ -377,3 +377,17 @@ async def test_timeout_raises_upstream_unavailable(httpx_mock):
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
     with pytest.raises(UpstreamUnavailable):
         await client.list_provinces()
+
+
+async def test_french_errors_and_provenance(httpx_mock):
+    with pytest.raises(InvalidInput, match="^Entrée invalide : category_level_2 ne doit"):
+        await client.get_table_data("Primary Rental Market", "  ", "2", "TIMESERIES", lang="fr")
+    with pytest.raises(InvalidInput, match="l'identifiant est '1' \\(Canada\\)"):
+        await client.list_categories(geography_type="Country", geography_id="2", lang="fr")
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/fr/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+    )
+    provinces = await client.list_provinces(lang="fr")
+    assert (provinces.provenance.licence or "").startswith("Conditions d'utilisation de la SCHL")
+    assert "appelez reproduce_code" in provinces.provenance.reproduce

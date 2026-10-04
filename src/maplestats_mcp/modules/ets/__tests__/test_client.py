@@ -28,7 +28,8 @@ def _feed() -> gtfs_realtime_pb2.FeedMessage:
 
 def _vehicles_payload() -> bytes:
     message = _feed()
-    for vehicle_id, route in (("4311", "922"), ("4400", "4")):
+    # Live route ids are zero-padded ("004", "001A"; checked 2026-10-03).
+    for vehicle_id, route in (("4311", "922"), ("4400", "004"), ("4501", "001A"), ("4600", "A15")):
         entity = message.entity.add(id=vehicle_id)
         entity.vehicle.trip.route_id = route
         entity.vehicle.trip.trip_id = f"trip-{route}"
@@ -70,6 +71,14 @@ def _alerts_payload() -> bytes:
     text_only = message.entity.add(id="2")
     text_only.alert.header_text.translation.add(text="Planned Detour for Route 124", language="en")
     text_only.alert.active_period.add(start=1777201200, end=1793509200)
+    # Live alert 202214 (2026-10-03): one detour on two separate days.
+    two_days = message.entity.add(id="202214")
+    two_days.alert.informed_entity.add(route_id="004")
+    two_days.alert.header_text.translation.add(
+        text="Planned Detour for Route 512 from 3760 to 3675.", language="en"
+    )
+    two_days.alert.active_period.add(start=1791000000, end=1791036000)
+    two_days.alert.active_period.add(start=1791086400, end=1791122400)
     return message.SerializeToString()
 
 
@@ -81,6 +90,40 @@ async def test_vehicle_positions_filter_and_speed(httpx_mock):
     assert vehicle.vehicle_label == "4311"
     assert vehicle.speed_kmh == 36.0
     assert result.feed_timestamp is not None
+
+
+async def test_route_filter_ignores_zero_padding(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.FEEDS["vehicles"], content=_vehicles_payload(), is_reusable=True
+    )
+    for asked, label in (("4", "4400"), ("004", "4400"), ("1A", "4501"), ("001a", "4501")):
+        result = await client.get_vehicle_positions(asked)
+        assert [v.vehicle_label for v in result.vehicles] == [label], asked
+    assert result.vehicles[0].route_id == "001A"  # echoed as in the feed
+    assert (await client.get_vehicle_positions("A15")).total_matches == 1
+    assert (await client.get_vehicle_positions("15")).total_matches == 0
+    assert (await client.get_vehicle_positions("40")).total_matches == 0
+
+
+async def test_stop_predictions_route_filter_ignores_zero_padding(httpx_mock):
+    message = _feed()
+    update = message.entity.add(id="1").trip_update
+    update.trip.route_id = "009"
+    update.stop_time_update.add(stop_sequence=1, stop_id="1321").departure.time = 1790132000
+    httpx_mock.add_response(
+        url=constants.FEEDS["trip_updates"], content=message.SerializeToString()
+    )
+    result = await client.get_stop_predictions(route_id="9")
+    assert [p.route_id for p in result.predictions] == ["009"]
+
+
+async def test_alerts_keep_every_active_period(httpx_mock):
+    httpx_mock.add_response(url=constants.FEEDS["alerts"], content=_alerts_payload())
+    result = await client.get_service_alerts(route_id="4")
+    [alert] = result.alerts
+    assert alert.alert_id == "202214" and len(alert.active_periods) == 2
+    assert alert.active_from == alert.active_periods[0].start
+    assert alert.active_until == alert.active_periods[1].end
 
 
 async def test_stop_predictions_sorted_and_arrival_fallback(httpx_mock):

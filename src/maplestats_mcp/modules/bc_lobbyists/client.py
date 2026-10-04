@@ -1,7 +1,6 @@
 """Client for the BC Registrar of Lobbyists mass datasets.
 
-Checked live 2026-10-02 (robots.txt disallows only /sitemap/; the open data
-page links both zips; the licence PDF and the two XLSX data dictionaries
+Checked live 2026-10-02 (the open data page links both zips; the licence PDF and the two XLSX data dictionaries
 were read):
 
 1. `mssDtstRprt?file=ORL_Registration_Data.zip` is 28 MB (260 MB unpacked) of
@@ -214,12 +213,17 @@ def _topics(rows: Iterable[dict[str, str]], key: str) -> dict[str, list[_Topic]]
 def _vocabulary(archive: zipfile.ZipFile, lang: str) -> tuple[dict[str, str], dict[str, str]]:
     subjects = {
         r["SUBJECT_MATTER_ID"]: r["SUBJECT_MATTER"].strip()
-        for r in _rows(archive, lang, "Subject_Matters_Export.csv", ["SUBJECT_MATTER_ID", "SUBJECT_MATTER"]
+        for r in _rows(
+            archive, lang, "Subject_Matters_Export.csv", ["SUBJECT_MATTER_ID", "SUBJECT_MATTER"]
         )
     }
     outcomes = {
         r["INTENDED_OUTCOME_ID"]: r["INTENDED_OUTCOME"].strip()
-        for r in _rows(archive, lang, "Intended_Outcomes_Export.csv", ["INTENDED_OUTCOME_ID", "INTENDED_OUTCOME"]
+        for r in _rows(
+            archive,
+            lang,
+            "Intended_Outcomes_Export.csv",
+            ["INTENDED_OUTCOME_ID", "INTENDED_OUTCOME"],
         )
     }
     return subjects, outcomes
@@ -303,7 +307,10 @@ def parse_registrations(body: bytes, url: str, lang: str = "en") -> _Registratio
     subjects, outcomes = _vocabulary(archive, lang)
     agency_names = {
         r["BC_PUBLIC_AGENCY_ID"].strip(): r["BC_PUBLIC_AGENCY"].strip()
-        for r in _rows(archive, lang, "BC_Public_Agencies_Export.csv",
+        for r in _rows(
+            archive,
+            lang,
+            "BC_Public_Agencies_Export.csv",
             ["BC_PUBLIC_AGENCY_ID", "BC_PUBLIC_AGENCY"],
         )
     }
@@ -343,14 +350,21 @@ def parse_registrations(body: bytes, url: str, lang: str = "en") -> _Registratio
                 lobbyists.setdefault(row["REG_ID"], {})[row["LOBBYIST_ID"]] = name
     agencies = {
         r["REG_ID"]: tuple(agency_names.get(i, i) for i in _ids(r["BC_PUBLIC_AGENCY_IDS"]))
-        for r in _rows(archive, lang, "Registration_BCPublicAgency_Export.csv", ["REG_ID", "BC_PUBLIC_AGENCY_IDS"]
+        for r in _rows(
+            archive,
+            lang,
+            "Registration_BCPublicAgency_Export.csv",
+            ["REG_ID", "BC_PUBLIC_AGENCY_IDS"],
         )
         if r["REG_ID"] in kept
     }
     topics = _topics(
         (
             r
-            for r in _rows(archive, lang, "Registration_SubjectMatterDetails_Export.csv",
+            for r in _rows(
+                archive,
+                lang,
+                "Registration_SubjectMatterDetails_Export.csv",
                 ["REG_ID", "TOPIC_OF_LOBBYING", "SUBJECT_MATTER_IDS", "INTENDED_OUTCOME_IDS"],
             )
             if r["REG_ID"] in kept
@@ -483,7 +497,10 @@ def parse_activity(body: bytes, url: str, lang: str = "en") -> _ActivityStore:
         if member := _clean(row["COALITION_MEMBER_NAME"]):
             coalition.setdefault(lar, {})[member] = None
     holders: dict[str, dict[_Holder, None]] = {}
-    for row in _rows(archive, lang, "LAR_SPOH_Export.csv",
+    for row in _rows(
+        archive,
+        lang,
+        "LAR_SPOH_Export.csv",
         ["LAR_ID", "SPOH_LAST_NAME", "SPOH_FIRST_NAME", "SPOH_TITLE", "BRANCH", "BC_PUBLIC_AGENCY"],
     ):
         name = _person(row["SPOH_FIRST_NAME"], row["SPOH_LAST_NAME"])
@@ -496,7 +513,10 @@ def parse_activity(body: bytes, url: str, lang: str = "en") -> _ActivityStore:
             )
             holders.setdefault(row["LAR_ID"], {})[holder] = None
     topics = _topics(
-        _rows(archive, lang, "LAR_SubjectMatterDetails_Export.csv",
+        _rows(
+            archive,
+            lang,
+            "LAR_SubjectMatterDetails_Export.csv",
             ["LAR_ID", "TOPIC_OF_LOBBYING", "SUBJECT_MATTER_IDS", "INTENDED_OUTCOME_IDS"],
         ),
         "LAR_ID",
@@ -913,8 +933,7 @@ async def search_registrations(
             else _limits_fr(
                 len(models),
                 len(matched),
-                "inscriptions correspondantes (actives d'abord, puis les plus récemment "
-                "modifiées)",
+                "inscriptions correspondantes (actives d'abord, puis les plus récemment modifiées)",
                 "précisez les filtres ou augmentez limit (maximum "
                 f"{constants.SEARCH_MAX_LIMIT}; les réponses sont aussi plafonnées vers 200 Ko)",
             ),
@@ -929,8 +948,7 @@ async def get_registration(registration: str, *, lang: str = "en") -> OrlRegistr
         raise_localized(
             InvalidInput,
             "bc_lobbyists: pass a registration id like 'R-56584653' or a number.",
-            "bc_lobbyists : indiquez un identifiant d'inscription comme 'R-56584653' ou un "
-            "numéro.",
+            "bc_lobbyists : indiquez un identifiant d'inscription comme 'R-56584653' ou un numéro.",
             lang,
         )
     store, cached = await _registrations(lang)
@@ -1227,11 +1245,32 @@ async def summarize_activity(
             counts[key] += 1
             if report.meeting is not None:
                 days.setdefault(key, []).append(report.meeting)
-    if group_by in ("month", "year"):
-        # A time series reads oldest to newest; keep the latest `top` periods.
+    series = group_by in ("month", "year")
+    if series:
+        # A time series reads oldest to newest and stays contiguous, so `top`
+        # keeps the latest periods, not the busiest (the docstring says so).
         ordered = sorted(counts)[-top:]
     else:
         ordered = [k for k, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:top]]
+    note = pick(
+        lang,
+        "Each row counts distinct reports, so a report naming two ministries counts once "
+        "for each; rows can add up to more than total_reports. Reports are not meetings: "
+        "one meeting can be reported by several lobbyists or clients.",
+        "Chaque ligne compte des rapports distincts : un rapport nommant deux ministères "
+        "compte une fois pour chacun, donc les lignes peuvent dépasser total_reports. Un "
+        "rapport n'est pas une rencontre : une rencontre peut être déclarée par plusieurs "
+        "lobbyistes ou clients.",
+    )
+    if series:
+        note += " " + pick(
+            lang,
+            f"Rows are the {len(ordered)} most recent of {len(counts)} periods, oldest to "
+            "newest (not the busiest); the latest period can be incomplete.",
+            f"Les lignes sont les {len(ordered)} périodes les plus récentes sur {len(counts)}, "
+            "de la plus ancienne à la plus récente (pas les plus chargées); la dernière "
+            "période peut être incomplète.",
+        )
     rows = [
         OrlGroupRow(
             key=k,
@@ -1246,16 +1285,7 @@ async def summarize_activity(
         rows=rows,
         groups_total=len(counts),
         total_reports=len(matched),
-        note=pick(
-            lang,
-            "Each row counts distinct reports, so a report naming two ministries counts once "
-            "for each; rows can add up to more than total_reports. Reports are not meetings: "
-            "one meeting can be reported by several lobbyists or clients.",
-            "Chaque ligne compte des rapports distincts : un rapport nommant deux ministères "
-            "compte une fois pour chacun, donc les lignes peuvent dépasser total_reports. Un "
-            "rapport n'est pas une rencontre : une rencontre peut être déclarée par plusieurs "
-            "lobbyistes ou clients.",
-        ),
+        note=note,
         omitted=_omitted(lang),
         provenance=_provenance(
             constants.ACTIVITY_ZIP,

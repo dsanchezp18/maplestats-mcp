@@ -2,7 +2,8 @@
 
 topic_population.html is the live population topic page unchanged;
 population_quarterly.xlsx and migration_quarterly.xls are the live files
-(an .xlsx and a legacy .xls).
+(an .xlsx and a legacy .xls). lfc_agesex_monthly.xlsx is the live labour
+"Current Month" file saved 2026-10-03 (one sheet per month, Jan2026 to Aug2026).
 """
 
 from __future__ import annotations
@@ -134,6 +135,60 @@ async def test_unknown_sheet_and_paging(httpx_mock):
     assert first.truncated and first.rows != second.rows
 
 
+_MONTHLY = "https://www.stats.gov.nl.ca/Statistics/Topics/labour/Excel/LFC_AgeSex_Mthly_NL.xlsx"
+
+
+def test_sheet_month_names():
+    assert client.sheet_month("Aug2026") == (2026, 8)
+    assert client.sheet_month("September 2025") == (2025, 9)
+    assert client.sheet_month("2026-Jan") == (2026, 1)
+    assert client.sheet_month("Dec 25") == (2025, 12)
+    assert client.sheet_month("Quarterly") is None
+    assert client.sheet_month("Notes2026") is None
+    assert client.default_sheet(["Quarterly", "Annual"]) == ("Quarterly", "first")
+    assert client.default_sheet(["Notes", "Dec2025", "Jan2026"]) == ("Jan2026", "newest_month")
+
+
+async def test_month_per_sheet_workbook_reads_newest_month(httpx_mock):
+    # lfc_agesex_monthly.xlsx is the live "Current Month" file of 2026-10-03:
+    # sheets Jan2026 .. Aug2026 in calendar order, so sheets[0] was the oldest.
+    httpx_mock.add_response(url=_MONTHLY, content=_bytes("lfc_agesex_monthly.xlsx"))
+    data = await client.read_file(_MONTHLY, limit=3)
+    assert data.sheets[0].name == "Jan2026"
+    assert data.sheet == "Aug2026" and data.sheet_chosen_by == "newest_month"
+    assert data.provenance.limits and "newest ('Aug2026')" in data.provenance.limits
+    assert "8 sheets exist" in data.provenance.limits
+    asked = await client.read_file(_MONTHLY, sheet="jan2026", limit=1)
+    assert asked.sheet == "Jan2026" and asked.sheet_chosen_by == "request"
+
+
+async def test_multi_row_header_is_joined(httpx_mock):
+    httpx_mock.add_response(url=_MONTHLY, content=_bytes("lfc_agesex_monthly.xlsx"))
+    single = await client.read_file(_MONTHLY, limit=2)
+    # Live layout: row 5 holds the group labels, row 6 the sub-labels, row 7 units.
+    assert single.header_row == 5 and single.header[3] == "Employment"
+    assert single.rows[0][3:6] == ["Total", "Full-Time", "Part-Time"]
+    joined = await client.read_file(_MONTHLY, header_rows=3, limit=2)
+    assert joined.header_rows == 3
+    assert joined.header[1] == "Population 15+ Thousands"
+    assert joined.header[3:6] == ["Employment Total", "Full-Time", "Part-Time"]
+    assert joined.rows[0][0] == "Total-Gender"
+    explicit = await client.read_file(_MONTHLY, header_row=6, limit=1)
+    assert explicit.header_row == 6 and explicit.header[3] == "Total"
+
+
+async def test_header_row_beyond_sheet_and_bad_header_rows(httpx_mock):
+    httpx_mock.add_response(url=_MONTHLY, content=_bytes("lfc_agesex_monthly.xlsx"))
+    data = await client.read_file(_MONTHLY, limit=1)
+    rows = next(s.rows for s in data.sheets if s.name == data.sheet)
+    with pytest.raises(InvalidInput, match=f"has only {rows} rows"):
+        await client.read_file(_MONTHLY, header_row=9999)
+    with pytest.raises(InvalidInput, match="header_rows"):
+        await client.read_file(_MONTHLY, header_rows=9)
+    with pytest.raises(InvalidInput, match="1-based"):
+        await client.read_file(_MONTHLY, header_row=0)
+
+
 async def test_html_error_page_is_not_found(httpx_mock):
     httpx_mock.add_response(url=_XLSX, content=b"<!DOCTYPE html><html>Error</html>")
     with pytest.raises(NotFound):
@@ -157,7 +212,7 @@ async def test_french_provenance_and_english_unchanged(httpx_mock):
     assert "Terre-Neuve-et-Labrador" in (french.provenance.licence or "")
     assert "Statistique Canada" in (french.provenance.licence or "")
     assert (french.provenance.freshness or "").startswith("Tel que publié")
-    assert (french.provenance.limits or "").startswith("Les feuilles sont lues")
+    assert (french.provenance.limits or "").startswith("les feuilles sont lues")
     english = await client.read_file(_XLSX, limit=2)
     assert english.provenance.freshness == "As published by the NL Statistics Agency."
     assert english.provenance.coverage == "Sheet 'Quarterly' of " + str(len(english.sheets)) + "."

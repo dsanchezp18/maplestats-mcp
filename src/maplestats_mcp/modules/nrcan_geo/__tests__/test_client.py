@@ -242,3 +242,80 @@ async def test_limit_and_radius_bounds_are_invalid_input():
         await client.search_names("Banff", limit=101)
     with pytest.raises(InvalidInput, match="radius_km"):
         await client.search_names(latitude=51.0, longitude=-115.0, radius_km=501)
+
+
+# Live 2026-10-04: with lang=fr the "locate" index translated "City" inside
+# the name ("Rapid Ville"), while geonames kept "Rapid City".
+_RAPID_EN = [
+    {
+        "key": "geonames",
+        "name": "Rapid City",
+        "province": "Manitoba",
+        "category": "Town",
+        "lat": 50.12,
+        "lng": -100.03,
+    },
+    {
+        "key": "locate",
+        "name": "Rapid City, 20,29-13-19-W, Manitoba (Town)",
+        "province": "Manitoba",
+        "category": "Town",
+        "lat": 50.13,
+        "lng": -100.02,
+    },
+]
+_RAPID_FR = [
+    {
+        "key": "geonames",
+        "name": "Rapid City",
+        "province": "Manitoba",
+        "category": "Ville",
+        "lat": 50.12,
+        "lng": -100.03,
+    },
+    {
+        "key": "locate",
+        "name": "Rapid Ville, 20,29-13-19-W, Manitoba (Ville)",
+        "province": "Manitoba",
+        "category": "Ville",
+        "lat": 50.13,
+        "lng": -100.02,
+    },
+]
+
+
+async def test_french_locate_keeps_the_official_toponym(httpx_mock):
+    httpx_mock.add_response(url=re.compile(r".*lang=fr.*"), json=_RAPID_FR)
+    httpx_mock.add_response(url=re.compile(r".*lang=en.*"), json=_RAPID_EN)
+    result = await client.locate("Rapid City", lang="fr")
+    assert [loc.name for loc in result.locations] == [
+        "Rapid City",
+        "Rapid City, 20,29-13-19-W, Manitoba (Ville)",
+    ]
+    assert result.locations[1].category == "Ville"
+    assert (result.provenance.limits or "").startswith("Les noms de lieux sont les toponymes")
+    assert "Rapid Ville" not in (result.provenance.limits or "")
+
+
+async def test_french_locate_notes_an_unmatched_name(httpx_mock):
+    moved = [{**_RAPID_EN[0]}, {**_RAPID_EN[1], "lat": 49.0}]
+    httpx_mock.add_response(url=re.compile(r".*lang=fr.*"), json=_RAPID_FR)
+    httpx_mock.add_response(url=re.compile(r".*lang=en.*"), json=moved)
+    result = await client.locate("Rapid City", lang="fr")
+    assert result.locations[1].name.startswith("Rapid Ville")
+    assert "Rapid Ville" in (result.provenance.limits or "")
+
+
+async def test_english_locate_makes_one_request(httpx_mock):
+    httpx_mock.add_response(json=_RAPID_EN)
+    result = await client.locate("Rapid City")
+    assert result.locations[1].name.startswith("Rapid City, 20")
+    assert result.provenance.limits is None
+    assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_french_errors_are_french():
+    with pytest.raises(InvalidInput, match="^Entrée invalide : limit doit être compris"):
+        await client.locate("Banff", limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="donnez une requête"):
+        await client.search_names(lang="fr")

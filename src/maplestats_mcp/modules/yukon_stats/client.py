@@ -3,7 +3,8 @@
 Discovery is one `package_search` for the Bureau's organization: its
 results already carry every resource (URL, format, size), so no per-dataset
 `package_show` is needed. Only CSV files the catalogue lists are read, and a
-file whose declared size is over the cap is refused before it is downloaded.
+file whose declared size is over the cap is refused before it is downloaded;
+others are streamed under the cap.
 """
 
 from __future__ import annotations
@@ -14,16 +15,15 @@ from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-import httpx
-
 from maplestats_mcp.modules.yukon_stats import constants
 from maplestats_mcp.modules.yukon_stats.schemas import TableEntry, TableList, TableRows
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.csv_files import Columns, decode, exact_filter
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits
@@ -148,7 +148,7 @@ async def list_tables(
                     lang,
                     f"Showing {limit} of {total} tables; narrow with query or dataset, or raise "
                     f"limit (max {constants.TABLES_LIMIT_MAX}).",
-                    f"{limit} tableaux affichés sur {total}; précisez avec query ou dataset, ou "
+                    f"{limit} tableaux affichés sur {total} ; précisez avec query ou dataset, ou "
                     f"augmentez limit (max. {constants.TABLES_LIMIT_MAX}).",
                 )
                 if total > limit
@@ -198,56 +198,89 @@ def _parse(body: bytes, lang: Lang = "en") -> tuple[list[str], list[dict[str, st
     return keep, rows
 
 
+def _thousands(number: int) -> str:
+    """12 345 678, the French way (no-break spaces between thousands)."""
+    return f"{number:,}".replace(",", "\u00a0")
+
+
+def _too_large(url: str, size: int, lang: Lang = "en") -> UpstreamError:
+    return UpstreamError(
+        pick(
+            lang,
+            f"yukon_stats: {url} is {size:,} bytes, larger than the "
+            f"{constants.MAX_FILE_BYTES:,} this tool reads. Download it from the portal instead.",
+            f"La source amont a renvoyé une réponse inattendue : yukon_stats : {url} pèse "
+            f"{_thousands(size)} octets, plus que les {_thousands(constants.MAX_FILE_BYTES)} "
+            "que cet outil lit. Téléchargez-le plutôt depuis le portail.",
+        )
+    )
+
+
 async def _table(
     url: str, declared_size: int | None, lang: Lang = "en"
 ) -> tuple[tuple[list[str], list[dict[str, str]]], bool]:
-    if declared_size is not None and declared_size > constants.MAX_FILE_BYTES:
-        size_mb = f"{declared_size / 1_048_576:.1f}"
-        max_mb = constants.MAX_FILE_BYTES // 1_048_576
-        raise_localized(
-            InvalidInput,
-            f"yukon_stats: {url} is {size_mb} MB, larger than the {max_mb} MB this tool reads.",
-            f"yukon_stats : {url} fait {size_mb.replace('.', ',')} Mo, plus que les {max_mb} Mo "
-            "que cet outil peut lire.",
-            lang,
-        )
+    # The catalogue states each file's size; refuse an oversized file before
+    # spending a paced request and the download on it.
+    if declared_size and declared_size > constants.MAX_FILE_BYTES:
+        raise _too_large(url, declared_size, lang)
 
     async def fetch() -> tuple[list[str], list[dict[str, str]]]:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            if status == 404:
-                raise_localized(
-                    NotFound,
-                    f"yukon_stats: no file at {url}.",
-                    f"yukon_stats : aucun fichier à {url}.",
-                    lang,
-                )
-            raise_localized(
-                UpstreamError,
-                f"yukon_stats: {url} returned HTTP {status}.",
-                f"yukon_stats : {url} a renvoyé le code HTTP {status}.",
-                lang,
-            )
-        except httpx.HTTPError:
-            raise_localized(
-                UpstreamUnavailable,
-                f"yukon_stats: {url} did not respond in time.",
-                f"yukon_stats : {url} n'a pas répondu à temps.",
-                lang,
-            )
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise_localized(
-                UpstreamError,
-                f"yukon_stats: {url} is larger than this tool reads.",
-                f"yukon_stats : {url} dépasse la taille que cet outil peut lire.",
-                lang,
-            )
-        return _parse(response.content, lang)
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, and an undeclared one stops at the cap. The
+        # parsed rows are cached below, so the bytes are not kept a second time.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="yukon_stats",
+            timeout=180.0,
+        )
+        return await run_parse(_parse, downloaded.body, lang)
 
     return await cached_fetch(f"yukon_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+
+
+async def _listed(url: str, lang: Lang = "en") -> TableEntry:
+    """The catalogue entry for exactly this URL.
+
+    open.yukon.ca serves a download by its resource id and ignores the file
+    name: on 2026-10-03 ".../resource/9d6ceba0-.../download/zz-vacancy-rates.csv"
+    returned the rent table, so an unchecked URL can label one table with
+    another's name. Only URLs the catalogue lists are read, so the tool also
+    never fetches an arbitrary path under /data/.
+    """
+    tables, _ = await _catalogue()
+    entry = next((t for t in tables if t.url == url), None)
+    if entry is not None:
+        return entry
+    resource_id = _resource_id(url)
+    same = next((t for t in tables if resource_id and _resource_id(t.url) == resource_id), None)
+    if same is not None:
+        raise_localized(
+            InvalidInput,
+            f"yukon_stats: the catalogue lists this resource as {same.url} ({same.title!r}); "
+            "pass that exact URL.",
+            f"yukon_stats : le catalogue répertorie cette ressource sous {same.url} "
+            f"({same.title!r}) ; indiquez cette adresse exacte.",
+            lang,
+        )
+    raise_localized(
+        NotFound,
+        f"yukon_stats: {url} is not a CSV table of the Yukon Bureau of Statistics "
+        "(see yukon_stats_list_tables).",
+        f"yukon_stats : {url} n'est pas un tableau CSV du Bureau de la statistique du Yukon "
+        "(voir yukon_stats_list_tables).",
+        lang,
+    )
+
+
+def _resource_id(url: str) -> str | None:
+    parts = urlparse(url).path.split("/")
+    if "resource" in parts:
+        index = parts.index("resource") + 1
+        return parts[index] if index < len(parts) else None
+    return None
 
 
 async def query_table(
@@ -274,20 +307,7 @@ async def query_table(
             lang,
         )
 
-    # Only files the catalogue lists are read, so the tool never fetches an
-    # arbitrary path under /data/.
-    listed, _ = await _catalogue()
-    entry = next((t for t in listed if t.url == url), None)
-    if entry is None:
-        raise_localized(
-            NotFound,
-            f"yukon_stats: {url} is not a CSV table of the Yukon Bureau of Statistics "
-            "(see yukon_stats_list_tables).",
-            f"yukon_stats : {url} n'est pas un tableau CSV du Bureau de la statistique du Yukon "
-            "(voir yukon_stats_list_tables).",
-            lang,
-        )
-
+    entry = await _listed(url, lang)
     (names, rows), cached = await _table(url, entry.size_bytes, lang)
     lookup = Columns([dict.fromkeys(names, "")])
     rows = exact_filter(rows, lookup, filters)

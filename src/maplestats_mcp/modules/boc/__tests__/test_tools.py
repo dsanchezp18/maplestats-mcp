@@ -61,7 +61,7 @@ async def test_boc_get_series_delegates_to_client(monkeypatch):
 
     result = await tools.boc_get_series("FXUSDCAD")
 
-    mock_get_series.assert_awaited_once_with("FXUSDCAD")
+    mock_get_series.assert_awaited_once_with("FXUSDCAD", lang="en")
     assert result is fake_result
 
 
@@ -70,11 +70,11 @@ async def test_boc_search_series_without_query_lists(monkeypatch):
     mock_search = AsyncMock(return_value="some")
     monkeypatch.setattr(tools.client, "list_series", mock_list)
     monkeypatch.setattr(tools.client, "search_series", mock_search)
-    monkeypatch.setattr(tools.client, "page_series", lambda result, limit: (result, limit))
+    monkeypatch.setattr(tools.client, "page_series", lambda result, limit, lang: (result, limit))
 
     assert await tools.boc_search_series() == ("all", 50)
     assert await tools.boc_search_series("cpi") == "some"
-    mock_search.assert_awaited_once_with("cpi", limit=25)
+    mock_search.assert_awaited_once_with("cpi", limit=25, lang="en")
 
 
 async def test_boc_search_groups_without_query_lists(monkeypatch):
@@ -82,11 +82,11 @@ async def test_boc_search_groups_without_query_lists(monkeypatch):
     mock_search = AsyncMock(return_value="some")
     monkeypatch.setattr(tools.client, "list_groups", mock_list)
     monkeypatch.setattr(tools.client, "search_groups", mock_search)
-    monkeypatch.setattr(tools.client, "page_groups", lambda result, limit: (result, limit))
+    monkeypatch.setattr(tools.client, "page_groups", lambda result, limit, lang: (result, limit))
 
     assert await tools.boc_search_groups() == ("all", 50)
     assert await tools.boc_search_groups("fx", limit=5) == "some"
-    mock_search.assert_awaited_once_with("fx", limit=5)
+    mock_search.assert_awaited_once_with("fx", limit=5, lang="en")
 
 
 async def test_boc_limit_without_query_trims_list(monkeypatch):
@@ -107,3 +107,23 @@ async def test_boc_limit_without_query_trims_list(monkeypatch):
     assert result.total_count == 3
     assert (result.provenance.limits or "").startswith("Returned the first 2 of 3 series")
     assert full.total_count == 3  # the cached list is left whole
+
+
+async def test_boc_tools_pass_lang_through(monkeypatch):
+    mock_get_series = AsyncMock(return_value="detail")
+    mock_observations = AsyncMock(return_value="obs")
+    monkeypatch.setattr(tools.client, "get_series", mock_get_series)
+    monkeypatch.setattr(tools.client, "get_observations", mock_observations)
+
+    assert await tools.boc_get_series("V39079", lang="fr") == "detail"
+    mock_get_series.assert_awaited_once_with("V39079", lang="fr")
+    await tools.boc_get_observations(["V39079"], recent=1, lang="fr")
+    assert mock_observations.await_args is not None
+    assert mock_observations.await_args.kwargs["lang"] == "fr"
+
+
+@pytest.mark.parametrize("tool_fn", ALL_TOOLS, ids=lambda f: f.__name__)
+def test_boc_mots_cles_capitalize_the_bank(tool_fn):
+    mots_cles = (tool_fn.__doc__ or "").split("Mots-clés :")[1]
+    assert "Banque du Canada" in mots_cles
+    assert "banque du canada" not in mots_cles

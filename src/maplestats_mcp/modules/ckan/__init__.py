@@ -14,7 +14,7 @@ MODULE_DESCRIPTION = (
     "organizations, resources, licenses, tags, groups, row-level "
     "DataStore queries, and a reader for the Excel (.xlsx, .xls) and CSV "
     "files of file-only resources (about half the tabular datasets on the "
-    "federal, Ontario and BC portals have no DataStore; not Toronto, whose robots.txt disallows file downloads): sheets, "
+    "federal, Ontario and BC portals have no DataStore; not Toronto, whose portal does not permit automated file downloads): sheets, "
     "guessed header row, filters and paging, with the licence, source and "
     "a warning when the licence is not open. Portals are selected with a "
     "`portal` key."
@@ -28,8 +28,7 @@ MODULE_DESCRIPTION_FR = (
     "lignes et lecture des fichiers Excel (.xlsx, .xls) et CSV des "
     "ressources sans DataStore (environ la moitié des jeux de données "
     "tabulaires des portails fédéral, ontarien et britanno-colombien; pas "
-    "Toronto, dont le serveur interdit le téléchargement automatisé des fichiers) : "
-    "feuilles, ligne d'en-tête devinée, filtres et pagination, "
+    "Toronto, dont le portail ne permet pas le téléchargement automatisé des fichiers) : feuilles, ligne d'en-tête devinée, filtres et pagination, "
     "avec la licence, la source et un avertissement quand la licence n'est "
     "pas ouverte. Les portails sont choisis au moyen d'une clé `portal`."
 )

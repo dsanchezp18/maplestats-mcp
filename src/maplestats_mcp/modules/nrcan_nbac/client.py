@@ -13,13 +13,14 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from typing import Any
+from typing import Any, NoReturn
 
 from maplestats_mcp.modules.nrcan_nbac import constants
 from maplestats_mcp.modules.nrcan_nbac.schemas import FireQueryResult, FireRecord
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.wfs import WfsConfig, get_features
 
 CONFIG = WfsConfig(
@@ -28,6 +29,17 @@ CONFIG = WfsConfig(
     rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
 )
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _pick(en: str, fr: str, lang: str) -> str:
+    return french_spacing(fr) if lang == "fr" else en
 
 
 def _parse_nbac_date(value: object) -> date | None:
@@ -91,7 +103,7 @@ async def query_fires(
     offset: int = 0,
     lang: str = "en",
 ) -> FireQueryResult:
-    """Query fire polygons/records from NBAC; ``lang`` is accepted for consistency.
+    """Query fire polygons/records from NBAC; ``lang`` picks the language of notes and errors.
 
     ``cql_filter`` is a standard OGC CQL expression against NBAC's own
     field names, e.g. ``"admin_area = 'BC' AND year >= 2017 AND year
@@ -99,11 +111,20 @@ async def query_fires(
     lightweight attribute-only query -- NBAC's polygons can be large,
     and most analyses only need the dates/area/admin_area columns.
     """
-    del lang
     if limit < 1 or limit > constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_LIMIT_MAX}, reçu {limit}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        _raise(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être >= 0, reçu {offset}.",
+            lang,
+        )
     requested = limit
     if include_geometry:
         limit = min(limit, constants.GEOMETRY_ROWS_MAX)
@@ -140,20 +161,47 @@ async def query_fires(
                 used += size
     total_matched = body.get("numberMatched") or body.get("totalFeatures") or len(fires)
     last_year = await latest_year()
-    notes = []
+    notes: list[str] = []
+    budget_mb = constants.GEOMETRY_BYTES_MAX // 1_000_000
     if limit < requested:
         notes.append(
-            f"With geometry, at most {limit} fires are returned per call (a single NBAC "
-            f"polygon can be several MB); continue with offset={offset + len(fires)}."
+            _pick(
+                f"With geometry, at most {limit} fires are returned per call (a single NBAC "
+                f"polygon can be several MB); continue with offset={offset + len(fires)}.",
+                f"Avec la géométrie, au plus {limit} feux sont renvoyés par appel (un seul "
+                f"polygone du CNZB peut peser plusieurs Mo) ; continuez avec "
+                f"offset={offset + len(fires)}.",
+                lang,
+            )
         )
     if omitted:
         notes.append(
-            f"{omitted} polygon(s) left out: together they exceed the "
-            f"{constants.GEOMETRY_BYTES_MAX // 1_000_000} MB geometry budget. Ask for those "
-            "fires one at a time, or use the NBAC shapefile download."
+            _pick(
+                f"{omitted} polygon(s) left out: together they exceed the "
+                f"{budget_mb} MB geometry budget. Ask for those "
+                "fires one at a time, or use the NBAC shapefile download.",
+                f"{omitted} polygone(s) omis : ensemble, ils dépassent le budget de "
+                f"géométrie de {budget_mb} Mo. Demandez ces feux un à la fois, ou utilisez "
+                "le téléchargement du fichier de formes du CNZB.",
+                lang,
+            )
         )
     if not fires and last_year is not None:
-        notes.append(f"No fires matched; NBAC currently runs to fire year {last_year}.")
+        notes.append(
+            _pick(
+                f"No fires matched; NBAC currently runs to fire year {last_year}.",
+                f"Aucun feu ne correspond ; le CNZB va actuellement jusqu'à la saison des "
+                f"feux {last_year}.",
+                lang,
+            )
+        )
+    if lang == "fr":
+        notes.append(
+            french_spacing(
+                "Les codes de la source (admin_area, basrc, firecaus, etc.) sont reproduits "
+                "tels quels."
+            )
+        )
     return FireQueryResult(
         fires=fires,
         returned_count=len(fires),
@@ -169,11 +217,23 @@ async def query_fires(
             url=f"{constants.BASE_URL}?typeName={constants.TYPE_NAME}",
             cached=was_cached,
             schema_name="nrcan_nbac.FireQueryResult",
-            coverage=f"{len(fires)} of {total_matched} total matching fires returned",
-            limits=f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
-            freshness=(
-                "NBAC is compiled annually, not updated in real time"
-                + (f"; latest fire year {last_year}" if last_year else "")
+            coverage=_pick(
+                f"{len(fires)} of {total_matched} total matching fires returned",
+                f"{len(fires)} feux renvoyés sur {total_matched} correspondants",
+                lang,
             ),
+            limits=_pick(
+                f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
+                f"lignes plafonnées à {constants.ROWS_LIMIT_MAX} par requête",
+                lang,
+            ),
+            freshness=_pick(
+                "NBAC is compiled annually, not updated in real time"
+                + (f"; latest fire year {last_year}" if last_year else ""),
+                "Le CNZB est compilé chaque année, pas mis à jour en temps réel"
+                + (f" ; dernière saison des feux : {last_year}" if last_year else ""),
+                lang,
+            ),
+            lang=lang,
         ),
     )

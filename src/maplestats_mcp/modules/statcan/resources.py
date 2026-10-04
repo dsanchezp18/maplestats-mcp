@@ -42,8 +42,8 @@ _GOTCHAS_DOC = """\
 - **Real-time tables.** StatCan's real-time data tables (revision
   histories such as "Historical (real-time) releases of Consumer Price
   Index statistics", 18100259) are ordinary tables in WDS. wds_search_cubes
-  marks them real_time=true. MapleStats reads them through WDS only; the
-  separate real-time viewer service is disallowed by StatCan's robots.txt.
+  marks them real_time=true. MapleStats reads them through WDS only, not
+  through the separate real-time viewer service.
 - **12am-8:30am ET daily lock window.** WDS returns HTTP 409 for some
   methods during this window while data updates. This surfaces as a
   DataLocked error here, not a generic failure — it means "try again

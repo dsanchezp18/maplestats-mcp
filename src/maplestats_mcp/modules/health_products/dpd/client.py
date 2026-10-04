@@ -178,10 +178,15 @@ def _summary(row: Row, status: tuple[int | None, str] | None, lang: str) -> Drug
     )
 
 
-def _normalise_din(din: str) -> str:
+def _normalise_din(din: str, lang: str = "en") -> str:
     cleaned = din.strip().replace(" ", "")
     if not _DIN.match(cleaned):
-        raise InvalidInput(f"'{din}' is not a DIN: a DIN is up to 8 digits, e.g. 02242705.")
+        api.fail(
+            InvalidInput,
+            f"'{din}' is not a DIN: a DIN is up to 8 digits, e.g. 02242705.",
+            f"'{din}' n'est pas un DIN : un DIN compte au plus 8 chiffres, p. ex. 02242705.",
+            lang,
+        )
     return cleaned.zfill(8)
 
 
@@ -202,51 +207,75 @@ async def search_products(
     lang: str = "en",
 ) -> DrugProductList:
     if not any((din, brand.strip(), ingredient.strip(), company.strip(), schedule, atc, status)):
-        raise InvalidInput(
-            "Give at least one of din, brand, ingredient, company, status, schedule or atc."
+        api.fail(
+            InvalidInput,
+            "Give at least one of din, brand, ingredient, company, status, schedule or atc.",
+            "donnez au moins l'un de din, brand, ingredient, company, status, schedule ou atc.",
+            lang,
         )
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}.")
+        api.fail(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}.",
+            lang,
+        )
     status_code = None
     if status is not None:
         status_code = constants.STATUS_KEYS.get(status)
         if status_code is None:
-            raise InvalidInput(f"Unknown status '{status}': use {sorted(constants.STATUS_KEYS)}.")
+            keys = sorted(constants.STATUS_KEYS)
+            api.fail(
+                InvalidInput,
+                f"Unknown status '{status}': use {keys}.",
+                f"statut inconnu '{status}' : utilisez {keys}.",
+                lang,
+            )
     klass = None
     if product_class is not None:
         klass = _PRODUCT_CLASSES.get(product_class)
         if klass is None:
-            raise InvalidInput(f"product_class must be one of {sorted(_PRODUCT_CLASSES)}.")
+            classes = sorted(_PRODUCT_CLASSES)
+            api.fail(
+                InvalidInput,
+                f"product_class must be one of {classes}.",
+                f"product_class doit valoir l'une de {classes}.",
+                lang,
+            )
 
-    index, cached = await _product_index()
-    statuses = await _status_map()
+    index, cached = await api.in_lang(lang, _product_index())
+    statuses = await api.in_lang(lang, _status_map())
     rows = index
     filters: list[str] = []
 
+    contains = "contient" if lang == "fr" else "contains"
     if din:
-        wanted = _normalise_din(din)
+        wanted = _normalise_din(din, lang)
         rows = [r for r in rows if r[1] == wanted]
         filters.append(f"din={wanted}")
     if brand.strip():
         needle = _fold(brand)
         rows = [r for r in rows if needle in _fold(f"{r[2]} {r[3]}")]
-        filters.append(f"brand contains '{brand.strip()}'")
+        filters.append(f"brand {contains} '{brand.strip()}'")
     if company.strip():
         needle = _fold(company)
         rows = [r for r in rows if needle in _fold(r[4])]
-        filters.append(f"company contains '{company.strip()}'")
+        filters.append(f"company {contains} '{company.strip()}'")
     if ingredient.strip():
         found = api.as_list(
-            await api.get_json(
-                constants.PATH_INGREDIENT,
-                {"ingredientname": ingredient.strip()},
-                lang=lang,
-                timeout=90.0,
+            await api.in_lang(
+                lang,
+                api.get_json(
+                    constants.PATH_INGREDIENT,
+                    {"ingredientname": ingredient.strip()},
+                    lang=lang,
+                    timeout=90.0,
+                ),
             )
         )
         codes = {int(r["drug_code"]) for r in found if r.get("drug_code")}
         rows = [r for r in rows if r[0] in codes]
-        filters.append(f"ingredient contains '{ingredient.strip()}'")
+        filters.append(f"ingredient {contains} '{ingredient.strip()}'")
     if status_code is not None:
         rows = [r for r in rows if statuses.get(r[0], (None, ""))[0] == status_code]
         filters.append(f"status={status}")
@@ -255,7 +284,7 @@ async def search_products(
         filters.append(f"class={product_class}")
     if schedule.strip():
         needle = _fold(schedule)
-        schedules = await _schedule_map()
+        schedules = await api.in_lang(lang, _schedule_map())
         rows = [
             r
             for r in rows
@@ -264,11 +293,11 @@ async def search_products(
                 for name in schedules.get(r[0], ())
             )
         ]
-        filters.append(f"schedule contains '{schedule.strip()}'")
+        filters.append(f"schedule {contains} '{schedule.strip()}'")
     if atc.strip():
         needle = atc.strip().upper()
         folded = _fold(atc)
-        classes = await _atc_map()
+        classes = await api.in_lang(lang, _atc_map())
         rows = [
             r
             for r in rows
@@ -277,7 +306,13 @@ async def search_products(
                 for code, desc in classes.get(r[0], ())
             )
         ]
-        filters.append(f"ATC starts with or names '{atc.strip()}'")
+        filters.append(
+            api.say(
+                f"ATC starts with or names '{atc.strip()}'",
+                f"ATC commence par ou nomme '{atc.strip()}'",
+                lang,
+            )
+        )
 
     # Marketed and approved products first, then by brand name.
     order = {2: 0, 1: 1, 6: 2, 13: 3}
@@ -302,6 +337,11 @@ async def search_products(
             freshness=constants.FRESHNESS,
             coverage=coverage,
             limits=f"limit {limit}; whole DPD tables cached up to 6 h",
+            lang=lang,
+            freshness_fr=constants.FRESHNESS_FR,
+            coverage_fr=f"{len(products)} produits sur {len(rows)} correspondant à "
+            f"{', '.join(filters)}",
+            limits_fr=f"limit {limit} ; tables complètes de la BDPP en cache jusqu'à 6 h",
         ),
     )
 
@@ -309,9 +349,19 @@ async def search_products(
 async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") -> IngredientList:
     term = name.strip()
     if len(term) < 3:
-        raise InvalidInput("Give at least 3 letters of an ingredient name, e.g. 'metformin'.")
+        api.fail(
+            InvalidInput,
+            "Give at least 3 letters of an ingredient name, e.g. 'metformin'.",
+            "donnez au moins 3 lettres d'un nom d'ingrédient, p. ex. 'metformine'.",
+            lang,
+        )
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}.")
+        api.fail(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}.",
+            lang,
+        )
 
     async def fetch() -> list[dict[str, Any]]:
         return api.as_list(
@@ -320,8 +370,11 @@ async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") ->
             )
         )
 
-    rows, cached = await cached_fetch(
-        f"hc_dpd:ingredient:{lang}:{term.casefold()}", constants.LOOKUP_TTL_SECONDS, fetch
+    rows, cached = await api.in_lang(
+        lang,
+        cached_fetch(
+            f"hc_dpd:ingredient:{lang}:{term.casefold()}", constants.LOOKUP_TTL_SECONDS, fetch
+        ),
     )
     products: dict[str, set[int]] = {}
     strengths: dict[str, Counter[str]] = {}
@@ -360,6 +413,9 @@ async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") ->
             schema="IngredientList",
             freshness=constants.FRESHNESS,
             coverage=f"{len(matches)} of {len(ranked)} ingredient names containing '{term}'",
+            lang=lang,
+            freshness_fr=constants.FRESHNESS_FR,
+            coverage_fr=f"{len(matches)} noms d'ingrédients sur {len(ranked)} contenant '{term}'",
         ),
     )
 
@@ -367,25 +423,41 @@ async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") ->
 # ------------------------------------------------------------------ detail
 
 
-async def _resolve_code(din: str, drug_code: int | None) -> int:
+async def _resolve_code(din: str, drug_code: int | None, lang: str = "en") -> int:
     if drug_code is not None:
         if drug_code <= 0:
-            raise InvalidInput("drug_code must be a positive number.")
+            api.fail(
+                InvalidInput,
+                "drug_code must be a positive number.",
+                "drug_code doit être un nombre positif.",
+                lang,
+            )
         return drug_code
     if not din:
-        raise InvalidInput("Give a din (e.g. 02242705) or a drug_code.")
-    wanted = _normalise_din(din)
-    found = [
-        r
-        for r in api.as_list(await api.get_json(constants.PATH_PRODUCT, {"din": wanted}))
-        if r.get("drug_code")
-    ]
+        api.fail(
+            InvalidInput,
+            "Give a din (e.g. 02242705) or a drug_code.",
+            "donnez un din (p. ex. 02242705) ou un drug_code.",
+            lang,
+        )
+    wanted = _normalise_din(din, lang)
+    answer = await api.in_lang(lang, api.get_json(constants.PATH_PRODUCT, {"din": wanted}))
+    found = [r for r in api.as_list(answer) if r.get("drug_code")]
     if not found:
-        raise NotFound(f"No drug product in the DPD has DIN {wanted}.")
+        api.fail(
+            NotFound,
+            f"No drug product in the DPD has DIN {wanted}.",
+            f"aucun produit de la BDPP n'a le DIN {wanted}.",
+            lang,
+        )
     if len(found) > 1:
         codes = ", ".join(str(r["drug_code"]) for r in found)
-        raise InvalidInput(
-            f"DIN {wanted} belongs to several DPD products (drug codes {codes}); pass drug_code."
+        api.fail(
+            InvalidInput,
+            f"DIN {wanted} belongs to several DPD products (drug codes {codes}); pass drug_code.",
+            f"le DIN {wanted} appartient à plusieurs produits de la BDPP (codes {codes}) ; "
+            "passez drug_code.",
+            lang,
         )
     return int(found[0]["drug_code"])
 
@@ -422,7 +494,7 @@ async def _company(name: str | None, lang: str) -> DrugCompany | None:
 async def get_product(
     din: str = "", drug_code: int | None = None, *, lang: str = "en"
 ) -> DrugProductDetail:
-    code = await _resolve_code(din, drug_code)
+    code = await _resolve_code(din, drug_code, lang)
 
     async def fetch() -> DrugProductDetail:
         by_id = {"id": code}
@@ -451,7 +523,12 @@ async def get_product(
         )
         products = [r for r in api.as_list(product) if not api.is_blank(r, "drug_code")]
         if not products:
-            raise NotFound(f"No drug product in the DPD has drug code {code}.")
+            api.fail(
+                NotFound,
+                f"No drug product in the DPD has drug code {code}.",
+                f"aucun produit de la BDPP n'a le code {code}.",
+                lang,
+            )
         p = products[0]
         statuses = [r for r in api.as_list(status) if not api.is_blank(r, "drug_code")]
         s = statuses[0] if statuses else {}
@@ -539,11 +616,15 @@ async def get_product(
                 cached=False,
                 schema="DrugProductDetail",
                 freshness=constants.FRESHNESS,
+                lang=lang,
+                freshness_fr=constants.FRESHNESS_FR,
+                limits_fr="Les noms de marque, de fabricant et d'ingrédient sont ceux "
+                "déposés auprès de Santé Canada, souvent en anglais.",
             ),
         )
 
-    detail, cached = await cached_fetch(
-        f"hc_dpd:product:{code}:{lang}", constants.LOOKUP_TTL_SECONDS, fetch
+    detail, cached = await api.in_lang(
+        lang, cached_fetch(f"hc_dpd:product:{code}:{lang}", constants.LOOKUP_TTL_SECONDS, fetch)
     )
     if cached:
         detail = detail.model_copy(

@@ -61,7 +61,7 @@ _ROWS = [
 ]
 
 
-async def test_search_crawls_library_until_no_new_indicators(httpx_mock):
+async def test_search_pages_library_until_no_new_indicators(httpx_mock):
     page = '<main><a href="/en/indicators/30-day-stroke-in-hospital-mortality">30-Day Stroke In-Hospital Mortality</a><a href="/en/indicators/hospitalized-strokes">Hospitalized Strokes</a></main>'
     httpx_mock.add_response(url=f"{constants.LIBRARY_URL}?page=0", text=page)
     httpx_mock.add_response(url=f"{constants.LIBRARY_URL}?page=1", text=page)

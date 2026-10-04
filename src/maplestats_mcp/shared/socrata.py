@@ -77,9 +77,7 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     return clean_detail(exc.response.text)
 
 
-def _raise_for_status_error(
-    exc: httpx.HTTPStatusError, context: str, lang: str = "en"
-) -> NoReturn:
+def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     detail = _error_detail(exc)
     if status == 404:

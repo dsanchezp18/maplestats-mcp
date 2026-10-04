@@ -510,9 +510,7 @@ async def test_english_dataset_provenance_is_unchanged(httpx_mock):
 
 
 async def test_french_search_coverage_and_limits(httpx_mock):
-    httpx_mock.add_response(
-        json=_ok({"count": 7, "results": [_FEDERAL_PACKAGE]}), is_reusable=True
-    )
+    httpx_mock.add_response(json=_ok({"count": 7, "results": [_FEDERAL_PACKAGE]}), is_reusable=True)
     result = await client.search_datasets("federal", "bienfaisance", lang="fr")
     assert result.provenance.coverage == "1 résultats renvoyés sur 7 au total"
     assert result.provenance.limits == f"au plus {constants.SEARCH_ROWS_MAX} résultats par requête"

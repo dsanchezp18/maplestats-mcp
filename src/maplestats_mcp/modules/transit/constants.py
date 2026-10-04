@@ -91,13 +91,14 @@ class Agency:
 # 2025-05-07) holding gtfs/<custom_id>/gtfs.zip for 138 feeds, data_sources.csv
 # (per-feed licence_url and attribution), validation_summary.csv and a
 # 485 MB GeoPackage this module does not read. Each inner zip is a plain GTFS
-# feed. www150.statcan.gc.ca/robots.txt sets Crawl-delay 2 for all agents.
+# feed.
 NATIONAL_PREFIX = "national:"
 NATIONAL_URL = (
     "https://www150.statcan.gc.ca/n1/pub/23-26-0003/2025001/zip/"
     "canadian_public_transit_network_database.zip"
 )
 NATIONAL_PAGE = "https://www150.statcan.gc.ca/n1/pub/23-26-0003/232600032025001-eng.htm"
+NATIONAL_PAGE_FR = "https://www150.statcan.gc.ca/n1/pub/23-26-0003/232600032025001-fra.htm"
 NATIONAL_ROOT = "canadian_public_transit_network_database/"
 NATIONAL_LICENCE = (
     "Statistics Canada Open Licence / Open Government Licence - Canada for the compilation; "
@@ -128,10 +129,10 @@ NATIONAL_FRESHNESS = (
 )
 NATIONAL_FRESHNESS_FR = (
     "Instantané compilé par Statistique Canada, version 1.0 publiée le 2025-01-31 (corrigée "
-    "le 2025-05-07); aucune mise à jour depuis. La période de service (couverture) de chaque "
+    "le 2025-05-07) ; aucune mise à jour depuis. La période de service (couverture) de chaque "
     "flux se situe surtout en 2025 : les dates récentes en sont donc exclues."
 )
-# Crawl-delay 2 in robots.txt: one request every two seconds to www150.
+# One request every two seconds to www150.
 NATIONAL_RATE_PER_SECOND = 0.5
 NATIONAL_CHUNK_BYTES = 16 * 1024 * 1024
 # One nested feed is inflated into memory; the largest feed this module
@@ -660,8 +661,7 @@ AGENCIES: dict[str, Agency] = {
             "4.0 sur sa fiche de Données Québec)"
         ),
         update_cadence_fr=(
-            "À chaque changement de service; le zip vérifié le 2026-10-03 était daté du "
-            "2026-10-02."
+            "À chaque changement de service; le zip vérifié le 2026-10-03 était daté du 2026-10-02."
         ),
     ),
     "stl_laval": _quebec(
@@ -716,8 +716,7 @@ AGENCIES: dict[str, Agency] = {
             "contient (GTFS_clients.zip). Le flux n'a pas de feed_info.txt."
         ),
         update_cadence_fr=(
-            "À chaque changement de service; le flux vérifié le 2026-10-03 va jusqu'au "
-            "2026-12-20."
+            "À chaque changement de service; le flux vérifié le 2026-10-03 va jusqu'au 2026-12-20."
         ),
     ),
     "stq_ferries": _quebec(
@@ -760,8 +759,7 @@ AGENCIES: dict[str, Agency] = {
             "identifiant quel que soit le nom du fichier."
         ),
         update_cadence_fr=(
-            "À chaque saison; le flux vérifié le 2026-10-03 (automne 2026) va jusqu'au "
-            "2026-12-26."
+            "À chaque saison; le flux vérifié le 2026-10-03 (automne 2026) va jusqu'au 2026-12-26."
         ),
     ),
     "rimouski": _quebec(
@@ -775,9 +773,7 @@ AGENCIES: dict[str, Agency] = {
         "As needed; the feed checked 2026-10-03 runs to 2027-02-14.",
         "Published by the Ville de Rimouski. The feed has no feed_info.txt.",
         "Publié par la Ville de Rimouski. Le flux n'a pas de feed_info.txt.",
-        update_cadence_fr=(
-            "Au besoin; le flux vérifié le 2026-10-03 va jusqu'au 2027-02-14."
-        ),
+        update_cadence_fr=("Au besoin; le flux vérifié le 2026-10-03 va jusqu'au 2027-02-14."),
     ),
     "rouyn_noranda": _quebec(
         "rouyn_noranda",

@@ -20,6 +20,7 @@ import asyncio
 import re
 from collections import Counter
 from datetime import date
+from typing import NoReturn
 
 import httpx
 from bs4 import BeautifulSoup
@@ -28,9 +29,10 @@ from maplestats_mcp.modules.competition_bureau import constants
 from maplestats_mcp.modules.competition_bureau.schemas import MergerReview, MergerSearchResult
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -41,16 +43,46 @@ _LIMITER = get_limiter(
 _DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+def _is_real_month_or_day(value: str) -> bool:
+    # The shape alone let "2024-13" through as a bound (live 2026-10-03:
+    # it returned 409 reviews instead of an error); the month and day must
+    # exist too.
+    if not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", value):
+        return False
+    try:
+        date.fromisoformat(value if len(value) == 10 else f"{value}-01")
+    except ValueError:
+        return False
+    return True
+
+
 def _label(outcome: str, lang: str) -> str:
     english, french = constants.OUTCOMES.get(outcome, (outcome, outcome))
     return french if lang == "fr" else english
 
 
-def _rows(page: str) -> list[list[str]]:
+def _rows(page: str, lang: str = "en") -> list[list[str]]:
     soup = BeautifulSoup(page, "html.parser")
     table = soup.find("table")
     if table is None:
-        raise UpstreamError("competition_bureau: the merger report no longer has its table.")
+        _raise(
+            UpstreamError,
+            "competition_bureau: the merger report no longer has its table.",
+            "competition_bureau : le rapport sur les fusions n'a plus son tableau.",
+            lang,
+        )
     rows = []
     for tr in table.find_all("tr"):
         cells = [" ".join(c.get_text(" ").split()) for c in tr.find_all(["td", "th"])]
@@ -91,25 +123,39 @@ def parse_archive(page: str) -> list[MergerReview]:
     ]
 
 
-async def _page(url: str) -> str:
+async def _page(url: str, lang: str = "en") -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(
-            f"competition_bureau: {url} returned HTTP {exc.response.status_code}."
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"competition_bureau: {url} did not respond in time.") from exc
+        status = exc.response.status_code
+        _raise(
+            UpstreamError,
+            f"competition_bureau: {url} returned HTTP {status}.",
+            f"competition_bureau : {url} a renvoyé HTTP {status}.",
+            lang,
+        )
+    except httpx.HTTPError:
+        _raise(
+            UpstreamUnavailable,
+            f"competition_bureau: {url} did not respond in time.",
+            f"competition_bureau : {url} n'a pas répondu à temps.",
+            lang,
+        )
     if len(response.content) > constants.MAX_PAGE_BYTES:
-        raise UpstreamError(f"competition_bureau: {url} is larger than expected.")
+        _raise(
+            UpstreamError,
+            f"competition_bureau: {url} is larger than expected.",
+            f"competition_bureau : {url} est plus volumineuse que prévu.",
+            lang,
+        )
     return response.text
 
 
-async def _all_reviews() -> tuple[list[MergerReview], bool]:
+async def _all_reviews(lang: str = "en") -> tuple[list[MergerReview], bool]:
     async def fetch() -> list[MergerReview]:
         current, archive = await asyncio.gather(
-            _page(constants.CURRENT_URL), _page(constants.ARCHIVE_URL)
+            _page(constants.CURRENT_URL, lang), _page(constants.ARCHIVE_URL, lang)
         )
         return parse_current(current) + parse_archive(archive)
 
@@ -129,16 +175,42 @@ async def search_mergers(
 ) -> MergerSearchResult:
     """Merger reviews matching every word of `party` and the other filters."""
     if limit < 1 or limit > constants.LIMIT_MAX:
-        raise InvalidInput(
-            f"competition_bureau: limit must be between 1 and {constants.LIMIT_MAX}, got {limit}."
+        _raise(
+            InvalidInput,
+            f"competition_bureau: limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"competition_bureau : limit doit être compris entre 1 et {constants.LIMIT_MAX}, "
+            f"reçu {limit}.",
+            lang,
         )
     if outcome is not None and outcome not in constants.OUTCOMES:
-        raise InvalidInput(
-            f"competition_bureau: outcome must be one of {list(constants.OUTCOMES)}, got {outcome!r}."
+        codes = list(constants.OUTCOMES)
+        _raise(
+            InvalidInput,
+            f"competition_bureau: outcome must be one of {codes}, got {outcome!r}.",
+            f"competition_bureau : outcome doit valoir l'un de {codes} (codes anglais du "
+            f"rapport), reçu {outcome!r}.",
+            lang,
         )
     for name, value in (("concluded_from", concluded_from), ("concluded_to", concluded_to)):
-        if value is not None and not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", value):
-            raise InvalidInput(f"competition_bureau: {name} must be YYYY-MM or YYYY-MM-DD.")
+        if value is not None and not _is_real_month_or_day(value):
+            _raise(
+                InvalidInput,
+                f"competition_bureau: {name} must be a real YYYY-MM or YYYY-MM-DD date, "
+                f"got {value!r}.",
+                f"competition_bureau : {name} doit être une date réelle AAAA-MM ou "
+                f"AAAA-MM-JJ, reçu {value!r}.",
+                lang,
+            )
+    start_month, end_month = (concluded_from or "")[:7], (concluded_to or "")[:7]
+    # The shared range check words its error in English only.
+    if lang == "fr" and start_month and end_month and start_month > end_month:
+        _raise(
+            InvalidInput,
+            "",
+            f"concluded_from ({start_month}) est postérieur à concluded_to ({end_month}) ; "
+            "inversez-les ou élargissez la plage.",
+            lang,
+        )
     # Month precision (the archive has no day), so a same-month pair is fine.
     check_range(
         (concluded_from or "")[:7] or None,
@@ -146,7 +218,7 @@ async def search_mergers(
         "concluded_from",
         "concluded_to",
     )
-    reviews, cached = await _all_reviews()
+    reviews, cached = await _all_reviews(lang)
     words = party.lower().split()
     prefix = (naics or "").strip()
     # Bounds compare months: the archive has no day, so a day is ignored.
@@ -176,11 +248,26 @@ async def search_mergers(
             url=constants.CURRENT_URL if lang == "en" else constants.FR_URLS["current"],
             cached=cached,
             schema_name="competition_bureau.MergerSearchResult",
-            freshness="weekly report updated on or after each Tuesday; archive fixed",
-            coverage="reviews opened since 2023-11 (weekly) and concluded 2015-01 to 2023-04",
-            limits=(
-                "Parties may ask the Bureau to delay or omit publication; "
-                "May-October 2023 is covered by neither report."
+            freshness=_text(
+                "weekly report updated on or after each Tuesday; archive fixed",
+                "rapport hebdomadaire mis à jour le mardi ou après ; archive figée",
+                lang,
             ),
+            coverage=_text(
+                "reviews opened since 2023-11 (weekly) and concluded 2015-01 to 2023-04",
+                "examens ouverts depuis 2023-11 (rapport hebdomadaire) et conclus de 2015-01 "
+                "à 2023-04 (archive)",
+                lang,
+            ),
+            limits=_text(
+                "Parties may ask the Bureau to delay or omit publication; "
+                "May-October 2023 is covered by neither report.",
+                "Les parties peuvent demander au Bureau de la concurrence de retarder ou "
+                "d'omettre la publication ; aucun des deux rapports ne couvre mai à octobre "
+                "2023. Les noms des parties sont reproduits tels que publiés dans le rapport "
+                "anglais.",
+                lang,
+            ),
+            lang=lang,
         ),
     )

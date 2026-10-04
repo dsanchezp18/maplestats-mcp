@@ -43,8 +43,10 @@ async def ircc_monthly_list_tables(
     foreign workers, asylum claimants, refugees, IRCC monthly data.
     Mots-clés : immigration, résidents permanents, admissions,
     nouveaux arrivants, permis d'études, étudiants étrangers, permis de
-    travail, travailleurs étrangers temporaires, demandeurs d'asile,
-    réfugiés, données mensuelles d'IRCC.
+    travail, permis de travail postdiplôme, travailleurs étrangers
+    temporaires, Entrée express, demandeurs d'asile, réfugiés,
+    données mensuelles d'Immigration, Réfugiés et Citoyenneté Canada
+    (IRCC).
     """
     return await client.list_tables(query, include_archived=include_archived, lang=lang)
 
@@ -63,8 +65,10 @@ async def ircc_monthly_describe_table(table_id: str, lang: Lang = "en") -> IrccT
     Keywords: IRCC table columns, dimensions, categories, province,
     country of citizenship, immigration category, coverage, codebook.
     Mots-clés : colonnes du tableau IRCC, dimensions, catégories,
-    province, pays de citoyenneté, catégorie d'immigration, période
-    couverte, dictionnaire de données.
+    province, pays de citoyenneté, catégorie d'immigration, région
+    métropolitaine de recensement (RMR), période couverte,
+    dictionnaire de données, Immigration, Réfugiés et Citoyenneté
+    Canada (IRCC).
     """
     return await client.describe_table(table_id, lang=lang)
 
@@ -106,7 +110,8 @@ async def ircc_monthly_query(
     IRCC time series.
     Mots-clés : immigrants par mois, admissions de résidents permanents
     par province, nouveaux résidents permanents, étudiants étrangers par
-    pays, permis de travail par province, demandes d'asile, tendance de
+    pays, permis de travail par province, demandes d'asile, passage du
+    statut temporaire à la résidence permanente, tendance de
     l'immigration, série chronologique IRCC.
     """
     return await client.query_table(

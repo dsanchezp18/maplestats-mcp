@@ -37,8 +37,7 @@ async def bc_stats_list_files(
     provincial statistics, data catalogue.
     Mots-clés : BC Stats, Colombie-Britannique, Excel, xlsx, Enquête sur la
     population active, PIB par industrie, comptes économiques, indicateurs
-    touristiques, estimations de population, projections de population, indice des
-    prix à la consommation, IPC, faillites, nombre d'entreprises, exportations,
+    touristiques, estimations de population, projections de population, IPC, faillites, nombre d'entreprises, exportations,
     mises en chantier, permis de bâtir, permis de construire, statistiques
     provinciales, catalogue de données, données ouvertes.
     """
@@ -63,8 +62,9 @@ async def bc_stats_read_file(
     characteristics (employment, unemployment rate, by age, industry, CMA),
     GDP by industry in current and chained dollars, tourism indicators, BC
     population estimates and projections to 2046, CPI by category, bankruptcies by
-    CMA. The first sheet is returned unless `sheet` names another (every sheet
-    name with its row and column counts is in the result). Layouts are kept as
+    CMA. Without `sheet`, the first sheet that is not a notes page ('READ ME',
+    'Notes', 'Contents') is returned and provenance.limits names it (every
+    sheet name with its row and column counts is in the result). Layouts are kept as
     published: title rows can precede the table, headers can span several rows and
     years can run across columns, so `header_row` is a guess (the first row with
     three filled cells) that you can override with a 1-based row number; every
@@ -77,8 +77,8 @@ async def bc_stats_read_file(
     Mots-clés : BC Stats, Colombie-Britannique, Excel, feuille de calcul, xlsx,
     Enquête sur la population active, taux de chômage, emploi, PIB par industrie,
     dollars enchaînés, tourisme, estimations de population, projections de
-    population, indice des prix à la consommation, IPC, faillites, mises en
-    chantier, permis de bâtir, permis de construire, mensuel, annuel, tableau.
+    population, IPC, faillites, mises en
+    chantier, permis de bâtir, mensuel, annuel, tableau.
     """
     return await client.read_file(
         url=url,

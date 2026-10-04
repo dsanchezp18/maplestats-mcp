@@ -411,9 +411,7 @@ async def search_files(
             lang,
         )
     chosen = [_check_topic(topic, lang)] if topic else list(constants.TOPICS)
-    loaded = await asyncio.gather(
-        *(_topic_files(t, lang) for t in chosen), return_exceptions=True
-    )
+    loaded = await asyncio.gather(*(_topic_files(t, lang) for t in chosen), return_exceptions=True)
     files: list[FileEntry] = []
     failed: list[str] = []
     cached = True

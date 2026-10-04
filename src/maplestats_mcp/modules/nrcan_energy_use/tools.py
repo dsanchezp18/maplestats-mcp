@@ -23,9 +23,9 @@ async def nrcan_energy_use_list_products(lang: Lang = "en") -> ProductList:
     covers energy use and GHG emissions by sector and province since 2000.
     Keywords: NRCan, energy use, energy consumption, household energy
     survey, SHEU, GHG emissions, energy efficiency, residential, buildings.
-    Mots-clés : RNCan, consommation d'énergie, utilisation de l'énergie,
-    enquête sur les ménages, émissions de GES, efficacité énergétique, base
-    de données, énergie.
+    Mots-clés : Ressources naturelles Canada (RNCan), consommation
+    d'énergie, utilisation de l'énergie, enquête sur les ménages, émissions
+    de GES, efficacité énergétique, base de données, énergie.
     """
     return await client.list_products(lang)
 
@@ -47,11 +47,10 @@ async def nrcan_energy_use_list_tables(
     nrcan_energy_use_get_table(lang="fr").
     Keywords: NRCan, energy use tables, household energy, heating,
     appliances, sector, province, energy database.
-    Mots-clés : RNCan, tableaux, consommation d'énergie, chauffage,
-    appareils, secteur, province, base de données.
+    Mots-clés : Ressources naturelles Canada (RNCan), tableaux, consommation
+    d'énergie, chauffage, appareils, secteur, province, base de données.
     """
-    del lang
-    return await client.list_tables(product, sector, jurisdiction)
+    return await client.list_tables(product, sector, jurisdiction, lang)
 
 
 @tool
@@ -66,7 +65,8 @@ async def nrcan_energy_use_get_table(table_key: str, lang: Lang = "en") -> Energ
     the legend is in `notes`.
     Keywords: NRCan, energy consumption, petajoules, GHG emissions,
     household energy use survey, heating, natural gas, electricity.
-    Mots-clés : RNCan, consommation d'énergie, pétajoules, émissions de
-    GES, enquête sur les ménages, chauffage, gaz naturel, électricité.
+    Mots-clés : Ressources naturelles Canada (RNCan), consommation
+    d'énergie, pétajoules, émissions de GES, enquête sur les ménages,
+    chauffage, gaz naturel, électricité.
     """
     return await client.get_table(table_key, lang)

@@ -44,17 +44,38 @@ from maplestats_mcp.modules.worldbank.schemas import (
     TopicList,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing
+from maplestats_mcp.shared.i18n import t as i18n_text
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.search import tokenize
 
 _FRESHNESS = {
     "en": "WDI is revised a few times a year; values are annual.",
-    "fr": "Les WDI sont révisés quelques fois par année; les valeurs sont annuelles.",
+    "fr": french_spacing(
+        "Les WDI sont révisés quelques fois par année ; les valeurs sont annuelles."
+    ),
 }
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+def _error(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> ValueError:
+    """The error to raise with `from`: English as before, French in the typed template."""
+    return exc_cls(i18n_text(ERROR_KEYS[exc_cls.__name__], "fr", detail=fr) if lang == "fr" else en)
 
 
 def _licence(lang: str) -> str:
@@ -81,14 +102,18 @@ def _api_message_text(payload: list[Any]) -> str:
     return "; ".join(p for p in parts if p) or "the request was rejected"
 
 
-def _raise_unavailable(url: str, exc: Exception) -> NoReturn:
-    raise UpstreamUnavailable(
+def _raise_unavailable(url: str, exc: Exception, lang: str = "en") -> NoReturn:
+    raise _error(
+        UpstreamUnavailable,
         f"The World Bank API did not answer ({url}): {exc}. It is often slow or briefly "
-        "unavailable; try again in a minute."
+        "unavailable; try again in a minute.",
+        f"l'API de la Banque mondiale n'a pas répondu ({url}) : {exc}. Elle est souvent lente "
+        "ou brièvement indisponible ; réessayez dans une minute.",
+        lang,
     ) from exc
 
 
-async def _get(url: str, params: dict[str, Any], timeout: float) -> Any:
+async def _get(url: str, params: dict[str, Any], timeout: float, lang: str = "en") -> Any:
     await get_limiter(
         constants.RATE_LIMIT_SOURCE,
         rate=constants.RATE_LIMIT_PER_SECOND,
@@ -99,10 +124,15 @@ async def _get(url: str, params: dict[str, Any], timeout: float) -> Any:
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status >= 500 or status == 429:
-            _raise_unavailable(url, exc)
-        raise UpstreamError(f"The World Bank API answered HTTP {status} for {url}.") from exc
+            _raise_unavailable(url, exc, lang)
+        raise _error(
+            UpstreamError,
+            f"The World Bank API answered HTTP {status} for {url}.",
+            f"l'API de la Banque mondiale a répondu HTTP {status} pour {url}.",
+            lang,
+        ) from exc
     except httpx.HTTPError as exc:
-        _raise_unavailable(url, exc)
+        _raise_unavailable(url, exc, lang)
 
 
 # ---------------------------------------------------------------- catalogue
@@ -121,14 +151,31 @@ async def _catalogue(lang: str) -> tuple[list[dict[str, Any]], bool]:
             url,
             {"format": "json", "per_page": 2000},
             constants.CATALOGUE_TIMEOUT_SECONDS,
+            lang,
         )
         if _is_api_message(payload):
-            raise UpstreamError(f"WDI indicator list: {_api_message_text(payload)}")
+            message = _api_message_text(payload)
+            _raise(
+                UpstreamError,
+                f"WDI indicator list: {message}",
+                f"liste des indicateurs WDI : {message} (message de la source, en anglais)",
+                lang,
+            )
         if not isinstance(payload, list) or len(payload) < 2:
-            raise UpstreamError("WDI indicator list: unexpected response shape.")
+            _raise(
+                UpstreamError,
+                "WDI indicator list: unexpected response shape.",
+                "liste des indicateurs WDI : forme de réponse inattendue.",
+                lang,
+            )
         rows = [r for r in (payload[1] or []) if isinstance(r, dict) and r.get("id")]
         if not rows:
-            raise UpstreamError("WDI indicator list came back empty.")
+            _raise(
+                UpstreamError,
+                "WDI indicator list came back empty.",
+                "la liste des indicateurs WDI est revenue vide.",
+                lang,
+            )
         return rows
 
     return await cached_fetch(f"worldbank:wdi:{lang}", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch)
@@ -170,19 +217,21 @@ async def list_topics(lang: str = "en") -> TopicList:
             cached=cached,
             schema_name="worldbank.TopicList",
             freshness=_FRESHNESS[lang],
-            coverage=(
+            coverage=_text(
                 "Topics of World Development Indicators; the number of indicators is in "
-                "brackets. 134 indicators have no topic and are found by words only."
-                if lang == "en"
-                else "Thèmes des Indicateurs du développement dans le monde; le nombre "
-                "d'indicateurs est entre parenthèses. 134 indicateurs n'ont aucun thème."
+                "brackets. 134 indicators have no topic and are found by words only.",
+                "Thèmes des Indicateurs du développement dans le monde ; le nombre "
+                "d'indicateurs est entre parenthèses. 134 indicateurs n'ont aucun thème et ne "
+                "se trouvent que par mots.",
+                lang,
             ),
             licence=_licence(lang),
+            lang=lang,
         ),
     )
 
 
-def _resolve_topic(rows: list[dict[str, Any]], topic: str) -> tuple[str, str]:
+def _resolve_topic(rows: list[dict[str, Any]], topic: str, lang: str = "en") -> tuple[str, str]:
     """Match `topic` to a topic id, by id or by words of its name."""
     wanted = topic.strip()
     names: dict[str, str] = {}
@@ -199,7 +248,12 @@ def _resolve_topic(rows: list[dict[str, Any]], topic: str) -> tuple[str, str]:
     choices = ", ".join(
         f"{tid} {name}" for tid, name in sorted(names.items(), key=lambda x: int(x[0]))
     )
-    raise InvalidInput(f"Unknown WDI topic {topic!r}. Topics: {choices}.")
+    _raise(
+        InvalidInput,
+        f"Unknown WDI topic {topic!r}. Topics: {choices}.",
+        f"thème WDI inconnu {topic!r}. Thèmes : {choices}.",
+        lang,
+    )
 
 
 def _score(row: dict[str, Any], words: list[str]) -> tuple[int, int]:
@@ -219,15 +273,25 @@ async def search_indicators(
 ) -> IndicatorSearchResult:
     lang = _lang(lang)
     if not (query and query.strip()) and not (topic and topic.strip()):
-        raise InvalidInput("Give words to search for (query), a topic, or both.")
+        _raise(
+            InvalidInput,
+            "Give words to search for (query), a topic, or both.",
+            "donnez des mots à chercher (query), un thème (topic), ou les deux.",
+            lang,
+        )
     if limit < 1:
-        raise InvalidInput("limit must be at least 1.")
+        _raise(
+            InvalidInput,
+            "limit must be at least 1.",
+            "limit doit valoir au moins 1.",
+            lang,
+        )
     limit = min(limit, constants.MAX_SEARCH_RESULTS)
     rows, cached = await _catalogue(lang)
 
     topic_label: str | None = None
     if topic and topic.strip():
-        topic_id, topic_label = _resolve_topic(rows, topic)
+        topic_id, topic_label = _resolve_topic(rows, topic, lang)
         rows = [r for r in rows if topic_id in _topic_ids(r)]
 
     exact = None
@@ -264,20 +328,21 @@ async def search_indicators(
             cached=cached,
             schema_name="worldbank.IndicatorSearchResult",
             freshness=_FRESHNESS[lang],
-            limits=(
-                f"First {len(indicators)} of {len(matches)} matches."
-                if lang == "en"
-                else f"{len(indicators)} premiers résultats sur {len(matches)}."
+            limits=_text(
+                f"First {len(indicators)} of {len(matches)} matches.",
+                f"{len(indicators)} premiers résultats sur {len(matches)}.",
+                lang,
             ),
-            coverage=(
+            coverage=_text(
                 "World Development Indicators only (1,498 indicators); every word must "
-                "appear in the name, code or definition."
-                if lang == "en"
-                else "Indicateurs du développement dans le monde seulement (1 498 "
-                "indicateurs); chaque mot doit figurer dans le nom, le code ou la "
-                "définition (définitions en anglais)."
+                "appear in the name, code or definition.",
+                "Indicateurs du développement dans le monde seulement (1\u00a0498 "
+                "indicateurs) ; chaque mot doit figurer dans le nom, le code ou la "
+                "définition (définitions en anglais).",
+                lang,
             ),
             licence=_licence(lang),
+            lang=lang,
         ),
     )
 
@@ -285,13 +350,23 @@ async def search_indicators(
 async def _indicator_row(indicator: str, lang: str) -> tuple[dict[str, Any], bool]:
     code = indicator.strip().upper()
     if not code:
-        raise InvalidInput("indicator must not be empty (e.g. NY.GDP.MKTP.KD.ZG).")
+        _raise(
+            InvalidInput,
+            "indicator must not be empty (e.g. NY.GDP.MKTP.KD.ZG).",
+            "indicator ne doit pas être vide (p. ex. NY.GDP.MKTP.KD.ZG).",
+            lang,
+        )
     rows, cached = await _catalogue(lang)
     row = next((r for r in rows if str(r.get("id")).upper() == code), None)
     if row is None:
-        raise NotFound(
+        _raise(
+            NotFound,
             f"{indicator!r} is not a World Development Indicators code. Find one with "
-            "worldbank_search_indicators (e.g. NY.GDP.MKTP.KD.ZG for real GDP growth)."
+            "worldbank_search_indicators (e.g. NY.GDP.MKTP.KD.ZG for real GDP growth).",
+            f"{indicator!r} n'est pas un code des Indicateurs du développement dans le monde. "
+            "Trouvez-en un avec worldbank_search_indicators (p. ex. NY.GDP.MKTP.KD.ZG pour "
+            "la croissance du PIB réel).",
+            lang,
         )
     return row, cached
 
@@ -316,6 +391,7 @@ async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
             if lang == "en"
             else "La définition n'existe qu'en anglais chez la Banque mondiale.",
             licence=_licence(lang),
+            lang=lang,
         ),
     )
 
@@ -323,7 +399,7 @@ async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
 # --------------------------------------------------------------------- data
 
 
-def _comparison_codes(compare_with: list[str] | None) -> list[str]:
+def _comparison_codes(compare_with: list[str] | None, lang: str = "en") -> list[str]:
     codes: list[str] = [constants.CANADA]
     allowed = set(constants.OECD_MEMBERS) | {constants.OECD_AGGREGATE}
     for raw in compare_with or []:
@@ -333,10 +409,16 @@ def _comparison_codes(compare_with: list[str] | None) -> list[str]:
         expanded = constants.GROUP_ALIASES.get(key, (key,))
         for code in expanded:
             if code not in allowed:
-                raise InvalidInput(
+                _raise(
+                    InvalidInput,
                     f"{raw!r} is not a comparison this tool offers. Use G7, OECD (the "
                     "World Bank's OECD members aggregate), OECD_MEMBERS, or the ISO3 "
-                    "code of an OECD member country (e.g. USA, GBR, AUS, MEX)."
+                    "code of an OECD member country (e.g. USA, GBR, AUS, MEX).",
+                    f"{raw!r} n'est pas une comparaison offerte par cet outil. Utilisez G7, "
+                    "OECD (l'agrégat de la Banque mondiale pour les membres de l'OCDE), "
+                    "OECD_MEMBERS, ou le code ISO3 d'un pays membre de l'OCDE (p. ex. USA, "
+                    "GBR, AUS, MEX).",
+                    lang,
                 )
             if code not in codes:
                 codes.append(code)
@@ -348,16 +430,38 @@ def _year(value: Any) -> int | None:
     return int(text) if text.isdigit() else None
 
 
-def _validate_years(start_year: int | None, end_year: int | None, most_recent: int | None) -> None:
+def _validate_years(
+    start_year: int | None, end_year: int | None, most_recent: int | None, lang: str = "en"
+) -> None:
     if most_recent is not None and (start_year is not None or end_year is not None):
-        raise InvalidInput("Use most_recent or start_year/end_year, not both.")
+        _raise(
+            InvalidInput,
+            "Use most_recent or start_year/end_year, not both.",
+            "utilisez most_recent ou start_year/end_year, pas les deux.",
+            lang,
+        )
     if most_recent is not None and not 1 <= most_recent <= 100:
-        raise InvalidInput("most_recent must be between 1 and 100 years.")
+        _raise(
+            InvalidInput,
+            "most_recent must be between 1 and 100 years.",
+            "most_recent doit être compris entre 1 et 100 ans.",
+            lang,
+        )
     for name, year in (("start_year", start_year), ("end_year", end_year)):
         if year is not None and not 1900 <= year <= 2100:
-            raise InvalidInput(f"{name} must be a four-digit year, got {year}.")
+            _raise(
+                InvalidInput,
+                f"{name} must be a four-digit year, got {year}.",
+                f"{name} doit être une année à quatre chiffres, reçu {year}.",
+                lang,
+            )
     if start_year is not None and end_year is not None and start_year > end_year:
-        raise InvalidInput("start_year is after end_year.")
+        _raise(
+            InvalidInput,
+            "start_year is after end_year.",
+            "start_year est postérieur à end_year.",
+            lang,
+        )
 
 
 async def get_canada_series(
@@ -369,8 +473,8 @@ async def get_canada_series(
     lang: str = "en",
 ) -> CanadaSeriesResult:
     lang = _lang(lang)
-    _validate_years(start_year, end_year, most_recent)
-    codes = _comparison_codes(compare_with)
+    _validate_years(start_year, end_year, most_recent, lang)
+    codes = _comparison_codes(compare_with, lang)
     row, _ = await _indicator_row(indicator, lang)
     code = str(row["id"])
 
@@ -384,19 +488,34 @@ async def get_canada_series(
         params["date"] = f"{start_year or 1960}:{end_year or 2100}"
 
     async def fetch() -> Any:
-        payload = await _get(url, params, constants.DATA_TIMEOUT_SECONDS)
+        payload = await _get(url, params, constants.DATA_TIMEOUT_SECONDS, lang)
         if _is_api_message(payload):
-            raise InvalidInput(
-                f"The World Bank API rejected the request: {_api_message_text(payload)}."
+            message = _api_message_text(payload)
+            _raise(
+                InvalidInput,
+                f"The World Bank API rejected the request: {message}.",
+                f"l'API de la Banque mondiale a refusé la requête : {message} (message de la "
+                "source).",
+                lang,
             )
         if not isinstance(payload, list) or len(payload) < 2 or not isinstance(payload[0], dict):
-            raise UpstreamError(f"{code}: unexpected response shape from the World Bank API.")
+            _raise(
+                UpstreamError,
+                f"{code}: unexpected response shape from the World Bank API.",
+                f"{code} : forme de réponse inattendue de l'API de la Banque mondiale.",
+                lang,
+            )
         header = payload[0]
         pages = _year(header.get("pages")) or 1
         if pages > 1:
             # Never seen with per_page=5000 (39 countries x 66 years is 2,574
             # rows), so a second page means the API changed; fail loudly.
-            raise UpstreamError(f"{code}: the API split the series over {pages} pages.")
+            _raise(
+                UpstreamError,
+                f"{code}: the API split the series over {pages} pages.",
+                f"{code} : l'API a réparti la série sur {pages} pages.",
+                lang,
+            )
         return payload
 
     payload, cached = await cached_fetch(
@@ -447,19 +566,27 @@ async def get_canada_series(
 
     canada = next((c for c in countries if c.country_code == constants.CANADA), None)
     if canada is None or not canada.observations:
-        raise NotFound(
+        narrowed = bool(start_year or end_year or most_recent)
+        _raise(
+            NotFound,
             f"{code} ({row.get('name')}) has no value for Canada"
-            + (" in the years asked for." if start_year or end_year or most_recent else ".")
-            + " Try another indicator or a wider year range."
+            + (" in the years asked for." if narrowed else ".")
+            + " Try another indicator or a wider year range.",
+            f"{code} ({row.get('name')}) n'a aucune valeur pour le Canada"
+            + (" pour les années demandées." if narrowed else ".")
+            + " Essayez un autre indicateur ou une période plus large.",
+            lang,
         )
 
     notes: list[str] = []
     missing = [iso for iso in codes if iso not in by_country or not by_country[iso].observations]
     if missing:
         notes.append(
-            f"No values for: {', '.join(missing)}."
-            if lang == "en"
-            else f"Aucune valeur pour : {', '.join(missing)}."
+            _text(
+                f"No values for: {', '.join(missing)}.",
+                f"Aucune valeur pour : {', '.join(missing)}.",
+                lang,
+            )
         )
     if constants.OECD_AGGREGATE in codes:
         notes.append(
@@ -499,6 +626,7 @@ async def get_canada_series(
                 else "Les années sans valeur sont omises."
             ),
             licence=_licence(lang),
+            lang=lang,
         ),
     )
 

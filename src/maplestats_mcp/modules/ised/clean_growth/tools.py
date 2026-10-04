@@ -31,7 +31,8 @@ async def ised_clean_growth_get_federal_investment(lang: Lang = "en") -> Federal
     Growth Hub, CTDS, green funding, grants and contributions, renewable
     energy, subsector, ISED, NRCan.
     Mots-clés : technologies propres, investissement fédéral, Carrefour de
-    la croissance propre, stratégie de données, financement vert,
-    subventions et contributions, énergie renouvelable, sous-secteur.
+    la croissance propre, Stratégie de données sur les technologies
+    propres, financement vert, subventions et contributions, énergie
+    renouvelable, sous-secteur, technologies vertes, ISDE, RNCan.
     """
     return await client.federal_investment(lang)

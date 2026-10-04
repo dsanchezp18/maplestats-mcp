@@ -10,23 +10,22 @@ layout; see shared/xlsx_sheets.py.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-import httpx
-
 from maplestats_mcp.modules.bc_stats import constants
 from maplestats_mcp.modules.bc_stats.schemas import FileData, FileEntry, FileList, SheetInfo
-from maplestats_mcp.shared import xlsx_sheets
+from maplestats_mcp.shared import file_download, xlsx_sheets
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.licences import (
+    LICENCES_FR,
     OGL_BC,
     OGL_BC_FR,
     OGL_CANADA,
@@ -51,7 +50,7 @@ LICENCE_NOTE = {
         "fr",
         "",
         "La licence est propre à chaque jeu de données : la plupart des fichiers de BC "
-        "Stats relèvent de la Licence du gouvernement ouvert – Colombie-Britannique; les "
+        "Stats relèvent de la Licence du gouvernement ouvert – Colombie-Britannique ; les "
         "tableaux dérivés de Statistique Canada sont visés par la Licence ouverte de "
         "Statistique Canada. Vérifiez le champ licence et citez la source.",
     ),
@@ -67,14 +66,6 @@ _UPDATE_CYCLES_FR = {
     "daily": "quotidienne",
     "irregular": "irrégulière",
 }
-
-# shared/licences has no French text for the federal licence; its official
-# French name is "Licence du gouvernement ouvert – Canada".
-OGL_CANADA_FR = (
-    "Licence du gouvernement ouvert – Canada 2.0 "
-    "(https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada). Attribution : "
-    "« Contient des renseignements visés par la Licence du gouvernement ouvert – Canada. »"
-)
 
 
 def _config() -> CkanConfig:
@@ -102,7 +93,7 @@ def _file_licence(entry: FileEntry, lang: str = "en") -> str:
     if "british columbia" in title:
         return pick(lang, OGL_BC, OGL_BC_FR)
     if "open government licence - canada" in title:
-        return pick(lang, OGL_CANADA, OGL_CANADA_FR)
+        return pick(lang, OGL_CANADA, LICENCES_FR[OGL_CANADA])
     where = f" ({entry.licence_url})" if entry.licence_url else ""
     return pick(
         lang,
@@ -244,7 +235,7 @@ async def list_files(
                 "catalogue; the organization's CSV, PDF and geographic resources are not "
                 "listed.",
                 "Ressources Excel (.xlsx) de l'organisation BC Stats dans le catalogue de "
-                "données de la Colombie-Britannique; ses ressources CSV, PDF et "
+                "données de la Colombie-Britannique ; ses ressources CSV, PDF et "
                 "géographiques ne sont pas listées.",
             ),
             limits=(
@@ -252,8 +243,7 @@ async def list_files(
                     lang,
                     f"Showing files {offset + 1} to {offset + min(limit, total - offset)} "
                     f"of {total}.",
-                    f"Fichiers {offset + 1} à {offset + min(limit, total - offset)} "
-                    f"sur {total}.",
+                    f"Fichiers {offset + 1} à {offset + min(limit, total - offset)} sur {total}.",
                 )
                 if total > limit
                 else None
@@ -281,73 +271,52 @@ def check_file_url(url: str, lang: str = "en") -> None:
         )
 
 
-async def _body(
-    url: str, declared_size: int | None = None, lang: str = "en"
-) -> tuple[bytes, bool]:
-    # The catalogue states each file's size; refuse an oversized file before
-    # spending a paced request and the download on it.
-    if declared_size is not None and declared_size > constants.MAX_FILE_BYTES:
-        megabytes = f"{declared_size / 1_048_576:.1f}"
-        cap = constants.MAX_FILE_BYTES // 1_048_576
+async def _body(url: str, size_hint: int | None, lang: str = "en") -> tuple[bytes, bool]:
+    if size_hint and size_hint > constants.MAX_FILE_BYTES:
         raise_localized(
-            InvalidInput,
-            f"bc_stats: {url} is {megabytes} MB, larger than the {cap} MB this tool reads.",
-            f"bc_stats : {url} pèse {megabytes.replace('.', ',')} Mo, plus que les {cap} Mo "
-            "que cet outil peut lire.",
+            UpstreamError,
+            f"bc_stats: {url} is {size_hint:,} bytes; this tool reads files up to "
+            f"{constants.MAX_FILE_BYTES:,}. Download it from the catalogue instead.",
+            f"bc_stats : {url} pèse {size_hint:,} octets ; cet outil lit les fichiers d'au "
+            f"plus {constants.MAX_FILE_BYTES:,} octets. Téléchargez-le plutôt depuis le "
+            "catalogue.".replace(",", " "),
             lang,
         )
 
-    async def fetch() -> bytes:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            if status == 404:
-                raise_localized(
-                    NotFound,
-                    f"bc_stats: no file at {url}.",
-                    f"bc_stats : aucun fichier à l'adresse {url}.",
-                    lang,
-                )
-            raise_localized(
-                UpstreamError,
-                f"bc_stats: {url} returned HTTP {status}.",
-                f"bc_stats : {url} a répondu par une erreur HTTP {status}.",
-                lang,
-            )
-        except httpx.HTTPError:
-            raise_localized(
-                UpstreamUnavailable,
-                f"bc_stats: {url} did not respond in time.",
-                f"bc_stats : {url} n'a pas répondu à temps.",
-                lang,
-            )
-        body = response.content
-        if len(body) > constants.MAX_FILE_BYTES:
-            raise_localized(
-                UpstreamError,
-                f"bc_stats: {url} is larger than this tool reads.",
-                f"bc_stats : {url} dépasse la taille que cet outil peut lire.",
-                lang,
-            )
-        if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
-            raise_localized(
-                NotFound,
-                f"bc_stats: {url} returned a web page, not an Excel file.",
-                f"bc_stats : {url} a renvoyé une page Web, pas un fichier Excel.",
-                lang,
-            )
-        return body
+    async def fetch() -> file_download.Downloaded:
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, an undeclared one stops at the cap.
+        return await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="bc_stats",
+            timeout=180.0,
+        )
 
-    return await cached_fetch(f"bc_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+    # The same key ckan_read_resource (portal "bc") uses for this URL, so one
+    # copy of the file sits in the shared byte budget.
+    downloaded, cached = await file_download.cached_download(
+        file_download.cache_key(url), constants.CACHE_TTL_FILE_SECONDS, fetch
+    )
+    body = downloaded.body
+    if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
+        raise_localized(
+            NotFound,
+            f"bc_stats: {url} returned a web page, not an Excel file.",
+            f"bc_stats : {url} a renvoyé une page Web, pas un fichier Excel.",
+            lang,
+        )
+    return body, cached
 
 
 async def _sheets(url: str, body: bytes, lang: str = "en") -> list[SheetInfo]:
     async def fetch() -> list[SheetInfo]:
         try:
             dims = await run_parse(xlsx_sheets.sheet_dimensions, body)
-        except Exception as exc:  # openpyxl raises several unrelated types
+        # openpyxl raises several unrelated types.
+        except Exception as exc:  # noqa: BLE001 (raise_localized re-raises it as UpstreamError)
             raise_localized(
                 UpstreamError,
                 f"bc_stats: could not read {url}: {exc}",
@@ -372,7 +341,7 @@ async def _rows(
             )
         except InvalidInput:
             raise
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 (raise_localized re-raises it as UpstreamError)
             raise_localized(
                 UpstreamError,
                 f"bc_stats: could not read {url}: {exc}",
@@ -384,6 +353,26 @@ async def _rows(
         f"bc_stats:rows:{url}:{sheet}", constants.CACHE_TTL_FILE_SECONDS, fetch
     )
     return result
+
+
+_NOTES_SHEETS = re.compile(
+    r"^(read ?me|notes?|contents|table of contents|index|about|definitions|metadata|"
+    r"sources?|footnotes)$"
+)
+
+
+def default_sheet(names: list[str]) -> str:
+    """The first sheet that is not a notes page.
+
+    Most BC Stats workbooks open on their table (GDP: 'BC GDP $Current' then
+    'BC GDP $2017'; CPI: page1..page5), but the population estimates and
+    projections workbook opens on 'READ ME' before 'Table 1' (live file of
+    2026-10-01), so a notes-like first sheet is skipped.
+    """
+    for name in names:
+        if not _NOTES_SHEETS.match(" ".join(name.casefold().split())):
+            return name
+    return names[0]
 
 
 async def read_file(
@@ -438,7 +427,7 @@ async def read_file(
             lang,
         )
     if sheet is None:
-        chosen = sheets[0].name
+        chosen = default_sheet([s.name for s in sheets])
     else:
         matches = [s.name for s in sheets if s.name.casefold() == sheet.strip().casefold()]
         if not matches:
@@ -446,29 +435,33 @@ async def read_file(
             raise_localized(
                 InvalidInput,
                 f"bc_stats: no sheet {sheet!r}; sheets are {names}.",
-                f"bc_stats : aucune feuille {sheet!r}; les feuilles sont {names}.",
+                f"bc_stats : aucune feuille {sheet!r} ; les feuilles sont {names}.",
                 lang,
             )
         chosen = matches[0]
 
     rows, capped = await _rows(url, body, chosen, lang)
+    # The file's declared size counts trailing blank rows and formatted empty
+    # columns (econ_incorporations.xlsx declares 286 x 47 for 284 x 38 of data,
+    # seen 2026-10-03); the sheet read reports what it holds, so its counts
+    # agree with the header_row bound below.
+    width = len(rows[0]) if rows else 0
+    sheets = [
+        SheetInfo(name=s.name, rows=len(rows), columns=width, counted=True)
+        if s.name == chosen
+        else s
+        for s in sheets
+    ]
     if header_row is not None:
         if header_row > len(rows):
-            # The sheet's declared size counts trailing blank rows that are not
-            # read, so name both counts rather than contradict the sheet listing.
-            declared = next((s.rows for s in sheets if s.name == chosen), None)
             raise_localized(
                 InvalidInput,
-                f"bc_stats: header_row {header_row} is past the last row with content "
-                f"(row {len(rows)}) of sheet {chosen!r}"
-                + (f"; the file declares {declared} rows, the rest blank." if declared else "."),
-                f"bc_stats : header_row {header_row} dépasse la dernière ligne remplie "
-                f"(ligne {len(rows)}) de la feuille {chosen!r}"
-                + (
-                    f"; le fichier déclare {declared} lignes, les autres sont vides."
-                    if declared
-                    else "."
-                ),
+                f"bc_stats: header_row {header_row} is past the last row with content of "
+                f"sheet {chosen!r}, which has only {len(rows)} rows (trailing blank rows "
+                "are not counted).",
+                f"bc_stats : header_row {header_row} dépasse la dernière ligne remplie de la "
+                f"feuille {chosen!r}, qui n'a que {len(rows)} lignes (les lignes vides de la "
+                "fin ne sont pas comptées).",
                 lang,
             )
         header_index: int | None = header_row - 1
@@ -483,6 +476,16 @@ async def read_file(
     total = len(table)
     more = offset + limit < total
     notes = []
+    if sheet is None and len(sheets) > 1:
+        notes.append(
+            pick(
+                lang,
+                f"no sheet was requested, so {chosen!r} (the first sheet that is not a notes "
+                f"page) of {len(sheets)} was read; pass sheet= for another",
+                f"aucune feuille demandée : {chosen!r} (la première feuille qui n'est pas une "
+                f"page de notes) sur {len(sheets)} a été lue ; passez sheet= pour une autre",
+            )
+        )
     if capped:
         notes.append(
             pick(
@@ -520,7 +523,7 @@ async def read_file(
             freshness=pick(
                 lang,
                 f"As published by BC Stats; catalogue update cycle: {cycle or 'not stated'}.",
-                f"Tel que publié par BC Stats; fréquence de mise à jour selon le catalogue : "
+                f"Tel que publié par BC Stats ; fréquence de mise à jour selon le catalogue : "
                 f"{cycle_fr}.",
             ),
             coverage=pick(
@@ -528,7 +531,7 @@ async def read_file(
                 f"{entry.title}, sheet {chosen!r} of {len(sheets)}.",
                 f"{entry.title}, feuille {chosen!r} sur {len(sheets)}.",
             ),
-            limits="; ".join(notes) or None,
+            limits=pick(lang, "; ", " ; ").join(notes) or None,
             licence=_file_licence(entry, lang),
             lang=lang,
         ),

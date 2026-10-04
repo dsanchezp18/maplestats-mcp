@@ -78,6 +78,15 @@ async def test_french_terms_and_organ_class_filter(httpx_mock):
     result = await client.search_reactions("céphalée", system_organ_class="nerveux", lang="fr")
     assert result.top_reactions == {"Céphalée": 1}
     assert result.by_system_organ_class == {"Affections du système nerveux": 1}
+    assert (result.provenance.coverage or "").startswith("toutes les lignes de réaction")
+    assert "n'est pas un taux d'incidence" in (result.provenance.limits or "")
+    with pytest.raises(InvalidInput, match="^Entrée invalide : donnez au moins 3 lettres"):
+        await client.search_reactions("ab", lang="fr")
+
+
+def test_stop_reason_in_french():
+    assert client._stop_reason_fr("the 25 s time limit") == "limite de temps de 25 s"
+    assert client._stop_reason_fr("the 40 MB read ceiling") == "plafond de lecture de 40 Mo"
 
 
 async def test_missing_reactions_file_is_an_error(httpx_mock):

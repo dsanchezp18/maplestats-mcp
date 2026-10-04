@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import date, datetime
+from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -130,7 +130,7 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
         raise_localized(
             InvalidInput,
             f"plant must be one of {sorted(constants.PLANTS)}, got {plant!r}.",
-            f"plant doit être l'une des valeurs {sorted(constants.PLANTS)}; reçu {plant!r}.",
+            f"plant doit être l'une des valeurs {sorted(constants.PLANTS)} ; reçu {plant!r}.",
             lang,
         )
     params = {"zone": constants.PLANTS[plant]}
@@ -147,6 +147,12 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
     page, was_cached = await cached_fetch(
         f"epcor:daily:{plant}", constants.CACHE_TTL_DAILY_SECONDS, fetch
     )
+    readings = parse_daily_page(page, today, lang=lang)
+    # The newest day the page reports (OCT-02 on 2026-10-03), at local midnight.
+    days = [r.date for r in readings if r.date is not None]
+    as_of = (
+        datetime.combine(max(days), time(), tzinfo=ZoneInfo(constants.TIMEZONE)) if days else None
+    )
     return DailyWaterQuality(
         plant=plant,
         plant_name=constants.PLANT_NAMES[plant],
@@ -154,21 +160,22 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
             field: pick(lang, unit, constants.UNITS_FR.get(unit, unit))
             for field, unit in constants.MEASURES.values()
         },
-        readings=parse_daily_page(page, today, lang=lang),
+        readings=readings,
         provenance=make_provenance(
             source=constants.SOURCE,
             url=f"{constants.DAILY_URL}?zone={params['zone']}",
             cached=was_cached,
             schema_name="epcor.DailyWaterQuality",
+            as_of=as_of,
             freshness=pick(
                 lang,
                 "daily averages, last 7 days; unvalidated monitoring data",
-                "moyennes quotidiennes des 7 derniers jours; données de surveillance non validées",
+                "moyennes quotidiennes des 7 derniers jours ; données de surveillance non validées",
             ),
             limits=pick(
                 lang,
                 "values leave the treatment plant; tap values can differ",
-                "valeurs mesurées à la sortie de l'usine de traitement; les valeurs au "
+                "valeurs mesurées à la sortie de l'usine de traitement ; les valeurs au "
                 "robinet peuvent différer",
             ),
             lang=lang,

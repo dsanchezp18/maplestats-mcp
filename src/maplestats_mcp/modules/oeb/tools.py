@@ -143,7 +143,7 @@ async def oeb_rates(
     TOU, tiered prices, ultra-low overnight, Regulated Price Plan, RPP,
     natural gas rates, delivery charge, distribution charge, OEB.
     Mots-clés : tarifs d'électricité de l'Ontario, prix de l'électricité,
-    facture d'électricité, prix selon l'heure de consommation, prix par
+    facture d'électricité, prix selon l'heure, prix par
     paliers, très bas prix de nuit, grille tarifaire réglementée, tarifs
     du gaz naturel, frais de livraison, frais de distribution, CEO.
     """

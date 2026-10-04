@@ -35,8 +35,8 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
-# www150.statcan.gc.ca asks for a two-second crawl delay (robots.txt), so the
-# national database has its own bucket: one request every two seconds.
+# The national database on www150.statcan.gc.ca has its own bucket: one
+# request every two seconds.
 STATCAN_LIMITER = get_limiter(
     f"{constants.SOURCE}_statcan", rate=constants.NATIONAL_RATE_PER_SECOND, capacity=1.0
 )
@@ -187,9 +187,7 @@ def members_of(blob: bytes, url: str, *, lang: str = "en") -> list[ZipMember]:
         )
 
 
-def read_blob_member(
-    blob: bytes, member: ZipMember, *, max_bytes: int, lang: str = "en"
-) -> bytes:
+def read_blob_member(blob: bytes, member: ZipMember, *, max_bytes: int, lang: str = "en") -> bytes:
     """One member of an in-memory zip, bounded on its inflated size."""
     if member.size > max_bytes:
         raise_localized(
@@ -329,8 +327,8 @@ async def read_nested_zip(url: str, member: ZipMember, *, lang: str = "en") -> b
 
     The national database keeps each feed as gtfs/<id>/gtfs.zip inside one
     archive. A deflated member cannot be read at random, so the member is
-    fetched in `NATIONAL_CHUNK_BYTES` ranges (one request per two seconds,
-    per the host's crawl delay), inflated incrementally and returned for
+    fetched in `NATIONAL_CHUNK_BYTES` ranges (one request per two
+    seconds), inflated incrementally and returned for
     the same in-memory path the BC Transit feeds use. Bounded on both the
     compressed and the actual inflated size.
     """

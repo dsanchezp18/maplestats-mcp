@@ -76,66 +76,44 @@ def normalize_lang(lang: str | None) -> str:
     return "fr" if (lang or "").strip().lower().startswith("fr") else "en"
 
 
-def t(key: str, lang: str = "en", **kwargs: Any) -> str:
-    """The `lang` text for `key`, formatted; English when no French exists.
-
-    An unknown key is returned as is, so a module can pass a literal
-    message where a template is expected.
-    """
-    entry = LABELS.get(key)
-    if entry is None:
-        return key
-    french = normalize_lang(lang) == "fr" and "fr" in entry
-    text = (entry["fr"] if french else entry.get("en", key)).format(**kwargs)
-    return french_spacing(text) if french else text
-
-
-# French typography: a no-break space (U+00A0) before : ; ? ! % and » and
-# after «. Idempotent; URLs are left alone ("https://", "?zone=", "%20").
-NBSP = "\u00a0"
-_URL = re.compile(r"https?://\S+")
-_BEFORE = re.compile(
-    r"(\S)[ \u00a0\u202f]?([;?!]+)(?=[\s)»]|$)|(\S)[ \u00a0\u202f]?([:»])(?=\s|$|[.,)])"
-)
-_OPEN_QUOTE = re.compile(r"«[ \u00a0\u202f]?(?=\S)")
-_PERCENT = re.compile(r"(\d)[ \u00a0\u202f]?%")
-
-
-def _space_marks(text: str) -> str:
-    text = _BEFORE.sub(
-        lambda m: (
-            f"{m.group(1)}{NBSP}{m.group(2)}"
-            if m.group(1) is not None
-            else f"{m.group(3)}{NBSP}{m.group(4)}"
-        ),
-        text,
-    )
-    text = _OPEN_QUOTE.sub("«" + NBSP, text)
-    return _PERCENT.sub(r"\1" + NBSP + "%", text)
+NBSP = " "
+# French puts a space before : ; ? ! % and » and after «; the space must not
+# break. Only a space already there is changed, so URLs ("https://", "?q=")
+# and English text are left as they are, and running it twice changes nothing.
+_FRENCH_SPACE_BEFORE = re.compile(r" ([:;?!%»])")
+_FRENCH_SPACE_AFTER = re.compile(r"« ")
 
 
 def french_spacing(text: str) -> str:
-    """Space French punctuation in `text` (idempotent), leaving URLs as they are."""
-    out, pos = [], 0
-    for match in _URL.finditer(text):
-        out.append(_space_marks(text[pos : match.start()]))
-        out.append(match.group(0))
-        pos = match.end()
-    out.append(_space_marks(text[pos:]))
-    return "".join(out)
-
-
-fr_typography = french_spacing  # TEMP alias, removed before commit
+    """French text with no-break spaces before : ; ? ! % » and after «."""
+    text = _FRENCH_SPACE_BEFORE.sub(NBSP + r"\1", text)
+    return _FRENCH_SPACE_AFTER.sub("«" + NBSP, text)
 
 
 def pick(lang: str | None, en: str, fr: str) -> str:
-    """`en` as written, or `fr` with French typography when `lang` is French.
+    """`en` as written, or `fr` with french_spacing when `lang` is French.
 
     For the text a module writes itself (notes, provenance freshness,
     coverage and limits, field descriptions), so the English output stays
     exactly as it was.
     """
     return french_spacing(fr) if normalize_lang(lang) == "fr" else en
+
+
+def t(key: str, lang: str = "en", **kwargs: Any) -> str:
+    """The `lang` text for `key`, formatted; English when no French exists.
+
+    An unknown key is returned as is, so a module can pass a literal
+    message where a template is expected. French text gets no-break
+    spaces before its punctuation (french_spacing).
+    """
+    entry = LABELS.get(key)
+    if entry is None:
+        return key
+    lang = normalize_lang(lang)
+    template = entry.get(lang, entry.get("en", key))
+    text = template.format(**kwargs)
+    return french_spacing(text) if lang == "fr" and "fr" in entry else text
 
 
 def register(labels: dict[str, dict[str, str]]) -> None:

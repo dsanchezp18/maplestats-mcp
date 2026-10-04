@@ -17,7 +17,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
-from typing import NamedTuple
+from typing import NamedTuple, NoReturn
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -49,10 +49,11 @@ from maplestats_mcp.modules.transit.zipstream import (
     total_bytes,
 )
 from maplestats_mcp.shared.cache import cached_fetch, forget
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
-from maplestats_mcp.shared.licences import derived_from_statcan
+from maplestats_mcp.shared.i18n import french_spacing, normalize_lang, pick
+from maplestats_mcp.shared.licences import derived_from_statcan, derived_from_statcan_fr
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.remote_zip import ZipMember, list_members, read_member
@@ -253,9 +254,7 @@ def _member(directory: FeedDirectory, key: str, name: str) -> ZipMember | None:
     return directory.members.get(name)
 
 
-async def _read_table_bytes(
-    directory: FeedDirectory, member: ZipMember, lang: str = "en"
-) -> bytes:
+async def _read_table_bytes(directory: FeedDirectory, member: ZipMember, lang: str = "en") -> bytes:
     if directory.blob is not None:
         return await run_in_pool(
             read_blob_member,
@@ -447,7 +446,9 @@ def _feed_licence(agency: Agency, lang: str = "en") -> str:
     # The credit line goes in after the French spacing, so a line the
     # publisher fixed in English is quoted exactly as written.
     marker = "\x00"
-    own = f"{agency.licence_fr or agency.licence} ({agency.licence_url}). Attribution : « {marker} »"
+    own = (
+        f"{agency.licence_fr or agency.licence} ({agency.licence_url}). Attribution : « {marker} »"
+    )
     text = (
         derived_from_statcan_fr(
             f"{own} Compilé par Statistique Canada ({constants.NATIONAL_LICENCE_FR})."
@@ -604,11 +605,13 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
                 f"Request: one HEAD request to each of the {len(feeds)} agencies' feed_url "
                 "(provenance url is the first of them; hosts that build the zip on request "
                 "are not probed). Only agencies with an open static GTFS zip and no key are "
-                "configured.",
+                "configured; hosts without range support (BC Transit) are downloaded whole.",
                 f"Requête : une requête HEAD vers le feed_url de chacun des {len(feeds)} "
-                "organismes (l'url de la provenance est le premier d'entre eux; les hôtes qui "
+                "organismes (l'url de la provenance est le premier d'entre eux ; les hôtes qui "
                 "construisent le zip à la demande ne sont pas sondés). Seuls les organismes qui "
-                "publient un zip GTFS statique ouvert, sans clé, sont configurés.",
+                "publient un zip GTFS statique ouvert, sans clé, sont configurés ; les hôtes "
+                "qui n'acceptent pas les requêtes partielles (BC Transit) sont téléchargés en "
+                "entier.",
             ),
             lang=lang,
         ),
@@ -824,11 +827,25 @@ def _natural(text: str) -> tuple[int, str]:
 
 async def _resolve_route(agency_key: str, route: str) -> RouteRecord:
     agency = _agency(agency_key)
-    rows, _ = await _table(agency_key, "routes.txt")
-    rows = [r for r in rows if not _is_excluded(agency, r)]
+    all_rows, _ = await _table(agency_key, "routes.txt")
+    rows = [r for r in all_rows if not _is_excluded(agency, r)]
     exact = [r for r in rows if r["route_id"] == route]
     named = [r for r in rows if r.get("route_short_name", "").casefold() == route.casefold()]
     found = exact or named
+    left_out = [
+        r
+        for r in all_rows
+        if _is_excluded(agency, r)
+        and (r["route_id"] == route or r.get("route_short_name", "").casefold() == route.casefold())
+    ]
+    if not found and left_out:
+        # STM route "1" is the green métro line (checked 2026-10-03): say it
+        # exists but is left out, rather than that there is no such route.
+        kind = constants.ROUTE_TYPES.get(int(left_out[0]["route_type"]), "route")
+        raise NotFound(
+            f"{agency_key}: route '{route}' is a {kind} line, which this server does not "
+            f"report under {agency.name_en}'s terms of use (see transit_list_agencies notes)."
+        )
     if not found:
         raise NotFound(
             f"{agency_key}: no route with id or short name '{route}'. Use transit_search_routes."

@@ -55,8 +55,10 @@ async def yukon_stats_query_table(
 
     Use for: getting Yukon figures such as monthly population by age and sex,
     median rent and vacancy by community, building permit values, fuel
-    prices by community, or a Census 2021 profile table. `url` comes from
-    yukon_stats_list_tables. `filters` are exact, case-insensitive matches
+    prices by community, or a Census 2021 profile table. `url` must be a
+    table URL exactly as yukon_stats_list_tables gives it (other URLs are
+    refused, since the portal would serve a table by its resource id under
+    any file name). `filters` are exact, case-insensitive matches
     on column values (for example {"region": "Whitehorse", "year": "2025"});
     `columns` picks and orders the columns. Rows are text. The long
     'footnotes' column is dropped and other cells are cut at 300 characters.
@@ -67,7 +69,7 @@ async def yukon_stats_query_table(
     vacancy, permits, prices, census, Whitehorse, community, monthly.
     Mots-clés : Yukon, Bureau de la statistique du Yukon, lire un tableau,
     lignes, filtrer, population par âge et sexe, loyer médian, taux
-    d'inoccupation, valeur des permis de bâtir, permis de construire, prix
+    d'inoccupation, valeur des permis de bâtir, prix
     des carburants, profil du recensement 2021, Whitehorse, collectivité,
     données mensuelles.
     """

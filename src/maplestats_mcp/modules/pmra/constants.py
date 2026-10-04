@@ -32,3 +32,8 @@ LICENCE = (
     "(https://open.canada.ca/en/open-government-licence-canada). Source: Health Canada, "
     "Pest Management Regulatory Agency."
 )
+LICENCE_FR = (
+    "Contient des informations visées par la Licence du gouvernement ouvert – Canada "
+    "(https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada). Source : Santé "
+    "Canada, Agence de réglementation de la lutte antiparasitaire (ARLA)."
+)

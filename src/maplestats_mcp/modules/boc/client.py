@@ -54,6 +54,10 @@ https://www.bankofcanada.ca/valet/docs prose alone):
   style header was present on any live response checked this session
   (series/list/observations endpoints) - see constants.py for the
   conservative default used in its place.
+- `lang="fr"` sends every request to the Bank's French domain
+  (constants.BASE_URL_FR), which returns French labels, descriptions and
+  error messages with the same JSON shapes. French responses are cached
+  under their own keys so the two languages never mix.
 """
 
 from __future__ import annotations
@@ -81,9 +85,10 @@ from maplestats_mcp.modules.boc.schemas import (
     SeriesSummary,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import NBSP, french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -97,6 +102,38 @@ def _limiter():
     )
 
 
+def _error(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> ValueError:
+    """The error to raise: English as before, French through the shared typed template.
+
+    Returned rather than raised so a caller can chain it (`raise ... from exc`).
+    """
+    if lang != "fr":
+        return exc_cls(en)
+    try:
+        raise_typed(exc_cls, fr, "fr")
+    except ValueError as err:
+        return err
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    raise _error(exc_cls, en, fr, lang)
+
+
+def _base(lang: str) -> str:
+    """Valet's French domain answers in French; read at call time so tests can patch it."""
+    return constants.BASE_URL_FR if lang == "fr" else constants.BASE_URL
+
+
+def _cache_key(key: str, lang: str) -> str:
+    """English keys stay as they were; French responses get their own entries."""
+    return key.replace("boc:", "boc:fr:", 1) if lang == "fr" else key
+
+
+def _fr_count(n: int) -> str:
+    """French thousands separator is a (no-break) space, not a comma."""
+    return f"{n:,}".replace(",", NBSP)
+
+
 def _error_message(exc: httpx.HTTPStatusError) -> str:
     try:
         body = exc.response.json()
@@ -105,26 +142,45 @@ def _error_message(exc: httpx.HTTPStatusError) -> str:
     return body.get("message", "") if isinstance(body, dict) else ""
 
 
-def _raise_for_status(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
+    # On the French domain Valet's own message is already French.
     message = _error_message(exc)
     if status == 404:
-        raise NotFound(message or f"{context}: not found.") from exc
+        raise _error(
+            NotFound,
+            message or f"{context}: not found.",
+            message or f"{context} : introuvable.",
+            lang,
+        ) from exc
     if status == 400:
-        raise InvalidInput(message or f"{context}: rejected the request (HTTP 400).") from exc
-    raise UpstreamError(f"{context}: upstream returned HTTP {status}: {message}") from exc
+        raise _error(
+            InvalidInput,
+            message or f"{context}: rejected the request (HTTP 400).",
+            message or f"{context} : requête refusée (HTTP 400).",
+            lang,
+        ) from exc
+    raise _error(
+        UpstreamError,
+        f"{context}: upstream returned HTTP {status}: {message}",
+        f"{context} : la source a renvoyé le code HTTP {status} : {message}",
+        lang,
+    ) from exc
 
 
-async def _get(path: str, params: dict[str, Any] | None = None) -> Any:
+async def _get(path: str, params: dict[str, Any] | None = None, lang: str = "en") -> Any:
     await _limiter().acquire()
-    url = f"{constants.BASE_URL}{path}"
+    url = f"{_base(lang)}{path}"
     try:
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status(exc, path)
+        _raise_for_status(exc, path, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{path} did not respond in time (already retried by shared/http.py)."
+        raise _error(
+            UpstreamUnavailable,
+            f"{path} did not respond in time (already retried by shared/http.py).",
+            f"{path} n'a pas répondu à temps (déjà relancé par shared/http.py).",
+            lang,
         ) from exc
 
 
@@ -139,10 +195,18 @@ def _parse_value(raw: str | None) -> float | None:
         return None
 
 
-def _require_name(name: str, kind: str) -> str:
+_KIND_FR = {"Series": "Le nom de la série", "Group": "Le nom du groupe"}
+
+
+def _require_name(name: str, kind: str, lang: str = "en") -> str:
     name = name.strip()
     if not name:
-        raise InvalidInput(f"{kind} name must not be empty.")
+        _raise(
+            InvalidInput,
+            f"{kind} name must not be empty.",
+            f"{_KIND_FR.get(kind, kind)} ne doit pas être vide.",
+            lang,
+        )
     return name
 
 
@@ -165,14 +229,19 @@ def _observation_params(
     recent_weeks: int | None,
     recent_months: int | None,
     recent_years: int | None,
+    lang: str = "en",
 ) -> dict[str, Any]:
     has_range = start_date is not None or end_date is not None
     has_recent = any(v is not None for v in (recent, recent_weeks, recent_months, recent_years))
     if has_range and has_recent:
         # Mirrors Valet's own HTTP 400 message for this combination
         # (confirmed live), caught here instead of round-tripping.
-        raise InvalidInput(
-            "Cannot mix start_date/end_date with recent/recent_weeks/recent_months/recent_years."
+        _raise(
+            InvalidInput,
+            "Cannot mix start_date/end_date with recent/recent_weeks/recent_months/recent_years.",
+            "start_date/end_date ne peuvent pas être combinés avec "
+            "recent/recent_weeks/recent_months/recent_years.",
+            lang,
         )
     params: dict[str, Any] = {}
     if start_date is not None:
@@ -235,7 +304,11 @@ class _NamedEntry(Protocol):
 
 
 async def _cached_inventory[Entry: _NamedEntry](
-    cache_key: str, path: str, container_key: str, item_type: Callable[..., Entry]
+    cache_key: str,
+    path: str,
+    container_key: str,
+    item_type: Callable[..., Entry],
+    lang: str = "en",
 ) -> tuple[list[Entry], bool]:
     """Fetch+parse `path` once per TTL window, caching the parsed models
     themselves (not the raw JSON) - list_series/list_groups return
@@ -243,13 +316,13 @@ async def _cached_inventory[Entry: _NamedEntry](
     call, cache hit or not."""
 
     async def fetch() -> list[Entry]:
-        obj = await _get(path)
+        obj = await _get(path, lang=lang)
         return [
             item_type(name=code, label=e.get("label", ""), description=e.get("description", ""))
             for code, e in obj[container_key].items()
         ]
 
-    return await cached_fetch(cache_key, constants.CACHE_TTL_LISTS_SECONDS, fetch)
+    return await cached_fetch(_cache_key(cache_key, lang), constants.CACHE_TTL_LISTS_SECONDS, fetch)
 
 
 def _filter_inventory[Entry: _NamedEntry](items: list[Entry], query: str) -> list[Entry]:
@@ -263,14 +336,19 @@ def _filter_inventory[Entry: _NamedEntry](items: list[Entry], query: str) -> lis
     ]
 
 
-def _check_limit(limit: int, maximum: int) -> None:
+def _check_limit(limit: int, maximum: int, lang: str = "en") -> None:
     if not 1 <= limit <= maximum:
-        raise InvalidInput(f"limit must be between 1 and {maximum}, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {maximum}, got {limit}.",
+            f"limit doit être compris entre 1 et {maximum} ; valeur reçue : {limit}.",
+            lang,
+        )
 
 
-def _url(path: str, params: dict[str, Any] | None = None) -> str:
+def _url(path: str, params: dict[str, Any] | None = None, lang: str = "en") -> str:
     """The request URL with its query string, so provenance reproduces the call."""
-    return str(httpx.URL(f"{constants.BASE_URL}{path}", params=params or None))
+    return str(httpx.URL(f"{_base(lang)}{path}", params=params or None))
 
 
 def _keep_latest(observations: list[Observation]) -> list[Observation]:
@@ -279,7 +357,15 @@ def _keep_latest(observations: list[Observation]) -> list[Observation]:
     return kept[::-1]
 
 
-def _observation_limits(returned: int, total: int) -> str | None:
+def _observation_limits(returned: int, total: int, lang: str = "en") -> str | None:
+    if lang == "fr":
+        if returned >= total:
+            return None
+        return french_spacing(
+            f"Seules les {_fr_count(returned)} dates d'observation les plus récentes sur "
+            f"{_fr_count(total)} sont renvoyées ; passez start_date/end_date ou recent_* "
+            "pour choisir la période."
+        )
     return truncation_note(
         returned=returned,
         total=total,
@@ -289,126 +375,172 @@ def _observation_limits(returned: int, total: int) -> str | None:
     )
 
 
-async def list_series() -> SeriesList:
+def _fr_cut(returned: int, total: int, kind: str, *, matching: bool) -> str:
+    """French "only the first N of M ..." with the agreement each noun needs
+    (séries is feminine, groupes masculine)."""
+    if kind == "series":
+        extra = " correspondantes" if matching else ""
+        return (
+            f"Seules les {_fr_count(returned)} premières séries{extra} sur "
+            f"{_fr_count(total)} sont renvoyées"
+        )
+    extra = " correspondants" if matching else ""
+    return (
+        f"Seuls les {_fr_count(returned)} premiers groupes{extra} sur "
+        f"{_fr_count(total)} sont renvoyés"
+    )
+
+
+def _search_limits(returned: int, total: int, kind: str, lang: str) -> str | None:
+    """The cut a keyword search made; `kind` is "series" or "groups"."""
+    if lang == "fr":
+        if returned >= total:
+            return None
+        return french_spacing(
+            f"{_fr_cut(returned, total, kind, matching=True)} ; précisez la requête ou "
+            f"augmentez limit (max. {constants.SEARCH_LIMIT_MAX})."
+        )
+    return truncation_note(
+        returned=returned,
+        total=total,
+        unit=f"matching {kind}",
+        how_to_get_more=f"refine the query or raise limit (max {constants.SEARCH_LIMIT_MAX})",
+    )
+
+
+def _page_limits(returned: int, total: int, kind: str, lang: str) -> str | None:
+    """The cut a no-query listing made; `kind` is "series" or "groups"."""
+    if lang == "fr":
+        if returned >= total:
+            return None
+        return french_spacing(
+            f"{_fr_cut(returned, total, kind, matching=False)} ; cherchez avec query ou "
+            f"augmentez limit (max. {constants.LIST_LIMIT_MAX})."
+        )
+    return truncation_note(
+        returned=returned,
+        total=total,
+        unit=kind,
+        how_to_get_more=f"search with query, or raise limit (max {constants.LIST_LIMIT_MAX})",
+    )
+
+
+def _search_coverage(count: int, kind: str, lang: str) -> str:
+    if lang == "fr":
+        what = "séries" if kind == "series" else "groupes"
+        return french_spacing(
+            f"recherche de sous-chaîne parmi {_fr_count(count)} {what} "
+            "(libellés et descriptions en français de la Banque du Canada)"
+        )
+    return f"substring search over {count} {kind}"
+
+
+async def list_series(lang: str = "en") -> SeriesList:
     series, was_cached = await _cached_inventory(
-        "boc:lists/series", "lists/series/json", "series", SeriesSummary
+        "boc:lists/series", "lists/series/json", "series", SeriesSummary, lang
     )
     return SeriesList(
         series=series,
         total_count=len(series),
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}lists/series/json",
+            url=f"{_base(lang)}lists/series/json",
             cached=was_cached,
             schema_name="boc.SeriesList",
+            lang=lang,
         ),
     )
 
 
-async def search_series(query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT) -> SeriesList:
+async def search_series(
+    query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT, lang: str = "en"
+) -> SeriesList:
     """Client-side substring search over the cached series inventory."""
-    _check_limit(limit, constants.SEARCH_LIMIT_MAX)
-    all_series = await list_series()
+    _check_limit(limit, constants.SEARCH_LIMIT_MAX, lang)
+    all_series = await list_series(lang)
     matches = _filter_inventory(all_series.series, query)
     return SeriesList(
         series=matches[:limit],
         total_count=len(matches),
         provenance=make_provenance(
             source="boc",
-            url=_url("lists/series/json"),
+            url=_url("lists/series/json", lang=lang),
             cached=all_series.provenance.cached,
             schema_name="boc.SeriesList",
-            coverage=f"substring search over {len(all_series.series)} series",
-            limits=truncation_note(
-                returned=min(limit, len(matches)),
-                total=len(matches),
-                unit="matching series",
-                how_to_get_more="refine the query or raise limit "
-                f"(max {constants.SEARCH_LIMIT_MAX})",
-            ),
+            coverage=_search_coverage(len(all_series.series), "series", lang),
+            limits=_search_limits(min(limit, len(matches)), len(matches), "series", lang),
+            lang=lang,
         ),
     )
 
 
-def page_series(result: SeriesList, limit: int) -> SeriesList:
+def page_series(result: SeriesList, limit: int, lang: str = "en") -> SeriesList:
     """The first `limit` series of the full inventory, with the cut recorded."""
-    _check_limit(limit, constants.LIST_LIMIT_MAX)
+    _check_limit(limit, constants.LIST_LIMIT_MAX, lang)
     series = result.series[:limit]
-    note = truncation_note(
-        returned=len(series),
-        total=len(result.series),
-        unit="series",
-        how_to_get_more=f"search with query, or raise limit (max {constants.LIST_LIMIT_MAX})",
-    )
+    note = _page_limits(len(series), len(result.series), "series", lang)
     provenance = result.provenance.model_copy(update={"limits": note})
     return result.model_copy(
         update={"series": series, "total_count": len(result.series), "provenance": provenance}
     )
 
 
-async def list_groups() -> GroupList:
+async def list_groups(lang: str = "en") -> GroupList:
     groups, was_cached = await _cached_inventory(
-        "boc:lists/groups", "lists/groups/json", "groups", GroupSummary
+        "boc:lists/groups", "lists/groups/json", "groups", GroupSummary, lang
     )
     return GroupList(
         groups=groups,
         total_count=len(groups),
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}lists/groups/json",
+            url=f"{_base(lang)}lists/groups/json",
             cached=was_cached,
             schema_name="boc.GroupList",
+            lang=lang,
         ),
     )
 
 
-async def search_groups(query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT) -> GroupList:
+async def search_groups(
+    query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT, lang: str = "en"
+) -> GroupList:
     """Client-side substring search over the cached group inventory."""
-    _check_limit(limit, constants.SEARCH_LIMIT_MAX)
-    all_groups = await list_groups()
+    _check_limit(limit, constants.SEARCH_LIMIT_MAX, lang)
+    all_groups = await list_groups(lang)
     matches = _filter_inventory(all_groups.groups, query)
     return GroupList(
         groups=matches[:limit],
         total_count=len(matches),
         provenance=make_provenance(
             source="boc",
-            url=_url("lists/groups/json"),
+            url=_url("lists/groups/json", lang=lang),
             cached=all_groups.provenance.cached,
             schema_name="boc.GroupList",
-            coverage=f"substring search over {len(all_groups.groups)} groups",
-            limits=truncation_note(
-                returned=min(limit, len(matches)),
-                total=len(matches),
-                unit="matching groups",
-                how_to_get_more="refine the query or raise limit "
-                f"(max {constants.SEARCH_LIMIT_MAX})",
-            ),
+            coverage=_search_coverage(len(all_groups.groups), "groups", lang),
+            limits=_search_limits(min(limit, len(matches)), len(matches), "groups", lang),
+            lang=lang,
         ),
     )
 
 
-def page_groups(result: GroupList, limit: int) -> GroupList:
+def page_groups(result: GroupList, limit: int, lang: str = "en") -> GroupList:
     """The first `limit` groups of the full inventory, with the cut recorded."""
-    _check_limit(limit, constants.LIST_LIMIT_MAX)
+    _check_limit(limit, constants.LIST_LIMIT_MAX, lang)
     groups = result.groups[:limit]
-    note = truncation_note(
-        returned=len(groups),
-        total=len(result.groups),
-        unit="groups",
-        how_to_get_more=f"search with query, or raise limit (max {constants.LIST_LIMIT_MAX})",
-    )
+    note = _page_limits(len(groups), len(result.groups), "groups", lang)
     provenance = result.provenance.model_copy(update={"limits": note})
     return result.model_copy(
         update={"groups": groups, "total_count": len(result.groups), "provenance": provenance}
     )
 
 
-async def get_series(name: str) -> SeriesDetail:
-    name = _require_name(name, "Series")
-    cache_key = f"boc:series/{name}"
+async def get_series(name: str, lang: str = "en") -> SeriesDetail:
+    name = _require_name(name, "Series", lang)
+    cache_key = _cache_key(f"boc:series/{name}", lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"series/{_path_segment(name)}/json")
+        return await _get(f"series/{_path_segment(name)}/json", lang=lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
     detail = obj["seriesDetails"]
@@ -418,19 +550,20 @@ async def get_series(name: str) -> SeriesDetail:
         description=detail.get("description", ""),
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}series/{name}/json",
+            url=f"{_base(lang)}series/{name}/json",
             cached=was_cached,
             schema_name="boc.SeriesDetail",
+            lang=lang,
         ),
     )
 
 
-async def get_group(name: str) -> GroupDetail:
-    name = _require_name(name, "Group")
-    cache_key = f"boc:group/{name}"
+async def get_group(name: str, lang: str = "en") -> GroupDetail:
+    name = _require_name(name, "Group", lang)
+    cache_key = _cache_key(f"boc:group/{name}", lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(f"groups/{_path_segment(name)}/json")
+        return await _get(f"groups/{_path_segment(name)}/json", lang=lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
     detail = obj["groupDetails"]
@@ -446,9 +579,10 @@ async def get_group(name: str) -> GroupDetail:
         series=members,
         provenance=make_provenance(
             source="boc",
-            url=f"{constants.BASE_URL}groups/{name}/json",
+            url=f"{_base(lang)}groups/{name}/json",
             cached=was_cached,
             schema_name="boc.GroupDetail",
+            lang=lang,
         ),
     )
 
@@ -462,10 +596,16 @@ async def get_observations(
     recent_weeks: int | None = None,
     recent_months: int | None = None,
     recent_years: int | None = None,
+    lang: str = "en",
 ) -> ObservationsResult:
     if not series_names:
-        raise InvalidInput("series_names must contain at least one series name.")
-    names = [_require_name(n, "Series") for n in series_names]
+        _raise(
+            InvalidInput,
+            "series_names must contain at least one series name.",
+            "series_names doit contenir au moins un nom de série.",
+            lang,
+        )
+    names = [_require_name(n, "Series", lang) for n in series_names]
     params = _observation_params(
         start_date=start_date,
         end_date=end_date,
@@ -473,13 +613,14 @@ async def get_observations(
         recent_weeks=recent_weeks,
         recent_months=recent_months,
         recent_years=recent_years,
+        lang=lang,
     )
     joined = ",".join(_path_segment(n) for n in names)
     path = f"observations/{joined}/json"
-    cache_key = f"boc:{path}:{sorted(params.items())}"
+    cache_key = _cache_key(f"boc:{path}:{sorted(params.items())}", lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(path, params=params)
+        return await _get(path, params=params, lang=lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     observations = _observations_from_json(list_or_empty(obj, "observations"))
@@ -489,11 +630,12 @@ async def get_observations(
         observations=kept,
         provenance=make_provenance(
             source="boc",
-            url=_url(path, params),
+            url=_url(path, params, lang),
             cached=was_cached,
             as_of=_latest_date(observations),
             schema_name="boc.ObservationsResult",
-            limits=_observation_limits(len(kept), len(observations)),
+            limits=_observation_limits(len(kept), len(observations), lang),
+            lang=lang,
         ),
     )
 
@@ -507,8 +649,9 @@ async def get_group_observations(
     recent_weeks: int | None = None,
     recent_months: int | None = None,
     recent_years: int | None = None,
+    lang: str = "en",
 ) -> GroupObservationsResult:
-    group_name = _require_name(group_name, "Group")
+    group_name = _require_name(group_name, "Group", lang)
     params = _observation_params(
         start_date=start_date,
         end_date=end_date,
@@ -516,12 +659,13 @@ async def get_group_observations(
         recent_weeks=recent_weeks,
         recent_months=recent_months,
         recent_years=recent_years,
+        lang=lang,
     )
     path = f"observations/group/{_path_segment(group_name)}/json"
-    cache_key = f"boc:{path}:{sorted(params.items())}"
+    cache_key = _cache_key(f"boc:{path}:{sorted(params.items())}", lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(path, params=params)
+        return await _get(path, params=params, lang=lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     group_detail = obj.get("groupDetail", {}) or {}
@@ -540,10 +684,11 @@ async def get_group_observations(
         observations=kept,
         provenance=make_provenance(
             source="boc",
-            url=_url(path, params),
+            url=_url(path, params, lang),
             cached=was_cached,
             as_of=_latest_date(observations),
             schema_name="boc.GroupObservationsResult",
-            limits=_observation_limits(len(kept), len(observations)),
+            limits=_observation_limits(len(kept), len(observations), lang),
+            lang=lang,
         ),
     )

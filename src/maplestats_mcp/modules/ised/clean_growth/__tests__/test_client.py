@@ -75,3 +75,21 @@ async def test_missing_tables_raise(httpx_mock):
         await client.federal_investment("en")
     with pytest.raises(InvalidInput):
         await client.federal_investment("de")
+
+
+async def test_french_provenance_text_is_french(httpx_mock):
+    httpx_mock.add_response(url=constants.PAGE_URLS["en"], text=_EN)
+    httpx_mock.add_response(url=constants.PAGE_URLS["fr"], text=_FR)
+    result = await client.federal_investment("fr")
+    assert (result.provenance.freshness or "").startswith("mis à jour à chaque diffusion")
+    assert "Agrégats tels que publiés ;" in (result.provenance.limits or "")
+
+
+async def test_french_missing_tables_error_is_french(httpx_mock):
+    empty = "<html><main></main></html>"
+    httpx_mock.add_response(url=constants.PAGE_URLS["en"], text=empty)
+    httpx_mock.add_response(url=constants.PAGE_URLS["fr"], text=empty)
+    with pytest.raises(UpstreamError) as excinfo:
+        await client.federal_investment("fr")
+    assert str(excinfo.value).startswith("La source amont a renvoyé une réponse inattendue :")
+    assert "trois tableaux" in str(excinfo.value)

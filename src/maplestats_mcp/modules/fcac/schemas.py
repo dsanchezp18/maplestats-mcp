@@ -90,10 +90,12 @@ class CreditCardDetail(BaseModel):
         default=None, description="Percent of the transaction value."
     )
     minimum_personal_income: float | None = Field(
-        default=None, description="Dollars; null when not required or not stated."
+        default=None,
+        description="Dollars; 0.0 when FCAC says 'Not required', null only when not stated.",
     )
     minimum_household_income: float | None = Field(
-        default=None, description="Dollars; null when not required or not stated."
+        default=None,
+        description="Dollars; 0.0 when FCAC says 'Not required', null only when not stated.",
     )
     rewards: list[str] = Field(default_factory=list)
     sections: list[DetailSection] = Field(

@@ -25,15 +25,17 @@ from __future__ import annotations
 import re
 import unicodedata
 from datetime import datetime, timedelta, timezone
+from typing import NoReturn
 
 import httpx
 
 from maplestats_mcp.modules.cbsa import constants
 from maplestats_mcp.modules.cbsa.schemas import BorderCrossing, BorderWaitTimes, WaitTime
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -50,6 +52,17 @@ _LANES = (
     "travellers_canada_bound",
     "travellers_us_bound",
 )
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """Raise with the French error template for lang='fr'; English stays as it was."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _fr(en: str, fr: str, lang: str) -> str:
+    return french_spacing(fr) if lang == "fr" else en
 
 
 def _fold(text: str) -> str:
@@ -83,10 +96,15 @@ def parse_updated(text: str) -> datetime | None:
     )
 
 
-def parse_file(text: str) -> list[BorderCrossing]:
+def parse_file(text: str, lang: str = "en") -> list[BorderCrossing]:
     lines = [line for line in text.lstrip("﻿").splitlines() if line.strip()]
     if not lines or ";;" not in lines[0]:
-        raise UpstreamError("cbsa: the wait times file has no ';;' header; its format changed.")
+        _raise(
+            UpstreamError,
+            "cbsa: the wait times file has no ';;' header; its format changed.",
+            "cbsa : le fichier des temps d'attente n'a pas d'en-tête « ;; » ; son format a changé.",
+            lang,
+        )
     crossings: list[BorderCrossing] = []
     for line in lines[1:]:
         fields = [f.strip() for f in line.split(";;")]
@@ -106,7 +124,13 @@ def parse_file(text: str) -> list[BorderCrossing]:
             )
         )
     if not crossings:
-        raise UpstreamError("cbsa: the wait times file lists no crossing; its format changed.")
+        _raise(
+            UpstreamError,
+            "cbsa: the wait times file lists no crossing; its format changed.",
+            "cbsa : le fichier des temps d'attente ne contient aucun poste frontalier ; "
+            "son format a changé.",
+            lang,
+        )
     return crossings
 
 
@@ -118,24 +142,43 @@ async def _crossings(lang: str) -> tuple[list[BorderCrossing], bool]:
         try:
             response = await get_raw(url, timeout=30.0)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(f"cbsa: {url} returned HTTP {exc.response.status_code}.") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"cbsa: {url} did not respond in time.") from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"cbsa: {url} returned HTTP {status}.",
+                f"cbsa : {url} a renvoyé HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                f"cbsa: {url} did not respond in time.",
+                f"cbsa : {url} n'a pas répondu à temps.",
+                lang,
+            )
         if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"cbsa: {url} is much larger than expected; it changed.")
-        return parse_file(response.content.decode("utf-8-sig", errors="replace"))
+            _raise(
+                UpstreamError,
+                f"cbsa: {url} is much larger than expected; it changed.",
+                f"cbsa : {url} est beaucoup plus volumineux que prévu ; il a changé.",
+                lang,
+            )
+        return parse_file(response.content.decode("utf-8-sig", errors="replace"), lang)
 
     return await cached_fetch(f"cbsa:bwt:{lang}", constants.CACHE_TTL_SECONDS, fetch)
 
 
-def _province_code(province: str) -> str:
+def _province_code(province: str, lang: str = "en") -> str:
     wanted = _fold(province)
     for code, names in constants.PROVINCES.items():
         if wanted in (code.casefold(), *(_fold(n) for n in names)):
             return code
-    raise InvalidInput(
-        f"cbsa: unknown province {province!r}; use a code like ON, QC, BC "
-        f"({', '.join(constants.PROVINCES)})."
+    codes = ", ".join(constants.PROVINCES)
+    _raise(
+        InvalidInput,
+        f"cbsa: unknown province {province!r}; use a code like ON, QC, BC ({codes}).",
+        f"cbsa : province inconnue {province!r} ; utilisez un code comme ON, QC, BC ({codes}).",
+        lang,
     )
 
 
@@ -148,8 +191,13 @@ async def border_wait_times(
 ) -> BorderWaitTimes:
     """Current waits, filtered by province of the Canadian side, crossing name and direction."""
     if direction not in ("both", "canada_bound", "us_bound"):
-        raise InvalidInput("cbsa: direction must be both, canada_bound or us_bound.")
-    code = _province_code(province) if province.strip() else None
+        _raise(
+            InvalidInput,
+            "cbsa: direction must be both, canada_bound or us_bound.",
+            "cbsa : direction doit valoir both, canada_bound ou us_bound.",
+            lang,
+        )
+    code = _province_code(province, lang) if province.strip() else None
     crossings, cached = await _crossings(lang)
     words = _fold(crossing).split()
     chosen: list[BorderCrossing] = []
@@ -173,8 +221,10 @@ async def border_wait_times(
     land = f"https://open.canada.ca/data/{lang}/dataset/{constants.HISTORICAL_LAND_DATASET}"
     air = f"https://open.canada.ca/data/{lang}/dataset/{constants.HISTORICAL_AIR_DATASET}"
     history = (
-        f"Historique : postes terrestres {land} (2010 et après), aéroports {air}; lisibles "
-        "avec ckan_read_resource (portal='federal')."
+        french_spacing(
+            f"Historique : postes terrestres {land} (2010 et après), aéroports {air} ; "
+            "lisibles avec ckan_read_resource (portal='federal')."
+        )
         if lang == "fr"
         else f"Historical files: land crossings {land} (2010 onward), airports {air}; "
         "readable with ckan_read_resource (portal='federal')."
@@ -192,9 +242,10 @@ async def border_wait_times(
             url=constants.CSV_URL[lang],
             cached=cached,
             schema_name="cbsa.BorderWaitTimes",
-            freshness="file rewritten every few minutes; each crossing has its own update time",
-            coverage="about 30 land crossings; most U.S.-bound lanes are not reported ('--')",
-            licence=constants.LICENCE,
+            freshness=_fr(constants.FRESHNESS, constants.FRESHNESS_FR, lang),
+            coverage=_fr(constants.COVERAGE, constants.COVERAGE_FR, lang),
+            limits=french_spacing(constants.LOCATION_NOTE_FR) if lang == "fr" else None,
+            licence=constants.LICENCE_FR if lang == "fr" else constants.LICENCE,
             lang=lang,
         ),
     )

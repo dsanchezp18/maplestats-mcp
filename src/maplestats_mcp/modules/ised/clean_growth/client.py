@@ -21,7 +21,7 @@ prose; this client turns both into numbers. Quirks handled:
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 from bs4 import BeautifulSoup
@@ -29,9 +29,10 @@ from bs4 import BeautifulSoup
 from maplestats_mcp.modules.ised.clean_growth import constants
 from maplestats_mcp.modules.ised.clean_growth.schemas import FederalInvestment, Headline, ValueRow
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -39,6 +40,29 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
+_FRESHNESS = {
+    "en": "updated with each Clean Growth Hub release (2016-2024 edition)",
+    "fr": "mis à jour à chaque diffusion du Carrefour de la croissance propre (édition 2016-2024)",
+}
+_LIMITS = {
+    "en": (
+        "Aggregates as published; projects were identified from proactive "
+        "disclosure of grants and contributions up to March 31, 2025."
+    ),
+    "fr": (
+        "Agrégats tels que publiés ; les projets ont été repérés dans la divulgation "
+        "proactive des subventions et contributions jusqu'au 31 mars 2025."
+    ),
+}
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English stays the plain message; French gets the typed template."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
 _SCALE = {"billion": 1e9, "milliard": 1e9, "milliards": 1e9, "million": 1e6, "millions": 1e6}
 
 
@@ -129,7 +153,8 @@ def parse_notes(page: str) -> list[str]:
     return notes
 
 
-async def _page(lang: str) -> tuple[str, bool]:
+async def _page(lang: str, msg_lang: str = "en") -> tuple[str, bool]:
+    """One edition of the page; `msg_lang` is the language of any error."""
     url = constants.PAGE_URLS[lang]
 
     async def fetch() -> str:
@@ -137,13 +162,27 @@ async def _page(lang: str) -> tuple[str, bool]:
         try:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"ised_clean_growth: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"ised_clean_growth: {url} did not respond in time.") from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"ised_clean_growth: {url} returned HTTP {status}.",
+                f"ised_clean_growth : {url} a renvoyé HTTP {status}.",
+                msg_lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                f"ised_clean_growth: {url} did not respond in time.",
+                f"ised_clean_growth : {url} n'a pas répondu à temps.",
+                msg_lang,
+            )
         if len(response.content) > constants.MAX_PAGE_BYTES:
-            raise UpstreamError(f"ised_clean_growth: {url} is larger than expected.")
+            _raise(
+                UpstreamError,
+                f"ised_clean_growth: {url} is larger than expected.",
+                f"ised_clean_growth : {url} est plus volumineuse que prévu.",
+                msg_lang,
+            )
         return response.text
 
     return await cached_fetch(f"ised-clean-growth:{lang}", constants.CACHE_TTL_SECONDS, fetch)
@@ -152,13 +191,21 @@ async def _page(lang: str) -> tuple[str, bool]:
 async def federal_investment(lang: str = "en") -> FederalInvestment:
     if lang not in constants.PAGE_URLS:
         raise InvalidInput(f"ised_clean_growth: lang must be 'en' or 'fr', got {lang!r}.")
-    english, cached = await _page("en")
-    page, page_cached = (english, cached) if lang == "en" else await _page(lang)
+    # The headline figures are read from the English prose (see module docstring).
+    english, cached = await _page("en", lang)
+    page, page_cached = (english, cached) if lang == "en" else await _page(lang, lang)
     tables = parse_tables(page)
     if len(tables) < 3 or not all(tables[:3]):
-        raise UpstreamError(
-            "ised_clean_growth: the investment page no longer has its three data tables."
+        _raise(
+            UpstreamError,
+            "ised_clean_growth: the investment page no longer has its three data tables.",
+            "ised_clean_growth : la page des investissements n'a plus ses trois tableaux "
+            "de données.",
+            lang,
         )
+    freshness, limits = _FRESHNESS[lang], _LIMITS[lang]
+    if lang == "fr":
+        freshness, limits = french_spacing(freshness), french_spacing(limits)
     return FederalInvestment(
         headline=parse_headline(english),
         by_year=tables[0],
@@ -173,10 +220,8 @@ async def federal_investment(lang: str = "en") -> FederalInvestment:
             url=constants.PAGE_URLS[lang],
             cached=cached and page_cached,
             schema_name="ised_clean_growth.FederalInvestment",
-            freshness="updated with each Clean Growth Hub release (2016-2024 edition)",
-            limits=(
-                "Aggregates as published; projects were identified from proactive "
-                "disclosure of grants and contributions up to March 31, 2025."
-            ),
+            freshness=freshness,
+            limits=limits,
+            lang=lang,
         ),
     )

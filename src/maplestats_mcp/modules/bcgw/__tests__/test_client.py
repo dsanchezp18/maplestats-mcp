@@ -5,6 +5,8 @@ docstring for the GML-date "Z"-suffix quirk).
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from maplestats_mcp.modules.bcgw import client, constants
@@ -85,7 +87,16 @@ async def test_get_active_wildfires_parses_records(httpx_mock):
     request = httpx_mock.get_requests()[0]
     assert request.url.params["typeName"] == constants.WILDFIRE_TYPE_NAME
     assert request.url.params["propertyName"] == constants.WILDFIRE_ATTRIBUTE_FIELDS
-    assert "CQL_FILTER" not in request.url.params
+    # 250 of 312 live perimeters were "Out" on 2026-10-03 and came first by
+    # OBJECTID: by default they are filtered out and the largest fires lead.
+    assert request.url.params["CQL_FILTER"] == "(FIRE_STATUS IS NULL OR FIRE_STATUS<>'Out')"
+    assert request.url.params["sortBy"] == "FIRE_SIZE_HECTARES D,OBJECTID A"
+
+
+async def test_get_active_wildfires_include_out_sends_no_status_filter(httpx_mock):
+    httpx_mock.add_response(json=_WILDFIRE_COLLECTION)
+    await client.get_active_wildfires(include_out=True)
+    assert "CQL_FILTER" not in httpx_mock.get_requests()[0].url.params
 
 
 async def test_get_active_wildfires_builds_cql_from_filters(httpx_mock):
@@ -96,6 +107,7 @@ async def test_get_active_wildfires_builds_cql_from_filters(httpx_mock):
     request = httpx_mock.get_requests()[0]
     cql = request.url.params["CQL_FILTER"]
     assert "FIRE_STATUS='Out of Control'" in cql
+    assert "<>'Out'" not in cql  # an explicit status replaces the default
     assert "FIRE_YEAR=2026" in cql
     assert "FIRE_SIZE_HECTARES>=10" in cql
     # The provenance URL is the request actually sent, filters included.
@@ -137,7 +149,11 @@ async def test_get_mining_tenure_builds_cql_and_uppercases_owner(httpx_mock):
     request = httpx_mock.get_requests()[0]
     cql = request.url.params["CQL_FILTER"]
     assert "TENURE_TYPE_CODE='M'" in cql
-    assert "OWNER_NAME LIKE '%TECK%'" in cql
+    # Word starts only: '%TECK%' also matched individuals like "BIATECKI, ...".
+    assert (
+        "(OWNER_NAME LIKE 'TECK%' OR OWNER_NAME LIKE '% TECK%' OR OWNER_NAME LIKE '%(TECK%')" in cql
+    )
+    assert "'%TECK%'" not in cql
     assert "AREA_IN_HECTARES>=100" in cql
 
 
@@ -212,6 +228,77 @@ async def test_query_layer_include_geometry_reprojects(httpx_mock):
     assert request.url.params["srsName"] == constants.DEFAULT_SRS
     assert "propertyName" not in request.url.params
     assert len(httpx_mock.get_requests()) == 1  # no DescribeFeatureType needed
+
+
+# DescribeFeatureType (outputFormat=application/json) for the fire points
+# layer, trimmed from the live answer of 2026-10-03.
+_FIRE_POINTS = "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_PNTS_SP"
+_DESCRIBE = {
+    "elementFormDefault": "qualified",
+    "targetNamespace": "http://delivery.openmaps.gov.bc.ca/pub",
+    "targetPrefix": "pub",
+    "featureTypes": [
+        {
+            "typeName": _FIRE_POINTS,
+            "properties": [
+                {"name": "FIRE_NUMBER", "nillable": False, "type": "xsd:string"},
+                {"name": "FIRE_YEAR", "nillable": False, "type": "xsd:number"},
+                {
+                    "name": "SHAPE",
+                    "nillable": True,
+                    "type": "gml:Geometry",
+                    "localType": "Geometry",
+                },
+                {"name": "OBJECTID", "nillable": False, "type": "xsd:number"},
+            ],
+        }
+    ],
+}
+_FIRE_POINT = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": f"{_FIRE_POINTS}.G80405",
+            "geometry": {"type": "Point", "coordinates": [-121.752716, 57.3919]},
+            "geometry_name": "SHAPE",
+            "properties": {"FIRE_NUMBER": "G80405", "FIRE_YEAR": 2026, "OBJECTID": 87211955},
+        }
+    ],
+    "totalFeatures": 1441,
+    "numberMatched": 1441,
+}
+
+
+async def test_query_layer_geometry_survives_property_names(httpx_mock):
+    httpx_mock.add_response(
+        url=re.compile(r".*request=DescribeFeatureType.*"), json=_DESCRIBE, is_reusable=True
+    )
+    httpx_mock.add_response(url=re.compile(r".*request=GetFeature.*"), json=_FIRE_POINT)
+    result = await client.query_layer(
+        _FIRE_POINTS, include_geometry=True, property_names="FIRE_NUMBER"
+    )
+    get_feature = httpx_mock.get_requests()[-1]
+    # Without SHAPE in propertyName every record came back "geometry": null.
+    assert get_feature.url.params["propertyName"] == "FIRE_NUMBER,SHAPE"
+    assert result.records[0]["geometry"] == {"type": "Point", "coordinates": [-121.752716, 57.3919]}
+
+
+async def test_query_layer_geometry_column_already_listed(httpx_mock):
+    httpx_mock.add_response(url=re.compile(r".*request=DescribeFeatureType.*"), json=_DESCRIBE)
+    httpx_mock.add_response(url=re.compile(r".*request=GetFeature.*"), json=_FIRE_POINT)
+    await client.query_layer(_FIRE_POINTS, include_geometry=True, property_names="shape,FIRE_YEAR")
+    assert httpx_mock.get_requests()[-1].url.params["propertyName"] == "shape,FIRE_YEAR"
+
+
+async def test_query_layer_geometry_on_unknown_layer_raises(httpx_mock):
+    httpx_mock.add_response(
+        url=re.compile(r".*request=DescribeFeatureType.*"),
+        status_code=400,
+        text="<ows:ExceptionReport/>",
+    )
+    with pytest.raises(InvalidInput, match="NOPE.NOPE: rejected the request"):
+        await client.query_layer("NOPE.NOPE", include_geometry=True, property_names="X")
 
 
 async def test_query_layer_empty_type_name_raises():

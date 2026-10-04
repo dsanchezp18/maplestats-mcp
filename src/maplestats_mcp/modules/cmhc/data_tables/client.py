@@ -82,14 +82,38 @@ from maplestats_mcp.modules.cmhc.data_tables.schemas import (
     TableSummary,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import api_get, get_raw
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing
+from maplestats_mcp.shared.i18n import t as i18n_text
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 _XHTML_NS = "http://www.w3.org/1999/xhtml"
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+def _error(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> ValueError:
+    """The error to raise with `from`: English as before, French in the typed template."""
+    return exc_cls(i18n_text(ERROR_KEYS[exc_cls.__name__], "fr", detail=fr) if lang == "fr" else en)
+
+
+def _check_lang(lang: str) -> None:
+    if lang not in ("en", "fr"):
+        raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
 
 
 def _limiter():
@@ -100,56 +124,75 @@ def _limiter():
     )
 
 
-def _require(value: str, name: str) -> str:
+def _require(value: str, name: str, lang: str = "en") -> str:
     value = value.strip()
     if not value:
-        raise InvalidInput(f"{name} must not be empty.")
+        _raise(InvalidInput, f"{name} must not be empty.", f"{name} ne doit pas être vide.", lang)
     return value
 
 
-def _require_category(category: str) -> str:
-    category = _require(category, "category")
+def _require_category(category: str, lang: str = "en") -> str:
+    category = _require(category, "category", lang)
     english = {fr: en for en, fr in constants.FRENCH_CATEGORIES.items()}
     category = english.get(category, category)
     if category not in constants.KNOWN_CATEGORIES:
-        raise InvalidInput(
-            f"category must be one of {constants.KNOWN_CATEGORIES}, got {category!r}."
+        _raise(
+            InvalidInput,
+            f"category must be one of {constants.KNOWN_CATEGORIES}, got {category!r}.",
+            f"category doit être l'une de {constants.KNOWN_CATEGORIES} (ou son équivalent "
+            f"français), reçu {category!r}.",
+            lang,
         )
     return category
 
 
-def _raise_for_status(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     if status == 404:
-        raise NotFound(f"{context}: not found.") from exc
+        raise _error(NotFound, f"{context}: not found.", f"{context} : introuvable.", lang) from exc
     if status == 400:
-        raise InvalidInput(f"{context}: rejected the request (HTTP 400).") from exc
-    raise UpstreamError(f"{context}: upstream returned HTTP {status}.") from exc
+        raise _error(
+            InvalidInput,
+            f"{context}: rejected the request (HTTP 400).",
+            f"{context} : requête refusée (HTTP 400).",
+            lang,
+        ) from exc
+    raise _error(
+        UpstreamError,
+        f"{context}: upstream returned HTTP {status}.",
+        f"{context} : la source a renvoyé HTTP {status}.",
+        lang,
+    ) from exc
 
 
-async def _get_html(url: str, params: dict[str, Any] | None = None) -> str:
+def _no_answer(url: str, lang: str) -> ValueError:
+    return _error(
+        UpstreamUnavailable,
+        f"{url} did not respond in time (already retried by shared/http.py).",
+        f"{url} n'a pas répondu à temps (malgré les nouvelles tentatives).",
+        lang,
+    )
+
+
+async def _get_html(url: str, params: dict[str, Any] | None = None, lang: str = "en") -> str:
     await _limiter().acquire()
     try:
         response = await get_raw(url, params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status(exc, url)
+        _raise_for_status(exc, url, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{url} did not respond in time (already retried by shared/http.py)."
-        ) from exc
+        raise _no_answer(url, lang) from exc
     return response.text
 
 
-async def _get_json(url: str, params: dict[str, Any]) -> Any:
+async def _get_json(url: str, params: dict[str, Any], lang: str = "en") -> Any:
     await _limiter().acquire()
     try:
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status(exc, url)
+        _raise_for_status(exc, url, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{url} did not respond in time (already retried by shared/http.py)."
-        ) from exc
+        raise _no_answer(url, lang) from exc
 
 
 def _clean(text: str) -> str:
@@ -221,7 +264,7 @@ def _alternate_url(soup: BeautifulSoup, lang: str) -> str | None:
     return href if isinstance(href, str) and href else None
 
 
-def _parse_table_detail(body: str, category: str, slug: str) -> dict[str, Any]:
+def _parse_table_detail(body: str, category: str, slug: str, lang: str = "en") -> dict[str, Any]:
     """Read a table page. Two page templates were found live (2026-10-03):
 
     - edition pages (20 of 72 tables): `#DataSource`, `#pdf_geo` and
@@ -237,7 +280,12 @@ def _parse_table_detail(body: str, category: str, slug: str) -> dict[str, Any]:
     title_tag = soup.find("h1")
     title = _clean(title_tag.get_text(" ")) if title_tag else ""
     if not title:
-        raise NotFound(f"CMHC data table {category}/{slug} was not found.")
+        _raise(
+            NotFound,
+            f"CMHC data table {category}/{slug} was not found.",
+            f"tableau de données de la SCHL {category}/{slug} introuvable.",
+            lang,
+        )
 
     description_container = soup.select_one("div.pdf-landing")
     description = ""
@@ -249,9 +297,14 @@ def _parse_table_detail(body: str, category: str, slug: str) -> dict[str, Any]:
     data_source = _input_value(soup, "DataSource")
     document_id = _input_value(soup, "document-id")
     if not data_source and not document_id:
-        raise UpstreamError(
+        _raise(
+            UpstreamError,
             f"CMHC data table {category}/{slug}: the page has neither a #DataSource nor a "
-            "#document-id value to resolve its download with; the layout may have changed."
+            "#document-id value to resolve its download with; the layout may have changed.",
+            f"tableau de données de la SCHL {category}/{slug} : la page n'a ni valeur "
+            "#DataSource ni valeur #document-id pour trouver son fichier ; sa structure a "
+            "peut-être changé.",
+            lang,
         )
 
     terms = _definition_list(soup)
@@ -291,7 +344,9 @@ async def _report_file_url(document_id: str, lang: str) -> str | None:
 
     async def fetch() -> str:
         body = await _get_json(
-            constants.GET_REPORT_FILE_URL, {"documentId": document_id, "contextLanguage": lang}
+            constants.GET_REPORT_FILE_URL,
+            {"documentId": document_id, "contextLanguage": lang},
+            lang,
         )
         return body if isinstance(body, str) else ""
 
@@ -426,7 +481,9 @@ async def _french_summaries(
                 title = None
         if not french_path or not title:
             missing.append(table.slug)
-            note = "No French page found for this table: English title and slug."
+            note = french_spacing(
+                "Aucune page française pour ce tableau : titre et identifiant anglais."
+            )
             summaries.append(table.model_copy(update={"english_slug": table.slug, "note": note}))
             continue
         summaries.append(
@@ -438,9 +495,12 @@ async def _french_summaries(
                 english_slug=table.slug,
             )
         )
+    # Only called for lang="fr", so the note is said in French.
     note = (
-        f"{len(missing)} table(s) have no French page and keep their English title: "
-        + ", ".join(missing)
+        french_spacing(
+            f"{len(missing)} tableau(x) sans page française gardent leur titre anglais : "
+            + ", ".join(missing)
+        )
         if missing
         else None
     )
@@ -452,9 +512,8 @@ async def list_tables(category: str, *, lang: str = "en") -> TableList:
     # of tables (50 against 52 for household characteristics, live
     # 2026-10-03), so French titles are paired through CMHC's own English
     # to French links, not matched by title.
-    if lang not in ("en", "fr"):
-        raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
-    category = _require_category(category)
+    _check_lang(lang)
+    category = _require_category(category, lang)
     url = f"{constants.BASE_URL}{constants.DATA_TABLES_PATH}/{category}"
     cache_key = f"cmhc-dt:list_tables:{category}"
 
@@ -477,28 +536,28 @@ async def list_tables(category: str, *, lang: str = "en") -> TableList:
             url=url,
             cached=was_cached,
             schema_name="cmhc.data_tables.TableList",
+            lang=lang,
         ),
     )
 
 
 async def _parsed_page(
-    url: str, cache_key: str, category: str, slug: str
+    url: str, cache_key: str, category: str, slug: str, lang: str = "en"
 ) -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
-        body = await _get_html(url)
-        return _parse_table_detail(body, category, slug)
+        body = await _get_html(url, lang=lang)
+        return _parse_table_detail(body, category, slug, lang)
 
     return await cached_fetch(cache_key, constants.CACHE_TTL_TABLE_SECONDS, fetch)
 
 
 async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetail:
-    if lang not in ("en", "fr"):
-        raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
-    category = _require_category(category)
-    slug = _require(slug, "slug")
+    _check_lang(lang)
+    category = _require_category(category, lang)
+    slug = _require(slug, "slug", lang)
     try:
         parsed, was_cached = await _parsed_page(
-            _table_url(category, slug), f"cmhc-dt:table:{category}:{slug}", category, slug
+            _table_url(category, slug), f"cmhc-dt:table:{category}:{slug}", category, slug, lang
         )
     except NotFound:
         # A French slug (from cmhc_dt_list_tables with lang="fr") is not an
@@ -508,7 +567,7 @@ async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetai
             raise
         slug = english
         parsed, was_cached = await _parsed_page(
-            _table_url(category, slug), f"cmhc-dt:table:{category}:{slug}", category, slug
+            _table_url(category, slug), f"cmhc-dt:table:{category}:{slug}", category, slug, lang
         )
     url = _table_url(category, slug)
     page_url = url
@@ -518,7 +577,7 @@ async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetai
         # edition ids), with French title, description and labels.
         page_url = parsed["french_url"]
         shown, was_cached = await _parsed_page(
-            page_url, f"cmhc-dt:table-fr:{category}:{slug}", category, slug
+            page_url, f"cmhc-dt:table-fr:{category}:{slug}", category, slug, lang
         )
     default_url = shown["default_download_url"]
     # A single-file table's French page has its own document id; the
@@ -547,6 +606,7 @@ async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetai
             url=page_url,
             cached=was_cached,
             schema_name="cmhc.data_tables.TableDetail",
+            lang=lang,
         ),
     )
 
@@ -563,18 +623,27 @@ async def get_download_url(
     edition_id: str | None = None,
     lang: str = "en",
 ) -> DownloadLink:
-    if lang not in ("en", "fr"):
-        raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
+    _check_lang(lang)
     table = await get_table(category, slug, lang=lang)
     slug = table.slug  # the English slug when a French one was given
     if table.document_id:
         if geography_id is not None or edition_id is not None:
-            raise InvalidInput(
+            _raise(
+                InvalidInput,
                 f"CMHC data table {category}/{slug} is a single file with no geography or "
-                "edition options; call it without geography_id and edition_id."
+                "edition options; call it without geography_id and edition_id.",
+                f"le tableau de données de la SCHL {category}/{slug} est un fichier unique, "
+                "sans choix de géographie ni d'édition ; appelez-le sans geography_id ni "
+                "edition_id.",
+                lang,
             )
         if not table.default_download_url:
-            raise NotFound(f"CMHC has no published file for {category}/{slug} in {lang!r}.")
+            _raise(
+                NotFound,
+                f"CMHC has no published file for {category}/{slug} in {lang!r}.",
+                f"la SCHL n'a publié aucun fichier pour {category}/{slug} en {lang!r}.",
+                lang,
+            )
         return DownloadLink(
             document_url=table.default_download_url,
             file_name=_file_name(table.default_download_url),
@@ -588,28 +657,48 @@ async def get_download_url(
                 url=constants.GET_REPORT_FILE_URL,
                 cached=table.provenance.cached,
                 schema_name="cmhc.data_tables.DownloadLink",
+                lang=lang,
             ),
         )
     if geography_id is None:
         if not table.geographies:
-            raise NotFound(f"CMHC data table {category}/{slug} has no geography options.")
+            _raise(
+                NotFound,
+                f"CMHC data table {category}/{slug} has no geography options.",
+                f"le tableau de données de la SCHL {category}/{slug} n'a aucun choix de "
+                "géographie.",
+                lang,
+            )
         geography_id = table.geographies[0].id
     if edition_id is None:
         if not table.editions:
-            raise NotFound(f"CMHC data table {category}/{slug} has no edition options.")
+            _raise(
+                NotFound,
+                f"CMHC data table {category}/{slug} has no edition options.",
+                f"le tableau de données de la SCHL {category}/{slug} n'a aucun choix d'édition.",
+                lang,
+            )
         edition_id = table.editions[0].id
 
     known_geo_ids = {g.id for g in table.geographies}
     known_edition_ids = {e.id for e in table.editions}
     if geography_id not in known_geo_ids:
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             f"geography_id {geography_id!r} is not a valid option for {category}/{slug} "
-            f"(known ids: {sorted(known_geo_ids)})."
+            f"(known ids: {sorted(known_geo_ids)}).",
+            f"geography_id {geography_id!r} n'est pas un choix valide pour {category}/{slug} "
+            f"(identifiants connus : {sorted(known_geo_ids)}).",
+            lang,
         )
     if edition_id not in known_edition_ids:
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             f"edition_id {edition_id!r} is not a valid option for {category}/{slug} "
-            f"(known ids: {sorted(known_edition_ids)})."
+            f"(known ids: {sorted(known_edition_ids)}).",
+            f"edition_id {edition_id!r} n'est pas un choix valide pour {category}/{slug} "
+            f"(identifiants connus : {sorted(known_edition_ids)}).",
+            lang,
         )
 
     params = {
@@ -621,11 +710,15 @@ async def get_download_url(
     cache_key = f"cmhc-dt:download:{category}:{slug}:{geography_id}:{edition_id}:{lang}"
 
     async def fetch() -> dict[str, Any]:
-        body = await _get_json(constants.GET_FILE_DETAILS_URL, params)
+        body = await _get_json(constants.GET_FILE_DETAILS_URL, params, lang)
         if not isinstance(body, dict) or not body.get("DocumentUrl"):
-            raise NotFound(
+            _raise(
+                NotFound,
                 f"CMHC has no published file for {category}/{slug} at geography_id="
-                f"{geography_id!r}, edition_id={edition_id!r}."
+                f"{geography_id!r}, edition_id={edition_id!r}.",
+                f"la SCHL n'a publié aucun fichier pour {category}/{slug} avec geography_id="
+                f"{geography_id!r}, edition_id={edition_id!r}.",
+                lang,
             )
         return body
 
@@ -646,5 +739,6 @@ async def get_download_url(
             url=str(httpx.URL(constants.GET_FILE_DETAILS_URL, params=params)),
             cached=was_cached,
             schema_name="cmhc.data_tables.DownloadLink",
+            lang=lang,
         ),
     )
