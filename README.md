@@ -132,33 +132,45 @@ Tools are found through search rather than listed flat: call
 ```
 
 `plan_query` turns a question into an ordered, multi-source plan, and
-`reproduce_code` writes the R, Python, Stata or Julia script that fetches
-the same data straight from the source. Most tools accept `lang: "en"|"fr"`
+`reproduce_code` writes the R, Python, Stata or Julia script (or an Excel
+Power Query) that fetches the same data straight from the source;
+`reproduce_workbook` returns the rows as a formatted Excel workbook. Most tools accept `lang: "en"|"fr"`
 (a documented no-op on single-language sources), and every response has a
 `provenance` block: source, URL, query time, freshness and limits.
 `docs://catalogue` describes every module in both languages.
 
 ## What it covers
 
-About 300 tools. Run `docs://catalogue` for the full, bilingual list.
+358 tools in 69 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
-| Statistics Canada | `wds_`, `sdmx_`, `rdaas_`, `statcan_*` | Tables and series, classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), The Daily, indicators, surveys, census geography |
+| Statistics Canada | `wds_`, `sdmx_`, `sdmx_space_`, `rdaas_`, `cimt_`, `statcan_*` | Tables and series, the extra SDMX spaces (energy information, shared data), classifications, Census Profiles 2001–2021 and census tables 2006–2016, public use microdata (codebooks, weighted tables), merchandise trade by commodity (CIMT), open databases (LODE), The Daily, delta files, indicators, surveys, census geography |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
-| Federal agencies | `eccc_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `cihi_`, `phac_infobase_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `pbo_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_` | Weather and climate, corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, health, spending, energy, oceans, grain, immigration, budgets, earthquakes |
-| Wildland fire | `cwfis_` | NRCan's Canadian Wildland Fire Information System: satellite hotspots, fire danger and weather stations |
-| Electricity | `electricity_ontario_`, `electricity_quebec_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only) |
-| Parliament | `ourcommons_`, `senate_` | MPs and their roles, party standings, Cabinet, Senate votes |
-| Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `ab_economic_`, `isq_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, Alberta Economic Dashboard, Institut de la statistique du Québec, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba) |
+| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, energy, mineral production, oceans, grain, forestry, immigration, border wait times, budgets, mergers, elections, earthquakes, university-library data tables |
+| Wildland fire | `cwfis_`, `nrcan_nbac_`, `ab_wildfire_` | NRCan's Canadian Wildland Fire Information System (satellite hotspots, fire danger, weather stations), burned areas, and Alberta Wildfire's live fire status |
+| Electricity | `electricity_ontario_`, `electricity_quebec_`, `oeb_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only); Ontario Energy Board datasets |
+| Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |
+| Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `bc_env_`, `bc_lobbyists_`, `drivebc_`, `ab_economic_`, `ab_opendata_`, `isq_`, `nl_stats_`, `yukon_stats_`, `nwt_stats_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, BC environmental monitoring (air quality, snow, groundwater, streamflow), BC lobbyists registry, DriveBC road events, Alberta Economic Dashboard, Open Alberta files, Institut de la statistique du Québec, the Newfoundland and Labrador, Yukon and Northwest Territories statistics bureaus, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba) |
+| Housing (links only) | `crea_` | Links, release timing and terms for CREA's MLS® Home Price Index; no values, because CREA's terms allow private, non-commercial analysis only |
+| International | `worldbank_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
-| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit systems, plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
+| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express 12 BC Transit systems and 19 Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
 
 Other federal series (CRA, OSFI, ISED insolvency) are ordinary
 open.canada.ca datasets, reachable with
 `ckan_search_datasets(portal="federal", fq="organization:<org>")`.
+
+Not covered: CAPP's Statistics Handbook, Petrinex and Payments Canada were
+not built, because their terms or download hosts do not permit automated
+access. CanadaBuys, OpenParliament.ca and the Toronto Transit Commission's
+own schedule download were removed for the same reason (the TTC schedule is
+still served from Statistics Canada's national transit database), and the
+Saskatchewan GeoHub portal was removed. The
+[roadmap](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/ROADMAP.md)
+records each decision.
 
 ## Development
 

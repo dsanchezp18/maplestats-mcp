@@ -251,6 +251,12 @@ and `site/assets/charts.js`. A `<case>_fr` capture (the same call with
 `lang="fr"`) replaces `<case>` on the French page, for tools that answer
 in French.
 
+The FAQ's answers on publishers' terms and data licences
+(`site/faq.html#terms`, `#licences`) and the README's "Not covered"
+paragraph are also written by hand: update them, in both languages on
+the site, when a source is not built or removed, or when a new source
+carries its own reuse conditions.
+
 French pages must read as French. The build spaces French punctuation
 itself (`french_typography()`: no-break spaces before `: ; ? ! %` and
 inside « »), so write templates with plain spaces. Text the server has
