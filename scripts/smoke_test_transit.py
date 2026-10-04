@@ -19,7 +19,7 @@ check the answers against something other than the code under test:
    of nested feeds (none over 15 MB compressed) is run through every tool,
    and Barrie's counts and one stop's departures are compared with an
    independent read that fetches the nested zip with plain httpx ranges
-   and zlib/zipfile. The host asks for a two-second crawl delay, so this
+   and zlib/zipfile. Requests go one every two seconds, so this
    part takes a few minutes.
 
 Pass agency keys as arguments to run only those (the independent

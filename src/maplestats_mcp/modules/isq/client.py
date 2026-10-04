@@ -11,8 +11,7 @@ Checked live 2026-09-26:
    plus an Excel file name (`excel`, served under /<lang>/fichier/).
    /<lang>/produit/tableau/<number> also resolves.
 3. Dynamic tables come from /pls/ken/ken411_data_explt_v2.* (the former
-   BDSO engine; robots.txt disallows the path, read here on demand only,
-   see __init__.py): p_retrn_titre (title), p_retrn_header (JSON column
+   BDSO engine, read on demand, one table per request): p_retrn_titre (title), p_retrn_header (JSON column
    tree and the field list), p_retrn_data (the rows as ';'-separated CSV,
    all rows in one response: 26 of 26 sampled tables, up to 1.4 MB),
    p_retrn_note_html (notes and sources) and p_retrn_signe (flag legend).

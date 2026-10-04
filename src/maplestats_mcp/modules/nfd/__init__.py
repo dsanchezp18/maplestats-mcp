@@ -4,8 +4,7 @@ The NFD (nfdp.ccfm.org, run with the Canadian Forest Service) publishes
 25 tables on its Download page, each as one bilingual CSV and XLSX, a data
 dictionary and, for 19 of them, a comments workbook. Checked live
 2026-10-02. Terms (terms.php): "made available for public use under the
-Open Government Licence - Canada version 2.0"; robots.txt allows
-everything. The federal CKAN catalogue does not list these files.
+Open Government Licence - Canada version 2.0". The federal CKAN catalogue does not list these files.
 """
 
 MODULE_NAME = "nfd"

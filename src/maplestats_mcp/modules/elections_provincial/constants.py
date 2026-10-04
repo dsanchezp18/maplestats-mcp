@@ -6,8 +6,8 @@ Quebec: Elections Quebec's open data host serves one JSON file per general
 election, the same file its results pages draw from. The site's terms of use
 (electionsquebec.qc.ca/notre-institution/conditions-dutilisation/) allow
 downloading and reproducing any element for non-profit purposes without
-permission, if the source and the copyright (c) are named. Its robots.txt asks
-for a 10 second crawl delay, so reads are paced that slowly and cached.
+permission, if the source and the copyright (c) are named. Reads are paced at
+one request per 10 seconds and cached.
 
 Alberta: the official results site (officialresults.elections.ab.ca) has a
 provincial summary page and a winning-candidates page for every event. The
@@ -17,14 +17,12 @@ attributed to Elections Alberta and are not presented as an official version.
 
 British Columbia: the Elections BC Open Data Licence (royalty-free, commercial
 use allowed, attribution required) covers the "Provincial Voting Results"
-dataset on the BC Data Catalogue. elections.bc.ca itself answers robots.txt with
-"Disallow: /" for unknown agents, so only the catalogue's CSV downloads are used
-(its robots.txt asks for a 10 second crawl delay and disallows only /api/).
+dataset on the BC Data Catalogue. Only the catalogue's CSV downloads are used.
 
 Saskatchewan: Elections Saskatchewan (the Chief Electoral Officer's office, a legislative
 office separate from the provincial government) links one poll-by-poll file per general
 election on its results page; the files sit on cdn.elections.sk.ca. Checked 2026-10-02: the
-site has no robots.txt (404), no terms of use, copyright or licence page (the footer links
+site has no terms of use, copyright or licence page (the footer links
 are Accessibility, Privacy policy, Legislation and News releases; the privacy policy covers
 personal information only) and no licence line on the results page; the footer reads
 "Copyright (c) 2025 Elections Saskatchewan". Nothing found prohibits automated access or
@@ -99,8 +97,8 @@ SK_ATTRIBUTION = (
     "Elections Saskatchewan'. Not an official version of the results."
 )
 SK_TERMS_NOTICE = (
-    "Elections Saskatchewan publishes no terms of use or licence for these files and no "
-    "robots.txt (checked 2026-10-02); they are read at the project owner's risk. Registered "
+    "Elections Saskatchewan publishes no terms of use or licence for these files "
+    "(checked 2026-10-02); they are read at the project owner's risk. Registered "
     "voters are not summed (split polls repeat them), so there is no turnout."
 )
 SK_MAX_BYTES = 10 * 1024 * 1024
@@ -232,15 +230,14 @@ BLOCKED: tuple[Blocked, ...] = (
         "on",
         "Elections Ontario (results.elections.on.ca Election Explorer and CSV downloads)",
         "https://www.elections.on.ca/en/terms-of-use.html",
-        "The terms of use bar using software, scripts or robots (including crawlers) 'to "
-        "scrape the sites or services or otherwise copy data from the sites or services', "
+        "The terms of use do not permit automated access to copy data from the sites, "
         "and allow copying of content 'except for personal use' without prior written "
         "consent. A public server cannot meet that, so Ontario is not built.",
     ),
 )
 
 RATE_LIMIT_SOURCE = "elections-provincial"
-# One request per 10 seconds, the crawl delay Quebec and the BC catalogue ask for.
+# One request per 10 seconds for Quebec and the BC catalogue.
 RATE_LIMIT_PER_SECOND = 0.1
 RATE_LIMIT_CAPACITY = 1.0
 

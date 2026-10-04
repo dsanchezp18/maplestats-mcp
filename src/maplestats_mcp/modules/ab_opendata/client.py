@@ -3,8 +3,8 @@
 Discovery calls the portal's CKAN Action API (`package_search`,
 `package_show`) through the shared CKAN helper; a file is read only when
 its dataset lists it, so the tool never fetches arbitrary URLs. API calls
-and downloads share one bucket of one request per 10 seconds (the portal's
-robots.txt crawl delay). Sheet and CSV parsing lives in tables.py.
+and downloads share one bucket of one request per 10 seconds. Sheet and
+CSV parsing lives in tables.py.
 """
 
 from __future__ import annotations

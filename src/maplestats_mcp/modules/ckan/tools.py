@@ -271,7 +271,7 @@ async def ckan_describe_resource(
 
     Use for: looking inside a file-only dataset before reading it, on federal
     (open.canada.ca), Ontario, BC, Québec, Montréal, NWT, Yukon,
-    Regina and Alberta portals (not Toronto: its robots.txt disallows file downloads). Most of their tabular datasets have no
+    Regina and Alberta portals (not Toronto: the portal does not permit automated file downloads). Most of their tabular datasets have no
     DataStore (`datastore_active` false), so the file is the only route to
     the numbers: ECCC wastewater indicators, CRA tax statistics and
     benefits by FSA, DFO salmon escapement, ESDC temporary foreign workers,
@@ -287,7 +287,7 @@ async def ckan_describe_resource(
     date and source URL. Reads .xlsx, legacy .xls and CSV/TSV (UTF-8 or
     Windows-1252, delimiter detected); the real format is sniffed from the
     bytes because labels are often wrong. Files over 40 MB are refused.
-    Cached 2 hours; the portal's robots.txt crawl delay applies to API calls.
+    Cached 2 hours; API calls are paced per portal.
     Keywords: CKAN, resource file, Excel, xlsx, xls, CSV, sheets, columns, header
     row, file-only dataset, open.canada.ca, Ontario, BC, licence.
     Mots-clés : CKAN, ressource, fichier Excel, xlsx, xls, CSV, feuilles, colonnes,
@@ -315,7 +315,7 @@ async def ckan_read_resource(
 
     Use for: getting the numbers of a file-only dataset (no DataStore) on
     federal (open.canada.ca), Ontario, BC, Québec, Montréal, NWT,
-    Yukon, Regina or Alberta (not Toronto, whose robots.txt disallows file downloads): ECCC wastewater indicators, tax filer
+    Yukon, Regina or Alberta (not Toronto, whose portal does not permit automated file downloads): ECCC wastewater indicators, tax filer
     statistics and child benefits by FSA, DFO salmon escapement, ESDC
     temporary foreign worker data, ISED insolvency statistics, Finance
     budget tables, Ontario tourism, education and farm finance workbooks, BC

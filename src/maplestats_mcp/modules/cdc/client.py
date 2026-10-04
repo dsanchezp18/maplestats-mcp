@@ -330,8 +330,8 @@ _RELATED: list[dict[str, Any]] = [
         "url": "https://bcmilk.com/",
         "status": "blocked_access",
         "detail": {
-            "en": "Every request, robots.txt included, gets a captcha challenge (HTTP 202).",
-            "fr": "Chaque requête, robots.txt compris, reçoit un test captcha (HTTP 202).",
+            "en": "Every request gets a captcha challenge (HTTP 202).",
+            "fr": "Chaque requête reçoit un test captcha (HTTP 202).",
         },
     },
     {
@@ -357,9 +357,8 @@ _RELATED: list[dict[str, Any]] = [
         "url": "https://www.chickenfarmers.ca/market-update/",
         "status": "pdf_only",
         "detail": {
-            "en": "The monthly market update is a PDF (robots.txt asks a 60-second delay).",
-            "fr": "La mise à jour mensuelle du marché est un PDF (robots.txt demande un "
-            "délai de 60 secondes).",
+            "en": "The monthly market update is a PDF.",
+            "fr": "La mise à jour mensuelle du marché est un PDF.",
         },
         "alternative": {
             "en": "wds_ table 32-10-0117-01 (StatCan poultry meat production)",

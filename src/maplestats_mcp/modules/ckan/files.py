@@ -73,7 +73,7 @@ def _origin(portal: Portal) -> str:
 
 
 def _buckets(key: str, portal: Portal) -> tuple[CkanConfig, TokenBucket]:
-    """The API config (crawl-delay pacing) and the download bucket for one portal."""
+    """The API config (request pacing) and the download bucket for one portal."""
     if portal.shared_bucket:
         rate = 1.0 / portal.download_delay_seconds
         config = CkanConfig(
@@ -87,7 +87,7 @@ def _buckets(key: str, portal: Portal) -> tuple[CkanConfig, TokenBucket]:
     config = CkanConfig(
         source=f"ckan-resolve-{key}",
         base_url=portal.base_url,
-        rate_limit_per_second=1.0 / portal.crawl_delay_seconds,
+        rate_limit_per_second=1.0 / portal.request_interval_seconds,
         rate_limit_capacity=constants.RESOLVE_BUCKET_CAPACITY,
         timeout=portal.timeout_seconds,
     )

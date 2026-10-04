@@ -4,7 +4,7 @@ Downloads are kept small on purpose: ODHF GeoJSON (2 MB), ODEF (1.5 MB),
 ODCAF (1.3 MB), Index of Remoteness (136 KB) and the Prince Edward Island
 buildings zip (16 MB). The National Address Register (1.67 GB) is only
 listed and previewed by HTTP range, and the 269 MB ODSRF is not fetched.
-Pages are paced at the site's two-second crawl-delay, so this takes a few
+Pages are paced at one request per two seconds, so this takes a few
 minutes.
 
 Usage:

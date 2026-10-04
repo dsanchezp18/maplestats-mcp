@@ -1,8 +1,6 @@
 """Constants for the House of Commons open data module.
 
-Fetched live on 2026-09-30 from www.ourcommons.ca/en/open-data. robots.txt
-disallows only /Embed/, /ErrorPage/, /ParlDataWidgets/, /PublicationSearch/
-and /Search/; the feeds below are not among them. Feeds exist per language
+Fetched live on 2026-09-30 from www.ourcommons.ca/en/open-data. Feeds exist per language
 (`/members/en/...` and `/members/fr/...`), and a member's page accepts the
 bare person id in place of "first-last(id)".
 """

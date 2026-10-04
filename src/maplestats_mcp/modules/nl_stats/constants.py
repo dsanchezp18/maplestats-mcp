@@ -1,7 +1,7 @@
 """Constants for the Newfoundland and Labrador Statistics Agency module.
 
-Fetched live on 2026-09-30. The agency's site (stats.gov.nl.ca, ASP.NET)
-has no robots.txt (404). Its copyright statement (gov.nl.ca/disclaimer)
+Fetched live on 2026-09-30 from the agency's site (stats.gov.nl.ca,
+ASP.NET). Its copyright statement (gov.nl.ca/disclaimer)
 allows use by the public and non-government organizations. Each topic page
 lists Excel and PDF links inside `#ContentPlaceHolder1_links`, grouped
 under <h4> headings; the Excel files sit under /Statistics/Topics/.

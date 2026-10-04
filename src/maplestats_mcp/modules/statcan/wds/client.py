@@ -10,8 +10,7 @@ the lock window cannot succeed.
 
 Every table here, including StatCan's "real-time" (revision-history)
 tables, is read through WDS on www150. The separate real-time viewer
-(/rtdat-oadtr-service/) is disallowed by StatCan's robots.txt and is
-never called.
+(/rtdat-oadtr-service/) is never called.
 """
 
 from __future__ import annotations
