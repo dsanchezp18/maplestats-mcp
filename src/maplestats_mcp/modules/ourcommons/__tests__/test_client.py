@@ -158,6 +158,19 @@ async def test_party_standings_in_french(httpx_mock):
     )
     standings = await client.get_party_standings(lang="fr")
     assert "Libéral" in {t.party for t in standings.by_party}
+    assert standings.provenance.freshness == "Répartition actuelle des députés en fonction."
+    assert (standings.provenance.licence or "").startswith("Autorisation du Président")
+
+
+async def test_french_errors(httpx_mock):
+    url = constants.ROLES_URL.format(lang="fr", person_id=2500)
+    httpx_mock.add_response(url=url, status_code=302, headers={"location": "/error"})
+    with pytest.raises(NotFound, match=r"^Aucune correspondance trouvée\xa0: ourcommons\xa0: "):
+        await client.get_member_roles(2500, lang="fr")
+    with pytest.raises(InvalidInput, match="person_id doit être un entier positif"):
+        await client.get_member_roles(0, lang="fr")
+    with pytest.raises(InvalidInput, match=r"^ourcommons: person_id must be a positive integer\.$"):
+        await client.get_member_roles(0)
 
 
 async def test_ministry_in_precedence_order(httpx_mock):
