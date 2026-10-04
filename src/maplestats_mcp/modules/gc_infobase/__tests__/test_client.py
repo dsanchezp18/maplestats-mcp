@@ -147,7 +147,10 @@ async def test_english_file_with_lang_fr_keeps_its_english_name(httpx_mock):
     assert result.rows[0]["org_name"] == "Atlantic Canada Opportunities Agency"
     assert result.rows[0]["expenditures"] == 390060074.49
     limits = result.provenance.limits or ""
-    assert "EN only" in limits and "'tp-fr'" in limits
+    assert "n'existe qu'en anglais ;" in limits and "'tp-fr'" in limits
+    assert (result.provenance.coverage or "").endswith("lignes correspondantes sur 1")
+    with pytest.raises(InvalidInput, match="fiscal_year doit contenir une année"):
+        await client.query("tp-en", fiscal_year="l'an dernier", lang="fr")
 
 
 async def test_query_validates_inputs(httpx_mock):

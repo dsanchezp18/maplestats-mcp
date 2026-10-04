@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import re
 from datetime import date
+from typing import NoReturn
 
 import httpx
 from bs4 import BeautifulSoup
@@ -46,9 +47,10 @@ from maplestats_mcp.modules.cra_digital_economy_registry.schemas import (
     DigitalEconomyRegistryResult,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -82,6 +84,18 @@ async def _get(url: str) -> httpx.Response:
     response = await _client.get(url)
     response.raise_for_status()
     return response
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
 
 
 def _cell_text(cell) -> str | None:
@@ -145,13 +159,17 @@ def parse_date(text: str | None) -> date | None:
         return None
 
 
-def _parse_registrants(html: str) -> list[DigitalEconomyRegistrant]:
+def _parse_registrants(html: str, lang: str = "en") -> list[DigitalEconomyRegistrant]:
     soup = BeautifulSoup(html, "html.parser")
     table = soup.select_one("table.wb-tables")
     if table is None:
-        raise UpstreamError(
+        _raise(
+            UpstreamError,
             "cra_digital_economy_registry: expected response shape not found "
-            "(missing table.wb-tables)."
+            "(missing table.wb-tables).",
+            "cra_digital_economy_registry : la page n'a pas la forme attendue "
+            "(table.wb-tables absente).",
+            lang,
         )
     registrants: list[DigitalEconomyRegistrant] = []
     for row in table.select("tbody tr"):
@@ -189,17 +207,24 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
         try:
             response = await _get(url)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"cra_digital_economy_registry returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "cra_digital_economy_registry did not respond in time."
-            ) from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"cra_digital_economy_registry returned HTTP {status}.",
+                f"cra_digital_economy_registry a renvoyé HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                "cra_digital_economy_registry did not respond in time.",
+                "cra_digital_economy_registry n'a pas répondu à temps.",
+                lang,
+            )
         return response.text
 
     html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    all_registrants = _parse_registrants(html)
+    all_registrants = _parse_registrants(html, lang)
 
     needle = query.strip().lower()
     if needle:
@@ -216,7 +241,11 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
     truncated = matched[: constants.SEARCH_RESULTS_MAX]
     coverage = None
     if len(matched) > len(truncated):
-        coverage = f"first {len(truncated)} of {len(matched)} matches -- narrow the query"
+        coverage = _text(
+            f"first {len(truncated)} of {len(matched)} matches -- narrow the query",
+            f"les {len(truncated)} premiers résultats sur {len(matched)} : précisez la requête",
+            lang,
+        )
 
     return DigitalEconomyRegistryResult(
         query=query,
@@ -230,5 +259,6 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
             cached=was_cached,
             schema_name="cra_digital_economy_registry.DigitalEconomyRegistryResult",
             coverage=coverage,
+            lang=lang,
         ),
     )

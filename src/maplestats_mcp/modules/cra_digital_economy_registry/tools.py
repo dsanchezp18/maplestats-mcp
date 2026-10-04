@@ -28,8 +28,9 @@ async def cra_digital_economy_registry_search(
     Keywords: CRA, GST, HST, digital economy, simplified GST/HST,
     registrant, registry, cross-border, platform, short-term
     accommodation, business number, tax registration.
-    Mots-clés : ARC, TPS, TVH, économie numérique, TPS/TVH simplifiée,
-    inscrit, registre, transfrontalier, plateforme, hébergement de
-    courte durée, numéro d'entreprise, inscription fiscale.
+    Mots-clés : Agence du revenu du Canada (ARC), TPS, TVH, économie
+    numérique, TPS/TVH simplifiée, inscrit, registre, transfrontalier,
+    plateforme, hébergement de courte durée, numéro d'entreprise,
+    inscription fiscale.
     """
     return await client.search_registrants(query, lang=lang)

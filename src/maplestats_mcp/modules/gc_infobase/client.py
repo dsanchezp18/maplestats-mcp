@@ -8,14 +8,16 @@ the CSV through shared/csv_files.py.
 from __future__ import annotations
 
 import re
+from typing import NoReturn
 
 from maplestats_mcp.modules.ckan import client as ckan
 from maplestats_mcp.modules.ckan.schemas import ResourceInfo
 from maplestats_mcp.modules.gc_infobase import constants
 from maplestats_mcp.modules.gc_infobase.schemas import InfoBaseFile, InfoBaseFileList, InfoBaseRows
 from maplestats_mcp.shared import csv_files
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -24,6 +26,18 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _YEAR = re.compile(r"(\d{4})")
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
 
 
 async def _csv_resources(lang: str) -> tuple[list[ResourceInfo], str, bool]:
@@ -118,10 +132,23 @@ async def _own_language_name(resource: ResourceInfo, lang: str) -> tuple[str, st
         ),
         None,
     )
-    note = f"This file is in {own.upper()} only; lang={lang!r} does not translate its rows."
+    note = _text(
+        f"This file is in {own.upper()} only; lang={lang!r} does not translate its rows.",
+        f"Ce fichier n'existe qu'en {_LANGUAGE_FR.get(own, own.upper())} ; lang={lang!r} ne "
+        "traduit pas ses lignes.",
+        lang,
+    )
     if twin is not None:
-        note += f" The {lang.upper()} file is resource_id {twin.id!r} ({twin.name})."
+        note += _text(
+            f" The {lang.upper()} file is resource_id {twin.id!r} ({twin.name}).",
+            f" Le fichier en {_LANGUAGE_FR.get(lang, lang.upper())} est resource_id "
+            f"{twin.id!r} ({twin.name}).",
+            lang,
+        )
     return name, note
+
+
+_LANGUAGE_FR = {"en": "anglais", "fr": "français"}
 
 
 def _start_year(value: str) -> str | None:
@@ -142,15 +169,30 @@ async def query(
     """Rows of one file. `organization` is a case-insensitive substring;
     `fiscal_year` matches on the start year ("2023", "2023-24")."""
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX}, reçu {limit}.",
+            lang,
+        )
     year = _start_year(fiscal_year) if fiscal_year else None
     if fiscal_year and year is None:
-        raise InvalidInput(f"fiscal_year must contain a year such as 2023, got {fiscal_year!r}.")
+        _raise(
+            InvalidInput,
+            f"fiscal_year must contain a year such as 2023, got {fiscal_year!r}.",
+            f"fiscal_year doit contenir une année comme 2023, reçu {fiscal_year!r}.",
+            lang,
+        )
 
     resources, _, _ = await _csv_resources(lang)
     resource = next((r for r in resources if r.id == resource_id.strip()), None)
     if resource is None:
-        raise NotFound(f"No GC InfoBase file {resource_id!r}. Use gc_infobase_list_files.")
+        _raise(
+            NotFound,
+            f"No GC InfoBase file {resource_id!r}. Use gc_infobase_list_files.",
+            f"aucun fichier de l'InfoBase du GC {resource_id!r}. Utilisez gc_infobase_list_files.",
+            lang,
+        )
     name, language_note = await _own_language_name(resource, lang)
     url = resource.url or ""
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "gc_infobase")
@@ -163,12 +205,22 @@ async def query(
     org_column = lookup.first_of(constants.ORGANIZATION_COLUMNS)
     if organization:
         if org_column is None:
-            raise InvalidInput(f"This file has no organization column; columns are {lookup.names}.")
+            _raise(
+                InvalidInput,
+                f"This file has no organization column; columns are {lookup.names}.",
+                f"ce fichier n'a pas de colonne d'organisation ; ses colonnes sont {lookup.names}.",
+                lang,
+            )
         needle = organization.strip().lower()
         matching = [r for r in matching if needle in (r.get(org_column) or "").lower()]
     if year:
         if year_column is None:
-            raise InvalidInput(f"This file has no fiscal-year column; columns are {lookup.names}.")
+            _raise(
+                InvalidInput,
+                f"This file has no fiscal-year column; columns are {lookup.names}.",
+                f"ce fichier n'a pas de colonne d'exercice ; ses colonnes sont {lookup.names}.",
+                lang,
+            )
         matching = [r for r in matching if _start_year(r.get(year_column) or "") == year]
     kept = matching[:limit]
     selected, selected_rows = csv_files.select(kept, lookup, columns)
@@ -194,8 +246,17 @@ async def query(
             url=url,
             cached=cached,
             schema_name="gc_infobase.InfoBaseRows",
-            coverage=f"{len(kept)} of {len(matching)} matching rows",
-            freshness="files refreshed with each Estimates and Public Accounts release",
+            coverage=_text(
+                f"{len(kept)} of {len(matching)} matching rows",
+                f"{len(kept)} lignes correspondantes sur {len(matching)}",
+                lang,
+            ),
+            freshness=_text(
+                "files refreshed with each Estimates and Public Accounts release",
+                "fichiers mis à jour à chaque publication des budgets des dépenses et des "
+                "Comptes publics",
+                lang,
+            ),
             limits=language_note,
             lang=lang,
         ),

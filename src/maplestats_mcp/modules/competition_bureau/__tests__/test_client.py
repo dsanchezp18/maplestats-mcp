@@ -68,6 +68,19 @@ async def test_french_labels(pages):
     result = await client.search_mergers(outcome="NAL", lang="fr")
     assert result.reviews[0].outcome_label == "Lettre de non-intervention"
     assert result.outcome_legend["ARC"].startswith("Certificat")
+    assert (result.provenance.freshness or "").startswith("rapport hebdomadaire")
+    assert "mai à octobre 2023" in (result.provenance.limits or "")
+    assert (result.provenance.licence or "").startswith("Avis du site Web du gouvernement")
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="^Entrée invalide : competition_bureau : "):
+        await client.search_mergers(outcome="merged", lang="fr")
+    with pytest.raises(InvalidInput, match="date réelle AAAA-MM"):
+        await client.search_mergers(concluded_from="2024-13", lang="fr")
+    with pytest.raises(InvalidInput, match="est postérieur à concluded_to"):
+        await client.search_mergers(concluded_from="2025-01", concluded_to="2024-01", lang="fr")
+    assert httpx_mock.get_requests() == []
 
 
 async def test_bad_input_and_missing_table(httpx_mock):
