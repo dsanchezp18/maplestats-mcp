@@ -9,6 +9,7 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.earthquakes import client, constants
 from maplestats_mcp.modules.earthquakes.schemas import EarthquakeSearchResult
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.fr_typography import lang_error
 
 
 @tool
@@ -37,11 +38,17 @@ async def earthquakes_search(
     place into coordinates.
     Keywords: earthquake, seismic event, tremor, quake, magnitude,
     epicentre, Earthquakes Canada, NRCan, seismology.
-    Mots-clés : séisme, tremblement de terre, secousse, magnitude,
-    épicentre, Séismes Canada, RNCan, sismologie.
+    Mots-clés : séisme, tremblement de terre, secousse sismique,
+    magnitude, épicentre, activité sismique, Séismes Canada, RNCan,
+    sismologie, séisme récent.
     """
     if bbox is not None and len(bbox) != 4:
-        raise InvalidInput("bbox must have 4 numbers: west, south, east, north.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "bbox must have 4 numbers: west, south, east, north.",
+            "bbox doit contenir 4 nombres : ouest, sud, est, nord.",
+        )
     return await client.search(
         start=start,
         end=end,

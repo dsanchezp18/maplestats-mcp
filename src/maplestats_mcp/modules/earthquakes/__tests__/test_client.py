@@ -86,3 +86,22 @@ async def test_validation():
         await client.search(event_id="nope1")
     with pytest.raises(InvalidInput):
         await client.search(start="2000-01-01", end="2026-01-01")
+
+
+async def test_french_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(text=_TEXT)
+    result = await client.search(start="2026-09-01", end="2026-09-20", lang="fr")
+    prov = result.provenance
+    assert "mis en cache" in (prov.freshness or "") and "jours" in (prov.limits or "")
+    assert "Licence du gouvernement ouvert – Canada" in (prov.licence or "")
+    # French spacing: a no-break space before the colon.
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: start .* postérieur"):
+        await client.search(start="2026-09-10", end="2026-09-01", lang="fr")
+    httpx_mock.add_response(status_code=204)
+    with pytest.raises(NotFound, match="aucun événement"):
+        await client.search(event_id="20260901.1000", lang="fr")
+
+
+async def test_english_messages_are_unchanged(httpx_mock):
+    with pytest.raises(InvalidInput, match=r"^start 2026-09-10 is after end 2026-09-01\.$"):
+        await client.search(start="2026-09-10", end="2026-09-01")

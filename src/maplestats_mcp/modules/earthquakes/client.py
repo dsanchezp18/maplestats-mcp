@@ -17,7 +17,9 @@ from maplestats_mcp.modules.earthquakes.schemas import Earthquake, EarthquakeSea
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -29,7 +31,7 @@ _KM_PER_DEGREE = 111.19
 _EVENT_ID = re.compile(r"^\d{8}\.\d{4}(\d{3})?$")
 
 
-async def _fetch(params: dict[str, Any]) -> tuple[str, bool]:
+async def _fetch(params: dict[str, Any], lang: str = "en") -> tuple[str, bool]:
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
@@ -38,15 +40,25 @@ async def _fetch(params: dict[str, Any]) -> tuple[str, bool]:
             if exc.response.status_code == 404:
                 return ""
             if exc.response.status_code in (400, 422):
-                raise InvalidInput(
-                    f"earthquakes: the service rejected the query: {exc.response.text[:200]}"
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    f"earthquakes: the service rejected the query: {exc.response.text[:200]}",
+                    f"earthquakes : le service a refusé la requête (texte du service, en "
+                    f"anglais) : {exc.response.text[:200]}",
                 ) from exc
-            raise UpstreamError(
-                f"earthquakes: {constants.BASE_URL} returned HTTP {exc.response.status_code}."
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"earthquakes: {constants.BASE_URL} returned HTTP {exc.response.status_code}.",
+                f"earthquakes : {constants.BASE_URL} a répondu HTTP {exc.response.status_code}.",
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                f"earthquakes: {constants.BASE_URL} could not be reached."
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"earthquakes: {constants.BASE_URL} could not be reached.",
+                f"earthquakes : {constants.BASE_URL} est injoignable.",
             ) from exc
         return "" if response.status_code == 204 else response.text
 
@@ -88,8 +100,18 @@ def parse_text(text: str, lang: Literal["en", "fr"] = "en") -> list[Earthquake]:
         return []
     if not lines[0].startswith("#"):
         if lines[0].lstrip().lower().startswith(("<!doctype", "<html", "<?xml")):
-            raise UpstreamError("earthquakes: expected a text table, got markup.")
-        raise UpstreamError("earthquakes: response has no header row.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "earthquakes: expected a text table, got markup.",
+                "earthquakes : un tableau texte était attendu, le service a renvoyé du balisage.",
+            )
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "earthquakes: response has no header row.",
+            "earthquakes : la réponse n'a pas de ligne d'en-tête.",
+        )
     header = [h.strip().lower() for h in lines[0].lstrip("#").split("|")]
     quakes = []
     for line in lines[1:]:
@@ -110,13 +132,18 @@ def parse_text(text: str, lang: Literal["en", "fr"] = "en") -> list[Earthquake]:
     return quakes
 
 
-def _date(value: str | None, name: str) -> date | None:
+def _date(value: str | None, name: str, lang: str = "en") -> date | None:
     if not value:
         return None
     try:
         return date.fromisoformat(value.strip())
     except ValueError as exc:
-        raise InvalidInput(f"{name} must be YYYY-MM-DD, got {value!r}.") from exc
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be YYYY-MM-DD, got {value!r}.",
+            f"{name} doit être au format AAAA-MM-JJ ; reçu {value!r}.",
+        ) from exc
 
 
 async def search(
@@ -134,24 +161,44 @@ async def search(
     lang: Literal["en", "fr"] = "en",
 ) -> EarthquakeSearchResult:
     if limit < 1 or limit > constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX} ; reçu {limit}.",
+        )
     params: dict[str, Any] = {"format": "text"}
     if event_id:
         event_id = event_id.strip()
         if not _EVENT_ID.match(event_id):
-            raise InvalidInput(
-                f"event_id must look like 20260924.1414001 or 20260924.1414, got {event_id!r}."
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"event_id must look like 20260924.1414001 or 20260924.1414, got {event_id!r}.",
+                f"event_id doit avoir la forme 20260924.1414001 ou 20260924.1414 ; reçu "
+                f"{event_id!r}.",
             )
         # The service looks up by minute only; narrow to the exact event after.
         params["eventid"] = event_id[:13]
     else:
-        end_date = _date(end, "end") or datetime.now(UTC).date()
-        start_date = _date(start, "start") or end_date - timedelta(days=constants.DAYS_DEFAULT)
+        end_date = _date(end, "end", lang) or datetime.now(UTC).date()
+        start_date = _date(start, "start", lang) or end_date - timedelta(
+            days=constants.DAYS_DEFAULT
+        )
         if start_date > end_date:
-            raise InvalidInput(f"start {start_date} is after end {end_date}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"start {start_date} is after end {end_date}.",
+                f"start ({start_date}) est postérieur à end ({end_date}).",
+            )
         if (end_date - start_date).days > constants.MAX_SPAN_DAYS:
-            raise InvalidInput(
-                f"Date range is limited to {constants.MAX_SPAN_DAYS} days; narrow start/end."
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"Date range is limited to {constants.MAX_SPAN_DAYS} days; narrow start/end.",
+                f"La période est limitée à {constants.MAX_SPAN_DAYS} jours ; resserrez "
+                "start et end.",
             )
         params["starttime"] = f"{start_date.isoformat()}T00:00:00"
         params["endtime"] = f"{end_date.isoformat()}T23:59:59"
@@ -162,9 +209,19 @@ async def search(
         point = (latitude, longitude, radius_km)
         if any(v is not None for v in point):
             if latitude is None or longitude is None or radius_km is None:
-                raise InvalidInput("latitude, longitude and radius_km go together.")
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    "latitude, longitude and radius_km go together.",
+                    "latitude, longitude et radius_km doivent être fournis ensemble.",
+                )
             if not (-90 <= latitude <= 90 and -180 <= longitude <= 180 and 0 < radius_km <= 5000):
-                raise InvalidInput("Invalid point or radius_km (must be 0-5000).")
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    "Invalid point or radius_km (must be 0-5000).",
+                    "Point ou radius_km invalide (radius_km doit être entre 0 et 5000).",
+                )
             params.update(
                 latitude=latitude,
                 longitude=longitude,
@@ -173,7 +230,12 @@ async def search(
         if bbox is not None:
             west, south, east, north = bbox
             if not (-90 <= south < north <= 90 and -180 <= west < east <= 180):
-                raise InvalidInput("bbox must be (west, south, east, north) in degrees.")
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    "bbox must be (west, south, east, north) in degrees.",
+                    "bbox doit être (ouest, sud, est, nord) en degrés.",
+                )
             params.update(
                 minlatitude=south, maxlatitude=north, minlongitude=west, maxlongitude=east
             )
@@ -181,14 +243,20 @@ async def search(
         # 2026-10-03). Without it, limit=2 over 2021-2025 downloaded all
         # 34,973 events; one extra row says whether more match.
         params["limit"] = limit + 1
-    text, cached = await _fetch(params)
+    text, cached = await _fetch(params, lang)
     quakes = parse_text(text, lang)
     if event_id and len(event_id) > 13:
         quakes = [q for q in quakes if q.event_id == event_id]
     if event_id and not quakes:
-        raise NotFound(f"No Earthquakes Canada event {event_id!r}.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"No Earthquakes Canada event {event_id!r}.",
+            f"aucun événement {event_id!r} dans le catalogue de Séismes Canada.",
+        )
     kept = quakes[:limit]
     has_more = len(quakes) > limit
+    url = str(httpx.URL(constants.BASE_URL, params=params))
     return EarthquakeSearchResult(
         earthquakes=kept,
         total_matches=None if has_more else len(quakes),
@@ -196,10 +264,20 @@ async def search(
         returned_count=len(kept),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=str(httpx.URL(constants.BASE_URL, params=params)),
+            url=url,
             cached=cached,
             schema_name="earthquakes.EarthquakeSearchResult",
-            freshness="catalogue updates within minutes; cached 5 min",
-            limits=f"date range up to {constants.MAX_SPAN_DAYS} days",
+            freshness=fr_or_en(
+                lang,
+                "catalogue updates within minutes; cached 5 min",
+                "catalogue mis à jour en quelques minutes ; mis en cache 5 min",
+            ),
+            limits=fr_or_en(
+                lang,
+                f"date range up to {constants.MAX_SPAN_DAYS} days",
+                f"période d'au plus {constants.MAX_SPAN_DAYS} jours",
+            ),
+            licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, url, lang),
+            lang=lang,
         ),
     )
