@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.sdg import client, constants
 from maplestats_mcp.modules.statcan.sdg.schemas import (
     SdgIndicatorData,
@@ -42,6 +43,7 @@ async def statcan_sdg_search_indicators(
     indicateur, ONU, Programme 2030, objectif, cible, Carrefour de données
     des ODD.
     """
+    use_lang(lang)
     return await client.search_indicators(framework, query, lang=lang, limit=limit)
 
 
@@ -62,6 +64,7 @@ async def statcan_sdg_get_indicator_metadata(
     Mots-clés : Statistique Canada, ODD, métadonnées d'indicateur, objectif,
     cible, définition, source, développement durable.
     """
+    use_lang(lang)
     return await client.get_indicator_metadata(framework, code, lang=lang)
 
 
@@ -94,6 +97,7 @@ async def statcan_sdg_get_indicator_data(
     développement durable, observations, Statistique Canada, valeurs de
     l'indicateur, Programme 2030.
     """
+    use_lang(lang)
     return await client.get_indicator_data(
         framework,
         code,

@@ -99,6 +99,13 @@ async def test_get_indicators_invalid_limit_raises():
         await client.get_indicators("all", limit=0)
 
 
+async def test_get_indicators_errors_in_french():
+    with pytest.raises(InvalidInput, match="dataset doit être l'une des valeurs"):
+        await client.get_indicators("not_a_real_dataset", lang="fr")
+    with pytest.raises(InvalidInput, match="limit doit être entre 1 et"):
+        await client.get_indicators("all", limit=0, lang="fr")
+
+
 async def test_get_indicators_upstream_5xx_becomes_upstream_error(httpx_mock):
     for _ in range(3):
         httpx_mock.add_response(url=constants.DATASET_URLS["all"], status_code=500)

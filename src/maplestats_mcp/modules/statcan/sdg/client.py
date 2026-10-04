@@ -14,6 +14,7 @@ from typing import Any
 
 import httpx
 
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.modules.statcan.sdg import constants
 from maplestats_mcp.modules.statcan.sdg.schemas import (
     SdgIndicatorData,
@@ -44,14 +45,22 @@ _VALID_CODE = re.compile(r"^[0-9A-Za-z.-]+$")
 def _base_url(framework: str) -> str:
     if framework not in constants.FRAMEWORK_BASE_URLS:
         raise InvalidInput(
-            f"framework must be one of {sorted(constants.FRAMEWORK_BASE_URLS)}, got {framework!r}."
+            say(
+                f"framework must be one of {sorted(constants.FRAMEWORK_BASE_URLS)}, got {framework!r}.",
+                f"framework doit être l'une des valeurs {sorted(constants.FRAMEWORK_BASE_URLS)}, reçu {framework!r}.",
+            )
         )
     return constants.FRAMEWORK_BASE_URLS[framework]
 
 
 def _validate_code(code: str) -> str:
     if not _VALID_CODE.match(code):
-        raise InvalidInput(f"code {code!r} must contain only letters, digits, '.', or '-'.")
+        raise InvalidInput(
+            say(
+                f"code {code!r} must contain only letters, digits, '.', or '-'.",
+                f"le code {code!r} ne doit contenir que des lettres, des chiffres, « . » ou « - ».",
+            )
+        )
     return code
 
 
@@ -67,12 +76,22 @@ async def _get_json(context: str, url: str) -> Any:
         return await api_get(url)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
-            raise NotFound(f"{context}: not found at {url}.") from exc
-        raise UpstreamError(f"{context} returned HTTP {exc.response.status_code}.") from exc
+            raise NotFound(
+                say(f"{context}: not found at {url}.", f"{context} : introuvable à {url}.")
+            ) from exc
+        raise UpstreamError(
+            say(
+                f"{context} returned HTTP {exc.response.status_code}.",
+                f"{context} a renvoyé HTTP {exc.response.status_code}.",
+            )
+        ) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). "
-            "Try again shortly."
+            say(
+                f"{context} did not respond in time (already retried by shared/http.py). "
+                "Try again shortly.",
+                f"{context} n'a pas répondu à temps (nouvelles tentatives déjà faites). Réessayez sous peu.",
+            )
         ) from exc
 
 
@@ -108,10 +127,14 @@ async def search_indicators(
     the framework's own cached indicator index). Leave `query` empty to
     list every indicator (86 for "canada", 251 for "global",
     confirmed live)."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}.",
+                f"limit doit être entre 1 et {constants.SEARCH_LIMIT_MAX}, reçu {limit}.",
+            )
         )
 
     index = await _get_index(framework, lang)
@@ -133,6 +156,7 @@ async def search_indicators(
             url=f"{_base_url(framework)}/{lang}/meta/all.json",
             cached=True,
             schema_name="statcan_sdg.SdgIndicatorSearchResult",
+            lang=lang,
         ),
     )
 
@@ -165,6 +189,7 @@ async def get_indicator_metadata(
     `STAT_CONC_DEF` -- this tries the Canadian field first, then the
     Global one, rather than assuming one name applies to both.
     """
+    use_lang(lang)
     lang = _validate_lang(lang)
     code = _validate_code(code)
     url = f"{_base_url(framework)}/{lang}/meta/{code}.json"
@@ -191,6 +216,7 @@ async def get_indicator_metadata(
             url=url,
             cached=was_cached,
             schema_name="statcan_sdg.SdgIndicatorMetadata",
+            lang=lang,
         ),
     )
 
@@ -220,12 +246,20 @@ async def get_indicator_data(
     Confirmed live 2026-10-02: a Global-framework indicator with no data
     (1-1-1) has the body `[]`, not an object -- zero observations.
     """
+    use_lang(lang)
     lang = _validate_lang(lang)
     code = _validate_code(code)
     if limit < 1 or limit > constants.DATA_LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.DATA_LIMIT_MAX}, got {limit}.")
+        raise InvalidInput(
+            say(
+                f"limit must be between 1 and {constants.DATA_LIMIT_MAX}, got {limit}.",
+                f"limit doit être entre 1 et {constants.DATA_LIMIT_MAX}, reçu {limit}.",
+            )
+        )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        raise InvalidInput(
+            say(f"offset must be >= 0, got {offset}.", f"offset doit être >= 0, reçu {offset}.")
+        )
     url = f"{_base_url(framework)}/{lang}/data/{code}.json"
     cache_key = f"statcan-sdg:data:{framework}:{lang}:{code}"
 
@@ -242,8 +276,11 @@ async def get_indicator_data(
     unknown = [c for c in (filters or {}) if c not in disaggregation_columns]
     if unknown:
         raise InvalidInput(
-            f"filters name unknown column(s) {unknown}; this indicator's columns are "
-            f"{disaggregation_columns}."
+            say(
+                f"filters name unknown column(s) {unknown}; this indicator's columns are "
+                f"{disaggregation_columns}.",
+                f"filters nomme des colonnes inconnues {unknown} ; les colonnes de cet indicateur sont {disaggregation_columns}.",
+            )
         )
 
     def column_value(column: str, i: int) -> Any:
@@ -272,11 +309,20 @@ async def get_indicator_data(
     ]
     notes: list[str] = []
     if no_data or not years:
-        notes.append("upstream publishes no observations for this indicator")
+        notes.append(
+            say(
+                "upstream publishes no observations for this indicator",
+                "la source ne publie aucune observation pour cet indicateur",
+            )
+        )
     if len(page) < len(matched):
         notes.append(
-            f"returned {len(page)} of {len(matched)} matching rows; use offset/limit, "
-            "start_year/end_year or filters for the rest"
+            say(
+                f"returned {len(page)} of {len(matched)} matching rows; use offset/limit, "
+                "start_year/end_year or filters for the rest",
+                f"{len(page)} des {len(matched)} lignes correspondantes renvoyées ; utilisez "
+                "offset/limit, start_year/end_year ou filters pour la suite",
+            )
         )
     return SdgIndicatorData(
         code=code,
@@ -291,5 +337,6 @@ async def get_indicator_data(
             cached=was_cached,
             schema_name="statcan_sdg.SdgIndicatorData",
             limits="; ".join(notes) if notes else None,
+            lang=lang,
         ),
     )
