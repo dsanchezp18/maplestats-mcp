@@ -371,8 +371,13 @@ async def test_french_spellings_hyphens_apostrophes_and_suggestions(httpx_mock):
         lang="fr", destination="cote d\u2019ivoire", region="Saint Laurent"
     )
     assert [r.ktonnes for r in ivory.rows] == [1.0]
+    # "Chine" is an alias for the file's "R.P. de Chine" (it used to be
+    # refused); the unit follows the language.
+    china = await client.query_exports(lang="fr", destination="Chine")
+    assert {r.destination for r in china.rows} == {"R.P. de Chine"}
+    assert china.unit == "milliers de tonnes"
     with pytest.raises(InvalidInput, match=r"did you mean 'R\.P\. de Chine'"):
-        await client.query_exports(lang="fr", destination="Chine")
+        await client.query_exports(lang="fr", destination="de Chi")
     httpx_mock.add_response(url=_weekly(2025, "fr"), content=FRENCH)
     weekly = await client.query_weekly(
         "Silos-Primaires", crop_year="2025-26", lang="fr", region="Colombie-Britannique"
