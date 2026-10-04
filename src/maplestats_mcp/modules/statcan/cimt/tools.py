@@ -17,6 +17,7 @@ from maplestats_mcp.modules.statcan.cimt.schemas import (
     TopPartnersResult,
     TradeResult,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 Lang = Literal["en", "fr"]
 Direction = Literal["exports", "imports"]
@@ -37,6 +38,7 @@ async def cimt_get_periods(lang: Lang = "en") -> CimtPeriods:
     dernier mois, couverture, période de référence, commerce international
     canadien de marchandises, données disponibles.
     """
+    use_lang(lang)
     return await client.get_periods()
 
 
@@ -65,6 +67,7 @@ async def cimt_search_commodities(
     classification, commerce, exportations, importations, CICM, recherche,
     chapitre, position.
     """
+    use_lang(lang)
     return await client.search_commodities(
         query, direction=direction, level=level, lang=lang, limit=limit
     )
@@ -92,6 +95,7 @@ async def cimt_search_partners(
     province, origine, destination, CICM, commerce, exportations,
     importations, code de partenaire, géographie.
     """
+    use_lang(lang)
     return await client.search_partners(query, kind=kind, lang=lang, limit=limit)
 
 
@@ -135,6 +139,7 @@ async def cimt_get_trade(
     mensuel, valeur des échanges, Statistique Canada, commerce
     international.
     """
+    use_lang(lang)
     return await client.get_trade(
         direction,
         from_period,
@@ -175,6 +180,7 @@ async def cimt_get_top_partners(
     marchés d'exportation, sources d'importation, pays, État américain,
     CICM, exportations, importations, part, commerce du Canada.
     """
+    use_lang(lang)
     return await client.get_top_partners(
         direction, period=period, hs_chapter=hs_chapter, province=province, view=view, lang=lang
     )
@@ -204,6 +210,7 @@ async def cimt_get_top_commodities(
     exportations, importations, code SH, province, partenaire, CICM,
     composition du commerce, principaux biens.
     """
+    use_lang(lang)
     return await client.get_top_commodities(
         direction,
         period=period,
@@ -239,6 +246,7 @@ async def cimt_get_province_breakdown(
     importations provinciales, province d'origine, province de dédouanement,
     CICM, commerce régional, territoire, répartition.
     """
+    use_lang(lang)
     return await client.get_province_breakdown(
         direction,
         period=period,
@@ -274,6 +282,7 @@ async def cimt_get_series(
     importations, code SH, chapitre, marchandise, cinq ans, CICM, quantité,
     valeur.
     """
+    use_lang(lang)
     return await client.get_series(
         direction,
         hs_code,
