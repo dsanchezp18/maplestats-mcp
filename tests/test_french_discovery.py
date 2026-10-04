@@ -171,6 +171,13 @@ CASES = [
     ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
     ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
     ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
+    # Sources fédérales ajoutées le 2026-10-03.
+    ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
+    ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),
+    ("limite maximale de résidus de pesticides sur les pommes", "pmra_get_residue_limits"),
+    ("production minérale par province valeur des expéditions", "nrcan_minerals_get_production"),
+    ("historique de la dette fédérale tableaux de référence financiers", "finance_frt_list_tables"),
+    ("revue financière déficit fédéral cumulatif mensuel", "finance_fiscal_monitor_get_tables"),
 ]
 
 

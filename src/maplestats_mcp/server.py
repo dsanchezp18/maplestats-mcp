@@ -219,17 +219,22 @@ Sources, by tool-name prefix:
 - World Bank WDI, Canada and G7/OECD peers: worldbank_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
-- Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit
+- Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
+  provincial revenue, spending, deficits, debt), finance_fiscal_monitor_
+  (monthly federal results), competition_bureau_ (merger reviews), fcac_ (credit
   card and bank account comparisons), pbo_ (Parliamentary Budget Officer
-  publications and tables), pmprb_ (patented medicine prices), ircc_
+  publications and tables), pmprb_ (patented medicine prices), pmra_
+  (pesticide products, residue limits), ircc_
   (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
   cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
   nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
-  (burned areas), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
+  (burned areas), nrcan_minerals_ (annual mineral production by
+  province), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
   Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
-  safety alerts), gazette_ (Canada Gazette), earthquakes_, dfo_iwls_
+  safety alerts), cbsa_ (current border wait times), gazette_ (Canada
+  Gazette), earthquakes_, dfo_iwls_
   (tides, water levels), nfd_
   (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
 - Elections and Parliament: elections_results_ (federal results by

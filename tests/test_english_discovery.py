@@ -186,6 +186,19 @@ CASES = [
     ("Ontario time-of-use electricity prices history", "oeb_rates"),
     ("Ontario Energy Board open data datasets", "oeb_list_datasets"),
     ("which fields does an OEB RRR file have", "oeb_describe_dataset"),
+    # Federal sources added 2026-10-03.
+    ("border wait time at the Peace Bridge right now", "cbsa_border_wait_times"),
+    ("pesticide products registered with active ingredient glyphosate", "pmra_search_products"),
+    ("maximum residue limit for pesticide on apples ppm", "pmra_get_residue_limits"),
+    ("pesticide registration number details pests and sites of use", "pmra_get_product"),
+    ("gold production by province mining statistics", "nrcan_minerals_get_production"),
+    ("value of mineral production in Canada since 1990 time series", "nrcan_minerals_get_series"),
+    (
+        "federal deficit and debt history since 1966 fiscal reference tables",
+        "finance_frt_list_tables",
+    ),
+    ("Alberta provincial net debt and deficit by year", "finance_frt_get_table"),
+    ("federal deficit year to date this fiscal year monthly", "finance_fiscal_monitor_get_tables"),
 ]
 
 

@@ -341,6 +341,14 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
+    "cbsa": Source(
+        "Canada Border Services Agency: border wait times",
+        "Agence des services frontaliers du Canada : temps d'attente à la frontière",
+        "national",
+        "CBSA",
+        "ASFC",
+        domain="transport",
+    ),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
@@ -531,6 +539,14 @@ SOURCES: dict[str, Source] = {
         "ACFC",
         domain="money",
     ),
+    "finance_canada": Source(
+        "Department of Finance Canada",
+        "Ministère des Finances Canada",
+        "national",
+        "Finance Canada",
+        "Finances Canada",
+        domain="money",
+    ),
     "gazette": Source("Canada Gazette", "Gazette du Canada", "national", domain="government"),
     "gc_infobase": Source("GC InfoBase", "InfoBase du GC", "national", domain="money"),
     "ircc": Source(
@@ -659,6 +675,14 @@ SOURCES: dict[str, Source] = {
         "RNCan zones brûlées",
         domain="environment",
     ),
+    "nrcan_minerals": Source(
+        "Natural Resources Canada: mineral production",
+        "Ressources naturelles Canada : production minérale",
+        "national",
+        "NRCan minerals",
+        "RNCan minéraux",
+        domain="energy",
+    ),
     "opendatasoft_vancouver": Source(
         "City of Vancouver Open Data",
         "Données ouvertes de la Ville de Vancouver",
@@ -675,6 +699,15 @@ SOURCES: dict[str, Source] = {
         "PBO",
         "DPB",
         domain="money",
+    ),
+    "pmra": Source(
+        "Health Canada Pest Management Regulatory Agency: pesticide registry",
+        "Agence de réglementation de la lutte antiparasitaire de Santé Canada : "
+        "registre des pesticides",
+        "national",
+        "PMRA",
+        "ARLA",
+        domain="health",
     ),
     "pmprb": Source(
         "Patented Medicine Prices Review Board",
