@@ -132,6 +132,24 @@ async def test_changed_data_for_another_table_is_refused(httpx_mock):
         await client.get_changed_series_data_from_cube_pid_coord(18100004, "2.2")
 
 
+async def test_changed_data_for_another_table_is_refused_in_french(httpx_mock):
+    client.use_lang("fr")
+    httpx_mock.add_response(url=f"{BASE}getSeriesInfoFromCubePidCoord", json=SERIES_INFO_OK)
+    wrong = {
+        "status": "SUCCESS",
+        "object": {
+            "responseStatusCode": 0,
+            "productId": 23100066,
+            "coordinate": "1.2.0.0.0.0.0.0.0.0",
+            "vectorId": 41690973,
+            "vectorDataPoint": [],
+        },
+    }
+    httpx_mock.add_response(url=f"{BASE}getChangedSeriesDataFromVector", json=[wrong])
+    with pytest.raises(UpstreamError, match="a renvoyé le tableau 23100066 pour une série"):
+        await client.get_changed_series_data_from_cube_pid_coord(18100004, "2.2")
+
+
 # M1 ---------------------------------------------------------------------
 
 

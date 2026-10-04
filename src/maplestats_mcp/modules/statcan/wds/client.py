@@ -25,6 +25,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.wds import constants
 from maplestats_mcp.modules.statcan.wds.schemas import (
     ChangedCubeEntry,
@@ -92,7 +93,7 @@ def use_lang(lang: str) -> None:
 
 
 def _m(en: str, fr: str) -> str:
-    return fr if _LANG.get() == "fr" else en
+    return say(en, fr, _LANG.get())
 
 
 _DASHED_PID = re.compile(r"^\d{2}-\d{2}-\d{4}(?:-\d{2})?$")
@@ -328,6 +329,7 @@ async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
             cached=was_cached,
             schema_name="statcan.wds.CubeSummaryList",
             freshness="daily at 8:30am ET",
+            lang=_LANG.get(),
         ),
     )
 
@@ -453,6 +455,7 @@ async def search_cubes(
             freshness="daily at 8:30am ET",
             coverage=note or f"{len(cubes)} tables searched",
             limits=limits,
+            lang=_LANG.get(),
         ),
     )
 
@@ -605,6 +608,7 @@ async def get_cube_metadata(
             cached=was_cached,
             schema_name="statcan.wds.CubeMetadata",
             limits=limits,
+            lang=_LANG.get(),
         ),
     )
 
@@ -627,6 +631,7 @@ def _series_info(obj: dict[str, Any], method: str) -> SeriesInfo:
             url=f"{constants.BASE_URL}{method}",
             cached=False,
             schema_name="statcan.wds.SeriesInfo",
+            lang=_LANG.get(),
         ),
     )
 
@@ -710,6 +715,7 @@ def _vector_data_from_json(obj: dict[str, Any], *, source_url: str, cached: bool
             url=source_url,
             cached=cached,
             schema_name="statcan.wds.VectorData",
+            lang=_LANG.get(),
         ),
     )
 
@@ -761,6 +767,7 @@ def _vector_data_set(
             cached=cached,
             schema_name="statcan.wds.VectorDataSet",
             limits=(f"{len(failed)} vector(s) returned no data, see `failed`" if failed else None),
+            lang=_LANG.get(),
         ),
     )
 
@@ -930,6 +937,7 @@ async def get_changed_series_list() -> ChangedSeriesList:
             url=f"{constants.BASE_URL}{method}",
             cached=False,
             schema_name="statcan.wds.ChangedSeriesList",
+            lang=_LANG.get(),
         ),
     )
 
@@ -968,6 +976,7 @@ async def get_changed_cube_list(date_str: str | None = None) -> ChangedCubeList:
             url=f"{constants.BASE_URL}{method}",
             cached=False,
             schema_name="statcan.wds.ChangedCubeList",
+            lang=_LANG.get(),
         ),
     )
 
@@ -982,7 +991,11 @@ async def get_changed_series_data_from_vector(vector_id: int) -> VectorData:
     )
     if data.vector_id != vector_id:
         raise UpstreamError(
-            f"getChangedSeriesDataFromVector returned vector {data.vector_id} for {vector_id}."
+            _m(
+                f"getChangedSeriesDataFromVector returned vector {data.vector_id} for {vector_id}.",
+                f"getChangedSeriesDataFromVector a renvoyé le vecteur {data.vector_id} "
+                f"au lieu du vecteur {vector_id}.",
+            )
         )
     return data
 
@@ -1003,8 +1016,12 @@ async def get_changed_series_data_from_cube_pid_coord(
     data = await get_changed_series_data_from_vector(info.vector_id)
     if data.product_id != pid:
         raise UpstreamError(
-            f"getChangedSeriesDataFromVector returned table {data.product_id} for a series of "
-            f"table {pid}."
+            _m(
+                f"getChangedSeriesDataFromVector returned table {data.product_id} for a series of "
+                f"table {pid}.",
+                f"getChangedSeriesDataFromVector a renvoyé le tableau {data.product_id} pour une "
+                f"série du tableau {pid}.",
+            )
         )
     return data
 
@@ -1039,6 +1056,7 @@ async def get_full_table_download_csv(
             url=f"{constants.BASE_URL}{method}/{pid}/{lang}",
             cached=False,
             schema_name="statcan.wds.FullTableDownloadLink",
+            lang=lang,
         ),
     )
 
@@ -1062,6 +1080,7 @@ async def get_full_table_download_sdmx(product_id: int | str) -> FullTableDownlo
             url=f"{constants.BASE_URL}{method}/{pid}",
             cached=False,
             schema_name="statcan.wds.FullTableDownloadLink",
+            lang=_LANG.get(),
         ),
     )
 
@@ -1159,6 +1178,7 @@ async def get_code_sets(
                 if cut
                 else None
             ),
+            lang=_LANG.get(),
         ),
     )
     return result

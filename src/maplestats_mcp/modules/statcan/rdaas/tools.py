@@ -77,8 +77,8 @@ async def rdaas_get_search_filters(
     recherche, normes statistiques.
     """
     if kind == "concordance":
-        return await client.get_concordance_search_filters()
-    return await client.get_classification_search_filters()
+        return await client.get_concordance_search_filters(lang)
+    return await client.get_classification_search_filters(lang)
 
 
 @tool
