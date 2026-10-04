@@ -190,6 +190,9 @@ async def test_filters(httpx_mock):
     archived = await client.search(recall_class="Class 2", include_archived=True)
     assert [r.recall_id for r in archived.recalls] == [48704]
     assert (await client.search(recall_class="Class 2")).total_matched == 0
+    # An unknown class used to be an empty success (live: "Class 9").
+    with pytest.raises(InvalidInput, match="Class 1"):
+        await client.search(recall_class="Class 9")
     toys = await client.search(category="electro")
     assert [r.recall_id for r in toys.recalls] == [82650]
     paged = await client.search(limit=2, offset=2)

@@ -89,6 +89,15 @@ async def main() -> int:
         print(f"OK: unknown id -> {type(exc).__name__}")
         ok &= type(exc).__name__ == "NotFound"
 
+    # An unknown class is refused (it used to be an empty success).
+    try:
+        await client.search(recall_class="Class 9")
+        ok = False
+        print("FAIL: unknown recall_class did not raise")
+    except Exception as exc:  # noqa: BLE001 - reporting the type is the point
+        print(f"OK: recall_class 'Class 9' -> {type(exc).__name__}")
+        ok &= type(exc).__name__ == "InvalidInput"
+
     print("\nRECALLS SMOKE TEST PASSED" if ok else "\nRECALLS SMOKE TEST FAILED")
     return 0 if ok else 1
 

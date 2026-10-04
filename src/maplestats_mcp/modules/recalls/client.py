@@ -291,6 +291,24 @@ def _class_parts(value: str) -> set[str]:
     return {" ".join(_fold(p).replace("classe", "class").split()) for p in value.split(" - ")}
 
 
+# The classes the dumps use (EN "Class 1", FR "Classe 1"; "Type I" in both),
+# counted live 2026-10-03; anything else used to match nothing silently.
+_KNOWN_CLASSES = {"class 1", "class 2", "class 3", "type i", "type ii", "type iii"}
+
+
+def _wanted_class(recall_class: str | None) -> set[str] | None:
+    if not recall_class or not recall_class.strip():
+        return None
+    parts = _class_parts(recall_class)
+    unknown = parts - _KNOWN_CLASSES
+    if unknown:
+        raise InvalidInput(
+            f"recall_class must be Class 1, Class 2, Class 3 (food; Classe in French) or "
+            f"Type I, Type II, Type III (health products), got {recall_class!r}."
+        )
+    return parts
+
+
 def _filter(
     records: Iterable[_Record],
     *,
@@ -313,7 +331,7 @@ def _filter(
         raise InvalidInput(f"updated_from {start} is after updated_to {end}.")
     words = _query_words(query)
     category_folded = _fold(category.strip()) if category and category.strip() else None
-    wanted_class = _class_parts(recall_class) if recall_class and recall_class.strip() else None
+    wanted_class = _wanted_class(recall_class)
 
     matched = []
     for record in records:
