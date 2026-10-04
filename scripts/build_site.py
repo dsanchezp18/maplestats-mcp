@@ -1282,8 +1282,7 @@ def esc(text: object) -> str:
 def en_only(lang: Lang) -> str:
     """The attribute lang="en" on a French page, for text only in English on the server.
 
-    Tool docstrings, the planner's plan and reproduce_code's notes are written
-    in English; marking them keeps screen readers and hyphenation right and
+    Tool docstrings are written in English; marking them keeps screen readers and hyphenation right and
     tells the reader (and tests/test_site.py) that the English is known.
     """
     return ' lang="en"' if lang == "fr" else ""
@@ -1724,35 +1723,25 @@ def plan_panel(lang: Lang, root: str, heading: int = 4) -> str:
     The planner answers the home page's question when the site is built.
     `heading` is the level of each list's title, one below the section's.
     """
-    # plan_query writes its plan in English only (its lang argument is accepted
-    # for consistency), so on a French page the plan's own words are marked
-    # lang="en" and only the labels around them are French.
-    plan = planner.plan(PLAN_QUESTION[lang]).model_dump(mode="json")
+    # plan_query answers in the page's language: lang="fr" translates its
+    # labels, purposes and caveats, and names places in French.
+    plan = planner.plan(PLAN_QUESTION[lang], lang).model_dump(mode="json")
     caveat = "Caveat" if lang == "en" else "Précaution"
-    en = en_only(lang)
 
-    def group(title: str, steps: list[dict[str, Any]], caveats: list[str], title_en: bool) -> str:
+    def group(title: str, steps: list[dict[str, Any]], caveats: list[str]) -> str:
         items = "".join(
             f'<li><a href="{tool_href(s["tool"], root)}"><code>{breakable(s["tool"])}</code></a>'
-            f"<span{en}>{esc(s['purpose'])}</span></li>"
+            f"<span>{esc(s['purpose'])}</span></li>"
             for s in steps
         )
-        notes = "".join(
-            f'<p class="plan-note"><b>{caveat}</b> {en_span(esc(c), lang)}</p>' for c in caveats
-        )
-        head = f"<h{heading}{en if title_en else ''}>{esc(title)}</h{heading}>"
+        notes = "".join(f'<p class="plan-note"><b>{caveat}</b> {esc(c)}</p>' for c in caveats)
+        head = f"<h{heading}>{esc(title)}</h{heading}>"
         return f'<div class="plan-group">{head}<ol>{items}</ol>{notes}</div>'
 
-    parts = [group(t["label"], t["steps"], t["caveats"], True) for t in plan["topics"]]
+    parts = [group(t["label"], t["steps"], t["caveats"]) for t in plan["topics"]]
     kinds = {"city": "ville"} if lang == "fr" else {}
-    # A place heading is the place's name and its kind, both shown in French.
     parts += [
-        group(
-            f"{place_name(p['place'], lang)} ({kinds.get(p['kind'], p['kind'])})",
-            p["steps"],
-            [],
-            False,
-        )
+        group(f"{p['place']} ({kinds.get(p['kind'], p['kind'])})", p["steps"], [])
         for p in plan["places"]
     ]
     return "".join(parts)

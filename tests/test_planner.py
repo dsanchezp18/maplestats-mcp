@@ -10,7 +10,7 @@ import pytest
 
 from maplestats_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
 from maplestats_mcp.modules.ckan.constants import PORTALS as CKAN_PORTALS
-from maplestats_mcp.modules.planner import client
+from maplestats_mcp.modules.planner import client, topics_fr
 from maplestats_mcp.modules.planner.places import CITIES, PROVINCES
 from maplestats_mcp.modules.planner.topics import FALLBACK_STEPS, TOPICS
 from maplestats_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
@@ -166,3 +166,66 @@ def test_rate_hikes_reach_the_rates_topic():
     assert result.topics[0].topic == "rates"
     french = client.plan("Qu'ont fait les hausses des taux de la Banque du Canada au logement?")
     assert "rates" in {t.topic for t in french.topics}
+
+
+def test_every_planner_string_has_french():
+    # A step, caveat or label added in English only would show in English in a
+    # French plan; fr() covers it through FR or the "search with portal=" rule.
+    missing = sorted(
+        {step.purpose for step in _all_steps() if topics_fr.fr(step.purpose) is None}
+        | {topic.label for topic in TOPICS if topics_fr.fr(topic.label) is None}
+        | {c for topic in TOPICS for c in topic.caveats if topics_fr.fr(c) is None}
+        | {
+            label
+            for label, _ in (*PROVINCES.values(), *CITIES.values())
+            if topics_fr.fr(label, place=True) is None
+        }
+    )
+    assert not missing, missing
+
+
+@pytest.mark.parametrize(
+    ("question", "topic", "place"),
+    [
+        ("Quel est le taux de chômage à Montréal ?", "labour", "Montréal"),
+        ("Loyers et mises en chantier dans la ville de Québec", "housing", "Ville de Québec"),
+        ("feux de forêt en Colombie-Britannique cet été", "environment", "Colombie-Britannique"),
+        ("indice des prix à la consommation en Nouvelle-Écosse", "prices", "Nouvelle-Écosse"),
+        ("résultats des élections provinciales au Québec", "elections", "Québec"),
+    ],
+)
+def test_french_plan_is_in_french(question, topic, place):
+    english = client.plan(question)
+    result = client.plan(question, lang="fr")
+    assert result.topics[0].topic == english.topics[0].topic
+    assert topic in {t.topic for t in result.topics}
+    assert place in [p.place for p in result.places]
+    # Same tools in the same order; only the wording changes.
+    assert [s.tool for t in result.topics for s in t.steps] == [
+        s.tool for t in english.topics for s in t.steps
+    ]
+    for match in result.topics:
+        assert match.label == topics_fr.to_french(
+            next(t.label for t in TOPICS if t.key == match.topic)
+        )
+    assert result.guidance[0].startswith("Exécutez")
+    assert "search_tools" in result.provenance.limits
+    assert result.provenance.reproduce.startswith("Pour obtenir")
+
+
+def test_french_portal_step_and_fallback_and_scope():
+    toronto = client.plan("données ouvertes de Toronto", lang="fr")
+    assert toronto.places[0].steps[0].purpose == "recherche avec portal='toronto'"
+    nothing = client.plan("xyzzy", lang="fr")
+    assert nothing.fallback_steps[0].purpose.startswith("produits de données")
+    abroad = client.plan("taux de chômage en France", lang="fr")
+    assert abroad.out_of_scope is not None
+    assert abroad.out_of_scope.startswith("La question porte sur")
+    with pytest.raises(InvalidInput, match="ne doit pas"):
+        client.plan(" ", lang="fr")
+
+
+def test_english_plan_unchanged_by_default():
+    result = client.plan("rents in Montreal")
+    assert result.places[0].place == "Montreal"
+    assert result.guidance[0].startswith("Run the steps")

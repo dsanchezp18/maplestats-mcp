@@ -28,8 +28,15 @@ from maplestats_mcp.modules.planner.topics import (
     PlanStep,
     Topic,
 )
+from maplestats_mcp.modules.planner.topics_fr import (
+    GUIDANCE_FR,
+    LIMITS_FR,
+    out_of_scope_fr,
+    to_french,
+)
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.i18n import normalize_lang
 
 _MAX_TOPICS = 4
 _GUIDANCE = (
@@ -144,9 +151,30 @@ def _foreign_place(question: str, text: str) -> str | None:
     return next((code for code in FOREIGN_CODES if code in capitals), None)
 
 
-def plan(question: str) -> QueryPlan:
+def _french(plan_out: QueryPlan) -> QueryPlan:
+    # Translate after planning: step order and place scoring read the English
+    # purposes, so the plan is the same in both languages, only worded in French.
+    def steps(items: list[StepOut]) -> list[StepOut]:
+        return [StepOut(tool=step.tool, purpose=to_french(step.purpose)) for step in items]
+
+    for topic in plan_out.topics:
+        topic.label = to_french(topic.label)
+        topic.steps = steps(topic.steps)
+        topic.caveats = [to_french(caveat) for caveat in topic.caveats]
+    for place in plan_out.places:
+        place.place = to_french(place.place, place=True)
+        place.steps = steps(place.steps)
+    plan_out.fallback_steps = steps(plan_out.fallback_steps)
+    plan_out.guidance = list(GUIDANCE_FR)
+    return plan_out
+
+
+def plan(question: str, lang: str = "en") -> QueryPlan:
+    french = normalize_lang(lang) == "fr"
     if not question.strip():
-        raise InvalidInput("question must not be empty.")
+        raise InvalidInput(
+            "La question ne doit pas être vide." if french else "question must not be empty."
+        )
     text = _normalize(question)
     places = _places(question, text)
     labels = [place.place for place in places]
@@ -156,9 +184,13 @@ def plan(question: str) -> QueryPlan:
     crosses = any(_matches(term, text) for term in CROSS_BORDER_TERMS)
     if foreign and not places and not crosses:
         out_of_scope = (
-            f"The question is about {foreign}, outside Canada; this server holds Canadian "
-            "public data only, so no plan is given. Name a Canadian place, or ask about "
-            "trade, exchange rates or migration between Canada and that country."
+            out_of_scope_fr(foreign)
+            if french
+            else (
+                f"The question is about {foreign}, outside Canada; this server holds Canadian "
+                "public data only, so no plan is given. Name a Canadian place, or ask about "
+                "trade, exchange rates or migration between Canada and that country."
+            )
         )
 
     scored = []
@@ -180,7 +212,7 @@ def plan(question: str) -> QueryPlan:
         for _, topic, hits, topic_text in scored[:_MAX_TOPICS]
     ]
 
-    return QueryPlan(
+    result = QueryPlan(
         question=question,
         topics=topics,
         places=places,
@@ -192,7 +224,11 @@ def plan(question: str) -> QueryPlan:
             url="docs://catalogue",
             cached=False,
             schema_name="planner.QueryPlan",
-            limits="curated topic and place map; not every tool is listed, use search_tools "
+            limits=LIMITS_FR
+            if french
+            else "curated topic and place map; not every tool is listed, use search_tools "
             "for anything the plan does not cover",
+            lang="fr" if french else "en",
         ),
     )
+    return _french(result) if french else result
