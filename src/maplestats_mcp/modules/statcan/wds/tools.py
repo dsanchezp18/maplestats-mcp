@@ -67,7 +67,7 @@ async def wds_search_cubes(
     de bâtir, permis de construire, estimations de population
     trimestrielles, commerce de détail, salaires, commerce, migration
     interprovinciale, séries chronologiques, tableau en temps réel,
-    révisions.
+    révisions, espérance de vie, mortalité.
     """
     client.use_lang(lang)
     if query is not None and query.strip() and not lite:
