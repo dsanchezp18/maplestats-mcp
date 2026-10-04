@@ -68,7 +68,8 @@ async def ab_wildfire_get_fires(
     ab_wildfire_summarize_fires with group_by "forest_area" for the names).
     start_date/end_date (YYYY-MM-DD, inclusive) apply to the assessment date
     (date_basis "assessed", roughly when the fire was found) or to the last
-    status change ("status_changed", for example when it was put out).
+    status change ("status_changed", for example when it was put out), as
+    Alberta calendar days; timestamps in the rows are UTC.
     bbox [min_lon, min_lat, max_lon, max_lat], or latitude, longitude and
     radius_km (up to 300) for fires near a point, nearest first. sort_by
     "latest" (default) or "largest". limit 1-2000, page with offset.

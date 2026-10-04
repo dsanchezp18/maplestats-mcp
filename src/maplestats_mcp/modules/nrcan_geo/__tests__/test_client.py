@@ -91,10 +91,20 @@ async def test_search_names_validation():
         await client.locate("  ")
 
 
-async def test_tomcat_404_is_invalid_input(httpx_mock):
+async def test_tomcat_404_is_upstream_error(httpx_mock):
     httpx_mock.add_response(url=_NAMES, status_code=404, text="<html>Apache Tomcat</html>")
-    with pytest.raises(InvalidInput, match="rejected"):
+    with pytest.raises(UpstreamError, match="rejected a parameter"):
         await client.search_names("Banff")
+
+
+async def test_float_radius_is_sent_as_whole_kilometres(httpx_mock):
+    # Live 2026-10-03: radius=5.0 is a Tomcat 404, radius=5 answers; radius_km
+    # arrives as a float from JSON.
+    httpx_mock.add_response(url=_NAMES, json={"items": []})
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    await client.search_names(latitude=51.05, longitude=-114.07, radius_km=5.0)
+    request = next(r for r in httpx_mock.get_requests() if "geonames.json" in str(r.url))
+    assert parse_qs(urlparse(str(request.url)).query)["radius"] == ["5"]
 
 
 # Trimmed from https://geogratis.gc.ca/services/geoname/en/geonames.json?q=Banff&num=3,

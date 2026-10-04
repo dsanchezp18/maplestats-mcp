@@ -150,3 +150,47 @@ async def test_indicator_page_without_links_is_not_found(httpx_mock):
     httpx_mock.add_response(text="<html><body>no links</body></html>")
     with pytest.raises(NotFound, match="no API links"):
         await client.get_indicator_series("Unemployment Rate")
+
+
+async def test_filter_columns_with_spaces_are_sent(httpx_mock):
+    # Live 2026-10-03: the Investment (Annual) - Construction page publishes
+    # filters on "NAICS Description", which the column check used to refuse.
+    httpx_mock.add_response(url=_TABLES_URL, json=[{"tableName": "Investment_34100035"}])
+    httpx_mock.add_response(json=[_row("2025-01-01", 1.0)])
+    await client.get_data(
+        "Investment_34100035", {"GeoName": "Alberta", "NAICS Description": "All Industries"}
+    )
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["NAICS Description"] == ["All Industries"]
+
+
+async def test_renamed_indicator_page_redirect_is_followed(httpx_mock):
+    # Live: /dashboard/wells-drilled/ answers 301 to /dashboard/new-wells-drilled/.
+    catalogue = {"data": [{"name": "Energy", "indicators": [{"name": "Rig Count X"}]}]}
+    httpx_mock.add_response(url=re.compile(r".*/api/tile-data/dashboard/.*"), json=catalogue)
+    httpx_mock.add_response(
+        url="https://economicdashboard.alberta.ca/dashboard/rig-count-x/",
+        status_code=301,
+        headers={"location": "https://economicdashboard.alberta.ca/dashboard/new-rig-count/"},
+    )
+    httpx_mock.add_response(
+        url="https://economicdashboard.alberta.ca/dashboard/new-rig-count/", text=_PAGE
+    )
+    result = await client.get_indicator_series("Rig Count X")
+    assert len(result.series) == 2
+
+
+async def test_page_without_links_uses_the_known_table(httpx_mock):
+    catalogue = {"data": [{"name": "Energy", "indicators": [{"name": "Active Drilling Rigs"}]}]}
+    httpx_mock.add_response(url=re.compile(r".*/api/tile-data/dashboard/.*"), json=catalogue)
+    httpx_mock.add_response(text="<html><body>chart only</body></html>")
+    result = await client.get_indicator_series("Active Drilling Rigs")
+    assert result.series[0].table == "RigActivity"
+    assert result.series[0].filters == {"Type": "Active"}
+    assert result.note is not None
+
+
+def test_slug_overrides_match_live_pages():
+    assert client._slug("Merchandise Exports") == "international-merchandise-exports"
+    assert client._slug("Service Exports") == "international-service-exports"
+    assert client._slug("Wells Drilled") == "new-wells-drilled"

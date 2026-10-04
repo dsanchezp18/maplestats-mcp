@@ -94,4 +94,5 @@ class ItemsResult(BaseModel):
     number_returned: int
     limit: int
     offset: int
+    note: str | None = None
     provenance: Provenance

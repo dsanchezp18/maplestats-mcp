@@ -36,7 +36,11 @@ class IndicatorData(BaseModel):
     slug: str
     table: str
     tables: list[str] = Field(description="Every data table in the workbook.")
-    columns: list[str]
+    columns: list[str] = Field(description="Columns in the rows (requested, or non-empty).")
+    empty_columns: list[str] = Field(
+        default_factory=list,
+        description="Columns left out because every returned row is blank in them.",
+    )
     rows: list[dict[str, str]]
     total_rows: int
     matching_rows: int

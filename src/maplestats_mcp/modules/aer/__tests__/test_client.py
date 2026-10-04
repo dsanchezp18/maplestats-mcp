@@ -6,6 +6,8 @@ for ST1 .TXT files, real HTTP 303 redirects for ST3/.zip files, and the
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from maplestats_mcp.modules.aer import client, constants
@@ -60,7 +62,13 @@ async def test_get_well_licences_daily_missing_date_line_returns_none(httpx_mock
 
 async def test_get_well_licence_archive_link_current_year_month(httpx_mock):
     url = constants.WELL_LICENCE_MONTHLY_ZIP_URL.format(year=2026, month=3)
-    httpx_mock.add_response(url=url, headers={"content-length": "123456"})
+    # Live, static.aer.ca sends Content-Length on HEAD only when the request
+    # asks for identity encoding; with gzip it sends none (2026-10-03).
+    httpx_mock.add_response(
+        url=url,
+        headers={"content-length": "123456"},
+        match_headers={"Accept-Encoding": "identity"},
+    )
     result = await client.get_well_licence_archive_link(2026, 3)
     assert result.url == url
     assert result.exists is True
@@ -83,11 +91,38 @@ async def test_get_well_licence_archive_link_old_year_uses_pre_prd_path(httpx_mo
 
 
 async def test_get_well_licence_archive_link_missing_reports_not_exists(httpx_mock):
-    url = constants.WELL_LICENCE_YEARLY_ZIP_URL_OLD.format(year=1999)
+    url = constants.WELL_LICENCE_YEARLY_ZIP_URL_OLD.format(year=2018)
     httpx_mock.add_response(url=url, status_code=404)
-    result = await client.get_well_licence_archive_link(1999)
+    result = await client.get_well_licence_archive_link(2018)
     assert result.exists is False
     assert result.size_bytes is None
+    assert result.note is not None
+
+
+async def test_get_well_licence_archive_link_year_outside_archive_raises():
+    with pytest.raises(InvalidInput, match="2017"):
+        await client.get_well_licence_archive_link(1850)
+    with pytest.raises(InvalidInput):
+        await client.get_well_licence_archive_link(2999)
+
+
+def test_expected_date_is_the_latest_matching_weekday():
+    saturday = date(2026, 10, 3)
+    assert client._expected_date("saturday", saturday) == saturday
+    assert client._expected_date("friday", saturday) == date(2026, 10, 2)
+    assert client._expected_date("sunday", saturday) == date(2026, 9, 27)
+
+
+async def test_stale_weekday_file_gets_a_note_and_as_of(httpx_mock):
+    # Each weekday file is overwritten weekly; one still holding an older week
+    # (the 2026-09-15 text here) is flagged rather than passed off as current.
+    httpx_mock.add_response(
+        url=constants.WELL_LICENCE_DAILY_URL.format(day_code="TUE"), text=_SAMPLE_DAILY_TEXT
+    )
+    result = await client.get_well_licences_daily("tuesday")
+    assert result.note is not None and "2026-09-15" in result.note
+    assert result.provenance.as_of is not None
+    assert result.provenance.as_of.date() == date(2026, 9, 15)
 
 
 async def test_get_well_licence_archive_link_invalid_month_raises():

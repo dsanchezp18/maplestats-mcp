@@ -38,7 +38,8 @@ async def test_search_parses_by_header_newest_first_and_sends_params(httpx_mock)
         radius_km=111.19,
         limit=1,
     )
-    assert result.total_matches == 2 and result.returned_count == 1
+    # Two events came back for limit=1 (limit + 1 is requested), so more match.
+    assert result.total_matches is None and result.has_more and result.returned_count == 1
     quake = result.earthquakes[0]
     assert quake.event_id == "20260910.0315002"
     assert quake.time == datetime(2026, 9, 10, 3, 15, tzinfo=UTC)
@@ -48,6 +49,7 @@ async def test_search_parses_by_header_newest_first_and_sends_params(httpx_mock)
     assert query["starttime"] == ["2026-09-01T00:00:00"]
     assert query["maxradius"] == ["1.0"]
     assert query["format"] == ["text"]
+    assert query["limit"] == ["2"]
 
 
 async def test_no_data_statuses_are_empty(httpx_mock):

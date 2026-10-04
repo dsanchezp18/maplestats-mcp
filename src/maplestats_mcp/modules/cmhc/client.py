@@ -178,7 +178,35 @@ def _require(value: str, name: str) -> str:
 
 def _ysod_title(body: str) -> str:
     match = _TITLE_RE.search(body)
-    return match.group(1).strip() if match else "no further detail available"
+    if not match:
+        return "no further detail available"
+    # The title carries markup ("...not a number.<br>Parameter name: 999",
+    # live 2026-10-03); keep the text only.
+    text = re.sub(r"<[^>]+>", " ", html_module.unescape(match.group(1)))
+    return " ".join(text.split()) or "no further detail available"
+
+
+async def _check_geography(geography_type: str, geography_id: str, lang: str) -> None:
+    """Refuse a geography id HMIP would not resolve before sending it.
+
+    An unknown province id is answered with the national category list
+    (geography_id="999" with type Province returned all of Canada's
+    categories, live 2026-10-03), so a typo read as a real answer.
+    """
+    kind = geography_type.lower()
+    if kind == "country":
+        if geography_id != "1":
+            raise InvalidInput(
+                f"For geography_type 'Country' the id is '1' (Canada), got {geography_id!r}."
+            )
+        return
+    if not geography_id.isdigit():
+        raise InvalidInput(f"geography_id must be a number, got {geography_id!r}.")
+    if kind == "province":
+        provinces = (await list_provinces(lang=lang)).provinces
+        if geography_id not in {p.id for p in provinces}:
+            known = ", ".join(f"{p.id} ({p.name})" for p in provinces)
+            raise InvalidInput(f"No province with id {geography_id!r}; province ids are {known}.")
 
 
 def _raise_for_status(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -399,6 +427,7 @@ async def list_categories(
 ) -> CategoryList:
     geography_type = _require(geography_type, "geography_type")
     geography_id = _require(geography_id, "geography_id")
+    await _check_geography(geography_type, geography_id, lang)
     base = _base_path(lang)
     params = {"geographyType": geography_type, "geographyId": geography_id}
     url = f"{base}/TableMapChart"
@@ -437,6 +466,7 @@ async def get_table_options(
     category_level_2 = _require(category_level_2, "category_level_2")
     geography_type = _require(geography_type, "geography_type")
     geography_id = _require(geography_id, "geography_id")
+    await _check_geography(geography_type, geography_id, lang)
     base = _base_path(lang)
     params = {
         "GeographyType": geography_type,
@@ -554,6 +584,7 @@ async def get_table_data(
     row_field = _require(row_field, "row_field")
     geography_type = _require(geography_type, "geography_type")
     geography_id = _require(geography_id, "geography_id")
+    await _check_geography(geography_type, geography_id, lang)
     filters = filters or {}
     base = _base_path(lang)
 

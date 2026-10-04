@@ -5,7 +5,7 @@ Opendatasoft behaviour confirmed live 2026-09-29 (see the client docstring).
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import unquote_plus
 
 import pytest
@@ -155,6 +155,46 @@ async def test_trade_maps_markets_and_unknown_spelling(httpx_mock):
     assert point.import_sources_mw["ontario"]["unknown"] == 5.0
     assert point.import_sources_mw["newyork"]["hydro"] is None
     assert point.import_sources_mw["newengland"]["gas"] is None
+
+
+def _trade_row(hour: datetime, exports: float, ny_hydro: float | None) -> dict[str, object]:
+    # Shape of a live row: zero placeholders carry 0.0 totals and null sources.
+    return {
+        "date": hour.strftime("%Y-%m-%dT%H:00:00+00:00"),
+        "exportations_total": exports,
+        "exportations_newengland": 0.0,
+        "exportations_newbrunswick": 0.0,
+        "exportations_newyork": 0.0,
+        "exportations_ontario": exports,
+        "importations_sources_ontario_total": 0.0,
+        "importations_sources_ontario_hydro": None,
+        "importations_sources_newyork_total": 0.0,
+        "importations_sources_newyork_hydro": ny_hydro,
+    }
+
+
+async def test_trade_drops_latest_hours_with_unpublished_exports(httpx_mock):
+    # Live 2026-10-03 at 20:00Z: 17:00-20:00Z had exportations_total 0.0 (some
+    # import sources already filled), every earlier hour about 610 MW.
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    newest_first = [
+        _trade_row(now, 0.0, None),
+        _trade_row(now - timedelta(hours=1), 0.0, 201.2),
+        _trade_row(now - timedelta(hours=2), 612.1, 199.9),
+        _trade_row(now - timedelta(hours=3), 610.0, 203.8),
+        _trade_row(now - timedelta(hours=4), 612.1, 209.2),
+    ]
+    httpx_mock.add_response(
+        url=_exports("importations-exportations-avec-transits"), json=newest_first
+    )
+    httpx_mock.add_response(
+        url=_records("importations-exportations-avec-transits"), json={"total_count": 48}
+    )
+    result = await quebec_client.get_trade(limit=2)
+    assert [p.exports_total_mw for p in result.points] == [610.0, 612.1]
+    assert result.rows_matched == 46
+    url = unquote_plus(str(httpx_mock.get_requests()[0].url))
+    assert "limit=14" in url
 
 
 async def test_input_validation():

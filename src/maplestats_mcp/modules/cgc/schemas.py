@@ -14,6 +14,12 @@ ExportDimension = Literal["grain", "grade", "elevator", "region", "global_region
 ExportFrequency = Literal["month", "year", "crop_year"]
 
 UNIT = "thousand tonnes"
+UNIT_FR = "milliers de tonnes"
+
+
+def unit_for(lang: str) -> str:
+    """The unit label in the result's language (it stayed English with lang="fr")."""
+    return UNIT_FR if lang == "fr" else UNIT
 
 
 class CgcWeek(BaseModel):

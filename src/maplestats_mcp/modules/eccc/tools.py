@@ -30,9 +30,10 @@ async def eccc_search_collections(query: str, limit: int = 25, lang: Lang = "en"
 
     Use for: finding a collection id when you only know a topic - e.g.
     "alert", "aqhi", "climate normal", "hydrometric", "swob", "marine",
-    "snowfall". Read docs://eccc/well-known-collections first - it
-    already lists the collection ids that matter most, with example
-    filters for each.
+    "snowfall". The query matches English and French text ("alerte"
+    finds weather-alerts); lang="fr" returns French titles. Read
+    docs://eccc/well-known-collections first - it already lists the
+    collection ids that matter most, with example filters for each.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     collection, search, find, discover, dataset, catalogue.
     Mots-clés : environnement canada, smc, geomet, météo, climat,
@@ -98,8 +99,8 @@ async def eccc_query_items(
     every collection (see docs://eccc/well-known-collections for good
     starting `collection_id` values and example filters).
     `bbox` is `[west, south, east, north]` in decimal degrees (WGS84).
-    `datetime_filter` accepts a single RFC3339 datetime or an interval
-    (`"start/end"`, `".."` for an open end) - support genuinely varies
+    `datetime_filter` accepts a single RFC3339 date or datetime or an
+    interval (`"start/end"`, `".."` for an open end) - support genuinely varies
     by collection and is not predictable from the collection's own
     metadata (confirmed: hydrometric-realtime supports it,
     weather-alerts does not and raises an error) - omit it and filter
@@ -109,9 +110,9 @@ async def eccc_query_items(
     with AND. `fields` limits which properties come back (omit for
     all). `sortby` is a property name, prefixed with `-` for descending
     (e.g. `"-publication_datetime"`). `limit` is capped at 1000 per
-    request - several collections here have hundreds of thousands of
-    rows, so page with `offset` rather than requesting everything at
-    once. Read docs://eccc/gotchas before relying on `datetime_filter`
+    request and rows stop at about 1 MB (`note` gives the next offset) -
+    several collections here have hundreds of thousands of rows, so page
+    with `offset`. Read docs://eccc/gotchas before relying on `datetime_filter`
     or on `climate-stations`' LATITUDE/LONGITUDE properties.
     Keywords: environment canada, eccc, msc, geomet, weather alert,
     weather forecast, snow, rain, temperature, tomorrow, current

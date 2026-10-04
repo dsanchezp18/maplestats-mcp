@@ -107,11 +107,17 @@ def _row(row: list[dict[str, Any]]) -> RecallRow:
     )
 
 
-async def _count(url: str) -> int:
-    """`<search path>/count` answers one row, "Result Count" (confirmed live 2026-10-03)."""
-    rows, _ = await _get(f"{url}/count")
-    values = _values(rows[0]) if rows else []
-    return _int(values[0]) or 0 if values else 0
+async def _all_rows(url: str) -> tuple[list[list[Any]], bool, bool]:
+    """Every matching row, whether all were read, and whether all came from the cache."""
+    rows: list[list[Any]] = []
+    cached_all = True
+    for number in range(1, constants.FETCH_PAGES_MAX + 1):
+        chunk, cached = await _get(url, {"limit": constants.FETCH_PAGE_SIZE, "page": number})
+        rows.extend(chunk)
+        cached_all = cached_all and cached
+        if len(chunk) < constants.FETCH_PAGE_SIZE:
+            return rows, True, cached_all
+    return rows, False, cached_all
 
 
 async def search(
@@ -122,14 +128,14 @@ async def search(
     year_to: int | None = None,
     limit: int = constants.LIMIT_DEFAULT,
     page: int = 1,
+    order: str = "newest",
     lang: str = "en",
 ) -> RecallSearchResult:
-    """Recalls matching the filters, newest first.
+    """Recalls matching the filters, sorted by recall date (newest first by default).
 
-    The API lists oldest first with page/limit paging and has no sort
-    parameter, so the total comes from the `/count` endpoint and the
-    newest-first page is cut from the (at most two) upstream pages that
-    hold it.
+    The API lists roughly oldest first with page/limit paging and has no
+    sort parameter or total, so every matching row is read (pages of
+    FETCH_PAGE_SIZE, cached) and sorted and paged here.
     """
     if not (make or model or year_from or year_to):
         raise InvalidInput("Give at least a make, a model, or a model-year range.")
@@ -137,6 +143,8 @@ async def search(
         raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
     if page < 1:
         raise InvalidInput(f"page must be >= 1, got {page}.")
+    if order not in ("newest", "oldest"):
+        raise InvalidInput(f"order must be 'newest' or 'oldest', got {order!r}.")
     path = "recall"
     if make:
         path += f"/make-name/{_segment(make, 'make')}"
@@ -149,57 +157,60 @@ async def search(
         check_range(first, last, "year_from", "year_to")
         path += f"/year-range/{first}-{last}"
     url = _root(lang) + path
-    total = await _count(url)
-    # An unknown make answers an empty list; tell it apart from a known make
-    # with no recalls for this model or these years.
-    narrowed = bool(model or year_from or year_to)
-    make_url = _root(lang) + f"recall/make-name/{_segment(make, 'make')}" if make else None
-    if total == 0 and make_url and (not narrowed or await _count(make_url) == 0):
+    # Upstream order is oldest first with no total: a make-only search for
+    # Ford started at 1975 and gave no way to reach recent recalls. The rows
+    # are only roughly in date order (25 of 5,181 Ford rows out of order,
+    # live 2026-10-03), so every matching row is read and sorted here.
+    raw, complete, cached = await _all_rows(url)
+    recalls = [_row(r) for r in raw]
+    known_make = bool(recalls) or not make
+    if not recalls and make and (model or year_from or year_to):
+        # An unknown make answers an empty list; tell it apart from a known
+        # make with no recall for this model or these years.
+        make_rows, _ = await _get(
+            _root(lang) + f"recall/make-name/{_segment(make, 'make')}", {"limit": 1, "page": 1}
+        )
+        known_make = bool(make_rows)
+    if not known_make:
         raise InvalidInput(
             f"No recall at all lists make {make!r}; check the spelling (makes are "
             "matched as written, e.g. 'Honda', 'Mercedes-Benz')."
         )
-    # Newest-first rows [low, high) are, oldest first, [total - high, total - low).
-    low, high = (page - 1) * limit, page * limit
-    first_index, stop_index = max(total - high, 0), max(total - low, 0)
-    rows: list[RecallRow] = []
-    cached = True
-    if stop_index > first_index:
-        first_page = first_index // limit + 1
-        last_page = (stop_index - 1) // limit + 1
-        fetched: list[RecallRow] = []
-        for upstream_page in range(first_page, last_page + 1):
-            part, part_cached = await _get(url, {"limit": limit, "page": upstream_page})
-            cached = cached and part_cached
-            fetched.extend(_row(r) for r in part)
-        offset = (first_page - 1) * limit
-        rows = fetched[first_index - offset : stop_index - offset][::-1]
-    has_more = high < total
-    note = (
-        "No recall matched; check the make and model spelling (matched as written)."
-        if total == 0
-        else (
-            f"Newest first: recalls {low + 1} to {low + len(rows)} of {total:,}; next page "
-            f"is page={page + 1}."
-            if has_more
-            else None
-        )
+    recalls.sort(
+        key=lambda r: (r.recall_date or date.min, r.recall_number),
+        reverse=order == "newest",
     )
+    start = (page - 1) * limit
+    shown = recalls[start : start + limit]
+    has_more = start + len(shown) < len(recalls)
+    note = None
+    if not recalls:
+        note = "No recall matched; check the model spelling (matched as written)."
+    elif has_more:
+        note = (
+            f"{order.capitalize()} first: recalls {start + 1} to {start + len(shown)} of "
+            f"{len(recalls):,}; next page is page={page + 1}."
+        )
     return RecallSearchResult(
-        recalls=rows,
-        returned_count=len(rows),
-        total_count=total,
+        recalls=shown,
+        returned_count=len(shown),
+        total_matched=len(recalls),
         has_more=has_more,
+        order=order,
         page=page,
         limit=limit,
+        note=note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=cached,
             schema_name="tc_recalls.RecallSearchResult",
             limits=join_limits(
-                f"Request: GET {url}/count, then GET {url}?limit={limit}&page=N for the "
-                "upstream pages holding these rows (the API lists oldest first)",
+                f"Request: GET {url}?limit={constants.FETCH_PAGE_SIZE}&page=N for every page "
+                f"(the API lists oldest first); sorted here by recall date, {order} first",
+                None
+                if complete
+                else f"only the first {len(recalls):,} matching rows were read; narrow the search",
                 note,
             ),
         ),
@@ -228,7 +239,9 @@ async def get_recall(recall_number: str, lang: str = "en") -> RecallDetail:
         system=first.get(f"SYSTEM_TYPE_{suffix}"),
         notification_type=first.get(f"NOTIFICATION_TYPE_{suffix}"),
         units_affected=_int(first.get("UNIT_AFFECTED_NBR")),
-        description=(first.get(f"COMMENT_{suffix}") or "").strip() or None,
+        # English descriptions use CRLF line breaks, French ones LF (live
+        # 2026-10-03, recall 2021001); both come back with LF.
+        description=(first.get(f"COMMENT_{suffix}") or "").replace("\r\n", "\n").strip() or None,
         affected_vehicles=[
             AffectedVehicle(make=m, model=mo, model_year=y)
             for m, mo, y in sorted(vehicles, key=lambda v: (str(v[0]), str(v[1]), v[2] or 0))

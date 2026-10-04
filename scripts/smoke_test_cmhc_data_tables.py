@@ -69,6 +69,32 @@ async def main() -> int:
         print(f"  {older_link.document_url}")
         ok &= older_link.document_url != default_link.document_url
 
+    # Every listed table must resolve a download. Checking one edition-type
+    # table hid that 52 of the 72 (single-file report pages) failed.
+    for listing in (rental, household):
+        failed = []
+        for i, summary in enumerate(listing.tables):
+            lang = "fr" if i % 5 == 0 else "en"
+            try:
+                link = await client.get_download_url(listing.category, summary.slug, lang=lang)
+                if not link.document_url.startswith("https://"):
+                    failed.append(summary.slug)
+            except Exception as exc:  # noqa: BLE001
+                failed.append(f"{summary.slug} ({type(exc).__name__}: {exc})")
+        print(
+            f"{'OK' if not failed else 'FAIL'}: {listing.category}: "
+            f"{len(listing.tables) - len(failed)} of {len(listing.tables)} tables resolve"
+        )
+        for item in failed:
+            print(f"  FAIL {item}")
+        ok &= not failed
+
+    french = await client.get_table(
+        "household-characteristics", "home-equity-net-worth-tenure-canada-provinces", lang="fr"
+    )
+    print(f"  fr title={french.title!r}")
+    ok &= french.title.startswith("Avoir")
+
     # Error-path checks: must raise typed errors, not a raw httpx exception.
     try:
         await client.list_tables("not-a-real-category")

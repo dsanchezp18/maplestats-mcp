@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import re
+import unicodedata
 from typing import Any
 from urllib.parse import urlparse
 
@@ -58,6 +59,11 @@ async def _page(url: str) -> tuple[str, bool]:
     return await cached_fetch(f"cihi:page:{url}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
 
 
+def _fold(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
 def _clean(text: str) -> str:
     return " ".join(text.split())
 
@@ -93,8 +99,8 @@ async def _library() -> tuple[list[IndicatorRef], bool]:
 
 async def search_indicators(query: str = "") -> IndicatorSearchResult:
     refs, cached = await _library()
-    words = query.lower().split()
-    matches = [r for r in refs if all(w in r.name.lower() for w in words)]
+    words = _fold(query).split()
+    matches = [r for r in refs if all(w in _fold(r.name) for w in words)]
     return IndicatorSearchResult(
         indicators=matches,
         total_matches=len(matches),
@@ -274,21 +280,29 @@ async def get_indicator_data(
             return False
         return all(cells[i].lower() == v for i, v in wanted)
 
-    chosen = [header[index(c)] for c in columns] if columns else header
     matching = [r for r in data if keep(r)]
-
-    def as_row(row: list[str]) -> dict[str, str]:
-        full = dict(zip(header, row + [""] * (len(header) - len(row)), strict=True))
-        return {c: full[c] for c in chosen}
+    kept = [r + [""] * (len(header) - len(r)) for r in matching[-limit:]]
+    # Rows carry 33 columns (about 1.35 KB each, live 2026-10-03), many of
+    # them blank for a given indicator; pick columns, or drop the blank ones.
+    if columns:
+        chosen = [index(name) for name in columns]
+        empty: list[str] = []
+    else:
+        chosen = [i for i in range(len(header)) if any(row[i] for row in kept)]
+        empty = [header[i] for i in range(len(header)) if i not in chosen] if kept else []
+        if not kept:
+            chosen = list(range(len(header)))
+    shown = [header[i] for i in chosen]
 
     # The latest rows come last in the file: fill the byte budget newest
     # first, then put them back in file order.
-    rows = fit_to_budget([as_row(r) for r in matching[-limit:]][::-1])[::-1]
+    rows = fit_to_budget([{header[i]: row[i] for i in chosen} for row in kept][::-1])[::-1]
     return IndicatorData(
         slug=detail.slug,
         table=title or sheet,
         tables=list(tables),
-        columns=chosen,
+        columns=shown,
+        empty_columns=empty,
         rows=rows,
         total_rows=len(data),
         matching_rows=len(matching),

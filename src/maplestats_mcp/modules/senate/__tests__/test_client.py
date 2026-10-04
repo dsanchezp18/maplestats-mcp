@@ -48,6 +48,37 @@ _DETAIL = """
 """
 
 
+# French list cell trimmed from /fr/dans-la-chambre/votes/ (2026-10-03): the
+# count label is "Abstention" in the singular.
+_LIST_FR = """
+<a href="/fr/dans-la-chambre/votes/45-1">45-1</a>
+<table class="sc-table table" id="votes-table"><tbody>
+<tr>
+ <td class="vote-centered"><a href="/j">2026-06-18</a></td>
+ <td><a class="vote-web-title-link" href="/fr/dans-la-chambre/votes/details/702799/45-1">
+   Loi d&#x27;ex&#xE9;cution de la mise &#xE0; jour &#xE9;conomique du printemps 2026 &#x2013;
+   C-30 &#x2013; Troisi&#xE8;me lecture</a>
+   <br />
+   Pour: 58 <text>|</text>
+   Contre: 9 <text>|</text>
+   Abstention: 1 <text>|</text>
+   Total: 68</td>
+ <td class="vote-centered"><a href="http://www.parl.ca/LEGISInfo">C-30</a></td>
+ <td class="vote-centered"> Adopt&#xE9; </td>
+</tr>
+</tbody></table>
+"""
+
+# An early session's page (41-2, confirmed live 2026-10-03): HTTP 200 with the
+# session links and no votes table.
+_LIST_NO_TABLE = """
+<a href="/en/in-the-chamber/votes/41-2">41-2</a>
+<a href="/en/in-the-chamber/votes/42-1">42-1</a>
+<a href="/en/in-the-chamber/votes/45-1">45-1</a>
+<p>No votes</p>
+"""
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache():
     cache_module._caches.clear()
@@ -74,12 +105,40 @@ async def test_list_votes_filters_by_bill_and_keyword(httpx_mock):
     assert [v.vote_id for v in result.votes] == [665744]
 
 
+async def test_french_list_reads_singular_abstention(httpx_mock):
+    httpx_mock.add_response(url="https://sencanada.ca/fr/dans-la-chambre/votes/", text=_LIST_FR)
+    vote = (await client.list_votes(lang="fr")).votes[0]
+    assert (vote.yeas, vote.nays, vote.abstentions) == (58, 9, 1)
+
+
+async def test_keyword_ignores_accents(httpx_mock):
+    httpx_mock.add_response(url="https://sencanada.ca/fr/dans-la-chambre/votes/", text=_LIST_FR)
+    result = await client.list_votes(lang="fr", keyword="troisieme LECTURE")
+    assert [v.vote_id for v in result.votes] == [702799]
+
+
+async def test_session_without_votes_list_is_invalid_input(httpx_mock):
+    httpx_mock.add_response(
+        url="https://sencanada.ca/en/in-the-chamber/votes/41-2", text=_LIST_NO_TABLE
+    )
+    with pytest.raises(InvalidInput, match="42-1"):
+        await client.list_votes(session="41-2")
+
+
+async def test_get_vote_rejects_a_vote_from_another_session(httpx_mock):
+    httpx_mock.add_response(url="https://sencanada.ca/en/in-the-chamber/votes/45-1", text=_LIST)
+    with pytest.raises(NotFound, match="not in session 45-1"):
+        await client.get_vote(702799, "45-1")
+
+
 async def test_get_vote_reads_marked_column(httpx_mock):
+    _list = _LIST.replace("665744", "674459")
+    httpx_mock.add_response(url="https://sencanada.ca/en/in-the-chamber/votes/45-1", text=_list)
     httpx_mock.add_response(
         url="https://sencanada.ca/en/in-the-chamber/votes/details/674459/45-1", text=_DETAIL
     )
     vote = await client.get_vote(674459, "45-1")
-    assert [b.vote for b in vote.ballots] == ["Yea", "Nay", ""]
+    assert [b.vote for b in vote.ballots] == ["Yea", "Nay", None]
     assert (vote.yeas, vote.nays, vote.abstentions, vote.bill) == (1, 1, 0, "S-205")
     assert vote.date_text == "Tuesday, October 21, 2025 - 45th Parliament"
 
@@ -88,6 +147,10 @@ async def test_layout_change_and_bad_input(httpx_mock):
     httpx_mock.add_response(text="<html>maintenance</html>")
     with pytest.raises(UpstreamError):
         await client.list_votes()
+    httpx_mock.add_response(
+        url="https://sencanada.ca/en/in-the-chamber/votes/45-1",
+        text=_LIST.replace("665744", "1"),
+    )
     httpx_mock.add_response(text="<html>no table</html>")
     with pytest.raises(NotFound):
         await client.get_vote(1, "45-1")

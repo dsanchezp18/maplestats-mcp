@@ -1,5 +1,12 @@
 BASE_URL = "https://www.elections.ca/WPAPPS/WPF/EN/CC"
 HOME_URL = "https://www.elections.ca/WPAPPS/WPF/EN/Home"
+# The portal has a French twin under /FR/ with the same ids and form fields;
+# only the submit-button values differ (confirmed live 2026-10-03: the French
+# RefreshEventList returns "45e élection générale" for event 62).
+BASE_URLS = {"en": BASE_URL, "fr": "https://www.elections.ca/WPAPPS/WPF/FR/CC"}
+HOME_URLS = {"en": HOME_URL, "fr": "https://www.elections.ca/WPAPPS/WPF/FR/Home"}
+FIND_BUTTON = {"en": "Find Candidates", "fr": "Trouver les candidats"}
+SELECT_BUTTON = {"en": "Search Selected", "fr": "Chercher"}
 RATE_LIMIT_SOURCE = "elections_financial_returns"
 # Unpublished rate limit -- kept conservative, matching this project's other
 # legacy-portal modules (see cmhc/constants.py) that also have no published

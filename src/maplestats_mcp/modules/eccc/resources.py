@@ -161,11 +161,12 @@ _GOTCHAS_DOC = """\
   confirmed live. The feature's own GeoJSON `geometry` field already
   carries correct decimal coordinates; prefer that over the raw
   properties for anything needing real lon/lat.
-- **No language query parameter exists, and bilingual field naming is
-  NOT consistent across collections.** Every eccc_ tool's `lang`
-  argument is a documented no-op - bilingual content is always
-  returned as separate properties within the same response, never
-  toggled by a request parameter, but confirmed live to use at least
+- **`lang` changes only collection titles and descriptions, and
+  bilingual field naming is NOT consistent across collections.**
+  `lang="fr"` returns French collection metadata (GeoMet's `lang`
+  parameter on /collections); item rows are the same in both
+  languages, with bilingual content returned as separate properties
+  within the same response, confirmed live to use at least
   three different naming conventions depending on the collection:
   `_en`/`_fr` suffixes (`weather-alerts`: `alert_text_en`/
   `alert_text_fr`), `E_`/`F_` prefixes (`climate-normals`:

@@ -23,7 +23,8 @@ async def cihi_search_indicators(query: str = "", lang: Lang = "en") -> Indicato
     Use for: finding an indicator's slug, e.g. "stroke mortality",
     "readmission", "wait times", "emergency department", "hospital
     stays", "public spending". Every word must appear in the English
-    name; read French content with lang="fr" on the other cihi_ tools.
+    name (case and accents ignored); read French content with lang="fr"
+    on the other cihi_ tools.
     Keywords: CIHI, health indicators, hospital, mortality, readmission,
     wait times, emergency department, health system performance.
     Mots-clés : ICIS, indicateurs de santé, hôpital, mortalité,
@@ -65,11 +66,14 @@ async def cihi_get_indicator_data(
     Alberta, or readmission rates by hospital. `place` is a substring
     of "Place or organization"; `filters` match columns exactly, e.g.
     {"Reporting level": "Province/Territory", "Time frame": "2024–2025",
-    "Level 1 breakdown": "Not applicable"}; `columns` picks the columns
-    returned (default all). The last `limit` matching rows in file order
-    come back (default 40, max 2000), held to about 200 KB, with the cut
-    noted in provenance.limits. `lang="fr"` reads CIHI's French file,
-    with French column names.
+    "Level 1 breakdown": "Not applicable"}. The last `limit` matching
+    rows in file order come back (default 40, max 2000), held to about
+    200 KB, with the cut noted in provenance.limits. `columns` picks the
+    columns to return (names as in the file); without it, columns blank
+    in every returned row are left out and listed in empty_columns. The
+    first read of an indicator downloads its workbook (about 2 MB; 20-50 s
+    measured live), later reads are cached for a day. `lang="fr"` reads
+    CIHI's French file, with French column names.
     Keywords: CIHI, health data, hospital mortality rate, readmission
     rate, province, hospital, fiscal year, risk-adjusted rate.
     Mots-clés : ICIS, données sur la santé, taux de mortalité,

@@ -29,8 +29,11 @@ async def nrcan_nbac_query_fires(
     event mapped in Canada since 1972. Filter with a standard OGC CQL
     expression against NBAC's own field names, e.g. "admin_area = 'BC'
     AND year >= 2017 AND year <= 2024" to get every mapped BC fire from
-    2017 to 2024. Leave include_geometry false (the default) unless you
-    specifically need the fire polygons -- NBAC's geometry can be large.
+    2017 to 2024. latest_year in the result is the newest fire year in
+    NBAC (later years return nothing). Leave include_geometry false (the
+    default) unless you specifically need the fire polygons: one polygon
+    can be several MB, so with geometry at most 10 fires come back per
+    call and polygons beyond a 2 MB budget are left out (note says which).
     Keywords: NRCan, National Burned Area Composite, NBAC, wildfire,
     forest fire, burned area, fire polygon, hectares burned, CWFIS,
     fire perimeter, fire season, prescribed burn.

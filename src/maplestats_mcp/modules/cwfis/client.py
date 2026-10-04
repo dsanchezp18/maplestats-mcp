@@ -11,8 +11,9 @@ Live quirks (confirmed 2026-09-29) this file relies on:
   on the station, forecast, danger and NFDB layers.
 - Station names are space-padded; the station layer uses NF for NL and SA for SK.
 - The archive `hotspots` layer is 18.5 million rows: always filter by date.
-  Descending sort on `frp` puts NULLs first, so sorting by FRP also requires
-  `frp IS NOT NULL`.
+  Descending sort on `frp` puts NULLs first, so the FRP ranking is a query
+  with `frp IS NOT NULL`, followed by the null-FRP rows (2023 archive rows
+  mostly have none: BC on 2023-08-18 matched 9,813 detections, 0 with FRP).
 - The situation-report API ignores a `type` filter, caps `limit` at 100 (HTTP 422
   above), answers 404 before 1998, and `by-date` returns the latest report on or
   before the date. Numeric totals are null for reports from 2024 on.
@@ -20,6 +21,7 @@ Live quirks (confirmed 2026-09-29) this file relies on:
 
 from __future__ import annotations
 
+import json
 import math
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -203,27 +205,63 @@ async def get_hotspots(
     layer = c.HOTSPOTS_ARCHIVE if archive else c.HOTSPOTS_CURRENT
     clauses: list[str] = []
     if agency:
-        clauses.append(f"agency = {_quote(agency.upper())}")
+        code = agency.strip().upper()
+        if code not in (*c.CANADIAN_AGENCIES, *c.OTHER_HOTSPOT_AGENCIES):
+            raise InvalidInput(
+                f"agency must be a province or territory code ({', '.join(c.CANADIAN_AGENCIES)}) "
+                f"or a US state code or MX, got {agency!r}."
+            )
+        clauses.append(f"agency = {_quote(code)}")
     elif canada_only:
         clauses.append("agency IN (" + ",".join(_quote(a) for a in c.CANADIAN_AGENCIES) + ")")
     if bbox:
         clauses.append(_bbox_cql("geometry", bbox))
     if min_frp is not None:
         clauses.append(f"frp >= {float(min_frp)}")
-    if sort_by == "frp":
-        clauses.append("frp IS NOT NULL")
     if start and end:
         clauses.append(f"rep_date >= '{start.isoformat()}T00:00:00Z'")
         clauses.append(f"rep_date < '{(end + timedelta(days=1)).isoformat()}T00:00:00Z'")
-    body, cached = await _wfs(
-        layer,
-        cql=" AND ".join(clauses) or None,
-        fields=_HOTSPOT_FIELDS,
-        sort_by="frp D" if sort_by == "frp" else "rep_date D",
-        limit=limit,
-        offset=offset,
-        ttl=c.CACHE_TTL_ARCHIVE if archive else c.CACHE_TTL_HOTSPOTS,
-    )
+    ttl = c.CACHE_TTL_ARCHIVE if archive else c.CACHE_TTL_HOTSPOTS
+    without_frp = None
+    if sort_by == "frp":
+        # Ranked rows first, then the rows with no FRP, so the filter never
+        # hides detections or changes total_matched.
+        ranked, cached = await _wfs(
+            layer,
+            cql=" AND ".join([*clauses, "frp IS NOT NULL"]),
+            fields=_HOTSPOT_FIELDS,
+            sort_by="frp D",
+            limit=limit,
+            offset=offset,
+            ttl=ttl,
+        )
+        props = _props(ranked)
+        ranked_total = _total(ranked, len(props))
+        unranked, _ = await _wfs(
+            layer,
+            cql=" AND ".join([*clauses, "frp IS NULL"]),
+            fields=_HOTSPOT_FIELDS,
+            sort_by="rep_date D",
+            limit=max(limit - len(props), 1),
+            offset=max(offset - ranked_total, 0),
+            ttl=ttl,
+        )
+        without_frp = _total(unranked, len(_props(unranked)))
+        if len(props) < limit:
+            props += _props(unranked)[: limit - len(props)]
+        total = ranked_total + without_frp
+    else:
+        body, cached = await _wfs(
+            layer,
+            cql=" AND ".join(clauses) or None,
+            fields=_HOTSPOT_FIELDS,
+            sort_by="rep_date D",
+            limit=limit,
+            offset=offset,
+            ttl=ttl,
+        )
+        props = _props(body)
+        total = _total(body, len(props))
     rows = [
         Hotspot(
             latitude=p["lat"],
@@ -242,13 +280,13 @@ async def get_hotspots(
             head_fire_intensity=p.get("hfi"),
             estimated_area=p.get("estarea"),
         )
-        for p in _props(body)
+        for p in props
     ]
-    total = _total(body, len(rows))
     return HotspotResult(
         hotspots=rows,
         returned_count=len(rows),
         total_matched=total,
+        without_frp=without_frp,
         layer=layer,
         provenance=_prov(
             "HotspotResult",
@@ -289,22 +327,38 @@ async def get_perimeters(
         ttl=c.CACHE_TTL_LIVE,
     )
     rows = []
-    for feature in body.get("features") or []:
+    used = 0
+    features = body.get("features") or []
+    for feature in features:
         p = feature.get("properties") or {}
+        geometry = feature.get("geometry") if include_geometry else None
+        if geometry is not None:
+            used += len(json.dumps(geometry, separators=(",", ":")))
+            if rows and used > c.GEOMETRY_BYTES_MAX:
+                break
         rows.append(
             Perimeter(
                 hotspot_count=p.get("hcount"),
                 first_detected=_dt(p.get("firstdate")),
                 last_detected=_dt(p.get("lastdate")),
                 area=p.get("area"),
-                geometry=feature.get("geometry") if include_geometry else None,
+                geometry=geometry,
             )
         )
     total = _total(body, len(rows))
+    note = None
+    if len(rows) < len(features):
+        note = (
+            f"Stopped at {len(rows)} perimeters: their polygons reach the "
+            f"{c.GEOMETRY_BYTES_MAX // 1000} KB geometry budget. Continue with "
+            f"offset={offset + len(rows)}, or leave include_geometry off for attributes only."
+        )
     return PerimeterResult(
         perimeters=rows,
         returned_count=len(rows),
         total_matched=total,
+        has_more=offset + len(rows) < total,
+        note=note,
         provenance=_prov(
             "PerimeterResult",
             c.PERIMETERS,
@@ -410,10 +464,37 @@ async def get_stations(
     else:
         stations = [_station(p) for p in props]
         total = _total(body, len(stations))
+    note = None
+    if not stations:
+        # Outside the fire season the layer holds a handful of stations (10 on
+        # 2026-10-03, nine of them NL), so an empty answer says so.
+        everything, _ = await _wfs(
+            c.STATIONS,
+            cql=None,
+            fields="prov",
+            sort_by="name",
+            limit=c.ROWS_LIMIT_MAX,
+            offset=0,
+            ttl=c.CACHE_TTL_LIVE,
+        )
+        held = _props(everything)
+        provinces = sorted(
+            {
+                c.STATION_CODE_TO_PROVINCE.get(code, code)
+                for p in held
+                if (code := (p.get("prov") or "").strip())
+            }
+        )
+        note = (
+            f"No station matched. The layer currently holds {len(held)} stations"
+            + (f" ({', '.join(provinces)})" if provinces else "")
+            + "; stations report during the fire season only."
+        )
     return StationResult(
         stations=stations,
         returned_count=len(stations),
         total_matched=total,
+        note=note,
         provenance=_prov(
             "StationResult",
             c.STATIONS,
@@ -553,7 +634,12 @@ async def search_large_fires(
     if year_to is not None:
         clauses.append(f"YEAR <= {int(year_to)}")
     if agency:
-        clauses.append(f"SRC_AGENCY = {_quote(agency.upper())}")
+        code = agency.strip().upper()
+        if code not in c.LARGE_FIRE_AGENCIES:
+            raise InvalidInput(
+                f"agency must be one of {', '.join(c.LARGE_FIRE_AGENCIES)}, got {agency!r}."
+            )
+        clauses.append(f"SRC_AGENCY = {_quote(code)}")
     if min_size_ha is not None:
         clauses.append(f"SIZE_HA >= {float(min_size_ha)}")
     if cause:

@@ -11,6 +11,7 @@ import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from maplestats_mcp.modules.ab_wildfire import constants as c
 from maplestats_mcp.modules.ab_wildfire.schemas import (
@@ -85,6 +86,9 @@ def _parse_iso_date(value: str, name: str) -> date:
         raise InvalidInput(f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.") from exc
 
 
+_ALBERTA = ZoneInfo("America/Edmonton")
+
+
 def _utc(value: object) -> datetime | None:
     return arcgis.parse_epoch_millis(value)
 
@@ -97,13 +101,22 @@ def _utc_date(value: object) -> date | None:
 
 
 def _local_datetime(value: object) -> datetime | None:
-    """Parse the string status date 'YYYY/MM/DD HH:MM:SS' (no zone stated)."""
+    """Parse the string status date 'YYYY/MM/DD HH:MM:SS' as Alberta time, in UTC.
+
+    The field states no zone. Checked live 2026-10-03 against the UTC
+    assessment time of fires put out on the day of assessment: CWF100 was
+    assessed 19:52Z and extinguished "13:57", RWF072 22:30Z and "16:35",
+    CWF099 00:13Z and "18:17" the evening before -- each a few minutes after
+    the assessment in Mountain Daylight Time. So the text is Alberta local
+    time, converted here to UTC like every other timestamp in the module.
+    """
     if not isinstance(value, str):
         return None
     try:
-        return datetime.strptime(value.strip(), "%Y/%m/%d %H:%M:%S")  # noqa: DTZ007 - no zone stated
+        local = datetime.strptime(value.strip(), "%Y/%m/%d %H:%M:%S")  # noqa: DTZ007 - zone added below
     except ValueError:
         return None
+    return local.replace(tzinfo=_ALBERTA).astimezone(UTC)
 
 
 def _whole(value: object) -> int | None:

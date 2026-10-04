@@ -32,7 +32,9 @@ async def earthquakes_search(
     (latitude, longitude, radius_km, e.g. near Vancouver), or a
     [west, south, east, north] bbox. Pass event_id alone for one event.
     Results are most recent first, with time (UTC), location, depth
-    and magnitude. Use nrcan_geo_locate to turn a place into coordinates.
+    and magnitude; the newest `limit` come back, with has_more true (and
+    total_matches null) when more match. Use nrcan_geo_locate to turn a
+    place into coordinates.
     Keywords: earthquake, seismic event, tremor, quake, magnitude,
     epicentre, Earthquakes Canada, NRCan, seismology.
     Mots-clés : séisme, tremblement de terre, secousse, magnitude,

@@ -7,7 +7,7 @@ real HTTP 303 for ST3 .xlsx/ST1 .zip files).
 from __future__ import annotations
 
 import re
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -48,23 +48,35 @@ def _parse_report_date(raw_text: str) -> date | None:
         return None
 
 
+def _expected_date(day_key: str, today: date) -> date:
+    """The most recent date (today or earlier) falling on that weekday."""
+    target = list(constants.DAY_CODES).index(day_key)  # sunday = 0
+    today_index = (today.weekday() + 1) % 7
+    return today - timedelta(days=(today_index - target) % 7)
+
+
 async def get_well_licences_daily(
     day: str | None = None, *, lang: str = "en"
 ) -> WellLicenceDailyReport:
-    """Fetch AER's ST1 "Well Licences Issued - Daily List" for one day of
-    the current week. `day` is a weekday name (e.g. "monday"); defaults
-    to today in America/Edmonton time, since that is AER's own reporting
-    timezone. Returns raw report text -- see the module docstring for
-    why this stays a text report rather than a structured parse (each
-    licence record spans 5 fixed-width lines with no stable column
-    boundaries confirmed safe to split on)."""
+    """Fetch AER's ST1 "Well Licences Issued - Daily List" for one weekday.
+    `day` is a weekday name (e.g. "monday"); defaults to yesterday in
+    America/Edmonton time, AER's own reporting timezone: a day's file is
+    posted around midnight after it ends, so before then "today" still
+    holds last week's list (live 2026-10-03, a Saturday: the default
+    returned the 2026-09-26 list). Each weekday file is overwritten
+    weekly; when it still holds an older list than the latest date with
+    that weekday, `note` says so. Returns raw report text -- see the
+    module docstring for why this stays a text report rather than a
+    structured parse (each licence record spans 5 fixed-width lines with
+    no stable column boundaries confirmed safe to split on)."""
     del lang
+    today = datetime.now(ZoneInfo(constants.TIMEZONE)).date()
     if day is None:
-        today = datetime.now(ZoneInfo(constants.TIMEZONE))
-        day = today.strftime("%A").lower()
+        day = (today - timedelta(days=1)).strftime("%A").lower()
     day_key = day.strip().lower()
     if day_key not in constants.DAY_CODES:
         raise InvalidInput(f"day must be one of {sorted(constants.DAY_CODES)}, got {day!r}.")
+    expected = _expected_date(day_key, today)
     day_code = constants.DAY_CODES[day_key]
     url = constants.WELL_LICENCE_DAILY_URL.format(day_code=day_code)
 
@@ -81,16 +93,31 @@ async def get_well_licences_daily(
 
     cache_key = f"aer:well-licences-daily:{day_key}"
     raw_text, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DAILY_SECONDS, fetch)
+    report_date = _parse_report_date(raw_text)
+    note = None
+    if report_date is not None and report_date < expected:
+        note = (
+            f"This is the {report_date.isoformat()} list: the {day_key} list for "
+            f"{expected.isoformat()} is not posted yet (files appear around midnight "
+            "Alberta time after the day ends)."
+        )
 
     return WellLicenceDailyReport(
         day=day_key,
-        report_date=_parse_report_date(raw_text),
+        report_date=report_date,
+        expected_date=expected,
+        note=note,
         raw_text=raw_text,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=was_cached,
             schema_name="aer.WellLicenceDailyReport",
+            as_of=(
+                datetime.combine(report_date, time(), tzinfo=ZoneInfo(constants.TIMEZONE))
+                if report_date
+                else None
+            ),
             freshness="posted nightly by 12:00am MT; each weekday's file is overwritten weekly",
         ),
     )
@@ -115,12 +142,20 @@ async def get_well_licence_archive_link(
     a full prior year's ZIP. Discovery-only -- these are large
     fixed-width archives, not parsed here."""
     del lang
+    today = datetime.now(ZoneInfo(constants.TIMEZONE)).date()
+    if not constants.WELL_LICENCE_FIRST_YEAR <= year <= today.year:
+        raise InvalidInput(
+            f"year must be between {constants.WELL_LICENCE_FIRST_YEAR} and {today.year} "
+            f"(AER's ST1 archive starts in {constants.WELL_LICENCE_FIRST_YEAR}), got {year}."
+        )
     url = _archive_url(year, month)
+    if month is not None and (year, month) > (today.year, today.month):
+        raise InvalidInput(f"{year}-{month:02d} has not happened yet; nothing is published.")
 
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            return await _client.head(url)
+            return await _client.head(url, headers=constants.HEAD_HEADERS)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "aer:get_well_licence_archive_link did not respond in time."
@@ -131,6 +166,13 @@ async def get_well_licence_archive_link(
     exists = response.status_code == 200
     size_raw = response.headers.get("content-length")
     size_bytes = int(size_raw) if exists and size_raw is not None and size_raw.isdigit() else None
+    note = None
+    if not exists:
+        note = (
+            "Not published yet: AER posts each month's ZIP after the month ends."
+            if month is not None and (year, month) >= (today.year, today.month - 1)
+            else "AER has no file at this address."
+        )
 
     return WellLicenceArchiveLink(
         year=year,
@@ -138,6 +180,7 @@ async def get_well_licence_archive_link(
         url=url,
         exists=exists,
         size_bytes=size_bytes,
+        note=note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
@@ -165,7 +208,7 @@ async def get_production_volumes_link(product: str, *, lang: str = "en") -> Prod
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            return await _client.head(url)
+            return await _client.head(url, headers=constants.HEAD_HEADERS)
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 "aer:get_production_volumes_link did not respond in time."

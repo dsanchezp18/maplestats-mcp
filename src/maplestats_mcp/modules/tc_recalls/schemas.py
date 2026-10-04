@@ -19,12 +19,14 @@ class RecallRow(BaseModel):
 
 
 class RecallSearchResult(BaseModel):
-    recalls: list[RecallRow] = Field(description="Newest recall date first.")
+    recalls: list[RecallRow] = Field(description="In recall-date order, as `order` says.")
     returned_count: int
-    total_count: int = Field(description="Recalls matching the filters, all pages.")
-    has_more: bool = Field(description="True when a later page holds older recalls.")
+    total_matched: int = Field(description="Recalls matching the filters, all pages.")
+    has_more: bool = Field(description="True when a later page holds more recalls.")
+    order: str = Field(description="'newest' (recall date, newest first) or 'oldest'.")
     page: int
     limit: int
+    note: str | None = None
     provenance: Provenance
 
 
@@ -43,7 +45,7 @@ class RecallDetail(BaseModel):
     notification_type: str | None = None
     units_affected: int | None = None
     description: str | None = Field(
-        default=None, description="Issue, safety risk, and corrective action."
+        default=None, description="Issue, safety risk, and corrective action (LF line breaks)."
     )
     affected_vehicles: list[AffectedVehicle]
     provenance: Provenance

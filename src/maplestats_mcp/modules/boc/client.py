@@ -59,6 +59,7 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime, time
 from typing import Any, NoReturn, Protocol
 from urllib.parse import quote
 
@@ -200,6 +201,13 @@ def _observations_from_json(rows: list[dict[str, Any]]) -> list[Observation]:
         }
         observations.append(Observation(ref_date=ref_date, values=values))
     return observations
+
+
+def _latest_date(observations: list[Observation]) -> datetime | None:
+    """The newest observation date, as provenance as_of."""
+    if not observations:
+        return None
+    return datetime.combine(max(o.ref_date for o in observations), time(), tzinfo=UTC)
 
 
 def _series_info_from_json(series_detail: dict[str, Any]) -> dict[str, SeriesInfoBrief]:
@@ -428,7 +436,8 @@ async def get_group(name: str) -> GroupDetail:
     detail = obj["groupDetails"]
     members = [
         GroupMemberSeries(name=code, label=e.get("label", ""), link=e.get("link"))
-        for code, e in detail.get("groupSeries", {}).items()
+        # `or {}`: an explicit null would otherwise crash .items().
+        for code, e in (detail.get("groupSeries") or {}).items()
     ]
     return GroupDetail(
         name=detail["name"],
@@ -482,6 +491,7 @@ async def get_observations(
             source="boc",
             url=_url(path, params),
             cached=was_cached,
+            as_of=_latest_date(observations),
             schema_name="boc.ObservationsResult",
             limits=_observation_limits(len(kept), len(observations)),
         ),
@@ -532,6 +542,7 @@ async def get_group_observations(
             source="boc",
             url=_url(path, params),
             cached=was_cached,
+            as_of=_latest_date(observations),
             schema_name="boc.GroupObservationsResult",
             limits=_observation_limits(len(kept), len(observations)),
         ),

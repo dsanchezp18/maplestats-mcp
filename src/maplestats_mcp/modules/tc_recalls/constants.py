@@ -20,3 +20,9 @@ CACHE_TTL_SECONDS = 6 * 60 * 60
 
 LIMIT_DEFAULT = 50
 LIMIT_MAX = 500
+
+# The API returns rows oldest first with no sort option and no total, so a
+# search reads every matching row (pages of FETCH_PAGE_SIZE; Ford alone has
+# 5,181, live 2026-10-03) and sorts and pages them here.
+FETCH_PAGE_SIZE = 5000
+FETCH_PAGES_MAX = 20

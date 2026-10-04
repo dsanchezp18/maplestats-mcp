@@ -165,11 +165,13 @@ async def cgc_exports_query(
     in `group_by` (e.g. frequency='crop_year', group_by=['destination']),
     and `months` shows partial periods. Rows come in period order, largest
     first within a period; past `limit` the oldest periods are dropped.
-    `total_ktonnes` sums every match. Thousands of tonnes. With
-    `lang="fr"` names are French: elevator 'Silos des Prairies', 'Silos
-    Terminaux' or 'Conteneurs', destination 'R.P. de Chine', 'Japon',
-    'États-Unis'; filters ignore case, accents, hyphens and spaces, and an
-    unknown name lists the ones containing it.
+    `total_ktonnes` sums every match. Thousands of tonnes. China is
+    'China P.R.' in the file ('China' also works). With `lang="fr"` names
+    are French: elevator 'Silos des Prairies', 'Silos Terminaux' or
+    'Conteneurs', destination 'R.P. de Chine' ('Chine' also works), 'Japon',
+    'États-Unis', and the unit is 'milliers de tonnes'; filters ignore case,
+    accents, hyphens and spaces, and an unknown name lists the ones
+    containing it.
     Keywords: grain exports by country, canola exports to China, wheat
     exports, export destinations, monthly exports, crop year exports,
     Canadian Grain Commission, pulse exports, lentil exports, trade.

@@ -123,6 +123,14 @@ async def main() -> int:
     print("OK: CNISP pediatric RSV ->", vri.rows)
     ok &= vri.returned_count == 2
 
+    try:
+        await client.query("measles_cases_by_province", geography="Atlantis")
+        print("FAIL: measles 'Atlantis' was answered instead of refused")
+        ok = False
+    except InvalidInput as exc:
+        print(f"OK: measles 'Atlantis' -> {exc}")
+        ok &= "Values:" in str(exc)
+
     measles = await client.query("measles_cases_by_province", geography="Alberta")
     print("OK: measles Alberta ->", measles.rows)
     ok &= measles.returned_count == 1

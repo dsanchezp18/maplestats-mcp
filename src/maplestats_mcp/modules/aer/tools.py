@@ -21,11 +21,15 @@ async def aer_get_well_licences_daily(
     day: str | None = None, lang: Lang = "en"
 ) -> WellLicenceDailyReport:
     """Fetch AER's ST1 "Well Licences Issued - Daily List" report text for
-    one weekday of the current week (well name, licence number, unique
+    the latest date with one weekday (well name, licence number, unique
     identifier, licensee, substance, field, and more, per licence).
 
-    day is a weekday name ("monday".."sunday"); defaults to today in
-    Alberta (America/Edmonton) time. Returns the report as raw text --
+    day is a weekday name ("monday".."sunday"); defaults to yesterday in
+    Alberta (America/Edmonton) time, the latest posted list. Each weekday
+    file is replaced weekly around midnight after the day ends, so asking
+    for today (or a file not yet replaced) gives last week's list: then
+    `note` says so and report_date is older than expected_date. Returns
+    the report as raw text --
     each licence record spans 5 fixed-width lines with no column
     boundary confirmed safe to split on generically.
     Use for: which new oil and gas wells AER licensed on a given day
@@ -47,9 +51,11 @@ async def aer_get_well_licence_archive_link(
     """Resolve AER's ST1 well-licence archive ZIP download link for a
     given year (or one month of the current year), confirming it exists.
 
+    year runs from 2017 (the archive's first year) to the current year.
     Pass month (1-12) only for the current year in progress -- AER
     publishes monthly ZIPs for that year and one combined yearly ZIP
-    for every prior year. Discovery-only: returns the URL and size, not
+    for every prior year; a month not yet posted comes back with
+    exists false and a note. Discovery-only: returns the URL and size, not
     parsed contents (these are large fixed-width archives).
     Use for: finding the download for historical Alberta well licences
     by year or month, for bulk analysis outside this server.

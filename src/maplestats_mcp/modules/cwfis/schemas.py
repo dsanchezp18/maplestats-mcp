@@ -36,6 +36,10 @@ class HotspotResult(BaseModel):
     hotspots: list[Hotspot]
     returned_count: int
     total_matched: int
+    without_frp: int | None = Field(
+        default=None,
+        description="With sort_by='frp': matching detections with no FRP, listed after the ranked ones.",
+    )
     layer: str
     provenance: Provenance
 
@@ -54,6 +58,8 @@ class PerimeterResult(BaseModel):
     perimeters: list[Perimeter]
     returned_count: int
     total_matched: int
+    has_more: bool = False
+    note: str | None = None
     provenance: Provenance
 
 
@@ -90,6 +96,7 @@ class StationResult(BaseModel):
     stations: list[WeatherStation]
     returned_count: int
     total_matched: int
+    note: str | None = None
     provenance: Provenance
 
 

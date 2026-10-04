@@ -33,9 +33,16 @@ async def _get(url: str, params: dict[str, Any], ttl: int) -> tuple[Any, bool]:
             return await api_get(url, params=params)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            if status in (400, 404):
-                # Geonames answers a malformed parameter with a Tomcat 404 page.
+            if status == 400:
                 raise InvalidInput(f"nrcan_geo: {url} rejected the request ({status}).") from exc
+            if status == 404:
+                # Geonames answers a parameter it cannot parse with a Tomcat 404
+                # page (radius=5.0 did, radius=5 did not, live 2026-10-03). The
+                # parameters are checked here first, so a 404 is the service's.
+                raise UpstreamError(
+                    f"nrcan_geo: {url} answered 404 for {sorted(params)}; the service "
+                    "rejected a parameter this client sends."
+                ) from exc
             raise UpstreamError(f"nrcan_geo: {url} returned HTTP {status}.") from exc
         except httpx.DecodingError as exc:
             # DecodingError is an httpx.HTTPError, so without this branch a 200 HTML
@@ -135,7 +142,9 @@ async def search_names(
         radius = radius_km or 10
         if not 0 < radius <= constants.RADIUS_MAX_KM:
             raise InvalidInput(f"radius_km must be between 0 and {constants.RADIUS_MAX_KM}.")
-        params.update(lat=latitude, lon=longitude, radius=radius)
+        # Geonames takes whole kilometres only: radius=5.0 is a 404, radius=5
+        # works (confirmed live 2026-10-03), and a float arrives from JSON.
+        params.update(lat=latitude, lon=longitude, radius=max(1, round(radius)))
     if bbox is not None:
         if len(bbox) != 4:
             raise InvalidInput("bbox must be [west, south, east, north].")

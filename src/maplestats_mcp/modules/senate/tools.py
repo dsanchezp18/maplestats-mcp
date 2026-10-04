@@ -25,7 +25,7 @@ async def senate_list_votes(
     Use for: Senate votes on a bill (bill like 'C-6' or 'S-205'), votes
     whose title contains a word, or all votes in a session (like '45-1',
     default current; sessions from 42-1), with yeas, nays, abstentions
-    and result.
+    and result. keyword ignores case and accents.
     Keywords: Senate vote, senators, recorded division, Senate of Canada,
     upper chamber, third reading, bill, adopted.
     Mots-clés : vote au Sénat, sénateurs, appel nominal, Sénat du Canada,
@@ -46,7 +46,8 @@ async def senate_get_vote(
 
     Use for: every senator's yea, nay or abstention, with their group
     (ISG, CSG, PSG, Conservative) and province. vote_id and session come
-    from senate_list_votes.
+    together from senate_list_votes; a vote_id not in that session's list
+    is NotFound. vote is null for a senator with no recorded vote.
     Keywords: senator vote, Senate ballot, how did senators vote, Senate
     group, ISG, CSG, PSG, abstention.
     Mots-clés : vote des sénateurs, Sénat, groupe sénatorial, abstention,

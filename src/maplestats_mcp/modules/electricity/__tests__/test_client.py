@@ -191,10 +191,15 @@ def test_parse_fuel_xml_flags_missing_data():
     rows = client.parse_fuel_xml(_FUEL_XML)
     assert len(rows) == 2
     assert rows[0].output_mw["control_actions"] == 50
-    assert rows[0].fuels_with_missing_data == ["gas"]
+    # Hour 1: gas has an Output with quality -1 (as live: gas 3247 MW at -1),
+    # which is a partial report, not a missing value.
+    assert rows[0].output_mw["gas"] == 1000
+    assert rows[0].fuels_without_output == []
+    assert rows[0].unavailable_data_points == {"gas": 1}
     # Hour 2: gas has no Output element at all (confirmed live for 9 fuel-hours).
     assert rows[1].output_mw["gas"] is None
-    assert rows[1].fuels_with_missing_data == ["gas"]
+    assert rows[1].fuels_without_output == ["gas"]
+    assert rows[1].unavailable_data_points == {}
 
 
 async def test_supply_by_fuel_totals_exclude_control_actions_from_shares(httpx_mock):
@@ -206,7 +211,8 @@ async def test_supply_by_fuel_totals_exclude_control_actions_from_shares(httpx_m
     assert totals["nuclear"].energy_mwh == 18000
     assert totals["nuclear"].share_percent == round(100 * 18000 / 19000, 2)
     assert totals["control_actions"].share_percent is None
-    assert totals["gas"].hours_with_missing_data == 2
+    assert totals["gas"].hours_without_output == 1
+    assert totals["gas"].hours_with_unavailable_points == 1
     assert result.first_date == result.last_date == date(2026, 1, 1)
 
 

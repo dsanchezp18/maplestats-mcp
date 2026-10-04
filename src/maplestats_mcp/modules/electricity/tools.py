@@ -87,7 +87,10 @@ async def electricity_ontario_get_supply_by_fuel(
     Hour-ending rows in MW plus energy totals and generation shares over the
     whole matched range. Covers IESO-metered generators, not embedded
     distribution-connected solar. One calendar year per call; the current-year
-    file ends about a day behind the clock and is about 6 MB.
+    file ends about a day behind the clock. A full-year file is about 8 MB,
+    so an uncached call takes 10-15 s. unavailable_data_points marks hours
+    whose output IESO reports with some units unreported (the value may be
+    understated); fuels_without_output marks hours with no value at all.
     Use for: Ontario generation mix, nuclear or wind share, gas-fired output,
     supply by fuel type, clean electricity share.
     Keywords: Ontario, IESO, generation mix, supply by fuel, nuclear, gas,
