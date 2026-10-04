@@ -23,5 +23,5 @@ MODULE_DESCRIPTION_FR = (
     "souterraines (profondeur de l'eau, moyennes quotidiennes depuis les années 1960) et "
     "débit et niveau du réseau hydrométrique provincial (une soixantaine de stations hors du "
     "réseau de Relevés hydrologiques du Canada, archives depuis les années 2000). Licence du "
-    "gouvernement ouvert - Colombie-Britannique."
+    "gouvernement ouvert – Colombie-Britannique."
 )

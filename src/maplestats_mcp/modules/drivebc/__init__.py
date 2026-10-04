@@ -41,7 +41,7 @@ MODULE_DESCRIPTION = (
 )
 MODULE_DESCRIPTION_FR = (
     "Événements routiers de DriveBC sur les routes provinciales de la "
-    "Colombie-Britannique (API Open511, Licence du gouvernement ouvert - "
+    "Colombie-Britannique (API Open511, Licence du gouvernement ouvert – "
     "Colombie-Britannique) : travaux et entretien en cours, incidents et état des "
     "routes avec gravité, route, direction, état des voies, horaire et emplacement, "
     "filtrés par type, gravité, district, route, zone ou texte; un événement complet "

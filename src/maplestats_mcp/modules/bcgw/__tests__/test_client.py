@@ -313,3 +313,32 @@ async def test_query_layer_passes_through_cql_and_sort(httpx_mock):
     assert request.url.params["CQL_FILTER"] == "X > 1"
     assert request.url.params["propertyName"] == "X,Y"
     assert request.url.params["sortBy"] == "X"
+
+
+# French (lang="fr"): errors, provenance text and licence; English unchanged.
+
+
+async def test_french_wildfire_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(json=_WILDFIRE_COLLECTION)
+    result = await client.get_active_wildfires(lang="fr")
+    assert result.provenance.coverage == "1 feux renvoyés sur 304 correspondants"
+    assert "saison des feux" in (result.provenance.freshness or "")
+    assert "Licence du gouvernement ouvert – Colombie-Britannique" in (
+        result.provenance.licence or ""
+    )
+
+
+async def test_english_wildfire_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(json=_WILDFIRE_COLLECTION)
+    result = await client.get_active_wildfires()
+    assert result.provenance.coverage == "1 of 304 total matching fires returned"
+    assert (result.provenance.licence or "").startswith("Open Government Licence - British")
+
+
+async def test_french_invalid_limit_and_tenure_type():
+    with pytest.raises(InvalidInput, match="Entrée invalide : limit doit être compris"):
+        await client.get_active_wildfires(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="tenure_type doit valoir"):
+        await client.get_mining_tenure(tenure_type="coal", lang="fr")
+    with pytest.raises(InvalidInput, match="type_name ne doit pas être vide"):
+        await client.query_layer("  ", lang="fr")
