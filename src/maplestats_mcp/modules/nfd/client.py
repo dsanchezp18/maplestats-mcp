@@ -40,7 +40,7 @@ import csv
 import io
 import re
 import unicodedata
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Awaitable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
@@ -65,13 +65,22 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import (
+    fr_or_en,
+    french_spacing,
+    lang_error,
+    truncation_note_lang,
+)
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.licences import OGL_CANADA
-from maplestats_mcp.shared.limits import truncation_note
+from maplestats_mcp.shared.licences import LICENCES_FR, OGL_CANADA
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LICENCE = f"{OGL_CANADA} NFD terms of use: {constants.TERMS_URL}"
+_LICENCE_FR = french_spacing(
+    f"{LICENCES_FR[OGL_CANADA]} Conditions d'utilisation de la BNDF : {constants.TERMS_URL}"
+)
+_SOURCE_ERRORS = (NotFound, UpstreamError, UpstreamUnavailable)
 
 Lang = Literal["en", "fr"]
 Filter = str | Sequence[str] | None
@@ -128,10 +137,28 @@ def _as_list(value: Filter) -> list[str]:
     return [value] if isinstance(value, str) else [v for v in value if v is not None]
 
 
-def _suggest(value: str, labels: Iterable[str]) -> str:
+def _suggest(value: str, labels: Iterable[str], lang: str = "en") -> str:
     wanted = fold(value)
     close = sorted({lb for lb in labels if lb and wanted and wanted in fold(lb)})
-    return ("; did you mean " + ", ".join(repr(v) for v in close[:10]) + "?") if close else ""
+    if not close:
+        return ""
+    names = ", ".join(repr(v) for v in close[:10])
+    return fr_or_en(lang, f"; did you mean {names}?", f" ; vouliez-vous dire {names} ?")
+
+
+async def _in_lang[T](awaitable: Awaitable[T], lang: str) -> T:
+    """Await a download or parse; for lang="fr", frame its English error in French."""
+    try:
+        return await awaitable
+    except _SOURCE_ERRORS as exc:
+        if lang != "fr":
+            raise
+        raise lang_error(
+            type(exc),
+            "fr",
+            "",
+            f"nfd : le fichier de la BNDF n'a pas pu être lu (détail technique en anglais) : {exc}",
+        ) from exc
 
 
 # ----------------------------------------------------------------- download
@@ -257,13 +284,18 @@ async def _load_catalogue() -> tuple[dict[str, CatalogueEntry], bool]:
     return await cached_fetch("nfd:catalogue", constants.CATALOGUE_TTL_SECONDS, fetch)
 
 
-async def _entry(table_id: str) -> tuple[CatalogueEntry, bool]:
-    entries, cached = await _load_catalogue()
+async def _entry(table_id: str, lang: str = "en") -> tuple[CatalogueEntry, bool]:
+    entries, cached = await _in_lang(_load_catalogue(), lang)
     wanted = normalize_table_id(table_id)
     entry = entries.get(wanted)
     if entry is None:
         listing = ", ".join(sorted(entries, key=_id_sort))
-        raise InvalidInput(f"Unknown NFD table {table_id!r}; table ids are {listing}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"Unknown NFD table {table_id!r}; table ids are {listing}.",
+            f"tableau de la BNDF {table_id!r} inconnu ; les tableaux sont {listing}.",
+        )
     return entry, cached
 
 
@@ -305,6 +337,7 @@ def _provenance(
     as_of: datetime | None = None,
     coverage: str | None = None,
     limits: str | None = None,
+    lang: str = "en",
 ) -> Provenance:
     return make_provenance(
         source=constants.SOURCE_NAME,
@@ -312,16 +345,22 @@ def _provenance(
         cached=cached,
         schema_name=schema,
         freshness=freshness
-        or "Updated a few times a year by the NFD (data dictionaries dated April to June 2026).",
+        or fr_or_en(
+            lang,
+            "Updated a few times a year by the NFD (data dictionaries dated April to June 2026).",
+            "Mise à jour quelques fois par année par la BNDF (dictionnaires de données datés "
+            "d'avril à juin 2026).",
+        ),
         as_of=as_of,
         coverage=coverage,
         limits=limits,
-        licence=_LICENCE,
+        licence=_LICENCE_FR if lang == "fr" else _LICENCE,
+        lang=lang,
     )
 
 
 async def list_tables(section: str | None = None, lang: Lang = "en") -> NfdTableList:
-    entries, cached = await _load_catalogue()
+    entries, cached = await _in_lang(_load_catalogue(), lang)
     chosen = sorted(entries.values(), key=lambda e: _id_sort(e.table_id))
     if section:
         wanted = fold(section)
@@ -335,7 +374,13 @@ async def list_tables(section: str | None = None, lang: Lang = "en") -> NfdTable
         ]
         if not chosen:
             names = sorted({_section(e, lang) for e in entries.values()})
-            raise InvalidInput(f"No NFD table matches {section!r}; sections are {names}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"No NFD table matches {section!r}; sections are {names}.",
+                f"aucun tableau de la BNDF ne correspond à {section!r} ; les sections sont "
+                f"{names}.",
+            )
     sections: list[str] = []
     for e in sorted(entries.values(), key=lambda e: _id_sort(e.table_id)):
         name = _section(e, lang)
@@ -349,7 +394,12 @@ async def list_tables(section: str | None = None, lang: Lang = "en") -> NfdTable
             constants.PAGE_FR if lang == "fr" else constants.PAGE_EN,
             cached,
             "nfd.NfdTableList",
-            coverage=f"{len(entries)} tables on the NFD Download page",
+            coverage=fr_or_en(
+                lang,
+                f"{len(entries)} tables on the NFD Download page",
+                f"{len(entries)} tableaux sur la page Téléchargement de la BNDF",
+            ),
+            lang=lang,
         ),
     )
 
@@ -581,9 +631,9 @@ def _dimension_values(dataset: Dataset, index: int, lang: Lang) -> list[str]:
 
 
 async def describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescription:
-    entry, cached_catalogue = await _entry(table_id)
-    dataset, cached = await _load_dataset(entry)
-    dictionary = await _load_dictionary(entry, lang)
+    entry, cached_catalogue = await _entry(table_id, lang)
+    dataset, cached = await _in_lang(_load_dataset(entry), lang)
+    dictionary = await _in_lang(_load_dictionary(entry, lang), lang)
     records = dataset.records
     years = [r.year for r in records]
     spans: dict[str, tuple[Record, int, int]] = {}
@@ -617,7 +667,7 @@ async def describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescriptio
         )
     legend = constants.QUALIFIERS_FR if lang == "fr" else constants.QUALIFIERS_EN
     present = {r.qualifier for r in records if r.qualifier}
-    quirks = _quirks(dataset)
+    quirks = _quirks(dataset, lang)
     return NfdTableDescription(
         table_id=entry.table_id,
         section=_section(entry, lang),
@@ -646,48 +696,100 @@ async def describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescriptio
                 if dictionary and dictionary["last_updated"]
                 else None
             ),
-            coverage=f"{len(records)} rows, {min(years)} to {max(years)}",
+            coverage=fr_or_en(
+                lang,
+                f"{len(records)} rows, {min(years)} to {max(years)}",
+                f"{len(records)} lignes, de {min(years)} à {max(years)}",
+            ),
+            lang=lang,
         ),
     )
 
 
-def _quirks(dataset: Dataset) -> list[str]:
+def _quirks(dataset: Dataset, lang: str = "en") -> list[str]:
     quirks: list[str] = []
     if dataset.duplicate_groups:
         quirks.append(
-            f"{dataset.duplicate_groups} combinations of year, jurisdiction and categories "
-            "occur on more than one row; they are kept as published, so sum with care."
+            fr_or_en(
+                lang,
+                f"{dataset.duplicate_groups} combinations of year, jurisdiction and categories "
+                "occur on more than one row; they are kept as published, so sum with care.",
+                f"{dataset.duplicate_groups} combinaisons d'année, d'administration et de "
+                "catégories figurent sur plus d'une ligne ; elles sont gardées telles que "
+                "publiées : additionnez avec prudence.",
+            )
         )
     if dataset.remapped_iso:
-        quirks.append("The file codes Yukon as 'YK' on some rows; shown as 'YT'.")
+        quirks.append(
+            fr_or_en(
+                lang,
+                "The file codes Yukon as 'YK' on some rows; shown as 'YT'.",
+                "Le fichier code le Yukon « YK » sur certaines lignes ; affiché « YT ».",
+            )
+        )
     isos = {r.iso for r in dataset.records}
     if "GC" in isos:
-        quirks.append("Jurisdiction 'GC' is the Government of Canada (federal), not a total.")
+        quirks.append(
+            fr_or_en(
+                lang,
+                "Jurisdiction 'GC' is the Government of Canada (federal), not a total.",
+                "L'administration « GC » est le gouvernement du Canada (fédéral), et non un total.",
+            )
+        )
     if "NP" in isos:
-        quirks.append("Jurisdiction 'NP' is national parks, not a province.")
+        quirks.append(
+            fr_or_en(
+                lang,
+                "Jurisdiction 'NP' is national parks, not a province.",
+                "L'administration « NP » désigne les parcs nationaux, et non une province.",
+            )
+        )
     if any(r.footnotes for r in dataset.records):
         quirks.append(
-            "Some labels carry footnote markers (shown in `footnotes`); the text is in "
-            "nfd_table_comments."
+            fr_or_en(
+                lang,
+                "Some labels carry footnote markers (shown in `footnotes`); the text is in "
+                "nfd_table_comments.",
+                "Certains libellés portent des appels de note (dans `footnotes`) ; le texte est "
+                "dans nfd_table_comments.",
+            )
         )
     if dataset.mixed_case_labels:
+        spellings = "; ".join(dataset.mixed_case_labels[:6])
         quirks.append(
-            "Labels spelled in more than one way in the file: "
-            + "; ".join(dataset.mixed_case_labels[:6])
-            + "."
+            fr_or_en(
+                lang,
+                f"Labels spelled in more than one way in the file: {spellings}.",
+                f"Libellés écrits de plus d'une façon dans le fichier : {spellings}.",
+            )
         )
     if any(r.value is None for r in dataset.records):
         quirks.append(
-            "Blank values have no figure (usually qualifier u, U or n, but a few carry "
-            "another code such as a); they are returned as null, not 0."
+            fr_or_en(
+                lang,
+                "Blank values have no figure (usually qualifier u, U or n, but a few carry "
+                "another code such as a); they are returned as null, not 0.",
+                "Les valeurs vides n'ont pas de chiffre (le plus souvent qualificatif u, U ou n, "
+                "parfois un autre code comme a) ; elles sont renvoyées comme null, et non 0.",
+            )
         )
     if _has_unit_dimension(dataset):
         quirks.append(
-            "Rows mix rates and totals: filter or group_by `unit_of_measure` before summing."
+            fr_or_en(
+                lang,
+                "Rows mix rates and totals: filter or group_by `unit_of_measure` before summing.",
+                "Les lignes mêlent taux et totaux : filtrez `unit_of_measure` ou mettez-le dans "
+                "group_by avant d'additionner.",
+            )
         )
     if dataset.unparsed_values:
         quirks.append(
-            f"{dataset.unparsed_values} values were not numbers and are returned as null."
+            fr_or_en(
+                lang,
+                f"{dataset.unparsed_values} values were not numbers and are returned as null.",
+                f"{dataset.unparsed_values} valeurs n'étaient pas des nombres et sont renvoyées "
+                "comme null.",
+            )
         )
     return quirks
 
@@ -695,7 +797,7 @@ def _quirks(dataset: Dataset) -> list[str]:
 # ----------------------------------------------------------------------- query
 
 
-def _resolve_dimension(dataset: Dataset, name: str) -> int:
+def _resolve_dimension(dataset: Dataset, name: str, lang: str = "en") -> int:
     wanted = fold(name)
     for index, spec in enumerate(dataset.dimensions):
         if (
@@ -704,10 +806,15 @@ def _resolve_dimension(dataset: Dataset, name: str) -> int:
         ):
             return index
     names = [spec.key for spec in dataset.dimensions]
-    raise InvalidInput(f"Unknown column {name!r}; this table's columns are {names}.")
+    raise lang_error(
+        InvalidInput,
+        lang,
+        f"Unknown column {name!r}; this table's columns are {names}.",
+        f"colonne {name!r} inconnue ; les colonnes de ce tableau sont {names}.",
+    )
 
 
-def _match_jurisdictions(dataset: Dataset, wanted: list[str]) -> set[str]:
+def _match_jurisdictions(dataset: Dataset, wanted: list[str], lang: str = "en") -> set[str]:
     by_name: dict[str, str] = {}
     for r in dataset.records:
         for name in (r.iso, r.jurisdiction[0], r.jurisdiction[1]):
@@ -718,15 +825,19 @@ def _match_jurisdictions(dataset: Dataset, wanted: list[str]) -> set[str]:
         iso = by_name.get(fold(constants.ISO_ALIASES.get(code, code))) or by_name.get(fold(value))
         if iso is None:
             names = sorted({f"{r.iso} ({r.jurisdiction[0]})" for r in dataset.records})
-            raise InvalidInput(
-                f"No jurisdiction {value!r} in this table; jurisdictions are {names}."
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"No jurisdiction {value!r} in this table; jurisdictions are {names}.",
+                f"aucune administration {value!r} dans ce tableau ; les administrations sont "
+                f"{names}.",
             )
         chosen.add(iso)
     return chosen
 
 
 def _matching_labels(
-    dataset: Dataset, index: int, wanted: list[str], spec: DimensionSpec
+    dataset: Dataset, index: int, wanted: list[str], spec: DimensionSpec, lang: str = "en"
 ) -> set[str]:
     """English labels whose English or French spelling matches one of `wanted`."""
     variants: dict[str, set[str]] = {}
@@ -739,18 +850,24 @@ def _matching_labels(
     for value in wanted:
         found = variants.get(fold(value))
         if not found:
-            close = _suggest(value, {en for pair in variants.values() for en in pair})
+            close = _suggest(value, {en for pair in variants.values() for en in pair}, lang)
             options = sorted({en for pair in variants.values() for en in pair}, key=fold)
-            raise InvalidInput(
+            listed = options[: constants.VALUES_LISTED_MAX]
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"No {spec.key} {value!r} in this table"
-                + (close or f"; values are {options[: constants.VALUES_LISTED_MAX]}")
-                + "."
+                + (close or f"; values are {listed}")
+                + ".",
+                f"aucune valeur {value!r} pour {spec.key} dans ce tableau"
+                + (close or f" ; valeurs : {listed}")
+                + ".",
             )
         chosen |= found
     return chosen
 
 
-def _group_keys(dataset: Dataset, group_by: list[str]) -> list[str]:
+def _group_keys(dataset: Dataset, group_by: list[str], lang: str = "en") -> list[str]:
     keys: list[str] = []
     for name in group_by:
         folded = fold(name)
@@ -759,7 +876,7 @@ def _group_keys(dataset: Dataset, group_by: list[str]) -> list[str]:
         elif folded in ("jurisdiction", "juridiction", "province", "iso"):
             key = "jurisdiction"
         else:
-            key = dataset.dimensions[_resolve_dimension(dataset, name)].key
+            key = dataset.dimensions[_resolve_dimension(dataset, name, lang)].key
         if key not in keys:
             keys.append(key)
     return keys
@@ -777,17 +894,27 @@ async def query_table(
     lang: Lang = "en",
 ) -> NfdQueryResult:
     if not 1 <= limit <= constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.ROWS_MAX}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX}.",
+        )
     if year_from is not None and year_to is not None and year_from > year_to:
-        raise InvalidInput("year_from is after year_to.")
-    entry, cached_catalogue = await _entry(table_id)
-    dataset, cached = await _load_dataset(entry)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "year_from is after year_to.",
+            "year_from est postérieur à year_to.",
+        )
+    entry, cached_catalogue = await _entry(table_id, lang)
+    dataset, cached = await _in_lang(_load_dataset(entry), lang)
     records = dataset.records
     notes: list[str] = []
 
     wanted_places = _as_list(province)
     if wanted_places:
-        isos = _match_jurisdictions(dataset, wanted_places)
+        isos = _match_jurisdictions(dataset, wanted_places, lang)
         records = [r for r in records if r.iso in isos]
     if year_from is not None:
         records = [r for r in records if r.year >= year_from]
@@ -795,12 +922,12 @@ async def query_table(
         records = [r for r in records if r.year <= year_to]
     chosen_by_index: dict[int, set[str]] = {}
     for name, value in (filters or {}).items():
-        index = _resolve_dimension(dataset, name)
+        index = _resolve_dimension(dataset, name, lang)
         spec = dataset.dimensions[index]
         values = _as_list(value)
         if not values:
             continue
-        chosen_by_index[index] = _matching_labels(dataset, index, values, spec)
+        chosen_by_index[index] = _matching_labels(dataset, index, values, spec, lang)
     for index, allowed in chosen_by_index.items():
         records = [r for r in records if r.labels[index][0] in allowed]
     if drop_missing:
@@ -808,14 +935,18 @@ async def query_table(
     legend = constants.QUALIFIERS_FR if lang == "fr" else constants.QUALIFIERS_EN
     unit = _unit(dataset, lang)
 
-    keys = _group_keys(dataset, group_by) if group_by else []
+    keys = _group_keys(dataset, group_by, lang) if group_by else []
     if keys and _has_unit_dimension(dataset):
         index = next(i for i, s in enumerate(dataset.dimensions) if s.key == "unit_of_measure")
         single = len({r.labels[index][0] for r in records}) <= 1
         if "unit_of_measure" not in keys and not single:
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 "This table mixes rates and totals; filter `unit_of_measure` to one value or "
-                "include it in group_by before summing."
+                "include it in group_by before summing.",
+                "ce tableau mêle taux et totaux ; limitez `unit_of_measure` à une valeur ou "
+                "mettez-le dans group_by avant d'additionner.",
             )
 
     rows = (
@@ -826,17 +957,34 @@ async def query_table(
     matched = len(rows)
     if keys:
         notes.append(
-            "Values are summed over source rows; rows with no figure add nothing "
-            "(`n_missing` counts them). Sums mix actual and estimated figures (`qualifiers`)."
+            fr_or_en(
+                lang,
+                "Values are summed over source rows; rows with no figure add nothing "
+                "(`n_missing` counts them). Sums mix actual and estimated figures (`qualifiers`).",
+                "Les valeurs sont additionnées sur les lignes de la source ; les lignes sans "
+                "chiffre n'ajoutent rien (`n_missing` les compte). Les sommes mêlent chiffres "
+                "réels et estimés (`qualifiers`).",
+            )
         )
         if "jurisdiction" not in keys:
             odd = sorted({r.iso for r in records if r.iso in ("GC", "NP")})
             if odd:
-                notes.append(f"The sums include non-provincial jurisdictions {odd}.")
+                notes.append(
+                    fr_or_en(
+                        lang,
+                        f"The sums include non-provincial jurisdictions {odd}.",
+                        f"Les sommes comprennent des administrations non provinciales {odd}.",
+                    )
+                )
     if dataset.duplicate_groups:
         notes.append(
-            f"{dataset.duplicate_groups} year/jurisdiction/category combinations repeat in the "
-            "file and are kept as published."
+            fr_or_en(
+                lang,
+                f"{dataset.duplicate_groups} year/jurisdiction/category combinations repeat in "
+                "the file and are kept as published.",
+                f"{dataset.duplicate_groups} combinaisons année/administration/catégorie se "
+                "répètent dans le fichier et sont gardées telles que publiées.",
+            )
         )
     # Rows run oldest year first; when the cap cuts, keep the most recent
     # years (the file starts in 1940 for some tables, so the first rows are
@@ -848,12 +996,15 @@ async def query_table(
     else:
         shown = rows
     used = {q for row in shown for q in row.qualifiers}
-    limits = truncation_note(
+    limits = truncation_note_lang(
+        lang,
         returned=len(shown),
         total=matched,
         unit="rows",
         order="latest",
         how_to_get_more=f"narrow year_from/year_to or filters, or raise limit (max {constants.ROWS_MAX})",
+        how_to_get_more_fr="resserrez year_from/year_to ou les filtres, ou augmentez limit "
+        f"(max. {constants.ROWS_MAX})",
     )
     return NfdQueryResult(
         table_id=entry.table_id,
@@ -870,16 +1021,25 @@ async def query_table(
             dataset.url,
             cached and cached_catalogue,
             "nfd.NfdQueryResult",
-            freshness=(
+            freshness=fr_or_en(
+                lang,
                 "Updated a few times a year by the NFD"
                 + (
                     f" (file Last-Modified: {dataset.last_modified})"
                     if dataset.last_modified
                     else ""
                 )
-                + "."
+                + ".",
+                "Mise à jour quelques fois par année par la BNDF"
+                + (
+                    f" (Last-Modified du fichier : {dataset.last_modified})"
+                    if dataset.last_modified
+                    else ""
+                )
+                + ".",
             ),
             limits=limits,
+            lang=lang,
         ),
     )
 
@@ -976,8 +1136,10 @@ async def table_comments(
     lang: Lang = "en",
 ) -> NfdCommentsResult:
     if limit < 1:
-        raise InvalidInput("limit must be at least 1.")
-    entry, cached_catalogue = await _entry(table_id)
+        raise lang_error(
+            InvalidInput, lang, "limit must be at least 1.", "limit doit être d'au moins 1."
+        )
+    entry, cached_catalogue = await _entry(table_id, lang)
     title = _title(entry, lang)
     if not entry.comments_path:
         return NfdCommentsResult(
@@ -986,8 +1148,16 @@ async def table_comments(
             comments=[],
             returned_count=0,
             matched_count=0,
-            notes=["The NFD lists no comments workbook for this table."],
-            provenance=_provenance(constants.PAGE_EN, cached_catalogue, "nfd.NfdCommentsResult"),
+            notes=[
+                fr_or_en(
+                    lang,
+                    "The NFD lists no comments workbook for this table.",
+                    "La BNDF ne donne aucun classeur de commentaires pour ce tableau.",
+                )
+            ],
+            provenance=_provenance(
+                constants.PAGE_EN, cached_catalogue, "nfd.NfdCommentsResult", lang=lang
+            ),
         )
     url = _file_url(entry.comments_path)
 
@@ -1013,7 +1183,9 @@ async def table_comments(
             sheets.append([[sheet.name]] + rows)
         return sheets
 
-    sheets, cached = await cached_fetch(f"nfd:comments:{url}", constants.TABLE_TTL_SECONDS, fetch)
+    sheets, cached = await _in_lang(
+        cached_fetch(f"nfd:comments:{url}", constants.TABLE_TTL_SECONDS, fetch), lang
+    )
     provenance_url = url
     if sheets is None:
         return NfdCommentsResult(
@@ -1023,15 +1195,26 @@ async def table_comments(
             returned_count=0,
             matched_count=0,
             notes=[
-                "The comments file listed for this table answers HTTP 404: no comments published."
+                fr_or_en(
+                    lang,
+                    "The comments file listed for this table answers HTTP 404: no comments "
+                    "published.",
+                    "Le fichier de commentaires donné pour ce tableau répond HTTP 404 : aucun "
+                    "commentaire publié.",
+                )
             ],
-            provenance=_provenance(provenance_url, cached, "nfd.NfdCommentsResult"),
+            provenance=_provenance(provenance_url, cached, "nfd.NfdCommentsResult", lang=lang),
         )
     suffix = "_" + _SHEET_LANG[lang]
     chosen = next((s for s in sheets if s[0][0].upper().endswith(suffix)), sheets[0])
     rows = chosen[1:]
     if not rows:
-        raise UpstreamError(f"nfd comments {entry.table_id}: sheet {chosen[0][0]!r} is empty.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"nfd comments {entry.table_id}: sheet {chosen[0][0]!r} is empty.",
+            f"nfd, commentaires {entry.table_id} : la feuille {chosen[0][0]!r} est vide.",
+        )
     header = [fold(h) for h in rows[0]]
 
     def find(*names: str) -> int:
@@ -1043,7 +1226,12 @@ async def table_comments(
     comment_i = find("comment", "commentaire")
     foot_i = find("footnote", "footnotes", "renvois")
     if min(iso_i, name_i, year_i, comment_i) < 0:
-        raise UpstreamError(f"nfd comments {entry.table_id}: unexpected columns {rows[0]}.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"nfd comments {entry.table_id}: unexpected columns {rows[0]}.",
+            f"nfd, commentaires {entry.table_id} : colonnes inattendues {rows[0]}.",
+        )
     known = {iso_i, name_i, year_i, comment_i, foot_i}
     wanted_places = {fold(v) for v in _as_list(province)}
     grouped: dict[tuple[str, str, str, str, str], list[int]] = {}
@@ -1088,15 +1276,26 @@ async def table_comments(
         returned_count=min(limit, len(comments)),
         matched_count=len(comments),
         notes=[
-            (
+            fr_or_en(
+                lang,
                 "Identical comments are merged and list every year they apply to. Footnote "
-                "letters match the markers on labels (see `footnotes` in nfd_query_table rows)."
+                "letters match the markers on labels (see `footnotes` in nfd_query_table rows).",
+                "Les commentaires identiques sont fusionnés et donnent toutes les années "
+                "visées. Les lettres de renvoi correspondent aux appels de note des libellés "
+                "(voir `footnotes` dans les lignes de nfd_query_table).",
             )
         ],
         provenance=_provenance(
             provenance_url,
             cached and cached_catalogue,
             "nfd.NfdCommentsResult",
-            limits=f"comments capped at {limit}" if len(comments) > limit else None,
+            limits=fr_or_en(
+                lang,
+                f"comments capped at {limit}",
+                f"commentaires plafonnés à {limit}",
+            )
+            if len(comments) > limit
+            else None,
+            lang=lang,
         ),
     )
