@@ -27,6 +27,20 @@ def _clear_cache():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _offline_validation(monkeypatch):
+    """The CKAN and Valet builders run the tool's own request first, to refuse
+    a resource or series that does not exist; here it always succeeds."""
+    from maplestats_mcp.modules.boc import client as boc_client
+    from maplestats_mcp.modules.ckan import client as ckan_client
+
+    async def found(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(boc_client, "get_observations", found)
+    monkeypatch.setattr(ckan_client, "datastore_search", found)
+
+
 # Every library function the queries call, as documented in the Power Query
 # M function reference (learn.microsoft.com/powerquery-m).
 KNOWN_FUNCTIONS = {
@@ -44,7 +58,9 @@ KNOWN_FUNCTIONS = {
     "Table.SelectRows", "Table.Skip", "Table.Sort", "Table.TransformColumnNames",
     "Table.TransformColumnTypes", "Table.TransformColumns", "Table.UnpivotOtherColumns",
     "Text.Combine", "Text.Contains", "Text.EndsWith", "Text.From", "Text.FromBinary",
-    "Text.Length", "Text.Lower", "Text.Middle", "Text.Split", "Text.StartsWith", "Text.ToBinary",
+    "Text.Length", "Text.Lower", "Text.Middle", "Text.Split", "Text.Start", "Text.StartsWith",
+    "Text.ToBinary", "List.AnyTrue", "List.Difference", "List.Skip", "Lines.FromBinary",
+    "Number.ToText",
     "Text.ToList", "Text.Trim", "Uri.BuildQueryString", "Web.Contents", "Web.Page",
     "Xml.Document",
 }  # fmt: skip
@@ -199,7 +215,14 @@ async def test_sdmx_data_reads_the_key_not_the_table():
     url = "https://www150.statcan.gc.ca/t1/wds/sdmx/statcan/rest/data/DF_18100004/2.2"
     assert f'"{url}?lastNObservations=3"' in by_language["excel"]
     assert "Xml.Document(Raw)" in by_language["excel"]
-    assert "get_cansim" in by_language["r"]  # the scripts still read the full table
+    # Every script reads the key's series too, not the full table.
+    assert result.source_url == f"{url}?lastNObservations=3"
+    assert (
+        "get_cansim" not in by_language["r"]
+        and "xml_find_all(document, \"//*[local-name()='Series']\")" in (by_language["r"])
+    )
+    assert 'series.findall("{*}Obs")' in by_language["python"]
+    assert "python:" in by_language["stata"] and "readxml(" in by_language["julia"]
     assert any("SDMX" in note for note in result.notes)
 
 

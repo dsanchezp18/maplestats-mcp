@@ -444,6 +444,13 @@ def test_french_typography_skips_code_and_english():
     assert "<script>if(a?b:c);</script>" in out
 
 
+def test_french_typography_spaces_quotes_around_elements():
+    page = '<html lang="fr"><p>(« <span lang="en">as is</span> ») et «<b>gras</b>»</p></html>'
+    out = site.french_typography(page)
+    assert '(« <span lang="en">as is</span> »)' in out
+    assert "« <b>gras</b> »" in out
+
+
 def _snippet_json(page: str, code_id: str) -> dict[str, Any]:
     match = re.search(rf'<code id="{code_id}">(.*?)</code>', page, re.DOTALL)
     assert match, code_id
@@ -488,6 +495,7 @@ FOLD_SAMPLES = [
     "h\u00f4pitaux",
     "\ufb01nance",
     "journaux, prix et taux",
+    "Quel est le taux de chômage par province, à l'été ou à Noël?",
 ]
 
 _NODE_SEARCH = """
@@ -569,6 +577,8 @@ def test_every_page_has_canonical_and_social_metadata(built_site: Path):
         assert title and description and og_title and og_description, where
         assert og_title.group(1) == title.group(1).strip(), where
         assert og_description.group(1) == description.group(1), where
+        # Search results cut a longer description off.
+        assert len(html.unescape(description.group(1))) <= 160, where
         assert "\x00" not in text, where
     image = site.SITE / "assets" / "og.png"
     header = image.read_bytes()[:24]

@@ -32,10 +32,10 @@ async def nl_stats_list_files(
     every word. The agency's own descriptions are English only.
     Keywords: Newfoundland and Labrador, NL, Statistics Agency, population,
     labour force, unemployment, CPI, GDP, trade, St. John's, census division,
-    Excel, provincial statistics.
+    Excel, provincial statistics, minimum wage.
     Mots-clés : Terre-Neuve-et-Labrador, agence de la statistique, population,
     population active, chômage, IPC, PIB, commerce, St. John's, division de
-    recensement, Excel, statistiques provinciales.
+    recensement, Excel, statistiques provinciales, salaire minimum.
     """
     return await client.list_files(topic=topic, query=query, limit=limit, lang=lang)
 

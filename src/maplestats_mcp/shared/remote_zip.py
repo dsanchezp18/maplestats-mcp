@@ -185,6 +185,11 @@ async def _size(url: str) -> int:
     return int(total)
 
 
+async def remote_size(url: str) -> int:
+    """Total bytes of a remote file (HEAD, or a one-byte range), for range readers."""
+    return await _size(url)
+
+
 def _decode_name(raw: bytes, flags: int) -> str:
     # Bit 11 marks UTF-8 names; StatCan's zips use CP437 (French folders
     # such as "Français/" otherwise decode wrongly).

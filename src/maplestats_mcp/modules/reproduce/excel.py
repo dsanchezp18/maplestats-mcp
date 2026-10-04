@@ -29,7 +29,7 @@ import dataclasses
 import json
 from typing import Any
 
-from maplestats_mcp.modules.reproduce.render import _safe_spec, comment_text
+from maplestats_mcp.modules.reproduce.render import _safe_spec, _trim_comment, comment_text
 from maplestats_mcp.modules.reproduce.spec import Filter, Spec
 
 PACKAGES = ["Power Query (built into Excel 2016 or later and Microsoft 365)"]
@@ -272,9 +272,54 @@ def _cleaning(previous: str) -> str:
                 in
                     not List.IsEmpty(Values) and List.AllTrue(List.Transform(Values, test))
         ),
-    NumberColumns = ColumnsWhere(Trimmed, IsNumberText),
+    // Codes stay text as the source wrote them: columns named like one
+    // (coordinate, vector_id, dguid, NAICS, postal code; StatCan's "2.1" and
+    // "2.10" are different coordinates) and columns with a leading zero (01).
+    CodeName = (name as text) as logical =>
+        List.Contains(
+            {{"coordinate", "vector", "vector_id", "vectorid", "product_id", "productid", "pid",
+              "dguid", "postal_code", "postalcode", "fsa", "noc", "sgc"}},
+            name
+        )
+        or Text.EndsWith(name, "_dguid")
+        or Text.EndsWith(name, "_postal_code")
+        or Text.Contains(name, "naics")
+        or Text.StartsWith(name, "noc_")
+        or Text.EndsWith(name, "_noc")
+        or Text.StartsWith(name, "sgc_")
+        or Text.EndsWith(name, "_sgc"),
+    HasLeadingZero = (value as any) as logical =>
+        value is text
+        and (
+            let
+                Digits = if Text.StartsWith(value, "-") then Text.Middle(value, 1) else value
+            in
+                Text.Length(Digits) > 1
+                and Text.Start(Digits, 1) = "0"
+                and List.Contains({{"0".."9"}}, Text.Middle(Digits, 1, 1))
+        ),
+    CodeColumns = List.Select(
+        Table.ColumnNames(Trimmed),
+        (name) => CodeName(name) or List.AnyTrue(List.Transform(Table.Column(Trimmed, name), HasLeadingZero))
+    ),
+    Codes = Table.TransformColumns(
+        Trimmed,
+        List.Transform(
+            CodeColumns,
+            (name) =>
+                {{
+                    name,
+                    (value) =>
+                        if value = null then null
+                        else if value is number then Number.ToText(value, "G", "en-US")
+                        else Text.From(value),
+                    type text
+                }}
+        )
+    ),
+    NumberColumns = List.Difference(ColumnsWhere(Codes, IsNumberText), CodeColumns),
     Numbers = Table.TransformColumnTypes(
-        Trimmed, List.Transform(NumberColumns, (name) => {{name, type number}}), "en-US"
+        Codes, List.Transform(NumberColumns, (name) => {{name, type number}}), "en-US"
     ),
     DateColumns = ColumnsWhere(Numbers, IsIsoDate),
     Cleaned = Table.TransformColumns(
@@ -407,6 +452,17 @@ def _read(spec: Spec) -> tuple[str, str] | None:
         f"[Delimiter = {m_text(spec.delimiter)}, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]"
     )
     promote = "    Loaded = Table.PromoteHeaders(Csv, [PromoteAllScalars = true]),\n"
+    if spec.kind == "csv" and (spec.skip_rows or spec.stop_at_blank):
+        lines = f"List.Skip(Lines.FromBinary(Raw, null, null, 65001), {spec.skip_rows})"
+        if spec.stop_at_blank:
+            lines = f'List.FirstN({lines}, each Text.Trim(_) <> "")'
+        return "", (
+            raw
+            + f"    {_trim_comment('//', spec).strip()}\n"
+            + f"    Body = {lines},\n"
+            + f'    Csv = Csv.Document(Text.Combine(Body, "#(cr,lf)"), {csv_options}),\n'
+            + promote
+        )
     if spec.kind == "csv":
         return "", raw + f"    Csv = Csv.Document(Raw, {csv_options}),\n" + promote
     if spec.kind == "zip_csv":
@@ -441,6 +497,8 @@ def _read(spec: Spec) -> tuple[str, str] | None:
         if records is None:
             return None
         return "", raw + "    Payload = Json.Document(Raw),\n" + records
+    if spec.kind == "sdmx":
+        return "", sdmx_generic_steps(spec.url)
     if spec.kind == "html_table":
         return "", (
             raw

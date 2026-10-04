@@ -9,11 +9,43 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
+import tempfile
 from datetime import UTC, datetime, timedelta
 
-from maplestats_mcp.modules.statcan.delta import archive, client, realtime
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.modules.statcan.delta import archive, client, realtime, scan_index
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+
+
+async def _resume_step(date: str, product_id: int) -> bool:
+    """Two capped calls for the last table of the biggest recent file: the
+    first stops at the ceiling and saves resume points, the second starts
+    from one. Capped at 8 MB per call so this costs at most about 16 MB of
+    range requests, whatever the file's size."""
+    with tempfile.TemporaryDirectory() as folder:
+        os.environ["MAPLE_DELTA_INDEX_DIR"] = folder
+        os.environ["MAPLE_DELTA_MAX_SCAN_MB"] = "8"
+        scan_index.clear()
+        try:
+            outcomes: list[str] = []
+            starts: list[int] = []
+            for _ in range(2):
+                try:
+                    data = await archive.read_table(date, product_id, max_rows=5)
+                    outcomes.append(f"{data.row_count} rows")
+                    starts.append(data.scan_started_at_byte)
+                    break
+                except UpstreamError as exc:
+                    outcomes.append(str(exc))
+                    starts.append(1 if "a saved resume point" in str(exc) else 0)
+        finally:
+            del os.environ["MAPLE_DELTA_INDEX_DIR"], os.environ["MAPLE_DELTA_MAX_SCAN_MB"]
+            scan_index.clear()
+    shown = [outcome[:200] for outcome in outcomes]
+    print(f"OK: read_table({date}, {product_id}) capped at 8 MB -> {shown}")
+    # Either the table sits in the first 8 MB, or the second call resumed.
+    return len(outcomes) == 1 or (starts[-1] > 0 and "Progress is saved" in outcomes[0])
 
 
 async def main() -> int:
@@ -27,6 +59,14 @@ async def main() -> int:
         recent_weekday -= timedelta(days=1)
 
     existing = await client.get_file_link(recent_weekday.isoformat())
+    # A holiday (2026-09-30) has no file either: step back to the last release.
+    for _ in range(5):
+        if existing.exists:
+            break
+        recent_weekday -= timedelta(days=1)
+        while recent_weekday.weekday() >= 5:
+            recent_weekday -= timedelta(days=1)
+        existing = await client.get_file_link(recent_weekday.isoformat())
     print(f"OK: get_file_link({recent_weekday}) -> exists={existing.exists} url={existing.url}")
     ok &= existing.exists
     ok &= existing.size_bytes is not None and existing.size_bytes > 0
@@ -72,6 +112,7 @@ async def main() -> int:
         f"OK: list_tables({big.date}, {big.size_bytes:,} bytes) -> {big_tables.table_count} tables"
     )
     ok &= big_tables.table_count > 0
+    ok &= await _resume_step(big.date, max(t.product_id for t in big_tables.tables))
     try:
         await archive.read_table(small.date, 99999999)
         print("FAIL: expected NotFound for a table not in the release")
