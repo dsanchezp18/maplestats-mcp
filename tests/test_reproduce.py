@@ -420,7 +420,12 @@ def _phac_table(dataset, lang: str):
         "Valeur" if french else "Value",
     ]
     values = [
-        ("2024 T1" if french else "2024 Q1", "Terre-Neuve et Labrador", "Mortalité", "Mas."),
+        (
+            "2024 T1" if french else "2024 Q1",
+            "Terre-Neuve et Labrador",
+            "Visites au service d’urgence",
+            "Mas.",
+        ),
         ("2024 T2" if french else "2024 Q2", "Ontario", "Visites au service d’urgence", "12,5"),
         ("2025 T1" if french else "2025 Q1", "Canada", "Mortalité", "3,4"),
     ]
@@ -462,7 +467,7 @@ async def test_phac_query_repeats_every_step_in_every_language(phac_files):
             "dataset_id": "opioid_stimulant_harms",
             "lang": "fr",
             "filters": {"source": "Visites au service d'urgence"},
-            "geography": "Ontario",
+            "geography": "NL",
             "start": "2024 T1",
             "end": "2025 T2",
             "columns": ["Année_Trimestre", "valeur"],
@@ -476,7 +481,7 @@ async def test_phac_query_repeats_every_step_in_every_language(phac_files):
     # Provenance header: dataset id and the query.
     for text in code.values():
         assert "Dataset: opioid_stimulant_harms" in text
-        assert '"geography": "Ontario"' in text and '"start": "2024 T1"' in text
+        assert '"geography": "NL"' in text and '"start": "2024 T1"' in text
     # ZIP member, matched ignoring accents (the French name has them).
     assert "fold('DonneesMefaitsSubstances.csv') in fold(name)" in py
     assert "unz(" in r and 'fixed("donneesmefaitssubstances.csv")' in r
