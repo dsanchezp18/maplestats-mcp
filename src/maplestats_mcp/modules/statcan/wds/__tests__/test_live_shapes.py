@@ -354,6 +354,16 @@ async def test_search_requires_every_content_word_and_ignores_stopwords(httpx_mo
     found = await client.search_cubes("monthly labour force characteristics for the")
     assert [c.product_id for c in found.cubes] == [14100287]
     assert found.provenance.coverage == "4 tables searched"
+    assert found.provenance.freshness == "daily at 8:30am ET"
+
+
+async def test_search_notes_in_french(httpx_mock):
+    client.use_lang("fr")
+    _mock_cubes(httpx_mock)
+    found = await client.search_cubes("monthly labour force characteristics for the")
+    assert found.provenance.coverage == "4 tableaux parcourus"
+    assert found.provenance.freshness == "chaque jour à 8 h 30, HE"
+    assert "Licence ouverte de Statistique Canada" in (found.provenance.licence or "")
 
 
 async def test_search_is_accent_insensitive_across_languages(httpx_mock):

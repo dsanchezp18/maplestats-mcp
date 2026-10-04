@@ -328,7 +328,7 @@ async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
             url=f"{constants.BASE_URL}{method}",
             cached=was_cached,
             schema_name="statcan.wds.CubeSummaryList",
-            freshness="daily at 8:30am ET",
+            freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
             lang=_LANG.get(),
         ),
     )
@@ -426,19 +426,27 @@ async def search_cubes(
             wanted = len(words) if best == len(words) else best
             matches = [c for c, s in zip(cubes, scores, strict=True) if wanted and s >= wanted]
             if wanted and wanted < len(words):
-                note = (
+                note = _m(
                     f"no table title contains all {len(words)} words; showing the tables "
                     f"whose titles match {wanted} of them. Words such as a province are often "
                     "dimension members, not title words: open the table with "
-                    "wds_get_cube_metadata."
+                    "wds_get_cube_metadata.",
+                    f"aucun titre de tableau ne contient les {len(words)} mots ; voici les "
+                    f"tableaux dont le titre en contient {wanted}. Des mots comme une province "
+                    "sont souvent des membres de dimension, pas des mots du titre : ouvrez le "
+                    "tableau avec wds_get_cube_metadata.",
                 )
     else:
         matches = cubes
     page = matches[offset : offset + limit]
     capped = len(matches) > offset + len(page)
     limits = (
-        f"showing {len(page)} of {len(matches)} tables from offset {offset}; "
-        "raise offset to see the rest"
+        _m(
+            f"showing {len(page)} of {len(matches)} tables from offset {offset}; "
+            "raise offset to see the rest",
+            f"{len(page)} des {len(matches)} tableaux à partir de l'offset {offset} ; "
+            "augmentez offset pour voir la suite",
+        )
         if capped
         else None
     )
@@ -452,8 +460,9 @@ async def search_cubes(
             url=inventory.provenance.url,
             cached=inventory.provenance.cached,
             schema_name="statcan.wds.CubeSummaryList",
-            freshness="daily at 8:30am ET",
-            coverage=note or f"{len(cubes)} tables searched",
+            freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
+            coverage=note
+            or _m(f"{len(cubes)} tables searched", f"{len(cubes)} tableaux parcourus"),
             limits=limits,
             lang=_LANG.get(),
         ),
@@ -552,7 +561,12 @@ async def get_cube_metadata(
                 member_offset=member_offset,
             )
             if matched > member_offset + len(members):
-                cut.append(f"dimension {position}: {len(members)} of {matched} members")
+                cut.append(
+                    _m(
+                        f"dimension {position}: {len(members)} of {matched} members",
+                        f"dimension {position} : {len(members)} des {matched} membres",
+                    )
+                )
         dimensions.append(
             CubeDimension(
                 dimension_position_id=position,
@@ -576,10 +590,19 @@ async def get_cube_metadata(
     ]
     limit_notes = list(cut)
     if len(all_footnotes) > footnote_limit:
-        limit_notes.append(f"footnotes: {footnote_limit} of {len(all_footnotes)}")
+        limit_notes.append(
+            _m(
+                f"footnotes: {footnote_limit} of {len(all_footnotes)}",
+                f"notes de bas de page : {footnote_limit} sur {len(all_footnotes)}",
+            )
+        )
     limits = (
-        "truncated (" + "; ".join(limit_notes) + "); use dimension, member_query, "
-        "member_limit/member_offset and footnote_limit to see more"
+        _m(
+            "truncated (" + "; ".join(limit_notes) + "); use dimension, member_query, "
+            "member_limit/member_offset and footnote_limit to see more",
+            "tronqué (" + "; ".join(limit_notes) + ") ; utilisez dimension, member_query, "
+            "member_limit/member_offset et footnote_limit pour en voir plus",
+        )
         if limit_notes
         else None
     )
@@ -766,7 +789,14 @@ def _vector_data_set(
             url=f"{constants.BASE_URL}{method}",
             cached=cached,
             schema_name="statcan.wds.VectorDataSet",
-            limits=(f"{len(failed)} vector(s) returned no data, see `failed`" if failed else None),
+            limits=(
+                _m(
+                    f"{len(failed)} vector(s) returned no data, see `failed`",
+                    f"{len(failed)} vecteur(s) sans données, voir `failed`",
+                )
+                if failed
+                else None
+            ),
             lang=_LANG.get(),
         ),
     )
@@ -1132,7 +1162,7 @@ async def get_code_sets(
                 )
             ]
         if len(found) > limit:
-            cut.append(f"{name}: {limit} of {len(found)}")
+            cut.append(_m(f"{name}: {limit} of {len(found)}", f"{name} : {limit} sur {len(found)}"))
         return found[:limit]
 
     # Field names below are verified against a live getCodeSets response,
@@ -1173,8 +1203,12 @@ async def get_code_sets(
             cached=was_cached,
             schema_name="statcan.wds.CodeSets",
             limits=(
-                "capped per category (" + "; ".join(cut) + "); raise limit or narrow with "
-                "category/query"
+                _m(
+                    "capped per category (" + "; ".join(cut) + "); raise limit or narrow with "
+                    "category/query",
+                    "plafonné par catégorie (" + "; ".join(cut) + ") ; augmentez limit ou "
+                    "précisez avec category/query",
+                )
                 if cut
                 else None
             ),
