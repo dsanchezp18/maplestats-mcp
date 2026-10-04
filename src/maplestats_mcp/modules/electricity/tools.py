@@ -265,21 +265,21 @@ async def electricity_quebec_list_facilities(
     limit: int = 100,
     lang: Lang = "en",
 ) -> QuebecFacilityList:
-    """Hydro-Quebec generating stations, dams and reservoirs with water-flow
+    """Hydro-Quebec generating stations, dams and reservoirs with flow
     data (94 sites): id, name, administrative region, coordinates and each
     series with its latest value in m³/s.
 
-    Series kinds: total (all water released at the site), turbined (through
+    Series kinds: total (everything released at the site), turbined (through
     the turbines of a named plant), spilled (through a named spillway or
     dam) and inflow (daily filtered natural inflow). Filter with query
     (site name or id, accents optional, also matches plant and structure
     names), region (e.g. 'Côte-Nord', 'Mauricie') and kind. About ten days
     of data; Nord-du-Québec and Côte-Nord sites lag about four days.
     Licence CC BY-NC 4.0: credit Hydro-Quebec, non-commercial use only.
-    Use for: water flow at a Quebec dam or power station, which Hydro-Quebec
+    Use for: flow at a Quebec dam or power station, which Hydro-Quebec
     plants are spilling, natural inflows to reservoirs, the site id for
     electricity_quebec_get_facility_flows.
-    Keywords: Hydro-Quebec, water flow, discharge, turbined flow, spillway,
+    Keywords: Hydro-Quebec, dam flow, discharge, turbined flow, spillway,
     dam, reservoir inflow, generating station, hydroelectric, m3/s, Quebec
     rivers.
     Mots-clés : Hydro-Québec, débit, débit turbiné, débit déversé, évacuateur
@@ -298,7 +298,7 @@ async def electricity_quebec_get_facility_flows(
     end: str | None = None,
     lang: Lang = "en",
 ) -> QuebecFacilityFlows:
-    """Hourly water flows (total, turbined, spilled) and daily natural
+    """Hourly flows (total, turbined, spilled) and daily natural
     inflows at one Hydro-Quebec generating station or control structure,
     in m³/s, for the last ten days or so.
 
@@ -307,8 +307,8 @@ async def electricity_quebec_get_facility_flows(
     kind; start and end (ISO date or date-time, UTC) narrow the window.
     Raw data, not quality-checked by Hydro-Quebec. Licence CC BY-NC 4.0:
     credit Hydro-Quebec, non-commercial use only.
-    Use for: hourly flow through a Quebec power station, is a dam spilling
-    water, reservoir inflow trend this week, flow at Beauharnois or
+    Use for: hourly flow through a Quebec power station, is a dam spilling now,
+    reservoir inflow trend this week, flow at Beauharnois or
     Carillon.
     Keywords: Hydro-Quebec, hourly flow, discharge, turbined flow, spilled
     flow, natural inflow, dam, generating station, hydroelectric, m3/s,

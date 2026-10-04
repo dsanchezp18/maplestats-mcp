@@ -24,6 +24,7 @@ CASES = [
     ("classification des industries SCIAN", "rdaas_get_classification"),
     ("mises en chantier", "cmhc_list_categories"),
     ("taux directeur", "boc_search_series"),
+    ("projections climatiques température future 2050 scénario", "eccc_coverages_get_data"),
     ("recherche de marques de commerce", "ised_cipo_search_trademarks"),
     ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
     ("superficie brûlée feux de forêt", "nrcan_nbac_query_fires"),
@@ -31,6 +32,7 @@ CASES = [
     ("interdiction de feu restriction Alberta comté", "ab_wildfire_get_fire_restrictions"),
     ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
+    ("indice des prix des propriétés MLS ACI", "crea_get_hpi_links"),
     ("horaire des autobus de la STM passages prévus à un arrêt", "transit_get_stop_departures"),
     (
         "organismes de transport en commun base de données nationale GTFS",
@@ -105,8 +107,16 @@ CASES = [
     ("population trimestrielle Terre-Neuve-et-Labrador feuille Excel", "nl_stats_read_file"),
     ("tableaux du Bureau de la statistique du Yukon", "yukon_stats_list_tables"),
     ("loyer et taux d'inoccupation Yukon Whitehorse", "yukon_stats_query_table"),
+    ("sujets du Bureau de la statistique des Territoires du Nord-Ouest", "nwt_stats_list_files"),
+    ("chercher un tableau indice des prix des collectivités T.N.-O.", "nwt_stats_search_files"),
+    ("lire une feuille de calcul Excel des Territoires du Nord-Ouest", "nwt_stats_read_file"),
     ("fichiers Excel et CSV des données ouvertes de l'Alberta", "ab_opendata_search_datasets"),
     ("lire les lignes d'un fichier Excel Open Alberta", "ab_opendata_read_resource"),
+    ("rejets de polluants INRP par installation", "eccc_datamart_npri_facilities"),
+    (
+        "émissions de gaz à effet de serre des grands émetteurs PDGES",
+        "eccc_datamart_ghgrp_facilities",
+    ),
     ("lire le fichier Excel d'une ressource CKAN sans DataStore", "ckan_read_resource"),
     ("feuilles et colonnes du fichier d'une ressource CKAN", "ckan_describe_resource"),
     ("résultats électoraux par circonscription candidat élu", "elections_results_get_table"),
@@ -145,6 +155,22 @@ CASES = [
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("émissions de gaz à effet de serre par province inventaire", "sdmx_space_get_data"),
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),
+    ("comparaison internationale du Canada avec les pays de l'OCDE", "worldbank_get_canada_series"),
+    (
+        "indicateurs du développement dans le monde de la Banque mondiale",
+        "worldbank_search_indicators",
+    ),
+    # French stop words in shared/search.py (2026-10-03): "de" and "par" no
+    # longer decide the ranking.
+    ("taux de chômage par province", "statcan_indicators_get_indicators"),
+    ("météo prévisions Québec", "eccc_query_items"),
+    ("produit intérieur brut par province", "wds_search_cubes"),
+    ("permis de construire", "wds_search_cubes"),
+    ("salaire minimum", "nl_stats_list_files"),
+    # Ontario Energy Board open data, 2026-10-03.
+    ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
+    ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
+    ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
 ]
 
 

@@ -82,7 +82,14 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     ),
     "northwest territories": (
         "Northwest Territories",
-        (_ckan("nt"), _arcgis("ntgs"), _arcgis("ntgs_datahub")),
+        (
+            PlanStep(
+                "nwt_stats_search_files", "NWT Bureau of Statistics Excel tables (query by words)"
+            ),
+            _ckan("nt"),
+            _arcgis("ntgs"),
+            _arcgis("ntgs_datahub"),
+        ),
     ),
     "yukon": (
         "Yukon",

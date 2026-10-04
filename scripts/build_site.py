@@ -293,6 +293,17 @@ SOURCES: dict[str, Source] = {
         row="provincial_agency",
     ),
     "arcgis_hub": Source("ArcGIS Hub portals", "Portails ArcGIS Hub", "catalogue", "ArcGIS Hub"),
+    "bc_environment": Source(
+        "BC Ministry of Environment: air quality, snow, groundwater and streamflow",
+        "Ministère de l'Environnement de la C.-B. : qualité de l'air, neige, eaux "
+        "souterraines et débits",
+        "provincial",
+        "BC Environment",
+        "Environnement C.-B.",
+        domain="environment",
+        places=("BC",),
+        row="provincial_agency",
+    ),
     "bc_lobbyists": Source(
         "BC Registrar of Lobbyists: registrations and activity reports",
         "Registraire des lobbyistes de la C.-B. : inscriptions et rapports d'activité",
@@ -395,6 +406,14 @@ SOURCES: dict[str, Source] = {
         "ARC",
         domain="business",
     ),
+    "crea": Source(
+        "The Canadian Real Estate Association: MLS® Home Price Index links",
+        "L'Association canadienne de l'immeuble : liens vers l'IPP MLS®",
+        "national",
+        "CREA",
+        "ACI",
+        domain="housing",
+    ),
     "dfo_iwls": Source(
         "Fisheries and Oceans Canada: tides and water levels",
         "Pêches et Océans Canada : marées et niveaux d'eau",
@@ -422,6 +441,14 @@ SOURCES: dict[str, Source] = {
         row="provincial_agency",
         domain="transport",
     ),
+    "eccc_datamart": Source(
+        "ECCC Data Catalogue files (NPRI, GHGRP, NAPS)",
+        "Fichiers du Catalogue de données d'ECCC (INRP, PDGES, SNPA)",
+        "national",
+        "ECCC Data Catalogue",
+        "Catalogue de données d'ECCC",
+        domain="environment",
+    ),
     "electricity": Source(
         "Electricity: Ontario (IESO) and Quebec (Hydro-Québec)",
         "Électricité : Ontario (SIERE) et Québec (Hydro-Québec)",
@@ -440,12 +467,16 @@ SOURCES: dict[str, Source] = {
         domain="government",
     ),
     "elections_provincial": Source(
-        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan",
-        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique, Saskatchewan",
+        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan, "
+        "Manitoba",
+        "Résultats des élections générales provinciales : Québec, Alberta, "
+        "Colombie-Britannique, Saskatchewan, Manitoba",
         "provincial",
-        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan",
-        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan",
-        places=("QC", "AB", "BC", "SK"),
+        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan, "
+        "Elections Manitoba",
+        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan, "
+        "Élections Manitoba",
+        places=("QC", "AB", "BC", "SK", "MB"),
         row="provincial_agency",
     ),
     "elections_financial_returns": Source(
@@ -536,6 +567,14 @@ SOURCES: dict[str, Source] = {
         places=("NL",),
         row="provincial_agency",
     ),
+    "worldbank": Source(
+        "World Bank World Development Indicators (Canada and peers)",
+        "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",
+        "national",
+        "World Bank WDI",
+        "Banque mondiale (WDI)",
+        domain="statistics",
+    ),
     "yukon_stats": Source(
         "Yukon Bureau of Statistics",
         "Bureau de la statistique du Yukon",
@@ -543,6 +582,15 @@ SOURCES: dict[str, Source] = {
         "Yukon Statistics",
         "Statistique Yukon",
         places=("YT",),
+        row="provincial_agency",
+    ),
+    "nwt_stats": Source(
+        "NWT Bureau of Statistics",
+        "Bureau de la statistique des Territoires du Nord-Ouest",
+        "provincial",
+        "NWT Statistics",
+        "Statistique T.N.-O.",
+        places=("NT",),
         row="provincial_agency",
     ),
     "ourcommons": Source(
@@ -561,6 +609,15 @@ SOURCES: dict[str, Source] = {
         "Données ouvertes T.-N.-L.",
         places=("NL",),
         row="provincial_catalogue",
+    ),
+    "oeb": Source(
+        "Ontario Energy Board",
+        "Commission de l'énergie de l'Ontario",
+        "provincial",
+        "OEB",
+        "CEO",
+        places=("ON",),
+        row="provincial_agency",
     ),
     "nrcan_energy_use": Source(
         "Natural Resources Canada: energy use",
@@ -688,6 +745,8 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "Portail de l'information sur le marché de l'habitation",
     ),
     "cmhc/data_tables": ("Data tables (Excel)", "Tableaux de données (Excel)"),
+    "eccc/": ("Weather, water and climate observations", "Observations météo, eau et climat"),
+    "eccc/coverages": ("Climate projections (gridded)", "Projections climatiques (grilles)"),
     "ircc/": ("Express Entry rounds", "Rondes d'invitations Entrée express"),
     "ircc/monthly": ("Monthly IRCC Updates", "Mises à jour mensuelles d'IRCC"),
     "ised/cipo": ("Trademarks (CIPO)", "Marques de commerce (OPIC)"),
@@ -3019,7 +3078,7 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             micro["unweighted_n"],
             "census records in one tabulation"
             if en
-            else "fiches du recensement dans une tabulation",
+            else "fiches du recensement dans une totalisation",
         ),
         (
             counts["boc_search_series"]["total_count"],
@@ -3780,7 +3839,9 @@ _SPACED = (
     (re.compile(r"(^|\S)\s?(:)(?=\s|$)"), NBSP),
     (re.compile(r"(^|\S)\s?(»)"), NBSP),
 )
-_OPEN_QUOTE = re.compile(r"«\s?(?=\S)")
+# A « that ends a text is followed by an element, as in "« <span>": it
+# needs its space too.
+_OPEN_QUOTE = re.compile(r"«\s?(?=\S|$)")
 _PERCENT = re.compile(r"(\d)\s?%")
 
 

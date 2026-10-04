@@ -33,6 +33,16 @@ project owner's risk and every response says so. The Crown copyright of saskatch
 ruled out the Saskatchewan Bureau of Statistics is a different body's website and does not
 appear on elections.sk.ca. By-elections have their own files and are not read.
 
+Manitoba: Elections Manitoba's page for each general election from 1999 to 2023
+(electionsmanitoba.ca/en/Results/PreviousElections/<year>) links a summary of votes received
+(one row per candidate), a summary of results (one row per electoral division, with
+registered voters and rejected and declined ballots) and a zip of results by voting area,
+all under /downloads/. Checked 2026-10-03: the site publishes no terms of use or licence;
+the footer reads only "(c) 2026. All rights reserved." and the Website Information page
+says only that the printed copies prevail if they differ from the website. The files are
+read at the project owner's risk and every response says so. Results from 1870 to 1995 are
+PDF only and are not read; by-elections are not read.
+
 Ontario is deliberately absent: see BLOCKED.
 """
 
@@ -45,6 +55,7 @@ PROVINCES: dict[str, tuple[str, str]] = {
     "ab": ("Alberta", "Alberta"),
     "bc": ("British Columbia", "Colombie-Britannique"),
     "sk": ("Saskatchewan", "Saskatchewan"),
+    "mb": ("Manitoba", "Manitoba"),
 }
 
 QC_BASE = "https://donnees.electionsquebec.qc.ca/production/provincial/resultats/archives"
@@ -94,6 +105,61 @@ SK_TERMS_NOTICE = (
 )
 SK_MAX_BYTES = 10 * 1024 * 1024
 
+MB_DOWNLOADS = "https://www.electionsmanitoba.ca/downloads"
+MB_PAGE = "https://www.electionsmanitoba.ca/en/Results/Elections1999AndLater"
+
+
+@dataclass(frozen=True)
+class ManitobaFiles:
+    """One Manitoba general election's three downloads (2023 moved to .xlsx)."""
+
+    year: str
+    votes: str  # summary of votes received: one row per candidate
+    summary: str  # summary of results: one row per electoral division
+    by_area: str  # zip of results by voting area
+
+    @property
+    def page(self) -> str:
+        return f"https://www.electionsmanitoba.ca/en/Results/PreviousElections/{self.year}"
+
+
+def _mb_files(number: str, year: str, ext: str = "xls") -> ManitobaFiles:
+    return ManitobaFiles(
+        year=year,
+        votes=f"{MB_DOWNLOADS}/{number}GE%20Summary%20of%20Votes%20Received.{ext}",
+        summary=f"{MB_DOWNLOADS}/Summary_of_Results_GE{year}.{ext}",
+        by_area=f"{MB_DOWNLOADS}/{number}GE.zip",
+    )
+
+
+# Keyed by the general election's number (the 43rd was 2023).
+MB_FILES: dict[str, ManitobaFiles] = {
+    "43": _mb_files("43", "2023", "xlsx"),
+    "42": _mb_files("42", "2019"),
+    "41": _mb_files("41", "2016"),
+    "40": _mb_files("40", "2011"),
+    "39": _mb_files("39", "2007"),
+    "38": _mb_files("38", "2003"),
+    "37": _mb_files("37", "1999"),
+}
+MB_ATTRIBUTION = (
+    "Source: Elections Manitoba, official results (summary of votes received, summary of "
+    "results and results by voting area). Elections Manitoba publishes no terms of use or "
+    "licence for these files; the site footer reads '(c) 2026. All rights reserved.' Not an "
+    "official version of the results: Elections Manitoba states that its printed copies "
+    "prevail over its website."
+)
+MB_TERMS_NOTICE = (
+    "Elections Manitoba publishes no terms of use or licence for these files (checked "
+    "2026-10-03; the footer reads only '(c) 2026. All rights reserved.'); they are read at the "
+    "project owner's risk."
+)
+MB_MAX_BYTES = 10 * 1024 * 1024
+# Elections Manitoba states no request rate; one file a second keeps the reads light.
+MB_RATE_LIMIT_SOURCE = "elections-manitoba"
+MB_RATE_LIMIT_PER_SECOND = 1.0
+MB_RATE_LIMIT_CAPACITY = 2.0
+
 
 @dataclass(frozen=True)
 class Election:
@@ -139,6 +205,14 @@ ELECTIONS: tuple[Election, ...] = (
     Election("sk", "2020-10-26", 61, "2020"),
     Election("sk", "2016-04-04", 61, "2016"),
     Election("sk", "2011-11-07", 58, "2011"),
+    # Manitoba's source_key is the general election's number keying MB_FILES.
+    Election("mb", "2023-10-03", 57, "43"),
+    Election("mb", "2019-09-10", 57, "42"),
+    Election("mb", "2016-04-19", 57, "41"),
+    Election("mb", "2011-10-04", 57, "40"),
+    Election("mb", "2007-05-22", 57, "39"),
+    Election("mb", "2003-06-03", 57, "38"),
+    Election("mb", "1999-09-21", 57, "37"),
 )
 
 # Years in the by-voting-place file (the by-voting-area file ends in 2020).

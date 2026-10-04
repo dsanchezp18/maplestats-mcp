@@ -182,6 +182,9 @@ TOPICS: tuple[Topic, ...] = (
             "permis de construire",
             "habitation",
             "inoccupation",
+            "mls",
+            "crea",
+            "prix des maisons",
         ),
         (
             PlanStep(
@@ -211,6 +214,12 @@ TOPICS: tuple[Topic, ...] = (
                 "boc_search_series",
                 "Bank of Canada mortgage and policy rates",
                 ("mortgage", "hypothe*"),
+            ),
+            PlanStep(
+                "crea_get_hpi_links",
+                "CREA MLS® Home Price Index (resale prices): download link, attribution and "
+                "terms only; no values, since CREA's terms forbid publishing them",
+                ("mls", "crea", "resale", "home price", "house price", "prix des maisons"),
             ),
             PlanStep(
                 "statcan_census_profile_get_data",
@@ -319,6 +328,32 @@ TOPICS: tuple[Topic, ...] = (
         (
             PlanStep("boc_search_series", "find the Valet series (e.g. FXUSDCAD, V39079)"),
             PlanStep("boc_get_observations", "pull the series for the period"),
+        ),
+    ),
+    Topic(
+        "international",
+        "Canada compared with other countries",
+        (
+            "compared to other countries",
+            "compared with other countries",
+            "g7",
+            "oecd",
+            "world bank",
+            "international comparison",
+            "peer countries",
+            "ppp",
+            "comparaison internationale",
+            "banque mondiale",
+            "ocde",
+            "autres pays",
+            "pays du g7",
+        ),
+        (
+            PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
+            PlanStep(
+                "worldbank_get_canada_series",
+                "Canada's series for the indicator, compared with G7 or OECD countries",
+            ),
         ),
     ),
     Topic(
@@ -1002,7 +1037,7 @@ TOPICS: tuple[Topic, ...] = (
             ),
             PlanStep(
                 "elections_provincial_get_results",
-                "provincial results by riding: province='qc', 'ab', 'bc' or 'sk' "
+                "provincial results by riding: province='qc', 'ab', 'bc', 'sk' or 'mb' "
                 "(elections_provincial_list_elections lists what is covered)",
                 _PROVINCIAL_TERMS,
             ),

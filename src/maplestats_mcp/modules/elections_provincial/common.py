@@ -1,4 +1,4 @@
-"""Shared pieces for the three province readers: a district model and one fetch helper."""
+"""Shared pieces for the province readers: a district model and one fetch helper."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import httpx
 from maplestats_mcp.modules.elections_provincial import constants
 from maplestats_mcp.shared.errors import NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -64,9 +64,18 @@ def finish_shares(district: District) -> None:
             candidate.share = round(100 * candidate.votes / total, 2)
 
 
-async def fetch_bytes(url: str, *, context: str, max_bytes: int | None = None) -> bytes:
-    """One paced GET of a file, with upstream failures turned into typed errors."""
-    await _LIMITER.acquire()
+async def fetch_bytes(
+    url: str,
+    *,
+    context: str,
+    max_bytes: int | None = None,
+    limiter: TokenBucket | None = None,
+) -> bytes:
+    """One paced GET of a file, with upstream failures turned into typed errors.
+
+    `limiter` replaces the module's 10 second pacing for a source that asks for none.
+    """
+    await (limiter or _LIMITER).acquire()
     try:
         response = await get_raw(url, timeout=120.0)
     except httpx.HTTPStatusError as exc:
