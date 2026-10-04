@@ -62,7 +62,10 @@ async def cdc_get_component_prices(
     `year_from`/`year_to` pick calendar years (default: the current
     year); `milk_class` filters one class ("5(a)", "5a", "3D"). Rows are
     sorted by month and class; a price the CDC does not set (0 or blank
-    in its file) is None. For the butter support price use
+    in its file) is None. In classes 4(a), 4(m), 5(b) and 5(c) the CDC
+    prices protein and other solids together as solids non-fat, so
+    protein_per_kg equals other_solids_per_kg there (as published, checked
+    against pricing_history_2026.csv). For the butter support price use
     cdc_get_butter_support_prices; for class definitions,
     cdc_get_milk_classes. `lang` switches notes and the linked page.
     Keywords: milk price, component pricing, special milk class,
