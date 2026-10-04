@@ -213,7 +213,9 @@ Sources, by tool-name prefix:
   (Excel data tables). ECCC weather, climate, hydrometric: eccc_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
-- Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit
+- Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
+  provincial revenue, spending, deficits, debt), finance_fiscal_monitor_
+  (monthly federal results), competition_bureau_ (merger reviews), fcac_ (credit
   card and bank account comparisons), pbo_ (Parliamentary Budget Officer
   publications and tables), pmprb_ (patented medicine prices), pmra_
   (pesticide products, residue limits), ircc_

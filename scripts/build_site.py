@@ -498,6 +498,14 @@ SOURCES: dict[str, Source] = {
         "ACFC",
         domain="money",
     ),
+    "finance_canada": Source(
+        "Department of Finance Canada",
+        "Ministère des Finances Canada",
+        "national",
+        "Finance Canada",
+        "Finances Canada",
+        domain="money",
+    ),
     "gazette": Source("Canada Gazette", "Gazette du Canada", "national", domain="government"),
     "gc_infobase": Source("GC InfoBase", "InfoBase du GC", "national", domain="money"),
     "ircc": Source(

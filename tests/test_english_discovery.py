@@ -174,6 +174,12 @@ CASES = [
     ("pesticide registration number details pests and sites of use", "pmra_get_product"),
     ("gold production by province mining statistics", "nrcan_minerals_get_production"),
     ("value of mineral production in Canada since 1990 time series", "nrcan_minerals_get_series"),
+    (
+        "federal deficit and debt history since 1966 fiscal reference tables",
+        "finance_frt_list_tables",
+    ),
+    ("Alberta provincial net debt and deficit by year", "finance_frt_get_table"),
+    ("federal deficit year to date this fiscal year monthly", "finance_fiscal_monitor_get_tables"),
 ]
 
 

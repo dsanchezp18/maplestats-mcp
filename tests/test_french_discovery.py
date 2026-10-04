@@ -150,6 +150,8 @@ CASES = [
     ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),
     ("limite maximale de résidus de pesticides sur les pommes", "pmra_get_residue_limits"),
     ("production minérale par province valeur des expéditions", "nrcan_minerals_get_production"),
+    ("historique de la dette fédérale tableaux de référence financiers", "finance_frt_list_tables"),
+    ("revue financière déficit fédéral cumulatif mensuel", "finance_fiscal_monitor_get_tables"),
 ]
 
 
