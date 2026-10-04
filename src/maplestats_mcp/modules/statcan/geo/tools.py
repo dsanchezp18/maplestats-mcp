@@ -15,6 +15,7 @@ from maplestats_mcp.modules.statcan.geo.schemas import (
     GeoSpatialLayerList,
     GeoSpatialQueryResult,
 )
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
@@ -44,6 +45,7 @@ async def statcan_geo_list_services(year: str, lang: Lang = "en") -> GeoServiceL
     géospatial, géographie du recensement, limites cartographiques, fichier
     numérique des limites, couches cartographiques, cartes.
     """
+    use_lang(lang)
     return await client.list_services(year, lang)
 
 
@@ -68,7 +70,7 @@ async def statcan_geo_get_layer_detail(
     attributs, fichier des limites, type de géométrie, structure de la
     couche.
     """
-    del lang
+    use_lang(lang)
     return await client.get_layer_detail(year, service, layer_id)
 
 
@@ -128,7 +130,7 @@ async def statcan_geo_query_layer(
     polygone, latitude et longitude, secteur de recensement, aire de
     diffusion, rectangle englobant.
     """
-    del lang
+    use_lang(lang)
     return await client.query_layer_features(
         year,
         service,
@@ -179,7 +181,7 @@ async def statcan_geo_list_spatial_layers(
     routier national, mesures de proximité, arrêts de transport en commun,
     couches.
     """
-    del lang
+    use_lang(lang)
     return await client.list_spatial_layers(dataset, province=province, road_class=road_class)
 
 
@@ -202,7 +204,7 @@ async def statcan_geo_get_spatial_layer_detail(
     réseau routier national, noms d'attributs, indice de défavorisation,
     qualité de vie, besoins en logement.
     """
-    del lang
+    use_lang(lang)
     return await client.get_spatial_layer_detail(dataset, layer_id)
 
 
@@ -254,12 +256,15 @@ async def statcan_geo_query_spatial_layer(
     qualité de vie, arrêts de transport en commun, réseau routier national,
     segments routiers, latitude et longitude, point dans un polygone.
     """
-    del lang
+    use_lang(lang)
     if layer_id is None:
         if dataset != "nrn" or not province or not road_class:
             raise InvalidInput(
-                "Give layer_id (from statcan_geo_list_spatial_layers), or for dataset 'nrn' "
-                "both province and road_class."
+                say(
+                    "Give layer_id (from statcan_geo_list_spatial_layers), or for dataset 'nrn' "
+                    "both province and road_class.",
+                    "Donnez layer_id (tiré de statcan_geo_list_spatial_layers) ou, pour le jeu de données « nrn », à la fois province et road_class.",
+                )
             )
         layer_id = await client.resolve_nrn_layer(province, road_class)
     return await client.query_spatial_layer(

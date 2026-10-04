@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from maplestats_mcp.modules.statcan.geo import client, constants
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
@@ -85,6 +86,17 @@ async def test_query_layer_features_tolerates_null_features(httpx_mock):
     httpx_mock.add_response(json={**_QUERY_GEOJSON, "features": None})
     result = await client.query_layer_features("2021", "Cartographic_boundary_files", 9)
     assert result.features == []
+
+
+async def test_errors_are_explained_in_french():
+    use_lang("fr")
+    with pytest.raises(InvalidInput, match="layer_id doit être >= 0, reçu -1"):
+        await client.get_layer_detail("2021", "Cartographic_boundary_files", -1)
+    with pytest.raises(InvalidInput, match="pas les deux"):
+        client.spatial_query_params(43.65, -79.38, "-79.4,43.6,-79.3,43.7", None)
+    use_lang("en")
+    with pytest.raises(InvalidInput, match="layer_id must be >= 0, got -1"):
+        await client.get_layer_detail("2021", "Cartographic_boundary_files", -1)
 
 
 async def test_get_layer_detail_rejects_negative_layer_id():
