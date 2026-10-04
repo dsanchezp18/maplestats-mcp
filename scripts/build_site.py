@@ -245,7 +245,7 @@ DOMAINS: dict[str, tuple[str, str]] = {
     "housing": ("Housing", "Logement"),
     "health": ("Health", "Santé"),
     "environment": ("Environment and hazards", "Environnement et risques naturels"),
-    "energy": ("Energy", "Énergie"),
+    "energy": ("Energy and mining", "Énergie et mines"),
     "business": ("Business, IP and competition", "Entreprises, PI et concurrence"),
     "immigration": ("Immigration", "Immigration"),
     "government": ("Parliament, law and elections", "Parlement, droit et élections"),
@@ -1012,10 +1012,10 @@ SEARCH_EXAMPLE: dict[Lang, str] = {
     "en": "Bank of Canada policy rate",
     "fr": "taux directeur de la Banque du Canada",
 }
-# Checked against search_tools on 2026-09-26: each one's top results are on topic.
+# Checked against search_tools on 2026-10-04: each one's top results are on topic.
 SEARCH_SUGGESTIONS: dict[Lang, tuple[str, ...]] = {
     "en": (
-        "federal contract awards",
+        "border wait times",
         "PUMF bootstrap weights",
         "tide times Halifax",
         "census profile income",
@@ -1026,13 +1026,13 @@ SEARCH_SUGGESTIONS: dict[Lang, tuple[str, ...]] = {
         "poids bootstrap microdonnées",
         "ronde d'invitations entrée express",
         "superficie brûlée feux de forêt",
-        "federal contract awards",
+        "border wait times",
     ),
 }
 
 
 # Each page offers one query in the other language, to show both work.
-SUGGESTION_LANG: dict[str, Lang] = {"taux de chômage": "fr", "federal contract awards": "en"}
+SUGGESTION_LANG: dict[str, Lang] = {"taux de chômage": "fr", "border wait times": "en"}
 
 
 def suggestion_buttons(lang: Lang) -> str:
