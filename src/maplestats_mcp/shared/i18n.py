@@ -10,6 +10,7 @@ registers for itself with register().
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 LABELS: dict[str, dict[str, str]] = {
@@ -86,6 +87,49 @@ def t(key: str, lang: str = "en", **kwargs: Any) -> str:
         return key
     template = entry.get(normalize_lang(lang), entry.get("en", key))
     return template.format(**kwargs)
+
+
+# French typography, the same marks scripts/build_site.py spaces on the
+# website: a no-break space before a colon and inside « », a narrow
+# no-break space before ; ? ! and %. URLs are left alone ("https://",
+# "?zone=", "%20").
+NBSP, NNBSP = " ", " "
+_URL = re.compile(r"https?://\S+")
+_SPACED = (
+    (re.compile(r"(\S)[   ]?([;?!]+)(?=[\s)»]|$)"), NNBSP),
+    (re.compile(r"(\S)[   ]?(:)(?=\s|$)"), NBSP),
+    (re.compile(r"(\S)[   ]?(»)"), NBSP),
+)
+_OPEN_QUOTE = re.compile(r"«[   ]?(?=\S)")
+_PERCENT = re.compile(r"(\d)[   ]?%")
+
+
+def _space_marks(text: str) -> str:
+    for pattern, space in _SPACED:
+        text = pattern.sub(lambda m, s=space: f"{m.group(1)}{s}{m.group(2)}", text)
+    text = _OPEN_QUOTE.sub("«" + NBSP, text)
+    return _PERCENT.sub(r"\1" + NNBSP + "%", text)
+
+
+def fr_typography(text: str) -> str:
+    """Space French punctuation in `text` (idempotent), leaving URLs as they are."""
+    out, pos = [], 0
+    for match in _URL.finditer(text):
+        out.append(_space_marks(text[pos : match.start()]))
+        out.append(match.group(0))
+        pos = match.end()
+    out.append(_space_marks(text[pos:]))
+    return "".join(out)
+
+
+def pick(lang: str | None, en: str, fr: str) -> str:
+    """`en` as written, or `fr` with French typography when `lang` is French.
+
+    For the text a module writes itself (notes, provenance freshness,
+    coverage and limits, field descriptions), so the English output stays
+    exactly as it was.
+    """
+    return fr_typography(fr) if normalize_lang(lang) == "fr" else en
 
 
 def register(labels: dict[str, dict[str, str]]) -> None:

@@ -16,7 +16,7 @@ an open licence.
 
 from __future__ import annotations
 
-from maplestats_mcp.shared.i18n import t
+from maplestats_mcp.shared.i18n import fr_typography, normalize_lang, t
 
 # The Statistics Canada Open Licence text lives in shared/i18n (English and
 # French); envelope.make_provenance picks the call's language.
@@ -329,15 +329,158 @@ SOURCE_LICENCES: dict[str, str] = {
 _FAMILY_PREFIXES = ("arcgis-", "ckan-", "socrata-")
 
 
-def licence_for(source: str, url: str) -> str | None:
-    """The licence text for a source name, falling back on a StatCan URL check."""
+# French text for the sources that have it; licence_for falls back on the
+# English text for the others. Official licence names take an en dash
+# ("Licence du gouvernement ouvert – Alberta"), as the governments write them.
+STATCAN_LICENCE_FR = t("provenance.statcan_licence", "fr")
+
+OGL_ALBERTA_FR = (
+    "Licence du gouvernement ouvert – Alberta (https://open.alberta.ca/licence). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Alberta. »"
+)
+
+OGL_BC_FR = (
+    "Licence du gouvernement ouvert – Colombie-Britannique 2.0 "
+    "(https://www2.gov.bc.ca/gov/content/data/policy-standards/open-data/open-government-licence-bc). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Colombie-Britannique. »"
+)
+
+OGL_YUKON_FR = (
+    "Licence du gouvernement ouvert – Yukon (https://open.yukon.ca/open-government-licence-yukon). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Yukon. »"
+)
+
+OGL_NL_FR = (
+    "Licence du gouvernement ouvert – Terre-Neuve-et-Labrador 1.0 "
+    "(https://opendata.gov.nl.ca/public/opendata/page/?page-id=licence). Attribution : « Contient "
+    "des renseignements visés par la Licence du gouvernement ouvert – Terre-Neuve-et-Labrador. »"
+)
+
+EDMONTON_TERMS_FR = (
+    "Conditions d'utilisation des données ouvertes de la Ville d'Edmonton (City of Edmonton Open "
+    "Data Terms of Use, "
+    "https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/). "
+    "Mention de la source : Ville d'Edmonton."
+)
+
+PER_RECORD_LICENCE_FR = (
+    "Les licences varient d'un jeu de données à l'autre sur cette plateforme : la licence de "
+    "chaque jeu figure dans ses champs de licence. Vérifiez-la avant de réutiliser les données."
+)
+
+
+def terms_not_stated_fr(publisher: str, url: str) -> str:
+    """terms_not_stated() in French."""
+    return (
+        f"Conditions non précisées par l'éditeur ({publisher}) : aucune licence ni condition "
+        f"d'utilisation n'a été trouvée à {url}. Ne supposez pas que ces données sont sous licence "
+        "ouverte; vérifiez auprès de l'éditeur avant de les redistribuer."
+    )
+
+
+def derived_from_statcan_fr(own_licence: str) -> str:
+    """derived_from_statcan() in French."""
+    return f"{own_licence} Données sous-jacentes de Statistique Canada : {STATCAN_LICENCE_FR}"
+
+
+NL_STATS_TERMS_FR = derived_from_statcan_fr(
+    "Conditions du site Web du gouvernement de Terre-Neuve-et-Labrador "
+    "(https://www.gov.nl.ca/disclaimer/) : le public peut utiliser l'information de ses sites. "
+    "Mention de la source : Newfoundland and Labrador Statistics Agency (agence de la statistique "
+    "de Terre-Neuve-et-Labrador)."
+)
+
+_SOURCE_LICENCES_FR: dict[str, str] = {
+    "ab-opendata": OGL_ALBERTA_FR,
+    "open-alberta": OGL_ALBERTA_FR,
+    "epcor": terms_not_stated_fr("EPCOR", "https://apps.epcor.ca"),
+    "eps": terms_not_stated_fr(
+        "Service de police d'Edmonton", "https://communitysafetydataportal.edmontonpolice.ca"
+    ),
+    "ets": EDMONTON_TERMS_FR,
+    "bc_lobbyists": (
+        "Licence de données ouvertes du Bureau du registraire des lobbyistes de la "
+        "Colombie-Britannique (Open Data Licence for the Office of the Registrar of Lobbyists for "
+        "British Columbia, https://www.lobbyistsregistrar.bc.ca/media/1285/open-data-licence-for-"
+        "the-office-of-the-registrar-of-lobbyists-for-british-columbia.pdf). Attribution "
+        "demandée, en anglais : « Contains information licensed under the Open Data Licence for "
+        "the Office of the Registrar of Lobbyists for British Columbia. » La licence n'accorde "
+        "aucun droit sur les renseignements personnels."
+    ),
+    "bc-stats": PER_RECORD_LICENCE_FR,
+    "bc-stats-files": PER_RECORD_LICENCE_FR,
+    "bcgw": OGL_BC_FR
+    + " Certaines couches du BC Geographic Warehouse relèvent d'autres conditions; consultez la "
+    "fiche de la couche.",
+    "drivebc": OGL_BC_FR
+    + " L'API Open511 relève aussi des conditions d'utilisation des API du gouvernement de la "
+    "Colombie-Britannique (BC Government API Terms of Use).",
+    "yukon-stats": OGL_YUKON_FR,
+    "yukon-bureau-of-statistics": OGL_YUKON_FR,
+    "nl-opendata": OGL_NL_FR,
+    "nl-stats": NL_STATS_TERMS_FR,
+    "nl-statistics-agency": NL_STATS_TERMS_FR,
+    "bc-environment": (
+        f"{OGL_BC_FR} Source : ministère de l'Environnement et des Parcs de la "
+        "Colombie-Britannique."
+    ),
+    "nwt-bureau-of-statistics": (
+        "Licence du gouvernement ouvert – Territoires du Nord-Ouest, selon le catalogue de "
+        "données ouvertes du territoire pour ces fichiers; les conditions générales d'utilisation "
+        "liées depuis statsnwt.ca demandent une autorisation avant tout usage commercial. "
+        "Vérifiez lesquelles s'appliquent à votre usage."
+    ),
+    "oeb": (
+        "Source : Commission de l'énergie de l'Ontario, données ouvertes "
+        "(https://www.oeb.ca/ontarios-energy-sector/open-data). Contient des renseignements "
+        "utilisés en vertu de la Licence du gouvernement ouvert – Ontario."
+    ),
+    "isq": (
+        "Droits d'auteur du gouvernement du Québec (https://www.quebec.ca/en/copyright) : la "
+        "reproduction, l'adaptation ou la publication exige l'autorisation préalable du "
+        "gouvernement du Québec. Mention : « Source : Institut de la statistique du Québec. »"
+    ),
+    "ckan": PER_RECORD_LICENCE_FR,
+    "arcgis-hub": PER_RECORD_LICENCE_FR,
+    "socrata": PER_RECORD_LICENCE_FR,
+    "opendatasoft-vancouver": PER_RECORD_LICENCE_FR,
+    "transit": (
+        "Chaque flux de transport en commun porte la licence et la mention de source de son "
+        "organisme (champs licence et attribution de chaque organisme)."
+    ),
+    "transit:statcan": derived_from_statcan_fr(
+        "Compilation de la Base de données ouvertes sur les réseaux de transport en commun "
+        "canadiens; chaque flux porte aussi les conditions de son organisme (licence_url, "
+        "attribution)."
+    ),
+}
+SOURCE_LICENCES_FR: dict[str, str] = {
+    source: fr_typography(text) for source, text in _SOURCE_LICENCES_FR.items()
+}
+
+
+def licence_for(source: str, url: str, lang: str = "en") -> str | None:
+    """The licence text for a source name, falling back on a StatCan URL check.
+
+    `lang="fr"` gives the French text where SOURCE_LICENCES_FR has it, and
+    the English text otherwise.
+    """
+    french = normalize_lang(lang) == "fr"
+    if french and source in SOURCE_LICENCES_FR:
+        return SOURCE_LICENCES_FR[source]
     known = SOURCE_LICENCES.get(source)
     if known is not None:
         return known
     if source.startswith(_FAMILY_PREFIXES):
-        return PER_RECORD_LICENCE
-    if ":" in source and source.split(":", 1)[0] in SOURCE_LICENCES:
-        return SOURCE_LICENCES[source.split(":", 1)[0]]
+        return fr_typography(PER_RECORD_LICENCE_FR) if french else PER_RECORD_LICENCE
+    prefix = source.split(":", 1)[0] if ":" in source else ""
+    if prefix in SOURCE_LICENCES:
+        if french and prefix in SOURCE_LICENCES_FR:
+            return SOURCE_LICENCES_FR[prefix]
+        return SOURCE_LICENCES[prefix]
     if source.lower().startswith("statcan") or "statcan.gc.ca" in url.lower():
-        return STATCAN_LICENCE
+        return STATCAN_LICENCE_FR if french else STATCAN_LICENCE
     return None

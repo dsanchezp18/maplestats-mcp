@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import NoReturn
 
-from maplestats_mcp.shared.i18n import ERROR_KEYS, normalize_lang, t
+from maplestats_mcp.shared.i18n import ERROR_KEYS, fr_typography, normalize_lang, t
 from maplestats_mcp.shared.licences import licence_for
 from maplestats_mcp.shared.models import Provenance
 
@@ -35,7 +35,7 @@ def _licence_for(source: str, url: str, lang: str = "en") -> str | None:
     """StatCan's licence in the call's language; every other source from shared/licences."""
     if source.lower().startswith("statcan") or "statcan.gc.ca" in url.lower():
         return t("provenance.statcan_licence", lang)
-    return licence_for(source, url)
+    return licence_for(source, url, lang)
 
 
 def make_provenance(
@@ -54,8 +54,9 @@ def make_provenance(
     """Build the Provenance block every response model embeds.
 
     `lang="fr"` gives the shared phrases (the reproduce_code note and the
-    Statistics Canada licence) in French; the caller's own freshness,
-    coverage and limits text is used as given.
+    licence, where shared/licences has French text for the source) in
+    French; the caller's own freshness, coverage and limits text is used
+    as given (shared.i18n.pick writes it in the call's language).
     """
     lang = normalize_lang(lang)
     return Provenance(
@@ -101,3 +102,19 @@ def raise_typed(exc_cls: type[ValueError], detail: str, lang: str = "en") -> NoR
         None,
     )
     raise exc_cls(t(key, lang, detail=detail) if key else detail)
+
+
+def raise_localized(exc_cls: type[ValueError], en: str, fr: str, lang: str = "en") -> NoReturn:
+    """Raise `exc_cls` with `en` as written, or in French through its typed template.
+
+    English stays exactly the module's own message; with `lang="fr"` the
+    French detail goes through raise_typed's template ("Entrée invalide :
+    ...") with French typography.
+    """
+    if normalize_lang(lang) != "fr":
+        raise exc_cls(en)
+    key = next(
+        (ERROR_KEYS[cls.__name__] for cls in exc_cls.__mro__ if cls.__name__ in ERROR_KEYS),
+        None,
+    )
+    raise exc_cls(fr_typography(t(key, "fr", detail=fr) if key else fr))
