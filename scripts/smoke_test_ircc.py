@@ -36,11 +36,15 @@ async def main() -> int:
     if latest_en.round.draw_number != latest_fr.round.draw_number:
         print("FAIL: EN and FR feeds report different latest draw numbers")
         return 1
-    if not any(ord(ch) > 127 for ch in latest_fr.round.program):
-        print(
-            "WARN: latest FR program has no accented characters -- cp1252 decoding "
-            "not exercised by this round; not a hard failure."
-        )
+    # Mojibake also has characters above 127 ("MÃ©tiers"), so check for real
+    # accents and for the tell-tale "Ã" of UTF-8 bytes read as cp1252.
+    french_text = f"{latest_fr.round.draw_name} {latest_fr.round.program}"
+    if "Ã" in french_text or "â€" in french_text:
+        print(f"FAIL: French feed text is mis-decoded: {french_text!r}")
+        return 1
+    if not any(ch in french_text for ch in "éèàçÉ"):
+        print(f"FAIL: French feed text has no French accents: {french_text!r}")
+        return 1
 
     listed = await _check("list_express_entry_rounds(default)", client.list_express_entry_rounds())
     if not listed.rounds or listed.rounds[0].draw_number != latest_en.round.draw_number:

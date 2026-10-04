@@ -289,6 +289,20 @@ STEPS: list[Step] = [
         {"collection_id": "swob-realtime", "limit": 1000},
         lambda data: len(json.dumps(data)) < 1_500_000 and bool(data["items"]),
     ),
+    # IRCC Express Entry (the rest is in smoke_test_ircc.py): French text is
+    # decoded right, through the tool, and a non-numeric draw is refused.
+    Step(
+        "ircc",
+        "ircc_get_latest_express_entry_round",
+        {"lang": "fr"},
+        lambda data: (
+            "Ã" not in json.dumps(data, ensure_ascii=False)
+            and "é" in json.dumps(data["round"], ensure_ascii=False)
+        ),
+    ),
+    Step(
+        "ircc", "ircc_get_express_entry_round", {"draw_number": "abc"}, expect_error="draw_number"
+    ),
     # Earthquakes Canada
     Step("earthquakes", "earthquakes_search", {"min_magnitude": 2}, _non_empty("earthquakes")),
     Step(
