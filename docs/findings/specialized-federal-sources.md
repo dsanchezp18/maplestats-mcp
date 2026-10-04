@@ -2644,8 +2644,8 @@ machine-readable feed.
 ### Hydro-Québec (added 2026-09-29)
 
 Three `electricity_quebec_*` tools over Hydro-Québec's Opendatasoft open
-data (Explore API v2.1, no key). All datasets are CC BY-NC 4.0; the owner
-accepted the non-commercial terms, and each response repeats the notice.
+data (Explore API v2.1, no key). All datasets are CC BY-NC 4.0 (non-commercial use only), and each response
+repeats the notice.
 Timestamps are UTC instants. Recent demand is 192 fifteen-minute rows from
 local midnight of the previous day, with unreached slots as null rows;
 recent generation and trade are 48 hourly rows whose future hours are zero

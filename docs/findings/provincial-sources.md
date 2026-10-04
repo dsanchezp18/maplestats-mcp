@@ -562,8 +562,8 @@ by-elections since 2014 each have a CSV; they are not read. The results of the
   belong to saskatchewan.ca and are not stated on elections.sk.ca).
 
 Nothing prohibits automated access, but nothing licenses reuse either. The
-project owner accepted that risk; it is recorded in the module docstring, in the
-module notes and on every Saskatchewan response (`provenance.limits`).
+absence of a licence is recorded in the module docstring, in the module notes
+and on every Saskatchewan response (`provenance.limits`).
 
 **How the files read.** Header spellings differ by year (`Row Order` and `Row
 Ordering`, `Poll Name` and `PollName`, `Rejected` and `RejectedBallots`, `BPSK`
@@ -598,7 +598,7 @@ of these are read.
 page reads only "(c) 2026. All rights reserved."; the Website Information page covers
 accuracy (printed copies prevail over the website), external links, official languages,
 privacy and usability, and states no terms of use or licence for reuse. Nothing licenses
-reuse. The project owner accepted that risk, as for Saskatchewan; it is recorded in the
+reuse. As for Saskatchewan, the absence of a licence is recorded in the
 module docstring, in the module notes and on every Manitoba response (`provenance.limits`).
 
 **How the files read.** The summary of votes received has one row per candidate. The

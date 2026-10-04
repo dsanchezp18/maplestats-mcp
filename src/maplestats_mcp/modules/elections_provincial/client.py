@@ -66,8 +66,8 @@ _NOTES = {
         (
             "Saskatchewan, 2011 to 2024: every candidate, summed from Elections Saskatchewan's "
             "poll-by-poll files. The site publishes no terms of use or licence for them (only "
-            "'Copyright (c) 2025 Elections Saskatchewan' in the footer), so they are read at the "
-            "project owner's risk. Registered voters are not summed (split polls repeat them), "
+            "'Copyright (c) 2025 Elections Saskatchewan' in the footer), so no licence is "
+            "stated. Registered voters are not summed (split polls repeat them), "
             "so there is no turnout."
         ),
         (
@@ -75,7 +75,7 @@ _NOTES = {
             "votes received and of results (registered voters, rejected ballots, turnout), and "
             "votes by voting area (elections_provincial_get_voting_areas). The site publishes "
             "no terms of use or licence for them (only '(c) 2026. All rights reserved.' in the "
-            "footer), so they are read at the project owner's risk. 1870 to 1995 are PDF only "
+            "footer), so no licence is stated. 1870 to 1995 are PDF only "
             "and not read."
         ),
         (

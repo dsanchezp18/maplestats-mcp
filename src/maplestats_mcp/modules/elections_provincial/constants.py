@@ -26,8 +26,8 @@ site has no terms of use, copyright or licence page (the footer links
 are Accessibility, Privacy policy, Legislation and News releases; the privacy policy covers
 personal information only) and no licence line on the results page; the footer reads
 "Copyright (c) 2025 Elections Saskatchewan". Nothing found prohibits automated access or
-restricts use, and nothing grants an open licence either, so the files are read at the
-project owner's risk and every response says so. The Crown copyright of saskatchewan.ca that
+restricts use, and nothing grants an open licence either, so the files are read as
+published and every response says that no licence is stated. The Crown copyright of saskatchewan.ca that
 ruled out the Saskatchewan Bureau of Statistics is a different body's website and does not
 appear on elections.sk.ca. By-elections have their own files and are not read.
 
@@ -38,7 +38,7 @@ registered voters and rejected and declined ballots) and a zip of results by vot
 all under /downloads/. Checked 2026-10-03: the site publishes no terms of use or licence;
 the footer reads only "(c) 2026. All rights reserved." and the Website Information page
 says only that the printed copies prevail if they differ from the website. The files are
-read at the project owner's risk and every response says so. Results from 1870 to 1995 are
+read as published and every response says that no licence is stated. Results from 1870 to 1995 are
 PDF only and are not read; by-elections are not read.
 
 Ontario is deliberately absent: see BLOCKED.
@@ -98,7 +98,7 @@ SK_ATTRIBUTION = (
 )
 SK_TERMS_NOTICE = (
     "Elections Saskatchewan publishes no terms of use or licence for these files "
-    "(checked 2026-10-02); they are read at the project owner's risk. Registered "
+    "(checked 2026-10-02); no licence is stated. Registered "
     "voters are not summed (split polls repeat them), so there is no turnout."
 )
 SK_MAX_BYTES = 10 * 1024 * 1024
@@ -149,8 +149,7 @@ MB_ATTRIBUTION = (
 )
 MB_TERMS_NOTICE = (
     "Elections Manitoba publishes no terms of use or licence for these files (checked "
-    "2026-10-03; the footer reads only '(c) 2026. All rights reserved.'); they are read at the "
-    "project owner's risk."
+    "2026-10-03; the footer reads only '(c) 2026. All rights reserved.'); no licence is stated."
 )
 MB_MAX_BYTES = 10 * 1024 * 1024
 # Elections Manitoba states no request rate; one file a second keeps the reads light.
