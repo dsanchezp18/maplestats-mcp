@@ -47,9 +47,9 @@ async def cwfis_get_hotspots(
     Keywords: hotspots, active fires, satellite fire detection, VIIRS, MODIS,
     wildfire today, fire radiative power, FRP, CWFIS, NRCan, fire season.
     Mots-clés : points chauds, feux actifs, détection satellite, incendie de forêt,
-    feux de végétation, puissance radiative, SCIF, RNCan, saison des feux.
+    feux de végétation, puissance radiative du feu, feux en cours, SCIFV,
+    RNCan, saison des feux.
     """
-    del lang
     return await client.get_hotspots(
         agency=agency,
         bbox=bbox,
@@ -60,6 +60,7 @@ async def cwfis_get_hotspots(
         sort_by=sort_by,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -83,15 +84,15 @@ async def cwfis_get_fire_perimeters(
     Keywords: fire perimeter, wildfire polygon, current season, M3, active fire
     size, area burned this year, CWFIS, NRCan, fire map, GeoJSON.
     Mots-clés : périmètre d'incendie, polygone de feu, saison en cours, superficie
-    brûlée cette année, feux actifs, carte des feux, SCIF, RNCan, GeoJSON.
+    brûlée cette année, feux actifs, carte des feux, SCIFV, RNCan, GeoJSON.
     """
-    del lang
     return await client.get_perimeters(
         bbox=bbox,
         min_area_ha=min_area_ha,
         include_geometry=include_geometry,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -118,9 +119,8 @@ async def cwfis_get_weather_stations(
     ISI, fire weather station, fire danger, wildfire risk, CWFIS, NRCan.
     Mots-clés : Indice Forêt-Météo, IFM, indice de sécheresse, indice de
     propagation initiale, station météo incendie, danger d'incendie, risque de feu,
-    SCIF, RNCan.
+    SCIFV, RNCan.
     """
-    del lang
     return await client.get_stations(
         province=province,
         name=name,
@@ -128,6 +128,7 @@ async def cwfis_get_weather_stations(
         longitude=longitude,
         radius_km=radius_km,
         limit=limit,
+        lang=lang,
     )
 
 
@@ -146,10 +147,10 @@ async def cwfis_get_fire_weather_forecast(
     Keywords: FWI outlook, wildfire outlook, fire danger next days, SCRIBE,
     fire weather station, wildfire, CWFIS, NRCan.
     Mots-clés : prévision météo-incendie, prévision IFM, danger d'incendie prévu,
-    perspectives feux de forêt, prochains jours, feu de végétation, SCIF, RNCan.
+    perspectives feux de forêt, prochains jours, feu de végétation,
+    Indice Forêt-Météo, SCIFV, RNCan.
     """
-    del lang
-    return await client.get_forecast(station_name=station_name, limit=limit)
+    return await client.get_forecast(station_name=station_name, limit=limit, lang=lang)
 
 
 @tool
@@ -167,10 +168,9 @@ async def cwfis_get_fire_danger(
     Keywords: fire danger rating, wildfire risk today, danger class, extreme fire
     danger, fire danger map, point lookup, CWFIS, NRCan, forest fire risk.
     Mots-clés : cote de danger d'incendie, risque de feu aujourd'hui, classe de
-    danger, danger extrême, carte du danger, point, SCIF, RNCan, feu de forêt.
+    danger, danger extrême, carte du danger, point, SCIFV, RNCan, feu de forêt.
     """
-    del lang
-    return await client.get_fire_danger(latitude=latitude, longitude=longitude)
+    return await client.get_fire_danger(latitude=latitude, longitude=longitude, lang=lang)
 
 
 @tool
@@ -196,11 +196,10 @@ async def cwfis_search_large_fires(
     lightning versus human-caused fires, fire size and dates.
     Keywords: National Fire Database, NFDB, large fires, historical wildfires,
     fire size hectares, fire cause lightning human, biggest fire, CWFIS, NRCan.
-    Mots-clés : Base de données nationale sur les feux, BDNF, grands feux,
-    incendies historiques, superficie brûlée, cause foudre humaine, plus grand
-    feu, SCIF, RNCan.
+    Mots-clés : Base nationale de données sur les feux de forêt, BNDFF,
+    grands feux, incendies historiques, superficie brûlée, feu causé par la
+    foudre, feu d'origine humaine, plus grand feu de forêt, SCIFV, RNCan.
     """
-    del lang
     return await client.search_large_fires(
         year_from=year_from,
         year_to=year_to,
@@ -211,6 +210,7 @@ async def cwfis_search_large_fires(
         sort_by=sort_by,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -236,15 +236,15 @@ async def cwfis_list_situation_reports(
     10-year average, season summary, CIFFC, wildfire statistics Canada, CWFIS.
     Mots-clés : rapport de situation national, superficie brûlée à ce jour,
     nombre de feux, moyenne sur 10 ans, bilan de saison, statistiques feux de
-    forêt Canada, SCIF, RNCan.
+    forêt Canada, SCIFV, RNCan.
     """
-    del lang
     return await client.list_situation_reports(
         report_type=report_type,
         start_date=start_date,
         end_date=end_date,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -265,7 +265,8 @@ async def cwfis_get_situation_report(
     Keywords: national wildfire situation, preparedness level, season summary,
     priority fires, fire season review, CIFFC, wildfire report Canada, CWFIS.
     Mots-clés : situation nationale des feux, niveau de préparation, bilan de la
-    saison, feux prioritaires, rapport sur les feux de forêt au Canada, préparation nationale, SCIF, RNCan.
+    saison, feux prioritaires, rapport sur les feux de forêt au Canada,
+    préparation nationale, SCIFV, RNCan.
     """
     return await client.get_situation_report(
         report_type=report_type, date_on_or_before=date_on_or_before, lang=lang

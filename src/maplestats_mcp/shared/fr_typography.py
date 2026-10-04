@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 
 from maplestats_mcp.shared.i18n import ERROR_KEYS, t
+from maplestats_mcp.shared.limits import Order, truncation_note
 
 NBSP, NNBSP = "\u00a0", "\u202f"
 
@@ -49,3 +50,37 @@ def lang_error[E: Exception](exc_cls: type[E], lang: str, english: str, french: 
         return exc_cls(english)
     key = next((ERROR_KEYS[c.__name__] for c in exc_cls.__mro__ if c.__name__ in ERROR_KEYS), None)
     return exc_cls(french_spacing(t(key, "fr", detail=french) if key else french))
+
+
+# Noun phrases, so the wording agrees with any unit ("lignes", "points").
+_ORDER_FR = {
+    "first": "en début de liste",
+    "latest": "période la plus récente",
+    "top": "en tête du classement",
+}
+
+
+def truncation_note_lang(
+    lang: str,
+    *,
+    returned: int,
+    total: int | None,
+    unit: str = "rows",
+    unit_fr: str = "lignes",
+    order: Order = "first",
+    how_to_get_more: str | None = None,
+    how_to_get_more_fr: str | None = None,
+) -> str | None:
+    """shared/limits.truncation_note, in French for lang="fr" (English unchanged)."""
+    if not lang.lower().startswith("fr"):
+        return truncation_note(
+            returned=returned, total=total, unit=unit, order=order, how_to_get_more=how_to_get_more
+        )
+    if total is not None and returned >= total:
+        return None
+    count = f"{total:,}".replace(",", NNBSP) if total is not None else "davantage"
+    shown = f"{returned:,}".replace(",", NNBSP)
+    note = f"Résultat limité à {shown} {unit_fr} sur {count} ({_ORDER_FR[order]})"
+    how = how_to_get_more_fr or ""
+    note += "." if not how else f" ; {how.rstrip('.')}."
+    return french_spacing(note)

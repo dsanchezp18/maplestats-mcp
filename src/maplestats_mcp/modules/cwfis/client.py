@@ -51,7 +51,9 @@ from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.wfs import WfsConfig, get_features
@@ -72,29 +74,68 @@ def _quote(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def _check_page(limit: int, offset: int, maximum: int = c.ROWS_LIMIT_MAX) -> None:
+def _check_page(limit: int, offset: int, maximum: int = c.ROWS_LIMIT_MAX, lang: str = "en") -> None:
     if limit < 1 or limit > maximum:
-        raise InvalidInput(f"limit must be between 1 and {maximum}, got {limit}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {maximum}, got {limit}.",
+            f"limit doit être compris entre 1 et {maximum} ; reçu {limit}.",
+        )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être positif ou nul ; reçu {offset}.",
+        )
 
 
-def _bbox_cql(field: str, bbox: list[float]) -> str:
+def _check_range(start: Any, end: Any, start_name: str, end_name: str, lang: str) -> None:
+    """shared/arg_checks.check_range, with its message in French for lang="fr"."""
+    if lang != "fr":
+        check_range(start, end, start_name, end_name)
+    elif start is not None and end is not None and start > end:
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "",
+            f"{start_name} ({start}) est postérieur à {end_name} ({end}) ; inversez-les ou "
+            "élargissez la plage.",
+        )
+
+
+def _bbox_cql(field: str, bbox: list[float], lang: str = "en") -> str:
     if len(bbox) != 4:
-        raise InvalidInput("bbox must be [min_lon, min_lat, max_lon, max_lat].")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "bbox must be [min_lon, min_lat, max_lon, max_lat].",
+            "bbox doit être [min_lon, min_lat, max_lon, max_lat].",
+        )
     min_lon, min_lat, max_lon, max_lat = bbox
     if not (-180 <= min_lon < max_lon <= 180 and -90 <= min_lat < max_lat <= 90):
-        raise InvalidInput(f"bbox is not a valid lon/lat box: {bbox}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"bbox is not a valid lon/lat box: {bbox}.",
+            f"bbox n'est pas un rectangle longitude/latitude valide : {bbox}.",
+        )
     return f"BBOX({field},{min_lon},{min_lat},{max_lon},{max_lat},'{SRS}')"
 
 
-def _parse_day(value: str | None, name: str) -> date | None:
+def _parse_day(value: str | None, name: str, lang: str = "en") -> date | None:
     if value is None:
         return None
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
-        raise InvalidInput(f"{name} must be YYYY-MM-DD, got {value!r}.") from exc
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be YYYY-MM-DD, got {value!r}.",
+            f"{name} doit être au format AAAA-MM-JJ ; reçu {value!r}.",
+        ) from exc
 
 
 def _dt(value: object) -> datetime | None:
@@ -154,15 +195,19 @@ def _prov(
     coverage: str | None = None,
     limits: str | None = None,
     freshness: str | None = None,
+    lang: str = "en",
 ) -> Provenance:
+    url = f"{c.WFS_URL}?typeName={layer}"
     return make_provenance(
         source=c.RATE_LIMIT_SOURCE,
-        url=f"{c.WFS_URL}?typeName={layer}",
+        url=url,
         cached=cached,
         schema_name=f"cwfis.{schema}",
         coverage=coverage,
         limits=limits,
         freshness=freshness,
+        licence=licence_for_lang(c.RATE_LIMIT_SOURCE, url, lang),
+        lang=lang,
     )
 
 
@@ -191,31 +236,48 @@ async def get_hotspots(
     sort_by: str = "latest",
     limit: int = c.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: str = "en",
 ) -> HotspotResult:
     """Satellite hotspots: last 24 hours, or the archive when dates are given."""
-    _check_page(limit, offset)
+    _check_page(limit, offset, lang=lang)
     if sort_by not in ("latest", "frp"):
-        raise InvalidInput("sort_by must be 'latest' or 'frp'.")
-    start, end = _parse_day(start_date, "start_date"), _parse_day(end_date, "end_date")
-    check_range(start, end, "start_date", "end_date")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "sort_by must be 'latest' or 'frp'.",
+            "sort_by doit être « latest » ou « frp ».",
+        )
+    start = _parse_day(start_date, "start_date", lang)
+    end = _parse_day(end_date, "end_date", lang)
+    _check_range(start, end, "start_date", "end_date", lang)
     archive = start is not None or end is not None
     if archive and not (start and end):
         # One open-ended side would scan up to 18.5M rows.
-        raise InvalidInput("Archive queries need both start_date and end_date (YYYY-MM-DD).")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "Archive queries need both start_date and end_date (YYYY-MM-DD).",
+            "une requête dans les archives exige start_date et end_date (AAAA-MM-JJ).",
+        )
     layer = c.HOTSPOTS_ARCHIVE if archive else c.HOTSPOTS_CURRENT
     clauses: list[str] = []
     if agency:
         code = agency.strip().upper()
         if code not in (*c.CANADIAN_AGENCIES, *c.OTHER_HOTSPOT_AGENCIES):
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"agency must be a province or territory code ({', '.join(c.CANADIAN_AGENCIES)}) "
-                f"or a US state code or MX, got {agency!r}."
+                f"or a US state code or MX, got {agency!r}.",
+                f"agency doit être un code de province ou de territoire "
+                f"({', '.join(c.CANADIAN_AGENCIES)}), un code d'État américain ou MX ; reçu "
+                f"{agency!r}.",
             )
         clauses.append(f"agency = {_quote(code)}")
     elif canada_only:
         clauses.append("agency IN (" + ",".join(_quote(a) for a in c.CANADIAN_AGENCIES) + ")")
     if bbox:
-        clauses.append(_bbox_cql("geometry", bbox))
+        clauses.append(_bbox_cql("geometry", bbox, lang))
     if min_frp is not None:
         clauses.append(f"frp >= {float(min_frp)}")
     if start and end:
@@ -292,9 +354,23 @@ async def get_hotspots(
             "HotspotResult",
             layer,
             cached,
-            coverage=f"{len(rows)} of {total} matching detections returned",
-            limits="current layer covers the last 24 hours; archive needs a date range",
-            freshness="updated several times a day from NASA and EUMETSAT feeds",
+            coverage=fr_or_en(
+                lang,
+                f"{len(rows)} of {total} matching detections returned",
+                f"{len(rows)} détections renvoyées sur {total} correspondantes",
+            ),
+            limits=fr_or_en(
+                lang,
+                "current layer covers the last 24 hours; archive needs a date range",
+                "la couche courante couvre les 24 dernières heures ; les archives exigent une "
+                "plage de dates",
+            ),
+            freshness=fr_or_en(
+                lang,
+                "updated several times a day from NASA and EUMETSAT feeds",
+                "mise à jour plusieurs fois par jour à partir des flux de la NASA et d'EUMETSAT",
+            ),
+            lang=lang,
         ),
     )
 
@@ -309,12 +385,13 @@ async def get_perimeters(
     include_geometry: bool = False,
     limit: int = c.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: str = "en",
 ) -> PerimeterResult:
     """Current-season estimated fire perimeters, largest first."""
-    _check_page(limit, offset)
+    _check_page(limit, offset, lang=lang)
     clauses: list[str] = []
     if bbox:
-        clauses.append(_bbox_cql("geometry", bbox))
+        clauses.append(_bbox_cql("geometry", bbox, lang))
     if min_area_ha is not None:
         clauses.append(f"area >= {float(min_area_ha)}")
     body, cached = await _wfs(
@@ -348,10 +425,15 @@ async def get_perimeters(
     total = _total(body, len(rows))
     note = None
     if len(rows) < len(features):
-        note = (
+        note = fr_or_en(
+            lang,
             f"Stopped at {len(rows)} perimeters: their polygons reach the "
             f"{c.GEOMETRY_BYTES_MAX // 1000} KB geometry budget. Continue with "
-            f"offset={offset + len(rows)}, or leave include_geometry off for attributes only."
+            f"offset={offset + len(rows)}, or leave include_geometry off for attributes only.",
+            f"Arrêt à {len(rows)} périmètres : leurs polygones atteignent le plafond de "
+            f"{c.GEOMETRY_BYTES_MAX // 1000} Ko de géométrie. Continuez avec "
+            f"offset={offset + len(rows)}, ou laissez include_geometry désactivé pour les "
+            "attributs seulement.",
         )
     return PerimeterResult(
         perimeters=rows,
@@ -363,8 +445,18 @@ async def get_perimeters(
             "PerimeterResult",
             c.PERIMETERS,
             cached,
-            coverage=f"{len(rows)} of {total} matching perimeters returned",
-            limits="model estimates from hotspot clusters, not agency-mapped perimeters",
+            coverage=fr_or_en(
+                lang,
+                f"{len(rows)} of {total} matching perimeters returned",
+                f"{len(rows)} périmètres renvoyés sur {total} correspondants",
+            ),
+            limits=fr_or_en(
+                lang,
+                "model estimates from hotspot clusters, not agency-mapped perimeters",
+                "estimations modélisées à partir des grappes de points chauds, et non "
+                "périmètres cartographiés par les organismes",
+            ),
+            lang=lang,
         ),
     )
 
@@ -414,11 +506,17 @@ async def get_stations(
     longitude: float | None = None,
     radius_km: float = 50.0,
     limit: int = c.ROWS_LIMIT_DEFAULT,
+    lang: str = "en",
 ) -> StationResult:
     """Fire-weather stations with latest FWI values, by province, name or point."""
-    _check_page(limit, 0)
+    _check_page(limit, 0, lang=lang)
     if (latitude is None) != (longitude is None):
-        raise InvalidInput("Give both latitude and longitude, or neither.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "Give both latitude and longitude, or neither.",
+            "donnez latitude et longitude ensemble, ou ni l'une ni l'autre.",
+        )
     clauses: list[str] = []
     if province:
         code = province.upper()
@@ -427,9 +525,19 @@ async def get_stations(
         clauses.append(f"strToUpperCase(name) LIKE {_quote('%' + name.upper() + '%')}")
     if latitude is not None and longitude is not None:
         if not 0 < radius_km <= c.MAX_RADIUS_KM:
-            raise InvalidInput(f"radius_km must be in (0, {c.MAX_RADIUS_KM:g}], got {radius_km}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"radius_km must be in (0, {c.MAX_RADIUS_KM:g}], got {radius_km}.",
+                f"radius_km doit être dans ]0, {c.MAX_RADIUS_KM:g}] ; reçu {radius_km}.",
+            )
         if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-            raise InvalidInput("latitude/longitude out of range.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                "latitude/longitude out of range.",
+                "latitude ou longitude hors limites.",
+            )
         dlat = radius_km / 111.32
         dlon = radius_km / (111.32 * max(math.cos(math.radians(latitude)), 0.05))
         box = [
@@ -438,9 +546,14 @@ async def get_stations(
             min(longitude + dlon, 180),
             min(latitude + dlat, 90),
         ]
-        clauses.append(_bbox_cql("the_geom", box))
+        clauses.append(_bbox_cql("the_geom", box, lang))
     if not clauses:
-        raise InvalidInput("Give at least one of province, name, or latitude+longitude.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "Give at least one of province, name, or latitude+longitude.",
+            "donnez au moins province, name, ou latitude et longitude.",
+        )
     by_point = latitude is not None
     body, cached = await _wfs(
         c.STATIONS,
@@ -485,10 +598,14 @@ async def get_stations(
                 if (code := (p.get("prov") or "").strip())
             }
         )
-        note = (
+        held_in = f" ({', '.join(provinces)})" if provinces else ""
+        note = fr_or_en(
+            lang,
             f"No station matched. The layer currently holds {len(held)} stations"
-            + (f" ({', '.join(provinces)})" if provinces else "")
-            + "; stations report during the fire season only."
+            + held_in
+            + "; stations report during the fire season only.",
+            f"Aucune station ne correspond. La couche compte actuellement {len(held)} "
+            f"stations{held_in} ; les stations ne transmettent que pendant la saison des feux.",
         )
     return StationResult(
         stations=stations,
@@ -499,9 +616,23 @@ async def get_stations(
             "StationResult",
             c.STATIONS,
             cached,
-            coverage=f"{len(stations)} of {total} matching stations returned",
-            limits="includes US stations; FWI components are null where inputs are missing",
-            freshness="one noon (UTC) observation per station per day",
+            coverage=fr_or_en(
+                lang,
+                f"{len(stations)} of {total} matching stations returned",
+                f"{len(stations)} stations renvoyées sur {total} correspondantes",
+            ),
+            limits=fr_or_en(
+                lang,
+                "includes US stations; FWI components are null where inputs are missing",
+                "comprend des stations américaines ; les composantes de l'IFM sont nulles "
+                "lorsque des données d'entrée manquent",
+            ),
+            freshness=fr_or_en(
+                lang,
+                "one noon (UTC) observation per station per day",
+                "une observation à midi (UTC) par station et par jour",
+            ),
+            lang=lang,
         ),
     )
 
@@ -511,11 +642,16 @@ async def get_stations(
 _FORECAST_FIELDS = "wmo,name,rep_date,elevation,temp,rh,ws,wdir,precip,ffmc,dmc,dc,isi,bui,fwi,dsr"
 
 
-async def get_forecast(*, station_name: str, limit: int = 100) -> ForecastResult:
+async def get_forecast(*, station_name: str, limit: int = 100, lang: str = "en") -> ForecastResult:
     """Daily forecast fire weather (SCRIBE) for stations whose name contains the text."""
-    _check_page(limit, 0)
+    _check_page(limit, 0, lang=lang)
     if not station_name.strip():
-        raise InvalidInput("station_name must not be empty.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "station_name must not be empty.",
+            "station_name ne doit pas être vide.",
+        )
     cql = f"strToUpperCase(name) LIKE {_quote('%' + station_name.strip().upper() + '%')}"
     body, cached = await _wfs(
         c.FORECAST,
@@ -548,7 +684,12 @@ async def get_forecast(*, station_name: str, limit: int = 100) -> ForecastResult
         for p in _props(body)
     ]
     if not rows:
-        raise NotFound(f"No forecast station name contains {station_name!r}.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"No forecast station name contains {station_name!r}.",
+            f"aucun nom de station de prévision ne contient {station_name!r}.",
+        )
     total = _total(body, len(rows))
     return ForecastResult(
         forecasts=rows,
@@ -558,8 +699,15 @@ async def get_forecast(*, station_name: str, limit: int = 100) -> ForecastResult
             "ForecastResult",
             c.FORECAST,
             cached,
-            coverage=f"{len(rows)} of {total} station-days returned",
-            freshness="model forecast refreshed daily",
+            coverage=fr_or_en(
+                lang,
+                f"{len(rows)} of {total} station-days returned",
+                f"{len(rows)} jours-stations renvoyés sur {total}",
+            ),
+            freshness=fr_or_en(
+                lang, "model forecast refreshed daily", "prévision modélisée actualisée chaque jour"
+            ),
+            lang=lang,
         ),
     )
 
@@ -567,10 +715,15 @@ async def get_forecast(*, station_name: str, limit: int = 100) -> ForecastResult
 # ----------------------------------------------------------------- danger
 
 
-async def get_fire_danger(*, latitude: float, longitude: float) -> FireDanger:
+async def get_fire_danger(*, latitude: float, longitude: float, lang: str = "en") -> FireDanger:
     """Fire danger class of the current national fire danger polygon at a point."""
     if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-        raise InvalidInput("latitude/longitude out of range.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "latitude/longitude out of range.",
+            "latitude ou longitude hors limites.",
+        )
     cql = f"INTERSECTS(the_geom, SRID=4326;POINT({longitude} {latitude}))"
     body, cached = await _wfs(
         c.DANGER,
@@ -583,9 +736,13 @@ async def get_fire_danger(*, latitude: float, longitude: float) -> FireDanger:
     )
     props = _props(body)
     if not props:
-        raise NotFound(
+        raise lang_error(
+            NotFound,
+            lang,
             f"No fire danger polygon covers ({latitude}, {longitude}); "
-            "the grid only covers land in and near Canada."
+            "the grid only covers land in and near Canada.",
+            f"aucun polygone de danger d'incendie ne couvre ({latitude}, {longitude}) ; la "
+            "grille ne couvre que les terres du Canada et des environs.",
         )
     # A polygon with a null or missing GRIDCODE has no class to report; say so
     # rather than fail on int(None).
@@ -595,7 +752,13 @@ async def get_fire_danger(*, latitude: float, longitude: float) -> FireDanger:
     except (TypeError, ValueError):
         code = None
     if code is None:
-        label = "Unknown (no danger class recorded for this polygon)"
+        label = fr_or_en(
+            lang,
+            "Unknown (no danger class recorded for this polygon)",
+            "Inconnu (aucune classe de danger enregistrée pour ce polygone)",
+        )
+    elif lang == "fr":
+        label = c.DANGER_CLASSES_FR.get(code, f"Inconnu ({code})")
     else:
         label = c.DANGER_CLASSES.get(code, f"Unknown ({code})")
     return FireDanger(
@@ -607,8 +770,17 @@ async def get_fire_danger(*, latitude: float, longitude: float) -> FireDanger:
             "FireDanger",
             c.DANGER,
             cached,
-            freshness="current-day fire danger rating grid",
-            limits="class 4 (Extreme) is inferred from the five-class CWFIS scale",
+            freshness=fr_or_en(
+                lang,
+                "current-day fire danger rating grid",
+                "grille de l'indice de danger d'incendie du jour",
+            ),
+            limits=fr_or_en(
+                lang,
+                "class 4 (Extreme) is inferred from the five-class CWFIS scale",
+                "la classe 4 (Extrême) est déduite de l'échelle à cinq classes du SCIFV",
+            ),
+            lang=lang,
         ),
     )
 
@@ -632,12 +804,18 @@ async def search_large_fires(
     sort_by: str = "size",
     limit: int = c.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: str = "en",
 ) -> LargeFireResult:
     """Query the National Fire Database point layer (fires of 200 ha or more)."""
-    _check_page(limit, offset)
+    _check_page(limit, offset, lang=lang)
     if sort_by not in ("size", "date"):
-        raise InvalidInput("sort_by must be 'size' or 'date'.")
-    check_range(year_from, year_to, "year_from", "year_to")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "sort_by must be 'size' or 'date'.",
+            "sort_by doit être « size » ou « date ».",
+        )
+    _check_range(year_from, year_to, "year_from", "year_to", lang)
     clauses: list[str] = []
     if year_from is not None:
         clauses.append(f"YEAR >= {int(year_from)}")
@@ -646,15 +824,24 @@ async def search_large_fires(
     if agency:
         code = agency.strip().upper()
         if code not in c.LARGE_FIRE_AGENCIES:
-            raise InvalidInput(
-                f"agency must be one of {', '.join(c.LARGE_FIRE_AGENCIES)}, got {agency!r}."
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"agency must be one of {', '.join(c.LARGE_FIRE_AGENCIES)}, got {agency!r}.",
+                f"agency doit être l'une des valeurs {', '.join(c.LARGE_FIRE_AGENCIES)} ; reçu "
+                f"{agency!r}.",
             )
         clauses.append(f"SRC_AGENCY = {_quote(code)}")
     if min_size_ha is not None:
         clauses.append(f"SIZE_HA >= {float(min_size_ha)}")
     if cause:
         if cause.upper() not in c.NFDB_CAUSES:
-            raise InvalidInput(f"cause must be one of {sorted(c.NFDB_CAUSES)}, got {cause!r}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"cause must be one of {sorted(c.NFDB_CAUSES)}, got {cause!r}.",
+                f"cause doit être l'une des valeurs {sorted(c.NFDB_CAUSES)} ; reçu {cause!r}.",
+            )
         clauses.append(f"CAUSE = {_quote(cause.upper())}")
     if name:
         clauses.append(f"strToUpperCase(FIRENAME) LIKE {_quote('%' + name.upper() + '%')}")
@@ -680,7 +867,7 @@ async def search_large_fires(
             out_date=_day(p.get("OUT_DATE")),
             size_ha=p.get("SIZE_HA"),
             cause_code=p.get("CAUSE") or None,
-            cause=c.NFDB_CAUSES.get(p.get("CAUSE") or ""),
+            cause=(c.NFDB_CAUSES_FR if lang == "fr" else c.NFDB_CAUSES).get(p.get("CAUSE") or ""),
             fire_type=p.get("FIRE_TYPE") or None,
             response=p.get("RESPONSE") or None,
             national_park=p.get("NAT_PARK") or None,
@@ -698,12 +885,23 @@ async def search_large_fires(
             "LargeFireResult",
             c.NFDB,
             cached,
-            coverage=f"{len(fires)} of {total} matching fires returned",
-            limits=(
-                "fires of 200 ha or more only; the layer's latest year is 2023 "
-                "although its title says 1970-2024"
+            coverage=fr_or_en(
+                lang,
+                f"{len(fires)} of {total} matching fires returned",
+                f"{len(fires)} feux renvoyés sur {total} correspondants",
             ),
-            freshness="annual compilation, not real time",
+            limits=fr_or_en(
+                lang,
+                "fires of 200 ha or more only; the layer's latest year is 2023 "
+                "although its title says 1970-2024",
+                "feux de 200 ha ou plus seulement ; la dernière année de la couche est 2023, "
+                "même si son titre indique 1970-2024. Les noms de feux et les codes "
+                "d'organisme sont ceux de la source.",
+            ),
+            freshness=fr_or_en(
+                lang, "annual compilation, not real time", "compilation annuelle, pas en temps réel"
+            ),
+            lang=lang,
         ),
     )
 
@@ -729,7 +927,7 @@ def _stats(item: dict[str, Any]) -> SituationStats:
     )
 
 
-async def _sitrep_get(path: str, params: dict[str, Any]) -> tuple[Any, bool]:
+async def _sitrep_get(path: str, params: dict[str, Any], lang: str = "en") -> tuple[Any, bool]:
     url = c.SITREP_URL + path
 
     async def fetch() -> Any:
@@ -741,28 +939,48 @@ async def _sitrep_get(path: str, params: dict[str, Any]) -> tuple[Any, bool]:
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 404:
-                raise NotFound(
-                    "No situation report on or before that date (reports start in 1998)."
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    "No situation report on or before that date (reports start in 1998).",
+                    "aucun rapport de situation à cette date ou avant (les rapports commencent "
+                    "en 1998).",
                 ) from exc
             if status == 422:
-                raise InvalidInput(
-                    f"Situation report API rejected the request: {exc.response.text[:200]}"
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    f"Situation report API rejected the request: {exc.response.text[:200]}",
+                    "l'API des rapports de situation a refusé la requête (message de l'API, en "
+                    f"anglais) : {exc.response.text[:200]}",
                 ) from exc
-            raise UpstreamError(f"CWFIS situation reports returned HTTP {status}.") from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"CWFIS situation reports returned HTTP {status}.",
+                f"les rapports de situation du SCIFV ont répondu HTTP {status}.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable("CWFIS situation report API did not respond.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                "CWFIS situation report API did not respond.",
+                "l'API des rapports de situation du SCIFV n'a pas répondu.",
+            ) from exc
 
     key = f"cwfis-sitrep:{path}:{sorted(params.items())}"
     return await cached_fetch(key, c.CACHE_TTL_SITREP, fetch)
 
 
-def _sitrep_prov(schema: str, cached: bool, limits: str) -> Provenance:
+def _sitrep_prov(schema: str, cached: bool, limits: str, lang: str = "en") -> Provenance:
     return make_provenance(
         source=c.SITREP_RATE_SOURCE,
         url=c.SITREP_URL,
         cached=cached,
         schema_name=f"cwfis.{schema}",
         limits=limits,
+        licence=licence_for_lang(c.SITREP_RATE_SOURCE, c.SITREP_URL, lang),
+        lang=lang,
     )
 
 
@@ -773,24 +991,31 @@ async def list_situation_reports(
     end_date: str | None = None,
     limit: int = 20,
     offset: int = 0,
+    lang: str = "en",
 ) -> SituationReportList:
     """List national situation reports (newest first) with their numeric totals."""
-    _check_page(limit, offset, c.SITREP_LIMIT_MAX)
+    _check_page(limit, offset, c.SITREP_LIMIT_MAX, lang)
     if report_type not in ("all", "end_of_season"):
-        raise InvalidInput("report_type must be 'all' or 'end_of_season'.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "report_type must be 'all' or 'end_of_season'.",
+            "report_type doit être « all » ou « end_of_season ».",
+        )
     params: dict[str, Any] = {"limit": limit, "offset": offset}
-    check_range(
-        _parse_day(start_date, "start_date"),
-        _parse_day(end_date, "end_date"),
+    _check_range(
+        _parse_day(start_date, "start_date", lang),
+        _parse_day(end_date, "end_date", lang),
         "start_date",
         "end_date",
+        lang,
     )
     for key, value in (("start_date", start_date), ("end_date", end_date)):
-        parsed = _parse_day(value, key)
+        parsed = _parse_day(value, key, lang)
         if parsed:
             params[key] = parsed.isoformat()
     path = "/end-of-season" if report_type == "end_of_season" else ""
-    body, cached = await _sitrep_get(path, params)
+    body, cached = await _sitrep_get(path, params, lang)
     reports = [
         SituationReportSummary(
             report_date=date.fromisoformat(i["date"]),
@@ -807,8 +1032,15 @@ async def list_situation_reports(
         provenance=_sitrep_prov(
             "SituationReportList",
             cached,
-            "numeric totals are published for 1998-2023 reports only; "
-            "later reports carry them in the narrative text",
+            fr_or_en(
+                lang,
+                "numeric totals are published for 1998-2023 reports only; "
+                "later reports carry them in the narrative text",
+                "les totaux numériques ne sont publiés que pour les rapports de 1998 à 2023 ; "
+                "les rapports suivants les donnent dans le texte. Utilisez "
+                'cwfis_get_situation_report avec lang="fr" pour le texte en français',
+            ),
+            lang,
         ),
     )
 
@@ -833,23 +1065,38 @@ async def get_situation_report(
 ) -> SituationReport:
     """One situation report with narrative: latest, or the one on/before a date."""
     if report_type not in ("in_season", "end_of_season"):
-        raise InvalidInput("report_type must be 'in_season' or 'end_of_season'.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "report_type must be 'in_season' or 'end_of_season'.",
+            "report_type doit être « in_season » ou « end_of_season ».",
+        )
     french = lang == "fr"
-    when = _parse_day(date_on_or_before, "date_on_or_before")
+    when = _parse_day(date_on_or_before, "date_on_or_before", lang)
     params: dict[str, Any] = {"limit": 1, "offset": 0}
     if report_type == "in_season":
         if when:
             params["date"] = when.isoformat()
-        item, cached = await _sitrep_get("/by-date", params)
+        item, cached = await _sitrep_get("/by-date", params, lang)
         if not item or "date" not in item:
-            raise NotFound("No in-season situation report found.")
+            raise lang_error(
+                NotFound,
+                lang,
+                "No in-season situation report found.",
+                "aucun rapport de situation en saison trouvé.",
+            )
     else:
         if when:
             params["end_date"] = when.isoformat()
-        body, cached = await _sitrep_get("/end-of-season", params)
+        body, cached = await _sitrep_get("/end-of-season", params, lang)
         items = body.get("items") or []
         if not items:
-            raise NotFound("No end-of-season report on or before that date.")
+            raise lang_error(
+                NotFound,
+                lang,
+                "No end-of-season report on or before that date.",
+                "aucun rapport de fin de saison à cette date ou avant.",
+            )
         item = items[0]
     layout = _IN_SEASON if item.get("type", report_type) == "in_season" else _END_OF_SEASON
     suffix = "_f" if french else "_e"
@@ -867,6 +1114,12 @@ async def get_situation_report(
         provenance=_sitrep_prov(
             "SituationReport",
             cached,
-            "narrative is in the requested language; numeric totals are null from 2024",
+            fr_or_en(
+                lang,
+                "narrative is in the requested language; numeric totals are null from 2024",
+                "le texte est dans la langue demandée ; les totaux numériques sont nuls à "
+                "partir de 2024",
+            ),
+            lang,
         ),
     )

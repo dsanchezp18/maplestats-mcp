@@ -66,8 +66,10 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.licences import OGL_CANADA
+from maplestats_mcp.shared.licences_fr import to_french
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -182,19 +184,26 @@ def label_key(text: str) -> str:
     return re.sub(r"[\s-]+", "", fold(text.replace("\u2019", "'").replace("\u2018", "'")))
 
 
-def _suggest(value: str, labels: Iterable[str]) -> str:
+def _suggest(value: str, labels: Iterable[str], lang: str = "en") -> str:
     """'Did you mean' text for labels containing the requested one, e.g. 'Chine'."""
     wanted = label_key(value)
     close = sorted({label for label in labels if label and wanted and wanted in label_key(label)})
     if not close:
         return ""
-    return "; did you mean " + ", ".join(repr(v) for v in close[:10]) + "?"
+    names = ", ".join(repr(v) for v in close[:10])
+    return fr_or_en(lang, f"; did you mean {names}?", f" ; vouliez-vous dire {names} ?")
 
 
 # Common names for destinations the exports file spells otherwise.
 DESTINATION_ALIASES = {
     "china": "China P.R.",
     "chine": "R.P. de Chine",
+}
+
+# The file a download error names, in French.
+_CONTEXT_FR = {
+    "cgc weekly": "cgc, statistiques hebdomadaires",
+    "cgc exports": "cgc, exportations",
 }
 
 
@@ -244,26 +253,76 @@ def available_crop_years() -> list[str]:
     return [crop_year_label(y) for y in range(constants.FIRST_CROP_YEAR, current_crop_year() + 1)]
 
 
-def parse_crop_year(value: str | int | None) -> int | None:
+def parse_crop_year(value: str | int | None, lang: str = "en") -> int | None:
     """Start year from '2026-27', '2026-2027', '26-27', '2026' or 2026."""
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
     match = _CROP_YEAR.match(str(value))
     if match is None:
-        raise InvalidInput(f"cgc: crop_year {value!r} should look like '2025-26'.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cgc: crop_year {value!r} should look like '2025-26'.",
+            f"cgc : crop_year {value!r} doit avoir la forme '2025-26'.",
+        )
     first = int(match.group(1))
     start = first + 2000 if first < 100 else first
     if match.group(2):
         second = int(match.group(2))
         if second % 100 != (start + 1) % 100:
-            raise InvalidInput(f"cgc: {value!r} is not a crop year (e.g. '2025-26').")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"cgc: {value!r} is not a crop year (e.g. '2025-26').",
+                f"cgc : {value!r} n'est pas une campagne agricole (p. ex. '2025-26').",
+            )
     latest = current_crop_year()
     if not constants.FIRST_CROP_YEAR <= start <= latest:
-        raise InvalidInput(
+        first_label, latest_label = (
+            crop_year_label(constants.FIRST_CROP_YEAR),
+            crop_year_label(latest),
+        )
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"cgc: crop year {crop_year_label(start)} is outside the CSV series "
-            f"({crop_year_label(constants.FIRST_CROP_YEAR)} to {crop_year_label(latest)})."
+            f"({first_label} to {latest_label}).",
+            f"cgc : la campagne agricole {crop_year_label(start)} est hors de la série CSV "
+            f"({first_label} à {latest_label}).",
         )
     return start
+
+
+def _check_range(start: Any, end: Any, start_name: str, end_name: str, lang: str) -> None:
+    """shared.arg_checks.check_range, with the message in French for lang="fr"."""
+    if start is not None and end is not None and start > end and lang == "fr":
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "",
+            f"{start_name} ({start}) est postérieur à {end_name} ({end}) ; inversez-les ou "
+            "élargissez l'intervalle.",
+        )
+    check_range(start, end, start_name, end_name)
+
+
+def _check_limit(limit: int, lang: str) -> None:
+    if not 1 <= limit <= constants.ROWS_MAX:
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cgc: limit must be between 1 and {constants.ROWS_MAX}.",
+            f"cgc : limit doit être compris entre 1 et {constants.ROWS_MAX}.",
+        )
+
+
+def _bad_group_by(allowed: Sequence[str], unknown: list[str], lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        f"cgc: group_by accepts {list(allowed)}; got {unknown}.",
+        f"cgc : group_by accepte {list(allowed)} ; reçu {unknown}.",
+    )
 
 
 def weekly_url(start: int, lang: Lang) -> str:
@@ -280,10 +339,11 @@ def _as_list(value: Filter) -> list[str]:
     return [str(v).strip() for v in items if str(v).strip()]
 
 
-def _values_hint(values: Iterable[str]) -> str:
+def _values_hint(values: Iterable[str], lang: str = "en") -> str:
     shown = sorted({v for v in values if v})
     head = shown[: constants.VALUES_LISTED_MAX]
-    more = f" (+{len(shown) - len(head)} more)" if len(shown) > len(head) else ""
+    extra = len(shown) - len(head)
+    more = fr_or_en(lang, f" (+{extra} more)", f" (+{extra} autres)") if extra > 0 else ""
     return ", ".join(repr(v) for v in head) + more
 
 
@@ -308,18 +368,28 @@ def _as_of(day: date | None) -> datetime | None:
 # ----------------------------------------------------------------- download
 
 
-async def _download(url: str, context: str) -> tuple[str, str | None]:
+async def _download(url: str, context: str, lang: str = "en") -> tuple[str, str | None]:
     """The file's text and Last-Modified header, retrying failed handshakes."""
+    context_fr = _CONTEXT_FR.get(context, context)
     last_error: Exception | None = None
     for _ in range(constants.DOWNLOAD_PASSES):
         await _LIMITER.acquire()
         try:
             response = await get_raw(url, timeout=constants.DOWNLOAD_TIMEOUT_SECONDS)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"{context}: no file at {url}.") from exc
-            raise UpstreamError(
-                f"{context}: {url} returned HTTP {exc.response.status_code}."
+            status = exc.response.status_code
+            if status == 404:
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    f"{context}: no file at {url}.",
+                    f"{context_fr} : aucun fichier à {url}.",
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"{context}: {url} returned HTTP {status}.",
+                f"{context_fr} : {url} a renvoyé HTTP {status}.",
             ) from exc
         except httpx.HTTPError as exc:
             # The shared client already retried 3 times; grainscanada.gc.ca
@@ -327,18 +397,38 @@ async def _download(url: str, context: str) -> tuple[str, str | None]:
             last_error = exc
             continue
         if response.status_code != 200:
-            raise UpstreamError(f"{context}: {url} returned HTTP {response.status_code}.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"{context}: {url} returned HTTP {response.status_code}.",
+                f"{context_fr} : {url} a renvoyé HTTP {response.status_code}.",
+            )
         body = response.content
         if len(body) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"{context}: {url} is larger than this tool reads.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"{context}: {url} is larger than this tool reads.",
+                f"{context_fr} : {url} dépasse la taille que cet outil peut lire.",
+            )
         head = body[:200].lstrip().lower()
         if head.startswith((b"<!doctype", b"<html")):
             # The site answers a missing file with HTTP 200 and its 404 page.
-            raise NotFound(f"{context}: {url} returned the site's 'page not found' page.")
+            raise lang_error(
+                NotFound,
+                lang,
+                f"{context}: {url} returned the site's 'page not found' page.",
+                f"{context_fr} : {url} a renvoyé la page « page introuvable » du site.",
+            )
         return decode(body), response.headers.get("last-modified")
-    raise UpstreamUnavailable(
+    error_name = type(last_error).__name__ if last_error else None
+    raise lang_error(
+        UpstreamUnavailable,
+        lang,
         f"{context}: grainscanada.gc.ca did not complete a connection for {url} "
-        f"({type(last_error).__name__ if last_error else 'no response'}); try again shortly."
+        f"({error_name or 'no response'}); try again shortly.",
+        f"{context_fr} : grainscanada.gc.ca n'a pas établi de connexion pour {url} "
+        f"({error_name or 'aucune réponse'}) ; réessayez sous peu.",
     )
 
 
@@ -381,6 +471,21 @@ class WeeklyTable:
         return max(self.week_ending) if self.week_ending else None
 
 
+def _empty_file(url: str, lang: str) -> UpstreamError:
+    return lang_error(
+        UpstreamError, lang, f"cgc: {url} is empty.", f"cgc : le fichier {url} est vide."
+    )
+
+
+def _bad_header(url: str, header: list[str], missing: list[str], lang: str) -> UpstreamError:
+    return lang_error(
+        UpstreamError,
+        lang,
+        f"cgc: {url} has an unexpected header {header} (missing {missing}).",
+        f"cgc : {url} a un en-tête inattendu {header} (colonnes manquantes : {missing}).",
+    )
+
+
 def _map_header(header: list[str], known: dict[str, str], prefixes=()) -> dict[str, int]:
     positions: dict[str, int] = {}
     for i, name in enumerate(header):
@@ -397,12 +502,12 @@ def parse_weekly(text: str, *, crop_year: int, lang: Lang, url: str, last_modifi
     reader = csv.reader(io.StringIO(text))
     header = next(reader, None)
     if not header:
-        raise UpstreamError(f"cgc: {url} is empty.")
+        raise _empty_file(url, lang)
     positions = _map_header(header, _WEEKLY_HEADERS, _WEEKLY_PREFIXES)
     needed = ("grain_week", "week_ending_date", *WEEKLY_DIMENSIONS, "ktonnes")
     missing = [c for c in needed if c not in positions]
     if missing:
-        raise UpstreamError(f"cgc: {url} has an unexpected header {header} (missing {missing}).")
+        raise _bad_header(url, header, missing, lang)
     labels = {d: _Labels() for d in WEEKLY_DIMENSIONS}
     codes = {d: array("H") for d in WEEKLY_DIMENSIONS}
     weeks = array("H")
@@ -432,7 +537,12 @@ def parse_weekly(text: str, *, crop_year: int, lang: Lang, url: str, last_modifi
         values.append(math.nan if value is None else value)
         by_worksheet.setdefault(codes["worksheet"][-1], array("I")).append(row_number)
     if not weeks:
-        raise UpstreamError(f"cgc: {url} has a header but no rows.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cgc: {url} has a header but no rows.",
+            f"cgc : {url} a un en-tête mais aucune ligne.",
+        )
     return WeeklyTable(
         crop_year=crop_year,
         lang=lang,
@@ -456,7 +566,7 @@ async def _load_weekly(start: int, lang: Lang) -> tuple[WeeklyTable, bool]:
     )
 
     async def fetch() -> WeeklyTable:
-        text, modified = await _download(url, "cgc weekly")
+        text, modified = await _download(url, "cgc weekly", lang)
         return parse_weekly(text, crop_year=start, lang=lang, url=url, last_modified=modified)
 
     return await cached_fetch(f"cgc:weekly:{url}", ttl, fetch)
@@ -468,7 +578,7 @@ async def load_weekly(crop_year: str | int | None, lang: Lang) -> tuple[WeeklyTa
     In early August the new crop year has no file until week 1 is out, so
     the default falls back to the previous crop year.
     """
-    start = parse_crop_year(crop_year)
+    start = parse_crop_year(crop_year, lang)
     if start is not None:
         return await _load_weekly(start, lang)
     latest = current_crop_year()
@@ -482,19 +592,26 @@ async def load_weekly(crop_year: str | int | None, lang: Lang) -> tuple[WeeklyTa
 
 def _weekly_provenance(table: WeeklyTable, cached: bool, schema: str, **extra: Any) -> Provenance:
     latest = table.latest_week
+    modified = table.last_modified
     return make_provenance(
         source="cgc-grain-statistics-weekly",
         url=table.url,
         cached=cached,
         schema_name=schema,
         as_of=_as_of(table.week_ending.get(latest) if latest is not None else None),
-        freshness=(
+        freshness=fr_or_en(
+            table.lang,
             "Weekly: the crop year's file is replaced each Thursday with the grain week "
             "that ended the previous Sunday"
-            + (f" (file Last-Modified: {table.last_modified})" if table.last_modified else "")
-            + "."
+            + (f" (file Last-Modified: {modified})" if modified else "")
+            + ".",
+            "Hebdomadaire : le fichier de la campagne agricole est remplacé chaque jeudi par "
+            "la semaine de grain terminée le dimanche précédent"
+            + (f" (Last-Modified du fichier : {modified})" if modified else "")
+            + ".",
         ),
-        licence=OGL_CANADA,
+        licence=to_french(OGL_CANADA, table.lang),
+        lang=table.lang,
         **extra,
     )
 
@@ -509,12 +626,16 @@ def _resolve(table: WeeklyTable, dim: str, wanted: list[str], among: set[int]) -
     for value in wanted:
         hits = folded.get(label_key(value))
         if not hits:
-            raise InvalidInput(
-                f"cgc: no {dim} {value!r} here"
-                + _suggest(value, (labels[c] for c in among))
-                + "; values are: "
-                + _values_hint(labels[c] for c in among)
-                + ". Call cgc_weekly_describe for the full lists."
+            lang = table.lang
+            suggestion = _suggest(value, (labels[c] for c in among), lang)
+            hint = _values_hint((labels[c] for c in among), lang)
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"cgc: no {dim} {value!r} here{suggestion}; values are: {hint}. "
+                "Call cgc_weekly_describe for the full lists.",
+                f"cgc : aucune valeur {value!r} pour {dim} ici{suggestion} ; valeurs possibles : "
+                f"{hint}. Appelez cgc_weekly_describe pour les listes complètes.",
             )
         chosen.update(hits)
     return chosen
@@ -588,11 +709,16 @@ def query_weekly_table(
     group_by: list[WeeklyDimension] | None = None,
     limit: int = constants.ROWS_DEFAULT,
 ) -> CgcWeeklyResult:
-    if not 1 <= limit <= constants.ROWS_MAX:
-        raise InvalidInput(f"cgc: limit must be between 1 and {constants.ROWS_MAX}.")
+    lang = table.lang
+    _check_limit(limit, lang)
     if not worksheet.strip():
-        raise InvalidInput("cgc: worksheet is required; cgc_weekly_describe lists them.")
-    check_range(week_from, week_to, "week_from", "week_to")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "cgc: worksheet is required; cgc_weekly_describe lists them.",
+            "cgc : worksheet est obligatoire ; cgc_weekly_describe donne la liste.",
+        )
+    _check_range(week_from, week_to, "week_from", "week_to", lang)
     sheet_codes = _resolve(table, "worksheet", [worksheet], set(table.by_worksheet))
     candidates = sorted(r for code in sheet_codes for r in table.by_worksheet[code])
     filters = {
@@ -637,13 +763,19 @@ def query_weekly_table(
     else:
         unknown = [d for d in group_by if d not in WEEKLY_DIMENSIONS]
         if unknown:
-            raise InvalidInput(f"cgc: group_by accepts {list(WEEKLY_DIMENSIONS)}; got {unknown}.")
+            raise _bad_group_by(WEEKLY_DIMENSIONS, unknown, lang)
         for dim in ("metric", "period"):
             if dim not in group_by and len(_codes_in(table, dim, matched)) > 1:
-                raise InvalidInput(
+                raise lang_error(
+                    InvalidInput,
+                    lang,
                     f"cgc: the matched rows have several {dim}s; summing across them would add "
                     f"different quantities (e.g. a week's figure to a crop-year total). Filter "
-                    f"`{dim}` to one value or add it to group_by."
+                    f"`{dim}` to one value or add it to group_by.",
+                    f"cgc : les lignes retenues ont plusieurs valeurs de {dim} ; les additionner "
+                    "mêlerait des quantités différentes (p. ex. le chiffre d'une semaine et un "
+                    f"cumul de campagne agricole). Limitez `{dim}` à une valeur ou ajoutez-le à "
+                    "group_by.",
                 )
         keep = [d for d in WEEKLY_DIMENSIONS if d in group_by or d == "worksheet"]
         sums: dict[tuple[int, ...], list[float]] = {}
@@ -692,8 +824,13 @@ def query_weekly_table(
             cached,
             "cgc.CgcWeeklyResult",
             limits=(
-                f"Kept the latest {len(rows)} of {total} rows (limit={limit}); narrow the "
-                "filters or weeks for the rest."
+                fr_or_en(
+                    lang,
+                    f"Kept the latest {len(rows)} of {total} rows (limit={limit}); narrow the "
+                    "filters or weeks for the rest.",
+                    f"Les {len(rows)} lignes les plus récentes sur {total} sont conservées "
+                    f"(limit={limit}) ; resserrez les filtres ou les semaines pour le reste.",
+                )
                 if truncated
                 else None
             ),
@@ -752,12 +889,12 @@ def parse_exports(text: str, *, lang: Lang, url: str, last_modified: str | None)
     reader = csv.reader(io.StringIO(text))
     header = next(reader, None)
     if not header:
-        raise UpstreamError(f"cgc: {url} is empty.")
+        raise _empty_file(url, lang)
     positions = _map_header(header, _EXPORT_HEADERS)
     needed = ("year", "month", "ktonnes", *EXPORT_DIMENSIONS)
     missing = [c for c in needed if c not in positions]
     if missing:
-        raise UpstreamError(f"cgc: {url} has an unexpected header {header} (missing {missing}).")
+        raise _bad_header(url, header, missing, lang)
     width = max(positions.values()) + 1
     interned: dict[str, str] = {}
     records: list[ExportRecord] = []
@@ -778,7 +915,12 @@ def parse_exports(text: str, *, lang: Lang, url: str, last_modified: str | None)
         }
         records.append(ExportRecord(year=year, month=month, ktonnes=value, **labels))
     if not records:
-        raise UpstreamError(f"cgc: {url} has no readable rows.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cgc: {url} has no readable rows.",
+            f"cgc : {url} n'a aucune ligne lisible.",
+        )
     return ExportsTable(lang=lang, url=url, last_modified=last_modified, records=records)
 
 
@@ -786,7 +928,7 @@ async def load_exports(lang: Lang) -> tuple[ExportsTable, bool]:
     url = constants.EXPORTS_URL_FR if lang == "fr" else constants.EXPORTS_URL_EN
 
     async def fetch() -> ExportsTable:
-        text, modified = await _download(url, "cgc exports")
+        text, modified = await _download(url, "cgc exports", lang)
         return parse_exports(text, lang=lang, url=url, last_modified=modified)
 
     return await cached_fetch(f"cgc:exports:{url}", constants.EXPORTS_TTL_SECONDS, fetch)
@@ -794,18 +936,24 @@ async def load_exports(lang: Lang) -> tuple[ExportsTable, bool]:
 
 def _exports_provenance(table: ExportsTable, cached: bool, schema: str, **extra: Any):
     latest = table.latest
+    modified = table.last_modified
     return make_provenance(
         source="cgc-exports-licensed-facilities",
         url=table.url,
         cached=cached,
         schema_name=schema,
         as_of=_as_of(date(latest[0], latest[1], 1)) if latest else None,
-        freshness=(
+        freshness=fr_or_en(
+            table.lang,
             "Monthly, a few weeks after the month ends"
-            + (f" (file Last-Modified: {table.last_modified})" if table.last_modified else "")
-            + ". Exports from licensed facilities, by destination."
+            + (f" (file Last-Modified: {modified})" if modified else "")
+            + ". Exports from licensed facilities, by destination.",
+            "Mensuelle, quelques semaines après la fin du mois"
+            + (f" (Last-Modified du fichier : {modified})" if modified else "")
+            + ". Exportations des installations agréées, par destination.",
         ),
-        licence=OGL_CANADA,
+        licence=to_french(OGL_CANADA, table.lang),
+        lang=table.lang,
         **extra,
     )
 
@@ -866,15 +1014,20 @@ def query_exports_table(
     group_by: list[ExportDimension] | None = None,
     limit: int = constants.ROWS_DEFAULT,
 ) -> CgcExportsResult:
-    if not 1 <= limit <= constants.ROWS_MAX:
-        raise InvalidInput(f"cgc: limit must be between 1 and {constants.ROWS_MAX}.")
+    lang = table.lang
+    _check_limit(limit, lang)
     if frequency not in ("month", "year", "crop_year"):
-        raise InvalidInput("cgc: frequency must be 'month', 'year' or 'crop_year'.")
-    check_range(year_from, year_to, "year_from", "year_to")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "cgc: frequency must be 'month', 'year' or 'crop_year'.",
+            "cgc : frequency doit valoir 'month', 'year' ou 'crop_year'.",
+        )
+    _check_range(year_from, year_to, "year_from", "year_to", lang)
     if group_by is not None:
         unknown = [d for d in group_by if d not in EXPORT_DIMENSIONS]
         if unknown:
-            raise InvalidInput(f"cgc: group_by accepts {list(EXPORT_DIMENSIONS)}; got {unknown}.")
+            raise _bad_group_by(EXPORT_DIMENSIONS, unknown, lang)
     filters = {
         "grain": _as_list(grain),
         "grade": _as_list(grade),
@@ -900,12 +1053,17 @@ def query_exports_table(
                 alias = DESTINATION_ALIASES.get(label_key(value))
                 hits = present.get(label_key(alias)) if alias else None
             if not hits:
-                raise InvalidInput(
-                    f"cgc: no {dim} {value!r} in the exports file"
-                    + _suggest(value, (label for labels in present.values() for label in labels))
-                    + "; values are: "
-                    + _values_hint(label for labels in present.values() for label in labels)
-                    + ". Call cgc_exports_describe for the full lists."
+                known = [label for labels in present.values() for label in labels]
+                suggestion = _suggest(value, known, lang)
+                hint = _values_hint(known, lang)
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    f"cgc: no {dim} {value!r} in the exports file{suggestion}; values are: "
+                    f"{hint}. Call cgc_exports_describe for the full lists.",
+                    f"cgc : aucune valeur {value!r} pour {dim} dans le fichier des exportations"
+                    f"{suggestion} ; valeurs possibles : {hint}. Appelez cgc_exports_describe "
+                    "pour les listes complètes.",
                 )
             chosen |= hits
         wanted[dim] = chosen
@@ -985,8 +1143,14 @@ def query_exports_table(
             cached,
             "cgc.CgcExportsResult",
             limits=(
-                f"Kept the latest {len(rows)} of {total} rows (limit={limit}); narrow the "
-                "filters, years or add group_by for the rest."
+                fr_or_en(
+                    lang,
+                    f"Kept the latest {len(rows)} of {total} rows (limit={limit}); narrow the "
+                    "filters, years or add group_by for the rest.",
+                    f"Les {len(rows)} lignes les plus récentes sur {total} sont conservées "
+                    f"(limit={limit}) ; resserrez les filtres ou les années, ou ajoutez group_by "
+                    "pour le reste.",
+                )
                 if truncated
                 else None
             ),

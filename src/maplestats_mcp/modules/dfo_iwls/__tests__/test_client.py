@@ -184,3 +184,30 @@ async def test_get_station_reads_datums(httpx_mock):
     detail = await client.get_station("07120")
     assert detail.region_code == "PAC"
     assert detail.datums[0].offset == -1.71
+
+
+async def test_french_errors_and_provenance(httpx_mock):
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    result = await client.search_stations("victoria", lang="fr")
+    prov = result.provenance
+    assert "mise en cache 24" in (prov.freshness or "")
+    assert (prov.limits or "").startswith("Requête\xa0: GET")
+    assert "Conditions non précisées" in (prov.licence or "")
+    assert result.stations[0].time_series[0].name == "Niveau d'eau, valeur officielle"
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: la période doit"):
+        await client.get_water_levels(
+            "07120", "wlp", start="2026-09-01", end="2026-09-30", lang="fr"
+        )
+    with pytest.raises(InvalidInput, match="séries disponibles"):
+        await client.get_water_levels("07120", "wlf", lang="fr")
+    with pytest.raises(NotFound, match="aucune station marégraphique"):
+        await client.get_station("99999", lang="fr")
+
+
+async def test_english_provenance_is_unchanged(httpx_mock):
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    prov = (await client.search_stations("victoria")).provenance
+    assert prov.freshness == "station list cached 24h"
+    assert (prov.licence or "").startswith("Terms not stated by the publisher")
+    with pytest.raises(InvalidInput, match=r"^The window must be 7 days or less\.$"):
+        await client.get_water_levels("07120", "wlp", start="2026-09-01", end="2026-09-30")

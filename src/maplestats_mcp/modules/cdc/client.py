@@ -74,7 +74,9 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.csv_files import Columns, fetch_rows
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -114,6 +116,22 @@ def _lang(lang: str) -> str:
     if lang not in ("en", "fr"):
         raise InvalidInput(f"cdc: lang must be 'en' or 'fr', got {lang!r}.")
     return lang
+
+
+def _fr(lang: str, texts: list[str]) -> list[str]:
+    """`texts` with French spacing for lang="fr" (the French strings here use plain spaces)."""
+    return [french_spacing(t) for t in texts] if lang == "fr" else texts
+
+
+def _provenance(lang: str, url: str, **fields: Any):
+    """make_provenance for the CDC, with the licence and reproduce note in `lang`."""
+    return make_provenance(
+        source=constants.RATE_LIMIT_SOURCE,
+        url=url,
+        licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, url, lang),
+        lang=lang,
+        **fields,
+    )
 
 
 def _today() -> date:
@@ -158,19 +176,37 @@ def _clean_text(node: Tag) -> str:
     return " ".join(node.get_text(" ").split())
 
 
-async def _page(url: str) -> tuple[str, bool]:
+async def _page(url: str, lang: str = "en") -> tuple[str, bool]:
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"cdc: no page at {url}.") from exc
-            raise UpstreamError(f"cdc: {url} returned HTTP {exc.response.status_code}.") from exc
+            status = exc.response.status_code
+            if status == 404:
+                raise lang_error(
+                    NotFound, lang, f"cdc: no page at {url}.", f"cdc : aucune page à {url}."
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cdc: {url} returned HTTP {status}.",
+                f"cdc : {url} a renvoyé HTTP {status}.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"cdc: {url} did not respond in time.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"cdc: {url} did not respond in time.",
+                f"cdc : {url} n'a pas répondu à temps.",
+            ) from exc
         if len(response.content) > constants.MAX_PAGE_BYTES:
-            raise UpstreamError(f"cdc: {url} is larger than expected.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cdc: {url} is larger than expected.",
+                f"cdc : {url} est plus volumineux que prévu.",
+            )
         return response.text
 
     return await cached_fetch(f"cdc:page:{url}", constants.PAGE_TTL_SECONDS, fetch)

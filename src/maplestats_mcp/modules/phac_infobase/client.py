@@ -41,7 +41,10 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.licences_fr import licence_for_lang
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -91,12 +94,17 @@ def _absolute(path: str) -> str:
     return path if path.startswith("https://") else constants.BASE_URL + path
 
 
-def _dataset(dataset_id: str) -> Dataset:
+def _dataset(dataset_id: str, lang: str = "en") -> Dataset:
     found = BY_ID.get(dataset_id.strip().lower())
     if found is None:
-        raise NotFound(
+        ids = ", ".join(d.id for d in DATASETS[:6])
+        raise lang_error(
+            NotFound,
+            lang,
             f"No Health Infobase dataset {dataset_id!r}. Use phac_infobase_list_datasets; "
-            f"ids include {', '.join(d.id for d in DATASETS[:6])}, ..."
+            f"ids include {ids}, ...",
+            f"aucun jeu de données {dataset_id!r} dans l'Infobase santé. Utilisez "
+            f"phac_infobase_list_datasets ; identifiants possibles : {ids}, ...",
         )
     return found
 
@@ -128,17 +136,22 @@ def _frequency(dataset: Dataset, lang: str) -> str:
 # Download and parse -----------------------------------------------------------
 
 
-def _check_host(url: str) -> None:
+def _check_host(url: str, lang: str = "en") -> None:
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname not in constants.ALLOWED_HOSTS:
-        raise UpstreamError(f"phac_infobase: refusing to fetch {url} (unexpected host).")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: refusing to fetch {url} (unexpected host).",
+            f"phac_infobase : téléchargement de {url} refusé (hôte inattendu).",
+        )
 
 
-async def _get(url: str) -> httpx.Response:
+async def _get(url: str, lang: str = "en") -> httpx.Response:
     """GET with manual redirects: a missing file answers 302 to /404.html."""
     current = url
     for _ in range(constants.MAX_REDIRECTS + 1):
-        _check_host(current)
+        _check_host(current, lang)
         await _LIMITER.acquire()
         try:
             return await get_raw(current, timeout=120.0)
@@ -148,15 +161,40 @@ async def _get(url: str) -> httpx.Response:
             if status in _REDIRECTS and location:
                 target = str(exc.response.url.join(location))
                 if urlparse(target).path == constants.NOT_FOUND_PAGE:
-                    raise NotFound(f"phac_infobase: no file at {url} (moved or removed).") from exc
+                    raise lang_error(
+                        NotFound,
+                        lang,
+                        f"phac_infobase: no file at {url} (moved or removed).",
+                        f"phac_infobase : aucun fichier à {url} (déplacé ou retiré).",
+                    ) from exc
                 current = target
                 continue
             if status == 404:
-                raise NotFound(f"phac_infobase: no file at {url}.") from exc
-            raise UpstreamError(f"phac_infobase: {url} returned HTTP {status}.") from exc
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    f"phac_infobase: no file at {url}.",
+                    f"phac_infobase : aucun fichier à {url}.",
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"phac_infobase: {url} returned HTTP {status}.",
+                f"phac_infobase : {url} a répondu HTTP {status}.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"phac_infobase: {url} did not respond in time.") from exc
-    raise UpstreamError(f"phac_infobase: {url} redirected too many times.")
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"phac_infobase: {url} did not respond in time.",
+                f"phac_infobase : {url} n'a pas répondu à temps.",
+            ) from exc
+    raise lang_error(
+        UpstreamError,
+        lang,
+        f"phac_infobase: {url} redirected too many times.",
+        f"phac_infobase : {url} a fait trop de redirections.",
+    )
 
 
 def _decode(body: bytes, encoding: str | None) -> tuple[str, str]:
@@ -179,15 +217,25 @@ def _unique(names: list[str]) -> list[str]:
 
 
 def parse_csv(
-    body: bytes, encoding: str | None, url: str
+    body: bytes, encoding: str | None, url: str, lang: str = "en"
 ) -> tuple[list[str], list[dict[str, str]], str]:
     text, used = _decode(body, encoding)
     if text.lstrip()[:15].lower().startswith(("<!doctype", "<html")):
-        raise NotFound(f"phac_infobase: {url} returned a web page, not a CSV file.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"phac_infobase: {url} returned a web page, not a CSV file.",
+            f"phac_infobase : {url} a renvoyé une page Web, pas un fichier CSV.",
+        )
     reader = csv.reader(io.StringIO(text))
     header = next(reader, None)
     if not header:
-        raise UpstreamError(f"phac_infobase: {url} is empty.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} is empty.",
+            f"phac_infobase : {url} est vide.",
+        )
     names = [h.strip() for h in header]
     # Columns with an empty header are row numbers written by R (the
     # tuberculosis files) or trailing blank columns (the 2018 CCDI and the
@@ -204,29 +252,54 @@ def parse_csv(
     return unique, rows, used
 
 
-def zip_member(body: bytes, pattern: str | None, url: str) -> bytes:
+def zip_member(body: bytes, pattern: str | None, url: str, lang: str = "en") -> bytes:
     try:
         archive = zipfile.ZipFile(io.BytesIO(body))
     except zipfile.BadZipFile as exc:
-        raise UpstreamError(f"phac_infobase: {url} is not a readable ZIP file.") from exc
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} is not a readable ZIP file.",
+            f"phac_infobase : {url} n'est pas un fichier ZIP lisible.",
+        ) from exc
     members = [i for i in archive.infolist() if i.filename.lower().endswith(".csv")]
     if pattern:
         # Accent-insensitive: the French opioid member is DonnéesMéfaitsSubstances.csv.
         members = [i for i in members if _fold(pattern) in _fold(i.filename)]
     if not members:
-        raise UpstreamError(f"phac_infobase: {url} has no CSV member matching {pattern!r}.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} has no CSV member matching {pattern!r}.",
+            f"phac_infobase : {url} ne contient aucun fichier CSV correspondant à {pattern!r}.",
+        )
     if members[0].file_size > constants.MAX_FILE_BYTES:
-        raise UpstreamError(f"phac_infobase: {url} unpacks to more than this tool reads.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} unpacks to more than this tool reads.",
+            f"phac_infobase : {url} décompressé dépasse la taille que cet outil lit.",
+        )
     return archive.read(members[0])
 
 
-def parse_api(body: bytes, url: str) -> tuple[list[str], list[dict[str, str]]]:
+def parse_api(body: bytes, url: str, lang: str = "en") -> tuple[list[str], list[dict[str, str]]]:
     try:
         data = json.loads(body)
     except ValueError as exc:
-        raise UpstreamError(f"phac_infobase: {url} did not return JSON.") from exc
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} did not return JSON.",
+            f"phac_infobase : {url} n'a pas renvoyé de JSON.",
+        ) from exc
     if not isinstance(data, list) or not all(isinstance(r, dict) for r in data):
-        raise UpstreamError(f"phac_infobase: {url} did not return a list of records.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} did not return a list of records.",
+            f"phac_infobase : {url} n'a pas renvoyé une liste d'enregistrements.",
+        )
     columns: list[str] = []
     for record in data:
         columns.extend(k for k in record if k not in columns)
@@ -253,17 +326,22 @@ async def load(dataset: Dataset, lang: str) -> tuple[Table, bool, str, str]:
     url, member, encoding, file_lang = _source(dataset, lang)
 
     async def fetch() -> Table:
-        response = await _get(url)
+        response = await _get(url, lang)
         body = response.content
         if len(body) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"phac_infobase: {url} is larger than this tool reads.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"phac_infobase: {url} is larger than this tool reads.",
+                f"phac_infobase : {url} dépasse la taille que cet outil lit.",
+            )
         if dataset.kind == "api":
-            columns, rows = await run_parse(parse_api, body, url)
+            columns, rows = await run_parse(parse_api, body, url, lang)
             return Table(columns, rows, "json", await _api_updated_at(url))
 
         def parse() -> tuple[list[str], list[dict[str, str]], str]:
-            raw = zip_member(body, member, url) if dataset.kind == "zip" else body
-            return parse_csv(raw, encoding, url)
+            raw = zip_member(body, member, url, lang) if dataset.kind == "zip" else body
+            return parse_csv(raw, encoding, url, lang)
 
         # The 20 MB survey files take about a second to parse; keep it off
         # the event loop so other requests are not stalled.
@@ -316,7 +394,7 @@ def parse_period(value: str) -> date | None:
     return None
 
 
-def _bound(value: str | None, name: str, *, end: bool) -> date | None:
+def _bound(value: str | None, name: str, *, end: bool, lang: str = "en") -> date | None:
     if value is None or not value.strip():
         return None
     text = value.strip()
@@ -327,8 +405,12 @@ def _bound(value: str | None, name: str, *, end: bool) -> date | None:
         except ValueError:
             start = None
     if start is None:
-        raise InvalidInput(
-            f"{name} must be YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn (or Tn), got {value!r}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be YYYY, YYYY-MM, YYYY-MM-DD or YYYY Qn (or Tn), got {value!r}.",
+            f"{name} doit être au format AAAA, AAAA-MM, AAAA-MM-JJ ou AAAA Tn (ou Qn) ; reçu "
+            f"{value!r}.",
         )
     if not end:
         return start
@@ -382,7 +464,7 @@ def geo_matcher(query: str) -> Callable[[str], bool]:
     return lambda cell: _place(cell) in accepted
 
 
-def _resolve(columns: list[str], name: str) -> str:
+def _resolve(columns: list[str], name: str, lang: str = "en") -> str:
     """The header `name` means: the exact header first, then one equal once folded.
 
     The exact match wins because two headers can fold alike: the CSUS files
@@ -393,7 +475,12 @@ def _resolve(columns: list[str], name: str) -> str:
     by_fold = {_fold(c): c for c in columns}
     found = by_fold.get(_fold(name))
     if found is None:
-        raise InvalidInput(f"Unknown column {name!r}; columns are {columns}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"Unknown column {name!r}; columns are {columns}.",
+            f"colonne inconnue {name!r} ; les colonnes sont {columns}.",
+        )
     return found
 
 
@@ -481,7 +568,12 @@ def list_datasets(
 ) -> DatasetList:
     wanted_topic = (topic or "").strip().lower()
     if wanted_topic and wanted_topic not in TOPICS:
-        raise InvalidInput(f"Unknown topic {topic!r}; topics are {sorted(TOPICS)}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"Unknown topic {topic!r}; topics are {sorted(TOPICS)}.",
+            f"thème inconnu {topic!r} ; les thèmes sont {sorted(TOPICS)}.",
+        )
     words = [w for w in (_query_word(w) for w in _fold(query or "").split()) if w]
     matches = []
     for dataset in DATASETS:
@@ -515,10 +607,16 @@ def list_datasets(
             url=constants.BASE_URL,
             cached=False,
             schema_name="phac_infobase.DatasetList",
-            coverage=(
+            coverage=fr_or_en(
+                lang,
                 f"{len(matches)} of {len(DATASETS)} curated Health Infobase files; dashboards "
-                "without downloadable files (CCDSS, current CCDI) are not listed"
+                "without downloadable files (CCDSS, current CCDI) are not listed",
+                f"{len(matches)} des {len(DATASETS)} fichiers retenus de l'Infobase santé ; les "
+                "tableaux de bord sans fichier téléchargeable (SCSMC, IMCC actuels) ne sont pas "
+                "listés",
             ),
+            licence=licence_for_lang(_SOURCE, constants.BASE_URL, lang),
+            lang=lang,
         ),
     )
 
@@ -536,8 +634,20 @@ def _column_summary(name: str, rows: list[dict[str, str]]) -> ColumnSummary:
     )
 
 
+def _english_file_note(lang: str, file_lang: str) -> str | None:
+    """French note when PHAC publishes no French file for the dataset (English read)."""
+    if lang != "fr" or file_lang == "fr":
+        return None
+    return fr_or_en(
+        lang,
+        "",
+        "L'ASPC ne publie pas de fichier français pour ce jeu de données : les noms de colonnes "
+        "et les valeurs proviennent du fichier anglais, tels que publiés.",
+    )
+
+
 async def describe_dataset(dataset_id: str, lang: str = "en") -> DatasetDescription:
-    dataset = _dataset(dataset_id)
+    dataset = _dataset(dataset_id, lang)
     table, cached, url, file_lang = await load(dataset, lang)
     title, description, notes = _text(dataset, lang)
     date_column = _first_present(table.columns, dataset.date_columns)
@@ -580,6 +690,9 @@ async def describe_dataset(dataset_id: str, lang: str = "en") -> DatasetDescript
             schema_name="phac_infobase.DatasetDescription",
             as_of=_as_of(table.last_modified),
             freshness=_frequency(dataset, lang),
+            limits=_english_file_note(lang, file_lang),
+            licence=licence_for_lang(_SOURCE, url, lang),
+            lang=lang,
         ),
     )
 
@@ -597,24 +710,38 @@ async def query(
 ) -> QueryResult:
     """Rows of one dataset; the most recent `limit` when it has a date column."""
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
-    start_date = _bound(start, "start", end=False)
-    end_date = _bound(end, "end", end=True)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX} ; reçu {limit}.",
+        )
+    start_date = _bound(start, "start", end=False, lang=lang)
+    end_date = _bound(end, "end", end=True, lang=lang)
     if start_date and end_date and start_date > end_date:
-        raise InvalidInput(f"start {start!r} is after end {end!r}.")
-    dataset = _dataset(dataset_id)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"start {start!r} is after end {end!r}.",
+            f"start ({start!r}) est postérieur à end ({end!r}).",
+        )
+    dataset = _dataset(dataset_id, lang)
     table, cached, url, file_lang = await load(dataset, lang)
     title, _, _ = _text(dataset, lang)
 
-    wanted = [(_resolve(table.columns, k), _fold(v)) for k, v in (filters or {}).items()]
+    wanted = [(_resolve(table.columns, k, lang), _fold(v)) for k, v in (filters or {}).items()]
     matching = [r for r in table.rows if all(_fold(r.get(c, "")) == v for c, v in wanted)]
 
     geo_column = _first_present(table.columns, dataset.geo_columns)
     if geography and geography.strip():
         if geo_column is None:
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"{dataset.id} has no geography column; filter a column instead. "
-                f"Columns are {table.columns}."
+                f"Columns are {table.columns}.",
+                f"{dataset.id} n'a pas de colonne géographique ; filtrez plutôt une colonne. "
+                f"Les colonnes sont {table.columns}.",
             )
         matches_geo = geo_matcher(geography)
         before = matching
@@ -623,14 +750,23 @@ async def query(
             # A geography the file does not have matched nothing and came
             # back as an empty success; list the ones it has.
             places = sorted({r.get(geo_column, "") for r in table.rows} - {""})
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"geography {geography!r} matches no {geo_column!r} value in {dataset.id}. "
-                f"Values: {format_choices(places)}."
+                f"Values: {format_choices(places)}.",
+                f"geography {geography!r} ne correspond à aucune valeur de {geo_column!r} dans "
+                f"{dataset.id}. Valeurs : {format_choices(places)}.",
             )
 
     date_column = _first_present(table.columns, dataset.date_columns)
     if (start_date or end_date) and date_column is None:
-        raise InvalidInput(f"{dataset.id} has no date column; use filters instead.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{dataset.id} has no date column; use filters instead.",
+            f"{dataset.id} n'a pas de colonne de date ; utilisez plutôt des filtres.",
+        )
     if date_column:
         dated = [(parse_period(r.get(date_column, "")), r) for r in matching]
         if start_date or end_date:
@@ -647,7 +783,7 @@ async def query(
     else:
         kept = matching[:limit]
 
-    chosen = [_resolve(table.columns, c) for c in columns] if columns else table.columns
+    chosen = [_resolve(table.columns, c, lang) for c in columns] if columns else table.columns
     rows = [{c: r.get(c, "") for c in chosen} for r in kept]
     return QueryResult(
         id=dataset.id,
@@ -669,10 +805,22 @@ async def query(
             schema_name="phac_infobase.QueryResult",
             as_of=_as_of(table.last_modified),
             freshness=_frequency(dataset, lang),
-            coverage=(
+            coverage=fr_or_en(
+                lang,
                 f"{len(rows)} of {len(matching)} matching rows"
-                + (" (the most recent, oldest first)" if date_column else "")
+                + (" (the most recent, oldest first)" if date_column else ""),
+                f"{len(rows)} des {len(matching)} lignes correspondantes"
+                + (" (les plus récentes, dans l'ordre chronologique)" if date_column else ""),
             ),
-            limits=f"rows capped at {limit}",
+            limits=fr_or_en(
+                lang,
+                f"rows capped at {limit}",
+                join_limits(
+                    f"nombre de lignes plafonné à {limit}", _english_file_note(lang, file_lang)
+                )
+                or "",
+            ),
+            licence=licence_for_lang(_SOURCE, url, lang),
+            lang=lang,
         ),
     )

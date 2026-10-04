@@ -30,7 +30,7 @@ MODULE_DESCRIPTION = (
     "by column values, province and date range, in English or French."
 )
 MODULE_DESCRIPTION_FR = (
-    "Santé Infobase de l'ASPC : liste, description et interrogation des "
+    "Infobase santé de l'ASPC : liste, description et interrogation des "
     "fichiers de données des tableaux de bord de surveillance de l'Agence "
     "de la santé publique du Canada (détections de virus respiratoires et "
     "ÉpiGrippe+, eaux usées, méfaits liés aux opioïdes et aux stimulants, "

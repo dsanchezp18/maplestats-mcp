@@ -69,7 +69,7 @@ async def nfd_describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescri
     harvest categories, forestry data codebook, jurisdictions covered.
     Mots-clés : description de tableau, dictionnaire de données,
     qualificatifs de données, origine des incendies, groupe d'espèces,
-    tenure, hectares brûlés, catégories de récolte, juridictions,
+    tenure, hectares brûlés, catégories de récolte, provinces et territoires,
     Base nationale de données forestières.
     """
     return await client.describe_table(table_id, lang=lang)
