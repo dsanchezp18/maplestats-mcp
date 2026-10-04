@@ -126,6 +126,17 @@ async def test_get_data_empty_dguid_raises():
         await client.get_data("")
 
 
+async def test_invalid_province_is_explained_in_french():
+    with pytest.raises(InvalidInput) as french:
+        await client.list_geographies(
+            "canada_provinces_territories", province_territory="mars", lang="fr"
+        )
+    with pytest.raises(InvalidInput) as english:
+        await client.list_geographies("canada_provinces_territories", province_territory="mars")
+    assert str(french.value) != str(english.value)
+    assert "doit" in str(french.value) or "reçu" in str(french.value)
+
+
 async def test_get_data_invalid_topic_raises():
     with pytest.raises(InvalidInput):
         await client.get_data("2016A000011124", topic="not_a_topic")

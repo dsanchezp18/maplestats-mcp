@@ -11,6 +11,7 @@ from maplestats_mcp.modules.statcan.census_tables.schemas import (
     CensusTableDownloads,
     CensusTableSearch,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 Release = Literal["2016", "2011", "2011_nhs", "2006"]
 
@@ -45,7 +46,8 @@ async def statcan_census_tables_search(
     recensement de 2016, Enquête nationale auprès des ménages, recensement
     de 2006, Beyond 20/20, tableaux thématiques, recensement.
     """
-    return await client.search(query, release=release, limit=limit)
+    use_lang(lang)
+    return await client.search(query, release=release, limit=limit, lang=lang)
 
 
 @tool
@@ -67,4 +69,5 @@ async def statcan_census_tables_get_downloads(
     Mots-clés : téléchargement, tableau du recensement, CSV, SDMX, IVT,
     Beyond 20/20, tableau complet, recensement.
     """
-    return await client.get_downloads(pid, release=release)
+    use_lang(lang)
+    return await client.get_downloads(pid, release=release, lang=lang)

@@ -91,3 +91,15 @@ BLOCKED_NOTE = (
     "in statcan_census_profile_*. Bulk 2016 files: statcan_census_profile_archive_* "
     "(download in a browser)."
 )
+BLOCKED_NOTE_FR = (
+    "Le serveur www12 de Statistique Canada, qui sert le service du Profil du recensement de "
+    "2016, est actuellement derrière une vérification de sécurité Cloudflare que les scripts "
+    "ne peuvent pas franchir. Le WDS contient le sous-ensemble d'indicateurs du profil de 2016 "
+    "à ces seuls niveaux (Canada, provinces et territoires, régions sociosanitaires\u00a0; "
+    "aucune subdivision de recensement, aucun secteur de recensement ni aucune aire de "
+    "diffusion) : wds_search_cubes avec «\u00a0Census indicator profile\u00a0» "
+    "(17100122 pour le questionnaire abrégé, 17100123 pour le questionnaire détaillé), à lire "
+    "avec wds_get_data_from_cube_coord\u00a0; les chiffres de 2021 sont dans "
+    "statcan_census_profile_*. Fichiers complets de 2016 : "
+    "statcan_census_profile_archive_* (à télécharger dans un navigateur)."
+)

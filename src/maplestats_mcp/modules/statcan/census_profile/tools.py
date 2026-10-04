@@ -12,6 +12,7 @@ from maplestats_mcp.modules.statcan.census_profile.schemas import (
     CharacteristicSearchResult,
     GeographySearchResult,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 GeographyLevel = Literal[
     "canada_provinces_territories",
@@ -55,6 +56,7 @@ async def statcan_census_profile_search_geography(
     de lieu, municipalité, ville, province, subdivision de recensement,
     secteur de recensement, région de tri d'acheminement, code géographique.
     """
+    use_lang(lang)
     return await client.search_geography(level, query, limit=limit, lang=lang)
 
 
@@ -82,6 +84,7 @@ async def statcan_census_profile_search_characteristic(
     variable, population, revenu, logement, âge, langue, scolarité,
     éducation, navettage.
     """
+    use_lang(lang)
     return await client.search_characteristic(query, limit=limit, lang=lang)
 
 
@@ -112,6 +115,7 @@ async def statcan_census_profile_get_data(
     logement, revenu, âge, démographie, données du recensement, Statistique
     Canada.
     """
+    use_lang(lang)
     return await client.get_data(
         level,
         geography_codes,

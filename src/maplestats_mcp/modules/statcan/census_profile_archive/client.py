@@ -16,13 +16,14 @@ from maplestats_mcp.modules.statcan.census_profile_archive.schemas import (
     DownloadLink,
     GeographyLevelList,
 )
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import CloudflareChallenge, InvalidInput
 from maplestats_mcp.shared.http import get_raw
 
 
-async def _blocked_note() -> str | None:
+async def _blocked_note(lang: str = "en") -> str | None:
     """A provenance.limits note while www12 serves its Cloudflare challenge.
 
     These tools only build URLs, and every URL points at www12, so a success
@@ -44,16 +45,21 @@ async def _blocked_note() -> str | None:
     blocked, _ = await cached_fetch(
         "statcan-census-profile-archive:www12-blocked", constants.PROBE_TTL_SECONDS, probe
     )
-    return constants.BLOCKED_NOTE if blocked else None
+    return say(constants.BLOCKED_NOTE, constants.BLOCKED_NOTE_FR, lang) if blocked else None
 
 
-async def list_geography_levels(year: int) -> GeographyLevelList:
+async def list_geography_levels(year: int, lang: str = "en") -> GeographyLevelList:
     """List the geography levels and file formats available for one archived census year."""
     config = constants.YEAR_CONFIG.get(year)
     if config is None:
         raise InvalidInput(
-            f"statcan_census_profile_archive:list_geography_levels: year must be one of "
-            f"{sorted(constants.YEAR_CONFIG)}, got {year!r}."
+            say(
+                f"statcan_census_profile_archive:list_geography_levels: year must be one of "
+                f"{sorted(constants.YEAR_CONFIG)}, got {year!r}.",
+                f"statcan_census_profile_archive:list_geography_levels : year doit être l'une des "
+                f"valeurs {sorted(constants.YEAR_CONFIG)}, reçu {year!r}.",
+                lang,
+            )
         )
     return GeographyLevelList(
         year=year,
@@ -64,7 +70,8 @@ async def list_geography_levels(year: int) -> GeographyLevelList:
             url=config["base_url"],
             cached=False,
             schema_name="statcan_census_profile_archive.GeographyLevelList",
-            limits=await _blocked_note(),
+            limits=await _blocked_note(lang),
+            lang=lang,
         ),
     )
 
@@ -80,20 +87,36 @@ async def get_download_link(
     config = constants.YEAR_CONFIG.get(year)
     if config is None:
         raise InvalidInput(
-            f"statcan_census_profile_archive:get_download_link: year must be one of "
-            f"{sorted(constants.YEAR_CONFIG)}, got {year!r}."
+            say(
+                f"statcan_census_profile_archive:get_download_link: year must be one of "
+                f"{sorted(constants.YEAR_CONFIG)}, got {year!r}.",
+                f"statcan_census_profile_archive:get_download_link : year doit être l'une des "
+                f"valeurs {sorted(constants.YEAR_CONFIG)}, reçu {year!r}.",
+                lang,
+            )
         )
     level_code = config["levels"].get(level)
     if level_code is None:
         raise InvalidInput(
-            f"statcan_census_profile_archive:get_download_link: level must be one of "
-            f"{sorted(config['levels'])} for year {year}, got {level!r}."
+            say(
+                f"statcan_census_profile_archive:get_download_link: level must be one of "
+                f"{sorted(config['levels'])} for year {year}, got {level!r}.",
+                f"statcan_census_profile_archive:get_download_link : pour l'année {year}, "
+                f"level doit être l'une des valeurs {sorted(config['levels'])}, reçu {level!r}.",
+                lang,
+            )
         )
     file_format = file_format.upper()
     if file_format not in config["formats"]:
         raise InvalidInput(
-            f"statcan_census_profile_archive:get_download_link: file_format must be one of "
-            f"{config['formats']} for year {year}, got {file_format!r}."
+            say(
+                f"statcan_census_profile_archive:get_download_link: file_format must be one of "
+                f"{config['formats']} for year {year}, got {file_format!r}.",
+                f"statcan_census_profile_archive:get_download_link : pour l'année {year}, "
+                f"file_format doit être l'une des valeurs {config['formats']}, "
+                f"reçu {file_format!r}.",
+                lang,
+            )
         )
 
     if config["style"] == "geono":
@@ -114,6 +137,7 @@ async def get_download_link(
             url=config["base_url"],
             cached=False,
             schema_name="statcan_census_profile_archive.DownloadLink",
-            limits=await _blocked_note(),
+            limits=await _blocked_note(lang),
+            lang=lang,
         ),
     )
