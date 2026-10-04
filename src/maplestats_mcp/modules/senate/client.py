@@ -20,6 +20,7 @@ from maplestats_mcp.modules.senate.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -34,9 +35,10 @@ _SESSION = re.compile(r"^\d{2}-\d$")
 _BILL = re.compile(r"\b([CS]-\d{1,4}[A-Z]?)\b")
 _COUNT = re.compile(r"(Yeas|Nays|Pour|Contre|Abstentions?)\s*:\s*(\d+)", re.IGNORECASE)
 _FRESHNESS = "sencanada.ca, updated after each sitting; cached 1 hour"
+_FRESHNESS_FR = "sencanada.ca, mis à jour après chaque séance ; mis en cache 1 heure"
 
 
-async def _page(path: str) -> tuple[str, bool]:
+async def _page(path: str, lang: str = "en") -> tuple[str, bool]:
     url = f"{constants.BASE_URL}{path}"
 
     async def fetch() -> str:
@@ -44,11 +46,24 @@ async def _page(path: str) -> tuple[str, bool]:
         try:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"senate: no page at {url}.") from exc
-            raise UpstreamError(f"senate: {url} returned HTTP {exc.response.status_code}.") from exc
+            status = exc.response.status_code
+            if status == 404:
+                raise lang_error(
+                    NotFound, lang, f"senate: no page at {url}.", f"senate : aucune page à {url}."
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"senate: {url} returned HTTP {status}.",
+                f"senate : {url} a renvoyé HTTP {status}.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"senate: {url} could not be reached.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"senate: {url} could not be reached.",
+                f"senate : {url} est injoignable.",
+            ) from exc
         return response.text
 
     return await cached_fetch(f"senate:{path}", constants.CACHE_TTL_SECONDS, fetch)
@@ -69,9 +84,14 @@ def _session_key(session: str) -> tuple[int, int]:
     return int(parliament), int(number)
 
 
-def _check_session(session: str) -> str:
+def _check_session(session: str, lang: str = "en") -> str:
     if not _SESSION.match(session.strip()):
-        raise InvalidInput(f"session must look like '45-1', got {session!r}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"session must look like '45-1', got {session!r}.",
+            f"session doit avoir la forme « 45-1 » ; reçu {session!r}.",
+        )
     return session.strip()
 
 
@@ -95,11 +115,22 @@ def parse_vote_list(
         if session and _session_key(session) < _session_key(constants.FIRST_SESSION):
             first = _session_key(constants.FIRST_SESSION)
             listed = [s for s in sessions if _session_key(s) >= first]
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"senate: sencanada.ca has no votes list for session {session}; "
-                f"sessions with votes: {', '.join(listed) or constants.FIRST_SESSION + ' on'}."
+                f"sessions with votes: {', '.join(listed) or constants.FIRST_SESSION + ' on'}.",
+                f"senate : sencanada.ca n'a pas de liste des votes pour la session {session} ; "
+                "sessions avec des votes : "
+                f"{', '.join(listed) or 'à partir de ' + constants.FIRST_SESSION}.",
             )
-        raise UpstreamError("senate: votes page has no votes table; the layout may have changed.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "senate: votes page has no votes table; the layout may have changed.",
+            "senate : la page des votes n'a pas de tableau des votes ; la présentation a "
+            "peut-être changé.",
+        )
     votes = []
     for row in table.select("tbody tr"):
         cells = row.find_all("td")
@@ -143,10 +174,15 @@ async def list_votes(
     limit: int = 50,
 ) -> SenateVoteList:
     if limit < 1 or limit > 500:
-        raise InvalidInput(f"limit must be between 1 and 500, got {limit}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and 500, got {limit}.",
+            f"limit doit être compris entre 1 et 500 ; reçu {limit}.",
+        )
     list_path = constants.LIST_PATHS[lang]
-    path = f"{list_path}{_check_session(session)}" if session else list_path
-    html, cached = await _page(path)
+    path = f"{list_path}{_check_session(session, lang)}" if session else list_path
+    html, cached = await _page(path, lang)
     votes, sessions = parse_vote_list(html, session or "", lang)
     current = session or (sessions[-1] if sessions else "")
     for vote in votes:
@@ -169,7 +205,8 @@ async def list_votes(
             url=f"{constants.BASE_URL}{path}",
             cached=cached,
             schema_name="senate.SenateVoteList",
-            freshness=_FRESHNESS,
+            freshness=fr_or_en(lang, _FRESHNESS, _FRESHNESS_FR),
+            lang=lang,
         ),
     )
 
@@ -183,7 +220,12 @@ def parse_vote(
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table", id="sc-vote-details-table")
     if not isinstance(table, Tag):
-        raise NotFound(f"senate: vote {vote_id} in {session} has no senator table.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"senate: vote {vote_id} in {session} has no senator table.",
+            f"senate : le vote {vote_id} de la session {session} n'a pas de tableau des sénateurs.",
+        )
     labels = _VOTE_COLUMNS[lang]
     ballots = []
     for row in table.select("tbody tr"):
@@ -225,26 +267,36 @@ def parse_vote(
             url=url,
             cached=cached,
             schema_name="senate.SenateVote",
-            freshness=_FRESHNESS,
+            freshness=fr_or_en(lang, _FRESHNESS, _FRESHNESS_FR),
+            lang=lang,
         ),
     )
 
 
 async def get_vote(vote_id: int, session: str, *, lang: Lang = "en") -> SenateVote:
     if vote_id < 1:
-        raise InvalidInput(f"vote_id must be positive, got {vote_id}.")
-    session = _check_session(session)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"vote_id must be positive, got {vote_id}.",
+            f"vote_id doit être positif ; reçu {vote_id}.",
+        )
+    session = _check_session(session, lang)
     # sencanada.ca renders any id/session pair and prints the session from
     # the URL (confirmed live 2026-10-03: vote 702799, a 45-1 vote, came back
     # as "44th Parliament, 1st Session" under 44-1), so the pairing is
     # checked against the session's own votes list.
-    list_html, _ = await _page(f"{constants.LIST_PATHS[lang]}{session}")
+    list_html, _ = await _page(f"{constants.LIST_PATHS[lang]}{session}", lang)
     listed, _sessions = parse_vote_list(list_html, session, lang)
     if not any(v.vote_id == vote_id for v in listed):
-        raise NotFound(
+        raise lang_error(
+            NotFound,
+            lang,
             f"senate: vote {vote_id} is not in session {session}'s votes list; take the "
-            "vote_id and session together from senate_list_votes."
+            "vote_id and session together from senate_list_votes.",
+            f"senate : le vote {vote_id} n'est pas dans la liste des votes de la session "
+            f"{session} ; prenez vote_id et session ensemble dans senate_list_votes.",
         )
     path = f"{constants.DETAIL_PATHS[lang]}{vote_id}/{session}"
-    html, cached = await _page(path)
+    html, cached = await _page(path, lang)
     return parse_vote(html, vote_id, session, f"{constants.BASE_URL}{path}", lang, cached)
