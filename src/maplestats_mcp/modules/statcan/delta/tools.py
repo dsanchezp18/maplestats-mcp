@@ -61,9 +61,16 @@ async def statcan_delta_list_tables(
     `product_id` is given). Cheap even for the 3.9 GB day: about 1 MB is
     fetched. date is "YYYY-MM-DD", a business day among the roughly 47
     kept (statcan_delta_list_files shows which). `query` filters by a word
-    in either title. Rows are read with statcan_delta_read_table. The count
-    can differ by one from WDS getChangedCubeList (51 against 50 on
-    2026-10-01).
+    in either title. Rows are read with statcan_delta_read_table. The list
+    is not WDS getChangedCubeList for the same date: WDS lists the cubes
+    whose releaseTime falls on that date, while a day's file holds every
+    cube processed since the previous file (built before 8:30 ET), with its
+    own releaseTime. So a release after 8:30 lands in the next business
+    day's file (42100107, released 2026-09-29 at 14:20, is in the 20261001
+    file with that releaseTime: 51 tables against WDS's 50; it was also in
+    the 20260929 file marked 08:30), and metadata-only changes to old
+    cubes keep their old releaseTime (four 2024-10-03 cubes in 20260925:
+    23 against 19). Compare release_time with the date to tell them apart.
     Keywords: delta file, released today, what changed, changed cubes,
     release calendar, daily release, new cubes, cube metadata, corrections,
     product id.
@@ -99,12 +106,19 @@ async def statcan_delta_read_table(
     (decoded in `legend` from the file's codeSet.xml) and release time.
     Values are raw: the scalar factor is not applied. Rows are never
     deleted; a correction arrives in the next day's file. The CSV is
-    sorted by productId, so a cube early in a big file is quick; one deep
-    in a multi-gigabyte file stops at 100 MB or 75 s with a pointer to
-    wds_get_changed_series_data or wds_get_full_table_download.
-    `vector_ids` keeps only those series; `max_rows` (1 to 10,000) caps the
-    answer. date is "YYYY-MM-DD"; the productId must be in
-    statcan_delta_list_tables for that date.
+    sorted by productId and must be inflated from its start, so a cube
+    early in a big file is quick, and one deep in a multi-gigabyte file
+    (20261001: 3.9 GB) takes several calls: each call reads up to 400 MB
+    or 75 s (about 5 MB/s), then errors with how far it got and saves
+    resume points, so calling again with the same arguments continues
+    from there. Once a day's file has been scanned past a table, later
+    reads of it on this server start next to it (scan_started_at_byte).
+    For a single deep table, wds_get_changed_series_data or
+    wds_get_full_table_download is faster. block_complete is False when
+    the ceiling stopped inside the table's own rows. `vector_ids` keeps
+    only those series; `max_rows` (1 to 10,000) caps the answer. date is
+    "YYYY-MM-DD"; the productId must be in statcan_delta_list_tables for
+    that date.
     Keywords: delta file, revisions, changed data points, vector values,
     release day, bulk update, symbol status codes, scalar factor, delta
     rows.

@@ -504,8 +504,9 @@ licence. Labour force and CPI tables on the same page repeat StatCan.
 ## Provincial general election results
 
 **Status:** Shipped 2026-10-01 for Quebec, Alberta and British Columbia as
-`modules/elections_provincial/` (3 tools), with Saskatchewan added 2026-10-02 (see
-the Saskatchewan section below); Ontario not built (terms of use).
+`modules/elections_provincial/` (3 tools), with Saskatchewan added 2026-10-02 and
+Manitoba 2026-10-03 (a fourth tool, by voting area; see the sections below); Ontario not
+built (terms of use).
 Each source's terms and robots rules were read before any data was requested.
 
 | Province | Source | Terms (wording) | Decision |
@@ -588,6 +589,54 @@ in a constituency is skipped.
 party match the legislature: Saskatchewan Party 34 and NDP 27 (2024), 48 and 13
 (2020), 51 and 10 (2016), 49 and 9 (2011). Valid votes: 466,930, 441,736,
 433,030 and 398,486; Saskatchewan Party shares 52.3%, 61.1%, 62.5% and 64.2%.
+
+### Manitoba (added 2026-10-03)
+
+**Source.** Elections Manitoba. `electionsmanitoba.ca/en/Results/PreviousElections/<year>`
+links, for each general election from 1999 to 2023, under `/downloads/`: a summary of
+votes received (`<n>GE Summary of Votes Received.xls`, `.xlsx` for the 43rd), a summary
+of results (`Summary_of_Results_GE<year>.xls`, `.xlsx` for 2023), the candidates elected,
+PDF statements of votes, and a zip of results by voting area (`<n>GE.zip`, 135 KB to
+2.3 MB). Results from 1870 to 1995 are PDF only; by-elections have their own pages. None
+of these are read.
+
+**Terms: none found.** Read on 2026-10-03 before the module was built: the footer of every
+page reads only "(c) 2026. All rights reserved."; the Website Information page covers
+accuracy (printed copies prevail over the website), external links, official languages,
+privacy and usability, and states no terms of use or licence for reuse. Nothing licenses
+reuse. The project owner accepted that risk, as for Saskatchewan; it is recorded in the
+module docstring, in the module notes and on every Manitoba response (`provenance.limits`).
+
+**How the files read.** The summary of votes received has one row per candidate. The
+division name is on the first candidate's row only, except 2011 and 2016 (every row); in
+1999 a bilingual division's second row holds its French name ("Brandon Est",
+"Saint-Boniface"), and from 2003 the cell holds both names ("Brandon East / Brandon Est",
+or split by a line break in 2019). The 2011 and 2016 header spells "Canidate"; 2023 adds
+"Declined" and "Rejected" rows. Party labels vary ("NDP / NPD / NPD", "PC Manitoba",
+"The Manitoba Greens", "MLP/PLM") and are reduced to one code. The summary of results gives
+registered voters, ballots cast and rejected and declined ballots per division; its names
+run words together in places ("BrandonWest", "St.Vital"), so names are matched on letters
+and digits. The 1999 to 2007 summaries are .xlsx workbooks with an .xls name, and the 2019
+summary and votes workbooks keep an earlier "Old" sheet before the final one.
+
+The voting-area zips come in two shapes: one row per voting area and candidate (a single
+workbook for 1999 and 2003, one per division for 2007) or one row per voting area with a
+column per candidate headed "LAST, First (PARTY)" (a single .xls of one sheet per division
+for 2011, one workbook per division for 2016, 2019 and 2023). The server answers byte ranges,
+so one division's workbook is read from the zip directory without the rest. Two 2011 sheets
+head both the number and the place column "Voting Area"; 2019 has a note row across the
+vote columns; the 2023 workbooks name no voting place per area.
+
+**Checks** (`scripts/smoke_test_elections_provincial.py mb`, run 2026-10-03): 57 winners in
+every election and seats by party as sworn in: NDP 32, PC 24, Liberal 1 (1999); 35, 20, 2
+(2003); 36, 19, 2 (2007); 37, 19, 1 (2011); PC 40, NDP 14, Liberal 3 (2016); 36, 18, 3
+(2019); NDP 34, PC 22, Liberal 1 (2023). Valid votes: 493,534, 394,324, 418,390, 431,302,
+437,248, 475,431 and 485,834. Summed over every division of every election, the voting
+areas match the official division totals in 387 of 399; the others are Arthur-Virden,
+Swan River and The Maples (2003), Elmwood, Gimli, Interlake, La Verendrye, Lac du Bonnet
+and Pembina (2007), Dawson Trail and Tuxedo (2016) and St. Boniface (2019), where
+the source's voting-area file itself differs. The voting-area response gives both sums and
+says which is final.
 
 ## British Columbia lobbyists registry (Office of the Registrar of Lobbyists)
 

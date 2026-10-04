@@ -205,12 +205,18 @@ Sources, by tool-name prefix:
 - Provincial and territorial statistics agencies: bc_stats_ (BC Stats
   Excel tables), isq_ (Institut de la statistique du Quebec),
   nl_stats_ (Newfoundland and Labrador Statistics Agency workbooks),
-  yukon_stats_ (Yukon Bureau of Statistics tables), ab_economic_ (Alberta
+  yukon_stats_ (Yukon Bureau of Statistics tables), nwt_stats_ (NWT
+  Bureau of Statistics workbooks), ab_economic_ (Alberta
   Economic Dashboard), ab_opendata_ (Open Alberta Excel and CSV files).
 - Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 tables from
   university libraries; ODESI DDI metadata, public files only).
 - Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
-  (Excel data tables). ECCC weather, climate, hydrometric: eccc_.
+  (Excel data tables). CREA MLS Home Price Index: crea_ (links, terms and
+  attribution only, no values). ECCC weather, climate, hydrometric: eccc_;
+  gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_.
+  ECCC Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP
+  facility lookups): eccc_datamart_.
+- World Bank WDI, Canada and G7/OECD peers: worldbank_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: competition_bureau_ (merger reviews), fcac_ (credit
@@ -228,15 +234,17 @@ Sources, by tool-name prefix:
   (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
 - Elections and Parliament: elections_results_ (federal results by
   riding), elections_financial_returns_ (candidate returns),
-  elections_provincial_ (QC, AB, BC, SK results), ourcommons_ (official
+  elections_provincial_ (QC, AB, BC, SK, MB results), ourcommons_ (official
   House of Commons MPs, roles, party standings), senate_ (Senate votes),
   represent_ (who represents a postal code; unofficial Open North).
 - Provincial and municipal sources: aer_ (Alberta Energy Regulator),
-  ab_wildfire_ (Alberta wildfire status), bcgw_ (BC Geographic
-  Warehouse), bc_lobbyists_ (BC Registrar of Lobbyists), nl_opendata_,
+  ab_wildfire_ (Alberta wildfire status), bc_env_ (BC air quality,
+  AQHI, snow, groundwater wells, provincial streamflow), bcgw_ (BC Geographic
+  Warehouse),bc_lobbyists_ (BC Registrar of Lobbyists), nl_opendata_,
   opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
-  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec).
+  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec), oeb_
+  (Ontario Energy Board: utility RRR filings, reliability, rates).
 - Portal families, each with a `portal` argument and a list_portals tool:
   ckan_ (open.canada.ca, provincial and city CKAN catalogues;
   ckan_datastore_search for rows, ckan_describe_resource and

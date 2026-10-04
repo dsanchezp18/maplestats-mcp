@@ -20,3 +20,13 @@ def test_folds_accents_and_plurals():
 def test_folds_ligatures():
     assert tokenize("Producteurs d'œufs, Œuvre") == ["producteur", "oeuf", "oeuvre"]
     assert tokenize("oeufs") == ["oeuf"]
+
+
+def test_drops_french_stop_words():
+    assert tokenize("Taux de chômage par province") == ["taux", "chomage", "province"]
+    assert tokenize("Quel est le PIB des provinces, à l'été ou à Noël?") == [
+        "pib",
+        "province",
+        "ete",
+        "noel",
+    ]
