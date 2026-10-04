@@ -26,7 +26,9 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -93,6 +95,25 @@ def _segment(value: str, name: str) -> str:
     return quote(value.lower())
 
 
+def _row(row: list[dict[str, Any]]) -> RecallRow:
+    values = _values(row) + [None] * 6
+    return RecallRow(
+        recall_number=str(values[0]),
+        manufacturer=values[1],
+        model=values[2],
+        make=values[3],
+        model_year=_int(values[4]),
+        recall_date=_date(values[5]),
+    )
+
+
+async def _count(url: str) -> int:
+    """`<search path>/count` answers one row, "Result Count" (confirmed live 2026-10-03)."""
+    rows, _ = await _get(f"{url}/count")
+    values = _values(rows[0]) if rows else []
+    return _int(values[0]) or 0 if values else 0
+
+
 async def search(
     *,
     make: str | None = None,
@@ -103,6 +124,13 @@ async def search(
     page: int = 1,
     lang: str = "en",
 ) -> RecallSearchResult:
+    """Recalls matching the filters, newest first.
+
+    The API lists oldest first with page/limit paging and has no sort
+    parameter, so the total comes from the `/count` endpoint and the
+    newest-first page is cut from the (at most two) upstream pages that
+    hold it.
+    """
     if not (make or model or year_from or year_to):
         raise InvalidInput("Give at least a make, a model, or a model-year range.")
     if limit < 1 or limit > constants.LIMIT_MAX:
@@ -115,28 +143,53 @@ async def search(
     if model:
         path += f"/model-name/{_segment(model, 'model')}"
     if year_from or year_to:
-        start, end = year_from or year_to, year_to or year_from
-        if start is None or end is None or start > end or start < 1900 or end > 2100:
+        first, last = year_from or year_to, year_to or year_from
+        if first is None or last is None or first < 1900 or last > 2100:
             raise InvalidInput(f"Invalid model-year range {year_from}-{year_to}.")
-        path += f"/year-range/{start}-{end}"
+        check_range(first, last, "year_from", "year_to")
+        path += f"/year-range/{first}-{last}"
     url = _root(lang) + path
-    rows, cached = await _get(url, {"limit": limit, "page": page})
-    recalls = []
-    for row in rows:
-        values = _values(row) + [None] * 6
-        recalls.append(
-            RecallRow(
-                recall_number=str(values[0]),
-                manufacturer=values[1],
-                model=values[2],
-                make=values[3],
-                model_year=_int(values[4]),
-                recall_date=_date(values[5]),
-            )
+    total = await _count(url)
+    # An unknown make answers an empty list; tell it apart from a known make
+    # with no recalls for this model or these years.
+    narrowed = bool(model or year_from or year_to)
+    make_url = _root(lang) + f"recall/make-name/{_segment(make, 'make')}" if make else None
+    if total == 0 and make_url and (not narrowed or await _count(make_url) == 0):
+        raise InvalidInput(
+            f"No recall at all lists make {make!r}; check the spelling (makes are "
+            "matched as written, e.g. 'Honda', 'Mercedes-Benz')."
         )
+    # Newest-first rows [low, high) are, oldest first, [total - high, total - low).
+    low, high = (page - 1) * limit, page * limit
+    first_index, stop_index = max(total - high, 0), max(total - low, 0)
+    rows: list[RecallRow] = []
+    cached = True
+    if stop_index > first_index:
+        first_page = first_index // limit + 1
+        last_page = (stop_index - 1) // limit + 1
+        fetched: list[RecallRow] = []
+        for upstream_page in range(first_page, last_page + 1):
+            part, part_cached = await _get(url, {"limit": limit, "page": upstream_page})
+            cached = cached and part_cached
+            fetched.extend(_row(r) for r in part)
+        offset = (first_page - 1) * limit
+        rows = fetched[first_index - offset : stop_index - offset][::-1]
+    has_more = high < total
+    note = (
+        "No recall matched; check the make and model spelling (matched as written)."
+        if total == 0
+        else (
+            f"Newest first: recalls {low + 1} to {low + len(rows)} of {total:,}; next page "
+            f"is page={page + 1}."
+            if has_more
+            else None
+        )
+    )
     return RecallSearchResult(
-        recalls=recalls,
-        returned_count=len(recalls),
+        recalls=rows,
+        returned_count=len(rows),
+        total_count=total,
+        has_more=has_more,
         page=page,
         limit=limit,
         provenance=make_provenance(
@@ -144,7 +197,11 @@ async def search(
             url=url,
             cached=cached,
             schema_name="tc_recalls.RecallSearchResult",
-            limits="results are oldest first; narrow with a model-year range or page",
+            limits=join_limits(
+                f"Request: GET {url}/count, then GET {url}?limit={limit}&page=N for the "
+                "upstream pages holding these rows (the API lists oldest first)",
+                note,
+            ),
         ),
     )
 

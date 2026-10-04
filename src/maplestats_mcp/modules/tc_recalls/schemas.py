@@ -19,8 +19,10 @@ class RecallRow(BaseModel):
 
 
 class RecallSearchResult(BaseModel):
-    recalls: list[RecallRow]
+    recalls: list[RecallRow] = Field(description="Newest recall date first.")
     returned_count: int
+    total_count: int = Field(description="Recalls matching the filters, all pages.")
+    has_more: bool = Field(description="True when a later page holds older recalls.")
     page: int
     limit: int
     provenance: Provenance

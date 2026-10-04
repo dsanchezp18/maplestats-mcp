@@ -293,7 +293,13 @@ async def test_summarize_groups(httpx_mock):
     ]
     classes = await client.summarize("recall_class", top=2)
     assert classes.groups[0].key == "(none)" and classes.groups_total == 4
-    assert "first 2 of 4" in (classes.provenance.limits or "")
+    assert "largest 2 of 4" in (classes.provenance.limits or "")
+    # A cut on years keeps the most recent ones, not the oldest.
+    recent = await client.summarize("year", top=2)
+    assert [g.key for g in recent.groups] == ["2024", "2026"]
+    assert "most recent 2 of 5" in (recent.provenance.limits or "")
+    with pytest.raises(InvalidInput, match="Classes in the data"):
+        await client.search(recall_class="Type IV")
 
 
 async def test_validation(httpx_mock):

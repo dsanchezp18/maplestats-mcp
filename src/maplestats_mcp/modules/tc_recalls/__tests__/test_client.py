@@ -1,7 +1,11 @@
-"""Tests for modules/tc_recalls/client.py, shaped on live 2026-09-23 responses."""
+"""Tests for modules/tc_recalls/client.py, shaped on live 2026-09-23 responses.
+
+The `/count` shape ("Result Count") was read live on 2026-10-03.
+"""
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
@@ -47,19 +51,56 @@ def _summary(model: str) -> list[dict[str, object]]:
     ]
 
 
+def _count(httpx_mock, total: int) -> None:
+    httpx_mock.add_response(
+        url=re.compile(r".*/count$"),
+        json={"ResultSet": [[_field("Result Count", str(total))]]},
+        is_reusable=True,
+    )
+
+
+def _row(number: int, year: int) -> list[dict[str, object]]:
+    row = list(_SEARCH_ROW)
+    row[0] = _field("Numéro de rappel", str(number))
+    row[5] = _field("Date du rappel", f"1/1/{year} 12:00:00 AM")
+    return row
+
+
 async def test_search_builds_path_and_reads_positional_columns(httpx_mock):
-    httpx_mock.add_response(json={"ResultSet": [_SEARCH_ROW]})
+    _count(httpx_mock, 1)
+    httpx_mock.add_response(url=re.compile(r".*2019-2020\?.*"), json={"ResultSet": [_SEARCH_ROW]})
     result = await client.search(
-        make="Land Rover", model="Civic", year_from=2019, year_to=2020, limit=5, page=2, lang="fr"
+        make="Land Rover", model="Civic", year_from=2019, year_to=2020, limit=5, lang="fr"
     )
     row = result.recalls[0]
     assert (row.recall_number, row.model, row.model_year) == ("2020236", "CIVIC", 2019)
     assert row.recall_date == date(2020, 5, 28)
-    url = urlparse(str(httpx_mock.get_request().url))
+    assert (result.total_count, result.has_more) == (1, False)
+    url = urlparse(str(httpx_mock.get_requests()[-1].url))
     assert url.path.endswith(
         "/fra/vehicle-recall-database/recall/make-name/land%20rover/model-name/civic/year-range/2019-2020"
     )
-    assert parse_qs(url.query) == {"limit": ["5"], "page": ["2"]}
+    assert parse_qs(url.query) == {"limit": ["5"], "page": ["1"]}
+
+
+async def test_search_returns_newest_first_across_upstream_pages(httpx_mock):
+    """7 recalls oldest first; limit 3: newest-first page 1 is rows 7, 6, 5,
+    which sit on upstream pages 2 (4-6) and 3 (7)."""
+    _count(httpx_mock, 7)
+    httpx_mock.add_response(
+        url=re.compile(r".*page=2.*"), json={"ResultSet": [_row(n, 2000 + n) for n in (4, 5, 6)]}
+    )
+    httpx_mock.add_response(url=re.compile(r".*page=3.*"), json={"ResultSet": [_row(7, 2007)]})
+    result = await client.search(make="Honda", limit=3)
+    assert [r.recall_number for r in result.recalls] == ["7", "6", "5"]
+    assert (result.total_count, result.has_more) == (7, True)
+    assert "recalls 1 to 3 of 7" in (result.provenance.limits or "")
+
+
+async def test_unknown_make_is_invalid_input(httpx_mock):
+    _count(httpx_mock, 0)
+    with pytest.raises(InvalidInput, match="check the spelling"):
+        await client.search(make="Hondaa")
 
 
 async def test_get_recall_merges_vehicles_and_picks_language(httpx_mock):
@@ -86,7 +127,8 @@ async def test_empty_result_set_and_validation(httpx_mock):
 
 
 async def test_provenance_reports_cache_hits(httpx_mock):
-    httpx_mock.add_response(json={"ResultSet": [_SEARCH_ROW]})
+    _count(httpx_mock, 1)
+    httpx_mock.add_response(url=re.compile(r".*page=1.*"), json={"ResultSet": [_SEARCH_ROW]})
     first = await client.search(make="Honda", year_from=2019, year_to=2019)
     second = await client.search(make="Honda", year_from=2019, year_to=2019)
     assert (first.provenance.cached, second.provenance.cached) == (False, True)

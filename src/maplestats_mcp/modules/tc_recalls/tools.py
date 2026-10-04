@@ -25,8 +25,8 @@ async def tc_recalls_search(
     """Search Transport Canada motor vehicle safety recalls by make, model, and model year.
 
     Use for: checking whether a vehicle has recalls, e.g. make="Honda",
-    model="Civic", year_from=2019, year_to=2020. Results are oldest
-    first, so give a model-year range or page through with `page`.
+    model="Civic", year_from=2019, year_to=2020. Results are newest
+    first, with the total and has_more; page through with `page`.
     Pass a recall number to tc_recalls_get for details.
     Keywords: vehicle recall, car recall, Transport Canada, safety
     recall, make, model, model year, defect, motor vehicle.

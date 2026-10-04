@@ -59,6 +59,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import decode_json, get_raw, is_retryable, new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.validation import format_choices
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -314,6 +315,16 @@ def _filter(
     words = _query_words(query)
     category_folded = _fold(category.strip()) if category and category.strip() else None
     wanted_class = _class_parts(recall_class) if recall_class and recall_class.strip() else None
+    records = list(records)
+    if wanted_class:
+        # An unknown class matched nothing and came back as an empty success.
+        known = {part for r in records if r.recall_class for part in _class_parts(r.recall_class)}
+        unknown = sorted(wanted_class - known)
+        if unknown:
+            raise InvalidInput(
+                f"recall_class {recall_class!r} has no match ({', '.join(unknown)}). "
+                f"Classes in the data: {format_choices(sorted(known))}."
+            )
 
     matched = []
     for record in records:
@@ -468,15 +479,21 @@ async def summarize(
     for record in matched:
         counts.update(_group_keys(record, group_by))
     if group_by == "year":
-        ordered = sorted(counts.items(), key=lambda kv: (kv[0] == "unknown", kv[0]))
+        # Years read oldest to newest, and a cut keeps the most recent ones.
+        years = sorted((kv for kv in counts.items() if kv[0] != "unknown"), key=lambda kv: kv[0])
+        unknown_year = [kv for kv in counts.items() if kv[0] == "unknown"]
+        ordered = years + unknown_year
+        shown = years[-top:] if len(ordered) > top else ordered
     else:
         ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
-    groups = [RecallCount(key=k, count=v) for k, v in ordered[:top]]
+        shown = ordered[:top]
+    groups = [RecallCount(key=k, count=v) for k, v in shown]
     limits = "year is the 'last updated' year, which the site's own date facet also uses"
     if group_by == "product_type":
         limits = "a notice can have several product types, so counts can sum past total_matched"
     if len(ordered) > top:
-        limits += f"; first {top} of {len(ordered)} groups"
+        which = "the most recent" if group_by == "year" else "the largest"
+        limits += f"; {which} {top} of {len(ordered)} groups (raise top to see more)"
     return RecallCountsResult(
         group_by=group_by,
         total_matched=len(matched),
