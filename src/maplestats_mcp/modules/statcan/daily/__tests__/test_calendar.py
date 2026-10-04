@@ -98,6 +98,17 @@ async def test_calendar_products_have_no_future_rows(httpx_mock):
     assert history.entries[0].reference_period is None
 
 
+async def test_calendar_and_releases_errors_in_french():
+    with pytest.raises(InvalidInput, match="kind doit être l'une des valeurs"):
+        await client.get_release_calendar(kind="nope", lang="fr")
+    with pytest.raises(InvalidInput, match="subject doit être l'une des valeurs"):
+        await client.get_releases("not_a_real_subject", lang="fr")
+    with pytest.raises(InvalidInput, match="date attendue au format AAAA-MM-JJ"):
+        await client.search_archive(start_date="soon", lang="fr")
+    with pytest.raises(InvalidInput, match="kind must be one of"):
+        await client.get_release_calendar(kind="nope")
+
+
 async def test_calendar_rejects_bad_kind_and_date():
     with pytest.raises(InvalidInput):
         await client.get_release_calendar(kind="nope")
