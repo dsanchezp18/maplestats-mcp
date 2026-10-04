@@ -27,7 +27,6 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import NBSP, fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.http import api_get
-from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -305,7 +304,6 @@ async def search(
             cached=cached,
             schema_name="tc_recalls.RecallSearchResult",
             limits=join_limits(request, None if complete else partial, note),
-            licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, url, lang),
             lang=lang,
         ),
     )
@@ -356,7 +354,6 @@ async def get_recall(recall_number: str, lang: str = "en") -> RecallDetail:
             url=url,
             cached=cached,
             schema_name="tc_recalls.RecallDetail",
-            licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, url, lang),
             lang=lang,
         ),
     )

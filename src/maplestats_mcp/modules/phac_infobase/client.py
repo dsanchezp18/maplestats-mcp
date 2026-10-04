@@ -43,7 +43,6 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -615,7 +614,6 @@ def list_datasets(
                 "tableaux de bord sans fichier téléchargeable (SCSMC, IMCC actuels) ne sont pas "
                 "listés",
             ),
-            licence=licence_for_lang(_SOURCE, constants.BASE_URL, lang),
             lang=lang,
         ),
     )
@@ -691,7 +689,6 @@ async def describe_dataset(dataset_id: str, lang: str = "en") -> DatasetDescript
             as_of=_as_of(table.last_modified),
             freshness=_frequency(dataset, lang),
             limits=_english_file_note(lang, file_lang),
-            licence=licence_for_lang(_SOURCE, url, lang),
             lang=lang,
         ),
     )
@@ -820,7 +817,6 @@ async def query(
                 )
                 or "",
             ),
-            licence=licence_for_lang(_SOURCE, url, lang),
             lang=lang,
         ),
     )
