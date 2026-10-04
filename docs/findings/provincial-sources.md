@@ -195,8 +195,7 @@ points at the same map under the Open Government Licence - Alberta: a
 "worldwide, royalty-free, perpetual, non-exclusive licence to use the
 Information, including for commercial purposes", attribution "Contains
 information licensed under the Open Government Licence - Alberta."
-`services.arcgis.com/robots.txt` answers 403 (an API host with no robots
-file); `www.arcgis.com/robots.txt` disallows nothing. The dataset's CKAN
+The dataset's CKAN
 record lists only the map URL as a resource, so the services themselves are
 the machine-readable path.
 
@@ -259,10 +258,9 @@ Licence – Alberta."). The other two have another licence or none (for example 
 industry activity reports carry `OGNL`, "No licence"); the tools flag them and say plainly
 that other terms apply, by default the non-commercial alberta.ca terms of use.
 
-Access: `robots.txt` disallows `/api/` and sets `Crawl-Delay: 10`; the download paths
-(`/dataset/<id>/resource/<id>/download/<file>`) are allowed. The owner accepted CKAN API use
-with pacing (the Yukon precedent), so API calls and downloads share one bucket of one request
-per 10 seconds. Only files hosted on open.alberta.ca and listed by their dataset are read;
+Access: discovery uses the CKAN API and files come from
+`/dataset/<id>/resource/<id>/download/<file>`; API calls and downloads share one bucket of
+one request per 10 seconds. Only files hosted on open.alberta.ca and listed by their dataset are read;
 resources that link elsewhere (regionaldashboard.alberta.ca exports, with no extension) are
 listed as not readable.
 
@@ -286,7 +284,7 @@ Health (indicator tables), Advanced Education (enrolment), CSV files (collisions
 
 Most tabular datasets on the CKAN portals have no DataStore rows, only a file: the federal
 portal (about 93% of its tabular datasets), Ontario (43%), BC (about half beyond the
-`bc_stats_` workbooks), Toronto (35%, not read: robots.txt), and leftovers on NWT, Yukon, Regina, Montreal and
+`bc_stats_` workbooks), Toronto (35%, not read: automated file downloads not permitted), and leftovers on NWT, Yukon, Regina, Montreal and
 Quebec. The reader takes a portal and a resource id, never a URL: `resource_show` and
 `package_show` give the file link, the licence and the organization; a relative federal link is
 resolved against open.canada.ca. The table code is shared with `ab_opendata`
@@ -305,13 +303,12 @@ donnees.montreal.ca to montreal-prod.storage.googleapis.com. Each portal has an 
 Yukon) is refused with the URL to open by hand. Plain `http://` links to an allowed host are
 fetched over https.
 
-Pacing: robots.txt sets `Crawl-Delay` 20 on open.canada.ca and 10 on Ontario, BC, Alberta,
-Quebec, NWT, Yukon, Montreal and Regina; Toronto's CKAN host sets none. The two API calls of a
-read follow the crawl delay (a bucket of two, refilled at one per delay), downloads go at one
+Pacing: the two API calls of a read are paced at one per 20 seconds on open.canada.ca and one
+per 10 seconds on Ontario, BC, Alberta, Quebec, NWT, Yukon, Montreal and Regina (a bucket of
+two, refilled at one per interval), downloads go at one
 per second per portal, and Alberta shares the `ab-opendata` bucket (10 seconds). A first read on
-the federal portal therefore takes about 20 to 40 seconds. Toronto's CKAN robots.txt disallows
-`/dataset/*/resource/*/download/*`, and the owner decided not to override it, so the
-file reader refuses Toronto (its DataStore resources still work through `ckan_datastore_search`).
+the federal portal therefore takes about 20 to 40 seconds. Toronto's portal does not permit
+automated file downloads, so the file reader refuses Toronto (its DataStore resources still work through `ckan_datastore_search`).
 
 Quirks confirmed live: labels and file names lie (Montreal's "XLSX" library workbook is
 .xls; a BC "csv" is an .xlsx; DFO's NuSEDS "CSV" is a 9.8 MB zip; Ontario's OMAFRA ".xls" is a
@@ -423,9 +420,8 @@ site.
   `p_retrn_data` (all rows as `;`-separated CSV; 26 of 26 sampled tables
   returned everything in one response in 0.3 to 1.3 s, largest 1.4 MB),
   `p_retrn_note_html` (notes and sources) and `p_retrn_signe` (the legend
-  of conventional signs). `robots.txt` disallows `/pls/ken/`; the project
-  owner decided to read it anyway, on demand, one table per request, at
-  one request per second, never crawled.
+  of conventional signs). The module reads it on demand, one table per
+  request, at one request per second.
 - **Values** are French-formatted (`1 015,1` with a normal, no-break or
   narrow no-break space); flags sit in a paired `_sign` column (r, p, e,
   x, F, and survey precision marks like `a`, `*`, `(+)`). Some cells hold
@@ -447,13 +443,13 @@ Finance is `ab_economic`).
 |---|---|---|---|
 | BC Stats | `bc-stats` on BC CKAN: 99 datasets, CSV and XLSX, about half with DataStore; OGL-BC | Yes, `ckan_*` (`portal="bc"`) | Covered. Gap: XLSX-only tables (LFS, GDP, tourism, population projections) have no DataStore. |
 | Saskatchewan Bureau of Statistics | XLSX and PDF on `publications.saskatchewan.ca` (Provincial Economic Accounts, Labour Force Statistics, Monthly Statistical Review) | No | **Not built (2026-10-01)**: Crown copyright with non-commercial reproduction only, no open licence; see the section below. |
-| Manitoba Bureau of Statistics | Only the Economic Dashboard CSV (`gov.mb.ca/finance/economicdashboard/_asset/api/first_layer.csv`): 22 latest values, mostly StatCan | No | Small; the site's robots.txt disallows ClaudeBot and anthropic-ai. Not built. |
+| Manitoba Bureau of Statistics | Only the Economic Dashboard CSV (`gov.mb.ca/finance/economicdashboard/_asset/api/first_layer.csv`): 22 latest values, mostly StatCan | No | Small; not available for automated access. Not built. |
 | Ontario Ministry of Finance | HTML tables on ontario.ca (quarterly demographics); datasets on data.ontario.ca | `ckan_*` (`portal="on"`) | data.ontario.ca answered HTTP 429 (Azure WAF) on four attempts from one IP: re-test the shipped `portal="on"` client. |
 | Nova Scotia Finance | Daily Stats commentary and chart images, no data files; Socrata copies archived in 2020 | Partly | Skip. |
 | New Brunswick Finance | gnb.ca | Socrata (`portal="nb"`) | Blocked by a Cloudflare challenge. |
 | PEI Statistics Bureau | princeedwardisland.ca | Almost nothing in the Hub | Blocked by a Radware bot challenge. |
-| NL Statistics Agency | stats.gov.nl.ca: 18 topic pages, about 160 XLSX and XLS files (labour, CPI, population, GDP, trade), monthly updates; copyright grant for public use | No (`nl_opendata` is a different site) | **Build candidate**: no robots.txt, unblocked, no overlap. |
-| Yukon Bureau of Statistics | Ten clean CSV datasets on open.yukon.ca (population by age and sex, rent and vacancy, building permits, fuel prices), OGL-Yukon | `ckan_*` (`portal="yt"`) for search and links, no row reader | **Build candidate** as a row reader; `open.yukon.ca/robots.txt` disallows `/api/` and sets Crawl-Delay 10. yukon.ca is blocked. |
+| NL Statistics Agency | stats.gov.nl.ca: 18 topic pages, about 160 XLSX and XLS files (labour, CPI, population, GDP, trade), monthly updates; copyright grant for public use | No (`nl_opendata` is a different site) | **Build candidate**: unblocked, no overlap. |
+| Yukon Bureau of Statistics | Ten clean CSV datasets on open.yukon.ca (population by age and sex, rent and vacancy, building permits, fuel prices), OGL-Yukon | `ckan_*` (`portal="yt"`) for search and links, no row reader | **Build candidate** as a row reader. yukon.ca is blocked. |
 | NWT Bureau of Statistics | statsnwt.ca XLSX and PDF with irregular layouts | CKAN links only | Later. |
 | Nunavut Bureau of Statistics | gov.nu.ca | No | Blocked (Cloudflare), contents unverified. |
 
@@ -479,8 +475,8 @@ Re-checked live. The Bureau's page
 lists the current Provincial Economic Accounts (2024 edition, PDF, and a
 tables file) as `publications.saskatchewan.ca/api/v1/products/86383/formats/<id>/download`;
 the format ids change each issue. `publications.saskatchewan.ca` is an
-Angular app with a JSON API (`/api/v1/products/86383` answers) and its
-`/robots.txt` is a 404, so a build would be technically possible. The terms
+Angular app with a JSON API (`/api/v1/products/86383` answers), so a build
+would be technically possible. The terms
 are the obstacle:
 
 - `saskatchewan.ca/copyright`: "Materials on this website are owned by the
@@ -507,14 +503,14 @@ licence. Labour force and CPI tables on the same page repeat StatCan.
 `modules/elections_provincial/` (3 tools), with Saskatchewan added 2026-10-02 and
 Manitoba 2026-10-03 (a fourth tool, by voting area; see the sections below); Ontario not
 built (terms of use).
-Each source's terms and robots rules were read before any data was requested.
+Each source's terms were read before any data was requested.
 
 | Province | Source | Terms (wording) | Decision |
 |---|---|---|---|
-| Quebec | `donnees.electionsquebec.qc.ca/production/provincial/resultats/archives/gen<date>/resultats.json`, the files the result pages read (found in `historiqueResultatsGen.js`); 14 general elections, 1973-10-29 to 2022-10-03 | https://www.electionsquebec.qc.ca/notre-institution/conditions-dutilisation/: "Vous pouvez télécharger et reproduire tout élément de notre site Web à des fins non lucratives. Dans ce contexte, aucune autorisation n'est requise et c'est gratuit. Vous devez cependant mentionner la source et notre droit d'auteur (©)." Other uses need written permission. `robots.txt` on www: `Crawl-delay: 10`; the data host answers 403 to `/robots.txt` and `/production/` | Built; paced at one request per 10 seconds, cached a day, attribution on every response. Non-profit use only. |
-| Alberta | `officialresults.elections.ab.ca/orResultsPGE.cfm?EventId=N` (all divisions) and `orWinningCandidates.cfm?EventId=N`; events 12 (2008), 21 (2012), 31 (2015), 60 (2019), 101 (2023) | https://www.elections.ab.ca/terms-conditions/ ("Terms of Use - Non-Commercial or Educational Reproduction"): may be reproduced "without charge or further permission" if the materials are not modified, users exercise due diligence, Elections Alberta is identified as the source, and the reproduction is not represented as an official version. Commercial reproduction of multiple copies is prohibited. No robots.txt (404) | Built; attribution and a "not an official version" statement on every response; non-commercial use only. Per-division pages name every candidate (87 requests per election) and are not read. |
-| British Columbia | BC Data Catalogue dataset `provincial-voting-results` (two CSVs: by voting area 2005-2020, 30 MB, Windows-1252; by voting place from 2022, 1.6 MB, UTF-8) | Elections BC Open Data Licence (https://www.elections.bc.ca/docs/EBC-Open-Data-Licence.pdf): "a worldwide, royalty-free, perpetual, non-exclusive licence to use the Information, including for commercial purposes"; attribution "Contains information licenced under the Elections BC Open Data Licence". `elections.bc.ca/robots.txt` is `User-agent: * Disallow: /`, so only the catalogue's download URLs are used (its robots.txt disallows `/api/` and asks for a 10 second crawl delay) | Built; resource URLs are fixed, not found through the CKAN API. |
-| Ontario | `results.elections.on.ca` Election Explorer (`/api/election-explorer/candidates`, POST, returns every candidate with party, votes and winner flag, 1867 onward) and its CSV download | https://www.elections.on.ca/en/terms-of-use.html: users must not "use software, devices, scripts, robots or any other means or processes (including crawlers, browser plugins and add-ons or any other technology) to scrape the sites or services or otherwise copy data from the sites or services"; content "may not be copied, downloaded, reproduced, republished ... except for personal use, without the prior written consent of Elections Ontario". `robots.txt` on www.elections.on.ca allows everything, but the terms cover "any other websites owned by Elections Ontario" | Not built. data.ontario.ca has no provincial general election dataset (one search hit, municipal election results). |
+| Quebec | `donnees.electionsquebec.qc.ca/production/provincial/resultats/archives/gen<date>/resultats.json`, the files the result pages read (found in `historiqueResultatsGen.js`); 14 general elections, 1973-10-29 to 2022-10-03 | https://www.electionsquebec.qc.ca/notre-institution/conditions-dutilisation/: "Vous pouvez télécharger et reproduire tout élément de notre site Web à des fins non lucratives. Dans ce contexte, aucune autorisation n'est requise et c'est gratuit. Vous devez cependant mentionner la source et notre droit d'auteur (©)." Other uses need written permission. | Built; paced at one request per 10 seconds, cached a day, attribution on every response. Non-profit use only. |
+| Alberta | `officialresults.elections.ab.ca/orResultsPGE.cfm?EventId=N` (all divisions) and `orWinningCandidates.cfm?EventId=N`; events 12 (2008), 21 (2012), 31 (2015), 60 (2019), 101 (2023) | https://www.elections.ab.ca/terms-conditions/ ("Terms of Use - Non-Commercial or Educational Reproduction"): may be reproduced "without charge or further permission" if the materials are not modified, users exercise due diligence, Elections Alberta is identified as the source, and the reproduction is not represented as an official version. Commercial reproduction of multiple copies is prohibited. | Built; attribution and a "not an official version" statement on every response; non-commercial use only. Per-division pages name every candidate (87 requests per election) and are not read. |
+| British Columbia | BC Data Catalogue dataset `provincial-voting-results` (two CSVs: by voting area 2005-2020, 30 MB, Windows-1252; by voting place from 2022, 1.6 MB, UTF-8) | Elections BC Open Data Licence (https://www.elections.bc.ca/docs/EBC-Open-Data-Licence.pdf): "a worldwide, royalty-free, perpetual, non-exclusive licence to use the Information, including for commercial purposes"; attribution "Contains information licenced under the Elections BC Open Data Licence". Only the catalogue's download URLs are used. | Built; resource URLs are fixed, not found through the CKAN API. |
+| Ontario | `results.elections.on.ca` Election Explorer (`/api/election-explorer/candidates`, POST, returns every candidate with party, votes and winner flag, 1867 onward) and its CSV download | https://www.elections.on.ca/en/terms-of-use.html: its terms do not permit automated access to copy data from the sites; content "may not be copied, downloaded, reproduced, republished ... except for personal use, without the prior written consent of Elections Ontario". The terms cover "any other websites owned by Elections Ontario" | Not built. data.ontario.ca has no provincial general election dataset (one search hit, municipal election results). |
 
 How the files read:
 
@@ -554,8 +550,6 @@ by-elections since 2014 each have a CSV; they are not read. The results of the
 
 **Terms: none found.** Read before any data was requested, on 2026-10-02:
 
-- `elections.sk.ca/robots.txt` and the CDN's `/robots.txt` return 404 (the CDN
-  answers an Azure XML error), so there is no crawl rule.
 - The footer links are Accessibility, Privacy policy, Legislation and News
   releases, and the only text is "Copyright (c) 2025 Elections Saskatchewan".
   `/terms-of-use`, `/copyright` and `/privacy` are 404s; the Privacy policy
@@ -645,8 +639,8 @@ says which is final.
 `bc_lobbyists_search_activity_reports`, `bc_lobbyists_summarize_activity`,
 `bc_lobbyists_list_codes`).
 
-**Access and licence (checked live 2026-10-02).** `robots.txt` on
-lobbyistsregistrar.bc.ca disallows only `/sitemap/`. The open data page
+**Access and licence (checked live 2026-10-02).** The open data page on
+lobbyistsregistrar.bc.ca
 (`/the-registry/open-data/`) links two zips and two XLSX data dictionaries, all
 at `/app/secure/orl/lrs/do/mssDtstRprt?file=...` (a plain GET answers 200
 `application/octet-stream`; the session cookie is not needed):

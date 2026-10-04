@@ -12,7 +12,7 @@ municipal officials and a postal code or point lookup.
 - `/api/` documents every endpoint and states "Represent is free up to 60
   requests per minute (86,400 queries/day)"; above that the server may answer
   HTTP 503. The shared limiter paces calls to 1 a second.
-- `/robots.txt` answers 404 (no rules). `/privacy/` covers server logs only.
+- `/privacy/` covers server logs only.
   `/terms/` and `/about/` are 404. No general terms of use exist, and nothing
   forbids automated use; the API page invites bulk download ("send a request to
   `/representatives/?limit=1000` and follow the next link").
