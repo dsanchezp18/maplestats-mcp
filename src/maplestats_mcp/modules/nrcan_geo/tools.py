@@ -27,7 +27,8 @@ async def nrcan_geo_locate(
     Keywords: geocode, geolocation, address lookup, postal code, FSA,
     coordinates, latitude longitude, NRCan, geo.ca, place search.
     Mots-clés : géocodage, géolocalisation, adresse, code postal, RTA,
-    coordonnées, latitude longitude, RNCan, recherche de lieu.
+    coordonnées, latitude longitude, Ressources naturelles Canada (RNCan),
+    recherche de lieu.
     """
     return await client.locate(query, limit=limit, lang=lang)
 
@@ -55,8 +56,9 @@ async def nrcan_geo_search_names(
     types. `province` in results is the SGC code ("48" for Alberta).
     Keywords: geographic names lookup, place names, toponymy, gazetteer,
     geographical names, lake, river, mountain, official name, NRCan, CGNDB.
-    Mots-clés : noms géographiques, toponymie, répertoire toponymique,
-    lac, rivière, montagne, nom officiel, RNCan, BDTC.
+    Mots-clés : noms géographiques, toponymie, répertoire toponymique, lac,
+    rivière, montagne, nom officiel, Ressources naturelles Canada (RNCan),
+    BDTC.
     """
     return await client.search_names(
         query,

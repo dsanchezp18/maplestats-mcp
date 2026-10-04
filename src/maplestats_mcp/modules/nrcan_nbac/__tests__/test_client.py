@@ -318,6 +318,18 @@ async def test_empty_result_names_the_latest_year(httpx_mock):
     assert result.note is not None and "2024" in result.note
 
 
+async def test_french_notes_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(json={"type": "FeatureCollection", "features": [], "numberMatched": 0})
+    result = await client.query_fires(cql_filter="year = 2025", lang="fr")
+    assert result.note is not None
+    assert result.note.startswith("Aucun feu ne correspond ; le CNZB va actuellement")
+    assert (result.provenance.coverage or "") == "0 feux renvoyés sur 0 correspondants"
+    assert "dernière saison des feux : 2024" in (result.provenance.freshness or "")
+    assert "Licence du gouvernement ouvert" in (result.provenance.licence or "")
+    with pytest.raises(InvalidInput, match="^Entrée invalide : limit doit être compris"):
+        await client.query_fires(limit=0, lang="fr")
+
+
 async def test_geometry_limit_and_byte_budget(httpx_mock, monkeypatch):
     monkeypatch.setattr(constants, "GEOMETRY_BYTES_MAX", 200)
     ring = [[-120.0 + i / 100, 55.0] for i in range(8)]
