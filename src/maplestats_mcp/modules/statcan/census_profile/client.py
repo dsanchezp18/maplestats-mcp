@@ -47,6 +47,7 @@ from maplestats_mcp.modules.statcan.census_profile.schemas import (
     GeographyMatch,
     GeographySearchResult,
 )
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
@@ -109,16 +110,32 @@ async def _fetch_codelist(codelist_id: str, lang: str = "en") -> tuple[list[dict
             detail = exc.response.text[:200]
             if status == 429 or status >= 500:
                 raise UpstreamUnavailable(
-                    f"statcan_census_profile:_fetch_codelist({codelist_id}) failed with HTTP "
-                    f"{status} after retries. Try again shortly."
+                    say(
+                        f"statcan_census_profile:_fetch_codelist({codelist_id}) failed with HTTP "
+                        f"{status} after retries. Try again shortly.",
+                        f"statcan_census_profile:_fetch_codelist({codelist_id}) a échoué "
+                        f"(HTTP {status}) après plusieurs tentatives. Réessayez sous peu.",
+                        lang,
+                    )
                 ) from exc
             raise UpstreamError(
-                f"statcan_census_profile:_fetch_codelist({codelist_id}) returned HTTP {status}: {detail}"
+                say(
+                    f"statcan_census_profile:_fetch_codelist({codelist_id}) returned HTTP "
+                    f"{status}: {detail}",
+                    f"statcan_census_profile:_fetch_codelist({codelist_id}) a renvoyé "
+                    f"HTTP {status}\u00a0: {detail}",
+                    lang,
+                )
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_census_profile:_fetch_codelist did not respond in time "
-                "(already retried by shared/http.py). Try again shortly."
+                say(
+                    "statcan_census_profile:_fetch_codelist did not respond in time "
+                    "(already retried by shared/http.py). Try again shortly.",
+                    "statcan_census_profile:_fetch_codelist n'a pas répondu à temps "
+                    "(nouvelles tentatives déjà faites). Réessayez sous peu.",
+                    lang,
+                )
             ) from exc
 
     cache_key = f"statcan-census-profile:codelist:{codelist_id}:{api_lang}"
@@ -126,7 +143,12 @@ async def _fetch_codelist(codelist_id: str, lang: str = "en") -> tuple[list[dict
     codelists = ((payload or {}).get("data") or {}).get("codelists") or []
     if not codelists:
         raise UpstreamError(
-            f"statcan_census_profile:_fetch_codelist: no codelist found for {codelist_id!r}."
+            say(
+                f"statcan_census_profile:_fetch_codelist: no codelist found for {codelist_id!r}.",
+                f"statcan_census_profile:_fetch_codelist\u00a0: aucune liste de codes trouvée "
+                f"pour {codelist_id!r}.",
+                lang,
+            )
         )
     codes = codelists[0].get("codes") or []
     return [
@@ -146,13 +168,23 @@ async def search_geography(
     dataflow = constants.GEOGRAPHY_LEVEL_TO_DATAFLOW.get(level)
     if dataflow is None:
         raise InvalidInput(
-            f"statcan_census_profile:search_geography: level must be one of "
-            f"{sorted(constants.GEOGRAPHY_LEVEL_TO_DATAFLOW)}, got {level!r}."
+            say(
+                f"statcan_census_profile:search_geography: level must be one of "
+                f"{sorted(constants.GEOGRAPHY_LEVEL_TO_DATAFLOW)}, got {level!r}.",
+                f"statcan_census_profile:search_geography\u00a0: level doit être l'une des valeurs "
+                f"{sorted(constants.GEOGRAPHY_LEVEL_TO_DATAFLOW)}, reçu {level!r}.",
+                lang,
+            )
         )
     if limit < 1 or limit > constants.GEOGRAPHY_SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_census_profile:search_geography: limit must be between 1 and "
-            f"{constants.GEOGRAPHY_SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_census_profile:search_geography: limit must be between 1 and "
+                f"{constants.GEOGRAPHY_SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_census_profile:search_geography\u00a0: limit doit être entre 1 et "
+                f"{constants.GEOGRAPHY_SEARCH_LIMIT_MAX}, reçu {limit}.",
+                lang,
+            )
         )
     _, codelist_id = dataflow
     codes, cached = await _fetch_codelist(codelist_id, lang)
@@ -167,6 +199,7 @@ async def search_geography(
             url=f"{constants.BASE_URL}/codelist/{constants.AGENCY}/{codelist_id}/latest",
             cached=cached,
             schema_name="statcan_census_profile.GeographySearchResult",
+            lang=lang,
         ),
     )
 
@@ -180,8 +213,13 @@ async def search_characteristic(
     """Search the 2,631 census profile characteristics (variables) by name substring."""
     if limit < 1 or limit > constants.CHARACTERISTIC_SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_census_profile:search_characteristic: limit must be between 1 and "
-            f"{constants.CHARACTERISTIC_SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_census_profile:search_characteristic: limit must be between 1 and "
+                f"{constants.CHARACTERISTIC_SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_census_profile:search_characteristic\u00a0: limit doit être "
+                f"entre 1 et {constants.CHARACTERISTIC_SEARCH_LIMIT_MAX}, reçu {limit}.",
+                lang,
+            )
         )
     codes, cached = await _fetch_codelist(constants.CHARACTERISTIC_CODELIST, lang)
     query_lower = query.strip().lower()
@@ -197,6 +235,7 @@ async def search_characteristic(
             url=f"{constants.BASE_URL}/codelist/{constants.AGENCY}/{constants.CHARACTERISTIC_CODELIST}/latest",
             cached=cached,
             schema_name="statcan_census_profile.CharacteristicSearchResult",
+            lang=lang,
         ),
     )
 
@@ -214,26 +253,52 @@ async def get_data(
     dataflow = constants.GEOGRAPHY_LEVEL_TO_DATAFLOW.get(level)
     if dataflow is None:
         raise InvalidInput(
-            f"statcan_census_profile:get_data: level must be one of "
-            f"{sorted(constants.GEOGRAPHY_LEVEL_TO_DATAFLOW)}, got {level!r}."
+            say(
+                f"statcan_census_profile:get_data: level must be one of "
+                f"{sorted(constants.GEOGRAPHY_LEVEL_TO_DATAFLOW)}, got {level!r}.",
+                f"statcan_census_profile:get_data\u00a0: level doit être l'une des valeurs "
+                f"{sorted(constants.GEOGRAPHY_LEVEL_TO_DATAFLOW)}, reçu {level!r}.",
+                lang,
+            )
         )
     if not geography_codes:
-        raise InvalidInput("statcan_census_profile:get_data: geography_codes must not be empty.")
+        raise InvalidInput(
+            say(
+                "statcan_census_profile:get_data: geography_codes must not be empty.",
+                "statcan_census_profile:get_data\u00a0: geography_codes ne doit pas être vide.",
+                lang,
+            )
+        )
     if not characteristic_codes:
         raise InvalidInput(
-            "statcan_census_profile:get_data: characteristic_codes must not be empty."
+            say(
+                "statcan_census_profile:get_data: characteristic_codes must not be empty.",
+                "statcan_census_profile:get_data\u00a0: characteristic_codes ne doit pas "
+                "être vide.",
+                lang,
+            )
         )
     gender_code = constants.GENDER_TO_CODE.get(gender)
     if gender_code is None:
         raise InvalidInput(
-            f"statcan_census_profile:get_data: gender must be one of "
-            f"{sorted(constants.GENDER_TO_CODE)}, got {gender!r}."
+            say(
+                f"statcan_census_profile:get_data: gender must be one of "
+                f"{sorted(constants.GENDER_TO_CODE)}, got {gender!r}.",
+                f"statcan_census_profile:get_data\u00a0: gender doit être l'une des valeurs "
+                f"{sorted(constants.GENDER_TO_CODE)}, reçu {gender!r}.",
+                lang,
+            )
         )
     statistic_code = constants.STATISTIC_TO_CODE.get(statistic)
     if statistic_code is None:
         raise InvalidInput(
-            f"statcan_census_profile:get_data: statistic must be one of "
-            f"{sorted(constants.STATISTIC_TO_CODE)}, got {statistic!r}."
+            say(
+                f"statcan_census_profile:get_data: statistic must be one of "
+                f"{sorted(constants.STATISTIC_TO_CODE)}, got {statistic!r}.",
+                f"statcan_census_profile:get_data\u00a0: statistic doit être l'une des valeurs "
+                f"{sorted(constants.STATISTIC_TO_CODE)}, reçu {statistic!r}.",
+                lang,
+            )
         )
 
     dataflow_id, _ = dataflow
@@ -258,20 +323,31 @@ async def get_data(
             detail = exc.response.text[:200]
             if status == 429 or status >= 500:
                 raise UpstreamUnavailable(
-                    f"statcan_census_profile:get_data failed with HTTP {status} after "
-                    "retries. Try again shortly."
+                    say(
+                        f"statcan_census_profile:get_data failed with HTTP {status} after "
+                        "retries. Try again shortly.",
+                        f"statcan_census_profile:get_data a échoué (HTTP {status}) après "
+                        "plusieurs tentatives. Réessayez sous peu.",
+                        lang,
+                    )
                 ) from exc
+            returned = say(
+                f"statcan_census_profile:get_data returned HTTP {status}: {detail}",
+                f"statcan_census_profile:get_data a renvoyé HTTP {status}\u00a0: {detail}",
+                lang,
+            )
             if 400 <= status < 500:
-                raise InvalidInput(
-                    f"statcan_census_profile:get_data returned HTTP {status}: {detail}"
-                ) from exc
-            raise UpstreamError(
-                f"statcan_census_profile:get_data returned HTTP {status}: {detail}"
-            ) from exc
+                raise InvalidInput(returned) from exc
+            raise UpstreamError(returned) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_census_profile:get_data did not respond in time "
-                "(already retried by shared/http.py). Try again shortly."
+                say(
+                    "statcan_census_profile:get_data did not respond in time "
+                    "(already retried by shared/http.py). Try again shortly.",
+                    "statcan_census_profile:get_data n'a pas répondu à temps "
+                    "(nouvelles tentatives déjà faites). Réessayez sous peu.",
+                    lang,
+                )
             ) from exc
 
     cache_key = f"statcan-census-profile:data:{dataflow_id}:{key}:{api_lang}"
@@ -282,7 +358,13 @@ async def get_data(
     structures = data.get("structures") or []
     if not datasets or not structures:
         raise UpstreamError(
-            "statcan_census_profile:get_data: unexpected response shape (missing dataSets/structures)."
+            say(
+                "statcan_census_profile:get_data: unexpected response shape "
+                "(missing dataSets/structures).",
+                "statcan_census_profile:get_data\u00a0: réponse de forme inattendue "
+                "(dataSets ou structures absents).",
+                lang,
+            )
         )
 
     dims = structures[0]["dimensions"]["series"]
@@ -339,5 +421,6 @@ async def get_data(
             url=url,
             cached=was_cached,
             schema_name="statcan_census_profile.CensusProfileDataResult",
+            lang=lang,
         ),
     )

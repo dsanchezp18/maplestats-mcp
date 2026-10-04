@@ -11,6 +11,7 @@ from maplestats_mcp.modules.statcan.census_profile_2016.schemas import (
     Census2016DataResult,
     Census2016GeographyList,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 GeographyLevel = Literal[
     "canada_provinces_territories",
@@ -86,9 +87,11 @@ async def statcan_census_profile_2016_list_geographies(
     non-response rates and a data-quality flag. Keywords: census 2016,
     geography, DGUID, place name, municipality, census subdivision, CMA,
     geographic code.
-    Mots-clés : recensement 2016, géographie, DGUID, nom de lieu,
-    municipalité, subdivision de recensement, RMR, code géographique.
+    Mots-clés : recensement de 2016, profil du recensement, géographie,
+    DGUID, nom de lieu, municipalité, subdivision de recensement, RMR, code
+    géographique.
     """
+    use_lang(lang)
     return await client.list_geographies(level, province_territory=province_territory, lang=lang)
 
 
@@ -120,9 +123,11 @@ async def statcan_census_profile_2016_get_data(
     statcan_census_profile_* (2021) and covers only the 2016 census.
     Keywords: census 2016, population, dwelling, income, age, demographics,
     statistics Canada, census profile.
-    Mots-clés : recensement 2016, population, logement, revenu, âge,
-    démographie, Statistique Canada, profil du recensement.
+    Mots-clés : recensement de 2016, profil du recensement, population,
+    logement, revenu, âge, démographie, données du recensement, Statistique
+    Canada.
     """
+    use_lang(lang)
     return await client.get_data(
         dguid, topic=topic, statistic=statistic, include_notes=include_notes, lang=lang
     )

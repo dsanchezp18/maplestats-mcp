@@ -17,6 +17,7 @@ from maplestats_mcp.modules.statcan.census_tables.schemas import (
     CensusTableSearch,
     Download,
 )
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
@@ -45,50 +46,93 @@ _PAGE_SLOTS = asyncio.Semaphore(4)
 _PAGE_ATTEMPTS = 2
 
 
-def _release(key: str) -> constants.Release:
+def _release(key: str, lang: str = "en") -> constants.Release:
     if key not in constants.RELEASES:
-        raise InvalidInput(f"release must be one of {sorted(constants.RELEASES)}, got {key!r}.")
+        raise InvalidInput(
+            say(
+                f"release must be one of {sorted(constants.RELEASES)}, got {key!r}.",
+                f"release doit être l'une des valeurs {sorted(constants.RELEASES)}, reçu {key!r}.",
+                lang,
+            )
+        )
     return constants.RELEASES[key]
 
 
-async def _page(url: str) -> str:
+async def _page(url: str, lang: str = "en") -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
     except CloudflareChallenge as exc:
-        raise CloudflareChallenge(f"census tables: {exc} {constants.BLOCKED_NOTE}") from exc
+        # The shared challenge text is English; the French note says the same.
+        raise CloudflareChallenge(
+            say(
+                f"census tables: {exc} {constants.BLOCKED_NOTE}",
+                f"tableaux du recensement : {constants.BLOCKED_NOTE_FR}",
+                lang,
+            )
+        ) from exc
     except httpx.HTTPStatusError as exc:
         # StatCan answers retired pages with a 302 to its "page not found"
         # notice (the 2011 Census tabulations since 2026-09, checked 2026-09-25).
         if "srvmsg404" in exc.response.headers.get("location", ""):
             raise NotFound(
-                f"census tables: StatCan answers {url} with its 'page not found' notice. "
-                "The 2011 Census tabulations have been retired this way (2011 NHS tables "
-                "remain); for other releases it may be a short outage, so retry later. "
-                "Copies of retired tables are on Borealis: use borealis_search_ivt "
-                "(e.g. 'census 2011 language')."
+                say(
+                    f"census tables: StatCan answers {url} with its 'page not found' notice. "
+                    "The 2011 Census tabulations have been retired this way (2011 NHS tables "
+                    "remain); for other releases it may be a short outage, so retry later. "
+                    "Copies of retired tables are on Borealis: use borealis_search_ivt "
+                    "(e.g. 'census 2011 language').",
+                    f"tableaux du recensement : Statistique Canada répond à {url} par son avis "
+                    "« page introuvable ». Les totalisations du Recensement de 2011 ont été "
+                    "retirées de cette façon (les tableaux de l'ENM de 2011 restent) ; pour les "
+                    "autres diffusions, il peut s'agir d'une brève panne, alors réessayez plus "
+                    "tard. Des copies des tableaux retirés sont dans Borealis : utilisez "
+                    "borealis_search_ivt (p. ex. « census 2011 language »).",
+                    lang,
+                )
             ) from exc
         status = exc.response.status_code
         if status == 403:
             raise UpstreamUnavailable(
-                f"census tables: {url} was refused (HTTP 403). {constants.BLOCKED_NOTE}"
+                say(
+                    f"census tables: {url} was refused (HTTP 403). {constants.BLOCKED_NOTE}",
+                    f"tableaux du recensement : {url} a été refusé (HTTP 403). "
+                    f"{constants.BLOCKED_NOTE_FR}",
+                    lang,
+                )
             ) from exc
         if status == 429 or status >= 500:
             raise UpstreamUnavailable(
-                f"census tables: {url} returned HTTP {status}. Try again shortly."
+                say(
+                    f"census tables: {url} returned HTTP {status}. Try again shortly.",
+                    f"tableaux du recensement : {url} a renvoyé HTTP {status}. Réessayez sous peu.",
+                    lang,
+                )
             ) from exc
-        raise UpstreamError(f"census tables: {url} returned HTTP {status}.") from exc
+        raise UpstreamError(
+            say(
+                f"census tables: {url} returned HTTP {status}.",
+                f"tableaux du recensement : {url} a renvoyé HTTP {status}.",
+                lang,
+            )
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"census tables: {url} could not be reached.") from exc
+        raise UpstreamUnavailable(
+            say(
+                f"census tables: {url} could not be reached.",
+                f"tableaux du recensement : {url} est injoignable.",
+                lang,
+            )
+        ) from exc
     return response.text
 
 
-async def _fetch_page(url: str) -> str:
+async def _fetch_page(url: str, lang: str = "en") -> str:
     """A theme page, retried once, a few at a time."""
     async with _PAGE_SLOTS:
         for attempt in range(1, _PAGE_ATTEMPTS + 1):
             try:
-                return await _page(url)
+                return await _page(url, lang)
             except UpstreamUnavailable:
                 if attempt == _PAGE_ATTEMPTS:
                     raise
@@ -164,15 +208,20 @@ def parse_list_page(
     return tables, next_url
 
 
-async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
-    release = _release(key)
+async def _catalogue(key: str, lang: str = "en") -> tuple[list[CensusTable], list[str], bool]:
+    release = _release(key, lang)
     base = f"{constants.HOST}{release.path}"
 
     async def walk_pages() -> tuple[list[CensusTable], list[str]]:
-        themes = theme_urls(await _page(f"{base}index-eng.cfm"), base)
+        themes = theme_urls(await _page(f"{base}index-eng.cfm", lang), base)
         if not themes:
             raise UpstreamError(
-                f"census tables: no themes found for {release.label}; layout changed?"
+                say(
+                    f"census tables: no themes found for {release.label}; layout changed?",
+                    f"tableaux du recensement : aucun thème trouvé pour {release.label} ; "
+                    "la mise en page a-t-elle changé ?",
+                    lang,
+                )
             )
 
         async def one_theme(name: str, url: str) -> list[CensusTable] | None:
@@ -183,7 +232,7 @@ async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
                     if next_url is None:
                         break
                     rows, next_url = parse_list_page(
-                        await _fetch_page(next_url), key, name, next_url
+                        await _fetch_page(next_url, lang), key, name, next_url
                     )
                     found.extend(rows)
             except UpstreamUnavailable:
@@ -193,7 +242,14 @@ async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
         results = await asyncio.gather(*(one_theme(n, u) for n, u in themes.items()))
         skipped = [name for name, batch in zip(themes, results, strict=True) if batch is None]
         if len(skipped) == len(themes):
-            raise UpstreamUnavailable(f"census tables: no {release.label} theme page answered.")
+            raise UpstreamUnavailable(
+                say(
+                    f"census tables: no {release.label} theme page answered.",
+                    f"tableaux du recensement : aucune page de thème de {release.label} "
+                    "n'a répondu.",
+                    lang,
+                )
+            )
         unique: dict[str, CensusTable] = {}
         for table in (t for batch in results if batch for t in batch):
             unique.setdefault(table.pid, table)
@@ -210,13 +266,21 @@ async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
 
 
 async def search(
-    query: str = "", *, release: str = "2016", limit: int = constants.SEARCH_LIMIT_DEFAULT
+    query: str = "",
+    *,
+    release: str = "2016",
+    limit: int = constants.SEARCH_LIMIT_DEFAULT,
+    lang: str = "en",
 ) -> CensusTableSearch:
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}.",
+                f"limit doit être entre 1 et {constants.SEARCH_LIMIT_MAX}, reçu {limit}.",
+                lang,
+            )
         )
-    tables, skipped, cached = await _catalogue(release)
+    tables, skipped, cached = await _catalogue(release, lang)
     words = query.lower().split()
     matched = [
         t
@@ -231,16 +295,30 @@ async def search(
         total_tables=len(tables),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.HOST}{_release(release).path}index-eng.cfm",
+            url=f"{constants.HOST}{_release(release, lang).path}index-eng.cfm",
             cached=cached,
             schema_name="census_tables.CensusTableSearch",
-            freshness="archived census releases; table list cached 7 days",
-            limits="English titles; 2021 census tables are NDM tables, use wds_search_cubes",
+            freshness=say(
+                "archived census releases; table list cached 7 days",
+                "diffusions archivées du recensement ; liste des tableaux en cache 7 jours",
+                lang,
+            ),
+            limits=say(
+                "English titles; 2021 census tables are NDM tables, use wds_search_cubes",
+                "titres offerts en anglais seulement ; les tableaux du Recensement de 2021 "
+                "sont des tableaux de la base de données principale, utilisez wds_search_cubes",
+                lang,
+            ),
             coverage=(
-                f"themes that did not answer and were skipped: {', '.join(skipped)}"
+                say(
+                    f"themes that did not answer and were skipped: {', '.join(skipped)}",
+                    f"thèmes qui n'ont pas répondu et ont été omis : {', '.join(skipped)}",
+                    lang,
+                )
                 if skipped
                 else None
             ),
+            lang=lang,
         ),
     )
 
@@ -267,10 +345,18 @@ async def _head(url: str) -> tuple[bool, int | None, bool]:
     return ok, (length or None) if ok else None, offline
 
 
-async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownloads:
+async def get_downloads(
+    pid: str, *, release: str = "2016", lang: str = "en"
+) -> CensusTableDownloads:
     if not pid.strip().isdigit():
-        raise InvalidInput(f"pid must be digits, got {pid!r}.")
-    base = f"{constants.HOST}{_release(release).path}"
+        raise InvalidInput(
+            say(
+                f"pid must be digits, got {pid!r}.",
+                f"pid doit contenir seulement des chiffres, reçu {pid!r}.",
+                lang,
+            )
+        )
+    base = f"{constants.HOST}{_release(release, lang).path}"
     urls = {
         "csv": f"{base}CompDataDownload.cfm?LANG=E&PID={pid}&OFT=CSV",
         "sdmx": f"{base}OpenDataDownload.cfm?PID={pid}",
@@ -279,7 +365,9 @@ async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownlo
     try:
         checks = await asyncio.gather(*(_head(u) for u in urls.values()))
     except CloudflareChallenge as exc:
-        raise CloudflareChallenge(f"{exc} {constants.BLOCKED_NOTE}") from exc
+        raise CloudflareChallenge(
+            say(f"{exc} {constants.BLOCKED_NOTE}", constants.BLOCKED_NOTE_FR, lang)
+        ) from exc
     downloads = [
         Download(format=fmt, url=url, available=ok, size_bytes=size)
         for (fmt, url), (ok, size, _) in zip(urls.items(), checks, strict=True)
@@ -289,25 +377,53 @@ async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownlo
         # 2026-09-25 while 2006, 2011 NHS and 2016 downloads worked).
         if release == "2011" and any(offline for _, _, offline in checks):
             raise NotFound(
-                f"StatCan has retired the 2011 Census tabulations, including PID {pid}. "
-                "Copies are on Borealis: use borealis_search_ivt (e.g. 'census 2011 language')."
+                say(
+                    f"StatCan has retired the 2011 Census tabulations, including PID {pid}. "
+                    "Copies are on Borealis: use borealis_search_ivt "
+                    "(e.g. 'census 2011 language').",
+                    "Statistique Canada a retiré les totalisations du Recensement de 2011, "
+                    f"dont le PID {pid}. Des copies sont dans Borealis : utilisez "
+                    "borealis_search_ivt (p. ex. « census 2011 language »).",
+                    lang,
+                )
             )
         if any(offline for _, _, offline in checks):
             raise UpstreamUnavailable(
-                "StatCan's census download service is temporarily offline (it redirects to its "
-                "'temporarily offline for updating' page). Try again later."
+                say(
+                    "StatCan's census download service is temporarily offline (it redirects "
+                    "to its 'temporarily offline for updating' page). Try again later.",
+                    "Le service de téléchargement du recensement de Statistique Canada est "
+                    "temporairement hors ligne (il redirige vers sa page « temporairement hors "
+                    "ligne pour mise à jour »). Réessayez plus tard.",
+                    lang,
+                )
             )
-        raise NotFound(f"No downloads found for PID {pid} in the {release} release.")
+        raise NotFound(
+            say(
+                f"No downloads found for PID {pid} in the {release} release.",
+                f"Aucun téléchargement trouvé pour le PID {pid} dans la diffusion {release}.",
+                lang,
+            )
+        )
     by_format = {d.format: d.available for d in downloads}
     ivt_only = by_format["ivt"] and not (by_format["csv"] or by_format["sdmx"])
     note = None
     if ivt_only:
-        note = (
-            "Only a Beyond 20/20 IVT file exists. Read it in R with mountainMath's canivt "
-            '(remotes::install_github("mountainMath/canivt")): '
+        code = (
             f'download.file("{urls["ivt"]}", "table_{pid}.ivt", mode = "wb"); '
             f'tab <- canivt::read_ivt("table_{pid}.ivt"); '
             "canivt::ivt_tidy(tab)"
+        )
+        # The R code goes after say(), so French spacing never touches it.
+        note = (
+            say(
+                "Only a Beyond 20/20 IVT file exists. Read it in R with mountainMath's canivt "
+                '(remotes::install_github("mountainMath/canivt")): ',
+                "Seul un fichier IVT Beyond 20/20 existe. Lisez-le dans R avec canivt, de "
+                'mountainMath (remotes::install_github("mountainMath/canivt")) : ',
+                lang,
+            )
+            + code
         )
     return CensusTableDownloads(
         release=release,
@@ -320,6 +436,11 @@ async def get_downloads(pid: str, *, release: str = "2016") -> CensusTableDownlo
             url=urls["csv"],
             cached=False,
             schema_name="census_tables.CensusTableDownloads",
-            limits="availability checked with HEAD requests; files are ZIPs",
+            limits=say(
+                "availability checked with HEAD requests; files are ZIPs",
+                "disponibilité vérifiée par des requêtes HEAD ; les fichiers sont des ZIP",
+                lang,
+            ),
+            lang=lang,
         ),
     )

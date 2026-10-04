@@ -9,7 +9,7 @@ from maplestats_mcp.shared.errors import InvalidInput
 @pytest.fixture(autouse=True)
 def _no_reachability_probe(monkeypatch):
     # URL building is what these tests check; the www12 probe has its own file.
-    async def unblocked() -> None:
+    async def unblocked(lang: str = "en") -> None:
         return None
 
     monkeypatch.setattr(client, "_blocked_note", unblocked)
@@ -65,6 +65,24 @@ async def test_get_download_link_french_2016_uses_lang_f():
     result = await client.get_download_link(2016, "canada_provinces_territories", "csv", "fr")
     assert "Lang=F" in result.url
     assert result.language == "fr"
+
+
+async def test_invalid_year_is_explained_in_french():
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.list_geography_levels(1996, lang="fr")
+    assert str(excinfo.value).startswith(
+        "statcan_census_profile_archive:list_geography_levels : year doit être"
+    )
+    assert "reçu 1996." in str(excinfo.value)
+
+
+async def test_invalid_format_keeps_english_wording():
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.get_download_link(2016, "canada_provinces_territories", "IVT2000")
+    assert str(excinfo.value) == (
+        "statcan_census_profile_archive:get_download_link: file_format must be one of "
+        "['CSV', 'TAB', 'IVT', 'XML'] for year 2016, got 'IVT2000'."
+    )
 
 
 @pytest.mark.parametrize(

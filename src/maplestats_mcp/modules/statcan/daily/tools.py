@@ -12,6 +12,7 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     DailyReleaseList,
     ReleaseCalendarResult,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 Subject = Literal[
     "all",
@@ -72,6 +73,7 @@ async def statcan_daily_get_releases(
     Statistique Canada, dernières statistiques, communiqués du Quotidien,
     communiqués d'aujourd'hui, diffusions du jour, nouveautés.
     """
+    use_lang(lang)
     return await client.get_releases(subject, lang=lang, limit=limit)
 
 
@@ -105,6 +107,7 @@ async def statcan_daily_search_archive(
     historique des diffusions, quand, Statistique Canada, date de diffusion,
     diffusions à venir, calendrier de diffusion.
     """
+    use_lang(lang)
     return await client.search_archive(
         query, lang=lang, start_date=start_date, end_date=end_date, limit=limit
     )
@@ -145,6 +148,7 @@ async def statcan_daily_get_release_calendar(
     active, indice des prix à la consommation, Le Quotidien, indicateurs
     clés, Statistique Canada.
     """
+    use_lang(lang)
     return await client.get_release_calendar(
         query,
         lang=lang,

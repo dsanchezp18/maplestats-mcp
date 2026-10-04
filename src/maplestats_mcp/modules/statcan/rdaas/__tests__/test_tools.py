@@ -14,7 +14,7 @@ async def test_search_filters_routes_by_kind(monkeypatch):
 
 
 def _ret(value):
-    async def f():
+    async def f(lang="en"):
         return value
 
     return f

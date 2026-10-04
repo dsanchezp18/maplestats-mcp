@@ -13,6 +13,7 @@ from typing import Any
 
 import httpx
 
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.rdaas import constants
 from maplestats_mcp.modules.statcan.rdaas.schemas import (
     ClassificationCategoriesDetailed,
@@ -57,7 +58,7 @@ def _limiter():
 
 
 def _say(lang: str, en: str, fr: str) -> str:
-    return fr if lang == "fr" else en
+    return say(en, fr, lang)
 
 
 async def _get(
@@ -213,12 +214,13 @@ async def search_classifications(
             url=f"{constants.BASE_URL}/search/classifications",
             cached=False,
             schema_name="statcan.rdaas.ClassificationSearchResult",
+            lang=lang,
         ),
     )
 
 
-async def _search_filters(kind: str) -> SearchFilters:
-    entries = await _get(f"/search/{kind}/filters")
+async def _search_filters(kind: str, lang: str = "en") -> SearchFilters:
+    entries = await _get(f"/search/{kind}/filters", lang=lang)
     return SearchFilters(
         filters=[FilterOption(parameter=e["parameter"], values=e["values"]) for e in entries],
         provenance=make_provenance(
@@ -226,12 +228,13 @@ async def _search_filters(kind: str) -> SearchFilters:
             url=f"{constants.BASE_URL}/search/{kind}/filters",
             cached=False,
             schema_name="statcan.rdaas.SearchFilters",
+            lang=lang,
         ),
     )
 
 
-async def get_classification_search_filters() -> SearchFilters:
-    return await _search_filters("classifications")
+async def get_classification_search_filters(lang: str = "en") -> SearchFilters:
+    return await _search_filters("classifications", lang)
 
 
 async def get_classification(classification_id: str, *, lang: str = "en") -> ClassificationDetail:
@@ -281,6 +284,7 @@ async def get_classification(classification_id: str, *, lang: str = "en") -> Cla
             url=f"{constants.BASE_URL}/classification/{resource_id}",
             cached=was_cached,
             schema_name="statcan.rdaas.ClassificationDetail",
+            lang=lang,
         ),
     )
 
@@ -358,11 +362,14 @@ def _check_page(limit: int, offset: int, lang: str) -> None:
         raise InvalidInput(_say(lang, "offset must be >= 0.", "offset doit être >= 0."))
 
 
-def _page_note(returned: int, total: int, offset: int) -> str | None:
+def _page_note(returned: int, total: int, offset: int, lang: str = "en") -> str | None:
     if offset + returned >= total:
         return None
-    return (
-        f"returned {returned} of {total} matching entries; use limit/offset or query for the rest"
+    return _say(
+        lang,
+        f"returned {returned} of {total} matching entries; use limit/offset or query for the rest",
+        f"{returned} des {total} entrées correspondantes renvoyées ; utilisez limit/offset ou "
+        "query pour la suite",
     )
 
 
@@ -417,18 +424,28 @@ async def get_classification_categories_detailed(
             url=f"{constants.BASE_URL}{path}",
             cached=was_cached,
             schema_name="statcan.rdaas.ClassificationCategoriesDetailed",
-            limits=_page_note(len(categories), len(matching), offset),
-            coverage=(
+            limits=_page_note(len(categories), len(matching), offset, lang),
+            coverage=_say(
+                lang,
                 "empty: RDaaS itself returns no category data for this classification id "
                 "(confirmed for the current released NAICS 2022.1.0 specifically -- retired "
                 "NAICS versions and the NAICS Trade Variant return full data, so this is not "
                 "true of NAICS in general). If this is the current NAICS and you need its code "
                 "list, try rdaas_get_concordance_maps on the 'NAICS Canada 2017.3.0 to "
                 "2022.1.0' concordance instead -- its target_code/target_descriptor fields are "
-                "the same current-NAICS codes and descriptions."
+                "the same current-NAICS codes and descriptions.",
+                "vide : RDaaS ne renvoie lui-même aucune catégorie pour cet identifiant de "
+                "classification (confirmé pour le SCIAN 2022.1.0 en vigueur précisément ; les "
+                "versions retirées du SCIAN et la variante pour le commerce renvoient toutes "
+                "leurs données, ce n'est donc pas vrai du SCIAN en général). S'il s'agit du "
+                "SCIAN en vigueur et qu'il vous faut sa liste de codes, essayez plutôt "
+                "rdaas_get_concordance_maps sur la concordance « SCIAN Canada 2017.3.0 à "
+                "2022.1.0 » : ses champs target_code et target_descriptor donnent les mêmes "
+                "codes et descriptions du SCIAN en vigueur.",
             )
             if not all_entries
             else None,
+            lang=lang,
         ),
     )
 
@@ -450,14 +467,19 @@ async def get_classification_exclusions(
             url=f"{constants.BASE_URL}/classification/{resource_id}/exclusions",
             cached=False,
             schema_name="statcan.rdaas.ClassificationExclusions",
-            coverage=(
+            coverage=_say(
+                lang,
                 "empty: RDaaS itself returns no exclusions data for this classification id "
                 "(confirmed live for both the current NAICS 2022.1.0 and a retired NAICS "
                 "version, so this one genuinely appears to have no exclusions data in RDaaS "
-                "across versions, unlike categories/detailed above)"
+                "across versions, unlike categories/detailed above)",
+                "vide : RDaaS ne renvoie lui-même aucune exclusion pour cet identifiant de "
+                "classification (confirmé pour le SCIAN 2022.1.0 en vigueur et pour une version "
+                "retirée ; aucune version ne semble avoir de données d'exclusion dans RDaaS)",
             )
             if not entries
             else None,
+            lang=lang,
         ),
     )
 
@@ -505,7 +527,8 @@ async def get_classification_indexes(
             url=f"{constants.BASE_URL}{path}",
             cached=was_cached,
             schema_name="statcan.rdaas.ClassificationIndexes",
-            limits=_page_note(len(page), len(matching), offset),
+            limits=_page_note(len(page), len(matching), offset, lang),
+            lang=lang,
         ),
     )
 
@@ -553,6 +576,7 @@ async def get_term_exclusion(term_exclusion_id: str, *, lang: str = "en") -> Ter
             url=f"{constants.BASE_URL}/termexclusion/{resource_id}",
             cached=False,
             schema_name="statcan.rdaas.TermExclusion",
+            lang=lang,
         ),
     )
 
@@ -603,12 +627,13 @@ async def search_concordances(
             url=f"{constants.BASE_URL}/search/concordances",
             cached=False,
             schema_name="statcan.rdaas.ConcordanceSearchResult",
+            lang=lang,
         ),
     )
 
 
-async def get_concordance_search_filters() -> SearchFilters:
-    return await _search_filters("concordances")
+async def get_concordance_search_filters(lang: str = "en") -> SearchFilters:
+    return await _search_filters("concordances", lang)
 
 
 async def get_concordance(concordance_id: str, *, lang: str = "en") -> ConcordanceDetail:
@@ -643,6 +668,7 @@ async def get_concordance(concordance_id: str, *, lang: str = "en") -> Concordan
             url=f"{constants.BASE_URL}/concordance/{resource_id}",
             cached=was_cached,
             schema_name="statcan.rdaas.ConcordanceDetail",
+            lang=lang,
         ),
     )
 
@@ -672,5 +698,6 @@ async def get_concordance_maps(concordance_id: str, *, lang: str = "en") -> Code
             url=f"{constants.BASE_URL}/concordance/{resource_id}/maps",
             cached=False,
             schema_name="statcan.rdaas.CodeMapList",
+            lang=lang,
         ),
     )

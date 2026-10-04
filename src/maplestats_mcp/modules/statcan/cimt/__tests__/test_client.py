@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from maplestats_mcp.modules.statcan.cimt import client, constants
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
@@ -198,6 +199,18 @@ async def test_missing_referer_404_names_the_api_change_risk(httpx_mock):
     httpx_mock.add_response(url=f"{_REST}/getPeriods", status_code=404)
     with pytest.raises(UpstreamError, match="Referer"):
         await client.get_periods()
+
+
+async def test_french_periods_provenance_and_errors(httpx_mock):
+    use_lang("fr")
+    _mock_periods(httpx_mock)
+    result = await client.get_periods()
+    assert (result.provenance.coverage or "").startswith("API non documentée")
+    assert result.provenance.freshness == "mensuel, depuis 1988-01"
+    with pytest.raises(InvalidInput, match="hors de la période publiée"):
+        await client.get_trade("exports", "2026-07", "2030-01", lang="fr")
+    with pytest.raises(InvalidInput, match="level doit être chapter"):
+        await client.search_commodities("x", level="hs12", lang="fr")
 
 
 # --- searching code lists ----------------------------------------------------

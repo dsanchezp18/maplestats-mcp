@@ -34,6 +34,7 @@ import re
 import httpx
 from bs4 import BeautifulSoup
 
+from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
 from maplestats_mcp.modules.statcan.reference import constants
 from maplestats_mcp.modules.statcan.reference.schemas import (
     ReferenceDocument,
@@ -99,7 +100,12 @@ def _parse_results(html: str, context: str) -> tuple[list[ReferenceDocument], in
     soup = BeautifulSoup(html, "html.parser")
     results_container = soup.find(id="ndm-results")
     if results_container is None:
-        raise UpstreamError(f"{context}: unexpected response shape (missing #ndm-results).")
+        raise UpstreamError(
+            say(
+                f"{context}: unexpected response shape (missing #ndm-results).",
+                f"{context} : réponse de forme inattendue (#ndm-results absent).",
+            )
+        )
 
     # The page renders the combined, paginated result set in the FIRST
     # <details> (id="all"/"tout"), immediately followed by several more
@@ -108,7 +114,12 @@ def _parse_results(html: str, context: str) -> tuple[list[ReferenceDocument], in
     # silently returning duplicates across every category grouping.
     first_details = results_container.find("details")
     if first_details is None:
-        raise UpstreamError(f"{context}: unexpected response shape (no <details> in #ndm-results).")
+        raise UpstreamError(
+            say(
+                f"{context}: unexpected response shape (no <details> in #ndm-results).",
+                f"{context} : réponse de forme inattendue (aucun <details> dans #ndm-results).",
+            )
+        )
 
     total_matched = 0
     summary = first_details.find("summary")
@@ -181,10 +192,18 @@ async def _search(
         raise InvalidInput(f"{context}: lang must be one of ('en', 'fr'), got {lang!r}.")
     if count < 1 or count > constants.SEARCH_COUNT_MAX:
         raise InvalidInput(
-            f"{context}: count must be between 1 and {constants.SEARCH_COUNT_MAX}, got {count}."
+            say(
+                f"{context}: count must be between 1 and {constants.SEARCH_COUNT_MAX}, got {count}.",
+                f"{context} : count doit être entre 1 et {constants.SEARCH_COUNT_MAX}, reçu {count}.",
+            )
         )
     if page < 0:
-        raise InvalidInput(f"{context}: page must be >= 0, got {page}.")
+        raise InvalidInput(
+            say(
+                f"{context}: page must be >= 0, got {page}.",
+                f"{context} : page doit être >= 0, reçu {page}.",
+            )
+        )
 
     config = constants.CATALOGUE_CONFIG[(catalogue, lang)]
     params: dict[str, str] = {"count": str(count)}
@@ -214,16 +233,24 @@ async def _search(
             if _query_ignored(response.text, config["query_param"]):
                 _warmed.discard((catalogue, lang))
                 raise UpstreamError(
-                    f"{context}: the catalogue ignored the search keyword even after "
-                    "refreshing its session, so results would be unfiltered. Try again shortly."
+                    say(
+                        f"{context}: the catalogue ignored the search keyword even after "
+                        "refreshing its session, so results would be unfiltered. Try again shortly.",
+                        f"{context} : le catalogue a ignoré le mot-clé de recherche même après le renouvellement de sa session, donc les résultats ne seraient pas filtrés. Réessayez sous peu.",
+                    )
                 )
             return response.text
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            raise UpstreamError(f"{context} returned HTTP {status}.") from exc
+            raise UpstreamError(
+                say(f"{context} returned HTTP {status}.", f"{context} a renvoyé HTTP {status}.")
+            ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                f"{context} did not respond in time. Try again shortly."
+                say(
+                    f"{context} did not respond in time. Try again shortly.",
+                    f"{context} n'a pas répondu à temps. Réessayez sous peu.",
+                )
             ) from exc
 
     cache_key = f"statcan-reference:{catalogue}:{lang}:{query.strip().lower()}:{count}:{page}"
@@ -241,6 +268,7 @@ async def _search(
             url=url,
             cached=was_cached,
             schema_name="statcan_reference.ReferenceSearchResult",
+            lang=current_lang(),
         ),
     )
 
@@ -253,6 +281,7 @@ async def search_documents(
     lang: str = "en",
 ) -> ReferenceSearchResult:
     """Search StatCan's Reference resources catalogue (definitions, data sources, methods)."""
+    use_lang(lang)
     return await _search("reference", "search_documents", query, count=count, page=page, lang=lang)
 
 
@@ -264,6 +293,7 @@ async def search_analysis(
     lang: str = "en",
 ) -> ReferenceSearchResult:
     """Search StatCan's Analysis catalogue (analytical articles, journals and periodicals)."""
+    use_lang(lang)
     return await _search("analysis", "search_analysis", query, count=count, page=page, lang=lang)
 
 
@@ -275,4 +305,5 @@ async def search_data(
     lang: str = "en",
 ) -> ReferenceSearchResult:
     """Search StatCan's Data catalogue (tables plus PUMFs, geographic and other bulk files)."""
+    use_lang(lang)
     return await _search("data", "search_data", query, count=count, page=page, lang=lang)

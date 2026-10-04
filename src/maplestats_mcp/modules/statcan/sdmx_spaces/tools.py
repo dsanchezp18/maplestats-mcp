@@ -54,9 +54,9 @@ async def sdmx_space_list_flows(
     Keywords: statcan, sdmx, ccei, energy information, greenhouse gas,
     dataflows, stcshared, CITH, internal trade, ISC advisories,
     ECCC, NRCan.
-    Mots-clés : statcan, sdmx, ccie, information sur l'énergie, gaz à effet
-    de serre, flux de données, commerce intérieur, avis sur l'eau potable,
-    qualité de vie, ECCC, RNCan.
+    Mots-clés : Statistique Canada, SDMX, CCIE, information sur l'énergie,
+    gaz à effet de serre, flux de données, commerce intérieur, avis sur
+    l'eau potable, qualité de vie, ECCC, RNCan.
     """
     return await client.list_flows(
         space, query=query, agency=agency, limit=limit, offset=offset, lang=lang
@@ -88,9 +88,9 @@ async def sdmx_space_search(
     the rest. limit + offset is capped at 50.
     Keywords: statcan, sdmx, search, ccei, energy, greenhouse gas, emissions,
     air pollutants, black carbon, energy efficiency, facets, dataflows.
-    Mots-clés : statcan, sdmx, recherche, ccie, énergie, gaz à effet de
-    serre, émissions, polluants atmosphériques, carbone noir, efficacité
-    énergétique, facettes, flux de données.
+    Mots-clés : Statistique Canada, SDMX, recherche, CCIE, énergie, gaz à
+    effet de serre, émissions, polluants atmosphériques, carbone noir,
+    efficacité énergétique, facettes, flux de données.
     """
     return await client.search_flows(
         space, query, tenant=tenant, filters=filters, limit=limit, offset=offset, lang=lang
@@ -120,8 +120,9 @@ async def sdmx_space_get_structure(
     the observation count. Flagged non_production for every flow so far.
     Keywords: statcan, sdmx, structure, dimensions, codes, codelist, key,
     ccei, energy information, dataflow, availability.
-    Mots-clés : statcan, sdmx, structure, dimensions, codes, liste de codes,
-    clé, ccie, information sur l'énergie, flux de données, disponibilité.
+    Mots-clés : Statistique Canada, SDMX, structure, dimensions, codes,
+    liste de codes, clé, CCIE, information sur l'énergie, flux de données,
+    disponibilité.
     """
     return await client.get_structure(
         space,
@@ -163,9 +164,9 @@ async def sdmx_space_get_data(
     Keywords: statcan, sdmx, data, observations, ccei, greenhouse gas,
     emissions, projections, air pollutants, ISC advisories,
     internal trade.
-    Mots-clés : statcan, sdmx, données, observations, ccie, gaz à effet de
-    serre, émissions, projections, polluants atmosphériques, avis sur l'eau
-    potable, commerce intérieur.
+    Mots-clés : Statistique Canada, SDMX, données, observations, CCIE, gaz à
+    effet de serre, émissions, projections, polluants atmosphériques, avis
+    sur l'eau potable, commerce intérieur.
     """
     return await client.get_data(
         space,

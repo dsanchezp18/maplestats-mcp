@@ -151,3 +151,11 @@ BLOCKED_NOTE = (
     "level, see WDS tables 17100122 / 17100123 via "
     "wds_search_cubes; 2021 figures via statcan_census_profile_*."
 )
+BLOCKED_NOTE_FR = (
+    "Le serveur www12 de Statistique Canada répond actuellement aux scripts par une "
+    "vérification de sécurité Cloudflare : cette adresse s'ouvre dans un navigateur, mais "
+    "un script (curl, R, Python) ne peut pas télécharger le fichier. Pour le sous-ensemble "
+    "d'indicateurs du profil de 2016 au niveau du Canada, des provinces et territoires et des "
+    "régions sociosanitaires, voir les tableaux 17100122 et 17100123 du WDS avec "
+    "wds_search_cubes ; les chiffres de 2021 sont dans statcan_census_profile_*."
+)

@@ -51,3 +51,13 @@ BLOCKED_NOTE = (
     "98-10-xxxx); an indicator subset of the 2016 profile (down to health regions) is in WDS tables 17100122 and 17100123; copies of "
     "older tables are on Borealis (borealis_search_ivt)."
 )
+# Passed through lang.say(), which adds the French no-break spaces.
+BLOCKED_NOTE_FR = (
+    "Le serveur www12 de Statistique Canada, qui sert ces tableaux du recensement, est "
+    "actuellement derrière une vérification de sécurité Cloudflare que les scripts ne peuvent "
+    "pas franchir (un navigateur peut encore ouvrir les pages). Autres sources de données du "
+    "recensement : les tableaux de 2021 sont des tableaux du WDS (wds_search_cubes, "
+    "98-10-xxxx) ; un sous-ensemble d'indicateurs du profil de 2016 (jusqu'aux régions "
+    "sociosanitaires) se trouve dans les tableaux 17100122 et 17100123 du WDS ; des copies "
+    "des tableaux plus anciens sont dans Borealis (borealis_search_ivt)."
+)

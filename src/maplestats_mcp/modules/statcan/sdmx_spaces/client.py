@@ -34,6 +34,7 @@ from typing import Any
 
 import httpx
 
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.modules.statcan.sdmx_spaces import constants
 from maplestats_mcp.modules.statcan.sdmx_spaces.schemas import (
     FacetValue,
@@ -50,7 +51,7 @@ from maplestats_mcp.modules.statcan.sdmx_spaces.schemas import (
     SpaceStructure,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import STATCAN_LICENCE, make_provenance
+from maplestats_mcp.shared.envelope import STATCAN_LICENCE, STATCAN_LICENCE_FR, make_provenance
 from maplestats_mcp.shared.errors import (
     InvalidInput,
     NotFound,
@@ -71,7 +72,7 @@ _CONCEPT_URN = re.compile(r"=([^:=]+):([^(]+)\(([^)]+)\)\.(.+)$")
 
 
 def _say(lang: str, en: str, fr: str) -> str:
-    return fr if lang == "fr" else en
+    return say(en, fr, lang)
 
 
 # Licence text. The StatCan Open Licence covers StatCan content; the services'
@@ -89,13 +90,23 @@ _PARTNER_CAVEAT = (
 )
 
 
+_PARTNER_CAVEAT_FR = (
+    " Les métadonnées de ce service n'indiquent aucune licence pour les flux republiés "
+    "d'autres ministères (ECCC, RNCan, SAC) ; leurs jeux de données d'origine sont publiés "
+    "sur ouvert.canada.ca sous la Licence du gouvernement ouvert – Canada. Citez le "
+    "ministère d'origine et vérifiez ses conditions avant toute rediffusion."
+)
+
+
 def licence_for(agency: str | None) -> str:
+    licence = say(STATCAN_LICENCE, STATCAN_LICENCE_FR)
+    caveat = say(_PARTNER_CAVEAT, _PARTNER_CAVEAT_FR)
     if agency is None:
-        return STATCAN_LICENCE + _PARTNER_CAVEAT
+        return licence + caveat
     tokens = {part.upper() for part in agency.split(".")}
     if tokens & set(_PARTNER_AGENCIES):
-        return STATCAN_LICENCE + _PARTNER_CAVEAT
-    return STATCAN_LICENCE
+        return licence + caveat
+    return licence
 
 
 _NON_PRODUCTION_NOTE = (
@@ -103,6 +114,15 @@ _NON_PRODUCTION_NOTE = (
     "StatCan has not declared these services production-grade, so flows, codes and "
     "values can change or disappear without notice."
 )
+_NON_PRODUCTION_NOTE_FR = (
+    "Chaque flux de données de cet espace porte l'annotation NonProductionDataflow : "
+    "Statistique Canada n'a pas déclaré ces services prêts pour la production, donc les "
+    "flux, les codes et les valeurs peuvent changer ou disparaître sans préavis."
+)
+
+
+def _non_production_note() -> str:
+    return say(_NON_PRODUCTION_NOTE, _NON_PRODUCTION_NOTE_FR)
 
 
 def _limiter(source: str = constants.RATE_LIMIT_SOURCE):
@@ -116,7 +136,12 @@ def _limiter(source: str = constants.RATE_LIMIT_SOURCE):
 def _space(key: str):
     space = constants.SPACES.get(key)
     if space is None:
-        raise InvalidInput(f"space must be one of {sorted(constants.SPACES)}, got {key!r}.")
+        raise InvalidInput(
+            say(
+                f"space must be one of {sorted(constants.SPACES)}, got {key!r}.",
+                f"space doit être l'une des valeurs {sorted(constants.SPACES)}, reçu {key!r}.",
+            )
+        )
     return space
 
 
@@ -198,7 +223,13 @@ async def _get(
                     "Réessayez sous peu.",
                 ).strip()
             ) from exc
-        raise UpstreamError(f"The SDMX service answered HTTP {status}: {body}") from exc
+        raise UpstreamError(
+            _say(
+                lang,
+                f"The SDMX service answered HTTP {status}: {body}",
+                f"Le service SDMX a répondu HTTP {status} : {body}",
+            )
+        ) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
             _say(
@@ -222,16 +253,30 @@ async def _get(
     return response
 
 
+# French for the `what` that _json's callers name.
+_WHAT_FR = {"dataflow list": "liste de flux de données", "structure": "structure"}
+
+
 def _json(response: httpx.Response, what: str) -> dict[str, Any]:
+    what_fr = _WHAT_FR.get(what, what)
     try:
         payload = response.json()
     except ValueError as exc:
         raise UpstreamError(
-            f"The SDMX service sent a {what} that is not valid JSON "
-            f"({len(response.content)} bytes; truncated?)."
+            say(
+                f"The SDMX service sent a {what} that is not valid JSON "
+                f"({len(response.content)} bytes; truncated?).",
+                f"Le service SDMX a envoyé une {what_fr} qui n'est pas du JSON valide "
+                f"({len(response.content)} octets ; réponse tronquée ?).",
+            )
         ) from exc
     if not isinstance(payload, dict):
-        raise UpstreamError(f"The SDMX service sent a {what} that is not a JSON object.")
+        raise UpstreamError(
+            say(
+                f"The SDMX service sent a {what} that is not a JSON object.",
+                f"Le service SDMX a envoyé une {what_fr} qui n'est pas un objet JSON.",
+            )
+        )
     return payload
 
 
@@ -293,10 +338,15 @@ def _parse_flows(payload: dict[str, Any]) -> list[_FlowRow]:
         ]
     except (KeyError, TypeError, AttributeError) as exc:
         raise UpstreamError(
-            f"The dataflow list is not shaped like SDMX-JSON 1.0 ({exc!r})."
+            say(
+                f"The dataflow list is not shaped like SDMX-JSON 1.0 ({exc!r}).",
+                f"La liste de flux de données n'a pas la forme SDMX-JSON 1.0 ({exc!r}).",
+            )
         ) from exc
     if not rows:
-        raise UpstreamError("The dataflow list is empty.")
+        raise UpstreamError(
+            say("The dataflow list is empty.", "La liste de flux de données est vide.")
+        )
     return rows
 
 
@@ -334,6 +384,7 @@ async def list_flows(
     offset: int = 0,
     lang: str = "en",
 ) -> SpaceFlowList:
+    use_lang(lang)
     if limit < 1 or limit > constants.MAX_LIST_LIMIT:
         raise InvalidInput(
             _say(
@@ -366,7 +417,12 @@ async def list_flows(
         agencies[row.agency] = agencies.get(row.agency, 0) + 1
     notes = []
     if len(page) < len(matched):
-        notes.append(f"{len(page)} of {len(matched)} matching flows; use limit/offset")
+        notes.append(
+            say(
+                f"{len(page)} of {len(matched)} matching flows; use limit/offset",
+                f"{len(page)} des {len(matched)} flux correspondants ; utilisez limit/offset",
+            )
+        )
     return SpaceFlowList(
         space=space_key,
         total_flows=len(rows),
@@ -389,9 +445,10 @@ async def list_flows(
             url=f"{space.base_url}/dataflow/all/all/latest",
             cached=False,
             schema_name="statcan.sdmx_spaces.SpaceFlowList",
-            coverage=_NON_PRODUCTION_NOTE,
+            coverage=_non_production_note(),
             limits="; ".join(notes) if notes else None,
             licence=licence_for(agency or None),
+            lang=lang,
         ),
     )
 
@@ -606,7 +663,10 @@ def _parse_structure(payload: dict[str, Any], agency: str, flow_id: str) -> _Str
         )
     except (KeyError, TypeError, AttributeError, IndexError, StopIteration, ValueError) as exc:
         raise UpstreamError(
-            f"The structure of {agency},{flow_id} is not shaped like SDMX-JSON 1.0 ({exc!r})."
+            say(
+                f"The structure of {agency},{flow_id} is not shaped like SDMX-JSON 1.0 ({exc!r}).",
+                f"La structure de {agency},{flow_id} n'a pas la forme SDMX-JSON 1.0 ({exc!r}).",
+            )
         ) from exc
 
 
@@ -645,6 +705,7 @@ async def get_structure(
     lang: str = "en",
 ) -> SpaceStructure:
     """A flow's dimensions in key order, with the codes that have data, paged."""
+    use_lang(lang)
     if limit < 1 or limit > constants.MAX_CODE_LIMIT:
         raise InvalidInput(
             _say(
@@ -683,7 +744,12 @@ async def get_structure(
         ]
         page = matching[offset : offset + limit]
         if len(page) < len(matching):
-            notes.append(f"{dim.id}: {len(page)} of {len(matching)} codes")
+            notes.append(
+                say(
+                    f"{dim.id}: {len(page)} of {len(matching)} codes",
+                    f"{dim.id} : {len(page)} des {len(matching)} codes",
+                )
+            )
         paged.append(dim.model_copy(update={"codes": page}))
     return SpaceStructure(
         space=space_key,
@@ -705,21 +771,36 @@ async def get_structure(
             schema_name="statcan.sdmx_spaces.SpaceStructure",
             as_of=structure.valid_from,
             coverage=(
-                (_NON_PRODUCTION_NOTE + " " if structure.non_production else "")
+                (_non_production_note() + " " if structure.non_production else "")
                 + (
-                    "Codes listed are those with data (from the flow's availability "
-                    "constraint); codelist_size is the whole codelist."
+                    say(
+                        "Codes listed are those with data (from the flow's availability "
+                        "constraint); codelist_size is the whole codelist.",
+                        "Les codes listés sont ceux qui ont des données (selon la contrainte "
+                        "de disponibilité du flux) ; codelist_size compte toute la liste "
+                        "de codes.",
+                    )
                     if structure.availability_known
-                    else "The flow has no availability constraint, so the codes are the whole "
-                    "codelists and some may have no data."
+                    else say(
+                        "The flow has no availability constraint, so the codes are the whole "
+                        "codelists and some may have no data.",
+                        "Le flux n'a pas de contrainte de disponibilité : les codes sont les "
+                        "listes de codes complètes et certains peuvent n'avoir aucune donnée.",
+                    )
                 )
             ),
             limits=(
-                "codes paged (" + "; ".join(notes) + "); use limit/offset, code_query or dimension"
+                say(
+                    "codes paged (" + "; ".join(notes) + "); use limit/offset, code_query or "
+                    "dimension",
+                    "codes paginés (" + "; ".join(notes) + ") ; utilisez limit/offset, "
+                    "code_query ou dimension",
+                )
                 if notes
                 else None
             ),
             licence=licence_for(structure.agency),
+            lang=lang,
         ),
     )
 
@@ -763,14 +844,23 @@ def _parse_csv(text: str, *, max_rows_per_series: int) -> _ParsedCsv:
     """SDMX-CSV 2.0 into series (dimension columns), oldest observation first."""
     text = text.lstrip("﻿")
     if not text.strip():
-        raise NotFound("The SDMX service returned an empty body: no observations.")
+        raise NotFound(
+            say(
+                "The SDMX service returned an empty body: no observations.",
+                "Le service SDMX a renvoyé une réponse vide : aucune observation.",
+            )
+        )
     first_line = text.split("\n", 1)[0]
     delimiter = ";" if first_line.count(";") > first_line.count(",") else ","
     rows = list(csv.reader(io.StringIO(text), delimiter=delimiter))
     header = rows[0]
     if header[:3] != ["STRUCTURE", "STRUCTURE_ID", "ACTION"] or "OBS_VALUE" not in header:
+        shown = ",".join(header)[:120]
         raise UpstreamError(
-            "The SDMX service did not send SDMX-CSV 2.0 (header: " + ",".join(header)[:120] + ")."
+            say(
+                f"The SDMX service did not send SDMX-CSV 2.0 (header: {shown}).",
+                f"Le service SDMX n'a pas envoyé du SDMX-CSV 2.0 (en-tête : {shown}).",
+            )
         )
     obs_idx = header.index("OBS_VALUE")
     time_idx = header.index("TIME_PERIOD") if "TIME_PERIOD" in header else None
@@ -788,7 +878,12 @@ def _parse_csv(text: str, *, max_rows_per_series: int) -> _ParsedCsv:
     for number, row in enumerate(data_rows, start=2):
         if len(row) > len(header):
             raise UpstreamError(
-                f"Malformed SDMX-CSV: row {number} has {len(row)} fields, header {len(header)}."
+                say(
+                    f"Malformed SDMX-CSV: row {number} has {len(row)} fields, "
+                    f"header {len(header)}.",
+                    f"SDMX-CSV mal formé : la ligne {number} a {len(row)} champs, "
+                    f"l'en-tête {len(header)}.",
+                )
             )
         row = row + [""] * (len(header) - len(row))
         period = row[time_idx] if time_idx is not None else ""
@@ -859,6 +954,7 @@ async def get_data(
     max_rows: int = 1000,
     lang: str = "en",
 ) -> SpaceData:
+    use_lang(lang)
     space = _space(space_key)
     key = key.strip() or "all"
     if not _KEY.match(key):
@@ -986,17 +1082,43 @@ async def get_data(
     notes: list[str] = []
     if default_applied:
         notes.append(
-            f"no period filter given: latest {constants.DEFAULT_LAST_N} observations per series "
-            "(pass last_n_observations or start_period/end_period for more)"
+            say(
+                f"no period filter given: latest {constants.DEFAULT_LAST_N} observations per "
+                "series (pass last_n_observations or start_period/end_period for more)",
+                f"aucun filtre de période : les {constants.DEFAULT_LAST_N} dernières "
+                "observations par série (passez last_n_observations ou "
+                "start_period/end_period pour en obtenir plus)",
+            )
         )
     if any(len(s.observations) >= constants.MAX_ROWS for s in series):
-        notes.append(f"newest {constants.MAX_ROWS} rows kept per series")
+        notes.append(
+            say(
+                f"newest {constants.MAX_ROWS} rows kept per series",
+                f"les {constants.MAX_ROWS} lignes les plus récentes gardées par série",
+            )
+        )
     if series_total > constants.MAX_SERIES:
-        notes.append(f"first {constants.MAX_SERIES} of {series_total} series; narrow the key")
+        notes.append(
+            say(
+                f"first {constants.MAX_SERIES} of {series_total} series; narrow the key",
+                f"{constants.MAX_SERIES} premières séries sur {series_total} ; précisez la clé",
+            )
+        )
     if row_count < total_rows:
-        notes.append(f"{row_count} of {total_rows} rows (max_rows={max_rows}); narrow the key")
+        notes.append(
+            say(
+                f"{row_count} of {total_rows} rows (max_rows={max_rows}); narrow the key",
+                f"{row_count} lignes sur {total_rows} (max_rows={max_rows}) ; précisez la clé",
+            )
+        )
     if parsed.truncated_body:
-        notes.append("the response ended mid-row (truncated); its last row was dropped")
+        notes.append(
+            say(
+                "the response ended mid-row (truncated); its last row was dropped",
+                "la réponse s'est arrêtée au milieu d'une ligne (tronquée) ; sa dernière ligne "
+                "a été retirée",
+            )
+        )
     return SpaceData(
         space=space_key,
         flow=structure.ref,
@@ -1010,9 +1132,10 @@ async def get_data(
             url=str(httpx.URL(url, params=params)),
             cached=False,
             schema_name="statcan.sdmx_spaces.SpaceData",
-            coverage=_NON_PRODUCTION_NOTE if structure.non_production else None,
+            coverage=_non_production_note() if structure.non_production else None,
             limits="; ".join(notes) if notes else None,
             licence=licence_for(structure.agency),
+            lang=lang,
         ),
     )
 
@@ -1058,7 +1181,13 @@ async def _search_tenant(
             )
         ) from exc
     except httpx.DecodingError as exc:
-        raise UpstreamError(f"The search service sent invalid JSON for tenant {tenant!r}.") from exc
+        raise UpstreamError(
+            _say(
+                lang,
+                f"The search service sent invalid JSON for tenant {tenant!r}.",
+                f"Le service de recherche a envoyé du JSON invalide pour le locataire {tenant!r}.",
+            )
+        ) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
             _say(
@@ -1096,7 +1225,12 @@ async def _search_tenant(
                 facets[name][raw] = (previous + count, raw)
     except (KeyError, TypeError, ValueError, AttributeError) as exc:
         raise UpstreamError(
-            f"The search response for tenant {tenant!r} is not shaped as expected ({exc!r})."
+            _say(
+                lang,
+                f"The search response for tenant {tenant!r} is not shaped as expected ({exc!r}).",
+                f"La réponse de recherche pour le locataire {tenant!r} n'a pas la forme "
+                f"attendue ({exc!r}).",
+            )
         ) from exc
     return found, hits, facets
 
@@ -1111,6 +1245,7 @@ async def search_flows(
     offset: int = 0,
     lang: str = "en",
 ) -> SpaceSearch:
+    use_lang(lang)
     space = _space(space_key)
     if limit < 1 or offset < 0 or limit + offset > constants.MAX_SEARCH_ROWS:
         raise InvalidInput(
@@ -1167,7 +1302,12 @@ async def search_flows(
     page = hits[offset : offset + limit]
     notes = []
     if found > len(page) + offset:
-        notes.append(f"{len(page)} of {found} matching flows; use limit/offset")
+        notes.append(
+            say(
+                f"{len(page)} of {found} matching flows; use limit/offset",
+                f"{len(page)} des {found} flux correspondants ; utilisez limit/offset",
+            )
+        )
     return SpaceSearch(
         space=space_key,
         query=query,
@@ -1183,11 +1323,18 @@ async def search_flows(
             cached=False,
             schema_name="statcan.sdmx_spaces.SpaceSearch",
             coverage=(
-                "Only flows indexed by the search tenants are searched (ccei 122 of 245 "
-                "flows; stcshared: rural, cith and pceip only, so QOL and MEA flows are "
-                "found with sdmx_space_list_flows). " + _NON_PRODUCTION_NOTE
+                say(
+                    "Only flows indexed by the search tenants are searched (ccei 122 of 245 "
+                    "flows; stcshared: rural, cith and pceip only, so QOL and MEA flows are "
+                    "found with sdmx_space_list_flows). ",
+                    "Seuls les flux indexés par les locataires de recherche sont cherchés "
+                    "(ccei : 122 flux sur 245 ; stcshared : rural, cith et pceip seulement, "
+                    "donc les flux QOL et MEA se trouvent avec sdmx_space_list_flows). ",
+                )
+                + _non_production_note()
             ),
             limits="; ".join(notes) if notes else None,
             licence=licence_for(None),
+            lang=lang,
         ),
     )
