@@ -36,9 +36,10 @@ async def nl_opendata_search_datasets(
     is needed; an id that is not a portal tag is an error. Keywords:
     Newfoundland, Labrador, NL, open data, dataset search, catalogue, tabular,
     spatial, geospatial, government, CSV, XLS, KMZ, shapefile, topic tag.
-    Mots-clés : Terre-Neuve, Labrador, données ouvertes, recherche de jeux de
-    données, catalogue, tabulaire, spatial, géospatial, gouvernement, CSV, XLS,
-    KMZ, shapefile, mot-clé thématique.
+    Mots-clés : Terre-Neuve-et-Labrador, T.-N.-L., portail de données
+    ouvertes, recherche de jeux de données, catalogue de données, données
+    tabulaires, données géospatiales, gouvernement provincial, CSV, XLS, KMZ,
+    fichier de formes, mot-clé thématique.
     """
     return await client.search_datasets(
         query,
@@ -61,9 +62,10 @@ async def nl_opendata_get_dataset(dataset_id: str, lang: Lang = "en") -> Dataset
     binary download URLs. Keywords: Newfoundland, Labrador, open data,
     dataset details, metadata, creator, publisher, geography, time coverage,
     rights, licence, topic, revision, format, file, download, CSV, XLS, KMZ.
-    Mots-clés : Terre-Neuve, Labrador, données ouvertes, détail du jeu de
-    données, métadonnées, créateur, éditeur, géographie, période, droits,
-    licence, sujet, révision, format, fichier, téléchargement, CSV, XLS, KMZ.
+    Mots-clés : Terre-Neuve-et-Labrador, données ouvertes, fiche du jeu de
+    données, métadonnées, créateur, éditeur, couverture géographique, période
+    couverte, droits, licence, sujet, révision, format, lien de
+    téléchargement, CSV, XLS, KMZ.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -76,8 +78,8 @@ async def nl_opendata_list_tags(lang: Lang = "en") -> TagList:
     nl_opendata_search_datasets with tag_id. Keywords: Newfoundland, Labrador,
     open data, topic tags, keywords, vocabulary, catalogue, Explore, filter,
     demographics, health, justice, transportation, environment.
-    Mots-clés : Terre-Neuve, Labrador, données ouvertes, mots-clés thématiques,
-    vocabulaire, catalogue, explorer, filtre, démographie, santé, justice,
-    transport, environnement.
+    Mots-clés : Terre-Neuve-et-Labrador, données ouvertes, mots-clés
+    thématiques, sujets, vocabulaire, catalogue, explorer, filtre, démographie,
+    santé, justice, transport, environnement.
     """
     return await client.list_tags(lang)

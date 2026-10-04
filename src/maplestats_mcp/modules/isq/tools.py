@@ -34,9 +34,9 @@ async def isq_search_tables(
     Keywords: Quebec statistics, ISQ, regional data, MRC, administrative
     region, health survey, culture statistics, cinema, disposable income,
     Québec tables.
-    Mots-clés : statistiques du Québec, ISQ, Institut de la statistique,
+    Mots-clés : statistiques du Québec, ISQ, Institut de la statistique du Québec,
     données régionales, MRC, région administrative, enquête de santé,
-    statistiques de la culture, cinéma, revenu disponible, tableaux.
+    statistiques de la culture, cinéma, revenu disponible, taux de chômage, tableaux statistiques.
     """
     return await client.search_tables(query, lang=lang, limit=limit)
 

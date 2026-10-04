@@ -24,6 +24,7 @@ Checked live 2026-09-26:
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import html
 import io
@@ -39,9 +40,10 @@ from bs4 import BeautifulSoup
 from maplestats_mcp.modules.isq import constants
 from maplestats_mcp.modules.isq.schemas import IsqSearchResult, IsqTable, IsqTableHit, Value
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.search import tokenize
 
@@ -56,18 +58,36 @@ _NUMBER = re.compile(r"^-?\d+(,\d+)?$")
 _SPACES = re.compile(r"[\s  ]")
 
 
-async def _get(url: str, params: dict[str, Any] | None = None) -> str:
+async def _get(url: str, params: dict[str, Any] | None = None, lang: str = "en") -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, params=params, timeout=90.0)
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            raise NotFound(f"isq: {url} does not exist.") from exc
-        raise UpstreamError(f"isq: {url} returned HTTP {exc.response.status_code}.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"isq: {url} did not respond in time.") from exc
+        status = exc.response.status_code
+        if status == 404:
+            raise_localized(
+                NotFound, f"isq: {url} does not exist.", f"isq : {url} n'existe pas.", lang
+            )
+        raise_localized(
+            UpstreamError,
+            f"isq: {url} returned HTTP {status}.",
+            f"isq : {url} a répondu par une erreur HTTP {status}.",
+            lang,
+        )
+    except httpx.HTTPError:
+        raise_localized(
+            UpstreamUnavailable,
+            f"isq: {url} did not respond in time.",
+            f"isq : {url} n'a pas répondu à temps.",
+            lang,
+        )
     if len(response.content) > constants.MAX_BYTES:
-        raise UpstreamError(f"isq: {url} is larger than expected.")
+        raise_localized(
+            UpstreamError,
+            f"isq: {url} is larger than expected.",
+            f"isq : {url} est plus volumineux que prévu.",
+            lang,
+        )
     return response.content.decode("utf-8", errors="replace")
 
 
@@ -78,12 +98,17 @@ def _text(fragment: str) -> str:
 # ------------------------------------------------------------------ search
 
 
-async def _sitemap() -> tuple[list[str], bool]:
+async def _sitemap(lang: str = "en") -> tuple[list[str], bool]:
     async def fetch() -> list[str]:
-        urls = [u for u in _LOC.findall(await _get(constants.SITEMAP_URL))]
+        urls = [u for u in _LOC.findall(await _get(constants.SITEMAP_URL, lang=lang))]
         tables = [u for u in urls if constants.TABLE_PATH in u]
         if not tables:
-            raise UpstreamError("isq: the sitemap lists no table pages.")
+            raise_localized(
+                UpstreamError,
+                "isq: the sitemap lists no table pages.",
+                "isq : le plan du site ne liste aucune page de tableau.",
+                lang,
+            )
         return tables
 
     return await cached_fetch("isq:sitemap", constants.SITEMAP_TTL_SECONDS, fetch)
@@ -103,11 +128,21 @@ async def search_tables(
 ) -> IsqSearchResult:
     """Tables whose slug contains every word of `query` (accents and plurals folded)."""
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
-        raise InvalidInput(f"isq: limit must be between 1 and {constants.SEARCH_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"isq: limit must be between 1 and {constants.SEARCH_LIMIT_MAX}.",
+            f"isq : limit doit être compris entre 1 et {constants.SEARCH_LIMIT_MAX}.",
+            lang,
+        )
     words = tokenize(query)
     if not words:
-        raise InvalidInput("isq: query needs at least one word.")
-    urls, cached = await _sitemap()
+        raise_localized(
+            InvalidInput,
+            "isq: query needs at least one word.",
+            "isq : query doit contenir au moins un mot.",
+            lang,
+        )
+    urls, cached = await _sitemap(lang)
     by_slug: dict[str, IsqTableHit] = {}
     for url in urls:
         if lang != "all" and f"/{lang}/" not in url:
@@ -126,8 +161,10 @@ async def search_tables(
         if hit.lang == "fr":
             seen.lang, seen.url, seen.title = hit.lang, hit.url, hit.title
     matched = list(by_slug.values())
+    shown = matched[:limit]
+    titled = await _page_titles(shown) if lang == "fr" else 0
     return IsqSearchResult(
-        tables=matched[:limit],
+        tables=shown,
         returned_count=min(limit, len(matched)),
         total_matched=len(matched),
         provenance=make_provenance(
@@ -135,10 +172,56 @@ async def search_tables(
             url=constants.SITEMAP_URL,
             cached=cached,
             schema_name="isq.IsqSearchResult",
-            freshness="the sitemap is read once a day",
-            coverage="matches table page names; about half the tables have an English page",
+            freshness=pick(
+                lang,
+                "the sitemap is read once a day",
+                "le plan du site est lu une fois par jour",
+            ),
+            coverage=pick(
+                lang,
+                "matches table page names; about half the tables have an English page",
+                "recherche dans les noms des pages de tableaux ; environ la moitié des "
+                "tableaux ont aussi une page en anglais",
+            ),
+            limits=(
+                pick(
+                    lang,
+                    "",
+                    f"Titres lus sur la page de chaque tableau pour les {titled} premiers "
+                    "résultats ; les suivants sont tirés de l'adresse de la page, sans accents "
+                    "(isq_get_table donne le titre exact).",
+                )
+                if len(shown) > titled
+                else None
+            )
+            or None,
+            lang=lang,
         ),
     )
+
+
+async def _page_titles(hits: list[IsqTableHit]) -> int:
+    """Replace the slug titles of the first hits by their page titles (with accents).
+
+    The sitemap has no titles, and a slug drops accents and punctuation
+    ("Indicateurs mensuels emploi et taux de chomage par region
+    administrative" for "Indicateurs mensuels : emploi et taux de chômage
+    par région administrative"). Each page's __NEXT_DATA__ carries its title
+    (`nom`, checked live 2026-10-04); pages are cached like get_table's, and a
+    page that fails keeps its slug title. Returns how many hits were read.
+    """
+    first = hits[: constants.SEARCH_TITLES_MAX]
+
+    async def title(hit: IsqTableHit) -> None:
+        try:
+            page = await _page(hit.url)
+        except (NotFound, UpstreamError, UpstreamUnavailable):
+            return
+        if page.get("nom"):
+            hit.title = _text(str(page["nom"]))
+
+    await asyncio.gather(*(title(hit) for hit in first))
+    return len(first)
 
 
 # ------------------------------------------------------------------ tables
@@ -277,33 +360,56 @@ def _page_url(table: str, lang: str) -> str:
     table = table.strip()
     if table.startswith("http"):
         if not table.startswith(constants.SITE) or constants.TABLE_PATH not in table:
-            raise InvalidInput("isq: table must be a statistique.quebec.ca table page.")
+            raise_localized(
+                InvalidInput,
+                "isq: table must be a statistique.quebec.ca table page.",
+                "isq : table doit être une page de tableau de statistique.quebec.ca.",
+                lang,
+            )
         return table
     if not re.fullmatch(r"[a-z0-9-]+", table):
-        raise InvalidInput(f"isq: {table!r} is not a table slug, number or page URL.")
+        raise_localized(
+            InvalidInput,
+            f"isq: {table!r} is not a table slug, number or page URL.",
+            f"isq : {table!r} n'est ni un identifiant de tableau, ni un numéro, ni l'adresse "
+            "d'une page.",
+            lang,
+        )
     return f"{constants.SITE}/{lang}{constants.TABLE_PATH}{table}"
 
 
-async def _page(url: str) -> dict[str, Any]:
+async def _page(url: str, lang: str = "en") -> dict[str, Any]:
     async def fetch() -> dict[str, Any]:
-        match = _NEXT_DATA.search(await _get(url))
+        match = _NEXT_DATA.search(await _get(url, lang=lang))
         data = json.loads(match.group(1))["props"]["pageProps"].get("data") if match else None
         if not data or "type" not in data:
-            raise NotFound(f"isq: {url} is not a table page.")
+            raise_localized(
+                NotFound,
+                f"isq: {url} is not a table page.",
+                f"isq : {url} n'est pas une page de tableau.",
+                lang,
+            )
         return data
 
     data, _ = await cached_fetch(f"isq:page:{url}", constants.TABLE_TTL_SECONDS, fetch)
     return data
 
 
-async def _dynamic(number: int) -> tuple[dict[str, Any], bool]:
+async def _dynamic(number: int, lang: str = "en") -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
-        header = json.loads(await _get(constants.KEN + "p_retrn_header", {"p_id_tabl": number}))
+        header = json.loads(
+            await _get(constants.KEN + "p_retrn_header", {"p_id_tabl": number}, lang)
+        )
         config = header.get("tableConfig", header)
         source = config.get("dataSource") or {}
         fields = str(source.get("fields") or "").replace(" ", "")
         if not fields:
-            raise UpstreamError(f"isq: table {number} has no field list.")
+            raise_localized(
+                UpstreamError,
+                f"isq: table {number} has no field list.",
+                f"isq : le tableau {number} n'a pas de liste de champs.",
+                lang,
+            )
         sort = ",".join(f"{s['field']} {s.get('dir', 'asc')}" for s in source.get("sort") or [])
         params: dict[str, Any] = {"p_id_tabl": number, "p_champs": fields}
         if sort:
@@ -314,15 +420,19 @@ async def _dynamic(number: int) -> tuple[dict[str, Any], bool]:
             tree.insert(0, {"field": group})
             tree = [n for n in tree if not (n.get("type") == "group" and n.get("field") == group)]
         return {
-            "title": _text(await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number})),
+            "title": _text(
+                await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number}, lang)
+            ),
             "tree": tree,
-            "data": await _get(constants.KEN + "p_retrn_data", params),
+            "data": await _get(constants.KEN + "p_retrn_data", params, lang),
             # The engine is French only: p_lang=en returned the same French
             # notes on 7 of 7 tables with an English page, and p_retrn_titre
             # or p_retrn_header with p_lang answer 404 (checked 2026-10-03).
             "notes": _text(
                 await _get(
-                    constants.KEN + "p_retrn_note_html", {"p_id_tabl": number, "p_lang": "fr"}
+                    constants.KEN + "p_retrn_note_html",
+                    {"p_id_tabl": number, "p_lang": "fr"},
+                    lang,
                 )
             ),
         }
@@ -351,19 +461,29 @@ async def get_table(
 ) -> IsqTable:
     """One table's metadata and rows, by slug, number or page URL."""
     if max_rows < 1 or max_rows > constants.ROWS_MAX:
-        raise InvalidInput(f"isq: max_rows must be between 1 and {constants.ROWS_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"isq: max_rows must be between 1 and {constants.ROWS_MAX}.",
+            f"isq : max_rows doit être compris entre 1 et {constants.ROWS_MAX}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput("isq: offset must be >= 0.")
+        raise_localized(
+            InvalidInput,
+            "isq: offset must be >= 0.",
+            "isq : offset doit être égal ou supérieur à 0.",
+            lang,
+        )
     url = _page_url(table, lang)
     try:
-        page = await _page(url)
+        page = await _page(url, lang)
     except NotFound:
         # A slug belongs to one language's page; try the other one.
         other = "en" if lang == "fr" else "fr"
         if table.startswith("http"):
             raise
         url = _page_url(table, other)
-        page = await _page(url)
+        page = await _page(url, lang)
     subjects = [str(s.get("nom")) for s in page.get("sujets") or [] if s.get("nom")]
     common = {
         "url": url,
@@ -372,7 +492,7 @@ async def get_table(
     }
     if page.get("type") == "dynamique" and page.get("no"):
         number = int(page["no"])
-        loaded, cached = await _dynamic(number)
+        loaded, cached = await _dynamic(number, lang)
         tree_columns = columns_from_tree(loaded["tree"], header_values(loaded["data"]))
         columns = [c for c in tree_columns if c.field not in constants.LAYOUT_FIELDS]
         rows, flags = parse_rows(loaded["data"], columns)
@@ -390,7 +510,9 @@ async def get_table(
             total_rows=len(rows),
             notes=loaded["notes"] or None,
             flag_legend=await _legend(),
-            provenance=_provenance(constants.KEN + f"p_retrn_data?p_id_tabl={number}", cached),
+            provenance=_provenance(
+                constants.KEN + f"p_retrn_data?p_id_tabl={number}", cached, lang
+            ),
             **common,
         )
     cells = parse_static(str(page.get("html") or ""))
@@ -405,21 +527,29 @@ async def get_table(
         excel_url=(
             f"{constants.SITE}/{'fr' if '/fr/' in url else 'en'}/fichier/{excel}" if excel else None
         ),
-        provenance=_provenance(url, False),
+        provenance=_provenance(url, False, lang),
         **common,
     )
 
 
-def _provenance(url: str, cached: bool) -> Any:
+def _provenance(url: str, cached: bool, lang: str = "en") -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
         cached=cached,
         schema_name="isq.IsqTable",
-        freshness="as published by ISQ; each table states its update date",
-        limits=(
+        freshness=pick(
+            lang,
+            "as published by ISQ; each table states its update date",
+            "tel que publié par l'ISQ ; chaque tableau indique sa date de mise à jour",
+        ),
+        limits=pick(
+            lang,
             "ISQ's data engine is French only: column labels, units, notes and"
             " sources stay French with lang='en' (only the title follows an"
-            " English page); flags are ISQ's conventional signs"
+            " English page); flags are ISQ's conventional signs",
+            "Les étiquettes de colonnes, unités, notes et sources sont celles de l'ISQ, en "
+            "français ; les signes sont les signes conventionnels de l'ISQ",
         ),
+        lang=lang,
     )
