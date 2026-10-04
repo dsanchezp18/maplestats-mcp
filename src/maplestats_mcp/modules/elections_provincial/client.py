@@ -34,7 +34,13 @@ from maplestats_mcp.modules.elections_provincial.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
+from maplestats_mcp.shared.fr_typography import NBSP, fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 Lang = Literal["en", "fr"]
@@ -106,7 +112,7 @@ _NOTES = {
             "Saskatchewan, 2011 à 2024 : tous les candidats, additionnés à partir des fichiers de "
             "résultats par bureau de vote d'Elections Saskatchewan. Le site ne publie ni conditions "
             "d'utilisation ni licence pour ces fichiers (seulement « Copyright © 2025 Elections "
-            "Saskatchewan » en pied de page) : ils sont lus aux risques du propriétaire du projet. "
+            "Saskatchewan » en pied de page) : aucune licence n'est donc indiquée. "
             "Les électeurs inscrits ne sont pas additionnés (les bureaux divisés les répètent) : "
             "pas de taux de participation."
         ),
@@ -116,12 +122,12 @@ _NOTES = {
             "participation), et les votes par section de vote "
             "(elections_provincial_get_voting_areas). Le site ne publie ni conditions "
             "d'utilisation ni licence pour ces fichiers (seulement « © 2026. All rights "
-            "reserved. » en pied de page) : ils sont lus aux risques du propriétaire du projet. "
+            "reserved. » en pied de page) : aucune licence n'est donc indiquée. "
             "Les résultats de 1870 à 1995 sont en PDF seulement et ne sont pas lus."
         ),
         (
-            "L'Ontario n'est pas couvert : ses conditions d'utilisation interdisent le moissonnage "
-            "et limitent la copie à un usage personnel (voir « blocked »). Les résultats fédéraux "
+            "L'Ontario n'est pas couvert : ses conditions d'utilisation interdisent l'extraction "
+            "automatisée et limitent la copie à un usage personnel (voir « blocked »). Les résultats fédéraux "
             "sont dans elections_results_."
         ),
         "Les élections partielles ne sont couvertes pour aucune province.",
@@ -141,7 +147,9 @@ def _source_url(election: constants.Election) -> str:
     return constants.BC_DATASET_PAGE
 
 
-def _attribution(province: str) -> str:
+def _attribution(province: str, lang: str = "en") -> str:
+    if lang == "fr":
+        return french_spacing(constants.ATTRIBUTIONS_FR[province])
     return {
         "qc": constants.QC_ATTRIBUTION,
         "ab": constants.AB_ATTRIBUTION,
@@ -151,31 +159,44 @@ def _attribution(province: str) -> str:
     }[province]
 
 
-def _limits(province: str, limit: str | None) -> str | None:
+def _limits(province: str, limit: str | None, lang: str = "en") -> str | None:
     """The response's limits, with Saskatchewan's or Manitoba's missing-terms notice added."""
-    notices = {"sk": constants.SK_TERMS_NOTICE, "mb": constants.MB_TERMS_NOTICE}
+    if lang == "fr":
+        notices = constants.TERMS_NOTICES_FR
+    else:
+        notices = {"sk": constants.SK_TERMS_NOTICE, "mb": constants.MB_TERMS_NOTICE}
     if province not in notices:
         return limit
     notice = notices[province]
-    return f"{limit} {notice}" if limit else notice
+    text = f"{limit} {notice}" if limit else notice
+    return french_spacing(text) if lang == "fr" else text
 
 
-def _province(code: str) -> str:
+def _province(code: str, lang: str = "en") -> str:
     code = code.strip().lower()
     if code not in constants.PROVINCES:
         if code == "on":
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 "elections_provincial: Ontario is not available; Elections Ontario's terms "
-                "of use forbid scraping its results (see elections_provincial_list_elections)."
+                "of use forbid scraping its results (see elections_provincial_list_elections).",
+                "elections_provincial : l'Ontario n'est pas offert ; les conditions "
+                "d'utilisation d'Élections Ontario interdisent l'extraction automatisée de ses "
+                "résultats (voir elections_provincial_list_elections).",
             )
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"elections_provincial: province must be one of {list(constants.PROVINCES)}, "
-            f"got {code!r}."
+            f"got {code!r}.",
+            f"elections_provincial : province doit être l'une des valeurs "
+            f"{list(constants.PROVINCES)} ; reçu {code!r}.",
         )
     return code
 
 
-def _election(province: str, election: str | None) -> constants.Election:
+def _election(province: str, election: str | None, lang: str = "en") -> constants.Election:
     candidates = [e for e in constants.ELECTIONS if e.province == province]
     if election is None or not election.strip():
         return candidates[0]
@@ -183,13 +204,59 @@ def _election(province: str, election: str | None) -> constants.Election:
     for item in candidates:
         if wanted in (item.date, item.date[:4]):
             return item
-    raise InvalidInput(
+    dates = [e.date for e in candidates]
+    raise lang_error(
+        InvalidInput,
+        lang,
         f"elections_provincial: {province} has general elections on "
-        f"{[e.date for e in candidates]}; election must be one of those dates or its year."
+        f"{dates}; election must be one of those dates or its year.",
+        f"elections_provincial : {province} a des élections générales aux dates {dates} ; "
+        "election doit être l'une de ces dates ou son année.",
     )
 
 
-async def _load(election: constants.Election) -> tuple[list[District], bool]:
+def _bad_limit(lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        f"elections_provincial: limit must be 1 to {constants.ROWS_LIMIT_MAX}.",
+        f"elections_provincial : limit doit être compris entre 1 et {constants.ROWS_LIMIT_MAX}.",
+    )
+
+
+def _bad_offset(lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        "elections_provincial: offset must be 0 or more.",
+        "elections_provincial : offset doit être 0 ou plus.",
+    )
+
+
+_SOURCE_ERRORS = (NotFound, UpstreamError, UpstreamUnavailable)
+
+
+def _in_french(exc: ValueError) -> ValueError:
+    """A province reader's error (written in English) with a French frame for lang="fr"."""
+    return lang_error(
+        type(exc),
+        "fr",
+        "",
+        "elections_provincial : la source provinciale n'a pas pu être lue (détail technique "
+        f"en anglais) : {exc}",
+    )
+
+
+async def _load(election: constants.Election, lang: str = "en") -> tuple[list[District], bool]:
+    try:
+        return await _load_any(election)
+    except _SOURCE_ERRORS as exc:
+        if lang != "fr":
+            raise
+        raise _in_french(exc) from exc
+
+
+async def _load_any(election: constants.Election) -> tuple[list[District], bool]:
     if election.province == "bc":
         return await british_columbia.fetch(election.source_key)
 
@@ -209,13 +276,40 @@ async def _load(election: constants.Election) -> tuple[list[District], bool]:
     )
 
 
+def _fr_int(number: int) -> str:
+    """12345 -> '12 345' with a no-break space, as French writes thousands."""
+    return f"{number:,}".replace(",", NBSP)
+
+
+def _final(lang: str) -> str:
+    return fr_or_en(
+        lang,
+        "Official results are final; by-elections are not included.",
+        "Les résultats officiels sont définitifs ; les élections partielles ne sont pas incluses.",
+    )
+
+
+def _english_only(code: str, lang: str, limit: str | None) -> str | None:
+    """For lang="fr", add that names come as the source publishes them (French for Quebec)."""
+    if lang != "fr":
+        return limit
+    note = (
+        "Noms des candidats, des partis et des circonscriptions tels qu'Élections Québec les "
+        "publie."
+        if code == "qc"
+        else "Noms des candidats, des partis et des circonscriptions tels que la source les "
+        "publie, en anglais."
+    )
+    return f"{limit} {note}" if limit else note
+
+
 def _squash(text: str) -> str:
     """Folded text without dots and spaces, so 'CAQ' finds 'C.A.Q.-E.F.L.'."""
     return fold(text).replace(".", "").replace(" ", "")
 
 
 def list_elections(province: str | None = None, lang: Lang = "en") -> ElectionList:
-    code = _province(province) if province else None
+    code = _province(province, lang) if province else None
     elections = [
         ElectionInfo(
             province=e.province,
@@ -229,20 +323,33 @@ def list_elections(province: str | None = None, lang: Lang = "en") -> ElectionLi
         if code is None or e.province == code
     ]
     blocked = [
-        BlockedSource(province=b.province, source=b.source, url=b.url, reason=b.reason)
+        BlockedSource(
+            province=b.province,
+            source=b.source,
+            url=b.url,
+            reason=french_spacing(constants.BLOCKED_REASONS_FR[b.province])
+            if lang == "fr"
+            else b.reason,
+        )
         for b in constants.BLOCKED
     ]
     return ElectionList(
         elections=elections,
         blocked=blocked,
-        notes=_NOTES[lang],
+        notes=[french_spacing(n) for n in _NOTES[lang]] if lang == "fr" else _NOTES[lang],
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=constants.PROVINCE_PAGES[code] if code else constants.QC_PAGE,
             cached=False,
             schema_name="elections_provincial.ElectionList",
-            coverage="General elections: Quebec 1973-2022, Alberta 2008-2023, British "
-            "Columbia 2005-2024, Saskatchewan 2011-2024, Manitoba 1999-2023.",
+            coverage=fr_or_en(
+                lang,
+                "General elections: Quebec 1973-2022, Alberta 2008-2023, British "
+                "Columbia 2005-2024, Saskatchewan 2011-2024, Manitoba 1999-2023.",
+                "Élections générales : Québec 1973-2022, Alberta 2008-2023, "
+                "Colombie-Britannique 2005-2024, Saskatchewan 2011-2024, Manitoba 1999-2023.",
+            ),
+            lang=lang,
         ),
     )
 
@@ -256,14 +363,15 @@ async def get_results(
     winners_only: bool = False,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: Lang = "en",
 ) -> ElectionResults:
-    code = _province(province)
+    code = _province(province, lang)
     if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"elections_provincial: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+        raise _bad_limit(lang)
     if offset < 0:
-        raise InvalidInput("elections_provincial: offset must be 0 or more.")
-    edition = _election(code, election)
-    districts, cached = await _load(edition)
+        raise _bad_offset(lang)
+    edition = _election(code, election, lang)
+    districts, cached = await _load(edition, lang)
 
     if district:
         wanted = fold(district)
@@ -329,29 +437,47 @@ async def get_results(
         total_rows=total,
         offset=offset,
         truncated=truncated,
-        attribution=_attribution(code),
+        attribution=_attribution(code, lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=_source_url(edition),
             cached=cached,
             schema_name="elections_provincial.ElectionResults",
-            freshness="Official results are final; by-elections are not included.",
-            coverage=f"{constants.PROVINCES[code][0]} general election of {edition.date}, "
-            f"{edition.seats} districts.",
+            freshness=_final(lang),
+            coverage=fr_or_en(
+                lang,
+                f"{constants.PROVINCES[code][0]} general election of {edition.date}, "
+                f"{edition.seats} districts.",
+                f"Élection générale du {edition.date}, {constants.PROVINCES[code][1]}, "
+                f"{edition.seats} circonscriptions.",
+            ),
             limits=_limits(
                 code,
-                f"Showing rows {offset + 1} to {offset + len(page)} of {total}."
-                if truncated
-                else None,
+                _english_only(
+                    code,
+                    lang,
+                    fr_or_en(
+                        lang,
+                        f"Showing rows {offset + 1} to {offset + len(page)} of {total}.",
+                        f"Lignes {offset + 1} à {offset + len(page)} sur {total}.",
+                    )
+                    if truncated
+                    else None,
+                ),
+                lang,
             ),
+            lang=lang,
         ),
     )
 
 
-async def get_seats(province: str, election: str | None = None) -> SeatSummary:
-    code = _province(province)
-    edition = _election(code, election)
-    districts, cached = await _load(edition)
+async def get_seats(province: str, election: str | None = None, lang: Lang = "en") -> SeatSummary:
+    code = _province(province, lang)
+    edition = _election(code, election, lang)
+    districts, cached = await _load(edition, lang)
+    no_affiliation = (
+        constants.NO_AFFILIATION_LABEL_FR if lang == "fr" else constants.NO_AFFILIATION_LABEL
+    )
 
     seats: dict[str, int] = {}
     votes: dict[str, int] = {}
@@ -366,8 +492,8 @@ async def get_seats(province: str, election: str | None = None) -> SeatSummary:
             # BC 2024 has 252 rows with a blank AFFILIATION (12 candidates such
             # as "Bernier, Mike", checked in the CSV 2026-10-03). The source
             # gives no party, so they are not called "Unknown" as if one were lost.
-            name = c.party or c.party_code or constants.NO_AFFILIATION_LABEL
-            blank_party = blank_party or name == constants.NO_AFFILIATION_LABEL
+            name = c.party or c.party_code or no_affiliation
+            blank_party = blank_party or name == no_affiliation
             votes[name] = votes.get(name, 0) + c.votes
             candidates[name] = candidates.get(name, 0) + 1
             seats[name] = seats.get(name, 0) + int(c.elected)
@@ -389,25 +515,48 @@ async def get_seats(province: str, election: str | None = None) -> SeatSummary:
         seats_decided=decided,
         total_valid_votes=total_valid,
         parties=parties,
-        attribution=_attribution(code),
+        attribution=_attribution(code, lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=_source_url(edition),
             cached=cached,
             schema_name="elections_provincial.SeatSummary",
-            freshness="Computed from the district rows; by-elections are not included.",
-            coverage=f"{constants.PROVINCES[code][0]} general election of {edition.date}.",
+            freshness=fr_or_en(
+                lang,
+                "Computed from the district rows; by-elections are not included.",
+                "Calculé à partir des lignes par circonscription ; les élections partielles ne "
+                "sont pas incluses.",
+            ),
+            coverage=fr_or_en(
+                lang,
+                f"{constants.PROVINCES[code][0]} general election of {edition.date}.",
+                f"Élection générale du {edition.date}, {constants.PROVINCES[code][1]}.",
+            ),
             limits=_limits(
                 code,
-                "Independent candidates appear under the label each source uses."
-                + (
-                    f" '{constants.NO_AFFILIATION_LABEL}' groups the candidates whose party "
-                    "field is empty in the source file (in BC, a blank AFFILIATION); the "
-                    "source does not say which party, if any, they ran for."
-                    if blank_party
-                    else ""
+                fr_or_en(
+                    lang,
+                    "Independent candidates appear under the label each source uses."
+                    + (
+                        f" '{no_affiliation}' groups the candidates whose party "
+                        "field is empty in the source file (in BC, a blank AFFILIATION); the "
+                        "source does not say which party, if any, they ran for."
+                        if blank_party
+                        else ""
+                    ),
+                    "Les candidats indépendants figurent sous le libellé de chaque source, et "
+                    "les noms de parti tels que la source les publie (en anglais sauf au Québec)."
+                    + (
+                        f" « {no_affiliation} » regroupe les candidats dont le champ de parti "
+                        "est vide dans le fichier source (en C.-B., AFFILIATION vide) ; la source "
+                        "n'indique pas sous quelle bannière, le cas échéant, ils se présentaient."
+                        if blank_party
+                        else ""
+                    ),
                 ),
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -421,7 +570,18 @@ async def _area_files(number: str) -> list[ZipMember]:
     return members
 
 
-async def _areas(number: str, district: District) -> tuple[list[manitoba.Area], bool]:
+async def _areas(
+    number: str, district: District, lang: str = "en"
+) -> tuple[list[manitoba.Area], bool]:
+    try:
+        return await _areas_any(number, district)
+    except _SOURCE_ERRORS as exc:
+        if lang != "fr":
+            raise
+        raise _in_french(exc) from exc
+
+
+async def _areas_any(number: str, district: District) -> tuple[list[manitoba.Area], bool]:
     """One district's voting areas, read from the election's zip by range."""
     members = await _area_files(number)
     wanted = manitoba.key(district.name)
@@ -457,31 +617,47 @@ async def get_voting_areas(
     candidate: str | None = None,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: Lang = "en",
 ) -> VotingAreaResults:
-    code = _province(province)
+    code = _province(province, lang)
     if code != "mb":
-        raise InvalidInput(
-            "elections_provincial: results by voting area are read for Manitoba (mb) only."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "elections_provincial: results by voting area are read for Manitoba (mb) only.",
+            "elections_provincial : les résultats par section de vote ne sont lus que pour le "
+            "Manitoba (mb).",
         )
     if not district.strip():
-        raise InvalidInput("elections_provincial: district is required (one Manitoba division).")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "elections_provincial: district is required (one Manitoba division).",
+            "elections_provincial : district est obligatoire (une division électorale du "
+            "Manitoba).",
+        )
     if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"elections_provincial: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+        raise _bad_limit(lang)
     if offset < 0:
-        raise InvalidInput("elections_provincial: offset must be 0 or more.")
-    edition = _election(code, election)
-    districts, _cached = await _load(edition)
+        raise _bad_offset(lang)
+    edition = _election(code, election, lang)
+    districts, _cached = await _load(edition, lang)
     wanted = fold(district)
     exact = [d for d in districts if fold(d.name) == wanted]
     matches = exact or [d for d in districts if wanted in fold(d.name)]
     if len(matches) != 1:
         names = [d.name for d in matches] or sorted(d.name for d in districts)
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"elections_provincial: district must name one Manitoba division of {edition.date}; "
-            f"{'it matches' if matches else 'choose from'} {names}."
+            f"{'it matches' if matches else 'choose from'} {names}.",
+            f"elections_provincial : district doit désigner une seule division électorale du "
+            f"Manitoba de {edition.date} ; "
+            f"{'il correspond à' if matches else 'choisissez parmi'} {names}.",
         )
     chosen = matches[0]
-    areas, cached = await _areas(edition.source_key, chosen)
+    areas, cached = await _areas(edition.source_key, chosen, lang)
 
     rows: list[VotingAreaRow] = []
     for area in areas:
@@ -510,12 +686,34 @@ async def get_voting_areas(
     truncated = offset + limit < total
     areas_valid = sum(v.votes for a in areas for v in a.votes)
     official = chosen.valid_votes or 0
-    limits = [f"Showing rows {offset + 1} to {offset + len(page)} of {total}."] if truncated else []
+    limits = (
+        [
+            fr_or_en(
+                lang,
+                f"Showing rows {offset + 1} to {offset + len(page)} of {total}.",
+                f"Lignes {offset + 1} à {offset + len(page)} sur {total}.",
+            )
+        ]
+        if truncated
+        else []
+    )
     if areas_valid != official:
         # Checked 2026-10-03: twelve divisions of 2003, 2007, 2016 and 2019 do not add up.
         limits.append(
-            f"The voting-area file's votes for {chosen.name} add up to {areas_valid:,}, not "
-            f"the {official:,} of the official summary of votes received; the summary is final."
+            fr_or_en(
+                lang,
+                f"The voting-area file's votes for {chosen.name} add up to {areas_valid:,}, not "
+                f"the {official:,} of the official summary of votes received; the summary is "
+                "final.",
+                f"Les votes du fichier par section de vote pour {chosen.name} totalisent "
+                f"{_fr_int(areas_valid)}, et non les {_fr_int(official)} du sommaire officiel "
+                "des votes obtenus ; le sommaire fait foi.",
+            )
+        )
+    if lang == "fr":
+        limits.append(
+            "Noms des candidats, des partis et des lieux de vote tels qu'Elections Manitoba les "
+            "publie, en anglais."
         )
     return VotingAreaResults(
         province=code,
@@ -538,15 +736,21 @@ async def get_voting_areas(
         truncated=truncated,
         district_valid_votes=official,
         areas_valid_votes=areas_valid,
-        attribution=_attribution(code),
+        attribution=_attribution(code, lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=manitoba.files(edition.source_key).by_area,
             cached=cached,
             schema_name="elections_provincial.VotingAreaResults",
-            freshness="Official results are final; by-elections are not included.",
-            coverage=f"Manitoba general election of {edition.date}, {chosen.name}, "
-            f"{len(areas)} voting areas and special polls.",
-            limits=_limits(code, " ".join(limits) or None),
+            freshness=_final(lang),
+            coverage=fr_or_en(
+                lang,
+                f"Manitoba general election of {edition.date}, {chosen.name}, "
+                f"{len(areas)} voting areas and special polls.",
+                f"Élection générale du Manitoba du {edition.date}, {chosen.name}, "
+                f"{len(areas)} sections de vote et bureaux spéciaux.",
+            ),
+            limits=_limits(code, " ".join(limits) or None, lang),
+            lang=lang,
         ),
     )

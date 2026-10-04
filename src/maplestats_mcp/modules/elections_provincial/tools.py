@@ -62,8 +62,9 @@ async def elections_provincial_get_results(
     (2022), and defaults to the latest. `district` (name or number or code), `party`
     (name or abbreviation, e.g. CAQ, UCP, NDP, PC) and `candidate` are
     accent-insensitive substring filters. Ontario is not available. By-elections
-    are not included. `lang` changes nothing here: district, party and
-    candidate names are given as each source publishes them.
+    are not included. District, party and candidate names are given as
+    each source publishes them (English except for Quebec); `lang="fr"`
+    gives errors, notes, attribution and provenance in French.
     Keywords: provincial election results, riding, electoral district,
     electoral division, candidate, votes, winner, elected, MLA, MNA, party, CAQ,
     Parti Quebecois, Liberal, UCP, NDP, BC NDP, Saskatchewan Party, Sask Party,
@@ -83,6 +84,7 @@ async def elections_provincial_get_results(
         winners_only=winners_only,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -100,8 +102,9 @@ async def elections_provincial_get_seats(
     Party's 34 of 61 in 2024, the Manitoba NDP's 34 of 57 in 2023), computed from
     the district results, with candidates per party and share of valid votes.
     `province` is qc, ab, bc, sk or mb; `election` is the polling day or its year,
-    and defaults to the latest. `lang` changes nothing here: party names are
-    given as each source publishes them.
+    and defaults to the latest. Party names are given as each source
+    publishes them; `lang="fr"` gives errors, notes, attribution and
+    provenance in French.
     Keywords: seats by party, popular vote, vote share, election outcome,
     legislature, majority, minority, provincial election, Quebec, Alberta,
     British Columbia, Saskatchewan, Manitoba, seat count.
@@ -109,7 +112,7 @@ async def elections_provincial_get_seats(
     électoral, législature, majorité, minorité, élection provinciale, Québec,
     Alberta, Colombie-Britannique, Saskatchewan, Manitoba, nombre de sièges.
     """
-    return await client.get_seats(province=province, election=election)
+    return await client.get_seats(province=province, election=election, lang=lang)
 
 
 @tool
@@ -135,7 +138,8 @@ async def elections_provincial_get_voting_areas(
     day or its year and defaults to 2023; `voting_area` (e.g. 12 or Adv-1),
     `party` and `candidate` filter the rows. The response compares the areas' sum
     with the division's official total, which differs for a few divisions.
-    `lang` changes nothing here (names are as Elections Manitoba publishes them).
+    Names are as Elections Manitoba publishes them (English); `lang="fr"`
+    gives errors, notes, attribution and provenance in French.
     Keywords: poll by poll results, voting area, polling division, poll,
     polling station, advance poll, Manitoba election, Elections Manitoba,
     electoral division, neighbourhood vote, precinct results, MLA.
@@ -152,4 +156,5 @@ async def elections_provincial_get_voting_areas(
         candidate=candidate,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
