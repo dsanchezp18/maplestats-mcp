@@ -17,6 +17,7 @@ import httpx
 
 from maplestats_mcp.modules.statcan.delta import constants
 from maplestats_mcp.modules.statcan.delta.schemas import DeltaFileLink
+from maplestats_mcp.modules.statcan.lang import current_lang, say
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client, send_with_retry
@@ -43,6 +44,21 @@ FILE_NOTES = [
     ),
 ]
 
+FILE_NOTES_FR = [
+    (
+        "Publié les jours ouvrables vers 8 h 30, heure de l'Est ; une correction arrive dans le fichier du "
+        "lendemain et rien n'est supprimé. Environ 47 jours ouvrables sont conservés "
+        "(statcan_delta_list_files)."
+    ),
+    (
+        "Chaque fichier zip contient codeSet.xml, AAAAMMJJ.xml (métadonnées des tableaux) et "
+        "AAAAMMJJ.csv (données, triées par productId, sans application des facteurs "
+        "scalaires) ; statcan_delta_read_table lit un tableau sans télécharger le fichier. "
+        "Schéma des métadonnées (en anglais) : "
+        "https://www.statcan.gc.ca/en/developers-developpeurs/df-fd/cubemetadata.zip"
+    ),
+]
+
 
 async def get_file_link(date: str) -> DeltaFileLink:
     """Resolve the Delta File URL for one date and confirm whether it exists."""
@@ -50,7 +66,10 @@ async def get_file_link(date: str) -> DeltaFileLink:
         parsed = date_cls.fromisoformat(date)
     except ValueError as exc:
         raise InvalidInput(
-            f"statcan_delta:get_file_link: expected a YYYY-MM-DD date, got {date!r}."
+            say(
+                f"statcan_delta:get_file_link: expected a YYYY-MM-DD date, got {date!r}.",
+                f"statcan_delta:get_file_link : date attendue au format AAAA-MM-JJ, reçu {date!r}.",
+            )
         ) from exc
 
     url = constants.BASE_URL.format(date=parsed.strftime("%Y%m%d"))
@@ -62,7 +81,10 @@ async def get_file_link(date: str) -> DeltaFileLink:
         response = await send_with_retry(_client, "HEAD", url, timeout=15.0)
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
-            "statcan_delta:get_file_link did not respond in time. Try again shortly."
+            say(
+                "statcan_delta:get_file_link did not respond in time. Try again shortly.",
+                "statcan_delta:get_file_link n'a pas répondu à temps. Réessayez dans un moment.",
+            )
         ) from exc
 
     exists = response.status_code == 200
@@ -76,11 +98,12 @@ async def get_file_link(date: str) -> DeltaFileLink:
         size_bytes=size_bytes,
         last_modified=response.headers.get("last-modified") if exists else None,
         etag=response.headers.get("etag") if exists else None,
-        notes=FILE_NOTES,
+        notes=[say(en, fr) for en, fr in zip(FILE_NOTES, FILE_NOTES_FR, strict=True)],
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=False,
             schema_name="statcan_delta.DeltaFileLink",
+            lang=current_lang(),
         ),
     )

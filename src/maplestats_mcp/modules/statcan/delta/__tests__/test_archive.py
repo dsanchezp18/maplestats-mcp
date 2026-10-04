@@ -560,6 +560,33 @@ async def test_list_files_reports_status_and_sizes(httpx_mock):
     assert any("5 releases" in note for note in result.notes)
 
 
+async def test_list_files_in_french(httpx_mock):
+    httpx_mock.add_response(url=PAGE, text=_page(LISTED), is_reusable=True)
+    result = await archive.list_files(date="2026-09-30", lang="fr")
+    assert result.files[0].weekday == "vendredi"
+    assert (
+        result.requested_status == "aucune diffusion ce jour-là (jour férié ou jour sans diffusion)"
+    )
+    assert any(
+        "«\N{NO-BREAK SPACE}5 diffusions\N{NO-BREAK SPACE}»" in note for note in result.notes
+    )
+    assert result.provenance.freshness == "Mis à jour chaque jour ouvrable vers 8 h 30, HE."
+    assert "Licence ouverte de Statistique Canada" in (result.provenance.licence or "")
+
+
+async def test_missing_date_and_bad_arguments_in_french(httpx_mock):
+    httpx_mock.add_response(url=PAGE, text=_page(LISTED), is_reusable=True)
+    httpx_mock.add_response(
+        method="HEAD", url="https://www150.statcan.gc.ca/n1/delta/20260926.zip", status_code=404
+    )
+    with pytest.raises(NotFound, match="Aucun fichier delta n'existe pour le 2026-09-26"):
+        await archive.list_tables("2026-09-26", lang="fr")
+    with pytest.raises(InvalidInput, match="max_tables doit être"):
+        await archive.list_tables("2026-09-26", max_tables=0, lang="fr")
+    with pytest.raises(InvalidInput, match="AAAA-MM-JJ"):
+        await archive.read_table("26/09/2026", 18100004, lang="fr")
+
+
 async def test_list_files_with_sizes_survives_a_failed_head(httpx_mock):
     httpx_mock.add_response(url=PAGE, text=_page(LISTED[:3]))
     for stamp in LISTED[:2]:
