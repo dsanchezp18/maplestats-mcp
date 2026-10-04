@@ -83,6 +83,12 @@ async def test_harms_zip_filters_dates_geography_and_markers(httpx_mock):
     ontario = await client.query("opioid_stimulant_harms", geography="ON", columns=["value"])
     assert ontario.columns == ["Value"] and [r["Value"] for r in ontario.rows] == ["n/a", "2567"]
     assert ontario.provenance.cached
+    assert ontario.note is None
+
+    # A place no row matches (live: "Atlantis" on measles) explains itself.
+    nowhere = await client.query("opioid_stimulant_harms", geography="Atlantis")
+    assert nowhere.rows == []
+    assert nowhere.note is not None and "Ontario" in nowhere.note
 
     # "2026 Q1" and "2026 (Jan to Mar)" both start in 2026; oldest first, most recent kept.
     recent = await client.query("opioid_stimulant_harms", geography="Canada", limit=2)

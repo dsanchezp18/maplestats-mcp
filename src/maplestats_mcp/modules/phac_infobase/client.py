@@ -606,6 +606,7 @@ async def query(
     title, _, _ = _text(dataset, lang)
 
     wanted = [(_resolve(table.columns, k), _fold(v)) for k, v in (filters or {}).items()]
+    note: str | None = None
     matching = [r for r in table.rows if all(_fold(r.get(c, "")) == v for c, v in wanted)]
 
     geo_column = _first_present(table.columns, dataset.geo_columns)
@@ -616,7 +617,19 @@ async def query(
                 f"Columns are {table.columns}."
             )
         matches_geo = geo_matcher(geography)
+        before_geo = matching
         matching = [r for r in matching if matches_geo(r.get(geo_column, ""))]
+        if not matching and before_geo:
+            # A name that is neither a province nor part of a place name (a
+            # typo such as "Atlantis") used to come back as 0 rows with no hint.
+            places = list(
+                dict.fromkeys(r.get(geo_column, "") for r in before_geo if r.get(geo_column))
+            )
+            note = (
+                f"No {geo_column} value matches {geography!r}. Values here include: "
+                + ", ".join(places[: constants.GEO_VALUES_MAX])
+                + ("." if len(places) <= constants.GEO_VALUES_MAX else ", ...")
+            )
 
     date_column = _first_present(table.columns, dataset.date_columns)
     if (start_date or end_date) and date_column is None:
@@ -652,6 +665,7 @@ async def query(
         geo_column=geo_column,
         markers=_markers(rows, lang),
         decimal_comma=_decimal_comma(rows, file_lang),
+        note=note,
         provenance=make_provenance(
             source=_SOURCE,
             url=url,

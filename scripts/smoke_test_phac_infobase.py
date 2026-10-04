@@ -123,6 +123,10 @@ async def main() -> int:
     print("OK: CNISP pediatric RSV ->", vri.rows)
     ok &= vri.returned_count == 2
 
+    nowhere = await client.query("measles_cases_by_province", geography="Atlantis")
+    print(f"OK: measles 'Atlantis' -> {nowhere.returned_count} rows, note {nowhere.note!r}")
+    ok &= nowhere.returned_count == 0 and bool(nowhere.note)
+
     measles = await client.query("measles_cases_by_province", geography="Alberta")
     print("OK: measles Alberta ->", measles.rows)
     ok &= measles.returned_count == 1

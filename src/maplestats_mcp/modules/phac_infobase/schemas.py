@@ -94,4 +94,5 @@ class QueryResult(BaseModel):
         default_factory=list, description="Suppression or missing-value markers in these rows."
     )
     decimal_comma: bool = False
+    note: str | None = None
     provenance: Provenance
