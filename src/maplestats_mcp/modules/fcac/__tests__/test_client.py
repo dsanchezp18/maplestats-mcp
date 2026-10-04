@@ -109,6 +109,21 @@ def test_amount_reads_fees_and_no_fee_wording(text, lang, expected):
     assert client._amount(text, lang) == expected
 
 
+@pytest.mark.parametrize(
+    ("text", "lang", "expected"),
+    [
+        ("Not required", "en", 0.0),
+        ("Non requis", "fr", 0.0),
+        ("$80,000.00", "en", 80000.0),
+        ("35 000,00 $", "fr", 35000.0),
+        ("", "en", None),
+        ("Not available", "en", None),
+    ],
+)
+def test_minimum_income_reads_not_required_as_zero(text, lang, expected):
+    assert client._minimum_income(text, lang) == expected
+
+
 def test_section_keys_do_not_depend_on_language():
     assert client._section_key("MainContent_MainContent_lblInteresrRateTitle") == "interest_rate"
     assert client._section_key("MainContent_MainContent_lblNSFFeesTitle") == "nsf_fees"
@@ -362,7 +377,8 @@ async def test_french_card_detail(httpx_mock):
     assert card.name == "Carte Visa* TD Dollars US" and card.currency == "USD"
     assert card.annual_fee == 39.0 and card.annual_fee_additional_card == 0.0  # "Sans frais"
     assert card.cash_advance_rate == 22.99 and card.balance_transfer_rate is None
-    assert card.minimum_personal_income is None and card.minimum_household_income == 35000.0
+    # "Non requis" is a minimum of zero, not an unknown (it read as null before).
+    assert card.minimum_personal_income == 0.0 and card.minimum_household_income == 35000.0
     rates = next(s for s in card.sections if s.key == "interest_rate")
     assert rates.title == "Taux d’intérêt" and rates.items[2].value == "Non disponible"
 

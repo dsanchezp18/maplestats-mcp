@@ -11,6 +11,7 @@ bc_by_place.csv (UTF-8, two districts in 2024).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -272,6 +273,61 @@ async def test_bc_results_use_one_download_for_several_calls(httpx_mock):
     assert second.rows[0].candidate == "Bruce Banman" and second.provenance.cached
     assert second.districts[0].rejected_ballots is not None
     assert "Elections BC Open Data Licence" in second.attribution
+
+
+async def test_bc_blank_affiliation_is_labelled_not_unknown(httpx_mock):
+    # The live 2024 file has 252 general-election rows with an empty AFFILIATION
+    # (12 candidates, e.g. "Bernier, Mike"); seats used to call them "Unknown".
+    # The row below follows that layout, in the same file as the fixture.
+    blank_row = (
+        "2024GEABS0105,2024 Provincial General Election,2024,ABS,Abbotsford South,,,"
+        'Clarion Hotel & Conference Centre,2969742,Advance voting,"Bernier, Mike",N,,40,'
+        "Valid,N,\r\n"
+    )
+    body = _bytes("bc_by_place.csv")
+    newline = b"\r\n" if b"\r\n" in body else b"\n"
+    body = body.rstrip(b"\r\n") + newline + blank_row.replace("\r\n", newline.decode()).encode()
+    httpx_mock.add_response(url=constants.BC_FILE_BY_PLACE, content=body)
+    seats = await client.get_seats("BC", "2024")
+    labels = [p.party for p in seats.parties]
+    assert "Unknown" not in labels
+    assert constants.NO_AFFILIATION_LABEL in labels
+    assert constants.NO_AFFILIATION_LABEL in (seats.provenance.limits or "")
+    results = await client.get_results("bc", "2024", candidate="bernier")
+    assert results.rows[0].party is None  # the row itself keeps the source's blank
+
+
+async def test_province_code_is_case_insensitive_and_listing_links_its_own_page(httpx_mock):
+    httpx_mock.add_response(url=QC_2022, content=_bytes("qc_2022.json"))
+    upper = await client.get_results("QC", winners_only=True)
+    assert upper.province == "qc" and upper.total_rows == 3
+    with pytest.raises(InvalidInput, match="province must be one of"):
+        await client.get_results("Xx")
+    assert client.list_elections("AB").provenance.url == constants.AB_PAGE
+    assert client.list_elections("bc").provenance.url == constants.BC_DATASET_PAGE
+    assert client.list_elections("sk").provenance.url == constants.SK_PAGE
+    assert client.list_elections("mb").provenance.url == constants.MB_PAGE
+    assert client.list_elections("qc").provenance.url == constants.QC_PAGE
+
+
+def test_quebec_parse_null_sections_and_bad_rows_are_typed():
+    # null where the 2014+ files have lists, as a defensive check on the
+    # list_or_empty paths; a riding without its name is an UpstreamError.
+    riding = {
+        "nomCirconscription": "Gaspé",
+        "numeroCirconscription": 1,
+        "nbVoteValide": 10,
+        "candidats": None,
+    }
+    payload = {"statistiques": None, "circonscriptions": [riding]}
+    districts = quebec.parse(json.dumps(payload).encode())
+    assert districts[0].name == "Gaspé" and districts[0].candidates == []
+    with pytest.raises(UpstreamError, match="KeyError"):
+        quebec.parse(b'{"statistiques": {}, "circonscriptions": [{"candidats": []}]}')
+    with pytest.raises(UpstreamError):
+        quebec.parse(b'{"circonscriptions": null}')
+    with pytest.raises(UpstreamError):
+        quebec.parse(b"[]")
 
 
 async def test_bc_year_missing_from_the_file_is_an_error(httpx_mock):

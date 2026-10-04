@@ -91,7 +91,11 @@ class DatasetDetail(BaseModel):
 class SheetInfo(BaseModel):
     name: str
     rows: int | None = Field(default=None, description="Row count the file declares.")
-    columns: int | None = None
+    columns: int | None = Field(
+        default=None,
+        description="Columns holding data at the top of the sheet (one per column_names "
+        "entry); trailing empty columns the file declares are not counted.",
+    )
     header_row: int | None = Field(
         default=None, description="Guessed 1-based header row; null when none looks like one."
     )

@@ -84,7 +84,11 @@ async def eps_summarize_occurrences(
     server over every matching row, not a sample.
 
     Months come back in date order; other groupings largest first, up
-    to top groups (1-2000). Also the way to discover the exact category/
+    to top groups (1-2000). With group_by="month", each month carries
+    `partial`: the rolling "current" dataset starts and ends mid-month,
+    so its first and last months are part-months (true) and should not be
+    compared with full months; `data_from`/`data_to` give the dates the
+    counts span. Also the way to discover the exact category/
     group/type labels to filter on (upstream has near-duplicates such as
     "Drug Violation" vs "Drug Violations").
     Use for: crime trends by month, most common offence types, crime

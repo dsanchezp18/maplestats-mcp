@@ -603,6 +603,12 @@ async def test_summaries_count_distinct_reports(httpx_mock):
     assert [(r.key, r.reports) for r in years.rows] == [("2020", 1), ("2025", 2)]
     months = await client.summarize_activity("month", top=2)
     assert [r.key for r in months.rows] == ["2025-06", "2025-07"]  # latest periods, oldest first
+    # The cut is stated, since `top` means "latest", not "busiest", for periods.
+    assert f"2 most recent of {months.groups_total} periods" in months.note
+    assert "not the busiest" in months.note
+    assert "Forests" not in ministries.note and "most recent" not in ministries.note
+    months_fr = await client.summarize_activity("month", top=2, lang="fr")
+    assert "pas les plus chargées" in months_fr.note
     holders = await client.summarize_activity("office_holder", agency="forests")
     assert {r.key for r in holders.rows} >= {"Trevor Hughes (Forests)", "Michael Snoddon (Forests)"}
     people = await client.summarize_activity("lobbyist")

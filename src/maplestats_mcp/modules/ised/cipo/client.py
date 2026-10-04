@@ -22,10 +22,24 @@ quirks found and handled:
    empty query.
 4. `mediaFileNames` in the response are relative paths (e.g.
    "/media/1137536.png"); this client resolves them to full URLs.
+5. Nice classification and CIPO status are not searched through
+   `textfield1`: the UI sends them as lists of codes in `nicetextfield1`
+   and `cipotextfield1` (its search.js). Checked live 2026-10-03:
+   textfield1="45" with the Nice field matched the whole register
+   (2,188,587) and nicetextfield1=["45"] matched 97,515; textfield1=
+   "REGISTERED" with the status field answered HTTP 500 and
+   cipotextfield1=["19"] matched 871,520. A code the UI does not offer
+   (Nice "46", status "12") is ignored, giving the whole register or
+   nothing, so both are checked here before sending.
+6. Number fields given text match nothing ("abc" gave 0 for application,
+   registration and international numbers), and an application number
+   with thousands separators ("1,244,495") also gave 0, so numbers are
+   checked and separators dropped before sending.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx
@@ -43,6 +57,72 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
+
+
+_NUMBER_FIELDS = (
+    "application_number",
+    "original_application_number",
+    "international_registration_number",
+)
+# Registration numbers carry an optional letter prefix: "TMA700000",
+# "TMA 700000", "TMA700,000" and "700000" all matched live (2026-10-03).
+_REGISTRATION = re.compile(r"^[A-Z]{0,4}\s*[\d,]+$", re.IGNORECASE)
+_SEPARATORS = re.compile(r"[\s,]+")
+
+
+def _nice_classes(criteria: str, context: str) -> list[str]:
+    parts = [p for p in _SEPARATORS.split(criteria) if p]
+    if not parts or not all(p.isdigit() for p in parts):
+        raise InvalidInput(
+            f"{context}: nice_classification criteria must be one or more Nice class "
+            f"numbers ({constants.NICE_CLASS_MIN}-{constants.NICE_CLASS_MAX}), "
+            f"e.g. '9' or '9, 35'; got {criteria!r}."
+        )
+    classes = sorted({int(p) for p in parts})
+    bad = [c for c in classes if not constants.NICE_CLASS_MIN <= c <= constants.NICE_CLASS_MAX]
+    if bad:
+        raise InvalidInput(
+            f"{context}: Nice classes run from {constants.NICE_CLASS_MIN} to "
+            f"{constants.NICE_CLASS_MAX}; got {bad}."
+        )
+    return [str(c) for c in classes]
+
+
+def _status_codes(criteria: str, context: str) -> list[str]:
+    by_label: dict[str, list[int]] = {}
+    for code, label in constants.CIPO_STATUS_CODES.items():
+        by_label.setdefault(label.lower(), []).append(code)
+    codes: set[int] = set()
+    for part in (p.strip() for p in criteria.split(",")):
+        if not part:
+            continue
+        if part.isdigit() and int(part) in constants.CIPO_STATUS_CODES:
+            codes.add(int(part))
+        elif part.lower() in by_label:
+            codes.update(by_label[part.lower()])
+        else:
+            labels = sorted(set(constants.CIPO_STATUS_CODES.values()))
+            raise InvalidInput(
+                f"{context}: unknown cipo_status {part!r}; give status names or codes "
+                f"separated by commas, from {labels} (codes {sorted(constants.CIPO_STATUS_CODES)})."
+            )
+    if not codes:
+        raise InvalidInput(f"{context}: cipo_status needs at least one status name or code.")
+    return [str(c) for c in sorted(codes)]
+
+
+def _number(search_field: str, criteria: str, context: str) -> str:
+    if search_field == "registration_number":
+        if not _REGISTRATION.match(criteria):
+            raise InvalidInput(
+                f"{context}: registration_number must be a number, optionally with its "
+                f"prefix (e.g. 'TMA700000' or '700000'); got {criteria!r}."
+            )
+        return criteria
+    digits = _SEPARATORS.sub("", criteria)
+    if not digits.isdigit():
+        raise InvalidInput(f"{context}: {search_field} must be digits only; got {criteria!r}.")
+    return digits
 
 
 def _trademark_record(doc: dict[str, Any]) -> TrademarkRecord:
@@ -77,15 +157,26 @@ async def search_trademarks(
             f"{constants.MAX_RETURN_MAX}, got {max_return}."
         )
 
+    context = "ised_cipo:search_trademarks"
     criteria = criteria.strip()
+    text = criteria
+    nice: list[str] | None = None
+    status: list[str] | None = None
+    # An empty criteria stays the documented match-all for every field.
+    if criteria and search_field == "nice_classification":
+        nice, text = _nice_classes(criteria, context), ""
+    elif criteria and search_field == "cipo_status":
+        status, text = _status_codes(criteria, context), ""
+    elif criteria and (search_field in _NUMBER_FIELDS or search_field == "registration_number"):
+        text = _number(search_field, criteria, context)
     body = {
         "domIntlFilter": "1",
         "searchfield1": api_field,
-        "textfield1": criteria,
+        "textfield1": text,
         "display": "list",
         "maxReturn": str(max_return),
-        "nicetextfield1": None,
-        "cipotextfield1": None,
+        "nicetextfield1": nice,
+        "cipotextfield1": status,
     }
 
     async def fetch() -> Any:
@@ -104,7 +195,7 @@ async def search_trademarks(
                 "(already retried by shared/http.py). Try again shortly."
             ) from exc
 
-    cache_key = f"ised-cipo:search:{api_field}:{criteria}:{max_return}"
+    cache_key = f"ised-cipo:search:{api_field}:{text}:{nice}:{status}:{max_return}"
     payload, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
 
     if not isinstance(payload, dict) or "docs" not in payload:

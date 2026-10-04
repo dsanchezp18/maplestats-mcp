@@ -188,6 +188,18 @@ async def test_read_xlsx_filters_and_attribution(httpx_mock, show):
     assert result.provenance.coverage and "Open Government Licence" in result.provenance.coverage
 
 
+async def test_describe_counts_only_columns_with_data(httpx_mock, show):
+    # The live income_support.xlsx declares 14 columns for 5 named ones (formatted
+    # empty columns); describe reported columns=14 on 2026-10-03.
+    httpx_mock.add_response(url=XLSX_URL, content=(_HERE / "income_support.xlsx").read_bytes())
+    described = await client.describe_resource(XLSX_URL)
+    sheet = described.sheets[0]
+    assert sheet.column_names == ["Ref_Date", "Geography", "Measure Type", "Measure", "Value"]
+    assert sheet.columns == 5
+    read = await client.read_resource(XLSX_URL, limit=1)
+    assert len(read.all_columns) == sheet.columns
+
+
 async def test_describe_workbook_with_many_sheets(httpx_mock):
     package = _package()
     package["resources"][1]["url"] = XLSX_URL

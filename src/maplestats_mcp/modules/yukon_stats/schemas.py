@@ -15,6 +15,7 @@ class TableEntry(BaseModel):
     title: str = Field(description="The table's title.")
     url: str = Field(description="Pass this to yukon_stats_query_table.")
     modified: datetime | None = None
+    size_bytes: int | None = Field(default=None, description="Size the catalogue states, if any.")
 
 
 class TableList(BaseModel):

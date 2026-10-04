@@ -45,6 +45,8 @@ async def nl_stats_read_file(
     url: str,
     sheet: str | None = None,
     contains: str | None = None,
+    header_row: int | None = None,
+    header_rows: int = 1,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: Lang = "en",
@@ -53,18 +55,31 @@ async def nl_stats_read_file(
 
     Use for: getting the numbers in a table found with nl_stats_list_files:
     monthly labour force and CPI series, quarterly population and migration,
-    GDP by industry, trade by partner. Reads both .xlsx and legacy .xls. The
-    first sheet is returned unless `sheet` names another (all sheet names,
-    row and column counts are in the result). The agency's layouts are kept
-    as published: a title row can precede the header, and years or months can
-    run across columns, so `header_row` is a guess (the first row with three
-    filled cells) and every value is text. `contains` keeps rows with that
-    text in any cell (case-insensitive), e.g. a year or an industry.
+    GDP by industry, trade by partner. Reads both .xlsx and legacy .xls.
+    Without `sheet`, a workbook whose sheets are named after months (the
+    "Current Month" labour files: Jan2026, Feb2026, ...) returns the newest
+    month's sheet, any other workbook its first sheet; `sheet_chosen_by` and
+    provenance.limits say which, and every sheet name with its row and column
+    counts is in the result. The agency's layouts are kept as published: a
+    title row can precede the header, and years or months can run across
+    columns, so `header_row` is a guess (the first row with three filled
+    cells) that you can override with a 1-based row number; `header_rows`
+    (1 to 5) joins that many rows per column for a header split over rows
+    (e.g. "Employment" above "Total", "Full-Time", "Part-Time", then a units
+    row). Every value is text. `contains` keeps rows with that text in any
+    cell (case-insensitive), e.g. a year or an industry.
     Keywords: Newfoundland and Labrador, Excel, sheet, table, monthly,
     quarterly, population, labour force, CPI, GDP, trade, xlsx, xls, series.
     Mots-clés : Terre-Neuve-et-Labrador, Excel, feuille, tableau, mensuel,
     trimestriel, population, population active, IPC, PIB, commerce, série.
     """
     return await client.read_file(
-        url=url, sheet=sheet, contains=contains, limit=limit, offset=offset, lang=lang
+        url=url,
+        sheet=sheet,
+        contains=contains,
+        header_row=header_row,
+        header_rows=header_rows,
+        limit=limit,
+        offset=offset,
+        lang=lang,
     )

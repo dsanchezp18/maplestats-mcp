@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import date, datetime
+from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -121,16 +121,23 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
     page, was_cached = await cached_fetch(
         f"epcor:daily:{plant}", constants.CACHE_TTL_DAILY_SECONDS, fetch
     )
+    readings = parse_daily_page(page, today)
+    # The newest day the page reports (OCT-02 on 2026-10-03), at local midnight.
+    days = [r.date for r in readings if r.date is not None]
+    as_of = (
+        datetime.combine(max(days), time(), tzinfo=ZoneInfo(constants.TIMEZONE)) if days else None
+    )
     return DailyWaterQuality(
         plant=plant,
         plant_name=constants.PLANT_NAMES[plant],
         units={field: unit for field, unit in constants.MEASURES.values()},
-        readings=parse_daily_page(page, today),
+        readings=readings,
         provenance=make_provenance(
             source=constants.SOURCE,
             url=f"{constants.DAILY_URL}?zone={params['zone']}",
             cached=was_cached,
             schema_name="epcor.DailyWaterQuality",
+            as_of=as_of,
             freshness="daily averages, last 7 days; unvalidated monitoring data",
             limits="values leave the treatment plant; tap values can differ",
         ),

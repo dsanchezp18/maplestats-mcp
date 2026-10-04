@@ -49,6 +49,27 @@ def _non_empty(key: str) -> Check:
     return lambda data: bool(data.get(key))
 
 
+def _iso_date(value: Any) -> bool:
+    try:
+        datetime.strptime(f"{value}+0000", "%Y-%m-%d%z")
+    except ValueError:
+        return False
+    return True
+
+
+def _not_required_is_zero(card: dict[str, Any]) -> bool:
+    """FCAC's "Not required" minimum income must come back as 0, not null."""
+    income = next(
+        (s["items"] for s in card["sections"] if s["key"] == "minimum_income_required"), []
+    )
+    fields = ("minimum_personal_income", "minimum_household_income")
+    return all(
+        card[field] == 0.0
+        for item, field in zip(income, fields, strict=False)
+        if item["value"].lower() in ("not required", "non requis")
+    )
+
+
 _TODAY = datetime.now(UTC).date()
 
 # Modules whose upstream is down; remove an entry once the source responds.
@@ -105,13 +126,299 @@ STEPS: list[Step] = [
         {"product": "oil"},
         lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
     ),
+    # Alberta Open Government Portal: describe counted 14 declared columns for
+    # 5 named ones (2026-10-03); the count must match the names.
+    Step(
+        "ab_opendata",
+        "ab_opendata_search_datasets",
+        {"query": "income support caseload", "format": "xlsx", "limit": 1},
+        _non_empty("datasets"),
+    ),
+    Step(
+        "ab_opendata",
+        "ab_opendata_describe_resource",
+        lambda ctx: {
+            "url": next(
+                r["url"]
+                for r in ctx["ab_opendata_search_datasets"]["datasets"][0]["resources"]
+                if r["url"].endswith(".xlsx")
+            )
+        },
+        lambda data: all(s["columns"] == len(s["column_names"]) for s in data["sheets"]),
+    ),
+    # BC lobbyists registry: `top` keeps the latest periods for month/year (stated
+    # in the note) and the largest counts for every other grouping.
+    Step(
+        "bc_lobbyists",
+        "bc_lobbyists_summarize_activity",
+        {"group_by": "month", "top": 3},
+        lambda data: (
+            [r["key"] for r in data["rows"]] == sorted(r["key"] for r in data["rows"])
+            and "most recent" in data["note"]
+            and len(data["rows"]) == 3
+        ),
+    ),
+    Step(
+        "bc_lobbyists",
+        "bc_lobbyists_summarize_activity",
+        {"group_by": "ministry", "top": 3},
+        lambda data: (
+            [r["reports"] for r in data["rows"]]
+            == sorted((r["reports"] for r in data["rows"]), reverse=True)
+        ),
+    ),
+    # BC Stats: the sheet read reports its own counts, so the header_row bound
+    # agrees with sheets[].rows (it said 284 against 286 on 2026-10-03).
+    Step(
+        "bc_stats",
+        "bc_stats_list_files",
+        {"query": "business incorporations"},
+        _non_empty("files"),
+    ),
+    Step(
+        "bc_stats",
+        "bc_stats_read_file",
+        lambda ctx: {"url": ctx["bc_stats_list_files"]["files"][0]["url"], "limit": 2},
+        lambda data: any(
+            s["counted"] and s["name"] == data["sheet"] and s["columns"] == len(data["header"])
+            for s in data["sheets"]
+        ),
+    ),
+    Step(
+        "bc_stats",
+        "bc_stats_read_file",
+        lambda ctx: {"url": ctx["bc_stats_list_files"]["files"][0]["url"], "header_row": 9999},
+        expect_error="trailing blank rows are not counted",
+    ),
+    # The projections workbook opens on 'READ ME'; the default skips it.
+    Step(
+        "bc_stats",
+        "bc_stats_list_files",
+        {"query": "population projections summary statistics"},
+        _non_empty("files"),
+    ),
+    Step(
+        "bc_stats",
+        "bc_stats_read_file",
+        lambda ctx: {"url": ctx["bc_stats_list_files"]["files"][0]["url"], "limit": 2},
+        lambda data: data["sheet"].casefold().replace(" ", "") != "readme",
+    ),
+    # Edmonton Police Service: the rolling dataset starts and ends mid-month, so
+    # its edge months are flagged partial; as_of is the load date; the closed
+    # 2023 year is not "refreshed daily".
+    Step(
+        "eps",
+        "eps_summarize_occurrences",
+        {"group_by": "month"},
+        lambda data: (
+            data["groups"][0]["partial"] == (not data["data_from"].endswith("-01"))
+            and all(g["partial"] is False for g in data["groups"][1:-1])
+            and data["provenance"]["as_of"] is not None
+        ),
+    ),
+    Step(
+        "eps",
+        "eps_summarize_occurrences",
+        {"dataset": "2023", "group_by": "month", "top": 12},
+        lambda data: (
+            len(data["groups"]) == 12
+            and not any(g["partial"] for g in data["groups"])
+            and "daily" not in data["provenance"]["freshness"]
+        ),
+    ),
+    Step(
+        "eps",
+        "eps_list_occurrences",
+        {"limit": 1},
+        lambda data: bool(data["occurrences"]) and data["provenance"]["as_of"] is not None,
+    ),
+    # Newfoundland and Labrador Statistics Agency: a "Current Month" workbook keeps
+    # one sheet per month in calendar order; the default is the newest (it was
+    # Jan2026 of Jan..Aug2026 on 2026-10-03), and header_rows joins split headers.
+    Step(
+        "nl_stats",
+        "nl_stats_read_file",
+        {
+            "url": "https://www.stats.gov.nl.ca/Statistics/Topics/labour/Excel/"
+            "LFC_AgeSex_Mthly_NL.xlsx",
+            "header_rows": 3,
+            "limit": 2,
+        },
+        lambda data: (
+            data["sheet"] == data["sheets"][-1]["name"]
+            and data["header"][3] == "Employment Total"
+            and "Full-Time" in data["header"]
+        ),
+    ),
+    Step(
+        "nl_stats",
+        "nl_stats_read_file",
+        {
+            "url": "https://www.stats.gov.nl.ca/Statistics/Topics/labour/Excel/"
+            "LFC_AgeSex_Mthly_NL.xlsx",
+            "header_row": 9999,
+        },
+        expect_error="has only",
+    ),
+    # Open Data NL: an unknown tag is NotFound (it was an empty success), tag
+    # results carry dataset_type, and every query word must match.
+    Step(
+        "nl_opendata",
+        "nl_opendata_search_datasets",
+        {"tag_id": "999999"},
+        expect_error="no tag with id",
+    ),
+    Step(
+        "nl_opendata",
+        "nl_opendata_search_datasets",
+        {"tag_id": "4"},
+        lambda data: bool(data["datasets"]) and all(d["dataset_type"] for d in data["datasets"]),
+    ),
+    Step(
+        "nl_opendata",
+        "nl_opendata_search_datasets",
+        {"query": "population estimates newfoundland"},
+        _non_empty("datasets"),
+    ),
+    # Yukon Bureau of Statistics: only catalogue URLs are read; the portal served
+    # the rent table under a made-up file name (2026-10-03).
+    Step("yukon_stats", "yukon_stats_list_tables", {"query": "rent"}, _non_empty("tables")),
+    Step(
+        "yukon_stats",
+        "yukon_stats_query_table",
+        lambda ctx: {"url": ctx["yukon_stats_list_tables"]["tables"][0]["url"], "limit": 2},
+        _non_empty("rows"),
+    ),
+    Step(
+        "yukon_stats",
+        "yukon_stats_query_table",
+        lambda ctx: {
+            "url": ctx["yukon_stats_list_tables"]["tables"][0]["url"].replace(
+                "/download/", "/download/zz-"
+            )
+        },
+        expect_error="pass that exact URL",
+    ),
     # BC Geographic Warehouse
-    Step("bcgw", "bcgw_get_active_wildfires", {"limit": 3}, _non_empty("wildfires")),
+    Step(
+        "bcgw",
+        "bcgw_get_active_wildfires",
+        {"limit": 3, "include_out": True},
+        _non_empty("wildfires"),
+    ),
+    # By default "Out" fires are left out (they were 250 of 312 and came
+    # first), and the largest fires lead.
+    Step(
+        "bcgw",
+        "bcgw_get_active_wildfires",
+        {"limit": 20},
+        lambda data: (
+            all(w["status"] != "Out" for w in data["wildfires"])
+            and [w["size_hectares"] or 0 for w in data["wildfires"]]
+            == sorted((w["size_hectares"] or 0 for w in data["wildfires"]), reverse=True)
+        ),
+    ),
     Step("bcgw", "bcgw_get_mining_tenure", {"limit": 3}),
+    # owner_name matches word starts: "teck" must not reach "BIATECKI, ...".
+    Step(
+        "bcgw",
+        "bcgw_get_mining_tenure",
+        {"owner_name": "teck", "limit": 200},
+        lambda data: (
+            bool(data["tenures"])
+            and all(
+                any(w.lstrip("(").startswith("TECK") for w in (t["owner_name"] or "").split())
+                for t in data["tenures"]
+            )
+        ),
+    ),
     Step(
         "bcgw",
         "bcgw_query_layer",
         {"type_name": "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_PNTS_SP", "limit": 2},
+    ),
+    # property_names used to drop the geometry (every record "geometry": null).
+    Step(
+        "bcgw",
+        "bcgw_query_layer",
+        {
+            "type_name": "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_PNTS_SP",
+            "property_names": "FIRE_NUMBER",
+            "include_geometry": True,
+            "limit": 2,
+        },
+        lambda data: bool(data["records"]) and all(r["geometry"] for r in data["records"]),
+    ),
+    # EPCOR water quality (the rest is in smoke_test_epcor.py): as_of is the
+    # newest reported day (it was null).
+    Step(
+        "epcor",
+        "epcor_get_daily_water_quality",
+        {"plant": "els"},
+        lambda data: (
+            data["provenance"]["as_of"] is not None
+            and data["provenance"]["as_of"][:10] == data["readings"][-1]["date"]
+        ),
+    ),
+    # ETS real time (the rest is in smoke_test_ets.py): the feeds zero-pad
+    # route ids ("004"), so the unpadded number must match too.
+    Step("ets", "ets_get_vehicle_positions", {"limit": 1000}, _non_empty("vehicles")),
+    Step(
+        "ets",
+        "ets_get_vehicle_positions",
+        lambda ctx: {
+            # No padded route running gives "" (every vehicle), failing the check.
+            "route_id": next(
+                (
+                    v["route_id"].lstrip("0")
+                    for v in ctx["ets_get_vehicle_positions"]["vehicles"]
+                    if (v["route_id"] or "").startswith("0") and v["route_id"].lstrip("0")
+                ),
+                "",
+            ),
+            "limit": 5,
+        },
+        lambda data: (
+            data["total_matches"] > 0
+            and all(v["route_id"].startswith("0") for v in data["vehicles"])
+        ),
+    ),
+    Step(
+        "ets",
+        "ets_get_service_alerts",
+        {"limit": 1000},
+        lambda data: all(
+            len(a["active_periods"]) >= 1 or a["active_from"] is None for a in data["alerts"]
+        ),
+    ),
+    # ISQ (the rest is in smoke_test_isq.py): table 4948 titles its years and
+    # units from fields, so rows that differ only by unit carry it.
+    Step(
+        "isq",
+        "isq_get_table",
+        {"table": "revenu-disponible-composantes-mrc-ensemble-quebec", "lang": "en", "max_rows": 2},
+        lambda data: (
+            "Unité" in data["columns"]
+            and "2024" in data["columns"]
+            and not any(c.startswith("an_") for c in data["columns"])
+            and data["rows"][0]["Unité"] != data["rows"][1]["Unité"]
+            and data["title"].startswith("Disposable income")
+        ),
+    ),
+    # One hit per slug when the French and English pages share it.
+    Step(
+        "isq",
+        "isq_search_tables",
+        {"query": "revenu disponible composantes mrc", "lang": "all"},
+        lambda data: len({t["table"] for t in data["tables"]}) == len(data["tables"]) >= 1,
+    ),
+    # Transit (the rest is in smoke_test_transit.py): STM route "1" is a métro
+    # line, left out under STM's terms, and must be named as such.
+    Step(
+        "transit",
+        "transit_get_route_summary",
+        {"agency": "stm", "route": "1"},
+        expect_error="terms of use",
     ),
     # Canada Energy Regulator
     Step("cer", "cer_list_datasets", {"query": "pipeline throughput"}, _non_empty("datasets")),
@@ -151,12 +458,58 @@ STEPS: list[Step] = [
             "limit": 5,
         },
     ),
-    # CRA digital economy platform operators
+    # Chosen columns only (a row has 33 columns, many blank).
+    Step(
+        "cihi",
+        "cihi_get_indicator_data",
+        {
+            "indicator": "30-day-stroke-in-hospital-mortality",
+            "place": "Alberta",
+            "limit": 3,
+            "columns": ["Place or organization", "Time frame", "Risk-adjusted rate"],
+        },
+        lambda data: bool(data["rows"]) and len(data["rows"][0]) == 3,
+    ),
+    # Competition Bureau merger reviews (tool level; client calls are in
+    # smoke_test_competition_bureau.py). "2024-13" was accepted as a bound.
+    Step(
+        "competition_bureau",
+        "competition_bureau_search_mergers",
+        {"party": "Rogers Shaw"},
+        _non_empty("reviews"),
+    ),
+    Step(
+        "competition_bureau",
+        "competition_bureau_search_mergers",
+        {"concluded_from": "2024-13", "limit": 1},
+        expect_error="real YYYY-MM",
+    ),
+    # CRA digital economy platform operators: dates were locale text
+    # ("July 1, 2023", "1 juillet 2021") before they became ISO dates.
     Step(
         "cra_digital_economy_registry",
         "cra_digital_economy_registry_search",
         {"query": "Airbnb"},
-        _non_empty("registrants"),
+        lambda data: (
+            bool(data["registrants"])
+            and all(_iso_date(r["effective_registration_date"]) for r in data["registrants"])
+        ),
+    ),
+    Step(
+        "cra_digital_economy_registry",
+        "cra_digital_economy_registry_search",
+        {"query": "Netflix", "lang": "fr"},
+        lambda data: (
+            bool(data["registrants"])
+            and all(
+                _iso_date(r["effective_registration_date"])
+                and (
+                    r["deregistration_date_text"] is None
+                    or _iso_date(r["effective_deregistration_date"])
+                )
+                for r in data["registrants"]
+            )
+        ),
     ),
     # DFO tides and water levels
     Step("dfo_iwls", "dfo_iwls_search_stations", {"query": "Halifax"}, _non_empty("stations")),
@@ -419,8 +772,32 @@ STEPS: list[Step] = [
         "gazette_get_notice",
         lambda ctx: {"url": _first_notice_url(ctx["gazette_get_issue"])},
     ),
-    # GC InfoBase
-    Step("gc_infobase", "gc_infobase_list_files", {"query": "transfer"}, _non_empty("files")),
+    # FCAC (tool level; client calls are in smoke_test_fcac.py). A card whose
+    # minimum income is "Non requis" must say 0, not null.
+    Step(
+        "fcac",
+        "fcac_search_credit_cards",
+        {"province": "QC", "query": "Flexi", "lang": "fr"},
+        _non_empty("cards"),
+    ),
+    Step(
+        "fcac",
+        "fcac_get_credit_card",
+        lambda ctx: {
+            "product_id": ctx["fcac_search_credit_cards"]["cards"][0]["product_id"],
+            "province": "QC",
+            "lang": "fr",
+        },
+        _not_required_is_zero,
+    ),
+    # GC InfoBase: the listing link must reproduce (?id=), amounts must be
+    # numbers, and an English file asked for in French keeps its own name.
+    Step(
+        "gc_infobase",
+        "gc_infobase_list_files",
+        {"query": "transfer"},
+        lambda data: bool(data["files"]) and "package_show?id=" in data["provenance"]["url"],
+    ),
     Step(
         "gc_infobase",
         "gc_infobase_query",
@@ -428,6 +805,96 @@ STEPS: list[Step] = [
             "resource_id": ctx["gc_infobase_list_files"]["files"][0]["resource_id"],
             "limit": 3,
         },
+        lambda data: (
+            bool(data["numeric_columns"])
+            and all(
+                isinstance(row[c], int | float) or row[c] is None
+                for row in data["rows"]
+                for c in data["numeric_columns"]
+            )
+        ),
+    ),
+    Step(
+        "gc_infobase",
+        "gc_infobase_query",
+        lambda ctx: {
+            "resource_id": next(
+                f["resource_id"]
+                for f in ctx["gc_infobase_list_files"]["files"]
+                if f["languages"] == ["en"]
+            ),
+            "lang": "fr",
+            "limit": 1,
+        },
+        lambda data: (
+            not data["name"].startswith("Comptes")
+            and "EN only" in (data["provenance"]["limits"] or "")
+        ),
+    ),
+    # ISED, tool level (client calls are in the smoke_test_ised_*.py scripts).
+    Step(
+        "ised",
+        "ised_ip_horizons_list_files",
+        {"ip_type": "patent", "table": "main"},
+        lambda data: (
+            data["provenance"]["as_of"] is not None
+            and "quarterly" not in (data["provenance"]["freshness"] or "")
+        ),
+    ),
+    # French titles are stored unaccented; this matched 0 before.
+    Step(
+        "ised",
+        "ised_ip_horizons_search_patents",
+        {"title": "pile à combustible", "limit": 1},
+        lambda data: data["total_matched"] > 0 and data["provenance"]["as_of"] is not None,
+    ),
+    # Nice classes and statuses go in their own list fields; through the text
+    # field they matched the whole register (2,188,587).
+    Step(
+        "ised",
+        "ised_cipo_search_trademarks",
+        {"search_field": "nice_classification", "criteria": "45", "max_return": 3},
+        lambda data: (
+            0 < data["total_matched"] < 1_000_000
+            and all(45 in r["nice_classes"] for r in data["records"])
+        ),
+    ),
+    Step(
+        "ised",
+        "ised_cipo_search_trademarks",
+        {"search_field": "cipo_status", "criteria": "Registered", "max_return": 3},
+        lambda data: (
+            0 < data["total_matched"] < 2_000_000
+            and all(r["status_description"] == "REGISTERED" for r in data["records"])
+        ),
+    ),
+    Step(
+        "ised",
+        "ised_cipo_search_trademarks",
+        {"search_field": "nice_classification", "criteria": "abc"},
+        expect_error="Nice class numbers",
+    ),
+    Step(
+        "ised",
+        "ised_cipo_search_trademarks",
+        {"search_field": "application_number", "criteria": "abc"},
+        expect_error="digits only",
+    ),
+    Step(
+        "ised",
+        "ised_spectrum_query_licences",
+        {"where": "PROV='AB' AND SERVICE='CELL'", "limit": 2},
+        lambda data: (
+            bool(data["rows"])
+            and all(_iso_date(r["LAST_UPLOAD_DATE"]) for r in data["rows"])
+            and data["provenance"]["as_of"] is not None
+        ),
+    ),
+    Step(
+        "ised",
+        "ised_corporations_get_corporation",
+        {"id_or_business_number": "4240880", "lang": "fr"},
+        lambda data: data["provenance"]["url"].endswith("?lang=fra") and data["status"] == "Actif",
     ),
     # NRCan energy use
     Step("nrcan_energy_use", "nrcan_energy_use_list_products", {}, _non_empty("surveys")),
@@ -493,11 +960,36 @@ STEPS: list[Step] = [
         {"postcode": "H3B 4W8", "lang": "fr"},
         _non_empty("boundaries"),
     ),
+    # The current federal set brings the MP back; the unsuffixed slug is the
+    # 2013 order, returns no representative and must say so (and call the set
+    # superseded rather than stale).
     Step(
         "represent",
         "represent_lookup_postcode",
-        {"postcode": "V6B1A1", "sets": "federal-electoral-districts", "include_set_details": False},
-        _non_empty("boundaries"),
+        {
+            "postcode": "K2J6B6",
+            "sets": "federal-electoral-districts-2023-representation-order",
+            "include_set_details": False,
+        },
+        lambda d: [r["level"] for r in d["representatives"]] == ["federal"],
+    ),
+    Step(
+        "represent",
+        "represent_lookup_postcode",
+        {"postcode": "K2J6B6", "sets": "federal-electoral-districts"},
+        lambda d: (
+            not d["representatives"]
+            and any("Drop sets" in n for n in d["notes"])
+            and any("Superseded" in n for n in d["notes"])
+            and not any("more than 5 years" in n for n in d["notes"])
+        ),
+    ),
+    # "NDP" must reach provincial parties named "... New Democratic Party".
+    Step(
+        "represent",
+        "represent_search_representatives",
+        {"party": "NDP", "level": "provincial", "limit": 5, "lang": "fr"},
+        lambda d: d["total_count"] > 20 and any("NPD" in n or "NDP" in n for n in d["notes"]),
     ),
     Step(
         "represent",
@@ -528,6 +1020,115 @@ STEPS: list[Step] = [
         "represent_list_representative_sets",
         {"level": "federal"},
         _non_empty("sets"),
+    ),
+    # House of Commons open data, through the tool layer (scripts/
+    # smoke_test_ourcommons.py calls the client). Filters typed in English
+    # must match the French feed.
+    Step(
+        "ourcommons",
+        "ourcommons_list_members",
+        {"party": "NDP", "province": "British Columbia", "lang": "fr"},
+        lambda d: d["total_members"] >= 1 and {m["party"] for m in d["members"]} == {"NPD"},
+    ),
+    Step(
+        "ourcommons",
+        "ourcommons_list_members",
+        {"province": "Alberta", "party": "Conservative", "limit": 5},
+        lambda d: d["total_members"] >= 1 and d["members"][0]["person_id"] > 0,
+    ),
+    Step(
+        "ourcommons",
+        "ourcommons_get_member_roles",
+        lambda ctx: {
+            "person_id": ctx["ourcommons_list_members"]["members"][0]["person_id"],
+            "lang": "fr",
+        },
+        _non_empty("seats"),
+    ),
+    Step(
+        "ourcommons",
+        "ourcommons_get_party_standings",
+        {"lang": "fr"},
+        lambda d: d["total_seats"] >= 300 and any(p["party"] == "NPD" for p in d["by_party"]),
+    ),
+    Step("ourcommons", "ourcommons_get_ministry", {}, _non_empty("ministers")),
+    # Provincial election results, through the tool layer (scripts/
+    # smoke_test_elections_provincial.py calls the client). An upper-case
+    # province code must work; Alberta is skipped here because its cold load
+    # takes about 20 s at the source's pace.
+    Step(
+        "elections_provincial",
+        "elections_provincial_list_elections",
+        {"province": "SK", "lang": "fr"},
+        lambda d: (
+            bool(d["elections"])
+            and d["provenance"]["url"].startswith("https://www.elections.sk.ca/")
+        ),
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_results",
+        {"province": "QC", "election": "2022", "winners_only": True, "limit": 3},
+        lambda d: d["province"] == "qc" and d["total_rows"] == 125,
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_seats",
+        {"province": "Qc", "election": "2022"},
+        lambda d: sum(p["seats"] for p in d["parties"]) == 125,
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_seats",
+        {"province": "bc", "election": "2024"},
+        lambda d: (
+            "Unknown" not in [p["party"] for p in d["parties"]]
+            and sum(p["seats"] for p in d["parties"]) == 93
+        ),
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_results",
+        {"province": "on"},
+        expect_error="Ontario",
+    ),
+    # Federal election results, through the tool layer (scripts/
+    # smoke_test_elections_results.py calls the client functions).
+    Step(
+        "elections_results",
+        "elections_results_list_elections",
+        {"lang": "fr"},
+        lambda d: all(e["page"].endswith("lang=f") for e in d["elections"]),
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_table",
+        {"election": 45, "table": "candidates", "district": "Nepean", "winners_only": True},
+        _non_empty("rows"),
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_historical",
+        {"election": 36, "province": "Alberta", "limit": 3},
+        _non_empty("ridings"),
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_historical_candidates",
+        {"election": 36, "year": 1997, "riding": "Calgary", "winners_only": True, "limit": 3},
+        _non_empty("candidates"),
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_historical_candidates",
+        {"election": 36, "year": 2000},
+        expect_error="held in 1997",
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_historical_candidates",
+        {"election_type": "bogus"},
+        expect_error="election_type",
     ),
     # Query planner (no network; checks registration through the server)
     Step(
@@ -754,6 +1355,18 @@ STEPS: list[Step] = [
         "tc_recalls",
         "tc_recalls_get",
         lambda ctx: {"recall_number": ctx["tc_recalls_search"]["recalls"][0]["recall_number"]},
+    ),
+    # A make-only search starts at the newest recall (it used to start in
+    # 1975) and reports the total.
+    Step(
+        "tc_recalls",
+        "tc_recalls_search",
+        {"make": "Ford", "limit": 2},
+        lambda data: (
+            data["total_matched"] > 1000
+            and data["has_more"]
+            and data["recalls"][0]["recall_date"] >= f"{_TODAY.year - 1}"
+        ),
     ),
 ]
 

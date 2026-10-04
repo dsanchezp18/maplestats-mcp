@@ -22,20 +22,22 @@ async def bcgw_get_active_wildfires(
     status: str | None = None,
     fire_year: int | None = None,
     min_size_hectares: float | None = None,
+    include_out: bool = False,
     include_geometry: bool = False,
     limit: int = ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: Lang = "en",
 ) -> WildfireQueryResult:
     """Query current BC wildfire perimeters and status from the BC Wildfire
-    Service's mapped fire layer.
+    Service's mapped fire layer, largest fires first.
 
     Use for: checking active/recent wildfire status, size in hectares,
     and mapped perimeter for any fire tracked by the BC Wildfire Service.
     status is free text matched against real values like "Out of
     Control", "Being Held", "Under Control", "Out" -- there is no fixed
-    enum. Leave include_geometry false unless the fire polygon itself is
-    needed.
+    enum. Without a status, fires that are "Out" (most of the layer) are
+    left out; set include_out true to list them too. Leave
+    include_geometry false unless the fire polygon itself is needed.
     Keywords: British Columbia, BC, wildfire, forest fire, fire
     perimeter, fire status, fire centre, hectares burned, BC Wildfire
     Service, active fire, out of control, being held.
@@ -47,6 +49,7 @@ async def bcgw_get_active_wildfires(
         status=status,
         fire_year=fire_year,
         min_size_hectares=min_size_hectares,
+        include_out=include_out,
         include_geometry=include_geometry,
         limit=limit,
         offset=offset,
@@ -70,8 +73,10 @@ async def bcgw_get_mining_tenure(
     Use for: mining rights research, resource-extraction analysis, and
     prospecting-zone identification -- claim name, tenure type
     (mineral/placer), owner, area in hectares, issue/expiry dates.
-    tenure_type is "mineral" or "placer". owner_name does a substring
-    match (case-insensitive from the caller's side).
+    tenure_type is "mineral" or "placer". owner_name matches the start
+    of a word in the registered owner's name, case-insensitively ("teck"
+    finds "TECK RESOURCES LIMITED", not "BIATECKI"). Owners include
+    individual free miners, whose names are part of this public registry.
     Keywords: British Columbia, BC, mining, mineral tenure, placer
     claim, mining claim, prospecting, mining rights, owner, hectares,
     tenure number, resource extraction.
@@ -109,7 +114,9 @@ async def bcgw_query_layer(
     ckan_get_dataset (portal="bc") -- a WFS/WMS-queryable BC dataset's package
     carries a resource whose URL embeds the type_name right after
     "openmaps.gov.bc.ca/geo/pub/". Filter with a standard OGC CQL
-    expression against that layer's own field names.
+    expression against that layer's own field names. property_names
+    (comma-separated) keeps only those fields; with include_geometry the
+    layer's geometry column is added to them, so geometry still comes back.
     Use for: pulling features from any BC government map layer (parks,
     land status, forestry, environment and more) with a CQL filter.
     Keywords: British Columbia, BC, BCGW, BC Geographic Warehouse,

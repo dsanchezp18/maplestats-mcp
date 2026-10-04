@@ -1427,8 +1427,10 @@ and industrial design XLSX dictionaries; none exists for trademarks).
 opic-cipo.ca omits its RapidSSL intermediate certificate, so the module
 bundles it (expires 2027-11-02).
 
-Checked 2026-09-24: IP Horizons (CIPO's quarterly researcher datasets for
-patents, trademarks and industrial designs, CSV/TXT; weekly XML) is
+Checked 2026-09-24: IP Horizons (CIPO's researcher datasets for patents,
+trademarks and industrial designs, CSV/TXT; weekly XML; released quarterly
+until 2024, newest open release 2024-10-11 for patents and 2024-11-20 for
+trademarks as of 2026-10-03) is
 published on open.canada.ca as "Patent data", "Trademark Data" and
 "Industrial Design Data", so `ckan_*` (portal="federal") already finds and
 downloads it, and `plan_query` routes IP questions there. Open: abstracts,

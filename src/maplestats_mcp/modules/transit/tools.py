@@ -24,26 +24,27 @@ Lang = Literal["en", "fr"]
 @tool
 async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     """The transit agencies whose published static GTFS schedule this
-    server reads (STM Montreal buses, OC Transpo Ottawa,
-    Calgary Transit, VIA Rail, GO Transit, UP Express and twelve BC Transit
-    systems such as Victoria, Kelowna and Kamloops), with each feed's URL, licence, required attribution
-    line, update cadence and a live check that the zip answers.
+    server reads (STM Montreal buses, OC Transpo Ottawa, Calgary Transit,
+    VIA Rail, GO Transit, UP Express and twelve BC Transit systems such as
+    Victoria, Kelowna and Kamloops), with each feed's URL, licence,
+    required attribution line, update cadence and a live check that the
+    zip answers.
 
     The key of each agency is what the other transit_ tools take as
     `agency`. TransLink (Vancouver) is not offered: its terms require
     users to identify themselves to TransLink first. For some 100 further
     agencies across Canada (a 2025 snapshot) use
-    transit_list_national_agencies. BC Transit zips are built
-    on request by BC Transit and downloaded whole, so a first call to one of
-    its systems takes 5 to 30 seconds.
+    transit_list_national_agencies. BC Transit zips are built on request by
+    BC Transit and downloaded whole, so a first call to one of its systems
+    takes 5 to 30 seconds.
     Use for: which transit schedules are available, licence and credit
     line for a transit feed, is the agency's GTFS zip reachable.
-    Keywords: transit, GTFS, static schedule, STM, OC Transpo,
-    Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, agencies, licence, attribution, bus, timetable
-    data.
-    Mots-clés : transport en commun, GTFS, horaire statique, STM,
-    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, organismes, licence, attribution,
-    autobus, données d'horaires.
+    Keywords: transit, GTFS, static schedule, STM, OC Transpo, Calgary
+    Transit, VIA Rail, GO Transit, UP Express, BC Transit, agencies,
+    licence, attribution, bus, timetable data.
+    Mots-clés : transport en commun, GTFS, horaire statique, STM, OC
+    Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit,
+    organismes, licence, attribution, autobus, données d'horaires.
     """
     return await client.list_agencies(lang=lang)
 

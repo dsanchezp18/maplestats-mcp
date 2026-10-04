@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
@@ -81,17 +82,82 @@ _POSTCODE_NOTE = {
 _OLD_ORDER_NOTE = {
     "en": (
         "Older federal representation orders (2003, 2013) and other superseded sets can appear "
-        "among the boundaries; the representatives point to the current ones."
+        "among the boundaries; the representatives point to the current ones. The slug "
+        "federal-electoral-districts (no year) is the 2013 order; the current federal map is "
+        f"{constants.CURRENT_FEDERAL_BOUNDARY_SET}."
     ),
     "fr": (
         "Des ordonnances de représentation fédérales plus anciennes (2003, 2013) et d'autres "
         "ensembles remplacés peuvent figurer parmi les limites; les élus renvoient aux "
-        "limites actuelles."
+        "limites actuelles. L'ensemble federal-electoral-districts (sans année) est "
+        "l'ordonnance de 2013; la carte fédérale actuelle est "
+        f"{constants.CURRENT_FEDERAL_BOUNDARY_SET}."
     ),
 }
 _STALE_NOTE = {
     "en": "These boundary sets were last updated more than 5 years ago: {names}.",
     "fr": "Ces ensembles de limites ont été mis à jour il y a plus de 5 ans : {names}.",
+}
+_SUPERSEDED_NOTE = {
+    "en": (
+        "Superseded representation orders, not the current map (their old last-updated date "
+        "reflects that, not a stale copy of current districts): {names}. Current federal "
+        f"ridings are in {constants.CURRENT_FEDERAL_BOUNDARY_SET}."
+    ),
+    "fr": (
+        "Ordonnances de représentation remplacées, et non la carte actuelle (leur date de mise "
+        "à jour ancienne vient de là, et non d'une copie périmée des limites actuelles) : "
+        "{names}. Les circonscriptions fédérales actuelles sont dans "
+        f"{constants.CURRENT_FEDERAL_BOUNDARY_SET}."
+    ),
+}
+_SETS_NO_REPS_NOTE = {
+    "en": (
+        "No representative came back for these sets. With sets, Represent returns only the "
+        "representatives of boundary sets that a representative set uses (e.g. "
+        f"{constants.CURRENT_FEDERAL_BOUNDARY_SET} for MPs); superseded orders such as "
+        "federal-electoral-districts (2013) and census sets have none. Drop sets to get every "
+        "representative."
+    ),
+    "fr": (
+        "Aucun élu n'est renvoyé pour ces ensembles. Avec sets, Represent ne renvoie que les "
+        "élus des ensembles de limites utilisés par un ensemble d'élus (p. ex. "
+        f"{constants.CURRENT_FEDERAL_BOUNDARY_SET} pour les députés fédéraux); les ordonnances "
+        "remplacées comme federal-electoral-districts (2013) et les ensembles de recensement "
+        "n'en ont aucun. Retirer sets pour obtenir tous les élus."
+    ),
+}
+_SEARCH_NO_MATCH_NOTE = {
+    "en": "No representative matched. Matching is a case-insensitive substring.",
+    "fr": (
+        "Aucun élu ne correspond. La recherche porte sur une sous-chaîne, sans égard à la casse."
+    ),
+}
+_PARTY_ALIAS_NOTE = {
+    "en": "party '{party}' was matched as any of: {needles}.",
+    "fr": "Le parti « {party} » a été cherché sous l'une de ces formes : {needles}.",
+}
+_PARTY_CAUCUS_NOTE = {
+    "en": (
+        "Party names come from each legislature's site: Saskatchewan lists caucuses (Government "
+        "Caucus, Opposition Caucus) and the Northwest Territories has no parties, so party "
+        "filters miss their members."
+    ),
+    "fr": (
+        "Les noms de parti viennent du site de chaque assemblée : la Saskatchewan indique des "
+        "caucus (Government Caucus, Opposition Caucus) et les Territoires du Nord-Ouest n'ont pas "
+        "de partis; le filtre de parti ne trouve donc pas leurs élus."
+    ),
+}
+_LEVEL_NOTE = {
+    "en": (
+        "Level is derived from the set slug (house-of-commons is federal; "
+        "*-legislature and quebec-assemblee-nationale are provincial; the rest municipal)."
+    ),
+    "fr": (
+        "Le palier est déduit de l'identifiant de l'ensemble (house-of-commons est fédéral; "
+        "*-legislature et quebec-assemblee-nationale sont provinciaux; les autres municipaux)."
+    ),
 }
 _MISSING_LEVEL_NOTE = {
     "en": (
@@ -120,6 +186,26 @@ def _check_lang(lang: str) -> None:
 def _text(value: object) -> str | None:
     """A string field, with the API's empty string read as absent."""
     return value if isinstance(value, str) and value.strip() else None
+
+
+def _fold(value: str) -> str:
+    """Lower case without accents or dots, so 'N.P.D.' and 'Québec' compare loosely."""
+    decomposed = unicodedata.normalize("NFKD", value)
+    bare = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return " ".join(bare.replace(".", "").casefold().split())
+
+
+def _party_needles(party: str) -> tuple[tuple[str, ...], bool]:
+    """Substrings to match party_name against, and whether an alias was used."""
+    aliases = constants.PARTY_ALIASES.get(_fold(party))
+    if aliases:
+        return aliases, True
+    return (party.strip(),), False
+
+
+def _party_matches(raw: dict[str, Any], needles: tuple[str, ...]) -> bool:
+    party_name = _fold(str(raw.get("party_name") or ""))
+    return any(_fold(n) in party_name for n in needles)
 
 
 def _slug_from(path: str | None, marker: str) -> str | None:
@@ -285,6 +371,9 @@ def _set_info(slug: str, raw: dict[str, Any]) -> BoundarySetInfo:
         end_date=_parse_date(raw.get("end_date")),
         notes=_text(raw.get("notes")),
         detail_loaded="licence_url" in raw or "last_updated" in raw,
+        superseded_by=(
+            constants.CURRENT_FEDERAL_BOUNDARY_SET if slug in constants.SUPERSEDED_SETS else None
+        ),
     )
 
 
@@ -292,7 +381,7 @@ def _check_slug(value: str, what: str) -> str:
     slug = value.strip().strip("/").lower()
     if not _SLUG.match(slug):
         raise InvalidInput(
-            f"represent: {what} must be a slug such as 'federal-electoral-districts'."
+            f"represent: {what} must be a slug such as '{constants.CURRENT_FEDERAL_BOUNDARY_SET}'."
         )
     return slug
 
@@ -325,8 +414,29 @@ def _oldest(infos: list[BoundarySetInfo]) -> date | None:
 
 
 def _stale_note(infos: list[BoundarySetInfo], lang: Lang) -> list[str]:
-    stale = [f"{i.name or i.slug} ({i.last_updated})" for i in infos if i.possibly_stale]
-    return [_STALE_NOTE[lang].format(names="; ".join(stale))] if stale else []
+    """Stale-set note, with superseded representation orders named as such.
+
+    The unsuffixed federal set (2013 order) is dated 2017-08-23, so a plain
+    "last updated more than 5 years ago" read as if the current federal map
+    were stale (seen live 2026-10-03 on every postcode lookup).
+    """
+    notes: list[str] = []
+    order = "{year} order" if lang == "en" else "ordonnance de {year}"
+    superseded = [
+        f"{i.slug} ({order.format(year=constants.SUPERSEDED_SETS[i.slug])})"
+        for i in infos
+        if i.slug in constants.SUPERSEDED_SETS
+    ]
+    if superseded:
+        notes.append(_SUPERSEDED_NOTE[lang].format(names="; ".join(superseded)))
+    stale = [
+        f"{i.name or i.slug} ({i.last_updated})"
+        for i in infos
+        if i.possibly_stale and i.slug not in constants.SUPERSEDED_SETS
+    ]
+    if stale:
+        notes.append(_STALE_NOTE[lang].format(names="; ".join(stale)))
+    return notes
 
 
 async def lookup_postcode(
@@ -350,8 +460,10 @@ async def lookup_postcode(
         raise NotFound(
             f"represent: postal code {code} is not in Open North's postal code data."
         ) from exc
-    # representatives_concordance is absent (not null) on many postal codes
-    # and both representative keys are dropped when `sets` is given, so every
+    # representatives_concordance is absent (not null) on many postal codes.
+    # With `sets`, Represent keeps only representatives_centroid, and only for
+    # sets a representative set uses (live 2026-10-03, K2J6B6: the 2023 order
+    # returns Mark Carney, federal-electoral-districts drops the key), so every
     # list goes through list_or_empty.
     boundaries = [
         _boundary_ref(b, "centroid")
@@ -383,6 +495,8 @@ async def lookup_postcode(
         (coords[0], coords[1]) if isinstance(coords, list) and len(coords) >= 2 else (None, None)
     )
     notes = [_POSTCODE_NOTE[lang], _OLD_ORDER_NOTE[lang], *_stale_note(infos, lang)]
+    if sets and not representatives:
+        notes.append(_SETS_NO_REPS_NOTE[lang])
     if not sets:
         present = {r.level for r in representatives}
         missing = [lv for lv in ("federal", "provincial") if lv not in present]
@@ -507,12 +621,7 @@ async def list_representative_sets(
     return RepresentativeSetList(
         sets=sorted(sets, key=lambda s: (s.level, s.name)),
         total_count=len(sets),
-        notes=[
-            (
-                "Level is derived from the set slug (house-of-commons is federal; "
-                "*-legislature and quebec-assemblee-nationale are provincial; the rest municipal)."
-            )
-        ],
+        notes=[_LEVEL_NOTE[lang]],
         provenance=_provenance(
             "/representative-sets/", cached, "represent.RepresentativeSetList", lang
         ),
@@ -547,16 +656,35 @@ async def search_representatives(
         "name__icontains": name,
         "elected_office__icontains": office,
         "district_name__icontains": district,
-        "party_name__icontains": party,
     }
     params = {k: v.strip() for k, v in filters.items() if v and v.strip()}
     set_slug = _check_slug(representative_set, "representative_set") if representative_set else None
-    if not params and not level and not set_slug:
+    notes: list[str] = []
+    # One party substring goes upstream as party_name__icontains. An alias with
+    # several forms ("NDP" -> "NDP" or "New Democratic") is matched here
+    # instead, because Represent has no OR filter.
+    local_party: tuple[str, ...] = ()
+    if party and party.strip():
+        needles, aliased = _party_needles(party)
+        if aliased:
+            notes.append(
+                _PARTY_ALIAS_NOTE[lang].format(party=party.strip(), needles=", ".join(needles))
+            )
+        if len(needles) == 1:
+            params["party_name__icontains"] = needles[0]
+        else:
+            local_party = needles
+        if not set_slug and level in (None, "provincial"):
+            notes.append(_PARTY_CAUCUS_NOTE[lang])
+    if not params and not local_party and not level and not set_slug:
         raise InvalidInput(
             "represent: give at least one of name, office, district, party, level or "
             "representative_set."
         )
-    notes: list[str] = []
+
+    def party_ok(raw: dict[str, Any]) -> bool:
+        return not local_party or _party_matches(raw, local_party)
+
     cached = True
     rows: list[dict[str, Any]]
     total: int
@@ -566,6 +694,7 @@ async def search_representatives(
         # An unknown set slug answers 200 with an empty list, so check it exists.
         await _get(f"/representative-sets/{set_slug}/", ttl=constants.SETS_TTL_SECONDS)
         rows, cached = await _search_in_set(set_slug, params)
+        rows = [r for r in rows if party_ok(r)]
         total = len(rows)
         rows = rows[offset : offset + limit]
     elif level in ("federal", "provincial"):
@@ -578,7 +707,7 @@ async def search_representatives(
         for slug in slugs:
             part, part_cached = await _search_in_set(slug, params)
             cached = cached and part_cached
-            merged.extend(part)
+            merged.extend(r for r in part if party_ok(r))
         total = len(merged)
         rows = merged[offset : offset + limit]
     elif level == "municipal":
@@ -602,10 +731,35 @@ async def search_representatives(
                     )
                 )
                 == "municipal"
+                and party_ok(r)
             )
             if not (raw.get("meta") or {}).get("next") or not objects:
                 break
             page_offset += len(objects)
+        total = len(merged)
+        rows = merged[offset : offset + limit]
+    elif local_party:
+        # One upstream query per party form, merged; a party never reaches
+        # PAGE_SIZE members (the largest, Liberal, had 169 MPs on 2026-10-03).
+        merged = []
+        seen: set[tuple[str, str, str]] = set()
+        for needle in local_party:
+            raw, part_cached = await _get(
+                "/representatives/",
+                {**params, "party_name__icontains": needle, "limit": constants.PAGE_SIZE},
+            )
+            cached = cached and part_cached
+            for r in list_or_empty(raw, "objects"):
+                if not isinstance(r, dict):
+                    continue
+                ident = (
+                    str(r.get("name") or ""),
+                    str((r.get("related") or {}).get("representative_set_url") or ""),
+                    str(r.get("district_name") or ""),
+                )
+                if ident not in seen:
+                    seen.add(ident)
+                    merged.append(r)
         total = len(merged)
         rows = merged[offset : offset + limit]
     else:
@@ -613,7 +767,7 @@ async def search_representatives(
         rows = [r for r in list_or_empty(raw, "objects") if isinstance(r, dict)]
         total = int((raw.get("meta") or {}).get("total_count") or 0)
     if total == 0:
-        notes.append("No representative matched. Matching is a case-insensitive substring.")
+        notes.append(_SEARCH_NO_MATCH_NOTE[lang])
     return RepresentativeSearchResult(
         representatives=[_representative(r) for r in rows],
         total_count=total,

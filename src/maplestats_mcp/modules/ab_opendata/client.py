@@ -424,11 +424,15 @@ async def describe_resource(
         resource_name=resource.name,
         dataset=entry.name,
         dataset_title=entry.title,
+        # The declared width counts formatted empty columns: the Income Support
+        # workbook declares 14 columns for 5 named ones (live 2026-10-03). Rows
+        # are trimmed of trailing blanks when read, so the width is the one
+        # read_resource uses: one column per name.
         sheets=[
             SheetInfo(
                 name=s.name,
                 rows=s.rows,
-                columns=s.columns,
+                columns=len(s.column_names) if s.column_names else s.columns,
                 header_row=s.header_row,
                 column_names=s.column_names,
                 preview=s.preview,

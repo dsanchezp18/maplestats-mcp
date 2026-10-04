@@ -64,6 +64,7 @@ async def test_get_corporation_by_id_parses_english_record(httpx_mock):
     assert result.director_limits.maximum == 30
     assert result.annual_returns[0].year_of_filing == "2026"
     assert result.activities[0].activity == "Incorporation"
+    assert result.provenance.url == f"{constants.BASE_URL}/1007.json?lang=eng"
 
 
 async def test_get_corporation_by_business_number_uses_same_endpoint(httpx_mock):
@@ -83,6 +84,8 @@ async def test_french_lang_reads_second_slot(httpx_mock):
     )
     result = await client.get_corporation("1007", lang="fr")
     assert result.act == "Loi sur les chambres de commerce - partie II"
+    # The provenance link must reproduce the French answer, not the English one.
+    assert result.provenance.url == f"{constants.BASE_URL}/1007.json?lang=fra"
 
 
 async def test_falls_back_to_other_slot_when_requested_language_is_null(httpx_mock):

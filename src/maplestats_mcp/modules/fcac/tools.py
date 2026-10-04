@@ -93,7 +93,8 @@ async def fcac_get_credit_card(
 
     Use for: one card's annual fees (first and additional card),
     purchase, cash advance and balance transfer interest rates, foreign
-    currency conversion fee, minimum personal and household income,
+    currency conversion fee, minimum personal and household income (0
+    when FCAC says "Not required", null only when not stated),
     reward categories and how to redeem them, other benefits, and
     included insurance (travel medical, trip cancellation, rental car,
     and more). product_id comes from fcac_search_credit_cards; pass the

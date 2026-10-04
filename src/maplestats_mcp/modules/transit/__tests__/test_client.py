@@ -263,8 +263,14 @@ async def test_stm_metro_is_not_reported(httpx_mock):
     _serve(httpx_mock, "stm")
     routes = await client.search_routes("stm")
     assert [r.route_id for r in routes.routes] == ["R1"]
-    with pytest.raises(NotFound, match="no route"):
+    # A métro line exists in the feed: say it is left out, not that it is missing.
+    with pytest.raises(NotFound, match="subway / metro line.*terms of use") as raised:
         await client.get_route_summary("stm", "M1", service_date="2026-10-06")
+    assert "no route" not in str(raised.value)
+    with pytest.raises(NotFound, match="terms of use"):
+        await client.get_route_summary("stm", "R2", service_date="2026-10-06")
+    with pytest.raises(NotFound, match="no route"):
+        await client.get_route_summary("stm", "nope", service_date="2026-10-06")
     departures = await client.get_stop_departures(
         "stm", "S1", service_date="2026-10-06", start_time="08:00"
     )

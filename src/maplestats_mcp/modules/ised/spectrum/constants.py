@@ -17,6 +17,10 @@ RATE_LIMIT_PER_SECOND = 2.0
 RATE_LIMIT_CAPACITY = 5.0
 
 CACHE_TTL_ROWS_SECONDS = 15 * 60
+# The layer's field list and last-edit date (for date fields and as_of).
+CACHE_TTL_LAYER_SECONDS = 6 * 60 * 60
+# Two missed monthly refreshes before the provenance calls the layer stale.
+STALE_AFTER_DAYS = 62
 
 ROWS_LIMIT_DEFAULT = 10
 ROWS_LIMIT_MAX = 1000

@@ -28,8 +28,9 @@ async def isq_search_tables(
     agriculture, and ISQ tabulations of StatCan data for Québec. Matches
     every word of `query` (French or English, accents optional) against
     about 7,000 table page names. lang 'fr' or 'en' keeps one language's
-    pages (many tables are French only). Pass a result's `table` to
-    isq_get_table.
+    pages (many tables are French only); with 'all', a slug that has both a
+    French and an English page is one hit (`languages` lists both). Pass a
+    result's `table` to isq_get_table.
     Keywords: Quebec statistics, ISQ, regional data, MRC, administrative
     region, health survey, culture statistics, cinema, disposable income,
     Québec tables.
@@ -57,8 +58,11 @@ async def isq_get_table(
     ' / ', e.g. '2025' or 'Moins de 1 verre / (%)'), numbers parsed from
     French format, and `flags` with ISQ's signs per value (r revised, p
     provisional, x confidential, F unreliable; see flag_legend), plus the
-    table's notes and sources. Static tables return `cells` as published
-    and an Excel link. Page through long tables with offset and max_rows.
+    table's notes and sources. When a table states each row's unit, it is
+    the 'Unité' column (e.g. '$/hab' or 'M$'). Static tables return `cells`
+    as published and an Excel link. Page through long tables with offset
+    and max_rows. ISQ's data engine is French only: with lang 'en' the
+    title follows the English page, but labels, units and notes stay French.
     Keywords: Quebec table data, ISQ values, time series, regional
     statistics, survey estimates, confidence interval, MRC data, Quebec
     statistics.

@@ -108,6 +108,18 @@ SK_MAX_BYTES = 10 * 1024 * 1024
 MB_DOWNLOADS = "https://www.electionsmanitoba.ca/downloads"
 MB_PAGE = "https://www.electionsmanitoba.ca/en/Results/Elections1999AndLater"
 
+# The results page of each province, for list_elections provenance.
+PROVINCE_PAGES: dict[str, str] = {
+    "qc": QC_PAGE,
+    "ab": AB_PAGE,
+    "bc": BC_DATASET_PAGE,
+    "sk": SK_PAGE,
+    "mb": MB_PAGE,
+}
+
+# Party label for a candidate whose source row has no party at all.
+NO_AFFILIATION_LABEL = "No affiliation (blank in source)"
+
 
 @dataclass(frozen=True)
 class ManitobaFiles:

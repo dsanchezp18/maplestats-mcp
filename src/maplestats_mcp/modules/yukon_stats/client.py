@@ -7,16 +7,15 @@ import io
 from typing import Literal
 from urllib.parse import urlparse
 
-import httpx
-
 from maplestats_mcp.modules.ckan import client as ckan
 from maplestats_mcp.modules.yukon_stats import constants
 from maplestats_mcp.modules.yukon_stats.schemas import TableEntry, TableList, TableRows
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.csv_files import Columns, decode, exact_filter
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 Lang = Literal["en", "fr"]
@@ -54,6 +53,7 @@ async def _catalogue() -> tuple[list[TableEntry], bool]:
                             title=resource.name,
                             url=url,
                             modified=resource.last_modified or resource.metadata_modified,
+                            size_bytes=resource.size,
                         )
                     )
         return tables
@@ -130,24 +130,67 @@ def _parse(body: bytes) -> tuple[list[str], list[dict[str, str]]]:
     return keep, rows
 
 
-async def _table(url: str) -> tuple[tuple[list[str], list[dict[str, str]]], bool]:
+def _too_large(url: str, size: int) -> UpstreamError:
+    return UpstreamError(
+        f"yukon_stats: {url} is {size:,} bytes; this tool reads files up to "
+        f"{constants.MAX_FILE_BYTES:,}. Download it from the portal instead."
+    )
+
+
+async def _table(
+    url: str, size_hint: int | None
+) -> tuple[tuple[list[str], list[dict[str, str]]], bool]:
+    if size_hint and size_hint > constants.MAX_FILE_BYTES:
+        raise _too_large(url, size_hint)
+
     async def fetch() -> tuple[list[str], list[dict[str, str]]]:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"yukon_stats: no file at {url}.") from exc
-            raise UpstreamError(
-                f"yukon_stats: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"yukon_stats: {url} did not respond in time.") from exc
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"yukon_stats: {url} is larger than this tool reads.")
-        return _parse(response.content)
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, and an undeclared one stops at the cap. The
+        # parsed rows are cached below, so the bytes are not kept a second time.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="yukon_stats",
+            timeout=180.0,
+        )
+        return await run_parse(_parse, downloaded.body)
 
     return await cached_fetch(f"yukon_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+
+
+async def _listed(url: str) -> TableEntry:
+    """The catalogue entry for exactly this URL.
+
+    open.yukon.ca serves a download by its resource id and ignores the file
+    name: on 2026-10-03 ".../resource/9d6ceba0-.../download/zz-vacancy-rates.csv"
+    returned the rent table, so an unchecked URL can label one table with
+    another's name. Only URLs the catalogue lists are read.
+    """
+    tables, _ = await _catalogue()
+    entry = next((t for t in tables if t.url == url), None)
+    if entry is not None:
+        return entry
+    resource_id = _resource_id(url)
+    same = next((t for t in tables if resource_id and _resource_id(t.url) == resource_id), None)
+    if same is not None:
+        raise InvalidInput(
+            f"yukon_stats: the catalogue lists this resource as {same.url} ({same.title!r}); "
+            "pass that exact URL."
+        )
+    raise NotFound(
+        f"yukon_stats: {url} is not a CSV table of the Yukon Bureau of Statistics "
+        "(see yukon_stats_list_tables)."
+    )
+
+
+def _resource_id(url: str) -> str | None:
+    parts = urlparse(url).path.split("/")
+    if "resource" in parts:
+        index = parts.index("resource") + 1
+        return parts[index] if index < len(parts) else None
+    return None
 
 
 async def query_table(
@@ -164,7 +207,8 @@ async def query_table(
     if offset < 0:
         raise InvalidInput("yukon_stats: offset must be 0 or more.")
 
-    (names, rows), cached = await _table(url)
+    entry = await _listed(url)
+    (names, rows), cached = await _table(url, entry.size_bytes)
     lookup = Columns([dict.fromkeys(names, "")])
     rows = exact_filter(rows, lookup, filters)
     chosen = [lookup.require(c) for c in columns] if columns else names

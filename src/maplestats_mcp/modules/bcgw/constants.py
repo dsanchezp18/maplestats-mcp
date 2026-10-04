@@ -30,6 +30,8 @@ CACHE_TTL_MINING_TENURE_SECONDS = 24 * 60 * 60
 # The generic layer tool can point at anything from a live-updated layer
 # to a static one -- a short-ish default that favours freshness.
 CACHE_TTL_GENERIC_SECONDS = 15 * 60
+# A layer's geometry column name (from DescribeFeatureType) rarely changes.
+CACHE_TTL_SCHEMA_SECONDS = 24 * 60 * 60
 
 # Confirmed live 2026-09-22 via WFS DescribeFeatureType against
 # WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_POLYS_SP: this is the
@@ -39,6 +41,11 @@ WILDFIRE_TYPE_NAME = "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_POLYS_SP"
 WILDFIRE_ATTRIBUTE_FIELDS = (
     "FIRE_NUMBER,FIRE_YEAR,FIRE_SIZE_HECTARES,SOURCE,TRACK_DATE,LOAD_DATE,FIRE_STATUS,FIRE_URL"
 )
+# Extinguished fires; left out of the wildfire tool unless asked for.
+WILDFIRE_OUT_STATUS = "Out"
+# Largest fires first; OBJECTID breaks ties so pages stay stable (a
+# two-key sortBy was accepted live 2026-10-03).
+WILDFIRE_SORT = "FIRE_SIZE_HECTARES D,OBJECTID A"
 
 # Confirmed live 2026-09-22 against a real feature (a Teck Highland Valley
 # Copper claim). TENURE_TYPE_CODE is 'M' (mineral) or 'P' (placer).

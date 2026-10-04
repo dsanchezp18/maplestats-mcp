@@ -36,22 +36,6 @@ MAX_RESULT_PAGES = 60
 LIMIT_DEFAULT = 25
 LIMIT_MAX = 200
 
-PROVINCE_NAMES = {
-    "AB": ("Alberta", "Alberta"),
-    "BC": ("British Columbia", "Colombie-Britannique"),
-    "MB": ("Manitoba", "Manitoba"),
-    "NB": ("New Brunswick", "Nouveau-Brunswick"),
-    "NL": ("Newfoundland and Labrador", "Terre-Neuve-et-Labrador"),
-    "NS": ("Nova Scotia", "Nouvelle-Écosse"),
-    "NT": ("Northwest Territories", "Territoires du Nord-Ouest"),
-    "NU": ("Nunavut", "Nunavut"),
-    "ON": ("Ontario", "Ontario"),
-    "PE": ("Prince Edward Island", "Île-du-Prince-Édouard"),
-    "QC": ("Quebec", "Québec"),
-    "SK": ("Saskatchewan", "Saskatchewan"),
-    "YT": ("Yukon", "Yukon"),
-}
-
 # ddlProvince option values, credit card tool.
 CARD_PROVINCES = {
     "AB": "1",
