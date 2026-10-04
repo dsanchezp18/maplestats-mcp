@@ -110,6 +110,10 @@ OGL = "Open Government Licence - Canada"
 OGL_URL = "https://open.canada.ca/en/open-government-licence-canada"
 STATCAN_LICENCE = "Statistics Canada Open Licence"
 STATCAN_LICENCE_URL = "https://www.statcan.gc.ca/en/terms-conditions/open-licence"
+OGL_FR = "Licence du gouvernement ouvert – Canada"
+OGL_URL_FR = "https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada"
+STATCAN_LICENCE_FR = "Licence ouverte de Statistique Canada"
+STATCAN_LICENCE_URL_FR = "https://www.statcan.gc.ca/fr/reference/licence"
 
 
 @dataclass(frozen=True)

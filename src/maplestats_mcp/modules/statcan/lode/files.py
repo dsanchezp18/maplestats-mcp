@@ -27,6 +27,7 @@ from urllib.parse import urlparse
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt
 
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.lode import constants
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
@@ -45,9 +46,19 @@ _downloads: dict[str, asyncio.Task[Path]] = {}
 def check_url(url: str) -> str:
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != constants.ALLOWED_HOST:
-        raise InvalidInput(f"url must be a {constants.ALLOWED_HOST} download link, got {url!r}.")
+        raise InvalidInput(
+            say(
+                f"url must be a {constants.ALLOWED_HOST} download link, got {url!r}.",
+                f"url doit être un lien de téléchargement de {constants.ALLOWED_HOST}, reçu {url!r}.",
+            )
+        )
     if not parsed.path.lower().endswith(".zip"):
-        raise InvalidInput(f"url must point to a .zip file, got {url!r}.")
+        raise InvalidInput(
+            say(
+                f"url must point to a .zip file, got {url!r}.",
+                f"url doit pointer vers un fichier .zip, reçu {url!r}.",
+            )
+        )
     return url
 
 
@@ -84,7 +95,12 @@ async def _download(url: str, member: str, target: Path) -> Path:
                     handle.write(chunk)
     except Exception as exc:
         archive.unlink(missing_ok=True)
-        raise UpstreamUnavailable(f"statcan_lode: download of {url} failed: {exc}") from exc
+        raise UpstreamUnavailable(
+            say(
+                f"statcan_lode: download of {url} failed: {exc}",
+                f"statcan_lode : le téléchargement de {url} a échoué : {exc}",
+            )
+        ) from exc
 
     def extract() -> None:
         part = target.with_suffix(target.suffix + ".part")
@@ -94,7 +110,12 @@ async def _download(url: str, member: str, target: Path) -> Path:
             part.replace(target)
         except (zipfile.BadZipFile, KeyError, OSError) as exc:
             part.unlink(missing_ok=True)
-            raise UpstreamError(f"{url} could not be unpacked: {exc}") from exc
+            raise UpstreamError(
+                say(
+                    f"{url} could not be unpacked: {exc}",
+                    f"{url} n'a pas pu être décompressé : {exc}",
+                )
+            ) from exc
         finally:
             archive.unlink(missing_ok=True)
         _enforce_cap(target)
@@ -138,11 +159,23 @@ async def _range(url: str, start: int, end: int) -> bytes:
     try:
         response = await _get_range(url, start, end)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        raise UpstreamError(
+            say(
+                f"{url} returned HTTP {exc.response.status_code}.",
+                f"{url} a renvoyé HTTP {exc.response.status_code}.",
+            )
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        raise UpstreamUnavailable(
+            say(f"{url} could not be reached.", f"{url} est injoignable.")
+        ) from exc
     if response.status_code != 206:
-        raise UpstreamError(f"{url} does not support range requests (HTTP {response.status_code}).")
+        raise UpstreamError(
+            say(
+                f"{url} does not support range requests (HTTP {response.status_code}).",
+                f"{url} n'accepte pas les requêtes de plage (HTTP {response.status_code}).",
+            )
+        )
     return response.content
 
 
@@ -152,9 +185,16 @@ async def head_size(url: str) -> tuple[int | None, str | None]:
         response = await _client.head(url, headers=request_headers(url, None))
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        raise UpstreamError(
+            say(
+                f"{url} returned HTTP {exc.response.status_code}.",
+                f"{url} a renvoyé HTTP {exc.response.status_code}.",
+            )
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        raise UpstreamUnavailable(
+            say(f"{url} could not be reached.", f"{url} est injoignable.")
+        ) from exc
     length = response.headers.get("content-length")
     return (int(length) if length and length.isdigit() else None), response.headers.get(
         "last-modified"
@@ -168,10 +208,20 @@ async def stream_member(
     whether the whole member was read. Stored and deflated members only.
     """
     if member.method not in (0, 8):
-        raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
+        raise UpstreamError(
+            say(
+                f"{member.name} uses ZIP compression method {member.method}.",
+                f"{member.name} utilise la méthode de compression ZIP {member.method}.",
+            )
+        )
     header = await _range(url, member.header_offset, member.header_offset + 29)
     if header[:4] != b"PK\x03\x04":
-        raise UpstreamError(f"{url}: malformed ZIP local header for {member.name}.")
+        raise UpstreamError(
+            say(
+                f"{url}: malformed ZIP local header for {member.name}.",
+                f"{url} : en-tête local ZIP mal formé pour {member.name}.",
+            )
+        )
     name_len, extra_len = struct.unpack("<HH", header[26:30])
     start = member.header_offset + 30 + name_len + extra_len
     inflater = zlib.decompressobj(-15) if member.method == 8 else None
@@ -226,7 +276,12 @@ def read_rows(
     wanted: list[tuple[int, str]] = []
     for key, value in match.items():
         if key.lower() not in lower:
-            raise InvalidInput(f"No column {key!r}. Columns: {', '.join(header)}.")
+            raise InvalidInput(
+                say(
+                    f"No column {key!r}. Columns: {', '.join(header)}.",
+                    f"Aucune colonne {key!r}. Colonnes : {', '.join(header)}.",
+                )
+            )
         wanted.append((lower[key.lower()], value.strip().lower()))
     rows: list[dict[str, str | None]] = []
     for record in reader:
