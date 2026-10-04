@@ -500,3 +500,38 @@ async def test_results_are_cached(httpx_mock):
     second = await client.get_avian_influenza(status="released")
     assert first.provenance.cached is False and second.provenance.cached is True
     assert second.total_matched == 18
+
+
+# --- French messages -----------------------------------------------------------
+
+
+async def test_french_errors_notes_and_provenance(httpx_mock):
+    _mock(httpx_mock, constants.REPORTABLE_PAGE["fr"], "reportable_fr.html")
+    french = await client.get_reportable_diseases(lang="fr")
+    assert "mise à jour\xa0; le tableau" in french.notes[0]
+    assert (french.provenance.freshness or "").startswith("mensuelle, le 10")
+    assert "rage exclue" in (french.provenance.coverage or "")
+    assert "Avis du site Web du gouvernement du Canada" in (french.provenance.licence or "")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: cfia\xa0: year_from ne doit"):
+        await client.get_reportable_diseases(2015, 2012, lang="fr")
+    with pytest.raises(InvalidInput, match="maladie 'foot and mouth' inconnue"):
+        await client.get_reportable_diseases(disease="foot and mouth", lang="fr")
+    with pytest.raises(InvalidInput, match="status doit être"):
+        await client.get_avian_influenza(status="open", lang="fr")
+
+
+async def test_french_layout_change_and_moved_page(httpx_mock):
+    page = _text("reportable_fr.html").replace(">Maladie<", ">Affection<", 1)
+    _mock(httpx_mock, constants.REPORTABLE_PAGE["fr"], text=page)
+    with pytest.raises(UpstreamError, match="la structure de la page a changé"):
+        await client.get_reportable_diseases(lang="fr")
+    httpx_mock.add_response(url=constants.REPORTABLE_PAGE["fr"], status_code=410)
+    with pytest.raises(UpstreamError, match="la structure de la page a changé"):
+        await client.get_reportable_diseases(lang="fr")
+
+
+async def test_english_errors_are_unchanged(httpx_mock):
+    with pytest.raises(
+        InvalidInput, match=r"^Invalid input: cfia: year_from must not be after year_to\.$"
+    ):
+        await client.get_reportable_diseases(2015, 2012)
