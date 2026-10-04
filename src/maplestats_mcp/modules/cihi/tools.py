@@ -70,7 +70,9 @@ async def cihi_get_indicator_data(
     "Level 1 breakdown": "Not applicable"}. The last `limit` matching
     rows in file order come back. `columns` picks the columns to return
     (names as in the file); without it, columns blank in every returned
-    row are left out and listed in empty_columns. `lang="fr"` reads
+    row are left out and listed in empty_columns. The first read of an
+    indicator downloads its workbook (about 2 MB; 20-50 s measured live),
+    later reads are cached for a day. `lang="fr"` reads
     CIHI's French file, with French column names.
     Keywords: CIHI, health data, hospital mortality rate, readmission
     rate, province, hospital, fiscal year, risk-adjusted rate.
