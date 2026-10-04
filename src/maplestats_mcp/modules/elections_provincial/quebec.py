@@ -25,6 +25,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
     mark_winners,
 )
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.json_utils import list_or_empty
 
 
 def file_url(source_key: str) -> str:
@@ -39,45 +40,59 @@ def _float(value: Any) -> float | None:
     return None if value in (None, "") else float(value)
 
 
+def _riding(riding: dict[str, Any], names: dict[str, str]) -> District:
+    district = District(
+        name=str(riding["nomCirconscription"]),
+        number=str(riding["numeroCirconscription"]),
+        electors=_int(riding.get("nbElecteurInscrit")),
+        valid_votes=_int(riding.get("nbVoteValide")),
+        rejected_ballots=_int(riding.get("nbVoteRejete")),
+        turnout=_float(riding.get("tauxParticipation")),
+    )
+    for entry in list_or_empty(riding, "candidats"):
+        code = entry.get("abreviationPartiPolitique")
+        full_name = " ".join(
+            part for part in (entry.get("prenom"), entry.get("nom")) if part
+        ).strip()
+        district.candidates.append(
+            Candidate(
+                name=full_name or None,
+                party=names.get(str(code), code),
+                party_code=code,
+                votes=int(entry["nbVoteTotal"]),
+                share=_float(entry.get("tauxVote")),
+            )
+        )
+    return district
+
+
 def parse(body: bytes) -> list[District]:
     try:
         data = json.loads(body.decode("utf-8"))
-        ridings = data["circonscriptions"]
-    except (UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
+    except (UnicodeDecodeError, ValueError) as exc:
         raise UpstreamError(f"elections_provincial: unexpected Quebec results file: {exc}") from exc
+    if not isinstance(data, dict):
+        raise UpstreamError("elections_provincial: the Quebec results file is not a JSON object.")
 
-    names = {
-        str(p.get("abreviationPartiPolitique")): str(p["nomPartiPolitique"])
-        for p in data.get("statistiques", {}).get("partisPolitiques", [])
-        if p.get("abreviationPartiPolitique") and p.get("nomPartiPolitique")
-    }
-    districts: list[District] = []
-    for riding in ridings:
-        district = District(
-            name=str(riding["nomCirconscription"]),
-            number=str(riding["numeroCirconscription"]),
-            electors=_int(riding.get("nbElecteurInscrit")),
-            valid_votes=_int(riding.get("nbVoteValide")),
-            rejected_ballots=_int(riding.get("nbVoteRejete")),
-            turnout=_float(riding.get("tauxParticipation")),
-        )
-        for entry in riding.get("candidats", []):
-            code = entry.get("abreviationPartiPolitique")
-            full_name = " ".join(
-                part for part in (entry.get("prenom"), entry.get("nom")) if part
-            ).strip()
-            district.candidates.append(
-                Candidate(
-                    name=full_name or None,
-                    party=names.get(str(code), code),
-                    party_code=code,
-                    votes=int(entry["nbVoteTotal"]),
-                    share=_float(entry.get("tauxVote")),
-                )
-            )
-        mark_winners(district)
-        finish_shares(district)
-        districts.append(district)
+    # The 1973 to 2012 files lack later fields, so missing or null sections read
+    # as empty, and a malformed riding is a typed error rather than a KeyError.
+    stats = data.get("statistiques") or {}
+    try:
+        names = {
+            str(p.get("abreviationPartiPolitique")): str(p["nomPartiPolitique"])
+            for p in list_or_empty(stats, "partisPolitiques")
+            if p.get("abreviationPartiPolitique") and p.get("nomPartiPolitique")
+        }
+        districts: list[District] = []
+        for riding in list_or_empty(data, "circonscriptions"):
+            district = _riding(riding, names)
+            mark_winners(district)
+            finish_shares(district)
+            districts.append(district)
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise UpstreamError(
+            f"elections_provincial: unexpected Quebec results file ({type(exc).__name__}: {exc})."
+        ) from exc
     if not districts:
         raise UpstreamError("elections_provincial: the Quebec results file has no ridings.")
     return districts

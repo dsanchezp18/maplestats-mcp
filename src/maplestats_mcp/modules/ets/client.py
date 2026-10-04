@@ -14,6 +14,7 @@ from google.transit import gtfs_realtime_pb2
 
 from maplestats_mcp.modules.ets import constants
 from maplestats_mcp.modules.ets.schemas import (
+    AlertPeriod,
     ServiceAlert,
     ServiceAlerts,
     StopTimePrediction,
@@ -77,6 +78,18 @@ def _provenance(feed: str, was_cached: bool, schema_name: str, as_of: datetime |
     )
 
 
+def route_key(route_id: str) -> str:
+    """Comparable form of an ETS route id.
+
+    The feeds zero-pad route numbers ("004", "009", "051", "001A"; checked
+    live 2026-10-03), while riders and the alert text say "4" or "Route 124".
+    Leading zeros are dropped on both sides, so "4" and "004" match and
+    "1A" matches "001A"; letters ("A15", "120X") are kept, in upper case.
+    """
+    route_id = route_id.strip().upper()
+    return route_id.lstrip("0") or route_id
+
+
 def _text(translated: Any) -> str | None:
     for translation in translated.translation:
         if translation.text:
@@ -94,12 +107,13 @@ async def get_vehicle_positions(
     del lang
     _check_limit(limit)
     message, was_cached = await _fetch_feed("vehicles", constants.CACHE_TTL_REALTIME_SECONDS)
+    wanted = route_key(route_id) if route_id else None
     vehicles: list[VehiclePosition] = []
     for entity in message.entity:
         if not entity.HasField("vehicle"):
             continue
         vehicle = entity.vehicle
-        if route_id and vehicle.trip.route_id != route_id:
+        if wanted and route_key(vehicle.trip.route_id) != wanted:
             continue
         position = vehicle.position if vehicle.HasField("position") else None
         vehicles.append(
@@ -148,12 +162,13 @@ async def get_stop_predictions(
     if not stop_id and not route_id:
         raise InvalidInput("Pass stop_id, route_id, or both -- the full feed is ~1,200 trips.")
     message, was_cached = await _fetch_feed("trip_updates", constants.CACHE_TTL_REALTIME_SECONDS)
+    wanted = route_key(route_id) if route_id else None
     predictions: list[StopTimePrediction] = []
     for entity in message.entity:
         if not entity.HasField("trip_update"):
             continue
         update = entity.trip_update
-        if route_id and update.trip.route_id != route_id:
+        if wanted and route_key(update.trip.route_id) != wanted:
             continue
         headsign = update.trip_properties.trip_headsign or None
         for stop_update in update.stop_time_update:
@@ -210,6 +225,7 @@ async def get_service_alerts(
     del lang
     _check_limit(limit)
     message, was_cached = await _fetch_feed("alerts", constants.CACHE_TTL_ALERTS_SECONDS)
+    wanted = route_key(route_id) if route_id else None
     alerts: list[ServiceAlert] = []
     for entity in message.entity:
         if not entity.HasField("alert"):
@@ -218,16 +234,26 @@ async def get_service_alerts(
         route_ids = sorted({e.route_id for e in alert.informed_entity if e.route_id})
         stop_ids = sorted({e.stop_id for e in alert.informed_entity if e.stop_id})
         header = _text(alert.header_text)
-        # A few alerts carry no informed_entity, only free text.
+        # A few alerts carry no informed_entity, only free text, which
+        # writes the number unpadded ("Planned Detour for Route 124").
         if (
-            route_id
-            and route_id not in route_ids
-            and (route_ids or not re.search(rf"\bRoute {re.escape(route_id)}\b", header or ""))
+            wanted
+            and wanted not in {route_key(r) for r in route_ids}
+            and (route_ids or not re.search(rf"\bRoute 0*{re.escape(wanted)}\b", header or ""))
         ):
             continue
         if stop_id and stop_id not in stop_ids:
             continue
-        period = alert.active_period[0] if alert.active_period else None
+        # A planned detour can run on several separate days: alert 202214
+        # had two active periods on 2026-10-03. Keep each one; the span
+        # runs from the earliest start to the latest end (0 means open).
+        periods = [
+            AlertPeriod(start=_epoch(p.start), end=_epoch(p.end)) for p in alert.active_period
+        ]
+        starts = [p.start for p in periods if p.start]
+        ends = [p.end for p in periods if p.end]
+        open_start = not periods or len(starts) < len(periods)
+        open_end = not periods or len(ends) < len(periods)
         alerts.append(
             ServiceAlert(
                 alert_id=entity.id,
@@ -238,8 +264,9 @@ async def get_service_alerts(
                 severity=gtfs_realtime_pb2.Alert.SeverityLevel.Name(alert.severity_level),
                 route_ids=route_ids,
                 stop_ids=stop_ids,
-                active_from=_epoch(period.start) if period else None,
-                active_until=_epoch(period.end) if period else None,
+                active_from=None if open_start else min(starts),
+                active_until=None if open_end else max(ends),
+                active_periods=periods,
             )
         )
     feed_time = _epoch(message.header.timestamp)

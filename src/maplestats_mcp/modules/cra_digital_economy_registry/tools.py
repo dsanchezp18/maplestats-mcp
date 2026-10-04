@@ -23,6 +23,8 @@ async def cra_digital_economy_registry_search(
     store, streaming service, short-term rental platform) is registered to
     charge GST/HST under the simplified regime; looking up a business's
     registration or de-registration date by name or business number.
+    Dates come back as ISO dates (YYYY-MM-DD), with the page's own wording
+    ("July 1, 2023", "1 juillet 2021") alongside in *_date_text.
     Keywords: CRA, GST, HST, digital economy, simplified GST/HST,
     registrant, registry, cross-border, platform, short-term
     accommodation, business number, tax registration.

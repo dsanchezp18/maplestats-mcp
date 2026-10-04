@@ -84,7 +84,7 @@ class Agency:
 # 2025-05-07) holding gtfs/<custom_id>/gtfs.zip for 138 feeds, data_sources.csv
 # (per-feed licence_url and attribution), validation_summary.csv and a
 # 485 MB GeoPackage this module does not read. Each inner zip is a plain GTFS
-# feed. www150.statcan.gc.ca/robots.txt sets Crawl-delay 2 for all agents.
+# feed.
 NATIONAL_PREFIX = "national:"
 NATIONAL_URL = (
     "https://www150.statcan.gc.ca/n1/pub/23-26-0003/2025001/zip/"
@@ -109,7 +109,7 @@ NATIONAL_FRESHNESS = (
     "2025-01-31 (corrected 2025-05-07); not updated since. Each feed's own service "
     "window (coverage) is mostly in 2025, so recent dates fall outside it."
 )
-# Crawl-delay 2 in robots.txt: one request every two seconds to www150.
+# One request every two seconds to www150.
 NATIONAL_RATE_PER_SECOND = 0.5
 NATIONAL_CHUNK_BYTES = 16 * 1024 * 1024
 # One nested feed is inflated into memory; the largest feed this module

@@ -1,7 +1,7 @@
 """Live smoke test for ckan_describe_resource / ckan_read_resource on every portal.
 
-Each portal is read one resource after another (its pacing: 1 request per
-crawl-delay for the API calls, so the federal portal takes minutes), and the
+Each portal is read one resource after another (its API pacing makes the
+federal portal take minutes), and the
 portals run side by side. Resources and expectations were checked by hand on
 2026-10-02:
 
@@ -15,8 +15,8 @@ portals run side by side. Resources and expectations were checked by hand on
 - nt: a snow survey workbook and the 2024 traffic workbook, whose declared
   65,536 x 16,217 sheet once took 250 s to read;
 - yt (53 MB CSV refused), regina, montreal (85-sheet budget), qc (a
-  Montreal library workbook, really .xls), toronto (file reading refused: its
-  robots.txt disallows downloads) and ab.
+  Montreal library workbook, really .xls), toronto (file reading refused: the
+  portal does not permit automated file downloads) and ab.
 """
 
 from __future__ import annotations
@@ -196,13 +196,13 @@ async def qc() -> None:
 
 
 async def toronto() -> None:
-    # Toronto's CKAN robots.txt disallows resource downloads: the reader must refuse.
+    # The reader must refuse Toronto's files.
     try:
         await files.read_resource("toronto", "53caa383-5515-4b01-81aa-cfdced622548", limit=1)
     except InvalidInput as exc:
-        check("robots.txt" in str(exc), "toronto file reading refused (robots.txt)")
+        check("automated file downloads" in str(exc), "toronto file reading refused")
     else:
-        check(False, "toronto file reading refused (robots.txt)")
+        check(False, "toronto file reading refused")
 
 
 async def ab() -> None:

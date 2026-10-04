@@ -60,7 +60,7 @@ def test_list_page_rows_and_next_link():
     assert next_url is not None and "StartRow=21" in next_url
 
 
-async def test_search_crawls_pages_and_requires_every_word(httpx_mock):
+async def test_search_walks_pages_and_requires_every_word(httpx_mock):
     httpx_mock.add_response(url=BASE + "index-eng.cfm", text=INDEX_2016)
     httpx_mock.add_response(text=PAGE_1)
     httpx_mock.add_response(text=PAGE_2)

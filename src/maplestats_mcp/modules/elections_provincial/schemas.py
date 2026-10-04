@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
-ProvinceCode = Literal["qc", "ab", "bc", "sk", "mb"]
+# A plain string, not a Literal: a Literal rejected "QC" with raw pydantic
+# text before the client's own lower-casing could run (seen live 2026-10-03).
+# The client validates it and raises InvalidInput listing the codes.
+ProvinceCode = Annotated[
+    str,
+    Field(
+        description="Province code: qc, ab, bc, sk or mb (any case, e.g. QC).",
+        examples=["qc", "ab", "bc", "sk", "mb"],
+    ),
+]
 
 
 class ElectionInfo(BaseModel):

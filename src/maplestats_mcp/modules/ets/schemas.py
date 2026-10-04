@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
@@ -49,6 +49,11 @@ class StopTimePredictions(BaseModel):
     provenance: Provenance
 
 
+class AlertPeriod(BaseModel):
+    start: datetime | None = Field(description="None when the period has no start.")
+    end: datetime | None = Field(description="None when the period is open-ended.")
+
+
 class ServiceAlert(BaseModel):
     alert_id: str
     header: str | None
@@ -56,10 +61,18 @@ class ServiceAlert(BaseModel):
     cause: str | None
     effect: str | None
     severity: str | None
-    route_ids: list[str]
+    route_ids: list[str] = Field(description="As in the feed: zero-padded ('004', '001A').")
     stop_ids: list[str]
-    active_from: datetime | None
-    active_until: datetime | None
+    active_from: datetime | None = Field(
+        description="Earliest start over active_periods; None if any period has no start."
+    )
+    active_until: datetime | None = Field(
+        description="Latest end over active_periods; None if any period is open-ended."
+    )
+    active_periods: list[AlertPeriod] = Field(
+        default_factory=list,
+        description="Every active period; a planned detour can cover separate days.",
+    )
 
 
 class ServiceAlerts(BaseModel):

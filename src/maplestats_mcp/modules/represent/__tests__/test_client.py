@@ -457,3 +457,183 @@ def test_level_of():
 async def test_lang_must_be_en_or_fr():
     with pytest.raises(InvalidInput, match="lang"):
         await client.lookup_postcode("T5J0N3", lang="es")  # type: ignore[arg-type]
+
+
+# Live 2026-10-03, K2J6B6 with sets=federal-electoral-districts: the response
+# keeps code, city, province, centroid and both boundaries_* keys but no
+# representatives_* key, because that slug is the superseded 2013 order.
+_K2J6B6_OLD_ORDER = {
+    "code": "K2J6B6",
+    "city": "NEPEAN",
+    "province": "ON",
+    "centroid": {"type": "Point", "coordinates": [-75.750606, 45.274051]},
+    "boundaries_concordance": [],
+    "boundaries_centroid": [
+        {
+            "url": "/boundaries/federal-electoral-districts/35064/",
+            "name": "Nepean",
+            "related": {"boundary_set_url": "/boundary-sets/federal-electoral-districts/"},
+            "boundary_set_name": "Federal electoral district",
+            "external_id": "35064",
+        }
+    ],
+}
+_FED_2013_DETAIL = {
+    "related": {"boundaries_url": "/boundaries/federal-electoral-districts/"},
+    "name_plural": "Federal electoral districts",
+    "name_singular": "Federal electoral district",
+    "authority": "Her Majesty the Queen in Right of Canada",
+    "domain": "Canada",
+    "source_url": "https://open.canada.ca/data/en/dataset/5f1c2e06-405a-4357-9566-872e69ee2ade",
+    "notes": "",
+    "licence_url": "https://open.canada.ca/en/open-government-licence-canada",
+    "last_updated": "2017-08-23",
+    "extent": [-141.0, 41.6, -52.5, 89.9],
+    "extra": {"division_id": "ocd-division/country:ca"},
+    "start_date": None,
+    "end_date": None,
+}
+
+
+async def test_old_federal_order_is_flagged_superseded_and_empty_reps_explained(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("/postcodes/K2J6B6/?sets=federal-electoral-districts"), json=_K2J6B6_OLD_ORDER
+    )
+    httpx_mock.add_response(
+        url=_url("/boundary-sets/federal-electoral-districts/"), json=_FED_2013_DETAIL
+    )
+    result = await client.lookup_postcode("K2J6B6", sets="federal-electoral-districts")
+    assert result.representatives == []
+    [info] = result.boundary_sets
+    assert info.superseded_by == "federal-electoral-districts-2023-representation-order"
+    # The 2017 date is explained as a superseded order, not reported as stale.
+    assert not any("more than 5 years" in n for n in result.notes)
+    assert any("Superseded" in n and "2013 order" in n for n in result.notes)
+    assert any("Drop sets" in n for n in result.notes)
+    assert any("federal-electoral-districts (no year) is the 2013 order" in n for n in result.notes)
+
+
+async def test_postcode_notes_follow_lang_fr(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("/postcodes/K2J6B6/?sets=federal-electoral-districts"), json=_K2J6B6_OLD_ORDER
+    )
+    httpx_mock.add_response(
+        url=_url("/boundary-sets/federal-electoral-districts/"), json=_FED_2013_DETAIL
+    )
+    result = await client.lookup_postcode("K2J6B6", sets="federal-electoral-districts", lang="fr")
+    assert any("ordonnance de 2013" in n for n in result.notes)
+    assert any("Retirer sets" in n for n in result.notes)
+    assert not any("order)" in n or "Drop sets" in n for n in result.notes)
+
+
+def _party_rep(name: str, set_slug: str, party: str) -> dict:
+    return _rep(name, set_slug, party_name=party)
+
+
+async def test_party_alias_ndp_matches_provincial_long_names_locally(httpx_mock):
+    # Live party_name values (2026-10-03): Alberta "Alberta New Democratic
+    # Party", Quebec none; "NDP" alone matched 0 provincial members before.
+    httpx_mock.add_response(
+        url=_url("/representative-sets/?limit=1000"),
+        json={
+            "objects": [
+                {
+                    "name": "Legislative Assembly of Alberta",
+                    "url": "/representative-sets/alberta-legislature/",
+                    "data_url": "https://x",
+                    "related": {},
+                },
+                {
+                    "name": "Assemblée nationale du Québec",
+                    "url": "/representative-sets/quebec-assemblee-nationale/",
+                    "data_url": "https://y",
+                    "related": {},
+                },
+            ],
+            "meta": {"total_count": 2, "next": None},
+        },
+    )
+    # No party_name__icontains upstream: the alias is matched here.
+    httpx_mock.add_response(
+        url=re.compile(re.escape(BASE + "/representatives/alberta-legislature/?limit=1000") + "$"),
+        json={
+            "objects": [
+                _party_rep("David Shepherd", "alberta-legislature", "Alberta New Democratic Party"),
+                _party_rep("Danielle Smith", "alberta-legislature", "United Conservative Party"),
+            ],
+            "meta": {"total_count": 2},
+        },
+    )
+    httpx_mock.add_response(
+        url=re.compile(
+            re.escape(BASE + "/representatives/quebec-assemblee-nationale/?limit=1000") + "$"
+        ),
+        json={
+            "objects": [
+                _party_rep(
+                    "François Legault", "quebec-assemblee-nationale", "Coalition avenir Québec"
+                )
+            ],
+            "meta": {"total_count": 1},
+        },
+    )
+    result = await client.search_representatives(party="N.D.P.", level="provincial")
+    assert [r.name for r in result.representatives] == ["David Shepherd"]
+    assert result.total_count == 1
+    assert any("NDP, New Democratic" in n for n in result.notes)
+    assert any("Saskatchewan" in n for n in result.notes)
+
+
+async def test_party_alias_without_level_merges_one_query_per_form(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("/representatives/?party_name__icontains=NDP&limit=1000"),
+        json={
+            "objects": [_party_rep("Leah Gazan", "house-of-commons", "NDP")],
+            "meta": {"total_count": 1, "next": None},
+        },
+    )
+    httpx_mock.add_response(
+        url=_url("/representatives/?party_name__icontains=New+Democratic&limit=1000"),
+        json={
+            "objects": [
+                _party_rep("David Shepherd", "alberta-legislature", "Alberta New Democratic Party")
+            ],
+            "meta": {"total_count": 1, "next": None},
+        },
+    )
+    result = await client.search_representatives(party="npd", lang="fr")
+    assert [r.name for r in result.representatives] == ["Leah Gazan", "David Shepherd"]
+    assert result.total_count == 2
+    assert any("« npd »" in n for n in result.notes)
+
+
+async def test_single_form_alias_goes_upstream(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("/representatives/?party_name__icontains=Coalition+avenir+Qu"),
+        json={
+            "objects": [
+                _party_rep(
+                    "François Legault", "quebec-assemblee-nationale", "Coalition avenir Québec"
+                )
+            ],
+            "meta": {"total_count": 1, "next": None},
+        },
+    )
+    result = await client.search_representatives(party="caq")
+    assert result.total_count == 1
+
+
+async def test_search_no_match_and_level_notes_follow_lang(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("/representatives/?name__icontains=zzzqqq&limit=20&offset=0"),
+        json={"objects": [], "meta": {"total_count": 0, "next": None}},
+    )
+    result = await client.search_representatives(name="zzzqqq", lang="fr")
+    assert result.notes == [
+        "Aucun élu ne correspond. La recherche porte sur une sous-chaîne, sans égard à la casse."
+    ]
+
+
+def test_limiter_has_no_burst_above_60_a_minute():
+    assert client.constants.RATE_LIMIT_CAPACITY == 1.0
+    assert client.constants.RATE_LIMIT_PER_SECOND * 60 <= client.constants.RATE_LIMIT_PER_MINUTE

@@ -48,6 +48,26 @@ def _fold(text: str) -> str:
     return "".join(c for c in stripped if not unicodedata.combining(c)).casefold().strip()
 
 
+Groups = tuple[tuple[tuple[str, ...], tuple[str, ...]], ...]
+
+
+def _needles(wanted: str, groups: Groups) -> tuple[str, ...]:
+    """The filter plus the en and fr feed values of every group it names.
+
+    An exact alias (a code such as "ab") stands for its group alone; as a raw
+    substring "ab" would also hit "Labrador".
+    """
+    key = _fold(wanted)
+    for values, aliases in groups:
+        if key in aliases:
+            return tuple(_fold(v) for v in values)
+    found = [key]
+    for values, _aliases in groups:
+        if any(key in _fold(v) for v in values):
+            found.extend(_fold(v) for v in values)
+    return tuple(dict.fromkeys(found))
+
+
 def _text(node: Node | None, tag: str) -> str:
     child = None if node is None else node.find(tag)
     return (child.text or "").strip() if child is not None and child.text else ""
@@ -120,14 +140,25 @@ async def list_members(
     root, cached = await _xml(url, "the member list", constants.CACHE_TTL_LIST_SECONDS)
     members = parse_members(root)
 
+    # Province and party accept either language whatever the feed's lang.
+    checks = (
+        (_needles(province, constants.PROVINCE_GROUPS) if province else (), "province"),
+        (_needles(party, constants.PARTY_GROUPS) if party else (), "party"),
+        ((_fold(constituency),) if constituency else (), "constituency"),
+        ((_fold(name),) if name else (), "name"),
+    )
+
     def keep(member: Member) -> bool:
-        checks = (
-            (province, member.province),
-            (party, member.party),
-            (constituency, member.constituency),
-            (name, f"{member.first_name} {member.last_name}"),
+        values = {
+            "province": member.province,
+            "party": member.party,
+            "constituency": member.constituency,
+            "name": f"{member.first_name} {member.last_name}",
+        }
+        return all(
+            not needles or any(n in _fold(values[field]) for n in needles)
+            for needles, field in checks
         )
-        return all(not wanted or _fold(wanted) in _fold(value) for wanted, value in checks)
 
     members = [m for m in members if keep(m)]
     return MemberList(

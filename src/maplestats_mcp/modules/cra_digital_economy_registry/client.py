@@ -33,6 +33,9 @@ transport to give up the StatCan fix to accommodate one large page.
 
 from __future__ import annotations
 
+import re
+from datetime import date
+
 import httpx
 from bs4 import BeautifulSoup
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -86,6 +89,62 @@ def _cell_text(cell) -> str | None:
     return None if text in ("", "-") else text
 
 
+# Dates are printed in the page's language (checked live 2026-10-03:
+# "July 1, 2023" on the English page, "1 juillet 2021" on the French one),
+# so they are read here rather than through the host's locale.
+_MONTHS = {
+    name: number
+    for number, names in enumerate(
+        (
+            ("january", "janvier"),
+            ("february", "février", "fevrier"),
+            ("march", "mars"),
+            ("april", "avril"),
+            ("may", "mai"),
+            ("june", "juin"),
+            ("july", "juillet"),
+            ("august", "août", "aout"),
+            ("september", "septembre"),
+            ("october", "octobre"),
+            ("november", "novembre"),
+            ("december", "décembre", "decembre"),
+        ),
+        start=1,
+    )
+    for name in names
+}
+_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# Hand-typed variants seen live: "July1, 2021", "20 août2026" (no space),
+# "1 septembre, 2026" (a comma) and "février 3 2026" (English order on the
+# French page), so either order is read with either language's months. A
+# misspelt month ("Obtober 1, 2024") stays null, its text kept in
+# *_date_text.
+_EN_DATE = re.compile(r"^([^\W\d_]+)\.?\s*(\d{1,2}),?\s*(\d{4})$")
+_FR_DATE = re.compile(r"^(\d{1,2})(?:er)?\s*([^\W\d_]+),?\s*(\d{4})$")
+
+
+def parse_date(text: str | None) -> date | None:
+    """An ISO date from the page's English or French date text, or None."""
+    if not text:
+        return None
+    cleaned = " ".join(text.split())
+    if _ISO.match(cleaned):
+        return date.fromisoformat(cleaned)
+    if match := _EN_DATE.match(cleaned):
+        month, day, year = match[1], match[2], match[3]
+    elif match := _FR_DATE.match(cleaned):
+        day, month, year = match[1], match[2], match[3]
+    else:
+        return None
+    number = _MONTHS.get(month.lower())
+    if number is None:
+        return None
+    try:
+        return date(int(year), number, int(day))
+    except ValueError:
+        return None
+
+
 def _parse_registrants(html: str) -> list[DigitalEconomyRegistrant]:
     soup = BeautifulSoup(html, "html.parser")
     table = soup.select_one("table.wb-tables")
@@ -104,13 +163,16 @@ def _parse_registrants(html: str) -> list[DigitalEconomyRegistrant]:
         registration_date = _cell_text(cells[3])
         if not legal_name or not business_number or not registration_date:
             continue
+        deregistration_date = _cell_text(cells[4])
         registrants.append(
             DigitalEconomyRegistrant(
                 legal_name=legal_name,
                 trade_name=_cell_text(cells[1]),
                 business_number=business_number,
-                effective_registration_date=registration_date,
-                effective_deregistration_date=_cell_text(cells[4]),
+                effective_registration_date=parse_date(registration_date),
+                effective_deregistration_date=parse_date(deregistration_date),
+                registration_date_text=registration_date,
+                deregistration_date_text=deregistration_date,
             )
         )
     return registrants

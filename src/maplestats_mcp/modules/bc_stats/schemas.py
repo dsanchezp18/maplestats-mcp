@@ -43,8 +43,21 @@ class FileList(BaseModel):
 
 class SheetInfo(BaseModel):
     name: str
-    rows: int | None = Field(description="Row count the file declares for the sheet.")
-    columns: int | None = None
+    rows: int | None = Field(
+        description="Rows of the sheet: for the sheet that was read, the rows holding data "
+        "(trailing blank rows left out); for the others, the count the file declares, "
+        "which can include blank rows."
+    )
+    columns: int | None = Field(
+        default=None,
+        description="Columns, counted the same way as `rows` (declared counts can include "
+        "formatted empty columns).",
+    )
+    counted: bool = Field(
+        default=False,
+        description="True for the sheet that was read (counts from its cells), false where "
+        "the counts are the file's declared ones.",
+    )
 
 
 class FileData(BaseModel):

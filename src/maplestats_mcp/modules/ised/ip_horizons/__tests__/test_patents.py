@@ -22,8 +22,10 @@ _MAIN = (
     "2000002|1989-10-02| 1994-09-27|LA|NON-PCT|ROLLER MASSAGING APPARATUS|MASSEUR A ROULEAU\n"
     "2000003|2016-05-01|NULL|DE|PCT|FUEL CELL STACK|EMPILEMENT DE PILES\n"
     "2000004|-1|-1|-2|NON-PCT|OLD ROLLER|NULL\n"
+    # French titles are unaccented capitals in the files (checked 2026-10-03).
+    "2000005|-1|NULL|CO|NON-PCT|SOLID OXIDE FUEL CELL|PILE A COMBUSTIBLE A OXYDE SOLIDE\n"
     # "~" as it stands in the live file's French titles (2024-10-11 release).
-    "2000005|-1|-1|EX|NON-PCT|OPERATING TOOL|"
+    "2000006|-1|-1|EX|NON-PCT|OPERATING TOOL|"
     "OUTIL D~EXPLOITATION QU~UNE MAIN-D~OEUVRE, SYSTEME DE MAN~UVRE, N~UD ET MISE EN ~UVRE"
     " D~UVRE, L~IL\n"
 )
@@ -123,14 +125,14 @@ async def test_unknown_codes_become_null(tables):
 
 
 async def test_tilde_for_an_elided_apostrophe_is_restored_and_oe_is_left(tables):
-    record = await client.get_patent(2000005)
+    record = await client.get_patent(2000006)
     assert record.patent.title_fr == (
         "OUTIL D'EXPLOITATION QU'UNE MAIN-D'OEUVRE, SYSTEME DE MAN~UVRE, N~UD ET MISE EN "
         "~UVRE D~UVRE, L~IL"
     )
     # A title search with an apostrophe also finds the "~" spelling.
     found = await client.search_patents(title="d'exploitation")
-    assert [p.patent_number for p in found.patents] == [2000005]
+    assert [p.patent_number for p in found.patents] == [2000006]
 
 
 async def test_get_patent_without_classifications(tables):
@@ -167,6 +169,26 @@ async def test_search_by_french_title_newest_first(tables):
     everything = await client.search_patents(filed_from=date(1980, 1, 1), limit=2)
     assert everything.total_matched == 3
     assert [p.patent_number for p in everything.patents] == [2000003, 2000002]
+
+
+async def test_title_search_ignores_accents(tables):
+    # Live 2026-10-03: "pile à combustible" matched 0 patents before accents
+    # were folded, against 2,796 for "PILE A COMBUSTIBLE".
+    accented = await client.search_patents(title="pile à combustible")
+    assert [p.patent_number for p in accented.patents] == [2000005]
+    assert (await client.search_patents(title="PILE A COMBUSTIBLE")).total_matched == 1
+    assert (await client.search_patents(title="oxyde solidé")).total_matched == 1
+
+
+async def test_release_date_is_the_provenance_as_of(tables):
+    result = await client.search_patents(title="roller")
+    assert result.provenance.as_of is not None
+    assert result.provenance.as_of.date() == date(2024, 10, 11)
+    assert "2024-10-11 release" in (result.provenance.freshness or "")
+    assert "quarterly" not in (result.provenance.freshness or "")
+    record = await client.get_patent(2000001)
+    assert record.provenance.as_of is not None
+    assert record.provenance.as_of.date() == record.release_date
 
 
 async def test_search_rejects_bad_input(tables):

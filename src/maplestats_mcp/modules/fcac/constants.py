@@ -36,7 +36,6 @@ MAX_RESULT_PAGES = 60
 LIMIT_DEFAULT = 25
 LIMIT_MAX = 200
 
-
 # ddlProvince option values, credit card tool.
 CARD_PROVINCES = {
     "AB": "1",

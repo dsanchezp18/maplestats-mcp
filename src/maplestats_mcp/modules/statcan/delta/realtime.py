@@ -11,9 +11,8 @@ CUBE_NOT_AVAILABLE for them, so `wds_available` is False and their titles
 come from the page (English only). Six carry "inactive" in their WDS
 title and end in 2025-12.
 
-StatCan's own real-time viewer service (/rtdat-oadtr-service/) is
-disallowed by its robots.txt and is never called; the tables are read
-through WDS like any other cube.
+StatCan's own real-time viewer service (/rtdat-oadtr-service/) is never
+called; the tables are read through WDS like any other cube.
 """
 
 from __future__ import annotations

@@ -50,6 +50,18 @@ def test_list_elections_covers_38_to_45_in_both_languages():
     assert "Cloudflare" in client.list_elections("fr").not_covered[0]
 
 
+def test_list_elections_links_pages_in_the_callers_language():
+    # elections.ca serves the same pages in French under lang=f (checked live
+    # 2026-10-03); lang="fr" used to return the lang=e pages.
+    english = client.list_elections("en")
+    french = client.list_elections("fr")
+    assert english.elections[0].page.endswith("45gedata&document=summary&lang=e")
+    assert french.elections[0].page.endswith("45gedata&document=summary&lang=f")
+    assert all("lang=e" not in e.page for e in french.elections)
+    assert french.provenance.url.endswith("document=ge&lang=f")
+    assert english.provenance.url.endswith("document=ge&lang=e")
+
+
 async def test_unknown_election_or_table_is_invalid_input():
     with pytest.raises(InvalidInput):
         await client.get_table(37, "candidates")

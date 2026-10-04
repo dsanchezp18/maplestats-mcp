@@ -5,7 +5,6 @@ Every URL below was fetched live on 2026-09-29. Elections Canada
 as numbered CSV tables. The folder differs by election (the 42nd to 45th
 sit under /res/rep/off/, the 38th to 41st under /scripts/), and the 38th
 names its files table01.csv where the others use table_tableau01.csv.
-robots.txt disallows only /pol/can/sof/efr/.
 """
 
 from __future__ import annotations

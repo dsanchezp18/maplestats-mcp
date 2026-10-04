@@ -1,9 +1,12 @@
 """Client for CIPO's IP Horizons researcher datasets.
 
 IP Horizons publishes Canada's full patent, industrial design and
-trademark registers as quarterly bulk ZIP files, listed as resources of
-three open.canada.ca CKAN packages (see constants.PACKAGE_IDS). Checked
-live 2026-09-25:
+trademark registers as bulk ZIP files, listed as resources of three
+open.canada.ca CKAN packages (see constants.PACKAGE_IDS). Releases were
+quarterly but have stopped: on 2026-10-03 the newest open release was
+2024-10-11 for patents and 2024-11-20 for trademarks, so every response
+sets provenance.as_of to the release date it read and says how old it
+is. Checked live 2026-09-25:
 
 1. Resource names and formats in CKAN are unreliable (a resource named
    "..._txt_format_..." links to a CSV ZIP; ZIPs are labelled CSV), so
@@ -35,8 +38,9 @@ import asyncio
 import io
 import re
 import ssl
+import unicodedata
 import zipfile
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +146,22 @@ def _latest_only(files: list[IpHorizonsFile]) -> list[IpHorizonsFile]:
     ]
 
 
+def _as_of(release: date | None) -> datetime | None:
+    return datetime(release.year, release.month, release.day, tzinfo=UTC) if release else None
+
+
+def _freshness(release: date | None) -> str:
+    # Derived from the files read rather than a fixed promise: CIPO's
+    # releases were quarterly until 2024 and none has followed since.
+    if release is None:
+        return "bulk releases; release date unknown"
+    return (
+        f"bulk releases, no fixed schedule; this is the {release.isoformat()} release, "
+        "the newest open release CIPO has published, so records filed or changed "
+        "after that date are missing"
+    )
+
+
 async def _package(ip_type: IpType) -> tuple[dict[str, Any], bool]:
     package_id = constants.PACKAGE_IDS[ip_type]
 
@@ -209,6 +229,7 @@ async def list_files(
         key=lambda f: (f.table, f.text_format, f.number_from or 0, f.release_date or date.min)
     )
     release_dates = [f.release_date for f in files if f.release_date]
+    newest_release = max(release_dates) if release_dates else None
     return IpHorizonsCatalogue(
         files=files,
         returned_count=len(files),
@@ -218,10 +239,11 @@ async def list_files(
             url=constants.DATASET_PAGE_URL.format(id=constants.PACKAGE_IDS[ip_type]),
             cached=was_cached,
             schema_name="ised_ip_horizons.IpHorizonsCatalogue",
-            freshness="quarterly bulk releases",
+            as_of=_as_of(newest_release),
+            freshness=_freshness(newest_release),
             coverage=(
-                f"newest release folder per table (latest {max(release_dates)})"
-                if latest_only and release_dates
+                f"newest release folder per table (latest {newest_release})"
+                if latest_only and newest_release
                 else "every release folder the package lists"
             ),
             limits="Lists download links only; files are ZIPs of pipe-delimited UTF-8 CSV."
@@ -445,6 +467,11 @@ def _party(row: dict[str, Any]) -> PatentParty:
     )
 
 
+def _fold_accents(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
 def _query(sql: str, params: list[Any]) -> list[dict[str, Any]]:
     # Imported on first use: duckdb takes ~0.5 s to import.
     import duckdb
@@ -500,18 +527,20 @@ async def get_patent(number: int, *, include_classifications: bool = False) -> P
     main, parties, classes = await run_in_pool(run)
     if not main:
         raise NotFound(f"{context}: patent {number} is not in the IP Horizons data.")
+    release = _release(used)
     return PatentRecord(
         patent=_summary(main[0]),
         parties=[_party(row) for row in parties],
         classifications=[_classification(row) for row in classes],
         classifications_included=ipc_path is not None,
-        release_date=_release(used),
+        release_date=release,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=main_file.url,
             cached=False,
             schema_name="ised_ip_horizons.PatentRecord",
-            freshness="quarterly bulk releases",
+            as_of=_as_of(release),
+            freshness=_freshness(release),
             limits="Owners, status and classes are as of the release date, not today.",
         ),
     )
@@ -566,11 +595,16 @@ async def search_patents(
     params: list[Any] = []
     if title:
         filters["title"] = title
+        # French titles are stored in unaccented capitals ("PILE A
+        # COMBUSTIBLE", checked live 2026-10-03), so "pile à combustible"
+        # matched nothing; accents are dropped on both sides.
+        folded = _fold_accents(title)
         where.append(
-            "(application_patent_title_english ILIKE ? OR application_patent_title_french ILIKE ?)"
+            "(strip_accents(application_patent_title_english) ILIKE ? "
+            "OR strip_accents(application_patent_title_french) ILIKE ?)"
         )
         # An apostrophe also matches the "~" some French titles carry instead.
-        params += [f"%{title}%", f"%{title.replace(chr(39), '_')}%"]
+        params += [f"%{folded}%", f"%{folded.replace(chr(39), '_')}%"]
     # Dates are ISO text in the files, so string comparison orders them;
     # the LIKE keeps "-1" (unknown) out of a filed_to range.
     if filed_from or filed_to:
@@ -623,19 +657,24 @@ async def search_patents(
         return total, rows
 
     total, rows = await run_in_pool(run)
+    release = _release(used)
     return PatentSearchResult(
         patents=[_summary(row) for row in rows],
         returned_count=len(rows),
         total_matched=total,
         filters=filters,
-        release_date=_release(used),
+        release_date=release,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=constants.DATASET_PAGE_URL.format(id=constants.PACKAGE_IDS["patent"]),
             cached=False,
             schema_name="ised_ip_horizons.PatentSearchResult",
-            freshness="quarterly bulk releases",
+            as_of=_as_of(release),
+            freshness=_freshness(release),
             coverage=f"newest {len(rows)} by filing date of {total} matches",
-            limits="Name and title filters are case-insensitive substring matches.",
+            limits=(
+                "Name and title filters are case-insensitive substring matches; "
+                "the title filter also ignores accents."
+            ),
         ),
     )

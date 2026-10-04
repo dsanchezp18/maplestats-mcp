@@ -26,10 +26,40 @@ _LIMITER = get_limiter(
 _YEAR = re.compile(r"(\d{4})")
 
 
-async def _csv_resources(lang: str) -> tuple[list[ResourceInfo], str]:
+async def _csv_resources(lang: str) -> tuple[list[ResourceInfo], str, bool]:
     package = await ckan.get_dataset("federal", constants.PACKAGE_ID, lang)
     resources = [r for r in package.resources if (r.format or "").upper() == "CSV" and r.url]
-    return resources, package.provenance.url
+    # The CKAN provenance names the bare package_show action; the package
+    # id makes the link reproduce this listing.
+    url = package.provenance.url
+    if "?" not in url:
+        url = f"{url}?id={constants.PACKAGE_ID}"
+    return resources, url, package.provenance.cached
+
+
+# Columns whose numbers are identifiers or codes, not quantities: org_id,
+# Org_ID, OID, MID, program_id, vote_type_id, vote_number, dept_code
+# (names seen across the 35 English files, 2026-10-03). They stay text.
+_ID_COLUMN = re.compile(r"(?:^|_)(?:[a-z]{0,2}id|code|number|num)$", re.IGNORECASE)
+_NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
+
+
+def _numeric_columns(rows: list[dict[str, str]], names: list[str]) -> set[str]:
+    numeric = set()
+    for name in names:
+        if _ID_COLUMN.search(name):
+            continue
+        values = [v for r in rows if (v := (r.get(name) or "").strip())]
+        if values and all(_NUMBER.match(v) for v in values):
+            numeric.add(name)
+    return numeric
+
+
+def _number(value: str) -> int | float | None:
+    text = value.strip()
+    if not text:
+        return None
+    return float(text) if "." in text else int(text)
 
 
 def _file(resource: ResourceInfo) -> InfoBaseFile:
@@ -43,7 +73,7 @@ def _file(resource: ResourceInfo) -> InfoBaseFile:
 
 
 async def list_files(query: str | None = None, lang: str = "en") -> InfoBaseFileList:
-    resources, url = await _csv_resources(lang)
+    resources, url, cached = await _csv_resources(lang)
     needle = (query or "").strip().lower()
     files = [
         _file(r)
@@ -56,10 +86,42 @@ async def list_files(query: str | None = None, lang: str = "en") -> InfoBaseFile
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
-            cached=False,
+            cached=cached,
             schema_name="gc_infobase.InfoBaseFileList",
+            lang=lang,
         ),
     )
+
+
+async def _own_language_name(resource: ResourceInfo, lang: str) -> tuple[str, str | None]:
+    """The file's name in its own language, and a note when `lang` differs.
+
+    CKAN translates a resource's name whatever the file's language: live
+    2026-10-03, tp_pt_en.csv asked for with lang="fr" came back named
+    "Comptes publics du Canada – Paiements de transfert" over English rows
+    and columns. The name is taken in the file's language instead, and the
+    note points to the file in the asked language when there is one.
+    """
+    if not resource.language or lang in resource.language:
+        return resource.name, None
+    own = resource.language[0]
+    own_resources, _, _ = await _csv_resources(own)
+    name = next((r.name for r in own_resources if r.id == resource.id), resource.name)
+    asked, _, _ = await _csv_resources(lang)
+    stem = (resource.url or "").rsplit("/", 1)[-1]
+    twin_stem = re.sub(rf"_{own}\.csv$", f"_{lang}.csv", stem)
+    twin = next(
+        (
+            r
+            for r in asked
+            if twin_stem != stem and (r.url or "").endswith(f"/{twin_stem}") and lang in r.language
+        ),
+        None,
+    )
+    note = f"This file is in {own.upper()} only; lang={lang!r} does not translate its rows."
+    if twin is not None:
+        note += f" The {lang.upper()} file is resource_id {twin.id!r} ({twin.name})."
+    return name, note
 
 
 def _start_year(value: str) -> str | None:
@@ -85,10 +147,11 @@ async def query(
     if fiscal_year and year is None:
         raise InvalidInput(f"fiscal_year must contain a year such as 2023, got {fiscal_year!r}.")
 
-    resources, _ = await _csv_resources(lang)
+    resources, _, _ = await _csv_resources(lang)
     resource = next((r for r in resources if r.id == resource_id.strip()), None)
     if resource is None:
         raise NotFound(f"No GC InfoBase file {resource_id!r}. Use gc_infobase_list_files.")
+    name, language_note = await _own_language_name(resource, lang)
     url = resource.url or ""
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "gc_infobase")
     rows, cached = await csv_files.fetch_rows(
@@ -109,11 +172,18 @@ async def query(
         matching = [r for r in matching if _start_year(r.get(year_column) or "") == year]
     kept = matching[:limit]
     selected, selected_rows = csv_files.select(kept, lookup, columns)
+    # Judged over the whole file so a column's type does not depend on
+    # which rows matched (live: "expenditures" came back as "390060074.49").
+    numeric = _numeric_columns(rows, selected)
+    typed_rows = [
+        {c: _number(v) if c in numeric else v for c, v in row.items()} for row in selected_rows
+    ]
     return InfoBaseRows(
         resource_id=resource.id,
-        name=resource.name,
+        name=name,
         columns=selected,
-        rows=selected_rows,
+        numeric_columns=[c for c in selected if c in numeric],
+        rows=typed_rows,
         total_rows=len(rows),
         matching_rows=len(matching),
         returned_count=len(kept),
@@ -126,5 +196,7 @@ async def query(
             schema_name="gc_infobase.InfoBaseRows",
             coverage=f"{len(kept)} of {len(matching)} matching rows",
             freshness="files refreshed with each Estimates and Public Accounts release",
+            limits=language_note,
+            lang=lang,
         ),
     )

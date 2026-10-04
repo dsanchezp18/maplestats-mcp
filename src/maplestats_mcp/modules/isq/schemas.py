@@ -15,6 +15,10 @@ class IsqTableHit(BaseModel):
     table: str = Field(description="The table's page slug; pass it to isq_get_table.")
     title: str = Field(description="Read from the slug; isq_get_table gives the exact title.")
     lang: Literal["en", "fr"]
+    languages: list[Literal["en", "fr"]] = Field(
+        default_factory=list,
+        description="Languages with a page under this slug (French is kept when both exist).",
+    )
     url: str
 
 

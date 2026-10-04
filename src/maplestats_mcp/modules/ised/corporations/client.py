@@ -167,8 +167,11 @@ async def get_corporation(id_or_business_number: str, lang: str = "en") -> Corpo
         landing_page_url=constants.LANDING_PAGE_URL,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.BASE_URL}/{query}.json",
+            # The language picks which half of the bilingual pair is shown,
+            # so the link names it (?lang=fra gives the French labels).
+            url=f"{constants.BASE_URL}/{query}.json?lang={api_lang}",
             cached=was_cached,
             schema_name="ised_corporations.CorporationDetail",
+            lang=lang,
         ),
     )

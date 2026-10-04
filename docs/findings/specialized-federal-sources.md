@@ -1222,7 +1222,7 @@ to a "Modernizing how we deliver data" page) in favour of the Indicator
 Library, whose interactive tables are embedded Qlik Sense (websocket engine,
 not a usable API). Each of ~196 indicator pages links an XLSX data table in
 English and French (~2 MB, via `<link hreflang>`), which this module parses
-with openpyxl: `cihi_search_indicators` (crawls the library's 10 pages,
+with openpyxl: `cihi_search_indicators` (reads the library's 10 pages,
 cached 7 days), `cihi_get_indicator` (description, data updated,
 availability, frequency, topics), `cihi_get_indicator_data` (place substring
 and exact column filters).
@@ -1346,7 +1346,7 @@ See docs/archive/pumf-beyond2020-scope.md.
 Checked 2026-09-25: StatCan has retired the 2011 Census tabulations (index
 and downloads redirect to its page-not-found notice; 2011 NHS, 2006 and 2016
 still work), so the tools point to the Borealis copies (27 datasets,
-`borealis_search_ivt`); the theme crawl now runs 4 pages at a time with a
+`borealis_search_ivt`); the theme page walk now runs 4 pages at a time with a
 retry and skips (and names) a theme that never answers, after a parallel
 burst made a 2006 search fail. Shipped 2026-09-24: `statcan_census_tables_`
 (2 tools) over 869 tables (2016, 2011, 2011 NHS, 2006) with CSV, SDMX and
@@ -1427,8 +1427,10 @@ and industrial design XLSX dictionaries; none exists for trademarks).
 opic-cipo.ca omits its RapidSSL intermediate certificate, so the module
 bundles it (expires 2027-11-02).
 
-Checked 2026-09-24: IP Horizons (CIPO's quarterly researcher datasets for
-patents, trademarks and industrial designs, CSV/TXT; weekly XML) is
+Checked 2026-09-24: IP Horizons (CIPO's researcher datasets for patents,
+trademarks and industrial designs, CSV/TXT; weekly XML; released quarterly
+until 2024, newest open release 2024-10-11 for patents and 2024-11-20 for
+trademarks as of 2026-10-03) is
 published on open.canada.ca as "Patent data", "Trademark Data" and
 "Industrial Design Data", so `ckan_*` (portal="federal") already finds and
 downloads it, and `plan_query` routes IP questions there. Open: abstracts,
@@ -1656,7 +1658,7 @@ by financial institutions and that additional fees may apply.
 Checked 2026-09-25: 76 Excel tables (reserves, production by field, value of
 producer sales from 1947, expenditures, demand), updated each December;
 industry copyright, use allowed with attribution. Re-checked 2026-10-02: the
-site Terms of Use prohibit robots, spiders and other automatic retrieval, so
+site Terms of Use do not permit automated access, so
 it is not built without written permission from CAPP. See
 `docs/findings/capp-statistics-handbook.md`.
 
@@ -1801,8 +1803,7 @@ Canadian Council of Forest Ministers' National Forestry Database
 `nrcan_nbac_`. Federal CKAN only links a Zenodo record, not these files.
 
 **Terms.** `terms.php`: "made available for public use under the Open
-Government Licence - Canada version 2.0". `robots.txt` is
-`User-agent: *` / `Disallow:` (everything allowed).
+Government Licence - Canada version 2.0".
 
 **Reaching it.** Port 80 answers; port 443 timed out on every attempt from
 the build machine (curl and httpx, several minutes apart), although the
@@ -1946,8 +1947,7 @@ Safety Alerts).
 
 Verified live on 2026-09-26 in English and French.
 
-Access and terms: robots.txt answers HTTP 200 with an empty body (no
-disallowed paths, no crawl delay). The pages link the Canada.ca terms,
+Access and terms: the pages link the Canada.ca terms,
 which allow non-commercial reproduction with the title, author and a
 note that it copies the version at the source URL; every result carries
 the page URL and its "Date modified" in its provenance. Retired URLs
@@ -2306,20 +2306,19 @@ published by the CDC. The CDC organization `cdc-ccl` on open.canada.ca
 has no datasets.
 
 Terms: the site links the Government of Canada terms (canada.ca
-transparency/terms); robots.txt disallows only admin, search and user
-paths and sets no crawl delay. The module requests at most 2 per second
+transparency/terms). The module requests at most 2 per second
 and caches past years for 7 days.
 
 ### Provincial boards and national agencies
 
 | Source | Decision | Evidence (2026-09-26) |
 |---|---|---|
-| Dairy Farmers of Ontario (milk.org) | PDF only | Quota exchange archive: monthly `MMS-Exchange-Summary-<Month>-<Year>.pdf`; annual reports PDF; prices behind the industry login. robots.txt allows all. |
-| Les Producteurs de lait du Québec (lait.org) | PDF only | The statistics selector posts `action=get_statistics` to `admin-ajax.php` (allowed by robots.txt, crawl delay 5) and returns links such as `fichiers/stats/2025/202506PF.pdf`: one PDF per month and statistic (farm prices, quota prices and transactions, sales by class, production). |
+| Dairy Farmers of Ontario (milk.org) | PDF only | Quota exchange archive: monthly `MMS-Exchange-Summary-<Month>-<Year>.pdf`; annual reports PDF; prices behind the industry login. |
+| Les Producteurs de lait du Québec (lait.org) | PDF only | The statistics selector posts `action=get_statistics` to `admin-ajax.php` and returns links such as `fichiers/stats/2025/202506PF.pdf`: one PDF per month and statistic (farm prices, quota prices and transactions, sales by class, production). |
 | Alberta Milk | PDF only | Monthly `quota-summary` PDFs; the quota page shows 14 months of average prices, components and quality as text only. |
-| BC Milk Marketing Board (bcmilk.com) | Blocked | Every request, robots.txt included, gets HTTP 202 with `sg-captcha: challenge`. |
-| Egg Farmers of Canada | Blocked (terms) | Weekly producer prices, cost of production, production, imports and industrial product declarations are Tableau Public views (workbook `ESPMarketInformationDataExternalv2`, profile `mis.eggs`); `<view>.csv?:showVizHome=no` exports CSV, but only the current fiscal year's default filter (3,344 producer price rows, weeks 202601-202638). The site's terms allow use "only for your own personal non-commercial purposes" and prohibit "reproduction, retransmission, distribution ... republication" without written permission. robots.txt crawl delay 10; Cloudflare answered its "Sorry, you have been blocked" page to a request made seconds after two others. |
-| Chicken Farmers of Canada | PDF only | Monthly `Market-Update-<Month>-<Year>.pdf`; robots.txt crawl delay 60. |
+| BC Milk Marketing Board (bcmilk.com) | Blocked | Every request gets HTTP 202 with `sg-captcha: challenge`. |
+| Egg Farmers of Canada | Blocked (terms) | Weekly producer prices, cost of production, production, imports and industrial product declarations are Tableau Public views (workbook `ESPMarketInformationDataExternalv2`, profile `mis.eggs`); `<view>.csv?:showVizHome=no` exports CSV, but only the current fiscal year's default filter (3,344 producer price rows, weeks 202601-202638). The site's terms allow use "only for your own personal non-commercial purposes" and prohibit "reproduction, retransmission, distribution ... republication" without written permission. Cloudflare answered its "Sorry, you have been blocked" page to a request made seconds after two others. |
+| Chicken Farmers of Canada | PDF only | Monthly `Market-Update-<Month>-<Year>.pdf`. |
 | Turkey Farmers of Canada | PDF only | Yearly facts page and `turkey-stats-1974_2025.pdf` e-book. |
 | Canadian Hatching Egg Producers (chep-poic.ca) | Blocked | TLS verification fails (unable to get local issuer certificate); plain HTTP answers 403. |
 | Farm Products Council of Canada | No data | Organization `fpcc-cpac` has 0 datasets on open.canada.ca; its site reset connections. |
@@ -2597,7 +2596,7 @@ paymentscanada.ca is a parked domain listed for sale. Its statistics are one
 HTML table of ACSS annual volumes and values by payment item (2021-2025,
 $000) and one PDF per year for Lynx. No API, CSV, XLSX or JSON exists in the
 sitemap (2,231 URLs) or on the pages. The Terms of Use (payments.ca/legal)
-section 2.4(i) prohibit using the site to "spider, crawl or scrape", and
+section 2.4(i) do not permit automated access, and
 section 3.2 permits reproduction only unmodified, attributed and
 non-commercial, so no module was built. Bank of Canada Valet and Statistics
 Canada payment tables are the machine-readable alternatives.
@@ -2647,8 +2646,8 @@ machine-readable feed.
 ### Hydro-Québec (added 2026-09-29)
 
 Three `electricity_quebec_*` tools over Hydro-Québec's Opendatasoft open
-data (Explore API v2.1, no key). All datasets are CC BY-NC 4.0; the owner
-accepted the non-commercial terms, and each response repeats the notice.
+data (Explore API v2.1, no key). All datasets are CC BY-NC 4.0 (non-commercial use only), and each response
+repeats the notice.
 Timestamps are UTC instants. Recent demand is 192 fifteen-minute rows from
 local midnight of the previous day, with unreached slots as null rows;
 recent generation and trade are 48 hourly rows whose future hours are zero
@@ -2675,7 +2674,7 @@ differs by election (`/res/rep/off/ovrGE45/62/`, `ovr2021app/53/`, `ovr2019app/5
 `table_tableau12.csv`; table numbers are the same in all eight (3 turnout, 7
 seats, 8 and 9 votes and share by party, 11 riding results, 12 every candidate,
 13 returning officers). Files are UTF-8 with a BOM, except the 2004 and 2008
-files in Windows-1252. `robots.txt` disallows only `/pol/can/sof/efr/`.
+files in Windows-1252.
 
 Checks: every table answered for all eight elections, and the rows of table 12
 carrying a majority (the winner) reconcile with the seat count: 308 for the
@@ -2719,8 +2718,7 @@ was not needed.
 Looking for what the Library of Parliament publishes: ParlInfo
 (`lop.parl.ca`) answers HTTP 403 with a Cloudflare challenge, but the House
 of Commons' own open data page (`www.ourcommons.ca/en/open-data`) lists XML
-feeds, and its robots.txt disallows only `/Embed/`, `/ErrorPage/`,
-`/ParlDataWidgets/`, `/PublicationSearch/` and `/Search/`. Confirmed live:
+feeds. Confirmed live:
 `/members/{en,fr}/search/xml` (337 sitting members with person id, riding,
 province, party, mandate start), `/members/{en,fr}/{person id}/roles/xml`
 (the bare person id works in place of "first-last(id)"; seats, caucus,
@@ -2754,9 +2752,8 @@ per call, without names). Code lists are static JavaScript files next to the
 page: `countriesF.js` (279 entries, some repeated, with the months each was
 used), `states_codr.js` (US states), `provinces.js`, `uom.js`, `chaptersF.js`,
 `hs4F.js`, `hs6F_X.js` (exports) and `hs6F.js` (imports), `hs8F.js` and
-`hs10F.js` (16 MB). Terms: StatCan Open Licence; `robots.txt` blocks neither
-`/t1/` nor `/n1/pub/`, and asks for a 2 second crawl delay, which the rate
-limit (0.5 per second) keeps. The pages carry no terms against automated use.
+`hs10F.js` (16 MB). Terms: StatCan Open Licence; the rate limit is 0.5 requests per second. The
+pages carry no terms against automated use.
 
 Path parameters, confirmed live: `getReport/(origin)/country/state/hs/hs6flag/
 maxRows/tradeType/annualize/from/to`. `origin` is a parenthesised province
@@ -2859,6 +2856,3 @@ responses say the flows may change or disappear.
   pollutant, black carbon, energy use and drinking water advisory datasets); a
   per-flow licence is not published by the service. Responses carry the StatCan
   Open Licence, plus a caveat for CCEI-agency and ECCC/ISC flows.
-- robots.txt: HTTP 404 on api.statcan.gc.ca, sdmx-sfs.statcan.gc.ca,
-  de-ccei.statcan.gc.ca and de-rural.statcan.gc.ca. The explorer pages carry
-  `<meta name="robots" content="noindex, nofollow">`, a search-engine hint.

@@ -30,8 +30,10 @@ async def nl_opendata_search_datasets(
     Use for: finding tabular or spatial datasets by title, publisher, creator,
     or a known topic-tag id. The upstream catalogue has no JSON search API or
     server-side pagination, so MapleStats fetches its small HTML listings and
-    applies text filtering and offset/limit pagination locally. Use
-    nl_opendata_list_tags first when a topic tag id is needed. Keywords:
+    applies text filtering and offset/limit pagination locally. `query`
+    keeps datasets whose title, publisher or creator contains every word
+    (case-insensitive). Use nl_opendata_list_tags first when a topic tag id
+    is needed; an id that is not a portal tag is an error. Keywords:
     Newfoundland, Labrador, NL, open data, dataset search, catalogue, tabular,
     spatial, geospatial, government, CSV, XLS, KMZ, shapefile, topic tag.
     Mots-clés : Terre-Neuve, Labrador, données ouvertes, recherche de jeux de

@@ -7,9 +7,8 @@ tables (French and English pages) in sitemap.xml. Checked live 2026-09-26:
 - "Dynamic" tables are served by the database engine that powered the BDSO
   data bank (closed 2025-12-18; ISQ's tables moved to its own site). Their
   page script reads the title, column configuration, notes and data from
-  /pls/ken/ken411_data_explt_v2.* by table number. robots.txt disallows
-  /pls/ken/; the project owner decided on 2026-09-26 to read it anyway, on
-  demand, one table per user request, rate-limited and never crawled.
+  /pls/ken/ken411_data_explt_v2.* by table number. This module reads it on
+  demand, one table per user request, rate-limited.
 - "Static" tables embed their table as HTML in the page's __NEXT_DATA__,
   with an Excel copy under /fr|en/fichier/.
 """

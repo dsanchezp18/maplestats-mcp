@@ -503,7 +503,7 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
                 f"Request: one HEAD request to each of the {len(feeds)} agencies' feed_url "
                 "(provenance url is the first of them; hosts that build the zip on request "
                 "are not probed). Only agencies with an open static GTFS zip and no key are "
-                "configured."
+                "configured; hosts without range support (BC Transit) are downloaded whole."
             ),
         ),
     )
@@ -680,11 +680,25 @@ def _natural(text: str) -> tuple[int, str]:
 
 async def _resolve_route(agency_key: str, route: str) -> RouteRecord:
     agency = _agency(agency_key)
-    rows, _ = await _table(agency_key, "routes.txt")
-    rows = [r for r in rows if not _is_excluded(agency, r)]
+    all_rows, _ = await _table(agency_key, "routes.txt")
+    rows = [r for r in all_rows if not _is_excluded(agency, r)]
     exact = [r for r in rows if r["route_id"] == route]
     named = [r for r in rows if r.get("route_short_name", "").casefold() == route.casefold()]
     found = exact or named
+    left_out = [
+        r
+        for r in all_rows
+        if _is_excluded(agency, r)
+        and (r["route_id"] == route or r.get("route_short_name", "").casefold() == route.casefold())
+    ]
+    if not found and left_out:
+        # STM route "1" is the green métro line (checked 2026-10-03): say it
+        # exists but is left out, rather than that there is no such route.
+        kind = constants.ROUTE_TYPES.get(int(left_out[0]["route_type"]), "route")
+        raise NotFound(
+            f"{agency_key}: route '{route}' is a {kind} line, which this server does not "
+            f"report under {agency.name_en}'s terms of use (see transit_list_agencies notes)."
+        )
     if not found:
         raise NotFound(
             f"{agency_key}: no route with id or short name '{route}'. Use transit_search_routes."

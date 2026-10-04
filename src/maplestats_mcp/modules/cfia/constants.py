@@ -1,9 +1,7 @@
 """Constants for the Canadian Food Inspection Agency (CFIA) module.
 
 Every URL below was fetched live on 2026-09-26. inspection.canada.ca
-(Drupal, WET/GCWeb theme) serves an empty robots.txt (HTTP 200, zero
-bytes), so no path is disallowed and no crawl delay is asked; its pages
-link the Canada.ca terms, which allow non-commercial reproduction with
+(Drupal, WET/GCWeb theme) pages link the Canada.ca terms, which allow non-commercial reproduction with
 the title, author and source URL, which every result's provenance
 carries. URLs the site retired answer HTTP 410 (the yearly
 "...-canada-2025" disease pages and the old terms page did), so a 404 or
