@@ -22,16 +22,19 @@ async def cihi_search_indicators(query: str = "", lang: Lang = "en") -> Indicato
 
     Use for: finding an indicator's slug, e.g. "stroke mortality",
     "readmission", "wait times", "emergency department", "hospital
-    stays", "public spending". Every word must appear in the English
-    name (case and accents ignored); read French content with lang="fr"
-    on the other cihi_ tools.
+    stays", "public spending". Every word must appear in the name (case
+    and accents ignored). With lang="fr" the French names are searched
+    ("mortalité accident vasculaire", "réadmission à l'hôpital";
+    articles such as de, la, l' are ignored, plurals match) and French
+    slugs come back with the paired English one in english_slug; an
+    indicator with no French page is listed by its English name with a
+    note.
     Keywords: CIHI, health indicators, hospital, mortality, readmission,
     wait times, emergency department, health system performance.
     Mots-clés : ICIS, indicateurs de santé, hôpital, mortalité,
     réadmission, temps d'attente, urgences, rendement du système de santé.
     """
-    del lang
-    return await client.search_indicators(query)
+    return await client.search_indicators(query, lang)
 
 
 @tool
@@ -39,8 +42,9 @@ async def cihi_get_indicator(indicator: str, lang: Lang = "en") -> IndicatorDeta
     """Get a CIHI indicator's description, data availability, update date, and topics.
 
     Use for: understanding what an indicator measures and which years
-    and places it covers before reading its data. `indicator` is a slug
-    from cihi_search_indicators; `lang="fr"` returns the French page.
+    and places it covers before reading its data. `indicator` is an
+    English or French slug (or page URL) from cihi_search_indicators;
+    `lang="fr"` returns the French page, `lang="en"` the English one.
     Keywords: CIHI, indicator definition, methodology, data availability,
     update frequency, health system, health indicator, definition.
     Mots-clés : ICIS, définition de l'indicateur, méthodologie,
@@ -72,8 +76,9 @@ async def cihi_get_indicator_data(
     columns to return (names as in the file); without it, columns blank
     in every returned row are left out and listed in empty_columns. The
     first read of an indicator downloads its workbook (about 2 MB; 20-50 s
-    measured live), later reads are cached for a day. `lang="fr"` reads
-    CIHI's French file, with French column names.
+    measured live), later reads are cached for a day. `indicator` is an
+    English or French slug; `lang="fr"` reads CIHI's French file, with
+    French column names (and French place filters, e.g. "Colombie").
     Keywords: CIHI, health data, hospital mortality rate, readmission
     rate, province, hospital, fiscal year, risk-adjusted rate.
     Mots-clés : ICIS, données sur la santé, taux de mortalité,

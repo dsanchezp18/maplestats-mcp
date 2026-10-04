@@ -151,6 +151,39 @@ STEPS: list[Step] = [
             "limit": 5,
         },
     ),
+    # French: the French library is searched and paired with the English
+    # one; a French slug works in either language.
+    Step(
+        "cihi",
+        "cihi_search_indicators",
+        {"query": "mortalité accident vasculaire", "lang": "fr"},
+        lambda data: (
+            data["indicators"][0]["english_slug"] == "30-day-stroke-in-hospital-mortality"
+            and data["indicators"][0]["name"].startswith("Mortalité")
+        ),
+    ),
+    Step(
+        "cihi",
+        "cihi_get_indicator",
+        lambda ctx: {
+            "indicator": ctx["cihi_search_indicators"]["indicators"][0]["slug"],
+            "lang": "fr",
+        },
+        lambda data: (
+            data["name"].startswith("Mortalité")
+            and (data["data_file_url"] or "").endswith("-fr.xlsx")
+        ),
+    ),
+    Step(
+        "cihi",
+        "cihi_get_indicator_data",
+        lambda ctx: {
+            "indicator": ctx["cihi_search_indicators"]["indicators"][0]["slug"],
+            "place": "Alberta",
+            "limit": 2,
+        },
+        lambda data: data["slug"] == "30-day-stroke-in-hospital-mortality" and bool(data["rows"]),
+    ),
     # CRA digital economy platform operators
     Step(
         "cra_digital_economy_registry",

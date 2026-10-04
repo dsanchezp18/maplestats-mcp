@@ -15,7 +15,8 @@ MODULE_DESCRIPTION = (
     "wait times, ED visits, health spending, patient outcomes), read an "
     "indicator's description and data availability, and query its data "
     "table by place, reporting level, time frame and breakdown, in English "
-    "or French."
+    "or French (French names searched, English and French slugs paired "
+    "from CIHI's own site)."
 )
 MODULE_DESCRIPTION_FR = (
     "Répertoire des indicateurs de l'Institut canadien d'information sur "
@@ -24,5 +25,7 @@ MODULE_DESCRIPTION_FR = (
     "visites aux urgences, dépenses de santé, résultats pour les patients), "
     "description et disponibilité des données d'un indicateur, et "
     "interrogation de son tableau de données par lieu, niveau de "
-    "déclaration, période et ventilation, en français ou en anglais."
+    "déclaration, période et ventilation, en français ou en anglais "
+    "(recherche par nom français, identifiants anglais et français "
+    "appariés d'après le site de l'ICIS)."
 )

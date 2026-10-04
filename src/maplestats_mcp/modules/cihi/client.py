@@ -1,8 +1,10 @@
 """Client for CIHI's Indicator Library pages and XLSX data tables.
 
 Pages are parsed with BeautifulSoup; data tables with openpyxl in
-read-only mode. Indicators are addressed by their English page slug;
-French pages and files are reached through each page's hreflang link.
+read-only mode. Indicators are addressed by their English or French page
+slug. The two libraries use different slugs; the site's sitemap pairs
+them (each entry carries both hreflang alternates), and an English page's
+own hreflang link leads to its French page and French file.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+from defusedxml import ElementTree
 
 from maplestats_mcp.modules.cihi import constants
 from maplestats_mcp.modules.cihi.schemas import (
@@ -38,6 +41,8 @@ _LIMITER = get_limiter(
 )
 _SLUG = re.compile(r"^[a-z0-9-]{3,200}$")
 _DATA_FILE = re.compile(r"data-table-(en|fr)\.xlsx$")
+_SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
+_XHTML_NS = "http://www.w3.org/1999/xhtml"
 
 
 async def _get(url: str) -> httpx.Response:
@@ -68,73 +73,224 @@ def _clean(text: str) -> str:
     return " ".join(text.split())
 
 
-def _parse_library(html: str) -> list[IndicatorRef]:
+def _parse_library(html: str, path: str = constants.INDICATOR_PATH) -> list[IndicatorRef]:
     soup = BeautifulSoup(html, "html.parser")
     main = soup.find("main") or soup
     refs: list[IndicatorRef] = []
     for link in main.find_all("a", href=True):
         href = str(link["href"])
-        if href.startswith(constants.INDICATOR_PATH):
-            slug = href[len(constants.INDICATOR_PATH) :].strip("/")
+        if href.startswith(path):
+            slug = href[len(path) :].strip("/")
             refs.append(
                 IndicatorRef(slug=slug, name=_clean(link.get_text()), url=constants.BASE_URL + href)
             )
     return refs
 
 
-async def _library() -> tuple[list[IndicatorRef], bool]:
+async def _library(lang: str = "en") -> tuple[list[IndicatorRef], bool]:
+    french = lang == "fr"
+    library_url = constants.FR_LIBRARY_URL if french else constants.LIBRARY_URL
+    path = constants.FR_INDICATOR_PATH if french else constants.INDICATOR_PATH
+
     async def fetch() -> list[IndicatorRef]:
         seen: dict[str, IndicatorRef] = {}
         for page in range(constants.LIBRARY_MAX_PAGES):
-            response = await _get(f"{constants.LIBRARY_URL}?page={page}")
-            refs = _parse_library(response.text)
+            response = await _get(f"{library_url}?page={page}")
+            refs = _parse_library(response.text, path)
             new = [r for r in refs if r.slug not in seen]
             if not new:
                 break
             seen.update({r.slug: r for r in new})
         return list(seen.values())
 
-    return await cached_fetch("cihi:library", constants.CACHE_TTL_LIBRARY_SECONDS, fetch)
+    key = "cihi:library:fr" if french else "cihi:library"
+    return await cached_fetch(key, constants.CACHE_TTL_LIBRARY_SECONDS, fetch)
 
 
-async def search_indicators(query: str = "") -> IndicatorSearchResult:
-    refs, cached = await _library()
-    words = _fold(query).split()
+def _sitemap_pairs(body: str) -> tuple[list[str], dict[str, str]]:
+    """(child sitemap URLs, English slug -> French slug) from one sitemap file."""
+    root = ElementTree.fromstring(body.lstrip("\N{ZERO WIDTH NO-BREAK SPACE}").encode())
+    children = [
+        (loc.text or "").strip()
+        for loc in root.iter(f"{{{_SITEMAP_NS}}}loc")
+        if root.tag.endswith("sitemapindex")
+    ]
+    pairs: dict[str, str] = {}
+    english_prefix = constants.BASE_URL + constants.INDICATOR_PATH
+    french_prefix = constants.BASE_URL + constants.FR_INDICATOR_PATH
+    for entry in root.iter(f"{{{_SITEMAP_NS}}}url"):
+        alternates = {
+            link.get("hreflang"): link.get("href") or ""
+            for link in entry.iter(f"{{{_XHTML_NS}}}link")
+        }
+        english, french = alternates.get("en", ""), alternates.get("fr", "")
+        if english.startswith(english_prefix) and french.startswith(french_prefix):
+            english_slug = english[len(english_prefix) :].strip("/")
+            pairs[english_slug] = french[len(french_prefix) :].strip("/")
+    return children, pairs
+
+
+async def _pairing() -> tuple[dict[str, str], bool]:
+    """English slug -> French slug, as CIHI's own hreflang alternates pair them."""
+
+    async def fetch() -> dict[str, str]:
+        # A child sitemap is about 1 MB of XML: parse it off the event loop.
+        index = (await _get(constants.SITEMAP_URL)).text
+        children, pairs = await run_parse(_sitemap_pairs, index)
+        for url in children[: constants.SITEMAP_MAX_PAGES]:
+            page = (await _get(url)).text
+            pairs.update((await run_parse(_sitemap_pairs, page))[1])
+        if not pairs:
+            raise UpstreamError(f"cihi: {constants.SITEMAP_URL} lists no indicator pages.")
+        return pairs
+
+    return await cached_fetch("cihi:pairing", constants.CACHE_TTL_PAIRING_SECONDS, fetch)
+
+
+def _french_stem(word: str) -> str:
+    # Names are mostly singular ("service d'urgence", "hôpital"): a plural
+    # query word matches by its stem ("urgences" -> "urgence", "hôpitaux"
+    # -> "hopita", which matches "hopital" and "hopitaux").
+    if len(word) > 4 and word.endswith("aux"):
+        return word[:-2]
+    if len(word) > 3 and word.endswith(("s", "x")):
+        return word[:-1]
+    return word
+
+
+def _french_words(query: str) -> list[str]:
+    words = re.findall(r"[a-z0-9]+", _fold(query))
+    return [_french_stem(w) for w in words if w not in constants.FR_STOP_WORDS]
+
+
+async def _french_refs() -> tuple[list[IndicatorRef], str | None, bool]:
+    """French library entries with their English twin, then English-only entries."""
+    french, french_cached = await _library("fr")
+    english, english_cached = await _library("en")
+    pairs, pairs_cached = await _pairing()
+    to_english = {fr: en for en, fr in pairs.items()}
+    refs = [
+        r.model_copy(
+            update={
+                "english_slug": to_english.get(r.slug),
+                "note": None
+                if r.slug in to_english
+                else "CIHI publishes no English page for this indicator.",
+            }
+        )
+        for r in french
+    ]
+    listed = {r.slug for r in french}
+    missing = [r for r in english if pairs.get(r.slug) not in listed]
+    refs += [
+        r.model_copy(
+            update={
+                "english_slug": r.slug,
+                "note": "No French page in CIHI's French library: English name and page.",
+            }
+        )
+        for r in missing
+    ]
+    note = (
+        f"{len(missing)} indicator(s) have no French page and are listed by English name."
+        if missing
+        else None
+    )
+    return refs, note, french_cached and english_cached and pairs_cached
+
+
+async def search_indicators(query: str = "", lang: str = "en") -> IndicatorSearchResult:
+    note = None
+    if lang == "fr":
+        refs, note, cached = await _french_refs()
+        words = _french_words(query)
+        url = constants.FR_LIBRARY_URL
+    else:
+        refs, cached = await _library()
+        words = _fold(query).split()
+        url = constants.LIBRARY_URL
     matches = [r for r in refs if all(w in _fold(r.name) for w in words)]
     return IndicatorSearchResult(
         indicators=matches,
         total_matches=len(matches),
+        note=note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=constants.LIBRARY_URL,
+            url=url,
             cached=cached,
             schema_name="cihi.IndicatorSearchResult",
-            freshness="indicator list cached 7 days",
+            freshness="indicator lists cached 7 days, English-French pairing 1 day",
         ),
     )
 
 
-def _slug(indicator: str) -> str:
+def _slug(indicator: str) -> tuple[str, str | None]:
+    """The slug, and "en"/"fr" when a page URL says which library it is from."""
     value = indicator.strip().rstrip("/").lower()
-    page_prefix = (constants.BASE_URL + constants.INDICATOR_PATH).lower()
-    value = value.removeprefix(page_prefix)
+    kind = None
+    for path, lang in ((constants.INDICATOR_PATH, "en"), (constants.FR_INDICATOR_PATH, "fr")):
+        prefix = (constants.BASE_URL + path).lower()
+        if value.startswith(prefix):
+            value, kind = value[len(prefix) :], lang
     if not _SLUG.match(value):
         raise InvalidInput(
             f"indicator must be a slug from cihi_search_indicators, got {indicator!r}."
         )
-    return value
+    return value, kind
 
 
-async def _page_url(slug: str, lang: str) -> str:
-    english = f"{constants.BASE_URL}{constants.INDICATOR_PATH}{slug}"
-    if lang != "fr":
-        return english
-    html, _ = await _page(english)
-    soup = BeautifulSoup(html, "html.parser")
-    alternate = soup.find("link", hreflang="fr")
-    if not isinstance(alternate, Tag) or not alternate.get("href"):
-        raise NotFound(f"cihi: no French page for {slug!r}.")
-    return str(alternate["href"])
+def _english_url(slug: str) -> str:
+    return f"{constants.BASE_URL}{constants.INDICATOR_PATH}{slug}"
+
+
+def _french_url(slug: str) -> str:
+    return f"{constants.BASE_URL}{constants.FR_INDICATOR_PATH}{slug}"
+
+
+async def _locate(indicator: str, lang: str) -> tuple[str, str, str | None, str | None]:
+    """(page URL to read, English slug or French if none, French slug, note).
+
+    An English slug is read as before; the French page is the English
+    page's hreflang link. A French slug is turned into its English twin
+    through the pairing, so either identifier works in either language.
+    """
+    slug, kind = _slug(indicator)
+    if kind is None:
+        try:
+            await _page(_english_url(slug))
+            kind = "en"
+        except NotFound:
+            kind = "fr"
+    if kind == "en":
+        if lang != "fr":
+            return _english_url(slug), slug, None, None
+        html, _ = await _page(_english_url(slug))
+        alternate = BeautifulSoup(html, "html.parser").find("link", hreflang="fr")
+        href = (
+            str(alternate["href"]) if isinstance(alternate, Tag) and alternate.get("href") else ""
+        )
+        if not href or href.rstrip("/") == _english_url(slug):
+            note = "CIHI publishes no French page for this indicator; English page shown."
+            return _english_url(slug), slug, None, note
+        return href, slug, href.rstrip("/").rsplit("/", 1)[-1], None
+    pairs, _ = await _pairing()
+    to_english = {fr: en for en, fr in pairs.items()}
+    english = to_english.get(slug)
+    if english is None:
+        try:
+            # Neither an English page nor a paired French one: read it as a
+            # French-only page if CIHI has one.
+            await _page(_french_url(slug))
+        except NotFound as exc:
+            raise NotFound(
+                f"cihi: no indicator {slug!r} in the English or French library; "
+                "use a slug from cihi_search_indicators."
+            ) from exc
+        note = None if lang == "fr" else "CIHI publishes no English page for this indicator."
+        return _french_url(slug), slug, slug, note
+    if lang == "fr":
+        return _french_url(slug), english, slug, None
+    return _english_url(english), english, slug, None
 
 
 def _data_file(soup: BeautifulSoup) -> str | None:
@@ -146,8 +302,7 @@ def _data_file(soup: BeautifulSoup) -> str | None:
 
 
 async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
-    slug = _slug(indicator)
-    url = await _page_url(slug, lang)
+    url, slug, french_slug, note = await _locate(indicator, lang)
     html, cached = await _page(url)
     soup = BeautifulSoup(html, "html.parser")
     heading = soup.find("h1")
@@ -163,10 +318,13 @@ async def get_indicator(indicator: str, lang: str = "en") -> IndicatorDetail:
                 facts[label.strip()] = value.strip()
         topics = [_clean(t.get_text()) for t in summary.select(".indicator-topics li")]
         if topics:
-            facts["Thèmes" if lang == "fr" else "Topics"] = ", ".join(topics)
+            in_french = constants.FR_INDICATOR_PATH in url
+            facts["Thèmes" if in_french else "Topics"] = ", ".join(topics)
     return IndicatorDetail(
         slug=slug,
+        french_slug=french_slug,
         name=_clean(heading.get_text()) if isinstance(heading, Tag) else slug,
+        note=note,
         description=description,
         facts=facts,
         page_url=url,
@@ -308,6 +466,7 @@ async def get_indicator_data(
         matching_rows=len(matching),
         returned_count=len(rows),
         data_file_url=detail.data_file_url,
+        note=detail.note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=detail.data_file_url,

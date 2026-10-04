@@ -70,6 +70,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from defusedxml import ElementTree
 
 from maplestats_mcp.modules.cmhc.data_tables import constants
 from maplestats_mcp.modules.cmhc.data_tables.schemas import (
@@ -83,8 +84,12 @@ from maplestats_mcp.modules.cmhc.data_tables.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
+
+_SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
+_XHTML_NS = "http://www.w3.org/1999/xhtml"
 
 
 def _limiter():
@@ -104,6 +109,8 @@ def _require(value: str, name: str) -> str:
 
 def _require_category(category: str) -> str:
     category = _require(category, "category")
+    english = {fr: en for en, fr in constants.FRENCH_CATEGORIES.items()}
+    category = english.get(category, category)
     if category not in constants.KNOWN_CATEGORIES:
         raise InvalidInput(
             f"category must be one of {constants.KNOWN_CATEGORIES}, got {category!r}."
@@ -294,12 +301,159 @@ async def _report_file_url(document_id: str, lang: str) -> str | None:
     return urljoin(constants.BASE_URL, url) if url else None
 
 
+def _sitemap_pairs(body: str) -> dict[str, str]:
+    """English data-table path -> French path, from the sitemap's hreflang alternates."""
+    root = ElementTree.fromstring(body.lstrip("\N{ZERO WIDTH NO-BREAK SPACE}").encode())
+    english_prefix = f"{constants.BASE_URL}/en{constants.DATA_TABLES_PATH}/"
+    french_prefix = f"{constants.BASE_URL}/fr"
+    pairs: dict[str, str] = {}
+    for entry in root.iter(f"{{{_SITEMAP_NS}}}url"):
+        alternates = {
+            link.get("hreflang"): link.get("href") or ""
+            for link in entry.iter(f"{{{_XHTML_NS}}}link")
+        }
+        english, french = alternates.get("en", ""), alternates.get("fr", "")
+        if english.startswith(english_prefix) and french.startswith(french_prefix + "/"):
+            english_path = english[len(constants.BASE_URL) + len("/en") :].rstrip("/")
+            pairs[english_path] = french[len(french_prefix) :].rstrip("/")
+    return pairs
+
+
+async def _pairing() -> tuple[dict[str, str], bool]:
+    async def fetch() -> dict[str, str]:
+        body = await _get_html(constants.SITEMAP_URL)
+        pairs = await run_parse(_sitemap_pairs, body)
+        if not pairs:
+            raise UpstreamError(f"{constants.SITEMAP_URL} lists no data table pages.")
+        return pairs
+
+    return await cached_fetch("cmhc-dt:pairing", constants.CACHE_TTL_PAIRING_SECONDS, fetch)
+
+
+def _last_segment(path: str) -> str:
+    return path.rstrip("/").rsplit("/", 1)[-1]
+
+
+async def _english_slug(category: str, slug: str) -> str | None:
+    """The English slug of a table given its French slug, if CMHC pairs them."""
+    pairs, _ = await _pairing()
+    prefix = f"{constants.DATA_TABLES_PATH}/{category}/"
+    for english, french in pairs.items():
+        if english.startswith(prefix) and _last_segment(french) == slug:
+            return english[len(prefix) :]
+    return None
+
+
+def _parse_french_titles(body: str, prefix: str) -> dict[str, str]:
+    """French path -> title, for paths whose listing links all say the same.
+
+    The French listing has 52 links to 50 pages (live 2026-10-03): some
+    pages are linked twice, once under another table's title ("Ménages
+    selon le type..." on the household count and size table, "médian" on
+    the average after-tax income table) or with a title split over two
+    links ("à"). Those paths are left out, and their title is read from
+    the French page itself.
+    """
+    soup = BeautifulSoup(body, "html.parser")
+    texts: dict[str, set[str]] = {}
+    for anchor in soup.find_all("a", href=True):
+        href = anchor.get("href")
+        if isinstance(href, str) and href.startswith(prefix):
+            title = _clean(anchor.get_text(" "))
+            if title:
+                texts.setdefault(href.rstrip("/"), set()).add(title)
+    return {path: titles.pop() for path, titles in texts.items() if len(titles) == 1}
+
+
+async def _french_titles(category: str) -> tuple[dict[str, str], bool]:
+    """French listing of a category: French path -> French title."""
+    french_category = constants.FRENCH_CATEGORIES[category]
+    url = f"{constants.BASE_URL}{constants.FR_DATA_TABLES_PATH}/{french_category}"
+
+    async def fetch() -> dict[str, str]:
+        body = await _get_html(url)
+        return _parse_french_titles(body, f"{constants.FR_DATA_TABLES_PATH}/{french_category}/")
+
+    return await cached_fetch(
+        f"cmhc-dt:list_tables_fr:{category}", constants.CACHE_TTL_LISTING_SECONDS, fetch
+    )
+
+
+async def _french_path(category: str, table: TableSummary, pairs: dict[str, str]) -> str | None:
+    french = pairs.get(table.path.rstrip("/"))
+    if french:
+        return french
+    # Not in the sitemap (a table added since): the English page's own
+    # language switch, read from its hreflang link.
+    try:
+        parsed, _ = await _parsed_page(
+            _table_url(category, table.slug),
+            f"cmhc-dt:table:{category}:{table.slug}",
+            category,
+            table.slug,
+        )
+    except (NotFound, UpstreamError):
+        return None
+    french_url = parsed.get("french_url")
+    return urlparse(french_url).path.rstrip("/") if french_url else None
+
+
+async def _french_summaries(
+    category: str, tables: list[TableSummary]
+) -> tuple[list[TableSummary], str | None, bool]:
+    """Each English table as its French twin: French slug, title and path."""
+    pairs, pairs_cached = await _pairing()
+    titles, titles_cached = await _french_titles(category)
+    summaries: list[TableSummary] = []
+    missing: list[str] = []
+    for table in tables:
+        french_path = await _french_path(category, table, pairs)
+        title = titles.get(french_path) if french_path else None
+        if french_path and title is None:
+            # Two household-characteristics tables have a French page that
+            # the French listing leaves out (50 pages listed against 52,
+            # live 2026-10-03), and a few listing titles are ambiguous:
+            # read the title from the French page itself.
+            try:
+                page, _ = await _parsed_page(
+                    constants.BASE_URL + french_path,
+                    f"cmhc-dt:table-fr:{category}:{table.slug}",
+                    category,
+                    table.slug,
+                )
+                title = page["title"]
+            except (NotFound, UpstreamError):
+                title = None
+        if not french_path or not title:
+            missing.append(table.slug)
+            note = "No French page found for this table: English title and slug."
+            summaries.append(table.model_copy(update={"english_slug": table.slug, "note": note}))
+            continue
+        summaries.append(
+            TableSummary(
+                category=category,
+                slug=_last_segment(french_path),
+                title=title,
+                path=french_path,
+                english_slug=table.slug,
+            )
+        )
+    note = (
+        f"{len(missing)} table(s) have no French page and keep their English title: "
+        + ", ".join(missing)
+        if missing
+        else None
+    )
+    return summaries, note, pairs_cached and titles_cached
+
+
 async def list_tables(category: str, *, lang: str = "en") -> TableList:
-    # Slugs are the English page names in both languages. The French
-    # listing pages use other slugs and list a different number of tables
-    # (50 against 52 for household characteristics, live 2026-10-03), so
-    # titles here stay English; get_table with lang="fr" gives the French
-    # title and description of one table.
+    # The French listing pages use other slugs and list a different number
+    # of tables (50 against 52 for household characteristics, live
+    # 2026-10-03), so French titles are paired through CMHC's own English
+    # to French links, not matched by title.
+    if lang not in ("en", "fr"):
+        raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
     category = _require_category(category)
     url = f"{constants.BASE_URL}{constants.DATA_TABLES_PATH}/{category}"
     cache_key = f"cmhc-dt:list_tables:{category}"
@@ -309,16 +463,15 @@ async def list_tables(category: str, *, lang: str = "en") -> TableList:
         return _parse_table_list(body, category)
 
     tables, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LISTING_SECONDS, fetch)
+    note = None
+    if lang == "fr" and tables:
+        tables, note, french_cached = await _french_summaries(category, tables)
+        was_cached = was_cached and french_cached
     return TableList(
         category=category,
         tables=tables,
         total_count=len(tables),
-        note=(
-            "Titles are in English (the French listing is organised differently); "
-            "cmhc_dt_get_table with lang='fr' gives a table's French title and description."
-            if lang == "fr"
-            else None
-        ),
+        note=note,
         provenance=make_provenance(
             source="cmhc-dt",
             url=url,
@@ -343,8 +496,21 @@ async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetai
         raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
     category = _require_category(category)
     slug = _require(slug, "slug")
+    try:
+        parsed, was_cached = await _parsed_page(
+            _table_url(category, slug), f"cmhc-dt:table:{category}:{slug}", category, slug
+        )
+    except NotFound:
+        # A French slug (from cmhc_dt_list_tables with lang="fr") is not an
+        # English page: read its English twin.
+        english = await _english_slug(category, slug)
+        if english is None:
+            raise
+        slug = english
+        parsed, was_cached = await _parsed_page(
+            _table_url(category, slug), f"cmhc-dt:table:{category}:{slug}", category, slug
+        )
     url = _table_url(category, slug)
-    parsed, was_cached = await _parsed_page(url, f"cmhc-dt:table:{category}:{slug}", category, slug)
     page_url = url
     shown = parsed
     if lang == "fr" and parsed.get("french_url"):
@@ -355,12 +521,17 @@ async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetai
             page_url, f"cmhc-dt:table-fr:{category}:{slug}", category, slug
         )
     default_url = shown["default_download_url"]
-    document_id = parsed["document_id"]
+    # A single-file table's French page has its own document id; the
+    # English id gives the English file whatever contextLanguage says
+    # (table_23_..._en_w.xls for both, live 2026-10-03).
+    document_id = shown.get("document_id") or parsed["document_id"]
     if document_id:
         default_url = await _report_file_url(document_id, lang)
+    french_url = parsed.get("french_url")
     return TableDetail(
         category=category,
         slug=slug,
+        french_slug=_last_segment(urlparse(french_url).path) if french_url else None,
         title=shown["title"],
         description=shown["description"],
         data_source=parsed["data_source"],
@@ -395,6 +566,7 @@ async def get_download_url(
     if lang not in ("en", "fr"):
         raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
     table = await get_table(category, slug, lang=lang)
+    slug = table.slug  # the English slug when a French one was given
     if table.document_id:
         if geography_id is not None or edition_id is not None:
             raise InvalidInput(

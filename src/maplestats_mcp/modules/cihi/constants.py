@@ -15,6 +15,18 @@ Confirmed live 2026-09-23:
 BASE_URL = "https://www.cihi.ca"
 LIBRARY_URL = f"{BASE_URL}/en/access-data-and-reports/indicator-library"
 INDICATOR_PATH = "/en/indicators/"
+# The French library has its own slugs (196 indicators either side, live
+# 2026-10-03): /fr/indicateurs/mortalite-a-lhopital-dans-les-30-jours-
+# accident-vasculaire-cerebral is the twin of
+# /en/indicators/30-day-stroke-in-hospital-mortality.
+FR_LIBRARY_URL = f"{BASE_URL}/fr/acceder-aux-donnees-et-aux-rapports/repertoire-des-indicateurs"
+FR_INDICATOR_PATH = "/fr/indicateurs/"
+# The site's sitemap index (two pages, ~1.6 MB) gives every page's English
+# and French addresses as hreflang alternates, the same pair as each
+# page's language switch; it pairs the two libraries in two requests
+# instead of ~200 page reads.
+SITEMAP_URL = f"{BASE_URL}/sitemap.xml"
+SITEMAP_MAX_PAGES = 10
 ALLOWED_HOSTS = frozenset({"www.cihi.ca"})
 
 RATE_LIMIT_SOURCE = "cihi"
@@ -24,7 +36,14 @@ RATE_LIMIT_CAPACITY = 4.0
 CACHE_TTL_LIBRARY_SECONDS = 7 * 24 * 60 * 60
 CACHE_TTL_PAGE_SECONDS = 24 * 60 * 60
 CACHE_TTL_DATA_SECONDS = 24 * 60 * 60
+CACHE_TTL_PAIRING_SECONDS = 24 * 60 * 60
 
+# Left out of a French query: "taux de réadmission à l'hôpital" must match
+# "Réadmission à l'hôpital..." names whatever the articles.
+FR_STOP_WORDS = frozenset(
+    {"a", "au", "aux", "avec", "d", "dans", "de", "des", "du", "en", "et", "l", "la", "le"}
+    | {"les", "ou", "par", "pour", "selon", "sur", "un", "une"}
+)
 LIBRARY_MAX_PAGES = 30
 MAX_FILE_BYTES = 30 * 1024 * 1024
 # 2,000 rows of a wide table came to 2.7 MB and 100 rows to 135 KB; the

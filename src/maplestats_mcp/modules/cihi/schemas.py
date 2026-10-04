@@ -8,20 +8,29 @@ from maplestats_mcp.shared.models import Provenance
 
 
 class IndicatorRef(BaseModel):
-    slug: str = Field(description="Pass to the other cihi_ tools.")
+    slug: str = Field(description="Pass to the other cihi_ tools (English or French slug).")
     name: str
     url: str
+    english_slug: str | None = Field(
+        default=None, description="With lang='fr': the paired English indicator's slug."
+    )
+    note: str | None = None
 
 
 class IndicatorSearchResult(BaseModel):
     indicators: list[IndicatorRef]
     total_matches: int
+    note: str | None = None
     provenance: Provenance
 
 
 class IndicatorDetail(BaseModel):
-    slug: str
+    slug: str = Field(
+        description="The English slug (the French one when there is no English page)."
+    )
+    french_slug: str | None = None
     name: str
+    note: str | None = None
     description: str | None = None
     facts: dict[str, str] = Field(
         default_factory=dict,
@@ -46,4 +55,5 @@ class IndicatorData(BaseModel):
     matching_rows: int
     returned_count: int
     data_file_url: str
+    note: str | None = None
     provenance: Provenance
