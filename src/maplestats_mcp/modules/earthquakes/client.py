@@ -19,7 +19,6 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -277,7 +276,6 @@ async def search(
                 f"date range up to {constants.MAX_SPAN_DAYS} days",
                 f"période d'au plus {constants.MAX_SPAN_DAYS} jours",
             ),
-            licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, url, lang),
             lang=lang,
         ),
     )

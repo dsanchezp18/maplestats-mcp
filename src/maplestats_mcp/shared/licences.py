@@ -397,6 +397,60 @@ LICENCES_FR: dict[str, str] = {
         "Les conditions diffèrent selon l'exploitant ; voir les conditions de l'exploitant dans "
         "ce résultat."
     ),
+    SOURCE_LICENCES["ab_wildfire"]: (
+        "Licence du gouvernement ouvert – Alberta (https://open.alberta.ca/licence). "
+        "Attribution : « Contient des informations visées par la Licence du gouvernement "
+        "ouvert – Alberta. » Mention : Alberta Wildfire, gouvernement de l'Alberta."
+    ),
+    CIHI_TERMS: (
+        "Conditions d'utilisation de l'ICIS (https://www.cihi.ca/fr/conditions-dutilisation) : "
+        "utilisation gratuite à des fins d'éducation, de recherche non commerciale, de "
+        "consultation interne et d'étude personnelle, en citant l'ICIS comme source ; "
+        "l'utilisation commerciale exige l'autorisation écrite de l'ICIS."
+    ),
+    HOUSE_OF_COMMONS_TERMS: (
+        "Autorisation du Président de la Chambre des communes "
+        "(https://www.noscommunes.ca/fr/avis-importants) : la reproduction des délibérations "
+        "est permise si elle est exacte et n'est pas présentée comme une version officielle ; "
+        "elle ne s'étend pas à l'usage commercial ni à un gain financier."
+    ),
+    SENATE_TERMS: (
+        "Propriété intellectuelle du Sénat du Canada "
+        "(https://sencanada.ca/fr/propriete-intellectuelle/) : la reproduction des "
+        "délibérations est permise si elle est exacte et sans but lucratif ; indiquer le Sénat "
+        "comme auteur, avec le titre et l'adresse URL de la source."
+    ),
+    ELECTIONS_CANADA_TERMS: (
+        "Avis d'Élections Canada "
+        "(https://www.elections.ca/content.aspx?section=pri&document=index&lang=f) : la "
+        "reproduction non commerciale est permise en citant le titre, l'auteur et l'adresse URL "
+        "de la source ; la redistribution commerciale exige une autorisation écrite."
+    ),
+    REPRESENT_TERMS: (
+        "L'API Represent d'Open North (https://represent.opennorth.ca) n'énonce aucune licence "
+        "propre. Les ensembles de limites relèvent de la licence de leur éditeur (licence_url de "
+        "chaque ensemble) ; les fiches des élus proviennent de sites officiels et leurs "
+        "conditions de réutilisation ne sont pas précisées."
+    ),
+    SOURCE_LICENCES["elections-provincial"]: (
+        "Les conditions varient selon l'organisme électoral ; voir les notes de licence par "
+        "province dans limits."
+    ),
+    SOURCE_LICENCES["dfo-iwls"]: (
+        "Conditions non précisées par l'éditeur (Pêches et Océans Canada, Service hydrographique "
+        "du Canada) : aucune licence ni condition d'utilisation n'a été trouvée à "
+        "https://api-iwls.dfo-mpo.gc.ca. Ne présumez pas une licence ouverte ; vérifiez auprès "
+        "de l'éditeur avant toute redistribution."
+    ),
+    SOURCE_LICENCES["harvard-dataverse-who-runs-federal-candidates"]: (
+        "Conditions du jeu de données Harvard Dataverse : voir la page du jeu de données pour sa "
+        "licence (Dataverse applique CC0 1.0 par défaut, sauf si le déposant fixe d'autres "
+        "conditions)."
+    ),
+    SOURCE_LICENCES["borealis-winer-ferris-federal-elections"]: (
+        "Conditions du jeu de données Borealis : voir la page du jeu de données pour sa licence "
+        "et ses conditions d'utilisation."
+    ),
 }
 
 

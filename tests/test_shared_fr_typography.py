@@ -1,21 +1,11 @@
-"""Tests for shared/fr_typography.py and shared/licences_fr.py."""
+"""Tests for shared/fr_typography.py and the French licences it relies on."""
 
 from __future__ import annotations
 
 from maplestats_mcp.shared import licences
+from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
-from maplestats_mcp.shared.fr_typography import NBSP, NNBSP, fr_or_en, french_spacing, lang_error
-from maplestats_mcp.shared.licences_fr import licence_for_lang, to_french
-
-
-def test_french_spacing_marks_and_quotes():
-    out = french_spacing("Note : 12 % ; voir « x » ? fin ! https://a.ca 12:30")
-    assert out == (
-        f"Note{NBSP}: 12{NNBSP}%{NNBSP}; voir «{NBSP}x{NBSP}»{NNBSP}? fin{NNBSP}! "
-        "https://a.ca 12:30"
-    )
-    # Already spaced text is unchanged.
-    assert french_spacing(out) == out
+from maplestats_mcp.shared.fr_typography import NBSP, fr_or_en, lang_error, truncation_note_lang
 
 
 def test_fr_or_en():
@@ -30,11 +20,31 @@ def test_lang_error_keeps_english_and_templates_french():
     assert str(fr) == f"Aucune correspondance trouvée{NBSP}: aucun résultat"
 
 
-def test_licence_for_lang():
-    assert licence_for_lang("cgc", "", "en") == licences.OGL_CANADA
-    fr = licence_for_lang("cgc", "", "fr") or ""
-    assert fr.startswith("Licence du gouvernement ouvert – Canada")
-    assert f"«{NBSP}Contient" in fr
-    assert "Avis du gouvernement du Canada" in (licence_for_lang("gazette", "", "fr") or "")
-    assert to_french(licences.SENATE_TERMS, "fr") != licences.SENATE_TERMS
-    assert to_french("unknown text", "fr") == "unknown text"
+def test_truncation_note_lang():
+    english = truncation_note_lang("en", returned=2, total=5, unit="points", order="latest")
+    assert english == "Returned the most recent 2 of 5 points."
+    french = truncation_note_lang(
+        "fr", returned=2, total=1500, unit_fr="points", how_to_get_more_fr="raccourcissez"
+    )
+    assert (
+        french
+        == f"Résultat limité à 2 points sur 1{NBSP}500 (en début de liste){NBSP}; raccourcissez."
+    )
+    assert truncation_note_lang("fr", returned=5, total=5) is None
+
+
+def test_added_french_licences_reach_make_provenance():
+    for source, start in [
+        ("dfo-iwls", "Conditions non précisées"),
+        ("senate", "Propriété intellectuelle du Sénat"),
+        ("ourcommons", "Autorisation du Président"),
+        ("elections-results", "Avis d'Élections Canada"),
+        ("ab_wildfire", "Licence du gouvernement ouvert – Alberta"),
+        ("cihi", "Conditions d'utilisation de l'ICIS"),
+    ]:
+        prov = make_provenance(
+            source=source, url="https://x.ca", cached=False, schema_name="s", lang="fr"
+        )
+        assert (prov.licence or "").startswith(start), source
+        english = make_provenance(source=source, url="https://x.ca", cached=False, schema_name="s")
+        assert english.licence == licences.licence_for(source, "https://x.ca")

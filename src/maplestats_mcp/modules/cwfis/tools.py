@@ -197,8 +197,9 @@ async def cwfis_search_large_fires(
     Keywords: National Fire Database, NFDB, large fires, historical wildfires,
     fire size hectares, fire cause lightning human, biggest fire, CWFIS, NRCan.
     Mots-clés : Base nationale de données sur les feux de forêt, BNDFF,
-    grands feux, incendies historiques, superficie brûlée, feu causé par la
-    foudre, feu d'origine humaine, plus grand feu de forêt, SCIFV, RNCan.
+    grands incendies, incendies historiques, taille des incendies, incendie
+    causé par la foudre, incendie d'origine humaine, plus grand incendie,
+    SCIFV, RNCan.
     """
     return await client.search_large_fires(
         year_from=year_from,

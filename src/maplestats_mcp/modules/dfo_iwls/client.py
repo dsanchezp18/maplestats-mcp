@@ -27,7 +27,6 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error, truncation_note_lang
 from maplestats_mcp.shared.http import api_get
-from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -178,9 +177,6 @@ async def search_stations(
             freshness=fr_or_en(
                 lang, "station list cached 24h", "liste des stations mise en cache 24 h"
             ),
-            licence=licence_for_lang(
-                constants.RATE_LIMIT_SOURCE, f"{constants.BASE_URL}/stations", lang
-            ),
             lang=lang,
         ),
     )
@@ -207,11 +203,6 @@ async def get_station(station_code: str, lang: str = "en") -> StationDetail:
             url=f"{constants.BASE_URL}/stations/{station['id']}/metadata",
             cached=cached,
             schema_name="dfo_iwls.StationDetail",
-            licence=licence_for_lang(
-                constants.RATE_LIMIT_SOURCE,
-                f"{constants.BASE_URL}/stations/{station['id']}/metadata",
-                lang,
-            ),
             lang=lang,
         ),
     )
@@ -380,7 +371,6 @@ async def get_water_levels(
                     "plus grossière",
                 ),
             ),
-            licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, data_url, lang),
             lang=lang,
         ),
     )

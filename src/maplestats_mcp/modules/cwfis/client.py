@@ -53,7 +53,6 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import api_get
-from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.wfs import WfsConfig, get_features
@@ -206,7 +205,6 @@ def _prov(
         coverage=coverage,
         limits=limits,
         freshness=freshness,
-        licence=licence_for_lang(c.RATE_LIMIT_SOURCE, url, lang),
         lang=lang,
     )
 
@@ -979,7 +977,6 @@ def _sitrep_prov(schema: str, cached: bool, limits: str, lang: str = "en") -> Pr
         cached=cached,
         schema_name=f"cwfis.{schema}",
         limits=limits,
-        licence=licence_for_lang(c.SITREP_RATE_SOURCE, c.SITREP_URL, lang),
         lang=lang,
     )
 
