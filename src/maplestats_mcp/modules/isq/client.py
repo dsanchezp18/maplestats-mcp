@@ -11,8 +11,7 @@ Checked live 2026-09-26:
    plus an Excel file name (`excel`, served under /<lang>/fichier/).
    /<lang>/produit/tableau/<number> also resolves.
 3. Dynamic tables come from /pls/ken/ken411_data_explt_v2.* (the former
-   BDSO engine; robots.txt disallows the path, read here on demand only,
-   see __init__.py): p_retrn_titre (title), p_retrn_header (JSON column
+   BDSO engine, read on demand, one table per request): p_retrn_titre (title), p_retrn_header (JSON column
    tree and the field list), p_retrn_data (the rows as ';'-separated CSV,
    all rows in one response: 26 of 26 sampled tables, up to 1.4 MB),
    p_retrn_note_html (notes and sources) and p_retrn_signe (flag legend).
@@ -30,6 +29,7 @@ import html
 import io
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
@@ -93,7 +93,9 @@ def _hit(url: str) -> IsqTableHit:
     slug = url.rstrip("/").rsplit("/", 1)[-1]
     lang = "fr" if "/fr/" in url else "en"
     title = slug.replace("-", " ")
-    return IsqTableHit(table=slug, title=title[:1].upper() + title[1:], lang=lang, url=url)
+    return IsqTableHit(
+        table=slug, title=title[:1].upper() + title[1:], lang=lang, languages=[lang], url=url
+    )
 
 
 async def search_tables(
@@ -106,13 +108,24 @@ async def search_tables(
     if not words:
         raise InvalidInput("isq: query needs at least one word.")
     urls, cached = await _sitemap()
-    matched = []
+    by_slug: dict[str, IsqTableHit] = {}
     for url in urls:
         if lang != "all" and f"/{lang}/" not in url:
             continue
         slug_words = set(tokenize(url.rsplit("/", 1)[-1].replace("-", " ")))
-        if all(w in slug_words for w in words):
-            matched.append(_hit(url))
+        if not all(w in slug_words for w in words):
+            continue
+        # Many English pages reuse the French slug (the sitemap lists
+        # /fr/ and /en/ .../revenu-disponible-composantes-mrc-ensemble-quebec):
+        # one hit per slug, on the French page, listing both languages.
+        hit = _hit(url)
+        if (seen := by_slug.get(hit.table)) is None:
+            by_slug[hit.table] = hit
+            continue
+        seen.languages = ["en", "fr"]
+        if hit.lang == "fr":
+            seen.lang, seen.url, seen.title = hit.lang, hit.url, hit.title
+    matched = list(by_slug.values())
     return IsqSearchResult(
         tables=matched[:limit],
         returned_count=min(limit, len(matched)),
@@ -136,17 +149,56 @@ class _Column:
     field: str
     label: str
     flag_field: str | None = None
+    # Field whose per-row text titles this column's header (e.g. lbl_2024 =
+    # "2024ᵖ"); a trailing superscript there is the cell's flag.
+    mark_field: str | None = None
 
 
-def columns_from_tree(tree: list[dict[str, Any]]) -> list[_Column]:
-    """Data columns in display order, labelled by their header path."""
+def split_mark(text: str) -> tuple[str, str]:
+    """'2024ᵖ' -> ('2024', 'p'): ISQ writes the flag as a superscript letter."""
+    text = _text(text)
+    end = len(text)
+    while end and unicodedata.category(text[end - 1]) == "Lm":
+        end -= 1
+    return text[:end].strip(), unicodedata.normalize("NFKC", text[end:])
+
+
+def header_values(body: str) -> dict[str, str]:
+    """First non-empty value of every field, to resolve titleField headers."""
+    found: dict[str, str] = {}
+    for record in csv.DictReader(io.StringIO(body), delimiter=";"):
+        for key, value in record.items():
+            if key and key not in found and value and value.strip():
+                found[key] = value
+    return found
+
+
+def columns_from_tree(
+    tree: list[dict[str, Any]], values: dict[str, str] | None = None
+) -> list[_Column]:
+    """Data columns in display order, labelled by their header path.
+
+    A header can name a field instead of carrying a title ("titleField"):
+    table 4948 (checked live 2026-10-03) titles each year group with
+    lbl_<year> ("2024ᵖ") and each value leaf with mesr, the row's unit
+    ("$/hab" or "M$"). The year comes from `values` (first non-empty cell
+    of each field); the unit field becomes a column of its own, since two
+    rows that differ only by unit are otherwise indistinguishable.
+    """
+    values = values or {}
     out: list[_Column] = []
+    fields_out: set[str] = set()
 
-    def walk(nodes: list[dict[str, Any]], path: list[str]) -> None:
+    def walk(nodes: list[dict[str, Any]], path: list[str], mark: str | None) -> None:
         for node in nodes:
             title = _text(str(node.get("title") or ""))
+            title_field = str(node.get("titleField") or "")
             if node.get("columns"):
-                walk(node["columns"], [*path, title] if title else path)
+                child_mark = mark
+                if title_field and not title:
+                    title = split_mark(values.get(title_field, ""))[0] or title_field
+                    child_mark = title_field
+                walk(node["columns"], [*path, title] if title else path, child_mark)
                 continue
             name = str(node.get("field") or "")
             if not name or node.get("type") == "interval":
@@ -155,12 +207,18 @@ def columns_from_tree(tree: list[dict[str, Any]]) -> list[_Column]:
                 if out:
                     out[-1].flag_field = name
                 continue
+            if title_field and not title and title_field not in fields_out:
+                label = constants.FIELD_LABELS.get(title_field, title_field)
+                # The unit lands right before the first value column it titles.
+                out.append(_Column(title_field, label))
+                fields_out.add(title_field)
             label = " / ".join(p for p in [*path, title] if p) or constants.FIELD_LABELS.get(
                 name, name
             )
-            out.append(_Column(name, label))
+            out.append(_Column(name, label, mark_field=mark))
+            fields_out.add(name)
 
-    walk(tree, [])
+    walk(tree, [], None)
     # Two columns may share a label (e.g. untitled); keep them apart.
     seen: dict[str, int] = {}
     for column in out:
@@ -193,8 +251,12 @@ def parse_rows(
         for column in columns:
             if column.field in constants.LAYOUT_FIELDS:
                 continue
-            row[column.label] = parse_value(record.get(column.field) or "")
-            if column.flag_field and (mark := _text(record.get(column.flag_field) or "")):
+            row[column.label] = value = parse_value(record.get(column.field) or "")
+            mark = _text(record.get(column.flag_field) or "") if column.flag_field else ""
+            if not mark and column.mark_field and value is not None:
+                # No sign: the flag is the header's superscript ("2024ᵖ").
+                mark = split_mark(record.get(column.mark_field) or "")[1]
+            if mark:
                 flag[column.label] = mark
         rows.append(row)
         flags.append(flag)
@@ -255,6 +317,9 @@ async def _dynamic(number: int) -> tuple[dict[str, Any], bool]:
             "title": _text(await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number})),
             "tree": tree,
             "data": await _get(constants.KEN + "p_retrn_data", params),
+            # The engine is French only: p_lang=en returned the same French
+            # notes on 7 of 7 tables with an English page, and p_retrn_titre
+            # or p_retrn_header with p_lang answer 404 (checked 2026-10-03).
             "notes": _text(
                 await _get(
                     constants.KEN + "p_retrn_note_html", {"p_id_tabl": number, "p_lang": "fr"}
@@ -308,13 +373,14 @@ async def get_table(
     if page.get("type") == "dynamique" and page.get("no"):
         number = int(page["no"])
         loaded, cached = await _dynamic(number)
-        columns = [
-            c for c in columns_from_tree(loaded["tree"]) if c.field not in constants.LAYOUT_FIELDS
-        ]
+        tree_columns = columns_from_tree(loaded["tree"], header_values(loaded["data"]))
+        columns = [c for c in tree_columns if c.field not in constants.LAYOUT_FIELDS]
         rows, flags = parse_rows(loaded["data"], columns)
         shown = slice(offset, offset + max_rows)
+        # The engine's title is French; an English page carries its own title.
+        english = lang == "en" and "/en/" in url and page.get("nom")
         return IsqTable(
-            title=loaded["title"] or str(page.get("nom") or ""),
+            title=str(page["nom"]) if english else loaded["title"] or str(page.get("nom") or ""),
             number=number,
             kind="dynamic",
             columns=[c.label for c in columns],
@@ -351,5 +417,9 @@ def _provenance(url: str, cached: bool) -> Any:
         cached=cached,
         schema_name="isq.IsqTable",
         freshness="as published by ISQ; each table states its update date",
-        limits="labels are mostly French; flags are ISQ's conventional signs",
+        limits=(
+            "ISQ's data engine is French only: column labels, units, notes and"
+            " sources stay French with lang='en' (only the title follows an"
+            " English page); flags are ISQ's conventional signs"
+        ),
     )

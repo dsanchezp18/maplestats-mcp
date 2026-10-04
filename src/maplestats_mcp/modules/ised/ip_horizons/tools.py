@@ -35,7 +35,10 @@ async def ised_ip_horizons_list_files(
     by table (e.g. patent 'main', 'claim', 'abstract', 'disclosure',
     'interested_party', 'priority_claim', 'ipc_classification') and
     patent-number range. Each file is a ZIP of one pipe-delimited UTF-8
-    CSV, refreshed quarterly; large tables are split by patent number.
+    CSV; large tables are split by patent number. Releases are not
+    regular: the newest open release was 2024-10-11 for patents and
+    2024-11-20 for trademarks (checked 2026-10-03), so provenance.as_of
+    gives the release date read.
     latest_only=True keeps each table's newest release folder only.
     Pair with ised_ip_horizons_get_dictionary for column meanings; for a
     live search of individual trademarks use ised_cipo_search_trademarks.
@@ -92,8 +95,9 @@ async def ised_ip_horizons_get_patent(
     and grant dates, status, PCT numbers, and its owners, inventors,
     applicants and agents with their city and country. Set
     include_classifications=True to add its IPC classes, which reads a
-    much larger file. Data is as of the latest quarterly release, not
-    live. The first call downloads the needed table (tens to hundreds of
+    much larger file. Data is as of CIPO's newest open release (2024-10-11
+    when checked on 2026-10-03; release_date and provenance.as_of give
+    it), not live. The first call downloads the needed table (tens to hundreds of
     MB) into a local cache; if it times out, the download continues and
     a retry a few minutes later answers from the cache. `lang` has no
     effect: titles come in both languages.
@@ -125,10 +129,13 @@ async def ised_ip_horizons_search_patents(
     (party_name, a case-insensitive substring; party_type narrows to
     owner, inventor, applicant or agent), patents in a technology class
     (ipc like 'H01M', 'H01M 8' or 'H01M 8/04'), by title words (English
-    or French), or by filing-date range. Filters combine with AND.
+    or French; accents are ignored, since French titles are stored
+    unaccented), or by filing-date range. Filters combine with AND.
     Returns the newest matches by filing date and the total match count
-    across all ~3.2 million records since 1869. Data is as of the latest
-    quarterly release. Each filter type downloads its table once into a
+    across all ~3.2 million records since 1869. Data is as of CIPO's
+    newest open release (2024-10-11 when checked on 2026-10-03;
+    release_date and provenance.as_of give it), so later filings are
+    absent. Each filter type downloads its table once into a
     local cache on first use; the IPC table is ~740 MB and can take many
     minutes, so a first call may time out while the download continues
     in the background; retry later. Follow up with

@@ -409,3 +409,38 @@ async def test_http_400_description_becomes_invalid_input(httpx_mock, router):
     httpx_mock.add_callback(bad, is_reusable=True)
     with pytest.raises(InvalidInput, match="Invalid field specified"):
         await client.get_coverage_data(CANDCS, lat=53.5, lon=-113.5, scenarios=["SSP245"])
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"lat": 53.5, "lon": -113.5, "start": "1990"}, "couvre 2015 à 2100"),
+        ({"lat": 53.5}, "à la fois lat et lon"),
+        ({"bbox": [-113, 53, -114, 54]}, "ouest < est"),
+        ({"lat": 53.5, "lon": -113.5, "seasons": ["JJA"]}, "pas d'axe seasons"),
+    ],
+)
+async def test_french_selection_errors_are_french(router, kwargs, match):
+    with pytest.raises(InvalidInput, match=match) as excinfo:
+        await client.get_coverage_data(CANDCS, lang="fr", **kwargs)
+    assert str(excinfo.value).startswith("Entrée invalide :")
+    assert router.calls == []
+
+
+async def test_french_data_has_french_notes_and_provenance(router):
+    router.coverage[CANDCS] = _coverage("AirTemp", _XS, _YS, ["2050", "2051"], _CANDCS_VALUES)
+    result = await client.get_coverage_data(
+        CANDCS, lat=53.55, lon=-113.55, scenarios=["SSP585"], start="2050", end="2051", lang="fr"
+    )
+    assert any(n.startswith("Aucune variable précisée :") for n in result.notes)
+    assert any("qu'en anglais" in n for n in result.notes)
+    assert (result.provenance.coverage or "").startswith("2 valeurs sur 2")
+    assert (result.provenance.limits or "").startswith("max_rows plafonné")
+
+
+async def test_french_no_data_is_french(router):
+    router.coverage_status = 204
+    with pytest.raises(NotFound, match="n'a pas de données au point"):
+        await client.get_coverage_data(
+            CANDCS, lat=50.0, lon=-135.0, scenarios=["SSP245"], lang="fr"
+        )

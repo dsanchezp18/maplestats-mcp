@@ -1,6 +1,6 @@
 """Live smoke test for the Open Alberta file reader.
 
-Every call is paced at one request per 10 seconds (portal crawl delay), so
+Every call is paced at one request per 10 seconds, so
 the run takes several minutes. Checked by hand on 2026-10-02:
 - AISH caseload workbook: first data row is April 2008, Alberta, family
   composition "Single Total".

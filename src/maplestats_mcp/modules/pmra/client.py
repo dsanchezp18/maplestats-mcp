@@ -32,7 +32,7 @@ import io
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 
@@ -46,9 +46,10 @@ from maplestats_mcp.modules.pmra.schemas import (
     ResidueLimitList,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -57,6 +58,20 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _REGISTRATION = re.compile(r"^\d{1,8}$")
+_DIGITS_EN = "pmra: registration_number is digits only, e.g. 31153."
+_DIGITS_FR = "pmra : registration_number ne contient que des chiffres, p. ex. 31153."
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
 
 
 def _fold(text: str) -> str:
@@ -77,30 +92,50 @@ def _url(kind: str, lang: str, key: str = "") -> str:
     return url + "?lang=fr" if lang == "fr" else url
 
 
-async def _get(url: str) -> bytes:
+async def _get(url: str, lang: str = "en") -> bytes:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=180.0)
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 404:
-            raise NotFound(f"pmra: no record at {url}.") from exc
-        raise UpstreamError(f"pmra: {url} returned HTTP {status}.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"pmra: {url} did not respond in time.") from exc
+            _raise(NotFound, f"pmra: no record at {url}.", f"pmra : aucune fiche à {url}.", lang)
+        _raise(
+            UpstreamError,
+            f"pmra: {url} returned HTTP {status}.",
+            f"pmra : {url} a renvoyé HTTP {status}.",
+            lang,
+        )
+    except httpx.HTTPError:
+        _raise(
+            UpstreamUnavailable,
+            f"pmra: {url} did not respond in time.",
+            f"pmra : {url} n'a pas répondu à temps.",
+            lang,
+        )
     if len(response.content) > constants.MAX_EXTRACT_BYTES:
-        raise UpstreamError(f"pmra: {url} is much larger than expected; it changed.")
+        _raise(
+            UpstreamError,
+            f"pmra: {url} is much larger than expected; it changed.",
+            f"pmra : {url} est beaucoup plus volumineux que prévu ; il a changé.",
+            lang,
+        )
     return response.content
 
 
-def parse_extract(body: bytes, columns: int, what: str) -> list[list[str]]:
+def parse_extract(body: bytes, columns: int, what: str, lang: str = "en") -> list[list[str]]:
     """Rows of an extract (header dropped), cells whitespace-collapsed."""
     text = body.decode("cp1252", errors="replace").lstrip("﻿")
     rows = list(csv.reader(io.StringIO(text)))
     if not rows or len(rows[0]) != columns:
-        raise UpstreamError(
-            f"pmra: the {what} extract has {len(rows[0]) if rows else 0} columns, expected "
-            f"{columns}; its layout changed."
+        found = len(rows[0]) if rows else 0
+        _raise(
+            UpstreamError,
+            f"pmra: the {what} extract has {found} columns, expected "
+            f"{columns}; its layout changed.",
+            f"pmra : l'extrait {what} a {found} colonnes au lieu de {columns} ; sa structure "
+            "a changé.",
+            lang,
         )
     return [[_clean(cell) for cell in row] for row in rows[1:] if len(row) == columns]
 
@@ -141,10 +176,15 @@ def to_product(cells: tuple[str, ...] | list[str], lang: str) -> PesticideProduc
 async def _products(lang: str) -> tuple[list[_Product], bool]:
     async def fetch() -> list[_Product]:
         rows = parse_extract(
-            await _get(_url("product", lang)), constants.PRODUCT_COLUMNS, "product"
+            await _get(_url("product", lang), lang), constants.PRODUCT_COLUMNS, "product", lang
         )
         if len(rows) < 1000:
-            raise UpstreamError(f"pmra: the product extract has only {len(rows)} rows.")
+            _raise(
+                UpstreamError,
+                f"pmra: the product extract has only {len(rows)} rows.",
+                f"pmra : l'extrait des produits n'a que {len(rows)} lignes.",
+                lang,
+            )
         return [
             _Product(
                 cells=tuple(r),
@@ -163,9 +203,13 @@ def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | 
         url=url,
         cached=cached,
         schema_name=f"pmra.{schema}",
-        freshness="daily (the database refreshes overnight, Eastern time)",
+        freshness=_text(
+            "daily (the database refreshes overnight, Eastern time)",
+            "quotidienne (la base de données se met à jour la nuit, heure de l'Est)",
+            lang,
+        ),
         coverage=coverage,
-        licence=constants.LICENCE,
+        licence=_text(constants.LICENCE, constants.LICENCE_FR, lang),
         lang=lang,
     )
 
@@ -183,16 +227,30 @@ async def search_products(
 ) -> PesticideProductList:
     """Products matching every filter given (words are matched without accents or case)."""
     if not 1 <= limit <= constants.SEARCH_MAX_LIMIT:
-        raise InvalidInput(f"pmra: limit must be 1 to {constants.SEARCH_MAX_LIMIT}.")
+        _raise(
+            InvalidInput,
+            f"pmra: limit must be 1 to {constants.SEARCH_MAX_LIMIT}.",
+            f"pmra : limit doit être compris entre 1 et {constants.SEARCH_MAX_LIMIT}.",
+            lang,
+        )
     if status not in ("current", "historical", "all"):
-        raise InvalidInput("pmra: status must be current, historical or all.")
+        _raise(
+            InvalidInput,
+            "pmra: status must be current, historical or all.",
+            "pmra : status doit valoir current, historical ou all.",
+            lang,
+        )
     number = registration_number.strip()
     if number and not _REGISTRATION.match(number):
-        raise InvalidInput("pmra: registration_number is digits only, e.g. 31153.")
+        _raise(InvalidInput, _DIGITS_EN, _DIGITS_FR, lang)
     if not any(s.strip() for s in (query, number, active_ingredient, registrant, product_type)):
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             "pmra: pass a query, registration_number, active_ingredient, registrant or "
-            "product_type."
+            "product_type.",
+            "pmra : donnez query, registration_number, active_ingredient, registrant ou "
+            "product_type.",
+            lang,
         )
     products, cached = await _products(lang)
     words = _fold(query).split()
@@ -226,7 +284,13 @@ async def search_products(
             cached,
             "PesticideProductList",
             lang,
-            f"{len(products):,} products in the extract; status filter '{status}'",
+            _text(
+                f"{len(products):,} products in the extract; status filter '{status}'",
+                f"{len(products):,} produits dans l'extrait ; filtre de statut '{status}'".replace(
+                    ",", "\u00a0"
+                ),
+                lang,
+            ),
         ),
     )
 
@@ -234,21 +298,32 @@ async def search_products(
 # ------------------------------------------------------ ingredients and MRLs
 
 
-async def _ingredients() -> tuple[dict[str, list[str]], bool]:
+async def _ingredients(lang: str = "en") -> tuple[dict[str, list[str]], bool]:
     async def fetch() -> dict[str, list[str]]:
         rows = parse_extract(
-            await _get(_url("ingredient", "en")), constants.INGREDIENT_COLUMNS, "ingredient"
+            await _get(_url("ingredient", "en"), lang),
+            constants.INGREDIENT_COLUMNS,
+            "ingredient",
+            lang,
         )
         return {r[0]: r for r in rows if r[0]}
 
     return await cached_fetch("pmra:ingredients", constants.EXTRACT_TTL_SECONDS, fetch)
 
 
-async def _mrls(lang: str) -> tuple[list[list[str]], bool]:
+async def _mrls(lang: str, msg_lang: str | None = None) -> tuple[list[list[str]], bool]:
+    """The MRL extract in `lang`; `msg_lang` (default `lang`) words any error."""
+    say = msg_lang or lang
+
     async def fetch() -> list[list[str]]:
-        rows = parse_extract(await _get(_url("mrl", lang)), constants.MRL_COLUMNS, "mrl")
+        rows = parse_extract(await _get(_url("mrl", lang), say), constants.MRL_COLUMNS, "mrl", say)
         if len(rows) < 1000:
-            raise UpstreamError(f"pmra: the MRL extract has only {len(rows)} rows.")
+            _raise(
+                UpstreamError,
+                f"pmra: the MRL extract has only {len(rows)} rows.",
+                f"pmra : l'extrait des LMR n'a que {len(rows)} lignes.",
+                say,
+            )
         return rows
 
     return await cached_fetch(f"pmra:mrl:{lang}", constants.EXTRACT_TTL_SECONDS, fetch)
@@ -263,14 +338,19 @@ async def get_product(registration_number: str, *, lang: str = "en") -> Pesticid
     """One product, fresh from the registry, with its ingredients joined and MRLs counted."""
     number = registration_number.strip()
     if not _REGISTRATION.match(number):
-        raise InvalidInput("pmra: registration_number is digits only, e.g. 31153.")
+        _raise(InvalidInput, _DIGITS_EN, _DIGITS_FR, lang)
     url = _url("product", lang, number)
-    rows = parse_extract(await _get(url), constants.PRODUCT_COLUMNS, "product")
+    rows = parse_extract(await _get(url, lang), constants.PRODUCT_COLUMNS, "product", lang)
     if not rows:
-        raise NotFound(f"pmra: no product with registration number {number}.")
+        _raise(
+            NotFound,
+            f"pmra: no product with registration number {number}.",
+            f"pmra : aucun produit avec le numéro d'homologation {number}.",
+            lang,
+        )
     cells = rows[0]
-    ingredients, ingredients_cached = await _ingredients()
-    mrls, mrls_cached = await _mrls("en")
+    ingredients, ingredients_cached = await _ingredients(lang)
+    mrls, mrls_cached = await _mrls("en", lang)
     mrl_counts: dict[str, int] = {}
     mrl_names: dict[str, str] = {}
     for row in mrls:
@@ -320,9 +400,19 @@ async def get_residue_limits(
 ) -> ResidueLimitList:
     """Maximum residue limits for a pesticide, a food commodity, or both."""
     if not 1 <= limit <= constants.MRL_MAX_LIMIT:
-        raise InvalidInput(f"pmra: limit must be 1 to {constants.MRL_MAX_LIMIT}.")
+        _raise(
+            InvalidInput,
+            f"pmra: limit must be 1 to {constants.MRL_MAX_LIMIT}.",
+            f"pmra : limit doit être compris entre 1 et {constants.MRL_MAX_LIMIT}.",
+            lang,
+        )
     if not chemical.strip() and not commodity.strip():
-        raise InvalidInput("pmra: pass a chemical (e.g. glyphosate), a commodity, or both.")
+        _raise(
+            InvalidInput,
+            "pmra: pass a chemical (e.g. glyphosate), a commodity, or both.",
+            "pmra : donnez une substance chimique (p. ex. glyphosate), une denrée, ou les deux.",
+            lang,
+        )
     rows, cached = await _mrls(lang)
     wanted_chemical = _fold(chemical)
     commodity_words = _fold(commodity).split()
@@ -349,6 +439,10 @@ async def get_residue_limits(
         total_matched=len(matched),
         chemicals=sorted({r[0] for r in matched})[:50],
         provenance=_provenance(
-            _url("mrl", lang), cached, "ResidueLimitList", lang, f"{len(rows):,} MRLs"
+            _url("mrl", lang),
+            cached,
+            "ResidueLimitList",
+            lang,
+            _text(f"{len(rows):,} MRLs", f"{len(rows):,} LMR".replace(",", "\u00a0"), lang),
         ),
     )

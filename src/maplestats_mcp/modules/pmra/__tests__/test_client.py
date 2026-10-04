@@ -186,3 +186,15 @@ async def test_residue_limits_in_french(httpx_mock):
     grapes = await client.get_residue_limits("dichloropropene", lang="fr")
     assert grapes.limits[0].chemical == "1,3-Dichloropropène"
     assert grapes.limits[0].mrl_ppm == 0.018
+    assert (result.provenance.coverage or "").endswith(" LMR")
+    assert (result.provenance.freshness or "").startswith("quotidienne")
+    assert "Agence de réglementation de la lutte antiparasitaire (ARLA)" in (
+        result.provenance.licence or ""
+    )
+
+
+async def test_french_errors():
+    with pytest.raises(InvalidInput, match="^Entrée invalide : pmra : donnez une"):
+        await client.get_residue_limits(lang="fr")
+    with pytest.raises(InvalidInput, match="ne contient que des chiffres"):
+        await client.get_product("abc", lang="fr")

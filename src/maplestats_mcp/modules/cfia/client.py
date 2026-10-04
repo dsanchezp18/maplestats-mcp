@@ -1,8 +1,8 @@
 """HTTP client for Canadian Food Inspection Agency (CFIA) animal disease tables.
 
 Three kinds of HTML page on inspection.canada.ca, all fetched live on
-2026-09-26 in English and French (see constants.py for the URLs, robots
-and terms):
+2026-09-26 in English and French (see constants.py for the URLs and
+terms):
 
 - "Federally reportable diseases for terrestrial animals in Canada": one
   table per year, 2011 to 2026, of confirmed herds or flocks per disease.

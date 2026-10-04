@@ -48,6 +48,19 @@ SEARCH_PAGE = "https://www.canada.ca/en/health-canada/services/drugs-health-prod
 
 API_FRESHNESS = "Canada Vigilance online database, updated by Health Canada"
 EXTRACT_FRESHNESS = "monthly extract (data through the date in its folder name)"
+API_FRESHNESS_FR = "base de données en ligne de Canada Vigilance, mise à jour par Santé Canada"
+EXTRACT_FRESHNESS_FR = (
+    "extrait mensuel (données jusqu'à la date indiquée dans le nom de son dossier)"
+)
+# Said for every report and every count, in each language.
+CAUTION = (
+    "A report records a suspected association, not a confirmed cause; counts of "
+    "reports are not incidence rates."
+)
+CAUTION_FR = (
+    "Une déclaration consigne une association soupçonnée, et non une cause confirmée ; "
+    "le nombre de déclarations n'est pas un taux d'incidence."
+)
 
 LOOKUP_TTL_SECONDS = 6 * 60 * 60
 CODES_TTL_SECONDS = 24 * 60 * 60

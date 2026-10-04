@@ -40,7 +40,7 @@ def test_listing_has_the_four_general_elections():
     assert listing.elections[0].province_name == "Saskatchewan"
     assert listing.elections[0].detail == "candidate"
     assert listing.elections[0].source_url == constants.SK_FILES["2024"]
-    assert any("Saskatchewan" in note and "risk" in note for note in listing.notes)
+    assert any("Saskatchewan" in note and "no licence is stated" in note for note in listing.notes)
 
 
 def test_2024_file_flips_names_and_picks_the_winner():
@@ -105,14 +105,14 @@ async def test_get_results_and_seats_over_the_mocked_download(httpx_mock):
     assert row.district == "Saskatoon Nutana" and row.candidate == "Erika Ritchie"
     assert row.party_code == "NDP" and row.votes == 3938 and row.elected
     assert "Elections Saskatchewan" in result.attribution
-    assert result.provenance.limits is not None and "risk" in result.provenance.limits
+    assert result.provenance.limits is not None and "no licence" in result.provenance.limits
     assert result.provenance.url == constants.SK_FILES["2024"]
 
     # The second call reads the cached parse, so no second download is mocked.
     seats = await client.get_seats("sk", "2024-10-28")
     assert seats.seats_contested == 2 and seats.seats_decided == 2
     assert (seats.parties[0].party, seats.parties[0].seats) == ("New Democratic Party", 2)
-    assert seats.provenance.limits is not None and "risk" in seats.provenance.limits
+    assert seats.provenance.limits is not None and "no licence" in seats.provenance.limits
 
 
 async def test_2011_workbook_is_read_through_the_client(httpx_mock):

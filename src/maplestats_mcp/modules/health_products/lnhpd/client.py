@@ -154,11 +154,21 @@ async def search_products(
 ) -> NhpSearchResult:
     query, company = query.strip(), company.strip()
     if len(query) < 3 and len(company) < 3:
-        raise InvalidInput("Give at least 3 characters of a product name, NPN or company.")
+        api.fail(
+            InvalidInput,
+            "Give at least 3 characters of a product name, NPN or company.",
+            "donnez au moins 3 caractères d'un nom de produit, d'un NPN ou d'une entreprise.",
+            lang,
+        )
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}.")
-    del lang  # Names and companies are stored as filed; the index has no labels.
-    blob, cached = await _index()
+        api.fail(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}.",
+            lang,
+        )
+    # Names and companies are stored as filed; the index has no labels to translate.
+    blob, cached = await api.in_lang(lang, _index())
     found = search_index(blob, query=query, company=company, active_only=active_only)
     found.sort(key=lambda p: (not p.active, not p.primary_name, p.product_name.casefold()))
     page = found[:limit]
@@ -167,6 +177,14 @@ async def search_products(
         for part in (
             f"name or NPN contains '{query}'" if query else "",
             f"company contains '{company}'" if company else "",
+        )
+        if part
+    )
+    what_fr = " et ".join(
+        part
+        for part in (
+            f"le nom ou le NPN contient '{query}'" if query else "",
+            f"l'entreprise contient '{company}'" if company else "",
         )
         if part
     )
@@ -187,6 +205,17 @@ async def search_products(
             limits=(
                 "the whole licence table is read once a day (about a minute the first time); "
                 "ingredients cannot be searched, only read per licence"
+            ),
+            lang=lang,
+            freshness_fr=constants.FRESHNESS_FR,
+            coverage_fr=(
+                f"{len(page)} noms de produits sur {len(found)} où {what_fr}"
+                + (", licences actives seulement" if active_only else "")
+            ),
+            limits_fr=(
+                "la table complète des licences est lue une fois par jour (environ une minute "
+                "la première fois) ; les ingrédients ne se cherchent pas, ils se lisent par "
+                "licence. Les noms de produits et d'entreprises sont ceux déposés."
             ),
         ),
     )
@@ -221,8 +250,12 @@ def _range(value: Any, low: Any, high: Any) -> str | None:
 async def get_product(npn: str, *, lang: str = "en") -> NhpProductDetail:
     cleaned = npn.strip().upper().removeprefix("NPN").removeprefix("DIN-HM").strip(" -:")
     if not _NPN.match(cleaned):
-        raise InvalidInput(
-            f"'{npn}' is not an NPN: give the 8-digit licence number, e.g. 80000035."
+        api.fail(
+            InvalidInput,
+            f"'{npn}' is not an NPN: give the 8-digit licence number, e.g. 80000035.",
+            f"'{npn}' n'est pas un NPN : donnez le numéro de licence à 8 chiffres, "
+            "p. ex. 80000035.",
+            lang,
         )
     cleaned = cleaned.zfill(8)
 
@@ -230,7 +263,12 @@ async def get_product(npn: str, *, lang: str = "en") -> NhpProductDetail:
         rows = api.as_list(await api.get_json(constants.PATH_LICENCE, {"id": cleaned}, lang=lang))
         rows = [r for r in rows if r.get("licence_number")]
         if not rows:
-            raise NotFound(f"No licensed natural health product has NPN {cleaned}.")
+            api.fail(
+                NotFound,
+                f"No licensed natural health product has NPN {cleaned}.",
+                f"aucun produit de santé naturel homologué n'a le NPN {cleaned}.",
+                lang,
+            )
         lnhpd_id = int(rows[0]["lnhpd_id"])
         by_id = {"id": lnhpd_id}
         medicinal, non_medicinal, purposes, risks, routes, doses = await asyncio.gather(
@@ -325,11 +363,16 @@ async def get_product(npn: str, *, lang: str = "en") -> NhpProductDetail:
                 cached=False,
                 schema="NhpProductDetail",
                 freshness=constants.FRESHNESS,
+                lang=lang,
+                freshness_fr=constants.FRESHNESS_FR,
+                limits_fr="Les noms, les fins et les mises en garde sont ceux que l'entreprise "
+                "a déposés, parfois en anglais seulement.",
             ),
         )
 
-    detail, cached = await cached_fetch(
-        f"hc_lnhpd:product:{cleaned}:{lang}", constants.LOOKUP_TTL_SECONDS, fetch
+    detail, cached = await api.in_lang(
+        lang,
+        cached_fetch(f"hc_lnhpd:product:{cleaned}:{lang}", constants.LOOKUP_TTL_SECONDS, fetch),
     )
     if cached:
         detail = detail.model_copy(

@@ -36,7 +36,7 @@ import io
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 from bs4 import BeautifulSoup
@@ -48,9 +48,10 @@ from maplestats_mcp.modules.nrcan_minerals.schemas import (
     MineralSeries,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -61,6 +62,17 @@ _LIMITER = get_limiter(
 # "(3)", "¹(10)", "(1),(2)" at the end of a name; "(K₂O)" or "(MOP)" stay.
 _FOOTNOTES = re.compile(r"(?:[¹²³⁴⁵⁶⁷⁸⁹⁰]+|\(\d+\)|,)+\s*$")
 _GRAND_TOTAL = re.compile(r"^Grand total,\s*(\d{4})$")
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    return french_spacing(fr) if lang == "fr" else en
 
 
 def _fold(text: str) -> str:
@@ -97,19 +109,29 @@ class _Year:
     rows: tuple[MineralRow, ...]
 
 
-def parse_csv(text: str, year: int) -> _Year:
+def parse_csv(text: str, year: int, lang: str = "en") -> _Year:
     lines = list(csv.reader(io.StringIO(text.lstrip("﻿"))))
     title = clean_name(lines[0][0]) if lines and lines[0] else ""
     header_at = next((i for i, line in enumerate(lines) if line and line[0] == "Year"), None)
     if header_at is None:
-        raise UpstreamError(f"nrcan_minerals: the {year} file has no 'Year' header row.")
+        _raise(
+            UpstreamError,
+            f"nrcan_minerals: the {year} file has no 'Year' header row.",
+            f"nrcan_minerals : le fichier {year} n'a pas de ligne d'en-tête 'Year'.",
+            lang,
+        )
     header = [h.strip() for h in lines[header_at]]
 
     def column(*names: str) -> int:
         for name in names:
             if name in header:
                 return header.index(name)
-        raise UpstreamError(f"nrcan_minerals: the {year} file has no {names[0]!r} column.")
+        _raise(
+            UpstreamError,
+            f"nrcan_minerals: the {year} file has no {names[0]!r} column.",
+            f"nrcan_minerals : le fichier {year} n'a pas de colonne {names[0]!r}.",
+            lang,
+        )
 
     at = {
         "group": column("Type", "Commodity Group"),
@@ -144,23 +166,48 @@ def parse_csv(text: str, year: int) -> _Year:
             )
         )
     if not rows:
-        raise UpstreamError(f"nrcan_minerals: the {year} file has no data rows.")
+        _raise(
+            UpstreamError,
+            f"nrcan_minerals: the {year} file has no data rows.",
+            f"nrcan_minerals : le fichier {year} n'a aucune ligne de données.",
+            lang,
+        )
     return _Year(year=year, title=title, rows=tuple(rows))
 
 
-async def _fetch(url: str) -> httpx.Response:
+async def _fetch(url: str, lang: str = "en") -> httpx.Response:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status in (301, 302, 404, 410):
-            raise NotFound(f"nrcan_minerals: no file at {url} (HTTP {status}).") from exc
-        raise UpstreamError(f"nrcan_minerals: {url} returned HTTP {status}.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"nrcan_minerals: {url} did not respond in time.") from exc
+            _raise(
+                NotFound,
+                f"nrcan_minerals: no file at {url} (HTTP {status}).",
+                f"nrcan_minerals : aucun fichier à {url} (HTTP {status}).",
+                lang,
+            )
+        _raise(
+            UpstreamError,
+            f"nrcan_minerals: {url} returned HTTP {status}.",
+            f"nrcan_minerals : {url} a renvoyé HTTP {status}.",
+            lang,
+        )
+    except httpx.HTTPError:
+        _raise(
+            UpstreamUnavailable,
+            f"nrcan_minerals: {url} did not respond in time.",
+            f"nrcan_minerals : {url} n'a pas répondu à temps.",
+            lang,
+        )
     if len(response.content) > constants.MAX_FILE_BYTES:
-        raise UpstreamError(f"nrcan_minerals: {url} is much larger than expected.")
+        _raise(
+            UpstreamError,
+            f"nrcan_minerals: {url} is much larger than expected.",
+            f"nrcan_minerals : {url} est beaucoup plus volumineux que prévu.",
+            lang,
+        )
     return response
 
 
@@ -176,30 +223,40 @@ def parse_years(html: str) -> list[int]:
     return sorted(years, reverse=True)
 
 
-async def _years() -> tuple[list[int], bool]:
+async def _years(lang: str = "en") -> tuple[list[int], bool]:
     async def fetch() -> list[int]:
-        years = parse_years((await _fetch(constants.ANNUAL_PAGE)).text)
+        years = parse_years((await _fetch(constants.ANNUAL_PAGE, lang)).text)
         if not years:
-            raise UpstreamError("nrcan_minerals: the annual page has no year selector.")
+            _raise(
+                UpstreamError,
+                "nrcan_minerals: the annual page has no year selector.",
+                "nrcan_minerals : la page annuelle n'a pas de sélecteur d'année.",
+                lang,
+            )
         return years
 
     return await cached_fetch("nrcan_minerals:years", constants.YEARS_TTL_SECONDS, fetch)
 
 
-async def _year(year: int) -> tuple[_Year, bool]:
+async def _year(year: int, lang: str = "en") -> tuple[_Year, bool]:
     url = constants.CSV_URL.format(year=year)
 
     async def fetch() -> _Year:
-        response = await _fetch(url)
+        response = await _fetch(url, lang)
         text = response.content.decode("utf-8-sig", errors="replace")
         if text.lstrip().lower().startswith(("<!doctype", "<html")):
-            raise NotFound(f"nrcan_minerals: {url} returned a web page, not a CSV file.")
-        return parse_csv(text, year)
+            _raise(
+                NotFound,
+                f"nrcan_minerals: {url} returned a web page, not a CSV file.",
+                f"nrcan_minerals : {url} a renvoyé une page Web, pas un fichier CSV.",
+                lang,
+            )
+        return parse_csv(text, year, lang)
 
     return await cached_fetch(f"nrcan_minerals:{year}", constants.CSV_TTL_SECONDS, fetch)
 
 
-def _province(province: str) -> str | None:
+def _province(province: str, lang: str = "en") -> str | None:
     wanted = province.strip()
     if not wanted:
         return None
@@ -208,9 +265,13 @@ def _province(province: str) -> str | None:
     for name in constants.PROVINCES.values():
         if _fold(name) == _fold(wanted):
             return name
-    raise InvalidInput(
+    _raise(
+        InvalidInput,
         f"nrcan_minerals: unknown province {province!r}; use a code like ON or a name, "
-        "or 'Canada' for the total."
+        "or 'Canada' for the total.",
+        f"nrcan_minerals : province inconnue {province!r} ; utilisez un code comme ON ou un "
+        "nom anglais, ou 'Canada' pour le total.",
+        lang,
     )
 
 
@@ -233,9 +294,20 @@ def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | 
         url=url,
         cached=cached,
         schema_name=f"nrcan_minerals.{schema}",
-        freshness="yearly: a preliminary estimate, then final figures the following year",
+        freshness=_text(
+            "yearly: a preliminary estimate, then final figures the following year",
+            "annuelle : une estimation provisoire, puis les chiffres définitifs l'année suivante",
+            lang,
+        ),
         coverage=coverage,
-        licence=constants.TERMS,
+        limits=_text(
+            "",
+            "Les fichiers de RNCan sont publiés en anglais seulement : noms des produits "
+            "minéraux, provinces et catégories sont reproduits tels quels.",
+            lang,
+        )
+        or None,
+        licence=_text(constants.TERMS, constants.TERMS_FR, lang),
         lang=lang,
     )
 
@@ -251,15 +323,24 @@ async def get_production(
 ) -> MineralProduction:
     """One reference year's rows, filtered by commodity, province and category."""
     if not 1 <= limit <= constants.ROWS_MAX_LIMIT:
-        raise InvalidInput(f"nrcan_minerals: limit must be 1 to {constants.ROWS_MAX_LIMIT}.")
-    years, _ = await _years()
+        _raise(
+            InvalidInput,
+            f"nrcan_minerals: limit must be 1 to {constants.ROWS_MAX_LIMIT}.",
+            f"nrcan_minerals : limit doit être compris entre 1 et {constants.ROWS_MAX_LIMIT}.",
+            lang,
+        )
+    years, _ = await _years(lang)
     chosen = years[0] if year is None else year
     if chosen not in years:
-        raise NotFound(
-            f"nrcan_minerals: no file for {chosen}; years are {min(years)}-{max(years)}."
+        _raise(
+            NotFound,
+            f"nrcan_minerals: no file for {chosen}; years are {min(years)}-{max(years)}.",
+            f"nrcan_minerals : aucun fichier pour {chosen} ; les années vont de {min(years)} "
+            f"à {max(years)}.",
+            lang,
         )
-    wanted_province = _province(province)
-    data, cached = await _year(chosen)
+    wanted_province = _province(province, lang)
+    data, cached = await _year(chosen, lang)
     words = _fold(commodity).split()
     matched = [
         r
@@ -282,7 +363,11 @@ async def get_production(
             cached,
             "MineralProduction",
             lang,
-            f"{len(data.rows):,} rows in the {chosen} file",
+            _text(
+                f"{len(data.rows):,} rows in the {chosen} file",
+                f"{len(data.rows):,} lignes dans le fichier {chosen}".replace(",", "\u00a0"),
+                lang,
+            ),
         ),
     )
 
@@ -309,19 +394,33 @@ async def get_series(
     """One commodity across years, read from each year's file."""
     wanted = _fold(clean_name(commodity))
     if not wanted:
-        raise InvalidInput("nrcan_minerals: pass a commodity, e.g. 'gold' or 'Grand total'.")
-    if category not in ("value", "quantity_shipped", "quantity_produced"):
-        raise InvalidInput(
-            "nrcan_minerals: category must be value, quantity_shipped or quantity_produced."
+        _raise(
+            InvalidInput,
+            "nrcan_minerals: pass a commodity, e.g. 'gold' or 'Grand total'.",
+            "nrcan_minerals : donnez un produit minéral, en anglais, p. ex. 'gold' ou "
+            "'Grand total'.",
+            lang,
         )
-    wanted_province = _province(province) or "Canada"
-    years, _ = await _years()
+    if category not in ("value", "quantity_shipped", "quantity_produced"):
+        _raise(
+            InvalidInput,
+            "nrcan_minerals: category must be value, quantity_shipped or quantity_produced.",
+            "nrcan_minerals : category doit valoir value, quantity_shipped ou quantity_produced.",
+            lang,
+        )
+    wanted_province = _province(province, lang) or "Canada"
+    years, _ = await _years(lang)
     first = max(from_year or constants.FIRST_YEAR, min(years))
     last = min(to_year or max(years), max(years))
     span = [y for y in sorted(years) if first <= y <= last]
     if not span:
-        raise InvalidInput(f"nrcan_minerals: years are {min(years)}-{max(years)}.")
-    loaded = await asyncio.gather(*(_year(y) for y in span))
+        _raise(
+            InvalidInput,
+            f"nrcan_minerals: years are {min(years)}-{max(years)}.",
+            f"nrcan_minerals : les années vont de {min(years)} à {max(years)}.",
+            lang,
+        )
+    loaded = await asyncio.gather(*(_year(y, lang) for y in span))
     points: list[MineralRow] = []
     missing: list[int] = []
     ambiguous: set[str] = set()
@@ -342,14 +441,28 @@ async def get_series(
             missing.append(y)
     if not points:
         hint = f" Several match: {sorted(ambiguous)}." if ambiguous else ""
-        raise NotFound(f"nrcan_minerals: no {commodity!r} rows for {wanted_province}.{hint}")
-    note = (
+        hint_fr = f" Plusieurs correspondent : {sorted(ambiguous)}." if ambiguous else ""
+        _raise(
+            NotFound,
+            f"nrcan_minerals: no {commodity!r} rows for {wanted_province}.{hint}",
+            f"nrcan_minerals : aucune ligne {commodity!r} pour {wanted_province}.{hint_fr}",
+            lang,
+        )
+    note = _text(
         "Units and commodity definitions changed over time (kilotonnes before 2019, metric "
         "tonnes after; iron ore split into concentrates and agglomerates in 2019); read each "
-        "point's units."
+        "point's units.",
+        "Les unités et les définitions des produits ont changé au fil du temps (kilotonnes "
+        "avant 2019, tonnes métriques ensuite ; le minerai de fer a été scindé en concentrés "
+        "et agglomérés en 2019) ; lisez les unités de chaque point.",
+        lang,
     )
     if ambiguous:
-        note += f" Years with several matching names were skipped: {sorted(ambiguous)}."
+        note += _text(
+            f" Years with several matching names were skipped: {sorted(ambiguous)}.",
+            f" Les années où plusieurs noms correspondent ont été omises : {sorted(ambiguous)}.",
+            lang,
+        )
     return MineralSeries(
         commodity=points[0].commodity,
         province=wanted_province,
@@ -362,6 +475,10 @@ async def get_series(
             all(c for _, c in loaded),
             "MineralSeries",
             lang,
-            f"{span[0]}-{span[-1]}, one file per year",
+            _text(
+                f"{span[0]}-{span[-1]}, one file per year",
+                f"{span[0]}-{span[-1]}, un fichier par année",
+                lang,
+            ),
         ),
     )

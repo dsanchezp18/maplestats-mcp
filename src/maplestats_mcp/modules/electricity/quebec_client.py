@@ -35,7 +35,13 @@ from typing import Any
 import httpx
 
 from maplestats_mcp.modules.electricity import constants
-from maplestats_mcp.modules.electricity.client import _check_limit, _parse_date
+from maplestats_mcp.modules.electricity.client import (
+    _check_limit,
+    _error,
+    _parse_date,
+    _raise,
+    _say,
+)
 from maplestats_mcp.modules.electricity.schemas import (
     QuebecDataset,
     QuebecDemand,
@@ -58,35 +64,59 @@ _LIMITER = get_limiter(
 )
 
 
-_LICENCE = constants.QUEBEC_LICENCE
+def _licence(lang: str) -> str:
+    return constants.QUEBEC_LICENCE_FR if lang == "fr" else constants.QUEBEC_LICENCE
 
 
-def _limits(extra: str = "") -> str | None:
-    return extra or None
+def _limits(extra: str, extra_fr: str, lang: str) -> str | None:
+    return _say(extra, extra_fr, lang) or None
 
 
-async def _get_json(url: str, params: dict[str, Any], context: str) -> Any:
+async def _get_json(url: str, params: dict[str, Any], context: str, lang: str = "en") -> Any:
     await _LIMITER.acquire()
     try:
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 404:
-            raise NotFound(f"electricity:{context} dataset not found.") from exc
-        if 400 <= status < 500:
-            raise InvalidInput(
-                f"electricity:{context} rejected the query (HTTP {status})."
+            raise _error(
+                NotFound,
+                f"electricity:{context} dataset not found.",
+                f"electricity:{context} : jeu de données introuvable.",
+                lang,
             ) from exc
-        raise UpstreamError(f"electricity:{context} returned HTTP {status}.") from exc
+        if 400 <= status < 500:
+            raise _error(
+                InvalidInput,
+                f"electricity:{context} rejected the query (HTTP {status}).",
+                f"electricity:{context} a refusé la requête (HTTP {status}).",
+                lang,
+            ) from exc
+        raise _error(
+            UpstreamError,
+            f"electricity:{context} returned HTTP {status}.",
+            f"electricity:{context} a renvoyé HTTP {status}.",
+            lang,
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"electricity:{context} did not respond in time.") from exc
+        raise _error(
+            UpstreamUnavailable,
+            f"electricity:{context} did not respond in time.",
+            f"electricity:{context} n'a pas répondu à temps.",
+            lang,
+        ) from exc
 
 
-def _timestamp(record: dict[str, Any], context: str) -> datetime:
+def _timestamp(record: dict[str, Any], context: str, lang: str = "en") -> datetime:
     try:
         return datetime.fromisoformat(str(record["date"]))
     except (KeyError, ValueError) as exc:
-        raise UpstreamError(f"electricity:{context} record has no valid date.") from exc
+        raise _error(
+            UpstreamError,
+            f"electricity:{context} record has no valid date.",
+            f"electricity:{context} : un enregistrement n'a pas de date valide.",
+            lang,
+        ) from exc
 
 
 def _value(record: dict[str, Any], field: str) -> float | None:
@@ -126,6 +156,7 @@ async def _fetch_rows(
     cache_key: str,
     ttl: int,
     context: str,
+    lang: str = "en",
 ) -> tuple[list[dict[str, Any]], int, bool]:
     """Return (rows oldest-first, total matched, was_cached)."""
     base = f"{constants.QUEBEC_DATASETS_URL}/{dataset_id}"
@@ -136,10 +167,15 @@ async def _fetch_rows(
         if where:
             params["where"] = where
             count_params["where"] = where
-        rows = await _get_json(f"{base}/exports/json", params, context)
-        counted = await _get_json(f"{base}/records", count_params, context)
+        rows = await _get_json(f"{base}/exports/json", params, context, lang)
+        counted = await _get_json(f"{base}/records", count_params, context, lang)
         if not isinstance(rows, list) or not isinstance(counted, dict):
-            raise UpstreamError(f"electricity:{context} answered in an unexpected shape.")
+            _raise(
+                UpstreamError,
+                f"electricity:{context} answered in an unexpected shape.",
+                f"electricity:{context} a répondu sous une forme inattendue.",
+                lang,
+            )
         return rows, int(counted.get("total_count", len(rows)))
 
     (rows, total), was_cached = await cached_fetch(cache_key, ttl, fetch)
@@ -152,15 +188,28 @@ def _ttl(dataset: QuebecDataset) -> int:
     return constants.QUEBEC_CACHE_TTL_HISTORY_SECONDS
 
 
-def _check_dataset(dataset: str) -> None:
+def _check_dataset(dataset: str, lang: str = "en") -> None:
     if dataset not in ("recent", "history"):
-        raise InvalidInput(f"dataset must be 'recent' or 'history', got {dataset!r}.")
+        _raise(
+            InvalidInput,
+            f"dataset must be 'recent' or 'history', got {dataset!r}.",
+            f"dataset doit valoir 'recent' ou 'history', reçu {dataset!r}.",
+            lang,
+        )
 
 
-def _range(start_date: str | None, end_date: str | None) -> tuple[date | None, date | None]:
-    start, end = _parse_date(start_date, "start_date"), _parse_date(end_date, "end_date")
+def _range(
+    start_date: str | None, end_date: str | None, lang: str = "en"
+) -> tuple[date | None, date | None]:
+    start = _parse_date(start_date, "start_date", lang)
+    end = _parse_date(end_date, "end_date", lang)
     if start and end and start > end:
-        raise InvalidInput("start_date must not be after end_date.")
+        _raise(
+            InvalidInput,
+            "start_date must not be after end_date.",
+            "start_date ne doit pas être postérieur à end_date.",
+            lang,
+        )
     return start, end
 
 
@@ -172,10 +221,9 @@ async def get_demand(
     *,
     lang: str = "en",
 ) -> QuebecDemand:
-    del lang
-    _check_dataset(dataset)
-    _check_limit(limit)
-    start, end = _range(start_date, end_date)
+    _check_dataset(dataset, lang)
+    _check_limit(limit, lang)
+    start, end = _range(start_date, end_date, lang)
     field = "valeurs_demandetotal" if dataset == "recent" else "moyenne_mw"
     dataset_id = constants.QUEBEC_DEMAND_DATASETS[dataset]
     where = _where(start, end, field, cutoff=False)
@@ -188,16 +236,23 @@ async def get_demand(
         f"electricity:qc:demand:{dataset}:{where}:{latest}:{limit}",
         _ttl(dataset),
         "quebec_demand",
+        lang,
     )
     points = [
-        QuebecDemandPoint(timestamp=_timestamp(r, "quebec_demand"), demand_mw=_value(r, field))
+        QuebecDemandPoint(
+            timestamp=_timestamp(r, "quebec_demand", lang), demand_mw=_value(r, field)
+        )
         for r in rows
     ]
     values = [p.demand_mw for p in points if p.demand_mw is not None]
     last = points[-1] if points else None
     return QuebecDemand(
         dataset=dataset,
-        interval="15 minutes" if dataset == "recent" else "hourly average",
+        interval=(
+            _say("15 minutes", "15 minutes", lang)
+            if dataset == "recent"
+            else _say("hourly average", "moyenne horaire", lang)
+        ),
         points=points,
         rows_matched=total,
         latest_timestamp=last.timestamp if last else None,
@@ -211,15 +266,32 @@ async def get_demand(
             cached=was_cached,
             schema_name="electricity.QuebecDemand",
             freshness=(
-                "recent: about two local days at 15 minutes, refreshed through the day"
+                _say(
+                    "recent: about two local days at 15 minutes, refreshed through the day",
+                    "recent : environ deux jours locaux aux 15 minutes, mis à jour au cours de "
+                    "la journée",
+                    lang,
+                )
                 if dataset == "recent"
-                else "archive ends 2025-01-01, not kept current"
+                else _say(
+                    "archive ends 2025-01-01, not kept current",
+                    "l'archive se termine le 2025-01-01 et n'est plus mise à jour",
+                    lang,
+                )
             ),
-            coverage="Quebec (Hydro-Quebec system) only",
-            licence=_LICENCE,
+            coverage=_say(
+                "Quebec (Hydro-Quebec system) only",
+                "Québec seulement (réseau d'Hydro-Québec)",
+                lang,
+            ),
+            licence=_licence(lang),
             limits=_limits(
-                f"Rows capped at {limit}; {total} rows matched. Start/end dates are UTC days."
+                f"Rows capped at {limit}; {total} rows matched. Start/end dates are UTC days.",
+                f"Lignes plafonnées à {limit} ; {total} lignes correspondent. Les dates de "
+                "début et de fin sont des jours UTC.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -232,10 +304,9 @@ async def get_generation(
     *,
     lang: str = "en",
 ) -> QuebecGeneration:
-    del lang
-    _check_dataset(dataset)
-    _check_limit(limit)
-    start, end = _range(start_date, end_date)
+    _check_dataset(dataset, lang)
+    _check_limit(limit, lang)
+    start, end = _range(start_date, end_date, lang)
     prefix = "valeurs_" if dataset == "recent" else ""
     dataset_id = constants.QUEBEC_GENERATION_DATASETS[dataset]
     where = _where(start, end, f"{prefix}hydraulique", cutoff=dataset == "recent")
@@ -248,10 +319,11 @@ async def get_generation(
         f"electricity:qc:generation:{dataset}:{where}:{latest}:{limit}",
         _ttl(dataset),
         "quebec_generation",
+        lang,
     )
     points = [
         QuebecGenerationPoint(
-            timestamp=_timestamp(r, "quebec_generation"),
+            timestamp=_timestamp(r, "quebec_generation", lang),
             total_mw=_value(r, f"{prefix}total"),
             hydro_mw=_value(r, f"{prefix}hydraulique"),
             wind_mw=_value(r, f"{prefix}eolien"),
@@ -283,16 +355,32 @@ async def get_generation(
             cached=was_cached,
             schema_name="electricity.QuebecGeneration",
             freshness=(
-                "recent: hourly, about two local days"
+                _say(
+                    "recent: hourly, about two local days",
+                    "recent : horaire, environ deux jours locaux",
+                    lang,
+                )
                 if dataset == "recent"
-                else "archive ends 2026-01-01, not kept current"
+                else _say(
+                    "archive ends 2026-01-01, not kept current",
+                    "l'archive se termine le 2026-01-01 et n'est plus mise à jour",
+                    lang,
+                )
             ),
-            coverage="Hydro-Quebec system generation by source group",
-            licence=_LICENCE,
+            coverage=_say(
+                "Hydro-Quebec system generation by source group",
+                "Production du réseau d'Hydro-Québec par groupe de sources",
+                lang,
+            ),
+            licence=_licence(lang),
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Shares use the mean of the "
-                "returned rows."
+                "returned rows.",
+                f"Lignes plafonnées à {limit} ; {total} lignes correspondent. Les parts "
+                "utilisent la moyenne des lignes renvoyées.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -325,9 +413,8 @@ async def get_trade(
     *,
     lang: str = "en",
 ) -> QuebecTrade:
-    del lang
-    _check_limit(limit)
-    start, end = _range(start_date, end_date)
+    _check_limit(limit, lang)
+    start, end = _range(start_date, end_date, lang)
     where = _where(start, end, None, cutoff=True)
     latest = not (start or end)
     # Extra rows so that dropping the unpublished hours below still fills limit.
@@ -340,6 +427,7 @@ async def get_trade(
         f"electricity:qc:trade:{where}:{latest}:{fetch_limit}",
         constants.QUEBEC_CACHE_TTL_RECENT_SECONDS,
         "quebec_trade",
+        lang,
     )
     rows, unpublished = _drop_unpublished_hours(rows)
     total -= unpublished
@@ -347,7 +435,7 @@ async def get_trade(
         rows = rows[-limit:]
     points = [
         QuebecTradePoint(
-            timestamp=_timestamp(r, "quebec_trade"),
+            timestamp=_timestamp(r, "quebec_trade", lang),
             exports_total_mw=_value(r, "exportations_total"),
             net_exports_mw={
                 m: _value(r, f"exportations_{m}") for m in constants.QUEBEC_TRADE_MARKETS
@@ -371,14 +459,27 @@ async def get_trade(
             url=f"{constants.QUEBEC_DATASETS_URL}/{constants.QUEBEC_TRADE_DATASET}",
             cached=was_cached,
             schema_name="electricity.QuebecTrade",
-            freshness=(
+            freshness=_say(
                 "hourly, about two local days; hours not yet reached, and the latest "
-                "hours whose exports are not yet published (still zero), are excluded"
+                "hours whose exports are not yet published (still zero), are excluded",
+                "horaire, environ deux jours locaux ; les heures pas encore atteintes et les "
+                "dernières heures dont les exportations ne sont pas encore publiées (encore à "
+                "zéro) sont exclues",
+                lang,
             ),
-            coverage="markets: New England, New Brunswick, New York, Ontario; includes wheel-through",
-            licence=_LICENCE,
+            coverage=_say(
+                "markets: New England, New Brunswick, New York, Ontario; includes wheel-through",
+                "marchés : Nouvelle-Angleterre, Nouveau-Brunswick, New York, Ontario ; transit "
+                "compris",
+                lang,
+            ),
+            licence=_licence(lang),
             limits=_limits(
-                f"Rows capped at {limit}; {total} rows matched. Start/end are UTC days."
+                f"Rows capped at {limit}; {total} rows matched. Start/end are UTC days.",
+                f"Lignes plafonnées à {limit} ; {total} lignes correspondent. Les dates de "
+                "début et de fin sont des jours UTC.",
+                lang,
             ),
+            lang=lang,
         ),
     )

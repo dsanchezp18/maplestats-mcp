@@ -27,7 +27,7 @@ _SAMPLE_ATTRIBUTES = {
 }
 
 
-async def test_query_licences_returns_attributes(httpx_mock):
+async def test_query_licences_returns_attributes(httpx_mock, layer_info):
     httpx_mock.add_response(
         url=(
             f"{_LAYER_URL}/query?where=1%3D1&outFields=%2A&f=json"
@@ -41,7 +41,7 @@ async def test_query_licences_returns_attributes(httpx_mock):
     assert result.exceeded_transfer_limit is False
 
 
-async def test_query_licences_where_clause_passed_through(httpx_mock):
+async def test_query_licences_where_clause_passed_through(httpx_mock, layer_info):
     httpx_mock.add_response(
         url=(
             f"{_LAYER_URL}/query?where=LICENSEE+%3D+%27TBayTel%27&outFields=%2A&f=json"
@@ -71,3 +71,77 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
         )
     with pytest.raises(UpstreamError):
         await client.query_licences()
+
+
+# Shaped like the live layer document (2026-10-03): date fields are typed
+# esriFieldTypeDate and editingInfo carries the last data edit.
+_LAYER_INFO = {
+    "name": "Site_Data_Extract_XYTableToPoint",
+    "editingInfo": {
+        "lastEditDate": 1707507567952,
+        "schemaLastEditDate": 1707507567952,
+        "dataLastEditDate": 1707410524029,
+    },
+    "fields": [
+        {"name": "OBJECTID", "type": "esriFieldTypeOID"},
+        {"name": "SERVICE", "type": "esriFieldTypeString"},
+        {"name": "LAST_MOD_DATE", "type": "esriFieldTypeDate"},
+        {"name": "LAST_UPLOAD_DATE", "type": "esriFieldTypeDate"},
+    ],
+}
+
+
+@pytest.fixture
+def layer_info(httpx_mock):
+    httpx_mock.add_response(url=f"{_LAYER_URL}?f=json", json=_LAYER_INFO, is_reusable=True)
+
+
+async def test_date_fields_become_iso_dates_and_as_of_is_the_last_edit(httpx_mock, layer_info):
+    httpx_mock.add_response(
+        url=(
+            f"{_LAYER_URL}/query?where=PROV%3D%27AB%27&outFields=%2A&f=json"
+            "&resultRecordCount=1&resultOffset=0&returnGeometry=false"
+        ),
+        json={
+            "features": [
+                {
+                    "attributes": {
+                        **_SAMPLE_ATTRIBUTES,
+                        "SERVICE": "BWA24",
+                        "LAST_MOD_DATE": 1431648000000,
+                        "LAST_UPLOAD_DATE": 1557273600000,
+                    }
+                }
+            ],
+            "exceededTransferLimit": True,
+        },
+    )
+    result = await client.query_licences(where="PROV='AB'", limit=1)
+    row = result.rows[0]
+    assert row["LAST_MOD_DATE"] == "2015-05-15"
+    assert row["LAST_UPLOAD_DATE"] == "2019-05-08"
+    assert row["TRANSMIT_FREQ"] == 887.5
+    assert result.provenance.as_of is not None
+    assert result.provenance.as_of.date().isoformat() == "2024-02-08"
+    assert "no refresh has followed" in (result.provenance.freshness or "")
+
+
+async def test_french_bad_limit_is_french():
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.query_licences(limit=0, lang="fr")
+    assert str(excinfo.value).startswith("Entrée invalide : limit doit être compris")
+
+
+async def test_french_provenance_text_is_french(httpx_mock, layer_info):
+    httpx_mock.add_response(
+        url=(
+            f"{_LAYER_URL}/query?where=1%3D1&outFields=%2A&f=json"
+            "&resultRecordCount=10&resultOffset=0&returnGeometry=false"
+        ),
+        json={"features": [{"attributes": _SAMPLE_ATTRIBUTES}], "exceededTransferLimit": False},
+    )
+    result = await client.query_licences(lang="fr")
+    assert (result.provenance.coverage or "").startswith("environ 840 000 fiches")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("lignes plafonnées")
+    assert "qu'en anglais ;" in limits

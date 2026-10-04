@@ -86,7 +86,12 @@ def _drug(row: dict[str, Any]) -> ReportDrug:
 
 async def get_report(report_id: int, *, lang: str = "en") -> VigilanceReport:
     if report_id <= 0:
-        raise InvalidInput("report_id must be a positive number, e.g. 950000 or 908853423.")
+        api.fail(
+            InvalidInput,
+            "report_id must be a positive number, e.g. 950000 or 908853423.",
+            "report_id doit être un nombre positif, p. ex. 950000 ou 908853423.",
+            lang,
+        )
 
     async def fetch() -> VigilanceReport:
         by_id = {"id": report_id}
@@ -96,7 +101,12 @@ async def get_report(report_id: int, *, lang: str = "en") -> VigilanceReport:
         )
         rows = [r for r in api.as_list(report) if not api.is_blank(r, "report_id")]
         if not rows:
-            raise NotFound(f"Canada Vigilance has no adverse reaction report {report_id}.")
+            api.fail(
+                NotFound,
+                f"Canada Vigilance has no adverse reaction report {report_id}.",
+                f"Canada Vigilance n'a aucune déclaration d'effet indésirable {report_id}.",
+                lang,
+            )
         r = rows[0]
         index = 1 if lang == "fr" else 0
         return VigilanceReport(
@@ -128,10 +138,10 @@ async def get_report(report_id: int, *, lang: str = "en") -> VigilanceReport:
                 cached=False,
                 schema="VigilanceReport",
                 freshness=constants.API_FRESHNESS,
-                limits=(
-                    "A report records a suspected association, not a confirmed cause; counts of "
-                    "reports are not incidence rates."
-                ),
+                limits=constants.CAUTION,
+                lang=lang,
+                freshness_fr=constants.API_FRESHNESS_FR,
+                limits_fr=constants.CAUTION_FR,
             ),
         )
 
@@ -179,8 +189,21 @@ async def list_codes(*, lang: str = "en") -> VigilanceCodeTables:
             cached=cached,
             schema="VigilanceCodeTables",
             freshness=constants.API_FRESHNESS,
+            lang=lang,
+            freshness_fr=constants.API_FRESHNESS_FR,
         ),
     )
+
+
+def _stop_reason_fr(reason: str | None) -> str:
+    """The extract reader's stop reason ("the 40 MB read ceiling", "the 25 s time limit")."""
+    text = reason or ""
+    number = "".join(ch for ch in text if ch.isdigit())
+    if "time limit" in text:
+        return f"limite de temps de {number} s"
+    if "read ceiling" in text:
+        return f"plafond de lecture de {number} Mo"
+    return text
 
 
 def _as_of(last_modified: str | None) -> datetime | None:
@@ -203,18 +226,36 @@ async def search_reactions(
 ) -> ReactionSearchResult:
     reaction, soc = reaction.strip(), system_organ_class.strip()
     if len(reaction) < 3 and len(soc) < 3:
-        raise InvalidInput(
+        api.fail(
+            InvalidInput,
             "Give at least 3 letters of a reaction term (e.g. 'anaphyla', 'myocarditis') or of "
-            "a system organ class (e.g. 'cardiac')."
+            "a system organ class (e.g. 'cardiac').",
+            "donnez au moins 3 lettres d'un terme de réaction (p. ex. 'anaphyla', "
+            "'myocardite') ou d'une classe de systèmes d'organes (p. ex. 'cardiaque').",
+            lang,
         )
     if not 1 <= limit <= constants.REPORTS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.REPORTS_MAX}.")
+        api.fail(
+            InvalidInput,
+            f"limit must be between 1 and {constants.REPORTS_MAX}.",
+            f"limit doit être compris entre 1 et {constants.REPORTS_MAX}.",
+            lang,
+        )
     if not constants.SCAN_MB_MIN <= max_scan_mb <= constants.SCAN_MB_MAX:
-        raise InvalidInput(
-            f"max_scan_mb must be between {constants.SCAN_MB_MIN} and {constants.SCAN_MB_MAX}."
+        low, high = constants.SCAN_MB_MIN, constants.SCAN_MB_MAX
+        api.fail(
+            InvalidInput,
+            f"max_scan_mb must be between {low} and {high}.",
+            f"max_scan_mb doit être compris entre {low} et {high}.",
+            lang,
         )
     if min_report_id < 0:
-        raise InvalidInput("min_report_id cannot be negative.")
+        api.fail(
+            InvalidInput,
+            "min_report_id cannot be negative.",
+            "min_report_id ne peut pas être négatif.",
+            lang,
+        )
 
     async def fetch() -> ReactionSearchResult:
         matcher = ReactionMatcher(reaction, soc, min_report_id, lang)
@@ -243,13 +284,29 @@ async def search_reactions(
             )
             if part
         )
+        filters_fr = " et ".join(
+            part
+            for part in (
+                f"le terme de réaction contient '{reaction}'" if reaction else "",
+                f"la classe de systèmes d'organes contient '{soc}'" if soc else "",
+                f"identifiant de déclaration >= {min_report_id}" if min_report_id else "",
+            )
+            if part
+        )
         if outcome.complete:
             coverage = f"every reaction row of the extract where {filters}"
+            coverage_fr = f"toutes les lignes de réaction de l'extrait où {filters_fr}"
         else:
             coverage = (
                 f"PARTIAL: reading stopped at {outcome.stop_reason} after {scanned_mb} MB, at "
                 f"report id {matcher.newest_report_id}; newer reports were not searched. Raise "
                 "max_scan_mb (up to 150) for the whole file."
+            )
+            coverage_fr = (
+                f"PARTIEL : lecture arrêtée ({_stop_reason_fr(outcome.stop_reason)}) après "
+                f"{scanned_mb} Mo, à l'identifiant de déclaration {matcher.newest_report_id} ; "
+                "les déclarations plus récentes n'ont pas été cherchées. Augmentez max_scan_mb "
+                "(jusqu'à 150) pour lire tout le fichier."
             )
         return ReactionSearchResult(
             reports=reports,
@@ -275,12 +332,23 @@ async def search_reactions(
                     "hc_vigilance_get_report. A report records a suspected association, not a "
                     "confirmed cause; counts of reports are not incidence rates."
                 ),
+                lang=lang,
+                freshness_fr=constants.EXTRACT_FRESHNESS_FR,
+                coverage_fr=coverage_fr,
+                limits_fr=(
+                    f"ne lit que le fichier des réactions de l'extrait, jusqu'à {max_scan_mb} Mo "
+                    "compressés ; les dates, les produits et les patients de chaque "
+                    "déclaration viennent de hc_vigilance_get_report. " + constants.CAUTION_FR
+                ),
             ),
         )
 
     key = f"hc_vigilance:scan:{reaction.casefold()}:{soc.casefold()}:{min_report_id}:{lang}:{max_scan_mb}"
     result, cached = await cached_fetch(key, constants.SCAN_TTL_SECONDS, fetch)
-    if not result.complete and "time limit" in (result.provenance.coverage or ""):
+    coverage_text = result.provenance.coverage or ""
+    if not result.complete and (
+        "time limit" in coverage_text or "limite de temps" in coverage_text
+    ):
         # A slow read is not a property of the query; let the next call retry.
         forget(key)
     if cached:

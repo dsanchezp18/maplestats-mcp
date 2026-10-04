@@ -17,7 +17,7 @@ import re
 import unicodedata
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, NoReturn
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import httpx
@@ -41,10 +41,11 @@ from maplestats_mcp.modules.eccc_datamart.schemas import (
 from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared import file_tables as tables
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import check_deadline, run_parse
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -89,19 +90,19 @@ NOTES = {
         "fr": "Les tableaux annuels par installation existent pour {years}. Les années "
         "antérieures (depuis 1993) ne figurent que dans les fichiers en vrac toutes années "
         "({bulk} : le fichier des rejets fait environ 375 Mo) et une base de données ZIP de "
-        "175 Mo, trop volumineux pour ce lecteur; les télécharger depuis le catalogue.",
+        "175 Mo, trop volumineux pour ce lecteur ; les télécharger depuis le catalogue.",
     },
     "npri_units": {
         "en": "Quantities are in the row's units (tonnes, kg, grams, or g TEQ for dioxins "
         "and furans); compare rows only within one substance.",
         "fr": "Les quantités sont dans les unités de la ligne (tonnes, kg, grammes ou g ÉQT "
-        "pour les dioxines et furannes); ne comparer que des lignes d'une même substance.",
+        "pour les dioxines et furannes) ; ne comparer que des lignes d'une même substance.",
     },
     "npri_largest": {
         "en": "order=largest ranks by grand total converted to tonnes (kg and grams "
         "converted; g TEQ rows last).",
         "fr": "order=largest classe selon le total général converti en tonnes (kg et "
-        "grammes convertis; lignes en g ÉQT à la fin).",
+        "grammes convertis ; lignes en g ÉQT à la fin).",
     },
     "ghgrp_gwp": {
         "en": "CO2e uses the global warming potentials of the IPCC Fifth Assessment Report "
@@ -119,23 +120,61 @@ NOTES = {
         "those columns are left out here. eccc_datamart_read_file returns the file as "
         "published.",
         "fr": "Le fichier donne aussi le responsable des renseignements au public de chaque "
-        "installation (nom, téléphone, courriel); ces colonnes sont omises ici. "
+        "installation (nom, téléphone, courriel) ; ces colonnes sont omises ici. "
         "eccc_datamart_read_file renvoie le fichier tel que publié.",
     },
 }
 
 
+def _note(key: str, lang: Lang, **kwargs: Any) -> str:
+    text = NOTES[key][lang].format(**kwargs)
+    return french_spacing(text) if lang == "fr" else text
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str = "en") -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _pick(en: str | None, fr: str | None, lang: Lang) -> str | None:
+    if lang != "fr":
+        return en
+    return french_spacing(fr) if fr else fr
+
+
+def _attribution(lang: Lang) -> str:
+    return constants.OGL_ATTRIBUTION_FR if lang == "fr" else constants.OGL_ATTRIBUTION
+
+
+def _licence(lang: Lang) -> str:
+    return french_spacing(constants.LICENCE_TEXT_FR) if lang == "fr" else constants.LICENCE_TEXT
+
+
+def _undocumented(lang: Lang) -> str:
+    return (
+        french_spacing(constants.UNDOCUMENTED_NOTE_FR)
+        if lang == "fr"
+        else constants.UNDOCUMENTED_NOTE
+    )
+
+
 # --- paths and listings -----------------------------------------------------------
 
 
-def normalize_path(raw: str) -> str:
+def normalize_path(raw: str, lang: Lang = "en") -> str:
     """'/a/b' from a path, a catalogue page URL or a file link; InvalidInput otherwise."""
     text = (raw or "").strip()
     if text.lower().startswith(("http://", "https://")):
         parsed = urlparse(text)
         if parsed.hostname != constants.DOMAIN:
-            raise InvalidInput(
-                f"{CTX}: only {constants.DOMAIN} paths are read; got {parsed.hostname!r}."
+            _raise(
+                InvalidInput,
+                f"{CTX}: only {constants.DOMAIN} paths are read; got {parsed.hostname!r}.",
+                f"{CTX} : seuls les chemins de {constants.DOMAIN} sont lus ; "
+                f"reçu {parsed.hostname!r}.",
+                lang,
             )
         if parsed.path.startswith("/api/"):
             text = (parse_qs(parsed.query).get("path") or [""])[0]
@@ -147,7 +186,12 @@ def normalize_path(raw: str) -> str:
             text = unquote(parsed.path)
     parts = [p for p in text.replace("\\", "/").split("/") if p]
     if any(p in (".", "..") for p in parts):
-        raise InvalidInput(f"{CTX}: a path cannot contain '.' or '..' segments.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: a path cannot contain '.' or '..' segments.",
+            f"{CTX} : un chemin ne peut pas contenir de segments '.' ou '..'.",
+            lang,
+        )
     return "/" + "/".join(parts)
 
 
@@ -229,7 +273,7 @@ def parse_entry(raw: dict[str, Any], catalogue_id: str | None, lang: Lang) -> Ca
     )
 
 
-async def _listing(path: str) -> tuple[dict[str, Any], bool]:
+async def _listing(path: str, lang: Lang = "en") -> tuple[dict[str, Any], bool]:
     key = f"{CTX}:listing:{path}"
 
     async def fetch() -> dict[str, Any]:
@@ -237,20 +281,36 @@ async def _listing(path: str) -> tuple[dict[str, Any], bool]:
         try:
             data = await api_get(constants.LISTING_URL, params={"path": path}, timeout=30.0)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(
+            status = exc.response.status_code
+            if status == 404:
+                _raise(
+                    NotFound,
                     f"{CTX}: no folder or file {path!r} in the ECCC Data Catalogue "
-                    "(eccc_datamart_browse lists what exists)."
-                ) from exc
-            raise UpstreamError(
-                f"{CTX}: the catalogue answered HTTP {exc.response.status_code} for {path!r}."
-            ) from exc
+                    "(eccc_datamart_browse lists what exists).",
+                    f"{CTX} : aucun dossier ni fichier {path!r} dans le catalogue de données "
+                    "d'ECCC (eccc_datamart_browse liste ce qui existe).",
+                    lang,
+                )
+            _raise(
+                UpstreamError,
+                f"{CTX}: the catalogue answered HTTP {status} for {path!r}.",
+                f"{CTX} : le catalogue a répondu HTTP {status} pour {path!r}.",
+                lang,
+            )
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                f"{CTX}: the catalogue did not respond for {path!r} ({type(exc).__name__})."
-            ) from exc
+            _raise(
+                UpstreamUnavailable,
+                f"{CTX}: the catalogue did not respond for {path!r} ({type(exc).__name__}).",
+                f"{CTX} : le catalogue n'a pas répondu pour {path!r} ({type(exc).__name__}).",
+                lang,
+            )
         if not isinstance(data, dict) or "path_contents" not in data:
-            raise UpstreamError(f"{CTX}: unexpected listing shape for {path!r}.")
+            _raise(
+                UpstreamError,
+                f"{CTX}: unexpected listing shape for {path!r}.",
+                f"{CTX} : forme de liste inattendue pour {path!r}.",
+                lang,
+            )
         return data
 
     return await cached_fetch(key, constants.CACHE_TTL_LISTING_SECONDS, fetch)
@@ -276,16 +336,18 @@ async def browse(
     offset: int = 0,
     lang: Lang = "en",
 ) -> FolderListing:
-    if not 1 <= limit <= constants.ENTRIES_LIMIT_MAX:
-        raise InvalidInput(f"{CTX}: limit must be 1 to {constants.ENTRIES_LIMIT_MAX}.")
-    if offset < 0:
-        raise InvalidInput(f"{CTX}: offset must be 0 or more.")
-    folder = normalize_path(path)
-    data, cached = await _listing(folder)
+    _check_limit(limit, constants.ENTRIES_LIMIT_MAX, lang)
+    _check_offset(offset, lang)
+    folder = normalize_path(path, lang)
+    data, cached = await _listing(folder, lang)
     if _is_file_listing(folder, data):
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             f"{CTX}: {folder!r} is a file, not a folder; use eccc_datamart_describe_file or "
-            "eccc_datamart_read_file."
+            "eccc_datamart_read_file.",
+            f"{CTX} : {folder!r} est un fichier, pas un dossier ; utilisez "
+            "eccc_datamart_describe_file ou eccc_datamart_read_file.",
+            lang,
         )
     catalogue_id = data.get("path_catalogue_id") or None
     entries = [parse_entry(e, catalogue_id, lang) for e in list_or_empty(data, "path_contents")]
@@ -306,20 +368,30 @@ async def browse(
         total_entries=len(entries),
         offset=offset,
         truncated=offset + len(page) < len(entries),
-        attribution=constants.OGL_ATTRIBUTION,
+        attribution=_attribution(lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=f"{constants.LISTING_URL}?path={quote(folder, safe='/')}",
             cached=cached,
             schema_name="eccc_datamart.FolderListing",
-            freshness="Listing cached for six hours; modified dates are the catalogue's.",
-            coverage=constants.UNDOCUMENTED_NOTE,
+            freshness=_pick(
+                "Listing cached for six hours; modified dates are the catalogue's.",
+                "Liste mise en cache six heures ; les dates de modification sont celles du "
+                "catalogue.",
+                lang,
+            ),
+            coverage=_undocumented(lang),
             limits=(
-                f"Showing entries {offset + 1} to {offset + len(page)} of {len(entries)}."
+                _pick(
+                    f"Showing entries {offset + 1} to {offset + len(page)} of {len(entries)}.",
+                    f"Entrées {offset + 1} à {offset + len(page)} sur {len(entries)}.",
+                    lang,
+                )
                 if offset or offset + len(page) < len(entries)
                 else None
             ),
-            licence=constants.LICENCE_TEXT,
+            licence=_licence(lang),
+            lang=lang,
         ),
     )
 
@@ -420,14 +492,24 @@ async def search(
 ) -> SearchResults:
     terms = fold(query or "").split()
     if not terms:
-        raise InvalidInput(f"{CTX}: query must contain at least one word.")
-    if not 1 <= limit <= constants.SEARCH_LIMIT_MAX:
-        raise InvalidInput(f"{CTX}: limit must be 1 to {constants.SEARCH_LIMIT_MAX}.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: query must contain at least one word.",
+            f"{CTX} : query doit contenir au moins un mot.",
+            lang,
+        )
+    _check_limit(limit, constants.SEARCH_LIMIT_MAX, lang)
     (folders, skipped), cached = await _index()
     topics = sorted({f.path.split("/")[1] for f in folders})
     wanted_topic = topic.strip().strip("/").lower() if topic else None
     if wanted_topic and wanted_topic not in topics:
-        raise InvalidInput(f"{CTX}: topic must be one of {topics}.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: topic must be one of {topics}.",
+            f"{CTX} : topic doit être l'un de {topics} (noms de dossiers du catalogue, en "
+            "anglais).",
+            lang,
+        )
     phrase = " ".join(terms)
     scored = []
     for folder in folders:
@@ -464,14 +546,31 @@ async def search(
             url=constants.LISTING_URL,
             cached=cached,
             schema_name="eccc_datamart.SearchResults",
-            freshness="Folder index rebuilt at most once a day (about 60 listings).",
-            coverage=f"Folder names and bilingual titles down to {constants.INDEX_DEPTH} "
-            "levels (topic / function / dataset); files and deeper folders (year folders, "
-            "sub-datasets) are reached with eccc_datamart_browse. " + constants.UNDOCUMENTED_NOTE,
-            limits=f"Showing {len(hits)} of {len(scored)} matching folders."
+            freshness=_pick(
+                "Folder index rebuilt at most once a day (about 60 listings).",
+                "Index des dossiers reconstruit au plus une fois par jour (environ 60 listes).",
+                lang,
+            ),
+            coverage=_pick(
+                f"Folder names and bilingual titles down to {constants.INDEX_DEPTH} "
+                "levels (topic / function / dataset); files and deeper folders (year folders, "
+                "sub-datasets) are reached with eccc_datamart_browse. "
+                + constants.UNDOCUMENTED_NOTE,
+                f"Noms de dossiers et titres bilingues sur {constants.INDEX_DEPTH} niveaux "
+                "(thème / fonction / jeu de données) ; les fichiers et les dossiers plus "
+                "profonds (dossiers annuels, sous-jeux de données) s'atteignent avec "
+                "eccc_datamart_browse. " + constants.UNDOCUMENTED_NOTE_FR,
+                lang,
+            ),
+            limits=_pick(
+                f"Showing {len(hits)} of {len(scored)} matching folders.",
+                f"{len(hits)} des {len(scored)} dossiers correspondants sont affichés.",
+                lang,
+            )
             if len(scored) > len(hits)
             else None,
-            licence=constants.LICENCE_TEXT,
+            licence=_licence(lang),
+            lang=lang,
         ),
     )
 
@@ -489,40 +588,67 @@ class FileContext:
 
 
 async def _file_context(path: str, lang: Lang) -> FileContext:
-    target = normalize_path(path)
+    target = normalize_path(path, lang)
     if target == "/":
-        raise InvalidInput(f"{CTX}: path must name a file.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: path must name a file.",
+            f"{CTX} : path doit désigner un fichier.",
+            lang,
+        )
     folder = target.rsplit("/", 1)[0] or "/"
-    data, _ = await _listing(folder)
+    data, _ = await _listing(folder, lang)
     catalogue_id = data.get("path_catalogue_id") or None
     siblings = [parse_entry(e, catalogue_id, lang) for e in list_or_empty(data, "path_contents")]
     entry = next((e for e in siblings if e.path == target), None)
     if entry is None:
-        raise NotFound(
+        _raise(
+            NotFound,
             f"{CTX}: no file {target!r}; eccc_datamart_browse with path={folder!r} lists "
-            "the folder."
+            "the folder.",
+            f"{CTX} : aucun fichier {target!r} ; eccc_datamart_browse avec path={folder!r} "
+            "liste le dossier.",
+            lang,
         )
     if entry.kind == "folder":
-        raise InvalidInput(f"{CTX}: {target!r} is a folder; use eccc_datamart_browse.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: {target!r} is a folder; use eccc_datamart_browse.",
+            f"{CTX} : {target!r} est un dossier ; utilisez eccc_datamart_browse.",
+            lang,
+        )
     return FileContext(target, entry, siblings, catalogue_id, folder)
 
 
-def _check_readable(entry: CatalogueEntry) -> None:
+def _check_readable(entry: CatalogueEntry, lang: Lang = "en") -> None:
     url = entry.file_url
     if entry.kind == "archive":
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             f"{CTX}: {entry.name} is a ZIP or other archive ({entry.size}); this reader does "
-            f"not open archives. Download it from {url}."
+            f"not open archives. Download it from {url}.",
+            f"{CTX} : {entry.name} est une archive ZIP ou autre ({entry.size}) ; ce lecteur "
+            f"n'ouvre pas les archives. Téléchargez-la depuis {url}.",
+            lang,
         )
     if _suffix(entry.name) not in constants.READABLE_SUFFIXES:
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             f"{CTX}: {entry.name} is not a CSV, TSV, TXT or Excel table, so it is not read "
-            f"here. Download it from {url}."
+            f"here. Download it from {url}.",
+            f"{CTX} : {entry.name} n'est pas un tableau CSV, TSV, TXT ou Excel ; il n'est "
+            f"donc pas lu ici. Téléchargez-le depuis {url}.",
+            lang,
         )
     if _surely_too_big(entry.size):
-        raise InvalidInput(
+        cap = constants.MAX_FILE_BYTES // (1024 * 1024)
+        _raise(
+            InvalidInput,
             f"{CTX}: {entry.name} is {entry.size}, above this reader's "
-            f"{constants.MAX_FILE_BYTES // (1024 * 1024)} MB cap. Download it from {url}."
+            f"{cap} MB cap. Download it from {url}.",
+            f"{CTX} : {entry.name} fait {entry.size}, au-delà du plafond de {cap} Mo de ce "
+            f"lecteur. Téléchargez-le depuis {url}.",
+            lang,
         )
 
 
@@ -582,13 +708,17 @@ async def _documentation(ctx: FileContext) -> list[DocumentationFile]:
     return docs
 
 
-def _freshness(entry: CatalogueEntry) -> str:
+def _freshness(entry: CatalogueEntry, lang: Lang = "en") -> str:
+    if lang == "fr":
+        return french_spacing(
+            f"Tel que publié par ECCC ; fichier modifié le {entry.modified or 'date non indiquée'}."
+        )
     return f"As published by ECCC; file modified {entry.modified or 'date not stated'}."
 
 
 async def describe_file(path: str, sheet: str | None = None, lang: Lang = "en") -> FileStructure:
     ctx = await _file_context(path, lang)
-    _check_readable(ctx.entry)
+    _check_readable(ctx.entry, lang)
     downloaded, cached = await _body(ctx.path)
     fmt = tables.detect_format(downloaded.body, _suffix(ctx.entry.name).lstrip("."))
     sizes = await run_parse(tables.sheet_sizes, downloaded.body, fmt)
@@ -619,20 +749,26 @@ async def describe_file(path: str, sheet: str | None = None, lang: Lang = "en") 
         total_sheets=total,
         truncated=len(summaries) < (1 if only else total),
         documentation=docs,
-        attribution=constants.OGL_ATTRIBUTION,
+        attribution=_attribution(lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=file_url(ctx.path),
             cached=cached,
             schema_name="eccc_datamart.FileStructure",
-            freshness=_freshness(ctx.entry),
-            coverage=constants.UNDOCUMENTED_NOTE,
+            freshness=_freshness(ctx.entry, lang),
+            coverage=_undocumented(lang),
             limits=(
-                f"Described the first {tables.MAX_DESCRIBED_SHEETS} of {total} sheets."
+                _pick(
+                    f"Described the first {tables.MAX_DESCRIBED_SHEETS} of {total} sheets.",
+                    f"Les {tables.MAX_DESCRIBED_SHEETS} premières feuilles sur {total} sont "
+                    "décrites.",
+                    lang,
+                )
                 if total > tables.MAX_DESCRIBED_SHEETS and not only
                 else None
             ),
-            licence=constants.LICENCE_TEXT,
+            licence=_licence(lang),
+            lang=lang,
         ),
     )
 
@@ -649,22 +785,34 @@ async def read_file(
     offset: int = 0,
     lang: Lang = "en",
 ) -> FileRows:
-    if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"{CTX}: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
-    if offset < 0:
-        raise InvalidInput(f"{CTX}: offset must be 0 or more.")
+    _validate_page(limit, offset, lang)
     if header_row is not None and header_row < 1:
-        raise InvalidInput(f"{CTX}: header_row is 1-based (1 or more).")
+        _raise(
+            InvalidInput,
+            f"{CTX}: header_row is 1-based (1 or more).",
+            f"{CTX} : header_row commence à 1 (1 ou plus).",
+            lang,
+        )
     if not 1 <= header_rows <= 5:
-        raise InvalidInput(f"{CTX}: header_rows must be 1 to 5.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: header_rows must be 1 to 5.",
+            f"{CTX} : header_rows doit être compris entre 1 et 5.",
+            lang,
+        )
     ctx = await _file_context(path, lang)
-    _check_readable(ctx.entry)
+    _check_readable(ctx.entry, lang)
     downloaded, cached = await _body(ctx.path)
     fmt = tables.detect_format(downloaded.body, _suffix(ctx.entry.name).lstrip("."))
     sizes = await run_parse(tables.sheet_sizes, downloaded.body, fmt)
     names = [n for n, _, _ in sizes]
     if not names:
-        raise UpstreamError(f"{CTX}: {ctx.path} has no sheets.")
+        _raise(
+            UpstreamError,
+            f"{CTX}: {ctx.path} has no sheets.",
+            f"{CTX} : {ctx.path} n'a aucune feuille.",
+            lang,
+        )
     chosen, how = tables.choose_sheet(sizes, sheet, fmt, CTX)
 
     def provenance(limits: str | None):
@@ -673,10 +821,11 @@ async def read_file(
             url=file_url(ctx.path),
             cached=cached,
             schema_name="eccc_datamart.FileRows",
-            freshness=_freshness(ctx.entry),
-            coverage=constants.UNDOCUMENTED_NOTE,
+            freshness=_freshness(ctx.entry, lang),
+            coverage=_undocumented(lang),
             limits=limits,
-            licence=constants.LICENCE_TEXT,
+            licence=_licence(lang),
+            lang=lang,
         )
 
     if chosen is None:
@@ -694,10 +843,16 @@ async def read_file(
             total_rows=0,
             offset=offset,
             truncated=False,
-            attribution=constants.OGL_ATTRIBUTION,
+            attribution=_attribution(lang),
             provenance=provenance(
-                f"the workbook has {len(names)} sheets of similar size and none was "
-                "requested, so no rows were read: pass one of `sheets` as `sheet`."
+                _pick(
+                    f"the workbook has {len(names)} sheets of similar size and none was "
+                    "requested, so no rows were read: pass one of `sheets` as `sheet`.",
+                    f"le classeur compte {len(names)} feuilles de taille semblable et aucune "
+                    "n'a été demandée ; aucune ligne n'a donc été lue : passez l'une des "
+                    "`sheets` comme `sheet`.",
+                    lang,
+                )
             ),
         )
     result = await run_parse(
@@ -714,14 +869,25 @@ async def read_file(
         limit=limit,
     )
     more = offset + limit < result.total_rows
-    notes = []
+    notes: list[str] = []
     if how == "largest":
-        notes.append(f"no sheet was requested, so the largest ({chosen!r}) was read")
-    if result.capped:
-        notes.append(f"the file was scanned only up to {tables.MAX_SCAN_ROWS} rows")
-    if more:
         notes.append(
-            f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}"
+            f"no sheet was requested, so the largest ({chosen!r}) was read"
+            if lang != "fr"
+            else f"aucune feuille demandée : la plus grande ({chosen!r}) a été lue"
+        )
+    if result.capped:
+        notes.append(
+            f"the file was scanned only up to {tables.MAX_SCAN_ROWS} rows"
+            if lang != "fr"
+            else f"le fichier n'a été parcouru que jusqu'à {tables.MAX_SCAN_ROWS} lignes"
+        )
+    if more:
+        last = offset + len(result.rows)
+        notes.append(
+            f"showing rows {offset + 1} to {last} of {result.total_rows}"
+            if lang != "fr"
+            else f"lignes {offset + 1} à {last} sur {result.total_rows}"
         )
     return FileRows(
         path=ctx.path,
@@ -737,23 +903,29 @@ async def read_file(
         total_rows=result.total_rows,
         offset=offset,
         truncated=more or result.capped,
-        attribution=constants.OGL_ATTRIBUTION,
-        provenance=provenance("; ".join(notes) or None),
+        attribution=_attribution(lang),
+        provenance=provenance(
+            (french_spacing(" ; ".join(notes)) if lang == "fr" else "; ".join(notes)) or None
+        ),
     )
 
 
 # --- NPRI and GHGRP lookups --------------------------------------------------------
 
 
-def province_code(value: str | None) -> str | None:
+def province_code(value: str | None, lang: Lang = "en") -> str | None:
     if value is None or not value.strip():
         return None
     wanted = fold(value)
     for code, (en, fr) in PROVINCES.items():
         if wanted in (code.lower(), fold(en), fold(fr)):
             return code
-    raise InvalidInput(
-        f"{CTX}: unknown province {value!r}; use a two-letter code such as AB or QC, or a name."
+    _raise(
+        InvalidInput,
+        f"{CTX}: unknown province {value!r}; use a two-letter code such as AB or QC, or a name.",
+        f"{CTX} : province inconnue {value!r} ; utilisez un code à deux lettres comme AB ou "
+        "QC, ou un nom.",
+        lang,
     )
 
 
@@ -764,16 +936,23 @@ def _rows(body: bytes) -> Iterator[list[str]]:
         yield row
 
 
-def locate(header: list[str], rules: dict[str, str], name: str) -> dict[str, int]:
+def locate(
+    header: list[str], rules: dict[str, str], name: str, lang: Lang = "en"
+) -> dict[str, int]:
     """Column index per field; a rule is a substring of the bilingual header text."""
     folded = [" ".join(h.split()).casefold() for h in header]
     found: dict[str, int] = {}
     for field, needle in rules.items():
         index = next((i for i, h in enumerate(folded) if needle in h), None)
         if index is None:
-            raise UpstreamError(
+            _raise(
+                UpstreamError,
                 f"{CTX}: the {name} file has no column matching {needle!r}; its layout "
-                "changed. eccc_datamart_describe_file shows the current columns."
+                "changed. eccc_datamart_describe_file shows the current columns.",
+                f"{CTX} : le fichier {name} n'a aucune colonne correspondant à {needle!r} ; "
+                "sa structure a changé. eccc_datamart_describe_file montre les colonnes "
+                "actuelles.",
+                lang,
             )
         found[field] = index
     return found
@@ -878,8 +1057,13 @@ def scan_npri(
     rows = _rows(body)
     header = next(rows, None)
     if not header:
-        raise UpstreamError(f"{CTX}: the NPRI file is empty.")
-    col = locate(header, NPRI_COLUMNS, "NPRI")
+        _raise(
+            UpstreamError,
+            f"{CTX}: the NPRI file is empty.",
+            f"{CTX} : le fichier de l'INRP est vide.",
+            lang,
+        )
+    col = locate(header, NPRI_COLUMNS, "NPRI", lang)
     want_facility, want_company = _prepare(facility), _prepare(company)
     want_substance = _prepare(substance)
     cas = substance.strip() if substance else None
@@ -946,19 +1130,42 @@ def scan_npri(
     return records, len(matched), facilities
 
 
-def _validate_page(limit: int, offset: int) -> None:
-    if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"{CTX}: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+def _check_limit(limit: int, maximum: int, lang: Lang = "en") -> None:
+    if not 1 <= limit <= maximum:
+        _raise(
+            InvalidInput,
+            f"{CTX}: limit must be 1 to {maximum}.",
+            f"{CTX} : limit doit être compris entre 1 et {maximum}.",
+            lang,
+        )
+
+
+def _check_offset(offset: int, lang: Lang = "en") -> None:
     if offset < 0:
-        raise InvalidInput(f"{CTX}: offset must be 0 or more.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: offset must be 0 or more.",
+            f"{CTX} : offset doit être 0 ou plus.",
+            lang,
+        )
 
 
-def _digits(value: str | None, field: str) -> str | None:
+def _validate_page(limit: int, offset: int, lang: Lang = "en") -> None:
+    _check_limit(limit, constants.ROWS_LIMIT_MAX, lang)
+    _check_offset(offset, lang)
+
+
+def _digits(value: str | None, field: str, lang: Lang = "en") -> str | None:
     if value is None or not str(value).strip():
         return None
     text = str(value).strip()
     if not text.isdigit():
-        raise InvalidInput(f"{CTX}: {field} must be digits; got {value!r}.")
+        _raise(
+            InvalidInput,
+            f"{CTX}: {field} must be digits; got {value!r}.",
+            f"{CTX} : {field} ne doit contenir que des chiffres ; reçu {value!r}.",
+            lang,
+        )
     return text
 
 
@@ -975,25 +1182,35 @@ async def npri_facilities(
     offset: int = 0,
     lang: Lang = "en",
 ) -> NpriResult:
-    _validate_page(limit, offset)
-    code = province_code(province)
-    naics_code = _digits(naics, "naics")
-    facility_id = _digits(npri_id, "npri_id")
-    data, _ = await _listing(constants.NPRI_FOLDER)
+    _validate_page(limit, offset, lang)
+    code = province_code(province, lang)
+    naics_code = _digits(naics, "naics", lang)
+    facility_id = _digits(npri_id, "npri_id", lang)
+    data, _ = await _listing(constants.NPRI_FOLDER, lang)
     files: dict[int, CatalogueEntry] = {}
     for raw in list_or_empty(data, "path_contents"):
         match = _NPRI_FILE.match(str(raw.get("name") or ""))
         if match:
             files[int(match["year"])] = parse_entry(raw, None, lang)
     if not files:
-        raise UpstreamError(f"{CTX}: no NPRI single-year CSV found in {constants.NPRI_FOLDER}.")
+        _raise(
+            UpstreamError,
+            f"{CTX}: no NPRI single-year CSV found in {constants.NPRI_FOLDER}.",
+            f"{CTX} : aucun CSV annuel de l'INRP dans {constants.NPRI_FOLDER}.",
+            lang,
+        )
     years = sorted(files)
     chosen_year = year if year is not None else years[-1]
-    years_note = NOTES["npri_years"][lang].format(
-        years=f"{years[0]}-{years[-1]}", bulk=constants.NPRI_BULK_FOLDER
+    years_note = _note(
+        "npri_years", lang, years=f"{years[0]}-{years[-1]}", bulk=constants.NPRI_BULK_FOLDER
     )
     if chosen_year not in files:
-        raise InvalidInput(f"{CTX}: no NPRI single-year table for {chosen_year}. {years_note}")
+        _raise(
+            InvalidInput,
+            f"{CTX}: no NPRI single-year table for {chosen_year}. {years_note}",
+            f"{CTX} : aucun tableau annuel de l'INRP pour {chosen_year}. {years_note}",
+            lang,
+        )
     entry = files[chosen_year]
     downloaded, cached = await _body(entry.path)
     records, total, facilities = await run_parse(
@@ -1010,9 +1227,9 @@ async def npri_facilities(
         offset=offset,
         limit=limit,
     )
-    notes = [NOTES["npri_units"][lang], years_note]
+    notes = [_note("npri_units", lang), years_note]
     if order == "largest":
-        notes.insert(0, NOTES["npri_largest"][lang])
+        notes.insert(0, _note("npri_largest", lang))
     more = offset + len(records) < total
     return NpriResult(
         year=chosen_year,
@@ -1025,20 +1242,35 @@ async def npri_facilities(
         offset=offset,
         truncated=more,
         notes=notes,
-        attribution=constants.OGL_ATTRIBUTION,
+        attribution=_attribution(lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=file_url(entry.path),
             cached=cached,
             schema_name="eccc_datamart.NpriResult",
-            freshness=f"NPRI single-year table, file modified {entry.modified}; ECCC "
-            "revises past years when facilities correct reports.",
-            coverage="One row per facility and substance reported to the National Pollutant "
-            "Release Inventory. " + constants.UNDOCUMENTED_NOTE,
-            limits=f"Showing records {offset + 1} to {offset + len(records)} of {total}."
+            freshness=_pick(
+                f"NPRI single-year table, file modified {entry.modified}; ECCC "
+                "revises past years when facilities correct reports.",
+                f"Tableau annuel de l'INRP, fichier modifié le {entry.modified} ; ECCC révise "
+                "les années passées quand les installations corrigent leurs déclarations.",
+                lang,
+            ),
+            coverage=_pick(
+                "One row per facility and substance reported to the National Pollutant "
+                "Release Inventory. " + constants.UNDOCUMENTED_NOTE,
+                "Une ligne par installation et par substance déclarée à l'Inventaire national "
+                "des rejets de polluants. " + constants.UNDOCUMENTED_NOTE_FR,
+                lang,
+            ),
+            limits=_pick(
+                f"Showing records {offset + 1} to {offset + len(records)} of {total}.",
+                f"Enregistrements {offset + 1} à {offset + len(records)} sur {total}.",
+                lang,
+            )
             if more or offset
             else None,
-            licence=constants.LICENCE_TEXT,
+            licence=_licence(lang),
+            lang=lang,
         ),
     )
 
@@ -1061,8 +1293,13 @@ def scan_ghgrp(
     rows = _rows(body)
     header = next(rows, None)
     if not header:
-        raise UpstreamError(f"{CTX}: the GHGRP file is empty.")
-    col = locate(header, GHGRP_COLUMNS, "GHGRP")
+        _raise(
+            UpstreamError,
+            f"{CTX}: the GHGRP file is empty.",
+            f"{CTX} : le fichier du PDGES est vide.",
+            lang,
+        )
+    col = locate(header, GHGRP_COLUMNS, "GHGRP", lang)
     want_facility, want_company = _prepare(facility), _prepare(company)
     province_name = fold(PROVINCES[province][0]) if province else None
     all_years: set[int] = set()
@@ -1141,15 +1378,25 @@ async def ghgrp_facilities(
     offset: int = 0,
     lang: Lang = "en",
 ) -> GhgrpResult:
-    _validate_page(limit, offset)
+    _validate_page(limit, offset, lang)
     if year_to is not None and year is None:
-        raise InvalidInput(f"{CTX}: year_to needs year (the start of the range).")
+        _raise(
+            InvalidInput,
+            f"{CTX}: year_to needs year (the start of the range).",
+            f"{CTX} : year_to exige year (le début de la période).",
+            lang,
+        )
     span = None if year is None else (year, year_to if year_to is not None else year)
     if span and span[1] < span[0]:
-        raise InvalidInput(f"{CTX}: year_to must not be before year.")
-    code = province_code(province)
+        _raise(
+            InvalidInput,
+            f"{CTX}: year_to must not be before year.",
+            f"{CTX} : year_to ne doit pas précéder year.",
+            lang,
+        )
+    code = province_code(province, lang)
     gid = ghgrp_id.strip().upper() if ghgrp_id and ghgrp_id.strip() else None
-    data, _ = await _listing(constants.GHGRP_FOLDER)
+    data, _ = await _listing(constants.GHGRP_FOLDER, lang)
     entry = next(
         (
             parse_entry(raw, None, lang)
@@ -1159,7 +1406,12 @@ async def ghgrp_facilities(
         None,
     )
     if entry is None:
-        raise UpstreamError(f"{CTX}: no GHGRP emissions CSV found in {constants.GHGRP_FOLDER}.")
+        _raise(
+            UpstreamError,
+            f"{CTX}: no GHGRP emissions CSV found in {constants.GHGRP_FOLDER}.",
+            f"{CTX} : aucun CSV des émissions du PDGES dans {constants.GHGRP_FOLDER}.",
+            lang,
+        )
     downloaded, cached = await _body(entry.path)
     records, total, facilities, total_sum, years = await run_parse(
         scan_ghgrp,
@@ -1169,16 +1421,20 @@ async def ghgrp_facilities(
         facility=facility,
         company=company,
         province=code,
-        naics=_digits(naics, "naics"),
+        naics=_digits(naics, "naics", lang),
         ghgrp_id=gid,
-        npri_id=_digits(npri_id, "npri_id"),
+        npri_id=_digits(npri_id, "npri_id", lang),
         order=order,
         offset=offset,
         limit=limit,
     )
     if span and years and (span[1] < years[0] or span[0] > years[-1]):
-        raise InvalidInput(
-            f"{CTX}: the GHGRP file covers {years[0]}-{years[-1]}; got {span[0]}-{span[1]}."
+        _raise(
+            InvalidInput,
+            f"{CTX}: the GHGRP file covers {years[0]}-{years[-1]}; got {span[0]}-{span[1]}.",
+            f"{CTX} : le fichier du PDGES couvre {years[0]}-{years[-1]} ; période demandée : "
+            f"{span[0]}-{span[1]}.",
+            lang,
         )
     more = offset + len(records) < total
     return GhgrpResult(
@@ -1192,21 +1448,37 @@ async def ghgrp_facilities(
         total_co2e_sum=total_sum,
         offset=offset,
         truncated=more,
-        notes=[NOTES["ghgrp_gwp"][lang], NOTES["ghgrp_contacts"][lang]],
-        attribution=constants.OGL_ATTRIBUTION,
+        notes=[_note("ghgrp_gwp", lang), _note("ghgrp_contacts", lang)],
+        attribution=_attribution(lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=file_url(entry.path),
             cached=cached,
             schema_name="eccc_datamart.GhgrpResult",
-            freshness=f"Greenhouse Gas Reporting Program facility file, modified "
-            f"{entry.modified}; updated once a year with the new reference year and "
-            "revisions to past years.",
-            coverage="One row per facility and reference year, emissions by gas. "
-            + constants.UNDOCUMENTED_NOTE,
-            limits=f"Showing records {offset + 1} to {offset + len(records)} of {total}."
+            freshness=_pick(
+                f"Greenhouse Gas Reporting Program facility file, modified "
+                f"{entry.modified}; updated once a year with the new reference year and "
+                "revisions to past years.",
+                f"Fichier des installations du Programme de déclaration des gaz à effet de "
+                f"serre, modifié le {entry.modified} ; mis à jour une fois par an avec la "
+                "nouvelle année de référence et les révisions des années passées.",
+                lang,
+            ),
+            coverage=_pick(
+                "One row per facility and reference year, emissions by gas. "
+                + constants.UNDOCUMENTED_NOTE,
+                "Une ligne par installation et par année de référence, émissions par gaz. "
+                + constants.UNDOCUMENTED_NOTE_FR,
+                lang,
+            ),
+            limits=_pick(
+                f"Showing records {offset + 1} to {offset + len(records)} of {total}.",
+                f"Enregistrements {offset + 1} à {offset + len(records)} sur {total}.",
+                lang,
+            )
             if more or offset
             else None,
-            licence=constants.LICENCE_TEXT,
+            licence=_licence(lang),
+            lang=lang,
         ),
     )

@@ -24,11 +24,6 @@ async def _error_text(name: str, arguments: dict, *, via_call_tool: bool) -> str
 @pytest.mark.parametrize(
     ("name", "arguments", "expected"),
     [
-        (
-            "elections_provincial_get_results",
-            {"province": "QC"},
-            "province must be one of 'qc', 'ab', 'bc', 'sk' or 'mb' (got 'QC')",
-        ),
         ("pmprb_search_patented_medicines", {"year": 2019}, "year must be one of"),
         ("fcac_search_credit_cards", {"province": "ZZ"}, "(got 'ZZ')"),
         (
@@ -59,7 +54,7 @@ async def test_french_call_gets_a_french_message():
     text = await _error_text(
         "fcac_search_credit_cards", {"province": "ZZ", "lang": "fr"}, via_call_tool=False
     )
-    assert text.startswith("Entrée invalide : fcac_search_credit_cards : province doit valoir")
+    assert text.startswith("Entrée invalide : fcac_search_credit_cards : province doit valoir")
     assert "(reçu 'ZZ')" in text
 
 

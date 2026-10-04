@@ -122,6 +122,10 @@ async def test_unknown_npn_is_not_found(httpx_mock):
         await lnhpd.get_product("99999999")
     with pytest.raises(InvalidInput):
         await lnhpd.get_product("abc")
+    with pytest.raises(InvalidInput, match="n'est pas un NPN : donnez le numéro"):
+        await lnhpd.get_product("abc", lang="fr")
+    with pytest.raises(InvalidInput, match="au moins 3 caractères"):
+        await lnhpd.search_products("ab", lang="fr")
 
 
 def _device_licence(number, name, company_id, end=None, status="I", risk=3):
@@ -161,6 +165,10 @@ async def test_licence_search_by_company_and_state(httpx_mock):
     assert [lic.licence_number for lic in result.licences] == [1561]
     assert result.licences[0].status == "Abandonnée au renouvellement"
     assert result.licences[0].licence_type == "Système"
+    assert "l'entreprise contient 'biodex'" in (result.provenance.coverage or "")
+    assert (result.provenance.freshness or "") == "LIMH, mise à jour chaque jour par Santé Canada"
+    with pytest.raises(InvalidInput, match="les instruments de classe I"):
+        await mdall.search_licences(company="biodex", risk_class=1, lang="fr")
     active = await mdall.search_licences(company="biodex")
     assert active.total_matched == 0
 

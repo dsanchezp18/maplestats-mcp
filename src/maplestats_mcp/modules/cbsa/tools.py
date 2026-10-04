@@ -36,9 +36,10 @@ async def cbsa_border_wait_times(
     Keywords: border wait times, border crossing delay, CBSA, Canada US
     border, Peace Bridge wait, Ambassador Bridge, Lacolle, Pacific Highway,
     border lineup, crossing into the United States.
-    Mots-clés : temps d'attente à la frontière, ASFC, poste frontalier,
-    frontière canado-américaine, délai à la douane, file d'attente
-    frontière, pont Ambassador, Lacolle, traverser aux États-Unis.
+    Mots-clés : temps d'attente à la frontière, Agence des services
+    frontaliers du Canada (ASFC), poste frontalier, frontière
+    canado-américaine, délai à la douane, file d'attente à la frontière,
+    pont Ambassador, Lacolle, traverser aux États-Unis.
     """
     return await client.border_wait_times(
         province=province, crossing=crossing, direction=direction, lang=lang

@@ -98,6 +98,19 @@ async def test_production_filters(httpx_mock):
         await client.get_production(province="Atlantis")
 
 
+async def test_french_provenance_notes_and_errors(httpx_mock):
+    _mock(httpx_mock, 2025)
+    result = await client.get_production(commodity="gold", lang="fr")
+    assert (result.provenance.freshness or "").startswith("annuelle : une estimation")
+    assert "lignes dans le fichier 2025" in (result.provenance.coverage or "")
+    assert "anglais seulement" in (result.provenance.limits or "")
+    assert (result.provenance.licence or "").startswith("Avis de Ressources naturelles Canada")
+    with pytest.raises(InvalidInput, match="province inconnue"):
+        await client.get_production(province="Atlantis", lang="fr")
+    with pytest.raises(NotFound, match="^Aucune correspondance trouvée : nrcan_minerals"):
+        await client.get_production(1989, lang="fr")
+
+
 async def test_series_across_layouts(httpx_mock):
     _mock(httpx_mock, 2018, 2019, 2025)
     gold = await client.get_series("gold", category="quantity_shipped")

@@ -18,7 +18,7 @@ from maplestats_mcp.modules.crea.schemas import CreaHpiLinks, CreaPage, OpenAlte
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.http import new_client, send_with_retry
-from maplestats_mcp.shared.i18n import normalize_lang
+from maplestats_mcp.shared.i18n import french_spacing, normalize_lang
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -132,7 +132,7 @@ _ALTERNATIVES = {
             name="Indice des prix des logements neufs de Statistique Canada",
             measure=(
                 "Prix de vente demandés par les entrepreneurs pour des maisons neuves "
-                "unifamiliales aux caractéristiques identiques, mensuel par RMR; pas des "
+                "unifamiliales aux caractéristiques identiques, mensuel par RMR ; pas des "
                 "prix de revente."
             ),
             tools=["wds_get_cube_metadata", "wds_get_data_from_cube_coord"],
@@ -146,7 +146,7 @@ _ALTERNATIVES = {
             measure=(
                 "Prix de vente payés par les acheteurs de propriétés résidentielles, "
                 "tirés des registres fonciers et d'évaluation, par province ou territoire "
-                "pour des années de référence occasionnelles (2018 à 2024); ni un indice "
+                "pour des années de référence occasionnelles (2018 à 2024) ; ni un indice "
                 "ni une série mensuelle."
             ),
             tools=["wds_get_cube_metadata", "wds_get_full_table_download"],
@@ -170,8 +170,8 @@ _LIMITS = {
     "fr": (
         "Aucune valeur de l'ACI n'est renvoyée et aucun fichier de l'ACI n'est lu. Les "
         "conditions d'utilisation de l'ACI permettent le téléchargement pour une analyse "
-        "privée et non commerciale seulement; publier ou présenter le contenu exige le "
-        "consentement écrit préalable de l'ACI; tout usage commercial est interdit; toute "
+        "privée et non commerciale seulement ; publier ou présenter le contenu exige le "
+        "consentement écrit préalable de l'ACI ; tout usage commercial est interdit ; toute "
         "présentation doit citer l'ACI."
     ),
 }
@@ -235,6 +235,11 @@ async def get_hpi_links(*, lang: str = "en", today: date | None = None) -> CreaH
     size = found["size"]
     last_modified = found["last_modified"]
     hpi_tool = constants.PAGES["hpi_tool"][lang]
+
+    # French text takes no-break spaces before its punctuation.
+    def say(text: str) -> str:
+        return french_spacing(text) if lang == "fr" else text
+
     pages = [
         CreaPage(
             key=key,
@@ -251,17 +256,20 @@ async def get_hpi_links(*, lang: str = "en", today: date | None = None) -> CreaH
         zip_size_bytes=size if isinstance(size, int) else None,
         download_from=zip_url if isinstance(zip_url, str) else hpi_tool,
         pages=pages,
-        release_timing=_TIMING[lang],
-        attribution=_ATTRIBUTION[lang],
-        terms_summary=_TERMS[lang],
-        open_alternatives=_ALTERNATIVES[lang],
+        release_timing=say(_TIMING[lang]),
+        attribution=say(_ATTRIBUTION[lang]),
+        terms_summary=[say(term) for term in _TERMS[lang]],
+        open_alternatives=[
+            item.model_copy(update={"name": say(item.name), "measure": say(item.measure)})
+            for item in _ALTERNATIVES[lang]
+        ],
         provenance=make_provenance(
             source=constants.SOURCE,
             url=zip_url if isinstance(zip_url, str) else hpi_tool,
             cached=was_cached,
             schema_name="crea.CreaHpiLinks",
-            freshness=_TIMING[lang],
-            limits=_LIMITS[lang],
+            freshness=say(_TIMING[lang]),
+            limits=say(_LIMITS[lang]),
             licence=f"{_ATTRIBUTION[lang]}. {constants.PAGES['terms'][lang]}",
             lang=lang,
         ),

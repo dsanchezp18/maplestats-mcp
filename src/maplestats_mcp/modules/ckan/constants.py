@@ -66,13 +66,12 @@ class Portal:
     note_fr: str | None = None
     # File reader (ckan_describe_resource / ckan_read_resource). `file_hosts`
     # are exact hosts or "*.suffix" patterns a resource URL and every
-    # redirect target must match. `crawl_delay_seconds` is the portal's
-    # robots.txt Crawl-Delay (checked live 2026-10-02), applied to the
+    # redirect target must match. `request_interval_seconds` paces the
     # resource_show and package_show calls the reader makes; downloads use
     # `download_delay_seconds`. `shared_bucket` reuses another module's
     # bucket so two tools over one site cannot double its pace.
     file_hosts: tuple[str, ...] = ()
-    crawl_delay_seconds: float = 10.0
+    request_interval_seconds: float = 10.0
     download_delay_seconds: float = 1.0
     shared_bucket: str | None = None
     # Set when the file reader must not read this portal's files (the reason is
@@ -109,7 +108,7 @@ PORTALS: dict[str, Portal] = {
             "*.gc.ca",
             "*.canada.ca",
         ),
-        crawl_delay_seconds=20.0,
+        request_interval_seconds=20.0,
     ),
     "on": Portal(
         base_url="https://data.ontario.ca/api/3/action/",
@@ -278,9 +277,9 @@ PORTALS: dict[str, Portal] = {
         ),
         resource_extra_fields=("record_count",),
         file_reader_off_reason=(
-            "Toronto's CKAN host disallows /dataset/*/resource/*/download/* for all crawlers "
-            "in its robots.txt, so this server does not download its files. Rows of resources "
-            "with an active DataStore can be read with ckan_datastore_search."
+            "Toronto's portal does not permit automated file downloads, so this server "
+            "does not download its files. Rows of resources with an active DataStore can be "
+            "read with ckan_datastore_search."
         ),
     ),
     "regina": Portal(
@@ -327,7 +326,7 @@ FILE_CACHE_TTL_SECONDS = 2 * 60 * 60
 FILE_ROWS_DEFAULT = 100
 FILE_ROWS_MAX = 1000
 # Two API calls (resource_show, package_show) make one read; the bucket holds
-# both, then refills at the portal's crawl delay.
+# both, then refills at the portal's request interval.
 RESOLVE_BUCKET_CAPACITY = 2.0
 
 # datastore_search's own cap is far higher (32,000 rows on federal).

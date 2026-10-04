@@ -20,8 +20,8 @@ MODULE_DESCRIPTION = (
 )
 MODULE_DESCRIPTION_FR = (
     "Société canadienne d'hypothèques et de logement (SCHL), via deux "
-    "plateformes distinctes. Le Portail d'information sur le marché du "
-    "logement (PIMH, www03.cmhc-schl.gc.ca/hmip-pimh, outils préfixés "
+    "plateformes distinctes. Le Portail de l'information sur le marché de "
+    "l'habitation (PIMH, www03.cmhc-schl.gc.ca/hmip-pimh, outils préfixés "
     "cmhc_) : taux d'inoccupation et loyers de l'Enquête sur les "
     "logements locatifs, mises en chantier et achèvements de nouveaux "
     "logements, marché locatif secondaire, logements locatifs pour "

@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp.modules.health_products import api
 from maplestats_mcp.modules.health_products.mdall import client
 from maplestats_mcp.modules.health_products.mdall.schemas import (
     DeviceLicenceDetail,
@@ -43,13 +44,16 @@ async def hc_device_search_licences(
     médicaux homologués, classe d'instrument, fabricant, trousse de
     diagnostic, implant, homologation de Santé Canada.
     """
-    return await client.search_licences(
-        name,
-        company=company,
-        active_only=active_only,
-        risk_class=risk_class,
-        limit=limit,
-        lang=lang,
+    return await api.in_lang(
+        lang,
+        client.search_licences(
+            name,
+            company=company,
+            active_only=active_only,
+            risk_class=risk_class,
+            limit=limit,
+            lang=lang,
+        ),
     )
 
 
@@ -65,10 +69,10 @@ async def hc_device_get_licence(licence_number: int, lang: Lang = "en") -> Devic
     model number, catalogue number, manufacturer address, device trade
     name, licence status.
     Mots-clés : numéro d'homologation, homologation d'instrument médical,
-    liste des instruments, numéro de modèle, numéro de catalogue, adresse
-    du fabricant, nom commercial, statut de l'homologation.
+    liste des instruments, numéro de modèle, numéro de catalogue, adresse du
+    fabricant, nom commercial, statut de l'homologation, Santé Canada.
     """
-    return await client.get_licence(licence_number, lang=lang)
+    return await api.in_lang(lang, client.get_licence(licence_number, lang=lang))
 
 
 @tool
@@ -91,8 +95,11 @@ async def hc_device_search_devices(
     product.
     Mots-clés : recherche d'instrument médical, nom commercial, numéro de
     modèle, numéro de catalogue, identifiant d'instrument, homologation,
-    produit étiqueté, appareil médical.
+    produit étiqueté, appareil médical, Santé Canada.
     """
-    return await client.search_devices(
-        name, identifier=identifier, active_only=active_only, limit=limit, lang=lang
+    return await api.in_lang(
+        lang,
+        client.search_devices(
+            name, identifier=identifier, active_only=active_only, limit=limit, lang=lang
+        ),
     )

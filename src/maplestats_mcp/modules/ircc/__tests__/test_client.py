@@ -239,6 +239,48 @@ async def test_invalid_inputs_are_typed():
         await client.get_express_entry_round(" ")
 
 
+async def test_french_errors_are_typed_and_in_french(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide : draw_number doit être"):
+        await client.get_express_entry_round("abc", lang="fr")
+    with pytest.raises(InvalidInput, match="limit doit être entre 1 et"):
+        await client.list_express_entry_rounds(limit=0, lang="fr")
+    httpx_mock.add_response(
+        url=constants.BASE_URL_FR, content=_french_body().encode("utf-8"), is_reusable=True
+    )
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée : ronde d'invitations"):
+        await client.get_express_entry_round("9999", lang="fr")
+
+
+async def test_french_provenance_text(httpx_mock):
+    httpx_mock.add_response(url=constants.BASE_URL_FR, content=_french_body().encode("utf-8"))
+    result = await client.list_express_entry_rounds(lang="fr")
+    assert result.provenance.coverage == (
+        "1 rondes renvoyées sur 1 correspondantes, de la plus récente à la plus "
+        "ancienne, parmi les 1 rondes du fichier"
+    )
+    assert result.provenance.freshness == (
+        "IRCC met à jour le fichier source environ une fois par semaine ; "
+        "MapleStats le garde en cache pendant 6 heures"
+    )
+
+
+async def test_english_provenance_text_unchanged(httpx_mock):
+    httpx_mock.add_response(url=constants.BASE_URL_EN, json=_EN_FEED)
+    result = await client.list_express_entry_rounds()
+    assert result.provenance.coverage == (
+        "2 of 2 matching rounds returned, newest first, out of 2 rounds in the feed"
+    )
+    assert result.provenance.freshness == (
+        "the underlying feed is updated by IRCC roughly weekly; MapleStats caches it for 6 hours"
+    )
+
+
+async def test_malformed_french_feed_error_is_french(httpx_mock):
+    httpx_mock.add_response(url=constants.BASE_URL_FR, text="not json")
+    with pytest.raises(UpstreamError, match="n'a pas la forme documentée"):
+        await client.list_express_entry_rounds(lang="fr")
+
+
 async def test_malformed_feed_is_typed_upstream_error(httpx_mock):
     httpx_mock.add_response(url=constants.BASE_URL_EN, text="not json")
     with pytest.raises(UpstreamError):

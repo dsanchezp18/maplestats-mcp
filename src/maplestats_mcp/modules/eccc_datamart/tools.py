@@ -43,8 +43,8 @@ async def eccc_datamart_browse(
     `lang` picks the display names.
     Keywords: ECCC, Environment Canada, data catalogue, Data Mart, file tree, browse
     folder, NPRI, GHGRP, NAPS, oil sands monitoring, open data files, downloads.
-    Mots-clés : ECCC, Environnement Canada, catalogue de données, arborescence de
-    fichiers, parcourir un dossier, INRP, PDGES, SNPA, surveillance des sables
+    Mots-clés : Environnement et Changement climatique Canada, ECCC, Environnement
+    Canada, catalogue de données, arborescence de fichiers, parcourir un dossier, INRP, PDGES, SNPA, surveillance des sables
     bitumineux, fichiers de données ouvertes, téléchargements.
     """
     return await client.browse(path=path, limit=limit, offset=offset, lang=lang)
@@ -73,7 +73,7 @@ async def eccc_datamart_search(
     emissions, oil sands monitoring, wildlife, contaminants, research data.
     Mots-clés : recherche dans le catalogue de données d'ECCC, trouver un jeu de
     données, données environnementales, polluants, émissions, qualité de l'air, qualité
-    de l'eau, faune, contaminants.
+    de l'eau, faune, contaminants, Environnement et Changement climatique Canada.
     """
     return await client.search(query=query, topic=topic, limit=limit, lang=lang)
 
@@ -94,7 +94,7 @@ async def eccc_datamart_describe_file(
     the error gives their download link. Licence: Open Government Licence - Canada.
     Keywords: ECCC, describe file, columns, header, sheets, CSV, Excel, data
     dictionary, read me, metadata, preview.
-    Mots-clés : ECCC, décrire un fichier, colonnes, en-tête, feuilles, CSV, Excel,
+    Mots-clés : Environnement et Changement climatique Canada, ECCC, décrire un fichier, colonnes, en-tête, feuilles, CSV, Excel,
     dictionnaire de données, lisez-moi, métadonnées, aperçu.
     """
     return await client.describe_file(path=path, sheet=sheet, lang=lang)
@@ -128,7 +128,7 @@ async def eccc_datamart_read_file(
     download link. Licence: Open Government Licence - Canada, attribution included.
     Keywords: ECCC, read file, rows, CSV, Excel, filter, environmental data, emissions
     table, monitoring data, Data Mart.
-    Mots-clés : ECCC, lire un fichier, lignes, CSV, Excel, filtre, données
+    Mots-clés : Environnement et Changement climatique Canada, ECCC, lire un fichier, lignes, CSV, Excel, filtre, données
     environnementales, tableau des émissions, données de surveillance.
     """
     return await client.read_file(
@@ -178,7 +178,8 @@ async def eccc_datamart_npri_facilities(
     polluters.
     Mots-clés : INRP, Inventaire national des rejets de polluants, rejets de polluants,
     émissions des installations, émissions atmosphériques, substances toxiques,
-    éliminations, transferts, pollueurs industriels.
+    éliminations, transferts, pollueurs industriels, Environnement et Changement
+    climatique Canada (ECCC).
     """
     return await client.npri_facilities(
         year=year,
@@ -225,7 +226,8 @@ async def eccc_datamart_ghgrp_facilities(
     methane, carbon dioxide equivalent, climate, industrial emissions, oil sands.
     Mots-clés : PDGES, émissions de gaz à effet de serre, GES par installation, grands
     émetteurs, CO2, méthane, équivalent dioxyde de carbone, climat, émissions
-    industrielles, sables bitumineux.
+    industrielles, sables bitumineux, Programme de déclaration des gaz à effet de
+    serre, Environnement et Changement climatique Canada (ECCC).
     """
     return await client.ghgrp_facilities(
         year=year,

@@ -30,8 +30,10 @@ async def ised_corporations_get_corporation(
     Canada, ISED, ISDE, federal corporation, business number, BN,
     corporate registry, director, annual return, incorporation,
     by-laws, company status.
-    Mots-clés : Corporations Canada, ISDE, société fédérale, numéro
-    d'entreprise, NE, registre des sociétés, administrateur, rapport
-    annuel, incorporation, règlements, statut de l'entreprise.
+    Mots-clés : Corporations Canada, Innovation, Sciences et
+    Développement économique Canada (ISDE), société par actions de régime
+    fédéral, société fédérale, numéro d'entreprise, NE, registre des
+    sociétés, administrateurs, rapport annuel, constitution en société,
+    règlements administratifs, statut de la société.
     """
     return await client.get_corporation(id_or_business_number, lang)

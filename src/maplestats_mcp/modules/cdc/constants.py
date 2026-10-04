@@ -1,9 +1,8 @@
 """Constants for the Canadian Dairy Commission (CDC) module.
 
-Every URL below was fetched live on 2026-09-26. The CDC site
-(cdc-ccl.ca, Drupal 10) has no crawl delay in robots.txt and disallows
-only admin, search and user paths; the AAFC open-data server hosting the
-CDC market data file is the one open.canada.ca links to.
+Every URL below was fetched live on 2026-09-26 from the CDC site
+(cdc-ccl.ca, Drupal 10); the AAFC open-data server hosting the CDC market
+data file is the one open.canada.ca links to.
 """
 
 DOMAIN = "cdc-ccl.ca"

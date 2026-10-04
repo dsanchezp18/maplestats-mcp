@@ -12,7 +12,7 @@ from maplestats_mcp.shared.http import new_client
 async def main() -> int:
     failures = 0
     async with new_client():
-        listing = await client.list_tables()
+        listing = await client.list_tables(limit=200)
         datasets = {t.dataset for t in listing.tables}
         print(f"OK: list_tables -> {listing.total_tables} tables in {len(datasets)} datasets")
         if listing.total_tables < 50 or len(datasets) < 8:

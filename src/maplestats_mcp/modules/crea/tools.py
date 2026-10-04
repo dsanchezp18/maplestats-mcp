@@ -35,8 +35,9 @@ async def crea_get_hpi_links(lang: Lang = "en") -> CreaHpiLinks:
     Keywords: CREA, MLS, home price index, HPI, benchmark price, resale,
     house prices, real estate, home sales, housing market, attribution,
     terms of use.
-    Mots-clés : ACI, MLS, indice des prix des propriétés, IPP, prix de
-    référence, revente, prix des maisons, immobilier, ventes de maisons,
-    marché de l'habitation, courtiers immobiliers, conditions d'utilisation.
+    Mots-clés : Association canadienne de l'immeuble (ACI), MLS, indice des
+    prix des propriétés, IPP, prix de référence, revente, prix des maisons,
+    immobilier, ventes de maisons, marché de l'habitation, courtiers
+    immobiliers, conditions d'utilisation.
     """
     return await client.get_hpi_links(lang=lang)

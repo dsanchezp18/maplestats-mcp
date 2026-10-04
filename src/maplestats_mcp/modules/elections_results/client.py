@@ -95,13 +95,22 @@ def file_url(election: constants.Election, table_number: int) -> str:
     return constants.SITE + election.folder + election.file_pattern.format(n=table_number)
 
 
+def _page_in(lang: Lang, path: str) -> str:
+    """An elections.ca page in the caller's language: the site takes lang=e or lang=f.
+
+    Checked live 2026-10-03: the 45th summary page and the general elections page
+    answer 200 with French titles under lang=f.
+    """
+    return constants.SITE + (path.replace("&lang=e", "&lang=f") if lang == "fr" else path)
+
+
 def list_elections(lang: Lang = "en") -> ElectionList:
     tables = [
         TableInfo(table=name, number=num, description=en if lang == "en" else fr)
         for name, (num, en, fr) in constants.TABLES.items()
     ]
     elections = [
-        ElectionInfo(election=e.number, date=e.date, page=constants.SITE + e.page)
+        ElectionInfo(election=e.number, date=e.date, page=_page_in(lang, e.page))
         for e in constants.ELECTIONS.values()
     ]
     return ElectionList(
@@ -110,7 +119,7 @@ def list_elections(lang: Lang = "en") -> ElectionList:
         not_covered=_NOT_COVERED[lang],
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
-            url=constants.SITE + "/content.aspx?section=ele&dir=pas&document=ge&lang=e",
+            url=_page_in(lang, "/content.aspx?section=ele&dir=pas&document=ge&lang=e"),
             cached=False,
             schema_name="elections_results.ElectionList",
             coverage="General elections 38 to 45 (2004 to 2025).",

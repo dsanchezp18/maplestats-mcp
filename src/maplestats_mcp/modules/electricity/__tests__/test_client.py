@@ -301,3 +301,25 @@ async def test_hoep_history(httpx_mock):
     assert result.months[0].on_peak_weighted == 51.0
     with pytest.raises(InvalidInput):
         await client.get_hoep_history(2026)
+
+
+async def test_french_notes_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BASE}/PriceHOEPAverage/PUB_PriceHOEPAverage_2024.xml", text=_HOEP_XML
+    )
+    hoep = await client.get_hoep_history(2024, lang="fr")
+    assert hoep.note.startswith("Prix horaire de l'énergie en Ontario (PHEO)")
+    assert hoep.provenance.freshness == (
+        "série close ; la dernière année, 2025, est partielle (jusqu'en avril)"
+    )
+    assert (hoep.provenance.limits or "").startswith("Les fichiers de la SIERE n'existent")
+    assert "Société indépendante d'exploitation" in (hoep.provenance.licence or "")
+    httpx_mock.add_response(
+        url=f"{BASE}/IntertieScheduleFlow/PUB_IntertieScheduleFlow.xml", text=_INTERTIE_XML
+    )
+    flows = await client.get_intertie_flows(lang="fr")
+    assert flows.sign_convention.startswith("Un flux réel positif est une exportation")
+    with pytest.raises(InvalidInput, match="^Entrée invalide : l'année du PHEO"):
+        await client.get_hoep_history(2026, lang="fr")
+    with pytest.raises(InvalidInput, match="une seule année par appel"):
+        await client.get_hourly_demand(start_date="2025-12-31", end_date="2026-01-01", lang="fr")

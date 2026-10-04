@@ -69,3 +69,14 @@ MONITOR_TERMS = (
     "purposes with attribution. The same tables are also published as CSV files under the "
     "Open Government Licence - Canada on open.canada.ca ('The Fiscal Monitor: <year>')."
 )
+TERMS_FR = (
+    "Avis de Canada.ca (ministère des Finances Canada) : reproduction à des fins non "
+    "commerciales permise avec attribution et sans laisser entendre une approbation ; la "
+    "reproduction commerciale exige une autorisation écrite."
+)
+MONITOR_TERMS_FR = (
+    "Avis de Canada.ca (ministère des Finances Canada) : reproduction à des fins non "
+    "commerciales permise avec attribution. Les mêmes tableaux sont aussi publiés en CSV "
+    "sous la Licence du gouvernement ouvert – Canada sur ouvert.canada.ca (« La revue "
+    "financière : <année> »)."
+)

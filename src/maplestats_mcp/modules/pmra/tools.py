@@ -43,9 +43,10 @@ async def pmra_search_products(
     Keywords: pesticide registration, PCP number, registered pesticides,
     herbicide products, Roundup, active ingredient, Pest Management
     Regulatory Agency, Health Canada pesticides, insecticide.
-    Mots-clés : homologation des pesticides, numéro d'homologation,
-    produits antiparasitaires, ARLA, herbicide homologué, principe actif,
-    insecticide, Santé Canada pesticides, produit phytosanitaire.
+    Mots-clés : homologation des pesticides, numéro d'homologation, produits
+    antiparasitaires, Agence de réglementation de la lutte antiparasitaire
+    (ARLA), herbicide homologué, principe actif, insecticide, Santé Canada
+    pesticides, produit phytosanitaire.
     """
     return await client.search_products(
         query,
@@ -75,7 +76,8 @@ async def pmra_get_product(registration_number: str, lang: Lang = "en") -> Pesti
     active ingredients, registrant.
     Mots-clés : fiche du produit antiparasitaire, numéro d'homologation,
     numéro CAS, réévaluation, organismes nuisibles, sites d'utilisation,
-    principes actifs, titulaire d'homologation.
+    principes actifs, titulaire d'homologation, Agence de réglementation de
+    la lutte antiparasitaire (ARLA), Santé Canada.
     """
     return await client.get_product(registration_number, lang=lang)
 
@@ -99,8 +101,9 @@ async def pmra_get_residue_limits(
     Keywords: maximum residue limit, MRL, pesticide residues in food, ppm,
     food safety pesticides, glyphosate limit, residue tolerance,
     Health Canada MRL database.
-    Mots-clés : limite maximale de résidus, LMR, résidus de pesticides
-    dans les aliments, ppm, salubrité des aliments, denrée alimentaire,
-    tolérance de résidus, glyphosate.
+    Mots-clés : limite maximale de résidus, LMR, résidus de pesticides dans
+    les aliments, ppm, salubrité des aliments, denrée alimentaire, tolérance
+    de résidus, glyphosate, Agence de réglementation de la lutte
+    antiparasitaire (ARLA), Santé Canada.
     """
     return await client.get_residue_limits(chemical, commodity=commodity, limit=limit, lang=lang)

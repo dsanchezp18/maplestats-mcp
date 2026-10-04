@@ -378,7 +378,17 @@ async def test_french_listing_pairs_tables_through_cmhc_language_links(httpx_moc
     ]
     assert result.tables[0].path == f"{_FR_BASE}/avoir-foncier"
     assert result.tables[2].note is not None
+    assert result.tables[2].note.startswith("Aucune page française pour ce tableau :")
     assert result.note is not None and "no-french-twin" in result.note
+    assert "sans page française gardent leur titre anglais :" in result.note
+    assert (result.provenance.licence or "").startswith("Conditions d'utilisation de la SCHL")
+
+
+async def test_french_errors_are_french():
+    with pytest.raises(InvalidInput, match="^Entrée invalide : category doit être"):
+        await client.list_tables("nothing", lang="fr")
+    with pytest.raises(InvalidInput, match="slug ne doit pas être vide"):
+        await client.get_table("household-characteristics", " ", lang="fr")
 
 
 async def test_french_slug_reads_its_english_twin(httpx_mock):

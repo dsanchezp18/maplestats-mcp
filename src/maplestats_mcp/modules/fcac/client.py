@@ -50,7 +50,7 @@ import re
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, NoReturn
 from urllib.parse import urljoin
 
 import httpx
@@ -69,9 +69,10 @@ from maplestats_mcp.modules.fcac.schemas import (
     DetailSection,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import is_retryable, new_client
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -395,6 +396,20 @@ def _first_rate(text: str, lang: str) -> float | None:
     return rates[0] if rates else None
 
 
+# FCAC writes "Not required" / "Non requis" when a card has no income
+# minimum (checked live 2026-10-03, Desjardins Flexi Visa and MBNA True
+# Line, both languages). That is a minimum of zero, not an unknown, so it
+# is returned as 0.0; null is kept for a missing or unreadable value.
+_NOT_REQUIRED = frozenset({"not required", "non requis"})
+
+
+def _minimum_income(text: str, lang: str) -> float | None:
+    numbers = _numbers(text, lang)
+    if numbers:
+        return numbers[0]
+    return 0.0 if " ".join(text.split()).lower() in _NOT_REQUIRED else None
+
+
 def _card_detail(product_id: str, sections: list[DetailSection], lang: str) -> dict[str, Any]:
     fees = _section(sections, "annual_fee")
     rates = _section(sections, "interest_rate")
@@ -417,9 +432,8 @@ def _card_detail(product_id: str, sections: list[DetailSection], lang: str) -> d
         "foreign_conversion_fee": _first_rate(
             _item(_section(sections, "foreign_conversion_fee"), 0), lang
         ),
-        # "Not required" / "Non requis" has no number and stays null.
-        "minimum_personal_income": (_numbers(personal, lang) or [None])[0],
-        "minimum_household_income": (_numbers(household, lang) or [None])[0],
+        "minimum_personal_income": _minimum_income(personal, lang),
+        "minimum_household_income": _minimum_income(household, lang),
         "rewards": [i.value for i in _section(sections, "rewards")],
     }
 
@@ -560,9 +574,44 @@ async def _detail_sections(
 # ------------------------------------------------------------------- public
 
 
-def _check(value: str, allowed: dict[str, Any], name: str) -> None:
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _say(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+async def _in_lang(lang: str, call: Any) -> Any:
+    """Await `call`; for lang="fr", restate an upstream failure in French.
+
+    The session helpers below the public functions word their errors in
+    English (they are shared by every call); the English detail is kept.
+    """
+    try:
+        return await call
+    except (UpstreamError, UpstreamUnavailable) as exc:
+        if lang != "fr":
+            raise
+        raise_typed(
+            type(exc),
+            f"fcac : l'outil de comparaison de l'ACFC n'a pas pu être lu (détail : {exc})",
+            "fr",
+        )
+
+
+def _check(value: str, allowed: dict[str, Any], name: str, lang: str = "en") -> None:
     if value not in allowed:
-        raise InvalidInput(f"{name} must be one of {sorted(allowed)}, got {value!r}.")
+        _raise(
+            InvalidInput,
+            f"{name} must be one of {sorted(allowed)}, got {value!r}.",
+            f"{name} doit valoir l'une de {sorted(allowed)}, reçu {value!r}.",
+            lang,
+        )
 
 
 def _check_lang(lang: str) -> None:
@@ -570,9 +619,14 @@ def _check_lang(lang: str) -> None:
         raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
 
 
-def _check_limit(limit: int) -> None:
+def _check_limit(limit: int, lang: str = "en") -> None:
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}.",
+            lang,
+        )
 
 
 def _fold(text: str) -> str:
@@ -620,10 +674,10 @@ async def _accounts_listing(
     return await cached_fetch(key, constants.CACHE_TTL_SECONDS, fetch)
 
 
-def _reward_labels(rewards: Sequence[str]) -> list[set[str]]:
+def _reward_labels(rewards: Sequence[str], lang: str = "en") -> list[set[str]]:
     wanted = []
     for reward in rewards:
-        _check(reward, constants.REWARD_LABELS, "rewards")
+        _check(reward, constants.REWARD_LABELS, "rewards", lang)
         wanted.append({_fold(label) for label in constants.REWARD_LABELS[reward]})
     return wanted
 
@@ -634,9 +688,12 @@ def _provenance(kind: Kind, lang: str, cached: bool, schema: str, limits: str | 
         url=_page_url(kind, "SearchFilter", lang),
         cached=cached,
         schema_name=schema,
-        freshness=constants.FRESHNESS,
-        coverage=constants.CARDS_COVERAGE if kind == "cards" else constants.ACCOUNTS_COVERAGE,
+        freshness=_say(constants.FRESHNESS, constants.FRESHNESS_FR, lang),
+        coverage=_say(constants.CARDS_COVERAGE, constants.CARDS_COVERAGE_FR, lang)
+        if kind == "cards"
+        else _say(constants.ACCOUNTS_COVERAGE, constants.ACCOUNTS_COVERAGE_FR, lang),
         limits=limits,
+        lang=lang,
     )
 
 
@@ -655,17 +712,22 @@ async def search_credit_cards(
     limit: int = constants.LIMIT_DEFAULT,
     lang: str = "en",
 ) -> CreditCardSearchResult:
-    _check(province, constants.CARD_PROVINCES, "province")
-    _check(currency, constants.CARD_CURRENCIES, "currency")
     _check_lang(lang)
-    _check_limit(limit)
+    _check(province, constants.CARD_PROVINCES, "province", lang)
+    _check(currency, constants.CARD_CURRENCIES, "currency", lang)
+    _check_limit(limit, lang)
     if sort not in (None, "annual_fee", "purchase_rate", "institution", "name"):
-        raise InvalidInput(
-            "sort must be one of 'annual_fee', 'purchase_rate', 'institution', 'name'."
+        _raise(
+            InvalidInput,
+            "sort must be one of 'annual_fee', 'purchase_rate', 'institution', 'name'.",
+            "sort doit valoir 'annual_fee', 'purchase_rate', 'institution' ou 'name'.",
+            lang,
         )
-    wanted = _reward_labels(rewards)
+    wanted = _reward_labels(rewards, lang)
 
-    (total, cards), cached = await _cards_listing(province, currency, student, secured, lang)
+    (total, cards), cached = await _in_lang(
+        lang, _cards_listing(province, currency, student, secured, lang)
+    )
     matched = []
     for card in cards:
         if query and not _matches(query, card.name, card.institution):
@@ -707,7 +769,11 @@ async def search_credit_cards(
             lang,
             cached,
             "fcac.CreditCardSearchResult",
-            limits=f"first {len(returned)} of {len(matched)} matching cards"
+            limits=_say(
+                f"first {len(returned)} of {len(matched)} matching cards",
+                f"les {len(returned)} premières cartes sur {len(matched)} correspondantes",
+                lang,
+            )
             if len(returned) < len(matched)
             else None,
         ),
@@ -723,17 +789,27 @@ async def get_credit_card(
     secured: bool = False,
     lang: str = "en",
 ) -> CreditCardDetail:
-    _check(province, constants.CARD_PROVINCES, "province")
-    _check(currency, constants.CARD_CURRENCIES, "currency")
     _check_lang(lang)
+    _check(province, constants.CARD_PROVINCES, "province", lang)
+    _check(currency, constants.CARD_CURRENCIES, "currency", lang)
     product_id = product_id.strip().lower()
     if not re.fullmatch(r"[0-9a-f-]{36}", product_id):
-        raise InvalidInput("product_id must be an FCAC product id from fcac_search_credit_cards.")
-    (_, cards), _ = await _cards_listing(province, currency, student, secured, lang)
+        _raise(
+            InvalidInput,
+            "product_id must be an FCAC product id from fcac_search_credit_cards.",
+            "product_id doit être un identifiant de produit de l'ACFC donné par "
+            "fcac_search_credit_cards.",
+            lang,
+        )
+    (_, cards), _ = await _in_lang(lang, _cards_listing(province, currency, student, secured, lang))
     if product_id not in {c.product_id for c in cards}:
-        raise NotFound(
+        _raise(
+            NotFound,
             f"credit card {product_id} is not listed for {province} ({currency}, student="
-            f"{student}, secured={secured}); pass the options used in the search."
+            f"{student}, secured={secured}); pass the options used in the search.",
+            f"la carte de crédit {product_id} n'est pas listée pour {province} ({currency}, "
+            f"student={student}, secured={secured}) ; passez les options de la recherche.",
+            lang,
         )
     fields, more = _search_fields("cards", province, currency, student=student, secured=secured)
 
@@ -741,7 +817,7 @@ async def get_credit_card(
         return await _with_session_retry(_detail_sections, "cards", lang, fields, more, product_id)
 
     key = f"fcac:card:{lang}:{province}:{currency}:{int(student)}:{int(secured)}:{product_id}"
-    sections, cached = await cached_fetch(key, constants.CACHE_TTL_SECONDS, fetch)
+    sections, cached = await _in_lang(lang, cached_fetch(key, constants.CACHE_TTL_SECONDS, fetch))
     return CreditCardDetail(
         **_card_detail(product_id, sections, lang),
         sections=sections,
@@ -763,19 +839,24 @@ async def search_bank_accounts(
     limit: int = constants.LIMIT_DEFAULT,
     lang: str = "en",
 ) -> AccountSearchResult:
-    _check(province, constants.ACCOUNT_PROVINCES, "province")
-    _check(account_type, constants.ACCOUNT_TYPES, "account_type")
-    _check(currency, constants.ACCOUNT_CURRENCIES, "currency")
-    for group in groups:
-        _check(group, constants.ACCOUNT_GROUPS, "groups")
     _check_lang(lang)
-    _check_limit(limit)
+    _check(province, constants.ACCOUNT_PROVINCES, "province", lang)
+    _check(account_type, constants.ACCOUNT_TYPES, "account_type", lang)
+    _check(currency, constants.ACCOUNT_CURRENCIES, "currency", lang)
+    for group in groups:
+        _check(group, constants.ACCOUNT_GROUPS, "groups", lang)
+    _check_limit(limit, lang)
     if sort not in (None, "monthly_fee", "institution", "name"):
-        raise InvalidInput("sort must be one of 'monthly_fee', 'institution', 'name'.")
+        _raise(
+            InvalidInput,
+            "sort must be one of 'monthly_fee', 'institution', 'name'.",
+            "sort doit valoir 'monthly_fee', 'institution' ou 'name'.",
+            lang,
+        )
     ordered_groups = sorted(set(groups), key=lambda g: constants.ACCOUNT_GROUPS[g][0])
 
-    (total, accounts), cached = await _accounts_listing(
-        province, account_type, currency, ordered_groups, lang
+    (total, accounts), cached = await _in_lang(
+        lang, _accounts_listing(province, account_type, currency, ordered_groups, lang)
     )
     matched = []
     for account in accounts:
@@ -811,7 +892,11 @@ async def search_bank_accounts(
             lang,
             cached,
             "fcac.AccountSearchResult",
-            limits=f"first {len(returned)} of {len(matched)} matching accounts"
+            limits=_say(
+                f"first {len(returned)} of {len(matched)} matching accounts",
+                f"les {len(returned)} premiers comptes sur {len(matched)} correspondants",
+                lang,
+            )
             if len(returned) < len(matched)
             else None,
         ),
@@ -827,23 +912,33 @@ async def get_bank_account(
     groups: Sequence[str] = (),
     lang: str = "en",
 ) -> AccountDetail:
-    _check(province, constants.ACCOUNT_PROVINCES, "province")
-    _check(account_type, constants.ACCOUNT_TYPES, "account_type")
-    _check(currency, constants.ACCOUNT_CURRENCIES, "currency")
-    for group in groups:
-        _check(group, constants.ACCOUNT_GROUPS, "groups")
     _check_lang(lang)
+    _check(province, constants.ACCOUNT_PROVINCES, "province", lang)
+    _check(account_type, constants.ACCOUNT_TYPES, "account_type", lang)
+    _check(currency, constants.ACCOUNT_CURRENCIES, "currency", lang)
+    for group in groups:
+        _check(group, constants.ACCOUNT_GROUPS, "groups", lang)
     product_id = product_id.strip().lower()
     if not re.fullmatch(r"[0-9a-f-]{36}", product_id):
-        raise InvalidInput("product_id must be an FCAC product id from fcac_search_bank_accounts.")
+        _raise(
+            InvalidInput,
+            "product_id must be an FCAC product id from fcac_search_bank_accounts.",
+            "product_id doit être un identifiant de produit de l'ACFC donné par "
+            "fcac_search_bank_accounts.",
+            lang,
+        )
     ordered_groups = sorted(set(groups), key=lambda g: constants.ACCOUNT_GROUPS[g][0])
-    (_, accounts), _ = await _accounts_listing(
-        province, account_type, currency, ordered_groups, lang
+    (_, accounts), _ = await _in_lang(
+        lang, _accounts_listing(province, account_type, currency, ordered_groups, lang)
     )
     if product_id not in {a.product_id for a in accounts}:
-        raise NotFound(
+        _raise(
+            NotFound,
             f"{account_type} account {product_id} is not listed for {province} ({currency}, "
-            f"groups={ordered_groups}); pass the options used in the search."
+            f"groups={ordered_groups}); pass the options used in the search.",
+            f"le compte {account_type} {product_id} n'est pas listé pour {province} "
+            f"({currency}, groups={ordered_groups}) ; passez les options de la recherche.",
+            lang,
         )
     fields, more = _search_fields(
         "accounts", province, currency, account_type=account_type, groups=ordered_groups
@@ -858,7 +953,7 @@ async def get_bank_account(
         f"fcac:account:{lang}:{province}:{account_type}:{currency}:"
         f"{','.join(ordered_groups)}:{product_id}"
     )
-    sections, cached = await cached_fetch(key, constants.CACHE_TTL_SECONDS, fetch)
+    sections, cached = await _in_lang(lang, cached_fetch(key, constants.CACHE_TTL_SECONDS, fetch))
     return AccountDetail(
         account_type=account_type,  # type: ignore[arg-type]
         **_account_detail(product_id, sections, lang),

@@ -10,6 +10,7 @@ registers for itself with register().
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 LABELS: dict[str, dict[str, str]] = {
@@ -75,17 +76,34 @@ def normalize_lang(lang: str | None) -> str:
     return "fr" if (lang or "").strip().lower().startswith("fr") else "en"
 
 
+NBSP = " "
+# French puts a space before : ; ? ! % and » and after «; the space must not
+# break. Only a space already there is changed, so URLs ("https://", "?q=")
+# and English text are left as they are, and running it twice changes nothing.
+_FRENCH_SPACE_BEFORE = re.compile(r" ([:;?!%»])")
+_FRENCH_SPACE_AFTER = re.compile(r"« ")
+
+
+def french_spacing(text: str) -> str:
+    """French text with no-break spaces before : ; ? ! % » and after «."""
+    text = _FRENCH_SPACE_BEFORE.sub(NBSP + r"\1", text)
+    return _FRENCH_SPACE_AFTER.sub("«" + NBSP, text)
+
+
 def t(key: str, lang: str = "en", **kwargs: Any) -> str:
     """The `lang` text for `key`, formatted; English when no French exists.
 
     An unknown key is returned as is, so a module can pass a literal
-    message where a template is expected.
+    message where a template is expected. French text gets no-break
+    spaces before its punctuation (french_spacing).
     """
     entry = LABELS.get(key)
     if entry is None:
         return key
-    template = entry.get(normalize_lang(lang), entry.get("en", key))
-    return template.format(**kwargs)
+    lang = normalize_lang(lang)
+    template = entry.get(lang, entry.get("en", key))
+    text = template.format(**kwargs)
+    return french_spacing(text) if lang == "fr" and "fr" in entry else text
 
 
 def register(labels: dict[str, dict[str, str]]) -> None:

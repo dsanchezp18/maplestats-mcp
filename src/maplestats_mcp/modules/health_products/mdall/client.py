@@ -159,11 +159,28 @@ async def search_licences(
 ) -> DeviceLicenceList:
     name, company = name.strip(), company.strip()
     if len(name) < 2 and len(company) < 2:
-        raise InvalidInput("Give at least 2 characters of a licence (device) name or company.")
+        api.fail(
+            InvalidInput,
+            "Give at least 2 characters of a licence (device) name or company.",
+            "donnez au moins 2 caractères d'un nom d'homologation (instrument) ou d'une "
+            "entreprise.",
+            lang,
+        )
     if risk_class is not None and risk_class not in (2, 3, 4):
-        raise InvalidInput("risk_class must be 2, 3 or 4; class I devices are not licensed.")
+        api.fail(
+            InvalidInput,
+            "risk_class must be 2, 3 or 4; class I devices are not licensed.",
+            "risk_class doit valoir 2, 3 ou 4 ; les instruments de classe I ne sont pas "
+            "homologués.",
+            lang,
+        )
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}.")
+        api.fail(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}.",
+            lang,
+        )
     rows, cached = await _licences()
     companies = await _companies()
     if name:
@@ -189,6 +206,16 @@ async def search_licences(
         )
         if part
     )
+    filters_fr = ", ".join(
+        part
+        for part in (
+            f"le nom contient '{name}'" if name else "",
+            f"l'entreprise contient '{company}'" if company else "",
+            "actives seulement" if active_only else "",
+            f"classe {risk_class}" if risk_class else "",
+        )
+        if part
+    )
     return DeviceLicenceList(
         licences=page,
         returned_count=len(page),
@@ -203,6 +230,11 @@ async def search_licences(
             freshness=constants.FRESHNESS,
             coverage=f"{len(page)} of {len(rows)} licences: {filters}",
             limits="whole licence table cached up to 6 h",
+            lang=lang,
+            freshness_fr=constants.FRESHNESS_FR,
+            coverage_fr=f"{len(page)} homologations sur {len(rows)} : {filters_fr}",
+            limits_fr="table complète des homologations en cache jusqu'à 6 h ; les noms "
+            "commerciaux sont ceux déposés",
         ),
     )
 
@@ -248,13 +280,23 @@ def _key(row: dict[str, Any]) -> tuple[int, int]:
 
 async def get_licence(licence_number: int, *, lang: str = "en") -> DeviceLicenceDetail:
     if licence_number <= 0:
-        raise InvalidInput("licence_number must be a positive number, e.g. 102449.")
+        api.fail(
+            InvalidInput,
+            "licence_number must be a positive number, e.g. 102449.",
+            "licence_number doit être un nombre positif, p. ex. 102449.",
+            lang,
+        )
 
     async def fetch() -> DeviceLicenceDetail:
         rows, _ = await _licences()
         row = next((r for r in rows if r[0] == licence_number), None)
         if row is None:
-            raise NotFound(f"No medical device licence has number {licence_number}.")
+            api.fail(
+                NotFound,
+                f"No medical device licence has number {licence_number}.",
+                f"aucune homologation d'instrument médical ne porte le numéro {licence_number}.",
+                lang,
+            )
         companies = await _companies()
         devices = [
             r
@@ -283,6 +325,15 @@ async def get_licence(licence_number: int, *, lang: str = "en") -> DeviceLicence
                     else f"identifiers omitted for licences with over {_IDENTIFIER_DEVICES_MAX} "
                     "devices; search them with hc_device_search_devices"
                 ),
+                lang=lang,
+                freshness_fr=constants.FRESHNESS_FR,
+                limits_fr=(
+                    None
+                    if len(devices) <= _IDENTIFIER_DEVICES_MAX
+                    else f"identifiants omis pour les homologations de plus de "
+                    f"{_IDENTIFIER_DEVICES_MAX} instruments ; cherchez-les avec "
+                    "hc_device_search_devices"
+                ),
             ),
         )
 
@@ -306,12 +357,27 @@ async def search_devices(
 ) -> DeviceList:
     name, identifier = name.strip(), identifier.strip()
     if bool(name) == bool(identifier):
-        raise InvalidInput("Give either a device name or a device identifier (model number).")
+        api.fail(
+            InvalidInput,
+            "Give either a device name or a device identifier (model number).",
+            "donnez soit un nom d'instrument, soit un identifiant d'instrument (numéro de modèle).",
+            lang,
+        )
     if len(name or identifier) < 3:
-        raise InvalidInput("Give at least 3 characters to search for.")
+        api.fail(
+            InvalidInput,
+            "Give at least 3 characters to search for.",
+            "donnez au moins 3 caractères à chercher.",
+            lang,
+        )
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}.")
-    del lang  # Trade names and identifiers are not translated.
+        api.fail(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}.",
+            lang,
+        )
+    # Trade names and identifiers are not translated by the API.
     state = {"state": "active"} if active_only else {}
     if name:
         path = constants.PATH_DEVICE
@@ -372,5 +438,17 @@ async def search_devices(
                 + (f"name contains '{name}'" if name else f"identifier contains '{identifier}'")
                 + (", active only" if active_only else "")
             ),
+            lang=lang,
+            freshness_fr=constants.FRESHNESS_FR,
+            coverage_fr=(
+                f"{len(devices)} instruments sur {total} dont "
+                + (
+                    f"le nom contient '{name}'"
+                    if name
+                    else f"l'identifiant contient '{identifier}'"
+                )
+                + (", actifs seulement" if active_only else "")
+            ),
+            limits_fr="Les noms commerciaux et les identifiants sont ceux déposés, non traduits.",
         ),
     )

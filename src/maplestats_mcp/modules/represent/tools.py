@@ -31,7 +31,10 @@ async def represent_lookup_postcode(
     each district set's licence and last-updated date. A postal code can
     match several districts (see notes); for exact results use
     represent_lookup_point. sets optionally limits districts to
-    comma-separated boundary set slugs (e.g. federal-electoral-districts).
+    comma-separated boundary set slugs (e.g.
+    federal-electoral-districts-2023-representation-order, the current
+    federal map; federal-electoral-districts with no year is the old 2013
+    order). With sets, only representatives of the current sets come back.
     Source is Open North (unofficial, 60 requests a minute); representative
     data is scraped from official sites, its licence is unverified and some
     records are stale. Complements the ourcommons_ tools.
@@ -91,6 +94,9 @@ async def represent_search_representatives(
     district or city, or every federal or provincial member. level is
     federal, provincial or municipal; representative_set is a set slug
     from represent_list_representative_sets (e.g. toronto-city-council).
+    party is a substring of the party name; common abbreviations and
+    French or English names also work (NDP/NPD, UCP, CAQ, PLQ, PQ, QS, BQ,
+    PC, Green/Vert, Liberal/Libéral).
     Each record shows contact details, offices and the official page it was
     scraped from (source_url); records are unverified and some sets are
     stale. Source is Open North (unofficial). Complements ourcommons_.

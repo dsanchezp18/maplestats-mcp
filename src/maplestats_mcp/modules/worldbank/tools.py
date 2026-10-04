@@ -43,10 +43,10 @@ async def worldbank_search_indicators(
     Keywords: world bank, world development indicators, WDI, international
     comparison, indicator code, cross-country, G7, OECD countries, peer
     countries, global ranking, GDP per capita, development indicators.
-    Mots-clés : banque mondiale, indicateurs du développement dans le
-    monde, comparaison internationale, code d'indicateur, comparaison
-    entre pays, pays du G7, pays de l'OCDE, pays comparables, classement
-    mondial, PIB par habitant, indicateurs internationaux.
+    Mots-clés : Banque mondiale, Indicateurs du développement dans le monde
+    (IDM), comparaison internationale, code d'indicateur, comparaison entre
+    pays, pays du G7, pays de l'OCDE, pays comparables, classement mondial,
+    PIB par habitant, indicateurs internationaux.
     """
     return await client.search_indicators(query=query, topic=topic, limit=limit, lang=lang)
 
@@ -63,7 +63,7 @@ async def worldbank_list_topics(lang: Lang = "en") -> TopicList:
     Keywords: world bank, WDI topics, themes, indicator categories,
     international indicators, browse, economy and growth, climate change,
     trade, health, education.
-    Mots-clés : banque mondiale, thèmes WDI, catégories d'indicateurs,
+    Mots-clés : Banque mondiale, thèmes WDI, catégories d'indicateurs,
     indicateurs internationaux, parcourir, économie et croissance,
     changement climatique, échanges commerciaux, santé, éducation.
     """
@@ -83,7 +83,7 @@ async def worldbank_get_indicator(indicator: str, lang: Lang = "en") -> Indicato
     Keywords: world bank, WDI, indicator definition, methodology, source
     organization, metadata, ILO modelled estimate, purchasing power
     parity, international data.
-    Mots-clés : banque mondiale, WDI, définition de l'indicateur,
+    Mots-clés : Banque mondiale, WDI, définition de l'indicateur,
     méthodologie, organisme source, métadonnées, estimation modélisée de
     l'OIT, parité de pouvoir d'achat, données internationales.
     """
@@ -116,10 +116,10 @@ async def worldbank_get_canada_series(
     Keywords: world bank, Canada compared, international comparison, G7
     comparison, OECD comparison, peer countries, cross-country, ranking,
     GDP per capita, annual series, Canada vs United States.
-    Mots-clés : banque mondiale, Canada comparé, comparaison
-    internationale, comparaison avec le G7, comparaison avec l'OCDE, pays
-    comparables, classement du Canada, PIB par habitant, série annuelle,
-    Canada et États-Unis.
+    Mots-clés : Banque mondiale, Canada comparé, comparaison internationale,
+    comparaison avec le G7, comparaison avec l'OCDE, pays comparables,
+    classement du Canada, PIB par habitant, série annuelle, Canada et
+    États-Unis.
     """
     return await client.get_canada_series(
         indicator,

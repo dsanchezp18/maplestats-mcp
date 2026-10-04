@@ -282,3 +282,21 @@ async def test_information_request_errors(httpx_mock):
     _mock_register(httpx_mock)
     with pytest.raises(NotFound):
         await client.get_information_request("IR9999")
+
+
+async def test_french_errors_and_provenance(httpx_mock):
+    with pytest.raises(InvalidInput, match="^Entrée invalide : pbo : statut inconnu"):
+        await client.search_information_requests(status="late", lang="fr")
+    with pytest.raises(InvalidInput, match="AAAA, AAAA-MM ou AAAA-MM-JJ"):
+        await client.search_information_requests(since="mars 2024", lang="fr")
+    with pytest.raises(InvalidInput, match="since \\(2025\\) est postérieur à until"):
+        await client.search_information_requests(since="2025", until="2024", lang="fr")
+    _mock_register(httpx_mock)
+    result = await client.search_information_requests(lang="fr")
+    assert (result.provenance.coverage or "").endswith("les plus récentes d'abord")
+    assert (result.provenance.freshness or "").startswith("au fil des publications du DPB")
+    assert (result.provenance.licence or "").startswith(
+        "Conditions du directeur parlementaire du budget"
+    )
+    with pytest.raises(NotFound, match="aucune demande d'information IR9999"):
+        await client.get_information_request("IR9999", lang="fr")

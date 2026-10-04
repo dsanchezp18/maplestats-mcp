@@ -46,17 +46,24 @@ async def ised_cipo_search_trademarks(
     design-code, or CIPO status. Returns application number, mark name
     and type, current status, Nice classes, and any logo image URLs. An
     empty criteria is a deliberate match-all against the entire register
-    (over 2 million records). Results are ranked by the upstream API and
+    (over 2 million records). For nice_classification give one or more
+    class numbers 0-45 ("9" or "9, 35": marks in any of them); for
+    cipo_status give status names or the search form's codes separated
+    by commas ("Registered", "Expunged, Abandoned", "19"); number fields
+    take digits only (registration numbers may keep a prefix such as
+    "TMA700000"). Anything else raises an error rather than matching the
+    whole register. Results are ranked by the upstream API and
     max_return only caps how many top-ranked matches come back in one
     call -- there is no way to page past that count. The search API
     answers in English only (status and mark-type labels), confirmed
-    live 2026-09-23, so `lang` has no effect. Keywords: CIPO,
+    live 2026-09-23, so `lang` changes only this server's own messages
+    and notes. Keywords: CIPO,
     ISED, trademark, brand, mark, owner, applicant, Nice classification,
     Vienna code, trademark status, registered, abandoned, expunged.
-    Mots-clés : OPIC, ISDE, recherche de marques de commerce, marque de
-    commerce, marque, propriétaire,
-    demandeur, classification de Nice, code de Vienne, statut de la
-    marque, enregistrée, abandonnée, radiée.
+    Mots-clés : Office de la propriété intellectuelle du Canada (OPIC),
+    ISDE, recherche de marques de commerce, marque de commerce, marque
+    déposée, propriétaire de la marque, requérant, classification de Nice,
+    code de Vienne, statut de la marque, marque enregistrée, abandonnée,
+    radiée.
     """
-    del lang
-    return await client.search_trademarks(search_field, criteria, max_return=max_return)
+    return await client.search_trademarks(search_field, criteria, max_return=max_return, lang=lang)

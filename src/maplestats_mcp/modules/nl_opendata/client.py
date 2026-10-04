@@ -323,6 +323,20 @@ def _sort_results(datasets: list[DatasetSummary], sort: str) -> None:
     )
 
 
+async def _with_types(datasets: list[DatasetSummary]) -> tuple[list[DatasetSummary], int]:
+    """Fill dataset_type from the tabular and spatial listings (the tag page has none).
+
+    Returns the datasets and how many stayed untyped.
+    """
+    kinds: dict[str, str] = {}
+    for kind in ("tabular", "spatial"):
+        page, _ = await _fetch_listing(kind, sort="name")
+        for dataset in page:
+            kinds.setdefault(dataset.id, kind)
+    typed = [d.model_copy(update={"dataset_type": kinds.get(d.id)}) for d in datasets]
+    return typed, sum(1 for d in typed if d.dataset_type is None)
+
+
 async def search_datasets(
     query: str = "",
     *,
@@ -351,6 +365,7 @@ async def search_datasets(
         raise InvalidInput("tag_id must not be empty.")
 
     if tag_id is not None:
+        tag_id = tag_id.strip()
         pages = [await _fetch_listing("all", sort=sort, tag_id=tag_id)]
         if not pages[0][0]:
             # An unknown tag id answers an empty listing, not an error.
@@ -371,15 +386,22 @@ async def search_datasets(
             datasets_by_id.setdefault(dataset.id, dataset)
     datasets = list(datasets_by_id.values())
 
-    needle = query.strip().casefold()
-    if needle:
+    untyped = 0
+    if tag_id is not None and datasets:
+        datasets, untyped = await _with_types(datasets)
+
+    words = query.casefold().split()
+    if words:
         datasets = [
             dataset
             for dataset in datasets
-            if needle
-            in " ".join(
-                part for part in (dataset.title, dataset.publisher or "", dataset.creator or "")
-            ).casefold()
+            if all(
+                word
+                in " ".join(
+                    part for part in (dataset.title, dataset.publisher or "", dataset.creator or "")
+                ).casefold()
+                for word in words
+            )
         ]
     _sort_results(datasets, sort)
 
@@ -404,7 +426,13 @@ async def search_datasets(
             url=provenance_url,
             cached=all(was_cached for _page, was_cached in pages),
             schema_name="nl_opendata.DatasetSearchResult",
-            coverage=f"{len(page)} of {total_count} matching records returned",
+            coverage=f"{len(page)} of {total_count} matching records returned"
+            + (
+                f"; {untyped} tagged dataset(s) are in neither the tabular nor the spatial "
+                "listing, so their dataset_type is null"
+                if untyped
+                else ""
+            ),
             limits=(
                 f"local page size capped at {constants.SEARCH_LIMIT_MAX}; "
                 "the upstream catalogue has no server-side pagination"
@@ -429,17 +457,21 @@ async def get_dataset(dataset_id: str, lang: str = "en") -> DatasetDetail:
     return result
 
 
-async def list_tags(lang: str = "en") -> TagList:
-    del lang
-    params = {"page-id": "explore"}
+_TAGS_PARAMS = {"page-id": "explore"}
 
+
+async def _tags() -> tuple[list[TagSummary], bool]:
     async def fetch() -> list[TagSummary]:
-        html = await _get_html(params)
+        html = await _get_html(_TAGS_PARAMS)
         return _parse_tag_list(html)
 
-    tags, was_cached = await cached_fetch(
-        "nl-opendata:tags", constants.CACHE_TTL_TAGS_SECONDS, fetch
-    )
+    return await cached_fetch("nl-opendata:tags", constants.CACHE_TTL_TAGS_SECONDS, fetch)
+
+
+async def list_tags(lang: str = "en") -> TagList:
+    del lang
+    params = _TAGS_PARAMS
+    tags, was_cached = await _tags()
     return TagList(
         tags=tags,
         total_count=len(tags),
