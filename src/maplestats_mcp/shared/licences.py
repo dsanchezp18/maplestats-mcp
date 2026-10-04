@@ -473,6 +473,10 @@ NL_STATS_TERMS_FR = derived_from_statcan_fr(
 )
 
 _PROVINCIAL_FR: dict[str, str] = {
+    "ab-economic": (
+        f"{OGL_ALBERTA_FR} Les indicateurs que le tableau de bord tire de tableaux de Statistique "
+        f"Canada (le champ source nomme le tableau) relèvent aussi de : {STATCAN_LICENCE_FR}"
+    ),
     "ab-opendata": OGL_ALBERTA_FR,
     "open-alberta": OGL_ALBERTA_FR,
     "epcor": terms_not_stated_fr("EPCOR", "https://apps.epcor.ca"),

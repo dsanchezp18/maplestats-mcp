@@ -52,7 +52,7 @@ async def ab_opendata_search_datasets(
     Open Government Licence Alberta, ministry.
     Mots-clés : Open Alberta, gouvernement de l'Alberta, données ouvertes Alberta,
     recherche de jeux de données, Excel, CSV, AISH, soutien du revenu, Alberta
-    Health, Conseil du Trésor et Finances, Licence du gouvernement ouvert Alberta,
+    Health, Conseil du Trésor et Finances, Licence du gouvernement ouvert – Alberta,
     ministère.
     """
     return await client.search_datasets(

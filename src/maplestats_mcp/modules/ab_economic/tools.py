@@ -32,12 +32,11 @@ async def ab_economic_list_indicators(lang: Lang = "en") -> IndicatorList:
     get an indicator's published series with ab_economic_get_indicator_series.
     Keywords: Alberta, economic dashboard, key indicators, economy, latest
     data, Government of Alberta, snapshot, updates.
-    Mots-clés : Alberta, tableau de bord économique, indicateurs clés,
-    économie, données récentes, gouvernement de l'Alberta, mises à jour,
-    indicateurs économiques.
+    Mots-clés : Alberta, tableau de bord économique de l'Alberta,
+    indicateurs clés, indicateurs économiques, économie albertaine, données
+    récentes, gouvernement de l'Alberta, mises à jour, conjoncture.
     """
-    del lang
-    return await client.list_indicators()
+    return await client.list_indicators(lang)
 
 
 @tool
@@ -52,10 +51,10 @@ async def ab_economic_get_indicator_series(indicator: str, lang: Lang = "en") ->
     Keywords: Alberta, economic dashboard, indicator, API, series,
     official data link, unemployment, housing starts, CPI.
     Mots-clés : Alberta, tableau de bord économique, indicateur, API,
-    série, lien de données officiel, chômage, mises en chantier.
+    série officielle, lien de données officiel, taux de chômage, mises en
+    chantier, IPC, recettes monétaires agricoles.
     """
-    del lang
-    return await client.get_indicator_series(indicator)
+    return await client.get_indicator_series(indicator, lang)
 
 
 @tool
@@ -68,11 +67,11 @@ async def ab_economic_list_tables(query: str | None = None, lang: Lang = "en") -
     digit number mirror that StatCan table with Alberta-focused cuts.
     Keywords: Alberta, economic data, tables, labour force, CPI,
     exports, energy, housing starts, population, rig count.
-    Mots-clés : Alberta, données économiques, tableaux, population
-    active, IPC, exportations, énergie, mises en chantier, population.
+    Mots-clés : Alberta, données économiques, tableaux de données,
+    population active, IPC, exportations, énergie, mises en chantier,
+    population, nombre d'appareils de forage, tableau de Statistique Canada.
     """
-    del lang
-    return await client.list_tables(query)
+    return await client.list_tables(query, lang)
 
 
 @tool
@@ -87,8 +86,7 @@ async def ab_economic_get_table_fields(table: str, lang: Lang = "en") -> TableFi
     Mots-clés : Alberta, tableau de bord économique, structure du tableau,
     colonnes, dimensions, valeurs de filtre, métadonnées, noms de champs.
     """
-    del lang
-    return await client.get_table_fields(table)
+    return await client.get_table_fields(table, lang)
 
 
 @tool
@@ -113,9 +111,9 @@ async def ab_economic_get_data(
     Keywords: Alberta, economic data, time series, unemployment rate,
     inflation, GDP, exports, oil production, Calgary, Edmonton.
     Mots-clés : Alberta, données économiques, séries chronologiques,
-    taux de chômage, inflation, PIB, exportations, production pétrolière.
+    taux de chômage, emploi, salaires, inflation, PIB, exportations,
+    production pétrolière, Calgary, Edmonton.
     """
-    del lang
     return await client.get_data(
-        table, filters, start_date=start_date, end_date=end_date, limit=limit
+        table, filters, start_date=start_date, end_date=end_date, limit=limit, lang=lang
     )

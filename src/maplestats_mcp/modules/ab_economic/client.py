@@ -28,9 +28,10 @@ from maplestats_mcp.modules.ab_economic.schemas import (
     TableList,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -46,30 +47,45 @@ _PID = re.compile(r"_(\d{8,10})$")
 _COLUMN = re.compile(r"^[A-Za-z_][A-Za-z0-9_ ]*$")
 
 
-def _raise_for(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     detail = exc.response.text[:200].strip()
     if status == 404:
-        raise NotFound(f"{context}: not found.") from exc
+        raise_localized(NotFound, f"{context}: not found.", f"{context} : introuvable.", lang)
     if status == 400:
-        raise InvalidInput(f"{context}: {detail or 'rejected the request'}.") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise_localized(
+            InvalidInput,
+            f"{context}: {detail or 'rejected the request'}.",
+            f"{context} : {detail or 'requête refusée'}.",
+            lang,
+        )
+    raise_localized(
+        UpstreamError,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a répondu par une erreur HTTP {status} : {detail}",
+        lang,
+    )
 
 
-async def _get(path: str, params: dict[str, Any] | None = None) -> Any:
+async def _get(path: str, params: dict[str, Any] | None = None, lang: str = "en") -> Any:
     await _LIMITER.acquire()
     context = f"ab_economic:{path.split('?')[0]}"
     try:
         return await api_get(f"{constants.BASE_URL}/{path}", params=params, timeout=60.0)
     except httpx.HTTPStatusError as exc:
-        _raise_for(exc, context)
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{context} did not respond in time. Try again shortly.") from exc
+        _raise_for(exc, context, lang)
+    except httpx.HTTPError:
+        raise_localized(
+            UpstreamUnavailable,
+            f"{context} did not respond in time. Try again shortly.",
+            f"{context} n'a pas répondu à temps. Réessayez sous peu.",
+            lang,
+        )
 
 
-async def _table_names() -> tuple[list[str], bool]:
+async def _table_names(lang: str = "en") -> tuple[list[str], bool]:
     async def fetch() -> Any:
-        return await _get("api/chart-editor/data-tables")
+        return await _get("api/chart-editor/data-tables", lang=lang)
 
     raw, cached = await cached_fetch(
         "ab-economic:tables", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch
@@ -77,13 +93,17 @@ async def _table_names() -> tuple[list[str], bool]:
     return [t["tableName"] for t in raw if t.get("tableName")], cached
 
 
-async def _resolve_table(table: str) -> str:
-    names, _ = await _table_names()
+async def _resolve_table(table: str, lang: str = "en") -> str:
+    names, _ = await _table_names(lang)
     by_lower = {n.lower(): n for n in names}
     match = by_lower.get(table.strip().lower())
     if match is None:
-        raise NotFound(
-            f"No Alberta Economic Dashboard table {table!r}. Use ab_economic_list_tables."
+        raise_localized(
+            NotFound,
+            f"No Alberta Economic Dashboard table {table!r}. Use ab_economic_list_tables.",
+            f"aucun tableau {table!r} dans le tableau de bord économique de l'Alberta "
+            "(Alberta Economic Dashboard). Utilisez ab_economic_list_tables.",
+            lang,
         )
     return match
 
@@ -93,8 +113,8 @@ def _pid(table: str) -> str | None:
     return found.group(1) if found else None
 
 
-async def list_tables(query: str | None = None) -> TableList:
-    names, cached = await _table_names()
+async def list_tables(query: str | None = None, lang: str = "en") -> TableList:
+    names, cached = await _table_names(lang)
     needle = (query or "").strip().lower()
     matches = [n for n in names if not needle or needle in n.lower() or needle == _pid(n)]
     return TableList(
@@ -106,19 +126,30 @@ async def list_tables(query: str | None = None) -> TableList:
             url=f"{constants.BASE_URL}/api/chart-editor/data-tables",
             cached=cached,
             schema_name="ab_economic.TableList",
-            freshness="table list cached 24h",
+            freshness=pick(
+                lang,
+                "table list cached 24h",
+                "liste des tableaux conservée en cache 24 h",
+            ),
+            coverage=pick(
+                lang,
+                "",
+                "Noms de tableaux, de colonnes et d'indicateurs tels que publiés par le tableau de bord, en anglais seulement.",
+            )
+            or None,
+            lang=lang,
         ),
     )
 
 
-async def get_table_fields(table: str) -> TableFields:
-    name = await _resolve_table(table)
+async def get_table_fields(table: str, lang: str = "en") -> TableFields:
+    name = await _resolve_table(table, lang)
 
     async def fetch_fields() -> Any:
-        return await _get(f"api/chart-editor/field-info/{name}")
+        return await _get(f"api/chart-editor/field-info/{name}", lang=lang)
 
     async def fetch_info() -> Any:
-        return await _get(f"api/chart-editor/indicator-info/{name}")
+        return await _get(f"api/chart-editor/indicator-info/{name}", lang=lang)
 
     fields, cached = await cached_fetch(
         f"ab-economic:fields:{name}", constants.CACHE_TTL_FIELDS_SECONDS, fetch_fields
@@ -150,17 +181,29 @@ async def get_table_fields(table: str) -> TableFields:
             url=f"{constants.BASE_URL}/api/chart-editor/field-info/{name}",
             cached=cached,
             schema_name="ab_economic.TableFields",
+            coverage=pick(
+                lang,
+                "",
+                "Noms de tableaux, de colonnes et d'indicateurs tels que publiés par le tableau de bord, en anglais seulement.",
+            )
+            or None,
+            lang=lang,
         ),
     )
 
 
-def _parse_date(value: str | None, name: str) -> date | None:
+def _parse_date(value: str | None, name: str, lang: str = "en") -> date | None:
     if not value:
         return None
     try:
         return date.fromisoformat(value)
-    except ValueError as exc:
-        raise InvalidInput(f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.") from exc
+    except ValueError:
+        raise_localized(
+            InvalidInput,
+            f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.",
+            f"{name} doit être une date ISO (AAAA-MM-JJ) (reçu {value!r}).",
+            lang,
+        )
 
 
 def _row_date(row: dict[str, Any]) -> datetime | None:
@@ -180,6 +223,7 @@ async def get_data(
     start_date: str | None = None,
     end_date: str | None = None,
     limit: int = constants.ROWS_DEFAULT,
+    lang: str = "en",
 ) -> TableData:
     """Rows of one table, filtered upstream by column values.
 
@@ -187,26 +231,46 @@ async def get_data(
     `limit` matching rows are returned, oldest first.
     """
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX} (reçu {limit}).",
+            lang,
+        )
     filters = dict(filters or {})
     for column in filters:
         if not _COLUMN.match(column):
-            raise InvalidInput(f"Filter column {column!r} is not a valid column name.")
-    start = _parse_date(start_date, "start_date")
-    end = _parse_date(end_date, "end_date")
+            raise_localized(
+                InvalidInput,
+                f"Filter column {column!r} is not a valid column name.",
+                f"la colonne de filtre {column!r} n'est pas un nom de colonne valide.",
+                lang,
+            )
+    start = _parse_date(start_date, "start_date", lang)
+    end = _parse_date(end_date, "end_date", lang)
     if start and end and start > end:
-        raise InvalidInput(f"start_date {start} is after end_date {end}.")
-    name = await _resolve_table(table)
+        raise_localized(
+            InvalidInput,
+            f"start_date {start} is after end_date {end}.",
+            f"start_date {start} est postérieure à end_date {end}.",
+            lang,
+        )
+    name = await _resolve_table(table, lang)
     params = {"table": name, **filters}
 
     async def fetch() -> Any:
-        return await _get("data", params)
+        return await _get("data", params, lang)
 
     rows, cached = await cached_fetch(
         f"ab-economic:data:{sorted(params.items())}", constants.CACHE_TTL_DATA_SECONDS, fetch
     )
     if not isinstance(rows, list):
-        raise UpstreamError(f"ab_economic:data returned {type(rows).__name__}, expected a list.")
+        raise_localized(
+            UpstreamError,
+            f"ab_economic:data returned {type(rows).__name__}, expected a list.",
+            f"ab_economic:data a renvoyé un objet {type(rows).__name__} au lieu d'une liste.",
+            lang,
+        )
 
     def in_range(row: dict[str, Any]) -> bool:
         when = _row_date(row)
@@ -231,7 +295,12 @@ async def get_data(
             url=str(httpx.URL(f"{constants.BASE_URL}/data", params=params)),
             cached=cached,
             schema_name="ab_economic.TableData",
-            coverage=f"{len(kept)} most recent of {len(matching)} matching rows",
+            coverage=pick(
+                lang,
+                f"{len(kept)} most recent of {len(matching)} matching rows",
+                f"les {len(kept)} lignes les plus récentes sur {len(matching)} correspondantes ; "
+                "noms de colonnes et valeurs textuelles en anglais, comme à la source",
+            ),
             limits=join_limits(
                 truncation_note(
                     returned=len(kept),
@@ -240,11 +309,25 @@ async def get_data(
                     order="latest",
                     how_to_get_more="filter to one series, set start_date/end_date, or raise "
                     f"limit (max {constants.ROWS_MAX}; responses are capped near 200 KB)",
+                )
+                if lang != "fr"
+                else (
+                    f"{len(kept)} lignes renvoyées sur {len(matching)}, les plus récentes ; "
+                    "pour en obtenir d'autres, filtrez sur une seule série, indiquez "
+                    f"start_date/end_date ou augmentez limit (max. {constants.ROWS_MAX} ; "
+                    "réponses plafonnées vers 200 Ko)"
+                    if len(kept) < len(matching)
+                    else None
                 ),
-                "dates are filtered here, after the upstream returns the filtered table"
+                pick(
+                    lang,
+                    "dates are filtered here, after the upstream returns the filtered table",
+                    "les dates sont filtrées ici, après que la source a renvoyé le tableau filtré",
+                )
                 if start or end
                 else None,
             ),
+            lang=lang,
         ),
     )
 
@@ -284,9 +367,9 @@ def _parse_api_links(html: str) -> list[PublishedSeries]:
     return series
 
 
-async def get_indicator_series(indicator: str) -> IndicatorSeries:
+async def get_indicator_series(indicator: str, lang: str = "en") -> IndicatorSeries:
     """The published API links behind one Key Indicators page."""
-    catalogue = await list_indicators()
+    catalogue = await list_indicators(lang)
     wanted = indicator.strip().lower()
     match = next(
         (i for i in catalogue.indicators if wanted in (i.name.lower(), _slug(i.name))),
@@ -295,7 +378,12 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
     name = match.name if match else indicator.strip()
     url = match.page_url if match else _page_url(name)
     if not name:
-        raise InvalidInput("indicator must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "indicator must not be empty.",
+            "indicator ne doit pas être vide.",
+            lang,
+        )
 
     async def fetch() -> str:
         await _LIMITER.acquire()
@@ -314,16 +402,29 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
                 await _LIMITER.acquire()
                 response = await get_raw(moved, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(
+            status = exc.response.status_code
+            if status == 404:
+                raise_localized(
+                    NotFound,
                     f"No Alberta Economic Dashboard page for {indicator!r}. "
-                    "Use ab_economic_list_indicators."
-                ) from exc
-            raise UpstreamError(
-                f"ab_economic: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"ab_economic: {url} did not respond in time.") from exc
+                    "Use ab_economic_list_indicators.",
+                    f"aucune page du tableau de bord économique de l'Alberta pour {indicator!r}. "
+                    "Utilisez ab_economic_list_indicators.",
+                    lang,
+                )
+            raise_localized(
+                UpstreamError,
+                f"ab_economic: {url} returned HTTP {status}.",
+                f"ab_economic : {url} a répondu par une erreur HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            raise_localized(
+                UpstreamUnavailable,
+                f"ab_economic: {url} did not respond in time.",
+                f"ab_economic : {url} n'a pas répondu à temps.",
+                lang,
+            )
         return response.text
 
     html, cached = await cached_fetch(
@@ -343,13 +444,20 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
             )
             for value in values
         ]
-        note = (
+        note = pick(
+            lang,
             f"The {name!r} page lists no API links; these series come from the data API "
-            f"table {table!r} that holds the chart's figures."
+            f"table {table!r} that holds the chart's figures.",
+            f"La page {name!r} ne liste aucun lien d'API ; ces séries viennent du tableau "
+            f"{table!r} de l'API de données, qui contient les chiffres du graphique.",
         )
     if not series:
-        raise NotFound(
-            f"The {name!r} page publishes no API links; use ab_economic_list_tables instead."
+        raise_localized(
+            NotFound,
+            f"The {name!r} page publishes no API links; use ab_economic_list_tables instead.",
+            f"la page {name!r} ne publie aucun lien d'API ; utilisez plutôt "
+            "ab_economic_list_tables.",
+            lang,
         )
     return IndicatorSeries(
         indicator=name,
@@ -361,13 +469,20 @@ async def get_indicator_series(indicator: str) -> IndicatorSeries:
             url=url,
             cached=cached,
             schema_name="ab_economic.IndicatorSeries",
+            coverage=pick(
+                lang,
+                "",
+                "Noms de tableaux, de colonnes et d'indicateurs tels que publiés par le tableau de bord, en anglais seulement.",
+            )
+            or None,
+            lang=lang,
         ),
     )
 
 
-async def list_indicators() -> IndicatorList:
+async def list_indicators(lang: str = "en") -> IndicatorList:
     async def fetch() -> Any:
-        return await _get(f"api/tile-data/dashboard/{constants.KEY_INDICATORS_CODE}")
+        return await _get(f"api/tile-data/dashboard/{constants.KEY_INDICATORS_CODE}", lang=lang)
 
     body, cached = await cached_fetch(
         "ab-economic:indicators", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch
@@ -391,6 +506,13 @@ async def list_indicators() -> IndicatorList:
             url=constants.DASHBOARD_URL,
             cached=cached,
             schema_name="ab_economic.IndicatorList",
-            freshness="catalogue cached 24h",
+            freshness=pick(lang, "catalogue cached 24h", "catalogue conservé en cache 24 h"),
+            coverage=pick(
+                lang,
+                "",
+                "Noms de tableaux, de colonnes et d'indicateurs tels que publiés par le tableau de bord, en anglais seulement.",
+            )
+            or None,
+            lang=lang,
         ),
     )

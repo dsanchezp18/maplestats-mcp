@@ -332,3 +332,35 @@ def test_both_readers_share_one_file_cache_key():
     from maplestats_mcp.shared import file_download
 
     assert file_download.cache_key(XLSX_URL) == f"file:{XLSX_URL}"
+
+
+# French (lang="fr"): errors, provenance text and licence; English unchanged.
+
+
+async def test_french_search_provenance_and_licence(httpx_mock):
+    body = _envelope({"count": 41, "results": [_package()]})
+    httpx_mock.add_response(url=re.compile(r".*/action/package_search\?.*"), json=body)
+    result = await client.search_datasets("population", limit=1, lang="fr")
+    assert (
+        result.provenance.freshness == "Métadonnées du catalogue, conservées en cache six heures."
+    )
+    assert result.provenance.limits == "Jeux de données 1 à 1 sur 41."
+    assert "Licence du gouvernement ouvert – Alberta" in (result.provenance.licence or "")
+    assert " : licence mondiale" in result.licence_note
+
+
+async def test_english_search_provenance_unchanged(httpx_mock):
+    body = _envelope({"count": 41, "results": [_package()]})
+    httpx_mock.add_response(url=re.compile(r".*/action/package_search\?.*"), json=body)
+    result = await client.search_datasets("population", limit=1)
+    assert result.provenance.limits == "Showing datasets 1 to 1 of 41."
+    assert (result.provenance.licence or "").startswith("Open Government Licence - Alberta")
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide : ab_opendata : limit doit"):
+        await client.search_datasets(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="url doit être un lien de téléchargement"):
+        await client.read_resource("https://example.com/x.csv", lang="fr")
+    with pytest.raises(NotFound, match="aucun jeu de données"):
+        await client.get_dataset("no such thing!", lang="fr")
