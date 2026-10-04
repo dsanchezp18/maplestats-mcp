@@ -723,12 +723,12 @@ async def list_national_agencies(
 
 async def get_feed_info(agency_key: str, *, lang: str = "en") -> FeedInfo:
     """The feed's own metadata, file sizes and counts of routes and stops."""
-    agency = await _resolve(agency_key)
-    directory, dir_cached = await _directory(agency_key)
-    feed_info, _ = await _table(agency_key, "feed_info.txt", required=False)
-    agency_rows, _ = await _table(agency_key, "agency.txt", required=False)
-    routes, _ = await _table(agency_key, "routes.txt")
-    stops, _ = await _table(agency_key, "stops.txt")
+    agency = await _resolve(agency_key, lang)
+    directory, dir_cached = await _directory(agency_key, lang)
+    feed_info, _ = await _table(agency_key, "feed_info.txt", required=False, lang=lang)
+    agency_rows, _ = await _table(agency_key, "agency.txt", required=False, lang=lang)
+    routes, _ = await _table(agency_key, "routes.txt", lang=lang)
+    stops, _ = await _table(agency_key, "stops.txt", lang=lang)
     info = feed_info[0] if feed_info else {}
     if directory.blob is None:
         feed, _ = await _probe(agency, lang)
@@ -755,7 +755,7 @@ async def get_feed_info(agency_key: str, *, lang: str = "en") -> FeedInfo:
             FeedFile(name=m.name, compressed_bytes=m.compressed_size, uncompressed_bytes=m.size)
             for m in directory.members.values()
         ],
-        provenance=await _provenance(agency_key, directory, dir_cached, "transit.FeedInfo"),
+        provenance=await _provenance(agency_key, directory, dir_cached, "transit.FeedInfo", lang),
     )
 
 
@@ -784,11 +784,10 @@ async def search_routes(
     lang: str = "en",
 ) -> RouteSearch:
     """Routes whose id, short name, long name or description contain `query`."""
-    del lang
-    agency = await _resolve(agency_key)
-    _check_limit(limit)
-    directory, dir_cached = await _directory(agency_key)
-    rows, _ = await _table(agency_key, "routes.txt")
+    agency = await _resolve(agency_key, lang)
+    _check_limit(limit, lang)
+    directory, dir_cached = await _directory(agency_key, lang)
+    rows, _ = await _table(agency_key, "routes.txt", lang=lang)
     needle = gtfs.fold(query) if query else None
     matches: list[tuple[int, RouteRecord]] = []
     for row in rows:
@@ -816,7 +815,9 @@ async def search_routes(
         query=query,
         total_matches=len(matches),
         routes=[record for _, record in matches[:limit]],
-        provenance=await _provenance(agency_key, directory, dir_cached, "transit.RouteSearch"),
+        provenance=await _provenance(
+            agency_key, directory, dir_cached, "transit.RouteSearch", lang
+        ),
     )
 
 
@@ -825,9 +826,9 @@ def _natural(text: str) -> tuple[int, str]:
     return (int(digits) if digits else 10**9, text)
 
 
-async def _resolve_route(agency_key: str, route: str) -> RouteRecord:
-    agency = _agency(agency_key)
-    all_rows, _ = await _table(agency_key, "routes.txt")
+async def _resolve_route(agency_key: str, route: str, lang: str = "en") -> RouteRecord:
+    agency = _agency(agency_key, lang)
+    all_rows, _ = await _table(agency_key, "routes.txt", lang=lang)
     rows = [r for r in all_rows if not _is_excluded(agency, r)]
     exact = [r for r in rows if r["route_id"] == route]
     named = [r for r in rows if r.get("route_short_name", "").casefold() == route.casefold()]
@@ -842,18 +843,32 @@ async def _resolve_route(agency_key: str, route: str) -> RouteRecord:
         # STM route "1" is the green métro line (checked 2026-10-03): say it
         # exists but is left out, rather than that there is no such route.
         kind = constants.ROUTE_TYPES.get(int(left_out[0]["route_type"]), "route")
-        raise NotFound(
+        kind_fr = constants.ROUTE_TYPES_FR.get(int(left_out[0]["route_type"]), "ligne")
+        raise_localized(
+            NotFound,
             f"{agency_key}: route '{route}' is a {kind} line, which this server does not "
-            f"report under {agency.name_en}'s terms of use (see transit_list_agencies notes)."
+            f"report under {agency.name_en}'s terms of use (see transit_list_agencies notes).",
+            f"{agency_key} : la ligne « {route} » est une ligne de {kind_fr}, que ce serveur ne "
+            f"diffuse pas selon les conditions d'utilisation de {agency.name_fr or agency.name_en} "
+            "(voir les notes de transit_list_agencies).",
+            lang,
         )
     if not found:
-        raise NotFound(
-            f"{agency_key}: no route with id or short name '{route}'. Use transit_search_routes."
+        raise_localized(
+            NotFound,
+            f"{agency_key}: no route with id or short name '{route}'. Use transit_search_routes.",
+            f"{agency_key} : aucune ligne dont l'identifiant ou le numéro est « {route} ». "
+            "Utilisez transit_search_routes.",
+            lang,
         )
     if len(found) > 1:
         ids = ", ".join(r["route_id"] for r in found[:10])
-        raise InvalidInput(
-            f"{agency_key}: '{route}' matches several routes ({ids}); pass the route_id."
+        raise_localized(
+            InvalidInput,
+            f"{agency_key}: '{route}' matches several routes ({ids}); pass the route_id.",
+            f"{agency_key} : « {route} » correspond à plusieurs lignes ({ids}) ; indiquez le "
+            "route_id.",
+            lang,
         )
     return _route_record(found[0])
 
@@ -902,17 +917,31 @@ async def search_stops(
     lang: str = "en",
 ) -> StopSearch:
     """Stops by name, code or id, and/or within `radius_m` of a point."""
-    del lang
-    await _resolve(agency_key)
-    _check_limit(limit)
+    await _resolve(agency_key, lang)
+    _check_limit(limit, lang)
     if (near_latitude is None) != (near_longitude is None):
-        raise InvalidInput("Pass near_latitude and near_longitude together.")
+        raise_localized(
+            InvalidInput,
+            "Pass near_latitude and near_longitude together.",
+            "indiquez near_latitude et near_longitude ensemble.",
+            lang,
+        )
     if not query and near_latitude is None:
-        raise InvalidInput("Pass a query, a point (near_latitude/near_longitude), or both.")
+        raise_localized(
+            InvalidInput,
+            "Pass a query, a point (near_latitude/near_longitude), or both.",
+            "indiquez une recherche (query), un point (near_latitude/near_longitude) ou les deux.",
+            lang,
+        )
     if radius_m <= 0:
-        raise InvalidInput("radius_m must be positive.")
-    directory, dir_cached = await _directory(agency_key)
-    rows, _ = await _table(agency_key, "stops.txt")
+        raise_localized(
+            InvalidInput,
+            "radius_m must be positive.",
+            "radius_m doit être positif.",
+            lang,
+        )
+    directory, dir_cached = await _directory(agency_key, lang)
+    rows, _ = await _table(agency_key, "stops.txt", lang=lang)
     needle = gtfs.fold(query) if query else None
     matches: list[tuple[float, int, StopRecord]] = []
     for row in rows:
@@ -948,20 +977,32 @@ async def search_stops(
         query=query,
         total_matches=len(matches),
         stops=[stop for _, _, stop in matches[:limit]],
-        provenance=await _provenance(agency_key, directory, dir_cached, "transit.StopSearch"),
+        provenance=await _provenance(agency_key, directory, dir_cached, "transit.StopSearch", lang),
     )
 
 
-async def _resolve_stop(agency_key: str, stop: str) -> tuple[dict[str, str], list[dict[str, str]]]:
-    rows, _ = await _table(agency_key, "stops.txt")
+async def _resolve_stop(
+    agency_key: str, stop: str, lang: str = "en"
+) -> tuple[dict[str, str], list[dict[str, str]]]:
+    rows, _ = await _table(agency_key, "stops.txt", lang=lang)
     by_id = [r for r in rows if r["stop_id"] == stop]
     found = by_id or [r for r in rows if r.get("stop_code") == stop]
     if not found:
-        raise NotFound(f"{agency_key}: no stop with id or code '{stop}'. Use transit_search_stops.")
+        raise_localized(
+            NotFound,
+            f"{agency_key}: no stop with id or code '{stop}'. Use transit_search_stops.",
+            f"{agency_key} : aucun arrêt dont l'identifiant ou le code est « {stop} ». "
+            "Utilisez transit_search_stops.",
+            lang,
+        )
     if len(found) > 1:
         ids = ", ".join(r["stop_id"] for r in found[:10])
-        raise InvalidInput(
-            f"{agency_key}: '{stop}' matches several stops ({ids}); pass the stop_id."
+        raise_localized(
+            InvalidInput,
+            f"{agency_key}: '{stop}' matches several stops ({ids}); pass the stop_id.",
+            f"{agency_key} : « {stop} » correspond à plusieurs arrêts ({ids}) ; indiquez le "
+            "stop_id.",
+            lang,
         )
     chosen = found[0]
     children = [r for r in rows if r.get("parent_station") == chosen["stop_id"]]
@@ -979,11 +1020,10 @@ async def get_stop_departures(
     lang: str = "en",
 ) -> StopDepartures:
     """Scheduled departures at a stop (and a station's platforms) on a date."""
-    del lang
-    agency = await _resolve(agency_key)
-    _check_limit(limit)
-    zone = await _timezone(agency_key)
-    day = _service_day(zone, service_date)
+    agency = await _resolve(agency_key, lang)
+    _check_limit(limit, lang)
+    zone = await _timezone(agency_key, lang)
+    day = _service_day(zone, service_date, lang)
     if start_time:
         from_seconds = gtfs.parse_start_time(start_time)
     elif day == datetime.now(ZoneInfo(zone)).date():
@@ -991,15 +1031,15 @@ async def get_stop_departures(
         from_seconds = now.hour * 3600 + now.minute * 60
     else:
         from_seconds = 0
-    await _check_date(agency_key, day)
-    directory, dir_cached = await _directory(agency_key)
-    chosen, children = await _resolve_stop(agency_key, stop)
+    await _check_date(agency_key, day, lang)
+    directory, dir_cached = await _directory(agency_key, lang)
+    chosen, children = await _resolve_stop(agency_key, stop, lang)
     stop_ids = frozenset([chosen["stop_id"], *(c["stop_id"] for c in children)])
-    route_record = await _resolve_route(agency_key, route) if route else None
+    route_record = await _resolve_route(agency_key, route, lang) if route else None
 
     async def fetch() -> list[StopCall]:
         rows = await _scan_stop_times(agency_key, stop_ids=stop_ids)
-        trips = await _trips(agency_key, trip_ids=frozenset(r.trip_id for r in rows))
+        trips = await _trips(agency_key, trip_ids=frozenset(r.trip_id for r in rows), lang=lang)
         by_trip = {t.trip_id: t for t in trips}
         return [StopCall(r, by_trip[r.trip_id]) for r in rows if r.trip_id in by_trip]
 
@@ -1008,14 +1048,14 @@ async def get_stop_departures(
         constants.CACHE_TTL_SCAN_SECONDS,
         fetch,
     )
-    templated = await _frequency_trips(agency_key)
+    templated = await _frequency_trips(agency_key, lang)
     if templated:
         calls = [c for c in calls if c.trip.trip_id not in templated]
-    calendar, _ = await _table(agency_key, "calendar.txt", required=False)
-    calendar_dates, _ = await _table(agency_key, "calendar_dates.txt", required=False)
+    calendar, _ = await _table(agency_key, "calendar.txt", required=False, lang=lang)
+    calendar_dates, _ = await _table(agency_key, "calendar_dates.txt", required=False, lang=lang)
     today = gtfs.active_services(calendar, calendar_dates, day)
     yesterday = gtfs.active_services(calendar, calendar_dates, gtfs.previous_day(day))
-    routes, _ = await _table(agency_key, "routes.txt")
+    routes, _ = await _table(agency_key, "routes.txt", lang=lang)
     route_by_id = {r["route_id"]: r for r in routes if not _is_excluded(agency, r)}
 
     entries: list[tuple[int, bool, StopCall]] = []
@@ -1068,7 +1108,7 @@ async def get_stop_departures(
         total_matches=len(entries),
         departures=departures,
         provenance=await _provenance(
-            agency_key, directory, dir_cached and scan_cached, "transit.StopDepartures"
+            agency_key, directory, dir_cached and scan_cached, "transit.StopDepartures", lang
         ),
     )
 
@@ -1084,18 +1124,19 @@ async def get_route_summary(
     lang: str = "en",
 ) -> RouteSummary:
     """Trips, first/last departures, stops served and frequency by hour on a date."""
-    del lang
-    await _resolve(agency_key)
-    day = _service_day(await _timezone(agency_key), service_date)
-    await _check_date(agency_key, day)
-    directory, dir_cached = await _directory(agency_key)
-    record = await _resolve_route(agency_key, route)
-    templated = await _frequency_trips(agency_key)
+    await _resolve(agency_key, lang)
+    day = _service_day(await _timezone(agency_key, lang), service_date, lang)
+    await _check_date(agency_key, day, lang)
+    directory, dir_cached = await _directory(agency_key, lang)
+    record = await _resolve_route(agency_key, route, lang)
+    templated = await _frequency_trips(agency_key, lang)
     all_trips = [
-        t for t in await _trips(agency_key, route_id=record.route_id) if t.trip_id not in templated
+        t
+        for t in await _trips(agency_key, route_id=record.route_id, lang=lang)
+        if t.trip_id not in templated
     ]
-    calendar, _ = await _table(agency_key, "calendar.txt", required=False)
-    calendar_dates, _ = await _table(agency_key, "calendar_dates.txt", required=False)
+    calendar, _ = await _table(agency_key, "calendar.txt", required=False, lang=lang)
+    calendar_dates, _ = await _table(agency_key, "calendar_dates.txt", required=False, lang=lang)
     services = gtfs.active_services(calendar, calendar_dates, day)
     trips = [t for t in all_trips if t.service_id in services]
     trip_ids = frozenset(t.trip_id for t in trips)
@@ -1108,7 +1149,7 @@ async def get_route_summary(
         constants.CACHE_TTL_SCAN_SECONDS,
         fetch,
     )
-    stops, _ = await _table(agency_key, "stops.txt")
+    stops, _ = await _table(agency_key, "stops.txt", lang=lang)
     stop_by_id = {s["stop_id"]: s for s in stops}
 
     by_trip: dict[str, list[gtfs.StopTimeRow]] = {}
@@ -1172,6 +1213,6 @@ async def get_route_summary(
             )
         ],
         provenance=await _provenance(
-            agency_key, directory, dir_cached and scan_cached, "transit.RouteSummary"
+            agency_key, directory, dir_cached and scan_cached, "transit.RouteSummary", lang
         ),
     )

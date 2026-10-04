@@ -33,9 +33,9 @@ async def opendatasoft_vancouver_search_datasets(
     query. Keywords: Vancouver, Opendatasoft, open data, dataset
     search, catalogue, government, municipal, British Columbia,
     discovery.
-    Mots-clés : Vancouver, Opendatasoft, données ouvertes, recherche
-    de jeux de données, catalogue, gouvernement, municipal,
-    Colombie-Britannique, découverte.
+    Mots-clés : Ville de Vancouver, données ouvertes de Vancouver, recherche
+    de jeux de données, catalogue de données, données municipales,
+    Colombie-Britannique, Opendatasoft, arbres de rue, permis, découverte.
     """
     return await client.search_datasets(query, limit=limit, offset=offset, lang=lang)
 
@@ -49,9 +49,9 @@ async def opendatasoft_vancouver_get_dataset(dataset_id: str, lang: Lang = "en")
     or downloading it. Keywords: Vancouver, Opendatasoft, dataset
     detail, fields, metadata, licence, publisher, download, CSV, JSON,
     GeoJSON.
-    Mots-clés : Vancouver, Opendatasoft, détail du jeu de données,
-    champs, métadonnées, licence, éditeur, téléchargement, CSV, JSON,
-    GeoJSON.
+    Mots-clés : Ville de Vancouver, fiche du jeu de données, champs,
+    métadonnées, licence, éditeur, liens de téléchargement, CSV, JSON,
+    GeoJSON, Opendatasoft.
     """
     return await client.get_dataset(dataset_id, lang)
 
@@ -76,8 +76,9 @@ async def opendatasoft_vancouver_query_records(
     within the dataset's own fields. Keywords: Vancouver, Opendatasoft,
     ODSQL, records, query, filter, rows, data, select, where, order,
     Explore API.
-    Mots-clés : Vancouver, Opendatasoft, ODSQL, enregistrements,
-    requête, filtrer, lignes, données, sélection, tri, Explore API.
+    Mots-clés : Ville de Vancouver, Opendatasoft, ODSQL, enregistrements,
+    requête de données, filtrer les lignes, sélection de colonnes, tri,
+    données municipales, Explore API.
     """
     return await client.query_records(
         dataset_id,
