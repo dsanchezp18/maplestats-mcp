@@ -31,6 +31,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from maplestats_mcp.modules.electricity import constants
+from maplestats_mcp.modules.electricity.client import _error, _raise, _say
 from maplestats_mcp.modules.electricity.quebec_client import _get_json
 from maplestats_mcp.modules.electricity.schemas import (
     QuebecFacility,
@@ -50,15 +51,23 @@ _KINDS = ("total", "turbined", "spilled", "inflow")
 _STEPS = {"Horaire": "hourly", "Journalier": "daily"}
 
 
-async def _sites() -> tuple[list[dict[str, Any]], bool]:
+async def _sites(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     async def fetch() -> list[dict[str, Any]]:
-        body = await _get_json(constants.QUEBEC_FLOWS_URL, {}, "quebec_flows")
+        body = await _get_json(constants.QUEBEC_FLOWS_URL, {}, "quebec_flows", lang)
         if not isinstance(body, dict) or not isinstance(body.get("Site"), list):
-            raise UpstreamError("electricity:quebec_flows: the file has no 'Site' list.")
+            _raise(
+                UpstreamError,
+                "electricity:quebec_flows: the file has no 'Site' list.",
+                "electricity:quebec_flows : le fichier n'a pas de liste 'Site'.",
+                lang,
+            )
         sites = list_or_empty(body, "Site")
         if len(sites) > constants.QUEBEC_FLOWS_MAX_FACILITIES:
-            raise UpstreamError(
-                f"electricity:quebec_flows lists {len(sites)} sites, more than expected."
+            _raise(
+                UpstreamError,
+                f"electricity:quebec_flows lists {len(sites)} sites, more than expected.",
+                f"electricity:quebec_flows liste {len(sites)} sites, plus que prévu.",
+                lang,
             )
         return sites
 
@@ -142,20 +151,32 @@ def _fold(text: str) -> str:
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
-def _provenance(schema: str, cached: bool, coverage: str | None = None) -> Provenance:
+def _provenance(
+    schema: str, cached: bool, coverage: str | None = None, lang: str = "en"
+) -> Provenance:
     return make_provenance(
         source="electricity:quebec_flows",
         url=constants.QUEBEC_FLOWS_URL,
         cached=cached,
         schema_name=schema,
-        freshness=(
+        freshness=_say(
             "Rewritten by Hydro-Quebec about hourly; about ten days of hourly flows and up to "
             "ten daily inflows per site. Nord-du-Québec and Côte-Nord sites lag about four "
-            "days. Raw data, not quality-checked by Hydro-Quebec. Cached 30 minutes."
+            "days. Raw data, not quality-checked by Hydro-Quebec. Cached 30 minutes.",
+            "Réécrit par Hydro-Québec environ toutes les heures ; environ dix jours de débits "
+            "horaires et jusqu'à dix apports quotidiens par site. Les sites du Nord-du-Québec "
+            "et de la Côte-Nord ont environ quatre jours de retard. Données brutes, non "
+            "validées par Hydro-Québec. Mises en cache 30 minutes.",
+            lang,
         ),
         coverage=coverage,
-        limits=f"Record: {constants.QUEBEC_FLOWS_PAGE}. Flows in m³/s; timestamps UTC.",
-        licence=constants.QUEBEC_LICENCE,
+        limits=_say(
+            f"Record: {constants.QUEBEC_FLOWS_PAGE}. Flows in m³/s; timestamps UTC.",
+            f"Fiche : {constants.QUEBEC_FLOWS_PAGE}. Débits en m³/s ; horodatage UTC.",
+            lang,
+        ),
+        licence=constants.QUEBEC_LICENCE_FR if lang == "fr" else constants.QUEBEC_LICENCE,
+        lang=lang,
     )
 
 
@@ -164,15 +185,25 @@ async def list_facilities(
     region: str | None = None,
     kind: str | None = None,
     limit: int = 100,
+    lang: str = "en",
 ) -> QuebecFacilityList:
     """Sites with their series and latest values, filtered by name/id, region or kind."""
-    if not 1 <= limit <= constants.QUEBEC_FLOWS_MAX_FACILITIES:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.QUEBEC_FLOWS_MAX_FACILITIES}, got {limit}."
+    maximum = constants.QUEBEC_FLOWS_MAX_FACILITIES
+    if not 1 <= limit <= maximum:
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {maximum}, got {limit}.",
+            f"limit doit être compris entre 1 et {maximum}, reçu {limit}.",
+            lang,
         )
     if kind is not None and kind not in _KINDS:
-        raise InvalidInput(f"kind must be one of {', '.join(_KINDS)}.")
-    sites, cached = await _sites()
+        _raise(
+            InvalidInput,
+            f"kind must be one of {', '.join(_KINDS)}.",
+            f"kind doit valoir l'une de {', '.join(_KINDS)}.",
+            lang,
+        )
+    sites, cached = await _sites(lang)
     needle = _fold(query) if query and query.strip() else None
     wanted_region = _fold(region) if region and region.strip() else None
     facilities = []
@@ -197,7 +228,14 @@ async def list_facilities(
         provenance=_provenance(
             "electricity.QuebecFacilityList",
             cached,
-            f"{len(facilities)} of {len(sites)} sites match; showing {min(limit, len(facilities))}.",
+            _say(
+                f"{len(facilities)} of {len(sites)} sites match; showing "
+                f"{min(limit, len(facilities))}.",
+                f"{len(facilities)} sites sur {len(sites)} correspondent ; "
+                f"{min(limit, len(facilities))} affichés.",
+                lang,
+            ),
+            lang,
         ),
     )
 
@@ -207,36 +245,58 @@ async def get_facility_flows(
     kind: str | None = None,
     start: str | None = None,
     end: str | None = None,
+    lang: str = "en",
 ) -> QuebecFacilityFlows:
     """One site's series (all values), optionally one kind and a UTC time window."""
     if not facility or not facility.strip():
-        raise InvalidInput("facility must be a site id (e.g. '3-130') or name.")
+        _raise(
+            InvalidInput,
+            "facility must be a site id (e.g. '3-130') or name.",
+            "facility doit être l'identifiant d'un site (p. ex. '3-130') ou son nom.",
+            lang,
+        )
     if kind is not None and kind not in _KINDS:
-        raise InvalidInput(f"kind must be one of {', '.join(_KINDS)}.")
+        _raise(
+            InvalidInput,
+            f"kind must be one of {', '.join(_KINDS)}.",
+            f"kind doit valoir l'une de {', '.join(_KINDS)}.",
+            lang,
+        )
     window = []
     for label, text in (("start", start), ("end", end)):
         if text:
             try:
                 parsed = datetime.fromisoformat(text)
             except ValueError as exc:
-                raise InvalidInput(
-                    f"{label} must be an ISO date or date-time, got '{text}'."
+                raise _error(
+                    InvalidInput,
+                    f"{label} must be an ISO date or date-time, got '{text}'.",
+                    f"{label} doit être une date ou une date-heure ISO, reçu '{text}'.",
+                    lang,
                 ) from exc
             window.append(parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC))
         else:
             window.append(None)
-    sites, cached = await _sites()
+    sites, cached = await _sites(lang)
     wanted = _fold(facility.strip())
     exact = [s for s in sites if _fold(str(s.get("identifiant") or "")) == wanted]
     exact = exact or [s for s in sites if _fold(str(s.get("nom") or "")) == wanted]
     found = exact or [s for s in sites if wanted in _fold(str(s.get("nom") or ""))]
     if not found:
-        raise NotFound(
-            f"No Hydro-Quebec site '{facility}'. Use electricity_quebec_list_facilities."
+        _raise(
+            NotFound,
+            f"No Hydro-Quebec site '{facility}'. Use electricity_quebec_list_facilities.",
+            f"aucun site d'Hydro-Québec '{facility}'. Utilisez electricity_quebec_list_facilities.",
+            lang,
         )
     if len(found) > 1:
         names = ", ".join(f"{s.get('identifiant')} {s.get('nom')}" for s in found[:10])
-        raise InvalidInput(f"'{facility}' matches several sites ({names}); pass the id.")
+        _raise(
+            InvalidInput,
+            f"'{facility}' matches several sites ({names}); pass the id.",
+            f"'{facility}' correspond à plusieurs sites ({names}) ; passez l'identifiant.",
+            lang,
+        )
     record, series = _facility(found[0])
     low, high = window
     kept = []
@@ -252,5 +312,5 @@ async def get_facility_flows(
     return QuebecFacilityFlows(
         facility=record,
         series=kept,
-        provenance=_provenance("electricity.QuebecFacilityFlows", cached),
+        provenance=_provenance("electricity.QuebecFacilityFlows", cached, lang=lang),
     )

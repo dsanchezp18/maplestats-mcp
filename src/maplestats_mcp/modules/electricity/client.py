@@ -35,6 +35,7 @@ import csv
 import statistics
 import xml.etree.ElementTree as ET
 from datetime import UTC, date, datetime, timedelta, timezone
+from typing import NoReturn
 
 import httpx
 
@@ -59,9 +60,11 @@ from maplestats_mcp.modules.electricity.schemas import (
     ZonalPrices,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing
+from maplestats_mcp.shared.i18n import t as i18n_text
 from maplestats_mcp.shared.licences import IESO_TERMS
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -73,6 +76,30 @@ _LIMITER = get_limiter(
 _IESO_TZ = timezone(timedelta(hours=constants.IESO_UTC_OFFSET_HOURS))
 
 
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _say(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+def _error(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> ValueError:
+    """The error to raise with `from`: English as before, French in the typed template."""
+    return exc_cls(i18n_text(ERROR_KEYS[exc_cls.__name__], "fr", detail=fr) if lang == "fr" else en)
+
+
+# Said with lang="fr" only: IESO publishes its files in English.
+_ENGLISH_SOURCE_FR = french_spacing(
+    "Les fichiers de la SIERE n'existent qu'en anglais ; les noms de champs et de zones "
+    "sont reproduits tels quels."
+)
+
+
 def ieso_today() -> date:
     return datetime.now(UTC).astimezone(_IESO_TZ).date()
 
@@ -80,28 +107,44 @@ def ieso_today() -> date:
 # ---------------------------------------------------------------- fetching
 
 
-async def _get_text(path: str, context: str) -> str:
+async def _get_text(path: str, context: str, lang: str = "en") -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(f"{constants.BASE_URL}/{path}")
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            raise NotFound(
+        status = exc.response.status_code
+        if status == 404:
+            raise _error(
+                NotFound,
                 f"electricity:{context} has no published file at {path}. IESO keeps dated "
-                "files for about three months; check the date, or omit it for the latest."
+                "files for about three months; check the date, or omit it for the latest.",
+                f"electricity:{context} : aucun fichier publié à {path}. La SIERE garde les "
+                "fichiers datés environ trois mois ; vérifiez la date, ou omettez-la pour le "
+                "plus récent.",
+                lang,
             ) from exc
-        raise UpstreamError(
-            f"electricity:{context} returned HTTP {exc.response.status_code}."
+        raise _error(
+            UpstreamError,
+            f"electricity:{context} returned HTTP {status}.",
+            f"electricity:{context} a renvoyé HTTP {status}.",
+            lang,
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"electricity:{context} did not respond in time.") from exc
+        raise _error(
+            UpstreamUnavailable,
+            f"electricity:{context} did not respond in time.",
+            f"electricity:{context} n'a pas répondu à temps.",
+            lang,
+        ) from exc
     return response.text
 
 
 _LICENCE = IESO_TERMS  # every reproduction must carry the IESO copyright notice
 
 
-def _limits(extra: str = "") -> str | None:
+def _limits(extra: str = "", extra_fr: str = "", lang: str = "en") -> str | None:
+    if lang == "fr":
+        return " ".join(part for part in (french_spacing(extra_fr), _ENGLISH_SOURCE_FR) if part)
     return extra or None
 
 
@@ -139,11 +182,16 @@ def _number(value: str | None) -> float | None:
         return None
 
 
-def _parse_xml(text: str, context: str) -> ET.Element:
+def _parse_xml(text: str, context: str, lang: str = "en") -> ET.Element:
     try:
         return ET.fromstring(text.encode("utf-8"))
     except ET.ParseError as exc:
-        raise UpstreamError(f"electricity:{context} returned XML that did not parse.") from exc
+        raise _error(
+            UpstreamError,
+            f"electricity:{context} returned XML that did not parse.",
+            f"electricity:{context} a renvoyé un XML illisible.",
+            lang,
+        ) from exc
 
 
 def _hourly_series(container: ET.Element | None) -> dict[int, float | None]:
@@ -164,11 +212,16 @@ def _hourly_series(container: ET.Element | None) -> dict[int, float | None]:
     return series
 
 
-def _date_from_text(value: str | None, context: str) -> date:
+def _date_from_text(value: str | None, context: str, lang: str = "en") -> date:
     try:
         return date.fromisoformat(value or "")
     except ValueError as exc:
-        raise UpstreamError(f"electricity:{context} has no valid delivery date.") from exc
+        raise _error(
+            UpstreamError,
+            f"electricity:{context} has no valid delivery date.",
+            f"electricity:{context} n'a pas de date de livraison valide.",
+            lang,
+        ) from exc
 
 
 def _dated_path(folder: str, report: str, target: date | None, hour: int | None = None) -> str:
@@ -178,37 +231,74 @@ def _dated_path(folder: str, report: str, target: date | None, hour: int | None 
     return f"{folder}/PUB_{report}_{stamp}.xml"
 
 
-def _parse_date(value: str | None, name: str) -> date | None:
+def _parse_date(value: str | None, name: str, lang: str = "en") -> date | None:
     if value is None or not value.strip():
         return None
     try:
         return date.fromisoformat(value.strip())
     except ValueError as exc:
-        raise InvalidInput(f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.") from exc
+        raise _error(
+            InvalidInput,
+            f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.",
+            f"{name} doit être une date ISO (AAAA-MM-JJ), reçu {value!r}.",
+            lang,
+        ) from exc
 
 
-def _check_hour(hour: int | None) -> None:
+def _check_hour(hour: int | None, lang: str = "en") -> None:
     if hour is not None and not 1 <= hour <= 24:
-        raise InvalidInput(f"hour must be 1-24 (hour ending, EST), got {hour}.")
+        _raise(
+            InvalidInput,
+            f"hour must be 1-24 (hour ending, EST), got {hour}.",
+            f"hour doit être compris entre 1 et 24 (heure de fin, HNE), reçu {hour}.",
+            lang,
+        )
 
 
-def _check_limit(limit: int) -> None:
+def _check_limit(limit: int, lang: str = "en") -> None:
     if not 1 <= limit <= constants.MAX_LIMIT:
-        raise InvalidInput(f"limit must be between 1 and {constants.MAX_LIMIT}, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.MAX_LIMIT}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.MAX_LIMIT}, reçu {limit}.",
+            lang,
+        )
 
 
-def _year_for_range(year: int | None, start: date | None, end: date | None, first: int) -> int:
+def _year_for_range(
+    year: int | None, start: date | None, end: date | None, first: int, lang: str = "en"
+) -> int:
     if start and end and start > end:
-        raise InvalidInput("start_date must not be after end_date.")
+        _raise(
+            InvalidInput,
+            "start_date must not be after end_date.",
+            "start_date ne doit pas être postérieur à end_date.",
+            lang,
+        )
     if start and end and start.year != end.year:
-        raise InvalidInput("IESO publishes one file per calendar year; use one year per call.")
+        _raise(
+            InvalidInput,
+            "IESO publishes one file per calendar year; use one year per call.",
+            "la SIERE publie un fichier par année civile ; une seule année par appel.",
+            lang,
+        )
     anchor = start or end
     if year and anchor and anchor.year != year:
-        raise InvalidInput("year does not match the year of start_date/end_date.")
+        _raise(
+            InvalidInput,
+            "year does not match the year of start_date/end_date.",
+            "year ne correspond pas à l'année de start_date/end_date.",
+            lang,
+        )
     chosen = year or (anchor or ieso_today()).year
     last = ieso_today().year
     if not first <= chosen <= last:
-        raise InvalidInput(f"year must be between {first} and {last}, got {chosen}.")
+        _raise(
+            InvalidInput,
+            f"year must be between {first} and {last}, got {chosen}.",
+            f"year doit être compris entre {first} et {last}, reçu {chosen}.",
+            lang,
+        )
     return chosen
 
 
@@ -221,12 +311,17 @@ def _ttl_for_year(year: int) -> int:
 # ------------------------------------------------------------------ demand
 
 
-def parse_demand_csv(text: str) -> list[DemandHour]:
+def parse_demand_csv(text: str, lang: str = "en") -> list[DemandHour]:
     lines = [line for line in text.splitlines() if line.strip() and not line.startswith("\\")]
     reader = csv.DictReader(lines)
     needed = {"Date", "Hour", "Market Demand", "Ontario Demand"}
     if not reader.fieldnames or not needed <= set(reader.fieldnames):
-        raise UpstreamError("electricity:hourly_demand CSV no longer has the expected columns.")
+        _raise(
+            UpstreamError,
+            "electricity:hourly_demand CSV no longer has the expected columns.",
+            "le CSV electricity:hourly_demand n'a plus les colonnes attendues.",
+            lang,
+        )
 
     def whole(value: str | None) -> int | None:
         number = _number(value)
@@ -239,7 +334,7 @@ def parse_demand_csv(text: str) -> list[DemandHour]:
             continue
         rows.append(
             DemandHour(
-                date=_date_from_text(record["Date"], "hourly_demand"),
+                date=_date_from_text(record["Date"], "hourly_demand", lang),
                 hour_ending=hour,
                 market_demand_mw=whole(record["Market Demand"]),
                 ontario_demand_mw=whole(record["Ontario Demand"]),
@@ -256,14 +351,16 @@ async def get_hourly_demand(
     *,
     lang: str = "en",
 ) -> HourlyDemand:
-    del lang
-    _check_limit(limit)
-    start, end = _parse_date(start_date, "start_date"), _parse_date(end_date, "end_date")
-    chosen = _year_for_range(year, start, end, constants.FIRST_DEMAND_YEAR)
+    _check_limit(limit, lang)
+    start, end = (
+        _parse_date(start_date, "start_date", lang),
+        _parse_date(end_date, "end_date", lang),
+    )
+    chosen = _year_for_range(year, start, end, constants.FIRST_DEMAND_YEAR, lang)
     path = f"Demand/PUB_Demand_{chosen}.csv"
 
     async def fetch() -> list[DemandHour]:
-        return parse_demand_csv(await _get_text(path, "hourly_demand"))
+        return parse_demand_csv(await _get_text(path, "hourly_demand", lang), lang)
 
     all_rows, was_cached = await cached_fetch(
         f"electricity:demand:{chosen}", _ttl_for_year(chosen), fetch
@@ -293,12 +390,24 @@ async def get_hourly_demand(
             url=f"{constants.BASE_URL}/{path}",
             cached=was_cached,
             schema_name="electricity.HourlyDemand",
-            freshness="current-year file refreshed daily; lags the clock by about a day",
-            coverage="Ontario only (IESO-controlled grid)",
+            freshness=_say(
+                "current-year file refreshed daily; lags the clock by about a day",
+                "fichier de l'année en cours mis à jour chaque jour ; environ un jour de retard",
+                lang,
+            ),
+            coverage=_say(
+                "Ontario only (IESO-controlled grid)",
+                "Ontario seulement (réseau géré par la SIERE)",
+                lang,
+            ),
             licence=_LICENCE,
             limits=_limits(
-                f"Rows capped at {limit}; peak and average cover all {len(matched)} matched hours."
+                f"Rows capped at {limit}; peak and average cover all {len(matched)} matched hours.",
+                f"Lignes plafonnées à {limit} ; la pointe et la moyenne couvrent les "
+                f"{len(matched)} heures retenues.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -306,23 +415,33 @@ async def get_hourly_demand(
 async def get_realtime_demand(
     date_text: str | None = None, hour: int | None = None, *, lang: str = "en"
 ) -> RealtimeDemand:
-    del lang
-    _check_hour(hour)
-    target = _parse_date(date_text, "date")
+    _check_hour(hour, lang)
+    target = _parse_date(date_text, "date", lang)
     if (target is None) != (hour is None):
-        raise InvalidInput("Give both date and hour for a past hour, or neither for the latest.")
+        _raise(
+            InvalidInput,
+            "Give both date and hour for a past hour, or neither for the latest.",
+            "donnez date et hour pour une heure passée, ou ni l'un ni l'autre pour la plus "
+            "récente.",
+            lang,
+        )
     path = _dated_path("RealtimeTotals", "RealtimeTotals", target, hour)
 
     async def fetch() -> str:
-        return await _get_text(path, "realtime_demand")
+        return await _get_text(path, "realtime_demand", lang)
 
     text, was_cached = await cached_fetch(
         f"electricity:{path}", constants.CACHE_TTL_LATEST_SECONDS, fetch
     )
-    root = _parse_xml(text, "realtime_demand")
+    root = _parse_xml(text, "realtime_demand", lang)
     body = _child(root, "DocBody")
     if body is None:
-        raise UpstreamError("electricity:realtime_demand has no DocBody.")
+        _raise(
+            UpstreamError,
+            "electricity:realtime_demand has no DocBody.",
+            "electricity:realtime_demand n'a pas de DocBody.",
+            lang,
+        )
     intervals = []
     for item in _children(_child(body, "Energies"), "IntervalEnergy"):
         quantities = {
@@ -343,7 +462,7 @@ async def get_realtime_demand(
         )
     demands = [i.ontario_demand_mw for i in intervals if i.ontario_demand_mw is not None]
     return RealtimeDemand(
-        delivery_date=_date_from_text(_text(body, "DeliveryDate"), "realtime_demand"),
+        delivery_date=_date_from_text(_text(body, "DeliveryDate"), "realtime_demand", lang),
         delivery_hour=int(_number(_text(body, "DeliveryHour")) or 0),
         intervals=intervals,
         average_ontario_demand_mw=round(statistics.fmean(demands), 1) if demands else None,
@@ -353,9 +472,19 @@ async def get_realtime_demand(
             url=f"{constants.BASE_URL}/{path}",
             cached=was_cached,
             schema_name="electricity.RealtimeDemand",
-            freshness="updated about every hour with 12 five-minute intervals",
+            freshness=_say(
+                "updated about every hour with 12 five-minute intervals",
+                "mis à jour environ toutes les heures, en 12 intervalles de cinq minutes",
+                lang,
+            ),
             licence=_LICENCE,
-            limits=_limits("One delivery hour per call; dated files are kept about three months."),
+            limits=_limits(
+                "One delivery hour per call; dated files are kept about three months.",
+                "Une heure de livraison par appel ; les fichiers datés sont gardés environ "
+                "trois mois.",
+                lang,
+            ),
+            lang=lang,
         ),
     )
 
@@ -363,12 +492,12 @@ async def get_realtime_demand(
 # ------------------------------------------------------------ supply / fuel
 
 
-def parse_fuel_xml(text: str) -> list[FuelHour]:
-    root = _parse_xml(text, "supply_by_fuel")
+def parse_fuel_xml(text: str, lang: str = "en") -> list[FuelHour]:
+    root = _parse_xml(text, "supply_by_fuel", lang)
     body = _child(root, "DocBody")
     rows: list[FuelHour] = []
     for day in _children(body, "DailyData"):
-        day_date = _date_from_text(_text(day, "Day"), "supply_by_fuel")
+        day_date = _date_from_text(_text(day, "Day"), "supply_by_fuel", lang)
         for hourly in _children(day, "HourlyData"):
             output: dict[str, int | None] = {}
             without_output: list[str] = []
@@ -393,7 +522,12 @@ def parse_fuel_xml(text: str) -> list[FuelHour]:
                 )
             )
     if not rows:
-        raise UpstreamError("electricity:supply_by_fuel file has no DailyData.")
+        _raise(
+            UpstreamError,
+            "electricity:supply_by_fuel file has no DailyData.",
+            "le fichier electricity:supply_by_fuel n'a pas de DailyData.",
+            lang,
+        )
     return rows
 
 
@@ -405,14 +539,16 @@ async def get_supply_by_fuel(
     *,
     lang: str = "en",
 ) -> SupplyByFuel:
-    del lang
-    _check_limit(limit)
-    start, end = _parse_date(start_date, "start_date"), _parse_date(end_date, "end_date")
-    chosen = _year_for_range(year, start, end, constants.FIRST_FUEL_YEAR)
+    _check_limit(limit, lang)
+    start, end = (
+        _parse_date(start_date, "start_date", lang),
+        _parse_date(end_date, "end_date", lang),
+    )
+    chosen = _year_for_range(year, start, end, constants.FIRST_FUEL_YEAR, lang)
     path = f"GenOutputbyFuelHourly/PUB_GenOutputbyFuelHourly_{chosen}.xml"
 
     async def fetch() -> list[FuelHour]:
-        return parse_fuel_xml(await _get_text(path, "supply_by_fuel"))
+        return parse_fuel_xml(await _get_text(path, "supply_by_fuel", lang), lang)
 
     all_rows, was_cached = await cached_fetch(
         f"electricity:fuel:{chosen}", _ttl_for_year(chosen), fetch
@@ -462,13 +598,27 @@ async def get_supply_by_fuel(
             url=f"{constants.BASE_URL}/{path}",
             cached=was_cached,
             schema_name="electricity.SupplyByFuel",
-            freshness="current-year file refreshed daily; ends about a day behind the clock",
-            coverage="IESO-metered generators; embedded (distribution-connected) supply excluded",
+            freshness=_say(
+                "current-year file refreshed daily; ends about a day behind the clock",
+                "fichier de l'année en cours mis à jour chaque jour ; se termine environ un "
+                "jour avant l'heure actuelle",
+                lang,
+            ),
+            coverage=_say(
+                "IESO-metered generators; embedded (distribution-connected) supply excluded",
+                "Producteurs mesurés par la SIERE ; la production raccordée aux réseaux de "
+                "distribution est exclue",
+                lang,
+            ),
             licence=_LICENCE,
             limits=_limits(
                 f"Rows capped at {limit}; totals cover all {len(matched)} matched hours. "
-                "Shares exclude the control_actions series."
+                "Shares exclude the control_actions series.",
+                f"Lignes plafonnées à {limit} ; les totaux couvrent les {len(matched)} heures "
+                "retenues. Les parts excluent la série control_actions.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -490,32 +640,50 @@ async def get_zonal_prices(
     *,
     lang: str = "en",
 ) -> ZonalPrices:
-    del lang
     if market not in ("day_ahead", "real_time"):
-        raise InvalidInput(f"market must be 'day_ahead' or 'real_time', got {market!r}.")
-    _check_hour(hour)
-    target = _parse_date(date_text, "date")
+        _raise(
+            InvalidInput,
+            f"market must be 'day_ahead' or 'real_time', got {market!r}.",
+            f"market doit valoir 'day_ahead' ou 'real_time', reçu {market!r}.",
+            lang,
+        )
+    _check_hour(hour, lang)
+    target = _parse_date(date_text, "date", lang)
     if market == "day_ahead":
         if hour is not None:
-            raise InvalidInput("hour applies to real_time only; day_ahead returns all 24 hours.")
+            _raise(
+                InvalidInput,
+                "hour applies to real_time only; day_ahead returns all 24 hours.",
+                "hour ne s'applique qu'à real_time ; day_ahead renvoie les 24 heures.",
+                lang,
+            )
         path = _dated_path("DAHourlyOntarioZonalPrice", "DAHourlyOntarioZonalPrice", target)
     else:
         if (target is None) != (hour is None):
-            raise InvalidInput(
-                "Give both date and hour for a past hour, or neither for the latest."
+            _raise(
+                InvalidInput,
+                "Give both date and hour for a past hour, or neither for the latest.",
+                "donnez date et hour pour une heure passée, ou ni l'un ni l'autre pour la "
+                "plus récente.",
+                lang,
             )
         path = _dated_path("RealtimeOntarioZonalPrice", "RealtimeOntarioZonalPrice", target, hour)
 
     async def fetch() -> str:
-        return await _get_text(path, f"{market}_prices")
+        return await _get_text(path, f"{market}_prices", lang)
 
     text, was_cached = await cached_fetch(
         f"electricity:{path}", constants.CACHE_TTL_LATEST_SECONDS, fetch
     )
-    root = _parse_xml(text, f"{market}_prices")
+    root = _parse_xml(text, f"{market}_prices", lang)
     body = _child(root, "DocBody")
     if body is None:
-        raise UpstreamError(f"electricity:{market}_prices has no DocBody.")
+        _raise(
+            UpstreamError,
+            f"electricity:{market}_prices has no DocBody.",
+            f"electricity:{market}_prices n'a pas de DocBody.",
+            lang,
+        )
     points: list[PricePoint] = []
     if market == "day_ahead":
         for item in _children(body, "HourlyPriceComponents"):
@@ -540,12 +708,17 @@ async def get_zonal_prices(
                 )
             )
     if not points:
-        raise UpstreamError(f"electricity:{market}_prices file has no price rows.")
+        _raise(
+            UpstreamError,
+            f"electricity:{market}_prices file has no price rows.",
+            f"le fichier electricity:{market}_prices n'a aucune ligne de prix.",
+            lang,
+        )
     average, low, high = _price_stats(points)
     delivery_hour = _number(_text(body, "DeliveryHour"))
     return ZonalPrices(
         market=market,
-        delivery_date=_date_from_text(_text(body, "DeliveryDate"), f"{market}_prices"),
+        delivery_date=_date_from_text(_text(body, "DeliveryDate"), f"{market}_prices", lang),
         delivery_hour=None if delivery_hour is None else int(delivery_hour),
         points=points,
         average_cad_per_mwh=average,
@@ -558,37 +731,57 @@ async def get_zonal_prices(
             cached=was_cached,
             schema_name="electricity.ZonalPrices",
             freshness=(
-                "day-ahead file for tomorrow appears about 12:30 EST"
+                _say(
+                    "day-ahead file for tomorrow appears about 12:30 EST",
+                    "le fichier du marché du jour précédent pour demain paraît vers 12 h 30 HNE",
+                    lang,
+                )
                 if market == "day_ahead"
-                else "one file per delivery hour, 12 five-minute intervals"
+                else _say(
+                    "one file per delivery hour, 12 five-minute intervals",
+                    "un fichier par heure de livraison, 12 intervalles de cinq minutes",
+                    lang,
+                )
             ),
-            coverage="Ontario Zonal Price only, the settlement price since 2025-05-01",
+            coverage=_say(
+                "Ontario Zonal Price only, the settlement price since 2025-05-01",
+                "Prix zonal de l'Ontario seulement, le prix de règlement depuis le 2025-05-01",
+                lang,
+            ),
             licence=_LICENCE,
             limits=_limits(
                 "Prices in CAD/MWh, capped values as published; dated files kept about "
-                "three months. HOEP no longer exists after 2025-04."
+                "three months. HOEP no longer exists after 2025-04.",
+                "Prix en $ CA/MWh, valeurs plafonnées telles que publiées ; fichiers datés "
+                "gardés environ trois mois. Le prix horaire de l'énergie en Ontario (PHEO) "
+                "n'existe plus après 2025-04.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
 
 async def get_hoep_history(year: int | None = None, *, lang: str = "en") -> HoepHistory:
-    del lang
     chosen = year or ieso_today().year - 1
     if not constants.FIRST_DEMAND_YEAR <= chosen <= 2025:
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             "HOEP year must be 2002-2025 (HOEP ended with the 2025-05-01 market renewal), "
-            f"got {chosen}."
+            f"got {chosen}.",
+            "l'année du PHEO doit être comprise entre 2002 et 2025 (le PHEO a pris fin avec "
+            f"le renouvellement du marché du 2025-05-01), reçu {chosen}.",
+            lang,
         )
     path = f"PriceHOEPAverage/PUB_PriceHOEPAverage_{chosen}.xml"
 
     async def fetch() -> str:
-        return await _get_text(path, "hoep_history")
+        return await _get_text(path, "hoep_history", lang)
 
     text, was_cached = await cached_fetch(
         f"electricity:{path}", constants.CACHE_TTL_ARCHIVE_SECONDS, fetch
     )
-    root = _parse_xml(text, "hoep_history")
+    root = _parse_xml(text, "hoep_history", lang)
     months = [
         HoepMonth(
             month=_text(item, "Month") or "",
@@ -602,22 +795,35 @@ async def get_hoep_history(year: int | None = None, *, lang: str = "en") -> Hoep
         for item in _children(_child(root, "DocBody"), "HOEP")
     ]
     if not months:
-        raise UpstreamError("electricity:hoep_history file has no monthly rows.")
+        _raise(
+            UpstreamError,
+            "electricity:hoep_history file has no monthly rows.",
+            "le fichier electricity:hoep_history n'a aucune ligne mensuelle.",
+            lang,
+        )
     return HoepHistory(
         year=chosen,
         months=months,
-        note=(
+        note=_say(
             "Hourly Ontario Energy Price in CAD/MWh, replaced by the Ontario Zonal Price on "
-            "2025-05-01; the two are not the same series."
+            "2025-05-01; the two are not the same series.",
+            "Prix horaire de l'énergie en Ontario (PHEO) en $ CA/MWh, remplacé par le prix "
+            "zonal de l'Ontario le 2025-05-01 ; les deux ne forment pas la même série.",
+            lang,
         ),
         provenance=make_provenance(
             source=constants.SOURCE,
             url=f"{constants.BASE_URL}/{path}",
             cached=was_cached,
             schema_name="electricity.HoepHistory",
-            freshness="closed series; the final year, 2025, is partial (to April)",
+            freshness=_say(
+                "closed series; the final year, 2025, is partial (to April)",
+                "série close ; la dernière année, 2025, est partielle (jusqu'en avril)",
+                lang,
+            ),
             licence=_LICENCE,
-            limits=_limits(),
+            limits=_limits(lang=lang),
+            lang=lang,
         ),
     )
 
@@ -628,20 +834,24 @@ async def get_hoep_history(year: int | None = None, *, lang: str = "en") -> Hoep
 async def get_adequacy_outlook(
     date_text: str | None = None, *, lang: str = "en"
 ) -> AdequacyOutlook:
-    del lang
-    target = _parse_date(date_text, "date") or ieso_today()
+    target = _parse_date(date_text, "date", lang) or ieso_today()
     path = _dated_path("Adequacy3", "Adequacy3", target)
 
     async def fetch() -> str:
-        return await _get_text(path, "adequacy_outlook")
+        return await _get_text(path, "adequacy_outlook", lang)
 
     text, was_cached = await cached_fetch(
         f"electricity:{path}", constants.CACHE_TTL_HOURLY_SECONDS, fetch
     )
-    root = _parse_xml(text, "adequacy_outlook")
+    root = _parse_xml(text, "adequacy_outlook", lang)
     body = _child(root, "DocBody")
     if body is None:
-        raise UpstreamError("electricity:adequacy_outlook has no DocBody.")
+        _raise(
+            UpstreamError,
+            "electricity:adequacy_outlook has no DocBody.",
+            "electricity:adequacy_outlook n'a pas de DocBody.",
+            lang,
+        )
     supply = _child(body, "ForecastSupply")
     demand = _child(body, "ForecastDemand")
     ontario = _child(demand, "OntarioDemand")
@@ -665,12 +875,17 @@ async def get_adequacy_outlook(
         for hour in sorted(set(total_supply) | set(requirements) | set(excess) | set(forecast))
     ]
     if not hours:
-        raise UpstreamError("electricity:adequacy_outlook file has no hourly series.")
+        _raise(
+            UpstreamError,
+            "electricity:adequacy_outlook file has no hourly series.",
+            "le fichier electricity:adequacy_outlook n'a aucune série horaire.",
+            lang,
+        )
     with_excess = [h for h in hours if h.excess_capacity_mw is not None]
     tightest = min(with_excess, key=lambda h: h.excess_capacity_mw or 0, default=None)
     forecasts = [h.forecast_ontario_demand_mw for h in hours if h.forecast_ontario_demand_mw]
     return AdequacyOutlook(
-        delivery_date=_date_from_text(_text(body, "DeliveryDate"), "adequacy_outlook"),
+        delivery_date=_date_from_text(_text(body, "DeliveryDate"), "adequacy_outlook", lang),
         created_at=_text(_child(root, "DocHeader"), "CreatedAt"),
         hours=hours,
         minimum_excess_capacity_mw=tightest.excess_capacity_mw if tightest else None,
@@ -681,12 +896,21 @@ async def get_adequacy_outlook(
             url=f"{constants.BASE_URL}/{path}",
             cached=was_cached,
             schema_name="electricity.AdequacyOutlook",
-            freshness="one file per delivery day, revised through the day; about 34 days ahead",
+            freshness=_say(
+                "one file per delivery day, revised through the day; about 34 days ahead",
+                "un fichier par jour de livraison, révisé au cours de la journée ; environ "
+                "34 jours à l'avance",
+                lang,
+            ),
             licence=_LICENCE,
             limits=_limits(
                 "Future days leave many series empty (null). Per-fuel, zonal and area detail "
-                "in the XML is not returned."
+                "in the XML is not returned.",
+                "Pour les jours à venir, plusieurs séries sont vides (null). Le détail par "
+                "combustible, par zone et par région du XML n'est pas renvoyé.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -715,20 +939,24 @@ def _mean_flow(container: ET.Element | None) -> tuple[float | None, int]:
 
 
 async def get_intertie_flows(date_text: str | None = None, *, lang: str = "en") -> IntertieFlows:
-    del lang
-    target = _parse_date(date_text, "date")
+    target = _parse_date(date_text, "date", lang)
     path = _dated_path("IntertieScheduleFlow", "IntertieScheduleFlow", target)
 
     async def fetch() -> str:
-        return await _get_text(path, "intertie_flows")
+        return await _get_text(path, "intertie_flows", lang)
 
     text, was_cached = await cached_fetch(
         f"electricity:{path}", constants.CACHE_TTL_LATEST_SECONDS, fetch
     )
-    root = _parse_xml(text, "intertie_flows")
+    root = _parse_xml(text, "intertie_flows", lang)
     body = _child(root, "IMODocBody")
     if body is None:
-        raise UpstreamError("electricity:intertie_flows has no IMODocBody.")
+        _raise(
+            UpstreamError,
+            "electricity:intertie_flows has no IMODocBody.",
+            "electricity:intertie_flows n'a pas de IMODocBody.",
+            lang,
+        )
     zones = []
     for zone in _children(body, "IntertieZone"):
         mean, count = _mean_flow(_child(zone, "Actuals"))
@@ -743,19 +971,35 @@ async def get_intertie_flows(date_text: str | None = None, *, lang: str = "en") 
     totals = _child(body, "Totals")
     total_mean, _ = _mean_flow(_child(totals, "Actuals"))
     return IntertieFlows(
-        date=_date_from_text(_text(body, "Date"), "intertie_flows"),
+        date=_date_from_text(_text(body, "Date"), "intertie_flows", lang),
         zones=zones,
         total_schedules=_schedules(_child(totals, "Schedules")),
         total_mean_actual_flow_mw=total_mean,
-        sign_convention="Positive actual flow is an export from Ontario; negative is an import.",
+        sign_convention=_say(
+            "Positive actual flow is an export from Ontario; negative is an import.",
+            "Un flux réel positif est une exportation de l'Ontario ; un flux négatif est une "
+            "importation.",
+            lang,
+        ),
         created_at=_text(_child(root, "IMODocHeader"), "CreatedAt"),
         provenance=make_provenance(
             source=constants.SOURCE,
             url=f"{constants.BASE_URL}/{path}",
             cached=was_cached,
             schema_name="electricity.IntertieFlows",
-            freshness="updated through the day; hourly schedules, 5-minute actual flows",
+            freshness=_say(
+                "updated through the day; hourly schedules, 5-minute actual flows",
+                "mis à jour au cours de la journée ; programmes horaires, flux réels aux "
+                "cinq minutes",
+                lang,
+            ),
             licence=_LICENCE,
-            limits=_limits("Means are over the 5-minute intervals reported so far that day."),
+            limits=_limits(
+                "Means are over the 5-minute intervals reported so far that day.",
+                "Les moyennes portent sur les intervalles de cinq minutes déclarés jusqu'ici "
+                "ce jour-là.",
+                lang,
+            ),
+            lang=lang,
         ),
     )
