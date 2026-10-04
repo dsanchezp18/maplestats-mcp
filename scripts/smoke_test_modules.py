@@ -49,13 +49,16 @@ def _non_empty(key: str) -> Check:
 _TODAY = datetime.now(UTC).date()
 
 # Modules whose upstream is down; remove an entry once the source responds.
-DOWN_MODULES = {
-    # oee.nrcan.gc.ca fails the TLS handshake from CI and locally (2026-09-29).
-    "nrcan_energy_use": "oee.nrcan.gc.ca does not complete a TLS handshake",
-}
+DOWN_MODULES: dict[str, str] = {}
 
 # Single tools whose upstream is down while the rest of their module works.
-DOWN_TOOLS: dict[str, str] = {}
+DOWN_TOOLS = {
+    # oee.nrcan.gc.ca accepts the TCP connection and then resets the TLS
+    # handshake (curl exit 35; httpx "All connection attempts failed"), checked
+    # 2026-10-03. list_products still answers from the static survey list.
+    "nrcan_energy_use_list_tables": "oee.nrcan.gc.ca resets the TLS handshake",
+    "nrcan_energy_use_get_table": "oee.nrcan.gc.ca resets the TLS handshake",
+}
 
 STEPS: list[Step] = [
     # Alberta Economic Dashboard
@@ -164,6 +167,51 @@ STEPS: list[Step] = [
             "election_id": ctx["elections_financial_returns_list_elections"]["elections"][0]["id"],
         },
     ),
+    # Elections Canada official results (through the tools, not only the client)
+    Step("elections_results", "elections_results_list_elections", {}, _non_empty("elections")),
+    Step(
+        "elections_results",
+        "elections_results_get_table",
+        {"election": 45, "table": "candidates", "province": "Alberta", "limit": 5},
+        _non_empty("rows"),
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_historical",
+        {"election": 40, "province": "Alberta", "limit": 5},
+        _non_empty("ridings"),
+    ),
+    Step(
+        "elections_results",
+        "elections_results_get_historical_candidates",
+        {"election": 30, "province": "Alberta", "winners_only": True, "limit": 5},
+        _non_empty("candidates"),
+    ),
+    # Provincial election results (through the tools)
+    Step(
+        "elections_provincial",
+        "elections_provincial_list_elections",
+        {},
+        _non_empty("elections"),
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_seats",
+        {"province": "ab", "election": "2023"},
+        _non_empty("parties"),
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_results",
+        {"province": "qc", "election": "2022", "district": "gaspe", "winners_only": True},
+        _non_empty("rows"),
+    ),
+    Step(
+        "elections_provincial",
+        "elections_provincial_get_voting_areas",
+        {"district": "Fort Rouge", "election": "2023", "limit": 5},
+        _non_empty("rows"),
+    ),
     # Canada Gazette
     Step("gazette", "gazette_list_issues", {"limit": 2}, _non_empty("issues")),
     Step("gazette", "gazette_get_issue", {"part": 1}),
@@ -182,6 +230,16 @@ STEPS: list[Step] = [
             "limit": 3,
         },
     ),
+    # House of Commons open data (through the tools)
+    Step("ourcommons", "ourcommons_list_members", {"province": "Alberta"}, _non_empty("members")),
+    Step(
+        "ourcommons",
+        "ourcommons_get_member_roles",
+        lambda ctx: {"person_id": ctx["ourcommons_list_members"]["members"][0]["person_id"]},
+        _non_empty("seats"),
+    ),
+    Step("ourcommons", "ourcommons_get_party_standings", {}, _non_empty("by_party")),
+    Step("ourcommons", "ourcommons_get_ministry", {"lang": "fr"}, _non_empty("ministers")),
     # NRCan energy use
     Step("nrcan_energy_use", "nrcan_energy_use_list_products", {}, _non_empty("surveys")),
     Step(

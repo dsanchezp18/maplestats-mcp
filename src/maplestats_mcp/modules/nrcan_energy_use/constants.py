@@ -113,3 +113,10 @@ RATE_LIMIT_CAPACITY = 4.0
 
 CACHE_TTL_MENU_SECONDS = 7 * 24 * 60 * 60
 CACHE_TTL_TABLE_SECONDS = 24 * 60 * 60
+
+# Per attempt, and for the whole retry chain of one request: a healthy
+# response comes in a few seconds. After a failure, calls fail at once for
+# DOWN_RETRY_SECONDS.
+REQUEST_TIMEOUT_SECONDS = 10.0
+REQUEST_BUDGET_SECONDS = 15.0
+DOWN_RETRY_SECONDS = 5 * 60

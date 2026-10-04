@@ -8,7 +8,9 @@ unchanged against the English and French roots.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 from urllib.parse import parse_qsl, urlencode, urlparse
 
 import httpx
@@ -38,19 +40,41 @@ _VALUE = re.compile(r"^[A-Za-z0-9]{1,12}$")
 _MENU = re.compile(r"trends_([a-z]+)_([a-z]+)\.cfm")
 
 
+# Monotonic time until which the host is treated as down. When the host
+# cannot be reached, a request used to spend about 67 s in connection
+# retries; after one such failure, calls fail at once for a few minutes.
+_down_until = 0.0
+
+
+def _unreachable(url: str) -> UpstreamUnavailable:
+    return UpstreamUnavailable(
+        f"nrcan_energy_use: oee.nrcan.gc.ca could not be reached ({url}); retry in a few "
+        "minutes. The survey list (nrcan_energy_use_list_products) does not need the host."
+    )
+
+
 async def _html(url: str, ttl: int) -> tuple[str, bool]:
     async def fetch() -> str:
+        global _down_until
+        if time.monotonic() < _down_until:
+            raise _unreachable(url)
         await _LIMITER.acquire()
         try:
-            response = await get_raw(url, timeout=60.0)
+            # The whole retry chain gets one budget, so an unreachable host
+            # fails in seconds rather than after every retry has timed out.
+            response = await asyncio.wait_for(
+                get_raw(url, timeout=constants.REQUEST_TIMEOUT_SECONDS),
+                constants.REQUEST_BUDGET_SECONDS,
+            )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 raise NotFound(f"nrcan_energy_use: nothing published at {url}.") from exc
             raise UpstreamError(
                 f"nrcan_energy_use: {url} returned HTTP {exc.response.status_code}."
             ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"nrcan_energy_use: {url} did not respond in time.") from exc
+        except (httpx.HTTPError, TimeoutError) as exc:
+            _down_until = time.monotonic() + constants.DOWN_RETRY_SECONDS
+            raise _unreachable(url) from exc
         return response.text
 
     return await cached_fetch(f"nrcan-energy-use:{url}", ttl, fetch)
@@ -74,10 +98,20 @@ def _table_key(href: str) -> str | None:
 
 
 async def list_products(lang: str = "en") -> ProductList:
+    """The 11 survey products (static) and the comprehensive-database menus (live).
+
+    The survey list never needs the host; when it is unreachable the
+    comprehensive menus are left empty and limits says so, instead of the
+    whole call failing.
+    """
     index = 1 if lang == "fr" else 0
-    html, cached = await _html(
-        constants.EN_ROOT + constants.COMPREHENSIVE_LIST, constants.CACHE_TTL_MENU_SECONDS
-    )
+    unreachable: str | None = None
+    try:
+        html, cached = await _html(
+            constants.EN_ROOT + constants.COMPREHENSIVE_LIST, constants.CACHE_TTL_MENU_SECONDS
+        )
+    except UpstreamUnavailable as exc:
+        html, cached, unreachable = "", False, str(exc)
     pairs = sorted(set(_MENU.findall(html)))
     menus = [
         ComprehensiveMenu(
@@ -96,6 +130,12 @@ async def list_products(lang: str = "en") -> ProductList:
             url=constants.EN_ROOT + constants.COMPREHENSIVE_LIST,
             cached=cached,
             schema_name="nrcan_energy_use.ProductList",
+            limits=(
+                f"Comprehensive-database menus not loaded: {unreachable} The survey list "
+                "comes from this server's own catalogue."
+                if unreachable
+                else None
+            ),
         ),
     )
 

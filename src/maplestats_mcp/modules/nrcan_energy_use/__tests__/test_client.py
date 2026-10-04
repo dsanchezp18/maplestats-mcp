@@ -13,6 +13,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 @pytest.fixture(autouse=True)
 def _clear_cache():
     cache_module._caches.clear()
+    client._down_until = 0.0
     yield
 
 
@@ -130,6 +131,14 @@ async def test_connection_failures_become_upstream_unavailable(httpx_mock):
     with pytest.raises(UpstreamUnavailable):
         await client.list_tables("sheu_2019")
     assert len(httpx_mock.get_requests()) == 3
+    # The next call fails at once, without another request.
+    with pytest.raises(UpstreamUnavailable, match="could not be reached"):
+        await client.get_table("type=SH&sector=aaa&juris=ca&year=2019&rn=1&page=1")
+    assert len(httpx_mock.get_requests()) == 3
+    # The survey list still answers, with the menus left out and the reason given.
+    products = await client.list_products()
+    assert len(products.surveys) == 11 and products.comprehensive == []
+    assert "not loaded" in (products.provenance.limits or "")
 
 
 async def test_menu_page_without_table_links_is_not_found(httpx_mock):
