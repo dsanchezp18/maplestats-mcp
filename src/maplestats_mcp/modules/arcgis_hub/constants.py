@@ -461,6 +461,33 @@ PORTALS: dict[str, Portal] = {
         "Portail de données ouvertes de la Ville de Canmore",
         note="Alberta. 19 datasets confirmed live 2026-10-02; Town of Canmore Open Data Licence.",
     ),
+    "ntgs": Portal(
+        "ntgs-open-data-ntgs.hub.arcgis.com",
+        "Northwest Territories Geological Survey Open Data",
+        "Données ouvertes de la Commission géologique des Territoires du Nord-Ouest",
+        note=(
+            "Northwest Territories Geological Survey (GNWT): geoscience open reports and "
+            "files (bedrock geology, airborne geophysics, mineral showings). 49 datasets "
+            "confirmed live 2026-10-03. Terms differ by item: most carry the NTGS terms (GNWT "
+            "copyright; no commercial use or reproduction without the NTGS's prior written "
+            "consent; non-commercial reuse must acknowledge the GNWT copyright), some the Open "
+            "Government Licence - Canada, and one (GSC Map D1860A) a CD-ROM licence for the "
+            "licensee's sole use. Check each item's licence before reuse."
+        ),
+    ),
+    "ntgs_datahub": Portal(
+        "datahub-ntgs.opendata.arcgis.com",
+        "Northwest Territories Geological Survey Data Hub",
+        "Carrefour de données de la Commission géologique des Territoires du Nord-Ouest",
+        note=(
+            "Northwest Territories Geological Survey (GNWT) data hub: 20 feature services "
+            "confirmed live 2026-10-03 (geological compilations, kimberlite indicator data, "
+            "map indexes). Most items carry the NTGS terms (GNWT copyright; no commercial use "
+            "without the NTGS's prior written consent; non-commercial reuse must acknowledge "
+            "the GNWT copyright); four carry the Open Government Licence - Canada. Check each "
+            "item's licence before reuse."
+        ),
+    ),
     "bc_energy_regulator": Portal(
         "data-bc-er.opendata.arcgis.com",
         "BC Energy Regulator Open Data",

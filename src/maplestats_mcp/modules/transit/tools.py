@@ -1,5 +1,6 @@
 """MCP tools for static GTFS transit schedules: live agency feeds (STM, OC Transpo,
-Calgary, VIA Rail, GO/UP Express, BC Transit) and Statistics Canada's national database (2025)."""
+Calgary, VIA Rail, GO/UP Express, BC Transit, exo, RTC, STL, STS, STQ ferries and other
+Quebec networks) and Statistics Canada's national database (2025)."""
 
 from __future__ import annotations
 
@@ -25,9 +26,13 @@ Lang = Literal["en", "fr"]
 async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     """The transit agencies whose published static GTFS schedule this
     server reads (STM Montreal buses, OC Transpo Ottawa,
-    Calgary Transit, VIA Rail, GO Transit, UP Express and twelve BC Transit
-    systems such as Victoria, Kelowna and Kamloops), with each feed's URL, licence, required attribution
-    line, update cadence and a live check that the zip answers.
+    Calgary Transit, VIA Rail, GO Transit, UP Express, twelve BC Transit
+    systems such as Victoria, Kelowna and Kamloops, and in Quebec exo's
+    commuter trains and ten bus sectors, RTC Québec City, STL Laval, STS
+    Sherbrooke, STQ ferries, Trois-Rivières, Rimouski, Rouyn-Noranda and
+    Salaberry-de-Valleyfield), with each feed's URL, licence, required
+    attribution line, update cadence and a live check that the zip answers.
+    STL Laval's own terms bar commercial use without its written permission.
 
     The key of each agency is what the other transit_ tools take as
     `agency`. TransLink (Vancouver) is not offered: its terms require
@@ -39,11 +44,12 @@ async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     Use for: which transit schedules are available, licence and credit
     line for a transit feed, is the agency's GTFS zip reachable.
     Keywords: transit, GTFS, static schedule, STM, OC Transpo,
-    Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, agencies, licence, attribution, bus, timetable
-    data.
+    Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, exo, RTC,
+    STL, STS, ferries, Quebec, agencies, licence, attribution, bus, timetable data.
     Mots-clés : transport en commun, GTFS, horaire statique, STM,
-    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, organismes, licence, attribution,
-    autobus, données d'horaires.
+    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit,
+    exo, RTC, STL, STS, traversiers, sociétés de transport du Québec,
+    organismes, licence, attribution, autobus, données d'horaires.
     """
     return await client.list_agencies(lang=lang)
 
@@ -65,8 +71,9 @@ async def transit_list_national_agencies(
     The key to pass as `agency` to the other transit_ tools is
     'national:<id>'. status says how a feed is handled: 'available' (read
     from the national archive), 'overlaps_live' (STM, OC Transpo,
-    Calgary, VIA, GO, UP Express and BC Transit systems already read live:
-    use live_agency_key) or 'excluded' (TransLink, and feeds with no
+    Calgary, VIA, GO, UP Express, BC Transit systems, exo, RTC, STL,
+    Trois-Rivières, Rimouski and Rouyn-Noranda already read live: use
+    live_agency_key) or 'excluded' (TransLink, and feeds with no
     licence or attribution recorded). This is a 2025 snapshot compiled by
     Statistics Canada: most service windows end in 2025, so pass a service_date inside
     the window. The compilation is under the Statistics Canada Open Licence;
@@ -124,7 +131,7 @@ async def transit_search_routes(
     empty to list them all.
 
     route_type is the GTFS code: 0 tram or light rail, 1 subway, 2 rail,
-    3 bus, 4 ferry. STM's metro lines are not reported (its terms bar
+    3 bus, 4 ferry (STQ's crossings). STM's metro lines are not reported (its terms bar
     applications built on metro timetables). total_matches counts every
     match before limit (1-500) is applied.
     Use for: find a bus route number or name, list the LRT or subway
@@ -194,7 +201,8 @@ async def transit_get_stop_departures(
     the agency's local calendar (default today); start_time is HH:MM
     (default now when the date is today, else midnight); route filters to
     one route number or id. Trips that began the previous service day and
-    run past midnight are included and flagged. The first call for a stop
+    run past midnight are included and flagged; trips described only by
+    frequencies.txt (template times) are left out. The first call for a stop
     streams the agency's stop_times file (tens of MB) and can take
     from several seconds to a minute; later calls for it are cached. limit is 1-500.
     Use for: when is the next bus at a stop, the timetable of a stop on a

@@ -71,6 +71,25 @@ CORES: dict[str, tuple[float, float, int, int, int]] = {
     "bct_campbell_river": (50.0244, -125.2475, 3000, 5, 100),
     "bct_squamish": (49.7016, -123.1558, 3000, 3, 50),
     "bct_whistler": (50.1163, -122.9574, 3000, 5, 100),
+    "exo_trains": (45.4951, -73.5711, 1500, 5, 50),
+    "exo_chambly_richelieu_carignan": (45.4495, -73.2878, 3000, 5, 100),
+    "exo_laurentides": (45.7804, -74.0036, 3000, 5, 100),
+    "exo_la_presquile": (45.4000, -74.0330, 3000, 5, 100),
+    "exo_sorel_varennes": (45.6833, -73.4333, 3000, 5, 100),
+    "exo_sud_ouest": (45.3800, -73.7500, 3000, 5, 100),
+    "exo_vallee_du_richelieu": (45.5667, -73.2000, 3000, 5, 100),
+    "exo_lassomption": (45.7422, -73.4500, 3000, 5, 100),
+    "exo_terrebonne_mascouche": (45.7000, -73.6470, 3000, 5, 100),
+    "exo_sainte_julie": (45.5833, -73.3333, 3000, 3, 50),
+    "exo_le_richelain_roussillon": (45.4200, -73.4990, 3000, 5, 100),
+    "rtc_quebec": (46.8139, -71.2080, 500, 50, 1000),
+    "stl_laval": (45.5583, -73.7215, 500, 30, 1000),
+    "sts_sherbrooke": (45.4042, -71.8929, 800, 20, 500),
+    "stq_ferries": (46.8130, -71.2010, 2000, 3, 6),
+    "sttr_trois_rivieres": (46.3432, -72.5477, 1000, 10, 300),
+    "rimouski": (48.4490, -68.5230, 1500, 3, 50),
+    "rouyn_noranda": (48.2366, -79.0230, 1500, 3, 50),
+    "stsv_valleyfield": (45.2580, -74.1300, 2000, 3, 50),
 }
 
 
@@ -132,7 +151,7 @@ NATIONAL_SAMPLE = (
     "edmonton_transit_service",
     "yellowknife_transit",
     "whitehorse_transit",
-    "exo_l'assomption",
+    "societe_transport_levis",
 )
 NATIONAL_MAX_MEMBER_BYTES = 15 * 1024 * 1024
 
@@ -362,39 +381,52 @@ async def main() -> int:
         )
         check(bool(near.stops), f"{key}: {near.total_matches} stops within {radius} m of the core")
 
-        # One stop only: each stop is a full pass over stop_times.txt
-        # (tens of MB compressed for the large agencies), so scanning more is slow.
-        best_stop = near.stops[0]
-        best = await client.get_stop_departures(
-            key, best_stop.stop_id, start_time="00:00", limit=500
-        )
+        # One stop at a time: each stop is a full pass over stop_times.txt
+        # (tens of MB compressed for the large agencies), so scanning many is slow. Suburban
+        # and small-town networks (exo's sectors) run little or nothing on
+        # weekends, so a few nearby stops are tried, then the next Wednesday.
+        weekday = today + timedelta(days=(2 - today.weekday()) % 7)
+        day_label, service_date = "today", None
+        best_stop, best = near.stops[0], None
+        for when, label in ((None, "today"), (str(weekday), str(weekday))):
+            for candidate in near.stops[:4]:
+                result = await client.get_stop_departures(
+                    key, candidate.stop_id, service_date=when, start_time="00:00", limit=500
+                )
+                if result.total_matches:
+                    best_stop, best, day_label, service_date = candidate, result, label, when
+                    break
+            if best is not None:
+                break
         check(
-            best.total_matches > 0,
+            best is not None,
             f"{key}: stop {best_stop.stop_id} ({best_stop.name}) has "
-            f"{best.total_matches} scheduled departures today",
+            f"{best.total_matches if best else 0} scheduled departures {day_label}",
         )
-        times = [d.local_time for d in best.departures]
-        check(len(best.departures) == min(best.total_matches, 500), f"{key}: listing size")
-        check(
-            all(d.route_id for d in best.departures),
-            f"{key}: every departure names its route",
-        )
-        print(f"    first: {best.departures[0].route_short_name} {times[0]}")
+        if best is not None:
+            times = [d.local_time for d in best.departures]
+            check(len(best.departures) == min(best.total_matches, 500), f"{key}: listing size")
+            check(
+                all(d.route_id for d in best.departures),
+                f"{key}: every departure names its route",
+            )
+            print(f"    first: {best.departures[0].route_short_name} {times[0]}")
 
         # Rail and small-town feeds have non-numeric names and few routes, so
-        # the first routes that run today are tried instead of a numbered bus.
-        candidates = [r for r in routes.routes if r.route_type in (2, 3)][:5]
+        # the first routes that run on the date are tried instead of a numbered bus.
+        # STQ's crossings are ferries (route_type 4).
+        candidates = [r for r in routes.routes if r.route_type in (2, 3, 4)][:10]
         route = candidates[0]
-        summary = await client.get_route_summary(key, route.route_id)
+        summary = await client.get_route_summary(key, route.route_id, service_date=service_date)
         for route in candidates[1:]:
             if summary.trips_on_date > 0:
                 break
-            summary = await client.get_route_summary(key, route.route_id)
+            summary = await client.get_route_summary(key, route.route_id, service_date=service_date)
         scanned = sum(h.trips for h in summary.hourly)
         check(
             summary.trips_on_date > 0 and scanned == summary.trips_on_date,
-            f"{key}: route {route.short_name or route.long_name} runs "
-            f"{summary.trips_on_date} trips today ({scanned} found in stop_times)",
+            f"{key}: route {summary.route.short_name or summary.route.long_name} runs "
+            f"{summary.trips_on_date} trips {day_label} ({scanned} found in stop_times)",
         )
 
     # STM metro lines stay out of results.

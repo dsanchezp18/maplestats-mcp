@@ -651,6 +651,11 @@ TOPICS: tuple[Topic, ...] = (
                 ("electricity", "electricite", "power demand"),
             ),
             PlanStep(
+                "electricity_quebec_list_facilities",
+                "water flows at Hydro-Quebec dams and generating stations",
+                ("dam", "water flow", "spillway", "debit", "barrage", "reservoir"),
+            ),
+            PlanStep(
                 "aer_get_production_volumes_link",
                 "Alberta production volumes: product='oil', 'gas'...",
                 ("oil", "natural gas", "gas production", "wells", "puits", "petrole"),
@@ -927,6 +932,10 @@ TOPICS: tuple[Topic, ...] = (
             "train schedule",
             "departure",
             "horaire",
+            "road closure",
+            "highway",
+            "road work",
+            "fermeture de route",
         ),
         (
             PlanStep(
@@ -946,6 +955,11 @@ TOPICS: tuple[Topic, ...] = (
                 "ets_get_service_alerts",
                 "Edmonton transit, when the question is Edmonton",
                 _TRANSIT_TERMS,
+            ),
+            PlanStep(
+                "drivebc_search_events",
+                "BC highway closures, road work and incidents now: road, area or severity",
+                ("road closure", "highway", "road work", "drivebc", "fermeture de route"),
             ),
             PlanStep(
                 "tc_recalls_search",

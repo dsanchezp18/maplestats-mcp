@@ -12,7 +12,9 @@ import asyncio
 import sys
 from datetime import timedelta
 
-from maplestats_mcp.modules.electricity import client
+import httpx
+
+from maplestats_mcp.modules.electricity import client, constants, quebec_flows
 from maplestats_mcp.modules.electricity import quebec_client as client_qc
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
@@ -159,6 +161,53 @@ async def main() -> int:
     latest_day = str(qc_trade.points[-1].timestamp)[:10]
     qc_trade_range = await client_qc.get_trade(latest_day, latest_day, limit=24)
     ok &= _report("quebec trade date range", len(qc_trade_range.points) >= 1, "ok")
+
+    # Hydro-Quebec flows: an independent read of the same file checks the parse.
+    facilities = await quebec_flows.list_facilities(limit=200)
+    ok &= _report(
+        "quebec flows facilities",
+        facilities.total_facilities >= 80
+        and facilities.total_matches == facilities.total_facilities,
+        f"{facilities.total_facilities} sites",
+    )
+    async with httpx.AsyncClient(timeout=120) as web:
+        raw = (await web.get(constants.QUEBEC_FLOWS_URL)).json()["Site"]
+    lg1_raw = next(s for s in raw if s["identifiant"] == "3-130")
+    lg1 = await quebec_flows.get_facility_flows("3-130")
+    by_measure = {s.info.measure: s for s in lg1.series}
+    raw_total = next(c for c in lg1_raw["Composition"] if c["type_point_donnee"] == "Débit total")
+    last_stamp = max(raw_total["Donnees"])
+    ok &= _report(
+        "quebec flows La Grande-1 matches the raw file",
+        lg1.facility.name == "La Grande-1"
+        and len(by_measure["Débit total"].values) == len(raw_total["Donnees"])
+        and by_measure["Débit total"].info.latest_value == float(raw_total["Donnees"][last_stamp]),
+        f"{len(lg1.series)} series, latest total {by_measure['Débit total'].info.latest_value} m3/s",
+    )
+    totals = {p.time: p.value for p in by_measure["Débit total"].values}
+    parts: dict = {}
+    for series in lg1.series:
+        if series.info.kind in ("turbined", "spilled"):
+            for p in series.values:
+                parts[p.time] = parts.get(p.time, 0.0) + p.value
+    worst = max(abs(totals[t] - parts[t]) for t in totals if t in parts)
+    ok &= _report(
+        "quebec flows total = turbined + spilled at La Grande-1",
+        worst < 0.5,
+        f"max gap {worst:.3f}",
+    )
+    spilled = await quebec_flows.list_facilities(kind="spilled", region="Côte-Nord")
+    ok &= _report(
+        "quebec flows filters",
+        spilled.total_matches > 0,
+        f"{spilled.total_matches} Côte-Nord sites with spillway series",
+    )
+    by_name = await quebec_flows.get_facility_flows("beauharnois", kind="turbined")
+    ok &= _report(
+        "quebec flows by name and kind",
+        len(by_name.series) == 1 and bool(by_name.series[0].values),
+        by_name.series[0].info.measure if by_name.series else "none",
+    )
 
     for label, coro in (
         ("missing dated file", client.get_zonal_prices("day_ahead", "2020-01-01")),
