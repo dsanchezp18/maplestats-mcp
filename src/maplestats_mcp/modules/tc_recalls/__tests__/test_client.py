@@ -47,10 +47,21 @@ def _summary(model: str) -> list[dict[str, object]]:
     ]
 
 
+def _row(number: str, day: str) -> list[dict[str, object]]:
+    return [
+        _field("Recall number", number),
+        _field("Manufacturer Name", "FORD"),
+        _field("Model name", "F-150"),
+        _field("Make name", "FORD"),
+        _field("Year", "2020"),
+        _field("Recall date", day),
+    ]
+
+
 async def test_search_builds_path_and_reads_positional_columns(httpx_mock):
     httpx_mock.add_response(json={"ResultSet": [_SEARCH_ROW]})
     result = await client.search(
-        make="Land Rover", model="Civic", year_from=2019, year_to=2020, limit=5, page=2, lang="fr"
+        make="Land Rover", model="Civic", year_from=2019, year_to=2020, limit=5, lang="fr"
     )
     row = result.recalls[0]
     assert (row.recall_number, row.model, row.model_year) == ("2020236", "CIVIC", 2019)
@@ -59,7 +70,37 @@ async def test_search_builds_path_and_reads_positional_columns(httpx_mock):
     assert url.path.endswith(
         "/fra/vehicle-recall-database/recall/make-name/land%20rover/model-name/civic/year-range/2019-2020"
     )
-    assert parse_qs(url.query) == {"limit": ["5"], "page": ["2"]}
+    # Every matching row is read (pages of 5000) so the result can be sorted.
+    assert parse_qs(url.query) == {"limit": ["5000"], "page": ["1"]}
+
+
+async def test_search_is_newest_first_with_a_total(httpx_mock):
+    # Live 2026-10-03: a make-only Ford search came back oldest first (1975)
+    # with no total, so recent recalls were out of reach.
+    rows = [_row("1975001", "1/2/1975 12:00:00 AM"), _row("2026100", "9/1/2026 12:00:00 AM")]
+    rows.append(_row("2010050", "3/3/2010 12:00:00 AM"))
+    httpx_mock.add_response(json={"ResultSet": rows})
+    result = await client.search(make="Ford", limit=2)
+    assert [r.recall_number for r in result.recalls] == ["2026100", "2010050"]
+    assert (result.total_matched, result.has_more, result.order) == (3, True, "newest")
+    oldest = await client.search(make="Ford", limit=2, order="oldest", page=2)
+    assert [r.recall_number for r in oldest.recalls] == ["2026100"]
+    assert oldest.has_more is False
+
+
+async def test_unknown_make_gets_a_note(httpx_mock):
+    httpx_mock.add_response(json={"ResultSet": []})
+    result = await client.search(make="NoSuchMake")
+    assert result.total_matched == 0
+    assert result.note is not None and "NoSuchMake" in result.note
+
+
+async def test_description_line_breaks_are_lf(httpx_mock):
+    summary = _summary("PILOT")
+    summary[7] = _field("COMMENT_ETXT", "Issue: label ink.\r\nRisk: none.\r\n")
+    httpx_mock.add_response(json={"ResultSet": [summary]})
+    detail = await client.get_recall("2020041")
+    assert detail.description == "Issue: label ink.\nRisk: none."
 
 
 async def test_get_recall_merges_vehicles_and_picks_language(httpx_mock):

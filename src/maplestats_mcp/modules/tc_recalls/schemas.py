@@ -21,8 +21,12 @@ class RecallRow(BaseModel):
 class RecallSearchResult(BaseModel):
     recalls: list[RecallRow]
     returned_count: int
+    total_matched: int
+    has_more: bool
+    order: str = Field(description="'newest' (recall date, newest first) or 'oldest'.")
     page: int
     limit: int
+    note: str | None = None
     provenance: Provenance
 
 
@@ -41,7 +45,7 @@ class RecallDetail(BaseModel):
     notification_type: str | None = None
     units_affected: int | None = None
     description: str | None = Field(
-        default=None, description="Issue, safety risk, and corrective action."
+        default=None, description="Issue, safety risk, and corrective action (LF line breaks)."
     )
     affected_vehicles: list[AffectedVehicle]
     provenance: Provenance

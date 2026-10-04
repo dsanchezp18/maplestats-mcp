@@ -93,6 +93,18 @@ def _segment(value: str, name: str) -> str:
     return quote(value.lower())
 
 
+async def _all_rows(url: str) -> tuple[list[list[Any]], bool]:
+    rows: list[list[Any]] = []
+    cached_all = True
+    for number in range(1, constants.FETCH_PAGES_MAX + 1):
+        chunk, cached = await _get(url, {"limit": constants.FETCH_PAGE_SIZE, "page": number})
+        rows.extend(chunk)
+        cached_all = cached_all and cached
+        if len(chunk) < constants.FETCH_PAGE_SIZE:
+            break
+    return rows, cached_all
+
+
 async def search(
     *,
     make: str | None = None,
@@ -101,6 +113,7 @@ async def search(
     year_to: int | None = None,
     limit: int = constants.LIMIT_DEFAULT,
     page: int = 1,
+    order: str = "newest",
     lang: str = "en",
 ) -> RecallSearchResult:
     if not (make or model or year_from or year_to):
@@ -109,6 +122,8 @@ async def search(
         raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
     if page < 1:
         raise InvalidInput(f"page must be >= 1, got {page}.")
+    if order not in ("newest", "oldest"):
+        raise InvalidInput(f"order must be 'newest' or 'oldest', got {order!r}.")
     path = "recall"
     if make:
         path += f"/make-name/{_segment(make, 'make')}"
@@ -120,7 +135,9 @@ async def search(
             raise InvalidInput(f"Invalid model-year range {year_from}-{year_to}.")
         path += f"/year-range/{start}-{end}"
     url = _root(lang) + path
-    rows, cached = await _get(url, {"limit": limit, "page": page})
+    # Upstream order is oldest first with no total: a make-only search for
+    # Ford started at 1975 and gave no way to reach recent recalls.
+    rows, cached = await _all_rows(url)
     recalls = []
     for row in rows:
         values = _values(row) + [None] * 6
@@ -134,17 +151,35 @@ async def search(
                 recall_date=_date(values[5]),
             )
         )
+    recalls.sort(
+        key=lambda r: (r.recall_date or date.min, r.recall_number),
+        reverse=order == "newest",
+    )
+    start = (page - 1) * limit
+    shown = recalls[start : start + limit]
+    note = None
+    if not recalls and make:
+        note = (
+            f"No recalls match make {make!r}"
+            + (f" and model {model!r}" if model else "")
+            + "; check the spelling (makes are as Transport Canada lists them, e.g. "
+            "'Honda', 'Mercedes-Benz')."
+        )
     return RecallSearchResult(
-        recalls=recalls,
-        returned_count=len(recalls),
+        recalls=shown,
+        returned_count=len(shown),
+        total_matched=len(recalls),
+        has_more=start + len(shown) < len(recalls),
+        order=order,
         page=page,
         limit=limit,
+        note=note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=cached,
             schema_name="tc_recalls.RecallSearchResult",
-            limits="results are oldest first; narrow with a model-year range or page",
+            limits=f"sorted by recall date, {order} first; page with `page`",
         ),
     )
 
@@ -171,7 +206,9 @@ async def get_recall(recall_number: str, lang: str = "en") -> RecallDetail:
         system=first.get(f"SYSTEM_TYPE_{suffix}"),
         notification_type=first.get(f"NOTIFICATION_TYPE_{suffix}"),
         units_affected=_int(first.get("UNIT_AFFECTED_NBR")),
-        description=(first.get(f"COMMENT_{suffix}") or "").strip() or None,
+        # English descriptions use CRLF line breaks, French ones LF (live
+        # 2026-10-03, recall 2021001); both come back with LF.
+        description=(first.get(f"COMMENT_{suffix}") or "").replace("\r\n", "\n").strip() or None,
         affected_vehicles=[
             AffectedVehicle(make=m, model=mo, model_year=y)
             for m, mo, y in sorted(vehicles, key=lambda v: (str(v[0]), str(v[1]), v[2] or 0))
