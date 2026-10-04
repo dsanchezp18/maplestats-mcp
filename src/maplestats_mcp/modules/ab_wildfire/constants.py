@@ -73,6 +73,17 @@ DANGER_MEANING = {
     "Extreme": "Forest fuels are extremely dry; fast-spreading, high-intensity fires are likely.",
 }
 
+DANGER_MEANING_FR = {
+    "Low": "Un feu peut encore prendre, mais ne devrait pas gagner les couches de végétation "
+    "plus profondes ni les combustibles plus gros.",
+    "Moderate": "Un feu de surface rampant ou peu intense est probable.",
+    "High": "Les combustibles forestiers sont secs et le risque d'incendie est sérieux ; un feu "
+    "de surface modéré à vigoureux est attendu.",
+    "Very High": "Un feu de forte intensité est attendu et risque de gagner la cime des arbres.",
+    "Extreme": "Les combustibles forestiers sont extrêmement secs ; des feux de forte intensité "
+    "à propagation rapide sont probables.",
+}
+
 # Most severe first.
 ALERT_SEVERITY = {
     "Forest Area Closure": 0,
