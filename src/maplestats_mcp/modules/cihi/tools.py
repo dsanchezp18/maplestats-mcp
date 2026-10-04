@@ -23,7 +23,9 @@ async def cihi_search_indicators(query: str = "", lang: Lang = "en") -> Indicato
     Use for: finding an indicator's slug, e.g. "stroke mortality",
     "readmission", "wait times", "emergency department", "hospital
     stays", "public spending". Every word must appear in the English
-    name; read French content with lang="fr" on the other cihi_ tools.
+    name (case and accents ignored): the library is searched in English
+    only, since the French pages use other slugs. Read French content
+    with lang="fr" on the other cihi_ tools.
     Keywords: CIHI, health indicators, hospital, mortality, readmission,
     wait times, emergency department, health system performance.
     Mots-clés : ICIS, indicateurs de santé, hôpital, mortalité,
@@ -55,6 +57,7 @@ async def cihi_get_indicator_data(
     place: str | None = None,
     filters: dict[str, str] | None = None,
     table: str | None = None,
+    columns: list[str] | None = None,
     limit: int = constants.ROWS_DEFAULT,
     lang: Lang = "en",
 ) -> IndicatorData:
@@ -65,13 +68,21 @@ async def cihi_get_indicator_data(
     of "Place or organization"; `filters` match columns exactly, e.g.
     {"Reporting level": "Province/Territory", "Time frame": "2024–2025",
     "Level 1 breakdown": "Not applicable"}. The last `limit` matching
-    rows in file order come back. `lang="fr"` reads CIHI's
-    French file, with French column names.
+    rows in file order come back. `columns` picks the columns to return
+    (names as in the file); without it, columns blank in every returned
+    row are left out and listed in empty_columns. `lang="fr"` reads
+    CIHI's French file, with French column names.
     Keywords: CIHI, health data, hospital mortality rate, readmission
     rate, province, hospital, fiscal year, risk-adjusted rate.
     Mots-clés : ICIS, données sur la santé, taux de mortalité,
     taux de réadmission, province, hôpital, exercice, taux ajusté.
     """
     return await client.get_indicator_data(
-        indicator, place=place, filters=filters, table=table, limit=limit, lang=lang
+        indicator,
+        place=place,
+        filters=filters,
+        table=table,
+        columns=columns,
+        limit=limit,
+        lang=lang,
     )

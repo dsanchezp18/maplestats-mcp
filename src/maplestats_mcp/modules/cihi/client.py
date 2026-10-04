@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import re
+import unicodedata
 from typing import Any
 from urllib.parse import urlparse
 
@@ -57,6 +58,11 @@ async def _page(url: str) -> tuple[str, bool]:
     return await cached_fetch(f"cihi:page:{url}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
 
 
+def _fold(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
 def _clean(text: str) -> str:
     return " ".join(text.split())
 
@@ -92,8 +98,8 @@ async def _library() -> tuple[list[IndicatorRef], bool]:
 
 async def search_indicators(query: str = "") -> IndicatorSearchResult:
     refs, cached = await _library()
-    words = query.lower().split()
-    matches = [r for r in refs if all(w in r.name.lower() for w in words)]
+    words = _fold(query).split()
+    matches = [r for r in refs if all(w in _fold(r.name) for w in words)]
     return IndicatorSearchResult(
         indicators=matches,
         total_matches=len(matches),
@@ -229,6 +235,7 @@ async def get_indicator_data(
     place: str | None = None,
     filters: dict[str, str] | None = None,
     table: str | None = None,
+    columns: list[str] | None = None,
     limit: int = constants.ROWS_DEFAULT,
     lang: str = "en",
 ) -> IndicatorData:
@@ -273,13 +280,25 @@ async def get_indicator_data(
         return all(cells[i].lower() == v for i, v in wanted)
 
     matching = [r for r in data if keep(r)]
-    kept = matching[-limit:]
+    kept = [r + [""] * (len(header) - len(r)) for r in matching[-limit:]]
+    # Rows carry 33 columns (about 1.35 KB each, live 2026-10-03), many of
+    # them blank for a given indicator; pick columns, or drop the blank ones.
+    if columns:
+        chosen = [index(name) for name in columns]
+        empty: list[str] = []
+    else:
+        chosen = [i for i in range(len(header)) if any(row[i] for row in kept)]
+        empty = [header[i] for i in range(len(header)) if i not in chosen] if kept else []
+        if not kept:
+            chosen = list(range(len(header)))
+    shown = [header[i] for i in chosen]
     return IndicatorData(
         slug=detail.slug,
         table=title or sheet,
         tables=list(tables),
-        columns=header,
-        rows=[dict(zip(header, r + [""] * (len(header) - len(r)), strict=True)) for r in kept],
+        columns=shown,
+        empty_columns=empty,
+        rows=[{header[i]: row[i] for i in chosen} for row in kept],
         total_rows=len(data),
         matching_rows=len(matching),
         returned_count=len(kept),
