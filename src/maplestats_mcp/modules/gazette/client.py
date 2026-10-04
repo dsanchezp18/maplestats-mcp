@@ -21,6 +21,7 @@ from maplestats_mcp.modules.gazette.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -44,27 +45,51 @@ def _lang(lang: str) -> str:
     return "fra" if lang == "fr" else "eng"
 
 
-def _part(part: int) -> int:
+def _part(part: int, lang: str = "en") -> int:
     if part not in (1, 2):
-        raise InvalidInput(f"part must be 1 or 2, got {part}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"part must be 1 or 2, got {part}.",
+            f"part doit valoir 1 ou 2 ; reçu {part}.",
+        )
     return part
 
 
-async def _fetch(url: str, ttl: int) -> tuple[bytes, bool]:
+async def _fetch(url: str, ttl: int, lang: str = "en") -> tuple[bytes, bool]:
     async def fetch() -> bytes:
         await _LIMITER.acquire()
         try:
             content = (await get_raw(url, timeout=60.0)).content
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"gazette: nothing published at {url}.") from exc
-            raise UpstreamError(
-                f"gazette: {url} returned HTTP {exc.response.status_code}."
+            status = exc.response.status_code
+            if status == 404:
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    f"gazette: nothing published at {url}.",
+                    f"gazette : rien n'est publié à {url}.",
+                ) from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"gazette: {url} returned HTTP {status}.",
+                f"gazette : {url} a renvoyé HTTP {status}.",
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"gazette: {url} did not respond in time.") from exc
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                f"gazette: {url} did not respond in time.",
+                f"gazette : {url} n'a pas répondu à temps.",
+            ) from exc
         if _SOFT_404.search(content[:4000].decode("utf-8", "replace")):
-            raise NotFound(f"gazette: nothing published at {url} (the site's not-found page).")
+            raise lang_error(
+                NotFound,
+                lang,
+                f"gazette: nothing published at {url} (the site's not-found page).",
+                f"gazette : rien n'est publié à {url} (page « introuvable » du site).",
+            )
         return content
 
     return await cached_fetch(f"gazette:{url}", ttl, fetch)
@@ -87,11 +112,16 @@ def _issue_date(link: str) -> date | None:
 async def list_issues(
     part: int = 1, *, limit: int = constants.ISSUES_DEFAULT, lang: str = "en"
 ) -> IssueList:
-    _part(part)
+    _part(part, lang)
     if limit < 1 or limit > constants.ISSUES_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ISSUES_MAX}, got {limit}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.ISSUES_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ISSUES_MAX} ; reçu {limit}.",
+        )
     url = constants.FEED_URL.format(part=part, lang=_lang(lang))
-    feed, cached = await _fetch(url, constants.CACHE_TTL_FEED_SECONDS)
+    feed, cached = await _fetch(url, constants.CACHE_TTL_FEED_SECONDS, lang)
     root = ElementTree.fromstring(feed)
     issues: list[Issue] = []
     for item in root.findall("./channel/item"):
@@ -113,7 +143,12 @@ async def list_issues(
             url=url,
             cached=cached,
             schema_name="gazette.IssueList",
-            freshness="Part I every Saturday; Part II every second Wednesday",
+            freshness=fr_or_en(
+                lang,
+                "Part I every Saturday; Part II every second Wednesday",
+                "Partie I chaque samedi ; Partie II un mercredi sur deux",
+            ),
+            lang=lang,
         ),
     )
 
@@ -153,21 +188,31 @@ def _parse_issue(html: str, base_url: str) -> list[Notice]:
 
 
 async def get_issue(part: int = 1, issue_date: str | None = None, lang: str = "en") -> IssueNotices:
-    _part(part)
+    _part(part, lang)
     if issue_date:
         try:
             when = date.fromisoformat(issue_date)
         except ValueError as exc:
-            raise InvalidInput(f"issue_date must be YYYY-MM-DD, got {issue_date!r}.") from exc
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"issue_date must be YYYY-MM-DD, got {issue_date!r}.",
+                f"issue_date doit être au format AAAA-MM-JJ ; reçu {issue_date!r}.",
+            ) from exc
     else:
         latest = await list_issues(part, limit=1, lang=lang)
         if not latest.issues:
-            raise NotFound(f"gazette: no Part {part} issues in the feed.")
+            raise lang_error(
+                NotFound,
+                lang,
+                f"gazette: no Part {part} issues in the feed.",
+                f"gazette : aucun numéro de la Partie {part} dans le fil.",
+            )
         when = latest.issues[0].date
     url = constants.ISSUE_URL.format(
         part=part, year=when.year, date=when.isoformat(), lang=_lang(lang)
     )
-    page, cached = await _fetch(url, constants.CACHE_TTL_PAGE_SECONDS)
+    page, cached = await _fetch(url, constants.CACHE_TTL_PAGE_SECONDS, lang)
     html = page.decode("utf-8-sig", "replace")
     return IssueNotices(
         part=part,
@@ -179,11 +224,12 @@ async def get_issue(part: int = 1, issue_date: str | None = None, lang: str = "e
             url=url,
             cached=cached,
             schema_name="gazette.IssueNotices",
+            lang=lang,
         ),
     )
 
 
-def _notice_text(soup: BeautifulSoup, fragment: str) -> tuple[str | None, str]:
+def _notice_text(soup: BeautifulSoup, fragment: str, lang: str = "en") -> tuple[str | None, str]:
     if not fragment:
         main = soup.find("main") or soup
         heading = main.find("h1")
@@ -193,7 +239,12 @@ def _notice_text(soup: BeautifulSoup, fragment: str) -> tuple[str | None, str]:
         )
     anchor = soup.find(id=fragment)
     if not isinstance(anchor, Tag):
-        raise NotFound(f"gazette: no notice #{fragment} on the page.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"gazette: no notice #{fragment} on the page.",
+            f"gazette : aucun avis #{fragment} sur la page.",
+        )
     lines: list[str] = []
     for el in anchor.find_all_next():
         if el is not anchor and el.get("id") and el.name in ("h2", "h3") and lines:
@@ -205,14 +256,18 @@ def _notice_text(soup: BeautifulSoup, fragment: str) -> tuple[str | None, str]:
 
 
 async def get_notice(url: str, lang: str = "en") -> NoticeText:
-    del lang
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname not in constants.ALLOWED_HOSTS:
-        raise InvalidInput("url must be a gazette.gc.ca link from gazette_get_issue.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "url must be a gazette.gc.ca link from gazette_get_issue.",
+            "url doit être un lien gazette.gc.ca tiré de gazette_get_issue.",
+        )
     page, fragment = urldefrag(url)
-    body, cached = await _fetch(page, constants.CACHE_TTL_PAGE_SECONDS)
+    body, cached = await _fetch(page, constants.CACHE_TTL_PAGE_SECONDS, lang)
     html = body.decode("utf-8-sig", "replace")
-    title, text = _notice_text(BeautifulSoup(html, "html.parser"), fragment)
+    title, text = _notice_text(BeautifulSoup(html, "html.parser"), fragment, lang)
     truncated = len(text) > constants.NOTICE_TEXT_MAX
     return NoticeText(
         url=url,
@@ -224,6 +279,13 @@ async def get_notice(url: str, lang: str = "en") -> NoticeText:
             url=url,
             cached=cached,
             schema_name="gazette.NoticeText",
-            limits="unofficial text extract; the published Gazette is authoritative",
+            # The text is in the language of the linked page, whatever lang is.
+            limits=fr_or_en(
+                lang,
+                "unofficial text extract; the published Gazette is authoritative",
+                "extrait non officiel du texte ; seule la Gazette publiée fait foi. Le texte est "
+                "dans la langue de la page liée (-fra.html pour le français)",
+            ),
+            lang=lang,
         ),
     )

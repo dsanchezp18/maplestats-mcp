@@ -135,3 +135,25 @@ async def test_soft_404_page_is_not_found(httpx_mock):
     httpx_mock.add_response(url=page, text=_SOFT_404_PAGE)
     with pytest.raises(NotFound):
         await client.get_notice(page)
+
+
+async def test_french_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(url=constants.FEED_URL.format(part=1, lang="fra"), content=_FEED)
+    result = await client.list_issues(1, limit=1, lang="fr")
+    assert (
+        result.provenance.freshness == "Partie I chaque samedi\xa0; Partie II un mercredi sur deux"
+    )
+    assert "Avis du site Web du gouvernement du Canada" in (result.provenance.licence or "")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: part doit valoir 1 ou 2"):
+        await client.list_issues(3, lang="fr")
+    with pytest.raises(InvalidInput, match="lien gazette.gc.ca"):
+        await client.get_notice("https://example.com/x.html", lang="fr")
+    page = "https://gazette.gc.ca/rp-pr/p1/2026/2026-09-19/html/notice-avis-fra.html"
+    httpx_mock.add_response(url=page, text=_SECTION_PAGE)
+    with pytest.raises(NotFound, match="aucun avis #zz sur la page"):
+        await client.get_notice(page + "#zz", lang="fr")
+
+
+async def test_english_messages_are_unchanged():
+    with pytest.raises(InvalidInput, match=r"^part must be 1 or 2, got 3\.$"):
+        await client.list_issues(3)
