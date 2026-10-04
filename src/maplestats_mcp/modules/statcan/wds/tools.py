@@ -59,7 +59,8 @@ async def wds_search_cubes(
     GDP by industry, CPI, consumer price index, population estimates
     quarterly, retail trade, wages, trade, interprovincial migration,
     time series, real-time table, Alberta, by province, which table has.
-    Mots-clés : Statistique Canada, StatCan, tableau de données, recherche,
+    Mots-clés : Statistique Canada, StatCan, chercher un tableau, trouver un
+    tableau, quel tableau, tableau de données, recherche, tableaux,
     numéro de tableau, découverte, catalogue, parcourir, liste, inventaire,
     population active, taux de chômage mensuel, emploi, PIB par industrie,
     produit intérieur brut, IPC, indice des prix à la consommation, permis
