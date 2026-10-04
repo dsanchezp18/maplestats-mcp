@@ -801,6 +801,69 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "minerals",
+        "Mineral production and mining",
+        (
+            "mineral production",
+            "mining",
+            "mine",
+            "gold",
+            "copper",
+            "potash",
+            "nickel",
+            "lithium",
+            "critical minerals",
+            "production miniere",
+            "mines",
+            "or",
+            "cuivre",
+            "potasse",
+            "minéraux critiques",
+        ),
+        (
+            PlanStep(
+                "nrcan_minerals_get_production", "mineral production by commodity and province"
+            ),
+            PlanStep("nrcan_minerals_get_series", "one commodity across years (commodity name)"),
+        ),
+    ),
+    Topic(
+        "pesticides",
+        "Pesticides and residue limits",
+        (
+            "pesticide",
+            "herbicide",
+            "insecticide",
+            "fungicide",
+            "glyphosate",
+            "maximum residue limit",
+            "pmra",
+            "limite maximale de residus",
+            "pesticides",
+            "herbicides",
+        ),
+        (
+            PlanStep("pmra_search_products", "registered pesticide products"),
+            PlanStep(
+                "pmra_get_product", "one product by its registration_number, with ingredients"
+            ),
+            PlanStep("pmra_get_residue_limits", "maximum residue limits by chemical or food"),
+        ),
+    ),
+    Topic(
+        "border",
+        "Border crossing wait times",
+        (
+            "border wait",
+            "border crossing",
+            "wait times at the border",
+            "temps d'attente a la frontiere",
+            "attente a la frontiere",
+            "poste frontalier",
+        ),
+        (PlanStep("cbsa_border_wait_times", "current CBSA wait times by crossing and direction"),),
+    ),
+    Topic(
         "spending",
         "Government spending, procurement and finances",
         (
@@ -822,9 +885,27 @@ TOPICS: tuple[Topic, ...] = (
             "appel d'offres",
             "subvention",
             "contrat",
+            "fiscal reference tables",
+            "fiscal monitor",
+            "federal deficit",
+            "federal debt",
+            "tableaux de reference financiers",
+            "deficit federal",
+            "dette federale",
         ),
         (
             PlanStep("pbo_search_publications", "PBO costings and fiscal analysis"),
+            PlanStep(
+                "finance_fiscal_monitor_list_issues",
+                "Finance Canada monthly Fiscal Monitor issues (deficit, revenues, spending)",
+                ("fiscal monitor", "federal deficit"),
+            ),
+            PlanStep(
+                "finance_frt_list_tables",
+                "Fiscal Reference Tables: long federal and provincial series (table number "
+                "for finance_frt_get_table)",
+                ("fiscal reference tables", "federal debt", "dette federale"),
+            ),
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
             PlanStep("ckan_search_datasets", "grants and contributions: portal='federal'"),
