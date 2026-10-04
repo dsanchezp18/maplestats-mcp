@@ -400,3 +400,17 @@ async def test_french_download_header_key(httpx_mock):
     result = await client.get_financial_return_part("56932", "1", election_id="62", lang="fr")
     assert result.export_header == {"TITRE": "Partie 1 - Déclaration"}
     assert list(result.sections) == ["DONNÉES_DÉTAIL"]
+    assert result.part_label == "Partie 1 – Déclaration"
+    assert (result.provenance.limits or "").startswith("Requête (liée à la session\xa0;")
+    assert (result.provenance.licence or "").startswith("Avis d'Élections Canada")
+
+
+async def test_french_errors():
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: act doit être l'une"):
+        await client.list_elections(act="not-a-real-period", lang="fr")
+    with pytest.raises(InvalidInput, match="part doit être l'une des valeurs"):
+        await client.get_financial_return_part("1", "9", election_id="62", lang="fr")
+    with pytest.raises(InvalidInput, match="election_id ne doit pas être vide"):
+        await client.search_candidates("  ", lang="fr")
+    with pytest.raises(InvalidInput, match=r"^election_id must not be empty\.$"):
+        await client.search_candidates("  ")
