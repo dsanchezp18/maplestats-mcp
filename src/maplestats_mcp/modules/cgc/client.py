@@ -69,7 +69,6 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.licences import OGL_CANADA
-from maplestats_mcp.shared.licences_fr import to_french
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -610,7 +609,7 @@ def _weekly_provenance(table: WeeklyTable, cached: bool, schema: str, **extra: A
             + (f" (Last-Modified du fichier : {modified})" if modified else "")
             + ".",
         ),
-        licence=to_french(OGL_CANADA, table.lang),
+        licence=OGL_CANADA,
         lang=table.lang,
         **extra,
     )
@@ -952,7 +951,7 @@ def _exports_provenance(table: ExportsTable, cached: bool, schema: str, **extra:
             + (f" (Last-Modified du fichier : {modified})" if modified else "")
             + ". Exportations des installations agréées, par destination.",
         ),
-        licence=to_french(OGL_CANADA, table.lang),
+        licence=OGL_CANADA,
         lang=table.lang,
         **extra,
     )
