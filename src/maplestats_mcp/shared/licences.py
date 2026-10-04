@@ -16,7 +16,7 @@ an open licence.
 
 from __future__ import annotations
 
-from maplestats_mcp.shared.i18n import fr_typography, normalize_lang, t
+from maplestats_mcp.shared.i18n import french_spacing, normalize_lang, t
 
 # The Statistics Canada Open Licence text lives in shared/i18n (English and
 # French); envelope.make_provenance picks the call's language.
@@ -458,7 +458,7 @@ _SOURCE_LICENCES_FR: dict[str, str] = {
     ),
 }
 SOURCE_LICENCES_FR: dict[str, str] = {
-    source: fr_typography(text) for source, text in _SOURCE_LICENCES_FR.items()
+    source: french_spacing(text) for source, text in _SOURCE_LICENCES_FR.items()
 }
 
 
@@ -475,7 +475,7 @@ def licence_for(source: str, url: str, lang: str = "en") -> str | None:
     if known is not None:
         return known
     if source.startswith(_FAMILY_PREFIXES):
-        return fr_typography(PER_RECORD_LICENCE_FR) if french else PER_RECORD_LICENCE
+        return french_spacing(PER_RECORD_LICENCE_FR) if french else PER_RECORD_LICENCE
     prefix = source.split(":", 1)[0] if ":" in source else ""
     if prefix in SOURCE_LICENCES:
         if french and prefix in SOURCE_LICENCES_FR:

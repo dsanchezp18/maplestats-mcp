@@ -5,8 +5,9 @@ Confirmed live 2026-09-18 against the cross-domain discovery API
 (api.us.socrata.com), the per-domain Views API, and the SODA row-query
 API. Unlike this codebase's CKAN portals, Socrata exposes dataset rows
 directly through a queryable API (SoQL). Content is English-only except
-New Brunswick, whose content is bilingual within each field — `lang` is
-a documented no-op on every portal.
+New Brunswick, whose content is bilingual within each field. `lang="fr"`
+gives this module's own text (errors, provenance, portal names) in French;
+the portals' own titles and descriptions stay as published.
 """
 
 MODULE_NAME = "socrata"

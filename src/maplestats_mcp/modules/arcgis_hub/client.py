@@ -43,20 +43,32 @@ from maplestats_mcp.shared.arcgis import (
     supported_download_formats,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import (
     InvalidInput,
     NotFound,
     UpstreamError,
     UpstreamUnavailable,
 )
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 
+# French only: most portals publish their own text in English.
+_SOURCE_TEXT_FR = (
+    "Titres, descriptions et étiquettes tels que publiés par le portail, le plus souvent en "
+    "anglais seulement."
+)
 
-def _config(portal: str) -> ArcGISHubConfig:
+
+def _config(portal: str, lang: str = "en") -> ArcGISHubConfig:
     info = constants.PORTALS.get(portal)
     if info is None:
-        raise InvalidInput(f"portal must be one of {sorted(constants.PORTALS)}, got {portal!r}.")
+        raise_localized(
+            InvalidInput,
+            f"portal must be one of {sorted(constants.PORTALS)}, got {portal!r}.",
+            f"portal doit être l'une des valeurs {sorted(constants.PORTALS)}; reçu {portal!r}.",
+            lang,
+        )
     return ArcGISHubConfig(
         source=constants.rate_limit_source(portal),
         domain=info.domain,
@@ -66,17 +78,41 @@ def _config(portal: str) -> ArcGISHubConfig:
     )
 
 
-def _item_id(item_id: str) -> str:
+def _item_id(item_id: str, lang: str = "en") -> str:
     """The item id, checked before it goes into a URL path (see shared/arcgis.py)."""
     cleaned = item_id.strip()
     if not cleaned:
-        raise InvalidInput("item_id must not be empty.")
+        raise_localized(
+            InvalidInput, "item_id must not be empty.", "item_id ne doit pas être vide.", lang
+        )
     if not ITEM_ID_PATTERN.match(cleaned):
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"item_id must be an ArcGIS item id (32 hex digits, optionally '_<layer id>') "
-            f"as returned by arcgis_hub_search_datasets, got {item_id!r}."
+            f"as returned by arcgis_hub_search_datasets, got {item_id!r}.",
+            "item_id doit être un identifiant d'élément ArcGIS (32 chiffres hexadécimaux, "
+            "suivis au besoin de « _<id de couche> »), comme ceux que renvoie "
+            f"arcgis_hub_search_datasets; reçu {item_id!r}.",
+            lang,
         )
     return cleaned
+
+
+def _check_page(limit: int, offset: int, limit_max: int, lang: str) -> None:
+    if limit < 1 or limit > limit_max:
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {limit_max}, got {limit}.",
+            f"limit doit être entre 1 et {limit_max}; reçu {limit}.",
+            lang,
+        )
+    if offset < 0:
+        raise_localized(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être supérieur ou égal à 0; reçu {offset}.",
+            lang,
+        )
 
 
 def list_portals(lang: str = "en") -> PortalList:
@@ -84,10 +120,10 @@ def list_portals(lang: str = "en") -> PortalList:
     portals = [
         PortalInfo(
             portal=key,
-            name=info.name_fr if lang == "fr" else info.name_en,
+            name=pick(lang, info.name_en, info.name_fr),
             domain=info.domain,
             bilingual_content=info.bilingual_content,
-            note=info.note,
+            note=pick(lang, info.note or "", constants.NOTES_FR.get(key, "")) or None,
         )
         for key, info in constants.PORTALS.items()
     ]
@@ -95,9 +131,14 @@ def list_portals(lang: str = "en") -> PortalList:
         portals=portals,
         provenance=make_provenance(
             source="arcgis-hub",
-            url="(static portal registry in modules/arcgis_hub/constants.py)",
+            url=pick(
+                lang,
+                "(static portal registry in modules/arcgis_hub/constants.py)",
+                "(registre fixe des portails dans modules/arcgis_hub/constants.py)",
+            ),
             cached=False,
             schema_name="arcgis_hub.PortalList",
+            lang=lang,
         ),
     )
 
@@ -132,25 +173,30 @@ async def search_datasets(
     offset: int = 0,
     lang: str = "en",
 ) -> DatasetSearchResult:
-    """Search one portal's ArcGIS Hub dataset catalogue; ``lang`` is accepted for consistency."""
-    del lang
-    config = _config(portal)
+    """Search one portal's ArcGIS Hub dataset catalogue in the language ``lang``."""
+    config = _config(portal, lang)
     item_type = item_type or constants.PORTALS[portal].default_item_type
-    if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
-        )
-    if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    _check_page(limit, offset, constants.SEARCH_LIMIT_MAX, lang)
     if offset + limit > SEARCH_WINDOW_MAX:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"offset + limit must be at most {SEARCH_WINDOW_MAX} (the catalogue search does "
-            f"not page further), got {offset + limit}; narrow the query, tag or item_type."
+            f"not page further), got {offset + limit}; narrow the query, tag or item_type.",
+            f"offset + limit doit être d'au plus {SEARCH_WINDOW_MAX} (la recherche dans le "
+            f"catalogue ne va pas plus loin); reçu {offset + limit}. Précisez query, tag ou "
+            "item_type.",
+            lang,
         )
 
     async def fetch() -> dict[str, Any]:
         return await search_items(
-            config, query=query, tag=tag, item_type=item_type, limit=limit, offset=offset
+            config,
+            query=query,
+            tag=tag,
+            item_type=item_type,
+            limit=limit,
+            offset=offset,
+            lang=lang,
         )
 
     cache_key = f"{config.source}:search:{query}:{tag}:{item_type}:{limit}:{offset}"
@@ -171,15 +217,26 @@ async def search_datasets(
             url=f"{collection_url(config)}/items",
             cached=was_cached,
             schema_name="arcgis_hub.DatasetSearchResult",
-            coverage=f"{len(items)} of {total_count} total matches returned",
-            limits=f"limit capped at {constants.SEARCH_LIMIT_MAX} per request",
+            coverage=pick(
+                lang,
+                f"{len(items)} of {total_count} total matches returned",
+                f"{len(items)} résultats renvoyés sur {total_count} au total",
+            ),
+            limits=pick(
+                lang,
+                f"limit capped at {constants.SEARCH_LIMIT_MAX} per request",
+                f"limit plafonné à {constants.SEARCH_LIMIT_MAX} par requête. {_SOURCE_TEXT_FR}",
+            ),
+            lang=lang,
         ),
     )
 
 
-async def _item_feature(config: ArcGISHubConfig, item_id: str) -> tuple[dict[str, Any], bool]:
+async def _item_feature(
+    config: ArcGISHubConfig, item_id: str, lang: str = "en"
+) -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
-        return await get_item(config, item_id)
+        return await get_item(config, item_id, lang)
 
     return await cached_fetch(
         f"{config.source}:get_item:{item_id}", constants.CACHE_TTL_ITEM_SECONDS, fetch
@@ -219,11 +276,10 @@ async def _download_links(
 
 
 async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail:
-    """Get one dataset item's metadata and download links; ``lang`` is a documented no-op."""
-    del lang
-    config = _config(portal)
-    item_id = _item_id(item_id)
-    feature, was_cached = await _item_feature(config, item_id)
+    """Get one dataset item's metadata and download links in the language ``lang``."""
+    config = _config(portal, lang)
+    item_id = _item_id(item_id, lang)
+    feature, was_cached = await _item_feature(config, item_id, lang)
     props = feature.get("properties") or {}
     canonical_id = props.get("id") or item_id
     service_url = props.get("url") or None
@@ -256,6 +312,8 @@ async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail
             url=f"{collection_url(config)}/items/{item_id}",
             cached=was_cached,
             schema_name="arcgis_hub.ItemDetail",
+            limits=pick(lang, "", _SOURCE_TEXT_FR) or None,
+            lang=lang,
         ),
     )
 
@@ -273,27 +331,29 @@ async def query_feature_layer(
     offset: int = 0,
     lang: str = "en",
 ) -> FeatureQueryResult:
-    """Query rows from one FeatureServer/MapServer layer; ``lang`` is accepted for consistency.
+    """Query rows from one FeatureServer/MapServer layer in the language ``lang``.
 
     ``layer_index=None`` (the default) resolves to whichever layer or
     table id the service itself reports as its first one, rather than
     assuming 0 — confirmed live that a hosted table (no geometry) can
     sit at a non-zero id (see shared/arcgis.py's ``default_layer_index``).
     """
-    del lang
-    config = _config(portal)
-    item_id = _item_id(item_id)
-    if limit < 1 or limit > constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.")
-    if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    config = _config(portal, lang)
+    item_id = _item_id(item_id, lang)
+    _check_page(limit, offset, constants.ROWS_LIMIT_MAX, lang)
+
     # A negative id reached the service, which answered an empty, "successful"
     # page (live 2026-10-03).
     if layer_index is not None and layer_index < 0:
-        raise InvalidInput(f"layer_index must be >= 0, got {layer_index}.")
+        raise_localized(
+            InvalidInput,
+            f"layer_index must be >= 0, got {layer_index}.",
+            f"layer_index doit être supérieur ou égal à 0; reçu {layer_index}.",
+            lang,
+        )
     where_clause = where or "1=1"
 
-    feature, _ = await _item_feature(config, item_id)
+    feature, _ = await _item_feature(config, item_id, lang)
     props = feature.get("properties") or {}
     canonical_id = props.get("id") or item_id
     item_type = props.get("type") or "unknown"
@@ -303,17 +363,29 @@ async def query_feature_layer(
         and item_kind(item_type, service_url) == "none"
         and "/ImageServer" in service_url
     ):
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"item {item_id!r} is an Image Service (raster imagery), which has no rows to "
-            "query; open its service_url in a GIS or use another item."
+            "query; open its service_url in a GIS or use another item.",
+            f"l'élément {item_id!r} est un Image Service (imagerie matricielle), qui n'a pas "
+            "de lignes à interroger; ouvrez son service_url dans un SIG ou choisissez un autre "
+            "élément.",
+            lang,
         )
     if not service_url or "/rest/services/" not in service_url:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"item {item_id!r} ({item_type}) has no queryable FeatureServer/MapServer "
-            "service_url; use its download_urls (arcgis_hub_get_dataset) instead."
+            "service_url; use its download_urls (arcgis_hub_get_dataset) instead.",
+            f"l'élément {item_id!r} ({item_type}) n'a pas de service_url FeatureServer/"
+            "MapServer interrogeable; utilisez plutôt ses download_urls "
+            "(arcgis_hub_get_dataset).",
+            lang,
         )
     resolved_layer_index = (
-        layer_index if layer_index is not None else await default_layer_index(config, service_url)
+        layer_index
+        if layer_index is not None
+        else await default_layer_index(config, service_url, lang)
     )
 
     async def fetch() -> dict[str, Any]:
@@ -327,6 +399,7 @@ async def query_feature_layer(
             return_geometry=return_geometry,
             limit=limit,
             offset=offset,
+            lang=lang,
         )
 
     cache_key = (
@@ -357,9 +430,18 @@ async def query_feature_layer(
             url=layer_query_url(service_url, resolved_layer_index),
             cached=was_cached,
             schema_name="arcgis_hub.FeatureQueryResult",
-            limits=(
+            limits=pick(
+                lang,
                 f"rows capped at {constants.ROWS_LIMIT_MAX} per request"
-                + (" (upstream layer's own transfer limit reached first)" if exceeded else "")
+                + (" (upstream layer's own transfer limit reached first)" if exceeded else ""),
+                f"lignes plafonnées à {constants.ROWS_LIMIT_MAX} par requête"
+                + (
+                    " (la limite de transfert propre à la couche a été atteinte avant)"
+                    if exceeded
+                    else ""
+                )
+                + "; noms de champs et valeurs tels que publiés par le service",
             ),
+            lang=lang,
         ),
     )

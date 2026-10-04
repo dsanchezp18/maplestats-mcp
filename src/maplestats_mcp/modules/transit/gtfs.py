@@ -12,6 +12,7 @@ import unicodedata
 from datetime import date, timedelta
 from typing import NamedTuple
 
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput
 
 _WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
@@ -55,10 +56,15 @@ def to_gtfs_time(seconds: int) -> str:
     return f"{seconds // 3600:02d}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
 
 
-def parse_start_time(value: str) -> int:
+def parse_start_time(value: str, *, lang: str = "en") -> int:
     seconds = to_seconds(value)
     if seconds is None:
-        raise InvalidInput(f"start_time must look like 'HH:MM' or 'HH:MM:SS', got '{value}'.")
+        raise_localized(
+            InvalidInput,
+            f"start_time must look like 'HH:MM' or 'HH:MM:SS', got '{value}'.",
+            f"start_time doit avoir la forme « HH:MM » ou « HH:MM:SS », reçu « {value} ».",
+            lang,
+        )
     return seconds
 
 
@@ -72,11 +78,16 @@ def parse_gtfs_date(value: str | None) -> date | None:
         return None
 
 
-def parse_iso_date(value: str) -> date:
+def parse_iso_date(value: str, *, lang: str = "en") -> date:
     try:
         return date.fromisoformat(value)
-    except ValueError as exc:
-        raise InvalidInput(f"date must be YYYY-MM-DD, got '{value}'.") from exc
+    except ValueError:
+        raise_localized(
+            InvalidInput,
+            f"date must be YYYY-MM-DD, got '{value}'.",
+            f"la date doit avoir la forme AAAA-MM-JJ, reçu « {value} ».",
+            lang,
+        )
 
 
 def active_services(

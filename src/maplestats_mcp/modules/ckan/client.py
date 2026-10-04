@@ -57,16 +57,21 @@ from maplestats_mcp.shared.ckan import (
     pick_translated_list,
     to_bool,
 )
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 
 
-def _portal(key: str) -> Portal:
+def _portal(key: str, lang: str = "en") -> Portal:
     portal = PORTALS.get(key)
     if portal is None:
-        raise InvalidInput(
-            f"Unknown CKAN portal {key!r}. Valid portals: {', '.join(sorted(PORTALS))}."
+        valid = ", ".join(sorted(PORTALS))
+        raise_localized(
+            InvalidInput,
+            f"Unknown CKAN portal {key!r}. Valid portals: {valid}.",
+            f"portail CKAN inconnu {key!r}. Portails valides : {valid}.",
+            lang,
         )
     return portal
 
@@ -82,12 +87,17 @@ def _config(key: str, portal: Portal) -> CkanConfig:
 
 
 async def _call(
-    key: str, method: str, params: dict[str, Any] | None, ttl: int, cache_suffix: str
+    key: str,
+    method: str,
+    params: dict[str, Any] | None,
+    ttl: int,
+    cache_suffix: str,
+    lang: str = "en",
 ) -> tuple[Any, bool]:
-    portal = _portal(key)
+    portal = _portal(key, lang)
 
     async def fetch() -> Any:
-        return await action(_config(key, portal), method, params=params)
+        return await action(_config(key, portal), method, params=params, lang=lang)
 
     return await cached_fetch(f"ckan:{key}:{method}:{cache_suffix}", ttl, fetch)
 
@@ -99,6 +109,7 @@ def _provenance(
     schema: str,
     *,
     params: dict[str, Any] | None = None,
+    lang: str = "en",
     **kwargs: Any,
 ):
     """Provenance whose URL is the action call made, query string included."""
@@ -107,17 +118,27 @@ def _provenance(
         url=str(httpx.URL(f"{PORTALS[key].base_url}{path}", params=params or None)),
         cached=cached,
         schema_name=f"ckan.{schema}",
+        lang=lang,
         **kwargs,
     )
 
 
-def _dataset_licence(title: str | None, url: str | None, is_open: bool | None) -> str:
+def _dataset_licence(
+    title: str | None, url: str | None, is_open: bool | None, lang: str = "en"
+) -> str:
     """The dataset's own licence, as the portal records it."""
-    named = title or "no licence stated"
     where = f" ({url})" if url else ""
-    status = {True: " The portal marks it open.", False: " The portal marks it not open."}
-    return (
-        f"Dataset licence: {named}{where}.{status.get(is_open, '') if is_open is not None else ''}"
+    status_en = {True: " The portal marks it open.", False: " The portal marks it not open."}
+    status_fr = {
+        True: " Le portail la marque comme ouverte.",
+        False: " Le portail la marque comme non ouverte.",
+    }
+    return pick(
+        lang,
+        f"Dataset licence: {title or 'no licence stated'}{where}."
+        f"{status_en.get(is_open, '') if is_open is not None else ''}",
+        f"Licence du jeu de données : {title or 'aucune licence indiquée'}{where}."
+        f"{status_fr.get(is_open, '') if is_open is not None else ''}",
     )
 
 
@@ -282,6 +303,7 @@ def list_portals(lang: str = "en") -> PortalList:
             url="(static portal registry in modules/ckan/constants.py)",
             cached=False,
             schema_name="ckan.PortalList",
+            lang=lang,
         ),
     )
 
@@ -297,11 +319,21 @@ async def search_datasets(
     lang: str = "en",
 ) -> PackageSearchResult:
     """`package_search`; an empty `query` deliberately matches everything."""
-    info = _portal(portal)
+    info = _portal(portal, lang)
     if rows < 1 or rows > constants.SEARCH_ROWS_MAX:
-        raise InvalidInput(f"rows must be between 1 and {constants.SEARCH_ROWS_MAX}, got {rows}.")
+        raise_localized(
+            InvalidInput,
+            f"rows must be between 1 and {constants.SEARCH_ROWS_MAX}, got {rows}.",
+            f"rows doit être entre 1 et {constants.SEARCH_ROWS_MAX} (reçu : {rows}).",
+            lang,
+        )
     if start < 0:
-        raise InvalidInput(f"start must be >= 0, got {start}.")
+        raise_localized(
+            InvalidInput,
+            f"start must be >= 0, got {start}.",
+            f"start doit être positif ou nul (reçu : {start}).",
+            lang,
+        )
 
     params: dict[str, Any] = {"q": query, "rows": rows, "start": start}
     if fq:
@@ -315,6 +347,7 @@ async def search_datasets(
         params,
         constants.CACHE_TTL_SEARCH_SECONDS,
         f"{query}:{fq}:{rows}:{start}:{sort}",
+        lang,
     )
     raw = list_or_empty(result, "results")
     total = get_or(result, "count", len(raw))
@@ -333,16 +366,27 @@ async def search_datasets(
             cached,
             "PackageSearchResult",
             params=params,
-            coverage=f"{len(packages)} of {total} total matches returned",
-            limits=f"rows capped at {constants.SEARCH_ROWS_MAX} per request",
+            lang=lang,
+            coverage=pick(
+                lang,
+                f"{len(packages)} of {total} total matches returned",
+                f"{len(packages)} résultats renvoyés sur {total} au total",
+            ),
+            limits=pick(
+                lang,
+                f"rows capped at {constants.SEARCH_ROWS_MAX} per request",
+                f"au plus {constants.SEARCH_ROWS_MAX} résultats par requête",
+            ),
         ),
     )
 
 
 async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> PackageDetail:
-    info = _portal(portal)
+    info = _portal(portal, lang)
     if not dataset_id.strip():
-        raise InvalidInput("dataset_id must not be empty.")
+        raise_localized(
+            InvalidInput, "dataset_id must not be empty.", "dataset_id ne doit pas être vide.", lang
+        )
 
     obj, cached = await _call(
         portal,
@@ -350,6 +394,7 @@ async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> Package
         {"id": dataset_id},
         constants.CACHE_TTL_PACKAGE_SECONDS,
         dataset_id,
+        lang,
     )
     resources = list_or_empty(obj, "resources")
     org = obj.get("organization")
@@ -379,16 +424,20 @@ async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> Package
             cached,
             "PackageDetail",
             params={"id": dataset_id},
+            lang=lang,
             licence=_dataset_licence(
                 _translated(obj, "license_title", lang),
                 _text(obj.get("license_url")),
                 _is_open(obj),
+                lang,
             ),
         ),
     )
 
 
-async def _all_fields_list(key: str, method: str, ttl: int) -> tuple[list[dict[str, Any]], bool]:
+async def _all_fields_list(
+    key: str, method: str, ttl: int, lang: str = "en"
+) -> tuple[list[dict[str, Any]], bool]:
     """Every entry of organization_list or group_list with all_fields, page by page.
 
     CKAN caps an all_fields listing at 25 entries per call (its
@@ -398,7 +447,7 @@ async def _all_fields_list(key: str, method: str, ttl: int) -> tuple[list[dict[s
     page through the rest; a page that repeats names already seen (a portal
     ignoring `offset`) ends the loop instead of duplicating entries.
     """
-    portal = _portal(key)
+    portal = _portal(key, lang)
 
     async def fetch() -> list[dict[str, Any]]:
         entries: list[dict[str, Any]] = []
@@ -409,6 +458,7 @@ async def _all_fields_list(key: str, method: str, ttl: int) -> tuple[list[dict[s
                 _config(key, portal),
                 method,
                 params={"all_fields": "true", "limit": constants.ROSTER_PAGE, "offset": offset},
+                lang=lang,
             )
             fresh = [
                 e for e in (page if isinstance(page, list) else []) if e.get("name") not in seen
@@ -423,7 +473,9 @@ async def _all_fields_list(key: str, method: str, ttl: int) -> tuple[list[dict[s
     return await cached_fetch(f"ckan:{key}:{method}:all_fields_paged", ttl, fetch)
 
 
-async def _facet(portal: str, field: str, ttl: int) -> tuple[list[dict[str, Any]], bool]:
+async def _facet(
+    portal: str, field: str, ttl: int, lang: str = "en"
+) -> tuple[list[dict[str, Any]], bool]:
     """Roster built from a package_search facet (see BC in constants.py)."""
     result, cached = await _call(
         portal,
@@ -431,16 +483,17 @@ async def _facet(portal: str, field: str, ttl: int) -> tuple[list[dict[str, Any]
         {"rows": 0, "facet.field": json.dumps([field]), "facet.limit": constants.FACET_LIMIT},
         ttl,
         f"facet:{field}",
+        lang,
     )
     facet = (result.get("search_facets") or {}).get(field) or {}
     return list(facet.get("items") or []), cached
 
 
 async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
-    info = _portal(portal)
+    info = _portal(portal, lang)
     ttl = constants.CACHE_TTL_ORGANIZATION_SECONDS
     if info.organizations == "facet":
-        items, cached = await _facet(portal, "organization", ttl)
+        items, cached = await _facet(portal, "organization", ttl, lang)
         organizations = [
             OrganizationSummary(
                 name=item["name"],
@@ -450,9 +503,13 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
             for item in items
         ]
         path = "package_search?rows=0&facet.field=organization"
-        coverage = "only organizations with at least one dataset are included"
+        coverage = pick(
+            lang,
+            "only organizations with at least one dataset are included",
+            "seules les organisations ayant au moins un jeu de données sont incluses",
+        )
     else:
-        raw, cached = await _all_fields_list(portal, "organization_list", ttl)
+        raw, cached = await _all_fields_list(portal, "organization_list", ttl, lang)
         organizations = [
             OrganizationSummary(
                 id=o.get("id"),
@@ -464,7 +521,11 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
         ]
         path = "organization_list?all_fields=true"
         coverage = (
-            f"first {constants.ROSTER_MAX} organizations only"
+            pick(
+                lang,
+                f"first {constants.ROSTER_MAX} organizations only",
+                f"les {constants.ROSTER_MAX} premières organisations seulement",
+            )
             if len(organizations) >= constants.ROSTER_MAX
             else None
         )
@@ -477,8 +538,13 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
             path,
             cached,
             "OrganizationList",
+            lang=lang,
             coverage=coverage,
-            freshness="organization roster changes infrequently; cached 24h",
+            freshness=pick(
+                lang,
+                "organization roster changes infrequently; cached 24h",
+                "la liste des organisations change rarement; mise en cache 24 h",
+            ),
         ),
     )
 
@@ -486,9 +552,14 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
 async def get_organization(
     portal: str, organization_id: str, lang: str = "en"
 ) -> OrganizationDetail:
-    info = _portal(portal)
+    info = _portal(portal, lang)
     if not organization_id.strip():
-        raise InvalidInput("organization_id must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "organization_id must not be empty.",
+            "organization_id ne doit pas être vide.",
+            lang,
+        )
 
     # Dataset and user lists are left out to keep this compact; list an
     # organization's datasets with search_datasets(fq="organization:<name>").
@@ -498,6 +569,7 @@ async def get_organization(
         {"id": organization_id, "include_datasets": "false", "include_users": "false"},
         constants.CACHE_TTL_ORGANIZATION_SECONDS,
         organization_id,
+        lang,
     )
     return OrganizationDetail(
         portal=portal,
@@ -509,15 +581,24 @@ async def get_organization(
         image_url=_image(obj),
         landing_page_url=info.organization_url.format(lang=lang, id=obj["name"]),
         provenance=_provenance(
-            portal, f"organization_show?id={organization_id}", cached, "OrganizationDetail"
+            portal,
+            f"organization_show?id={organization_id}",
+            cached,
+            "OrganizationDetail",
+            lang=lang,
         ),
     )
 
 
 async def get_resource(portal: str, resource_id: str, lang: str = "en") -> ResourceDetail:
-    info = _portal(portal)
+    info = _portal(portal, lang)
     if not resource_id.strip():
-        raise InvalidInput("resource_id must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "resource_id must not be empty.",
+            "resource_id ne doit pas être vide.",
+            lang,
+        )
 
     obj, cached = await _call(
         portal,
@@ -525,11 +606,14 @@ async def get_resource(portal: str, resource_id: str, lang: str = "en") -> Resou
         {"id": resource_id},
         constants.CACHE_TTL_RESOURCE_SECONDS,
         resource_id,
+        lang,
     )
     return ResourceDetail(
         portal=portal,
         resource=_resource(obj, info, lang),
-        provenance=_provenance(portal, f"resource_show?id={resource_id}", cached, "ResourceDetail"),
+        provenance=_provenance(
+            portal, f"resource_show?id={resource_id}", cached, "ResourceDetail", lang=lang
+        ),
     )
 
 
@@ -538,9 +622,9 @@ def _optional_bool(lic: dict[str, Any], key: str) -> bool | None:
 
 
 async def list_licenses(portal: str, lang: str = "en") -> LicenseList:
-    _portal(portal)
+    _portal(portal, lang)
     raw, cached = await _call(
-        portal, "license_list", None, constants.CACHE_TTL_LICENSE_SECONDS, "all"
+        portal, "license_list", None, constants.CACHE_TTL_LICENSE_SECONDS, "all", lang
     )
 
     # Federal names its French license fields `title_fra`/`url_fra`;
@@ -572,24 +656,32 @@ async def list_licenses(portal: str, lang: str = "en") -> LicenseList:
             "license_list",
             cached,
             "LicenseList",
-            freshness="licenses rarely change; cached 7d",
+            lang=lang,
+            freshness=pick(
+                lang,
+                "licenses rarely change; cached 7d",
+                "les licences changent rarement; mises en cache 7 jours",
+            ),
         ),
     )
 
 
 async def list_tags(portal: str, query: str | None = None, lang: str = "en") -> TagList:
     """`tag_list`; an unfiltered call is capped at TAG_LIST_MAX tags."""
-    del lang
-    info = _portal(portal)
+    info = _portal(portal, lang)
     if not info.has_tags:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"The {portal!r} portal does not use CKAN tags (tag_list is empty upstream). "
-            "Search with ckan_search_datasets instead."
+            "Search with ckan_search_datasets instead.",
+            f"le portail {portal!r} n'utilise pas les mots-clés CKAN (tag_list est vide à la "
+            "source). Cherchez plutôt avec ckan_search_datasets.",
+            lang,
         )
 
     params = {"query": query} if query else None
     raw, cached = await _call(
-        portal, "tag_list", params, constants.CACHE_TTL_TAG_SECONDS, query or ""
+        portal, "tag_list", params, constants.CACHE_TTL_TAG_SECONDS, query or "", lang
     )
     names = [
         name
@@ -608,9 +700,15 @@ async def list_tags(portal: str, query: str | None = None, lang: str = "en") -> 
             "tag_list",
             cached,
             "TagList",
+            lang=lang,
             limits=(
-                f"unfiltered list capped at {constants.TAG_LIST_MAX} of {len(names)} tags; "
-                "pass `query` to search a specific term"
+                pick(
+                    lang,
+                    f"unfiltered list capped at {constants.TAG_LIST_MAX} of {len(names)} tags; "
+                    "pass `query` to search a specific term",
+                    f"liste non filtrée limitée à {constants.TAG_LIST_MAX} mots-clés sur "
+                    f"{len(names)}; passez `query` pour chercher un terme précis",
+                )
                 if truncated
                 else None
             ),
@@ -618,19 +716,23 @@ async def list_tags(portal: str, query: str | None = None, lang: str = "en") -> 
     )
 
 
-def _require_groups(portal: str, info: Portal) -> None:
+def _require_groups(portal: str, info: Portal, lang: str = "en") -> None:
     if info.groups == "none":
-        raise InvalidInput(
-            f"The {portal!r} portal does not use CKAN groups (group_list is empty upstream)."
+        raise_localized(
+            InvalidInput,
+            f"The {portal!r} portal does not use CKAN groups (group_list is empty upstream).",
+            f"le portail {portal!r} n'utilise pas les groupes CKAN (group_list est vide à la "
+            "source).",
+            lang,
         )
 
 
 async def list_groups(portal: str, lang: str = "en") -> GroupList:
-    info = _portal(portal)
-    _require_groups(portal, info)
+    info = _portal(portal, lang)
+    _require_groups(portal, info, lang)
     ttl = constants.CACHE_TTL_GROUP_SECONDS
     if info.groups == "facet":
-        items, cached = await _facet(portal, "groups", ttl)
+        items, cached = await _facet(portal, "groups", ttl, lang)
         groups = [
             GroupSummary(
                 name=item["name"],
@@ -641,9 +743,13 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
             for item in items
         ]
         path = "package_search?rows=0&facet.field=groups"
-        coverage = "only groups with at least one dataset are included"
+        coverage = pick(
+            lang,
+            "only groups with at least one dataset are included",
+            "seuls les groupes ayant au moins un jeu de données sont inclus",
+        )
     else:
-        raw, cached = await _all_fields_list(portal, "group_list", ttl)
+        raw, cached = await _all_fields_list(portal, "group_list", ttl, lang)
         groups = [
             GroupSummary(
                 id=g.get("id"),
@@ -657,7 +763,11 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
         ]
         path = "group_list?all_fields=true"
         coverage = (
-            f"first {constants.ROSTER_MAX} groups only"
+            pick(
+                lang,
+                f"first {constants.ROSTER_MAX} groups only",
+                f"les {constants.ROSTER_MAX} premiers groupes seulement",
+            )
             if len(groups) >= constants.ROSTER_MAX
             else None
         )
@@ -670,17 +780,24 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
             path,
             cached,
             "GroupList",
+            lang=lang,
             coverage=coverage,
-            freshness="group roster changes infrequently; cached 24h",
+            freshness=pick(
+                lang,
+                "group roster changes infrequently; cached 24h",
+                "la liste des groupes change rarement; mise en cache 24 h",
+            ),
         ),
     )
 
 
 async def get_group(portal: str, group_id: str, lang: str = "en") -> GroupDetail:
-    info = _portal(portal)
-    _require_groups(portal, info)
+    info = _portal(portal, lang)
+    _require_groups(portal, info, lang)
     if not group_id.strip():
-        raise InvalidInput("group_id must not be empty.")
+        raise_localized(
+            InvalidInput, "group_id must not be empty.", "group_id ne doit pas être vide.", lang
+        )
 
     obj, cached = await _call(
         portal,
@@ -688,6 +805,7 @@ async def get_group(portal: str, group_id: str, lang: str = "en") -> GroupDetail
         {"id": group_id, "include_datasets": "false", "include_users": "false"},
         constants.CACHE_TTL_GROUP_SECONDS,
         group_id,
+        lang,
     )
     return GroupDetail(
         portal=portal,
@@ -698,7 +816,9 @@ async def get_group(portal: str, group_id: str, lang: str = "en") -> GroupDetail
         package_count=get_or(obj, "package_count", 0),
         image_url=_image(obj),
         landing_page_url=_landing(info.group_url, lang, obj["name"]),
-        provenance=_provenance(portal, f"group_show?id={group_id}", cached, "GroupDetail"),
+        provenance=_provenance(
+            portal, f"group_show?id={group_id}", cached, "GroupDetail", lang=lang
+        ),
     )
 
 
@@ -712,21 +832,39 @@ async def datastore_search(
     fields: str | None = None,
     limit: int = constants.DATASTORE_ROWS_DEFAULT,
     offset: int = 0,
+    lang: str = "en",
 ) -> DatastoreSearchResult:
     """Rows from one DataStore-active resource (check `datastore_active` first)."""
-    info = _portal(portal)
+    info = _portal(portal, lang)
     if not info.has_datastore:
-        raise InvalidInput(
-            f"The {portal!r} portal has no DataStore extension; download the resource URL instead."
+        raise_localized(
+            InvalidInput,
+            f"The {portal!r} portal has no DataStore extension; download the resource URL instead.",
+            f"le portail {portal!r} n'a pas d'extension DataStore; téléchargez plutôt le fichier "
+            "de la ressource.",
+            lang,
         )
     if not resource_id.strip():
-        raise InvalidInput("resource_id must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "resource_id must not be empty.",
+            "resource_id ne doit pas être vide.",
+            lang,
+        )
     if limit < 1 or limit > constants.DATASTORE_ROWS_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.DATASTORE_ROWS_MAX}, got {limit}."
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.DATASTORE_ROWS_MAX}, got {limit}.",
+            f"limit doit être entre 1 et {constants.DATASTORE_ROWS_MAX} (reçu : {limit}).",
+            lang,
         )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        raise_localized(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être positif ou nul (reçu : {offset}).",
+            lang,
+        )
 
     params: dict[str, Any] = {"resource_id": resource_id, "limit": limit, "offset": offset}
     if filters:
@@ -744,6 +882,7 @@ async def datastore_search(
         params,
         constants.CACHE_TTL_DATASTORE_SECONDS,
         f"{resource_id}:{filters}:{query}:{sort}:{fields}:{limit}:{offset}",
+        lang,
     )
     records = list_or_empty(result, "records")
     field_ids = [f["id"] for f in list_or_empty(result, "fields") if isinstance(f, dict)]
@@ -752,7 +891,12 @@ async def datastore_search(
     unknown = [name for name in (filters or {}) if field_ids and name not in field_ids]
     if unknown:
         shown = [name for name in field_ids if name not in ("_id", "_full_text")]
-        raise InvalidInput(f"unknown filter column(s) {unknown}; columns are {shown}.")
+        raise_localized(
+            InvalidInput,
+            f"unknown filter column(s) {unknown}; columns are {shown}.",
+            f"colonne(s) de filtre inconnue(s) {unknown}; les colonnes sont {shown}.",
+            lang,
+        )
     return DatastoreSearchResult(
         portal=portal,
         resource_id=resource_id,
@@ -773,6 +917,11 @@ async def datastore_search(
             cached,
             "DatastoreSearchResult",
             params=params,
-            limits=f"rows capped at {constants.DATASTORE_ROWS_MAX} per request",
+            lang=lang,
+            limits=pick(
+                lang,
+                f"rows capped at {constants.DATASTORE_ROWS_MAX} per request",
+                f"au plus {constants.DATASTORE_ROWS_MAX} lignes par requête",
+            ),
         ),
     )

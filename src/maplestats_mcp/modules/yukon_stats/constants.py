@@ -38,5 +38,5 @@ TABLES_LIMIT_MAX = 200
 PROVENANCE_SOURCE = "yukon-bureau-of-statistics"
 LICENCE = {
     "en": "Open Government Licence - Yukon",
-    "fr": "Licence du gouvernement ouvert - Yukon",
+    "fr": "Licence du gouvernement ouvert – Yukon",
 }

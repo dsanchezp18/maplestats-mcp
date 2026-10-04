@@ -22,9 +22,10 @@ from maplestats_mcp.modules.ets.schemas import (
     VehiclePositions,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -33,9 +34,10 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _FRESHNESS = "real-time; ETS regenerates each feed about every 30 seconds"
+_FRESHNESS_FR = "temps réel; ETS régénère chaque flux environ toutes les 30 secondes"
 
 
-async def _fetch_feed(feed: str, ttl: int) -> tuple[Any, bool]:
+async def _fetch_feed(feed: str, ttl: int, *, lang: str = "en") -> tuple[Any, bool]:
     url = constants.FEEDS[feed]
 
     async def fetch() -> Any:
@@ -43,14 +45,30 @@ async def _fetch_feed(feed: str, ttl: int) -> tuple[Any, bool]:
         try:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(f"ets:{feed} returned HTTP {exc.response.status_code}.") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"ets:{feed} did not respond in time.") from exc
+            status = exc.response.status_code
+            raise_localized(
+                UpstreamError,
+                f"ets:{feed} returned HTTP {status}.",
+                f"ets:{feed} a renvoyé le code HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            raise_localized(
+                UpstreamUnavailable,
+                f"ets:{feed} did not respond in time.",
+                f"ets:{feed} n'a pas répondu à temps.",
+                lang,
+            )
         message = gtfs_realtime_pb2.FeedMessage()
         try:
             message.ParseFromString(response.content)
-        except DecodeError as exc:
-            raise UpstreamError(f"ets:{feed} did not return a valid GTFS-RT feed.") from exc
+        except DecodeError:
+            raise_localized(
+                UpstreamError,
+                f"ets:{feed} did not return a valid GTFS-RT feed.",
+                f"ets:{feed} n'a pas renvoyé un flux GTFS-RT valide.",
+                lang,
+            )
         return message
 
     return await cached_fetch(f"ets:{feed}", ttl, fetch)
@@ -61,19 +79,33 @@ def _epoch(value: int) -> datetime | None:
     return datetime.fromtimestamp(value, tz=UTC) if value else None
 
 
-def _check_limit(limit: int) -> None:
+def _check_limit(limit: int, lang: str = "en") -> None:
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}; reçu {limit}.",
+            lang,
+        )
 
 
-def _provenance(feed: str, was_cached: bool, schema_name: str, as_of: datetime | None):
+def _provenance(
+    feed: str,
+    was_cached: bool,
+    schema_name: str,
+    as_of: datetime | None,
+    lang: str = "en",
+    limits: str | None = None,
+):
     return make_provenance(
         source=constants.SOURCE,
         url=constants.FEEDS[feed],
         cached=was_cached,
         schema_name=schema_name,
         as_of=as_of,
-        freshness=_FRESHNESS,
+        freshness=pick(lang, _FRESHNESS, _FRESHNESS_FR),
+        limits=limits,
+        lang=lang,
     )
 
 
@@ -91,9 +123,10 @@ async def get_vehicle_positions(
     lang: str = "en",
 ) -> VehiclePositions:
     """Live positions of ETS vehicles, optionally for one route."""
-    del lang
-    _check_limit(limit)
-    message, was_cached = await _fetch_feed("vehicles", constants.CACHE_TTL_REALTIME_SECONDS)
+    _check_limit(limit, lang)
+    message, was_cached = await _fetch_feed(
+        "vehicles", constants.CACHE_TTL_REALTIME_SECONDS, lang=lang
+    )
     vehicles: list[VehiclePosition] = []
     for entity in message.entity:
         if not entity.HasField("vehicle"):
@@ -130,7 +163,7 @@ async def get_vehicle_positions(
         feed_timestamp=feed_time,
         total_matches=len(vehicles),
         vehicles=vehicles[:limit],
-        provenance=_provenance("vehicles", was_cached, "ets.VehiclePositions", feed_time),
+        provenance=_provenance("vehicles", was_cached, "ets.VehiclePositions", feed_time, lang),
     )
 
 
@@ -143,11 +176,17 @@ async def get_stop_predictions(
     lang: str = "en",
 ) -> StopTimePredictions:
     """Predicted arrival/departure times and delays, soonest first."""
-    del lang
-    _check_limit(limit)
+    _check_limit(limit, lang)
     if not stop_id and not route_id:
-        raise InvalidInput("Pass stop_id, route_id, or both -- the full feed is ~1,200 trips.")
-    message, was_cached = await _fetch_feed("trip_updates", constants.CACHE_TTL_REALTIME_SECONDS)
+        raise_localized(
+            InvalidInput,
+            "Pass stop_id, route_id, or both -- the full feed is ~1,200 trips.",
+            "indiquez stop_id, route_id ou les deux; le flux complet compte environ 1 200 trajets.",
+            lang,
+        )
+    message, was_cached = await _fetch_feed(
+        "trip_updates", constants.CACHE_TTL_REALTIME_SECONDS, lang=lang
+    )
     predictions: list[StopTimePrediction] = []
     for entity in message.entity:
         if not entity.HasField("trip_update"):
@@ -195,7 +234,9 @@ async def get_stop_predictions(
         feed_timestamp=feed_time,
         total_matches=len(predictions),
         predictions=predictions[:limit],
-        provenance=_provenance("trip_updates", was_cached, "ets.StopTimePredictions", feed_time),
+        provenance=_provenance(
+            "trip_updates", was_cached, "ets.StopTimePredictions", feed_time, lang
+        ),
     )
 
 
@@ -207,9 +248,8 @@ async def get_service_alerts(
     lang: str = "en",
 ) -> ServiceAlerts:
     """Current ETS service alerts (detours, closures), optionally filtered."""
-    del lang
-    _check_limit(limit)
-    message, was_cached = await _fetch_feed("alerts", constants.CACHE_TTL_ALERTS_SECONDS)
+    _check_limit(limit, lang)
+    message, was_cached = await _fetch_feed("alerts", constants.CACHE_TTL_ALERTS_SECONDS, lang=lang)
     alerts: list[ServiceAlert] = []
     for entity in message.entity:
         if not entity.HasField("alert"):
@@ -247,5 +287,18 @@ async def get_service_alerts(
         feed_timestamp=feed_time,
         total_matches=len(alerts),
         alerts=alerts[:limit],
-        provenance=_provenance("alerts", was_cached, "ets.ServiceAlerts", feed_time),
+        provenance=_provenance(
+            "alerts",
+            was_cached,
+            "ets.ServiceAlerts",
+            feed_time,
+            lang,
+            # ETS writes its alert text in English only; say so to a French reader.
+            limits=pick(
+                lang,
+                "",
+                "Le texte des avis (titre et description) vient d'ETS, en anglais seulement.",
+            )
+            or None,
+        ),
     )

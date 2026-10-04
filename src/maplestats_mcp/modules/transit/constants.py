@@ -61,6 +61,13 @@ class Agency:
     update_cadence: str
     notes_en: str = ""
     notes_fr: str = ""
+    # French text for the fields above; empty means the English text stands
+    # (a credit line a licence fixes in English, a proper name).
+    city_fr: str = ""
+    licence_fr: str = ""
+    attribution_fr: str = ""
+    update_cadence_fr: str = ""
+    status_reason_fr: str = ""
     # GTFS route_type codes this module will not report schedules for
     # (STM's terms bar building an application on its métro timetables).
     excluded_route_types: tuple[int, ...] = ()
@@ -96,10 +103,20 @@ NATIONAL_LICENCE = (
     "Statistics Canada Open Licence / Open Government Licence - Canada for the compilation; "
     "each feed also carries its transit agency's own licence (see licence_url)"
 )
+NATIONAL_NAME_FR = "Base de données ouvertes sur les réseaux de transport en commun canadiens"
+NATIONAL_LICENCE_FR = (
+    "Licence ouverte de Statistique Canada / Licence du gouvernement ouvert – Canada pour la "
+    "compilation; chaque flux porte aussi la licence de son organisme de transport (voir "
+    "licence_url)"
+)
 NATIONAL_LICENCE_URL = "https://www.statcan.gc.ca/en/reference/licence"
 NATIONAL_NOTICE = (
     "Adapted from Statistics Canada, Canadian Public Transit Network Database, 2025. "
     "This does not constitute an endorsement by Statistics Canada of this product."
+)
+NATIONAL_NOTICE_FR = (
+    f"Adapté de Statistique Canada, {NATIONAL_NAME_FR}, 2025. Ceci ne constitue pas une "
+    "approbation de ce produit par Statistique Canada."
 )
 # Last-Modified of the zip, read 2026-10-02 (the release of 2025-01-31 was
 # corrected on 2025-05-07). A new release gets a new URL (2025001 in the path).
@@ -108,6 +125,11 @@ NATIONAL_FRESHNESS = (
     "Snapshot compiled by Statistics Canada's Urban Data Lab, version 1.0 released "
     "2025-01-31 (corrected 2025-05-07); not updated since. Each feed's own service "
     "window (coverage) is mostly in 2025, so recent dates fall outside it."
+)
+NATIONAL_FRESHNESS_FR = (
+    "Instantané compilé par Statistique Canada, version 1.0 publiée le 2025-01-31 (corrigée "
+    "le 2025-05-07); aucune mise à jour depuis. La période de service (couverture) de chaque "
+    "flux se situe surtout en 2025 : les dates récentes en sont donc exclues."
 )
 # Crawl-delay 2 in robots.txt: one request every two seconds to www150.
 NATIONAL_RATE_PER_SECOND = 0.5
@@ -166,6 +188,13 @@ NATIONAL_EXCLUDED: dict[str, str] = {
         "is not offered)."
     ),
 }
+NATIONAL_EXCLUDED_FR: dict[str, str] = {
+    "translink_vancouver": (
+        "Les conditions de TransLink exigent que les utilisateurs s'identifient auprès de "
+        "TransLink et lui permettent d'imposer des conditions, ce qu'un serveur public ne peut "
+        "pas faire (la même raison pour laquelle son propre flux n'est pas offert)."
+    ),
+}
 # Province or territory code -> IANA zone, used until the feed's agency.txt is read.
 PROVINCE_TIMEZONES: dict[str, str] = {
     "bc": "America/Vancouver",
@@ -199,6 +228,15 @@ def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agen
         licence_url="https://www.bctransit.com/open-data/terms-of-use/",
         attribution="Source: BC Transit.",
         update_cadence="Rebuilt by BC Transit on request from its scheduling system.",
+        licence_fr=(
+            "Conditions d'utilisation des données ouvertes de BC Transit (licence limitée, "
+            "révocable et non exclusive)"
+        ),
+        attribution_fr="Source : BC Transit.",
+        update_cadence_fr=(
+            "Reconstruit par BC Transit à chaque demande, à partir de son système de "
+            "planification des horaires."
+        ),
         notes_en=(
             f"Operator id {operator_id}. {also} BC Transit's host builds each zip on request "
             "(5 to 25 s) and serves neither HEAD nor byte ranges, so this module downloads the "
@@ -218,6 +256,7 @@ def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agen
 
 
 QC_CC_BY = "Creative Commons Attribution 4.0 (CC BY 4.0), per the Données Québec record"
+QC_CC_BY_FR = "Creative Commons Attribution 4.0 (CC BY 4.0), selon la fiche de Données Québec"
 QC_LICENCE_URL = "https://www.donneesquebec.ca/licence/#cc-by"
 _DQ = "https://www.donneesquebec.ca/recherche/dataset/"
 
@@ -245,6 +284,13 @@ def _exo(
         licence_url=QC_LICENCE_URL,
         attribution="Source: exo (Réseau de transport métropolitain), CC BY 4.0.",
         update_cadence="At each service change; exo's sector feeds checked 2026-10-03 run to 2027-01-03.",
+        city_fr="Grand Montréal" if city == "Greater Montreal" else "",
+        licence_fr=QC_CC_BY_FR,
+        attribution_fr="Source : exo (Réseau de transport métropolitain), CC BY 4.0.",
+        update_cadence_fr=(
+            "À chaque changement de service; les flux des secteurs d'exo vérifiés le 2026-10-03 "
+            "vont jusqu'au 2027-01-03."
+        ),
         notes_en=(
             f"exo publishes one feed per bus sector and one for its trains (code {code}). Names "
             "are French. Some routes use GTFS extended route_type 1501 (on-demand taxi)."
@@ -270,8 +316,18 @@ def _quebec(
     licence: str = QC_CC_BY,
     licence_url: str = QC_LICENCE_URL,
     range_requests: bool = True,
+    city_fr: str = "",
+    licence_fr: str = QC_CC_BY_FR,
+    attribution_fr: str = "",
+    update_cadence_fr: str = "",
 ) -> Agency:
-    """A Quebec feed listed on Données Québec."""
+    """A Quebec feed listed on Données Québec.
+
+    An English credit line written "Source: ..." reads "Source : ..." in French
+    unless `attribution_fr` says otherwise.
+    """
+    if not attribution_fr and attribution.startswith("Source: "):
+        attribution_fr = "Source : " + attribution.removeprefix("Source: ")
     return Agency(
         key=key,
         name_en=name,
@@ -288,6 +344,10 @@ def _quebec(
         notes_en=notes_en,
         notes_fr=notes_fr,
         range_requests=range_requests,
+        city_fr=city_fr,
+        licence_fr=licence_fr,
+        attribution_fr=attribution_fr,
+        update_cadence_fr=update_cadence_fr,
     )
 
 
@@ -305,6 +365,10 @@ AGENCIES: dict[str, Agency] = {
         licence_url="https://www.stm.info/en/about/developers/terms-use",
         attribution="Source: Société de transport de Montréal (STM), CC BY 4.0.",
         update_cadence="At each service change (several times a year).",
+        city_fr="Montréal",
+        licence_fr="Licence Creative Commons Attribution 4.0 (CC BY 4.0)",
+        attribution_fr="Source : Société de transport de Montréal (STM), CC BY 4.0.",
+        update_cadence_fr="À chaque changement de service (plusieurs fois par année).",
         notes_en=(
             "STM's terms say métro schedules are for information only and cannot be used "
             "to develop an application, so métro lines (route_type 1) are left out of "
@@ -336,6 +400,10 @@ AGENCIES: dict[str, Agency] = {
         ),
         attribution="Contains information licensed under the City of Ottawa Open Data Licence v2.0.",
         update_cadence="At each service change; release notes published per update.",
+        licence_fr="Licence de données ouvertes de la Ville d'Ottawa, version 2.0",
+        update_cadence_fr=(
+            "À chaque changement de service; des notes de version accompagnent chaque mise à jour."
+        ),
         notes_en=(
             "The City's catalogue still lists www.octranspo.com/files/google_transit.zip, "
             "which returns 404; this module reads the file served from OC Transpo's own "
@@ -361,6 +429,15 @@ AGENCIES: dict[str, Agency] = {
         licence_url="https://data.calgary.ca/stories/s/u45n-7awa/",
         attribution="Contains information licensed under the Open Government Licence - City of Calgary.",
         update_cadence="Irregular (per the Open Calgary record); follows Calgary Transit service changes.",
+        # The City of Calgary publishes its licence and credit line in English only.
+        licence_fr=(
+            "Licence du gouvernement ouvert de la Ville de Calgary (Open Government Licence - "
+            "City of Calgary, conditions d'utilisation d'Open Calgary), version 2.1"
+        ),
+        update_cadence_fr=(
+            "Irrégulière (selon la fiche d'Open Calgary); suit les changements de service de "
+            "Calgary Transit."
+        ),
     ),
     "via_rail": Agency(
         key="via_rail",
@@ -375,6 +452,15 @@ AGENCIES: dict[str, Agency] = {
         licence_url="https://open.canada.ca/en/open-government-licence-canada",
         attribution="Contains information licensed under the Open Government Licence - Canada.",
         update_cadence="At each timetable change (last updated 2026-08-17 when checked).",
+        city_fr="Partout au Canada (trains interurbains)",
+        licence_fr="Licence du gouvernement ouvert – Canada, version 2.0",
+        attribution_fr=(
+            "Contient des informations visées par la Licence du gouvernement ouvert – Canada."
+        ),
+        update_cadence_fr=(
+            "À chaque changement d'horaire (dernière mise à jour le 2026-08-17 lors de la "
+            "vérification)."
+        ),
         notes_en=(
             "Intercity trains across Canada. Times are local to each stop (stop_timezone "
             "in stops.txt), not to the agency's America/Toronto zone. The feed is encoded "
@@ -402,6 +488,12 @@ AGENCIES: dict[str, Agency] = {
         ),
         attribution="Contains information licensed under the Open Government Licence - Ontario - Metrolinx.",
         update_cadence="At each service change; the feed checked 2026-10-02 was published 2026-10-01.",
+        city_fr="Région du grand Toronto et de Hamilton",
+        licence_fr="Licence du gouvernement ouvert – Ontario – Metrolinx",
+        update_cadence_fr=(
+            "À chaque changement de service; le flux vérifié le 2026-10-02 avait été publié le "
+            "2026-10-01."
+        ),
         notes_en="GO train and GO bus services. UP Express has its own feed (up_express).",
         notes_fr="Services de train et d'autobus GO. L'UP Express a son propre flux (up_express).",
     ),
@@ -421,6 +513,8 @@ AGENCIES: dict[str, Agency] = {
         ),
         attribution="Contains information licensed under the Open Government Licence - Ontario - Metrolinx.",
         update_cadence="At each service change.",
+        licence_fr="Licence du gouvernement ouvert – Ontario – Metrolinx",
+        update_cadence_fr="À chaque changement de service.",
         notes_en="Union Station to Pearson Airport train.",
         notes_fr="Train entre la gare Union et l'aéroport Pearson.",
     ),
@@ -560,6 +654,15 @@ AGENCIES: dict[str, Agency] = {
             "record)"
         ),
         licence_url="https://www.rtcquebec.ca/donnees-ouvertes",
+        city_fr="Québec",
+        licence_fr=(
+            "Conditions d'utilisation des données ouvertes du RTC (Creative Commons Attribution "
+            "4.0 sur sa fiche de Données Québec)"
+        ),
+        update_cadence_fr=(
+            "À chaque changement de service; le zip vérifié le 2026-10-03 était daté du "
+            "2026-10-02."
+        ),
     ),
     "stl_laval": _quebec(
         "stl_laval",
@@ -586,6 +689,15 @@ AGENCIES: dict[str, Agency] = {
             "STL's written permission (CC BY 4.0 on its Données Québec record)"
         ),
         licence_url="https://stlaval.ca/affaires/donnees-ouvertes",
+        licence_fr=(
+            "Conditions d'utilisation GTFS de la STL : licence limitée et révocable; aucun usage "
+            "commercial sans l'autorisation écrite de la STL (CC BY 4.0 sur sa fiche de Données "
+            "Québec)"
+        ),
+        update_cadence_fr=(
+            "Trimestrielle selon la fiche de Données Québec; le flux vérifié le 2026-10-03 va "
+            "jusqu'au 2026-10-30."
+        ),
     ),
     "sts_sherbrooke": _quebec(
         "sts_sherbrooke",
@@ -602,6 +714,10 @@ AGENCIES: dict[str, Agency] = {
         (
             "La fiche de Données Québec renvoie à un répertoire; ce module lit le zip qu'il "
             "contient (GTFS_clients.zip). Le flux n'a pas de feed_info.txt."
+        ),
+        update_cadence_fr=(
+            "À chaque changement de service; le flux vérifié le 2026-10-03 va jusqu'au "
+            "2026-12-20."
         ),
     ),
     "stq_ferries": _quebec(
@@ -623,6 +739,8 @@ AGENCIES: dict[str, Agency] = {
             "entier."
         ),
         range_requests=False,
+        city_fr="Partout au Québec (traversiers)",
+        update_cadence_fr="Quotidienne selon la fiche de Données Québec.",
     ),
     "sttr_trois_rivieres": _quebec(
         "sttr_trois_rivieres",
@@ -641,6 +759,10 @@ AGENCIES: dict[str, Agency] = {
             "La STTR renomme le fichier à chaque saison; Données Québec sert la ressource par son "
             "identifiant quel que soit le nom du fichier."
         ),
+        update_cadence_fr=(
+            "À chaque saison; le flux vérifié le 2026-10-03 (automne 2026) va jusqu'au "
+            "2026-12-26."
+        ),
     ),
     "rimouski": _quebec(
         "rimouski",
@@ -653,6 +775,9 @@ AGENCIES: dict[str, Agency] = {
         "As needed; the feed checked 2026-10-03 runs to 2027-02-14.",
         "Published by the Ville de Rimouski. The feed has no feed_info.txt.",
         "Publié par la Ville de Rimouski. Le flux n'a pas de feed_info.txt.",
+        update_cadence_fr=(
+            "Au besoin; le flux vérifié le 2026-10-03 va jusqu'au 2027-02-14."
+        ),
     ),
     "rouyn_noranda": _quebec(
         "rouyn_noranda",
@@ -663,6 +788,9 @@ AGENCIES: dict[str, Agency] = {
         "transport-en-commun-gtfs",
         "Source: Ville de Rouyn-Noranda, Données Québec, CC BY 4.0.",
         "As needed; the feed checked 2026-10-03 was published 2026-02-05.",
+        update_cadence_fr=(
+            "Au besoin; le flux vérifié le 2026-10-03 avait été publié le 2026-02-05."
+        ),
     ),
     "stsv_valleyfield": _quebec(
         "stsv_valleyfield",
@@ -683,6 +811,10 @@ AGENCIES: dict[str, Agency] = {
             "frequencies.txt; ce module ne développe pas les fréquences, leurs voyages sont donc "
             "exclus des passages et des résumés de ligne. Les lignes régulières sont complètes."
         ),
+        update_cadence_fr=(
+            "Deux fois par année selon la fiche de Données Québec; le flux vérifié le 2026-10-03 "
+            "va jusqu'au 2026-12-31."
+        ),
     ),
 }
 
@@ -696,6 +828,18 @@ ROUTE_TYPES: dict[int, str] = {
     5: "cable tram",
     6: "aerial lift",
     7: "funicular",
+    11: "trolleybus",
+    12: "monorail",
+}
+ROUTE_TYPES_FR: dict[int, str] = {
+    0: "tramway / train léger",
+    1: "métro",
+    2: "train",
+    3: "autobus",
+    4: "traversier",
+    5: "tramway à câble",
+    6: "remontée aérienne",
+    7: "funiculaire",
     11: "trolleybus",
     12: "monorail",
 }

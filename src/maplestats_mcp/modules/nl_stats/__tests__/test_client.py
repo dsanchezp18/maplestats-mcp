@@ -138,3 +138,27 @@ async def test_html_error_page_is_not_found(httpx_mock):
     httpx_mock.add_response(url=_XLSX, content=b"<!DOCTYPE html><html>Error</html>")
     with pytest.raises(NotFound):
         await client.read_file(_XLSX)
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide") as caught:
+        await client.list_files(topic="weather", lang="fr")
+    assert "topic doit être l'un de" in str(caught.value)
+    httpx_mock.add_response(url=_XLSX, content=b"<!DOCTYPE html><html>Error</html>")
+    with pytest.raises(NotFound, match="page Web, pas un fichier Excel"):
+        await client.read_file(_XLSX, lang="fr")
+
+
+async def test_french_provenance_and_english_unchanged(httpx_mock):
+    httpx_mock.add_response(
+        url=_XLSX, content=_bytes("population_quarterly.xlsx"), is_reusable=True
+    )
+    french = await client.read_file(_XLSX, limit=2, lang="fr")
+    assert "Terre-Neuve-et-Labrador" in (french.provenance.licence or "")
+    assert "Statistique Canada" in (french.provenance.licence or "")
+    assert (french.provenance.freshness or "").startswith("Tel que publié")
+    assert (french.provenance.limits or "").startswith("Les feuilles sont lues")
+    english = await client.read_file(_XLSX, limit=2)
+    assert english.provenance.freshness == "As published by the NL Statistics Agency."
+    assert english.provenance.coverage == "Sheet 'Quarterly' of " + str(len(english.sheets)) + "."
+    assert "Statistics Canada" in (english.provenance.licence or "")

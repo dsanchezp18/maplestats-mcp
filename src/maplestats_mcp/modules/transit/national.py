@@ -22,6 +22,7 @@ from datetime import date
 from maplestats_mcp.modules.transit import constants, gtfs
 from maplestats_mcp.modules.transit.constants import Agency
 from maplestats_mcp.modules.transit.zipstream import STATCAN_LIMITER
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import UpstreamError
 from maplestats_mcp.shared.remote_zip import ZipMember, list_members, read_member
 
@@ -55,19 +56,32 @@ def _title(custom_id: str) -> str:
     return custom_id.replace("_", " ").title()
 
 
-def _status(custom_id: str, source: dict[str, str], present: bool) -> tuple[str, str, str | None]:
-    """(status, reason, live agency key) for one feed of the database."""
+def _status(
+    custom_id: str, source: dict[str, str], present: bool
+) -> tuple[str, str, str, str | None]:
+    """(status, reason, French reason, live agency key) for one feed of the database."""
     live_key = constants.NATIONAL_OVERLAPS.get(custom_id)
     if live_key:
         return (
             "overlaps_live",
             f"Already read live from the agency's own site: use agency='{live_key}'.",
+            f"Déjà lu en direct sur le site de l'organisme : utilisez agency='{live_key}'.",
             live_key,
         )
     if custom_id in constants.NATIONAL_EXCLUDED:
-        return "excluded", constants.NATIONAL_EXCLUDED[custom_id], None
+        return (
+            "excluded",
+            constants.NATIONAL_EXCLUDED[custom_id],
+            constants.NATIONAL_EXCLUDED_FR.get(custom_id, ""),
+            None,
+        )
     if not present:
-        return "excluded", "Listed in data_sources.csv but absent from the archive.", None
+        return (
+            "excluded",
+            "Listed in data_sources.csv but absent from the archive.",
+            "Inscrit dans data_sources.csv, mais absent de l'archive.",
+            None,
+        )
     if not source.get("license_url") and not source.get("attribution"):
         return (
             "excluded",
@@ -75,9 +89,13 @@ def _status(custom_id: str, source: dict[str, str], present: bool) -> tuple[str,
                 "The database records neither a licence page nor an attribution line for "
                 "this feed, so its reuse terms cannot be confirmed."
             ),
+            (
+                "La base de données n'indique ni page de licence ni mention de source pour ce "
+                "flux; ses conditions de réutilisation ne peuvent donc pas être confirmées."
+            ),
             None,
         )
-    return "available", "", None
+    return "available", "", "", None
 
 
 def build_agencies(
@@ -93,7 +111,7 @@ def build_agencies(
         if not custom_id:
             continue
         check = checks.get(custom_id, {})
-        status, reason, live_key = _status(
+        status, reason, reason_fr, live_key = _status(
             custom_id, source, member_path(custom_id) in archive_names
         )
         province = (source.get("prov_terr") or "").strip().lower()
@@ -122,21 +140,35 @@ def build_agencies(
                 else constants.NATIONAL_NOTICE
             ),
             update_cadence=constants.NATIONAL_FRESHNESS,
+            licence_fr=(
+                "Licence de l'organisme consignée par Statistique Canada"
+                if own_licence
+                else "Aucune page de licence de l'organisme consignée par Statistique Canada"
+            ),
+            # The agency's own credit line is kept as published (often English).
+            attribution_fr=(
+                f"{attribution} | {constants.NATIONAL_NOTICE_FR}"
+                if attribution
+                else constants.NATIONAL_NOTICE_FR
+            ),
+            update_cadence_fr=constants.NATIONAL_FRESHNESS_FR,
             notes_en=(
                 f"Feed id {custom_id} in the StatCan database; the agency's own download is "
                 f"{source.get('direct_url', '').strip() or 'not recorded'}. The compilation "
                 f"is under {constants.NATIONAL_LICENCE}."
             ),
             notes_fr=(
-                f"Identifiant {custom_id} dans la base de Statistique Canada; téléchargement "
-                f"de l'organisme : {source.get('direct_url', '').strip() or 'non indiqué'}. "
-                "La compilation est sous la Licence ouverte de Statistique Canada / Licence "
-                "du gouvernement ouvert - Canada; chaque flux porte aussi la licence de son "
-                "organisme (licence_url)."
+                f"Identifiant {custom_id} dans la {constants.NATIONAL_NAME_FR} de Statistique "
+                "Canada; téléchargement de l'organisme : "
+                f"{source.get('direct_url', '').strip() or 'non indiqué'}. La compilation est "
+                "sous la Licence ouverte de Statistique Canada / Licence du gouvernement "
+                "ouvert – Canada; chaque flux porte aussi la licence de son organisme "
+                "(licence_url)."
             ),
             database="statcan",
             status=status,
             status_reason=reason,
+            status_reason_fr=reason_fr,
             live_agency_key=live_key,
             window_start=_iso(check.get("feed_service_window_start")),
             window_end=_iso(check.get("feed_service_window_end")),
@@ -146,10 +178,17 @@ def build_agencies(
     return agencies
 
 
-async def _read_csv(url: str, members: dict[str, ZipMember], name: str) -> list[dict[str, str]]:
+async def _read_csv(
+    url: str, members: dict[str, ZipMember], name: str, *, lang: str = "en"
+) -> list[dict[str, str]]:
     member = members.get(f"{constants.NATIONAL_ROOT}{name}")
     if member is None:
-        raise UpstreamError(f"{url}: the archive has no {name}.")
+        raise_localized(
+            UpstreamError,
+            f"{url}: the archive has no {name}.",
+            f"{url} : l'archive ne contient pas {name}.",
+            lang,
+        )
     # read_member makes two requests (local header, then data).
     await STATCAN_LIMITER.acquire()
     await STATCAN_LIMITER.acquire()
@@ -157,7 +196,7 @@ async def _read_csv(url: str, members: dict[str, ZipMember], name: str) -> list[
     return gtfs.parse_table(data)
 
 
-async def load_catalog() -> Catalog:
+async def load_catalog(*, lang: str = "en") -> Catalog:
     """Read the archive's directory and its two metadata tables (about six requests)."""
     url = constants.NATIONAL_URL
     # list_members makes two requests (size, then the tail with the directory).
@@ -165,6 +204,6 @@ async def load_catalog() -> Catalog:
     await STATCAN_LIMITER.acquire()
     listed, total = await list_members(url)
     members = {m.name: m for m in listed}
-    sources = await _read_csv(url, members, "data_sources.csv")
-    validation = await _read_csv(url, members, "validation_summary.csv")
+    sources = await _read_csv(url, members, "data_sources.csv", lang=lang)
+    validation = await _read_csv(url, members, "validation_summary.csv", lang=lang)
     return Catalog(build_agencies(sources, validation, set(members)), members, total)

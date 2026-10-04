@@ -89,31 +89,53 @@ class StopCall(NamedTuple):
 _NATIONAL: dict[str, Agency] = {}
 
 
-def _agency(key: str) -> Agency:
+def _fr_or_en(lang: str, en: str, fr: str) -> str:
+    """`fr` (French spacing applied) for a French call when the agency has it, else `en`.
+
+    An English fallback is returned as written, without French spacing, since
+    it is a credit line or name the publisher fixed.
+    """
+    return pick(lang, en, fr) if fr else en
+
+
+def _agency(key: str, lang: str = "en") -> Agency:
     if key.startswith(constants.NATIONAL_PREFIX):
         agency = _NATIONAL.get(key)
         if agency is None:
-            raise InvalidInput(
+            raise_localized(
+                InvalidInput,
                 f"Unknown agency '{key}'. Use transit_list_national_agencies for the keys of "
-                "StatCan's national database."
+                "StatCan's national database.",
+                f"organisme inconnu « {key} ». Utilisez transit_list_national_agencies pour "
+                f"les clés de la {constants.NATIONAL_NAME_FR} de Statistique Canada.",
+                lang,
             )
         if agency.status != "available":
-            raise InvalidInput(
-                f"{key} is not served from the national database: {agency.status_reason}"
+            raise_localized(
+                InvalidInput,
+                f"{key} is not served from the national database: {agency.status_reason}",
+                f"{key} n'est pas servi à partir de la base de données nationale : "
+                f"{agency.status_reason_fr or agency.status_reason}",
+                lang,
             )
         return agency
     agency = constants.AGENCIES.get(key)
     if agency is None:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"Unknown agency '{key}'. Use one of: {', '.join(constants.AGENCIES)}, or "
-            f"'{constants.NATIONAL_PREFIX}<id>' from transit_list_national_agencies."
+            f"'{constants.NATIONAL_PREFIX}<id>' from transit_list_national_agencies.",
+            f"organisme inconnu « {key} ». Utilisez l'une de ces clés : "
+            f"{', '.join(constants.AGENCIES)}, ou « {constants.NATIONAL_PREFIX}<id> » "
+            "obtenue avec transit_list_national_agencies.",
+            lang,
         )
     return agency
 
 
-async def _national_catalog() -> tuple[national.Catalog, bool]:
+async def _national_catalog(lang: str = "en") -> tuple[national.Catalog, bool]:
     async def fetch() -> national.Catalog:
-        return await national.load_catalog()
+        return await national.load_catalog(lang=lang)
 
     catalog, was_cached = await cached_fetch(
         "transit:national:catalog", constants.NATIONAL_CATALOG_TTL_SECONDS, fetch
@@ -123,15 +145,15 @@ async def _national_catalog() -> tuple[national.Catalog, bool]:
     return catalog, was_cached
 
 
-async def _load_national() -> national.Catalog:
-    return (await _national_catalog())[0]
+async def _load_national(lang: str = "en") -> national.Catalog:
+    return (await _national_catalog(lang))[0]
 
 
-async def _resolve(key: str) -> Agency:
+async def _resolve(key: str, lang: str = "en") -> Agency:
     """`_agency`, after loading the national catalogue when the key needs it."""
     if key.startswith(constants.NATIONAL_PREFIX):
-        await _load_national()
-    return _agency(key)
+        await _load_national(lang)
+    return _agency(key, lang)
 
 
 def _is_excluded(agency: Agency, row: dict[str, str]) -> bool:
@@ -141,9 +163,14 @@ def _is_excluded(agency: Agency, row: dict[str, str]) -> bool:
     )
 
 
-def _check_limit(limit: int) -> None:
+def _check_limit(limit: int, lang: str = "en") -> None:
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}, reçu {limit}.",
+            lang,
+        )
 
 
 def _last_modified(value: str | None) -> datetime | None:
@@ -159,29 +186,34 @@ def _last_modified(value: str | None) -> datetime | None:
 # -- directory and tables ---------------------------------------------
 
 
-async def _directory(key: str) -> tuple[FeedDirectory, bool]:
-    agency = await _resolve(key)
+async def _directory(key: str, lang: str = "en") -> tuple[FeedDirectory, bool]:
+    agency = await _resolve(key, lang)
 
     async def fetch() -> FeedDirectory:
         if agency.database == "statcan":
             # The inner zip is read whole (a deflated member cannot be read at
             # random) and then served from memory like a BC Transit feed.
-            catalog = await _load_national()
+            catalog = await _load_national(lang)
             custom_id = key.removeprefix(constants.NATIONAL_PREFIX)
             member = catalog.members.get(national.member_path(custom_id))
             if member is None:
-                raise UpstreamError(f"{key}: the feed is not in the national archive.")
-            blob = await read_nested_zip(constants.NATIONAL_URL, member)
+                raise_localized(
+                    UpstreamError,
+                    f"{key}: the feed is not in the national archive.",
+                    f"{key} : le flux ne se trouve pas dans l'archive nationale.",
+                    lang,
+                )
+            blob = await read_nested_zip(constants.NATIONAL_URL, member, lang=lang)
             return FeedDirectory(
                 constants.NATIONAL_URL,
                 len(blob),
                 constants.NATIONAL_AS_OF,
-                {m.name.rsplit("/", 1)[-1].lower(): m for m in members_of(blob, key)},
+                {m.name.rsplit("/", 1)[-1].lower(): m for m in members_of(blob, key, lang=lang)},
                 blob,
             )
         if not agency.range_requests:
-            blob, whole = await download_whole(agency.feed_url)
-            blob_members = members_of(blob, agency.feed_url)
+            blob, whole = await download_whole(agency.feed_url, lang=lang)
+            blob_members = members_of(blob, agency.feed_url, lang=lang)
             return FeedDirectory(
                 str(whole.url),
                 len(blob),
@@ -189,7 +221,7 @@ async def _directory(key: str) -> tuple[FeedDirectory, bool]:
                 {m.name.rsplit("/", 1)[-1].lower(): m for m in blob_members},
                 blob,
             )
-        response = await head(agency.feed_url)
+        response = await head(agency.feed_url, lang=lang)
         final_url = str(response.url)
         members, total = await list_members(final_url)
         by_name = {m.name.rsplit("/", 1)[-1].lower(): m for m in members}
@@ -221,28 +253,43 @@ def _member(directory: FeedDirectory, key: str, name: str) -> ZipMember | None:
     return directory.members.get(name)
 
 
-async def _read_table_bytes(directory: FeedDirectory, member: ZipMember) -> bytes:
+async def _read_table_bytes(
+    directory: FeedDirectory, member: ZipMember, lang: str = "en"
+) -> bytes:
     if directory.blob is not None:
         return await run_in_pool(
-            read_blob_member, directory.blob, member, max_bytes=constants.TABLE_MAX_BYTES
+            read_blob_member,
+            directory.blob,
+            member,
+            max_bytes=constants.TABLE_MAX_BYTES,
+            lang=lang,
         )
     return await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
 
 
+def _raise_missing_file(key: str, name: str, lang: str) -> NoReturn:
+    raise_localized(
+        UpstreamError,
+        f"{key}: the feed has no {name}.",
+        f"{key} : le flux ne contient pas {name}.",
+        lang,
+    )
+
+
 async def _table(
-    key: str, name: str, *, required: bool = True
+    key: str, name: str, *, required: bool = True, lang: str = "en"
 ) -> tuple[list[dict[str, str]], bool]:
     """A small GTFS table, parsed and cached. Optional files read as empty."""
 
     async def fetch() -> list[dict[str, str]]:
         async def once() -> list[dict[str, str]]:
-            directory, _ = await _directory(key)
+            directory, _ = await _directory(key, lang)
             member = _member(directory, key, name)
             if member is None:
                 if required:
-                    raise UpstreamError(f"{key}: the feed has no {name}.")
+                    _raise_missing_file(key, name, lang)
                 return []
-            data = await _read_table_bytes(directory, member)
+            data = await _read_table_bytes(directory, member, lang)
             return await run_in_pool(gtfs.parse_table, data)
 
         return await _with_fresh_directory(key, once)
@@ -257,16 +304,19 @@ async def _scan_stop_times(
     *,
     stop_ids: frozenset[str] | None = None,
     trip_ids: frozenset[str] | None = None,
+    lang: str = "en",
 ) -> list[gtfs.StopTimeRow]:
     async def once() -> list[gtfs.StopTimeRow]:
-        directory, _ = await _directory(key)
+        directory, _ = await _directory(key, lang)
         member = _member(directory, key, "stop_times.txt")
         if member is None:
-            raise UpstreamError(f"{key}: the feed has no stop_times.txt.")
+            _raise_missing_file(key, "stop_times.txt", lang)
         rows: list[gtfs.StopTimeRow] = []
         indexes: dict[str, int] | None = None
         async with _SCANS:
-            async for batch in stream_member_lines(directory.url, member, blob=directory.blob):
+            async for batch in stream_member_lines(
+                directory.url, member, blob=directory.blob, lang=lang
+            ):
                 if indexes is None:
                     indexes = gtfs.column_indexes(batch[0])
                     batch = batch[1:]
@@ -289,13 +339,14 @@ async def _trips(
     *,
     route_id: str | None = None,
     trip_ids: frozenset[str] | None = None,
+    lang: str = "en",
 ) -> list[TripRecord]:
     async def once() -> list[TripRecord]:
-        directory, _ = await _directory(key)
+        directory, _ = await _directory(key, lang)
         member = _member(directory, key, "trips.txt")
         if member is None:
-            raise UpstreamError(f"{key}: the feed has no trips.txt.")
-        data = await _read_table_bytes(directory, member)
+            _raise_missing_file(key, "trips.txt", lang)
+        data = await _read_table_bytes(directory, member, lang)
         rows = await run_in_pool(gtfs.parse_table, data)
         return [
             TripRecord(
@@ -315,7 +366,7 @@ async def _trips(
     return await _with_fresh_directory(key, once)
 
 
-async def _frequency_trips(key: str) -> frozenset[str]:
+async def _frequency_trips(key: str, lang: str = "en") -> frozenset[str]:
     """Trips described by frequencies.txt, which this module leaves out.
 
     Their stop_times are a template (Salaberry-de-Valleyfield's Communobus
@@ -323,7 +374,7 @@ async def _frequency_trips(key: str) -> frozenset[str]:
     minutes from frequencies.txt), so reporting them as listed would give
     wrong times. Most feeds ship the file empty or not at all.
     """
-    rows, _ = await _table(key, "frequencies.txt", required=False)
+    rows, _ = await _table(key, "frequencies.txt", required=False, lang=lang)
     return frozenset(r["trip_id"] for r in rows if r.get("trip_id"))
 
 
@@ -331,77 +382,121 @@ async def _frequency_trips(key: str) -> frozenset[str]:
 
 
 async def _provenance(
-    key: str, directory: FeedDirectory, was_cached: bool, schema_name: str
+    key: str, directory: FeedDirectory, was_cached: bool, schema_name: str, lang: str = "en"
 ) -> Provenance:
-    agency = _agency(key)
-    feed_info, _ = await _table(key, "feed_info.txt", required=False)
+    agency = _agency(key, lang)
+    feed_info, _ = await _table(key, "feed_info.txt", required=False, lang=lang)
     start = gtfs.parse_gtfs_date(feed_info[0].get("feed_start_date")) if feed_info else None
     end = gtfs.parse_gtfs_date(feed_info[0].get("feed_end_date")) if feed_info else None
-    coverage = f"Schedule valid {start} to {end}." if start and end else None
+    coverage = (
+        pick(lang, f"Schedule valid {start} to {end}.", f"Horaire valide du {start} au {end}.")
+        if start and end
+        else None
+    )
     if agency.database == "statcan":
-        coverage = (
+        coverage = pick(
+            lang,
             f"{coverage or 'No feed_info.txt dates.'} StatCan validator window "
-            f"{agency.window_start} to {agency.window_end}."
+            f"{agency.window_start} to {agency.window_end}.",
+            f"{coverage or 'Aucune date dans feed_info.txt.'} Période du validateur de "
+            f"Statistique Canada : du {agency.window_start} au {agency.window_end}.",
         )
+    notes = _fr_or_en(lang, agency.notes_en, agency.notes_fr)
     return make_provenance(
         source=f"transit:{key}",
         url=directory.url,
         cached=was_cached,
         schema_name=schema_name,
         as_of=directory.last_modified,
-        freshness=agency.update_cadence,
+        freshness=_fr_or_en(lang, agency.update_cadence, agency.update_cadence_fr),
         coverage=coverage,
         limits=(
-            (agency.notes_en if agency.excluded_route_types else "")
+            (notes if agency.excluded_route_types else "")
             + (
-                " Data quality is taken as is (no fixes applied by StatCan)."
+                pick(
+                    lang,
+                    " Data quality is taken as is (no fixes applied by StatCan).",
+                    " La qualité des données est celle de la source (Statistique Canada "
+                    "n'y apporte aucune correction).",
+                )
                 if agency.database == "statcan"
                 else ""
             )
         ).strip()
         or None,
-        licence=_feed_licence(agency),
+        licence=_feed_licence(agency, lang),
+        lang=lang,
     )
 
 
-def _feed_licence(agency: Agency) -> str:
+def _attribution(agency: Agency, lang: str) -> str:
+    if normalize_lang(lang) == "fr" and agency.attribution_fr:
+        return agency.attribution_fr
+    return agency.attribution
+
+
+def _feed_licence(agency: Agency, lang: str = "en") -> str:
     """The feed's own terms; a national-database feed also carries StatCan's."""
-    own = f"{agency.licence} ({agency.licence_url}). Attribution: '{agency.attribution}'"
-    if agency.database == "statcan":
-        return derived_from_statcan(
-            f"{own} Compiled by Statistics Canada ({constants.NATIONAL_LICENCE})."
+    if normalize_lang(lang) != "fr":
+        own = f"{agency.licence} ({agency.licence_url}). Attribution: '{agency.attribution}'"
+        if agency.database == "statcan":
+            return derived_from_statcan(
+                f"{own} Compiled by Statistics Canada ({constants.NATIONAL_LICENCE})."
+            )
+        return own
+    # The credit line goes in after the French spacing, so a line the
+    # publisher fixed in English is quoted exactly as written.
+    marker = "\x00"
+    own = f"{agency.licence_fr or agency.licence} ({agency.licence_url}). Attribution : « {marker} »"
+    text = (
+        derived_from_statcan_fr(
+            f"{own} Compilé par Statistique Canada ({constants.NATIONAL_LICENCE_FR})."
         )
-    return own
+        if agency.database == "statcan"
+        else own
+    )
+    return french_spacing(text).replace(marker, _attribution(agency, "fr"))
 
 
-async def _check_date(key: str, day: date) -> None:
-    feed_info, _ = await _table(key, "feed_info.txt", required=False)
+async def _check_date(key: str, day: date, lang: str = "en") -> None:
+    feed_info, _ = await _table(key, "feed_info.txt", required=False, lang=lang)
     start = end = None
     if feed_info:
         start = gtfs.parse_gtfs_date(feed_info[0].get("feed_start_date"))
         end = gtfs.parse_gtfs_date(feed_info[0].get("feed_end_date"))
-    agency = _agency(key)
+    agency = _agency(key, lang)
     if agency.database == "statcan" and not (start and end):
         # Feeds without feed_info.txt dates: StatCan's validator window instead.
         start, end = agency.window_start, agency.window_end
     if start and end and not start <= day <= end:
+        statcan = agency.database == "statcan"
         hint = (
             " This is a 2025 snapshot compiled by Statistics Canada: pass a service_date "
             "inside that window."
-            if agency.database == "statcan"
+            if statcan
             else ""
         )
-        raise InvalidInput(
-            f"{key}: the schedule covers {start} to {end}; {day} is outside it.{hint}"
+        hint_fr = (
+            " Il s'agit d'un instantané de 2025 compilé par Statistique Canada : passez une "
+            "service_date comprise dans cette période."
+            if statcan
+            else ""
+        )
+        raise_localized(
+            InvalidInput,
+            f"{key}: the schedule covers {start} to {end}; {day} is outside it.{hint}",
+            f"{key} : l'horaire couvre la période du {start} au {end}; le {day} est en "
+            f"dehors.{hint_fr}",
+            lang,
         )
 
 
-async def _timezone(key: str) -> str:
+async def _timezone(key: str, lang: str = "en") -> str:
     """The zone for "today" and local times: a national feed's own agency.txt, else the config."""
-    agency = _agency(key)
+    agency = _agency(key, lang)
     if agency.database != "statcan":
         return agency.timezone
-    rows, _ = await _table(key, "agency.txt", required=False)
+    rows, _ = await _table(key, "agency.txt", required=False, lang=lang)
     zone = rows[0].get("agency_timezone", "") if rows else ""
     try:
         ZoneInfo(zone)
@@ -410,9 +505,9 @@ async def _timezone(key: str) -> str:
     return zone
 
 
-def _service_day(zone: str, day: str | None) -> date:
+def _service_day(zone: str, day: str | None, lang: str = "en") -> date:
     if day:
-        return gtfs.parse_iso_date(day)
+        return gtfs.parse_iso_date(day, lang=lang)
     return datetime.now(ZoneInfo(zone)).date()
 
 
@@ -427,28 +522,28 @@ def _agency_feed(
     zip_bytes: int | None = None,
     modified: datetime | None = None,
 ) -> AgencyFeed:
-    notes = (agency.notes_fr if lang == "fr" else agency.notes_en) or None
+    notes = pick(lang, agency.notes_en, agency.notes_fr) or None
     return AgencyFeed(
         key=agency.key,
         name=agency.name_fr if lang == "fr" else agency.name_en,
         name_en=agency.name_en,
         name_fr=agency.name_fr,
-        city=agency.city,
+        city=_fr_or_en(lang, agency.city, agency.city_fr),
         province=agency.province,
         timezone=agency.timezone,
         feed_url=agency.feed_url,
         source_page=agency.source_page,
-        licence=agency.licence,
+        licence=_fr_or_en(lang, agency.licence, agency.licence_fr),
         licence_url=agency.licence_url,
-        attribution=agency.attribution,
-        update_cadence=agency.update_cadence,
+        attribution=_attribution(agency, lang),
+        update_cadence=_fr_or_en(lang, agency.update_cadence, agency.update_cadence_fr),
         notes=notes,
         reachable=reachable,
         zip_bytes=zip_bytes,
         last_modified=modified,
         database=agency.database,
         status=agency.status,
-        status_reason=agency.status_reason or None,
+        status_reason=_fr_or_en(lang, agency.status_reason, agency.status_reason_fr) or None,
         live_agency_key=agency.live_agency_key,
         service_window_start=agency.window_start,
         service_window_end=agency.window_end,
@@ -498,13 +593,24 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
             url=feeds[0].feed_url,
             cached=all(cached for _, cached in probed),
             schema_name="transit.AgencyList",
-            freshness="Each agency's zip is checked with a HEAD request (cached 10 minutes).",
-            limits=(
+            freshness=pick(
+                lang,
+                "Each agency's zip is checked with a HEAD request (cached 10 minutes).",
+                "Le zip de chaque organisme est vérifié par une requête HEAD (en cache "
+                "10 minutes).",
+            ),
+            limits=pick(
+                lang,
                 f"Request: one HEAD request to each of the {len(feeds)} agencies' feed_url "
                 "(provenance url is the first of them; hosts that build the zip on request "
                 "are not probed). Only agencies with an open static GTFS zip and no key are "
-                "configured."
+                "configured.",
+                f"Requête : une requête HEAD vers le feed_url de chacun des {len(feeds)} "
+                "organismes (l'url de la provenance est le premier d'entre eux; les hôtes qui "
+                "construisent le zip à la demande ne sont pas sondés). Seuls les organismes qui "
+                "publient un zip GTFS statique ouvert, sans clé, sont configurés.",
             ),
+            lang=lang,
         ),
     )
 
@@ -525,12 +631,24 @@ async def list_national_agencies(
     'excluded' (terms or missing licence information; see status_reason).
     """
     if status is not None and status not in ("available", "overlaps_live", "excluded"):
-        raise InvalidInput("status must be 'available', 'overlaps_live' or 'excluded'.")
+        raise_localized(
+            InvalidInput,
+            "status must be 'available', 'overlaps_live' or 'excluded'.",
+            "status doit valoir « available », « overlaps_live » ou « excluded ».",
+            lang,
+        )
     if not 1 <= limit <= constants.NATIONAL_LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.NATIONAL_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.NATIONAL_LIMIT_MAX}.",
+            f"limit doit être compris entre 1 et {constants.NATIONAL_LIMIT_MAX}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput("offset must be 0 or more.")
-    _, was_cached = await _national_catalog()
+        raise_localized(
+            InvalidInput, "offset must be 0 or more.", "offset doit être 0 ou plus.", lang
+        )
+    _, was_cached = await _national_catalog(lang)
     needle = gtfs.fold(query) if query else None
     wanted = province.strip().upper() if province else None
     feeds = [
@@ -554,22 +672,48 @@ async def list_national_agencies(
             cached=was_cached,
             schema_name="transit.AgencyList",
             as_of=constants.NATIONAL_AS_OF,
-            freshness=constants.NATIONAL_FRESHNESS,
-            coverage=f"{len(_NATIONAL)} feeds in the database; product page {constants.NATIONAL_PAGE}.",
+            freshness=pick(lang, constants.NATIONAL_FRESHNESS, constants.NATIONAL_FRESHNESS_FR),
+            coverage=pick(
+                lang,
+                f"{len(_NATIONAL)} feeds in the database; product page {constants.NATIONAL_PAGE}.",
+                f"{len(_NATIONAL)} flux dans la base de données; page du produit "
+                f"{constants.NATIONAL_PAGE_FR}.",
+            ),
             limits=join_limits(
-                "Each feed's licence_url and attribution are the ones StatCan recorded for it; "
-                "check them before republishing",
+                pick(
+                    lang,
+                    "Each feed's licence_url and attribution are the ones StatCan recorded for "
+                    "it; check them before republishing",
+                    "Les champs licence_url et attribution de chaque flux sont ceux que "
+                    "Statistique Canada a consignés; vérifiez-les avant toute rediffusion",
+                ),
                 (
-                    f"Returned feeds {offset + 1} to {offset + len(page)} of {len(feeds)} "
-                    "matching; page with offset or narrow with query, province or status"
+                    pick(
+                        lang,
+                        f"Returned feeds {offset + 1} to {offset + len(page)} of {len(feeds)} "
+                        "matching; page with offset or narrow with query, province or status",
+                        f"Flux {offset + 1} à {offset + len(page)} sur {len(feeds)} "
+                        "correspondants; paginez avec offset ou précisez avec query, province "
+                        "ou status",
+                    )
                     if page and len(page) < len(feeds)
                     else None
                 ),
             ),
-            licence=derived_from_statcan(
-                f"Canadian Public Transit Network Database compilation ({constants.NATIONAL_NOTICE}); "
-                "each feed also carries its agency's own terms (licence_url, attribution)."
+            licence=pick(
+                lang,
+                derived_from_statcan(
+                    "Canadian Public Transit Network Database compilation "
+                    f"({constants.NATIONAL_NOTICE}); each feed also carries its agency's own "
+                    "terms (licence_url, attribution)."
+                ),
+                derived_from_statcan_fr(
+                    f"Compilation de la {constants.NATIONAL_NAME_FR} "
+                    f"({constants.NATIONAL_NOTICE_FR}); chaque flux porte aussi les conditions "
+                    "de son organisme (licence_url, attribution)."
+                ),
             ),
+            lang=lang,
         ),
     )
 

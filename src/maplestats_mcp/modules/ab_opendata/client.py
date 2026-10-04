@@ -65,7 +65,7 @@ LICENCE_NOTE = {
     "is false is under other terms: its own licence, or by default the alberta.ca terms "
     "of use (non-commercial); check licence_note before reusing it.",
     "fr": "Presque tous les jeux de données d'Open Alberta relèvent de la Licence du "
-    "gouvernement ouvert - Alberta : licence mondiale, libre de redevances, perpétuelle et "
+    "gouvernement ouvert – Alberta : licence mondiale, libre de redevances, perpétuelle et "
     "non exclusive d'utilisation de l'information, y compris à des fins commerciales, avec "
     "la mention « Contains information licensed under the Open Government Licence – "
     "Alberta. » Un jeu dont ogl_alberta est faux relève d'autres conditions : sa propre "
@@ -76,7 +76,7 @@ OTHER_LICENCE_NOTE = {
     "en": "NOT under the Open Government Licence - Alberta (licence: {licence}). Other terms "
     "apply: the dataset's own licence or, by default, the alberta.ca terms of use, which "
     "are non-commercial. Do not assume commercial reuse is allowed; check {url}.",
-    "fr": "N'est PAS sous la Licence du gouvernement ouvert - Alberta (licence : {licence}). "
+    "fr": "N'est PAS sous la Licence du gouvernement ouvert – Alberta (licence : {licence}). "
     "D'autres conditions s'appliquent : la licence propre au jeu ou, par défaut, les "
     "conditions d'utilisation d'alberta.ca, qui sont non commerciales. Ne pas supposer que "
     "la réutilisation commerciale est permise; vérifier {url}.",

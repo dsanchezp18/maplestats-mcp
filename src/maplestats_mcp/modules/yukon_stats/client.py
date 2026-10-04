@@ -21,11 +21,11 @@ from maplestats_mcp.modules.yukon_stats.schemas import TableEntry, TableList, Ta
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.csv_files import Columns, decode, exact_filter
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import list_or_empty
-from maplestats_mcp.shared.licences import OGL_YUKON
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -105,7 +105,12 @@ async def list_tables(
     lang: Lang = "en",
 ) -> TableList:
     if not 1 <= limit <= constants.TABLES_LIMIT_MAX:
-        raise InvalidInput(f"yukon_stats: limit must be 1 to {constants.TABLES_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"yukon_stats: limit must be 1 to {constants.TABLES_LIMIT_MAX}.",
+            f"yukon_stats : limit doit être entre 1 et {constants.TABLES_LIMIT_MAX}.",
+            lang,
+        )
     tables, cached = await _catalogue()
     if dataset:
         wanted = dataset.casefold()
@@ -133,19 +138,28 @@ async def list_tables(
             "&rows=100",
             cached=cached,
             schema_name="yukon_stats.TableList",
-            coverage="CSV tables of the Yukon Bureau of Statistics organization only.",
+            coverage=pick(
+                lang,
+                "CSV tables of the Yukon Bureau of Statistics organization only.",
+                "Tableaux CSV du Bureau de la statistique du Yukon seulement.",
+            ),
             limits=(
-                f"Showing {limit} of {total} tables; narrow with query or dataset, or raise "
-                f"limit (max {constants.TABLES_LIMIT_MAX})."
+                pick(
+                    lang,
+                    f"Showing {limit} of {total} tables; narrow with query or dataset, or raise "
+                    f"limit (max {constants.TABLES_LIMIT_MAX}).",
+                    f"{limit} tableaux affichés sur {total}; précisez avec query ou dataset, ou "
+                    f"augmentez limit (max. {constants.TABLES_LIMIT_MAX}).",
+                )
                 if total > limit
                 else None
             ),
-            licence=OGL_YUKON,
+            lang=lang,
         ),
     )
 
 
-def check_table_url(url: str) -> None:
+def check_table_url(url: str, lang: Lang = "en") -> None:
     parsed = urlparse(url)
     if (
         parsed.scheme != "https"
@@ -153,16 +167,26 @@ def check_table_url(url: str) -> None:
         or not parsed.path.startswith(constants.DOWNLOAD_PATH_PREFIX)
         or not parsed.path.lower().endswith(".csv")
     ):
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"yukon_stats: url must be an https .csv link on {constants.DOMAIN} under "
-            f"{constants.DOWNLOAD_PATH_PREFIX} (see yukon_stats_list_tables)."
+            f"{constants.DOWNLOAD_PATH_PREFIX} (see yukon_stats_list_tables).",
+            f"yukon_stats : url doit être un lien https vers un fichier .csv sur "
+            f"{constants.DOMAIN}, sous {constants.DOWNLOAD_PATH_PREFIX} (voir "
+            "yukon_stats_list_tables).",
+            lang,
         )
 
 
-def _parse(body: bytes) -> tuple[list[str], list[dict[str, str]]]:
+def _parse(body: bytes, lang: Lang = "en") -> tuple[list[str], list[dict[str, str]]]:
     text = decode(body)
     if text.lstrip().lower().startswith(("<!doctype", "<html")):
-        raise NotFound("yukon_stats: the link returned a web page, not a CSV file.")
+        raise_localized(
+            NotFound,
+            "yukon_stats: the link returned a web page, not a CSV file.",
+            "yukon_stats : le lien a renvoyé une page Web, pas un fichier CSV.",
+            lang,
+        )
     reader = csv.DictReader(io.StringIO(text))
     names = [(n or "").strip() for n in (reader.fieldnames or [])]
     keep = [n for n in names if n.lower() not in constants.DROPPED_COLUMNS]
@@ -175,12 +199,17 @@ def _parse(body: bytes) -> tuple[list[str], list[dict[str, str]]]:
 
 
 async def _table(
-    url: str, declared_size: int | None
+    url: str, declared_size: int | None, lang: Lang = "en"
 ) -> tuple[tuple[list[str], list[dict[str, str]]], bool]:
     if declared_size is not None and declared_size > constants.MAX_FILE_BYTES:
-        raise InvalidInput(
-            f"yukon_stats: {url} is {declared_size / 1_048_576:.1f} MB, larger than the "
-            f"{constants.MAX_FILE_BYTES // 1_048_576} MB this tool reads."
+        size_mb = f"{declared_size / 1_048_576:.1f}"
+        max_mb = constants.MAX_FILE_BYTES // 1_048_576
+        raise_localized(
+            InvalidInput,
+            f"yukon_stats: {url} is {size_mb} MB, larger than the {max_mb} MB this tool reads.",
+            f"yukon_stats : {url} fait {size_mb.replace('.', ',')} Mo, plus que les {max_mb} Mo "
+            "que cet outil peut lire.",
+            lang,
         )
 
     async def fetch() -> tuple[list[str], list[dict[str, str]]]:
@@ -188,16 +217,35 @@ async def _table(
         try:
             response = await get_raw(url, timeout=180.0)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"yukon_stats: no file at {url}.") from exc
-            raise UpstreamError(
-                f"yukon_stats: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"yukon_stats: {url} did not respond in time.") from exc
+            status = exc.response.status_code
+            if status == 404:
+                raise_localized(
+                    NotFound,
+                    f"yukon_stats: no file at {url}.",
+                    f"yukon_stats : aucun fichier à {url}.",
+                    lang,
+                )
+            raise_localized(
+                UpstreamError,
+                f"yukon_stats: {url} returned HTTP {status}.",
+                f"yukon_stats : {url} a renvoyé le code HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            raise_localized(
+                UpstreamUnavailable,
+                f"yukon_stats: {url} did not respond in time.",
+                f"yukon_stats : {url} n'a pas répondu à temps.",
+                lang,
+            )
         if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"yukon_stats: {url} is larger than this tool reads.")
-        return _parse(response.content)
+            raise_localized(
+                UpstreamError,
+                f"yukon_stats: {url} is larger than this tool reads.",
+                f"yukon_stats : {url} dépasse la taille que cet outil peut lire.",
+                lang,
+            )
+        return _parse(response.content, lang)
 
     return await cached_fetch(f"yukon_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
 
@@ -210,23 +258,37 @@ async def query_table(
     offset: int = 0,
     lang: Lang = "en",
 ) -> TableRows:
-    check_table_url(url)
+    check_table_url(url, lang)
     if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"yukon_stats: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"yukon_stats: limit must be 1 to {constants.ROWS_LIMIT_MAX}.",
+            f"yukon_stats : limit doit être entre 1 et {constants.ROWS_LIMIT_MAX}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput("yukon_stats: offset must be 0 or more.")
+        raise_localized(
+            InvalidInput,
+            "yukon_stats: offset must be 0 or more.",
+            "yukon_stats : offset doit être égal ou supérieur à 0.",
+            lang,
+        )
 
     # Only files the catalogue lists are read, so the tool never fetches an
     # arbitrary path under /data/.
     listed, _ = await _catalogue()
     entry = next((t for t in listed if t.url == url), None)
     if entry is None:
-        raise NotFound(
+        raise_localized(
+            NotFound,
             f"yukon_stats: {url} is not a CSV table of the Yukon Bureau of Statistics "
-            "(see yukon_stats_list_tables)."
+            "(see yukon_stats_list_tables).",
+            f"yukon_stats : {url} n'est pas un tableau CSV du Bureau de la statistique du Yukon "
+            "(voir yukon_stats_list_tables).",
+            lang,
         )
 
-    (names, rows), cached = await _table(url, entry.size_bytes)
+    (names, rows), cached = await _table(url, entry.size_bytes, lang)
     lookup = Columns([dict.fromkeys(names, "")])
     rows = exact_filter(rows, lookup, filters)
     chosen = [lookup.require(c) for c in columns] if columns else names
@@ -247,18 +309,36 @@ async def query_table(
             url=url,
             cached=cached,
             schema_name="yukon_stats.TableRows",
-            freshness="As published by the Yukon Bureau of Statistics.",
-            coverage="The 'footnotes' column is dropped and other cells are cut at "
-            f"{constants.CELL_MAX_CHARS} characters.",
+            freshness=pick(
+                lang,
+                "As published by the Yukon Bureau of Statistics.",
+                "Tel que publié par le Bureau de la statistique du Yukon.",
+            ),
+            coverage=pick(
+                lang,
+                "The 'footnotes' column is dropped and other cells are cut at "
+                f"{constants.CELL_MAX_CHARS} characters.",
+                "La colonne « footnotes » est retirée et les autres cellules sont coupées à "
+                f"{constants.CELL_MAX_CHARS} caractères.",
+            ),
             limits=join_limits(
-                f"Showing rows {offset + 1} to {offset + len(page)} of {total}; page with "
-                "offset, filter, or select fewer columns"
+                pick(
+                    lang,
+                    f"Showing rows {offset + 1} to {offset + len(page)} of {total}; page with "
+                    "offset, filter, or select fewer columns",
+                    f"Lignes {offset + 1} à {offset + len(page)} sur {total}; paginez avec "
+                    "offset, filtrez ou choisissez moins de colonnes",
+                )
                 if more
                 else None,
-                "The page was cut to about 200 KB"
+                pick(
+                    lang,
+                    "The page was cut to about 200 KB",
+                    "La page a été réduite à environ 200 Ko",
+                )
                 if len(page) < min(limit, total - offset)
                 else None,
             ),
-            licence=OGL_YUKON,
+            lang=lang,
         ),
     )

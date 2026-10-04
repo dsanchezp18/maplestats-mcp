@@ -24,8 +24,9 @@ from maplestats_mcp.modules.eps.schemas import (
 )
 from maplestats_mcp.shared import arcgis
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.limits import join_limits
 
 _CONFIG = arcgis.ArcGISHubConfig(
@@ -36,11 +37,25 @@ _CONFIG = arcgis.ArcGISHubConfig(
 )
 _COUNT_FIELD = "occurrence_count"
 _FRESHNESS = "refreshed daily by EPS with a 24-48 hour publication delay"
+_FRESHNESS_FR = "mis à jour chaque jour par le Service de police d'Edmonton, avec un délai de publication de 24 à 48 heures"
 
 
-def _layer_url(dataset: str) -> str:
+def _freshness(lang: str) -> str:
+    return pick(lang, _FRESHNESS, _FRESHNESS_FR)
+
+
+def _coverage(dataset: str, lang: str) -> str:
+    return pick(lang, constants.DATASET_COVERAGE[dataset], constants.DATASET_COVERAGE_FR[dataset])
+
+
+def _layer_url(dataset: str, lang: str = "en") -> str:
     if dataset not in constants.DATASETS:
-        raise InvalidInput(f"dataset must be one of {sorted(constants.DATASETS)}, got {dataset!r}.")
+        raise_localized(
+            InvalidInput,
+            f"dataset must be one of {sorted(constants.DATASETS)}, got {dataset!r}.",
+            f"dataset doit être l'une des valeurs {sorted(constants.DATASETS)}; reçu {dataset!r}.",
+            lang,
+        )
     return constants.DATASETS[dataset]
 
 
@@ -48,11 +63,16 @@ def _quote(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def _parse_iso_date(value: str, name: str) -> date:
+def _parse_iso_date(value: str, name: str, lang: str = "en") -> date:
     try:
         return date.fromisoformat(value)
-    except ValueError as exc:
-        raise InvalidInput(f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.") from exc
+    except ValueError:
+        raise_localized(
+            InvalidInput,
+            f"{name} must be an ISO date (YYYY-MM-DD), got {value!r}.",
+            f"{name} doit être une date ISO (AAAA-MM-JJ); reçu {value!r}.",
+            lang,
+        )
 
 
 def build_where(
@@ -63,6 +83,7 @@ def build_where(
     start_date: str | None = None,
     end_date: str | None = None,
     intersection_contains: str | None = None,
+    lang: str = "en",
 ) -> str:
     """Build a SQL-92 `where` clause. Label filters match exactly because
     upstream labels include near-duplicates (see module docstring);
@@ -75,10 +96,15 @@ def build_where(
     ):
         if value:
             clauses.append(f"{field} = {_quote(value)}")
-    start = _parse_iso_date(start_date, "start_date") if start_date else None
-    end = _parse_iso_date(end_date, "end_date") if end_date else None
+    start = _parse_iso_date(start_date, "start_date", lang) if start_date else None
+    end = _parse_iso_date(end_date, "end_date", lang) if end_date else None
     if start and end and start > end:
-        raise InvalidInput(f"start_date {start} is after end_date {end}.")
+        raise_localized(
+            InvalidInput,
+            f"start_date {start} is after end_date {end}.",
+            f"start_date {start} est postérieure à end_date {end}.",
+            lang,
+        )
     if start:
         clauses.append(f"Reported_Date >= DATE '{start.isoformat()}'")
     if end:
@@ -134,12 +160,21 @@ async def list_occurrences(
     lang: str = "en",
 ) -> OccurrenceList:
     """List individual occurrences, newest first, with WGS84 coordinates."""
-    del lang
     if not 1 <= limit <= constants.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.")
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.LIMIT_MAX}; reçu {limit}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
-    layer_url = _layer_url(dataset)
+        raise_localized(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être supérieur ou égal à 0; reçu {offset}.",
+            lang,
+        )
+    layer_url = _layer_url(dataset, lang)
     where = build_where(
         category=category,
         group=group,
@@ -147,6 +182,7 @@ async def list_occurrences(
         start_date=start_date,
         end_date=end_date,
         intersection_contains=intersection_contains,
+        lang=lang,
     )
 
     request: dict[str, Any] = {
@@ -181,18 +217,33 @@ async def list_occurrences(
             url=arcgis.query_url(layer_url, 0, **request),
             cached=was_cached,
             schema_name="eps.OccurrenceList",
-            freshness=_FRESHNESS,
-            coverage=constants.DATASET_COVERAGE[dataset],
+            freshness=_freshness(lang),
+            coverage=_coverage(dataset, lang),
             limits=join_limits(
                 (
-                    f"Returned occurrences {offset + 1} to {offset + len(features)} of "
-                    f"{total:,}, newest first; page with offset, narrow the filters, or use "
-                    "eps_summarize_occurrences for counts"
+                    pick(
+                        lang,
+                        f"Returned occurrences {offset + 1} to {offset + len(features)} of "
+                        f"{total:,}, newest first; page with offset, narrow the filters, or use "
+                        "eps_summarize_occurrences for counts",
+                        f"Incidents {offset + 1} à {offset + len(features)} sur {total:,}".replace(
+                            ",", "\u00a0"
+                        )
+                        + ", du plus récent au plus ancien; paginez avec offset, resserrez "
+                        "les filtres ou utilisez eps_summarize_occurrences pour les "
+                        "dénombrements",
+                    )
                     if features and offset + len(features) < total
                     else None
                 ),
-                "location is the nearest intersection only; no time of day",
+                pick(
+                    lang,
+                    "location is the nearest intersection only; no time of day",
+                    "le lieu se limite à l'intersection la plus proche; aucune heure n'est "
+                    "indiquée",
+                ),
             ),
+            lang=lang,
         ),
     )
 
@@ -212,14 +263,22 @@ async def summarize_occurrences(
 ) -> OccurrenceSummary:
     """Count occurrences grouped by category, group, type, month, or
     intersection, computed server-side with ArcGIS outStatistics."""
-    del lang
     if group_by not in constants.GROUP_BY_FIELDS:
-        raise InvalidInput(
-            f"group_by must be one of {sorted(constants.GROUP_BY_FIELDS)}, got {group_by!r}."
+        raise_localized(
+            InvalidInput,
+            f"group_by must be one of {sorted(constants.GROUP_BY_FIELDS)}, got {group_by!r}.",
+            f"group_by doit être l'une des valeurs {sorted(constants.GROUP_BY_FIELDS)}; "
+            f"reçu {group_by!r}.",
+            lang,
         )
     if not 1 <= top <= constants.LIMIT_MAX:
-        raise InvalidInput(f"top must be between 1 and {constants.LIMIT_MAX}, got {top}.")
-    layer_url = _layer_url(dataset)
+        raise_localized(
+            InvalidInput,
+            f"top must be between 1 and {constants.LIMIT_MAX}, got {top}.",
+            f"top doit être compris entre 1 et {constants.LIMIT_MAX}; reçu {top}.",
+            lang,
+        )
+    layer_url = _layer_url(dataset, lang)
     where = build_where(
         category=category,
         group=group,
@@ -227,6 +286,7 @@ async def summarize_occurrences(
         start_date=start_date,
         end_date=end_date,
         intersection_contains=intersection_contains,
+        lang=lang,
     )
     fields = constants.GROUP_BY_FIELDS[group_by]
     # Months read chronologically; everything else reads largest first.
@@ -276,16 +336,16 @@ async def summarize_occurrences(
             url=str(httpx.URL(f"{layer_url}/query", params=params)),
             cached=was_cached,
             schema_name="eps.OccurrenceSummary",
-            freshness=_FRESHNESS,
-            coverage=constants.DATASET_COVERAGE[dataset],
-            limits=f"at most {top} groups returned",
+            freshness=_freshness(lang),
+            coverage=_coverage(dataset, lang),
+            limits=pick(lang, f"at most {top} groups returned", f"au plus {top} groupes renvoyés"),
+            lang=lang,
         ),
     )
 
 
 async def get_last_load_date(*, lang: str = "en") -> LoadDate:
     """Return EPS's own record of when the occurrence data was last loaded."""
-    del lang
 
     async def fetch() -> dict[str, Any]:
         body = await arcgis.query_layer(_CONFIG, constants.LOAD_DATE_URL, 0, limit=1)
@@ -293,9 +353,13 @@ async def get_last_load_date(*, lang: str = "en") -> LoadDate:
         # the data, and it is empty meanwhile. Raising here also keeps the
         # empty answer out of the cache.
         if not body.get("features"):
-            raise UpstreamUnavailable(
+            raise_localized(
+                UpstreamUnavailable,
                 "eps: the load-date table is empty, which happens while EPS reloads "
-                "its data. Try again later."
+                "its data. Try again later.",
+                "eps : la table de la date de chargement est vide, ce qui arrive pendant "
+                "que le Service de police d'Edmonton recharge ses données. Réessayez plus tard.",
+                lang,
             )
         return body
 
@@ -319,5 +383,6 @@ async def get_last_load_date(*, lang: str = "en") -> LoadDate:
             url=arcgis.query_url(constants.LOAD_DATE_URL, 0, limit=1),
             cached=was_cached,
             schema_name="eps.LoadDate",
+            lang=lang,
         ),
     )

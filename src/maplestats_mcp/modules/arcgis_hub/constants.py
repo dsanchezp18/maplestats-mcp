@@ -560,6 +560,205 @@ PORTALS: dict[str, Portal] = {
     ),
 }
 
+# French text of each portal's `note`, for lang="fr". A unit test checks that
+# every portal with a note has one here.
+NOTES_FR: dict[str, str] = {
+    "durham": (
+        "Les éléments pointent vers une couche d'un MapServer commun de plus de 200 couches; "
+        "laissez layer_index vide pour que l'id de couche propre à l'élément soit utilisé."
+    ),
+    "markham": (
+        "307 des 321 éléments (vérifié le 2026-10-03) sont des couches de la région de York "
+        "(propriétaire YorkMunicipalGovt) affichées sur le site de Markham; 14 sont celles "
+        "de la Ville."
+    ),
+    "aurora": (
+        "opendata-cityofaurora.hub.arcgis.com est Aurora, en Illinois, une autre ville; ce "
+        "portail est celui d'Aurora, en Ontario."
+    ),
+    "grande_prairie_county": (
+        "Une administration distincte de la Ville de Grande Prairie. Au moins un élément (Fire "
+        "Permit Zones) pointe vers un chemin de service /arcgisadmin/ défectueux qui répond "
+        "HTTP 500, un problème de métadonnées du portail."
+    ),
+    "emrb": (
+        "Couches du plan de croissance régional des 13 municipalités membres. Aussi servies à "
+        "gis-capitalregion.opendata.arcgis.com (les mêmes 85 jeux de données)."
+    ),
+    "alberta_geological_survey": (
+        "Géré par l'Alberta Energy Regulator, comme les rapports statistiques aer_*, mais sur "
+        "une plateforme distincte (ArcGIS Hub, pas www.aer.ca)."
+    ),
+    "cochrane": (
+        "Ville de Cochrane, Alberta. A quitté data-cochranegis.opendata.arcgis.com, dont l'API "
+        "refuse maintenant l'accès anonyme (GWM_0003); le nouveau domaine répond (vérifié le "
+        "2026-09-27)."
+    ),
+    "okotoks": (
+        "Ville d'Okotoks, Alberta. Remplace okotoksmaps-okotoks.hub.arcgis.com, dont l'API "
+        "refuse l'accès anonyme (GWM_0003). Le nouveau site n'a que la collection « all », "
+        "donc les recherches se limitent par défaut aux Feature Service (vérifié le "
+        "2026-09-27)."
+    ),
+    "oakville": (
+        "Région de Halton, Ontario (la région n'a pas son propre portail de données ouvertes). "
+        "Les 14 éléments sur 157 servis depuis maps.oakville.ca, le serveur de la Ville, "
+        "coupent toute connexion depuis certains réseaux (vérifié le 2026-10-03); les autres, "
+        "sur services5.arcgis.com, répondent normalement."
+    ),
+    "burlington": (
+        "Région de Halton, Ontario (la région n'a pas son propre portail de données ouvertes)."
+    ),
+    "milton": (
+        "Région de Halton, Ontario (la région n'a pas son propre portail de données ouvertes)."
+    ),
+    "red_deer": (
+        "Organisation AGOL de la Ville de Red Deer (8EWx42uKeMSu9Wcl), environ 170 éléments : "
+        "orthophotos, sentiers, parcs et de nombreuses couches de formulaires Survey123. Le "
+        "catalogue choisi par la Ville, data.reddeer.ca, est un site ASP.NET sur mesure (sans "
+        "API); data-reddeer.opendata.arcgis.com répond 401. Son API de téléchargement répond "
+        "HTTP 500 « domain record not found » pour chaque élément (vérifié le 2026-09-27) : "
+        "les éléments n'ont donc pas de liens de téléchargement; interrogez plutôt les lignes."
+    ),
+    "brampton": (
+        "Région de Peel, Ontario. 352 jeux de données confirmés le 2026-09-29 (GTFS du "
+        "transport en commun, imagerie, couches)."
+    ),
+    "kingston": "Ontario. 201 jeux de données confirmés le 2026-09-29.",
+    "kelowna": "Colombie-Britannique. 133 jeux de données confirmés le 2026-09-29.",
+    "barrie": "Ontario. 113 jeux de données confirmés le 2026-09-29.",
+    "burnaby": "Colombie-Britannique. 66 jeux de données confirmés le 2026-09-29.",
+    "fredericton": "Nouveau-Brunswick. 66 jeux de données confirmés le 2026-09-29.",
+    "greater_sudbury": "Ontario. 50 jeux de données confirmés le 2026-09-29.",
+    "guelph": "Ontario. 41 jeux de données confirmés le 2026-09-29.",
+    "moncton": "Nouveau-Brunswick. 54 jeux de données confirmés le 2026-09-29.",
+    "abbotsford": "Colombie-Britannique. 136 jeux de données confirmés le 2026-09-29.",
+    "whitby": "Région de Durham, Ontario. 19 jeux de données confirmés le 2026-09-29.",
+    "oshawa": "Région de Durham, Ontario. 314 jeux de données confirmés le 2026-09-29.",
+    "niagara_falls": "Région de Niagara, Ontario. 301 jeux de données confirmés le 2026-09-29.",
+    "niagara_region": "Ontario. 44 jeux de données confirmés le 2026-09-29.",
+    "st_catharines": "Région de Niagara, Ontario. 12 jeux de données confirmés le 2026-09-29.",
+    "thunder_bay": "Ontario. 67 jeux de données confirmés le 2026-09-29.",
+    "peterborough": "Ontario. 94 jeux de données confirmés le 2026-09-29.",
+    "coquitlam": "Colombie-Britannique. 27 jeux de données confirmés le 2026-09-29.",
+    "saanich": "Colombie-Britannique. 51 jeux de données confirmés le 2026-09-29.",
+    "kamloops": "Colombie-Britannique. 156 jeux de données confirmés le 2026-09-29.",
+    "prince_george": "Colombie-Britannique. 175 jeux de données confirmés le 2026-09-29.",
+    "delta": (
+        "Colombie-Britannique. 16 jeux de données confirmés le 2026-10-02; Open Government "
+        "Licence de la Ville."
+    ),
+    "yellowknife": (
+        "Territoires du Nord-Ouest. 6 jeux de données confirmés le 2026-10-02 (limites, rues, "
+        "zonage, adresses municipales); la licence de données ouvertes v1 de la Ville permet "
+        "la réutilisation commerciale avec mention de la source."
+    ),
+    "cambridge": (
+        "Région de Waterloo, Ontario. 48 jeux de données confirmés le 2026-10-02; la licence de "
+        "données ouvertes v2.1 de la Ville permet la réutilisation commerciale avec mention de "
+        "la source."
+    ),
+    "maple_ridge": (
+        "Colombie-Britannique. 61 jeux de données confirmés le 2026-10-02 (photographies "
+        "aériennes, couches SIG); Open Government Licence de la Ville. Un second site, "
+        "opengov2-mapleridge.opendata.arcgis.com, en compte 88."
+    ),
+    "pickering": (
+        "Région de Durham, Ontario. 268 jeux de données confirmés le 2026-10-02. Les licences "
+        "varient selon l'élément (vérifié le 2026-10-03) : 124 indiquent une Open Data "
+        "License, 109 n'en indiquent aucune et 26 couches de Central Lake Ontario Conservation "
+        "relèvent de la CLOCA Open Data License v1; vérifiez le license_info de chaque élément."
+    ),
+    "sarnia": (
+        "Ontario. 14 jeux de données confirmés le 2026-10-02; licence fondée sur la Licence du "
+        "gouvernement ouvert – Canada 2.0."
+    ),
+    "saint_john": (
+        "Nouveau-Brunswick (Saint John, et non St. John's). 233 jeux de données confirmés le "
+        "2026-10-02; titres bilingues; Open Government Licence – City of Saint John."
+    ),
+    "port_moody": (
+        "Colombie-Britannique. 104 jeux de données confirmés le 2026-10-02; la licence de la "
+        "Ville permet la réutilisation commerciale avec mention de la source."
+    ),
+    "white_rock": (
+        "Colombie-Britannique. 59 jeux de données confirmés le 2026-10-02; White Rock Open "
+        "Government License."
+    ),
+    "penticton": (
+        "Colombie-Britannique. 136 jeux de données confirmés le 2026-10-02; City of Penticton "
+        "Open Government Licence."
+    ),
+    "orangeville": (
+        "Ontario. 18 jeux de données confirmés le 2026-10-02; Open Government Licence – "
+        "Orangeville."
+    ),
+    "canmore": (
+        "Alberta. 19 jeux de données confirmés le 2026-10-02; Town of Canmore Open Data Licence."
+    ),
+    "ntgs": (
+        "Commission géologique des Territoires du Nord-Ouest (GTNO) : rapports et fichiers "
+        "géoscientifiques ouverts (géologie du substratum, géophysique aéroportée, indices "
+        "minéralisés). 49 jeux de données confirmés le 2026-10-03. Les conditions varient "
+        "selon l'élément : la plupart relèvent des conditions de la NTGS (droit d'auteur du "
+        "GTNO; aucun usage commercial ni reproduction sans le consentement écrit préalable de "
+        "la NTGS; toute réutilisation non commerciale doit mentionner le droit d'auteur du "
+        "GTNO), certains de la Licence du gouvernement ouvert – Canada, et un (carte GSC "
+        "D1860A) d'une licence de CD-ROM réservée au seul usage du titulaire. Vérifiez la "
+        "licence de chaque élément avant de le réutiliser."
+    ),
+    "ntgs_datahub": (
+        "Carrefour de données de la Commission géologique des Territoires du Nord-Ouest "
+        "(GTNO) : 20 services d'entités confirmés le 2026-10-03 (compilations géologiques, "
+        "données sur les minéraux indicateurs de kimberlite, index cartographiques). La "
+        "plupart des éléments relèvent des conditions de la NTGS (droit d'auteur du GTNO; "
+        "aucun usage commercial sans le consentement écrit préalable de la NTGS; toute "
+        "réutilisation non commerciale doit mentionner le droit d'auteur du GTNO); quatre "
+        "relèvent de la Licence du gouvernement ouvert – Canada. Vérifiez la licence de chaque "
+        "élément avant de le réutiliser."
+    ),
+    "bc_energy_regulator": (
+        "Colombie-Britannique, organisme provincial de réglementation de l'énergie. 42 jeux de "
+        "données confirmés le 2026-10-02 (puits, sites orphelins, incidents, installations); "
+        "BCER Open Data Licence, fondée sur la Licence du gouvernement ouvert – "
+        "Colombie-Britannique 2.0, usage commercial permis. Les fichiers en bloc IRIS "
+        "(iris.bcogc.ca) ne sont pas couverts."
+    ),
+    "toronto_police": (
+        "Ontario. 71 jeux de données confirmés le 2026-09-30 (crimes signalés, fusillades, "
+        "victimes, personnel, budget). Le site a quitté data.torontopolice.on.ca, qui redirige "
+        "maintenant ici (vérifié le 2026-10-03). L'ancien torontops.hub.arcgis.com compte 111 "
+        "éléments, surtout des couches cartographiques."
+    ),
+    "ottawa_police": (
+        "Ontario. Seule la collection « all » existe (98 éléments, surtout des PDF et des "
+        "pages), donc les recherches se limitent par défaut aux Feature Service (13 couches : "
+        "crimes haineux, fusillades, vols de vélos, appels pour surdose). Vérifié le "
+        "2026-09-30."
+    ),
+    "conservation_halton": (
+        "Office de protection de la nature, Ontario. 36 jeux de données confirmés le 2026-09-30."
+    ),
+    "credit_valley": (
+        "Office de protection de la nature, Ontario. Seulement 2 jeux de données confirmés le "
+        "2026-09-30."
+    ),
+    "npca": (
+        "Office de protection de la nature, Ontario. 31 jeux de données confirmés le 2026-09-30."
+    ),
+    "hamilton_conservation": "Ontario. 31 jeux de données confirmés le 2026-09-30.",
+    "cloca": "Ontario. 27 jeux de données confirmés le 2026-09-30.",
+    "quinte_conservation": "Ontario. 14 jeux de données confirmés le 2026-09-30.",
+    "ontario_geohub": (
+        "Données géospatiales provinciales, Ontario. 242 jeux de données confirmés le "
+        "2026-09-30; titres bilingues."
+    ),
+    "parks_canada": (
+        "Fédéral. 25 jeux de données confirmés le 2026-09-30 (sentiers, lieux protégés); "
+        "titres bilingues."
+    ),
+}
+
 RATE_LIMIT_PER_SECOND = 2.0
 RATE_LIMIT_CAPACITY = 5.0
 

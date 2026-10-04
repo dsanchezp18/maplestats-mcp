@@ -36,6 +36,7 @@ from typing import Any, NoReturn
 
 import httpx
 
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
@@ -76,24 +77,63 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     return clean_detail(exc.response.text)
 
 
-def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status_error(
+    exc: httpx.HTTPStatusError, context: str, lang: str = "en"
+) -> NoReturn:
     status = exc.response.status_code
     detail = _error_detail(exc)
     if status == 404:
-        raise NotFound(f"{context}: no match found ({detail}).") from exc
+        raise_localized(
+            NotFound,
+            f"{context}: no match found ({detail}).",
+            f"{context} : rien ne correspond ({detail}).",
+            lang,
+        )
     if 400 <= status < 500:
-        raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise_localized(
+            InvalidInput,
+            f"{context}: rejected the request ({detail}).",
+            f"{context} : la requête a été refusée ({detail}).",
+            lang,
+        )
+    raise_localized(
+        UpstreamError,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a répondu HTTP {status} : {detail}",
+        lang,
+    )
 
 
-async def _get(config: SocrataConfig, context: str, url: str, params: dict[str, Any]) -> Any:
+def _network_error_fr(context: str, exc: httpx.HTTPError) -> str:
+    """French text for upstream_text.network_error, which writes English only."""
+    if isinstance(exc, httpx.DecodingError):
+        start = clean_detail(getattr(exc, "body_start", ""), 120)
+        seen = "" if start == clean_detail("") else f" (début de la réponse : {start})"
+        return (
+            f"{context} : le service a répondu, mais pas en JSON{seen}; c'est souvent une "
+            "page d'erreur ou de maintenance en HTML."
+        )
+    kind = type(exc).__name__
+    if isinstance(exc, httpx.TimeoutException):
+        reason = f"n'a pas répondu à temps ({kind})"
+    else:
+        message = str(exc).strip()
+        detail = f" : {clean_detail(message, 120)}" if message else ", connexion interrompue"
+        reason = f"est injoignable ({kind}{detail})"
+    return f"{context} {reason}; la requête a déjà été relancée. Réessayez sous peu."
+
+
+async def _get(
+    config: SocrataConfig, context: str, url: str, params: dict[str, Any], lang: str = "en"
+) -> Any:
     await _limiter(config).acquire()
     try:
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status_error(exc, context)
+        _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        raise network_error(context, exc) from exc
+        error = network_error(context, exc)
+        raise_localized(type(error), str(error), _network_error_fr(context, exc), lang)
 
 
 async def catalog_search(
@@ -104,6 +144,7 @@ async def catalog_search(
     tag: str | None = None,
     limit: int = 10,
     offset: int = 0,
+    lang: str = "en",
 ) -> dict[str, Any]:
     """Search one domain's dataset catalog via the cross-domain discovery API."""
     params: dict[str, Any] = {
@@ -119,35 +160,37 @@ async def catalog_search(
         params["categories"] = category
     if tag:
         params["tags"] = tag
-    return await _get(config, f"{config.source}:catalog_search", CATALOG_BASE_URL, params)
+    return await _get(config, f"{config.source}:catalog_search", CATALOG_BASE_URL, params, lang)
 
 
-async def facet_categories(config: SocrataConfig) -> list[dict[str, Any]]:
+async def facet_categories(config: SocrataConfig, lang: str = "en") -> list[dict[str, Any]]:
     """List the domain's dataset categories and how many datasets carry each."""
     data = await _get(
         config,
         f"{config.source}:domain_categories",
         f"{CATALOG_BASE_URL}/domain_categories",
         {"domains": config.domain},
+        lang,
     )
     return list_or_empty(data, "results") if isinstance(data, dict) else []
 
 
-async def facet_tags(config: SocrataConfig) -> list[dict[str, Any]]:
+async def facet_tags(config: SocrataConfig, lang: str = "en") -> list[dict[str, Any]]:
     """List the domain's free-text dataset tags and how many datasets carry each."""
     data = await _get(
         config,
         f"{config.source}:domain_tags",
         f"{CATALOG_BASE_URL}/domain_tags",
         {"domains": config.domain},
+        lang,
     )
     return list_or_empty(data, "results") if isinstance(data, dict) else []
 
 
-async def get_view(config: SocrataConfig, dataset_id: str) -> dict[str, Any]:
+async def get_view(config: SocrataConfig, dataset_id: str, lang: str = "en") -> dict[str, Any]:
     """Fetch one dataset's Views API metadata (columns, license, timestamps)."""
     url = f"https://{config.domain}/api/views/{dataset_id}.json"
-    return await _get(config, f"{config.source}:get_view:{dataset_id}", url, {})
+    return await _get(config, f"{config.source}:get_view:{dataset_id}", url, {}, lang)
 
 
 async def query_rows(
@@ -160,6 +203,7 @@ async def query_rows(
     q: str | None = None,
     limit: int = 10,
     offset: int = 0,
+    lang: str = "en",
 ) -> list[dict[str, Any]]:
     """Run a SoQL query against one dataset's rows via the SODA resource API."""
     params: dict[str, Any] = {"$limit": limit, "$offset": offset}
@@ -172,7 +216,7 @@ async def query_rows(
     if q:
         params["$q"] = q
     url = f"https://{config.domain}/resource/{dataset_id}.json"
-    data = await _get(config, f"{config.source}:query_rows:{dataset_id}", url, params)
+    data = await _get(config, f"{config.source}:query_rows:{dataset_id}", url, params, lang)
     return data if isinstance(data, list) else []
 
 

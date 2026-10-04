@@ -23,7 +23,7 @@ MODULE_DESCRIPTION_FR = (
     "Données ouvertes de la Commission de l'énergie de l'Ontario (CEO, oeb.ca) : rapports RRR "
     "par distributeur d'électricité et de gaz naturel (fiabilité du réseau SAIDI/SAIFI, "
     "clients, demande et revenus, immobilisations, main-d'œuvre, exactitude de la "
-    "facturation, programmes LEAP et POSPE, balance de vérification, facturation nette), "
+    "facturation, programmes LEAP et POAFE, balance de vérification, facturation nette), "
     "fiches de rendement et plaintes, tarifs d'électricité et de gaz en vigueur, prix "
     "historiques de la grille tarifaire réglementée, bases de données des tarifs de "
     "distribution, permis, demandes en cours, annuaire 2021. Licence du gouvernement ouvert "

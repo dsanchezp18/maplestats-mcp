@@ -23,5 +23,5 @@ MODULE_DESCRIPTION_FR = (
     "collectivités et profil statistique de chaque collectivité), listés avec les titres "
     "de l'organisme, cherchés dans tous les sujets et lus feuille par feuille avec ligne "
     "d'en-tête devinée, filtres de colonnes et pagination. Titres en anglais seulement. "
-    "Licence du gouvernement ouvert - Territoires du Nord-Ouest."
+    "Licence du gouvernement ouvert – Territoires du Nord-Ouest."
 )

@@ -157,3 +157,31 @@ async def test_catalogue_is_one_call_and_keeps_only_bureau_csvs(httpx_mock):
     assert (await client.list_tables(dataset="social")).tables[0].title == "Crime"
     assert len(httpx_mock.get_requests()) == 1
     assert "Open Government Licence - Yukon" in (everything.provenance.licence or "")
+    assert everything.provenance.coverage == (
+        "CSV tables of the Yukon Bureau of Statistics organization only."
+    )
+
+
+def test_french_url_error():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as caught:
+        client.check_table_url("https://example.com/data/a/b.csv", lang="fr")
+    assert "doit être un lien https" in str(caught.value)
+
+
+async def test_french_unlisted_csv_error(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, json=_search())
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée") as caught:
+        await client.query_table(
+            "https://open.yukon.ca/data/x/resource/y/download/other.csv", lang="fr"
+        )
+    assert "Bureau de la statistique du Yukon" in str(caught.value)
+
+
+async def test_french_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, json=_search())
+    httpx_mock.add_response(url=_URL, content=_csv())
+    result = await client.query_table(_URL, limit=2, lang="fr")
+    assert result.licence == "Licence du gouvernement ouvert – Yukon"
+    assert "Licence du gouvernement ouvert – Yukon" in (result.provenance.licence or "")
+    assert "Bureau de la statistique du Yukon" in (result.provenance.freshness or "")
+    assert "Lignes 1 à 2 sur" in (result.provenance.limits or "")

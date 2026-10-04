@@ -14,11 +14,11 @@ MODULE_DESCRIPTION_FR = (
     "Tableaux du Bureau de la statistique du Yukon sur open.yukon.ca, outils préfixés "
     "yukon_stats_ : une centaine de tableaux CSV dans dix jeux de données (estimations de "
     "la population par âge et sexe, âge médian, statistiques de l'état civil, loyers et "
-    "taux d'inoccupation, permis de bâtir, prix des carburants et du combustible de "
+    "taux d'inoccupation, permis de bâtir (permis de construire), prix des carburants et du combustible de "
     "chauffage, indice spatial des prix par collectivité, immobilier de Whitehorse, "
     "mouvements d'aéronefs, entreprises et travailleurs, prestations d'assurance-emploi, "
     "criminalité, effectifs scolaires et profils du recensement de 2011, 2016 et 2021 par "
     "collectivité), listés à partir du portail et lus ligne par ligne avec filtres sur "
-    "valeurs exactes et choix de colonnes. Licence du gouvernement ouvert - Yukon. Le "
+    "valeurs exactes et choix de colonnes. Licence du gouvernement ouvert – Yukon. Le "
     "portail demande un délai de 10 secondes entre requêtes."
 )

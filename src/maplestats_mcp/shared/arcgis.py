@@ -78,6 +78,7 @@ from typing import Any, Literal, NoReturn
 import httpx
 
 from maplestats_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -167,33 +168,76 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     return clean_detail(exc.response.text)
 
 
-def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status_error(
+    exc: httpx.HTTPStatusError, context: str, lang: str = "en"
+) -> NoReturn:
     status = exc.response.status_code
     detail = _error_detail(exc)
     if status == 404:
-        raise NotFound(f"{context}: no match found ({detail}).") from exc
+        raise_localized(
+            NotFound,
+            f"{context}: no match found ({detail}).",
+            f"{context} : rien ne correspond ({detail}).",
+            lang,
+        )
     if status == 429 or (400 <= status < 500 and is_backend_outage(detail)):
         # A rate limit that outlasted shared/http.py's retries, or a 4xx naming the
         # server's own database or pool, is the service being unavailable, not a
         # mistake in the request (same rule as shared/wfs.py).
-        raise UpstreamUnavailable(
+        raise_localized(
+            UpstreamUnavailable,
             f"{context}: the service is temporarily unavailable (HTTP {status}: {detail}). "
-            "Try again shortly."
-        ) from exc
+            "Try again shortly.",
+            f"{context} : le service est temporairement indisponible (HTTP {status} : "
+            f"{detail}). Réessayez sous peu.",
+            lang,
+        )
     if 400 <= status < 500:
-        raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise_localized(
+            InvalidInput,
+            f"{context}: rejected the request ({detail}).",
+            f"{context} : la requête a été refusée ({detail}).",
+            lang,
+        )
+    raise_localized(
+        UpstreamError,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a répondu HTTP {status} : {detail}",
+        lang,
+    )
 
 
-async def _get(config: ArcGISHubConfig, context: str, url: str, params: dict[str, Any]) -> Any:
+def _network_error_fr(context: str, exc: httpx.HTTPError) -> str:
+    """French text for upstream_text.network_error, which writes English only."""
+    if isinstance(exc, httpx.DecodingError):
+        start = clean_detail(getattr(exc, "body_start", ""), 120)
+        seen = "" if start == clean_detail("") else f" (début de la réponse : {start})"
+        return (
+            f"{context} : le service a répondu, mais pas en JSON{seen}; c'est souvent une "
+            "page d'erreur ou de maintenance en HTML."
+        )
+    kind = type(exc).__name__
+    if isinstance(exc, httpx.TimeoutException):
+        reason = f"n'a pas répondu à temps ({kind})"
+    else:
+        message = str(exc).strip()
+        detail = f" : {clean_detail(message, 120)}" if message else ", connexion interrompue"
+        reason = f"est injoignable ({kind}{detail})"
+    return f"{context} {reason}; la requête a déjà été relancée. Réessayez sous peu."
+
+
+async def _get(
+    config: ArcGISHubConfig, context: str, url: str, params: dict[str, Any], lang: str = "en"
+) -> Any:
     await _limiter(config).acquire()
     try:
         headers = {"Connection": "close"} if config.fresh_connection_per_request else None
         return await api_get(url, params=params, headers=headers)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status_error(exc, context)
+        _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        raise network_error(context, exc) from exc
+        error = network_error(context, exc)
+        raise_localized(type(error), str(error), _network_error_fr(context, exc), lang)
 
 
 def collection_url(config: ArcGISHubConfig) -> str:
@@ -208,6 +252,7 @@ async def search_items(
     item_type: str | None = None,
     limit: int = 10,
     offset: int = 0,
+    lang: str = "en",
 ) -> dict[str, Any]:
     """Search one Hub site's dataset catalogue.
 
@@ -225,14 +270,14 @@ async def search_items(
     if item_type:
         params["type"] = item_type
     return await _get(
-        config, f"{config.source}:search_items", f"{collection_url(config)}/items", params
+        config, f"{config.source}:search_items", f"{collection_url(config)}/items", params, lang
     )
 
 
-async def get_item(config: ArcGISHubConfig, item_id: str) -> dict[str, Any]:
+async def get_item(config: ArcGISHubConfig, item_id: str, lang: str = "en") -> dict[str, Any]:
     """Fetch one dataset item's full Hub Search API metadata."""
     url = f"{collection_url(config)}/items/{item_id}"
-    return await _get(config, f"{config.source}:get_item:{item_id}", url, {})
+    return await _get(config, f"{config.source}:get_item:{item_id}", url, {}, lang)
 
 
 def download_url(config: ArcGISHubConfig, item_id: str, fmt: str, *, layer_index: int = 0) -> str:
@@ -344,7 +389,7 @@ def _feature_service_error_detail(body: dict[str, Any]) -> str:
     return str(error)
 
 
-def _raise_if_embedded_error(source: str, context: str, body: Any) -> None:
+def _raise_if_embedded_error(source: str, context: str, body: Any, lang: str = "en") -> None:
     if not (isinstance(body, dict) and "error" in body):
         return
     detail = _feature_service_error_detail(body)
@@ -353,39 +398,75 @@ def _raise_if_embedded_error(source: str, context: str, body: Any) -> None:
     # ArcGIS's fixed text for a layer without the Query capability; the
     # request itself was fine, so this is not the caller's InvalidInput.
     if code == 400 and "operation is not supported" in detail.lower():
-        raise LayerNotQueryable(
+        raise_localized(
+            LayerNotQueryable,
             f"{source}:{context}: this layer does not allow queries (it is likely a "
-            "submit-only form); use the item's download_urls if it has any, or another item."
+            "submit-only form); use the item's download_urls if it has any, or another item.",
+            f"{source}:{context} : cette couche n'accepte pas les requêtes (c'est sans doute "
+            "un formulaire de saisie seulement); utilisez les download_urls de l'élément s'il "
+            "en a, ou un autre élément.",
+            lang,
         )
     if code == 400:
-        raise InvalidInput(f"{source}:{context}: rejected the request ({detail}).")
+        raise_localized(
+            InvalidInput,
+            f"{source}:{context}: rejected the request ({detail}).",
+            f"{source}:{context} : la requête a été refusée ({detail}).",
+            lang,
+        )
     # Confirmed live against a plain ArcGIS Server deployment (StatCan's
     # geo.statcan.gc.ca): an unknown folder/service/layer answers this
     # same embedded shape with code 404 ("Folder not found"/"Service
     # not found"/"Layer not found") -- map it the same way a real HTTP
     # 404 status is mapped elsewhere in this codebase.
     if code == 404:
-        raise NotFound(f"{source}:{context}: {detail or 'not found'}.")
+        raise_localized(
+            NotFound,
+            f"{source}:{context}: {detail or 'not found'}.",
+            f"{source}:{context} : {detail or 'introuvable'}.",
+            lang,
+        )
     # 499 "Token Required" / 498 "Invalid Token": the service is secured.
     if code in (498, 499):
-        raise LayerNotQueryable(
+        raise_localized(
+            LayerNotQueryable,
             f"{source}:{context}: this layer is secured and needs an ArcGIS login "
             f"({detail or 'Token Required'}), so it cannot be queried here; use the "
-            "item's download_urls if it has any, or another item."
+            "item's download_urls if it has any, or another item.",
+            f"{source}:{context} : cette couche est protégée et exige une connexion ArcGIS "
+            f"({detail or 'Token Required'}); elle ne peut donc pas être interrogée ici. "
+            "Utilisez les download_urls de l'élément s'il en a, ou un autre élément.",
+            lang,
         )
-    raise UpstreamError(f"{source}:{context} returned an error: {detail}")
+    raise_localized(
+        UpstreamError,
+        f"{source}:{context} returned an error: {detail}",
+        f"{source}:{context} a renvoyé une erreur : {detail}",
+        lang,
+    )
 
 
-def _require_arcgis_rest_url(config: ArcGISHubConfig, context: str, service_url: str) -> None:
+def _require_arcgis_rest_url(
+    config: ArcGISHubConfig, context: str, service_url: str, lang: str = "en"
+) -> None:
     if not service_url.startswith("https://") or "/rest/services/" not in service_url:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"{config.source}:{context}: service_url must be an https ArcGIS REST "
-            f"service endpoint (containing /rest/services/), got {service_url!r}."
+            f"service endpoint (containing /rest/services/), got {service_url!r}.",
+            f"{config.source}:{context} : service_url doit être un point d'accès de service "
+            f"ArcGIS REST en https (contenant /rest/services/); reçu {service_url!r}.",
+            lang,
         )
 
 
 async def get_json(
-    config: ArcGISHubConfig, context: str, url: str, *, params: dict[str, Any] | None = None
+    config: ArcGISHubConfig,
+    context: str,
+    url: str,
+    *,
+    params: dict[str, Any] | None = None,
+    lang: str = "en",
 ) -> Any:
     """GET one arbitrary ArcGIS REST resource -- a folder listing, a
     specific layer's own field/schema document, or anything else this
@@ -395,21 +476,25 @@ async def get_json(
     this does not strip a trailing numeric path segment first; pass the
     exact resource URL wanted.
     """
-    body = await _get(config, f"{config.source}:{context}", url, {"f": "json", **(params or {})})
-    _raise_if_embedded_error(config.source, context, body)
+    body = await _get(
+        config, f"{config.source}:{context}", url, {"f": "json", **(params or {})}, lang
+    )
+    _raise_if_embedded_error(config.source, context, body, lang)
     return body
 
 
-async def get_service_info(config: ArcGISHubConfig, service_url: str) -> dict[str, Any]:
+async def get_service_info(
+    config: ArcGISHubConfig, service_url: str, lang: str = "en"
+) -> dict[str, Any]:
     """Fetch a FeatureServer/MapServer's own root document (its `layers`/`tables` listing)."""
-    _require_arcgis_rest_url(config, "get_service_info", service_url)
+    _require_arcgis_rest_url(config, "get_service_info", service_url, lang)
     root = _service_root(service_url)
-    body = await _get(config, f"{config.source}:get_service_info", root, {"f": "json"})
-    _raise_if_embedded_error(config.source, "get_service_info", body)
+    body = await _get(config, f"{config.source}:get_service_info", root, {"f": "json"}, lang)
+    _raise_if_embedded_error(config.source, "get_service_info", body, lang)
     return body
 
 
-async def default_layer_index(config: ArcGISHubConfig, service_url: str) -> int:
+async def default_layer_index(config: ArcGISHubConfig, service_url: str, lang: str = "en") -> int:
     """Resolve which layer/table id to query when the caller doesn't pick one.
 
     Most hosted Feature/Map Services expose their one layer at index 0,
@@ -440,7 +525,7 @@ async def default_layer_index(config: ArcGISHubConfig, service_url: str) -> int:
         return int(tail)
 
     async def fetch() -> dict[str, Any]:
-        return await get_service_info(config, service_url)
+        return await get_service_info(config, service_url, lang)
 
     # Cached: an item's detail (for its download links) and a query of the
     # same item both need it.
@@ -470,6 +555,7 @@ async def query_layer(
     output_format: str = "json",
     out_sr: int | None = None,
     extra_params: dict[str, Any] | None = None,
+    lang: str = "en",
 ) -> dict[str, Any]:
     """Query one FeatureServer/MapServer layer's rows via the ArcGIS REST API.
 
@@ -507,7 +593,7 @@ async def query_layer(
     filter `geometry`/`geometryType`/`inSR`/`spatialRel`) for callers
     that need them; it is merged last and absent for every other caller.
     """
-    _require_arcgis_rest_url(config, "query_layer", service_url)
+    _require_arcgis_rest_url(config, "query_layer", service_url, lang)
     url, params = _query_request(
         service_url,
         layer_index,
@@ -521,8 +607,8 @@ async def query_layer(
         out_sr=out_sr,
         extra_params=extra_params,
     )
-    body = await _get(config, f"{config.source}:query_layer:{layer_index}", url, params)
-    _raise_if_embedded_error(config.source, "query_layer", body)
+    body = await _get(config, f"{config.source}:query_layer:{layer_index}", url, params, lang)
+    _raise_if_embedded_error(config.source, "query_layer", body, lang)
     return body
 
 

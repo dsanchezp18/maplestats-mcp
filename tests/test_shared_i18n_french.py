@@ -6,22 +6,22 @@ import pytest
 
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
-from maplestats_mcp.shared.i18n import NBSP, NNBSP, fr_typography, pick
+from maplestats_mcp.shared.i18n import NBSP, french_spacing, pick
 from maplestats_mcp.shared.licences import licence_for
 
 
-def test_fr_typography_spaces_marks_and_leaves_urls():
-    text = fr_typography("Note : voir https://a.b/c?x=1%20y, 50 % « oui » fin!")
+def test_french_spacing_spaces_marks_and_leaves_urls():
+    text = french_spacing("Note : voir https://a.b/c?x=1%20y, 50 % « oui » fin!")
     assert f"Note{NBSP}:" in text
     assert "https://a.b/c?x=1%20y" in text
-    assert f"50{NNBSP}%" in text
+    assert f"50{NBSP}%" in text
     assert f"«{NBSP}oui{NBSP}»" in text
-    assert text.endswith(f"fin{NNBSP}!")
+    assert text.endswith(f"fin{NBSP}!")
 
 
-def test_fr_typography_is_idempotent():
-    once = fr_typography("Source : Statistique Canada; voir « ceci » ?")
-    assert fr_typography(once) == once
+def test_french_spacing_is_idempotent():
+    once = french_spacing("Source : Statistique Canada; voir « ceci » ?")
+    assert french_spacing(once) == once
 
 
 def test_pick_keeps_english_as_written():

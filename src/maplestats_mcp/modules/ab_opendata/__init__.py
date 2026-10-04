@@ -32,7 +32,7 @@ MODULE_DESCRIPTION_FR = (
     "déclarations financières municipales, les redevances énergétiques, les volumes de "
     "circulation et les collisions, les statistiques de l'état civil et les données "
     "postsecondaires. Presque tous les jeux relèvent de la Licence du gouvernement ouvert "
-    "- Alberta (usage commercial permis avec mention de la source); un jeu sous une autre "
+    "– Alberta (usage commercial permis avec mention de la source); un jeu sous une autre "
     "licence est signalé. La découverte passe par l'API CKAN du portail et les lectures de "
     "fichiers attendent 10 secondes entre deux requêtes (délai d'exploration du fichier "
     "robots.txt). Voir ckan_ avec portal=ab pour le reste du catalogue."

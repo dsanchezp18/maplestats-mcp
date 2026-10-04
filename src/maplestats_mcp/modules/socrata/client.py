@@ -30,8 +30,9 @@ from maplestats_mcp.modules.socrata.schemas import (
     TagList,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 from maplestats_mcp.shared.socrata import (
     CATALOG_BASE_URL,
@@ -50,23 +51,62 @@ from maplestats_mcp.shared.socrata import (
 # so a value like "../x" or "abcd-1234?$where=" cannot reach another resource.
 _DATASET_ID = re.compile(r"^[a-z0-9]{4}-[a-z0-9]{4}$")
 
+# French only: the portals publish their own text in English (New Brunswick
+# writes both languages in the same field).
+_SOURCE_TEXT_FR = (
+    "Titres, descriptions, catégories et étiquettes tels que publiés par le portail, en "
+    "anglais sauf au Nouveau-Brunswick, qui écrit les deux langues dans le même champ."
+)
 
-def _dataset_id(dataset_id: str) -> str:
+
+def _dataset_id(dataset_id: str, lang: str = "en") -> str:
     cleaned = dataset_id.strip().lower()
     if not cleaned:
-        raise InvalidInput("dataset_id must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "dataset_id must not be empty.",
+            "dataset_id ne doit pas être vide.",
+            lang,
+        )
     if not _DATASET_ID.match(cleaned):
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             "dataset_id must be a Socrata id of the form 'abcd-1234' (two groups of four "
-            f"letters or digits), as returned by socrata_search_datasets; got {dataset_id!r}."
+            f"letters or digits), as returned by socrata_search_datasets; got {dataset_id!r}.",
+            "dataset_id doit être un identifiant Socrata de la forme « abcd-1234 » (deux "
+            "groupes de quatre lettres ou chiffres), comme ceux que renvoie "
+            f"socrata_search_datasets; reçu {dataset_id!r}.",
+            lang,
         )
     return cleaned
 
 
-def _config(portal: str) -> SocrataConfig:
+def _check_page(limit: int, offset: int, limit_max: int, lang: str) -> None:
+    if limit < 1 or limit > limit_max:
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {limit_max}, got {limit}.",
+            f"limit doit être entre 1 et {limit_max}; reçu {limit}.",
+            lang,
+        )
+    if offset < 0:
+        raise_localized(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être supérieur ou égal à 0; reçu {offset}.",
+            lang,
+        )
+
+
+def _config(portal: str, lang: str = "en") -> SocrataConfig:
     info = constants.PORTALS.get(portal)
     if info is None:
-        raise InvalidInput(f"portal must be one of {sorted(constants.PORTALS)}, got {portal!r}.")
+        raise_localized(
+            InvalidInput,
+            f"portal must be one of {sorted(constants.PORTALS)}, got {portal!r}.",
+            f"portal doit être l'une des valeurs {sorted(constants.PORTALS)}; reçu {portal!r}.",
+            lang,
+        )
     return SocrataConfig(
         source=f"socrata-{portal}",
         domain=info.domain,
@@ -81,7 +121,7 @@ def list_portals(lang: str = "en") -> PortalList:
         portals=[
             PortalInfo(
                 portal=key,
-                name=info.name_fr if lang == "fr" else info.name_en,
+                name=pick(lang, info.name_en, info.name_fr),
                 domain=info.domain,
                 bilingual_content=info.bilingual_content,
             )
@@ -89,9 +129,14 @@ def list_portals(lang: str = "en") -> PortalList:
         ],
         provenance=make_provenance(
             source="socrata",
-            url="(static portal registry in modules/socrata/constants.py)",
+            url=pick(
+                lang,
+                "(static portal registry in modules/socrata/constants.py)",
+                "(registre fixe des portails dans modules/socrata/constants.py)",
+            ),
             cached=False,
             schema_name="socrata.PortalList",
+            lang=lang,
         ),
     )
 
@@ -134,19 +179,19 @@ async def search_datasets(
     offset: int = 0,
     lang: str = "en",
 ) -> DatasetSearchResult:
-    """Search one portal's dataset catalogue; ``lang`` is accepted for consistency."""
-    del lang
-    config = _config(portal)
-    if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
-        )
-    if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    """Search one portal's dataset catalogue; ``lang`` sets the language of messages and notes."""
+    config = _config(portal, lang)
+    _check_page(limit, offset, constants.SEARCH_LIMIT_MAX, lang)
 
     async def fetch() -> dict[str, Any]:
         return await catalog_search(
-            config, query=query, category=category, tag=tag, limit=limit, offset=offset
+            config,
+            query=query,
+            category=category,
+            tag=tag,
+            limit=limit,
+            offset=offset,
+            lang=lang,
         )
 
     cache_key = f"{config.source}:search:{query}:{category}:{tag}:{limit}:{offset}"
@@ -167,19 +212,27 @@ async def search_datasets(
             url=f"{CATALOG_BASE_URL}?domains={config.domain}",
             cached=was_cached,
             schema_name="socrata.DatasetSearchResult",
-            coverage=f"{len(datasets)} of {total_count} total matches returned",
-            limits=f"limit capped at {constants.SEARCH_LIMIT_MAX} per request",
+            coverage=pick(
+                lang,
+                f"{len(datasets)} of {total_count} total matches returned",
+                f"{len(datasets)} résultats renvoyés sur {total_count} au total",
+            ),
+            limits=pick(
+                lang,
+                f"limit capped at {constants.SEARCH_LIMIT_MAX} per request",
+                f"limit plafonné à {constants.SEARCH_LIMIT_MAX} par requête. {_SOURCE_TEXT_FR}",
+            ),
+            lang=lang,
         ),
     )
 
 
 async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> DatasetDetail:
-    del lang
-    config = _config(portal)
-    dataset_id = _dataset_id(dataset_id)
+    config = _config(portal, lang)
+    dataset_id = _dataset_id(dataset_id, lang)
 
     async def fetch() -> dict[str, Any]:
-        return await get_view(config, dataset_id)
+        return await get_view(config, dataset_id, lang)
 
     obj, was_cached = await cached_fetch(
         f"{config.source}:get_view:{dataset_id}", constants.CACHE_TTL_DATASET_SECONDS, fetch
@@ -209,6 +262,8 @@ async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> Dataset
             url=f"https://{config.domain}/api/views/{dataset_id}.json",
             cached=was_cached,
             schema_name="socrata.DatasetDetail",
+            limits=pick(lang, "", _SOURCE_TEXT_FR) or None,
+            lang=lang,
         ),
     )
 
@@ -225,14 +280,10 @@ async def query_dataset_rows(
     offset: int = 0,
     lang: str = "en",
 ) -> RowQueryResult:
-    """Run a SoQL query against one dataset's rows; ``lang`` is accepted for consistency."""
-    del lang
-    config = _config(portal)
-    dataset_id = _dataset_id(dataset_id)
-    if limit < 1 or limit > constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.")
-    if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+    """Run a SoQL query against one dataset's rows; ``lang`` sets the language of messages."""
+    config = _config(portal, lang)
+    dataset_id = _dataset_id(dataset_id, lang)
+    _check_page(limit, offset, constants.ROWS_LIMIT_MAX, lang)
 
     async def fetch() -> list[dict[str, Any]]:
         return await query_rows(
@@ -244,6 +295,7 @@ async def query_dataset_rows(
             q=q,
             limit=limit,
             offset=offset,
+            lang=lang,
         )
 
     cache_key = f"{config.source}:rows:{dataset_id}:{select}:{where}:{order}:{q}:{limit}:{offset}"
@@ -264,17 +316,22 @@ async def query_dataset_rows(
             url=f"https://{config.domain}/resource/{dataset_id}.json",
             cached=was_cached,
             schema_name="socrata.RowQueryResult",
-            limits=f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
+            limits=pick(
+                lang,
+                f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
+                f"lignes plafonnées à {constants.ROWS_LIMIT_MAX} par requête; noms de "
+                "colonnes et valeurs tels que publiés par le portail",
+            ),
+            lang=lang,
         ),
     )
 
 
 async def list_categories(portal: str, lang: str = "en") -> CategoryList:
-    del lang
-    config = _config(portal)
+    config = _config(portal, lang)
 
     async def fetch() -> list[dict[str, Any]]:
-        return await facet_categories(config)
+        return await facet_categories(config, lang)
 
     raw, was_cached = await cached_fetch(
         f"{config.source}:domain_categories", constants.CACHE_TTL_FACET_SECONDS, fetch
@@ -292,16 +349,17 @@ async def list_categories(portal: str, lang: str = "en") -> CategoryList:
             url=f"{CATALOG_BASE_URL}/domain_categories?domains={config.domain}",
             cached=was_cached,
             schema_name="socrata.CategoryList",
+            limits=pick(lang, "", _SOURCE_TEXT_FR) or None,
+            lang=lang,
         ),
     )
 
 
 async def list_tags(portal: str, lang: str = "en") -> TagList:
-    del lang
-    config = _config(portal)
+    config = _config(portal, lang)
 
     async def fetch() -> list[dict[str, Any]]:
-        return await facet_tags(config)
+        return await facet_tags(config, lang)
 
     raw, was_cached = await cached_fetch(
         f"{config.source}:domain_tags", constants.CACHE_TTL_FACET_SECONDS, fetch
@@ -319,5 +377,7 @@ async def list_tags(portal: str, lang: str = "en") -> TagList:
             url=f"{CATALOG_BASE_URL}/domain_tags?domains={config.domain}",
             cached=was_cached,
             schema_name="socrata.TagList",
+            limits=pick(lang, "", _SOURCE_TEXT_FR) or None,
+            lang=lang,
         ),
     )

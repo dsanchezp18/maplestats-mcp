@@ -36,10 +36,11 @@ from maplestats_mcp.modules.oeb.schemas import (
 )
 from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import new_client, send_with_retry
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
@@ -63,8 +64,9 @@ _COMPANY_EXACT = frozenset({"dist", "comdist", "licencename", "applicant1", "com
 _YEAR_EXACT = frozenset({"year", "fiscalyear", "filingyear", "comyear", "rateyear"})
 
 
-def _t(lang: str, en: str, fr: str) -> str:
-    return fr if lang == "fr" else en
+def _lower_first(text: str) -> str:
+    """French error details follow "Entrée invalide :", so they start in lower case."""
+    return text[:1].lower() + text[1:]
 
 
 def norm(text: str) -> str:
@@ -109,27 +111,44 @@ async def _get_html(url: str, lang: str) -> str:
                 _client, "GET", request_url(current), timeout=constants.PAGE_TIMEOUT_SECONDS
             )
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                _t(
-                    lang,
-                    f"www.oeb.ca did not answer for {current} ({type(exc).__name__}).",
-                    f"www.oeb.ca n'a pas répondu pour {current} ({type(exc).__name__}).",
-                )
-            ) from exc
+            raise_localized(
+                UpstreamUnavailable,
+                f"www.oeb.ca did not answer for {current} ({type(exc).__name__}).",
+                f"www.oeb.ca n'a pas répondu pour {current} ({type(exc).__name__}).",
+                lang,
+            )
         if response.status_code in (301, 302, 303, 307, 308):
             target = urljoin(current, response.headers.get("location", ""))
             if not _allowed(urlparse(target).hostname or ""):
-                raise UpstreamError(f"{current} redirected off www.oeb.ca, to {target}.")
+                raise_localized(
+                    UpstreamError,
+                    f"{current} redirected off www.oeb.ca, to {target}.",
+                    f"{current} redirige hors de www.oeb.ca, vers {target}.",
+                    lang,
+                )
             current = target
             continue
         if response.status_code == 404:
-            raise NotFound(
-                _t(lang, f"No OEB page at {current}.", f"Aucune page de la CEO à {current}.")
+            raise_localized(
+                NotFound,
+                f"No OEB page at {current}.",
+                f"aucune page de la CEO à {current}.",
+                lang,
             )
         if response.status_code >= 400:
-            raise UpstreamError(f"{current} returned HTTP {response.status_code}.")
+            raise_localized(
+                UpstreamError,
+                f"{current} returned HTTP {response.status_code}.",
+                f"{current} a renvoyé le code HTTP {response.status_code}.",
+                lang,
+            )
         return response.text
-    raise UpstreamError(f"{url} redirected more than {_MAX_REDIRECTS} times.")
+    raise_localized(
+        UpstreamError,
+        f"{url} redirected more than {_MAX_REDIRECTS} times.",
+        f"{url} a redirigé plus de {_MAX_REDIRECTS} fois.",
+        lang,
+    )
 
 
 async def _listing_rows(lang: str) -> list[pages.ListingRow]:
@@ -149,7 +168,12 @@ async def _listing_rows(lang: str) -> list[pages.ListingRow]:
 
     rows, _ = await cached_fetch(f"oeb:listing:{lang}", constants.CATALOGUE_TTL_SECONDS, fetch)
     if not rows:
-        raise UpstreamError(f"The OEB open data listing at {base} showed no datasets.")
+        raise_localized(
+            UpstreamError,
+            f"The OEB open data listing at {base} showed no datasets.",
+            f"la liste des données ouvertes de la CEO à {base} n'affichait aucun jeu de données.",
+            lang,
+        )
     return rows
 
 
@@ -207,14 +231,14 @@ def _note(files: list[OebFile], lang: str) -> str | None:
     if any(f.readable for f in files):
         return None
     if any(f.format == "zip" for f in files):
-        return _t(
+        return pick(
             lang,
             "Map files (KMZ inside zip archives) for GIS software, not tables: the rows are "
             "not read here. Download them from the page.",
             "Fichiers cartographiques (KMZ dans des archives zip) pour logiciels SIG, et non "
             "des tableaux : les lignes ne sont pas lues ici. Téléchargez-les depuis la page.",
         )
-    return _t(
+    return pick(
         lang,
         "The page links no XML or Excel file that can be read.",
         "La page ne renvoie à aucun fichier XML ou Excel lisible.",
@@ -285,7 +309,8 @@ def _provenance(
         freshness=freshness,
         coverage=coverage,
         limits=limits,
-        licence=constants.LICENCE_FR if lang == "fr" else constants.LICENCE,
+        licence=pick(lang, constants.LICENCE, constants.LICENCE_FR),
+        lang=lang,
     )
 
 
@@ -316,7 +341,7 @@ async def list_datasets(query: str | None = None, *, lang: str = "en") -> Datase
             "DatasetList",
             lang,
             cached=False,
-            coverage=_t(
+            coverage=pick(
                 lang,
                 "Every dataset page on the OEB open data page, plus the 2021 yearbook workbooks "
                 "linked from it.",
@@ -330,7 +355,9 @@ async def list_datasets(query: str | None = None, *, lang: str = "en") -> Datase
 async def _resolve(dataset: str, lang: str) -> tuple[pages.DatasetPage, pages.ListingRow | None]:
     key = dataset.strip().strip("/").rsplit("/", 1)[-1]
     if not key:
-        raise InvalidInput(_t(lang, "dataset must not be empty.", "dataset ne doit pas être vide."))
+        raise_localized(
+            InvalidInput, "dataset must not be empty.", "dataset ne doit pas être vide.", lang
+        )
     rows = await _listing_rows("en")
     by_slug = {r.slug: r for r in rows}
     if key == constants.YEARBOOK_SLUG or norm(key) in ("yearbook", "yearbook2021"):
@@ -353,22 +380,20 @@ async def _resolve(dataset: str, lang: str) -> tuple[pages.DatasetPage, pages.Li
         row = (exact or candidates)[0]
         return await _dataset_page(row.slug, lang), row
     if not candidates:
-        raise NotFound(
-            _t(
-                lang,
-                f"No OEB open data dataset matches {dataset!r}. Call oeb_list_datasets for slugs.",
-                f"Aucun jeu de données ouvertes de la CEO ne correspond à {dataset!r}. Appelez "
-                "oeb_list_datasets pour les identifiants.",
-            )
+        raise_localized(
+            NotFound,
+            f"No OEB open data dataset matches {dataset!r}. Call oeb_list_datasets for slugs.",
+            f"aucun jeu de données ouvertes de la CEO ne correspond à {dataset!r}. Appelez "
+            "oeb_list_datasets pour les identifiants.",
+            lang,
         )
     names = ", ".join(r.slug for r in candidates[:8])
-    raise InvalidInput(
-        _t(
-            lang,
-            f"{dataset!r} matches {len(candidates)} datasets; pass one slug: {names}.",
-            f"{dataset!r} correspond à {len(candidates)} jeux de données; donnez un "
-            f"identifiant : {names}.",
-        )
+    raise_localized(
+        InvalidInput,
+        f"{dataset!r} matches {len(candidates)} datasets; pass one slug: {names}.",
+        f"{dataset!r} correspond à {len(candidates)} jeux de données; donnez un "
+        f"identifiant : {names}.",
+        lang,
     )
 
 
@@ -379,19 +404,23 @@ def _select_file(files: list[OebFile], file: str | None, release: str | None, la
         pool = [f for f in files if f.release == wanted or f.release.startswith(wanted)]
         if not pool:
             releases = sorted({f.release for f in files})
-            raise InvalidInput(
-                _t(
-                    lang,
-                    f"No release {release!r}; releases are {releases}.",
-                    f"Aucune publication {release!r}; publications : {releases}.",
-                )
+            raise_localized(
+                InvalidInput,
+                f"No release {release!r}; releases are {releases}.",
+                f"aucune publication {release!r}; publications : {releases}.",
+                lang,
             )
     if file is None or not str(file).strip():
         current = [f for f in pool if f.readable and f.release == "current"] or [
             f for f in pool if f.readable
         ]
         if not current:
-            raise InvalidInput(_note(files, lang) or "No readable file.")
+            raise_localized(
+                InvalidInput,
+                _note(files, "en") or "No readable file.",
+                _lower_first(_note(files, "fr") or "aucun fichier lisible."),
+                lang,
+            )
         return current[0]
     text = str(file).strip()
     # A small number is a position in the list; a year ("2025") is matched
@@ -401,13 +430,12 @@ def _select_file(files: list[OebFile], file: str | None, release: str | None, la
     wanted = norm(text)
     matches = [f for f in pool if wanted in norm(f"{f.name} {f.caption or ''}")]
     if not matches:
-        raise InvalidInput(
-            _t(
-                lang,
-                f"No file matches {file!r}; call oeb_describe_dataset for the file list.",
-                f"Aucun fichier ne correspond à {file!r}; appelez oeb_describe_dataset pour la "
-                "liste des fichiers.",
-            )
+        raise_localized(
+            InvalidInput,
+            f"No file matches {file!r}; call oeb_describe_dataset for the file list.",
+            f"aucun fichier ne correspond à {file!r}; appelez oeb_describe_dataset pour la "
+            "liste des fichiers.",
+            lang,
         )
     current = [f for f in matches if f.release == "current"]
     return (current or matches)[0]
@@ -415,14 +443,13 @@ def _select_file(files: list[OebFile], file: str | None, release: str | None, la
 
 async def _download(file: OebFile, lang: str) -> tuple[bytes, bool]:
     if not file.readable:
-        raise InvalidInput(
-            _t(
-                lang,
-                f"{file.name} is a {file.format} file whose rows are not read here; download it "
-                f"from {file.url}.",
-                f"{file.name} est un fichier {file.format} dont les lignes ne sont pas lues ici; "
-                f"téléchargez-le à {file.url}.",
-            )
+        raise_localized(
+            InvalidInput,
+            f"{file.name} is a {file.format} file whose rows are not read here; download it "
+            f"from {file.url}.",
+            f"{file.name} est un fichier {file.format} dont les lignes ne sont pas lues ici; "
+            f"téléchargez-le à {file.url}.",
+            lang,
         )
     url = request_url(file.url)
     max_bytes = constants.MAX_FILE_BYTES if file.format == "xml" else constants.MAX_XLSX_BYTES
@@ -442,9 +469,19 @@ async def _download(file: OebFile, lang: str) -> tuple[bytes, bool]:
     )
     body = got.body
     if file.format == "xlsx" and not body.startswith(b"PK"):
-        raise UpstreamError(f"{file.url} is not an Excel workbook (got {body[:20]!r}).")
+        raise_localized(
+            UpstreamError,
+            f"{file.url} is not an Excel workbook (got {body[:20]!r}).",
+            f"{file.url} n'est pas un classeur Excel (reçu {body[:20]!r}).",
+            lang,
+        )
     if file.format == "xml" and not body.lstrip(b"\xef\xbb\xbf \r\n\t").startswith(b"<"):
-        raise UpstreamError(f"{file.url} is not XML (got {body[:20]!r}).")
+        raise_localized(
+            UpstreamError,
+            f"{file.url} is not XML (got {body[:20]!r}).",
+            f"{file.url} n'est pas un fichier XML (reçu {body[:20]!r}).",
+            lang,
+        )
     return body, cached
 
 
@@ -465,12 +502,11 @@ async def _sheet_for(
     for name in names:
         if norm(name) == norm(sheet):
             return name, names
-    raise InvalidInput(
-        _t(
-            lang,
-            f"No sheet {sheet!r}; sheets are {names}.",
-            f"Aucune feuille {sheet!r}; feuilles : {names}.",
-        )
+    raise_localized(
+        InvalidInput,
+        f"No sheet {sheet!r}; sheets are {names}.",
+        f"aucune feuille {sheet!r}; feuilles : {names}.",
+        lang,
     )
 
 
@@ -548,7 +584,7 @@ async def describe_dataset(
             cached=cached,
             freshness=summary.update_frequency,
             as_of=summary.last_updated,
-            limits=_t(
+            limits=pick(
                 lang,
                 f"Distributor names capped at {constants.MAX_LISTED_DISTRIBUTORS}; "
                 f"{constants.MAX_EXAMPLES} example values per field.",
@@ -681,12 +717,11 @@ async def query_dataset(
     lang: str = "en",
 ) -> QueryResult:
     if not 1 <= max_rows <= constants.MAX_ROWS:
-        raise InvalidInput(
-            _t(
-                lang,
-                f"max_rows must be between 1 and {constants.MAX_ROWS}.",
-                f"max_rows doit être entre 1 et {constants.MAX_ROWS}.",
-            )
+        raise_localized(
+            InvalidInput,
+            f"max_rows must be between 1 and {constants.MAX_ROWS}.",
+            f"max_rows doit être entre 1 et {constants.MAX_ROWS}.",
+            lang,
         )
     page, row = await _resolve(dataset, lang)
     summary = _summary(page, row, await _fr_rows(lang), lang)
@@ -707,27 +742,25 @@ async def query_dataset(
         max_rows,
     )
     columns: list[str] = scan["columns"]
-    problems: list[str] = []
+    # Each problem in English and French, so the error reads whole in either language.
+    problems: list[tuple[str, str]] = []
     if scan["unknown_where"] or scan["unknown_fields"]:
         unknown = scan["unknown_where"] + scan["unknown_fields"]
         problems.append(
-            _t(lang, f"No column matches {unknown}.", f"Aucune colonne ne correspond à {unknown}.")
+            (f"No column matches {unknown}.", f"Aucune colonne ne correspond à {unknown}.")
         )
     if not scan["has_company_field"]:
         problems.append(
-            _t(
-                lang,
-                "This file has no company column.",
-                "Ce fichier n'a pas de colonne d'entreprise.",
-            )
+            ("This file has no company column.", "Ce fichier n'a pas de colonne d'entreprise.")
         )
     if not scan["has_year_field"]:
-        problems.append(
-            _t(lang, "This file has no year column.", "Ce fichier n'a pas de colonne d'année.")
-        )
+        problems.append(("This file has no year column.", "Ce fichier n'a pas de colonne d'année."))
     if problems:
-        raise InvalidInput(
-            " ".join(problems) + _t(lang, f" Columns: {columns}.", f" Colonnes : {columns}.")
+        raise_localized(
+            InvalidInput,
+            " ".join(en for en, _ in problems) + f" Columns: {columns}.",
+            _lower_first(" ".join(fr for _, fr in problems)) + f" Colonnes : {columns}.",
+            lang,
         )
     shown = _columns(columns, wanted_fields)
     rows = [{c: record.get(c) for c in shown} for record in scan["rows"]]
@@ -749,7 +782,7 @@ async def query_dataset(
             cached=cached,
             freshness=summary.update_frequency,
             as_of=summary.last_updated,
-            limits=_t(
+            limits=pick(
                 lang,
                 f"First {max_rows} matching rows. Blank values the distributors left were "
                 "published as zeros in many RRR files (as the dataset pages state).",
@@ -805,24 +838,27 @@ async def get_rates(
 ) -> RatesTable:
     spec = constants.RATE_TABLES.get(table)
     if spec is None:
-        raise InvalidInput(
-            _t(
-                lang,
-                f"table must be one of {sorted(constants.RATE_TABLES)}.",
-                f"table doit être l'une de {sorted(constants.RATE_TABLES)}.",
-            )
+        raise_localized(
+            InvalidInput,
+            f"table must be one of {sorted(constants.RATE_TABLES)}.",
+            f"table doit être l'une de {sorted(constants.RATE_TABLES)}.",
+            lang,
         )
     if not 1 <= max_rows <= constants.MAX_ROWS:
-        raise InvalidInput(f"max_rows must be between 1 and {constants.MAX_ROWS}.")
+        raise_localized(
+            InvalidInput,
+            f"max_rows must be between 1 and {constants.MAX_ROWS}.",
+            f"max_rows doit être entre 1 et {constants.MAX_ROWS}.",
+            lang,
+        )
     is_xml = spec["url"].endswith(".xml")
     if distributor and not is_xml:
-        raise InvalidInput(
-            _t(
-                lang,
-                "The Regulated Price Plan tables are province-wide; drop distributor.",
-                "Les grilles tarifaires réglementées valent pour toute la province; retirez "
-                "distributor.",
-            )
+        raise_localized(
+            InvalidInput,
+            "The Regulated Price Plan tables are province-wide; drop distributor.",
+            "les grilles tarifaires réglementées valent pour toute la province; retirez "
+            "distributor.",
+            lang,
         )
     data_file = OebFile(
         index=1,
@@ -849,12 +885,11 @@ async def get_rates(
         max_rows,
     )
     if distributor and not scan["total"]:
-        raise NotFound(
-            _t(
-                lang,
-                f"No distributor in {table} matches {distributor!r}.",
-                f"Aucun distributeur de {table} ne correspond à {distributor!r}.",
-            )
+        raise_localized(
+            NotFound,
+            f"No distributor in {table} matches {distributor!r}.",
+            f"aucun distributeur de {table} ne correspond à {distributor!r}.",
+            lang,
         )
     fields = [
         RateField(
@@ -876,12 +911,12 @@ async def get_rates(
             "RatesTable",
             lang,
             cached=cached,
-            freshness=_t(
+            freshness=pick(
                 lang,
                 "Electricity rates monthly, natural gas quarterly, RPP prices as needed.",
                 "Électricité chaque mois, gaz naturel chaque trimestre, prix de la grille au "
                 "besoin.",
             ),
-            limits=_t(lang, f"First {max_rows} rows.", f"Les {max_rows} premières lignes."),
+            limits=pick(lang, f"First {max_rows} rows.", f"Les {max_rows} premières lignes."),
         ),
     )

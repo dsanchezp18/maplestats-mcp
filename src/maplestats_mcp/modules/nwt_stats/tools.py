@@ -31,14 +31,16 @@ async def nwt_stats_list_files(
     community-data with a statistical profile per community, surveys, and
     more). With `topic`, lists that page's .xlsx and .xls files with the
     agency's own title, the heading above the link (release date, survey,
-    quarter or community) and nearby text. Titles are English only (`lang`
-    changes the topic titles and the licence line).
+    quarter or community) and nearby text. File titles are English only
+    (`lang` changes the topic titles, notes and licence line).
     Keywords: Northwest Territories, NWT, Bureau of Statistics, statsnwt,
     Yellowknife, territorial statistics, Excel tables, topics, census,
     community profile, population, labour force.
-    Mots-clés : Territoires du Nord-Ouest, T.N.-O., Bureau de la statistique,
-    statistiques territoriales, tableaux Excel, sujets, recensement, profil
-    des collectivités, Yellowknife, population, marché du travail.
+    Mots-clés : Territoires du Nord-Ouest, T.N.-O., Bureau de la statistique
+    des Territoires du Nord-Ouest, statistiques territoriales, tableaux
+    Excel, sujets, recensement, profil des collectivités, Yellowknife,
+    estimations de la population, population active, produit intérieur brut,
+    indice des prix à la consommation, état civil.
     """
     return await client.list_files(topic=topic, limit=limit, offset=offset, lang=lang)
 
@@ -66,8 +68,11 @@ async def nwt_stats_search_files(
     CPI, community price index, population by community, census, labour,
     housing, cannabis, Excel.
     Mots-clés : Territoires du Nord-Ouest, chercher un tableau, statistiques
-    des T.N.-O., PIB, IPC, indice des prix des collectivités, population par
-    collectivité, recensement, emploi, logement, cannabis, Excel.
+    des T.N.-O., PIB par industrie, exportations, IPC, indice des prix des
+    collectivités, population par collectivité, naissances et décès,
+    recensement, emploi, rémunération hebdomadaire moyenne, besoins
+    impérieux en matière de logement, criminalité, langues autochtones,
+    ventes d'alcool et de cannabis, fichiers Excel.
     """
     return await client.search_files(query=query, topic=topic, limit=limit, lang=lang)
 
@@ -100,8 +105,8 @@ async def nwt_stats_read_file(
     Keywords: Northwest Territories, NWT, Excel, sheet, workbook, xlsx, xls,
     table rows, header row, GDP, population, CPI, census.
     Mots-clés : Territoires du Nord-Ouest, T.N.-O., fichier Excel, feuille de
-    calcul, classeur, lignes du tableau, ligne d'en-tête, PIB, population,
-    IPC, recensement.
+    calcul, classeur, lire un tableau, lignes du tableau, ligne d'en-tête,
+    filtrer des colonnes, PIB, population, IPC, recensement.
     """
     return await client.read_file(
         url=url,

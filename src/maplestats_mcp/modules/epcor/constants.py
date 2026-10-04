@@ -17,6 +17,9 @@ MEASURES = {
     "SodaDose": ("caustic_soda_dose", "mg/L"),
 }
 
+# French spelling of the units that have one (lang="fr").
+UNITS_FR = {"mg/L as CaCO3": "mg/L en CaCO3"}
+
 RATE_LIMIT_PER_SECOND = 1.0
 RATE_LIMIT_CAPACITY = 3.0
 

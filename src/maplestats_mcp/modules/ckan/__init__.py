@@ -28,7 +28,8 @@ MODULE_DESCRIPTION_FR = (
     "lignes et lecture des fichiers Excel (.xlsx, .xls) et CSV des "
     "ressources sans DataStore (environ la moitié des jeux de données "
     "tabulaires des portails fédéral, ontarien et britanno-colombien; pas "
-    "Toronto, dont le robots.txt interdit le téléchargement des fichiers) : feuilles, ligne d'en-tête devinée, filtres et pagination, "
+    "Toronto, dont le serveur interdit le téléchargement automatisé des fichiers) : "
+    "feuilles, ligne d'en-tête devinée, filtres et pagination, "
     "avec la licence, la source et un avertissement quand la licence n'est "
     "pas ouverte. Les portails sont choisis au moyen d'une clé `portal`."
 )

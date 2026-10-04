@@ -458,3 +458,70 @@ async def test_network_failure_names_the_exception(httpx_mock):
         httpx_mock.add_exception(httpx.ConnectError("connection refused"))
     with pytest.raises(UpstreamUnavailable, match="ConnectError"):
         await client.get_dataset("regina", "anything")
+
+
+# --- French output ------------------------------------------------------------------------
+
+
+async def test_french_errors_use_the_typed_template():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as exc:
+        await client.search_datasets("on", rows=0, lang="fr")
+    assert "rows doit être entre 1 et" in str(exc.value)
+    with pytest.raises(InvalidInput, match="portail CKAN inconnu"):
+        await client.get_dataset("nowhere", "x", lang="fr")
+    with pytest.raises(InvalidInput, match="n'utilise pas les mots-clés CKAN"):
+        await client.list_tags("federal", lang="fr")
+    with pytest.raises(InvalidInput, match="n'a pas d'extension DataStore"):
+        await client.datastore_search("yt", "r1", lang="fr")
+
+
+async def test_english_errors_are_unchanged():
+    with pytest.raises(InvalidInput) as exc:
+        await client.search_datasets("on", rows=0)
+    assert str(exc.value) == f"rows must be between 1 and {constants.SEARCH_ROWS_MAX}, got 0."
+    with pytest.raises(InvalidInput) as exc:
+        await client.list_groups("federal")
+    assert str(exc.value) == (
+        "The 'federal' portal does not use CKAN groups (group_list is empty upstream)."
+    )
+
+
+async def test_french_upstream_404_from_the_portal(httpx_mock):
+    httpx_mock.add_response(status_code=404, json=_error("Not Found Error", "Not found"))
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée"):
+        await client.get_dataset("federal", "missing", lang="fr")
+
+
+async def test_french_dataset_provenance(httpx_mock):
+    httpx_mock.add_response(json=_ok({**_FEDERAL_PACKAGE, "isopen": True}))
+    detail = await client.get_dataset("federal", "fe1b2c3d", lang="fr")
+    assert detail.title == "Liste des organismes de bienfaisance"
+    licence = detail.provenance.licence or ""
+    assert licence.startswith("Licence du jeu de données : Open Government Licence - Canada")
+    assert licence.endswith("Le portail la marque comme ouverte.")
+
+
+async def test_english_dataset_provenance_is_unchanged(httpx_mock):
+    httpx_mock.add_response(json=_ok({**_FEDERAL_PACKAGE, "isopen": True}))
+    detail = await client.get_dataset("federal", "fe1b2c3d")
+    assert detail.provenance.licence == (
+        "Dataset licence: Open Government Licence - Canada. The portal marks it open."
+    )
+
+
+async def test_french_search_coverage_and_limits(httpx_mock):
+    httpx_mock.add_response(
+        json=_ok({"count": 7, "results": [_FEDERAL_PACKAGE]}), is_reusable=True
+    )
+    result = await client.search_datasets("federal", "bienfaisance", lang="fr")
+    assert result.provenance.coverage == "1 résultats renvoyés sur 7 au total"
+    assert result.provenance.limits == f"au plus {constants.SEARCH_ROWS_MAX} résultats par requête"
+    english = await client.search_datasets("federal", "bienfaisance")
+    assert english.provenance.coverage == "1 of 7 total matches returned"
+
+
+def test_french_portal_names():
+    names = {p.portal: p.name for p in client.list_portals("fr").portals}
+    assert names["federal"] == "Portail du gouvernement ouvert (ouvert.canada.ca)"
+    assert names["on"].startswith("Catalogue de données de l'Ontario")
+    assert names["qc"].startswith("Données Québec")

@@ -18,7 +18,7 @@ MODULE_DESCRIPTION_FR = (
     "tableaux mensuels de l'Enquête sur la population active, PIB par industrie et comptes "
     "économiques de la C.-B., indicateurs touristiques mensuels et annuels, estimations et "
     "projections de population, indice des prix à la consommation, faillites, nombre "
-    "d'entreprises, exportations de produits de base, mises en chantier, permis de bâtir. "
+    "d'entreprises, exportations de produits de base, mises en chantier, permis de bâtir (permis de construire). "
     "Les fichiers sont listés à partir de l'organisation BC Stats du catalogue avec les "
     "titres de l'agence, la licence et la fréquence de mise à jour, puis lus feuille par "
     "feuille (ligne d'en-tête devinée, filtre de texte facultatif, pagination). Les feuilles "

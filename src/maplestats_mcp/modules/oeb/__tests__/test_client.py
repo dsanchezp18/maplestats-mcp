@@ -424,3 +424,58 @@ def test_docstrings_have_use_for_and_bilingual_keywords():
         french = doc.split("Mots-clés :")[1]
         assert len([k for k in english.split(",") if k.strip()]) >= 8
         assert len([k for k in french.split(",") if k.strip()]) >= 8
+
+
+def _mock_french_listing(httpx_mock) -> None:
+    httpx_mock.add_response(
+        url=LISTING_FR,
+        text=_listing(
+            _row(
+                "fiabilite",
+                "Indicateurs de fiabilité du système",
+                "Fiabilité.",
+                "Chaque année",
+                "/fr/donnees-ouvertes/",
+            ),
+            yearbook=False,
+        ),
+        is_reusable=True,
+    )
+
+
+async def test_bad_rate_table_in_french():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as excinfo:
+        await client.get_rates("water", lang="fr")
+    assert "table doit être l'une de" in str(excinfo.value)
+
+
+async def test_unknown_column_in_french(httpx_mock):
+    _mock_catalogue(httpx_mock)
+    _mock_french_listing(httpx_mock)
+    httpx_mock.add_response(url=REL_URL, content=ACCESS_XML)
+    with pytest.raises(InvalidInput, match="aucune colonne ne correspond") as excinfo:
+        await tools.oeb_query_dataset(REL_SLUG, where={"colour": "blue"}, lang="fr")
+    assert str(excinfo.value).startswith("Entrée invalide")
+    assert "Total SAIDI" in str(excinfo.value)
+
+
+async def test_query_provenance_in_french(httpx_mock):
+    _mock_catalogue(httpx_mock)
+    _mock_french_listing(httpx_mock)
+    httpx_mock.add_response(url=REL_URL, content=ACCESS_XML)
+    result = await tools.oeb_query_dataset(REL_SLUG, max_rows=5, lang="fr")
+    assert result.provenance.licence is not None
+    assert "Licence du gouvernement ouvert – Ontario" in result.provenance.licence
+    assert result.provenance.limits is not None
+    assert result.provenance.limits.startswith("Les 5 premières lignes correspondantes.")
+
+
+async def test_query_provenance_english_unchanged(httpx_mock):
+    _mock_catalogue(httpx_mock)
+    httpx_mock.add_response(url=REL_URL, content=ACCESS_XML)
+    result = await tools.oeb_query_dataset(REL_SLUG, max_rows=5)
+    assert result.provenance.licence == constants.LICENCE
+    assert result.provenance.limits == (
+        "First 5 matching rows. Blank values the distributors left were published as zeros "
+        "in many RRR files (as the dataset pages state)."
+    )

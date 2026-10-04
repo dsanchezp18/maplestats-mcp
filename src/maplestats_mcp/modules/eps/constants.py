@@ -12,6 +12,10 @@ DATASET_COVERAGE = {
     "current": "rolling ~12 months to the last refresh",
     "2023": "calendar year 2023 only",
 }
+DATASET_COVERAGE_FR = {
+    "current": "environ 12 mois glissants jusqu'à la dernière mise à jour",
+    "2023": "année civile 2023 seulement",
+}
 LOAD_DATE_URL = f"{SERVICES_ROOT}/FME_Load_Date/FeatureServer/0"
 
 # No published limit; Esri's hosted services are generous, but keep this

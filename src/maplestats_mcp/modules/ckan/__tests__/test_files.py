@@ -474,3 +474,40 @@ def test_sheet_sizes_that_are_formatting_never_pick_a_sheet():
         "Data",
         "largest",
     )
+
+
+# --- French output -----------------------------------------------------------------------
+
+
+async def test_french_paging_error_and_toronto_reason():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as exc:
+        await files.read_resource("federal", RES, limit=0, lang="fr")
+    assert "limit doit être entre 1 et" in str(exc.value)
+    with pytest.raises(InvalidInput, match="lecteur de fichiers CKAN") as exc:
+        await files.describe_resource("toronto", RES, lang="fr")
+    assert "agents automatisés" in str(exc.value)
+
+
+async def test_french_citation_freshness_and_limits(httpx_mock):
+    _mock_api(httpx_mock, _resource(FED_FILE))
+    httpx_mock.add_response(url=FED_FILE, content=b"FSA,Montant\nH2X,1200\nM5V,3400\nK1A,5600\n")
+    result = await files.read_resource("federal", RES, limit=1, lang="fr")
+    assert result.source.citation.startswith("Source : Canada Revenue Agency, « ")
+    assert "Licence : Open Government Licence - Canada" in result.source.citation
+    assert "modifié le 2026-08-01" in result.source.citation
+    assert (result.provenance.freshness or "").startswith("Fichier modifié le 2026-08-01;")
+    assert result.provenance.limits == "lignes 1 à 1 sur 3"
+    assert "feuille 'csv' sur 1" in (result.provenance.coverage or "")
+
+
+async def test_english_citation_is_unchanged(httpx_mock):
+    _mock_api(httpx_mock, _resource(FED_FILE))
+    httpx_mock.add_response(url=FED_FILE, content=b"FSA,Montant\nH2X,1200\n")
+    result = await files.read_resource("federal", RES)
+    assert result.source.citation == (
+        "Source: Canada Revenue Agency, “Tax statistics”, "
+        f"https://open.canada.ca/data/en/dataset/{PKG}. Licence: Open Government Licence - "
+        "Canada (ca-ogl-lgo), modified 2026-08-01."
+    )
+    hours = constants.FILE_CACHE_TTL_SECONDS // 3600
+    assert result.provenance.freshness == f"File modified 2026-08-01; cached up to {hours} hours."

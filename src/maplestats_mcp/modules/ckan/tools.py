@@ -37,7 +37,7 @@ from maplestats_mcp.modules.ckan.schemas import (
     ResourceDetail,
     TagList,
 )
-from maplestats_mcp.shared.envelope import raise_error
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
@@ -54,8 +54,11 @@ async def ckan_list_portals(lang: Lang = "en") -> PortalList:
     Territories), yt (Yukon), montreal, toronto, regina.
     Keywords: CKAN, open data portal, catalogue, federal, provincial,
     territorial, municipal, city, list portals.
-    Mots-clés : CKAN, portail de données ouvertes, catalogue, fédéral,
-    provincial, territorial, municipal, ville, liste des portails.
+    Mots-clés : CKAN, portail de données ouvertes, catalogue de données,
+    liste des portails, Portail du gouvernement ouvert, ouvert.canada.ca,
+    Catalogue de données de l'Ontario, Données Québec, données ouvertes de
+    Montréal, Colombie-Britannique, Territoires du Nord-Ouest, Yukon,
+    fédéral, provincial, territorial, municipal, ville.
     """
     return client.list_portals(lang)
 
@@ -83,8 +86,9 @@ async def ckan_search_datasets(
     Keywords: CKAN, open data, dataset search, catalogue, government,
     federal, provincial, municipal, package_search, discover, browse.
     Mots-clés : CKAN, données ouvertes, recherche de jeux de données,
-    catalogue, gouvernement, fédéral, provincial, municipal, découvrir,
-    parcourir, filtre.
+    trouver un jeu de données, catalogue de données, gouvernement ouvert,
+    ouvert.canada.ca, Données Québec, Ville de Montréal, Ville de Toronto,
+    fédéral, provincial, municipal, découvrir, parcourir, filtre.
     """
     return await client.search_datasets(
         portal, query, fq=fq, rows=rows, start=start, sort=sort, lang=lang
@@ -102,8 +106,9 @@ async def ckan_get_dataset(portal: PortalKey, dataset_id: str, lang: Lang = "en"
     querying rows with ckan_datastore_search.
     Keywords: CKAN, dataset detail, package_show, resources, download,
     metadata, license, open data.
-    Mots-clés : CKAN, détail du jeu de données, ressources, téléchargement,
-    métadonnées, licence, données ouvertes, jeu de données.
+    Mots-clés : CKAN, détail du jeu de données, fiche du jeu de données,
+    ressources, liens de téléchargement, télécharger les données,
+    métadonnées, licence, éditeur, date de mise à jour, données ouvertes.
     """
     return await client.get_dataset(portal, dataset_id, lang)
 
@@ -118,7 +123,8 @@ async def ckan_list_organizations(portal: PortalKey, lang: Lang = "en") -> Organ
     Keywords: CKAN, organizations, publishers, departments, agencies,
     ministries, open data, catalogue.
     Mots-clés : CKAN, organisations, éditeurs, ministères, organismes,
-    données ouvertes, catalogue, producteurs de données.
+    organismes publics, ministères fédéraux, producteurs de données,
+    liste des éditeurs, données ouvertes, catalogue.
     """
     return await client.list_organizations(portal, lang)
 
@@ -133,8 +139,9 @@ async def ckan_get_resource(
     it has a queryable DataStore table (`datastore_active`).
     Keywords: CKAN, resource, file, download URL, format, datastore, data
     file, CSV.
-    Mots-clés : CKAN, ressource, fichier, URL de téléchargement, format,
-    fichier de données, CSV, magasin de données.
+    Mots-clés : CKAN, ressource, fichier de données, lien de
+    téléchargement, URL du fichier, format du fichier, taille du fichier,
+    CSV, DataStore, magasin de données.
     """
     return await client.get_resource(portal, resource_id, lang)
 
@@ -146,9 +153,9 @@ async def ckan_list_licenses(portal: PortalKey, lang: Lang = "en") -> LicenseLis
     Use for: explaining what a dataset's `license_id` permits.
     Keywords: CKAN, license, licence, open government licence, terms of use,
     open data, reuse, copyright.
-    Mots-clés : CKAN, licence, licence du gouvernement ouvert, conditions
-    d'utilisation, données ouvertes, réutilisation, droit d'auteur, licence
-    ouverte.
+    Mots-clés : CKAN, licence, licence du gouvernement ouvert, licence
+    ouverte, conditions d'utilisation, droit d'auteur, réutilisation des
+    données, Creative Commons, données ouvertes.
     """
     return await client.list_licenses(portal, lang)
 
@@ -163,8 +170,9 @@ async def ckan_list_tags(portal: PortalKey, query: str | None = None, lang: Lang
     `keywords` via ckan_get_dataset instead).
     Keywords: CKAN, tags, keywords, vocabulary, subjects, open data, browse,
     topics.
-    Mots-clés : CKAN, mots-clés, étiquettes, vocabulaire, sujets, données
-    ouvertes, parcourir, thèmes.
+    Mots-clés : CKAN, mots-clés, étiquettes, vocabulaire, liste des
+    mots-clés, sujets, thèmes, filtrer par mot-clé, données ouvertes,
+    parcourir.
     """
     return await client.list_tags(portal, query, lang)
 
@@ -178,8 +186,9 @@ async def ckan_list_groups(portal: PortalKey, lang: Lang = "en") -> GroupList:
     which do not use CKAN groups.
     Keywords: CKAN, groups, themes, topics, categories, open data, browse,
     catalogue.
-    Mots-clés : CKAN, groupes, thèmes, sujets, catégories, données ouvertes,
-    parcourir, catalogue.
+    Mots-clés : CKAN, groupes, groupes thématiques, thèmes, sujets,
+    catégories, santé, transport, parcourir par thème, données ouvertes,
+    catalogue.
     """
     return await client.list_groups(portal, lang)
 
@@ -214,11 +223,11 @@ async def ckan_get_organization_or_group(
     elif kind == "group":
         detail = await client.get_group(portal, collection_id, lang)
     else:
-        raise_error(
+        raise_localized(
             InvalidInput,
-            "error.invalid_input",
+            "Invalid input: ckan: kind must be 'organization' or 'group'.",
+            "ckan : kind doit être 'organization' ou 'group'.",
             lang,
-            detail="ckan: kind must be 'organization' or 'group'.",
         )
     return CollectionDetail(kind=kind, **detail.model_dump())
 
@@ -245,12 +254,12 @@ async def ckan_datastore_search(
     e.g. {"Year": "2024"}; `query` is full-text (rejected on federal
     resources over 100,000 rows — use `filters`). `sort` e.g.
     "Year desc"; `fields` a comma-separated column list; `limit` ≤ 1000.
-    Rows are returned as published, so `lang` has no effect.
+    Rows are returned as published; `lang` sets the language of messages.
     Keywords: CKAN, datastore, rows, records, table, query, filter, data.
-    Mots-clés : CKAN, magasin de données, lignes, enregistrements,
-    tableau, requête, filtre, données.
+    Mots-clés : CKAN, DataStore, magasin de données, lignes,
+    enregistrements, tableau de données, interroger un tableau, requête,
+    filtrer les lignes, recherche plein texte, données tabulaires.
     """
-    del lang
     return await client.datastore_search(
         portal,
         resource_id,
@@ -260,6 +269,7 @@ async def ckan_datastore_search(
         fields=fields,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -290,9 +300,10 @@ async def ckan_describe_resource(
     Cached 2 hours; the portal's robots.txt crawl delay applies to API calls.
     Keywords: CKAN, resource file, Excel, xlsx, xls, CSV, sheets, columns, header
     row, file-only dataset, open.canada.ca, Ontario, BC, licence.
-    Mots-clés : CKAN, ressource, fichier Excel, xlsx, xls, CSV, feuilles, colonnes,
-    ligne d'en-tête, jeu de données sans DataStore, ouvert.canada.ca, Ontario,
-    Colombie-Britannique, licence.
+    Mots-clés : CKAN, ressource, fichier Excel, classeur, xlsx, xls, CSV,
+    feuilles, onglets, colonnes, ligne d'en-tête, aperçu du fichier, jeu de
+    données sans DataStore, ouvert.canada.ca, Ontario, Colombie-Britannique,
+    licence.
     """
     return await files.describe_resource(portal, resource_id, sheet, lang)
 
@@ -338,9 +349,10 @@ async def ckan_read_resource(
     licence stated). Files over 40 MB are refused.
     Keywords: CKAN, read file, Excel, xlsx, xls, CSV, rows, filter, file-only dataset,
     wastewater, tax statistics, FSA, salmon, insolvency, budget, tourism.
-    Mots-clés : CKAN, lire un fichier, Excel, xlsx, xls, CSV, lignes, filtre, jeu de
-    données sans DataStore, eaux usées, statistiques fiscales, RTA, saumon,
-    insolvabilité, budget, tourisme.
+    Mots-clés : CKAN, lire un fichier, fichier Excel, classeur, xlsx, xls, CSV,
+    lignes, filtre, jeu de données sans DataStore, eaux usées, statistiques
+    fiscales, allocation canadienne pour enfants, RTA, saumon, insolvabilité,
+    travailleurs étrangers temporaires, budget, tourisme.
     """
     return await files.read_resource(
         portal,

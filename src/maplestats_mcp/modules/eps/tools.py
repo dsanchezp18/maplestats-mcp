@@ -47,9 +47,10 @@ async def eps_list_occurrences(
     Keywords: Edmonton, police, EPS, crime, occurrences, incidents,
     assault, theft, break and enter, property crime, community safety,
     crime map, intersection.
-    Mots-clés : Edmonton, police, SPE, criminalité, incidents,
-    infractions, voies de fait, vol, introduction par effraction,
-    sécurité communautaire, carte de la criminalité, intersection.
+    Mots-clés : Edmonton, Service de police d'Edmonton, police,
+    criminalité, crimes, incidents signalés, infractions, voies de fait,
+    vol, introduction par effraction, crimes contre les biens, sécurité
+    communautaire, carte de la criminalité, intersection.
     """
     return await client.list_occurrences(
         dataset,
@@ -92,10 +93,11 @@ async def eps_summarize_occurrences(
     Keywords: Edmonton, police, EPS, crime statistics, crime trends,
     monthly crime, offence types, hotspots, counts, community safety,
     violent crime, property crime.
-    Mots-clés : Edmonton, police, SPE, statistiques de criminalité,
-    tendances, criminalité mensuelle, types d'infractions, points chauds,
-    dénombrement, sécurité communautaire, crimes violents, crimes contre
-    les biens.
+    Mots-clés : Edmonton, Service de police d'Edmonton, police,
+    statistiques de criminalité, taux de criminalité, tendances de la
+    criminalité, criminalité mensuelle, types d'infractions, points
+    chauds, nombre d'incidents, sécurité communautaire, crimes violents,
+    crimes contre les biens.
     """
     return await client.summarize_occurrences(
         dataset,
@@ -119,8 +121,9 @@ async def eps_get_last_load_date(lang: Lang = "en") -> LoadDate:
     Use for: checking how current EPS crime data is before analysing it.
     Keywords: Edmonton, police, EPS, data freshness, last updated,
     refresh date, community safety, crime data, load date.
-    Mots-clés : Edmonton, police, SPE, fraîcheur des données, dernière
-    mise à jour, date d'actualisation, sécurité communautaire, données
-    sur la criminalité.
+    Mots-clés : Edmonton, Service de police d'Edmonton, police,
+    fraîcheur des données, dernière mise à jour, date de mise à jour,
+    date de chargement, sécurité communautaire, données sur la
+    criminalité.
     """
     return await client.get_last_load_date(lang=lang)

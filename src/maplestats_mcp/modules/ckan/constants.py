@@ -78,13 +78,14 @@ class Portal:
     # Set when the file reader must not read this portal's files (the reason is
     # given to the caller); the catalogue and DataStore tools still work.
     file_reader_off_reason: str | None = None
+    file_reader_off_reason_fr: str | None = None
 
 
 PORTALS: dict[str, Portal] = {
     "federal": Portal(
         base_url="https://open.canada.ca/data/api/3/action/",
         name_en="Government of Canada Open Data (open.canada.ca)",
-        name_fr="Données ouvertes du gouvernement du Canada (ouvert.canada.ca)",
+        name_fr="Portail du gouvernement ouvert (ouvert.canada.ca)",
         dataset_url="https://open.canada.ca/data/{lang}/dataset/{id}",
         organization_url="https://open.canada.ca/data/{lang}/organization/{id}",
         content_language="bilingual",
@@ -281,6 +282,12 @@ PORTALS: dict[str, Portal] = {
             "Toronto's CKAN host disallows /dataset/*/resource/*/download/* for all crawlers "
             "in its robots.txt, so this server does not download its files. Rows of resources "
             "with an active DataStore can be read with ckan_datastore_search."
+        ),
+        file_reader_off_reason_fr=(
+            "le serveur CKAN de Toronto interdit à tous les agents automatisés le chemin "
+            "/dataset/*/resource/*/download/*; ce serveur ne télécharge donc pas ses fichiers. "
+            "Les lignes des ressources dont le DataStore est actif se lisent avec "
+            "ckan_datastore_search."
         ),
     ),
     "regina": Portal(

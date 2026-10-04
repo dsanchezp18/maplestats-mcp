@@ -35,8 +35,9 @@ async def socrata_list_portals(lang: Lang = "en") -> PortalList:
     Keywords: Socrata, SODA, open data portal, Nova Scotia, New
     Brunswick, Calgary, Edmonton, Winnipeg, list portals.
     Mots-clés : Socrata, SODA, portail de données ouvertes,
-    Nouvelle-Écosse, Nouveau-Brunswick, Calgary, Edmonton, Winnipeg,
-    liste des portails.
+    Nouvelle-Écosse, Nouveau-Brunswick, Ville de Calgary, Ville
+    d'Edmonton, Ville de Winnipeg, données municipales, données
+    provinciales, liste des portails.
     """
     return client.list_portals(lang)
 
@@ -59,7 +60,8 @@ async def socrata_search_datasets(
     government, province, city, category, tags.
     Mots-clés : Nouvelle-Écosse, Nouveau-Brunswick, Calgary, Edmonton,
     Winnipeg, données ouvertes, Socrata, recherche de jeux de données,
-    catalogue, gouvernement, province, ville, catégorie, étiquettes.
+    catalogue, gouvernement, province, ville, catégorie, étiquettes,
+    permis de construire, évaluation foncière, collisions, criminalité.
     """
     return await client.search_datasets(
         portal, query, category=category, tag=tag, limit=limit, offset=offset, lang=lang
@@ -77,7 +79,8 @@ async def socrata_get_dataset(
     dataset detail, columns, metadata, licence, publisher, download,
     CSV, views, Nova Scotia, New Brunswick, Calgary, Edmonton, Winnipeg.
     Mots-clés : Socrata, détail du jeu de données, colonnes,
-    métadonnées, licence, éditeur, téléchargement, CSV, vues.
+    métadonnées, licence, éditeur, téléchargement, CSV, vues,
+    Nouvelle-Écosse, Nouveau-Brunswick, Calgary, Edmonton, Winnipeg.
     """
     return await client.get_dataset(portal, dataset_id, lang)
 
@@ -124,8 +127,9 @@ async def socrata_list_categories(portal: PortalKey, lang: Lang = "en") -> Categ
     Use for: discovering topic categories before filtering search.
     Keywords: Socrata, categories, domain_category, catalogue, open data,
     topics, classification, themes.
-    Mots-clés : Socrata, catégories, domaine, catalogue, données ouvertes,
-    sujets, classification, thèmes.
+    Mots-clés : Socrata, catégories, catalogue, données ouvertes,
+    sujets, classification, thèmes, thématiques, catégories de jeux de
+    données.
     """
     return await client.list_categories(portal, lang)
 
@@ -138,6 +142,7 @@ async def socrata_list_tags(portal: PortalKey, lang: Lang = "en") -> TagList:
     Keywords: Socrata, tags, domain_tags, keywords, vocabulary,
     catalogue, search, discover.
     Mots-clés : Socrata, étiquettes, mots-clés, vocabulaire, catalogue,
-    recherche, découvrir, terminologie.
+    recherche, terminologie, étiquettes de jeux de données, données
+    ouvertes.
     """
     return await client.list_tags(portal, lang)

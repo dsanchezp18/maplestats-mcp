@@ -350,3 +350,38 @@ async def test_out_of_range_paging_is_rejected_before_any_request():
         await client.summarize_occurrences(top=0)
     with pytest.raises(InvalidInput, match="end_date"):
         await client.summarize_occurrences(end_date="28/09/2026")
+
+
+def test_build_where_bad_date_in_french():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as excinfo:
+        client.build_where(start_date="2026/09/01", lang="fr")
+    assert "date ISO (AAAA-MM-JJ)" in str(excinfo.value)
+
+
+async def test_invalid_limit_in_french():
+    with pytest.raises(InvalidInput, match="limit doit être compris entre 1 et 500"):
+        await client.list_occurrences(limit=0, lang="fr")
+
+
+async def test_summary_provenance_in_french(httpx_mock):
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 0})
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"features": []})
+    result = await client.summarize_occurrences(top=5, lang="fr")
+    assert result.provenance.freshness is not None
+    assert "mis à jour chaque jour par le Service de police" in result.provenance.freshness
+    assert result.provenance.coverage is not None
+    assert "12 mois glissants" in result.provenance.coverage
+    assert result.provenance.limits == "au plus 5 groupes renvoyés"
+    assert result.provenance.licence is not None
+    assert "Service de police d'Edmonton" in result.provenance.licence
+
+
+async def test_summary_provenance_english_unchanged(httpx_mock):
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 0})
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"features": []})
+    result = await client.summarize_occurrences(top=5)
+    assert result.provenance.freshness == (
+        "refreshed daily by EPS with a 24-48 hour publication delay"
+    )
+    assert result.provenance.coverage == "rolling ~12 months to the last refresh"
+    assert result.provenance.limits == "at most 5 groups returned"

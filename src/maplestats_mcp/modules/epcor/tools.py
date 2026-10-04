@@ -30,8 +30,9 @@ async def epcor_get_daily_water_quality(
     Keywords: Edmonton, EPCOR, drinking water, water quality, hardness,
     pH, chlorine, chloramine, conductivity, alkalinity, treatment plant,
     Rossdale, E.L. Smith.
-    Mots-clés : Edmonton, EPCOR, eau potable, qualité de l'eau, dureté,
-    pH, chlore, chloramine, conductivité, alcalinité, usine de
-    traitement, Rossdale.
+    Mots-clés : Edmonton, EPCOR, eau potable, eau du robinet, qualité de
+    l'eau, dureté de l'eau, pH, chlore résiduel, chloramine, température
+    de l'eau, conductivité, alcalinité, soude caustique, usine de
+    traitement de l'eau, Rossdale, E.L. Smith.
     """
     return await client.get_daily_water_quality(plant, lang=lang)

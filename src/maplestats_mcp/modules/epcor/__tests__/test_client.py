@@ -200,3 +200,37 @@ async def test_error_page_without_spans_is_upstream_error_and_not_cached(httpx_m
         await client.get_daily_water_quality("els")
     result = await client.get_daily_water_quality("els")
     assert len(result.readings) == 2
+
+
+async def test_unknown_plant_raises_in_french():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as excinfo:
+        await client.get_daily_water_quality("gold_bar", lang="fr")  # type: ignore[arg-type]
+    assert "plant doit être l'une des valeurs" in str(excinfo.value)
+
+
+async def test_french_provenance_units_and_licence(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.DAILY_URL}?zone=ELS", text=_DAILY_PAGE)
+    result = await client.get_daily_water_quality("els", lang="fr")
+    assert result.provenance.freshness is not None
+    assert "données de surveillance non validées" in result.provenance.freshness
+    assert result.provenance.limits is not None
+    assert "robinet" in result.provenance.limits
+    assert result.units["total_hardness"] == "mg/L en CaCO3"
+    assert result.provenance.licence is not None
+    assert result.provenance.licence.startswith("Conditions non précisées")
+
+
+async def test_english_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.DAILY_URL}?zone=ELS", text=_DAILY_PAGE)
+    result = await client.get_daily_water_quality("els")
+    assert result.provenance.freshness == (
+        "daily averages, last 7 days; unvalidated monitoring data"
+    )
+    assert result.provenance.limits == "values leave the treatment plant; tap values can differ"
+    assert result.units["total_hardness"] == "mg/L as CaCO3"
+
+
+async def test_404_in_french(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.DAILY_URL}?zone=ELS", status_code=404)
+    with pytest.raises(UpstreamError, match="La source amont"):
+        await client.get_daily_water_quality("els", lang="fr")

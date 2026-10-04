@@ -130,3 +130,35 @@ async def test_alert_text_route_match_is_whole_number(httpx_mock):
     httpx_mock.add_response(url=constants.FEEDS["alerts"], content=_alerts_payload())
     result = await client.get_service_alerts(route_id="12")
     assert result.alerts == []
+
+
+async def test_stop_predictions_filter_error_in_french():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as excinfo:
+        await client.get_stop_predictions(lang="fr")
+    assert "indiquez stop_id, route_id ou les deux" in str(excinfo.value)
+
+
+async def test_garbage_payload_in_french(httpx_mock):
+    httpx_mock.add_response(url=constants.FEEDS["alerts"], content=b"<html>maintenance</html>")
+    with pytest.raises(UpstreamError, match="flux GTFS-RT valide"):
+        await client.get_service_alerts(lang="fr")
+
+
+async def test_alerts_provenance_in_french(httpx_mock):
+    httpx_mock.add_response(url=constants.FEEDS["alerts"], content=_alerts_payload())
+    result = await client.get_service_alerts(lang="fr")
+    assert result.provenance.freshness is not None
+    assert result.provenance.freshness.startswith("temps réel")
+    assert result.provenance.limits is not None
+    assert "en anglais seulement" in result.provenance.limits
+    assert result.provenance.licence is not None
+    assert "Ville d'Edmonton" in result.provenance.licence
+
+
+async def test_alerts_provenance_english_unchanged(httpx_mock):
+    httpx_mock.add_response(url=constants.FEEDS["alerts"], content=_alerts_payload())
+    result = await client.get_service_alerts()
+    assert result.provenance.freshness == (
+        "real-time; ETS regenerates each feed about every 30 seconds"
+    )
+    assert result.provenance.limits is None

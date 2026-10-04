@@ -85,33 +85,36 @@ def t(key: str, lang: str = "en", **kwargs: Any) -> str:
     entry = LABELS.get(key)
     if entry is None:
         return key
-    template = entry.get(normalize_lang(lang), entry.get("en", key))
-    return template.format(**kwargs)
+    french = normalize_lang(lang) == "fr" and "fr" in entry
+    text = (entry["fr"] if french else entry.get("en", key)).format(**kwargs)
+    return french_spacing(text) if french else text
 
 
-# French typography, the same marks scripts/build_site.py spaces on the
-# website: a no-break space before a colon and inside « », a narrow
-# no-break space before ; ? ! and %. URLs are left alone ("https://",
-# "?zone=", "%20").
-NBSP, NNBSP = " ", " "
+# French typography: a no-break space (U+00A0) before : ; ? ! % and » and
+# after «. Idempotent; URLs are left alone ("https://", "?zone=", "%20").
+NBSP = "\u00a0"
 _URL = re.compile(r"https?://\S+")
-_SPACED = (
-    (re.compile(r"(\S)[   ]?([;?!]+)(?=[\s)»]|$)"), NNBSP),
-    (re.compile(r"(\S)[   ]?(:)(?=\s|$)"), NBSP),
-    (re.compile(r"(\S)[   ]?(»)"), NBSP),
+_BEFORE = re.compile(
+    r"(\S)[ \u00a0\u202f]?([;?!]+)(?=[\s)»]|$)|(\S)[ \u00a0\u202f]?([:»])(?=\s|$|[.,)])"
 )
-_OPEN_QUOTE = re.compile(r"«[   ]?(?=\S)")
-_PERCENT = re.compile(r"(\d)[   ]?%")
+_OPEN_QUOTE = re.compile(r"«[ \u00a0\u202f]?(?=\S)")
+_PERCENT = re.compile(r"(\d)[ \u00a0\u202f]?%")
 
 
 def _space_marks(text: str) -> str:
-    for pattern, space in _SPACED:
-        text = pattern.sub(lambda m, s=space: f"{m.group(1)}{s}{m.group(2)}", text)
+    text = _BEFORE.sub(
+        lambda m: (
+            f"{m.group(1)}{NBSP}{m.group(2)}"
+            if m.group(1) is not None
+            else f"{m.group(3)}{NBSP}{m.group(4)}"
+        ),
+        text,
+    )
     text = _OPEN_QUOTE.sub("«" + NBSP, text)
-    return _PERCENT.sub(r"\1" + NNBSP + "%", text)
+    return _PERCENT.sub(r"\1" + NBSP + "%", text)
 
 
-def fr_typography(text: str) -> str:
+def french_spacing(text: str) -> str:
     """Space French punctuation in `text` (idempotent), leaving URLs as they are."""
     out, pos = [], 0
     for match in _URL.finditer(text):
@@ -122,6 +125,9 @@ def fr_typography(text: str) -> str:
     return "".join(out)
 
 
+fr_typography = french_spacing  # TEMP alias, removed before commit
+
+
 def pick(lang: str | None, en: str, fr: str) -> str:
     """`en` as written, or `fr` with French typography when `lang` is French.
 
@@ -129,7 +135,7 @@ def pick(lang: str | None, en: str, fr: str) -> str:
     coverage and limits, field descriptions), so the English output stays
     exactly as it was.
     """
-    return fr_typography(fr) if normalize_lang(lang) == "fr" else en
+    return french_spacing(fr) if normalize_lang(lang) == "fr" else en
 
 
 def register(labels: dict[str, dict[str, str]]) -> None:

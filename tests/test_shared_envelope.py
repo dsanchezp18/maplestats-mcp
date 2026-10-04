@@ -59,7 +59,7 @@ def test_french_provenance_has_french_shared_phrases():
         lang="fr",
     )
     assert prov.licence is not None
-    assert prov.licence.startswith("Source : Statistique Canada.")
+    assert prov.licence.startswith("Source\u00a0: Statistique Canada.")
     assert "https://www.statcan.gc.ca/fr/reference/licence" in prov.licence
     assert "approuvées par Statistique Canada" in prov.licence
     assert "reproduce_code" in prov.reproduce and "appelez" in prov.reproduce
@@ -72,7 +72,7 @@ def test_english_provenance_is_unchanged_by_default():
 
 
 def test_raise_typed_picks_the_class_template():
-    with pytest.raises(NotFound, match="^Aucune correspondance trouvée : rien$"):
+    with pytest.raises(NotFound, match="^Aucune correspondance trouvée\u00a0: rien$"):
         raise_typed(NotFound, "rien", lang="fr")
     with pytest.raises(InvalidInput, match="^Invalid input: bad$"):
         raise_typed(InvalidInput, "bad")
