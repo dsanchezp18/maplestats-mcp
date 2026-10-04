@@ -54,6 +54,9 @@ CASES = [
     ("BC Stats Excel workbook list British Columbia", "bc_stats_list_files"),
     ("Open Alberta Excel CSV dataset files AISH caseload", "ab_opendata_search_datasets"),
     ("read rows of an Open Alberta xlsx file", "ab_opendata_read_resource"),
+    ("NPRI pollutant releases by facility mercury Ontario", "eccc_datamart_npri_facilities"),
+    ("largest greenhouse gas emitters facility GHGRP Alberta", "eccc_datamart_ghgrp_facilities"),
+    ("browse ECCC data catalogue folder files", "eccc_datamart_browse"),
     ("read the Excel file of an open.canada.ca resource with no DataStore", "ckan_read_resource"),
     ("sheets and columns of the xlsx file behind a CKAN resource", "ckan_describe_resource"),
     ("Edmonton bus real-time arrivals", "ets_get_stop_predictions"),
@@ -62,6 +65,7 @@ CASES = [
     ("small town transit agencies Canada national GTFS database", "transit_list_national_agencies"),
     ("Edmonton crime occurrences", "eps_list_occurrences"),
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
+    ("MLS home price index CREA download", "crea_get_hpi_links"),
     ("Ontario electricity demand by hour", "electricity_ontario_get_hourly_demand"),
     ("Hydro-Quebec electricity demand right now", "electricity_quebec_get_demand"),
     ("Quebec electricity exports to New York", "electricity_quebec_get_trade"),
@@ -88,6 +92,9 @@ CASES = [
     ("seedlings planted forestry data comments", "nfd_table_comments"),
     ("milk class prices dairy", "cdc_get_component_prices"),
     ("animal disease cases CFIA", "cfia_disease_detections"),
+    ("NWT Bureau of Statistics topics", "nwt_stats_list_files"),
+    ("Northwest Territories community price index table", "nwt_stats_search_files"),
+    ("read NWT Bureau of Statistics Excel sheet", "nwt_stats_read_file"),
     ("chronic disease prevalence public health", "phac_infobase_list_datasets"),
     ("federal departmental spending InfoBase", "gc_infobase_query"),
     ("energy use by sector NRCan", "nrcan_energy_use_list_tables"),
@@ -109,6 +116,11 @@ CASES = [
     ("is it going to snow tomorrow in Winnipeg forecast", "eccc_query_items"),
     ("air quality health index Toronto", "eccc_query_items"),
     ("historical daily temperature climate station", "eccc_query_items"),
+    (
+        "projected temperature in Edmonton in 2050 under a high emissions scenario",
+        "eccc_coverages_get_data",
+    ),
+    ("which climate projection datasets have SSP5-8.5 scenarios", "eccc_coverages_search"),
     ("is this company incorporated federally", "ised_corporations_get_corporation"),
     ("spectrum licences held by Rogers", "ised_spectrum_query_licences"),
     ("patent search by keyword", "ised_ip_horizons_search_patents"),
@@ -167,6 +179,13 @@ CASES = [
     ("find a dataflow in the energy information space", "sdmx_space_list_flows"),
     ("air pollutants black carbon emissions inventory", "sdmx_space_search"),
     ("browse dimensions and codes of an SDMX dataflow in CCEI", "sdmx_space_get_structure"),
+    ("how does Canada compare with G7 countries on GDP per capita", "worldbank_get_canada_series"),
+    ("World Bank development indicator code search", "worldbank_search_indicators"),
+    # Ontario Energy Board open data, 2026-10-03.
+    ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
+    ("Ontario time-of-use electricity prices history", "oeb_rates"),
+    ("Ontario Energy Board open data datasets", "oeb_list_datasets"),
+    ("which fields does an OEB RRR file have", "oeb_describe_dataset"),
 ]
 
 

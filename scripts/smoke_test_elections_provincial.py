@@ -1,4 +1,4 @@
-"""Live smoke test for provincial general election results (QC, AB, BC, SK).
+"""Live smoke test for provincial general election results (QC, AB, BC, SK, MB).
 
 Every general election must reconcile with the legislature's seat count and, for
 the newest of each province, with the known seats by party.
@@ -21,6 +21,13 @@ KNOWN_SEATS: dict[tuple[str, str], dict[str, int]] = {
     ("sk", "2020-10-26"): {"Saskatchewan Party": 48, "New Democratic": 13},
     ("sk", "2016-04-04"): {"Saskatchewan Party": 51, "New Democratic": 10},
     ("sk", "2011-11-07"): {"Saskatchewan Party": 49, "New Democratic": 9},
+    ("mb", "2023-10-03"): {"New Democratic": 34, "Progressive Conservative": 22, "Liberal": 1},
+    ("mb", "2019-09-10"): {"Progressive Conservative": 36, "New Democratic": 18, "Liberal": 3},
+    ("mb", "2016-04-19"): {"Progressive Conservative": 40, "New Democratic": 14, "Liberal": 3},
+    ("mb", "2011-10-04"): {"New Democratic": 37, "Progressive Conservative": 19, "Liberal": 1},
+    ("mb", "2007-05-22"): {"New Democratic": 36, "Progressive Conservative": 19, "Liberal": 2},
+    ("mb", "2003-06-03"): {"New Democratic": 35, "Progressive Conservative": 20, "Liberal": 2},
+    ("mb", "1999-09-21"): {"New Democratic": 32, "Progressive Conservative": 24, "Liberal": 1},
 }
 
 
@@ -85,6 +92,23 @@ async def main() -> int:
                 print(
                     f"OK: 2011 nutana -> {result.rows[0].candidate} ({result.rows[0].party_code})"
                 )
+
+        if "mb" in provinces:
+            # One single-workbook election (1999) and one zip of per-division workbooks
+            # (2023), read by range; both divisions add up to the official totals.
+            for year, district in (("1999", "Brandon West"), ("2023", "Fort Rouge")):
+                areas = await client.get_voting_areas("mb", district, year)
+                if not areas.areas or areas.areas_valid_votes != areas.district_valid_votes:
+                    print(
+                        f"FAIL: mb {year} {district} voting areas sum to "
+                        f"{areas.areas_valid_votes}, official {areas.district_valid_votes}"
+                    )
+                    failures += 1
+                else:
+                    print(
+                        f"OK: mb {year} {district} -> {len(areas.areas)} voting areas, "
+                        f"{areas.areas_valid_votes} valid votes"
+                    )
 
         blocked = client.list_elections()
         if not any(b.province == "on" for b in blocked.blocked):

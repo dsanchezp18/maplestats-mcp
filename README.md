@@ -140,7 +140,7 @@ the same data straight from the source. Most tools accept `lang: "en"|"fr"`
 
 ## What it covers
 
-About 250 tools. Run `docs://catalogue` for the full, bilingual list.
+About 300 tools. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -151,7 +151,7 @@ About 250 tools. Run `docs://catalogue` for the full, bilingual list.
 | Wildland fire | `cwfis_` | NRCan's Canadian Wildland Fire Information System: satellite hotspots, fire danger and weather stations |
 | Electricity | `electricity_ontario_`, `electricity_quebec_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only) |
 | Parliament | `ourcommons_`, `senate_` | MPs and their roles, party standings, Cabinet, Senate votes |
-| Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `ab_economic_`, `isq_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, Alberta Economic Dashboard, Institut de la statistique du Québec, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan) |
+| Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `ab_economic_`, `isq_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, Alberta Economic Dashboard, Institut de la statistique du Québec, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
 | Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit systems, plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
@@ -201,6 +201,8 @@ server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
+| `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
+| `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |
 
 ## License
 
@@ -210,9 +212,8 @@ MIT
 
 MapleStats owes its architecture to
 [EcuDataMCP](https://github.com/DweskZ/EcuDataMCP), my MCP server for
-Ecuador's open data, and its module pattern to ReyemTech's `mcp-canada`.
-Its approach to Canadian data owes much to the R developers who got there
-first: Jens von Bergmann
+Ecuador's open data. Its approach to Canadian data owes much to the R
+developers who got there first: Jens von Bergmann
 ([mountainMath](https://github.com/mountainMath)) and his co-authors,
 Thierry Warin ([statcanR](https://github.com/warint/statcanR)), Valentin
 Lucet ([rgovcan](https://github.com/VLucet/rgovcan)), and others. Thanks

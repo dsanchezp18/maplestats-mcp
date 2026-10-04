@@ -1,0 +1,27 @@
+MODULE_NAME = "bc_environment"
+MODULE_DESCRIPTION = (
+    "BC Ministry of Environment monitoring files on www.env.gov.bc.ca (tools prefixed "
+    "bc_env_): unverified hourly air quality and meteorology for the last 30 days at about "
+    "100 provincial, Metro Vancouver and industry stations (PM2.5, ozone, NO2, SO2, TRS, "
+    "CO and others, raw and reported values), the current Air Quality Health Index with "
+    "forecasts for 27 areas, automated snow weather stations (snow water equivalent, snow "
+    "depth, precipitation, air temperature; current season and the hourly archive since "
+    "2003), manual snow survey measurements since 1935, groundwater observation well levels "
+    "(depth to water, daily means back to the 1960s), and the provincial hydrometric "
+    "network's discharge and stage (about 60 stations not in the Water Survey of Canada "
+    "network, archives back to the 2000s). Open Government Licence - British Columbia."
+)
+MODULE_DESCRIPTION_FR = (
+    "Fichiers de surveillance du ministère de l'Environnement de la Colombie-Britannique "
+    "sur www.env.gov.bc.ca (outils préfixés bc_env_) : qualité de l'air et météo horaires "
+    "non vérifiées des 30 derniers jours à une centaine de stations provinciales, de Metro "
+    "Vancouver et de l'industrie (PM2,5, ozone, NO2, SO2, SRT, CO et autres, valeurs brutes "
+    "et déclarées), cote air santé (CAS) actuelle et prévisions pour 27 secteurs, stations "
+    "nivométéorologiques automatiques (équivalent en eau de la neige, épaisseur de neige, "
+    "précipitations, température; saison en cours et archive horaire depuis 2003), relevés "
+    "nivométriques manuels depuis 1935, niveaux des puits d'observation des eaux "
+    "souterraines (profondeur de l'eau, moyennes quotidiennes depuis les années 1960) et "
+    "débit et niveau du réseau hydrométrique provincial (une soixantaine de stations hors du "
+    "réseau de Relevés hydrologiques du Canada, archives depuis les années 2000). Licence du "
+    "gouvernement ouvert - Colombie-Britannique."
+)

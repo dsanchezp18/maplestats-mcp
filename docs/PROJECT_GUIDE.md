@@ -172,9 +172,8 @@ servers before implementing each source adaptor, to absorb strong
 design and reliability ideas rather than reinvent them. The goal
 remains one coherent Canada MCP, not a wrapper around a collection of
 separate MCPs. Specific repositories, authors, and registry entries
-reviewed during this research are not named here — see
-[README.md](README.md#acknowledgments) for credit to the projects
-whose patterns most directly informed this implementation.
+reviewed during this research are not named here; see
+[README.md](README.md#acknowledgments) for the acknowledgements.
 
 ### Primary architectural benchmark
 
