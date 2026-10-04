@@ -395,6 +395,20 @@ def _first_rate(text: str, lang: str) -> float | None:
     return rates[0] if rates else None
 
 
+# FCAC writes "Not required" / "Non requis" when a card has no income
+# minimum (checked live 2026-10-03, Desjardins Flexi Visa and MBNA True
+# Line, both languages). That is a minimum of zero, not an unknown, so it
+# is returned as 0.0; null is kept for a missing or unreadable value.
+_NOT_REQUIRED = frozenset({"not required", "non requis"})
+
+
+def _minimum_income(text: str, lang: str) -> float | None:
+    numbers = _numbers(text, lang)
+    if numbers:
+        return numbers[0]
+    return 0.0 if " ".join(text.split()).lower() in _NOT_REQUIRED else None
+
+
 def _card_detail(product_id: str, sections: list[DetailSection], lang: str) -> dict[str, Any]:
     fees = _section(sections, "annual_fee")
     rates = _section(sections, "interest_rate")
@@ -417,9 +431,8 @@ def _card_detail(product_id: str, sections: list[DetailSection], lang: str) -> d
         "foreign_conversion_fee": _first_rate(
             _item(_section(sections, "foreign_conversion_fee"), 0), lang
         ),
-        # "Not required" / "Non requis" has no number and stays null.
-        "minimum_personal_income": (_numbers(personal, lang) or [None])[0],
-        "minimum_household_income": (_numbers(household, lang) or [None])[0],
+        "minimum_personal_income": _minimum_income(personal, lang),
+        "minimum_household_income": _minimum_income(household, lang),
         "rewards": [i.value for i in _section(sections, "rewards")],
     }
 

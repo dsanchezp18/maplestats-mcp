@@ -76,7 +76,8 @@ from the NBAC precedent:
    Valley Copper claims) after the wildfire layer's own smaller result set
    masked the same bug -- fixed by defaulting `sortBy` to `OBJECTID` (BCGW's
    standard ArcSDE row identifier, confirmed present on every layer checked)
-   across all three tools unless a caller overrides it;
+   unless a caller overrides it; the wildfire tool sorts by size, largest
+   first, with OBJECTID as the tie-breaker;
 2. `propertyName` narrows fields but not exactly to the requested list --
    this instance always adds back each layer's own identifying field(s)
    (e.g.

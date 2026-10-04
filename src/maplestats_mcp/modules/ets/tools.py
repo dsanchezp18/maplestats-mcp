@@ -24,9 +24,10 @@ async def ets_get_vehicle_positions(
     latitude/longitude, bearing, speed (km/h), route, trip, and the stop
     each vehicle is at or approaching.
 
-    route_id is the GTFS route id, which for ETS buses is the route
-    number (e.g. "4", "922"). total_matches counts every match before
-    limit (1-1000) is applied.
+    route_id is the GTFS route id: the route number, which the feed
+    zero-pads ("004", "051", "922", "001A", "A15"); "4" and "004" both
+    match, as do "1A" and "001A". Results echo the feed's padded id.
+    total_matches counts every match before limit (1-1000) is applied.
     Use for: where is my bus, how many buses are running on a route,
     live transit maps for Edmonton.
     Keywords: Edmonton, ETS, transit, bus, LRT, real-time, GTFS-RT,
@@ -52,7 +53,8 @@ async def ets_get_stop_predictions(
     late), soonest first.
 
     Pass stop_id (the ETS stop number shown at the stop, e.g. "1321"),
-    route_id (e.g. "4"), or both; at least one is required because the
+    route_id (the route number; the feed's "004" and "4" both match), or
+    both; at least one is required because the
     full feed covers ~1,200 active trips. Stops a trip has already
     served are dropped unless include_past is true. limit is 1-1000.
     Use for: next bus at a stop, how late a route is running, on-time
@@ -78,10 +80,13 @@ async def ets_get_service_alerts(
 ) -> ServiceAlerts:
     """Current Edmonton Transit Service alerts: detours, stop closures,
     and disruptions, with cause, effect, severity, affected routes and
-    stops, and the active period. Alert text is English only.
+    stops, and every active period (a planned detour can cover separate
+    days; active_from/active_until span them). Alert text is English only.
 
-    Optionally filter by route_id (e.g. "124") and/or stop_id. limit is
-    1-1000.
+    Optionally filter by route_id (e.g. "124" or "004"; leading zeros do
+    not matter) and/or stop_id. A few alerts list no routes or stops, only
+    text: route_id also matches "Route 124" in their header, but stop_id
+    cannot match them. limit is 1-1000.
     Use for: is my route on detour, closed stops, construction impacts
     on Edmonton transit.
     Keywords: Edmonton, ETS, service alerts, detours, stop closures,

@@ -225,7 +225,7 @@ def _independent_national(member: ZipMember, day: date) -> dict[str, str | int]:
 
 
 async def national_checks(check: Callable[[bool, str], None], keys: list[str]) -> None:
-    result = await client.list_national_agencies()
+    result = await client.list_national_agencies(limit=constants.NATIONAL_LIMIT_MAX)
     by_key = {a.key: a for a in result.agencies}
     statuses = {
         s: sum(a.status == s for a in result.agencies)
@@ -290,7 +290,7 @@ async def national_checks(check: Callable[[bool, str], None], keys: list[str]) -
             f"{summary.trips_on_date} trips on {day} ({scanned} found in stop_times)",
         )
         check(
-            "Statistics Canada" in (summary.provenance.limits or "")
+            "Statistics Canada" in (summary.provenance.licence or "")
             and summary.provenance.url == constants.NATIONAL_URL,
             f"{key}: provenance names the StatCan compilation and the agency's own terms",
         )

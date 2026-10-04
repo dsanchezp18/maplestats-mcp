@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
@@ -35,14 +37,26 @@ class SheetInfo(BaseModel):
     columns: int
 
 
+SheetChoice = Literal["request", "newest_month", "first"]
+
+
 class FileData(BaseModel):
     url: str
     format: str
     sheets: list[SheetInfo]
     sheet: str
+    sheet_chosen_by: SheetChoice = Field(
+        description="'request' (the sheet argument), 'newest_month' (no sheet was asked and "
+        "the sheets are named after months, so the newest was read) or 'first'."
+    )
     header_row: int | None = Field(
-        description="1-based row number guessed to hold the column names (the first row "
-        "with at least three filled cells); null when none looks like a header."
+        description="1-based row number holding the column names: the one requested, else "
+        "guessed as the first row with at least three filled cells; null when none looks "
+        "like a header."
+    )
+    header_rows: int = Field(
+        description="Rows joined per column into `header` (from header_row down); 0 when "
+        "no header was found."
     )
     header: list[str]
     rows: list[list[str]] = Field(

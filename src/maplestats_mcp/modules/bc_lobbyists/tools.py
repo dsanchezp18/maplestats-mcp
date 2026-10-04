@@ -185,8 +185,12 @@ async def bc_lobbyists_summarize_activity(
     filters are those of bc_lobbyists_search_activity_reports (all optional),
     so 'reports per ministry for one client in 2025' is one call. Counts are
     distinct reports, not meetings; rows for a report with several ministries
-    or subjects add up to more than the total. Month and year rows run oldest
-    to newest.
+    or subjects add up to more than the total. `top` caps the rows: for
+    client, ministry, office_holder, subject_matter and lobbyist they are the
+    `top` largest counts, largest first; for month and year they are the
+    `top` most recent periods (a contiguous trend, not the busiest periods),
+    oldest to newest. `groups_total` gives the number of groups before the
+    cap.
     Keywords: BC lobbying statistics, most lobbied ministry, top lobbying
     clients, lobbying by subject, lobbying trend by month, lobbying volume,
     count of lobbying reports, who lobbies most, lobbying ranking.

@@ -144,6 +144,19 @@ async def test_by_elections_are_separate_and_accent_insensitive(dataset):
     assert every.total_candidates == 4 and every.truncated
 
 
+async def test_year_that_contradicts_the_election_is_invalid(dataset):
+    # Live 2026-10-03: year=2000 with election=36 (held in 1997) returned 0 rows.
+    with pytest.raises(InvalidInput, match="election 37 .* held in 2000, not 1997"):
+        await candidates.get_candidates(election=37, year=1997)
+    agreed = await candidates.get_candidates(election=37, year=2000)
+    assert agreed.total_candidates == 2
+    # A by-election year inside the parliament is fine for by-election rows.
+    by = await candidates.get_candidates(election=37, year=2002, election_type="by-election")
+    assert by.total_candidates == 1
+    with pytest.raises(InvalidInput, match="2002"):
+        await candidates.get_candidates(election=37, year=2000, election_type="by-election")
+
+
 async def test_validation_errors():
     with pytest.raises(InvalidInput):
         await candidates.get_candidates(election=0)

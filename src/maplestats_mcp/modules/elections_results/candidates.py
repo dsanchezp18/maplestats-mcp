@@ -179,6 +179,15 @@ async def get_candidates(
         rows = [r for r in rows if r["type_elxn"] == wanted_type]
     if election is not None:
         rows = [r for r in rows if _int(r["parliament"]) == election]
+        # year=2000 with election=36 (held in 1997) was an empty success;
+        # contradictory filters are an input error naming the right year(s).
+        years = sorted({y for r in rows if (y := _int(r["year"])) is not None})
+        if year is not None and years and year not in years:
+            raise InvalidInput(
+                f"elections_results: election {election} ({election_type} rows) was held in "
+                f"{', '.join(str(y) for y in years)}, not {year}; give one of those years, "
+                "or only election or year."
+            )
     if year is not None:
         rows = [r for r in rows if _int(r["year"]) == year]
     for column, text in (

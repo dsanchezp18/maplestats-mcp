@@ -10,20 +10,18 @@ layout; see shared/xlsx_sheets.py.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-import httpx
-
 from maplestats_mcp.modules.bc_stats import constants
 from maplestats_mcp.modules.bc_stats.schemas import FileData, FileEntry, FileList, SheetInfo
-from maplestats_mcp.shared import xlsx_sheets
+from maplestats_mcp.shared import file_download, xlsx_sheets
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.licences import OGL_BC, OGL_CANADA, STATCAN_LICENCE
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -209,35 +207,34 @@ def check_file_url(url: str) -> None:
         )
 
 
-async def _body(url: str, declared_size: int | None = None) -> tuple[bytes, bool]:
-    # The catalogue states each file's size; refuse an oversized file before
-    # spending a paced request and the download on it.
-    if declared_size is not None and declared_size > constants.MAX_FILE_BYTES:
-        raise InvalidInput(
-            f"bc_stats: {url} is {declared_size / 1_048_576:.1f} MB, larger than the "
-            f"{constants.MAX_FILE_BYTES // 1_048_576} MB this tool reads."
+async def _body(url: str, size_hint: int | None) -> tuple[bytes, bool]:
+    if size_hint and size_hint > constants.MAX_FILE_BYTES:
+        raise UpstreamError(
+            f"bc_stats: {url} is {size_hint:,} bytes; this tool reads files up to "
+            f"{constants.MAX_FILE_BYTES:,}. Download it from the catalogue instead."
         )
 
-    async def fetch() -> bytes:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"bc_stats: no file at {url}.") from exc
-            raise UpstreamError(
-                f"bc_stats: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"bc_stats: {url} did not respond in time.") from exc
-        body = response.content
-        if len(body) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"bc_stats: {url} is larger than this tool reads.")
-        if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
-            raise NotFound(f"bc_stats: {url} returned a web page, not an Excel file.")
-        return body
+    async def fetch() -> file_download.Downloaded:
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, an undeclared one stops at the cap.
+        return await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="bc_stats",
+            timeout=180.0,
+        )
 
-    return await cached_fetch(f"bc_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+    # The same key ckan_read_resource (portal "bc") uses for this URL, so one
+    # copy of the file sits in the shared byte budget.
+    downloaded, cached = await file_download.cached_download(
+        file_download.cache_key(url), constants.CACHE_TTL_FILE_SECONDS, fetch
+    )
+    body = downloaded.body
+    if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
+        raise NotFound(f"bc_stats: {url} returned a web page, not an Excel file.")
+    return body, cached
 
 
 async def _sheets(url: str, body: bytes) -> list[SheetInfo]:
@@ -271,6 +268,26 @@ async def _rows(url: str, body: bytes, sheet: str) -> tuple[list[list[str]], boo
     return result
 
 
+_NOTES_SHEETS = re.compile(
+    r"^(read ?me|notes?|contents|table of contents|index|about|definitions|metadata|"
+    r"sources?|footnotes)$"
+)
+
+
+def default_sheet(names: list[str]) -> str:
+    """The first sheet that is not a notes page.
+
+    Most BC Stats workbooks open on their table (GDP: 'BC GDP $Current' then
+    'BC GDP $2017'; CPI: page1..page5), but the population estimates and
+    projections workbook opens on 'READ ME' before 'Table 1' (live file of
+    2026-10-01), so a notes-like first sheet is skipped.
+    """
+    for name in names:
+        if not _NOTES_SHEETS.match(" ".join(name.casefold().split())):
+            return name
+    return names[0]
+
+
 async def read_file(
     url: str,
     sheet: str | None = None,
@@ -298,7 +315,7 @@ async def read_file(
     if not sheets:
         raise UpstreamError(f"bc_stats: {url} has no sheets.")
     if sheet is None:
-        chosen = sheets[0].name
+        chosen = default_sheet([s.name for s in sheets])
     else:
         matches = [s.name for s in sheets if s.name.casefold() == sheet.strip().casefold()]
         if not matches:
@@ -308,15 +325,23 @@ async def read_file(
         chosen = matches[0]
 
     rows, capped = await _rows(url, body, chosen)
+    # The file's declared size counts trailing blank rows and formatted empty
+    # columns (econ_incorporations.xlsx declares 286 x 47 for 284 x 38 of data,
+    # seen 2026-10-03); the sheet read reports what it holds, so its counts
+    # agree with the header_row bound below.
+    width = len(rows[0]) if rows else 0
+    sheets = [
+        SheetInfo(name=s.name, rows=len(rows), columns=width, counted=True)
+        if s.name == chosen
+        else s
+        for s in sheets
+    ]
     if header_row is not None:
         if header_row > len(rows):
-            # The sheet's declared size counts trailing blank rows that are not
-            # read, so name both counts rather than contradict the sheet listing.
-            declared = next((s.rows for s in sheets if s.name == chosen), None)
             raise InvalidInput(
-                f"bc_stats: header_row {header_row} is past the last row with content "
-                f"(row {len(rows)}) of sheet {chosen!r}"
-                + (f"; the file declares {declared} rows, the rest blank." if declared else ".")
+                f"bc_stats: header_row {header_row} is past the last row with content of "
+                f"sheet {chosen!r}, which has only {len(rows)} rows (trailing blank rows "
+                "are not counted)."
             )
         header_index: int | None = header_row - 1
     else:
@@ -330,6 +355,11 @@ async def read_file(
     total = len(table)
     more = offset + limit < total
     notes = []
+    if sheet is None and len(sheets) > 1:
+        notes.append(
+            f"no sheet was requested, so {chosen!r} (the first sheet that is not a notes "
+            f"page) of {len(sheets)} was read; pass sheet= for another"
+        )
     if capped:
         notes.append(f"the sheet was read only up to {constants.MAX_ROWS_PER_SHEET} rows")
     if more:

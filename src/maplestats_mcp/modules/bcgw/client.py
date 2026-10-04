@@ -26,6 +26,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+import httpx
+
 from maplestats_mcp.modules.bcgw import constants
 from maplestats_mcp.modules.bcgw.schemas import (
     LayerQueryResult,
@@ -36,7 +38,10 @@ from maplestats_mcp.modules.bcgw.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.wfs import WfsConfig, feature_url, get_features
 
 CONFIG = WfsConfig(
@@ -44,6 +49,12 @@ CONFIG = WfsConfig(
     base_url=constants.BASE_URL,
     rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
+)
+# The same bucket shared/wfs.py uses for this source.
+_LIMITER = get_limiter(
+    constants.RATE_LIMIT_SOURCE,
+    rate=constants.RATE_LIMIT_PER_SECOND,
+    capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
 
@@ -88,18 +99,24 @@ async def get_active_wildfires(
     status: str | None = None,
     fire_year: int | None = None,
     min_size_hectares: float | None = None,
+    include_out: bool = False,
     include_geometry: bool = False,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: str = "en",
 ) -> WildfireQueryResult:
-    """Query current BC wildfire perimeters/status.
+    """Query current BC wildfire perimeters/status, largest first.
 
     Confirmed live 2026-09-22: `status` values observed include "Out of
     Control", "Being Held", "Under Control", and "Out" -- there is no
     fixed enum published, so this passes the value through rather than
     validating against a hardcoded list. There is no fire-centre/region
     field on this layer to filter by.
+
+    Most of the layer is extinguished fires: on 2026-10-03, 250 of 312
+    perimeters had status "Out" (one had no status), and ordered by
+    OBJECTID they came first. Without a `status`, "Out" fires are left
+    out unless `include_out` is set; a fire with no status is kept.
     """
     del lang
     _check_limit_offset(limit, offset)
@@ -107,6 +124,8 @@ async def get_active_wildfires(
     clauses: list[str] = []
     if status:
         clauses.append(f"FIRE_STATUS='{_escape_cql_literal(status)}'")
+    elif not include_out:
+        clauses.append(f"(FIRE_STATUS IS NULL OR FIRE_STATUS<>'{constants.WILDFIRE_OUT_STATUS}')")
     if fire_year is not None:
         clauses.append(f"FIRE_YEAR={fire_year}")
     if min_size_hectares is not None:
@@ -119,7 +138,7 @@ async def get_active_wildfires(
         "cql_filter": cql_filter,
         "property_names": property_names,
         "srs_name": constants.DEFAULT_SRS,
-        "sort_by": constants.DEFAULT_SORT_FIELD,
+        "sort_by": constants.WILDFIRE_SORT,
         "count": limit,
         "start_index": offset,
     }
@@ -187,10 +206,11 @@ async def get_mining_tenure(
     """Query acquired BC mineral/placer mining tenure (claims).
 
     `tenure_type` is "mineral" or "placer" (maps to BCGW's own 'M'/'P'
-    TENURE_TYPE_CODE) if given. `owner_name` does a case-sensitive
-    substring match against BCGW's own data, which is stored in upper
-    case -- confirmed live -- so the input is upper-cased before matching
-    rather than requiring the caller to know that.
+    TENURE_TYPE_CODE) if given. `owner_name` matches the start of a word
+    in OWNER_NAME, which BCGW stores in upper case (confirmed live), so
+    the input is upper-cased first. A plain substring match let "teck"
+    reach individual free miners such as "BIATECKI, ..." (1,318 owners
+    matched '%TECK%' on 2026-10-03, 1,312 matched at a word start).
     """
     del lang
     _check_limit_offset(limit, offset)
@@ -202,9 +222,11 @@ async def get_mining_tenure(
     clauses: list[str] = []
     if tenure_type is not None:
         clauses.append(f"TENURE_TYPE_CODE='{_TENURE_TYPE_CODES[tenure_type]}'")
-    if owner_name:
-        pattern = _escape_cql_literal(owner_name.upper())
-        clauses.append(f"OWNER_NAME LIKE '%{pattern}%'")
+    if owner_name and owner_name.strip():
+        pattern = _escape_cql_literal(owner_name.strip().upper())
+        # A word starts the name, follows a space, or opens a parenthesis.
+        starts = (f"'{pattern}%'", f"'% {pattern}%'", f"'%({pattern}%'")
+        clauses.append("(" + " OR ".join(f"OWNER_NAME LIKE {s}" for s in starts) + ")")
     if min_area_hectares is not None:
         clauses.append(f"AREA_IN_HECTARES>={min_area_hectares}")
     cql_filter = " AND ".join(clauses) if clauses else None
@@ -247,6 +269,50 @@ async def get_mining_tenure(
     )
 
 
+async def _geometry_field(type_name: str) -> str:
+    """The layer's geometry column, from DescribeFeatureType.
+
+    Checked live 2026-10-03: the JSON DescribeFeatureType lists it as the
+    property whose type starts with "gml:" (SHAPE on the fire points,
+    fire polygons and park layers; GEOMETRY is not a field there and a
+    propertyName naming it answers HTTP 400).
+    """
+
+    async def fetch() -> str:
+        await _LIMITER.acquire()
+        params = {
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "DescribeFeatureType",
+            "typeName": type_name,
+            "outputFormat": "application/json",
+        }
+        try:
+            body = await api_get(constants.BASE_URL, params=params)
+        except httpx.HTTPStatusError as exc:
+            # An unknown typeName answers HTTP 400 with an ExceptionReport.
+            if exc.response.status_code in (400, 404):
+                raise InvalidInput(f"bcgw: unknown layer {type_name!r}.") from exc
+            raise UpstreamError(
+                f"bcgw: DescribeFeatureType returned HTTP {exc.response.status_code}."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailable("bcgw: DescribeFeatureType did not respond.") from exc
+        types = list_or_empty(body, "featureTypes") if isinstance(body, dict) else []
+        properties = list_or_empty(types[0], "properties") if types else []
+        for prop in properties:
+            if str(prop.get("type") or "").startswith("gml:") and prop.get("name"):
+                return str(prop["name"])
+        raise InvalidInput(
+            f"bcgw: layer {type_name!r} has no geometry column; set include_geometry=false."
+        )
+
+    field, _ = await cached_fetch(
+        f"bcgw:geometry-field:{type_name}", constants.CACHE_TTL_SCHEMA_SECONDS, fetch
+    )
+    return field
+
+
 async def query_layer(
     type_name: str,
     *,
@@ -284,6 +350,14 @@ async def query_layer(
     if not type_name:
         raise InvalidInput("type_name must not be empty.")
     effective_sort_by = sort_by if sort_by is not None else constants.DEFAULT_SORT_FIELD
+    if include_geometry and property_names:
+        # propertyName drops the geometry unless the geometry column is in
+        # the list (every record came back "geometry": null before
+        # 2026-10-03), and its name varies by layer, so look it up.
+        geometry_field = await _geometry_field(type_name)
+        listed = {p.strip().upper() for p in property_names.split(",")}
+        if geometry_field.upper() not in listed:
+            property_names = f"{property_names},{geometry_field}"
 
     request: dict[str, Any] = {
         "cql_filter": cql_filter,

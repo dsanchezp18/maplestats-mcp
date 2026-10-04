@@ -41,6 +41,19 @@ _LIMITER = get_limiter(
 _DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def _is_real_month_or_day(value: str) -> bool:
+    # The shape alone let "2024-13" through as a bound (live 2026-10-03:
+    # it returned 409 reviews instead of an error); the month and day must
+    # exist too.
+    if not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", value):
+        return False
+    try:
+        date.fromisoformat(value if len(value) == 10 else f"{value}-01")
+    except ValueError:
+        return False
+    return True
+
+
 def _label(outcome: str, lang: str) -> str:
     english, french = constants.OUTCOMES.get(outcome, (outcome, outcome))
     return french if lang == "fr" else english
@@ -137,8 +150,11 @@ async def search_mergers(
             f"competition_bureau: outcome must be one of {list(constants.OUTCOMES)}, got {outcome!r}."
         )
     for name, value in (("concluded_from", concluded_from), ("concluded_to", concluded_to)):
-        if value is not None and not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", value):
-            raise InvalidInput(f"competition_bureau: {name} must be YYYY-MM or YYYY-MM-DD.")
+        if value is not None and not _is_real_month_or_day(value):
+            raise InvalidInput(
+                f"competition_bureau: {name} must be a real YYYY-MM or YYYY-MM-DD date, "
+                f"got {value!r}."
+            )
     # Month precision (the archive has no day), so a same-month pair is fine.
     check_range(
         (concluded_from or "")[:7] or None,

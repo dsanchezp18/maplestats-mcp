@@ -49,7 +49,11 @@ async def gc_infobase_query(
     `organization` is a substring match; `fiscal_year` matches the start
     year whatever the file's format ("2023-24", "2023-2024", "FY 2023-24");
     `filters` are exact column matches. `resource_id` comes from
-    gc_infobase_list_files; use a French file for French column names.
+    gc_infobase_list_files; use a French file for French column names
+    (an English file asked for with lang="fr" keeps its English name and
+    rows, and provenance.limits names the French file). Amounts and
+    counts come back as numbers (listed in numeric_columns); id and code
+    columns stay text.
     Keywords: federal spending, department budget, expenditures,
     authorities, transfer payments, program spending, FTE, public accounts.
     Mots-clés : dépenses fédérales, budget ministériel, autorisations,

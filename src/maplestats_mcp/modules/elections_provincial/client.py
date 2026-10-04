@@ -169,7 +169,8 @@ def _province(code: str) -> str:
                 "of use forbid scraping its results (see elections_provincial_list_elections)."
             )
         raise InvalidInput(
-            f"elections_provincial: province must be one of {list(constants.PROVINCES)}."
+            f"elections_provincial: province must be one of {list(constants.PROVINCES)}, "
+            f"got {code!r}."
         )
     return code
 
@@ -237,7 +238,7 @@ def list_elections(province: str | None = None, lang: Lang = "en") -> ElectionLi
         notes=_NOTES[lang],
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
-            url=constants.QC_PAGE,
+            url=constants.PROVINCE_PAGES[code] if code else constants.QC_PAGE,
             cached=False,
             schema_name="elections_provincial.ElectionList",
             coverage="General elections: Quebec 1973-2022, Alberta 2008-2023, British "
@@ -357,11 +358,16 @@ async def get_seats(province: str, election: str | None = None) -> SeatSummary:
     candidates: dict[str, int] = {}
     decided = 0
     total_valid = 0
+    blank_party = False
     for d in districts:
         total_valid += d.valid_votes or 0
         decided += any(c.elected for c in d.candidates)
         for c in d.candidates:
-            name = c.party or c.party_code or "Unknown"
+            # BC 2024 has 252 rows with a blank AFFILIATION (12 candidates such
+            # as "Bernier, Mike", checked in the CSV 2026-10-03). The source
+            # gives no party, so they are not called "Unknown" as if one were lost.
+            name = c.party or c.party_code or constants.NO_AFFILIATION_LABEL
+            blank_party = blank_party or name == constants.NO_AFFILIATION_LABEL
             votes[name] = votes.get(name, 0) + c.votes
             candidates[name] = candidates.get(name, 0) + 1
             seats[name] = seats.get(name, 0) + int(c.elected)
@@ -391,7 +397,17 @@ async def get_seats(province: str, election: str | None = None) -> SeatSummary:
             schema_name="elections_provincial.SeatSummary",
             freshness="Computed from the district rows; by-elections are not included.",
             coverage=f"{constants.PROVINCES[code][0]} general election of {edition.date}.",
-            limits=_limits(code, "Independent candidates appear under the label each source uses."),
+            limits=_limits(
+                code,
+                "Independent candidates appear under the label each source uses."
+                + (
+                    f" '{constants.NO_AFFILIATION_LABEL}' groups the candidates whose party "
+                    "field is empty in the source file (in BC, a blank AFFILIATION); the "
+                    "source does not say which party, if any, they ran for."
+                    if blank_party
+                    else ""
+                ),
+            ),
         ),
     )
 

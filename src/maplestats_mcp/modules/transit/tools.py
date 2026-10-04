@@ -38,9 +38,9 @@ async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     `agency`. TransLink (Vancouver) is not offered: its terms require
     users to identify themselves to TransLink first. For some 100 further
     agencies across Canada (a 2025 snapshot) use
-    transit_list_national_agencies. BC Transit zips are built
-    on request by BC Transit and downloaded whole, so a first call to one of
-    its systems takes 5 to 30 seconds.
+    transit_list_national_agencies. BC Transit zips are built on request by
+    BC Transit and downloaded whole, so a first call to one of its systems
+    takes 5 to 30 seconds.
     Use for: which transit schedules are available, licence and credit
     line for a transit feed, is the agency's GTFS zip reachable.
     Keywords: transit, GTFS, static schedule, STM, OC Transpo,

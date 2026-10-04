@@ -3,7 +3,8 @@
 Discovery is one `package_search` for the Bureau's organization: its
 results already carry every resource (URL, format, size), so no per-dataset
 `package_show` is needed. Only CSV files the catalogue lists are read, and a
-file whose declared size is over the cap is refused before it is downloaded.
+file whose declared size is over the cap is refused before it is downloaded;
+others are streamed under the cap.
 """
 
 from __future__ import annotations
@@ -14,16 +15,15 @@ from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-import httpx
-
 from maplestats_mcp.modules.yukon_stats import constants
 from maplestats_mcp.modules.yukon_stats.schemas import TableEntry, TableList, TableRows
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.csv_files import Columns, decode, exact_filter
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.licences import OGL_YUKON
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits
@@ -174,32 +174,70 @@ def _parse(body: bytes) -> tuple[list[str], list[dict[str, str]]]:
     return keep, rows
 
 
+def _too_large(url: str, size: int) -> UpstreamError:
+    return UpstreamError(
+        f"yukon_stats: {url} is {size:,} bytes, larger than the {constants.MAX_FILE_BYTES:,} "
+        "this tool reads. Download it from the portal instead."
+    )
+
+
 async def _table(
     url: str, declared_size: int | None
 ) -> tuple[tuple[list[str], list[dict[str, str]]], bool]:
-    if declared_size is not None and declared_size > constants.MAX_FILE_BYTES:
-        raise InvalidInput(
-            f"yukon_stats: {url} is {declared_size / 1_048_576:.1f} MB, larger than the "
-            f"{constants.MAX_FILE_BYTES // 1_048_576} MB this tool reads."
-        )
+    # The catalogue states each file's size; refuse an oversized file before
+    # spending a paced request and the download on it.
+    if declared_size and declared_size > constants.MAX_FILE_BYTES:
+        raise _too_large(url, declared_size)
 
     async def fetch() -> tuple[list[str], list[dict[str, str]]]:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise NotFound(f"yukon_stats: no file at {url}.") from exc
-            raise UpstreamError(
-                f"yukon_stats: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"yukon_stats: {url} did not respond in time.") from exc
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"yukon_stats: {url} is larger than this tool reads.")
-        return _parse(response.content)
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, and an undeclared one stops at the cap. The
+        # parsed rows are cached below, so the bytes are not kept a second time.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="yukon_stats",
+            timeout=180.0,
+        )
+        return await run_parse(_parse, downloaded.body)
 
     return await cached_fetch(f"yukon_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+
+
+async def _listed(url: str) -> TableEntry:
+    """The catalogue entry for exactly this URL.
+
+    open.yukon.ca serves a download by its resource id and ignores the file
+    name: on 2026-10-03 ".../resource/9d6ceba0-.../download/zz-vacancy-rates.csv"
+    returned the rent table, so an unchecked URL can label one table with
+    another's name. Only URLs the catalogue lists are read, so the tool also
+    never fetches an arbitrary path under /data/.
+    """
+    tables, _ = await _catalogue()
+    entry = next((t for t in tables if t.url == url), None)
+    if entry is not None:
+        return entry
+    resource_id = _resource_id(url)
+    same = next((t for t in tables if resource_id and _resource_id(t.url) == resource_id), None)
+    if same is not None:
+        raise InvalidInput(
+            f"yukon_stats: the catalogue lists this resource as {same.url} ({same.title!r}); "
+            "pass that exact URL."
+        )
+    raise NotFound(
+        f"yukon_stats: {url} is not a CSV table of the Yukon Bureau of Statistics "
+        "(see yukon_stats_list_tables)."
+    )
+
+
+def _resource_id(url: str) -> str | None:
+    parts = urlparse(url).path.split("/")
+    if "resource" in parts:
+        index = parts.index("resource") + 1
+        return parts[index] if index < len(parts) else None
+    return None
 
 
 async def query_table(
@@ -216,16 +254,7 @@ async def query_table(
     if offset < 0:
         raise InvalidInput("yukon_stats: offset must be 0 or more.")
 
-    # Only files the catalogue lists are read, so the tool never fetches an
-    # arbitrary path under /data/.
-    listed, _ = await _catalogue()
-    entry = next((t for t in listed if t.url == url), None)
-    if entry is None:
-        raise NotFound(
-            f"yukon_stats: {url} is not a CSV table of the Yukon Bureau of Statistics "
-            "(see yukon_stats_list_tables)."
-        )
-
+    entry = await _listed(url)
     (names, rows), cached = await _table(url, entry.size_bytes)
     lookup = Columns([dict.fromkeys(names, "")])
     rows = exact_filter(rows, lookup, filters)
