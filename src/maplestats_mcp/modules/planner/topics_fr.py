@@ -821,12 +821,15 @@ FR: dict[str, str] = {
     "Delta (BC)": "Delta (C.-B.)",
     "Saint John (New Brunswick)": "Saint John (Nouveau-Brunswick)",
 }
+# French spaces a semicolon, as reproduce_code's French notes and the website
+# do; the entries above are typed "x; y" like the English they sit beside.
+FR = {english: re.sub(r"(?<=\S);", " ;", french) for english, french in FR.items()}
 
 # "search with portal='x' (...)": one rule for the many portal steps.
 _SEARCH = re.compile(r"^search with (portal=.+?)(?: \((.+)\))?$")
 _SEARCH_NOTES = {
     "city data; no provincial portal is covered": (
-        "données municipales; aucun portail provincial n'est couvert"
+        "données municipales ; aucun portail provincial n'est couvert"
     ),
     "no Nunavut portal is covered": "aucun portail du Nunavut n'est couvert",
     "the city publishes on Donnees Quebec": "la ville publie sur Données Québec",
@@ -836,7 +839,7 @@ _SAME_IN_FRENCH = re.compile(r"^[A-Z][A-Za-z.\- ]*(?: \((?:Ontario|Alberta)\))?$
 
 GUIDANCE_FR = (
     (
-        "Exécutez les étapes dans l'ordre pour chaque sujet; la provenance de chaque résultat "
+        "Exécutez les étapes dans l'ordre pour chaque sujet ; la provenance de chaque résultat "
         "donne l'URL et la date de la source à citer."
     ),
     (
@@ -845,20 +848,20 @@ GUIDANCE_FR = (
         "écarts."
     ),
     (
-        "Citez la source de chaque chiffre; ne fusionnez pas en une seule série des chiffres de "
+        "Citez la source de chaque chiffre ; ne fusionnez pas en une seule série des chiffres de "
         "sources différentes."
     ),
     "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
 )
 LIMITS_FR = (
-    "carte organisée des sujets et des lieux; tous les outils n'y figurent pas, utilisez "
+    "carte organisée des sujets et des lieux ; tous les outils n'y figurent pas, utilisez "
     "search_tools pour tout ce que le plan ne couvre pas"
 )
 
 
 def out_of_scope_fr(foreign: str) -> str:
     return (
-        f"La question porte sur {foreign}, hors du Canada; ce serveur ne contient que des "
+        f"La question porte sur {foreign}, hors du Canada ; ce serveur ne contient que des "
         "données publiques canadiennes, donc aucun plan n'est proposé. Nommez un lieu "
         "canadien, ou posez une question sur le commerce, les taux de change ou la migration "
         "entre le Canada et ce pays."
@@ -886,5 +889,5 @@ def fr(text: str, *, place: bool = False) -> str | None:
 
 
 def to_french(text: str, *, place: bool = False) -> str:
-    """French for a planner string; the English when none exists (a test keeps that empty)."""
+    """French for a planner string ; the English when none exists (a test keeps that empty)."""
     return fr(text, place=place) or text
