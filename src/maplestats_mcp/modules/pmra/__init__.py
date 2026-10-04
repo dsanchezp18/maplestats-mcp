@@ -24,5 +24,5 @@ MODULE_DESCRIPTION_FR = (
     "statut de réévaluation), sites d'utilisation et organismes nuisibles; et les limites "
     "maximales de résidus (LMR, ppm) par pesticide et denrée. Extraits CSV quotidiens de la "
     "Base de données sur les produits antiparasitaires, en français ou en anglais, Licence "
-    "du gouvernement ouvert - Canada."
+    "du gouvernement ouvert – Canada."
 )

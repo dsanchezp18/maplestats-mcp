@@ -27,6 +27,7 @@ from typing import Any, Literal
 
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.executor import check_deadline
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.xlsx_sheets import cell_text as _shared_cell_text
 
 FileFormat = Literal["xlsx", "xls", "csv"]
@@ -110,23 +111,36 @@ def detect_format(body: bytes, declared: str | None) -> FileFormat:
         if _is_workbook_zip(body):
             return "xlsx"
         # Confirmed live: "XLSX"/"CSV" resources that are zipped shapefiles or CSVs.
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"the file is a ZIP archive, not an Excel workbook (portal format {declared!r}); "
-            "this reader does not open archives."
+            "this reader does not open archives.",
+            f"le fichier est une archive ZIP, pas un classeur Excel (format du portail "
+            f"{declared!r}) ; ce lecteur n'ouvre pas les archives.",
         )
     if body.startswith(_XLS_MAGIC):
         return "xls"
     head = body.lstrip()[:15].lower()
     if head.startswith((b"<!doc", b"<html")):
-        raise UpstreamError("the link returned a web page, not a data file.")
+        raise call_error(
+            UpstreamError,
+            "the link returned a web page, not a data file.",
+            "le lien a renvoyé une page Web, pas un fichier de données.",
+        )
     if head.startswith((b"<?xml", b"<workbook")):
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"the file is XML (portal format {declared!r}), for example a SpreadsheetML export "
-            "or a feed, which this reader does not parse."
+            "or a feed, which this reader does not parse.",
+            f"le fichier est du XML (format du portail {declared!r}), par exemple un export "
+            "SpreadsheetML ou un fil, que ce lecteur n'analyse pas.",
         )
     if head.startswith((b"{", b"[{")):
-        raise UpstreamError(
-            f"the file is JSON (portal format {declared!r}), which this reader does not parse."
+        raise call_error(
+            UpstreamError,
+            f"the file is JSON (portal format {declared!r}), which this reader does not parse.",
+            f"le fichier est du JSON (format du portail {declared!r}), que ce lecteur "
+            "n'analyse pas.",
         )
     # A text file under an Excel label is read as CSV; binary data is not (UTF-16
     # text is full of NUL bytes, so its byte-order mark is checked first).
@@ -134,8 +148,11 @@ def detect_format(body: bytes, declared: str | None) -> FileFormat:
         return "csv"
     if not body.startswith(b"%PDF") and b"\x00" not in body[:2000]:
         return "csv"
-    raise UpstreamError(
-        f"the file is not a readable Excel workbook or CSV (portal format {declared!r})."
+    raise call_error(
+        UpstreamError,
+        f"the file is not a readable Excel workbook or CSV (portal format {declared!r}).",
+        f"le fichier n'est ni un classeur Excel ni un CSV lisible (format du portail "
+        f"{declared!r}).",
     )
 
 
@@ -222,7 +239,11 @@ def scan_rows(
     buffer = list(islice(iterator, max(HEADER_SEARCH_ROWS, (header_row or 0) + header_rows)))
     if header_row is not None:
         if header_row > len(buffer):
-            raise InvalidInput(f"the sheet has only {len(buffer)} rows.")
+            raise call_error(
+                InvalidInput,
+                f"the sheet has only {len(buffer)} rows.",
+                f"la feuille ne compte que {len(buffer)} lignes.",
+            )
         header_index: int | None = header_row - 1
     else:
         header_index = guess_header(buffer, csv_like=csv_like)
@@ -238,7 +259,11 @@ def scan_rows(
     def locate(name: str) -> int:
         found = by_name.get(_normal(name))
         if found is None:
-            raise InvalidInput(f"unknown column {name!r}; columns are {names}.")
+            raise call_error(
+                InvalidInput,
+                f"unknown column {name!r}; columns are {names}.",
+                f"colonne inconnue {name!r} ; les colonnes sont {names}.",
+            )
         return found
 
     wanted = [(locate(k), _normal(v)) for k, v in (filters or {}).items()]
@@ -377,7 +402,11 @@ def sheet_sizes(body: bytes, fmt: FileFormat) -> list[tuple[str, int, int]]:
     except (InvalidInput, UpstreamError):
         raise
     except Exception as exc:  # openpyxl, xlrd and zipfile raise several unrelated types
-        raise UpstreamError(f"could not open the file: {exc}") from exc
+        raise call_error(
+            UpstreamError,
+            f"could not open the file: {exc}",
+            f"impossible d'ouvrir le fichier : {exc}",
+        ) from exc
 
 
 def largest_sheet(sizes: list[tuple[str, int, int]]) -> str:
@@ -409,9 +438,12 @@ def choose_sheet(
     names = [n for n, _, _ in sizes]
     if fmt == "csv":
         if sheet is not None and sheet.strip().casefold() != CSV_SHEET:
-            raise InvalidInput(
+            raise call_error(
+                InvalidInput,
                 f"{context}: this file is a CSV, which has no sheets; leave sheet unset "
-                f"(got {sheet!r})."
+                f"(got {sheet!r}).",
+                f"{context} : ce fichier est un CSV, qui n'a pas de feuilles ; laissez sheet "
+                f"vide (reçu {sheet!r}).",
             )
         return CSV_SHEET, "only"
     if sheet is None:
@@ -428,7 +460,11 @@ def choose_sheet(
     for name in names:
         if name.casefold() == wanted:
             return name, "request"
-    raise InvalidInput(f"{context}: no sheet {sheet!r}; sheets are {names}.")
+    raise call_error(
+        InvalidInput,
+        f"{context}: no sheet {sheet!r}; sheets are {names}.",
+        f"{context} : aucune feuille {sheet!r} ; les feuilles sont {names}.",
+    )
 
 
 def _summary(name: str, declared: tuple[int | None, int | None], rows: Iterator[list[str]]):
@@ -487,7 +523,11 @@ def describe(body: bytes, fmt: FileFormat, only: str | None) -> tuple[int, list[
     except (InvalidInput, UpstreamError):
         raise
     except Exception as exc:
-        raise UpstreamError(f"could not read the file: {exc}") from exc
+        raise call_error(
+            UpstreamError,
+            f"could not read the file: {exc}",
+            f"impossible de lire le fichier : {exc}",
+        ) from exc
 
 
 def scan(
@@ -528,4 +568,8 @@ def scan(
     except (InvalidInput, UpstreamError):
         raise
     except Exception as exc:
-        raise UpstreamError(f"could not read the file: {exc}") from exc
+        raise call_error(
+            UpstreamError,
+            f"could not read the file: {exc}",
+            f"impossible de lire le fichier : {exc}",
+        ) from exc

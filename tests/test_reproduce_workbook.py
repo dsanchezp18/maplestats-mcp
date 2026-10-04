@@ -86,7 +86,7 @@ def fake_call(monkeypatch):
     calls = []
 
     def install(payload):
-        async def call(tool, arguments):
+        async def call(tool, arguments, lang="en"):
             calls.append((tool, arguments))
             return payload
 
@@ -253,3 +253,22 @@ async def test_tool_is_registered_and_findable():
     async with Client(mcp) as client:
         result = await client.call_tool("search_tools", {"query": "export to an Excel workbook"})
     assert "reproduce_workbook" in str(result.content)
+
+
+async def test_french_errors_notes_and_chart(hosted, monkeypatch):
+    with pytest.raises(InvalidInput, match="serveur est hébergé"):
+        await workbook.export(None, None, [{"a": 1}], None, "fr", 10, "file")
+    with pytest.raises(InvalidInput, match="ne renvoie pas de lignes"):
+        await workbook.export("plan_query", {}, None, None, "fr", 10, "auto")
+    with pytest.raises(NotFound, match="aucune ligne"):
+        await workbook.export(None, None, [], None, "fr", 10, "auto")
+    rows = [{"nom": f"ligne {n}", "montant": n} for n in range(1500)]
+    result = await workbook.export(None, None, rows, "Lignes", "fr", 10, "base64")
+    assert result.notes[0] == "Les 10 premières lignes sur 1 500 ont été écrites (max_rows)."
+    assert result.notes[1].startswith("Décodez workbook_base64")
+    assert result.chart is not None and result.chart.startswith("graphique à barres de montant")
+    assert (result.provenance.limits or "").startswith("au plus 20 000 lignes")
+    assert result.provenance.reproduce.startswith("Pour obtenir")
+    english = await workbook.export(None, None, rows, "Rows", "en", 10, "base64")
+    assert english.notes[0] == "Wrote the first 10 of 1,500 rows (max_rows)."
+    assert english.chart is not None and english.chart.startswith("bar chart of montant")

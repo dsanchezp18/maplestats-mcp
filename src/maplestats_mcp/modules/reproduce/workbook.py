@@ -40,6 +40,7 @@ from typing import Any, Literal
 from maplestats_mcp.modules.reproduce.schemas import ExcelWorkbook
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.i18n import NBSP, french_text, normalize_lang
 
 MAX_ROWS = 20_000
 DEFAULT_ROWS = 2_000
@@ -78,7 +79,7 @@ LABELS: dict[str, dict[str, str]] = {
         "cleaning": "Cleaning",
         "reproduce": "Reproduce",
         "created": "Workbook created (UTC)",
-        "rows_text": "{written:,} of {available:,} rows",
+        "rows_text": "{written} of {available} rows",
         "rows_capped": " (capped by max_rows)",
         "caller_rows": "rows passed to reproduce_workbook by the caller",
         "no_licence": (
@@ -97,6 +98,33 @@ LABELS: dict[str, dict[str, str]] = {
             "Call reproduce_code with the same tool and arguments for R, Python, Stata and "
             "Julia scripts, or language='excel' for a Power Query that refreshes the full data."
         ),
+        "default_title": "MapleStats data",
+        "chart_text": "{kind} chart of {columns} by {x}",
+        "line": "line",
+        "bar": "bar",
+        "max_rows": "max_rows must be between 1 and {limit}, got {got}.",
+        "no_call": "Pass tool_name (and its arguments), or the rows to write.",
+        "not_data": "{tool} does not return data rows to write to a workbook.",
+        "delivery": "delivery must be 'auto', 'base64' or 'file'.",
+        "hosted": "This is a hosted server: it cannot write to your disk. Use delivery='base64'.",
+        "rows_shape": "rows must be a list of objects, one per row.",
+        "no_rows": "{what} returned no rows to write to a workbook.",
+        "the_rows": "The rows",
+        "too_big": (
+            "The workbook is {size} bytes, over the {limit}-byte limit for a tool response. "
+            "Lower max_rows, or call reproduce_code with language='excel' for a Power Query "
+            "that loads the full data inside Excel."
+        ),
+        "failed": "{tool} failed with these arguments: {text}",
+        "unstructured": "{tool} did not return a structured result.",
+        "first_rows": "Wrote the first {written} of {available} rows (max_rows).",
+        "saved": "Saved to {path}.",
+        "decode": (
+            "Decode workbook_base64 and save it as {file} (a hosted server cannot write to your "
+            "disk). Large results pass through the client's context: keep max_rows small, or "
+            "use reproduce_code language='excel' for the full data."
+        ),
+        "limits_text": "at most {rows} rows (max_rows, default {default}) and {size} bytes per workbook",
     },
     "fr": {
         "data": "Données",
@@ -121,7 +149,7 @@ LABELS: dict[str, dict[str, str]] = {
         "cleaning": "Nettoyage",
         "reproduce": "Reproduire",
         "created": "Classeur créé le (UTC)",
-        "rows_text": "{written:,} lignes sur {available:,}",
+        "rows_text": "{written} lignes sur {available}",
         "rows_capped": " (limite max_rows)",
         "caller_rows": "lignes transmises à reproduce_workbook par l'appelant",
         "no_licence": (
@@ -129,27 +157,76 @@ LABELS: dict[str, dict[str, str]] = {
             "l'éditeur à l'URL de la source."
         ),
         "ogl_attribution": (
-            "Contient des informations visées par la Licence du gouvernement ouvert - Canada."
+            "Contient des renseignements visés par la Licence du gouvernement ouvert – Canada."
         ),
         "cite": "Citez l'éditeur et l'URL de la source ci-dessus.",
         "cleaning_text": (
-            "Noms en snake_case (comme janitor::clean_names en R), texte épuré des espaces, "
-            "texte vide traité comme manquant, nombres et dates ISO stockés en texte "
-            "convertis; codes à zéros initiaux conservés en texte."
+            "Noms en snake_case (comme janitor::clean_names en R), espaces superflus retirés "
+            "du texte, texte vide traité comme valeur manquante, nombres et dates ISO stockés "
+            "comme texte convertis ; codes à zéros initiaux conservés comme texte."
         ),
         "reproduce_text": (
-            "Appelez reproduce_code avec le même outil et les mêmes arguments pour des scripts "
-            "R, Python, Stata et Julia, ou language='excel' pour une requête Power Query qui "
-            "actualise toutes les données."
+            "Appelez reproduce_code avec le même outil et les mêmes arguments pour obtenir des "
+            "scripts R, Python, Stata et Julia, ou avec language='excel' pour une requête "
+            "Power Query qui actualise toutes les données."
+        ),
+        "default_title": "Données MapleStats",
+        "chart_text": "graphique {kind} de {columns} selon {x}",
+        "line": "linéaire",
+        "bar": "à barres",
+        "max_rows": "max_rows doit être compris entre 1 et {limit}; valeur reçue : {got}.",
+        "no_call": "Indiquez tool_name (et ses arguments), ou les lignes à écrire.",
+        "not_data": "{tool} ne renvoie pas de lignes de données à écrire dans un classeur.",
+        "delivery": "delivery doit valoir 'auto', 'base64' ou 'file'.",
+        "hosted": (
+            "Ce serveur est hébergé : il ne peut pas écrire sur votre disque. Utilisez "
+            "delivery='base64'."
+        ),
+        "rows_shape": "rows doit être une liste d'objets, un par ligne.",
+        "no_rows": "{what} n'a renvoyé aucune ligne à écrire dans un classeur.",
+        "the_rows": "La liste rows",
+        "too_big": (
+            "Le classeur fait {size} octets, au-delà de la limite de {limit} octets d'une "
+            "réponse d'outil. Réduisez max_rows, ou appelez reproduce_code avec "
+            "language='excel' pour une requête Power Query qui charge toutes les données dans "
+            "Excel."
+        ),
+        "failed": "{tool} a échoué avec ces arguments : {text}",
+        "unstructured": "{tool} n'a pas renvoyé de résultat structuré.",
+        "first_rows": "Les {written} premières lignes sur {available} ont été écrites (max_rows).",
+        "saved": "Enregistré dans {path}.",
+        "decode": (
+            "Décodez workbook_base64 et enregistrez-le sous le nom {file} (un serveur hébergé "
+            "ne peut pas écrire sur votre disque). Les gros résultats passent par le contexte "
+            "du client : gardez max_rows petit, ou utilisez reproduce_code avec "
+            "language='excel' pour toutes les données."
+        ),
+        "limits_text": (
+            "au plus {rows} lignes (max_rows, {default} par défaut) et {size} octets par classeur"
         ),
     },
 }
 
 
+def _labels(lang: str) -> dict[str, str]:
+    return LABELS["fr" if normalize_lang(lang) == "fr" else "en"]
+
+
+def _say(lang: str, key: str, **values: object) -> str:
+    """A label filled in; French gets no-break spacing and 1 234-style numbers."""
+    french = normalize_lang(lang) == "fr"
+    filled = {
+        k: (f"{v:,}".replace(",", NBSP) if french else f"{v:,}") if isinstance(v, int) else v
+        for k, v in values.items()
+    }
+    text = _labels(lang)[key].format(**filled)
+    return french_text(text) if french else text
+
+
 # Rows ------------------------------------------------------------------------
 
 
-async def _call(tool: str, arguments: dict[str, Any]) -> Any:
+async def _call(tool: str, arguments: dict[str, Any], lang: str = "en") -> Any:
     """The tool's structured result, called through the server like any client."""
     from fastmcp import Client
     from mcp.types import TextContent
@@ -162,11 +239,11 @@ async def _call(tool: str, arguments: dict[str, Any]) -> Any:
         )
     text = next((block.text for block in result.content if isinstance(block, TextContent)), "")
     if result.is_error:
-        raise InvalidInput(f"{tool} failed with these arguments: {text[:300]}")
+        raise InvalidInput(_say(lang, "failed", tool=tool, text=text[:300]))
     try:
         return json.loads(text)
     except ValueError as exc:
-        raise NotFound(f"{tool} did not return a structured result.") from exc
+        raise NotFound(_say(lang, "unstructured", tool=tool)) from exc
 
 
 def _record_lists(payload: Any) -> list[list[dict[str, Any]]]:
@@ -494,7 +571,9 @@ def _chart_plan(
     return None
 
 
-def _add_chart(wb: Any, plan: tuple[Any, ...], header, rows, labels, title: str, taken) -> str:
+def _add_chart(
+    wb: Any, plan: tuple[Any, ...], header, rows, labels: dict[str, str], title: str, taken
+) -> str:
     from openpyxl.chart import BarChart, LineChart, Reference
 
     chart_type, x, values, series = plan
@@ -534,7 +613,9 @@ def _add_chart(wb: Any, plan: tuple[Any, ...], header, rows, labels, title: str,
             line.graphicalProperties.solidFill = colour
     sheet = wb.create_chartsheet(_sheet_name(labels["chart"], taken))
     sheet.add_chart(chart)
-    return f"{chart_type} chart of {', '.join(columns[1:4])} by {header[x]}"
+    return labels["chart_text"].format(
+        kind=labels[chart_type], columns=", ".join(columns[1:4]), x=header[x]
+    )
 
 
 def _licence(provenance: dict[str, Any]) -> str | None:
@@ -557,7 +638,7 @@ def build_workbook(
     """The .xlsx bytes, its sheet names and a description of its chart."""
     from openpyxl import Workbook
 
-    labels = LABELS["fr" if lang == "fr" else "en"]
+    labels = _labels(lang)
     header, table = clean_rows(rows)
     wb = Workbook()
     taken: set[str] = set()
@@ -587,7 +668,7 @@ def build_workbook(
         (labels["attribution"], attribution),
         (
             labels["rows"],
-            labels["rows_text"].format(written=len(table), available=available) + capped,
+            _say(lang, "rows_text", written=len(table), available=available) + capped,
         ),
         (labels["cleaning"], labels["cleaning_text"]),
         (labels["reproduce"], labels["reproduce_text"]),
@@ -634,31 +715,30 @@ async def export(
     from maplestats_mcp import config
 
     if not 1 <= max_rows <= MAX_ROWS:
-        raise InvalidInput(f"max_rows must be between 1 and {MAX_ROWS:,}, got {max_rows}.")
+        raise InvalidInput(_say(lang, "max_rows", limit=MAX_ROWS, got=str(max_rows)))
     if rows is None and not tool_name:
-        raise InvalidInput("Pass tool_name (and its arguments), or the rows to write.")
+        raise InvalidInput(_say(lang, "no_call"))
     if tool_name in _NOT_DATA:
-        raise InvalidInput(f"{tool_name} does not return data rows to write to a workbook.")
+        raise InvalidInput(_say(lang, "not_data", tool=tool_name))
     if delivery not in ("auto", "base64", "file"):
-        raise InvalidInput("delivery must be 'auto', 'base64' or 'file'.")
+        raise InvalidInput(_say(lang, "delivery"))
     local = config.get_transport() == "stdio"
     if delivery == "file" and not local:
-        raise InvalidInput(
-            "This is a hosted server: it cannot write to your disk. Use delivery='base64'."
-        )
+        raise InvalidInput(_say(lang, "hosted"))
     provenance: dict[str, Any] = {}
     if rows is None:
-        payload = await _call(str(tool_name), arguments or {})
+        payload = await _call(str(tool_name), arguments or {}, lang)
         provenance = payload_provenance(payload)
         records = rows_from_payload(payload)
     else:
         if not all(isinstance(row, dict) for row in rows):
-            raise InvalidInput("rows must be a list of objects, one per row.")
+            raise InvalidInput(_say(lang, "rows_shape"))
         records = [_flatten(row) for row in rows]
     if not records:
-        raise NotFound(f"{tool_name or 'The rows'} returned no rows to write to a workbook.")
+        what = tool_name or _labels(lang)["the_rows"]
+        raise NotFound(_say(lang, "no_rows", what=what))
     available = len(records)
-    title = (title or tool_name or "MapleStats data").strip()[:120]
+    title = (title or tool_name or _labels(lang)["default_title"]).strip()[:120]
     content, sheets, chart = build_workbook(
         records[:max_rows],
         title=title,
@@ -669,15 +749,11 @@ async def export(
         lang=lang,
     )
     if len(content) > MAX_BYTES:
-        raise InvalidInput(
-            f"The workbook is {len(content):,} bytes, over the {MAX_BYTES:,}-byte limit for "
-            "a tool response. Lower max_rows, or call reproduce_code with language='excel' "
-            "for a Power Query that loads the full data inside Excel."
-        )
+        raise InvalidInput(_say(lang, "too_big", size=len(content), limit=MAX_BYTES))
     file_name = _file_name(title)
     notes = []
     if available > max_rows:
-        notes.append(f"Wrote the first {max_rows:,} of {available:,} rows (max_rows).")
+        notes.append(_say(lang, "first_rows", written=max_rows, available=available))
     saved_path = None
     encoded = None
     if delivery == "file" or (delivery == "auto" and local):
@@ -686,14 +762,10 @@ async def export(
         target = folder / file_name
         target.write_bytes(content)
         saved_path = str(target)
-        notes.append(f"Saved to {saved_path}.")
+        notes.append(_say(lang, "saved", path=saved_path))
     else:
         encoded = base64.b64encode(content).decode("ascii")
-        notes.append(
-            f"Decode workbook_base64 and save it as {file_name} (a hosted server cannot write "
-            "to your disk). Large results pass through the client's context: keep max_rows "
-            "small, or use reproduce_code language='excel' for the full data."
-        )
+        notes.append(_say(lang, "decode", file=file_name))
     return ExcelWorkbook(
         file_name=file_name,
         media_type=MEDIA_TYPE,
@@ -711,9 +783,7 @@ async def export(
             url=str(provenance.get("url") or "about:blank"),
             cached=False,
             schema_name="reproduce.ExcelWorkbook",
-            limits=(
-                f"at most {MAX_ROWS:,} rows (max_rows, default {DEFAULT_ROWS:,}) and "
-                f"{MAX_BYTES:,} bytes per workbook"
-            ),
+            limits=_say(lang, "limits_text", rows=MAX_ROWS, default=DEFAULT_ROWS, size=MAX_BYTES),
+            lang=lang,
         ),
     )

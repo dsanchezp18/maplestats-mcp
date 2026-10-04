@@ -19,6 +19,7 @@ import httpx
 
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
@@ -35,9 +36,17 @@ def decode(body: bytes) -> str:
 def check_url(url: str, allowed_hosts: Iterable[str], context: str) -> None:
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname not in set(allowed_hosts):
-        raise InvalidInput(f"{context}: url must be an https link on {sorted(allowed_hosts)}.")
+        raise call_error(
+            InvalidInput,
+            f"{context}: url must be an https link on {sorted(allowed_hosts)}.",
+            f"{context} : url doit être un lien https sur {sorted(allowed_hosts)}.",
+        )
     if not parsed.path.lower().endswith(".csv"):
-        raise InvalidInput(f"{context}: url must point to a .csv file.")
+        raise call_error(
+            InvalidInput,
+            f"{context}: url must point to a .csv file.",
+            f"{context} : url doit pointer vers un fichier .csv.",
+        )
 
 
 async def _get_following_redirects(url: str, context: str) -> httpx.Response:
@@ -57,15 +66,35 @@ async def _get_following_redirects(url: str, context: str) -> httpx.Response:
             if status in (301, 302, 303, 307, 308) and location:
                 target = str(exc.response.url.join(location))
                 if urlparse(target).scheme != "https":
-                    raise UpstreamError(f"{context}: {url} redirected to a non-https URL.") from exc
+                    raise call_error(
+                        UpstreamError,
+                        f"{context}: {url} redirected to a non-https URL.",
+                        f"{context} : {url} a redirigé vers une URL non https.",
+                    ) from exc
                 current = target
                 continue
             if status == 404:
-                raise NotFound(f"{context}: no file at {url}.") from exc
-            raise UpstreamError(f"{context}: {url} returned HTTP {status}.") from exc
+                raise call_error(
+                    NotFound,
+                    f"{context}: no file at {url}.",
+                    f"{context} : aucun fichier à {url}.",
+                ) from exc
+            raise call_error(
+                UpstreamError,
+                f"{context}: {url} returned HTTP {status}.",
+                f"{context} : {url} a renvoyé HTTP {status}.",
+            ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"{context}: {url} did not respond in time.") from exc
-    raise UpstreamError(f"{context}: {url} redirected too many times.")
+            raise call_error(
+                UpstreamUnavailable,
+                f"{context}: {url} did not respond in time.",
+                f"{context} : {url} n'a pas répondu à temps.",
+            ) from exc
+    raise call_error(
+        UpstreamError,
+        f"{context}: {url} redirected too many times.",
+        f"{context} : {url} a redirigé trop de fois.",
+    )
 
 
 async def fetch_rows(
@@ -77,10 +106,18 @@ async def fetch_rows(
         await limiter.acquire()
         response = await _get_following_redirects(url, context)
         if len(response.content) > MAX_FILE_BYTES:
-            raise UpstreamError(f"{context}: {url} is larger than this tool reads.")
+            raise call_error(
+                UpstreamError,
+                f"{context}: {url} is larger than this tool reads.",
+                f"{context} : {url} dépasse la taille que cet outil lit.",
+            )
         text = decode(response.content)
         if text.lstrip().lower().startswith(("<!doctype", "<html")):
-            raise NotFound(f"{context}: {url} returned a web page, not a CSV file.")
+            raise call_error(
+                NotFound,
+                f"{context}: {url} returned a web page, not a CSV file.",
+                f"{context} : {url} a renvoyé une page Web, pas un fichier CSV.",
+            )
         return [
             {(k or "").strip(): (v or "") for k, v in row.items()}
             for row in csv.DictReader(io.StringIO(text))
@@ -102,7 +139,11 @@ class Columns:
     def require(self, name: str) -> str:
         match = self.get(name)
         if match is None:
-            raise InvalidInput(f"Unknown column {name!r}; columns are {self.names}.")
+            raise call_error(
+                InvalidInput,
+                f"Unknown column {name!r}; columns are {self.names}.",
+                f"Colonne inconnue {name!r} ; les colonnes sont {self.names}.",
+            )
         return match
 
     def first_of(self, candidates: Iterable[str]) -> str | None:

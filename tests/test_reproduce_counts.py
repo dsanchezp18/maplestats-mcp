@@ -364,3 +364,47 @@ async def test_french_notes_and_errors(offline):
     assert any("paginez" in note for note in result.notes)
     with pytest.raises(InvalidInput, match="ne récupère pas"):
         await client.reproduce("plan_query", {}, lang="fr")
+
+
+@pytest.mark.parametrize(
+    "english",
+    [
+        # One note from each builder that writes its own (CFIA, PHAC, IP Horizons).
+        (
+            "The tool returned 13 rows (2011-2026); the scripts parse all year tables on the page "
+            "and repeat its year range, disease match (folded for case, accents and apostrophes, "
+            "with the abbreviations and other names in constants.DISEASES), order and totals by "
+            "disease."
+        ),
+        (
+            "The tool returned 3 detections (3 herds) from 1 disease page(s); the scripts parse the "
+            "same pages as the tool does (herd counts such as 'Elk (3 herds)', day and month read "
+            "with the row's year, provinces named in the location, BSE's age) and repeat its "
+            "filters, order."
+        ),
+        (
+            "The tool matched 5 premises and returned 3; the scripts parse the "
+            "investigations-and-orders table as the tool does (hidden padding digits, quarantine "
+            "and released markers, premises type, WOAH class, control zone and order) and repeat "
+            "its filters, newest-first order, counts by province and limit of 3, and read the "
+            "status-by-province table."
+        ),
+        (
+            "The tool returned 1 of 1 matching rows (2 in the file); the scripts repeat its "
+            "filters, province match, date bounds, ordering and limit, so they keep the same rows."
+        ),
+        "Files listed (0): none.",
+        (
+            "`data` holds the patent; `parties` its owners, inventors, applicants and agents; "
+            "`classes` its IPC classes."
+        ),
+    ],
+)
+def test_builder_notes_have_french(english):
+    from maplestats_mcp.modules.reproduce import french, ip_horizons
+
+    assert french.translate(english) is not None, english
+    assert french.translate(ip_horizons._TLS_NOTE) is not None
+    out = french.note(english, "fr")
+    assert out != english and " ;" not in out  # no-break space before ;
+    assert french.note(english, "en") == english

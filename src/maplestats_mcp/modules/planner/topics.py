@@ -92,6 +92,8 @@ _TRANSIT_TERMS = (
     "horaire",
     "metro",
     "stop",
+    "transport en commun",
+    "transport collectif",
 )
 _VEHICLE_TERMS = (
     "vehicle",
@@ -523,7 +525,10 @@ TOPICS: tuple[Topic, ...] = (
             "emergency",
             "readmission",
             "mortality",
+            "life expectancy",
             "sante",
+            "esperance de vie",
+            "mortalite",
             "hopital",
             "hopitaux",
             "temps d'attente",
@@ -696,6 +701,7 @@ TOPICS: tuple[Topic, ...] = (
             "precipitation",
             "qualite de l'air",
             "feu de foret",
+            "feux de foret",
             "incendie",
             "inondation",
             "seisme",
@@ -1017,6 +1023,8 @@ TOPICS: tuple[Topic, ...] = (
             "highway",
             "road work",
             "fermeture de route",
+            "transport en commun",
+            "transport collectif",
         ),
         (
             PlanStep(

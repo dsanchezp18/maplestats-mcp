@@ -46,6 +46,7 @@ from maplestats_mcp.shared.errors import (
     UpstreamUnavailable,
 )
 from maplestats_mcp.shared.http import RecordedRequest, recording
+from maplestats_mcp.shared.i18n import pick
 
 _NOT_DATA = ("reproduce_code", "plan_query", "search_tools", "call_tool")
 # Tools that return documents or text (articles, release notices,
@@ -66,11 +67,11 @@ ALL_LANGUAGES: list[Language] = ["r", "python", "stata", "julia", "excel"]
 
 
 def _say(lang: str, english: str, french_text: str) -> str:
-    return french_text if lang == "fr" else english
+    return pick(lang, english, french_text)
 
 
 async def _run_tool(
-    tool: str, args: dict[str, Any]
+    tool: str, args: dict[str, Any], lang: str = "en"
 ) -> tuple[dict[str, Any], list[RecordedRequest]]:
     """The tool's result and every upstream request it made (cache bypassed)."""
     # Lazy import: the server imports this module's tools at startup.
@@ -87,20 +88,32 @@ async def _run_tool(
     text = next((block.text for block in result.content if isinstance(block, TextContent)), "")
     if result.is_error:
         raise InvalidInput(
-            f"{tool} failed with these arguments, so there is nothing to reproduce: {text[:300]}"
+            _say(
+                lang,
+                f"{tool} failed with these arguments, so there is nothing to reproduce: "
+                f"{text[:300]}",
+                f"{tool} a échoué avec ces arguments ; il n'y a donc rien à reproduire : "
+                f"{text[:300]}",
+            )
         )
     try:
         payload = json.loads(text)
     except ValueError as exc:
-        raise NotFound(f"{tool} did not return a structured result.") from exc
+        raise NotFound(
+            _say(
+                lang,
+                f"{tool} did not return a structured result.",
+                f"{tool} n'a pas renvoyé de résultat structuré.",
+            )
+        ) from exc
     return (payload if isinstance(payload, dict) else {}), list(requests)
 
 
-async def _spec(tool: str, args: dict[str, Any]) -> Spec:
+async def _spec(tool: str, args: dict[str, Any], lang: str = "en") -> Spec:
     builder = builders.builder_for(tool, args)
     if builder is not None and builders.argument_only(tool, args):
         return await builder(args, {})
-    payload, requests = await _run_tool(tool, args)
+    payload, requests = await _run_tool(tool, args, lang)
     if tool in _IP_HORIZONS:
         return await ip_horizons.build(tool, args, payload)
     if builder is not None:
@@ -185,7 +198,7 @@ async def reproduce(
             )
         )
     try:
-        spec = await _spec(tool, arguments)
+        spec = await _spec(tool, arguments, lang)
     except KeyError as exc:
         raise InvalidInput(
             _say(
@@ -246,5 +259,6 @@ async def reproduce(
             url=spec.url or "about:blank",
             cached=False,
             schema_name="reproduce.ReproductionCode",
+            lang=lang,
         ),
     )

@@ -65,3 +65,68 @@ def test_pick_adds_a_missing_space_but_leaves_urls():
     assert f"12{NBSP}%" in text
     assert "https://a.b/?q=1;x%20y)." in text
     assert pick("fr", "", text) == text
+
+
+def test_shared_errors_have_french_twins():
+    # A typed error built from a bare string in shared/ reaches a French call
+    # in English; shared helpers raise through fr_typography.call_error (or
+    # take lang) so each message has its French twin.
+    import ast
+    import pathlib
+
+    from maplestats_mcp import shared
+
+    typed = {"InvalidInput", "NotFound", "UpstreamError", "UpstreamUnavailable", "DataLocked"}
+    english_only = []
+    for path in sorted(pathlib.Path(shared.__file__).parent.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and getattr(node.func, "id", None) in typed
+                and node.args
+                and isinstance(node.args[0], ast.Constant | ast.JoinedStr | ast.BinOp)
+            ):
+                english_only.append(f"{path.name}:{node.lineno}")
+    assert not english_only, english_only
+
+
+def test_shared_helpers_follow_the_call_language():
+    from maplestats_mcp.shared.arg_checks import check_choice, check_range
+    from maplestats_mcp.shared.i18n import reset_call_lang, set_call_lang
+
+    with pytest.raises(InvalidInput) as english:
+        check_range(2020, 2010, "year_from", "year_to")
+    assert str(english.value) == (
+        "year_from (2020) is after year_to (2010); swap them or widen the range."
+    )
+    token = set_call_lang("fr")
+    try:
+        with pytest.raises(InvalidInput) as french:
+            check_range(2020, 2010, "year_from", "year_to")
+        with pytest.raises(InvalidInput) as choice:
+            check_choice("x", ["a", "b"], "class")
+    finally:
+        reset_call_lang(token)
+    assert str(french.value).startswith(f"Entrée invalide{NBSP}: year_from (2020) est postérieur")
+    assert f"Valeurs valides{NBSP}: a, b." in str(choice.value)
+
+
+async def test_call_language_middleware_sets_french_for_the_tool_call():
+    from types import SimpleNamespace
+
+    from maplestats_mcp.shared.i18n import call_lang
+    from maplestats_mcp.shared.validation import CallLanguageMiddleware
+
+    message = SimpleNamespace(
+        name="call_tool", arguments={"name": "x", "arguments": {"lang": "fr-CA"}}
+    )
+
+    async def call_next(context):
+        return call_lang()
+
+    middleware = CallLanguageMiddleware()
+    assert await middleware.on_call_tool(SimpleNamespace(message=message), call_next)  # type: ignore[arg-type] == "fr"
+    assert call_lang() == "en"
+    plain = SimpleNamespace(name="wds_get_cube_metadata", arguments={"product_id": 1})
+    assert await middleware.on_call_tool(SimpleNamespace(message=plain), call_next)  # type: ignore[arg-type] == "en"

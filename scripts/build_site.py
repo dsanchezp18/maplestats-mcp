@@ -53,6 +53,7 @@ from maplestats_mcp import __version__
 from maplestats_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
 from maplestats_mcp.modules.ckan.constants import PORTALS as CKAN_PORTALS
 from maplestats_mcp.modules.planner import client as planner
+from maplestats_mcp.modules.reproduce import french as reproduce_french
 from maplestats_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
 from maplestats_mcp.server import MODULES_ROOT, ModuleProvider, mcp
 from maplestats_mcp.shared.search import tokenize
@@ -1282,8 +1283,7 @@ def esc(text: object) -> str:
 def en_only(lang: Lang) -> str:
     """The attribute lang="en" on a French page, for text only in English on the server.
 
-    Tool docstrings, the planner's plan and reproduce_code's notes are written
-    in English; marking them keeps screen readers and hyphenation right and
+    Tool docstrings are written in English; marking them keeps screen readers and hyphenation right and
     tells the reader (and tests/test_site.py) that the English is known.
     """
     return ' lang="en"' if lang == "fr" else ""
@@ -1724,35 +1724,25 @@ def plan_panel(lang: Lang, root: str, heading: int = 4) -> str:
     The planner answers the home page's question when the site is built.
     `heading` is the level of each list's title, one below the section's.
     """
-    # plan_query writes its plan in English only (its lang argument is accepted
-    # for consistency), so on a French page the plan's own words are marked
-    # lang="en" and only the labels around them are French.
-    plan = planner.plan(PLAN_QUESTION[lang]).model_dump(mode="json")
-    caveat = "Caveat" if lang == "en" else "Précaution"
-    en = en_only(lang)
+    # plan_query answers in the page's language: lang="fr" translates its
+    # labels, purposes and caveats, and names places in French.
+    plan = planner.plan(PLAN_QUESTION[lang], lang).model_dump(mode="json")
+    caveat = "Caveat" if lang == "en" else "Mise en garde"
 
-    def group(title: str, steps: list[dict[str, Any]], caveats: list[str], title_en: bool) -> str:
+    def group(title: str, steps: list[dict[str, Any]], caveats: list[str]) -> str:
         items = "".join(
             f'<li><a href="{tool_href(s["tool"], root)}"><code>{breakable(s["tool"])}</code></a>'
-            f"<span{en}>{esc(s['purpose'])}</span></li>"
+            f"<span>{esc(s['purpose'])}</span></li>"
             for s in steps
         )
-        notes = "".join(
-            f'<p class="plan-note"><b>{caveat}</b> {en_span(esc(c), lang)}</p>' for c in caveats
-        )
-        head = f"<h{heading}{en if title_en else ''}>{esc(title)}</h{heading}>"
+        notes = "".join(f'<p class="plan-note"><b>{caveat}</b> {esc(c)}</p>' for c in caveats)
+        head = f"<h{heading}>{esc(title)}</h{heading}>"
         return f'<div class="plan-group">{head}<ol>{items}</ol>{notes}</div>'
 
-    parts = [group(t["label"], t["steps"], t["caveats"], True) for t in plan["topics"]]
+    parts = [group(t["label"], t["steps"], t["caveats"]) for t in plan["topics"]]
     kinds = {"city": "ville"} if lang == "fr" else {}
-    # A place heading is the place's name and its kind, both shown in French.
     parts += [
-        group(
-            f"{place_name(p['place'], lang)} ({kinds.get(p['kind'], p['kind'])})",
-            p["steps"],
-            [],
-            False,
-        )
+        group(f"{p['place']} ({kinds.get(p['kind'], p['kind'])})", p["steps"], [])
         for p in plan["places"]
     ]
     return "".join(parts)
@@ -1908,7 +1898,7 @@ def long_date(iso: str, lang: Lang) -> str:
 # reader meets the same sentence wherever they start.
 AGENT_PROMPT: dict[Lang, str] = {
     "en": f"Connect the MapleStats MCP server to this agent. Follow the setup steps in {REPO}",
-    "fr": f"Connecte le serveur MCP MapleStats à cet agent. Suis les étapes de {REPO}",
+    "fr": f"Connectez le serveur MCP MapleStats à cet agent. Suivez les étapes de {REPO}",
 }
 
 # Shown next to the install snippets while the package is not on PyPI.
@@ -2225,8 +2215,15 @@ def how_block(case: dict[str, Any], key: str, lang: Lang) -> str:
         tail = f'<figure class="panel">{script_tabs(list(first["scripts"].items()), f"{key}-rp")}</figure>'
     else:
         heading = "No script for this one" if lang == "en" else "Pas de script pour cet appel"
-        # reproduce_code explains itself in English only.
-        notes = en_span(" ".join(esc(n) for n in first.get("script_notes", [])), lang)
+        # The capture holds reproduce_code's English notes; French pages show
+        # its French notes (reproduce/french.py), and any note without one in
+        # a lang="en" span.
+        notes = " ".join(
+            esc(reproduce_french.note(n, lang))
+            if lang == "en" or reproduce_french.translate(n)
+            else en_span(esc(n), lang)
+            for n in first.get("script_notes", [])
+        )
         tail = f'<div class="how-note"><strong>{heading}.</strong> <code>reproduce_code</code>: {notes}</div>'
     return (
         f'<details class="how"><summary>{summary}</summary><div class="how-body">'
@@ -3970,7 +3967,13 @@ def french_typography(html_text: str) -> str:
         tag = match.group(0)
         if french():
             tag = _TEXT_ATTR.sub(lambda m: m.group(1) + fix(m.group(2), True) + m.group(3), tag)
-            if name == "meta" and 'name="description"' in tag:
+            # Text a reader sees: the description, and the title and
+            # description cards show when the page is shared.
+            if name == "meta" and re.search(
+                r'(name="description"|property="og:(title|description)"|'
+                r'name="twitter:(title|description)")',
+                tag,
+            ):
                 tag = _DESCRIPTION.sub(
                     lambda m: m.group(1) + fix(m.group(2), True) + m.group(3), tag
                 )

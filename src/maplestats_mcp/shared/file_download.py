@@ -31,12 +31,14 @@ import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import (
     is_recording,
     is_retryable,
     new_client,
     raise_if_cloudflare_challenge,
 )
+from maplestats_mcp.shared.i18n import fr_number
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 MAX_REDIRECTS = 4
@@ -59,9 +61,12 @@ LimiterFor = Callable[[str], TokenBucket]
 
 def _refuse(url: str, context: str) -> InvalidInput:
     host = urlparse(url).hostname or url
-    return InvalidInput(
+    return call_error(
+        InvalidInput,
         f"{context}: {host} is not on this portal's list of data hosts, so the file is not "
-        f"downloaded. Open {url} in a browser to get it."
+        f"downloaded. Open {url} in a browser to get it.",
+        f"{context} : {host} ne figure pas dans la liste des hôtes de données de ce portail ; "
+        f"le fichier n'est donc pas téléchargé. Ouvrez {url} dans un navigateur pour l'obtenir.",
     )
 
 
@@ -69,7 +74,11 @@ def check_url(url: str, allow_host: HostCheck, context: str) -> None:
     """https and an allowed host, or InvalidInput (nothing is requested)."""
     parsed = urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname:
-        raise InvalidInput(f"{context}: only https file links are downloaded; got {url!r}.")
+        raise call_error(
+            InvalidInput,
+            f"{context}: only https file links are downloaded; got {url!r}.",
+            f"{context} : seuls les liens de fichiers https sont téléchargés ; reçu {url!r}.",
+        )
     if not allow_host(parsed.hostname):
         raise _refuse(url, context)
 
@@ -98,7 +107,11 @@ async def _fetch_chain(
             if status in _REDIRECT_STATUSES:
                 location = response.headers.get("location")
                 if not location:
-                    raise UpstreamError(f"{context}: {current} redirected without a location.")
+                    raise call_error(
+                        UpstreamError,
+                        f"{context}: {current} redirected without a location.",
+                        f"{context} : {current} a redirigé sans indiquer d'adresse.",
+                    )
                 current = urljoin(str(response.url), location)
                 continue
             if status >= 400:
@@ -107,18 +120,24 @@ async def _fetch_chain(
                 response.raise_for_status()
             declared = response.headers.get("content-length", "")
             if declared.isdigit() and int(declared) > max_bytes:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     f"{context}: {current} is {int(declared):,} bytes; this reader stops at "
-                    f"{max_bytes:,}. Download it from the portal instead."
+                    f"{max_bytes:,}. Download it from the portal instead.",
+                    f"{context} : {current} fait {fr_number(int(declared))} octets ; ce lecteur "
+                    f"s'arrête à {fr_number(max_bytes)}. Téléchargez-le plutôt depuis le portail.",
                 )
             chunks: list[bytes] = []
             total = 0
             async for chunk in response.aiter_bytes():
                 total += len(chunk)
                 if total > max_bytes:
-                    raise UpstreamError(
+                    raise call_error(
+                        UpstreamError,
                         f"{context}: {current} is larger than {max_bytes:,} bytes (stopped "
-                        "reading at the cap). Download it from the portal instead."
+                        "reading at the cap). Download it from the portal instead.",
+                        f"{context} : {current} dépasse {fr_number(max_bytes)} octets (lecture "
+                        "arrêtée à la limite). Téléchargez-le plutôt depuis le portail.",
                     )
                 chunks.append(chunk)
             return Downloaded(
@@ -126,7 +145,11 @@ async def _fetch_chain(
                 final_url=current,
                 content_type=response.headers.get("content-type", ""),
             )
-    raise UpstreamError(f"{context}: {url} redirected more than {MAX_REDIRECTS} times.")
+    raise call_error(
+        UpstreamError,
+        f"{context}: {url} redirected more than {MAX_REDIRECTS} times.",
+        f"{context} : {url} a redirigé plus de {MAX_REDIRECTS} fois.",
+    )
 
 
 async def download(
@@ -152,11 +175,21 @@ async def download(
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status in (404, 410):
-            raise NotFound(f"{context}: {url} answered HTTP {status}: no file there.") from exc
-        raise UpstreamError(f"{context}: {url} returned HTTP {status}.") from exc
+            raise call_error(
+                NotFound,
+                f"{context}: {url} answered HTTP {status}: no file there.",
+                f"{context} : {url} a répondu HTTP {status} : aucun fichier à cette adresse.",
+            ) from exc
+        raise call_error(
+            UpstreamError,
+            f"{context}: {url} returned HTTP {status}.",
+            f"{context} : {url} a renvoyé HTTP {status}.",
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{context}: {url} did not respond in time ({type(exc).__name__})."
+        raise call_error(
+            UpstreamUnavailable,
+            f"{context}: {url} did not respond in time ({type(exc).__name__}).",
+            f"{context} : {url} n'a pas répondu à temps ({type(exc).__name__}).",
         ) from exc
 
 

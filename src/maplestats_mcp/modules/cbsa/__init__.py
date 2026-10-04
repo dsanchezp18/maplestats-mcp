@@ -22,6 +22,6 @@ MODULE_DESCRIPTION_FR = (
     "postes frontaliers canado-américains (pont Peace, pont Ambassador, Pacific Highway, "
     "Lacolle, etc.) pour les voies commerciales et des voyageurs, vers le Canada et vers "
     "les États-Unis, avec l'heure de mise à jour de chaque poste, filtrés par province, "
-    "poste ou direction, en français ou en anglais. Licence du gouvernement ouvert - "
+    "poste ou direction, en français ou en anglais. Licence du gouvernement ouvert – "
     "Canada. Les fichiers historiques sont des jeux de données d'open.canada.ca (ckan_)."
 )

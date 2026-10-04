@@ -16,6 +16,7 @@ from typing import Any
 
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.executor import check_deadline
+from maplestats_mcp.shared.fr_typography import call_error
 
 # A header row is the first of the first rows with this many filled cells.
 HEADER_MIN_CELLS = 3
@@ -64,7 +65,11 @@ def read_sheet(body: bytes, sheet: str, max_rows: int) -> tuple[list[list[str]],
     workbook = load_workbook(io.BytesIO(body), read_only=True, data_only=True)
     try:
         if sheet not in workbook.sheetnames:
-            raise InvalidInput(f"No sheet {sheet!r}; sheets are {workbook.sheetnames}.")
+            raise call_error(
+                InvalidInput,
+                f"No sheet {sheet!r}; sheets are {workbook.sheetnames}.",
+                f"Aucune feuille {sheet!r} ; les feuilles sont {workbook.sheetnames}.",
+            )
         rows: list[list[str]] = []
         capped = False
         for raw in workbook[sheet].iter_rows(values_only=True):
