@@ -142,7 +142,7 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
     ),
     (
         "user",
-        "https://mcprush.com/dsanchezp18/maplestats-mcp",
+        "https://mcprush.com/daniel-sanchez-pazmino/maplestats-mcp",
         f"{_SHIELDS}/badge/Mcprush-listed-B6F24B",
         "Listed on Mcprush",
         "Répertorié sur Mcprush",
