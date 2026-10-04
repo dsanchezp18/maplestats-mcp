@@ -224,10 +224,12 @@ _REPORT_HTML = """
 </div></div>
 </body></html>
 """
+# The French page has its own document id (live 2026-10-03): the English
+# id resolves to the English file even with contextLanguage=fr.
 _REPORT_HTML_FR = """
 <html><body>
 <h1>Avoir foncier et valeur nette selon le mode d'occupation : Canada et provinces</h1>
-<input id="document-id" type="hidden" value="2850a1fa-f31c-4d27-a6fd-75de56e2cecb" />
+<input id="document-id" type="hidden" value="7d33243c-8bbc-4231-8e0e-7e9fe56f9a89" />
 <div class="pdf-landing"><div><p>Données sur l'avoir foncier.</p>
 <dl><dt>Auteur :</dt><dd>SCHL</dd><dt>Type de document :</dt><dd>Excel</dd>
 <dt>Date de publication :</dt><dd>31 mars 2018</dd></dl></div></div>
@@ -236,6 +238,10 @@ _REPORT_HTML_FR = """
 _REPORT_FILE = (
     "https://assets.cmhc-schl.gc.ca/sf/project/cmhc/pubsandreports/excel/"
     "table_23_homeequity_net_worth_canada_provinces_en_w.xls?rev=840c74ea"
+)
+_REPORT_FILE_FR = (
+    "https://assets.cmhc-schl.gc.ca/sf/project/cmhc/pubsandreports/excel/"
+    "table_23_homeequity_net_worth_canada_provinces_fr_w.xls?rev=fd1a03f5"
 )
 
 
@@ -283,15 +289,120 @@ async def test_french_table_reads_the_french_page(httpx_mock):
     )
     httpx_mock.add_response(
         url=(
-            f"{constants.GET_REPORT_FILE_URL}?documentId=2850a1fa-f31c-4d27-a6fd-75de56e2cecb"
+            f"{constants.GET_REPORT_FILE_URL}?documentId=7d33243c-8bbc-4231-8e0e-7e9fe56f9a89"
             "&contextLanguage=fr"
         ),
-        json=_REPORT_FILE.replace("rev=840c74ea", "rev=7818a06b"),
+        json=_REPORT_FILE_FR,
     )
     table = await client.get_table(
         "household-characteristics", "home-equity-net-worth-tenure-canada-provinces", lang="fr"
     )
     assert table.title.startswith("Avoir foncier")
     assert (table.author, table.date_published) == ("SCHL", "31 mars 2018")
-    assert table.default_download_url is not None
-    assert table.default_download_url.endswith("rev=7818a06b")
+    assert table.french_slug == "avoir-foncier"
+    assert table.default_download_url == _REPORT_FILE_FR
+    link = await client.get_download_url(
+        "household-characteristics", "home-equity-net-worth-tenure-canada-provinces", lang="fr"
+    )
+    assert link.file_name == "table_23_homeequity_net_worth_canada_provinces_fr_w.xls"
+
+
+# Pairing, shaped on the live sitemap (2026-10-03): a byte-order mark, and
+# /en and /fr prefixes that the site's own links leave out.
+_FR_BASE = f"{constants.FR_DATA_TABLES_PATH}/caracteristiques-des-menages"
+_HC_BASE = f"{constants.DATA_TABLES_PATH}/household-characteristics"
+_BOM = "\N{ZERO WIDTH NO-BREAK SPACE}"
+_SITEMAP = f"""{_BOM}<?xml version="1.0" encoding="utf-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>{constants.BASE_URL}{_HC_BASE}/home-equity-net-worth-tenure-canada-provinces</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="{constants.BASE_URL}/en{_HC_BASE}/home-equity-net-worth-tenure-canada-provinces" />
+    <xhtml:link rel="alternate" hreflang="fr" href="{constants.BASE_URL}/fr{_FR_BASE}/avoir-foncier" />
+  </url>
+  <url>
+    <loc>{constants.BASE_URL}{_HC_BASE}/household-count-size</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="{constants.BASE_URL}/en{_HC_BASE}/household-count-size" />
+    <xhtml:link rel="alternate" hreflang="fr" href="{constants.BASE_URL}/fr{_FR_BASE}/nombre-menages-taille" />
+  </url>
+  <url>
+    <loc>{constants.BASE_URL}/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="{constants.BASE_URL}/en/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="{constants.BASE_URL}/fr/" />
+  </url>
+</urlset>"""
+_HC_LISTING = f"""<ul>
+<li><a href="{_HC_BASE}/home-equity-net-worth-tenure-canada-provinces">Home Equity and Net Worth</a></li>
+<li><a href="{_HC_BASE}/household-count-size">Household Count and Size</a></li>
+<li><a href="{_HC_BASE}/no-french-twin">English Only Table</a></li>
+</ul>"""
+# The live French listing links one page twice, once under another table's
+# title; such a page's title is read from the page itself.
+_FR_LISTING = f"""<ul>
+<li><a href="{_FR_BASE}/avoir-foncier">Avoir foncier et valeur  nette</a></li>
+<li><a href="{_FR_BASE}/nombre-menages-taille">M&eacute;nages selon le type</a></li>
+<li><a href="{_FR_BASE}/nombre-menages-taille">Nombre de m&eacute;nages et taille</a></li>
+</ul>"""
+_COUNT_FR_HTML = """<html><body><h1>Nombre de ménages et taille des ménages</h1>
+<input id="document-id" type="hidden" value="abc" /></body></html>"""
+_NO_TWIN_HTML = """<html><body><h1>English Only Table</h1>
+<input id="document-id" type="hidden" value="def" /></body></html>"""
+
+
+async def test_french_listing_pairs_tables_through_cmhc_language_links(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.BASE_URL}{_HC_BASE}", text=_HC_LISTING)
+    httpx_mock.add_response(url=constants.SITEMAP_URL, text=_SITEMAP)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}{_FR_BASE}", text=_FR_LISTING)
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}{_FR_BASE}/nombre-menages-taille", text=_COUNT_FR_HTML
+    )
+    # Not in the sitemap: the English page's own language link is read, and
+    # this one has none.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}{_HC_BASE}/no-french-twin", text=_NO_TWIN_HTML
+    )
+    # A French category name is accepted.
+    result = await client.list_tables("caracteristiques-des-menages", lang="fr")
+    assert result.category == "household-characteristics"
+    assert [(t.slug, t.english_slug, t.title) for t in result.tables] == [
+        (
+            "avoir-foncier",
+            "home-equity-net-worth-tenure-canada-provinces",
+            "Avoir foncier et valeur nette",
+        ),
+        (
+            "nombre-menages-taille",
+            "household-count-size",
+            "Nombre de ménages et taille des ménages",
+        ),
+        ("no-french-twin", "no-french-twin", "English Only Table"),
+    ]
+    assert result.tables[0].path == f"{_FR_BASE}/avoir-foncier"
+    assert result.tables[2].note is not None
+    assert result.note is not None and "no-french-twin" in result.note
+
+
+async def test_french_slug_reads_its_english_twin(httpx_mock):
+    # Each call first tries the slug as an English page (a 404 is not cached).
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}{_HC_BASE}/avoir-foncier", status_code=404, is_reusable=True
+    )
+    httpx_mock.add_response(url=constants.SITEMAP_URL, text=_SITEMAP)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}{_REPORT_PATH}", text=_REPORT_HTML)
+    httpx_mock.add_response(
+        url=(
+            f"{constants.GET_REPORT_FILE_URL}?documentId=2850a1fa-f31c-4d27-a6fd-75de56e2cecb"
+            "&contextLanguage=en"
+        ),
+        json=_REPORT_FILE,
+    )
+    table = await client.get_table("household-characteristics", "avoir-foncier")
+    assert table.slug == "home-equity-net-worth-tenure-canada-provinces"
+    link = await client.get_download_url("household-characteristics", "avoir-foncier")
+    assert link.document_url == _REPORT_FILE
+
+
+async def test_unknown_slug_stays_not_found(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.BASE_URL}{_HC_BASE}/nope", status_code=404)
+    httpx_mock.add_response(url=constants.SITEMAP_URL, text=_SITEMAP)
+    with pytest.raises(NotFound):
+        await client.get_table("household-characteristics", "nope")

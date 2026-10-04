@@ -62,7 +62,7 @@ def test_listing_has_the_seven_general_elections():
     ]
     assert all(e.seats == 57 and e.detail == "candidate" for e in listing.elections)
     assert listing.elections[0].source_url == _2023.votes
-    assert any("Manitoba" in note and "risk" in note for note in listing.notes)
+    assert any("Manitoba" in note and "no licence is stated" in note for note in listing.notes)
 
 
 def test_2023_files_give_candidates_electors_and_turnout():
@@ -165,7 +165,7 @@ async def test_voting_areas_read_one_member_by_range(httpx_mock):
     assert len(result.areas) == 63 and result.areas[0].electors == 181
     assert result.areas[-1].voting_area.startswith("BALLOTS CAST OUTSIDE")
     assert result.district_valid_votes == result.areas_valid_votes == 7077
-    assert "project owner's risk" in (result.provenance.limits or "")
+    assert "no licence is stated" in (result.provenance.limits or "")
     assert result.provenance.url == _2023.by_area
 
 
@@ -196,7 +196,7 @@ async def test_seats_and_results_carry_the_terms_notice(httpx_mock):
     httpx_mock.add_response(url=_2023.summary, content=_bytes("mb_2023_summary.xlsx"))
     seats = await client.get_seats("mb")
     assert seats.seats_contested == 3 and seats.parties[0].seats == 2
-    assert "project owner's risk" in (seats.provenance.limits or "")
+    assert "no licence is stated" in (seats.provenance.limits or "")
     assert seats.attribution == constants.MB_ATTRIBUTION
     results = await client.get_results("mb", "2023", party="liberal")
     assert {r.party_code for r in results.rows} == {"MLP"}

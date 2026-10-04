@@ -926,29 +926,34 @@ async def test_embedded_error_codes_map_to_typed_errors(httpx_mock, body, error)
 
 
 @pytest.mark.parametrize(
-    "status",
+    "status, error",
     [
-        # Found 2026-10-03: shared/arcgis.py::_raise_for_status_error maps every
-        # 4xx, 429 included, to InvalidInput ("rejected the request"), so a rate
-        # limit that outlasts the retries reads as the caller's fault. Fix belongs
-        # in shared/arcgis.py; non-strict so that fix does not break this suite.
-        pytest.param(
-            429,
-            marks=pytest.mark.xfail(reason="shared/arcgis.py maps 429 to InvalidInput"),
-        ),
-        500,
-        502,
-        503,
-        504,
+        # A rate limit that outlasts the retries is the service being
+        # unavailable, not the caller's InvalidInput.
+        (429, UpstreamUnavailable),
+        (500, UpstreamError),
+        (502, UpstreamError),
+        (503, UpstreamError),
+        (504, UpstreamError),
     ],
 )
-async def test_transient_status_is_retried_three_times_then_upstream_error(httpx_mock, status):
+async def test_transient_status_is_retried_three_times_then_typed(httpx_mock, status, error):
     httpx_mock.add_response(
         url=_ANY_QUERY, status_code=status, text="Service Unavailable", is_reusable=True
     )
-    with pytest.raises(UpstreamError, match=f"HTTP {status}"):
+    with pytest.raises(error, match=f"HTTP {status}"):
         await client.summarize_fires()
     assert len(httpx_mock.get_requests()) == 3
+
+
+async def test_database_pool_failure_with_4xx_is_unavailable(httpx_mock):
+    httpx_mock.add_response(
+        url=_ANY_QUERY,
+        status_code=400,
+        json={"message": "Unable to obtain connection from database HikariPool-1"},
+    )
+    with pytest.raises(UpstreamUnavailable, match="temporarily unavailable"):
+        await client.get_fire_danger(53.5, -113.5)
 
 
 @pytest.mark.parametrize(
@@ -972,10 +977,10 @@ async def test_client_error_status_is_typed_and_not_retried(httpx_mock, status, 
 )
 async def test_non_json_body_with_http_200_is_a_typed_error(httpx_mock, content_type, text):
     httpx_mock.add_response(url=_ANY_QUERY, headers={"Content-Type": content_type}, text=text)
-    # shared/arcgis.py reports an undecodable body as UpstreamUnavailable; what
-    # matters here is that no raw httpx/JSON exception reaches the tool layer.
-    with pytest.raises((UpstreamError, UpstreamUnavailable)):
+    # Not a timeout: an UpstreamError naming the problem and the start of the body.
+    with pytest.raises(UpstreamError, match="did not return JSON .*it starts: ") as caught:
         await client.get_perimeters("extinguished")
+    assert "did not respond in time" not in str(caught.value)
 
 
 async def test_null_count_features_and_attributes_are_empty_not_errors(server):
@@ -1004,7 +1009,7 @@ async def test_null_count_features_and_attributes_are_empty_not_errors(server):
 )
 async def test_layer_info_failure_only_drops_as_of(httpx_mock, status, body):
     # The layer document is only a freshness hint: any typed failure there
-    # (404 -> NotFound, embedded 400 -> InvalidInput, 429 -> UpstreamError
+    # (404 -> NotFound, embedded 400 -> InvalidInput, 429 -> UpstreamUnavailable
     # after retries) must leave an already-successful data query intact.
     fake = Server()
     fake.on(c.DANGER, lambda p: {"features": [{"attributes": {"Fire_Danger": "Low"}}]})

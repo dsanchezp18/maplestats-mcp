@@ -1,7 +1,6 @@
 """Client for the BC Registrar of Lobbyists mass datasets.
 
-Checked live 2026-10-02 (robots.txt disallows only /sitemap/; the open data
-page links both zips; the licence PDF and the two XLSX data dictionaries
+Checked live 2026-10-02 (the open data page links both zips; the licence PDF and the two XLSX data dictionaries
 were read):
 
 1. `mssDtstRprt?file=ORL_Registration_Data.zip` is 28 MB (260 MB unpacked) of

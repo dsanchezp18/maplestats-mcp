@@ -30,6 +30,27 @@ KNOWN_CATEGORIES = (
     "canadian-housing-survey-data-tables",
 )
 
+# The French site has its own paths and slugs, read from each English
+# page's "Français" link (live 2026-10-03). A French category name is
+# accepted as input and mapped to the English one.
+FR_DATA_TABLES_PATH = (
+    "/professionnels/marche-du-logement-donnees-et-recherche/donnees-sur-le-logement"
+    "/tableaux-de-donnees"
+)
+FRENCH_CATEGORIES = {
+    "rental-market": "donnees-sur-le-marche-locatif",
+    "household-characteristics": "caracteristiques-des-menages",
+    "canadian-housing-survey-data-tables": "enquete-canadienne-sur-logement",
+}
+
+# The sitemap (one ~2 MB file) gives each page's English and French
+# addresses as hreflang alternates. For all 72 tables they equal the
+# language-switch link on the English page (checked live 2026-10-03), so
+# one request pairs every table instead of 72 page reads. Its addresses
+# carry an /en or /fr prefix that the site's own links leave out.
+SITEMAP_URL = f"{BASE_URL}/sitemap.xml"
+CACHE_TTL_PAIRING_SECONDS = 24 * 60 * 60  # 24h
+
 # No published rate limit; same conservative default as the rest of
 # modules/cmhc/ (a legacy-platform-adjacent government site).
 RATE_LIMIT_SOURCE = "cmhc-dt"

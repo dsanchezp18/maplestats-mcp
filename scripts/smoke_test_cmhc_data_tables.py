@@ -94,6 +94,25 @@ async def main() -> int:
     )
     print(f"  fr title={french.title!r}")
     ok &= french.title.startswith("Avoir")
+    # The French page has its own document id: the English one gave the
+    # English file under lang="fr".
+    ok &= "_fr_" in (french.default_download_url or "")
+
+    # French listings: every table paired with its French twin through
+    # CMHC's own language links (72 of 72 on 2026-10-03), and a French slug
+    # resolves the French file.
+    for category in ("rental-market", "household-characteristics"):
+        listing = await client.list_tables(category, lang="fr")
+        unpaired = [t.slug for t in listing.tables if t.note]
+        print(
+            f"{'OK' if not unpaired else 'NOTE'}: list_tables({category}, fr) -> "
+            f"{listing.total_count - len(unpaired)} of {listing.total_count} French twins"
+        )
+        ok &= listing.total_count > 10 and len(unpaired) < listing.total_count // 10
+        first = listing.tables[0]
+        link = await client.get_download_url(category, first.slug, lang="fr")
+        print(f"  {first.slug} (fr) -> {link.file_name}")
+        ok &= first.english_slug is not None and bool(link.file_name)
 
     # Error-path checks: must raise typed errors, not a raw httpx exception.
     try:

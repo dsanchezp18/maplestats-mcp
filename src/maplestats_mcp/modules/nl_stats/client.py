@@ -121,13 +121,16 @@ async def _topic_files(topic: str) -> tuple[list[FileEntry], bool]:
 async def list_files(
     topic: str | None = None,
     query: str | None = None,
-    limit: int = constants.FILES_LIMIT_MAX,
+    limit: int = constants.FILES_LIMIT_DEFAULT,
     lang: Lang = "en",
+    offset: int = 0,
 ) -> FileList:
     if topic is not None and topic not in constants.TOPICS:
         raise InvalidInput(f"nl_stats: topic must be one of {list(constants.TOPICS)}.")
     if not 1 <= limit <= constants.FILES_LIMIT_MAX:
         raise InvalidInput(f"nl_stats: limit must be 1 to {constants.FILES_LIMIT_MAX}.")
+    if offset < 0:
+        raise InvalidInput("nl_stats: offset must be 0 or more.")
     chosen = [topic] if topic else list(constants.TOPICS)
 
     files: list[FileEntry] = []
@@ -145,6 +148,14 @@ async def list_files(
             if all(w in f"{f.title} {f.section or ''} {f.url}".casefold() for w in words)
         ]
     total = len(files)
+    page = files[offset : offset + limit]
+    more = offset + len(page) < total
+    shown = (
+        f"Showing files {offset + 1}-{offset + len(page)} of {total}; pass offset="
+        f"{offset + len(page)} for the next page, or a topic or query to narrow the list."
+        if page and (more or offset)
+        else (f"offset {offset} is past the {total} files." if not page and total else None)
+    )
     return FileList(
         topics=[
             TopicInfo(
@@ -154,9 +165,10 @@ async def list_files(
             )
             for name in constants.TOPICS
         ],
-        files=files[:limit],
+        files=page,
         total_files=total,
-        truncated=total > limit,
+        truncated=more,
+        offset=offset,
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=constants.SITE + "/Statistics/Statistics.aspx",
@@ -165,7 +177,7 @@ async def list_files(
             freshness="The agency updates monthly, quarterly and annually by table.",
             coverage="Excel files only (each topic page also links PDFs); census, "
             "environment and justice topics publish no Excel files.",
-            limits=f"Showing {limit} of {total} files." if total > limit else None,
+            limits=shown,
         ),
     )
 

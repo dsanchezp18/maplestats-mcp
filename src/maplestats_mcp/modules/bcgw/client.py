@@ -26,8 +26,6 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-import httpx
-
 from maplestats_mcp.modules.bcgw import constants
 from maplestats_mcp.modules.bcgw.schemas import (
     LayerQueryResult,
@@ -38,23 +36,19 @@ from maplestats_mcp.modules.bcgw.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import api_get
-from maplestats_mcp.shared.json_utils import list_or_empty
-from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.wfs import WfsConfig, feature_url, get_features
+from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.wfs import (
+    WfsConfig,
+    describe_feature_type,
+    feature_url,
+    get_features,
+)
 
 CONFIG = WfsConfig(
     source=constants.RATE_LIMIT_SOURCE,
     base_url=constants.BASE_URL,
     rate_limit_per_second=constants.RATE_LIMIT_PER_SECOND,
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
-)
-# The same bucket shared/wfs.py uses for this source.
-_LIMITER = get_limiter(
-    constants.RATE_LIMIT_SOURCE,
-    rate=constants.RATE_LIMIT_PER_SECOND,
-    capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
 
@@ -269,48 +263,37 @@ async def get_mining_tenure(
     )
 
 
-async def _geometry_field(type_name: str) -> str:
-    """The layer's geometry column, from DescribeFeatureType.
+async def _fields(type_name: str) -> list[tuple[str, str]]:
+    """The layer's (name, type) fields from DescribeFeatureType, cached."""
 
-    Checked live 2026-10-03: the JSON DescribeFeatureType lists it as the
-    property whose type starts with "gml:" (SHAPE on the fire points,
-    fire polygons and park layers; GEOMETRY is not a field there and a
-    propertyName naming it answers HTTP 400).
-    """
+    async def fetch() -> list[tuple[str, str]]:
+        return await describe_feature_type(CONFIG, type_name)
 
-    async def fetch() -> str:
-        await _LIMITER.acquire()
-        params = {
-            "service": "WFS",
-            "version": "2.0.0",
-            "request": "DescribeFeatureType",
-            "typeName": type_name,
-            "outputFormat": "application/json",
-        }
-        try:
-            body = await api_get(constants.BASE_URL, params=params)
-        except httpx.HTTPStatusError as exc:
-            # An unknown typeName answers HTTP 400 with an ExceptionReport.
-            if exc.response.status_code in (400, 404):
-                raise InvalidInput(f"bcgw: unknown layer {type_name!r}.") from exc
-            raise UpstreamError(
-                f"bcgw: DescribeFeatureType returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable("bcgw: DescribeFeatureType did not respond.") from exc
-        types = list_or_empty(body, "featureTypes") if isinstance(body, dict) else []
-        properties = list_or_empty(types[0], "properties") if types else []
-        for prop in properties:
-            if str(prop.get("type") or "").startswith("gml:") and prop.get("name"):
-                return str(prop["name"])
-        raise InvalidInput(
-            f"bcgw: layer {type_name!r} has no geometry column; set include_geometry=false."
-        )
-
-    field, _ = await cached_fetch(
-        f"bcgw:geometry-field:{type_name}", constants.CACHE_TTL_SCHEMA_SECONDS, fetch
+    fields, _ = await cached_fetch(
+        f"bcgw:describe:{type_name}", constants.CACHE_TTL_DESCRIBE_SECONDS, fetch
     )
-    return field
+    return fields
+
+
+async def _attribute_fields(type_name: str) -> str | None:
+    """The layer's non-geometry fields as a propertyName list (None if it has none)."""
+    names = [name for name, kind in await _fields(type_name) if not kind.startswith("gml:")]
+    return ",".join(names) or None
+
+
+async def _geometry_field(type_name: str) -> str:
+    """The layer's geometry column: the field whose type starts with "gml:".
+
+    Checked live 2026-10-03: SHAPE on the fire points, fire polygons and
+    park layers; GEOMETRY is not a field there and a propertyName naming it
+    answers HTTP 400.
+    """
+    for name, kind in await _fields(type_name):
+        if kind.startswith("gml:"):
+            return name
+    raise InvalidInput(
+        f"bcgw: layer {type_name!r} has no geometry column; set include_geometry=false."
+    )
 
 
 async def query_layer(
@@ -330,10 +313,9 @@ async def query_layer(
     Discover a layer's type_name via ckan_* (portal="bc") -- a WFS/WMS-queryable
     dataset's package carries a resource whose URL embeds it right after
     "openmaps.gov.bc.ca/geo/pub/". `property_names` is a comma-separated
-    field list; when omitted (and `include_geometry` is false), no
-    property filter is sent and BCGW returns every field including
-    geometry, so pass `property_names` explicitly for a lightweight
-    attribute-only query on an unfamiliar layer.
+    field list; when omitted and `include_geometry` is false, the layer's
+    own non-geometry fields (from DescribeFeatureType, cached) are asked
+    for, so no geometry is downloaded.
 
     Confirmed live 2026-09-22: this GeoServer instance answers HTTP 400
     ("Cannot do natural order without a primary key") whenever a request
@@ -350,6 +332,12 @@ async def query_layer(
     if not type_name:
         raise InvalidInput("type_name must not be empty.")
     effective_sort_by = sort_by if sort_by is not None else constants.DEFAULT_SORT_FIELD
+    # Without a field list GeoServer sends every polygon, only for this function
+    # to drop it (live 2026-10-03: 25 mining tenures were 36 KB with geometry).
+    # Name the layer's own non-geometry fields instead, so none is downloaded.
+    requested_fields = property_names
+    if not property_names and not include_geometry:
+        requested_fields = await _attribute_fields(type_name)
     if include_geometry and property_names:
         # propertyName drops the geometry unless the geometry column is in
         # the list (every record came back "geometry": null before
@@ -357,11 +345,11 @@ async def query_layer(
         geometry_field = await _geometry_field(type_name)
         listed = {p.strip().upper() for p in property_names.split(",")}
         if geometry_field.upper() not in listed:
-            property_names = f"{property_names},{geometry_field}"
+            requested_fields = f"{property_names},{geometry_field}"
 
     request: dict[str, Any] = {
         "cql_filter": cql_filter,
-        "property_names": property_names,
+        "property_names": requested_fields,
         "srs_name": constants.DEFAULT_SRS if include_geometry else None,
         "sort_by": effective_sort_by,
         "count": limit,

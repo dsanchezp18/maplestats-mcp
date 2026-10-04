@@ -14,7 +14,9 @@ MODULE_DESCRIPTION = (
     "per-edition Excel table publications for Rental Market Survey, "
     "Household Characteristics, and related surveys, with direct "
     "download links resolved through the site's own resolver API for "
-    "any historical geography/edition, not just the current one."
+    "any historical geography/edition, not just the current one; in "
+    "English or French (French titles, slugs and files, paired with the "
+    "English tables through CMHC's own language links)."
 )
 MODULE_DESCRIPTION_FR = (
     "Société canadienne d'hypothèques et de logement (SCHL), via deux "
@@ -35,5 +37,7 @@ MODULE_DESCRIPTION_FR = (
     "caractéristiques des ménages et d'autres enquêtes connexes, avec "
     "des liens de téléchargement directs résolus via l'API de "
     "résolution propre au site, pour n'importe quelle géographie ou "
-    "édition historique, pas seulement l'actuelle."
+    "édition historique, pas seulement l'actuelle ; en français ou en "
+    "anglais (titres, identifiants et fichiers français, appariés aux "
+    "tableaux anglais par les liens de langue du site de la SCHL)."
 )

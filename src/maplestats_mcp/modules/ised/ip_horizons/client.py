@@ -395,12 +395,27 @@ def _date(value: Any) -> str | None:
     return value if isinstance(value, str) and _ISO_DATE.match(value) else None
 
 
+# Checked 2026-10-03 on the 2024-10-11 release: 965 French titles (no English
+# ones) carry "~" in the source file itself for a character lost upstream,
+# mostly the apostrophe after an elided D, L, S or QU ("D~EXPLOITATION",
+# "QU~UNE"), but also Œ ("MAN~UVRE", "N~UD", "MISE EN ~UVRE"). Only the
+# elision is restored: a standalone D, L, S or QU before a vowel or H, and
+# not before the Œ words ŒUVRE, ŒUF and ŒIL.
+_ELIDED_TILDE = re.compile(
+    r"\b(D|L|S|QU|JUSQU|LORSQU|PUISQU)~(?=[AEIOUYH])(?!UVR|UFS?\b|ILS?\b|ILLET)", re.IGNORECASE
+)
+
+
+def _french_title(value: Any) -> Any:
+    return _ELIDED_TILDE.sub(r"\1'", value) if isinstance(value, str) else value
+
+
 def _summary(row: dict[str, Any]) -> PatentSummary:
     row = {key: _clean(value) for key, value in row.items()}
     return PatentSummary(
         patent_number=row["patent_number"],
         title_en=row.get("application_patent_title_english"),
-        title_fr=row.get("application_patent_title_french"),
+        title_fr=_french_title(row.get("application_patent_title_french")),
         filing_date=_date(row.get("filing_date")),
         grant_date=_date(row.get("grant_date")),
         status_code=row.get("application_status_code"),
@@ -588,7 +603,8 @@ async def search_patents(
             "(strip_accents(application_patent_title_english) ILIKE ? "
             "OR strip_accents(application_patent_title_french) ILIKE ?)"
         )
-        params += [f"%{folded}%", f"%{folded}%"]
+        # An apostrophe also matches the "~" some French titles carry instead.
+        params += [f"%{folded}%", f"%{folded.replace(chr(39), '_')}%"]
     # Dates are ISO text in the files, so string comparison orders them;
     # the LIKE keeps "-1" (unknown) out of a filed_to range.
     if filed_from or filed_to:

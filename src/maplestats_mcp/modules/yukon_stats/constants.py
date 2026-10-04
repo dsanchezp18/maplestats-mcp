@@ -5,8 +5,8 @@ resources (176 on 2026-10-03) of ten datasets in the
 `yukon-bureau-of-statistics` organization on open.yukon.ca (CKAN), all under
 the Open Government Licence - Yukon 2.0. One `package_search` returns the ten
 datasets with their resources (URL, format, size), so discovery is a single
-API call. The host asks for 10 seconds between requests; discovery and file
-downloads share one bucket paced at one request per 10 seconds.
+API call. Discovery and file downloads share one bucket paced at one
+request per 10 seconds.
 """
 
 DOMAIN = "open.yukon.ca"

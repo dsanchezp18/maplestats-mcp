@@ -65,6 +65,35 @@ async def test_list_files_filters_by_topic_and_query(httpx_mock):
 async def test_list_files_rejects_unknown_topic():
     with pytest.raises(InvalidInput):
         await client.list_files(topic="weather")
+    with pytest.raises(InvalidInput):
+        await client.list_files(offset=-1)
+
+
+async def test_list_files_pages_with_limit_and_offset(httpx_mock):
+    httpx_mock.add_response(
+        url=_page_url("population"), content=_bytes("topic_population.html"), is_reusable=True
+    )
+    everything = await client.list_files(topic="population", limit=constants.FILES_LIMIT_MAX)
+    total = everything.total_files
+    assert total >= 10 and not everything.truncated and everything.offset == 0
+    first = await client.list_files(topic="population", limit=4)
+    assert len(first.files) == 4 and first.truncated and first.total_files == total
+    assert first.provenance.limits is not None and "offset=4" in first.provenance.limits
+    second = await client.list_files(topic="population", limit=4, offset=4)
+    assert second.offset == 4
+    assert [f.url for f in first.files + second.files] == [f.url for f in everything.files[:8]]
+    last = await client.list_files(topic="population", limit=4, offset=total - 1)
+    assert len(last.files) == 1 and not last.truncated
+    past = await client.list_files(topic="population", offset=total + 5)
+    assert past.files == [] and past.provenance.limits is not None
+
+
+async def test_list_files_default_is_a_compact_page(httpx_mock):
+    # 15 topic pages with the same body: about 15 x the population files.
+    httpx_mock.add_response(content=_bytes("topic_population.html"), is_reusable=True)
+    result = await client.list_files()
+    assert len(result.files) == constants.FILES_LIMIT_DEFAULT
+    assert result.truncated and result.total_files > constants.FILES_LIMIT_DEFAULT
 
 
 def test_only_agency_excel_links_are_read():

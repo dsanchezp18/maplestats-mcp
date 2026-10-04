@@ -9,9 +9,13 @@ from maplestats_mcp.shared.models import Provenance
 
 class TableSummary(BaseModel):
     category: str
-    slug: str
+    slug: str = Field(description="Pass to cmhc_dt_get_table (English or French slug).")
     title: str
     path: str = Field(description="Full site path, e.g. /professionals/.../<category>/<slug>.")
+    english_slug: str | None = Field(
+        default=None, description="With lang='fr': the paired English table's slug."
+    )
+    note: str | None = None
 
 
 class TableList(BaseModel):
@@ -34,7 +38,8 @@ class EditionOption(BaseModel):
 
 class TableDetail(BaseModel):
     category: str
-    slug: str
+    slug: str = Field(description="The English slug.")
+    french_slug: str | None = None
     title: str
     description: str
     data_source: str | None = Field(

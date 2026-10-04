@@ -337,6 +337,18 @@ STEPS: list[Step] = [
         "bcgw_query_layer",
         {"type_name": "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_PNTS_SP", "limit": 2},
     ),
+    # Without property_names the request names the layer's attribute fields
+    # (DescribeFeatureType), so no polygon is downloaded.
+    Step(
+        "bcgw",
+        "bcgw_query_layer",
+        {"type_name": "WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW", "limit": 3},
+        lambda data: (
+            bool(data.get("records"))
+            and "propertyName=" in data["provenance"]["url"]
+            and "GEOMETRY" not in data["records"][0]
+        ),
+    ),
     # property_names used to drop the geometry (every record "geometry": null).
     Step(
         "bcgw",
@@ -457,6 +469,39 @@ STEPS: list[Step] = [
             "place": "Alberta",
             "limit": 5,
         },
+    ),
+    # French: the French library is searched and paired with the English
+    # one; a French slug works in either language.
+    Step(
+        "cihi",
+        "cihi_search_indicators",
+        {"query": "mortalité accident vasculaire", "lang": "fr"},
+        lambda data: (
+            data["indicators"][0]["english_slug"] == "30-day-stroke-in-hospital-mortality"
+            and data["indicators"][0]["name"].startswith("Mortalité")
+        ),
+    ),
+    Step(
+        "cihi",
+        "cihi_get_indicator",
+        lambda ctx: {
+            "indicator": ctx["cihi_search_indicators"]["indicators"][0]["slug"],
+            "lang": "fr",
+        },
+        lambda data: (
+            data["name"].startswith("Mortalité")
+            and (data["data_file_url"] or "").endswith("-fr.xlsx")
+        ),
+    ),
+    Step(
+        "cihi",
+        "cihi_get_indicator_data",
+        lambda ctx: {
+            "indicator": ctx["cihi_search_indicators"]["indicators"][0]["slug"],
+            "place": "Alberta",
+            "limit": 2,
+        },
+        lambda data: data["slug"] == "30-day-stroke-in-hospital-mortality" and bool(data["rows"]),
     ),
     # Chosen columns only (a row has 33 columns, many blank).
     Step(

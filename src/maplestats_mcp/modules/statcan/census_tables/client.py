@@ -38,10 +38,10 @@ _LIMITER = get_limiter(
 # Download links 302-redirect to the ZIP; HEAD needs redirects followed.
 _HEAD_CLIENT = new_client(timeout=60.0, follow_redirects=True)
 _PID = re.compile(r"PID=(\d+)")
-# Theme pages fetched at once. Crawling every theme in parallel made
+# Theme pages fetched at once. Fetching every theme in parallel made
 # www12 drop connections (2026-09-25: a 2006 search failed while each
 # page answered alone in under a second).
-_CRAWL = asyncio.Semaphore(4)
+_PAGE_SLOTS = asyncio.Semaphore(4)
 _PAGE_ATTEMPTS = 2
 
 
@@ -83,9 +83,9 @@ async def _page(url: str) -> str:
     return response.text
 
 
-async def _crawl_page(url: str) -> str:
+async def _fetch_page(url: str) -> str:
     """A theme page, retried once, a few at a time."""
-    async with _CRAWL:
+    async with _PAGE_SLOTS:
         for attempt in range(1, _PAGE_ATTEMPTS + 1):
             try:
                 return await _page(url)
@@ -168,7 +168,7 @@ async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
     release = _release(key)
     base = f"{constants.HOST}{release.path}"
 
-    async def crawl() -> tuple[list[CensusTable], list[str]]:
+    async def walk_pages() -> tuple[list[CensusTable], list[str]]:
         themes = theme_urls(await _page(f"{base}index-eng.cfm"), base)
         if not themes:
             raise UpstreamError(
@@ -183,7 +183,7 @@ async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
                     if next_url is None:
                         break
                     rows, next_url = parse_list_page(
-                        await _crawl_page(next_url), key, name, next_url
+                        await _fetch_page(next_url), key, name, next_url
                     )
                     found.extend(rows)
             except UpstreamUnavailable:
@@ -201,10 +201,10 @@ async def _catalogue(key: str) -> tuple[list[CensusTable], list[str], bool]:
 
     cache_key = f"census_tables:{key}"
     (tables, skipped), cached = await cached_fetch(
-        cache_key, constants.CATALOGUE_TTL_SECONDS, crawl
+        cache_key, constants.CATALOGUE_TTL_SECONDS, walk_pages
     )
     if skipped:
-        # A partial crawl is not kept, so the next call retries the gaps.
+        # A partial walk is not kept, so the next call retries the gaps.
         cache_module.forget(cache_key)
     return tables, skipped, cached
 

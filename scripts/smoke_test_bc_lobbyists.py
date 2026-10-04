@@ -68,6 +68,12 @@ async def main() -> int:
     by_ministry = await client.summarize_activity("ministry", top=5)
     print(f"OK: top ministries -> {[(r.key, r.reports) for r in by_ministry.rows]}")
     ok &= by_ministry.total_reports >= 45000 and by_ministry.rows[0].reports > 1000
+    # The files are UTF-8: "Premier’s Special Advisor" keeps its U+2019 apostrophe.
+    all_ministries = await client.summarize_activity("ministry", top=200)
+    keys = [r.key for r in all_ministries.rows]
+    curly = [k for k in keys if "’" in k]
+    print(f"OK: ministries with a curly apostrophe -> {len(curly)}")
+    ok &= not any("�" in k for k in keys)
 
     by_month = await client.summarize_activity("month", client="Suzuki", top=6)
     print(f"OK: Suzuki by month -> {[(r.key, r.reports) for r in by_month.rows]}")

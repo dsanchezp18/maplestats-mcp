@@ -40,8 +40,7 @@ SEARCH_LIMIT_DEFAULT = 20
 SEARCH_LIMIT_MAX = 300
 
 # Microdata holdings pages on statcan.gc.ca (Drupal pages with plain tables,
-# no session needed; checked live 2026-10-02, open licence, robots.txt has no
-# rule for /en/microdata/). The French RTRA page is "ADTR" (adtr), not "dtar".
+# no session needed; checked live 2026-10-02, open licence). The French RTRA page is "ADTR" (adtr), not "dtar".
 RDC_URL_EN = "https://www.statcan.gc.ca/en/microdata/data-centres/data"
 RDC_URL_FR = "https://www.statcan.gc.ca/fr/microdonnees/centres-donnees/donnees"
 RTRA_URL_EN = "https://www.statcan.gc.ca/en/microdata/rtra/data"

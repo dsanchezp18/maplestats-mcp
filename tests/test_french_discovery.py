@@ -76,6 +76,10 @@ CASES = [
     ("séisme tremblement de terre magnitude", "earthquakes_search"),
     ("noms géographiques officiels lac rivière", "nrcan_geo_search_names"),
     ("taux de réadmission à l'hôpital ICIS", "cihi_get_indicator_data"),
+    # CIHI and CMHC data tables answer in French (paired from the sources).
+    ("indicateurs de santé ICIS mortalité", "cihi_search_indicators"),
+    ("tableaux de données SCHL caractéristiques des ménages", "cmhc_dt_list_tables"),
+    ("fichier Excel des tableaux de données SCHL", "cmhc_dt_get_download_url"),
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),
     ("débit des pipelines Régie de l'énergie", "cer_query_file"),
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),

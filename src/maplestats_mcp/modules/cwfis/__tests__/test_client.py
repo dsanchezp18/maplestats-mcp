@@ -190,6 +190,15 @@ async def test_fire_danger_maps_gridcode_and_raises_off_grid(httpx_mock):
         await client.get_fire_danger(latitude=0.0, longitude=-30.0)
 
 
+@pytest.mark.parametrize("props", [{"GRIDCODE": None}, {}])
+async def test_fire_danger_null_or_missing_gridcode_is_unknown(httpx_mock, props):
+    # GeoServer writes an absent attribute as "GRIDCODE": null in GeoJSON.
+    httpx_mock.add_response(url=WFS, json=_collection(props))
+    result = await client.get_fire_danger(latitude=49.9, longitude=-119.4)
+    assert result.gridcode is None
+    assert result.danger_class.startswith("Unknown")
+
+
 async def test_large_fires_parse_and_filter(httpx_mock):
     httpx_mock.add_response(
         url=WFS,
@@ -566,9 +575,6 @@ async def test_non_json_body_with_http_200_is_a_typed_error(httpx_mock, content_
 @pytest.mark.parametrize(
     "status",
     [
-        # Same mapping bug as shared/arcgis.py (found 2026-10-03): shared/wfs.py
-        # turns a 429 that outlasts the retries into InvalidInput.
-        pytest.param(429, marks=pytest.mark.xfail(reason="shared/wfs.py maps 429 to InvalidInput")),
         500,
         502,
         503,
@@ -579,6 +585,12 @@ async def test_wfs_transient_status_is_retried_three_times_then_upstream_error(h
     with pytest.raises(UpstreamError, match=f"HTTP {status}"):
         await client.search_large_fires()
     assert len(httpx_mock.get_requests()) == 3
+
+
+async def test_wfs_429_after_retries_is_unavailable_not_a_caller_error(httpx_mock):
+    httpx_mock.add_response(url=WFS, status_code=429, content=b"busy", is_reusable=True)
+    with pytest.raises(UpstreamUnavailable):
+        await client.search_large_fires()
 
 
 async def test_null_features_properties_and_counts_are_empty_not_errors(httpx_mock):

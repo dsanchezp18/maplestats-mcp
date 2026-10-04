@@ -80,7 +80,10 @@ class NfdRow(BaseModel):
     jurisdiction: str | None = None
     dimensions: dict[str, str] = Field(default_factory=dict)
     value: float | None = Field(
-        description="Null when the agency gave no figure (see `qualifiers`: u, U, n)."
+        description=(
+            "Null when the agency gave no figure (see `qualifiers`: usually u, U or n, "
+            "occasionally another code such as a)."
+        )
     )
     unit: str | None = None
     qualifiers: list[str] = Field(

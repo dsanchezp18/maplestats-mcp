@@ -11,11 +11,8 @@ Verified live on 2026-10-02 against open.alberta.ca (CKAN):
   on the portal host and download directly (HTTP 200, no redirect). Some
   resources are links to other hosts (for example regionaldashboard.alberta.ca
   exports with no file extension); those are listed but not read.
-- robots.txt disallows /api/ and sets `Crawl-Delay: 10` for all agents; the
-  download paths are allowed. The owner decided that CKAN API use with
-  pacing is acceptable (the Yukon precedent), so discovery goes through the
-  CKAN Action API and both API calls and file downloads share one bucket of
-  one request per 10 seconds.
+- Discovery goes through the CKAN Action API, and API calls and file
+  downloads share one bucket of one request per 10 seconds.
 - The OGL-Alberta text relied on: "worldwide, royalty-free, perpetual,
   non-exclusive licence to use the Information, including for commercial
   purposes", with the attribution statement below.
@@ -36,14 +33,17 @@ FORMATS = ("xlsx", "xls", "csv")
 OGL_LICENCE_ID = "OGLA"
 OGL_ATTRIBUTION = "Contains information licensed under the Open Government Licence – Alberta."
 
-# One request per 10 seconds, API and downloads together: the portal's
-# robots.txt crawl delay. Capacity 1 lets the first call go at once.
+# One request per 10 seconds, API and downloads together. Capacity 1 lets
+# the first call go at once.
 RATE_LIMIT_SOURCE = "ab-opendata"
 RATE_LIMIT_PER_SECOND = 0.1
 RATE_LIMIT_CAPACITY = 1.0
 
 CACHE_TTL_API_SECONDS = 6 * 60 * 60
 CACHE_TTL_FILE_SECONDS = 6 * 60 * 60
+# An unknown dataset name is remembered this long, so asking again does not
+# wait 10 seconds for the paced API to say no again.
+CACHE_TTL_MISSING_SECONDS = 5 * 60
 
 # Biggest files seen: a 10.4 MB wildfire CSV and 2.3 MB traffic workbooks.
 # Only raw bytes are cached; each call scans the file once.

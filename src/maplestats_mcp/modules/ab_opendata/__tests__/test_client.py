@@ -169,6 +169,23 @@ async def test_get_dataset_not_found(httpx_mock):
     )
     with pytest.raises(NotFound):
         await client.get_dataset("no-such-dataset")
+    # Asked again within minutes: answered from memory, not another paced call.
+    with pytest.raises(NotFound, match="no-such-dataset"):
+        await client.get_dataset("no-such-dataset")
+    assert len(httpx_mock.get_requests()) == 1
+
+
+@pytest.mark.parametrize("name", ["no such thing!", "x", "a/b", "é-dataset", "n" * 101])
+async def test_impossible_dataset_name_is_not_found_without_a_request(httpx_mock, name):
+    # CKAN names and ids are 2-100 characters of a-z, 0-9, - and _.
+    with pytest.raises(NotFound):
+        await client.get_dataset(name)
+    assert httpx_mock.get_requests() == []
+
+
+async def test_dataset_name_is_lowercased(httpx_mock, show):
+    await client.get_dataset(DATASET_ID.upper())
+    assert httpx_mock.get_requests()[0].url.params["id"] == DATASET_ID
 
 
 async def test_read_xlsx_filters_and_attribution(httpx_mock, show):

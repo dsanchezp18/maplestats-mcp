@@ -16,7 +16,8 @@ Lang = Literal["en", "fr"]
 async def nl_stats_list_files(
     topic: str | None = None,
     query: str | None = None,
-    limit: int = constants.FILES_LIMIT_MAX,
+    limit: int = constants.FILES_LIMIT_DEFAULT,
+    offset: int = 0,
     lang: Lang = "en",
 ) -> FileList:
     """List the Excel tables published by the Newfoundland and Labrador Statistics Agency.
@@ -29,7 +30,9 @@ async def nl_stats_list_files(
     (population, labour, cpi, gdp, trade, industry, income, health, education,
     ei, minimumwage, personalfinance, transportation, charitabledonations,
     incomesupport); `query` keeps files whose title, heading or URL contains
-    every word. The agency's own descriptions are English only.
+    every word. Results come a page at a time (`limit`, default 40, up to
+    200; `offset` for the next page); `total_files` counts every match. The
+    agency's own descriptions are English only.
     Keywords: Newfoundland and Labrador, NL, Statistics Agency, population,
     labour force, unemployment, CPI, GDP, trade, St. John's, census division,
     Excel, provincial statistics, minimum wage.
@@ -37,7 +40,7 @@ async def nl_stats_list_files(
     population active, chômage, IPC, PIB, commerce, St. John's, division de
     recensement, Excel, statistiques provinciales, salaire minimum.
     """
-    return await client.list_files(topic=topic, query=query, limit=limit, lang=lang)
+    return await client.list_files(topic=topic, query=query, limit=limit, lang=lang, offset=offset)
 
 
 @tool

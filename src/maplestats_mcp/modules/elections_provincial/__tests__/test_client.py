@@ -60,7 +60,7 @@ def test_list_elections_covers_three_provinces_and_blocks_ontario():
     assert [e.date[:4] for e in by_province["ab"]] == ["2023", "2019", "2015", "2012", "2008"]
     assert by_province["bc"][0].seats == 93
     assert [b.province for b in listing.blocked] == ["on"]
-    assert "scrape" in listing.blocked[0].reason
+    assert "automated access" in listing.blocked[0].reason
     assert client.list_elections("bc", "fr").elections[0].province_name == "Colombie-Britannique"
     assert len(client.list_elections("ab").elections) == 5
 
