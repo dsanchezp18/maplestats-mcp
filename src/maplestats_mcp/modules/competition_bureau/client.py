@@ -26,12 +26,12 @@ from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.competition_bureau import constants
 from maplestats_mcp.modules.competition_bureau.schemas import MergerReview, MergerSearchResult
+from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,

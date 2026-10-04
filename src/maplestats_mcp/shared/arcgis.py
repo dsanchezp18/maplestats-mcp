@@ -1,13 +1,12 @@
 """Shared plumbing for any Esri ArcGIS Hub deployment ("Data Hub" sites).
 
-Confirmed live 2026-09-18 against geoportal.gov.mb.ca (Manitoba),
-geohub.saskatchewan.ca (Saskatchewan), and data.princeedwardisland.ca
-(Prince Edward Island): every ArcGIS Hub site — even one running on a
-fully custom government domain rather than a *.hub.arcgis.com
-subdomain — proxies the same two APIs under its own domain, so one
-client works for all three portals. What differs per portal (domain,
-rate limit, cache TTLs) stays in each modules/arcgis_<province>/
-package, per AGENTS.md.
+Confirmed live 2026-09-18 against geoportal.gov.mb.ca (Manitoba) and
+data.princeedwardisland.ca (Prince Edward Island): every ArcGIS Hub
+site — even one running on a fully custom government domain rather
+than a *.hub.arcgis.com subdomain — proxies the same two APIs under its
+own domain, so one client works for every portal. What differs per
+portal (domain, collection, whether downloads work) stays in
+modules/arcgis_hub/constants.py.
 
 Two live-verified platform quirks this module encodes:
 
@@ -16,10 +15,14 @@ Two live-verified platform quirks this module encodes:
    own content by construction — no orgId/siteId parameter needed. The
    collection's own root document (`/api/search/v1/collections/dataset`)
    declares its `type` filter enum as CSV/Feature Service/Shapefile/
-   KML/Table/Image Service and similar — never a web app or StoryMap —
-   so every item this API returns is a genuine downloadable dataset,
-   and `download_url` below never needs to check an item's type before
-   building an export link. Errors here use real HTTP status codes
+   KML/Table/Image Service and similar — never a web app or StoryMap.
+   That does not make every item exportable: checked live 2026-10-03,
+   the download API (`/api/download/v1`) answers HTTP 500 for File
+   Geodatabase, Shapefile and CSV Collection items and 400 for Image
+   Service items, and a Feature Service exports only the formats its
+   own settings allow (Surrey's plan layers: geojson and kml, not csv
+   or shapefile). `download_links` below therefore picks links by item
+   kind. Errors here use real HTTP status codes
    with a `{"message": ..., "error": ..., "statusCode": ...}` body,
    but `message` is a plain string on a 404 and a `list[str]` on some
    400s (confirmed: an over-limit request returns
@@ -34,11 +37,11 @@ Two live-verified platform quirks this module encodes:
    since `api_get`'s `raise_for_status()` never fires for this
    endpoint. Relatedly, `properties.url` is sometimes the bare service
    root (Manitoba) and sometimes already a specific layer endpoint
-   (Saskatchewan), and the layer/table id worth querying by default is
+   (Ottawa's Planning/MapServer/277), and the layer/table id worth querying by default is
    not always 0 — a Prince Edward Island item's service had an empty
    `layers` list and its one queryable table at id 2. `_service_root`
    and `default_layer_index` below exist because of these two, found
-   only by calling every function here against all three portals live
+   only by calling every function here against the portals live
    (see AGENTS.md's rule on why mocked tests alone cannot catch this).
 3. A later audit (2026-09-19, adding Durham Region) found a third
    quirk `default_layer_index` did not yet handle: an item's
@@ -67,18 +70,46 @@ default to the prior behavior.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, NoReturn
+from typing import Any, Literal, NoReturn
 
 import httpx
 
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.upstream_text import clean_detail, network_error
 
-DOWNLOAD_FORMATS = ("csv", "shapefile", "geojson", "kml")
+DOWNLOAD_FORMATS = ("csv", "shapefile", "geojson", "kml", "filegdb")
+# A Hub item id is 32 hex digits; a layer-level item adds "_<layer id>".
+# Checked live 2026-10-03: an unchecked id went straight into the URL path, so
+# "../../../collections" read another resource and "x?f=html" added a query.
+ITEM_ID_PATTERN = re.compile(r"^[0-9a-f]{32}(_\d+)?$")
+# The Hub Search API pages through Elasticsearch, which refuses from + size
+# above 10,000 with HTTP 500 (live 2026-10-03, Orangeville, startindex=10002).
+SEARCH_WINDOW_MAX = 10_000
+# Files stored on the item itself (not a service) are served by the item's
+# /data resource: checked live 2026-10-03, a 302 to storage for a File
+# Geodatabase or Shapefile and 206 for a ranged CSV read.
+ITEM_DATA_URL = "https://www.arcgis.com/sharing/rest/content/items/{item_id}/data"
+_FILE_FORMATS = {
+    "CSV": "csv",
+    "CSV Collection": "zip",
+    "Shapefile": "shapefile",
+    "File Geodatabase": "filegdb",
+    "GeoJson": "geojson",
+    "KML": "kml",
+    "KML Collection": "zip",
+    "Microsoft Excel": "xlsx",
+    "PDF": "pdf",
+    "GeoPackage": "geopackage",
+    "Microsoft Word": "docx",
+    "Image": "image",
+}
+_SUPPORTED = re.compile(r"Supported file formats are ([a-zA-Z0-9_, ]+)")
 
 
 class LayerNotQueryable(UpstreamError):
@@ -123,17 +154,17 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     try:
         body = exc.response.json()
     except ValueError:
-        return exc.response.text[:200]
+        return clean_detail(exc.response.text)
     if isinstance(body, dict):
         message = body.get("message")
         if isinstance(message, list) and message:
-            return "; ".join(str(item) for item in message)
+            return clean_detail("; ".join(str(item) for item in message))
         if isinstance(message, str) and message:
-            return message
+            return clean_detail(message)
         error = body.get("error")
         if isinstance(error, str) and error:
-            return error
-    return exc.response.text[:200]
+            return clean_detail(error)
+    return clean_detail(exc.response.text)
 
 
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -154,9 +185,7 @@ async def _get(config: ArcGISHubConfig, context: str, url: str, params: dict[str
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
-        ) from exc
+        raise network_error(context, exc) from exc
 
 
 def collection_url(config: ArcGISHubConfig) -> str:
@@ -206,13 +235,82 @@ def download_url(config: ArcGISHubConfig, item_id: str, fmt: str, *, layer_index
     Okotoks's "Floodway" (layer 35) answer `layers=0` with HTTP 404 and
     their real id with the 302 below.
 
-    Confirmed live: `https://<domain>/api/download/v1/items/<id>/<fmt>
-    ?layers=<n>` 302-redirects to a hub.arcgis.com-hosted download —
-    the same link `data.json`'s `distribution` array publishes for
-    every dataset, so it is safe to build for any item this Hub site's
-    dataset collection returns (see module docstring).
+    `https://<domain>/api/download/v1/items/<id>/<fmt>?layers=<n>`
+    302-redirects to a hub.arcgis.com-hosted file (or answers 202 while
+    it builds one) for a Feature Service in a format the service allows.
+    It does not work for every item (see module docstring): build it
+    only through `download_links`, which checks the item kind and the
+    formats the download API itself lists.
     """
     return f"https://{config.domain}/api/download/v1/items/{item_id}/{fmt}?layers={layer_index}"
+
+
+ItemKind = Literal["service", "file", "none"]
+
+
+def item_kind(item_type: str, service_url: str | None) -> ItemKind:
+    """How an item can be downloaded: export of a service, its stored file, or not at all.
+
+    Checked live 2026-10-03 across Manitoba, Ottawa, Surrey and Burnaby: a
+    Feature/Map Service exports through the download API; an item with no
+    service url (CSV, CSV Collection, Shapefile, File Geodatabase) is a file
+    stored on the item; an Image Service (raster) answers the download API
+    with 400 and has no stored file either.
+    """
+    if item_type == "Image Service" or (service_url and "/ImageServer" in service_url):
+        return "none"
+    if service_url:
+        return "service" if "/rest/services/" in service_url else "none"
+    return "file"
+
+
+def file_format(item_type: str) -> str:
+    """A short format label for a file item's /data link."""
+    return _FILE_FORMATS.get(item_type, "file")
+
+
+def item_data_url(item_id: str) -> str:
+    return ITEM_DATA_URL.format(item_id=item_id)
+
+
+async def supported_download_formats(
+    config: ArcGISHubConfig, item_id: str, layer_index: int
+) -> tuple[str, ...]:
+    """The export formats the download API accepts for one service item, in DOWNLOAD_FORMATS order.
+
+    The API lists them itself when asked for a format it does not know:
+    checked live 2026-10-03, `/api/download/v1/items/<id>/_?layers=<n>`
+    answers 400 "Unsupported file format. Supported file formats are csv,
+    shapefile, geojson, kml" on most portals, and "filegdb, geojson, kml"
+    for Surrey's plan layers, whose csv and shapefile links answer 400.
+    Any other answer (the API broken for the site, as Red Deer's 500, or a
+    network failure) gives no formats, so no dead links are handed out.
+    """
+
+    async def fetch() -> tuple[str, ...]:
+        await _limiter(config).acquire()
+        url = f"https://{config.domain}/api/download/v1/items/{item_id}/_"
+        try:
+            await api_get(url, params={"layers": layer_index})
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 400:
+                return ()
+            found = _SUPPORTED.search(_error_detail(exc))
+            if not found:
+                return ()
+            listed = {part.strip().lower() for part in found.group(1).split(",")}
+            return tuple(fmt for fmt in DOWNLOAD_FORMATS if fmt in listed)
+        return ()
+
+    # A network failure is not cached (it raises out of fetch), so the next
+    # call asks again; it still yields no links for this answer.
+    try:
+        formats, _ = await cached_fetch(
+            f"{config.source}:download_formats:{item_id}:{layer_index}", 60 * 60, fetch
+        )
+    except httpx.HTTPError:
+        return ()
+    return formats
 
 
 def _service_root(service_url: str) -> str:
@@ -365,19 +463,19 @@ async def query_layer(
     same portal's own search results (see module docstring point 2 for
     why this endpoint's errors need special handling); checking for
     `/rest/services/` (present on every ArcGIS REST endpoint, Esri-
-    hosted or self-hosted — confirmed live: Saskatchewan's GeoHub
-    items point at `gis.saskatchewan.ca/egis/rest/services/...`, not
-    an `*.arcgis.com` domain) is a cheap guard against a caller
+    hosted or self-hosted — confirmed live: Burnaby's items point at
+    `gis.burnaby.ca/arcgis/rest/services/...`, not an `*.arcgis.com`
+    domain) is a cheap guard against a caller
     passing an arbitrary URL, not a documented upstream requirement.
 
     Confirmed live: an item's `url` is sometimes the bare service root
     (Manitoba: `.../FeatureServer`) and sometimes already a specific
-    layer endpoint (Saskatchewan: `.../FeatureServer/0`) — the two
+    layer endpoint (Burnaby: `.../MapServer/10`) — the two
     portals differ in which layer of a possibly-multi-layer service
     their catalogue item happens to reference. `_service_root` strips
     a trailing numeric layer segment first so `layer_index` always
     selects the layer, instead of silently doubling it into
-    `.../FeatureServer/0/0/query` on a portal like Saskatchewan's. Pass
+    `.../MapServer/10/10/query` on a portal like Burnaby's. Pass
     a `layer_index` resolved by `default_layer_index` rather than a
     bare `0` unless the caller already knows the right id.
 

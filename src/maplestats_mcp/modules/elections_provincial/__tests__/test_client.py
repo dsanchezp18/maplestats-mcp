@@ -68,7 +68,7 @@ async def test_ontario_and_unknown_inputs_are_invalid():
     with pytest.raises(InvalidInput, match="Ontario"):
         await client.get_results("on")
     with pytest.raises(InvalidInput, match="province"):
-        await client.get_results("mb")
+        await client.get_results("nb")
     with pytest.raises(InvalidInput, match="election must be"):
         await client.get_results("qc", "1999")
     with pytest.raises(InvalidInput, match="limit"):

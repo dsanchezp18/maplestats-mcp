@@ -88,18 +88,6 @@ STEPS: list[Step] = [
         "bcgw_query_layer",
         {"type_name": "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_PNTS_SP", "limit": 2},
     ),
-    # CanadaBuys
-    Step("canadabuys", "canadabuys_search_tenders", {"limit": 3}, _non_empty("tenders")),
-    Step("canadabuys", "canadabuys_search_awards", {"limit": 3}, _non_empty("awards")),
-    Step("canadabuys", "canadabuys_search_contracts", {"limit": 3}, _non_empty("contracts")),
-    Step(
-        "canadabuys",
-        "canadabuys_get_notice",
-        lambda ctx: {
-            "reference_number": ctx["canadabuys_search_tenders"]["tenders"][0]["reference_number"]
-        },
-    ),
-    Step("canadabuys", "canadabuys_list_bulk_files", {}, _non_empty("files")),
     # Canada Energy Regulator
     Step("cer", "cer_list_datasets", {"query": "pipeline throughput"}, _non_empty("datasets")),
     Step(
@@ -209,89 +197,6 @@ STEPS: list[Step] = [
     # NRCan geocoding and place names
     Step("nrcan_geo", "nrcan_geo_locate", {"query": "Ottawa"}, _non_empty("locations")),
     Step("nrcan_geo", "nrcan_geo_search_names", {"query": "Lake Louise", "province": "AB"}),
-    # House of Commons (OpenParliament.ca)
-    Step("openparliament", "parliament_search_bills", {"limit": 3}, _non_empty("bills")),
-    Step(
-        "openparliament",
-        "parliament_get_bill",
-        lambda ctx: {
-            "session": ctx["parliament_search_bills"]["bills"][0]["session"],
-            "number": ctx["parliament_search_bills"]["bills"][0]["number"],
-        },
-    ),
-    Step("openparliament", "parliament_search_votes", {"limit": 3}, _non_empty("votes")),
-    Step(
-        "openparliament",
-        "parliament_get_vote",
-        lambda ctx: {
-            "session": ctx["parliament_search_votes"]["votes"][0]["session"],
-            "number": ctx["parliament_search_votes"]["votes"][0]["number"],
-            "include_ballots": True,
-        },
-        _non_empty("ballots"),
-    ),
-    Step(
-        "openparliament",
-        "parliament_search_politicians",
-        {"province": "PE"},
-        _non_empty("politicians"),
-    ),
-    Step(
-        "openparliament",
-        "parliament_get_politician",
-        lambda ctx: {"slug": ctx["parliament_search_politicians"]["politicians"][0]["slug"]},
-    ),
-    Step(
-        "openparliament",
-        "parliament_search_speeches",
-        lambda ctx: {
-            "politician": ctx["parliament_search_politicians"]["politicians"][0]["slug"],
-            "limit": 3,
-        },
-    ),
-    Step(
-        "openparliament",
-        "parliament_search_hansard",
-        {"query": "pharmacare", "sort": "newest"},
-        _non_empty("hits"),
-    ),
-    Step(
-        "openparliament",
-        "parliament_list_committees",
-        {"keyword": "finance"},
-        _non_empty("committees"),
-    ),
-    Step(
-        "openparliament",
-        "parliament_get_committee",
-        lambda ctx: {"committee": ctx["parliament_list_committees"]["committees"][0]["slug"]},
-        _non_empty("sessions"),
-    ),
-    Step(
-        "openparliament",
-        "parliament_search_committee_meetings",
-        lambda ctx: {
-            "committee": ctx["parliament_list_committees"]["committees"][0]["slug"],
-            "in_camera": False,
-            "date_to": _TODAY.isoformat(),
-            "limit": 20,
-        },
-        _non_empty("meetings"),
-    ),
-    Step(
-        "openparliament",
-        "parliament_get_committee_meeting",
-        lambda ctx: {
-            **next(
-                {"committee": m["committee"], "session": m["session"], "number": m["number"]}
-                for m in ctx["parliament_search_committee_meetings"]["meetings"]
-                if m["has_evidence"]
-            ),
-            "limit": 5,
-            "lang": "fr",
-        },
-        _non_empty("speeches"),
-    ),
     # Senate of Canada votes
     Step("senate", "senate_list_votes", {"limit": 3}, _non_empty("votes")),
     Step(
@@ -541,8 +446,11 @@ STEPS: list[Step] = [
     Step(
         "reproduce",
         "reproduce_code",
-        {"tool_name": "canadabuys_search_awards", "arguments": {"query": "snow removal"}},
-        lambda data: len(data["scripts"]) == 5 and "snow" in data["scripts"][1]["code"],
+        {
+            "tool_name": "ircc_list_express_entry_rounds",
+            "arguments": {"program": "Canadian Experience Class"},
+        },
+        lambda data: "experience" in data["scripts"][1]["code"].lower(),
     ),
     # Excel: a Power Query reading the key's series, and a formatted workbook.
     Step(

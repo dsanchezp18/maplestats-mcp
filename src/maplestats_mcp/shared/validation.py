@@ -1,72 +1,173 @@
-"""Argument checks every module shares, so a bad request fails the same way everywhere.
+"""Turn argument validation failures into one readable InvalidInput line.
 
-Two mistakes kept producing an empty *success* instead of an error: a
-range whose start is after its end (a date range, a year range), and a
-filter value the source does not know (a recall class, a vehicle make, a
-geography). An agent reads an empty success as "there is no data", which
-is the wrong conclusion in both cases. These helpers raise `InvalidInput`
-with the valid values listed, so the caller can correct the request.
+FastMCP validates a tool's arguments with pydantic before the tool runs,
+and a failure used to reach the client as pydantic's own text: several
+lines naming an internal `call[tool]` model, the error type in brackets,
+and a link to errors.pydantic.dev. An agent reading that has to guess
+which argument was wrong and what would be accepted. This middleware
+catches the ValidationError once, for every tool and for calls made
+through call_tool, and raises InvalidInput naming each argument, what it
+accepts, and what was sent, in French when the call has lang="fr".
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
+from fastmcp.exceptions import DisabledError, NotFoundError, ToolError
+from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
+from pydantic import ValidationError
+
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.i18n import t
 
-# A long list of valid values is still useful, but past this many the
-# message stops being readable; the rest are counted, not printed.
-_MAX_LISTED = 40
+_TEMPLATES: dict[str, dict[str, str]] = {
+    "literal": {
+        "en": "{field} must be one of {expected} (got {got})",
+        "fr": "{field} doit valoir {expected} (reçu {got})",
+    },
+    "missing": {
+        "en": "{field} is required",
+        "fr": "{field} est obligatoire",
+    },
+    "unexpected": {
+        "en": "{field} is not a parameter of this tool",
+        "fr": "{field} n'est pas un paramètre de cet outil",
+    },
+    "date": {
+        "en": "{field} must be a real date as YYYY-MM-DD (got {got})",
+        "fr": "{field} doit être une date réelle au format AAAA-MM-JJ (reçu {got})",
+    },
+    "int": {
+        "en": "{field} must be a whole number (got {got})",
+        "fr": "{field} doit être un nombre entier (reçu {got})",
+    },
+    "number": {
+        "en": "{field} must be a number (got {got})",
+        "fr": "{field} doit être un nombre (reçu {got})",
+    },
+    "bool": {
+        "en": "{field} must be true or false (got {got})",
+        "fr": "{field} doit valoir true ou false (reçu {got})",
+    },
+    "other": {
+        "en": "{field}: {message} (got {got})",
+        "fr": "{field} : valeur non valide, {message} (reçu {got})",
+    },
+}
+_OR = {"en": " or ", "fr": " ou "}
+_PARAMETERS = {"en": "parameters: {names}", "fr": "paramètres : {names}"}
 
 
-def check_range(
-    start: Any,
-    end: Any,
-    start_name: str = "start",
-    end_name: str = "end",
-) -> None:
-    """Raise InvalidInput when both bounds are given and `start` is after `end`.
+class InvalidArguments(ToolError, InvalidInput):
+    """InvalidInput raised from middleware.
 
-    Works for dates, datetimes, years (int) and ISO date strings of the
-    same shape. Either bound may be None (an open range).
+    A plain exception raised outside the tool body reaches the client as an
+    internal server error; FastMCP turns only ToolError into an isError
+    result there, so this is both.
     """
-    if start is None or end is None:
-        return
-    if start > end:
-        raise InvalidInput(
-            f"{start_name} ({start}) is after {end_name} ({end}); swap them or widen the range."
+
+
+def _kind(error_type: str) -> str:
+    if error_type in ("literal_error", "enum"):
+        return "literal"
+    if error_type in ("missing", "missing_argument"):
+        return "missing"
+    if error_type in ("unexpected_keyword_argument", "extra_forbidden"):
+        return "unexpected"
+    if error_type.startswith(("date", "datetime")):
+        return "date"
+    if error_type.startswith("int"):
+        return "int"
+    if error_type.startswith(("float", "decimal")):
+        return "number"
+    if error_type.startswith("bool"):
+        return "bool"
+    return "other"
+
+
+def _field(loc: tuple[Any, ...]) -> str:
+    # The first element can be the synthetic "call[tool]" model; skip it.
+    parts = [str(p) for p in loc if not str(p).startswith("call[")]
+    return ".".join(parts) or "arguments"
+
+
+def _got(value: Any) -> str:
+    text = repr(value)
+    return text if len(text) <= 60 else text[:57] + "..."
+
+
+def describe(exc: ValidationError, lang: str = "en", parameters: list[str] | None = None) -> str:
+    """One line listing every failed argument (the message InvalidInput carries)."""
+    lang = lang if lang in ("en", "fr") else "en"
+    parts: list[str] = []
+    unexpected = False
+    for error in exc.errors(include_url=False):
+        kind = _kind(error.get("type", ""))
+        unexpected = unexpected or kind == "unexpected"
+        context = error.get("ctx") or {}
+        field = _field(tuple(error.get("loc", ())))
+        if kind == "unexpected":
+            # loc ends at the stray keyword itself.
+            field = _field(tuple(error.get("loc", ()))[-1:])
+        expected = str(context.get("expected", "")).replace(" or ", _OR[lang])
+        parts.append(
+            _TEMPLATES[kind][lang].format(
+                field=field,
+                expected=expected,
+                got=_got(error.get("input")),
+                message=str(error.get("msg", "")).rstrip("."),
+            )
         )
+    detail = "; ".join(dict.fromkeys(parts))
+    if unexpected and parameters:
+        detail += "; " + _PARAMETERS[lang].format(names=", ".join(parameters))
+    return detail
 
 
-def format_choices(valid: Iterable[object]) -> str:
-    """List valid values for an error message, capped so the message stays readable."""
-    values = [str(value) for value in valid]
-    shown = ", ".join(values[:_MAX_LISTED])
-    if len(values) > _MAX_LISTED:
-        shown += f", ... ({len(values) - _MAX_LISTED} more)"
-    return shown
+def _validation_error(exc: BaseException) -> ValidationError | None:
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, ValidationError):
+            return current
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return None
 
 
-def check_choice(
-    value: str | None,
-    valid: Iterable[str],
-    name: str,
-    *,
-    case_sensitive: bool = False,
-) -> str | None:
-    """Return the canonical spelling of `value` from `valid`, or raise InvalidInput.
+class ValidationErrorMiddleware(Middleware):
+    """Re-raise a tool's argument ValidationError as a one-line InvalidInput."""
 
-    None passes through (the filter is optional). Matching ignores case
-    and surrounding spaces unless `case_sensitive` is set.
-    """
-    if value is None:
+    async def on_call_tool(self, context: MiddlewareContext, call_next: CallNext) -> Any:
+        try:
+            return await call_next(context)
+        except Exception as exc:
+            validation = _validation_error(exc)
+            if validation is None:
+                raise
+            params = context.message
+            name = str(getattr(params, "name", "tool"))
+            arguments = getattr(params, "arguments", None) or {}
+            if name == "call_tool" and isinstance(arguments, dict):
+                name = str(arguments.get("name", name))
+                inner = arguments.get("arguments")
+                arguments = inner if isinstance(inner, dict) else {}
+            lang = str(arguments.get("lang", "en")) if isinstance(arguments, dict) else "en"
+            parameters = await _parameter_names(context, name)
+            separator = " : " if lang == "fr" else ": "
+            detail = f"{name}{separator}{describe(validation, lang, parameters)}"
+            raise InvalidArguments(t("error.invalid_input", lang, detail=detail)) from None
+
+
+async def _parameter_names(context: MiddlewareContext, name: str) -> list[str] | None:
+    server = getattr(context.fastmcp_context, "fastmcp", None)
+    if server is None:
         return None
-    options = list(valid)
-    wanted = value.strip()
-    for option in options:
-        if option == wanted or (not case_sensitive and option.casefold() == wanted.casefold()):
-            return option
-    raise InvalidInput(
-        f"{name} {value!r} is not a known value. Valid values: {format_choices(options)}."
-    )
+    try:
+        tool = await server.get_tool(name)
+    except (NotFoundError, DisabledError):  # reported by the call's own error
+        return None
+    if tool is None:
+        return None
+    return sorted(tool.parameters.get("properties", {}))

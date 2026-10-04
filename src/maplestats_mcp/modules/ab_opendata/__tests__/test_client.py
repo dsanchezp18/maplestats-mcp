@@ -275,3 +275,31 @@ async def test_later_pages_drop_the_facets(httpx_mock):
     await client.search_datasets(offset=20)
     params = httpx_mock.get_requests()[0].url.params
     assert params["start"] == "20" and "facet.field" not in params
+
+
+async def test_csv_rejects_a_sheet_name(httpx_mock, show):
+    httpx_mock.add_response(url=CSV_URL, content=b"a,b,c\n1,2,3\n")
+    with pytest.raises(InvalidInput, match="has no sheets"):
+        await client.read_resource(CSV_URL, sheet="nope")
+
+
+def test_sheet_policy_is_shared_with_ckan():
+    from maplestats_mcp.modules.ckan import files as ckan_files
+
+    comparable = [("A", 100, 10), ("B", 90, 10)]
+    dominant = [("Notes", 10, 2), ("Data", 5000, 20)]
+    for choose in (
+        lambda s, sh, f: client._choose_sheet(s, sh, f),
+        lambda s, sh, f: ckan_files._choose_sheet(s, sh, f),
+    ):
+        assert choose(comparable, None, "xlsx") == (None, "none")
+        assert choose(dominant, None, "xlsx") == ("Data", "largest")
+        assert choose(dominant, "data", "xlsx") == ("Data", "request")
+        with pytest.raises(InvalidInput):
+            choose([("csv", 0, 0)], "nope", "csv")
+
+
+def test_both_readers_share_one_file_cache_key():
+    from maplestats_mcp.shared import file_download
+
+    assert file_download.cache_key(XLSX_URL) == f"file:{XLSX_URL}"

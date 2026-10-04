@@ -54,12 +54,12 @@ from maplestats_mcp.modules.recalls.schemas import (
     RecallSummary,
     RecallTable,
 )
+from maplestats_mcp.shared.arg_checks import format_choices
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import decode_json, get_raw, is_retryable, new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.validation import format_choices
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,

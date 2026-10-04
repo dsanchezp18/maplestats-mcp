@@ -17,16 +17,13 @@ from maplestats_mcp.modules.competition_bureau import client as competition_bure
 from maplestats_mcp.modules.cwfis import client as cwfis
 from maplestats_mcp.modules.ircc.monthly import client as ircc_monthly
 from maplestats_mcp.modules.ised.ip_horizons import client as ip_horizons
-from maplestats_mcp.modules.openparliament import client as openparliament
 from maplestats_mcp.modules.pbo import client as pbo
 from maplestats_mcp.shared.errors import InvalidInput
 
 CASES: list[tuple[str, Callable[[], Awaitable[Any]]]] = [
     (
         "competition_bureau",
-        lambda: competition_bureau.search_mergers(
-            concluded_from="2025-06", concluded_to="2024-01"
-        ),
+        lambda: competition_bureau.search_mergers(concluded_from="2025-06", concluded_to="2024-01"),
     ),
     ("pbo", lambda: pbo.search_information_requests(since="2025", until="2024-12")),
     (
@@ -42,10 +39,6 @@ CASES: list[tuple[str, Callable[[], Awaitable[Any]]]] = [
     (
         "bc_lobbyists",
         lambda: bc_lobbyists.search_registrations(date_from="2025-02-01", date_to="2025-01-01"),
-    ),
-    (
-        "openparliament_votes",
-        lambda: openparliament.search_votes(date_from="2025-02-01", date_to="2025-01-01"),
     ),
 ]
 

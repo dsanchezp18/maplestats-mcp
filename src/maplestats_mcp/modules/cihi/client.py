@@ -7,7 +7,6 @@ French pages and files are reached through each page's hreflang link.
 
 from __future__ import annotations
 
-import asyncio
 import io
 import re
 from typing import Any
@@ -26,6 +25,7 @@ from maplestats_mcp.modules.cihi.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -217,7 +217,7 @@ async def _tables(url: str) -> tuple[dict[str, tuple[str, list[str], list[list[s
         try:
             # Parsing a ~2 MB workbook held the event loop for ~1.8 s (measured
             # 2026-09-24), stalling every other request on the server meanwhile.
-            return await asyncio.to_thread(_parse_workbook, response.content)
+            return await run_parse(_parse_workbook, response.content)
         except Exception as exc:  # openpyxl raises several unrelated types
             raise UpstreamError(f"cihi: {url} is not a readable XLSX file.") from exc
 

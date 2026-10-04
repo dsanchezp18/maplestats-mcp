@@ -16,14 +16,11 @@ an open licence.
 
 from __future__ import annotations
 
-# Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence):
-# attribution is required, and adapted data must not imply StatCan endorsed the
-# adaptation.
-STATCAN_LICENCE = (
-    "Source: Statistics Canada. Contains information licensed under the Statistics Canada "
-    "Open Licence (https://www.statcan.gc.ca/en/reference/licence). Adapted or summarised "
-    "data must not be presented as endorsed by Statistics Canada."
-)
+from maplestats_mcp.shared.i18n import t
+
+# The Statistics Canada Open Licence text lives in shared/i18n (English and
+# French); envelope.make_provenance picks the call's language.
+STATCAN_LICENCE = t("provenance.statcan_licence", "en")
 
 OGL_CANADA = (
     "Open Government Licence - Canada 2.0 (https://open.canada.ca/en/open-government-licence-canada). "
@@ -96,13 +93,6 @@ SENATE_TERMS = (
     "Senate of Canada intellectual property terms (https://sencanada.ca/en/intellectual-property/): "
     "reproduction of proceedings is permitted if accurate and not for financial gain; identify "
     "the Senate as author with the title and source URL."
-)
-
-OPENPARLIAMENT_TERMS = (
-    "openparliament.ca holds no copyright on its data (https://openparliament.ca/api/); the "
-    "underlying parliamentary data are under the House of Commons Speaker's permission "
-    "(https://www.ourcommons.ca/en/important-notices): accurate, not presented as official, no "
-    "commercial use. A link back to openparliament.ca is requested."
 )
 
 ELECTIONS_CANADA_TERMS = (
@@ -230,10 +220,29 @@ SOURCE_LICENCES: dict[str, str] = {
     "nl-opendata": OGL_NL,
     "nl-stats": NL_STATS_TERMS,
     "nl-statistics-agency": NL_STATS_TERMS,
+    "bc-environment": f"{OGL_BC} Source: BC Ministry of Environment and Parks.",
+    "nwt-bureau-of-statistics": (
+        "Open Government Licence - Northwest Territories, as the territory's open data "
+        "catalogue lists for these files; the general terms of use linked from statsnwt.ca "
+        "ask for permission before commercial use. Check which applies to your use."
+    ),
+    # Ontario
+    "oeb": (
+        "Source: Ontario Energy Board open data (https://www.oeb.ca/ontarios-energy-sector/"
+        "open-data). Contains information licensed under the Open Government Licence - Ontario."
+    ),
+    "crea": (
+        "Source: The Canadian Real Estate Association (CREA), MLS Home Price Index. CREA's "
+        "terms (https://www.crea.ca/legal/) apply; this is not an open licence."
+    ),
+    # International
+    "worldbank-wdi": (
+        "Source: World Bank, World Development Indicators. Creative Commons Attribution 4.0 "
+        "(https://datacatalog.worldbank.org/public-licenses)."
+    ),
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
-    "canadabuys": OGL_CANADA,
     "cdc": OGL_CANADA,
     "cer": OGL_CANADA,
     "cgc": OGL_CANADA,
@@ -276,13 +285,13 @@ SOURCE_LICENCES: dict[str, str] = {
     "cmhc": CMHC_TERMS,
     "cmhc-dt": CMHC_TERMS,
     "eccc": ECCC_LICENCE,
+    "eccc-data-catalogue": OGL_CANADA,
     "pbo": PBO_TERMS,
     "electricity": "Terms differ by operator; see the operator's terms in this result.",
     # Parliament and elections
     "ourcommons": HOUSE_OF_COMMONS_TERMS,
     "house-of-commons-open-data": HOUSE_OF_COMMONS_TERMS,
     "senate": SENATE_TERMS,
-    "openparliament": OPENPARLIAMENT_TERMS,
     "represent": REPRESENT_TERMS,
     "elections_financial_returns": ELECTIONS_CANADA_TERMS,
     "elections-results": ELECTIONS_CANADA_TERMS,

@@ -24,7 +24,6 @@ are not read.
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 import re
@@ -39,6 +38,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
     mark_winners,
 )
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.executor import run_parse
 
 # Names for the party codes in the files. Elections Saskatchewan's own notes spell out GP,
 # LIB, NDP, PC, SP and WIP; the other codes are the party names it registers.
@@ -233,7 +233,7 @@ async def fetch(year: str) -> list[District]:
     )
     parser = parse_xlsx if url.endswith(".xlsx") else parse_csv
     try:
-        return await asyncio.to_thread(parser, body)
+        return await run_parse(parser, body)
     except UpstreamError:
         raise
     except Exception as exc:  # csv and openpyxl raise several unrelated types

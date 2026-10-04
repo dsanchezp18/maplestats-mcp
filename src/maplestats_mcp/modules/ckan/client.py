@@ -11,8 +11,9 @@ schemas, applying every portal's documented quirks from constants.py:
   values (confirmed on BC); `_text` folds both to None everywhere.
 - An organization's or group's `image_url` is a bare uploaded filename
   on most portals; `image_display_url` is the real link.
-- BC's organization and group rosters come from package_search facets
-  because its `organization_list` caps at 25 and `group_list` needs auth.
+- organization_list/group_list with all_fields return at most 25 entries per
+  call on every CKAN, so they are paged; BC's rosters come from package_search
+  facets because its `group_list` needs auth.
 """
 
 from __future__ import annotations
@@ -387,6 +388,41 @@ async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> Package
     )
 
 
+async def _all_fields_list(key: str, method: str, ttl: int) -> tuple[list[dict[str, Any]], bool]:
+    """Every entry of organization_list or group_list with all_fields, page by page.
+
+    CKAN caps an all_fields listing at 25 entries per call (its
+    group_and_organization_list_all_fields_max default), so a single call
+    silently dropped the rest: checked live 2026-10-03, Open Alberta has 405
+    organizations and Yukon 27, and both came back as 25. `limit`/`offset`
+    page through the rest; a page that repeats names already seen (a portal
+    ignoring `offset`) ends the loop instead of duplicating entries.
+    """
+    portal = _portal(key)
+
+    async def fetch() -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        offset = 0
+        while len(entries) < constants.ROSTER_MAX:
+            page = await action(
+                _config(key, portal),
+                method,
+                params={"all_fields": "true", "limit": constants.ROSTER_PAGE, "offset": offset},
+            )
+            fresh = [
+                e for e in (page if isinstance(page, list) else []) if e.get("name") not in seen
+            ]
+            entries.extend(fresh)
+            seen.update(str(e.get("name")) for e in fresh)
+            if len(page) < constants.ROSTER_PAGE or not fresh:
+                break
+            offset += constants.ROSTER_PAGE
+        return entries
+
+    return await cached_fetch(f"ckan:{key}:{method}:all_fields_paged", ttl, fetch)
+
+
 async def _facet(portal: str, field: str, ttl: int) -> tuple[list[dict[str, Any]], bool]:
     """Roster built from a package_search facet (see BC in constants.py)."""
     result, cached = await _call(
@@ -416,9 +452,7 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
         path = "package_search?rows=0&facet.field=organization"
         coverage = "only organizations with at least one dataset are included"
     else:
-        raw, cached = await _call(
-            portal, "organization_list", {"all_fields": "true"}, ttl, "all_fields"
-        )
+        raw, cached = await _all_fields_list(portal, "organization_list", ttl)
         organizations = [
             OrganizationSummary(
                 id=o.get("id"),
@@ -429,7 +463,11 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
             for o in raw
         ]
         path = "organization_list?all_fields=true"
-        coverage = None
+        coverage = (
+            f"first {constants.ROSTER_MAX} organizations only"
+            if len(organizations) >= constants.ROSTER_MAX
+            else None
+        )
     return OrganizationList(
         portal=portal,
         organizations=organizations,
@@ -605,7 +643,7 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
         path = "package_search?rows=0&facet.field=groups"
         coverage = "only groups with at least one dataset are included"
     else:
-        raw, cached = await _call(portal, "group_list", {"all_fields": "true"}, ttl, "all_fields")
+        raw, cached = await _all_fields_list(portal, "group_list", ttl)
         groups = [
             GroupSummary(
                 id=g.get("id"),
@@ -618,7 +656,11 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
             for g in raw
         ]
         path = "group_list?all_fields=true"
-        coverage = None
+        coverage = (
+            f"first {constants.ROSTER_MAX} groups only"
+            if len(groups) >= constants.ROSTER_MAX
+            else None
+        )
     return GroupList(
         portal=portal,
         groups=groups,
@@ -704,6 +746,13 @@ async def datastore_search(
         f"{resource_id}:{filters}:{query}:{sort}:{fields}:{limit}:{offset}",
     )
     records = list_or_empty(result, "records")
+    field_ids = [f["id"] for f in list_or_empty(result, "fields") if isinstance(f, dict)]
+    # The file reader rejects an unknown filter column; the DataStore path must
+    # too, rather than answer as though the filter had matched.
+    unknown = [name for name in (filters or {}) if field_ids and name not in field_ids]
+    if unknown:
+        shown = [name for name in field_ids if name not in ("_id", "_full_text")]
+        raise InvalidInput(f"unknown filter column(s) {unknown}; columns are {shown}.")
     return DatastoreSearchResult(
         portal=portal,
         resource_id=resource_id,

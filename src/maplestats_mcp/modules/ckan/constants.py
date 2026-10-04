@@ -10,8 +10,9 @@ recorded here as data rather than as ten copies of the client:
   terms live in the bilingual `keywords` field instead.
 - on: bilingual `_translated` dicts; Ontario-specific metadata
   (access level, current-as-of date, geographic coverage).
-- bc: English-only; `organization_list(all_fields=True)` silently caps
-  at 25 and `group_list(all_fields=True)` returns 403 anonymously, so
+- bc: English-only; `organization_list(all_fields=True)` returns 25 per
+  call (true of every CKAN, so rosters are paged) and
+  `group_list(all_fields=True)` returns 403 anonymously, so
   both rosters come from package_search facets; some string fields are
   the literal "null".
 - qc, montreal: French-only content; montreal ignores an unknown sort
@@ -313,6 +314,11 @@ NOTES_EXCERPT_LENGTH = 300
 # an unfiltered listing is capped client-side.
 TAG_LIST_MAX = 200
 FACET_LIMIT = 500
+# organization_list/group_list with all_fields return at most 25 per call
+# (CKAN's default cap), so rosters are read in pages of that size, up to
+# ROSTER_MAX entries (Open Alberta's 405 organizations, 2026-10-03, need 17).
+ROSTER_PAGE = 25
+ROSTER_MAX = 2000
 
 # File reader: a file larger than this is refused (declared length) or the
 # download aborted (undeclared). Cached for 2 hours inside a total byte budget.

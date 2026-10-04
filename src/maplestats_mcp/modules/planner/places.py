@@ -32,13 +32,15 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
         "British Columbia",
         (
             _ckan("bc"),
-            PlanStep("bcgw_query_layer", "BC Geographic Warehouse layers"),
+            PlanStep("bc_stats_list_files", "BC Stats Excel tables (labour, GDP, population)"),
+            PlanStep("bcgw_query_layer", "BC Geographic Warehouse layers: type_name"),
             _arcgis("bc_energy_regulator"),
         ),
     ),
     "alberta": (
         "Alberta",
         (
+            PlanStep("ab_opendata_search_datasets", "Open Alberta Excel and CSV files"),
             _ckan("ab"),
             PlanStep("ab_economic_list_indicators", "Alberta Economic Dashboard"),
             PlanStep("aer_get_well_licences_daily", "Alberta Energy Regulator reports"),
@@ -48,20 +50,61 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
         "Quebec",
         (
             _ckan("qc"),
-            PlanStep("isq_search_tables", "Institut de la statistique du Quebec tables"),
+            PlanStep(
+                "isq_search_tables", "Institut de la statistique du Quebec tables: query=<topic>"
+            ),
         ),
     ),
     "manitoba": ("Manitoba", (_arcgis("mb"),)),
-    "saskatchewan": ("Saskatchewan", (_arcgis("sk"),)),
+    # No provincial catalogue is covered; the two largest cities publish their own.
+    "saskatchewan": (
+        "Saskatchewan",
+        (
+            PlanStep(
+                "arcgis_hub_search_datasets",
+                "search with portal='saskatoon' (city data; no provincial portal is covered)",
+            ),
+            PlanStep(
+                "ckan_search_datasets",
+                "search with portal='regina' (city data; no provincial portal is covered)",
+            ),
+        ),
+    ),
     "prince edward island": ("Prince Edward Island", (_arcgis("pe"),)),
     "nova scotia": ("Nova Scotia", (_socrata("ns"),)),
     "new brunswick": ("New Brunswick", (_socrata("nb"),)),
     "newfoundland": (
         "Newfoundland and Labrador",
-        (PlanStep("nl_opendata_search_datasets", "provincial open-data catalogue"),),
+        (
+            PlanStep("nl_stats_list_files", "NL Statistics Agency Excel tables by topic"),
+            PlanStep("nl_opendata_search_datasets", "provincial open-data catalogue"),
+        ),
     ),
-    "northwest territories": ("Northwest Territories", (_ckan("nt"),)),
-    "yukon": ("Yukon", (_ckan("yt"),)),
+    "northwest territories": (
+        "Northwest Territories",
+        (
+            PlanStep(
+                "nwt_stats_search_files", "NWT Bureau of Statistics Excel tables (query by words)"
+            ),
+            _ckan("nt"),
+        ),
+    ),
+    "yukon": (
+        "Yukon",
+        (
+            PlanStep("yukon_stats_list_tables", "Yukon Bureau of Statistics tables"),
+            _ckan("yt"),
+        ),
+    ),
+    # No Nunavut portal is covered; the federal catalogue and StatCan tables
+    # carry its figures.
+    "nunavut": (
+        "Nunavut",
+        (
+            _ckan("federal", ", q='Nunavut' (no Nunavut portal is covered)"),
+            PlanStep("wds_search_cubes", "StatCan tables with Nunavut as a geography"),
+        ),
+    ),
 }
 
 PROVINCE_ALIASES: dict[str, str] = {
@@ -72,6 +115,36 @@ PROVINCE_ALIASES: dict[str, str] = {
     "terre-neuve": "newfoundland",
     "territoires du nord-ouest": "northwest territories",
     "labrador": "newfoundland",
+    "bc": "british columbia",
+    "b c": "british columbia",  # "B.C." after normalization
+    "pei": "prince edward island",
+    "p e i": "prince edward island",
+    "ipe": "prince edward island",
+    "nwt": "northwest territories",
+    "tno": "northwest territories",
+}
+
+# Two-letter codes that are also ordinary words ("nu" in French, "on"):
+# they count only when typed in capitals, as in "QC" or "NL".
+PROVINCE_CODES: dict[str, str] = {
+    "AB": "alberta",
+    "BC": "british columbia",
+    "SK": "saskatchewan",
+    "MB": "manitoba",
+    "QC": "quebec",
+    "NS": "nova scotia",
+    "NB": "new brunswick",
+    "NL": "newfoundland",
+    "PE": "prince edward island",
+    "YT": "yukon",
+    "NT": "northwest territories",
+    "NU": "nunavut",
+}
+
+# Phrases in which a city name means something else: StatCan's Delta File
+# is not Delta, British Columbia.
+CITY_SHADOWS: dict[str, tuple[str, ...]] = {
+    "delta": ("delta file", "delta files", "fichier delta", "fichiers delta", "statcan delta"),
 }
 
 CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
@@ -141,7 +214,9 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
         "Niagara Region",
         (_arcgis("niagara_region"), _arcgis("niagara_falls"), _arcgis("st_catharines")),
     ),
-    "st. catharines": ("St. Catharines", (_arcgis("st_catharines"),)),
+    # Keys are matched after normalization, which turns "St." into "st".
+    "st catharines": ("St. Catharines", (_arcgis("st_catharines"),)),
+    "saint catharines": ("St. Catharines", (_arcgis("st_catharines"),)),
     "thunder bay": ("Thunder Bay", (_arcgis("thunder_bay"),)),
     "peterborough": ("Peterborough", (_arcgis("peterborough"),)),
     "coquitlam": ("Coquitlam", (_arcgis("coquitlam"),)),

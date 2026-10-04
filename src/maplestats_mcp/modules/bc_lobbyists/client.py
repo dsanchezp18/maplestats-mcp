@@ -54,7 +54,6 @@ module never reads those members from the zip.
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 import re
@@ -84,14 +83,15 @@ from maplestats_mcp.modules.bc_lobbyists.schemas import (
     OrlRegistrationList,
     OrlTopic,
 )
+from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.validation import check_range
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -566,9 +566,7 @@ async def _download(name: str) -> bytes:
 async def _registrations() -> tuple[_RegistrationStore, bool]:
     async def fetch() -> _RegistrationStore:
         body = await _download(constants.REGISTRATION_ZIP)
-        return await asyncio.to_thread(
-            parse_registrations, body, _zip_url(constants.REGISTRATION_ZIP)
-        )
+        return await run_parse(parse_registrations, body, _zip_url(constants.REGISTRATION_ZIP))
 
     return await cached_fetch("bc_lobbyists:registrations", constants.DATA_TTL_SECONDS, fetch)
 
@@ -576,7 +574,7 @@ async def _registrations() -> tuple[_RegistrationStore, bool]:
 async def _activity() -> tuple[_ActivityStore, bool]:
     async def fetch() -> _ActivityStore:
         body = await _download(constants.ACTIVITY_ZIP)
-        return await asyncio.to_thread(parse_activity, body, _zip_url(constants.ACTIVITY_ZIP))
+        return await run_parse(parse_activity, body, _zip_url(constants.ACTIVITY_ZIP))
 
     return await cached_fetch("bc_lobbyists:activity", constants.DATA_TTL_SECONDS, fetch)
 

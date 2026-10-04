@@ -26,8 +26,7 @@ CACHE_TTL_SCAN_SECONDS = 60 * 60
 
 # stop_times.txt is streamed in ranges of this size (compressed bytes).
 SCAN_CHUNK_BYTES = 4 * 1024 * 1024
-# Bounds for one streamed file: the largest feed here is TTC at 84 MB
-# compressed.
+# Bounds for one streamed file, with room above the largest feed served live.
 SCAN_MAX_COMPRESSED_BYTES = 150 * 1024 * 1024
 SCAN_MAX_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024
 # A feed from a host without range support (BC Transit) is downloaded whole
@@ -122,7 +121,6 @@ NATIONAL_CATALOG_TTL_SECONDS = 24 * 60 * 60
 # Database id -> live agency key, for the feeds this module already reads
 # from the agency's own site. They are listed but not served from the zip.
 NATIONAL_OVERLAPS: dict[str, str] = {
-    "toronto_transit_commission": "ttc",
     "societe_transport_montreal": "stm",
     "oc_transpo": "oc_transpo",
     "calgary_transit": "calgary",
@@ -202,34 +200,6 @@ def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agen
 
 
 AGENCIES: dict[str, Agency] = {
-    "ttc": Agency(
-        key="ttc",
-        name_en="Toronto Transit Commission (TTC)",
-        name_fr="Commission de transport de Toronto (TTC)",
-        city="Toronto",
-        province="ON",
-        timezone="America/Toronto",
-        feed_url=(
-            "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/"
-            "b811ead4-6eaf-4adb-8408-d389fb5a069c/resource/"
-            "c920e221-7a1c-488b-8c5b-6d8cd4e85eaf/download/completegtfs.zip"
-        ),
-        source_page=("https://open.toronto.ca/dataset/merged-gtfs-ttc-routes-and-schedules/"),
-        licence="Open Government Licence - Toronto",
-        licence_url=(
-            "https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-licence/"
-        ),
-        attribution="Contains information licensed under the Open Government Licence - Toronto.",
-        update_cadence="Quarterly per the City of Toronto catalogue; refreshed more often in practice.",
-        notes_en=(
-            "The CKAN record says 'License not specified'; City of Toronto open data "
-            "is published under the Open Government Licence - Toronto."
-        ),
-        notes_fr=(
-            "La fiche CKAN indique « licence non précisée »; les données ouvertes de la "
-            "Ville de Toronto sont publiées sous la Licence du gouvernement ouvert - Toronto."
-        ),
-    ),
     "stm": Agency(
         key="stm",
         name_en="Societe de transport de Montreal (STM)",

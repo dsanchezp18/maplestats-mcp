@@ -51,6 +51,7 @@ from maplestats_mcp.modules.transit.zipstream import (
 from maplestats_mcp.shared.cache import cached_fetch, forget
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.licences import derived_from_statcan
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
@@ -222,7 +223,7 @@ def _member(directory: FeedDirectory, key: str, name: str) -> ZipMember | None:
 
 async def _read_table_bytes(directory: FeedDirectory, member: ZipMember) -> bytes:
     if directory.blob is not None:
-        return await asyncio.to_thread(
+        return await run_in_pool(
             read_blob_member, directory.blob, member, max_bytes=constants.TABLE_MAX_BYTES
         )
     return await read_member(directory.url, member, max_bytes=constants.TABLE_MAX_BYTES)
@@ -242,7 +243,7 @@ async def _table(
                     raise UpstreamError(f"{key}: the feed has no {name}.")
                 return []
             data = await _read_table_bytes(directory, member)
-            return await asyncio.to_thread(gtfs.parse_table, data)
+            return await run_in_pool(gtfs.parse_table, data)
 
         return await _with_fresh_directory(key, once)
 
@@ -270,7 +271,7 @@ async def _scan_stop_times(
                     indexes = gtfs.column_indexes(batch[0])
                     batch = batch[1:]
                 rows.extend(
-                    await asyncio.to_thread(
+                    await run_in_pool(
                         gtfs.filter_stop_times,
                         batch,
                         indexes,
@@ -295,7 +296,7 @@ async def _trips(
         if member is None:
             raise UpstreamError(f"{key}: the feed has no trips.txt.")
         data = await _read_table_bytes(directory, member)
-        rows = await asyncio.to_thread(gtfs.parse_table, data)
+        rows = await run_in_pool(gtfs.parse_table, data)
         return [
             TripRecord(
                 trip_id=r["trip_id"],

@@ -60,6 +60,7 @@ from maplestats_mcp.modules.cgc.schemas import (
     ExportFrequency,
     WeeklyDimension,
 )
+from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
@@ -68,7 +69,6 @@ from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.licences import OGL_CANADA
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.validation import check_range
 
 Lang = Literal["en", "fr"]
 Filter = str | Sequence[str] | None

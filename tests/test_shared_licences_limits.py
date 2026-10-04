@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from maplestats_mcp.shared.arg_checks import check_choice, check_range
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.licences import (
@@ -18,7 +19,6 @@ from maplestats_mcp.shared.licences import (
     licence_for,
 )
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
-from maplestats_mcp.shared.validation import check_choice, check_range
 
 MODULES = Path(__file__).resolve().parents[1] / "src" / "maplestats_mcp" / "modules"
 NO_UPSTREAM = {"example", "maplestats-planner", "maplestats-reproduce", "maplestats-workbook"}

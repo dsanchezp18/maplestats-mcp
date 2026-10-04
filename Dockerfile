@@ -1,10 +1,13 @@
-FROM python:3.12-slim
+# Tag for readers, digest for reproducible builds (the digest wins). Refresh both
+# together: docker buildx imagetools inspect python:3.12-slim
+FROM python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016
 
 RUN groupadd -r appuser && useradd -r -g appuser -m appuser
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv
+# Pinned: an unpinned uv could read uv.lock differently from the version that wrote it.
+RUN pip install --no-cache-dir uv==0.11.7
 
 COPY pyproject.toml uv.lock README.md ./
 COPY src/ src/
@@ -13,8 +16,10 @@ COPY src/ src/
 # rather than silently resolving different versions than were tested.
 RUN uv sync --locked --no-dev
 
-# PUMF and CIPO patent caches; named volumes mounted here inherit this owner.
-RUN mkdir -p /data/pumf /data/ip_horizons     && chown appuser:appuser /data/pumf /data/ip_horizons
+# PUMF, CIPO patent and StatCan open-database (LODE) caches; named volumes
+# mounted here inherit this owner.
+RUN mkdir -p /data/pumf /data/ip_horizons /data/lode \
+    && chown appuser:appuser /data/pumf /data/ip_horizons /data/lode
 
 USER appuser
 

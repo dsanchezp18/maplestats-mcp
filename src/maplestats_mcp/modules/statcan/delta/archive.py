@@ -17,6 +17,13 @@ Confirmed live 2026-10-02 against www150.statcan.gc.ca/n1/delta/:
   none) and a date past the roughly 47 business days that are kept.
 - Rows are never deleted; a correction arrives in the next day's file.
   The CSV's values are raw: the scalar factor is not applied.
+
+Reading deep into the CSV (confirmed live 2026-10-03 on 20261001): the
+deflate stream must be inflated from its start once, at about 5 MB/s, so a
+table near the end of the 3.87 GB day takes several calls. Each scan saves
+verified resume points (`scan_index.py`, `shared/zip_stream.py`), so the
+next call continues where the last stopped and any later read of the same
+file version starts next to its table.
 """
 
 from __future__ import annotations
@@ -25,6 +32,7 @@ import asyncio
 import html
 import io
 import re
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from datetime import date as date_cls
@@ -35,7 +43,8 @@ import httpx
 from defusedxml import ElementTree
 from tenacity import retry, retry_if_exception, stop_after_attempt
 
-from maplestats_mcp.modules.statcan.delta import constants
+from maplestats_mcp import config
+from maplestats_mcp.modules.statcan.delta import constants, scan_index
 from maplestats_mcp.modules.statcan.delta.archive_schemas import (
     DeltaCorrection,
     DeltaDimension,
@@ -70,14 +79,23 @@ SCHEMA_URL = "https://www.statcan.gc.ca/en/developers-developpeurs/df-fd/cubemet
 # 2026-10-02, 20260728 to 20261002), not the "5 releases" of the user guide.
 RETENTION_BUSINESS_DAYS = 47
 CACHE_TTL_SECONDS = 600
-SCAN_CHUNK_BYTES = 8 * 1024 * 1024
-# Measured 2026-10-02 from a home connection: about 2.5 MB/s from this
-# host, so 200 MB took 80 to 100 s, close to the server's 120 s tool
-# timeout. 100 MB (about 750 MB inflated on the 3.87 GB day) or 75 s,
-# whichever comes first; past that a table is better fetched from WDS.
-SCAN_MAX_COMPRESSED_BYTES = 100 * 1024 * 1024
-SCAN_MAX_SECONDS = 75.0
-SCAN_MAX_INFLATED_BYTES = 4 * 1024 * 1024 * 1024
+SCAN_CHUNK_BYTES = 16 * 1024 * 1024
+# Measured 2026-10-03 against 20261001.zip from a home connection: one
+# range request runs at about 2.5 MB/s (8 MB in 3.1 s, 32 MB in 9.6 to 15 s)
+# whatever its size, two in flight reach 5 MB/s and four 7 MB/s. www150
+# asks automated clients for 2 s between requests, so requests *start* at
+# least 2 s apart and at most two overlap: with 16 MB ranges that is about
+# one request every 3 s, for roughly twice the single-stream rate.
+SCAN_PREFETCH = 2
+SCAN_REQUEST_INTERVAL_SECONDS = 2.0
+# One verified resume point per range (each 16 MB range is due one); 240
+# points of 32 KiB windows for the 3.87 GB day, about 2 MB saved.
+SCAN_POINT_SPACING = 8 * 1024 * 1024
+# The compressed and time ceilings come from config (MAPLE_DELTA_MAX_SCAN_MB,
+# default 400; MAPLE_DELTA_MAX_SCAN_SECONDS, default 75, under the 120 s
+# tool timeout). The inflated ceiling only stops a deflate bomb: the real
+# CSV inflates about 7.5 times (3.87 GB to 29 GB on 20261001).
+SCAN_MAX_INFLATE_RATIO = 16
 MAX_XML_BYTES = 80 * 1024 * 1024
 MAX_ROWS_CAP = 10_000
 MAX_VECTOR_FILTER = 1_000
@@ -494,6 +512,52 @@ _EXPECTED_COLUMNS = (
 )
 
 
+def _size(count: int) -> str:
+    return f"{count / 1024**2:,.0f} MB" if count >= 10 * 1024**2 else f"{count:,} bytes"
+
+
+def _column_index(header: str, member: str) -> dict[str, int]:
+    names = header.split(",")
+    index = {name: position for position, name in enumerate(names)}
+    missing = [name for name in _EXPECTED_COLUMNS if name not in index]
+    if missing:
+        raise UpstreamError(
+            f"{member} lacks the columns {', '.join(missing)}; "
+            "the Delta CSV layout may have changed."
+        )
+    return index
+
+
+def _ceiling_message(
+    archive: Archive,
+    product_id: int,
+    stream: MemberStream,
+    exc: ScanLimitExceeded,
+    started_at: int,
+    reached: int,
+    max_scan_bytes: int,
+    max_seconds: float,
+) -> str:
+    """How far a stopped scan got, and that calling again continues from there."""
+    total = archive.data.compressed_size
+    share = stream.offset / total if total else 0.0
+    saved = (
+        "Progress is saved: calling statcan_delta_read_table again with the same arguments "
+        "continues from there, about as far again per call"
+        if stream.points
+        else "No resume point was saved (the scan was too short), so calling again repeats it"
+    )
+    origin = f" from byte {started_at:,} (a saved resume point)" if started_at else ""
+    return (
+        f"Table {product_id} was not reached in the Delta File of {archive.date} within one "
+        f"call's ceiling ({_size(max_scan_bytes)} or {max_seconds:.0f} s): "
+        f"{_size(exc.scanned)} of the {_size(total)} compressed CSV were "
+        f"read{origin}, up to productId {reached} ({share:.0%} of the file). {saved}. Faster routes: wds_get_changed_series_data "
+        "(the series that changed) or wds_get_full_table_download (the whole table as CSV), or "
+        f"download {archive.url} yourself."
+    )
+
+
 def _leading_id(line: bytes) -> int:
     head = line.split(b",", 1)[0]
     if not head.isdigit():
@@ -513,6 +577,7 @@ async def read_table(
         raise InvalidInput(f"max_rows must be between 1 and {MAX_ROWS_CAP:,}.")
     if vector_ids is not None and len(vector_ids) > MAX_VECTOR_FILTER:
         raise InvalidInput(f"vector_ids takes at most {MAX_VECTOR_FILTER:,} ids.")
+    called = time.monotonic()
     wanted = set(vector_ids) if vector_ids else None
     archive = await _open_archive(date)
 
@@ -528,51 +593,67 @@ async def read_table(
         )
     codes = await _codeset(archive)
 
+    saved = scan_index.load(archive.date, archive.etag)
+    resume = scan_index.best_start(saved, product_id)
+    max_scan_bytes = config.get_delta_max_scan_bytes()
+    max_seconds = config.get_delta_max_scan_seconds()
     stream = MemberStream(
         archive.url,
         archive.data,
         chunk_bytes=SCAN_CHUNK_BYTES,
-        max_scan_bytes=SCAN_MAX_COMPRESSED_BYTES,
-        max_inflated_bytes=SCAN_MAX_INFLATED_BYTES,
-        max_seconds=SCAN_MAX_SECONDS,
+        max_scan_bytes=max_scan_bytes,
+        max_inflated_bytes=SCAN_MAX_INFLATE_RATIO * max_scan_bytes,
+        # The ceiling counts from the call's start: opening a big archive
+        # (HEAD, directory, metadata XML) took up to 23 s on 2026-10-03.
+        max_seconds=max(1.0, max_seconds - (time.monotonic() - called)),
         before_fetch=_LIMITER.acquire,
+        start=resume.point if resume else None,
+        point_spacing=SCAN_POINT_SPACING,
+        prefetch=SCAN_PREFETCH,
+        min_request_interval=SCAN_REQUEST_INTERVAL_SECONDS,
     )
+    started_at = stream.offset
     rows: list[DeltaRow] = []
     index: dict[str, int] | None = None
+    header_line: str | None = None
+    if resume is not None and saved.header:
+        index = _column_index(saved.header, archive.data.name)
     truncated = False
     done = False
-    batches = stream.batches()
+    in_block = False
+    block_complete = True
+    reached = resume.product_id if resume else 0
+    blocks = stream.blocks()
     try:
-        async for batch in batches:
+        async for block in blocks:
             if index is None:
-                header = batch.pop(0).decode("ascii", "replace").lstrip(_BOM).split(",")
-                index = {name: position for position, name in enumerate(header)}
-                missing = [name for name in _EXPECTED_COLUMNS if name not in index]
-                if missing:
-                    raise UpstreamError(
-                        f"{archive.data.name} lacks the columns {', '.join(missing)}; "
-                        "the Delta CSV layout may have changed."
-                    )
-                if not batch:
+                head, _, block = block.partition(b"\n")
+                header_line = head.rstrip(b"\r").decode("ascii", "replace").lstrip(_BOM)
+                index = _column_index(header_line, archive.data.name)
+                if not block:
                     continue
             # Sorted ascending by productId in contiguous blocks (confirmed
-            # on 20260929 and 20261002), so a whole batch is skipped from its
-            # first and last line and only the batches that touch the
-            # block are read line by line.
-            first, last = _leading_id(batch[0]), _leading_id(batch[-1])
+            # on 20260929, 20261001 and 20261002), so a run of lines is
+            # skipped from its first and last line and only the runs that
+            # touch the table are split into lines.
+            first = _leading_id(block[: block.find(b"\n")] if b"\n" in block else block)
+            last = _leading_id(block[block.rfind(b"\n") + 1 :])
             if first > last:
                 raise UpstreamError(f"{archive.data.name} is not sorted by productId.")
+            reached = last
             if last < product_id:
                 continue
             if first > product_id:
                 break
-            for line in batch:
+            for raw_line in block.split(b"\n"):
+                line = raw_line.rstrip(b"\r")
                 current = _leading_id(line)
                 if current < product_id:
                     continue
                 if current > product_id:
                     done = True
                     break
+                in_block = True
                 row = _row(line.split(b","), index)
                 if wanted is not None and row.vector_id not in wanted:
                     continue
@@ -584,16 +665,25 @@ async def read_table(
             if done:
                 break
     except ScanLimitExceeded as exc:
-        raise UpstreamError(
-            f"Table {product_id} is too far into the Delta File of {archive.date} "
-            f"({archive.data.compressed_size:,} bytes compressed): {exc.scanned:,} bytes were "
-            f"scanned (limits {SCAN_MAX_COMPRESSED_BYTES:,} bytes and {SCAN_MAX_SECONDS:.0f} s) without finishing its rows. "
-            "Use wds_get_changed_series_data (the series that changed) or "
-            "wds_get_full_table_download (the whole table as CSV), or download "
-            f"{archive.url} yourself."
-        ) from exc
+        if not in_block:
+            raise UpstreamError(
+                _ceiling_message(
+                    archive,
+                    product_id,
+                    stream,
+                    exc,
+                    started_at,
+                    reached,
+                    max_scan_bytes,
+                    max_seconds,
+                )
+            ) from exc
+        block_complete = False
     finally:
-        await batches.aclose()
+        await blocks.aclose()
+        # Points are kept even when the ceiling stopped the scan: that is
+        # what lets the next call continue from here.
+        scan_index.record(saved, header_line, stream.points)
 
     notes = [
         "Values are raw: the scalar factor is not applied (see legend.scalar_factors).",
@@ -609,6 +699,18 @@ async def read_table(
         )
     if truncated:
         notes.append(f"Stopped at max_rows={max_rows:,}; filter with vector_ids or raise max_rows.")
+    if not block_complete:
+        notes.append(
+            f"Incomplete: the scan ceiling ({_size(max_scan_bytes)} or "
+            f"{max_seconds:.0f} s) stopped inside this table's rows, so only its first rows were "
+            "read and matching rows further on are missing. For the whole table use "
+            "wds_get_full_table_download; for a few series, wds_get_changed_series_data."
+        )
+    if resume is not None:
+        notes.append(
+            f"Started at compressed byte {started_at:,} (productId {resume.product_id}), a resume "
+            "point saved by an earlier scan of this file, instead of at byte 0."
+        )
     return DeltaTableData(
         date=archive.date,
         product_id=product_id,
@@ -623,6 +725,8 @@ async def read_table(
         truncated=truncated,
         csv_rows_found=bool(rows),
         compressed_bytes_scanned=stream.scanned,
+        scan_started_at_byte=started_at,
+        block_complete=block_complete,
         rows=rows,
         legend=_legend(codes, rows, lang),
         notes=notes,
@@ -635,7 +739,7 @@ async def read_table(
             freshness="One file per business day, about 8:30 ET.",
             coverage=f"Table {product_id} in the release of {archive.date}.",
             limits=f"{stream.scanned:,} of {archive.data.compressed_size:,} compressed CSV bytes "
-            f"read; rows capped at {max_rows:,}.",
+            f"read from byte {started_at:,}; rows capped at {max_rows:,}.",
         ),
     )
 

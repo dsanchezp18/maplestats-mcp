@@ -238,7 +238,7 @@ async def test_timezone_comes_from_the_feed_with_a_province_fallback(httpx_mock)
     await client._resolve("national:exo_l'assomption")
     assert await client._timezone("national:exo_l'assomption") == "America/Halifax"
     assert await client._timezone("national:regina_transit") == "America/Regina"
-    assert await client._timezone("ttc") == "America/Toronto"
+    assert await client._timezone("oc_transpo") == "America/Toronto"
 
 
 def test_province_table_covers_the_provinces():
