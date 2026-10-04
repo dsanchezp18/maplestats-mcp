@@ -601,6 +601,15 @@ SOURCES: dict[str, Source] = {
         places=("BC",),
         row="municipal_catalogue",
     ),
+    "health_products": Source(
+        "Health Canada: drugs, natural health products, medical devices and adverse reactions",
+        "Santé Canada : médicaments, produits de santé naturels, instruments médicaux et "
+        "effets indésirables",
+        "national",
+        "Health Canada",
+        "Santé Canada",
+        domain="health",
+    ),
     "pbo": Source(
         "Parliamentary Budget Officer",
         "Directeur parlementaire du budget",
@@ -678,6 +687,22 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "Portail de l'information sur le marché de l'habitation",
     ),
     "cmhc/data_tables": ("Data tables (Excel)", "Tableaux de données (Excel)"),
+    "health_products/dpd": (
+        "Drug Product Database",
+        "Base de données sur les produits pharmaceutiques",
+    ),
+    "health_products/lnhpd": (
+        "Licensed natural health products",
+        "Produits de santé naturels homologués",
+    ),
+    "health_products/mdall": (
+        "Medical device licences",
+        "Homologations d'instruments médicaux",
+    ),
+    "health_products/vigilance": (
+        "Canada Vigilance adverse reaction reports",
+        "Déclarations d'effets indésirables de Canada Vigilance",
+    ),
     "ircc/": ("Express Entry rounds", "Rondes d'invitations Entrée express"),
     "ircc/monthly": ("Monthly IRCC Updates", "Mises à jour mensuelles d'IRCC"),
     "ised/cipo": ("Trademarks (CIPO)", "Marques de commerce (OPIC)"),
