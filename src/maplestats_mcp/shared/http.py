@@ -223,12 +223,20 @@ def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
         )
 
 
+class NotJsonResponse(httpx.DecodingError):
+    """A 2xx answer whose body is not JSON; keeps the start of the body for the error."""
+
+    def __init__(self, message: str, body: str) -> None:
+        super().__init__(message)
+        self.body_start = body[:2000]
+
+
 def decode_json(response: httpx.Response, url: str = "") -> Any:
     try:
         return response.json()
     except ValueError as exc:
-        raise httpx.DecodingError(
-            f"Response from {url or response.url} was not valid JSON"
+        raise NotJsonResponse(
+            f"Response from {url or response.url} was not valid JSON", response.text
         ) from exc
 
 

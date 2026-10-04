@@ -91,6 +91,18 @@ STEPS: list[Step] = [
         "bcgw_query_layer",
         {"type_name": "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_PNTS_SP", "limit": 2},
     ),
+    # Without property_names the request names the layer's attribute fields
+    # (DescribeFeatureType), so no polygon is downloaded.
+    Step(
+        "bcgw",
+        "bcgw_query_layer",
+        {"type_name": "WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW", "limit": 3},
+        lambda data: (
+            bool(data.get("records"))
+            and "propertyName=" in data["provenance"]["url"]
+            and "GEOMETRY" not in data["records"][0]
+        ),
+    ),
     # Canada Energy Regulator
     Step("cer", "cer_list_datasets", {"query": "pipeline throughput"}, _non_empty("datasets")),
     Step(

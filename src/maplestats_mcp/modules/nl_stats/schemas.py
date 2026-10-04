@@ -24,8 +24,9 @@ class FileEntry(BaseModel):
 class FileList(BaseModel):
     topics: list[TopicInfo]
     files: list[FileEntry]
-    total_files: int
-    truncated: bool
+    total_files: int = Field(description="Files matching topic and query, before paging.")
+    truncated: bool = Field(description="True when more files follow this page.")
+    offset: int = Field(default=0, description="Position of the first file shown.")
     provenance: Provenance
 
 

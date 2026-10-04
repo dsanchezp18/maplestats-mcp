@@ -44,6 +44,7 @@ import httpx
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.upstream_text import is_backend_outage, network_error
 
 _OWS_NS = "{http://www.opengis.net/ows/1.1}"
 
@@ -82,28 +83,12 @@ def _extract_exception_text(body: bytes) -> str:
     return body[:200].decode("utf-8", errors="replace")
 
 
-_OUTAGE_MARKERS = (
-    "unable to obtain connection",
-    "hikaripool",
-    "sessions_per_user",
-    "ora-0",
-    "too many connections",
-    "connection pool",
-)
-
-
-def _is_backend_outage(detail: str) -> bool:
-    """True when an error text describes the server's own database or pool failing."""
-    text = detail.lower()
-    return any(marker in text for marker in _OUTAGE_MARKERS)
-
-
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
     status = exc.response.status_code
     detail = _extract_exception_text(exc.response.content)
     if status == 404:
         raise NotFound(f"{context}: no match found ({detail}).") from exc
-    if status == 429 or (400 <= status < 500 and _is_backend_outage(detail)):
+    if status == 429 or (400 <= status < 500 and is_backend_outage(detail)):
         # Some servers answer a database-pool failure (or throttling) with a 4xx; that
         # is the service being unavailable, not a mistake in the request.
         raise UpstreamUnavailable(
@@ -161,6 +146,41 @@ def _feature_params(
     return params
 
 
+async def describe_feature_type(config: WfsConfig, type_name: str) -> list[tuple[str, str]]:
+    """The (name, type) of each property of one feature type, in the server's order.
+
+    GeoServer answers DescribeFeatureType with `outputFormat=application/json`
+    as {"featureTypes": [{"properties": [{"name", "type"}, ...]}]}; checked
+    live 2026-10-03 on BCGW, where a geometry property's type is "gml:..."
+    (e.g. "gml:Geometry") and every attribute's is "xsd:...". Errors come back
+    as the same XML ExceptionReport as GetFeature's.
+    """
+    params = {
+        "service": "WFS",
+        "version": "2.0.0",
+        "request": "DescribeFeatureType",
+        "typeName": type_name,
+        "outputFormat": "application/json",
+    }
+    await _limiter(config).acquire()
+    context = f"{config.source}:describe_feature_type:{type_name}"
+    try:
+        body = await api_get(config.base_url, params=params)
+    except httpx.HTTPStatusError as exc:
+        _raise_for_status_error(exc, context)
+    except httpx.HTTPError as exc:
+        raise network_error(context, exc) from exc
+    types = body.get("featureTypes") if isinstance(body, dict) else None
+    if not isinstance(types, list) or not types or not isinstance(types[0], dict):
+        raise UpstreamError(f"{context}: the answer lists no feature type.")
+    properties = types[0].get("properties") or []
+    return [
+        (str(p.get("name")), str(p.get("type") or ""))
+        for p in properties
+        if isinstance(p, dict) and p.get("name")
+    ]
+
+
 async def get_features(
     config: WfsConfig,
     type_name: str,
@@ -183,6 +203,4 @@ async def get_features(
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
-        ) from exc
+        raise network_error(context, exc) from exc

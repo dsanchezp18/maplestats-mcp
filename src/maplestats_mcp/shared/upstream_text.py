@@ -27,6 +27,7 @@ _TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _TAG = re.compile(r"<[^>]+>")
 _SCRIPT = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
 DETAIL_MAX_CHARS = 200
+_NO_DETAIL = "no detail in the response"
 
 
 def clean_detail(text: str, limit: int = DETAIL_MAX_CHARS) -> str:
@@ -42,15 +43,38 @@ def clean_detail(text: str, limit: int = DETAIL_MAX_CHARS) -> str:
     flat = " ".join(stripped.split())
     if len(flat) > limit:
         return flat[:limit].rstrip() + "…"
-    return flat or "no detail in the response"
+    return flat or _NO_DETAIL
+
+
+_OUTAGE_MARKERS = (
+    "unable to obtain connection",
+    "hikaripool",
+    "sessions_per_user",
+    "ora-0",
+    "too many connections",
+    "connection pool",
+)
+
+
+def is_backend_outage(detail: str) -> bool:
+    """True when an error text describes the server's own database or pool failing.
+
+    Some GeoServer and ArcGIS deployments answer such a failure with a 4xx;
+    shared/wfs.py and shared/arcgis.py read it as the service being unavailable.
+    """
+    text = detail.lower()
+    return any(marker in text for marker in _OUTAGE_MARKERS)
 
 
 def network_error(context: str, exc: httpx.HTTPError) -> UpstreamError | UpstreamUnavailable:
     """The typed error for a request that got no usable HTTP answer."""
     if isinstance(exc, httpx.DecodingError):
+        # shared/http.py's decode_json keeps the start of the body on the error.
+        start = clean_detail(getattr(exc, "body_start", ""), 120)
+        seen = "" if start == _NO_DETAIL else f" (it starts: {start})"
         return UpstreamError(
-            f"{context}: the service answered, but not with JSON (often an HTML error or "
-            "maintenance page)."
+            f"{context}: the service answered, but did not return JSON{seen}; often an HTML "
+            "error or maintenance page."
         )
     kind = type(exc).__name__
     if isinstance(exc, httpx.TimeoutException):

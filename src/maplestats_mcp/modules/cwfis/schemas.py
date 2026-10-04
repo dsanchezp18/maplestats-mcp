@@ -122,7 +122,7 @@ class ForecastResult(BaseModel):
 class FireDanger(BaseModel):
     latitude: float
     longitude: float
-    gridcode: int
+    gridcode: int | None  # None when the polygon carries no GRIDCODE
     danger_class: str
     provenance: Provenance
 

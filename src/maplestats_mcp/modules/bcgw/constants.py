@@ -30,6 +30,8 @@ CACHE_TTL_MINING_TENURE_SECONDS = 24 * 60 * 60
 # The generic layer tool can point at anything from a live-updated layer
 # to a static one -- a short-ish default that favours freshness.
 CACHE_TTL_GENERIC_SECONDS = 15 * 60
+# A layer's field list (DescribeFeatureType) changes only with a schema release.
+CACHE_TTL_DESCRIBE_SECONDS = 24 * 60 * 60
 
 # Confirmed live 2026-09-22 via WFS DescribeFeatureType against
 # WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_POLYS_SP: this is the

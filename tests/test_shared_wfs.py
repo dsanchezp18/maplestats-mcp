@@ -39,3 +39,18 @@ def _error(status: int, text: str) -> httpx.HTTPStatusError:
 def test_wfs_http_errors_are_typed(status, text, expected):
     with pytest.raises(expected):
         wfs._raise_for_status_error(_error(status, text), "layer query")
+
+
+async def test_wfs_html_page_with_http_200_is_not_json_not_a_timeout(httpx_mock):
+    config = wfs.WfsConfig("wfs_test", "https://wfs.example/ows", 100.0, 100.0)
+    httpx_mock.add_response(
+        url=httpx.URL(
+            config.base_url, params=wfs._feature_params("a:b", None, None, None, None, 1, 0)
+        ),
+        headers={"Content-Type": "text/html"},
+        text="<html><head><title>Service maintenance</title></head><body>Back soon</body></html>",
+    )
+    with pytest.raises(
+        UpstreamError, match=r"did not return JSON \(it starts: Service maintenance\)"
+    ):
+        await wfs.get_features(config, "a:b", count=1)

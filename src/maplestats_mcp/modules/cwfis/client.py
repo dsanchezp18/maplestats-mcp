@@ -506,12 +506,22 @@ async def get_fire_danger(*, latitude: float, longitude: float) -> FireDanger:
             f"No fire danger polygon covers ({latitude}, {longitude}); "
             "the grid only covers land in and near Canada."
         )
-    code = int(props[0]["GRIDCODE"])
+    # A polygon with a null or missing GRIDCODE has no class to report; say so
+    # rather than fail on int(None).
+    raw = props[0].get("GRIDCODE")
+    try:
+        code = int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        code = None
+    if code is None:
+        label = "Unknown (no danger class recorded for this polygon)"
+    else:
+        label = c.DANGER_CLASSES.get(code, f"Unknown ({code})")
     return FireDanger(
         latitude=latitude,
         longitude=longitude,
         gridcode=code,
-        danger_class=c.DANGER_CLASSES.get(code, f"Unknown ({code})"),
+        danger_class=label,
         provenance=_prov(
             "FireDanger",
             c.DANGER,
