@@ -82,9 +82,21 @@ LICENCE_TEXT = (
     "canada), as stated in the catalogue's license-en.txt: commercial use allowed; "
     f"attribution required: '{OGL_ATTRIBUTION}'"
 )
+OGL_ATTRIBUTION_FR = (
+    "Contient des informations visées par la Licence du gouvernement ouvert – Canada."
+)
+LICENCE_TEXT_FR = (
+    "Licence du gouvernement ouvert – Canada (https://ouvert.canada.ca/fr/licence-du-"
+    "gouvernement-ouvert-canada), selon le fichier license-en.txt du catalogue : usage "
+    f"commercial permis ; attribution exigée : « {OGL_ATTRIBUTION_FR} »"
+)
 
 PROVENANCE_SOURCE = "eccc-data-catalogue"
 UNDOCUMENTED_NOTE = (
     "Listings and files come from the catalogue's api/path_contents and api/file "
     "endpoints, which its web page uses; they are undocumented and may change."
+)
+UNDOCUMENTED_NOTE_FR = (
+    "Les listes et les fichiers viennent des points d'accès api/path_contents et api/file "
+    "du catalogue, qu'utilise sa page Web ; ils ne sont pas documentés et peuvent changer."
 )

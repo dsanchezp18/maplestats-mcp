@@ -45,7 +45,14 @@ ROUNDING_NOTE = (
 )
 ROUNDING_NOTE_FR = (
     "IRCC arrondit chaque nombre au multiple de 5 et affiche les nombres de "
-    "1 à 4 par « -- » (supprimés); ses fichiers indiquent « pas pour les "
+    "1 à 4 par « -- » (supprimés) ; ses fichiers indiquent « pas pour les "
     "calculs ». La somme de cellules arrondies peut différer des totaux "
     "publiés par IRCC."
 )
+
+FRESHNESS = "monthly; IRCC adds the latest month and may revise earlier ones"
+FRESHNESS_FR = "mensuelle ; IRCC ajoute le dernier mois et peut réviser les mois précédents"
+ARCHIVED_LEFT_OUT = "archived datasets left out"
+ARCHIVED_LEFT_OUT_FR = "jeux de données archivés exclus"
+CATALOGUE_FRESHNESS = "IRCC refreshes the files monthly"
+CATALOGUE_FRESHNESS_FR = "IRCC met à jour les fichiers chaque mois"

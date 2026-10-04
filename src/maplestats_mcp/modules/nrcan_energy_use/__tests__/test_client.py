@@ -23,7 +23,7 @@ _REAL_CHECK = client._check_reachable
 @pytest.fixture(autouse=True)
 def _host_reachable(monkeypatch):
     # The real check opens a TCP socket; tests of it call _REAL_CHECK directly.
-    async def reachable() -> None:
+    async def reachable(lang: str = "en") -> None:
         return None
 
     monkeypatch.setattr(client, "_check_reachable", reachable)
@@ -192,10 +192,27 @@ async def test_unreachable_host_fails_fast_and_is_remembered(monkeypatch):
     with pytest.raises(UpstreamUnavailable, match="not accepting connections"):
         await _REAL_CHECK()
     assert calls == 1
+    with pytest.raises(UpstreamUnavailable, match="n'accepte pas les connexions"):
+        await _REAL_CHECK("fr")
+
+
+async def test_french_errors_and_down_note(monkeypatch):
+    with pytest.raises(InvalidInput, match="^Entrée invalide : produit inconnu"):
+        await client.list_tables("nothing", lang="fr")
+    with pytest.raises(InvalidInput, match="table_key doit être une clé"):
+        await client.get_table("x=1", lang="fr")
+
+    async def down(lang: str = "en") -> None:
+        raise UpstreamUnavailable("nrcan_energy_use : site injoignable")
+
+    monkeypatch.setattr(client, "_check_reachable", down)
+    result = await client.list_products("fr")
+    assert result.note is not None and result.note.startswith("Le menu des tableaux complets")
+    assert (result.provenance.limits or "").startswith("Menus de la base de données complète")
 
 
 async def test_list_products_keeps_the_static_surveys_when_the_site_is_down(monkeypatch):
-    async def down() -> None:
+    async def down(lang: str = "en") -> None:
         raise UpstreamUnavailable("nrcan_energy_use: host down")
 
     monkeypatch.setattr(client, "_check_reachable", down)

@@ -36,11 +36,12 @@ async def ircc_list_express_entry_rounds(
     invitations issued, immigration, permanent residence, Canadian
     Experience Class, Federal Skilled Worker, Provincial Nominee Program,
     category-based selection, IRCC.
-    Mots-clés : Entrée express, rondes d'invitations, SCG, système de
-    classement global, score limite, tirage, invitations émises,
-    immigration, résidence permanente, catégorie de l'expérience
-    canadienne, travailleurs qualifiés, programme des candidats des
-    provinces, sélection fondée sur les catégories, IRCC.
+    Mots-clés : Entrée express, rondes d'invitations, SCG, Système de
+    classement global, note minimale, score limite, tirage, invitations
+    émises, immigration, résidence permanente, catégorie de l'expérience
+    canadienne, Programme des travailleurs qualifiés (fédéral),
+    Programme des candidats des provinces, sélection fondée sur les
+    catégories, Immigration, Réfugiés et Citoyenneté Canada (IRCC).
     """
     return await client.list_express_entry_rounds(program, since, limit, lang)
 
@@ -58,8 +59,10 @@ async def ircc_get_express_entry_round(
     (2018-05-30) are published as "91a" and "91b" rather than separate
     sequential numbers. Keywords: Express Entry, round, draw number,
     invitation, CRS cutoff, immigration, permanent residence, IRCC.
-    Mots-clés : Entrée express, ronde, numéro de tirage, invitation,
-    score limite SCG, immigration, résidence permanente, IRCC.
+    Mots-clés : Entrée express, ronde d'invitations, numéro de ronde,
+    numéro de tirage, invitation à présenter une demande, note minimale
+    SCG, score limite, immigration, résidence permanente, Immigration,
+    Réfugiés et Citoyenneté Canada (IRCC).
     """
     return await client.get_express_entry_round(draw_number, lang)
 
@@ -73,8 +76,9 @@ async def ircc_get_latest_express_entry_round(lang: Lang = "en") -> ExpressEntry
     Keywords: Express Entry, latest round, current CRS cutoff, most
     recent draw, today, this week, immigration, permanent residence,
     IRCC.
-    Mots-clés : Entrée express, dernière ronde, score limite SCG actuel,
-    tirage le plus récent, aujourd'hui, cette semaine, immigration,
-    résidence permanente, IRCC.
+    Mots-clés : Entrée express, dernière ronde d'invitations, note
+    minimale SCG actuelle, score limite actuel, tirage le plus récent,
+    aujourd'hui, cette semaine, immigration, résidence permanente,
+    Immigration, Réfugiés et Citoyenneté Canada (IRCC).
     """
     return await client.get_latest_express_entry_round(lang)

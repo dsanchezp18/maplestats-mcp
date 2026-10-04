@@ -20,7 +20,7 @@ Lang = Literal["en", "fr"]
 
 @tool
 async def elections_provincial_list_elections(
-    province: str | None = None, lang: Lang = "en"
+    province: ProvinceCode | None = None, lang: Lang = "en"
 ) -> ElectionList:
     """List the provincial general elections with results here (QC, AB, BC, SK, Manitoba).
 
@@ -62,7 +62,8 @@ async def elections_provincial_get_results(
     (2022), and defaults to the latest. `district` (name or number or code), `party`
     (name or abbreviation, e.g. CAQ, UCP, NDP, PC) and `candidate` are
     accent-insensitive substring filters. Ontario is not available. By-elections
-    are not included.
+    are not included. `lang` changes nothing here: district, party and
+    candidate names are given as each source publishes them.
     Keywords: provincial election results, riding, electoral district,
     electoral division, candidate, votes, winner, elected, MLA, MNA, party, CAQ,
     Parti Quebecois, Liberal, UCP, NDP, BC NDP, Saskatchewan Party, Sask Party,
@@ -99,7 +100,8 @@ async def elections_provincial_get_seats(
     Party's 34 of 61 in 2024, the Manitoba NDP's 34 of 57 in 2023), computed from
     the district results, with candidates per party and share of valid votes.
     `province` is qc, ab, bc, sk or mb; `election` is the polling day or its year,
-    and defaults to the latest.
+    and defaults to the latest. `lang` changes nothing here: party names are
+    given as each source publishes them.
     Keywords: seats by party, popular vote, vote share, election outcome,
     legislature, majority, minority, provincial election, Quebec, Alberta,
     British Columbia, Saskatchewan, Manitoba, seat count.
@@ -113,7 +115,7 @@ async def elections_provincial_get_seats(
 @tool
 async def elections_provincial_get_voting_areas(
     district: str,
-    province: Literal["mb"] = "mb",
+    province: ProvinceCode = "mb",
     election: str | None = None,
     voting_area: str | None = None,
     party: str | None = None,
@@ -133,6 +135,7 @@ async def elections_provincial_get_voting_areas(
     day or its year and defaults to 2023; `voting_area` (e.g. 12 or Adv-1),
     `party` and `candidate` filter the rows. The response compares the areas' sum
     with the division's official total, which differs for a few divisions.
+    `lang` changes nothing here (names are as Elections Manitoba publishes them).
     Keywords: poll by poll results, voting area, polling division, poll,
     polling station, advance poll, Manitoba election, Elections Manitoba,
     electoral division, neighbourhood vote, precinct results, MLA.

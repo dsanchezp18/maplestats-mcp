@@ -146,13 +146,32 @@ from maplestats_mcp.modules.cmhc.schemas import (
     TableOptions,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw, post_form_raw
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing
+from maplestats_mcp.shared.i18n import t as i18n_text
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _TITLE_RE = re.compile(r"<title>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _TABLE_MODEL_RE = re.compile(r'data-table-model="([^"]*)"')
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+def _error(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> ValueError:
+    """The error to raise with `from`: English as before, French in the typed template."""
+    return exc_cls(i18n_text(ERROR_KEYS[exc_cls.__name__], "fr", detail=fr) if lang == "fr" else en)
 
 
 def _limiter():
@@ -169,10 +188,10 @@ def _base_path(lang: str) -> str:
     return f"{constants.BASE_URL}/{lang}"
 
 
-def _require(value: str, name: str) -> str:
+def _require(value: str, name: str, lang: str = "en") -> str:
     value = value.strip()
     if not value:
-        raise InvalidInput(f"{name} must not be empty.")
+        _raise(InvalidInput, f"{name} must not be empty.", f"{name} ne doit pas être vide.", lang)
     return value
 
 
@@ -196,59 +215,93 @@ async def _check_geography(geography_type: str, geography_id: str, lang: str) ->
     kind = geography_type.lower()
     if kind == "country":
         if geography_id != "1":
-            raise InvalidInput(
-                f"For geography_type 'Country' the id is '1' (Canada), got {geography_id!r}."
+            _raise(
+                InvalidInput,
+                f"For geography_type 'Country' the id is '1' (Canada), got {geography_id!r}.",
+                f"pour geography_type 'Country', l'identifiant est '1' (Canada), "
+                f"reçu {geography_id!r}.",
+                lang,
             )
         return
     if not geography_id.isdigit():
-        raise InvalidInput(f"geography_id must be a number, got {geography_id!r}.")
+        _raise(
+            InvalidInput,
+            f"geography_id must be a number, got {geography_id!r}.",
+            f"geography_id doit être un nombre, reçu {geography_id!r}.",
+            lang,
+        )
     if kind == "province":
         provinces = (await list_provinces(lang=lang)).provinces
         if geography_id not in {p.id for p in provinces}:
             known = ", ".join(f"{p.id} ({p.name})" for p in provinces)
-            raise InvalidInput(f"No province with id {geography_id!r}; province ids are {known}.")
+            _raise(
+                InvalidInput,
+                f"No province with id {geography_id!r}; province ids are {known}.",
+                f"aucune province avec l'identifiant {geography_id!r} ; les identifiants des "
+                f"provinces sont {known}.",
+                lang,
+            )
 
 
-def _raise_for_status(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     if status == 500:
         # Confirmed live: an unresolvable category/geography/TableId
         # combination returns an ASP.NET YSOD page, not a clean 404 -
         # see module docstring.
-        raise NotFound(
-            f"{context}: HMIP has no matching table for this combination "
-            f"({_ysod_title(exc.response.text)})."
+        title = _ysod_title(exc.response.text)
+        raise _error(
+            NotFound,
+            f"{context}: HMIP has no matching table for this combination ({title}).",
+            f"{context} : le PIMH n'a aucun tableau pour cette combinaison (message de la "
+            f"source : {title}).",
+            lang,
         ) from exc
     if status == 404:
-        raise NotFound(f"{context}: not found.") from exc
+        raise _error(NotFound, f"{context}: not found.", f"{context} : introuvable.", lang) from exc
     if status == 400:
-        raise InvalidInput(f"{context}: rejected the request (HTTP 400).") from exc
-    raise UpstreamError(f"{context}: upstream returned HTTP {status}.") from exc
+        raise _error(
+            InvalidInput,
+            f"{context}: rejected the request (HTTP 400).",
+            f"{context} : requête refusée (HTTP 400).",
+            lang,
+        ) from exc
+    raise _error(
+        UpstreamError,
+        f"{context}: upstream returned HTTP {status}.",
+        f"{context} : la source a renvoyé HTTP {status}.",
+        lang,
+    ) from exc
 
 
-async def _get_html(url: str, params: dict[str, Any]) -> str:
+def _no_answer(url: str, lang: str) -> ValueError:
+    return _error(
+        UpstreamUnavailable,
+        f"{url} did not respond in time (already retried by shared/http.py).",
+        f"{url} n'a pas répondu à temps (malgré les nouvelles tentatives).",
+        lang,
+    )
+
+
+async def _get_html(url: str, params: dict[str, Any], lang: str = "en") -> str:
     await _limiter().acquire()
     try:
         response = await get_raw(url, params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status(exc, url)
+        _raise_for_status(exc, url, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{url} did not respond in time (already retried by shared/http.py)."
-        ) from exc
+        raise _no_answer(url, lang) from exc
     return response.text
 
 
-async def _post_csv(url: str, data: dict[str, Any]) -> bytes:
+async def _post_csv(url: str, data: dict[str, Any], lang: str = "en") -> bytes:
     await _limiter().acquire()
     try:
         response = await post_form_raw(url, data=data)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status(exc, url)
+        _raise_for_status(exc, url, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{url} did not respond in time (already retried by shared/http.py)."
-        ) from exc
+        raise _no_answer(url, lang) from exc
     return response.content
 
 
@@ -312,17 +365,26 @@ def _parse_provinces(body: str) -> list[ProvinceOption]:
     return provinces
 
 
-def _extract_table_model(body: str) -> dict[str, Any]:
+def _extract_table_model(body: str, lang: str = "en") -> dict[str, Any]:
     match = _TABLE_MODEL_RE.search(body)
     if not match:
-        raise NotFound(
-            "HMIP returned no resolvable table for this category/geography/field combination."
+        _raise(
+            NotFound,
+            "HMIP returned no resolvable table for this category/geography/field combination.",
+            "le PIMH n'a renvoyé aucun tableau pour cette combinaison de catégorie, de "
+            "géographie et de champs.",
+            lang,
         )
     raw = html_module.unescape(match.group(1))
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise UpstreamError("HMIP's embedded table model was not valid JSON.") from exc
+        raise _error(
+            UpstreamError,
+            "HMIP's embedded table model was not valid JSON.",
+            "le modèle de tableau intégré du PIMH n'était pas du JSON valide.",
+            lang,
+        ) from exc
 
 
 def _parse_value_cell(raw_value: str, raw_flag: str) -> TableCell:
@@ -378,24 +440,39 @@ def _header_columns(header: list[str]) -> list[tuple[str, int, int | None]]:
     return columns
 
 
-def _parse_csv_export(text: str) -> tuple[list[str], list[TableDataRow], list[str]]:
+def _parse_csv_export(
+    text: str, lang: str = "en"
+) -> tuple[list[str], list[TableDataRow], list[str]]:
     """Parse HMIP's ExportTable CSV: title line, subtitle line, a header
     row (columns sometimes, but not always, paired with a following empty
     quality/flag column - see `_header_columns`), one data row per period,
     a blank line, then a Notes/legend block - see module docstring."""
     lines = text.splitlines()
     if len(lines) < 3:
-        raise UpstreamError(
-            "HMIP's CSV export was shorter than expected (missing header/data rows)."
+        _raise(
+            UpstreamError,
+            "HMIP's CSV export was shorter than expected (missing header/data rows).",
+            "l'export CSV du PIMH est plus court que prévu (en-tête ou lignes de données absents).",
+            lang,
         )
 
     body_rows = list(csv.reader(StringIO("\n".join(lines[2:]))))
     if not body_rows:
-        raise UpstreamError("HMIP's CSV export had no header row.")
+        _raise(
+            UpstreamError,
+            "HMIP's CSV export had no header row.",
+            "l'export CSV du PIMH n'a pas de ligne d'en-tête.",
+            lang,
+        )
 
     column_specs = _header_columns(body_rows[0])
     if not column_specs:
-        raise UpstreamError("HMIP's CSV export header had no data columns.")
+        _raise(
+            UpstreamError,
+            "HMIP's CSV export header had no data columns.",
+            "l'en-tête de l'export CSV du PIMH n'a aucune colonne de données.",
+            lang,
+        )
     columns = [name for name, _, _ in column_specs]
 
     rows: list[TableDataRow] = []
@@ -425,8 +502,8 @@ def _parse_csv_export(text: str) -> tuple[list[str], list[TableDataRow], list[st
 async def list_categories(
     *, geography_type: str = "Country", geography_id: str = "1", lang: str = "en"
 ) -> CategoryList:
-    geography_type = _require(geography_type, "geography_type")
-    geography_id = _require(geography_id, "geography_id")
+    geography_type = _require(geography_type, "geography_type", lang)
+    geography_id = _require(geography_id, "geography_id", lang)
     await _check_geography(geography_type, geography_id, lang)
     base = _base_path(lang)
     params = {"geographyType": geography_type, "geographyId": geography_id}
@@ -434,7 +511,7 @@ async def list_categories(
     cache_key = f"cmhc:categories:{lang}:{geography_type}:{geography_id}"
 
     async def fetch() -> list[CategoryOption]:
-        body = await _get_html(url, params)
+        body = await _get_html(url, params, lang)
         return _parse_categories(body)
 
     categories, was_cached = await cached_fetch(
@@ -450,6 +527,7 @@ async def list_categories(
             url=f"{url}?{urlencode(params)}",
             cached=was_cached,
             schema_name="cmhc.CategoryList",
+            lang=lang,
         ),
     )
 
@@ -462,10 +540,10 @@ async def get_table_options(
     geography_id: str = "1",
     lang: str = "en",
 ) -> TableOptions:
-    category_level_1 = _require(category_level_1, "category_level_1")
-    category_level_2 = _require(category_level_2, "category_level_2")
-    geography_type = _require(geography_type, "geography_type")
-    geography_id = _require(geography_id, "geography_id")
+    category_level_1 = _require(category_level_1, "category_level_1", lang)
+    category_level_2 = _require(category_level_2, "category_level_2", lang)
+    geography_type = _require(geography_type, "geography_type", lang)
+    geography_id = _require(geography_id, "geography_id", lang)
     await _check_geography(geography_type, geography_id, lang)
     base = _base_path(lang)
     params = {
@@ -478,16 +556,20 @@ async def get_table_options(
     cache_key = f"cmhc:table_options:{lang}:{sorted(params.items())}"
 
     async def fetch() -> list[TableFieldOption]:
-        body = await _get_html(url, params)
+        body = await _get_html(url, params, lang)
         return _parse_table_options(body)
 
     field_options, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_TABLE_OPTIONS_SECONDS, fetch
     )
     if not field_options:
-        raise NotFound(
+        _raise(
+            NotFound,
             f"No breakdown options found for category ({category_level_1!r}, "
-            f"{category_level_2!r}) at {geography_type} {geography_id!r}."
+            f"{category_level_2!r}) at {geography_type} {geography_id!r}.",
+            f"aucune option de répartition pour la catégorie ({category_level_1!r}, "
+            f"{category_level_2!r}) au niveau {geography_type} {geography_id!r}.",
+            lang,
         )
     return TableOptions(
         category_level_1=category_level_1,
@@ -498,6 +580,7 @@ async def get_table_options(
             url=f"{url}?{urlencode(params)}",
             cached=was_cached,
             schema_name="cmhc.TableOptions",
+            lang=lang,
         ),
     )
 
@@ -509,7 +592,7 @@ async def list_provinces(*, lang: str = "en") -> ProvinceList:
     cache_key = f"cmhc:provinces:{lang}"
 
     async def fetch() -> list[ProvinceOption]:
-        body = await _get_html(url, params)
+        body = await _get_html(url, params, lang)
         return _parse_provinces(body)
 
     provinces, was_cached = await cached_fetch(
@@ -522,6 +605,7 @@ async def list_provinces(*, lang: str = "en") -> ProvinceList:
             url=f"{url}?countryId=1",
             cached=was_cached,
             schema_name="cmhc.ProvinceList",
+            lang=lang,
         ),
     )
 
@@ -552,18 +636,28 @@ def _parse_available_filters(model: dict[str, Any]) -> list[FilterOption]:
     return options
 
 
-def _validate_filters(filters: dict[str, str], available: list[FilterOption], context: str) -> None:
+def _validate_filters(
+    filters: dict[str, str], available: list[FilterOption], context: str, lang: str = "en"
+) -> None:
     by_key = {f.key: f.values for f in available}
     for key, value in filters.items():
         if key not in by_key:
-            raise InvalidInput(
+            _raise(
+                InvalidInput,
                 f"{context}: filter key {key!r} is not available for this table "
-                f"(available: {sorted(by_key)})."
+                f"(available: {sorted(by_key)}).",
+                f"{context} : la clé de filtre {key!r} n'existe pas pour ce tableau "
+                f"(clés possibles : {sorted(by_key)}).",
+                lang,
             )
         if value not in by_key[key]:
-            raise InvalidInput(
+            _raise(
+                InvalidInput,
                 f"{context}: filter value {value!r} is not valid for {key!r} "
-                f"(valid values: {by_key[key]})."
+                f"(valid values: {by_key[key]}).",
+                f"{context} : la valeur de filtre {value!r} n'est pas valide pour {key!r} "
+                f"(valeurs possibles : {by_key[key]}).",
+                lang,
             )
 
 
@@ -578,12 +672,12 @@ async def get_table_data(
     filters: dict[str, str] | None = None,
     lang: str = "en",
 ) -> TableDataResult:
-    category_level_1 = _require(category_level_1, "category_level_1")
-    category_level_2 = _require(category_level_2, "category_level_2")
-    column_field = _require(column_field, "column_field")
-    row_field = _require(row_field, "row_field")
-    geography_type = _require(geography_type, "geography_type")
-    geography_id = _require(geography_id, "geography_id")
+    category_level_1 = _require(category_level_1, "category_level_1", lang)
+    category_level_2 = _require(category_level_2, "category_level_2", lang)
+    column_field = _require(column_field, "column_field", lang)
+    row_field = _require(row_field, "row_field", lang)
+    geography_type = _require(geography_type, "geography_type", lang)
+    geography_id = _require(geography_id, "geography_id", lang)
     await _check_geography(geography_type, geography_id, lang)
     filters = filters or {}
     base = _base_path(lang)
@@ -601,21 +695,27 @@ async def get_table_data(
     cache_key = f"cmhc:table_data:{lang}:{sorted(match_params.items())}:{sorted(filters.items())}"
 
     async def fetch() -> dict[str, Any]:
-        body = await _get_html(match_url, match_params)
-        model = _extract_table_model(body)
+        body = await _get_html(match_url, match_params, lang)
+        model = _extract_table_model(body, lang)
         table_id = model.get("TableId")
         geography_type_id = model.get("GeographyTypeId")
         if not table_id or geography_type_id is None:
-            raise NotFound(
+            _raise(
+                NotFound,
                 f"HMIP resolved no TableId for category ({category_level_1!r}, "
                 f"{category_level_2!r}) with column_field={column_field!r}, "
-                f"row_field={row_field!r}."
+                f"row_field={row_field!r}.",
+                f"le PIMH n'a trouvé aucun TableId pour la catégorie ({category_level_1!r}, "
+                f"{category_level_2!r}) avec column_field={column_field!r}, "
+                f"row_field={row_field!r}.",
+                lang,
             )
         available_filters = _parse_available_filters(model)
         _validate_filters(
             filters,
             available_filters,
             f"get_table_data({category_level_1!r}, {category_level_2!r})",
+            lang,
         )
         export_params: dict[str, Any] = {
             "TableId": str(table_id),
@@ -626,9 +726,9 @@ async def get_table_data(
         for i, (key, value) in enumerate(filters.items()):
             export_params[f"AppliedFilters[{i}].Key"] = key
             export_params[f"AppliedFilters[{i}].Value"] = value
-        raw_csv = await _post_csv(export_url, export_params)
+        raw_csv = await _post_csv(export_url, export_params, lang)
         text = raw_csv.decode(constants.CSV_ENCODING)
-        columns, rows, notes = _parse_csv_export(text)
+        columns, rows, notes = _parse_csv_export(text, lang)
         return {
             "table_id": str(table_id),
             # sic: CMHC's own JSON key is "GeograghyName" - see module docstring.
@@ -664,10 +764,15 @@ async def get_table_data(
             schema_name="cmhc.TableDataResult",
             # The export is a form POST, so a URL alone cannot reproduce it;
             # the table is resolved first by a GET to TableMatchingCriteria.
-            limits=(
+            limits=_text(
                 f"Request: GET {match_url}?{urlencode(match_params)} to resolve the table, "
                 f"then POST {export_url} with form fields "
-                f"{urlencode(parsed.get('export_params') or {})}."
+                f"{urlencode(parsed.get('export_params') or {})}.",
+                f"Requête : GET {match_url}?{urlencode(match_params)} pour trouver le tableau, "
+                f"puis POST {export_url} avec les champs de formulaire "
+                f"{urlencode(parsed.get('export_params') or {})}.",
+                lang,
             ),
+            lang=lang,
         ),
     )

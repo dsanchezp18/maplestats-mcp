@@ -25,7 +25,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import date
-from typing import Any, Literal
+from typing import Any, Literal, NoReturn
 from urllib.parse import urljoin
 
 import httpx
@@ -38,9 +38,10 @@ from maplestats_mcp.modules.ircc.schemas import (
     ExpressEntryRoundsResult,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 Lang = Literal["en", "fr"]
@@ -81,6 +82,35 @@ _DISTRIBUTION_FIELDS: list[tuple[str, str]] = [
 ]
 
 _HREF_RE = re.compile(r"href='([^']+)'")
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """Raise with the French error template for lang='fr'; English stays as it was."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _freshness(lang: str) -> str:
+    hours = constants.CACHE_TTL_SECONDS // 3600
+    if lang == "fr":
+        return french_spacing(
+            "IRCC met à jour le fichier source environ une fois par semaine ; "
+            f"MapleStats le garde en cache pendant {hours} heures"
+        )
+    return f"the underlying feed is updated by IRCC roughly weekly; MapleStats caches it for {hours} hours"
+
+
+def _coverage(returned: int, matching: int, total: int, lang: str) -> str:
+    if lang == "fr":
+        return (
+            f"{returned} rondes renvoyées sur {matching} correspondantes, de la plus "
+            f"récente à la plus ancienne, parmi les {total} rondes du fichier"
+        )
+    return (
+        f"{returned} of {matching} matching rounds returned, "
+        f"newest first, out of {total} rounds in the feed"
+    )
 
 
 def _parse_int(value: str) -> int:
@@ -136,6 +166,13 @@ def _parse_feed(raw_bytes: bytes, lang: str) -> list[ExpressEntryRound]:
         rounds = payload["rounds"]
         return [_round_from_json(obj) for obj in rounds]
     except (UnicodeDecodeError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        if lang == "fr":
+            raise UpstreamError(
+                french_spacing(
+                    "La source amont a renvoyé une réponse inattendue : le fichier Entrée "
+                    f"express d'IRCC ({lang}) n'a pas la forme documentée : {exc}"
+                )
+            ) from exc
         raise UpstreamError(
             f"IRCC Express Entry feed ({lang}) was not shaped as documented: {exc}"
         ) from exc
@@ -151,13 +188,27 @@ async def _fetch_rounds(lang: str) -> tuple[list[ExpressEntryRound], bool]:
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 404:
-                raise NotFound(f"IRCC Express Entry feed not found at {url}.") from exc
-            raise UpstreamError(f"IRCC Express Entry feed returned HTTP {status}.") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
+                _raise(
+                    NotFound,
+                    f"IRCC Express Entry feed not found at {url}.",
+                    f"fichier Entrée express d'IRCC introuvable à {url}.",
+                    lang,
+                )
+            _raise(
+                UpstreamError,
+                f"IRCC Express Entry feed returned HTTP {status}.",
+                f"le fichier Entrée express d'IRCC a renvoyé HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
                 "IRCC's Express Entry feed did not respond in time after the "
-                "shared HTTP retries. Try again shortly."
-            ) from exc
+                "shared HTTP retries. Try again shortly.",
+                "le fichier Entrée express d'IRCC n'a pas répondu à temps malgré les "
+                "nouvelles tentatives. Réessayez sous peu.",
+                lang,
+            )
         return _parse_feed(response.content, lang)
 
     return await cached_fetch(f"ircc:express-entry:{lang}", constants.CACHE_TTL_SECONDS, fetch)
@@ -175,8 +226,11 @@ async def list_express_entry_rounds(
     lang: Lang = "en",
 ) -> ExpressEntryRoundsResult:
     if limit < 1 or limit > constants.ROUNDS_LIMIT_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.ROUNDS_LIMIT_MAX}, got {limit}."
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.ROUNDS_LIMIT_MAX}, got {limit}.",
+            f"limit doit être entre 1 et {constants.ROUNDS_LIMIT_MAX} (reçu : {limit}).",
+            lang,
         )
 
     rounds, was_cached = await _fetch_rounds(lang)
@@ -184,7 +238,12 @@ async def list_express_entry_rounds(
     if program is not None:
         needle = program.strip().casefold()
         if not needle:
-            raise InvalidInput("program must not be empty when provided.")
+            _raise(
+                InvalidInput,
+                "program must not be empty when provided.",
+                "program ne doit pas être vide lorsqu'il est fourni.",
+                lang,
+            )
         matching = [r for r in matching if _matches_program(r, needle)]
     if since is not None:
         matching = [r for r in matching if r.draw_date >= since]
@@ -202,10 +261,9 @@ async def list_express_entry_rounds(
             url=_URL_BY_LANG[lang],
             cached=was_cached,
             schema_name="ircc.ExpressEntryRoundsResult",
-            coverage=f"{len(page)} of {len(matching)} matching rounds returned, "
-            f"newest first, out of {len(rounds)} rounds in the feed",
-            freshness="the underlying feed is updated by IRCC roughly weekly; "
-            f"MapleStats caches it for {constants.CACHE_TTL_SECONDS // 3600} hours",
+            coverage=_coverage(len(page), len(matching), len(rounds), lang),
+            freshness=_freshness(lang),
+            lang=lang,
         ),
     )
 
@@ -213,10 +271,19 @@ async def list_express_entry_rounds(
 async def get_express_entry_round(draw_number: str, lang: Lang = "en") -> ExpressEntryRoundDetail:
     draw_number = draw_number.strip()
     if not draw_number:
-        raise InvalidInput("draw_number must not be empty.")
+        _raise(
+            InvalidInput,
+            "draw_number must not be empty.",
+            "draw_number ne doit pas être vide.",
+            lang,
+        )
     if not _DRAW_NUMBER_RE.fullmatch(draw_number):
-        raise InvalidInput(
-            f"draw_number must be a round number such as '300' or '91a', got {draw_number!r}."
+        _raise(
+            InvalidInput,
+            f"draw_number must be a round number such as '300' or '91a', got {draw_number!r}.",
+            "draw_number doit être un numéro de ronde comme « 300 » ou « 91a » "
+            f"(reçu : {draw_number!r}).",
+            lang,
         )
     rounds, was_cached = await _fetch_rounds(lang)
     for round_ in rounds:
@@ -228,15 +295,26 @@ async def get_express_entry_round(draw_number: str, lang: Lang = "en") -> Expres
                     url=_URL_BY_LANG[lang],
                     cached=was_cached,
                     schema_name="ircc.ExpressEntryRoundDetail",
+                    lang=lang,
                 ),
             )
-    raise NotFound(f"IRCC Express Entry round #{draw_number} was not found.")
+    _raise(
+        NotFound,
+        f"IRCC Express Entry round #{draw_number} was not found.",
+        f"ronde d'invitations Entrée express nº {draw_number} d'IRCC introuvable.",
+        lang,
+    )
 
 
 async def get_latest_express_entry_round(lang: Lang = "en") -> ExpressEntryRoundDetail:
     rounds, was_cached = await _fetch_rounds(lang)
     if not rounds:
-        raise UpstreamError("IRCC Express Entry feed returned no rounds.")
+        _raise(
+            UpstreamError,
+            "IRCC Express Entry feed returned no rounds.",
+            "le fichier Entrée express d'IRCC ne contient aucune ronde.",
+            lang,
+        )
     return ExpressEntryRoundDetail(
         round=rounds[0],
         provenance=make_provenance(
@@ -244,7 +322,7 @@ async def get_latest_express_entry_round(lang: Lang = "en") -> ExpressEntryRound
             url=_URL_BY_LANG[lang],
             cached=was_cached,
             schema_name="ircc.ExpressEntryRoundDetail",
-            freshness="the underlying feed is updated by IRCC roughly weekly; "
-            f"MapleStats caches it for {constants.CACHE_TTL_SECONDS // 3600} hours",
+            freshness=_freshness(lang),
+            lang=lang,
         ),
     )

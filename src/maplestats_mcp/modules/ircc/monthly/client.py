@@ -32,7 +32,7 @@ import io
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 
@@ -48,9 +48,10 @@ from maplestats_mcp.modules.ircc.monthly.schemas import (
 )
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -59,6 +60,19 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """Raise with the French error template for lang='fr'; English stays as it was."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _fr(en: str, fr: str, lang: str) -> str:
+    return french_spacing(fr) if lang == "fr" else en
+
+
 _TIME = {"EN_YEAR": "year", "EN_QUARTER": "quarter", "EN_MONTH": "month"}
 _BRACKET = re.compile(r"^\s*\[[^\]]*\]\s*")
 
@@ -107,7 +121,7 @@ def table_id_of(url: str) -> str:
     return url.rsplit("/", 1)[-1].removesuffix(".csv")
 
 
-async def _packages() -> tuple[list[dict[str, Any]], bool]:
+async def _packages(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     async def fetch() -> list[dict[str, Any]]:
         await _LIMITER.acquire()
         try:
@@ -115,17 +129,26 @@ async def _packages() -> tuple[list[dict[str, Any]], bool]:
                 constants.CKAN_SEARCH_URL,
                 params={"q": constants.CKAN_QUERY, "rows": constants.CKAN_ROWS},
             )
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "ircc_monthly: open.canada.ca did not return the dataset list."
-            ) from exc
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                "ircc_monthly: open.canada.ca did not return the dataset list.",
+                "ircc_monthly : ouvert.canada.ca n'a pas renvoyé la liste des jeux de données.",
+                lang,
+            )
         packages = [
             p
             for p in list_or_empty(result.get("result") or {}, "results")
             if "Monthly IRCC Updates" in str(p.get("title") or "")
         ]
         if not packages:
-            raise UpstreamError("ircc_monthly: open.canada.ca lists no Monthly IRCC Updates.")
+            _raise(
+                UpstreamError,
+                "ircc_monthly: open.canada.ca lists no Monthly IRCC Updates.",
+                "ircc_monthly : ouvert.canada.ca ne répertorie aucune « Mise à jour mensuelle "
+                "d'IRCC ».",
+                lang,
+            )
         return packages
 
     return await cached_fetch("ircc-monthly:catalogue", constants.CATALOGUE_TTL_SECONDS, fetch)
@@ -158,7 +181,7 @@ async def list_tables(
     query: str = "", *, include_archived: bool = False, lang: str = "en"
 ) -> IrccTableCatalogue:
     """Monthly-update tables whose title, dataset or id contain every word of `query`."""
-    packages, cached = await _packages()
+    packages, cached = await _packages(lang)
     everything = _tables(packages, lang)
     words = query.lower().split()
     matched = [
@@ -176,19 +199,28 @@ async def list_tables(
             url=constants.CKAN_SEARCH_URL,
             cached=cached,
             schema_name="ircc_monthly.IrccTableCatalogue",
-            freshness="IRCC refreshes the files monthly",
-            coverage=None if include_archived else "archived datasets left out",
+            freshness=_fr(constants.CATALOGUE_FRESHNESS, constants.CATALOGUE_FRESHNESS_FR, lang),
+            coverage=None
+            if include_archived
+            else _fr(constants.ARCHIVED_LEFT_OUT, constants.ARCHIVED_LEFT_OUT_FR, lang),
+            lang=lang,
         ),
     )
 
 
 async def _find(table_id: str, lang: str) -> IrccTable:
-    packages, _ = await _packages()
+    packages, _ = await _packages(lang)
     wanted = table_id.strip().removesuffix(".csv").lower()
     for table in _tables(packages, lang):
         if table.table_id.lower() == wanted:
             return table
-    raise NotFound(f"ircc_monthly: no table {table_id!r}; list them with ircc_monthly_list_tables.")
+    _raise(
+        NotFound,
+        f"ircc_monthly: no table {table_id!r}; list them with ircc_monthly_list_tables.",
+        f"ircc_monthly : aucun tableau {table_id!r} ; consultez la liste avec "
+        "ircc_monthly_list_tables.",
+        lang,
+    )
 
 
 # ------------------------------------------------------------------ parsing
@@ -198,17 +230,22 @@ def _key(column: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", column.removeprefix("EN_").lower()).strip("_")
 
 
-def _count(cell: str) -> int | None:
+def _count(cell: str, lang: str = "en") -> int | None:
     cell = cell.strip()
     if cell == constants.SUPPRESSED or not cell:
         return None
     try:
         return int(cell.replace(",", ""))
-    except ValueError as exc:
-        raise UpstreamError(f"ircc_monthly: unexpected count {cell!r}.") from exc
+    except ValueError:
+        _raise(
+            UpstreamError,
+            f"ircc_monthly: unexpected count {cell!r}.",
+            f"ircc_monthly : nombre inattendu {cell!r}.",
+            lang,
+        )
 
 
-def parse_table(body: bytes) -> ParsedTable:
+def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
     try:
         text = body.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -218,9 +255,14 @@ def parse_table(body: bytes) -> ParsedTable:
     reader = csv.reader(io.StringIO(text), delimiter=delimiter)
     header = [h.strip() for h in next(reader, [])]
     if not any(h.startswith("EN_") for h in header):
-        raise UpstreamError(
+        _raise(
+            UpstreamError,
             "ircc_monthly: IRCC published this file without a header row, so its "
-            "columns cannot be named; use the dataset's XLSX version instead."
+            "columns cannot be named; use the dataset's XLSX version instead.",
+            "ircc_monthly : IRCC a publié ce fichier sans ligne d'en-tête, ses colonnes "
+            "ne peuvent donc pas être nommées ; utilisez plutôt la version XLSX du jeu "
+            "de données.",
+            lang,
         )
 
     time_index: dict[str, int] = {}
@@ -240,7 +282,12 @@ def parse_table(body: bytes) -> ParsedTable:
             dims.append(_Dimension(_key(column), column, nxt if fr_i else None))
             dim_index.append((i, fr_i))
     if value_index is None:
-        raise UpstreamError("ircc_monthly: the file has no TOTAL column.")
+        _raise(
+            UpstreamError,
+            "ircc_monthly: the file has no TOTAL column.",
+            "ircc_monthly : le fichier n'a pas de colonne TOTAL.",
+            lang,
+        )
 
     rows: list[_Row] = []
     interned: dict[str, str] = {}
@@ -272,7 +319,7 @@ def parse_table(body: bytes) -> ParsedTable:
                 quarter=quarter,
                 month=month,
                 labels=tuple(labels),
-                value=_count(cells[value_index]),
+                value=_count(cells[value_index], lang),
             )
         )
 
@@ -286,24 +333,43 @@ def parse_table(body: bytes) -> ParsedTable:
     return ParsedTable(dims, header[value_index], periods, rows, delimiter)
 
 
-async def _load(table: IrccTable) -> tuple[ParsedTable, bool]:
+async def _load(table: IrccTable, lang: str = "en") -> tuple[ParsedTable, bool]:
+    url = table.csv_url
+
     async def fetch() -> ParsedTable:
         await _LIMITER.acquire()
         try:
-            response = await get_raw(table.csv_url, timeout=180.0)
+            response = await get_raw(url, timeout=180.0)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"ircc_monthly: {table.csv_url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                f"ircc_monthly: {table.csv_url} did not respond in time."
-            ) from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"ircc_monthly: {url} returned HTTP {status}.",
+                f"ircc_monthly : {url} a renvoyé HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                f"ircc_monthly: {url} did not respond in time.",
+                f"ircc_monthly : {url} n'a pas répondu à temps.",
+                lang,
+            )
         if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"ircc_monthly: {table.csv_url} is larger than expected.")
+            _raise(
+                UpstreamError,
+                f"ircc_monthly: {url} is larger than expected.",
+                f"ircc_monthly : {url} est plus volumineux que prévu.",
+                lang,
+            )
         if response.content.lstrip()[:15].lower().startswith((b"<!doctype", b"<html")):
-            raise UpstreamError(f"ircc_monthly: {table.csv_url} returned a web page, not data.")
-        return parse_table(response.content)
+            _raise(
+                UpstreamError,
+                f"ircc_monthly: {url} returned a web page, not data.",
+                f"ircc_monthly : {url} a renvoyé une page Web, pas des données.",
+                lang,
+            )
+        return parse_table(response.content, lang)
 
     return await cached_fetch(f"ircc-monthly:{table.table_id}", constants.TABLE_TTL_SECONDS, fetch)
 
@@ -335,15 +401,16 @@ def _provenance(table: IrccTable, cached: bool, schema: str, lang: str) -> Any:
         url=table.csv_url,
         cached=cached,
         schema_name=f"ircc_monthly.{schema}",
-        freshness="monthly; IRCC adds the latest month and may revise earlier ones",
-        limits=constants.ROUNDING_NOTE_FR if lang == "fr" else constants.ROUNDING_NOTE,
+        freshness=_fr(constants.FRESHNESS, constants.FRESHNESS_FR, lang),
+        limits=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang),
+        lang=lang,
     )
 
 
 async def describe_table(table_id: str, *, lang: str = "en") -> IrccTableDescription:
     """Dimensions, their values, and time coverage of one table."""
     table = await _find(table_id, lang)
-    parsed, cached = await _load(table)
+    parsed, cached = await _load(table, lang)
     finest = parsed.periods[0] if parsed.periods else None
     labels = sorted(
         {p for r in parsed.rows if (p := _period_label(r, finest)) is not None},
@@ -372,28 +439,37 @@ async def describe_table(table_id: str, *, lang: str = "en") -> IrccTableDescrip
         suppressed_cells=sum(1 for r in parsed.rows if r.value is None),
         dimensions=dimensions,
         value_column=parsed.value_column,
-        note=constants.ROUNDING_NOTE_FR if lang == "fr" else constants.ROUNDING_NOTE,
+        note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang),
         provenance=_provenance(table, cached, "IrccTableDescription", lang),
     )
 
 
-def _dimension(parsed: ParsedTable, name: str) -> int:
+def _dimension(parsed: ParsedTable, name: str, lang: str = "en") -> int:
     wanted = name.strip().lower()
     for i, dim in enumerate(parsed.dimensions):
         if wanted in (dim.key, dim.column.lower(), (dim.column_fr or "").lower()):
             return i
     keys = [d.key for d in parsed.dimensions]
-    raise InvalidInput(f"ircc_monthly: unknown dimension {name!r}; this table has {keys}.")
+    _raise(
+        InvalidInput,
+        f"ircc_monthly: unknown dimension {name!r}; this table has {keys}.",
+        f"ircc_monthly : dimension inconnue {name!r} ; ce tableau a {keys}.",
+        lang,
+    )
 
 
-def _match_value(parsed: ParsedTable, i: int, value: str) -> str:
+def _match_value(parsed: ParsedTable, i: int, value: str, lang: str = "en") -> str:
     dim = parsed.dimensions[i]
     wanted = " ".join(value.split()).lower()
     for english in {r.labels[i] for r in parsed.rows}:
         if wanted in (english.lower(), dim.fr.get(english, "").lower()):
             return english
-    raise InvalidInput(
-        f"ircc_monthly: {dim.key} has no value {value!r}; see ircc_monthly_describe_table."
+    _raise(
+        InvalidInput,
+        f"ircc_monthly: {dim.key} has no value {value!r}; see ircc_monthly_describe_table.",
+        f"ircc_monthly : {dim.key} n'a pas de valeur {value!r} ; consultez "
+        "ircc_monthly_describe_table.",
+        lang,
     )
 
 
@@ -411,26 +487,46 @@ async def query_table(
 ) -> IrccQueryResult:
     """Filter a table, then sum it to `period` and the `group_by` dimensions."""
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(
-            f"ircc_monthly: limit must be between 1 and {constants.ROWS_MAX}, got {limit}."
+        _raise(
+            InvalidInput,
+            f"ircc_monthly: limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"ircc_monthly : limit doit être entre 1 et {constants.ROWS_MAX} (reçu : {limit}).",
+            lang,
         )
     if sort not in ("period", "value_desc"):
-        raise InvalidInput("ircc_monthly: sort must be 'period' or 'value_desc'.")
+        _raise(
+            InvalidInput,
+            "ircc_monthly: sort must be 'period' or 'value_desc'.",
+            "ircc_monthly : sort doit être 'period' ou 'value_desc'.",
+            lang,
+        )
+    # The shared range check speaks English only; French callers get the same check in French.
+    if lang == "fr" and year_from is not None and year_to is not None and year_from > year_to:
+        raise_typed(
+            InvalidInput,
+            f"year_from ({year_from}) est postérieur à year_to ({year_to}) ; inversez-les "
+            "ou élargissez la plage.",
+            lang,
+        )
     check_range(year_from, year_to, "year_from", "year_to")
     table = await _find(table_id, lang)
-    parsed, cached = await _load(table)
+    parsed, cached = await _load(table, lang)
     if period is not None and period not in parsed.periods:
-        raise InvalidInput(
-            f"ircc_monthly: {table.table_id} supports periods {parsed.periods}, not {period!r}."
+        _raise(
+            InvalidInput,
+            f"ircc_monthly: {table.table_id} supports periods {parsed.periods}, not {period!r}.",
+            f"ircc_monthly : {table.table_id} accepte les périodes {parsed.periods}, "
+            f"pas {period!r}.",
+            lang,
         )
     grain = period or (parsed.periods[0] if parsed.periods else None)
 
     wanted: dict[int, str] = {}
     for name, value in (filters or {}).items():
-        i = _dimension(parsed, name)
-        wanted[i] = _match_value(parsed, i, value)
+        i = _dimension(parsed, name, lang)
+        wanted[i] = _match_value(parsed, i, value, lang)
     kept = (
-        [_dimension(parsed, g) for g in group_by]
+        [_dimension(parsed, g, lang) for g in group_by]
         if group_by is not None
         else list(range(len(parsed.dimensions)))
     )
@@ -483,6 +579,6 @@ async def query_table(
         group_by=[parsed.dimensions[i].key for i in kept],
         period=grain,
         value_column=parsed.value_column,
-        note=constants.ROUNDING_NOTE_FR if lang == "fr" else constants.ROUNDING_NOTE,
+        note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang),
         provenance=_provenance(table, cached, "IrccQueryResult", lang),
     )

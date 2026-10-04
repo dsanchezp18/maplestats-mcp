@@ -71,6 +71,20 @@ async def test_search_in_french_maps_class_and_status_labels(httpx_mock):
     result = await client.search_products(product_class="veterinary", lang="fr", brand="myso")
     assert result.products[0].product_class == "Vétérinaire"
     assert result.products[0].status == "Annulé après commercialisation"
+    assert (result.provenance.coverage or "").startswith("1 produits sur 1 correspondant à")
+    assert "brand contient 'myso'" in (result.provenance.coverage or "")
+    assert (result.provenance.freshness or "").startswith("données en ligne de la BDPP")
+    assert (result.provenance.licence or "").startswith("Source : Santé Canada.")
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="^Entrée invalide : donnez au moins l'un de"):
+        await client.search_products(lang="fr")
+    with pytest.raises(InvalidInput, match="n'est pas un DIN"):
+        await client.get_product(din="ABC123", lang="fr")
+    httpx_mock.add_response(url=_url("drugproduct", r"din=00000001"), status_code=400, json={})
+    with pytest.raises(InvalidInput, match="la requête a échoué \\(détail\\s: "):
+        await client.get_product(din="1", lang="fr")
 
 
 async def test_ingredient_search_joins_the_api_filter_to_the_product_table(httpx_mock):

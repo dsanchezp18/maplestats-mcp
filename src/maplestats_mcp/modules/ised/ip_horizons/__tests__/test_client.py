@@ -88,6 +88,12 @@ async def test_list_files_latest_only_drops_older_releases(httpx_mock):
     abstract = next(f for f in result.files if f.table == "abstract")
     assert abstract.text_format is False
     assert all("IP_Horizon_Resources" not in f.url for f in result.files)
+    # as_of is the newest release read, not a promised quarterly refresh
+    # (the newest live patent release was still 2024-10-11 on 2026-10-03).
+    assert result.provenance.as_of is not None
+    assert result.provenance.as_of.date() == date(2024, 10, 11)
+    assert "quarterly" not in (result.provenance.freshness or "")
+    assert "2024-10-11" in (result.provenance.freshness or "")
 
 
 async def test_list_files_all_releases_and_table_filter(httpx_mock):

@@ -79,6 +79,11 @@ class BoundarySetInfo(BaseModel):
         default=True,
         description="False when only the list fields (name, domain) were read.",
     )
+    superseded_by: str | None = Field(
+        default=None,
+        description="Current set's slug when this one is a superseded representation order "
+        "(federal-electoral-districts with no year is the 2013 order).",
+    )
 
 
 class PostcodeLookup(BaseModel):

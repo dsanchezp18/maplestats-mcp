@@ -37,9 +37,11 @@ async def aer_get_well_licences_daily(
     Keywords: Alberta, AER, Alberta Energy Regulator, ST1, well
     licence, well licences issued, oil and gas, drilling, licensee,
     daily report, mineral rights, field.
-    Mots-clés : Alberta, AER, Alberta Energy Regulator, ST1, permis de
-    puits, permis délivrés, pétrole et gaz, forage, titulaire de
-    permis, rapport quotidien, droits miniers, champ.
+    Mots-clés : Alberta, AER, Alberta Energy Regulator, organisme de
+    réglementation de l'énergie de l'Alberta, ST1,
+    permis de puits, nouveaux puits, permis délivrés, pétrole et gaz,
+    forage, titulaire de permis, rapport quotidien, droits miniers,
+    champ pétrolier.
     """
     return await client.get_well_licences_daily(day, lang=lang)
 
@@ -62,8 +64,10 @@ async def aer_get_well_licence_archive_link(
     Keywords: Alberta, AER, well licence archive, ST1, historical well
     licences, ZIP, oil and gas history, monthly archive, yearly
     archive.
-    Mots-clés : Alberta, AER, archive des permis de puits, ST1, permis
-    historiques, archive mensuelle, archive annuelle, pétrole et gaz.
+    Mots-clés : Alberta, AER, Alberta Energy Regulator, organisme de
+    réglementation de l'énergie de l'Alberta, archive
+    des permis de puits, ST1, historique des permis de forage, archive
+    mensuelle, archive annuelle, fichier ZIP, pétrole et gaz.
     """
     return await client.get_well_licence_archive_link(year, month, lang=lang)
 
@@ -82,8 +86,10 @@ async def aer_get_production_volumes_link(product: str, lang: Lang = "en") -> Pr
     Keywords: Alberta, AER, ST3, production volumes, oil, gas, NGL,
     butane, ethane, propane, sulphur, oil prices, monthly statistics,
     energy resource industry.
-    Mots-clés : Alberta, AER, ST3, volumes de production, pétrole, gaz,
-    LGN, butane, éthane, propane, soufre, prix du pétrole,
-    statistiques mensuelles, industrie énergétique.
+    Mots-clés : Alberta, AER, Alberta Energy Regulator, organisme de
+    réglementation de l'énergie de l'Alberta, ST3,
+    volumes de production, production pétrolière, gaz naturel, LGN,
+    butane, éthane, propane, soufre, prix du pétrole, statistiques
+    mensuelles, industrie énergétique.
     """
     return await client.get_production_volumes_link(product, lang=lang)

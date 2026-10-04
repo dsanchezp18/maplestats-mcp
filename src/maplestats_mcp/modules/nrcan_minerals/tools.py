@@ -37,9 +37,9 @@ async def nrcan_minerals_get_production(
     Keywords: mineral production, mining statistics, gold production by
     province, value of mineral shipments, metal production, NRCan mining,
     potash output, critical minerals, preliminary estimate.
-    Mots-clés : production minérale, statistiques minières, production
-    d'or par province, valeur des expéditions minérales, production de
-    métaux, RNCan mines, potasse, minéraux critiques.
+    Mots-clés : production minérale, statistiques minières, production d'or
+    par province, valeur des expéditions minérales, production de métaux,
+    Ressources naturelles Canada (RNCan), mines, potasse, minéraux critiques.
     """
     return await client.get_production(
         year, commodity=commodity, province=province, category=category, limit=limit, lang=lang
@@ -71,8 +71,9 @@ async def nrcan_minerals_get_series(
     history, annual mineral statistics, NRCan, metal output since 1990.
     Mots-clés : série chronologique production minérale, historique de la
     production d'or, valeur des expéditions par année, tendance de la
-    production de cuivre, histoire minière du Canada, statistiques annuelles,
-    RNCan, production de métaux depuis 1990.
+    production de cuivre, histoire minière du Canada, statistiques
+    annuelles, Ressources naturelles Canada (RNCan), production de métaux
+    depuis 1990.
     """
     return await client.get_series(
         commodity,

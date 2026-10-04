@@ -28,15 +28,16 @@ from __future__ import annotations
 
 import codecs
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable
 from datetime import datetime
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, new_client, request_headers
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -46,6 +47,45 @@ LICENCE = (
     "Source: Health Canada. Contains information licensed under the Open Government "
     "Licence - Canada (https://open.canada.ca/en/open-government-licence-canada)."
 )
+LICENCE_FR = (
+    "Source : Santé Canada. Contient des informations visées par la Licence du gouvernement "
+    "ouvert – Canada (https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada)."
+)
+# The start of each typed error's French template (shared/i18n), so a message
+# already in French is not restated.
+_FRENCH_STARTS = ("Entrée invalide", "Aucune correspondance", "La source amont")
+
+
+def fail(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def say(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+async def in_lang[T](lang: str, call: Awaitable[T]) -> T:
+    """Await `call`; for lang="fr", restate an English error from the shared helpers.
+
+    The request helpers here word their errors in English (they serve every
+    language); a French call gets the French template with the English
+    detail kept, so nothing is lost.
+    """
+    try:
+        return await call
+    except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable) as exc:
+        if lang != "fr" or str(exc).startswith(_FRENCH_STARTS):
+            raise
+        raise_typed(
+            type(exc),
+            f"health-products.canada.ca (Santé Canada) : la requête a échoué (détail : {exc})",
+            "fr",
+        )
+
 
 # The API answered 20 quick requests in a row without throttling; a modest
 # pace keeps a burst of detail lookups (up to 11 per drug product) polite.
@@ -143,8 +183,16 @@ def provenance(
     limits: str | None = None,
     as_of: datetime | None = None,
     lang: str = "en",
+    freshness_fr: str | None = None,
+    coverage_fr: str | None = None,
+    limits_fr: str | None = None,
 ) -> Provenance:
-    del lang  # Provenance text is English for every language, as elsewhere.
+    """Provenance in the call's language: the `*_fr` texts are used for lang="fr"."""
+    if lang == "fr":
+        freshness = french_spacing(freshness_fr or freshness)
+        coverage = french_spacing(coverage_fr or coverage) if coverage else None
+        chosen = limits_fr or limits
+        limits = french_spacing(chosen) if chosen else None
     return make_provenance(
         source=SOURCE,
         url=url,
@@ -154,7 +202,8 @@ def provenance(
         coverage=coverage,
         limits=limits,
         as_of=as_of,
-        licence=LICENCE,
+        licence=LICENCE_FR if lang == "fr" else LICENCE,
+        lang=lang,
     )
 
 

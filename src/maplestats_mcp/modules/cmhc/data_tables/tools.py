@@ -48,9 +48,10 @@ async def cmhc_dt_list_tables(category: str, lang: Lang = "en") -> TableList:
     Keywords: cmhc, housing, data tables, publications, excel,
     download, rental market, household characteristics, canadian
     housing survey, catalogue, list.
-    Mots-clés : schl, logement, tableaux de données, publications,
-    excel, téléchargement, marché locatif, caractéristiques des
-    ménages, enquête canadienne sur le logement, catalogue, liste.
+    Mots-clés : Société canadienne d'hypothèques et de logement (SCHL),
+    logement, tableaux de données, publications, Excel, téléchargement,
+    marché locatif, caractéristiques des ménages, enquête canadienne sur le
+    logement, catalogue, liste.
     """
     return await client.list_tables(category, lang=lang)
 
@@ -68,9 +69,9 @@ async def cmhc_dt_get_table(category: str, slug: str, lang: Lang = "en") -> Tabl
     reads the French page (French title, labels and file).
     Keywords: cmhc, housing, data table, detail, description,
     geography, edition, publication date, document type, metadata.
-    Mots-clés : schl, logement, tableau de données, détail,
-    description, géographie, édition, date de publication, type de
-    document, métadonnées.
+    Mots-clés : Société canadienne d'hypothèques et de logement (SCHL),
+    logement, tableau de données, détail, description, géographie, édition,
+    date de publication, type de document, métadonnées.
     """
     return await client.get_table(category, slug, lang=lang)
 
@@ -96,9 +97,9 @@ async def cmhc_dt_get_download_url(
     French; lang="fr" gives the French file.
     Keywords: cmhc, housing, download link, excel file, data table,
     historical edition, geography, publication, direct link, xlsx.
-    Mots-clés : schl, logement, lien de téléchargement, fichier excel,
-    tableau de données, édition historique, géographie, publication,
-    lien direct.
+    Mots-clés : Société canadienne d'hypothèques et de logement (SCHL),
+    logement, lien de téléchargement, fichier Excel, tableau de données,
+    édition historique, géographie, publication, lien direct.
     """
     return await client.get_download_url(
         category, slug, geography_id=geography_id, edition_id=edition_id, lang=lang

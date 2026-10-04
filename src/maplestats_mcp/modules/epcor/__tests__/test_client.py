@@ -143,6 +143,10 @@ async def test_get_daily_water_quality_live_shape_and_cache(httpx_mock):
     second = await client.get_daily_water_quality("rossdale")
     assert [r.date_label for r in first.readings] == ["SEP-30", "OCT-01", "OCT-02"]
     assert first.units["conductivity"] == "µS/cm"
+    # as_of is the newest reported day (it was null before 2026-10-03).
+    assert first.provenance.as_of is not None
+    assert first.provenance.as_of.date() == first.readings[-1].date
+    assert first.provenance.as_of.utcoffset() is not None
     assert first.provenance.cached is False
     assert second.provenance.cached is True
     assert len(httpx_mock.get_requests()) == 1

@@ -5,13 +5,11 @@ derives outputSchema/structuredContent from the return-type annotation
 automatically. A raised exception (see shared/errors.py) becomes a real
 MCP isError:true result; tools never return an error-shaped dict.
 
-`lang` is accepted on every tool for consistency with the rest of this
-project, but Valet itself has no language query parameter - every field
-this module reads back (label/description) is already in whichever
-language the series/group was authored in (mostly English, with some
-French-only or bilingual entries), so `lang` has no effect on the
-Valet request itself. It is kept purely so a caller/BM25 query
-mentioning "fr" doesn't rule this module out.
+`lang="fr"` sends the request to the Bank's French domain
+(banqueducanada.ca/valet), which returns series and group labels,
+descriptions and Valet's own error messages in French; MapleStats's own
+notes, limits and errors follow `lang` too. Valet has no language query
+parameter, so the domain is what selects the language.
 """
 
 from __future__ import annotations
@@ -51,7 +49,7 @@ async def boc_search_series(
     rate, interest rate, policy rate, prime rate, five-year mortgage
     rate, bond yield, cpi, inflation, commodity price, discover, list,
     inventory, all series, catalogue, full list.
-    Mots-clés : banque du canada, valet, série, recherche, trouver, taux
+    Mots-clés : Banque du Canada, valet, série, recherche, trouver, taux
     de change, taux d'intérêt, taux directeur, taux préférentiel, taux
     hypothécaire, rendement des obligations, IPC, inflation, prix des
     matières premières, découvrir, liste, inventaire, toutes les séries,
@@ -59,11 +57,13 @@ async def boc_search_series(
     """
     if query is not None:
         return await client.search_series(
-            query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit
+            query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit, lang=lang
         )
     # page_series copies, so the cached full list is not trimmed in place.
     return client.page_series(
-        await client.list_series(), constants.LIST_LIMIT_DEFAULT if limit is None else limit
+        await client.list_series(lang),
+        constants.LIST_LIMIT_DEFAULT if limit is None else limit,
+        lang,
     )
 
 
@@ -82,17 +82,19 @@ async def boc_search_groups(
     Keywords: bank of canada, boc, valet, group, series group, search,
     find, cpi, exchange rates, commodity prices, discover, list, groups,
     inventory, catalogue, full list.
-    Mots-clés : banque du canada, valet, groupe, groupe de séries,
+    Mots-clés : Banque du Canada, valet, groupe, groupe de séries,
     recherche, trouver, IPC, taux de change, prix des produits de base,
-    découvrir, liste, groupes, inventaire, catalogue, liste complète,
+    IPPB, découvrir, liste, groupes, inventaire, catalogue, liste complète,
     parcourir.
     """
     if query is not None:
         return await client.search_groups(
-            query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit
+            query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit, lang=lang
         )
     return client.page_groups(
-        await client.list_groups(), constants.LIST_LIMIT_DEFAULT if limit is None else limit
+        await client.list_groups(lang),
+        constants.LIST_LIMIT_DEFAULT if limit is None else limit,
+        lang,
     )
 
 
@@ -106,10 +108,10 @@ async def boc_get_series(name: str, lang: Lang = "en") -> SeriesDetail:
     V80691311 (prime rate), V41690973 (Total CPI).
     Keywords: bank of canada, boc, valet, series, detail, metadata,
     description, label, lookup.
-    Mots-clés : banque du canada, valet, série, détail, métadonnées,
-    description, étiquette, recherche par code, consulter.
+    Mots-clés : Banque du Canada, valet, série, détail, métadonnées,
+    description, libellé, recherche par code, consulter, code de série.
     """
-    return await client.get_series(name)
+    return await client.get_series(name, lang=lang)
 
 
 @tool
@@ -122,10 +124,10 @@ async def boc_get_group(name: str, lang: Lang = "en") -> GroupDetail:
     core-inflation measures such as CPI-trim, CPI-median, CPI-common).
     Keywords: bank of canada, boc, valet, group, detail, member series,
     cpi, exchange rates, commodity prices, metadata.
-    Mots-clés : banque du canada, valet, groupe, détail, séries membres,
+    Mots-clés : Banque du Canada, valet, groupe, détail, séries membres,
     IPC, taux de change, prix des produits de base, métadonnées.
     """
-    return await client.get_group(name)
+    return await client.get_group(name, lang=lang)
 
 
 @tool
@@ -158,7 +160,7 @@ async def boc_get_observations(
     Keywords: bank of canada, boc, valet, observations, data, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, time series, history, recent, date range.
-    Mots-clés : banque du canada, valet, observations, données, taux de
+    Mots-clés : Banque du Canada, valet, observations, données, taux de
     change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, série chronologique,
     historique, plage de dates.
@@ -171,6 +173,7 @@ async def boc_get_observations(
         recent_weeks=recent_weeks,
         recent_months=recent_months,
         recent_years=recent_years,
+        lang=lang,
     )
 
 
@@ -199,7 +202,7 @@ async def boc_get_group_observations(
     Keywords: bank of canada, boc, valet, group, observations, data,
     exchange rates, cpi, inflation, commodity prices, time series,
     history, recent, date range.
-    Mots-clés : banque du canada, valet, groupe, observations, données,
+    Mots-clés : Banque du Canada, valet, groupe, observations, données,
     taux de change, IPC, inflation, prix des produits de base, série
     chronologique, historique, plage de dates.
     """
@@ -211,4 +214,5 @@ async def boc_get_group_observations(
         recent_weeks=recent_weeks,
         recent_months=recent_months,
         recent_years=recent_years,
+        lang=lang,
     )

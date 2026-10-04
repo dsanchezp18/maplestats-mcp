@@ -33,6 +33,10 @@ transport to give up the StatCan fix to accommodate one large page.
 
 from __future__ import annotations
 
+import re
+from datetime import date
+from typing import NoReturn
+
 import httpx
 from bs4 import BeautifulSoup
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -43,9 +47,10 @@ from maplestats_mcp.modules.cra_digital_economy_registry.schemas import (
     DigitalEconomyRegistryResult,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -81,18 +86,90 @@ async def _get(url: str) -> httpx.Response:
     return response
 
 
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English as before; French in the typed template ("Entrée invalide : ...")."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _text(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
 def _cell_text(cell) -> str | None:
     text = cell.get_text(strip=True)
     return None if text in ("", "-") else text
 
 
-def _parse_registrants(html: str) -> list[DigitalEconomyRegistrant]:
+# Dates are printed in the page's language (checked live 2026-10-03:
+# "July 1, 2023" on the English page, "1 juillet 2021" on the French one),
+# so they are read here rather than through the host's locale.
+_MONTHS = {
+    name: number
+    for number, names in enumerate(
+        (
+            ("january", "janvier"),
+            ("february", "février", "fevrier"),
+            ("march", "mars"),
+            ("april", "avril"),
+            ("may", "mai"),
+            ("june", "juin"),
+            ("july", "juillet"),
+            ("august", "août", "aout"),
+            ("september", "septembre"),
+            ("october", "octobre"),
+            ("november", "novembre"),
+            ("december", "décembre", "decembre"),
+        ),
+        start=1,
+    )
+    for name in names
+}
+_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# Hand-typed variants seen live: "July1, 2021", "20 août2026" (no space),
+# "1 septembre, 2026" (a comma) and "février 3 2026" (English order on the
+# French page), so either order is read with either language's months. A
+# misspelt month ("Obtober 1, 2024") stays null, its text kept in
+# *_date_text.
+_EN_DATE = re.compile(r"^([^\W\d_]+)\.?\s*(\d{1,2}),?\s*(\d{4})$")
+_FR_DATE = re.compile(r"^(\d{1,2})(?:er)?\s*([^\W\d_]+),?\s*(\d{4})$")
+
+
+def parse_date(text: str | None) -> date | None:
+    """An ISO date from the page's English or French date text, or None."""
+    if not text:
+        return None
+    cleaned = " ".join(text.split())
+    if _ISO.match(cleaned):
+        return date.fromisoformat(cleaned)
+    if match := _EN_DATE.match(cleaned):
+        month, day, year = match[1], match[2], match[3]
+    elif match := _FR_DATE.match(cleaned):
+        day, month, year = match[1], match[2], match[3]
+    else:
+        return None
+    number = _MONTHS.get(month.lower())
+    if number is None:
+        return None
+    try:
+        return date(int(year), number, int(day))
+    except ValueError:
+        return None
+
+
+def _parse_registrants(html: str, lang: str = "en") -> list[DigitalEconomyRegistrant]:
     soup = BeautifulSoup(html, "html.parser")
     table = soup.select_one("table.wb-tables")
     if table is None:
-        raise UpstreamError(
+        _raise(
+            UpstreamError,
             "cra_digital_economy_registry: expected response shape not found "
-            "(missing table.wb-tables)."
+            "(missing table.wb-tables).",
+            "cra_digital_economy_registry : la page n'a pas la forme attendue "
+            "(table.wb-tables absente).",
+            lang,
         )
     registrants: list[DigitalEconomyRegistrant] = []
     for row in table.select("tbody tr"):
@@ -104,13 +181,16 @@ def _parse_registrants(html: str) -> list[DigitalEconomyRegistrant]:
         registration_date = _cell_text(cells[3])
         if not legal_name or not business_number or not registration_date:
             continue
+        deregistration_date = _cell_text(cells[4])
         registrants.append(
             DigitalEconomyRegistrant(
                 legal_name=legal_name,
                 trade_name=_cell_text(cells[1]),
                 business_number=business_number,
-                effective_registration_date=registration_date,
-                effective_deregistration_date=_cell_text(cells[4]),
+                effective_registration_date=parse_date(registration_date),
+                effective_deregistration_date=parse_date(deregistration_date),
+                registration_date_text=registration_date,
+                deregistration_date_text=deregistration_date,
             )
         )
     return registrants
@@ -127,17 +207,24 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
         try:
             response = await _get(url)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"cra_digital_economy_registry returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "cra_digital_economy_registry did not respond in time."
-            ) from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"cra_digital_economy_registry returned HTTP {status}.",
+                f"cra_digital_economy_registry a renvoyé HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                "cra_digital_economy_registry did not respond in time.",
+                "cra_digital_economy_registry n'a pas répondu à temps.",
+                lang,
+            )
         return response.text
 
     html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    all_registrants = _parse_registrants(html)
+    all_registrants = _parse_registrants(html, lang)
 
     needle = query.strip().lower()
     if needle:
@@ -154,7 +241,11 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
     truncated = matched[: constants.SEARCH_RESULTS_MAX]
     coverage = None
     if len(matched) > len(truncated):
-        coverage = f"first {len(truncated)} of {len(matched)} matches -- narrow the query"
+        coverage = _text(
+            f"first {len(truncated)} of {len(matched)} matches -- narrow the query",
+            f"les {len(truncated)} premiers résultats sur {len(matched)} : précisez la requête",
+            lang,
+        )
 
     return DigitalEconomyRegistryResult(
         query=query,
@@ -168,5 +259,6 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
             cached=was_cached,
             schema_name="cra_digital_economy_registry.DigitalEconomyRegistryResult",
             coverage=coverage,
+            lang=lang,
         ),
     )

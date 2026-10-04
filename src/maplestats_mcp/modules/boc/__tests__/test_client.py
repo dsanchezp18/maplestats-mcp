@@ -293,3 +293,92 @@ async def test_observations_url_reproduces_the_query_and_keeps_latest(httpx_mock
     assert str(result.observations[-1].ref_date) == "2026-01-30"
     assert (result.provenance.limits or "").startswith("Returned the most recent")
     assert "Bank of Canada" in (result.provenance.licence or "")
+
+
+# French: lang="fr" reads Valet on the Bank's French domain and writes
+# MapleStats's own errors, limits and coverage in French.
+
+
+async def test_french_series_comes_from_the_french_domain(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL_FR}series/V39079/json",
+        json={
+            "seriesDetails": {
+                "name": "V39079",
+                "label": "Taux cible du financement à un jour (quotidien ouvrable)",
+                "description": "Aussi appelé taux directeur.",
+            }
+        },
+    )
+    result = await client.get_series("V39079", lang="fr")
+    assert result.label.startswith("Taux cible")
+    assert result.provenance.url == f"{constants.BASE_URL_FR}series/V39079/json"
+    assert "Banque du Canada" in (result.provenance.licence or "")
+    assert (result.provenance.reproduce or "").startswith("Pour obtenir")
+
+
+async def test_french_not_found_uses_the_french_template(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL_FR}series/NOPE/json",
+        status_code=404,
+        json={"message": "Série NOPE non valide.", "docs": ""},
+    )
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée : Série NOPE"):
+        await client.get_series("NOPE", lang="fr")
+
+
+async def test_french_timeout_message(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
+    with pytest.raises(UpstreamUnavailable, match="n'a pas répondu à temps"):
+        await client.get_series("FXGBPCAD", lang="fr")
+
+
+async def test_french_input_errors():
+    with pytest.raises(InvalidInput, match="Entrée invalide : start_date/end_date ne peuvent"):
+        await client.get_observations(["FXUSDCAD"], start_date="2024-01-01", recent=5, lang="fr")
+    with pytest.raises(InvalidInput, match="au moins un nom de série"):
+        await client.get_observations([], lang="fr")
+    with pytest.raises(InvalidInput, match="Le nom du groupe ne doit pas être vide"):
+        await client.get_group("  ", lang="fr")
+    with pytest.raises(InvalidInput, match="limit doit être compris entre 1 et 200"):
+        await client.search_series("taux", limit=0, lang="fr")
+
+
+async def test_french_search_limits_and_coverage(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL_FR}lists/series/json",
+        json={
+            "series": {
+                f"V{i}": {"label": f"Taux {i}", "description": "taux directeur"} for i in range(3)
+            }
+        },
+    )
+    result = await client.search_series("taux directeur", limit=2, lang="fr")
+    assert result.total_count == 3
+    assert result.provenance.limits == (
+        "Seules les 2 premières séries correspondantes sur 3 sont renvoyées ; "
+        "précisez la requête ou augmentez limit (max. 200)."
+    )
+    assert (result.provenance.coverage or "").startswith("recherche de sous-chaîne parmi 3 séries")
+
+
+async def test_french_observation_limits(httpx_mock, monkeypatch):
+    rows = [{"d": f"2026-01-{day:02d}", "FXUSDCAD": {"v": "1.35"}} for day in range(1, 31)]
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL_FR}observations/FXUSDCAD/json?start_date=2026-01-01",
+        json={"seriesDetail": {"FXUSDCAD": {"label": "USD/CAD"}}, "observations": rows},
+    )
+    monkeypatch.setattr(constants, "OBSERVATIONS_MAX_BYTES", 500)
+    result = await client.get_observations(["FXUSDCAD"], start_date="2026-01-01", lang="fr")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Seules les ")
+    assert "sur 30 sont renvoyées ; passez start_date/end_date" in limits
+
+
+def test_french_page_limits_use_no_break_thousands():
+    note = client._page_limits(50, 2538, "groups", "fr")
+    assert note == (
+        "Seuls les 50 premiers groupes sur 2 538 sont renvoyés ; "
+        "cherchez avec query ou augmentez limit (max. 1000)."
+    )

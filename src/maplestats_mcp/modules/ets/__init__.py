@@ -19,6 +19,9 @@ Confirmed live 2026-09-22:
 3. Most alerts (95 of 100 when checked) list `informed_entity`
    route/stop ids; a few carry only free text, so route filtering on
    alerts also searches the header text for the route number.
+4. Route ids are zero-padded in every feed ("004", "051", "001A",
+   alongside "922", "A15", "120X"; checked 2026-10-03), while alert text
+   says "Route 124". Route filters compare ids without leading zeros.
 """
 
 MODULE_NAME = "ets"

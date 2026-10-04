@@ -46,8 +46,8 @@ DISTANCE_MAX_METRES = 100_000
 
 # --- StatCan geoanalytics MapServers (CSGE / GAIA apps) ----------------------
 
-# Confirmed live 2026-10-02: no robots.txt (HTTP 404) on gaia.statcan.gc.ca,
-# geoanalytics.cloud.statcan.ca or geo.statcan.gc.ca. These are the services
+# Confirmed live 2026-10-02 on gaia.statcan.gc.ca,
+# geoanalytics.cloud.statcan.ca and geo.statcan.gc.ca. These are the services
 # behind StatCan's public map apps, reached through the portal's anonymous
 # "sharing/servers" proxy; the /server REST folders themselves need a token.
 ANALYTICS_CONFIG_URL = "https://gaia.statcan.gc.ca/csge/infc/app/config/urls/urls-prod.json"

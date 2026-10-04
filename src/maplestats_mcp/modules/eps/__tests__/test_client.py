@@ -19,10 +19,31 @@ from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUn
 _CURRENT_QUERY = re.compile(re.escape(constants.DATASETS["current"]) + r"/query.*")
 
 
+_LOAD_DATE_QUERY = re.compile(re.escape(constants.LOAD_DATE_URL) + r"/query.*")
+
+
 @pytest.fixture(autouse=True)
-def _reset_cache():
+def _reset_cache(request, monkeypatch):
     cache_module._caches.clear()
+    # Reads also ask for the load date (as_of) and, for months, the layer's date
+    # window. Tests about rows stub those two out; tests that take the
+    # `side_queries` fixture mock the real requests.
+    if "side_queries" not in request.fixturenames:
+
+        async def no_as_of(dataset):
+            return None
+
+        async def no_window(layer_url):
+            return None, None
+
+        monkeypatch.setattr(client, "_as_of", no_as_of)
+        monkeypatch.setattr(client, "_window", no_window)
     yield
+
+
+@pytest.fixture
+def side_queries():
+    """Marker fixture: keep the real load-date and date-window requests."""
 
 
 def test_build_where_quotes_and_makes_end_date_inclusive():
@@ -338,6 +359,136 @@ async def test_load_date_live_shape_and_unexpected_formats(httpx_mock):
         result = await client.get_last_load_date()
         assert result.last_load_date is None
         assert result.raw_value == raw
+
+
+# Live 2026-10-03: the min/max Reported_Date statistics of each layer (12:00 UTC).
+_LIVE_WINDOW_CURRENT = {
+    "fields": [{"name": "first_date", "type": "esriFieldTypeDate"}],
+    "features": [{"attributes": {"first_date": 1759147200000, "last_date": 1790510400000}}],
+}
+_LIVE_WINDOW_2023 = {
+    "features": [{"attributes": {"first_date": 1672574400000, "last_date": 1704024000000}}]
+}
+_LIVE_LOAD_DATE = {
+    "features": [{"attributes": {"OBJECTID": 1, "Last_Load_Date": "28/09/2026"}}],
+}
+
+
+async def test_month_summary_flags_partial_edge_months_and_sets_as_of(httpx_mock, side_queries):
+    months = dict(_LIVE_MONTHS)
+    months["features"] = [
+        *_LIVE_MONTHS["features"],
+        {"attributes": {"occurrence_count": 6366, "Reported_Year": "2026", "Reported_Month": 9}},
+    ]
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 79281})
+    httpx_mock.add_response(url=_CURRENT_QUERY, json=months)
+    httpx_mock.add_response(url=_CURRENT_QUERY, json=_LIVE_WINDOW_CURRENT)
+    httpx_mock.add_response(url=_LOAD_DATE_QUERY, json=_LIVE_LOAD_DATE)
+    result = await client.summarize_occurrences(group_by="month")
+    # Live: 2025-09 held 422 occurrences (window from 2025-09-29), 2026-09 ran to the 27th.
+    assert [g.partial for g in result.groups] == [True, False, True]
+    assert (result.data_from, result.data_to) == (date(2025, 9, 29), date(2026, 9, 27))
+    limits = result.provenance.limits or ""
+    assert "2025-09, 2026-09 cover only part of the month" in limits
+    assert result.provenance.as_of and result.provenance.as_of.date() == date(2026, 9, 28)
+    assert "daily" in (result.provenance.freshness or "")
+    window = _params(httpx_mock.get_requests()[2])
+    stats = json.loads(window["outStatistics"])
+    assert [s["statisticType"] for s in stats] == ["min", "max"]
+
+
+async def test_date_filters_narrow_the_month_window(httpx_mock, side_queries):
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 10})
+    httpx_mock.add_response(
+        url=_CURRENT_QUERY,
+        json={
+            "features": [
+                {
+                    "attributes": {
+                        "occurrence_count": 10,
+                        "Reported_Year": "2026",
+                        "Reported_Month": 3,
+                    }
+                }
+            ]
+        },
+    )
+    httpx_mock.add_response(url=_CURRENT_QUERY, json=_LIVE_WINDOW_CURRENT)
+    httpx_mock.add_response(url=_LOAD_DATE_QUERY, json=_LIVE_LOAD_DATE)
+    whole = await client.summarize_occurrences(
+        group_by="month", start_date="2026-03-01", end_date="2026-03-31"
+    )
+    assert whole.groups[0].partial is False
+    cache_module._caches.clear()
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 10})
+    httpx_mock.add_response(
+        url=_CURRENT_QUERY,
+        json={
+            "features": [
+                {
+                    "attributes": {
+                        "occurrence_count": 10,
+                        "Reported_Year": "2026",
+                        "Reported_Month": 3,
+                    }
+                }
+            ]
+        },
+    )
+    httpx_mock.add_response(url=_CURRENT_QUERY, json=_LIVE_WINDOW_CURRENT)
+    httpx_mock.add_response(url=_LOAD_DATE_QUERY, json=_LIVE_LOAD_DATE)
+    half = await client.summarize_occurrences(group_by="month", start_date="2026-03-15")
+    assert half.groups[0].partial is True and half.data_from == date(2026, 3, 15)
+
+
+async def test_closed_2023_year_is_static_with_no_partial_months(httpx_mock, side_queries):
+    layer = re.compile(re.escape(constants.DATASETS["2023"]) + r"/query.*")
+    httpx_mock.add_response(url=layer, json={"count": 81345})
+    httpx_mock.add_response(
+        url=layer,
+        json={
+            "features": [
+                {
+                    "attributes": {
+                        "occurrence_count": 6729,
+                        "Reported_Year": "2023",
+                        "Reported_Month": 1,
+                    }
+                },
+                {
+                    "attributes": {
+                        "occurrence_count": 6100,
+                        "Reported_Year": "2023",
+                        "Reported_Month": 12,
+                    }
+                },
+            ]
+        },
+    )
+    httpx_mock.add_response(url=layer, json=_LIVE_WINDOW_2023)
+    result = await client.summarize_occurrences("2023", group_by="month")
+    assert [g.partial for g in result.groups] == [False, False]
+    assert "daily" not in (result.provenance.freshness or "")
+    assert "closed" in (result.provenance.freshness or "")
+    # No load-date request for the closed year: its as_of stays unset.
+    assert result.provenance.as_of is None
+    assert not httpx_mock.get_requests(url=_LOAD_DATE_QUERY)
+
+
+async def test_list_as_of_survives_an_empty_load_date_table(httpx_mock, side_queries):
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 1})
+    httpx_mock.add_response(url=_CURRENT_QUERY, json=_LIVE_LIST)
+    httpx_mock.add_response(url=_LOAD_DATE_QUERY, json={"features": []})
+    result = await client.list_occurrences(limit=2)
+    assert result.total_matches == 1 and result.provenance.as_of is None
+    cache_module._caches.clear()
+    httpx_mock.add_response(url=_CURRENT_QUERY, json={"count": 1})
+    httpx_mock.add_response(url=_CURRENT_QUERY, json=_LIVE_LIST)
+    httpx_mock.add_response(url=_LOAD_DATE_QUERY, json=_LIVE_LOAD_DATE)
+    result = await client.list_occurrences(limit=2)
+    assert result.provenance.as_of and result.provenance.as_of.date() == date(2026, 9, 28)
+    load = await client.get_last_load_date()
+    assert load.provenance.as_of == result.provenance.as_of
 
 
 async def test_out_of_range_paging_is_rejected_before_any_request():

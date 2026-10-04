@@ -171,3 +171,41 @@ async def test_bad_inputs(live):
         await client.query_table("ODP-PR-PT_IMMCAT", {"region": "x"})
     with pytest.raises(InvalidInput, match="no value"):
         await client.query_table("ODP-PR-PT_IMMCAT", {"province_territory": "Atlantis"})
+
+
+async def test_french_errors(live):
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée : ircc_monthly : aucun"):
+        await client.query_table("ODP-NOPE", lang="fr")
+    with pytest.raises(InvalidInput, match="dimension inconnue"):
+        await client.query_table("ODP-PR-PT_IMMCAT", {"region": "x"}, lang="fr")
+    with pytest.raises(InvalidInput, match="n'a pas de valeur"):
+        await client.query_table("ODP-PR-PT_IMMCAT", {"province_territory": "Atlantis"}, lang="fr")
+    with pytest.raises(InvalidInput, match="Entrée invalide.*limit doit être"):
+        await client.query_table("ODP-PR-PT_IMMCAT", limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="est postérieur à year_to"):
+        await client.query_table("ODP-PR-PT_IMMCAT", year_from=2026, year_to=2020, lang="fr")
+
+
+def test_french_headerless_file_is_reported():
+    with pytest.raises(UpstreamError, match="sans ligne d'en-tête"):
+        client.parse_table((_HERE / "headerless.tsv").read_bytes(), lang="fr")
+
+
+async def test_french_note_and_provenance(live):
+    result = await client.query_table("ODP-PR-PT_IMMCAT", limit=2, lang="fr")
+    assert result.note.startswith("IRCC arrondit")
+    assert "(supprimés) ;" in result.note
+    assert result.provenance.limits == result.note
+    assert result.provenance.freshness is not None
+    assert result.provenance.freshness.startswith("mensuelle ; IRCC ajoute")
+    catalogue = await client.list_tables(lang="fr")
+    assert catalogue.provenance.coverage == "jeux de données archivés exclus"
+    assert catalogue.provenance.freshness == "IRCC met à jour les fichiers chaque mois"
+
+
+async def test_english_note_and_provenance_unchanged(live):
+    result = await client.query_table("ODP-PR-PT_IMMCAT", limit=2)
+    assert result.note == constants.ROUNDING_NOTE
+    assert result.provenance.freshness == (
+        "monthly; IRCC adds the latest month and may revise earlier ones"
+    )

@@ -208,6 +208,13 @@ async def test_input_validation():
         await quebec_client.get_trade(start_date="soon")
 
 
+async def test_french_errors():
+    with pytest.raises(InvalidInput, match="^Entrée invalide : dataset doit valoir"):
+        await quebec_client.get_demand("archive", lang="fr")  # type: ignore[arg-type]
+    with pytest.raises(InvalidInput, match="start_date doit être une date ISO"):
+        await quebec_client.get_trade(start_date="bientôt", lang="fr")
+
+
 async def test_upstream_status_mapping(httpx_mock):
     httpx_mock.add_response(url=_exports("demande-electricite-quebec"), status_code=404)
     with pytest.raises(NotFound):

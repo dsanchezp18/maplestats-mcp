@@ -93,18 +93,24 @@ async def get_active_wildfires(
     status: str | None = None,
     fire_year: int | None = None,
     min_size_hectares: float | None = None,
+    include_out: bool = False,
     include_geometry: bool = False,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: str = "en",
 ) -> WildfireQueryResult:
-    """Query current BC wildfire perimeters/status.
+    """Query current BC wildfire perimeters/status, largest first.
 
     Confirmed live 2026-09-22: `status` values observed include "Out of
     Control", "Being Held", "Under Control", and "Out" -- there is no
     fixed enum published, so this passes the value through rather than
     validating against a hardcoded list. There is no fire-centre/region
     field on this layer to filter by.
+
+    Most of the layer is extinguished fires: on 2026-10-03, 250 of 312
+    perimeters had status "Out" (one had no status), and ordered by
+    OBJECTID they came first. Without a `status`, "Out" fires are left
+    out unless `include_out` is set; a fire with no status is kept.
     """
     del lang
     _check_limit_offset(limit, offset)
@@ -112,6 +118,8 @@ async def get_active_wildfires(
     clauses: list[str] = []
     if status:
         clauses.append(f"FIRE_STATUS='{_escape_cql_literal(status)}'")
+    elif not include_out:
+        clauses.append(f"(FIRE_STATUS IS NULL OR FIRE_STATUS<>'{constants.WILDFIRE_OUT_STATUS}')")
     if fire_year is not None:
         clauses.append(f"FIRE_YEAR={fire_year}")
     if min_size_hectares is not None:
@@ -124,7 +132,7 @@ async def get_active_wildfires(
         "cql_filter": cql_filter,
         "property_names": property_names,
         "srs_name": constants.DEFAULT_SRS,
-        "sort_by": constants.DEFAULT_SORT_FIELD,
+        "sort_by": constants.WILDFIRE_SORT,
         "count": limit,
         "start_index": offset,
     }
@@ -192,10 +200,11 @@ async def get_mining_tenure(
     """Query acquired BC mineral/placer mining tenure (claims).
 
     `tenure_type` is "mineral" or "placer" (maps to BCGW's own 'M'/'P'
-    TENURE_TYPE_CODE) if given. `owner_name` does a case-sensitive
-    substring match against BCGW's own data, which is stored in upper
-    case -- confirmed live -- so the input is upper-cased before matching
-    rather than requiring the caller to know that.
+    TENURE_TYPE_CODE) if given. `owner_name` matches the start of a word
+    in OWNER_NAME, which BCGW stores in upper case (confirmed live), so
+    the input is upper-cased first. A plain substring match let "teck"
+    reach individual free miners such as "BIATECKI, ..." (1,318 owners
+    matched '%TECK%' on 2026-10-03, 1,312 matched at a word start).
     """
     del lang
     _check_limit_offset(limit, offset)
@@ -207,9 +216,11 @@ async def get_mining_tenure(
     clauses: list[str] = []
     if tenure_type is not None:
         clauses.append(f"TENURE_TYPE_CODE='{_TENURE_TYPE_CODES[tenure_type]}'")
-    if owner_name:
-        pattern = _escape_cql_literal(owner_name.upper())
-        clauses.append(f"OWNER_NAME LIKE '%{pattern}%'")
+    if owner_name and owner_name.strip():
+        pattern = _escape_cql_literal(owner_name.strip().upper())
+        # A word starts the name, follows a space, or opens a parenthesis.
+        starts = (f"'{pattern}%'", f"'% {pattern}%'", f"'%({pattern}%'")
+        clauses.append("(" + " OR ".join(f"OWNER_NAME LIKE {s}" for s in starts) + ")")
     if min_area_hectares is not None:
         clauses.append(f"AREA_IN_HECTARES>={min_area_hectares}")
     cql_filter = " AND ".join(clauses) if clauses else None
@@ -252,8 +263,8 @@ async def get_mining_tenure(
     )
 
 
-async def _attribute_fields(type_name: str) -> str | None:
-    """The layer's non-geometry fields as a propertyName list (None if it has none)."""
+async def _fields(type_name: str) -> list[tuple[str, str]]:
+    """The layer's (name, type) fields from DescribeFeatureType, cached."""
 
     async def fetch() -> list[tuple[str, str]]:
         return await describe_feature_type(CONFIG, type_name)
@@ -261,8 +272,28 @@ async def _attribute_fields(type_name: str) -> str | None:
     fields, _ = await cached_fetch(
         f"bcgw:describe:{type_name}", constants.CACHE_TTL_DESCRIBE_SECONDS, fetch
     )
-    names = [name for name, kind in fields if not kind.startswith("gml:")]
+    return fields
+
+
+async def _attribute_fields(type_name: str) -> str | None:
+    """The layer's non-geometry fields as a propertyName list (None if it has none)."""
+    names = [name for name, kind in await _fields(type_name) if not kind.startswith("gml:")]
     return ",".join(names) or None
+
+
+async def _geometry_field(type_name: str) -> str:
+    """The layer's geometry column: the field whose type starts with "gml:".
+
+    Checked live 2026-10-03: SHAPE on the fire points, fire polygons and
+    park layers; GEOMETRY is not a field there and a propertyName naming it
+    answers HTTP 400.
+    """
+    for name, kind in await _fields(type_name):
+        if kind.startswith("gml:"):
+            return name
+    raise InvalidInput(
+        f"bcgw: layer {type_name!r} has no geometry column; set include_geometry=false."
+    )
 
 
 async def query_layer(
@@ -307,6 +338,14 @@ async def query_layer(
     requested_fields = property_names
     if not property_names and not include_geometry:
         requested_fields = await _attribute_fields(type_name)
+    if include_geometry and property_names:
+        # propertyName drops the geometry unless the geometry column is in
+        # the list (every record came back "geometry": null before
+        # 2026-10-03), and its name varies by layer, so look it up.
+        geometry_field = await _geometry_field(type_name)
+        listed = {p.strip().upper() for p in property_names.split(",")}
+        if geometry_field.upper() not in listed:
+            requested_fields = f"{property_names},{geometry_field}"
 
     request: dict[str, Any] = {
         "cql_filter": cql_filter,

@@ -1,7 +1,6 @@
 """Client for the BC Registrar of Lobbyists mass datasets.
 
-Checked live 2026-10-02 (robots.txt disallows only /sitemap/; the open data
-page links both zips; the licence PDF and the two XLSX data dictionaries
+Checked live 2026-10-02 (the open data page links both zips; the licence PDF and the two XLSX data dictionaries
 were read):
 
 1. `mssDtstRprt?file=ORL_Registration_Data.zip` is 28 MB (260 MB unpacked) of
@@ -1087,11 +1086,32 @@ async def summarize_activity(
             counts[key] += 1
             if report.meeting is not None:
                 days.setdefault(key, []).append(report.meeting)
-    if group_by in ("month", "year"):
-        # A time series reads oldest to newest; keep the latest `top` periods.
+    series = group_by in ("month", "year")
+    if series:
+        # A time series reads oldest to newest and stays contiguous, so `top`
+        # keeps the latest periods, not the busiest (the docstring says so).
         ordered = sorted(counts)[-top:]
     else:
         ordered = [k for k, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:top]]
+    note = _pick(
+        lang,
+        "Each row counts distinct reports, so a report naming two ministries counts once "
+        "for each; rows can add up to more than total_reports. Reports are not meetings: "
+        "one meeting can be reported by several lobbyists or clients.",
+        "Chaque ligne compte des rapports distincts : un rapport nommant deux ministères "
+        "compte une fois pour chacun, donc les lignes peuvent dépasser total_reports. Un "
+        "rapport n'est pas une rencontre : une rencontre peut être déclarée par plusieurs "
+        "lobbyistes ou clients.",
+    )
+    if series:
+        note += " " + _pick(
+            lang,
+            f"Rows are the {len(ordered)} most recent of {len(counts)} periods, oldest to "
+            "newest (not the busiest); the latest period can be incomplete.",
+            f"Les lignes sont les {len(ordered)} périodes les plus récentes sur {len(counts)}, "
+            "de la plus ancienne à la plus récente (pas les plus chargées); la dernière "
+            "période peut être incomplète.",
+        )
     rows = [
         OrlGroupRow(
             key=k,
@@ -1106,16 +1126,7 @@ async def summarize_activity(
         rows=rows,
         groups_total=len(counts),
         total_reports=len(matched),
-        note=_pick(
-            lang,
-            "Each row counts distinct reports, so a report naming two ministries counts once "
-            "for each; rows can add up to more than total_reports. Reports are not meetings: "
-            "one meeting can be reported by several lobbyists or clients.",
-            "Chaque ligne compte des rapports distincts : un rapport nommant deux ministères "
-            "compte une fois pour chacun, donc les lignes peuvent dépasser total_reports. Un "
-            "rapport n'est pas une rencontre : une rencontre peut être déclarée par plusieurs "
-            "lobbyistes ou clients.",
-        ),
+        note=note,
         omitted=_omitted(lang),
         provenance=_provenance(
             constants.ACTIVITY_ZIP,

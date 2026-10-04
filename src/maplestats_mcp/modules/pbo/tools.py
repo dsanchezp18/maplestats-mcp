@@ -97,7 +97,9 @@ async def pbo_search_information_requests(
     DND, CRA, TBS) or part of a name; `status` 'open' keeps every pending
     request, and open ones carry days_past_deadline; `since`/`until` bound
     the request date (YYYY, YYYY-MM or YYYY-MM-DD). 25 per page, newest
-    first. Pass an id to pbo_get_information_request for the letters.
+    first. Pass an id to pbo_get_information_request for the letters. The
+    first call in a session takes about 30 seconds while the whole
+    register is read (the API ignores filters); it is then kept 6 hours.
     Keywords: Parliamentary Budget Officer, PBO information request,
     access to information, departmental disclosure, refused request,
     overdue request, government transparency, data request, PBO mandate.
@@ -125,6 +127,10 @@ async def pbo_get_information_request(request_id: str, lang: Lang = "en") -> Pbo
     department, dates, status, outcome and note, and the request letter and
     the department's replies (mostly PDF) in the requested language.
     `request_id` is PBO's number, e.g. 'IR0959', 'RI0929' or 'IR0080a'.
+    The first request-register call in a session takes about 30 seconds:
+    PBO's API cannot look a request up by its number and ignores filters,
+    so all ~29 register pages are read at one per second, then kept for 6
+    hours (later calls answer in under a second).
     Keywords: PBO information request, request letter, reply letter,
     departmental response, disclosure, Parliamentary Budget Officer,
     IR number, request details.

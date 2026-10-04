@@ -30,6 +30,11 @@ QUEBEC_LICENCE = (
     "(https://creativecommons.org/licenses/by-nc/4.0/): credit Hydro-Quebec; "
     "non-commercial use only."
 )
+QUEBEC_LICENCE_FR = (
+    "Données ouvertes d'Hydro-Québec, licence CC BY-NC 4.0 "
+    "(https://creativecommons.org/licenses/by-nc/4.0/deed.fr) : citer Hydro-Québec ; "
+    "usage non commercial seulement."
+)
 # Dataset ids. "recent" is the rolling two-day window; "history" is the archive.
 QUEBEC_DEMAND_DATASETS = {
     "recent": "demande-electricite-quebec",

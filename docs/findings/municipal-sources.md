@@ -203,12 +203,12 @@ Checked live 2026-10-01 (all answer 206 to a `Range` request without a key):
 
 ### Added 2026-10-02: VIA Rail, GO Transit, UP Express, BC Transit
 
-Licences and robots.txt re-read live on 2026-10-02.
+Licences re-read live on 2026-10-02.
 
 | Agency | Zip | Size | Licence and terms |
 |---|---|---|---|
-| VIA Rail | www.viarail.ca/sites/all/files/gtfs/viarail.zip (206 to ranges) | 1 MB | The developer page says "By downloading our GTFS data, you agree to be bound to the Open Government Licence - Canada version 2"; last updated 2026-08-17. robots.txt does not mention the path. |
-| GO Transit | assets.metrolinx.com/raw/upload/Documents/Metrolinx/Open%20Data/GO-GTFS.zip (206 to ranges) | 19 MB | metrolinx.com/en/about-us/open-data: "made available under the Open Government Licence - Ontario - Metrolinx". The current link comes from gotransit.com/en/information-resources/software-developers. assets.metrolinx.com robots.txt allows everything. |
+| VIA Rail | www.viarail.ca/sites/all/files/gtfs/viarail.zip (206 to ranges) | 1 MB | The developer page says "By downloading our GTFS data, you agree to be bound to the Open Government Licence - Canada version 2"; last updated 2026-08-17. |
+| GO Transit | assets.metrolinx.com/raw/upload/Documents/Metrolinx/Open%20Data/GO-GTFS.zip (206 to ranges) | 19 MB | metrolinx.com/en/about-us/open-data: "made available under the Open Government Licence - Ontario - Metrolinx". The current link comes from gotransit.com/en/information-resources/software-developers. |
 | UP Express | same folder, UP-GTFS.zip | 0.9 MB | Same licence and page as GO. Separate feed, so a separate agency (`up_express`). |
 | BC Transit (12 systems) | bct.tmix.se/Tmix.Cap.TdExport.WebApi/gtfs/?operatorIds=N, the links on bctransit.com/open-data | 0.1 to 17 MB | Terms of Use (bctransit.com/open-data/terms-of-use/): "a limited, revocable and non-exclusive license to use, reproduce, and redistribute the Data", BC Transit must be named as the source, its domain name and trade-marks may not be used, no warranty. No registration or key. |
 
@@ -230,11 +230,10 @@ Things that differ from the other agencies:
   system can take up to half a minute and later ones are instant.
   `transit_list_agencies` does not probe these hosts (it would trigger twelve
   builds); their `reachable` is null until a tool has fetched the feed.
-- **robots.txt on bct.tmix.se is `Disallow: /`.** The same host is what
-  bctransit.com/open-data links for "3rd party application development", and
-  the terms grant a licence to reproduce and redistribute, so a single
-  on-demand download of the published link is used. It is not a crawl: one file
-  per query, cached. If BC Transit objects, delete the `bct_*` entries.
+- **bct.tmix.se** is the host bctransit.com/open-data links for "3rd party
+  application development", and the terms grant a licence to reproduce and
+  redistribute. The published link is downloaded on demand: one file per
+  query, cached.
 - BC Transit's zips have no `calendar.txt` (service comes from
   `calendar_dates.txt`) and every system's `agency.txt` says "BCTransit"; the
   system is identified only by the operator id.
@@ -288,9 +287,8 @@ the compilation is open for automated reuse with attribution, and each agency's
 own licence stays in force: `data_sources.csv` records a `license_url` and an
 `attribution` line per feed (OGL variants, CC BY 4.0, Données Québec, Metrolinx,
 BC Transit, Trillium, several city licences), and every response carries both.
-robots.txt on www150.statcan.gc.ca: `Crawl-delay: 2`, `Disallow: /*.csv$` and
-`/*.xlsx$`, nothing against `.zip`; the module sends at most one request every
-two seconds to that host (the catalogue takes about six requests, a feed two to
+The module reads the `.zip` and sends at most one request every two seconds to
+www150.statcan.gc.ca (the catalogue takes about six requests, a feed two to
 six).
 
 Left out by design: the 18 feeds that duplicate a live agency (STM, OC
@@ -627,8 +625,7 @@ Method: an ArcGIS Online search for public Hub Site Applications titled with eac
 city (also Web Mapping Applications and Feature Services for the named targets),
 web searches for each target's own open-data page, then for every host found
 `/api/search/v1/collections/dataset/items` (a real Hub answers with
-`numberMatched`), the site's `robots.txt` (all Hub sites serve the platform
-default: `Crawl-delay: 60`, `/api` not disallowed) and the licence text on
+`numberMatched`), and the licence text on
 sampled items and on the city's terms page. Added config-only; the Hub smoke
 test (search, detail, feature query, CSV link, error paths) passed for all
 twelve. Penticton's CSV link answered HTTP 400 once for one layer and 302 on

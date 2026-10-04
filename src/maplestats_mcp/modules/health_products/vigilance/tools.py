@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp.modules.health_products import api
 from maplestats_mcp.modules.health_products.vigilance import client
 from maplestats_mcp.modules.health_products.vigilance.schemas import (
     ReactionSearchResult,
@@ -33,9 +34,9 @@ async def hc_vigilance_get_report(report_id: int, lang: Lang = "en") -> Vigilanc
     pharmacovigilance, MedDRA term, serious adverse event.
     Mots-clés : déclaration d'effet indésirable, effet secondaire, Canada
     Vigilance, réaction indésirable à un médicament, médicament suspect,
-    pharmacovigilance, terme MedDRA, effet indésirable grave.
+    pharmacovigilance, terme MedDRA, effet indésirable grave, Santé Canada.
     """
-    return await client.get_report(report_id, lang=lang)
+    return await api.in_lang(lang, client.get_report(report_id, lang=lang))
 
 
 @tool
@@ -68,15 +69,18 @@ async def hc_vigilance_search_reactions(
     Mots-clés : recherche d'effets indésirables, effets secondaires
     déclarés, extrait de Canada Vigilance, terme privilégié MedDRA, classe
     de systèmes d'organes, pharmacovigilance, nombre de déclarations,
-    innocuité des médicaments.
+    innocuité des médicaments, Santé Canada.
     """
-    return await client.search_reactions(
-        reaction,
-        system_organ_class=system_organ_class,
-        min_report_id=min_report_id,
-        limit=limit,
-        max_scan_mb=max_scan_mb,
-        lang=lang,
+    return await api.in_lang(
+        lang,
+        client.search_reactions(
+            reaction,
+            system_organ_class=system_organ_class,
+            min_report_id=min_report_id,
+            limit=limit,
+            max_scan_mb=max_scan_mb,
+            lang=lang,
+        ),
     )
 
 
@@ -92,7 +96,7 @@ async def hc_vigilance_list_codes(lang: Lang = "en") -> VigilanceCodeTables:
     report source, report type, adverse reaction database lookup,
     pharmacovigilance code list, data dictionary.
     Mots-clés : codes de Canada Vigilance, codes de résultat, gravité,
-    source de la déclaration, type de déclaration, dictionnaire de
-    données, liste de codes, pharmacovigilance.
+    source de la déclaration, type de déclaration, dictionnaire de données,
+    liste de codes, pharmacovigilance, Santé Canada.
     """
-    return await client.list_codes(lang=lang)
+    return await api.in_lang(lang, client.list_codes(lang=lang))

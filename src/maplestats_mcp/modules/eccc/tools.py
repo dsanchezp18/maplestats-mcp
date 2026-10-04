@@ -9,7 +9,9 @@ MCP isError:true result; tools never return an error-shaped dict.
 language of collection titles and descriptions (confirmed live
 2026-10-03). Item properties are not translated by it: bilingual content
 comes as separate `_en`/`_fr` properties in every response (e.g.
-weather-alerts' alert_text_en/alert_text_fr).
+weather-alerts' alert_text_en/alert_text_fr). With lang="fr" the errors,
+notes and provenance text this module writes are in French, and a note
+names the French (`_fr`) properties present in the returned rows.
 """
 
 from __future__ import annotations
@@ -36,9 +38,10 @@ async def eccc_search_collections(query: str, limit: int = 25, lang: Lang = "en"
     collection ids that matter most, with example filters for each.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     collection, search, find, discover, dataset, catalogue.
-    Mots-clés : environnement canada, smc, geomet, météo, climat,
-    collection, recherche, trouver, découvrir, jeu de données,
-    catalogue.
+    Mots-clés : Environnement et Changement climatique Canada, ECCC,
+    Environnement Canada, Service météorologique du Canada (SMC),
+    GeoMet, météo, climat, collection, recherche, trouver, jeu de
+    données, catalogue.
     """
     return await client.search_collections(query, limit=limit, lang=lang)
 
@@ -54,8 +57,10 @@ async def eccc_list_collections(lang: Lang = "en") -> CollectionList:
     which are gridded coverages read with eccc_coverages_get_data.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     list, inventory, all collections, catalogue, full list.
-    Mots-clés : environnement canada, smc, geomet, météo, climat, liste,
-    inventaire, toutes les collections, catalogue, liste complète.
+    Mots-clés : Environnement et Changement climatique Canada, ECCC,
+    Environnement Canada, Service météorologique du Canada (SMC),
+    GeoMet, météo, climat, liste, inventaire, toutes les collections,
+    catalogue, liste complète.
     """
     return await client.list_collections(lang)
 
@@ -72,8 +77,10 @@ async def eccc_get_collection(collection_id: str, lang: Lang = "en") -> Collecti
     rather than an error, so checking here first avoids that trap.
     Keywords: environment canada, eccc, msc, geomet, collection, detail,
     metadata, queryables, properties, schema, extent, bbox.
-    Mots-clés : environnement canada, smc, geomet, collection, détail,
-    métadonnées, propriétés interrogeables, schéma, étendue.
+    Mots-clés : Environnement et Changement climatique Canada, ECCC,
+    Environnement Canada, Service météorologique du Canada (SMC),
+    GeoMet, collection, détail, métadonnées, propriétés interrogeables,
+    schéma, étendue géographique.
     """
     return await client.get_collection(collection_id, lang)
 
@@ -119,13 +126,13 @@ async def eccc_query_items(
     conditions, swob, observation, aqhi, air quality, climate
     normal, hydrometric, water level, flow, marine forecast, query,
     data, filter, bbox, station.
-    Mots-clés : environnement canada, Environnement et Changement
-    climatique Canada, ECCC, smc, geomet, météo, prévisions météo,
-    prévisions, alerte météo, alertes météorologiques, conditions
-    actuelles, observation, cote air santé, qualité de l'air, normale
-    climatique, hydrométrique, rivière, cours d'eau, hydrogramme, niveau
-    d'eau, débit, débit journalier, prévision maritime, requête, données,
-    filtre, station.
+    Mots-clés : Environnement Canada, Environnement et Changement
+    climatique Canada, ECCC, Service météorologique du Canada (SMC),
+    GeoMet, météo, prévisions météo, prévisions, alerte météo, alertes
+    météorologiques, conditions actuelles, observation, cote air santé
+    (CAS), qualité de l'air, normale climatique, hydrométrique, rivière,
+    cours d'eau, hydrogramme, niveau d'eau, débit, débit journalier,
+    prévision maritime, requête, données, filtre, station.
     """
     return await client.query_items(
         collection_id,

@@ -3,9 +3,8 @@
 Confirmed live 2026-10-02: statcan.gc.ca/en/lode/databases lists the open
 databases; each links a www150.statcan.gc.ca /n1/pub/ product page whose
 .zip links are free, unauthenticated downloads answering `Accept-Ranges:
-bytes`. robots.txt on www150 sets `Crawl-delay: 2` and disallows `.csv`,
-`.xlsx`, `.txt` and similar *URLs* (not .zip, .json or .parquet), so every
-file here is read through its .zip and no .csv/.xlsx path is requested.
+bytes`. Every file here is read through its .zip and no .csv/.xlsx path is
+requested.
 The product pages state the data are released under the Open Government
 Licence - Canada, with the publication governed by the Statistics Canada
 Open Licence Agreement.
@@ -32,8 +31,8 @@ LANDING_URL = {
 PUB_URL = "https://www150.statcan.gc.ca/n1/pub/{path}-{suffix}.htm"
 
 RATE_LIMIT_SOURCE = "statcan-lode"
-# robots.txt asks for Crawl-delay: 2, so pages and HEAD probes go at most
-# one every two seconds (a burst of two for the first request of a call).
+# Pages and HEAD probes go at most one every two seconds (a burst of two
+# for the first request of a call).
 RATE_LIMIT_PER_SECOND = 0.5
 RATE_LIMIT_CAPACITY = 2.0
 

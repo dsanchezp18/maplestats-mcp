@@ -389,12 +389,11 @@ async def test_bc_access_only_licence_carries_a_warning(httpx_mock):
     assert result.provenance.coverage and "NOT an open licence" in result.provenance.coverage
 
 
-async def test_toronto_files_are_not_read_because_of_its_robots_txt():
-    # Toronto's CKAN host disallows resource downloads for all crawlers; the project owner
-    # decided not to override that, so the reader refuses before any request is made.
-    with pytest.raises(InvalidInput, match="robots.txt"):
+async def test_toronto_files_are_not_read():
+    # The reader refuses Toronto's files before any request is made.
+    with pytest.raises(InvalidInput, match="automated file downloads"):
         await files.read_resource("toronto", RES)
-    with pytest.raises(InvalidInput, match="robots.txt"):
+    with pytest.raises(InvalidInput, match="automated file downloads"):
         await files.describe_resource("toronto", RES)
 
 

@@ -19,8 +19,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import NoReturn
 
-from maplestats_mcp.shared.i18n import ERROR_KEYS, normalize_lang, t
-from maplestats_mcp.shared.licences import licence_for
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing, normalize_lang, t
+from maplestats_mcp.shared.licences import licence_for, licence_in
 from maplestats_mcp.shared.models import Provenance
 
 # Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence):
@@ -54,10 +54,13 @@ def make_provenance(
     """Build the Provenance block every response model embeds.
 
     `lang="fr"` gives the shared phrases (the reproduce_code note and the
-    Statistics Canada licence) in French; the caller's own freshness,
-    coverage and limits text is used as given.
+    licence, when shared/licences has its French text) in French; the
+    caller's own freshness, coverage and limits text is used as given.
     """
     lang = normalize_lang(lang)
+    terms = licence or _licence_for(source, url, lang)
+    if terms and lang == "fr":
+        terms = french_spacing(licence_in(terms, lang))
     return Provenance(
         source=source,
         url=url,
@@ -68,7 +71,7 @@ def make_provenance(
         limits=limits,
         cached=cached,
         schema_name=schema_name,
-        licence=licence or _licence_for(source, url, lang),
+        licence=terms,
         reproduce=t("provenance.reproduce", lang),
     )
 

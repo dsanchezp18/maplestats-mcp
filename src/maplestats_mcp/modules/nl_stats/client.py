@@ -9,6 +9,7 @@ back as published text with a guessed header row.
 from __future__ import annotations
 
 import io
+import re
 from datetime import date, datetime
 from typing import Any, Literal
 from urllib.parse import urljoin, urlparse
@@ -21,6 +22,7 @@ from maplestats_mcp.modules.nl_stats.schemas import (
     FileData,
     FileEntry,
     FileList,
+    SheetChoice,
     SheetInfo,
     TopicInfo,
 )
@@ -290,10 +292,47 @@ def guess_header(rows: list[list[str]]) -> int | None:
     return None
 
 
+_MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+_MONTH_FIRST = re.compile(r"^([a-z]{3})[a-z]*\.?[\s_-]*(\d{4}|\d{2})$")
+_YEAR_FIRST = re.compile(r"^(\d{4})[\s_-]*([a-z]{3})[a-z]*\.?$")
+
+
+def sheet_month(name: str) -> tuple[int, int] | None:
+    """(year, month) for a sheet named after a month, e.g. 'Aug2026' or 'August 2026'."""
+    text = name.strip().casefold()
+    month_first = _MONTH_FIRST.match(text)
+    year_first = _YEAR_FIRST.match(text)
+    if month_first:
+        month, year = month_first.group(1), month_first.group(2)
+    elif year_first:
+        year, month = year_first.group(1), year_first.group(2)
+    else:
+        return None
+    if month not in _MONTHS:
+        return None
+    return (int(year) if len(year) == 4 else 2000 + int(year)), _MONTHS.index(month) + 1
+
+
+def default_sheet(names: list[str]) -> tuple[str, SheetChoice]:
+    """The sheet read when none is requested, and why.
+
+    The "Current Month" labour files keep one sheet per month in calendar
+    order (LFC_AgeSex_Mthly_NL.xlsx had Jan2026 to Aug2026 on 2026-10-03),
+    so the first sheet is the oldest month. When two or more sheets are named
+    after months, the newest of them is read; otherwise the first sheet.
+    """
+    dated = [(when, name) for name in names if (when := sheet_month(name)) is not None]
+    if len(dated) >= 2:
+        return max(dated, key=lambda item: item[0])[1], "newest_month"
+    return names[0], "first"
+
+
 async def read_file(
     url: str,
     sheet: str | None = None,
     contains: str | None = None,
+    header_row: int | None = None,
+    header_rows: int = 1,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: Lang = "en",
@@ -303,27 +342,62 @@ async def read_file(
         raise InvalidInput(f"nl_stats: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
     if offset < 0:
         raise InvalidInput("nl_stats: offset must be 0 or more.")
+    if header_row is not None and header_row < 1:
+        raise InvalidInput("nl_stats: header_row is 1-based (1 or more).")
+    if not 1 <= header_rows <= constants.HEADER_ROWS_MAX:
+        raise InvalidInput(f"nl_stats: header_rows must be 1 to {constants.HEADER_ROWS_MAX}.")
 
     sheets, cached = await _workbook(url)
     if not sheets:
         raise UpstreamError(f"nl_stats: {url} has no sheets.")
+    names = list(sheets)
+    how: SheetChoice
     if sheet is None:
-        chosen = next(iter(sheets))
+        chosen, how = default_sheet(names)
     else:
-        matches = [name for name in sheets if name.casefold() == sheet.strip().casefold()]
+        matches = [name for name in names if name.casefold() == sheet.strip().casefold()]
         if not matches:
-            raise InvalidInput(f"nl_stats: no sheet {sheet!r}; sheets are {list(sheets)}.")
-        chosen = matches[0]
+            raise InvalidInput(f"nl_stats: no sheet {sheet!r}; sheets are {names}.")
+        chosen, how = matches[0], "request"
 
     rows = sheets[chosen]
-    header_index = guess_header(rows)
-    header = rows[header_index] if header_index is not None else []
-    body = rows[header_index + 1 :] if header_index is not None else rows
+    if header_row is not None:
+        if header_row > len(rows):
+            raise InvalidInput(f"nl_stats: sheet {chosen!r} has only {len(rows)} rows.")
+        header_index: int | None = header_row - 1
+    else:
+        header_index = guess_header(rows)
+    if header_index is None:
+        header: list[str] = []
+        body = rows
+    else:
+        # A header can span rows (a group label above Total/Full-Time/Part-Time,
+        # then a units row); the parts are joined per column, nothing is filled across.
+        block = rows[header_index : header_index + header_rows]
+        width = len(rows[0]) if rows else 0
+        header = [" ".join(r[i] for r in block if i < len(r) and r[i]) for i in range(width)]
+        body = rows[header_index + header_rows :]
     body = [r for r in body if any(r)]
     if contains:
         wanted = contains.casefold()
         body = [r for r in body if any(wanted in cell.casefold() for cell in r)]
     total = len(body)
+    notes = []
+    if how == "newest_month":
+        notes.append(
+            f"no sheet was requested and the workbook keeps one sheet per month, so the "
+            f"newest ({chosen!r}) was read; {len(names)} sheets exist, pass sheet= for another"
+        )
+    elif how == "first" and len(names) > 1:
+        notes.append(
+            f"no sheet was requested, so the first of {len(names)} sheets ({chosen!r}) was "
+            "read; pass sheet= for another"
+        )
+    if offset + limit < total:
+        notes.append(
+            f"sheets are read up to {constants.MAX_ROWS_PER_SHEET} rows; showing rows "
+            f"{offset + 1} to {offset + min(limit, total - offset)} of {total}"
+        )
     return FileData(
         url=url,
         format=url.lower().rsplit(".", 1)[1],
@@ -332,7 +406,9 @@ async def read_file(
             for name, r in sheets.items()
         ],
         sheet=chosen,
+        sheet_chosen_by=how,
         header_row=None if header_index is None else header_index + 1,
+        header_rows=header_rows if header_index is not None else 0,
         header=header,
         rows=body[offset : offset + limit],
         total_rows=total,
@@ -349,11 +425,6 @@ async def read_file(
                 if lang == "en"
                 else f"Feuille {chosen!r} sur {len(sheets)}."
             ),
-            limits=(
-                f"Sheets are read up to {constants.MAX_ROWS_PER_SHEET} rows; showing rows "
-                f"{offset + 1} to {offset + min(limit, total - offset)} of {total}."
-                if offset + limit < total
-                else None
-            ),
+            limits="; ".join(notes) or None,
         ),
     )
