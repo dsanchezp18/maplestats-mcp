@@ -260,3 +260,46 @@ async def test_missing_listing_container_is_upstream_error(httpx_mock):
     )
     with pytest.raises(UpstreamError):
         await client.search_datasets("x", dataset_type="tabular")
+
+
+# French (lang="fr"): errors, provenance text and licence; English unchanged.
+
+
+async def test_french_search_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?page-id=datasets-tabular",
+        text=_LISTING_HTML,
+        headers={"content-type": "text/html"},
+    )
+    result = await client.search_datasets("birth", dataset_type="tabular", limit=5, lang="fr")
+    assert (result.provenance.coverage or "").startswith(
+        "1 jeux de données renvoyés sur 1 correspondants."
+    )
+    assert "pagination côté serveur" in (result.provenance.limits or "")
+    assert "Licence du gouvernement ouvert – Terre-Neuve-et-Labrador" in (
+        result.provenance.licence or ""
+    )
+
+
+async def test_english_search_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?page-id=datasets-tabular",
+        text=_LISTING_HTML,
+        headers={"content-type": "text/html"},
+    )
+    result = await client.search_datasets("birth", dataset_type="tabular", limit=5)
+    assert result.provenance.coverage == "1 of 1 matching records returned"
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide : limit doit être compris"):
+        await client.search_datasets(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="dataset_id ne doit pas être vide"):
+        await client.get_dataset(" ", lang="fr")
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?page-id=datasetdetails&id=999999",
+        text="<html><title>Dataset Details</title></html>",
+        headers={"content-type": "text/html"},
+    )
+    with pytest.raises(NotFound, match="est introuvable"):
+        await client.get_dataset("999999", lang="fr")

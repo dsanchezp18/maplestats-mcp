@@ -194,3 +194,33 @@ def test_slug_overrides_match_live_pages():
     assert client._slug("Merchandise Exports") == "international-merchandise-exports"
     assert client._slug("Service Exports") == "international-service-exports"
     assert client._slug("Wells Drilled") == "new-wells-drilled"
+
+
+# French (lang="fr"): errors, notes, provenance text and licence; English unchanged.
+
+
+async def test_french_data_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(url=_TABLES_URL, json=_TABLES)
+    httpx_mock.add_response(json=[_row("2026-06-01", 7.1), _row("2026-08-01", 7.4)])
+    result = await client.get_data("UnemploymentRates_14100287", limit=1, lang="fr")
+    assert (result.provenance.coverage or "").startswith(
+        "les 1 lignes les plus récentes sur 2 correspondantes"
+    )
+    assert "augmentez limit" in (result.provenance.limits or "")
+    assert "Licence du gouvernement ouvert – Alberta" in (result.provenance.licence or "")
+
+
+async def test_english_data_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(url=_TABLES_URL, json=_TABLES)
+    httpx_mock.add_response(json=[_row("2026-06-01", 7.1), _row("2026-08-01", 7.4)])
+    result = await client.get_data("UnemploymentRates_14100287", limit=1)
+    assert result.provenance.coverage == "1 most recent of 2 matching rows"
+    assert (result.provenance.licence or "").startswith("Open Government Licence - Alberta")
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="doit être une date ISO"):
+        await client.get_data("x", start_date="2026/01/01", lang="fr")
+    httpx_mock.add_response(url=_TABLES_URL, json=_TABLES)
+    with pytest.raises(NotFound, match="tableau de bord économique de l'Alberta"):
+        await client.get_data("NoSuchTable", lang="fr")

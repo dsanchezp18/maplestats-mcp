@@ -19,7 +19,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import NoReturn
 
-from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing, normalize_lang, t
+from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing, french_text, normalize_lang, t
 from maplestats_mcp.shared.licences import licence_for, licence_in
 from maplestats_mcp.shared.models import Provenance
 
@@ -104,3 +104,20 @@ def raise_typed(exc_cls: type[ValueError], detail: str, lang: str = "en") -> NoR
         None,
     )
     raise exc_cls(t(key, lang, detail=detail) if key else detail)
+
+
+def raise_localized(exc_cls: type[ValueError], en: str, fr: str, lang: str = "en") -> NoReturn:
+    """Raise `exc_cls` with `en` as written, or in French through its typed template.
+
+    English stays exactly the module's own message; with `lang="fr"` the
+    French detail goes through raise_typed's template ("Entrée invalide :
+    ...") with French typography.
+    """
+    if normalize_lang(lang) != "fr":
+        raise exc_cls(en)
+    key = next(
+        (ERROR_KEYS[cls.__name__] for cls in exc_cls.__mro__ if cls.__name__ in ERROR_KEYS),
+        None,
+    )
+    detail = french_text(fr)
+    raise exc_cls(french_spacing(t(key, "fr", detail=detail) if key else detail))

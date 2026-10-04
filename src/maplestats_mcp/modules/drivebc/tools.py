@@ -51,11 +51,11 @@ async def drivebc_search_events(
     Keywords: DriveBC, road closures, highway conditions, construction,
     incidents, British Columbia, Open511, traffic events, road work,
     Coquihalla, travel advisory.
-    Mots-clés : DriveBC, fermetures de routes, état des routes, travaux
-    routiers, incidents, Colombie-Britannique, Open511, circulation,
-    entraves, autoroute, avis aux voyageurs.
+    Mots-clés : DriveBC, fermetures de routes, route fermée, état des
+    routes, conditions routières, travaux routiers, chantiers, incidents,
+    accident de la route, Colombie-Britannique, Open511, circulation,
+    entraves, autoroute, Coquihalla, avis aux voyageurs.
     """
-    del lang
     return await client.search_events(
         event_type=event_type,
         severity=severity,
@@ -65,6 +65,7 @@ async def drivebc_search_events(
         bbox=bbox,
         query=query,
         limit=limit,
+        lang=lang,
     )
 
 
@@ -85,8 +86,7 @@ async def drivebc_get_event(event_id: str, lang: Lang = "en") -> EventDetail:
     géométrie, GeoJSON, détail d'incident, route de la Colombie-Britannique,
     Open511, horaire.
     """
-    del lang
-    return await client.get_event(event_id)
+    return await client.get_event(event_id, lang)
 
 
 @tool
@@ -111,9 +111,8 @@ async def drivebc_summarize_events(
     district, sommaire des incidents, Colombie-Britannique, Open511,
     nombre de chantiers, événements majeurs.
     """
-    del lang
     return await client.summarize_events(
-        group_by, event_type=event_type, severity=severity, area=area, road=road
+        group_by, event_type=event_type, severity=severity, area=area, road=road, lang=lang
     )
 
 
@@ -130,7 +129,7 @@ async def drivebc_list_areas(lang: Lang = "en") -> AreaList:
     Keywords: DriveBC, districts, areas, Lower Mainland, Vancouver Island,
     Okanagan, British Columbia, Open511, highway districts.
     Mots-clés : DriveBC, districts, zones, Lower Mainland, île de
-    Vancouver, Okanagan, Colombie-Britannique, Open511, districts routiers.
+    Vancouver, Okanagan, Colombie-Britannique, Open511, districts routiers,
+    ministère des Transports de la Colombie-Britannique.
     """
-    del lang
-    return await client.list_areas()
+    return await client.list_areas(lang)

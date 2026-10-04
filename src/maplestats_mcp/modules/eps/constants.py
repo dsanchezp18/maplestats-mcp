@@ -12,11 +12,22 @@ DATASET_COVERAGE = {
     "current": "rolling ~12 months to the last refresh",
     "2023": "calendar year 2023 only",
 }
+DATASET_COVERAGE_FR = {
+    "current": "environ 12 mois glissants jusqu'à la dernière mise à jour",
+    "2023": "année civile 2023 seulement",
+}
 # "current" is reloaded daily; "2023" is a closed year (its Reported_Date
 # runs 2023-01-01 to 2023-12-31, confirmed live 2026-10-03) and never changes.
 DATASET_FRESHNESS = {
     "current": "refreshed daily by EPS with a 24-48 hour publication delay",
     "2023": "a closed historical year: the 2023 occurrences as published, not updated",
+}
+DATASET_FRESHNESS_FR = {
+    "current": (
+        "mise à jour quotidienne par le Service de police d'Edmonton, avec un délai de "
+        "publication de 24 à 48 heures"
+    ),
+    "2023": "année historique close : les incidents de 2023 tels que publiés, sans mise à jour",
 }
 LOAD_DATE_URL = f"{SERVICES_ROOT}/FME_Load_Date/FeatureServer/0"
 

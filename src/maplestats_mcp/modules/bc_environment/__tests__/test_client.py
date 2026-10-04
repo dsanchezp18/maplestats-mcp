@@ -399,3 +399,31 @@ def test_period_bounds_and_archive_spans():
         None,
     )
     assert client.archive_span("Stage.csv", "Stage") is None
+
+
+# French (lang="fr"): provenance text, licence, notes and errors; English unchanged.
+
+
+async def test_french_air_stations_provenance(httpx_mock):
+    httpx_mock.add_response(url=constants.AIR_STATIONS_URL, content=STATIONS_CSV)
+    result = await bc_env_list_air_stations(parameter="O3", lang="fr")
+    assert "Licence du gouvernement ouvert – Colombie-Britannique" in (
+        result.provenance.licence or ""
+    )
+    assert result.provenance.freshness == "Réécrit toutes les heures (valeurs de l'heure courante)."
+    assert " ; les unités" in (result.provenance.coverage or "")
+
+
+async def test_english_air_stations_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(url=constants.AIR_STATIONS_URL, content=STATIONS_CSV)
+    result = await bc_env_list_air_stations(parameter="O3")
+    assert result.provenance.freshness == "Rewritten every hour (current-hour values)."
+
+
+async def test_french_station_notes_and_errors(httpx_mock):
+    httpx_mock.add_response(url=constants.AIR_STATIONS_URL, content=STATIONS_CSV)
+    httpx_mock.add_response(url=f"{AIR}/Station/E238212.csv", content=STATION_FILE)
+    result = await bc_env_get_air_station_data("abbotsford central", ["PM25"], lang="fr")
+    assert result.notes[0].startswith("Données brutes non vérifiées")
+    with pytest.raises(InvalidInput, match="Entrée invalide : limit doit être compris"):
+        await bc_env_list_air_stations(limit=0, lang="fr")

@@ -38,9 +38,10 @@ async def oeb_list_datasets(query: str | None = None, lang: Lang = "en") -> Data
     record-keeping requirements, electricity distributors, local distribution
     company, LDC, natural gas utilities, yearbook, utility datasets.
     Mots-clés : Commission de l'énergie de l'Ontario, CEO, données ouvertes,
-    exigences de rapport, distributeurs d'électricité, sociétés de
-    distribution locale, services publics de gaz naturel, annuaire,
-    jeux de données des services publics.
+    exigences de rapport et de tenue de dossiers, distributeurs
+    d'électricité, sociétés de distribution locale, services publics
+    d'électricité, services publics de gaz naturel, annuaire des
+    distributeurs, jeux de données des services publics, Ontario.
     """
     return await client.list_datasets(query, lang=lang)
 
@@ -66,8 +67,9 @@ async def oeb_describe_dataset(
     Keywords: OEB, Ontario Energy Board, dataset fields, columns, RRR file,
     data dictionary, archived release, distributors list, years covered.
     Mots-clés : CEO, Commission de l'énergie de l'Ontario, champs, colonnes,
-    fichier RRR, dictionnaire de données, publication archivée, liste des
-    distributeurs, années couvertes.
+    variables, fichier RRR, dictionnaire de données, publication archivée,
+    liste des distributeurs, années couvertes, description du jeu de
+    données.
     """
     return await client.describe_dataset(dataset, file, release, sheet, lang=lang)
 
@@ -100,10 +102,11 @@ async def oeb_query_dataset(
     Keywords: Ontario utility reliability, SAIDI, SAIFI, power outages,
     distributor customers, demand and revenue, capital expenditures, labour
     FTE, billing accuracy, LEAP, OESP, net metering, scorecard, OEB.
-    Mots-clés : fiabilité des services publics ontariens, SAIDI, SAIFI,
-    pannes de courant, clients des distributeurs, demande et revenus,
-    dépenses en immobilisations, effectifs, exactitude de la facturation,
-    fiche de rendement, CEO.
+    Mots-clés : fiabilité des services publics ontariens, fiabilité du
+    réseau électrique, SAIDI, SAIFI, pannes de courant, interruptions de
+    service, clients des distributeurs, demande et revenus, dépenses en
+    immobilisations, effectifs, exactitude de la facturation, facturation
+    nette, fiche de rendement, CEO.
     """
     return await client.query_dataset(
         dataset,
@@ -139,8 +142,9 @@ async def oeb_rates(
     Keywords: Ontario electricity rates, hydro rates, time-of-use prices,
     TOU, tiered prices, ultra-low overnight, Regulated Price Plan, RPP,
     natural gas rates, delivery charge, distribution charge, OEB.
-    Mots-clés : tarifs d'électricité de l'Ontario, prix selon l'heure,
-    prix par paliers, très bas prix de nuit, grille tarifaire réglementée,
-    tarifs du gaz naturel, frais de livraison, frais de distribution, CEO.
+    Mots-clés : tarifs d'électricité de l'Ontario, prix de l'électricité,
+    facture d'électricité, prix selon l'heure, prix par
+    paliers, très bas prix de nuit, grille tarifaire réglementée, tarifs
+    du gaz naturel, frais de livraison, frais de distribution, CEO.
     """
     return await client.get_rates(table, distributor, max_rows, lang=lang)

@@ -43,7 +43,7 @@ async def bcgw_get_active_wildfires(
     Service, active fire, out of control, being held.
     Mots-clés : Colombie-Britannique, feu de forêt, incendie, périmètre
     d'incendie, statut du feu, hectares brûlés, service des incendies de
-    forêt, feu actif, hors de contrôle, maîtrisé.
+    forêt, feu actif, feux de forêt en cours, hors de contrôle, maîtrisé.
     """
     return await client.get_active_wildfires(
         status=status,
@@ -122,9 +122,9 @@ async def bcgw_query_layer(
     Keywords: British Columbia, BC, BCGW, BC Geographic Warehouse,
     WFS, geospatial, layer, feature, CQL filter, data catalogue,
     generic query, openmaps.
-    Mots-clés : Colombie-Britannique, entrepôt géographique, WFS,
-    géospatial, couche, entité, filtre CQL, catalogue de données,
-    requête générique.
+    Mots-clés : Colombie-Britannique, BC Geographic Warehouse, entrepôt de
+    données géographiques, WFS, données géospatiales, couche cartographique,
+    entité géographique, filtre CQL, catalogue de données, requête générique.
     """
     return await client.query_layer(
         type_name,

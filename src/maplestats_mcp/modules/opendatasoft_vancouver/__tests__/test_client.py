@@ -207,3 +207,42 @@ async def test_dataset_ids_that_are_not_slugs_are_rejected(bad):
         await client.get_dataset(bad)
     with pytest.raises(InvalidInput, match="street-trees"):
         await client.query_records(bad)
+
+
+# French (lang="fr"): errors, provenance text and licence; English unchanged.
+
+
+async def test_french_search_provenance(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_CATALOG_URL}/datasets?limit=10&offset=0&where=search%28%2A%2C+%27olympic%27%29",
+        json={"total_count": 1, "datasets": [_SEARCH_ENTRY]},
+    )
+    result = await client.search_datasets("olympic", lang="fr")
+    assert (result.provenance.coverage or "").startswith(
+        "1 jeux de données renvoyés sur 1 correspondants."
+    )
+    assert "en anglais seulement" in (result.provenance.coverage or "")
+    assert "Les licences diffèrent" in (result.provenance.licence or "")
+
+
+async def test_english_search_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_CATALOG_URL}/datasets?limit=10&offset=0&where=search%28%2A%2C+%27olympic%27%29",
+        json={"total_count": 1, "datasets": [_SEARCH_ENTRY]},
+    )
+    result = await client.search_datasets("olympic")
+    assert result.provenance.coverage == "1 of 1 total matches returned"
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide : limit doit être compris"):
+        await client.search_datasets(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="dataset_id doit être un identifiant"):
+        await client.get_dataset("Not An Id", lang="fr")
+    httpx_mock.add_response(
+        url=f"{_CATALOG_URL}/datasets/missing",
+        status_code=404,
+        json={"error_code": "NotFoundResource", "message": "Unknown dataset: missing"},
+    )
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée :"):
+        await client.get_dataset("missing", lang="fr")

@@ -26,8 +26,9 @@ from maplestats_mcp.modules.opendatasoft_vancouver.schemas import (
     RecordQueryResult,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 from maplestats_mcp.shared.opendatasoft import (
     OpendatasoftConfig,
@@ -58,15 +59,25 @@ CONFIG = OpendatasoftConfig(
 _DATASET_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,199}$")
 
 
-def _dataset_id(dataset_id: str) -> str:
+def _dataset_id(dataset_id: str, lang: str = "en") -> str:
     cleaned = dataset_id.strip()
     if not cleaned:
-        raise InvalidInput("dataset_id must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "dataset_id must not be empty.",
+            "dataset_id ne doit pas être vide.",
+            lang,
+        )
     if not _DATASET_ID.match(cleaned):
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             "dataset_id must be a Vancouver dataset id such as 'street-trees' (lowercase "
             "letters, digits, hyphens), as returned by opendatasoft_vancouver_search_datasets; "
-            f"got {dataset_id!r}."
+            f"got {dataset_id!r}.",
+            "dataset_id doit être un identifiant de jeu de données de Vancouver comme "
+            "« street-trees » (lettres minuscules, chiffres, traits d'union), tel que renvoyé "
+            f"par opendatasoft_vancouver_search_datasets (reçu {dataset_id!r}).",
+            lang,
         )
     return quote(cleaned, safe="")
 
@@ -105,17 +116,24 @@ async def search_datasets(
     offset: int = 0,
     lang: str = "en",
 ) -> DatasetSearchResult:
-    """Search Vancouver's Opendatasoft dataset catalogue; ``lang`` is accepted for consistency."""
-    del lang
+    """Search Vancouver's Opendatasoft dataset catalogue (catalogue text is English only)."""
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.SEARCH_LIMIT_MAX} (reçu {limit}).",
+            lang,
         )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        raise_localized(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être égal ou supérieur à 0 (reçu {offset}).",
+            lang,
+        )
 
     async def fetch() -> dict[str, Any]:
-        return await _fetch_search(CONFIG, query=query, limit=limit, offset=offset)
+        return await _fetch_search(CONFIG, query=query, limit=limit, offset=offset, lang=lang)
 
     cache_key = f"opendatasoft-vancouver:search:{query}:{limit}:{offset}"
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SEARCH_SECONDS, fetch)
@@ -134,19 +152,28 @@ async def search_datasets(
             url=f"https://{constants.DOMAIN}/api/v2/catalog/datasets",
             cached=was_cached,
             schema_name="opendatasoft_vancouver.DatasetSearchResult",
-            coverage=f"{len(datasets)} of {total_count} total matches returned",
-            limits=f"limit capped at {constants.SEARCH_LIMIT_MAX} per request",
+            coverage=pick(
+                lang,
+                f"{len(datasets)} of {total_count} total matches returned",
+                f"{len(datasets)} jeux de données renvoyés sur {total_count} correspondants. "
+                "Titres, descriptions, champs et valeurs tels que publiés par la Ville de Vancouver, en anglais seulement.",
+            ),
+            limits=pick(
+                lang,
+                f"limit capped at {constants.SEARCH_LIMIT_MAX} per request",
+                f"limit plafonné à {constants.SEARCH_LIMIT_MAX} par requête",
+            ),
+            lang=lang,
         ),
     )
 
 
 async def get_dataset(dataset_id: str, lang: str = "en") -> DatasetDetail:
-    """Get one Vancouver dataset's metadata, fields, and download links; ``lang`` is a documented no-op."""
-    del lang
-    dataset_id = _dataset_id(dataset_id)
+    """Get one Vancouver dataset's metadata, fields, and download links."""
+    dataset_id = _dataset_id(dataset_id, lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _fetch_dataset(CONFIG, dataset_id)
+        return await _fetch_dataset(CONFIG, dataset_id, lang)
 
     result, was_cached = await cached_fetch(
         f"opendatasoft-vancouver:get_dataset:{dataset_id}",
@@ -179,6 +206,13 @@ async def get_dataset(dataset_id: str, lang: str = "en") -> DatasetDetail:
             url=f"https://{constants.DOMAIN}/api/v2/catalog/datasets/{dataset_id}",
             cached=was_cached,
             schema_name="opendatasoft_vancouver.DatasetDetail",
+            coverage=pick(
+                lang,
+                "",
+                "Titres, descriptions, champs et valeurs tels que publiés par la Ville de Vancouver, en anglais seulement.",
+            )
+            or None,
+            lang=lang,
         ),
     )
 
@@ -200,14 +234,21 @@ async def query_records(
     ``query`` instead runs a full-text ``search(*, '...')`` match. If
     both are given, ``where`` wins -- see shared/opendatasoft.py.
     """
-    del lang
-    dataset_id = _dataset_id(dataset_id)
+    dataset_id = _dataset_id(dataset_id, lang)
     if limit < 1 or limit > constants.RECORDS_LIMIT_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.RECORDS_LIMIT_MAX}, got {limit}."
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {constants.RECORDS_LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.RECORDS_LIMIT_MAX} (reçu {limit}).",
+            lang,
         )
     if offset < 0:
-        raise InvalidInput(f"offset must be >= 0, got {offset}.")
+        raise_localized(
+            InvalidInput,
+            f"offset must be >= 0, got {offset}.",
+            f"offset doit être égal ou supérieur à 0 (reçu {offset}).",
+            lang,
+        )
 
     async def fetch() -> dict[str, Any]:
         return await _fetch_records(
@@ -219,6 +260,7 @@ async def query_records(
             query=query,
             limit=limit,
             offset=offset,
+            lang=lang,
         )
 
     cache_key = (
@@ -245,7 +287,17 @@ async def query_records(
             url=f"https://{constants.DOMAIN}/api/v2/catalog/datasets/{dataset_id}/records",
             cached=was_cached,
             schema_name="opendatasoft_vancouver.RecordQueryResult",
-            coverage=f"{len(rows)} of {total_count} total matching records returned",
-            limits=f"records capped at {constants.RECORDS_LIMIT_MAX} per request",
+            coverage=pick(
+                lang,
+                f"{len(rows)} of {total_count} total matching records returned",
+                f"{len(rows)} enregistrements renvoyés sur {total_count} correspondants ; "
+                "champs et valeurs tels que publiés par la Ville de Vancouver, en anglais",
+            ),
+            limits=pick(
+                lang,
+                f"records capped at {constants.RECORDS_LIMIT_MAX} per request",
+                f"enregistrements plafonnés à {constants.RECORDS_LIMIT_MAX} par requête",
+            ),
+            lang=lang,
         ),
     )

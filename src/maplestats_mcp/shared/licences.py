@@ -412,6 +412,134 @@ def licence_in(text: str, lang: str = "en") -> str:
 _FAMILY_PREFIXES = ("arcgis-", "ckan-", "socrata-")
 
 
+# French text for the provincial, territorial, municipal and portal
+# sources, added to LICENCES_FR under each English text. Official licence
+# names take an en dash ("Licence du gouvernement ouvert – Alberta"), as the
+# governments write them.
+STATCAN_LICENCE_FR = t("provenance.statcan_licence", "fr")
+
+OGL_ALBERTA_FR = (
+    "Licence du gouvernement ouvert – Alberta (https://open.alberta.ca/licence). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Alberta. »"
+)
+
+OGL_BC_FR = (
+    "Licence du gouvernement ouvert – Colombie-Britannique 2.0 "
+    "(https://www2.gov.bc.ca/gov/content/data/policy-standards/open-data/open-government-licence-bc). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Colombie-Britannique. »"
+)
+
+OGL_YUKON_FR = (
+    "Licence du gouvernement ouvert – Yukon (https://open.yukon.ca/open-government-licence-yukon). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Yukon. »"
+)
+
+OGL_NL_FR = (
+    "Licence du gouvernement ouvert – Terre-Neuve-et-Labrador 1.0 "
+    "(https://opendata.gov.nl.ca/public/opendata/page/?page-id=licence). Attribution : « Contient "
+    "des renseignements visés par la Licence du gouvernement ouvert – Terre-Neuve-et-Labrador. »"
+)
+
+EDMONTON_TERMS_FR = (
+    "Conditions d'utilisation des données ouvertes de la Ville d'Edmonton (City of Edmonton Open "
+    "Data Terms of Use, "
+    "https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/). "
+    "Mention de la source : Ville d'Edmonton."
+)
+
+
+def terms_not_stated_fr(publisher: str, url: str) -> str:
+    """terms_not_stated() in French."""
+    return (
+        f"Conditions non précisées par l'éditeur ({publisher}) : aucune licence ni condition "
+        f"d'utilisation n'a été trouvée à {url}. Ne supposez pas que ces données sont sous licence "
+        "ouverte ; vérifiez auprès de l'éditeur avant de les redistribuer."
+    )
+
+
+def derived_from_statcan_fr(own_licence: str) -> str:
+    """derived_from_statcan() in French."""
+    return f"{own_licence} Données sous-jacentes de Statistique Canada : {STATCAN_LICENCE_FR}"
+
+
+NL_STATS_TERMS_FR = derived_from_statcan_fr(
+    "Conditions du site Web du gouvernement de Terre-Neuve-et-Labrador "
+    "(https://www.gov.nl.ca/disclaimer/) : le public peut utiliser l'information de ses sites. "
+    "Mention de la source : Newfoundland and Labrador Statistics Agency (agence de la statistique "
+    "de Terre-Neuve-et-Labrador)."
+)
+
+_PROVINCIAL_FR: dict[str, str] = {
+    "ab-economic": (
+        f"{OGL_ALBERTA_FR} Les indicateurs que le tableau de bord tire de tableaux de Statistique "
+        f"Canada (le champ source nomme le tableau) relèvent aussi de : {STATCAN_LICENCE_FR}"
+    ),
+    "ab-opendata": OGL_ALBERTA_FR,
+    "open-alberta": OGL_ALBERTA_FR,
+    "epcor": terms_not_stated_fr("EPCOR", "https://apps.epcor.ca"),
+    "eps": terms_not_stated_fr(
+        "Service de police d'Edmonton", "https://communitysafetydataportal.edmontonpolice.ca"
+    ),
+    "ets": EDMONTON_TERMS_FR,
+    "bc_lobbyists": (
+        "Licence de données ouvertes du Bureau du registraire des lobbyistes de la "
+        "Colombie-Britannique (Open Data Licence for the Office of the Registrar of Lobbyists for "
+        "British Columbia, https://www.lobbyistsregistrar.bc.ca/media/1285/open-data-licence-for-"
+        "the-office-of-the-registrar-of-lobbyists-for-british-columbia.pdf). Attribution "
+        "demandée, en anglais : « Contains information licensed under the Open Data Licence for "
+        "the Office of the Registrar of Lobbyists for British Columbia. » La licence n'accorde "
+        "aucun droit sur les renseignements personnels."
+    ),
+    "bcgw": OGL_BC_FR
+    + " Certaines couches du BC Geographic Warehouse relèvent d'autres conditions ; consultez la "
+    "fiche de la couche.",
+    "drivebc": OGL_BC_FR
+    + " L'API Open511 relève aussi des conditions d'utilisation des API du gouvernement de la "
+    "Colombie-Britannique (BC Government API Terms of Use).",
+    "yukon-stats": OGL_YUKON_FR,
+    "yukon-bureau-of-statistics": OGL_YUKON_FR,
+    "nl-opendata": OGL_NL_FR,
+    "nl-stats": NL_STATS_TERMS_FR,
+    "nl-statistics-agency": NL_STATS_TERMS_FR,
+    "bc-environment": (
+        f"{OGL_BC_FR} Source : ministère de l'Environnement et des Parcs de la "
+        "Colombie-Britannique."
+    ),
+    "nwt-bureau-of-statistics": (
+        "Licence du gouvernement ouvert – Territoires du Nord-Ouest, selon le catalogue de "
+        "données ouvertes du territoire pour ces fichiers ; les conditions générales d'utilisation "
+        "liées depuis statsnwt.ca demandent une autorisation avant tout usage commercial. "
+        "Vérifiez lesquelles s'appliquent à votre usage."
+    ),
+    "oeb": (
+        "Source : Commission de l'énergie de l'Ontario, données ouvertes "
+        "(https://www.oeb.ca/ontarios-energy-sector/open-data). Contient des renseignements "
+        "utilisés en vertu de la Licence du gouvernement ouvert – Ontario."
+    ),
+    "isq": (
+        "Droits d'auteur du gouvernement du Québec (https://www.quebec.ca/en/copyright) : la "
+        "reproduction, l'adaptation ou la publication exige l'autorisation préalable du "
+        "gouvernement du Québec. Mention : « Source : Institut de la statistique du Québec. »"
+    ),
+    "transit": (
+        "Chaque flux de transport en commun porte la licence et la mention de source de son "
+        "organisme (champs licence et attribution de chaque organisme)."
+    ),
+    "transit:statcan": derived_from_statcan_fr(
+        "Compilation de la Base de données ouvertes sur les réseaux de transport en commun "
+        "canadiens ; chaque flux porte aussi les conditions de son organisme (licence_url, "
+        "attribution)."
+    ),
+}
+LICENCES_FR.update(
+    {SOURCE_LICENCES[source]: text for source, text in _PROVINCIAL_FR.items()}
+    | {OGL_ALBERTA: OGL_ALBERTA_FR, OGL_BC: OGL_BC_FR, OGL_YUKON: OGL_YUKON_FR, OGL_NL: OGL_NL_FR}
+)
+
+
 def licence_for(source: str, url: str) -> str | None:
     """The licence text for a source name, falling back on a StatCan URL check."""
     known = SOURCE_LICENCES.get(source)

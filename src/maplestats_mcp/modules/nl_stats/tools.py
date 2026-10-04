@@ -36,9 +36,11 @@ async def nl_stats_list_files(
     Keywords: Newfoundland and Labrador, NL, Statistics Agency, population,
     labour force, unemployment, CPI, GDP, trade, St. John's, census division,
     Excel, provincial statistics, minimum wage.
-    Mots-clés : Terre-Neuve-et-Labrador, agence de la statistique, population,
-    population active, chômage, IPC, PIB, commerce, St. John's, division de
-    recensement, Excel, statistiques provinciales, salaire minimum.
+    Mots-clés : Terre-Neuve-et-Labrador, agence de la statistique,
+    statistiques provinciales, population trimestrielle, migration,
+    population active, taux de chômage, IPC,
+    PIB, commerce international, revenu, assurance-emploi, salaire minimum,
+    St. John's, division de recensement, tableaux Excel.
     """
     return await client.list_files(topic=topic, query=query, limit=limit, lang=lang, offset=offset)
 
@@ -73,8 +75,10 @@ async def nl_stats_read_file(
     cell (case-insensitive), e.g. a year or an industry.
     Keywords: Newfoundland and Labrador, Excel, sheet, table, monthly,
     quarterly, population, labour force, CPI, GDP, trade, xlsx, xls, series.
-    Mots-clés : Terre-Neuve-et-Labrador, Excel, feuille, tableau, mensuel,
-    trimestriel, population, population active, IPC, PIB, commerce, série.
+    Mots-clés : Terre-Neuve-et-Labrador, fichier Excel, feuille de calcul,
+    lire un tableau, série mensuelle, série trimestrielle, population,
+    migration, population active, chômage, IPC, PIB par industrie, commerce
+    par partenaire.
     """
     return await client.read_file(
         url=url,

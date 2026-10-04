@@ -39,6 +39,7 @@ from typing import Any, NoReturn
 
 import httpx
 
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -80,24 +81,55 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     return clean_detail(exc.response.text)
 
 
-def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     detail = _error_detail(exc)
     if status == 404:
-        raise NotFound(f"{context}: no match found ({detail}).") from exc
+        raise_localized(
+            NotFound,
+            f"{context}: no match found ({detail}).",
+            f"{context} : aucune correspondance ({detail}).",
+            lang,
+        )
     if 400 <= status < 500:
-        raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise_localized(
+            InvalidInput,
+            f"{context}: rejected the request ({detail}).",
+            f"{context} : requête refusée par le portail ({detail}).",
+            lang,
+        )
+    raise_localized(
+        UpstreamError,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a répondu par une erreur HTTP {status} : {detail}",
+        lang,
+    )
 
 
-async def _get(config: OpendatasoftConfig, context: str, url: str, params: dict[str, Any]) -> Any:
+async def _get(
+    config: OpendatasoftConfig,
+    context: str,
+    url: str,
+    params: dict[str, Any],
+    lang: str = "en",
+) -> Any:
     await _limiter(config).acquire()
     try:
         return await api_get(url, params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status_error(exc, context)
+        _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        raise network_error(context, exc) from exc
+        error = network_error(context, exc)
+        if lang == "fr":
+            french = (
+                f"{context} : le portail a répondu, mais pas en JSON (souvent une page d'erreur "
+                "ou de maintenance)."
+                if isinstance(error, UpstreamError)
+                else f"{context} : le portail n'a pas répondu ({type(exc).__name__}) malgré les "
+                "nouvelles tentatives. Réessayez sous peu."
+            )
+            raise_localized(type(error), str(error), french, lang)
+        raise error from exc
 
 
 def _search_where(query: str) -> str | None:
@@ -113,6 +145,7 @@ async def search_datasets(
     query: str = "",
     limit: int = 10,
     offset: int = 0,
+    lang: str = "en",
 ) -> dict[str, Any]:
     """Search one Opendatasoft domain's dataset catalogue."""
     params: dict[str, Any] = {"limit": limit, "offset": offset}
@@ -120,14 +153,20 @@ async def search_datasets(
     if where:
         params["where"] = where
     return await _get(
-        config, f"{config.source}:search_datasets", f"{_catalog_url(config)}/datasets", params
+        config,
+        f"{config.source}:search_datasets",
+        f"{_catalog_url(config)}/datasets",
+        params,
+        lang,
     )
 
 
-async def get_dataset(config: OpendatasoftConfig, dataset_id: str) -> dict[str, Any]:
+async def get_dataset(
+    config: OpendatasoftConfig, dataset_id: str, lang: str = "en"
+) -> dict[str, Any]:
     """Fetch one dataset's full catalogue metadata."""
     url = f"{_catalog_url(config)}/datasets/{dataset_id}"
-    return await _get(config, f"{config.source}:get_dataset:{dataset_id}", url, {})
+    return await _get(config, f"{config.source}:get_dataset:{dataset_id}", url, {}, lang)
 
 
 async def query_records(
@@ -140,6 +179,7 @@ async def query_records(
     query: str | None = None,
     limit: int = 10,
     offset: int = 0,
+    lang: str = "en",
 ) -> dict[str, Any]:
     """Query one dataset's records, optionally filtered/sorted with raw ODSQL.
 
@@ -163,7 +203,7 @@ async def query_records(
     if order_by:
         params["order_by"] = order_by
     url = f"{_catalog_url(config)}/datasets/{dataset_id}/records"
-    return await _get(config, f"{config.source}:query_records:{dataset_id}", url, params)
+    return await _get(config, f"{config.source}:query_records:{dataset_id}", url, params, lang)
 
 
 def download_url(config: OpendatasoftConfig, dataset_id: str, fmt: str) -> str:

@@ -243,3 +243,54 @@ async def test_not_a_table_page(httpx_mock):
     httpx_mock.add_response(url=f"{constants.SITE}/en{constants.TABLE_PATH}999", status_code=404)
     with pytest.raises(NotFound):
         await client.get_table("999", lang="fr")
+
+
+# French (lang="fr"): titles with accents from the table pages, French errors
+# and provenance; English unchanged.
+
+_SLUG_FR = "indicateurs-mensuels-emploi-et-taux-de-chomage-par-region-administrative"
+
+
+async def test_french_search_reads_accented_titles_from_the_page(httpx_mock):
+    sitemap = f"<urlset><url><loc>{constants.SITE}/fr{constants.TABLE_PATH}{_SLUG_FR}</loc></url></urlset>"
+    httpx_mock.add_response(url=constants.SITEMAP_URL, text=sitemap)
+    httpx_mock.add_response(
+        url=f"{constants.SITE}/fr{constants.TABLE_PATH}{_SLUG_FR}",
+        text=_page(
+            {
+                "type": "statique",
+                "nom": "Indicateurs mensuels : emploi et taux de chômage par région administrative",
+            }
+        ),
+    )
+    result = await client.search_tables("taux de chômage région", lang="fr")
+    assert result.tables[0].title == (
+        "Indicateurs mensuels : emploi et taux de chômage par région administrative"
+    )
+    assert result.provenance.freshness == "le plan du site est lu une fois par jour"
+    assert "Institut de la statistique du Québec" in (result.provenance.licence or "")
+
+
+async def test_french_search_keeps_slug_title_when_the_page_fails(httpx_mock):
+    sitemap = f"<urlset><url><loc>{constants.SITE}/fr{constants.TABLE_PATH}{_SLUG_FR}</loc></url></urlset>"
+    httpx_mock.add_response(url=constants.SITEMAP_URL, text=sitemap)
+    httpx_mock.add_response(
+        url=f"{constants.SITE}/fr{constants.TABLE_PATH}{_SLUG_FR}", status_code=404
+    )
+    result = await client.search_tables("chomage", lang="fr")
+    assert result.tables[0].title.startswith("Indicateurs mensuels emploi")
+
+
+async def test_english_search_does_not_fetch_pages(httpx_mock):
+    httpx_mock.add_response(url=constants.SITEMAP_URL, text=_SITEMAP)
+    english = await client.search_tables("movie theatres", lang="en")
+    assert english.tables[0].title.startswith("Operating statistics")
+    assert english.provenance.freshness == "the sitemap is read once a day"
+    assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_french_errors():
+    with pytest.raises(InvalidInput, match="query doit contenir au moins un mot"):
+        await client.search_tables("  ", lang="fr")
+    with pytest.raises(InvalidInput, match="n'est ni un identifiant de tableau"):
+        await client.get_table("Pas un slug!", lang="fr")

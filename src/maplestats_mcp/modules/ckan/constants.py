@@ -77,13 +77,14 @@ class Portal:
     # Set when the file reader must not read this portal's files (the reason is
     # given to the caller); the catalogue and DataStore tools still work.
     file_reader_off_reason: str | None = None
+    file_reader_off_reason_fr: str | None = None
 
 
 PORTALS: dict[str, Portal] = {
     "federal": Portal(
         base_url="https://open.canada.ca/data/api/3/action/",
         name_en="Government of Canada Open Data (open.canada.ca)",
-        name_fr="Données ouvertes du gouvernement du Canada (ouvert.canada.ca)",
+        name_fr="Portail du gouvernement ouvert (ouvert.canada.ca)",
         dataset_url="https://open.canada.ca/data/{lang}/dataset/{id}",
         organization_url="https://open.canada.ca/data/{lang}/organization/{id}",
         content_language="bilingual",
@@ -100,7 +101,7 @@ PORTALS: dict[str, Portal] = {
             "de Santé Canada, d'EDSC, du CRTC et d'Élections Canada. Aucun mot-clé "
             "ni groupe CKAN : les thèmes figurent dans le champ bilingue `keywords`. "
             "La recherche plein texte DataStore (`query`) est refusée au-delà de "
-            "100 000 lignes; utilisez plutôt `filters`."
+            "100 000 lignes ; utilisez plutôt `filters`."
         ),
         file_hosts=(
             "open.canada.ca",
@@ -183,7 +184,7 @@ PORTALS: dict[str, Portal] = {
         note_fr=(
             "Le DataStore est défaillant du côté du portail : datastore_search et "
             "datastore_info renvoient une erreur HTTP 500 pour chaque ressource "
-            "vérifiée (15 sur 15, en septembre 2026); les requêtes de lignes sont "
+            "vérifiée (15 sur 15, en septembre 2026) ; les requêtes de lignes sont "
             "donc désactivées. Téléchargez plutôt les ressources."
         ),
         file_hosts=("open.alberta.ca",),
@@ -255,7 +256,7 @@ PORTALS: dict[str, Portal] = {
         landing_uses_name=True,
         extra_fields=("update_frequency",),
         note="Content is in French; an unknown `sort` field is silently ignored.",
-        note_fr="Contenu en français; un champ `sort` inconnu est ignoré sans erreur.",
+        note_fr="Contenu en français ; un champ `sort` inconnu est ignoré sans erreur.",
         file_hosts=("donnees.montreal.ca", "montreal-prod.storage.googleapis.com"),
     ),
     "toronto": Portal(
@@ -280,6 +281,12 @@ PORTALS: dict[str, Portal] = {
             "Toronto's portal does not permit automated file downloads, so this server "
             "does not download its files. Rows of resources with an active DataStore can be "
             "read with ckan_datastore_search."
+        ),
+        file_reader_off_reason_fr=(
+            "le serveur CKAN de Toronto interdit à tous les agents automatisés le chemin "
+            "/dataset/*/resource/*/download/*; ce serveur ne télécharge donc pas ses fichiers. "
+            "Les lignes des ressources dont le DataStore est actif se lisent avec "
+            "ckan_datastore_search."
         ),
     ),
     "regina": Portal(

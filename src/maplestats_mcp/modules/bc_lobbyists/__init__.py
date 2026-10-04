@@ -29,7 +29,7 @@ MODULE_DESCRIPTION_FR = (
     "titulaire de charge publique supérieure, quel ministère, sur quel sujet), décompte de "
     "l'activité par client, ministère, titulaire, sujet ou mois, et liste des sujets, "
     "résultats visés et ministères du registre. Données ouvertes mensuelles sous la licence "
-    "de données ouvertes de l'ORL; les adresses, numéros de téléphone, indicateurs de "
+    "de données ouvertes de l'ORL ; les adresses, numéros de téléphone, indicateurs de "
     "contributions politiques, cadeaux et anciennes charges publiques des lobbyistes sont "
     "exclus, la licence n'accordant aucun droit sur les renseignements personnels. Le "
     "registre fédéral est inaccessible aux requêtes automatisées (voir la feuille de route)."

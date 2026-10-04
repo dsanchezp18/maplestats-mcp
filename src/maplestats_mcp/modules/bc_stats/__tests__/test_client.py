@@ -236,3 +236,43 @@ async def test_html_page_and_http_404_are_not_found(httpx_mock, catalogue):
     httpx_mock.add_response(url=_SEARCH, content=_bytes("package_search_bc_stats.json"))
     with pytest.raises(NotFound, match="no file"):
         await client.read_file(other)
+
+
+async def test_french_errors_and_provenance(httpx_mock, catalogue):
+    with pytest.raises(InvalidInput, match="Entrée invalide.*limit doit être compris"):
+        await client.list_files(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="lien de téléchargement"):
+        client.check_file_url("https://example.com/x.xlsx", lang="fr")
+
+    url = _by_name("gdp_by_industry_at_basic_prices.xlsx")
+    httpx_mock.add_response(url=url, content=_bytes("gdp_by_industry_at_basic_prices.xlsx"))
+    data = await client.read_file(url, limit=5, lang="fr")
+    assert data.provenance.licence
+    assert data.provenance.licence.startswith("Licence du gouvernement ouvert – Colombie")
+    assert data.provenance.freshness
+    assert data.provenance.freshness.startswith("Tel que publié par BC Stats")
+    assert data.provenance.coverage
+    assert "feuille 'BC GDP $Current' sur 2" in data.provenance.coverage
+    with pytest.raises(InvalidInput, match="aucune feuille 'Nope'"):
+        await client.read_file(url, sheet="Nope", lang="fr")
+
+    listing = await client.list_files(limit=2, lang="fr")
+    assert listing.provenance.limits
+    assert listing.provenance.limits.startswith("Fichiers 1 à 2 sur")
+    assert "Licence du gouvernement ouvert – Colombie-Britannique" in listing.licence_note
+
+
+async def test_english_text_is_unchanged(httpx_mock, catalogue):
+    with pytest.raises(InvalidInput, match=r"^bc_stats: limit must be 1 to 200\.$"):
+        await client.list_files(limit=0)
+    listing = await client.list_files(limit=2)
+    assert listing.provenance.freshness == "Catalogue metadata, cached for six hours."
+    assert listing.provenance.limits
+    assert listing.provenance.limits.startswith("Showing files 1 to 2 of")
+    url = _by_name("gdp_by_industry_at_basic_prices.xlsx")
+    httpx_mock.add_response(url=url, content=_bytes("gdp_by_industry_at_basic_prices.xlsx"))
+    data = await client.read_file(url, limit=5)
+    assert data.provenance.freshness
+    assert data.provenance.freshness.startswith("As published by BC Stats; catalogue update")
+    assert data.provenance.licence
+    assert data.provenance.licence.startswith("Open Government Licence - British Columbia")

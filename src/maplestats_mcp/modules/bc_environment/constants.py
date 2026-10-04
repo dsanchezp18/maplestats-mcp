@@ -119,7 +119,7 @@ LICENCE = {
     "en": "Contains information licensed under the Open Government Licence - British "
     "Columbia (https://www2.gov.bc.ca/gov/content/data/policy-standards/open-data/"
     "open-government-licence-bc). Source: BC Ministry of Environment and Parks.",
-    "fr": "Contient des renseignements visés par la Licence du gouvernement ouvert - "
+    "fr": "Contient des renseignements visés par la Licence du gouvernement ouvert – "
     "Colombie-Britannique (https://www2.gov.bc.ca/gov/content/data/policy-standards/"
     "open-data/open-government-licence-bc). Source : ministère de l'Environnement et des "
     "Parcs de la Colombie-Britannique.",

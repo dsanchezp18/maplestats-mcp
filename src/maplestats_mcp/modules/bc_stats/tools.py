@@ -36,8 +36,10 @@ async def bc_stats_list_files(
     industry, tourism indicators, population projections, CPI, bankruptcies,
     provincial statistics, data catalogue.
     Mots-clés : BC Stats, Colombie-Britannique, Excel, xlsx, Enquête sur la
-    population active, PIB par industrie, indicateurs touristiques, projections de
-    population, IPC, faillites, statistiques provinciales, catalogue de données.
+    population active, PIB par industrie, comptes économiques, indicateurs
+    touristiques, estimations de population, projections de population, IPC, faillites, nombre d'entreprises, exportations,
+    mises en chantier, permis de bâtir, permis de construire, statistiques
+    provinciales, catalogue de données, données ouvertes.
     """
     return await client.list_files(
         query=query, dataset=dataset, limit=limit, offset=offset, lang=lang
@@ -72,9 +74,11 @@ async def bc_stats_read_file(
     Keywords: BC Stats, British Columbia, Excel, sheet, xlsx, Labour Force Survey,
     unemployment rate, GDP by industry, tourism, population projections, CPI,
     monthly, annual, table.
-    Mots-clés : BC Stats, Colombie-Britannique, Excel, feuille, xlsx, Enquête sur
-    la population active, taux de chômage, PIB par industrie, tourisme,
-    projections de population, IPC, mensuel, annuel, tableau.
+    Mots-clés : BC Stats, Colombie-Britannique, Excel, feuille de calcul, xlsx,
+    Enquête sur la population active, taux de chômage, emploi, PIB par industrie,
+    dollars enchaînés, tourisme, estimations de population, projections de
+    population, IPC, faillites, mises en
+    chantier, permis de bâtir, mensuel, annuel, tableau.
     """
     return await client.read_file(
         url=url,

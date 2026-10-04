@@ -82,12 +82,12 @@ from maplestats_mcp.modules.bc_lobbyists.schemas import (
     OrlRegistrationList,
     OrlTopic,
 )
-from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -105,13 +105,9 @@ def _fold(text: str) -> str:
     return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
 
 
-def _pick(lang: str, en: str, fr: str) -> str:
-    return fr if lang == "fr" else en
-
-
 def _label(code: str, lang: str) -> str:
     en, fr = constants.LABELS[code]
-    return _pick(lang, en, fr)
+    return pick(lang, en, fr)
 
 
 # ---------------------------------------------------------------- parsing
@@ -142,26 +138,49 @@ def _ids(value: str | None) -> tuple[str, ...]:
     return tuple(p.strip() for p in (_clean(value) or "").split(",") if p.strip())
 
 
-def _open_archive(body: bytes, url: str) -> zipfile.ZipFile:
+def _open_archive(body: bytes, url: str, lang: str = "en") -> zipfile.ZipFile:
     try:
         return zipfile.ZipFile(io.BytesIO(body))
-    except zipfile.BadZipFile as exc:
-        raise UpstreamError(f"bc_lobbyists: {url} is not a readable ZIP file.") from exc
+    except zipfile.BadZipFile:
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {url} is not a readable ZIP file.",
+            f"bc_lobbyists : {url} n'est pas un fichier ZIP lisible.",
+            lang,
+        )
 
 
-def _rows(archive: zipfile.ZipFile, name: str, columns: Iterable[str]) -> Iterator[dict[str, str]]:
+def _rows(
+    archive: zipfile.ZipFile, lang: str, name: str, columns: Iterable[str]
+) -> Iterator[dict[str, str]]:
     """Rows of one CSV member, checking the columns this module reads exist."""
     members = {i.filename.rsplit("/", 1)[-1].lower(): i for i in archive.infolist()}
     info = members.get(name.lower())
     if info is None:
-        raise UpstreamError(f"bc_lobbyists: the zip has no {name}; the dataset layout changed.")
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: the zip has no {name}; the dataset layout changed.",
+            f"bc_lobbyists : l'archive ZIP ne contient pas {name}; la structure du jeu de "
+            "données a changé.",
+            lang,
+        )
     if info.file_size > constants.MAX_MEMBER_BYTES:
-        raise UpstreamError(f"bc_lobbyists: {name} unpacks to more than this module reads.")
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {name} unpacks to more than this module reads.",
+            f"bc_lobbyists : {name} décompressé dépasse la taille que ce module peut lire.",
+            lang,
+        )
     with archive.open(info) as raw:
         reader = csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig", newline=""))
         missing = [c for c in columns if c not in (reader.fieldnames or [])]
         if missing:
-            raise UpstreamError(f"bc_lobbyists: {name} has no column {missing}; layout changed.")
+            raise_localized(
+                UpstreamError,
+                f"bc_lobbyists: {name} has no column {missing}; layout changed.",
+                f"bc_lobbyists : {name} n'a pas la colonne {missing}; la structure a changé.",
+                lang,
+            )
         yield from reader
 
 
@@ -191,17 +210,20 @@ def _topics(rows: Iterable[dict[str, str]], key: str) -> dict[str, list[_Topic]]
     return {k: list(v) for k, v in found.items()}
 
 
-def _vocabulary(archive: zipfile.ZipFile) -> tuple[dict[str, str], dict[str, str]]:
+def _vocabulary(archive: zipfile.ZipFile, lang: str) -> tuple[dict[str, str], dict[str, str]]:
     subjects = {
         r["SUBJECT_MATTER_ID"]: r["SUBJECT_MATTER"].strip()
         for r in _rows(
-            archive, "Subject_Matters_Export.csv", ["SUBJECT_MATTER_ID", "SUBJECT_MATTER"]
+            archive, lang, "Subject_Matters_Export.csv", ["SUBJECT_MATTER_ID", "SUBJECT_MATTER"]
         )
     }
     outcomes = {
         r["INTENDED_OUTCOME_ID"]: r["INTENDED_OUTCOME"].strip()
         for r in _rows(
-            archive, "Intended_Outcomes_Export.csv", ["INTENDED_OUTCOME_ID", "INTENDED_OUTCOME"]
+            archive,
+            lang,
+            "Intended_Outcomes_Export.csv",
+            ["INTENDED_OUTCOME_ID", "INTENDED_OUTCOME"],
         )
     }
     return subjects, outcomes
@@ -280,13 +302,14 @@ def _chain_start(
     return earliest
 
 
-def parse_registrations(body: bytes, url: str) -> _RegistrationStore:
-    archive = _open_archive(body, url)
-    subjects, outcomes = _vocabulary(archive)
+def parse_registrations(body: bytes, url: str, lang: str = "en") -> _RegistrationStore:
+    archive = _open_archive(body, url, lang)
+    subjects, outcomes = _vocabulary(archive, lang)
     agency_names = {
         r["BC_PUBLIC_AGENCY_ID"].strip(): r["BC_PUBLIC_AGENCY"].strip()
         for r in _rows(
             archive,
+            lang,
             "BC_Public_Agencies_Export.csv",
             ["BC_PUBLIC_AGENCY_ID", "BC_PUBLIC_AGENCY"],
         )
@@ -297,7 +320,7 @@ def parse_registrations(body: bytes, url: str) -> _RegistrationStore:
         "CLIENT_ORG_BUS_DESC", "CLIENT_ORG_WEB_ADDRESS", "REG_START_DATE", "REG_END_DATE",
         "REG_POSTED_DATE", "ARRANGE_MEETING", "PREVIOUS_VERSION_REG_ID",
     ]  # fmt: skip
-    primary = list(_rows(archive, "Registration_Primary_Export.csv", primary_columns))
+    primary = list(_rows(archive, lang, "Registration_Primary_Export.csv", primary_columns))
 
     previous = {r["REG_ID"]: _clean(r["PREVIOUS_VERSION_REG_ID"]) for r in primary}
     starts = {r["REG_ID"]: _date(r["REG_START_DATE"]) for r in primary}
@@ -319,7 +342,7 @@ def parse_registrations(body: bytes, url: str) -> _RegistrationStore:
         "Registration_ConsultantLobbyists_Export.csv",
         "Registration_InHouseLobbyists_Export.csv",
     ):
-        for row in _rows(archive, member, lobbyist_columns):
+        for row in _rows(archive, lang, member, lobbyist_columns):
             if row["REG_ID"] not in kept:
                 continue
             name = _person(row["LOBBYIST_FIRST_NAME"], row["LOBBYIST_LAST_NAME"])
@@ -328,7 +351,10 @@ def parse_registrations(body: bytes, url: str) -> _RegistrationStore:
     agencies = {
         r["REG_ID"]: tuple(agency_names.get(i, i) for i in _ids(r["BC_PUBLIC_AGENCY_IDS"]))
         for r in _rows(
-            archive, "Registration_BCPublicAgency_Export.csv", ["REG_ID", "BC_PUBLIC_AGENCY_IDS"]
+            archive,
+            lang,
+            "Registration_BCPublicAgency_Export.csv",
+            ["REG_ID", "BC_PUBLIC_AGENCY_IDS"],
         )
         if r["REG_ID"] in kept
     }
@@ -337,6 +363,7 @@ def parse_registrations(body: bytes, url: str) -> _RegistrationStore:
             r
             for r in _rows(
                 archive,
+                lang,
                 "Registration_SubjectMatterDetails_Export.csv",
                 ["REG_ID", "TOPIC_OF_LOBBYING", "SUBJECT_MATTER_IDS", "INTENDED_OUTCOME_IDS"],
             )
@@ -391,7 +418,12 @@ def parse_registrations(body: bytes, url: str) -> _RegistrationStore:
         )
         registrations.append(reg)
     if not registrations:
-        raise UpstreamError(f"bc_lobbyists: {url} holds no current registrations; it changed.")
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {url} holds no current registrations; it changed.",
+            f"bc_lobbyists : {url} ne contient aucune inscription courante ; le fichier a changé.",
+            lang,
+        )
     store = _RegistrationStore(
         registrations=registrations,
         subjects=subjects,
@@ -446,9 +478,9 @@ class _ActivityStore:
     as_of: datetime | None
 
 
-def parse_activity(body: bytes, url: str) -> _ActivityStore:
-    archive = _open_archive(body, url)
-    subjects, outcomes = _vocabulary(archive)
+def parse_activity(body: bytes, url: str, lang: str = "en") -> _ActivityStore:
+    archive = _open_archive(body, url, lang)
+    subjects, outcomes = _vocabulary(archive, lang)
     primary_columns = [
         "LAR_ID", "CLIENT_ORG_NUM", "CLIENT_ORG_NAME", "FILER_LAST_NAME", "FILER_FIRST_NAME",
         "MEETING_DATE", "ARRANGE_MEETING", "REG_TYPE", "SUBMISSION_DATE", "POSTED_DATE",
@@ -457,7 +489,7 @@ def parse_activity(body: bytes, url: str) -> _ActivityStore:
     base: dict[str, dict[str, str]] = {}
     people: dict[str, dict[str, None]] = {}
     coalition: dict[str, dict[str, None]] = {}
-    for row in _rows(archive, "LAR_Primary_Export.csv", primary_columns):
+    for row in _rows(archive, lang, "LAR_Primary_Export.csv", primary_columns):
         lar = row["LAR_ID"]
         base.setdefault(lar, row)
         if name := _person(row["IH_LOBBYIST_FIRST_NAME"], row["IH_LOBBYIST_LAST_NAME"]):
@@ -467,6 +499,7 @@ def parse_activity(body: bytes, url: str) -> _ActivityStore:
     holders: dict[str, dict[_Holder, None]] = {}
     for row in _rows(
         archive,
+        lang,
         "LAR_SPOH_Export.csv",
         ["LAR_ID", "SPOH_LAST_NAME", "SPOH_FIRST_NAME", "SPOH_TITLE", "BRANCH", "BC_PUBLIC_AGENCY"],
     ):
@@ -482,6 +515,7 @@ def parse_activity(body: bytes, url: str) -> _ActivityStore:
     topics = _topics(
         _rows(
             archive,
+            lang,
             "LAR_SubjectMatterDetails_Export.csv",
             ["LAR_ID", "TOPIC_OF_LOBBYING", "SUBJECT_MATTER_IDS", "INTENDED_OUTCOME_IDS"],
         ),
@@ -524,7 +558,12 @@ def parse_activity(body: bytes, url: str) -> _ActivityStore:
         )
         reports.append(report)
     if not reports:
-        raise UpstreamError(f"bc_lobbyists: {url} holds no activity reports; it changed.")
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {url} holds no activity reports; it changed.",
+            f"bc_lobbyists : {url} ne contient aucun rapport d'activité ; le fichier a changé.",
+            lang,
+        )
     return _ActivityStore(
         reports=reports, subjects=subjects, outcomes=outcomes, as_of=_as_of(archive)
     )
@@ -537,7 +576,7 @@ def _zip_url(name: str) -> str:
     return f"{constants.DOWNLOAD_URL}?file={name}"
 
 
-async def _download(name: str) -> bytes:
+async def _download(name: str, lang: str = "en") -> bytes:
     url = _zip_url(name)
     await _LIMITER.acquire()
     try:
@@ -549,31 +588,58 @@ async def _download(name: str) -> bytes:
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status in (404, 410):
-            raise NotFound(f"bc_lobbyists: {url} is gone (HTTP {status}); the file moved.") from exc
-        raise UpstreamError(f"bc_lobbyists: {url} returned HTTP {status}.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"bc_lobbyists: {url} did not respond in time.") from exc
+            raise_localized(
+                NotFound,
+                f"bc_lobbyists: {url} is gone (HTTP {status}); the file moved.",
+                f"bc_lobbyists : {url} n'existe plus (HTTP {status}) ; le fichier a été déplacé.",
+                lang,
+            )
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {url} returned HTTP {status}.",
+            f"bc_lobbyists : {url} a répondu par une erreur HTTP {status}.",
+            lang,
+        )
+    except httpx.HTTPError:
+        raise_localized(
+            UpstreamUnavailable,
+            f"bc_lobbyists: {url} did not respond in time.",
+            f"bc_lobbyists : {url} n'a pas répondu à temps.",
+            lang,
+        )
     body = response.content
     if len(body) > constants.MAX_ZIP_BYTES:
-        raise UpstreamError(f"bc_lobbyists: {url} is much larger than expected; it changed.")
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {url} is much larger than expected; it changed.",
+            f"bc_lobbyists : {url} est beaucoup plus volumineux que prévu ; le fichier a changé.",
+            lang,
+        )
     # An expired session or maintenance page answers 200 with HTML, not a zip.
     if not body.startswith(b"PK"):
-        raise UpstreamError(f"bc_lobbyists: {url} did not return a ZIP file (got a web page).")
+        raise_localized(
+            UpstreamError,
+            f"bc_lobbyists: {url} did not return a ZIP file (got a web page).",
+            f"bc_lobbyists : {url} n'a pas renvoyé de fichier ZIP (page Web reçue).",
+            lang,
+        )
     return body
 
 
-async def _registrations() -> tuple[_RegistrationStore, bool]:
+async def _registrations(lang: str = "en") -> tuple[_RegistrationStore, bool]:
     async def fetch() -> _RegistrationStore:
-        body = await _download(constants.REGISTRATION_ZIP)
-        return await run_parse(parse_registrations, body, _zip_url(constants.REGISTRATION_ZIP))
+        body = await _download(constants.REGISTRATION_ZIP, lang)
+        return await run_parse(
+            parse_registrations, body, _zip_url(constants.REGISTRATION_ZIP), lang
+        )
 
     return await cached_fetch("bc_lobbyists:registrations", constants.DATA_TTL_SECONDS, fetch)
 
 
-async def _activity() -> tuple[_ActivityStore, bool]:
+async def _activity(lang: str = "en") -> tuple[_ActivityStore, bool]:
     async def fetch() -> _ActivityStore:
-        body = await _download(constants.ACTIVITY_ZIP)
-        return await run_parse(parse_activity, body, _zip_url(constants.ACTIVITY_ZIP))
+        body = await _download(constants.ACTIVITY_ZIP, lang)
+        return await run_parse(parse_activity, body, _zip_url(constants.ACTIVITY_ZIP), lang)
 
     return await cached_fetch("bc_lobbyists:activity", constants.DATA_TTL_SECONDS, fetch)
 
@@ -593,38 +659,68 @@ def _provenance(
         cached=cached,
         schema_name=f"bc_lobbyists.{schema}",
         as_of=as_of,
-        freshness=_pick(
+        freshness=pick(
             lang,
             "monthly (Registrar's mass datasets)",
-            "mensuelle (jeux de données massifs du registraire)",
+            "mensuelle (fichiers de données complets du registraire)",
         ),
         coverage=coverage,
         limits=limits,
-        licence=f"Open Data Licence for the Office of the Registrar of Lobbyists for British "
-        f"Columbia ({constants.LICENCE_URL}). Attribution: '{constants.ATTRIBUTION}' The licence "
-        "grants no rights to personal information.",
+        # In French, make_provenance supplies shared/licences' French text for this source.
+        licence=pick(
+            lang,
+            f"Open Data Licence for the Office of the Registrar of Lobbyists for British "
+            f"Columbia ({constants.LICENCE_URL}). Attribution: '{constants.ATTRIBUTION}' The "
+            "licence grants no rights to personal information.",
+            "",
+        )
+        or None,
+        lang=lang,
     )
 
 
 def _omitted(lang: str) -> str:
-    return _pick(lang, constants.OMITTED_EN, constants.OMITTED_FR)
+    return pick(lang, constants.OMITTED_EN, constants.OMITTED_FR)
+
+
+def _limits_fr(returned: int, total: int, unit: str, how: str) -> str | None:
+    """truncation_note() in French (shared/limits writes English only)."""
+    if returned >= total:
+        return None
+    return f"{returned} {unit} sur {total} renvoyés ; {how}."
 
 
 # ----------------------------------------------------------------- filters
 
 
-def _parse_date(value: str | None, name: str) -> date | None:
+def _parse_date(value: str | None, name: str, lang: str = "en") -> date | None:
     if not value:
         return None
     try:
         return date.fromisoformat(value.strip())
-    except ValueError as exc:
-        raise InvalidInput(f"bc_lobbyists: {name} must be YYYY-MM-DD, got {value!r}.") from exc
+    except ValueError:
+        raise_localized(
+            InvalidInput,
+            f"bc_lobbyists: {name} must be YYYY-MM-DD, got {value!r}.",
+            f"bc_lobbyists : {name} doit être au format AAAA-MM-JJ ; reçu {value!r}.",
+            lang,
+        )
 
 
-def _date_range(date_from: str | None, date_to: str | None) -> tuple[date | None, date | None]:
-    start, end = _parse_date(date_from, "date_from"), _parse_date(date_to, "date_to")
-    check_range(start, end, "date_from", "date_to")
+def _date_range(
+    date_from: str | None, date_to: str | None, lang: str = "en"
+) -> tuple[date | None, date | None]:
+    start = _parse_date(date_from, "date_from", lang)
+    end = _parse_date(date_to, "date_to", lang)
+    # The English text is shared check_range's, which has no French.
+    if start is not None and end is not None and start > end:
+        raise_localized(
+            InvalidInput,
+            f"date_from ({start}) is after date_to ({end}); swap them or widen the range.",
+            f"date_from ({start}) est postérieure à date_to ({end}) ; inversez-les ou "
+            "élargissez l'intervalle.",
+            lang,
+        )
     return start, end
 
 
@@ -641,27 +737,41 @@ def _any_all_in(items: Iterable[str], words: list[str]) -> bool:
     return any(_all_in(item, words) for item in items)
 
 
-def _subject_ids(text: str, subjects: dict[str, str]) -> frozenset[str]:
+def _subject_ids(text: str, subjects: dict[str, str], lang: str = "en") -> frozenset[str]:
     if not text.strip():
         return frozenset()
     words = _words(text)
     found = frozenset(i for i, n in subjects.items() if _all_in(_fold(n), words))
     if not found:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"bc_lobbyists: no subject matter matches {text!r}; "
-            "see bc_lobbyists_list_codes(kind='subject_matters')."
+            "see bc_lobbyists_list_codes(kind='subject_matters').",
+            f"bc_lobbyists : aucun objet de lobbying ne correspond à {text!r}; voir "
+            "bc_lobbyists_list_codes(kind='subject_matters'). Les objets sont en anglais.",
+            lang,
         )
     return found
 
 
-def _check_limit(limit: int, maximum: int, name: str = "limit") -> None:
+def _check_limit(limit: int, maximum: int, name: str = "limit", lang: str = "en") -> None:
     if not 1 <= limit <= maximum:
-        raise InvalidInput(f"bc_lobbyists: {name} must be 1 to {maximum}.")
+        raise_localized(
+            InvalidInput,
+            f"bc_lobbyists: {name} must be 1 to {maximum}.",
+            f"bc_lobbyists : {name} doit être compris entre 1 et {maximum}.",
+            lang,
+        )
 
 
-def _check_kind(kind: str | None) -> None:
+def _check_kind(kind: str | None, lang: str = "en") -> None:
     if kind is not None and kind not in ("consultant", "in_house"):
-        raise InvalidInput("bc_lobbyists: kind must be 'consultant' or 'in_house'.")
+        raise_localized(
+            InvalidInput,
+            "bc_lobbyists: kind must be 'consultant' or 'in_house'.",
+            "bc_lobbyists : kind doit valoir 'consultant' ou 'in_house'.",
+            lang,
+        )
 
 
 # ----------------------------------------------------------- registrations
@@ -738,16 +848,21 @@ async def search_registrations(
     lang: str = "en",
 ) -> OrlRegistrationList:
     """Current versions of registrations matching every filter given."""
-    _check_limit(limit, constants.SEARCH_MAX_LIMIT)
-    _check_kind(kind)
+    _check_limit(limit, constants.SEARCH_MAX_LIMIT, lang=lang)
+    _check_kind(kind, lang)
     if status is not None and status not in ("active", "ended"):
-        raise InvalidInput("bc_lobbyists: status must be 'active' or 'ended'.")
-    start, end = _date_range(date_from, date_to)
-    store, cached = await _registrations()
+        raise_localized(
+            InvalidInput,
+            "bc_lobbyists: status must be 'active' or 'ended'.",
+            "bc_lobbyists : status doit valoir 'active' ou 'ended'.",
+            lang,
+        )
+    start, end = _date_range(date_from, date_to, lang)
+    store, cached = await _registrations(lang)
     words, client_words = _words(query), _words(client)
     lobbyist_words, firm_words = _words(lobbyist), _words(firm)
     agency_words = _words(agency)
-    subject_ids = _subject_ids(subject_matter, store.subjects)
+    subject_ids = _subject_ids(subject_matter, store.subjects, lang)
     client_number = client.strip() if client.strip().isdigit() else None
 
     matched = [
@@ -783,14 +898,16 @@ async def search_registrations(
         total_matched=len(matched),
         by_status=dict(Counter("active" if r.active else "ended" for r in matched)),
         by_kind=dict(Counter(r.kind for r in matched)),
-        note=_pick(
+        note=pick(
             lang,
             "Only the current version of each registration is searched "
             f"({len(store.registrations)} of {store.versions_total} versions in the file). "
             "Topics and lobbyists are shortened here; bc_lobbyists_get_registration gives all.",
             "Seule la version courante de chaque inscription est interrogée "
             f"({len(store.registrations)} versions sur {store.versions_total} dans le fichier). "
-            "Les sujets et lobbyistes sont abrégés ici; bc_lobbyists_get_registration les donne tous.",
+            "Les sujets et les lobbyistes sont abrégés ici ; bc_lobbyists_get_registration les "
+            "donne au complet. Les noms, sujets et descriptions viennent du registre, en anglais "
+            "seulement.",
         ),
         omitted=_omitted(lang),
         provenance=_provenance(
@@ -798,10 +915,11 @@ async def search_registrations(
             "OrlRegistrationList",
             cached,
             store.as_of,
-            _pick(
+            pick(
                 lang,
                 f"registration returns filed since 2010, {len(store.registrations)} registrations",
-                f"déclarations d'inscription depuis 2010, {len(store.registrations)} inscriptions",
+                f"déclarations d'inscription déposées depuis 2010, {len(store.registrations)} "
+                "inscriptions",
             ),
             lang,
             truncation_note(
@@ -810,6 +928,14 @@ async def search_registrations(
                 unit="matching registrations (active first, then most recently changed)",
                 how_to_get_more="narrow the filters or raise limit "
                 f"(max {constants.SEARCH_MAX_LIMIT}; responses are also capped near 200 KB)",
+            )
+            if lang != "fr"
+            else _limits_fr(
+                len(models),
+                len(matched),
+                "inscriptions correspondantes (actives d'abord, puis les plus récemment modifiées)",
+                "précisez les filtres ou augmentez limit (maximum "
+                f"{constants.SEARCH_MAX_LIMIT}; les réponses sont aussi plafonnées vers 200 Ko)",
             ),
         ),
     )
@@ -819,8 +945,13 @@ async def get_registration(registration: str, *, lang: str = "en") -> OrlRegistr
     """One registration by id ('R-56584653') or number ('9997-443-56' or '9997-443')."""
     wanted = registration.strip()
     if not wanted:
-        raise InvalidInput("bc_lobbyists: pass a registration id like 'R-56584653' or a number.")
-    store, cached = await _registrations()
+        raise_localized(
+            InvalidInput,
+            "bc_lobbyists: pass a registration id like 'R-56584653' or a number.",
+            "bc_lobbyists : indiquez un identifiant d'inscription comme 'R-56584653' ou un numéro.",
+            lang,
+        )
+    store, cached = await _registrations(lang)
     found: list[_Registration] = []
     if wanted.upper().startswith("R-"):
         reg_id = store.latest_of.get(wanted.upper(), wanted.upper())
@@ -833,13 +964,21 @@ async def get_registration(registration: str, *, lang: str = "en") -> OrlRegistr
         # pair, falls back to the current version(s) of that pair.
         found = found or [r for r in store.registrations if (r.number + "-").startswith(pair)]
     else:
-        raise InvalidInput(
-            "bc_lobbyists: registration must look like 'R-56584653', '9997-443-56' or '9997-443'."
+        raise_localized(
+            InvalidInput,
+            "bc_lobbyists: registration must look like 'R-56584653', '9997-443-56' or '9997-443'.",
+            "bc_lobbyists : registration doit avoir la forme 'R-56584653', '9997-443-56' ou "
+            "'9997-443'.",
+            lang,
         )
     if not found:
-        raise NotFound(
+        raise_localized(
+            NotFound,
             f"bc_lobbyists: no current registration {wanted!r}; search with "
-            "bc_lobbyists_search_registrations."
+            "bc_lobbyists_search_registrations.",
+            f"bc_lobbyists : aucune inscription courante {wanted!r}; cherchez avec "
+            "bc_lobbyists_search_registrations.",
+            lang,
         )
     found = found[:20]
     return OrlRegistrationDetail(
@@ -850,7 +989,7 @@ async def get_registration(registration: str, *, lang: str = "en") -> OrlRegistr
             "OrlRegistrationDetail",
             cached,
             store.as_of,
-            _pick(lang, "current version of the registration", "version courante de l'inscription"),
+            pick(lang, "current version of the registration", "version courante de l'inscription"),
             lang,
         ),
     )
@@ -900,13 +1039,14 @@ def _filter_reports(
     date_from: str | None,
     date_to: str | None,
     arranged_only: bool | None,
+    lang: str = "en",
 ) -> list[_Report]:
-    _check_kind(kind)
-    start, end = _date_range(date_from, date_to)
+    _check_kind(kind, lang)
+    start, end = _date_range(date_from, date_to, lang)
     words, client_words = _words(query), _words(client)
     lobbyist_words, holder_words = _words(lobbyist), _words(office_holder)
     agency_words = _words(agency)
-    subject_ids = _subject_ids(subject_matter, store.subjects)
+    subject_ids = _subject_ids(subject_matter, store.subjects, lang)
     client_number = client.strip() if client.strip().isdigit() else None
     return [
         r
@@ -934,23 +1074,24 @@ def _span(reports: list[_Report]) -> tuple[date | None, date | None]:
 
 
 def _activity_note(lang: str) -> str:
-    return _pick(
+    return pick(
         lang,
         "Lobbying activity reports since 2020-05-04 (Lobbyists Transparency Act): one "
         "report per client, month and communication, naming the senior public office "
         "holders reached. Registrations are searched with bc_lobbyists_search_registrations.",
-        "Rapports d'activité de lobbying depuis le 2020-05-04 (Loi sur la transparence du "
-        "lobbying) : un rapport par client, mois et communication, nommant les titulaires de "
-        "charge publique supérieure joints. Les inscriptions se cherchent avec "
-        "bc_lobbyists_search_registrations.",
+        "Rapports d'activité de lobbying depuis le 4 mai 2020 (Lobbyists Transparency Act) : "
+        "un rapport par client, par mois et par communication, qui nomme les titulaires de "
+        "charge publique désignés joints. Les inscriptions se cherchent avec "
+        "bc_lobbyists_search_registrations. Les noms et les sujets viennent du registre, en "
+        "anglais seulement.",
     )
 
 
 def _activity_coverage(store: _ActivityStore, lang: str) -> str:
-    return _pick(
+    return pick(
         lang,
         f"{len(store.reports)} activity reports, meetings from 2020-05-04",
-        f"{len(store.reports)} rapports d'activité, rencontres depuis le 2020-05-04",
+        f"{len(store.reports)} rapports d'activité, rencontres depuis le 4 mai 2020",
     )
 
 
@@ -970,9 +1111,9 @@ async def search_activity_reports(
     lang: str = "en",
 ) -> OrlActivityReportList:
     """Activity reports matching every filter given, newest meeting first."""
-    _check_limit(limit, constants.SEARCH_MAX_LIMIT)
-    _date_range(date_from, date_to)  # fail before the download
-    store, cached = await _activity()
+    _check_limit(limit, constants.SEARCH_MAX_LIMIT, lang=lang)
+    _date_range(date_from, date_to, lang)  # fail before the download
+    store, cached = await _activity(lang)
     matched = _filter_reports(
         store,
         query=query,
@@ -985,6 +1126,7 @@ async def search_activity_reports(
         date_from=date_from,
         date_to=date_to,
         arranged_only=arranged_only,
+        lang=lang,
     )
     matched.sort(key=lambda r: ((r.meeting or date.min).toordinal(), r.report_id), reverse=True)
     reports = fit_to_budget([_report_model(r, store) for r in matched[:limit]])
@@ -1011,17 +1153,28 @@ async def search_activity_reports(
                 order="latest",
                 how_to_get_more="narrow the dates or filters or raise limit "
                 f"(max {constants.SEARCH_MAX_LIMIT}; responses are also capped near 200 KB)",
+            )
+            if lang != "fr"
+            else _limits_fr(
+                len(reports),
+                len(matched),
+                "rapports correspondants les plus récents",
+                "resserrez les dates ou les filtres, ou augmentez limit (maximum "
+                f"{constants.SEARCH_MAX_LIMIT}; les réponses sont aussi plafonnées vers 200 Ko)",
             ),
         ),
     )
 
 
-def _group_keys(report: _Report, group_by: str, store: _ActivityStore) -> list[str]:
+def _group_keys(
+    report: _Report, group_by: str, store: _ActivityStore, lang: str = "en"
+) -> list[str]:
+    unstated = pick(lang, "(not stated)", "(non précisé)")
     match group_by:
         case "client":
             return [report.client_name]
         case "ministry":
-            return list(dict.fromkeys(h.agency or "(not stated)" for h in report.holders))
+            return list(dict.fromkeys(h.agency or unstated for h in report.holders))
         case "office_holder":
             return list(
                 dict.fromkeys(
@@ -1063,9 +1216,14 @@ async def summarize_activity(
 ) -> OrlActivitySummary:
     """Distinct activity reports counted by client, ministry, office holder, subject..."""
     if group_by not in constants.GROUPS:
-        raise InvalidInput(f"bc_lobbyists: group_by must be one of {list(constants.GROUPS)}.")
-    _check_limit(top, constants.SUMMARY_MAX_TOP, "top")
-    store, cached = await _activity()
+        raise_localized(
+            InvalidInput,
+            f"bc_lobbyists: group_by must be one of {list(constants.GROUPS)}.",
+            f"bc_lobbyists : group_by doit être l'une des valeurs {list(constants.GROUPS)}.",
+            lang,
+        )
+    _check_limit(top, constants.SUMMARY_MAX_TOP, "top", lang)
+    store, cached = await _activity(lang)
     matched = _filter_reports(
         store,
         query=query,
@@ -1078,11 +1236,12 @@ async def summarize_activity(
         date_from=date_from,
         date_to=date_to,
         arranged_only=arranged_only,
+        lang=lang,
     )
     counts: Counter[str] = Counter()
     days: dict[str, list[date]] = {}
     for report in matched:
-        for key in _group_keys(report, group_by, store):
+        for key in _group_keys(report, group_by, store, lang):
             counts[key] += 1
             if report.meeting is not None:
                 days.setdefault(key, []).append(report.meeting)
@@ -1093,7 +1252,7 @@ async def summarize_activity(
         ordered = sorted(counts)[-top:]
     else:
         ordered = [k for k, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:top]]
-    note = _pick(
+    note = pick(
         lang,
         "Each row counts distinct reports, so a report naming two ministries counts once "
         "for each; rows can add up to more than total_reports. Reports are not meetings: "
@@ -1104,12 +1263,12 @@ async def summarize_activity(
         "lobbyistes ou clients.",
     )
     if series:
-        note += " " + _pick(
+        note += " " + pick(
             lang,
             f"Rows are the {len(ordered)} most recent of {len(counts)} periods, oldest to "
             "newest (not the busiest); the latest period can be incomplete.",
             f"Les lignes sont les {len(ordered)} périodes les plus récentes sur {len(counts)}, "
-            "de la plus ancienne à la plus récente (pas les plus chargées); la dernière "
+            "de la plus ancienne à la plus récente (pas les plus chargées) ; la dernière "
             "période peut être incomplète.",
         )
     rows = [
@@ -1145,8 +1304,13 @@ async def summarize_activity(
 async def list_codes(kind: CodeKind, *, query: str = "", lang: str = "en") -> OrlCodeList:
     """Subject matters, intended outcomes, or the ministries named in activity reports."""
     if kind not in constants.CODE_KINDS:
-        raise InvalidInput(f"bc_lobbyists: kind must be one of {list(constants.CODE_KINDS)}.")
-    store, cached = await _activity()
+        raise_localized(
+            InvalidInput,
+            f"bc_lobbyists: kind must be one of {list(constants.CODE_KINDS)}.",
+            f"bc_lobbyists : kind doit être l'une des valeurs {list(constants.CODE_KINDS)}.",
+            lang,
+        )
+    store, cached = await _activity(lang)
     words = _words(query)
     codes: list[OrlCode]
     if kind == "ministries":

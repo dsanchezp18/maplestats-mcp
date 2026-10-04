@@ -32,9 +32,12 @@ async def yukon_stats_list_tables(
     Keywords: Yukon, Bureau of Statistics, Whitehorse, population, rent,
     vacancy, building permits, fuel prices, census, community, territory,
     CSV.
-    Mots-clés : Yukon, Bureau de la statistique, Whitehorse, population,
-    loyer, inoccupation, permis de bâtir, prix des carburants, recensement,
-    collectivité, territoire, CSV.
+    Mots-clés : Yukon, Bureau de la statistique du Yukon, Whitehorse,
+    estimations de la population, âge médian, loyer médian, taux
+    d'inoccupation, permis de bâtir, permis de construire, prix de
+    l'essence, prix des carburants, indice spatial des prix, immobilier,
+    assurance-emploi, criminalité, effectifs scolaires, profil du
+    recensement, collectivité, territoire, tableaux CSV.
     """
     return await client.list_tables(query=query, dataset=dataset, limit=limit, lang=lang)
 
@@ -64,9 +67,11 @@ async def yukon_stats_query_table(
     Government Licence - Yukon.
     Keywords: Yukon, Bureau of Statistics, rows, filter, population, rent,
     vacancy, permits, prices, census, Whitehorse, community, monthly.
-    Mots-clés : Yukon, Bureau de la statistique, lignes, filtre, population,
-    loyer, inoccupation, permis, prix, recensement, Whitehorse, collectivité,
-    mensuel.
+    Mots-clés : Yukon, Bureau de la statistique du Yukon, lire un tableau,
+    lignes, filtrer, population par âge et sexe, loyer médian, taux
+    d'inoccupation, valeur des permis de bâtir, prix
+    des carburants, profil du recensement 2021, Whitehorse, collectivité,
+    données mensuelles.
     """
     return await client.query_table(
         url=url, filters=filters, columns=columns, limit=limit, offset=offset, lang=lang

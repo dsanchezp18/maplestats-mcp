@@ -90,6 +90,41 @@ def french_spacing(text: str) -> str:
     return _FRENCH_SPACE_AFTER.sub("«" + NBSP, text)
 
 
+# Text a module writes in French sometimes has no space at all before ; ? ! or
+# after a number before % ("heures; le", "12%"). Outside URLs, a mark that
+# ends a word and is followed by a space or the end of the text gets one, so
+# "?q=", "http://" and "%20" are never touched.
+_URL = re.compile(r"https?://\S+")
+_MISSING_BEFORE = re.compile(r"(?<=[\w)\]»'\"])([;?!]+)(?=\s|$)")
+_MISSING_PERCENT = re.compile(r"(?<=\d)%(?=\s|$|[.,;)])")
+
+
+def french_text(text: str) -> str:
+    """french_spacing, plus the no-break space a French mark is missing entirely."""
+    parts, pos = [], 0
+    for match in _URL.finditer(text):
+        parts.append(_space_missing(text[pos : match.start()]))
+        parts.append(match.group(0))
+        pos = match.end()
+    parts.append(_space_missing(text[pos:]))
+    return french_spacing("".join(parts))
+
+
+def _space_missing(text: str) -> str:
+    text = _MISSING_BEFORE.sub(lambda m: " " + m.group(1), text)
+    return _MISSING_PERCENT.sub(" %", text)
+
+
+def pick(lang: str | None, en: str, fr: str) -> str:
+    """`en` as written, or `fr` with French spacing (french_text) when `lang` is French.
+
+    For the text a module writes itself (notes, provenance freshness,
+    coverage and limits, field descriptions), so the English output stays
+    exactly as it was.
+    """
+    return french_text(fr) if normalize_lang(lang) == "fr" else en
+
+
 def t(key: str, lang: str = "en", **kwargs: Any) -> str:
     """The `lang` text for `key`, formatted; English when no French exists.
 

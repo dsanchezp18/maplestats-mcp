@@ -13,6 +13,8 @@ links back to these HTML pages, so the CKAN tools cannot read the numbers;
 attribution statement, when the provider gives none, is the one in LICENCE.
 """
 
+from maplestats_mcp.shared.i18n import french_spacing
+
 DOMAIN = "www.statsnwt.ca"
 SITE = f"https://{DOMAIN}"
 HOSTS = frozenset({DOMAIN, "statsnwt.ca"})
@@ -100,7 +102,7 @@ TOPICS: dict[str, tuple[str, str, str]] = {
     "population": (
         "/population/population-estimates/",
         "Population estimates - NWT",
-        "Estimations de la population - T.N.-O.",
+        "Estimations de la population – T.N.-O.",
     ),
     "population-communities": (
         "/population/population-estimates/bycommunity.php",
@@ -224,12 +226,14 @@ LICENCE = {
     f"Open Government Licence - Northwest Territories. {LICENCE_URL} "
     "(2) The general terms of use linked from statsnwt.ca ask users to request permission "
     f"before commercial use. {TERMS_URL} Check which applies to your use.",
-    "fr": "Deux énoncés s'appliquent. (1) Licence du gouvernement ouvert - Territoires du "
-    "Nord-Ouest, que le catalogue de données ouvertes du territoire indique pour ces "
-    "fichiers (réutilisation permise, y compris commerciale, avec attribution). "
-    "Attribution : Contient des renseignements visés par la licence du gouvernement "
-    f"ouvert des Territoires du Nord-Ouest. {LICENCE_URL} "
-    "(2) Les conditions d'utilisation générales liées à statsnwt.ca demandent d'obtenir "
-    f"une permission avant tout usage commercial. {TERMS_URL} Vérifiez lequel s'applique "
-    "à votre usage.",
+    "fr": french_spacing(
+        "Deux énoncés s'appliquent. (1) Licence du gouvernement ouvert – Territoires du "
+        "Nord-Ouest, que le catalogue de données ouvertes du territoire indique pour ces "
+        "fichiers (réutilisation permise, y compris commerciale, avec attribution). "
+        "Attribution : « Contient des renseignements visés par la Licence du gouvernement "
+        f"ouvert – Territoires du Nord-Ouest. » {LICENCE_URL} "
+        "(2) Les conditions générales d'utilisation liées depuis statsnwt.ca demandent "
+        f"d'obtenir une autorisation avant tout usage commercial. {TERMS_URL} Vérifiez lequel "
+        "s'applique à votre usage."
+    ),
 }
