@@ -7,6 +7,7 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
+from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
 from maplestats_mcp.modules.statcan.pumf import codebooks, constants
 from maplestats_mcp.modules.statcan.pumf.schemas import (
     Codebook,
@@ -57,9 +58,19 @@ _SAS_ROLES = {
 def _check_url(url: str) -> str:
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != constants.ALLOWED_HOST:
-        raise InvalidInput(f"url must be a {constants.ALLOWED_HOST} download link, got {url!r}.")
+        raise InvalidInput(
+            say(
+                f"url must be a {constants.ALLOWED_HOST} download link, got {url!r}.",
+                f"url doit être un lien de téléchargement de {constants.ALLOWED_HOST}, reçu {url!r}.",
+            )
+        )
     if not parsed.path.lower().endswith(".zip"):
-        raise InvalidInput(f"url must point to a .zip file, got {url!r}.")
+        raise InvalidInput(
+            say(
+                f"url must point to a .zip file, got {url!r}.",
+                f"url doit pointer vers un fichier .zip, reçu {url!r}.",
+            )
+        )
     return url
 
 
@@ -70,12 +81,22 @@ async def _page(url: str) -> str:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
-                raise NotFound(f"statcan_pumf: no page at {url}.") from exc
+                raise NotFound(
+                    say(f"statcan_pumf: no page at {url}.", f"statcan_pumf : aucune page à {url}.")
+                ) from exc
             raise UpstreamError(
-                f"statcan_pumf: {url} returned HTTP {exc.response.status_code}."
+                say(
+                    f"statcan_pumf: {url} returned HTTP {exc.response.status_code}.",
+                    f"statcan_pumf : {url} a renvoyé HTTP {exc.response.status_code}.",
+                )
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"statcan_pumf: {url} could not be reached.") from exc
+            raise UpstreamUnavailable(
+                say(
+                    f"statcan_pumf: {url} could not be reached.",
+                    f"statcan_pumf : {url} est injoignable.",
+                )
+            ) from exc
         return response.text
 
     text, _ = await cached_fetch(f"statcan_pumf:{url}", constants.CACHE_TTL_SECONDS, fetch)
@@ -83,8 +104,14 @@ async def _page(url: str) -> str:
 
 
 async def search(query: str = "", *, lang: str = "en", limit: int = 25) -> PumfSearchResult:
+    use_lang(lang)
     if limit < 1 or limit > 100:
-        raise InvalidInput(f"limit must be between 1 and 100, got {limit}.")
+        raise InvalidInput(
+            say(
+                f"limit must be between 1 and 100, got {limit}.",
+                f"limit doit être entre 1 et 100, reçu {limit}.",
+            )
+        )
     phrase = "public use microdata" if lang == "en" else "fichiers de microdonnées"
     result = await reference.search_data(f"{query} {phrase}".strip(), count=100, lang=lang)
     products = [
@@ -107,10 +134,14 @@ async def search(query: str = "", *, lang: str = "en", limit: int = 25) -> PumfS
 
 
 async def list_files(catalogue_number: str, *, lang: str = "en") -> PumfFileList:
+    use_lang(lang)
     number = catalogue_number.strip().replace("-", "")
     if not _CATALOGUE.match(number):
         raise InvalidInput(
-            f"catalogue_number looks like 71M0001X or 45-25-0001, got {catalogue_number!r}."
+            say(
+                f"catalogue_number looks like 71M0001X or 45-25-0001, got {catalogue_number!r}.",
+                f"catalogue_number a la forme 71M0001X ou 45-25-0001, reçu {catalogue_number!r}.",
+            )
         )
     url = constants.CATALOGUE_URL.format(lang=lang, number=number)
     html = await _page(url)
@@ -131,8 +162,11 @@ async def list_files(catalogue_number: str, *, lang: str = "en") -> PumfFileList
             files.setdefault(zip_url, PumfFile(label=label, url=zip_url, page_url=page_url))
     if not files:
         raise NotFound(
-            f"No direct ZIP download found for {catalogue_number}; it may be available only "
-            "through the Data Liberation Initiative (DLI) or on request."
+            say(
+                f"No direct ZIP download found for {catalogue_number}; it may be available only "
+                "through the Data Liberation Initiative (DLI) or on request.",
+                f"Aucun téléchargement ZIP direct trouvé pour {catalogue_number} ; le fichier n'est peut-être offert que par l'Initiative de démocratisation des données (IDD) ou sur demande.",
+            )
         )
     return PumfFileList(
         catalogue_number=number,
@@ -143,7 +177,11 @@ async def list_files(catalogue_number: str, *, lang: str = "en") -> PumfFileList
             url=url,
             cached=False,
             schema_name="statcan_pumf.PumfFileList",
-            freshness="StatCan product pages; cached 1 day",
+            freshness=say(
+                "StatCan product pages; cached 1 day",
+                "pages de produits de Statistique Canada ; en cache 1 jour",
+            ),
+            lang=lang,
         ),
     )
 
@@ -197,13 +235,18 @@ async def list_zip(url: str) -> ZipContents:
             url=url,
             cached=cached,
             schema_name="statcan_pumf.ZipContents",
-            limits="read with HTTP range requests; the archive itself was not downloaded",
+            limits=say(
+                "read with HTTP range requests; the archive itself was not downloaded",
+                "lu par requêtes de plage HTTP ; l'archive elle-même n'a pas été téléchargée",
+            ),
+            lang=current_lang(),
         ),
     )
 
 
 async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable], list[str], bool]:
     """Every variable in a PUMF ZIP's codebook, the files read, and whether cached."""
+    use_lang(lang)
     members, _, cached = await _members(_check_url(url))
     by_name = {m.name: m for m in members}
     chosen = _for_language([m.name for m in members if _is_codebook(m.name)], lang)
@@ -227,7 +270,12 @@ async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable],
                     sas_roles[name] = role
         chosen = list(sas_roles)
     if not chosen:
-        raise NotFound("No codebook this tool can read in the ZIP.")
+        raise NotFound(
+            say(
+                "No codebook this tool can read in the ZIP.",
+                "Aucun dictionnaire de données lisible par cet outil dans le ZIP.",
+            )
+        )
 
     texts: dict[str, str] = {}
     for name in chosen:
@@ -306,8 +354,14 @@ async def get_codebook(
     lang: str = "en",
     limit: int = constants.VARIABLES_DEFAULT,
 ) -> Codebook:
+    use_lang(lang)
     if limit < 1 or limit > constants.VARIABLES_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.VARIABLES_MAX}, got {limit}.")
+        raise InvalidInput(
+            say(
+                f"limit must be between 1 and {constants.VARIABLES_MAX}, got {limit}.",
+                f"limit doit être entre 1 et {constants.VARIABLES_MAX}, reçu {limit}.",
+            )
+        )
     loaded, chosen, cached = await load_codebook(url, lang)
     # Copies: the loaded list is cached per ZIP, and values are truncated below.
     everything = [v.model_copy(deep=True) for v in loaded]
@@ -337,6 +391,12 @@ async def get_codebook(
             url=url,
             cached=cached,
             schema_name="statcan_pumf.Codebook",
-            limits="codebook files read from inside the ZIP by range request; microdata not downloaded",
+            limits=say(
+                "codebook files read from inside the ZIP by range request; microdata not "
+                "downloaded",
+                "fichiers du dictionnaire de données lus dans le ZIP par requête de plage ; "
+                "microdonnées non téléchargées",
+            ),
+            lang=lang,
         ),
     )
