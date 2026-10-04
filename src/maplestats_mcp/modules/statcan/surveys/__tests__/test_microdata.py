@@ -100,6 +100,18 @@ async def test_rdc_french_page_uses_french_url(httpx_mock):
     result = await client.search_rdc_holdings(lang="fr", limit=1)
     assert result.returned_count == 1
     assert result.provenance.url == constants.RDC_URL_FR
+    assert (result.provenance.limits or "").startswith("Une liste des fonds, pas des données")
+    assert "Licence ouverte de Statistique Canada" in (result.provenance.licence or "")
+
+
+async def test_microdata_errors_in_french(httpx_mock):
+    with pytest.raises(InvalidInput, match="limit doit être entre 1 et"):
+        await client.search_rtra_datasets(limit=0, lang="fr")
+    httpx_mock.add_response(url=constants.RDC_URL_FR, content=b"<html><table></table></html>")
+    with pytest.raises(UpstreamError, match="aucune ligne de tableau"):
+        await client.search_rdc_holdings(lang="fr")
+    with pytest.raises(InvalidInput, match="limit must be between 1 and"):
+        await client.search_rtra_datasets(limit=0)
 
 
 async def test_rdc_empty_table_is_an_error_not_a_result(httpx_mock):
