@@ -18,6 +18,7 @@ class TableList(BaseModel):
     category: str
     tables: list[TableSummary]
     total_count: int
+    note: str | None = None
     provenance: Provenance
 
 
@@ -36,9 +37,15 @@ class TableDetail(BaseModel):
     slug: str
     title: str
     description: str
-    data_source: str = Field(
-        description="Sitecore item path for this table - pass to get_download_url as-is."
+    data_source: str | None = Field(
+        default=None,
+        description="Sitecore item path of an edition table (null for a single-file table).",
     )
+    document_id: str | None = Field(
+        default=None,
+        description="Set for a single-file table (no geography or edition options).",
+    )
+    author: str | None = None
     document_type: str | None = None
     date_published: str | None = None
     geographies: list[GeographyOption]
@@ -55,6 +62,6 @@ class DownloadLink(BaseModel):
     author: str | None = None
     document_type: str | None = None
     date_published: str | None = None
-    geography_id: str
-    edition_id: str
+    geography_id: str | None = Field(default=None, description="Null for a single-file table.")
+    edition_id: str | None = Field(default=None, description="Null for a single-file table.")
     provenance: Provenance

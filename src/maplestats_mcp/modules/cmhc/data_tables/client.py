@@ -16,9 +16,10 @@ ASP.NET app):
   unconfirmed URL structure for wherever its tables actually live.
 - `GET {DATA_TABLES_PATH}/{category}` -> an accordion-style listing
   page whose `<a href="{DATA_TABLES_PATH}/{category}/{slug}">Title</a>`
-  links are every leaf table in that category (72 confirmed live across
+  links are every leaf table in that category (72 listed live across
   the two categories that have them: 20 for rental-market, 52 for
-  household-characteristics).
+  household-characteristics). Two page templates exist; see
+  `_parse_table_detail`.
 - `GET {DATA_TABLES_PATH}/{category}/{slug}` -> one table's detail page.
   Confirmed live, all present directly in the static HTML with no JS
   execution required:
@@ -65,7 +66,7 @@ ASP.NET app):
 from __future__ import annotations
 
 from typing import Any, NoReturn
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -144,6 +145,12 @@ async def _get_json(url: str, params: dict[str, Any]) -> Any:
         ) from exc
 
 
+def _clean(text: str) -> str:
+    """Collapse runs of whitespace: titles carry doubled and trailing spaces
+    upstream ("Number  of Units", "Vacancy  Rates")."""
+    return " ".join(text.split())
+
+
 def _parse_table_list(body: str, category: str) -> list[TableSummary]:
     soup = BeautifulSoup(body, "html.parser")
     prefix = f"{constants.DATA_TABLES_PATH}/{category}/"
@@ -152,7 +159,7 @@ def _parse_table_list(body: str, category: str) -> list[TableSummary]:
         href = anchor.get("href")
         if not isinstance(href, str) or not href.startswith(prefix):
             continue
-        title = anchor.get_text(strip=True)
+        title = _clean(anchor.get_text(" "))
         if not title:
             continue
         slug = href[len(prefix) :].strip("/")
@@ -169,7 +176,7 @@ def _select_options(soup: BeautifulSoup, select_id: str) -> list[tuple[str, str]
     options: list[tuple[str, str]] = []
     for option in select.find_all("option"):
         value = option.get("value")
-        label = option.get_text(strip=True)
+        label = _clean(option.get_text(" "))
         if isinstance(value, str) and value and label:
             options.append((value, label))
     return options
@@ -185,14 +192,43 @@ def _input_value(soup: BeautifulSoup, element_id: str) -> str | None:
 
 def _text_value(soup: BeautifulSoup, element_id: str) -> str | None:
     element = soup.find(id=element_id)
-    text = element.get_text(strip=True) if element is not None else ""
+    text = _clean(element.get_text(" ")) if element is not None else ""
     return text or None
 
 
+def _definition_list(soup: BeautifulSoup) -> dict[str, str]:
+    """The landing block's <dl>: "Author:", "Document Type:", "Date Published:"
+    (French: "Auteur :", "Type de document :", "Date de publication :")."""
+    pairs: dict[str, str] = {}
+    for term in soup.select("div.pdf-landing dt"):
+        definition = term.find_next_sibling("dd")
+        if definition is not None:
+            key = _clean(term.get_text(" ")).rstrip(": ").lower()
+            pairs[key] = _clean(definition.get_text(" "))
+    return pairs
+
+
+def _alternate_url(soup: BeautifulSoup, lang: str) -> str | None:
+    link = soup.find("link", attrs={"rel": "alternate", "hreflang": lang})
+    href = link.get("href") if link is not None else None
+    return href if isinstance(href, str) and href else None
+
+
 def _parse_table_detail(body: str, category: str, slug: str) -> dict[str, Any]:
+    """Read a table page. Two page templates were found live (2026-10-03):
+
+    - edition pages (20 of 72 tables): `#DataSource`, `#pdf_geo` and
+      `#pdf_edition` selects, resolved through GetFileDetails;
+    - single-file report pages (52 of 72: every rural-rental, percentile-rent
+      and seniors-rental table, and 43 household-characteristics tables):
+      no selects, a hidden `#document-id` GUID and a "Download" link whose
+      href the site's script fills from
+      GetReportFileUrl?documentId=...&contextLanguage=... (found in
+      cmhc-custom.js). These used to fail with "no #DataSource value".
+    """
     soup = BeautifulSoup(body, "html.parser")
     title_tag = soup.find("h1")
-    title = title_tag.get_text(strip=True) if title_tag else ""
+    title = _clean(title_tag.get_text(" ")) if title_tag else ""
     if not title:
         raise NotFound(f"CMHC data table {category}/{slug} was not found.")
 
@@ -201,14 +237,17 @@ def _parse_table_detail(body: str, category: str, slug: str) -> dict[str, Any]:
     if description_container is not None:
         paragraph = description_container.find("p")
         if paragraph is not None:
-            description = paragraph.get_text(strip=True)
+            description = _clean(paragraph.get_text(" "))
 
     data_source = _input_value(soup, "DataSource")
-    if not data_source:
+    document_id = _input_value(soup, "document-id")
+    if not data_source and not document_id:
         raise UpstreamError(
-            f"CMHC data table {category}/{slug}: page had no #DataSource value to resolve downloads with."
+            f"CMHC data table {category}/{slug}: the page has neither a #DataSource nor a "
+            "#document-id value to resolve its download with; the layout may have changed."
         )
 
+    terms = _definition_list(soup)
     geographies = [
         GeographyOption(id=value, name=label) for value, label in _select_options(soup, "pdf_geo")
     ]
@@ -221,11 +260,18 @@ def _parse_table_detail(body: str, category: str, slug: str) -> dict[str, Any]:
         "title": title,
         "description": description,
         "data_source": data_source,
-        "document_type": _text_value(soup, "DocumentTag"),
-        "date_published": _text_value(soup, "DatePublishedTag"),
+        "document_id": None if data_source else document_id,
+        "author": _text_value(soup, "AuthorTag") or terms.get("author") or terms.get("auteur"),
+        "document_type": _text_value(soup, "DocumentTag")
+        or terms.get("document type")
+        or terms.get("type de document"),
+        "date_published": _text_value(soup, "DatePublishedTag")
+        or terms.get("date published")
+        or terms.get("date de publication"),
         "geographies": geographies,
         "editions": editions,
         "default_download_url": _input_value(soup, "document-url"),
+        "french_url": _alternate_url(soup, "fr"),
     }
 
 
@@ -233,8 +279,27 @@ def _table_url(category: str, slug: str) -> str:
     return f"{constants.BASE_URL}{constants.DATA_TABLES_PATH}/{category}/{slug}"
 
 
+async def _report_file_url(document_id: str, lang: str) -> str | None:
+    """The single file of a report-template table, in `lang`."""
+
+    async def fetch() -> str:
+        body = await _get_json(
+            constants.GET_REPORT_FILE_URL, {"documentId": document_id, "contextLanguage": lang}
+        )
+        return body if isinstance(body, str) else ""
+
+    url, _ = await cached_fetch(
+        f"cmhc-dt:report-file:{document_id}:{lang}", constants.CACHE_TTL_DOWNLOAD_SECONDS, fetch
+    )
+    return urljoin(constants.BASE_URL, url) if url else None
+
+
 async def list_tables(category: str, *, lang: str = "en") -> TableList:
-    del lang  # this site's category/table URLs are language-neutral; see module docstring
+    # Slugs are the English page names in both languages. The French
+    # listing pages use other slugs and list a different number of tables
+    # (50 against 52 for household characteristics, live 2026-10-03), so
+    # titles here stay English; get_table with lang="fr" gives the French
+    # title and description of one table.
     category = _require_category(category)
     url = f"{constants.BASE_URL}{constants.DATA_TABLES_PATH}/{category}"
     cache_key = f"cmhc-dt:list_tables:{category}"
@@ -248,6 +313,12 @@ async def list_tables(category: str, *, lang: str = "en") -> TableList:
         category=category,
         tables=tables,
         total_count=len(tables),
+        note=(
+            "Titles are in English (the French listing is organised differently); "
+            "cmhc_dt_get_table with lang='fr' gives a table's French title and description."
+            if lang == "fr"
+            else None
+        ),
         provenance=make_provenance(
             source="cmhc-dt",
             url=url,
@@ -257,36 +328,60 @@ async def list_tables(category: str, *, lang: str = "en") -> TableList:
     )
 
 
-async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetail:
-    del lang
-    category = _require_category(category)
-    slug = _require(slug, "slug")
-    url = _table_url(category, slug)
-    cache_key = f"cmhc-dt:table:{category}:{slug}"
-
+async def _parsed_page(
+    url: str, cache_key: str, category: str, slug: str
+) -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
         body = await _get_html(url)
         return _parse_table_detail(body, category, slug)
 
-    parsed, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_TABLE_SECONDS, fetch)
+    return await cached_fetch(cache_key, constants.CACHE_TTL_TABLE_SECONDS, fetch)
+
+
+async def get_table(category: str, slug: str, *, lang: str = "en") -> TableDetail:
+    if lang not in ("en", "fr"):
+        raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
+    category = _require_category(category)
+    slug = _require(slug, "slug")
+    url = _table_url(category, slug)
+    parsed, was_cached = await _parsed_page(url, f"cmhc-dt:table:{category}:{slug}", category, slug)
+    page_url = url
+    shown = parsed
+    if lang == "fr" and parsed.get("french_url"):
+        # The French page is the same Sitecore item (same geography and
+        # edition ids), with French title, description and labels.
+        page_url = parsed["french_url"]
+        shown, was_cached = await _parsed_page(
+            page_url, f"cmhc-dt:table-fr:{category}:{slug}", category, slug
+        )
+    default_url = shown["default_download_url"]
+    document_id = parsed["document_id"]
+    if document_id:
+        default_url = await _report_file_url(document_id, lang)
     return TableDetail(
         category=category,
         slug=slug,
-        title=parsed["title"],
-        description=parsed["description"],
+        title=shown["title"],
+        description=shown["description"],
         data_source=parsed["data_source"],
-        document_type=parsed["document_type"],
-        date_published=parsed["date_published"],
-        geographies=parsed["geographies"],
-        editions=parsed["editions"],
-        default_download_url=parsed["default_download_url"],
+        document_id=document_id,
+        author=shown["author"],
+        document_type=shown["document_type"],
+        date_published=shown["date_published"],
+        geographies=shown["geographies"] or parsed["geographies"],
+        editions=shown["editions"] or parsed["editions"],
+        default_download_url=default_url,
         provenance=make_provenance(
             source="cmhc-dt",
-            url=url,
+            url=page_url,
             cached=was_cached,
             schema_name="cmhc.data_tables.TableDetail",
         ),
     )
+
+
+def _file_name(url: str) -> str:
+    return unquote(urlparse(url).path.rsplit("/", 1)[-1])
 
 
 async def get_download_url(
@@ -300,6 +395,29 @@ async def get_download_url(
     if lang not in ("en", "fr"):
         raise InvalidInput(f"lang must be 'en' or 'fr', got {lang!r}.")
     table = await get_table(category, slug, lang=lang)
+    if table.document_id:
+        if geography_id is not None or edition_id is not None:
+            raise InvalidInput(
+                f"CMHC data table {category}/{slug} is a single file with no geography or "
+                "edition options; call it without geography_id and edition_id."
+            )
+        if not table.default_download_url:
+            raise NotFound(f"CMHC has no published file for {category}/{slug} in {lang!r}.")
+        return DownloadLink(
+            document_url=table.default_download_url,
+            file_name=_file_name(table.default_download_url),
+            author=table.author,
+            document_type=table.document_type,
+            date_published=table.date_published,
+            geography_id=None,
+            edition_id=None,
+            provenance=make_provenance(
+                source="cmhc-dt",
+                url=constants.GET_REPORT_FILE_URL,
+                cached=table.provenance.cached,
+                schema_name="cmhc.data_tables.DownloadLink",
+            ),
+        )
     if geography_id is None:
         if not table.geographies:
             raise NotFound(f"CMHC data table {category}/{slug} has no geography options.")
@@ -340,11 +458,14 @@ async def get_download_url(
         return body
 
     details, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DOWNLOAD_SECONDS, fetch)
+    document_url = urljoin(constants.BASE_URL, details["DocumentUrl"])
     return DownloadLink(
-        document_url=urljoin(constants.BASE_URL, details["DocumentUrl"]),
-        file_name=details.get("FileName") or None,
+        document_url=document_url,
+        # FileName and ProductType come back null; the site's own script reads
+        # DocumentType, and the file name is the URL's last segment.
+        file_name=details.get("FileName") or _file_name(document_url),
         author=details.get("Author") or None,
-        document_type=details.get("ProductType") or None,
+        document_type=details.get("DocumentType") or details.get("ProductType") or None,
         date_published=details.get("DatePublished") or None,
         geography_id=geography_id,
         edition_id=edition_id,

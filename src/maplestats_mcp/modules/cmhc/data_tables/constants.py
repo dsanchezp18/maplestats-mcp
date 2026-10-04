@@ -14,6 +14,9 @@ response shapes.
 BASE_URL = "https://www.cmhc-schl.gc.ca"
 DATA_TABLES_PATH = "/professionals/housing-markets-data-and-research/housing-data/data-tables"
 GET_FILE_DETAILS_URL = f"{BASE_URL}/api/Sitecore/PubsAndReports/GetFileDetails"
+# Single-file report pages resolve their download here (documentId is the
+# page's hidden #document-id; the answer is a JSON string, "" if unknown).
+GET_REPORT_FILE_URL = f"{BASE_URL}/api/Sitecore/PubsAndReports/GetReportFileUrl"
 
 # Confirmed live this session: exactly these three top-level categories
 # exist under DATA_TABLES_PATH (the parent index page 301-redirects and

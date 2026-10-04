@@ -529,8 +529,12 @@ The separate `www.cmhc-schl.gc.ca` "Data Tables" Sitecore document catalogue
 is now also shipped (added 2026-09-19) as `cmhc_dt_*`, 3 more tools (list
 tables, get table detail, resolve a download link) covering Rental Market
 Survey and Household Characteristics official per-edition Excel publications
-(72 tables confirmed live across the two categories; Canadian Housing Survey
-tables are not yet mapped). Discovery reads geography/edition options and a
+(72 tables listed across the two categories; Canadian Housing Survey tables
+are not yet mapped). Two page templates exist: 20 tables have geography and
+edition selects, and 52 are single-file report pages (a hidden document id,
+resolved through `api/Sitecore/PubsAndReports/GetReportFileUrl`). Until
+2026-10-03 only the first template was read, so those 52 failed; all 72
+resolved a download link in a live check that day. Discovery reads geography/edition options and a
 table's default download link directly from static HTML (Sitecore item
 GUIDs, a different id scheme from HMIP's small integers); resolving any
 historical edition's download link uses the site's own resolver API

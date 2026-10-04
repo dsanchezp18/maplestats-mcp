@@ -11,10 +11,8 @@ CMHC's officially-published Excel table files, one download per
 survey edition — useful when the deliverable itself, not just the
 numbers, is what's needed, and for surveys HMIP doesn't cover (the
 Canadian Housing Survey, household income/equity/core-housing-need
-breakdowns). `lang` is accepted for interface consistency but this
-site's category/table URL slugs are language-neutral (unlike the rest
-of modules/cmhc/, where lang changes the category name strings
-themselves).
+breakdowns). Slugs are the English page names in both languages;
+`lang="fr"` gives a table's French title, description and French file.
 """
 
 from __future__ import annotations
@@ -40,6 +38,8 @@ async def cmhc_dt_list_tables(category: str, lang: Lang = "en") -> TableList:
     last currently returns no tables - its own tables live elsewhere
     and are not yet mapped). Read docs://cmhc/well-known-categories for
     a sample of well-known table slugs in the first two categories.
+    Titles are English even with lang="fr" (the French listing is
+    organised differently); cmhc_dt_get_table gives the French title.
     Keywords: cmhc, housing, data tables, publications, excel,
     download, rental market, household characteristics, canadian
     housing survey, catalogue, list.
@@ -57,7 +57,9 @@ async def cmhc_dt_get_table(category: str, slug: str, lang: Lang = "en") -> Tabl
     Use for: confirming what a table covers and which `geography_id`/
     `edition_id` values cmhc_dt_get_download_url will accept for it,
     before requesting a specific historical edition or geography.
-    `slug` comes from cmhc_dt_list_tables.
+    `slug` comes from cmhc_dt_list_tables. Many tables (most household-
+    characteristics ones) are a single file: document_id is set and
+    geographies/editions are empty. lang="fr" reads the French page.
     Keywords: cmhc, housing, data table, detail, description,
     geography, edition, publication date, document type, metadata.
     Mots-clés : schl, logement, tableau de données, détail,
@@ -81,7 +83,8 @@ async def cmhc_dt_get_download_url(
     published edition of a CMHC data table (e.g. October 2022 rather
     than the current default) - `geography_id`/`edition_id` come from
     cmhc_dt_get_table's `geographies`/`editions` lists; omit either to
-    get the most recent edition / first geography option. Raises a
+    get the most recent edition / first geography option. A single-file
+    table (document_id set in cmhc_dt_get_table) takes neither id. Raises a
     clear error if the id is not one of that table's known options,
     rather than silently returning nothing.
     Keywords: cmhc, housing, download link, excel file, data table,
