@@ -17,7 +17,10 @@ from maplestats_mcp.modules.reproduce.schemas import (
 
 @tool
 async def reproduce_code(
-    tool_name: str, arguments: dict[str, Any], language: LanguageChoice = "all"
+    tool_name: str,
+    arguments: dict[str, Any],
+    language: LanguageChoice = "all",
+    lang: Literal["en", "fr"] = "en",
 ) -> ReproductionCode:
     """Get R, Python, Stata, Julia or Excel Power Query code that refetches the same data.
 
@@ -34,13 +37,13 @@ async def reproduce_code(
     (CFIA), the script repeats those steps. Scripts
     follow a header plus numbered sections (setup, read, check, prepare),
     save downloads under data/raw/, and clean names, text and numbers;
-    Python uses polars, Julia TidierFiles, Stata import delimited (JSON
+    Python uses polars, Julia CSV.jl and TidierData, Stata import delimited (JSON
     and filtered files go through Stata's built-in Python). language
     "excel" is a Power Query M query to paste into Excel (Get Data > Blank
     Query > Advanced Editor): it calls the same URL, filters and cleans the
     same way, and refreshes inside Excel, with nothing to install. notes
     say what a script cannot repeat and why a language is missing;
-    language picks one.
+    language picks one; lang "fr" writes the notes and errors in French.
     Keywords: reproducible, R code, Python code, Stata do-file, Julia,
     Excel, Power Query, M query, script, cansim, download data,
     replication, code generation.
@@ -48,7 +51,7 @@ async def reproduce_code(
     Power Query, requête M, script, télécharger les données, réplication,
     génération de code.
     """
-    return await client.reproduce(tool_name, arguments, language)
+    return await client.reproduce(tool_name, arguments, language, lang)
 
 
 @tool

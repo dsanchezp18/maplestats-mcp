@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from maplestats_mcp.modules.reproduce import builders, ip_horizons, probe
+from maplestats_mcp.modules.reproduce import builders, french, ip_horizons, probe
 from maplestats_mcp.modules.reproduce.excel import render_excel
 from maplestats_mcp.modules.reproduce.render import RENDERERS as SCRIPT_RENDERERS
 from maplestats_mcp.modules.reproduce.schemas import (
@@ -38,7 +38,13 @@ from maplestats_mcp.modules.reproduce.schemas import (
 )
 from maplestats_mcp.modules.reproduce.spec import Spec
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import (
+    DataLocked,
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.http import RecordedRequest, recording
 
 _NOT_DATA = ("reproduce_code", "plan_query", "search_tools", "call_tool")
@@ -57,6 +63,10 @@ _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents"
 # excel is a Power Query M query (excel.py), rendered from the same Spec.
 RENDERERS = {**SCRIPT_RENDERERS, "excel": render_excel}
 ALL_LANGUAGES: list[Language] = ["r", "python", "stata", "julia", "excel"]
+
+
+def _say(lang: str, english: str, french_text: str) -> str:
+    return french_text if lang == "fr" else english
 
 
 async def _run_tool(
@@ -130,7 +140,7 @@ async def _spec(tool: str, args: dict[str, Any]) -> Spec:
         chosen = RecordedRequest("GET", url, b"", "", status=200)
         pages = 1
     spec = await probe.spec_from_request(chosen, pages)
-    unsent = probe.unsent_arguments(args, chosen)
+    unsent = probe.unsent_arguments(args, [chosen, *requests])
     if unsent and spec.kind != "none":
         spec.notes.append(
             "The tool applied these arguments itself after downloading, so the script "
@@ -140,38 +150,76 @@ async def _spec(tool: str, args: dict[str, Any]) -> Spec:
 
 
 async def reproduce(
-    tool: str, arguments: dict[str, Any], language: LanguageChoice = "all"
+    tool: str,
+    arguments: dict[str, Any],
+    language: LanguageChoice = "all",
+    lang: str = "en",
 ) -> ReproductionCode:
     requested: list[Language] = (
         list(ALL_LANGUAGES) if language == "all" else [language]  # type: ignore[list-item]
     )
     if any(lang not in RENDERERS for lang in requested):
         raise InvalidInput(
-            f"language must be 'all' or one of {sorted(RENDERERS)}, got {language!r}."
+            _say(
+                lang,
+                f"language must be 'all' or one of {sorted(RENDERERS)}, got {language!r}.",
+                f"language doit valoir 'all' ou l'un de {sorted(RENDERERS)}, reçu {language!r}.",
+            )
         )
     if tool in _NOT_DATA:
-        raise InvalidInput(f"{tool} does not fetch data, so there is nothing to reproduce.")
+        raise InvalidInput(
+            _say(
+                lang,
+                f"{tool} does not fetch data, so there is nothing to reproduce.",
+                f"{tool} ne récupère pas de données ; il n'y a donc rien à reproduire.",
+            )
+        )
     if tool in _DOCUMENTS:
         raise InvalidInput(
-            f"{tool} returns documents or text, not data, so reproduce_code writes no "
-            "script for it; cite the links it returns instead."
+            _say(
+                lang,
+                f"{tool} returns documents or text, not data, so reproduce_code writes no "
+                "script for it; cite the links it returns instead.",
+                f"{tool} renvoie des documents ou du texte, pas des données ; reproduce_code "
+                "n'écrit donc pas de script. Citez plutôt les liens qu'il renvoie.",
+            )
         )
     try:
         spec = await _spec(tool, arguments)
     except KeyError as exc:
-        raise InvalidInput(f"{tool} is missing the argument {exc.args[0]!r}.") from exc
+        raise InvalidInput(
+            _say(
+                lang,
+                f"{tool} is missing the argument {exc.args[0]!r}.",
+                f"Il manque l'argument {exc.args[0]!r} à {tool}.",
+            )
+        ) from exc
+    except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable, DataLocked):
+        raise
+    except (TypeError, ValueError) as exc:
+        # A malformed argument (a vector id "abc", a limit "ten") would
+        # otherwise surface as a bare Python error.
+        raise InvalidInput(
+            _say(
+                lang,
+                f"{tool} got an argument it cannot use: {exc}",
+                f"{tool} a reçu un argument inutilisable : {exc}",
+            )
+        ) from exc
 
     scripts: list[Script] = []
     skipped: list[str] = []
-    for lang in requested:
+    for script_language in requested:
         rendered = (
-            RENDERERS[lang](spec, tool) if spec.kind != "none" and lang in spec.languages else None
+            RENDERERS[script_language](spec, tool)
+            if spec.kind != "none" and script_language in spec.languages
+            else None
         )
         if rendered is None:
-            skipped.append(lang)
+            skipped.append(script_language)
             continue
         code, packages = rendered
-        scripts.append(Script(language=lang, code=code, packages=packages))
+        scripts.append(Script(language=script_language, code=code, packages=packages))
     notes = list(spec.notes)
     if skipped and spec.kind not in ("none",):
         reason = {
@@ -192,7 +240,7 @@ async def reproduce(
         scripts=scripts,
         source_url=spec.url,
         method=spec.method,
-        notes=notes,
+        notes=[french.note(text, lang) for text in notes],
         provenance=make_provenance(
             source="maplestats-reproduce",
             url=spec.url or "about:blank",

@@ -3276,7 +3276,7 @@ def _more_fields(count: int, lang: Lang) -> str:
     return f"+ {count} autre{'s' if count > 1 else ''} champ{'s' if count > 1 else ''}"
 
 
-def _excerpt(code: str, start: str, end: str) -> str:
+def _excerpt(code: str, start: str, end: str | tuple[str, ...]) -> str:
     """The lines of a recorded script from the one starting with `start`
     through the next one starting with `end`; the build fails if either is gone."""
     lines = code.split("\n")
@@ -3440,7 +3440,9 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         + _excerpt(scripts["python"], "# scalarFactorCode is", ")")
     )
     r_code = (
-        _excerpt(scripts["r"], "data <- get_cansim_vector(", "data <- get_cansim_vector(")
+        # A capture from before 2026-10-03 calls get_cansim_vector() on one line;
+        # later ones call get_cansim_vector_for_latest_periods() over several.
+        _excerpt(scripts["r"], "data <- get_cansim_vector", ("data <- get_cansim_vector(c(", ")"))
         + "\n\n# …\n\n"
         + _excerpt(scripts["r"], "# cansim adds val_norm", "  filter(")
     )

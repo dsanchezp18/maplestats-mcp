@@ -29,6 +29,20 @@ def _clear_cache():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _offline_validation(monkeypatch):
+    """The CKAN and Valet builders run the tool's own request first, to refuse
+    a resource or series that does not exist; here it always succeeds."""
+    from maplestats_mcp.modules.boc import client as boc_client
+    from maplestats_mcp.modules.ckan import client as ckan_client
+
+    async def found(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(boc_client, "get_observations", found)
+    monkeypatch.setattr(ckan_client, "datastore_search", found)
+
+
 def _by_language(result) -> dict[str, str]:
     return {s.language: s.code for s in result.scripts}
 
@@ -44,7 +58,7 @@ async def test_table_all_languages_with_house_layout():
     assert 'get_cansim("18-10-0004-01")' in code["r"] and "val_norm" in code["r"]
     assert "http2=True" in code["python"]  # StatCan rejects HTTP/1.1-only clients
     assert 'pl.col("SCALAR_ID")' in code["python"]
-    assert "value * 10^scalar_id" in code["stata"] and " cd " not in code["stata"]
+    assert "real(value) * 10^real(scalar_id)" in code["stata"] and " cd " not in code["stata"]
     assert "@clean_names" in code["julia"]
     # House layout: header block, then numbered sections in order.
     for language, text in code.items():
@@ -686,11 +700,28 @@ def test_python_cleaning_numbers_names_that_clean_alike():
 
     from maplestats_mcp.modules.reproduce import cleaning
 
-    code = "import re\nimport unicodedata\n" + cleaning.GENERIC["python"].body
-    columns = ["Indicator", "x", "indicator", "INDICATOR", "indicator_2", "Été", "refNumber"]
+    # The naming half of the step; the number half needs a real polars frame.
+    naming = cleaning.GENERIC["python"].body.split("# Numbers stored as text")[0]
+    code = "import re\nimport unicodedata\n" + naming
+    columns = [
+        "Indicator",
+        "x",
+        "indicator",
+        "INDICATOR",
+        "indicator_2",
+        "Été",
+        "refNumber",
+        "# of cases",
+        "% change",
+        "Owner's share",
+        "2021 value",
+        "#",
+        "Owner’s",
+    ]
     namespace = {"data": _FakeFrame(columns), "pl": MagicMock()}
     exec(code, namespace)  # noqa: S102 - this repository's own generated code
-    # The names janitor::make_clean_names gives (checked with janitor 2.2.1).
+    # The names janitor::make_clean_names gives (checked with janitor 2.2.1;
+    # the last six on 2026-10-03).
     assert namespace["data"].columns == [
         "indicator",
         "x",
@@ -699,6 +730,12 @@ def test_python_cleaning_numbers_names_that_clean_alike():
         "indicator_2_2",
         "ete",
         "ref_number",
+        "number_of_cases",
+        "percent_change",
+        "owners_share",
+        "x2021_value",
+        "number",
+        "owner_s",
     ]
 
 

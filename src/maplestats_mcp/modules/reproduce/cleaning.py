@@ -15,24 +15,56 @@ from __future__ import annotations
 
 from maplestats_mcp.modules.reproduce.spec import Code
 
+# Columns that hold codes, by their cleaned name: StatCan coordinates
+# ("2.1" and "2.10" are different members), vector and product ids, DGUIDs,
+# postal codes and FSAs, NAICS, NOC and SGC codes. They stay text, as do
+# columns with a leading zero ("01", "000000001"). Checked live 2026-10-03:
+# read as numbers, 18-10-0004's 2,139 coordinates collapsed to 2,011.
+# Written for every engine (R's ICU, Python re, Julia PCRE, Stata regexm).
+CODE_COLUMNS = (
+    r"^(coordinate|vector|vector_?id|product_?id|pid|dguid|[a-z0-9_]*_dguid|postal_?code|"
+    r"[a-z0-9_]*_postal_code|fsa|[a-z0-9_]*naics[a-z0-9_]*|noc|noc_[a-z0-9_]*|[a-z0-9_]*_noc|"
+    r"sgc|sgc_[a-z0-9_]*|[a-z0-9_]*_sgc)$"
+)
+LEADING_ZERO = r"^-?0[0-9]"
+# A "$" in a do-file string could start a global macro, so Stata matches the
+# name followed by "|" instead of anchoring with "$".
+_STATA_CODE_COLUMNS = CODE_COLUMNS.removesuffix("$") + "[|]"
+
 GENERIC: dict[str, Code] = {
     "r": Code(
-        ["dplyr", "readr", "stringr"],
+        ["dplyr", "purrr", "readr", "stringr"],
         (
             "# Standard cleaning: trimmed text, empty strings as missing, and numbers\n"
-            "# stored as text converted to numbers.\n\n"
+            "# stored as text converted to numbers. Codes stay text as the source\n"
+            "# wrote them: columns named like one (coordinate, vector_id, dguid, NAICS,\n"
+            "# postal code) and columns with a leading zero (01, 000000001).\n\n"
+            f'code_columns <- "{CODE_COLUMNS}"\n'
             "data <- data |>\n"
-            '  mutate(across(where(is.character), \\(x) na_if(str_trim(x), ""))) |>\n'
-            "  type_convert()\n"
+            '  mutate(across(where(is.character), \\(x) na_if(str_trim(x), "")))\n'
+            "keep_text <- names(data)[\n"
+            "  str_detect(names(data), code_columns) |\n"
+            "    map_lgl(\n"
+            "      data,\n"
+            f'      \\(column) is.character(column) && any(str_detect(column, "{LEADING_ZERO}"), na.rm = TRUE)\n'
+            "    )\n"
+            "]\n"
+            "data <- data |>\n"
+            "  mutate(\n"
+            "    across(any_of(keep_text), \\(x) if (is.list(x)) x else as.character(x)),\n"
+            "    across(where(is.character) & !any_of(keep_text), parse_guess)\n"
+            "  )\n"
         ),
     ),
     "python": Code(
         ["import re", "import unicodedata"],
         (
-            "# Standard cleaning: snake_case names without accents (PÉRIODE -> periode,\n"
-            "# referenceNumber -> reference_number, as janitor does in R), trimmed text,\n"
-            "# empty strings as missing. Names that clean alike are numbered as janitor\n"
-            "# numbers them (Indicator, indicator -> indicator, indicator_2).\n\n"
+            "# Standard cleaning: snake_case names as janitor's clean_names() gives them\n"
+            "# in R (PÉRIODE -> periode, referenceNumber -> reference_number, # -> number,\n"
+            "# % -> percent, apostrophes dropped, a leading digit prefixed with x),\n"
+            "# trimmed text, empty strings as missing. Names that clean alike are\n"
+            "# numbered as janitor numbers them (Indicator, indicator -> indicator,\n"
+            "# indicator_2).\n\n"
             "clean_names = [\n"
             "    re.sub(\n"
             '        r"[^0-9a-z]+",\n'
@@ -40,11 +72,20 @@ GENERIC: dict[str, Code] = {
             "        re.sub(\n"
             '            r"([a-z0-9])([A-Z])",\n'
             '            r"\\1_\\2",\n'
-            '            unicodedata.normalize("NFKD", column).encode("ascii", "ignore").decode(),\n'
+            '            "".join(\n'
+            '                " " if unicodedata.category(ch)[0] in "PS" and not ch.isascii() else ch\n'
+            '                for ch in unicodedata.normalize("NFKD", column.replace("\'", ""))\n'
+            "            )\n"
+            '            .replace("#", " number ")\n'
+            '            .replace("%", " percent ")\n'
+            '            .encode("ascii", "ignore")\n'
+            "            .decode(),\n"
             "        ).lower(),\n"
             '    ).strip("_")\n'
+            '    or "x"\n'
             "    for column in data.columns\n"
             "]\n"
+            'clean_names = [f"x{name}" if name[0].isdigit() else name for name in clean_names]\n'
             "while len(set(clean_names)) < len(clean_names):\n"
             "    name_counts = {}\n"
             "    numbered = []\n"
@@ -54,14 +95,33 @@ GENERIC: dict[str, Code] = {
             '        numbered.append(name if count == 1 else f"{name}_{count}")\n'
             "    clean_names = numbered\n"
             "data = data.rename(dict(zip(data.columns, clean_names)))\n"
-            'data = data.with_columns(pl.col(pl.Utf8).str.strip_chars().replace("", None))\n'
+            'data = data.with_columns(pl.col(pl.Utf8).str.strip_chars().replace("", None))\n\n'
+            "# Numbers stored as text become numbers. Codes stay text as the source\n"
+            "# wrote them: columns named like one (coordinate, vector_id, dguid, NAICS,\n"
+            "# postal code) and columns with a leading zero (01, 000000001).\n\n"
+            f'code_columns = re.compile(r"{CODE_COLUMNS}")\n'
+            "for column in data.columns:\n"
+            "    dtype = data.schema[column]\n"
+            "    if code_columns.search(column) and not dtype.is_nested():\n"
+            "        data = data.with_columns(pl.col(column).cast(pl.Utf8))\n"
+            "        continue\n"
+            "    if dtype != pl.Utf8 or data[column].null_count() == data.height:\n"
+            "        continue\n"
+            "    numbers = data[column].cast(pl.Float64, strict=False)\n"
+            f'    leading_zero = data[column].str.contains(r"{LEADING_ZERO}").any()\n'
+            "    if numbers.null_count() > data[column].null_count() or leading_zero:\n"
+            "        continue\n"
+            "    whole = data[column].cast(pl.Int64, strict=False)\n"
+            "    data = data.with_columns(whole if whole.null_count() == numbers.null_count() else numbers)\n"
         ),
     ),
     "stata": Code(
         [],
         (
             "* Standard cleaning: lower-case names, trimmed text, and numbers stored as\n"
-            "* text converted (destring leaves genuinely non-numeric text alone).\n"
+            "* text converted (destring leaves genuinely non-numeric text alone). Codes\n"
+            "* stay text as the source wrote them: variables named like one (coordinate,\n"
+            "* vectorid, dguid, NAICS, postal code) and ones with a leading zero (01).\n"
             "* rename *, lower stops at a clash (Indicator next to indicator), so names\n"
             "* that lower-case alike are numbered as janitor numbers them (indicator,\n"
             "* indicator_2), then renamed in one group rename, which allows swaps.\n\n"
@@ -105,12 +165,15 @@ GENERIC: dict[str, Code] = {
             "local text_vars `r(varlist)'\n"
             "foreach var of local text_vars {\n"
             "    replace `var' = strtrim(`var')\n"
+            f'    if regexm("`var\'|", "{_STATA_CODE_COLUMNS}") continue\n'
+            f'    quietly count if regexm(`var\', "{LEADING_ZERO}")\n'
+            "    if r(N) > 0 continue\n"
+            "    destring `var', replace\n"
             "}\n"
-            "destring, replace\n"
         ),
     ),
     "julia": Code(
-        ["TidierData"],
+        ["DataFrames", "TidierData"],
         (
             "# Standard cleaning: snake_case names, trimmed text, empty strings as missing.\n\n"
             "data = @chain data begin\n    @clean_names\nend\n"
@@ -118,7 +181,26 @@ GENERIC: dict[str, Code] = {
             "    col -> eltype(col) <: Union{Missing, AbstractString} ?\n"
             "        [ismissing(x) || isempty(strip(x)) ? missing : strip(x) for x in col] : col,\n"
             "    data,\n"
-            ")\n"
+            ")\n\n"
+            "# Numbers stored as text become numbers. Codes stay text as the source\n"
+            "# wrote them: columns named like one (coordinate, vector_id, dguid, NAICS,\n"
+            "# postal code) and columns with a leading zero (01, 000000001).\n\n"
+            f'code_columns = r"{CODE_COLUMNS}"\n'
+            "for name in names(data)\n"
+            "    column = data[!, name]\n"
+            "    if occursin(code_columns, name)\n"
+            "        data[!, name] = [ismissing(x) ? missing : string(x) for x in column]\n"
+            "        continue\n"
+            "    end\n"
+            "    eltype(column) <: Union{Missing, AbstractString} || continue\n"
+            "    values = collect(skipmissing(column))\n"
+            f'    (isempty(values) || any(v -> occursin(r"{LEADING_ZERO}", v), values)) && continue\n'
+            "    any(v -> isnothing(tryparse(Float64, v)), values) && continue\n"
+            "    whole = all(v -> !isnothing(tryparse(Int, v)), values)\n"
+            "    data[!, name] = [\n"
+            "        ismissing(x) ? missing : parse(whole ? Int : Float64, x) for x in column\n"
+            "    ]\n"
+            "end\n"
         ),
     ),
 }
@@ -142,9 +224,10 @@ SPECIFIC: dict[str, dict[str, Code]] = {
             (
                 "# VALUE is in the unit named by SCALAR_FACTOR; SCALAR_ID is its power of ten.\n\n"
                 "data = data.with_columns(\n"
-                '    (pl.col("VALUE") * 10 ** pl.col("SCALAR_ID").cast(pl.Int64)).alias(\n'
-                '        "VALUE_NORMALIZED"\n'
-                "    )\n"
+                "    (\n"
+                '        pl.col("VALUE").cast(pl.Float64, strict=False)\n'
+                '        * 10.0 ** pl.col("SCALAR_ID").cast(pl.Int64, strict=False)\n'
+                '    ).alias("VALUE_NORMALIZED")\n'
                 ")\n"
             ),
         ),
@@ -152,14 +235,19 @@ SPECIFIC: dict[str, dict[str, Code]] = {
             [],
             (
                 "* value is in the unit named by scalar_factor; scalar_id is its power of ten.\n\n"
-                "generate double value_normalized = value * 10^scalar_id\n"
+                "* Variables come in as text (codes keep their form); real() reads numbers.\n\n"
+                "generate double value_normalized = real(value) * 10^real(scalar_id)\n"
             ),
         ),
         "julia": Code(
             [],
             (
                 "# VALUE is in the unit named by SCALAR_FACTOR; SCALAR_ID is its power of ten.\n\n"
-                "data.VALUE_NORMALIZED = data.VALUE .* 10.0 .^ data.SCALAR_ID\n"
+                "# Columns are read as text (codes keep their form), so numbers are parsed.\n\n"
+                "data.VALUE_NORMALIZED = [\n"
+                "    ismissing(v) || ismissing(s) ? missing : parse(Float64, v) * 10.0^parse(Int, s)\n"
+                "    for (v, s) in zip(data.VALUE, data.SCALAR_ID)\n"
+                "]\n"
             ),
         ),
     },
@@ -185,7 +273,7 @@ SPECIFIC: dict[str, dict[str, Code]] = {
             [],
             (
                 "* scalarfactorcode is the value's power of ten.\n\n"
-                "generate double value_normalized = value * 10^scalarfactorcode\n"
+                "generate double value_normalized = real(value) * 10^real(scalarfactorcode)\n"
                 'generate ref_date = date(refper, "YMD")\n'
                 "format ref_date %td\n"
             ),
@@ -234,6 +322,20 @@ SPECIFIC: dict[str, dict[str, Code]] = {
                 "drop d\n"
             ),
         ),
+        "julia": Code(
+            ["DataFrames", "Dates"],
+            (
+                "# Valet nests each series as {v: value}; make one row per date and series.\n\n"
+                'data = stack(data, Not("d"); variable_name = "series", value_name = "cell")\n'
+                "data.value = [\n"
+                "    ismissing(cell) ? missing :\n"
+                '        something(tryparse(Float64, string(get(cell, :v, ""))), missing)\n'
+                "    for cell in data.cell\n"
+                "]\n"
+                "data.date = Date.(data.d)\n"
+                'data = select(data, "date", "series", "value")\n'
+            ),
+        ),
     },
 }
 
@@ -249,9 +351,10 @@ SPECIFIC["statcan_table_fr"] = {
             "# VALEUR est dans l'unité de FACTEUR SCALAIRE; IDENTIFICATEUR SCALAIRE en est\n"
             "# la puissance de dix.\n\n"
             "data = data.with_columns(\n"
-            '    (pl.col("VALEUR") * 10 ** pl.col("IDENTIFICATEUR SCALAIRE").cast(pl.Int64)).alias(\n'
-            '        "VALEUR_NORMALISEE"\n'
-            "    )\n"
+            "    (\n"
+            '        pl.col("VALEUR").cast(pl.Float64, strict=False)\n'
+            '        * 10.0 ** pl.col("IDENTIFICATEUR SCALAIRE").cast(pl.Int64, strict=False)\n'
+            '    ).alias("VALEUR_NORMALISEE")\n'
             ")\n"
         ),
     ),
@@ -260,7 +363,10 @@ SPECIFIC["statcan_table_fr"] = {
         (
             "# VALEUR est dans l'unité de FACTEUR SCALAIRE; IDENTIFICATEUR SCALAIRE en est\n"
             "# la puissance de dix.\n\n"
-            'data.VALEUR_NORMALISEE = data.VALEUR .* 10.0 .^ data[!, "IDENTIFICATEUR SCALAIRE"]\n'
+            "data.VALEUR_NORMALISEE = [\n"
+            "    ismissing(v) || ismissing(s) ? missing : parse(Float64, v) * 10.0^parse(Int, s)\n"
+            '    for (v, s) in zip(data.VALEUR, data[!, "IDENTIFICATEUR SCALAIRE"])\n'
+            "]\n"
         ),
     ),
 }
