@@ -15,7 +15,8 @@ import pytest
 
 from maplestats_mcp.modules.bc_stats import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared import file_download
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _HERE = Path(__file__).parent
 _SEARCH = re.compile(r"https://catalogue\.data\.gov\.bc\.ca/api/3/action/package_search\?.*")
@@ -37,6 +38,7 @@ def _by_name(name: str) -> str:
 @pytest.fixture(autouse=True)
 def _clear_cache():
     cache_module._caches.clear()
+    file_download.clear_cache()
     yield
 
 
@@ -169,6 +171,53 @@ async def test_paging_and_unknown_sheet(httpx_mock, catalogue):
         await client.read_file(url, header_row=0)
 
 
+async def test_default_sheet_skips_read_me(httpx_mock, catalogue):
+    # The live projections workbook opens on 'READ ME'; its table is 'Table 1'.
+    name = "table_provincial_level_population_estimates_and_projections.xlsx"
+    url = _by_name(name)
+    httpx_mock.add_response(url=url, content=_bytes(name))
+    data = await client.read_file(url, limit=1)
+    assert data.sheets[0].name == "READ ME"
+    assert data.sheet == "Table 1"
+    assert data.provenance.limits and "'Table 1'" in data.provenance.limits
+    assert client.default_sheet(["page1", "page2"]) == "page1"
+    assert client.default_sheet(["Notes"]) == "Notes"
+
+
+async def test_read_sheet_counts_match_header_row_bound(httpx_mock, catalogue):
+    url = _by_name("gdp_by_industry_at_basic_prices.xlsx")
+    httpx_mock.add_response(url=url, content=_bytes("gdp_by_industry_at_basic_prices.xlsx"))
+    data = await client.read_file(url, limit=1)
+    read = next(s for s in data.sheets if s.name == data.sheet)
+    assert read.counted and read.columns == len(data.header)
+    other = next(s for s in data.sheets if s.name != data.sheet)
+    assert not other.counted
+    # Live 2026-10-03 the error said 284 rows while sheets[].rows said 286.
+    with pytest.raises(InvalidInput, match=f"has only {read.rows} rows"):
+        await client.read_file(url, header_row=9999)
+
+
+async def test_oversized_file_is_refused_before_or_while_downloading(
+    httpx_mock, catalogue, monkeypatch
+):
+    url = _by_name("cpidata.xlsx")
+    stated = next(f.size_bytes for f in client.parse_packages(_packages()) if f.url == url)
+    assert stated
+    # The catalogue's stated size is checked before any download request.
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", stated - 1)
+    with pytest.raises(UpstreamError, match="Download it from the catalogue"):
+        await client.read_file(url)
+    # A file larger than its listed size is refused on its Content-Length.
+    other = _by_name("econ_bankruptcies_quarterly.xlsx")
+    listed = next(f.size_bytes for f in client.parse_packages(_packages()) if f.url == other)
+    assert listed
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", listed)
+    grown = _bytes("econ_bankruptcies_quarterly.xlsx") + b"\0" * (listed + 1)
+    httpx_mock.add_response(url=other, content=grown)
+    with pytest.raises(UpstreamError, match="stopped reading at the cap|stops at"):
+        await client.read_file(other)
+
+
 async def test_unlisted_file_is_not_found(httpx_mock, catalogue):
     url = _by_name("lfs_datatables.xlsx").replace("c9bdc5f3", "00000000")
     with pytest.raises(NotFound, match="not an Excel file of the BC Stats"):
@@ -181,8 +230,49 @@ async def test_html_page_and_http_404_are_not_found(httpx_mock, catalogue):
     with pytest.raises(NotFound, match="web page"):
         await client.read_file(url)
     cache_module._caches.clear()
+    file_download.clear_cache()
     other = _by_name("econ_bankruptcies_quarterly.xlsx")
     httpx_mock.add_response(url=other, status_code=404)
     httpx_mock.add_response(url=_SEARCH, content=_bytes("package_search_bc_stats.json"))
     with pytest.raises(NotFound, match="no file"):
         await client.read_file(other)
+
+
+async def test_french_errors_and_provenance(httpx_mock, catalogue):
+    with pytest.raises(InvalidInput, match="Entrée invalide.*limit doit être compris"):
+        await client.list_files(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="lien de téléchargement"):
+        client.check_file_url("https://example.com/x.xlsx", lang="fr")
+
+    url = _by_name("gdp_by_industry_at_basic_prices.xlsx")
+    httpx_mock.add_response(url=url, content=_bytes("gdp_by_industry_at_basic_prices.xlsx"))
+    data = await client.read_file(url, limit=5, lang="fr")
+    assert data.provenance.licence
+    assert data.provenance.licence.startswith("Licence du gouvernement ouvert – Colombie")
+    assert data.provenance.freshness
+    assert data.provenance.freshness.startswith("Tel que publié par BC Stats")
+    assert data.provenance.coverage
+    assert "feuille 'BC GDP $Current' sur 2" in data.provenance.coverage
+    with pytest.raises(InvalidInput, match="aucune feuille 'Nope'"):
+        await client.read_file(url, sheet="Nope", lang="fr")
+
+    listing = await client.list_files(limit=2, lang="fr")
+    assert listing.provenance.limits
+    assert listing.provenance.limits.startswith("Fichiers 1 à 2 sur")
+    assert "Licence du gouvernement ouvert – Colombie-Britannique" in listing.licence_note
+
+
+async def test_english_text_is_unchanged(httpx_mock, catalogue):
+    with pytest.raises(InvalidInput, match=r"^bc_stats: limit must be 1 to 200\.$"):
+        await client.list_files(limit=0)
+    listing = await client.list_files(limit=2)
+    assert listing.provenance.freshness == "Catalogue metadata, cached for six hours."
+    assert listing.provenance.limits
+    assert listing.provenance.limits.startswith("Showing files 1 to 2 of")
+    url = _by_name("gdp_by_industry_at_basic_prices.xlsx")
+    httpx_mock.add_response(url=url, content=_bytes("gdp_by_industry_at_basic_prices.xlsx"))
+    data = await client.read_file(url, limit=5)
+    assert data.provenance.freshness
+    assert data.provenance.freshness.startswith("As published by BC Stats; catalogue update")
+    assert data.provenance.licence
+    assert data.provenance.licence.startswith("Open Government Licence - British Columbia")

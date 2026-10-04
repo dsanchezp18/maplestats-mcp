@@ -92,6 +92,7 @@ from maplestats_mcp.modules.elections_financial_returns.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -105,11 +106,31 @@ _client = new_client(http2=False)
 _warmed: set[str] = set()
 
 
-def _resolve(mapping: dict[str, str], value: str, name: str) -> str:
+def _resolve(mapping: dict[str, str], value: str, name: str, lang: str = "en") -> str:
     try:
         return mapping[value]
     except KeyError as exc:
-        raise InvalidInput(f"{name} must be one of {sorted(mapping)}, got {value!r}.") from exc
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be one of {sorted(mapping)}, got {value!r}.",
+            f"{name} doit être l'une des valeurs {sorted(mapping)} ; reçu {value!r}.",
+        ) from exc
+
+
+def _empty(name: str, lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput, lang, f"{name} must not be empty.", f"{name} ne doit pas être vide."
+    )
+
+
+def _slow(when: str, when_fr: str, lang: str) -> UpstreamUnavailable:
+    return lang_error(
+        UpstreamUnavailable,
+        lang,
+        f"elections_financial_returns:get_financial_return_part did not respond in time {when}.",
+        f"elections_financial_returns:get_financial_return_part n'a pas répondu à temps {when_fr}.",
+    )
 
 
 def _search_url(
@@ -138,20 +159,26 @@ def _decode(content: bytes) -> str:
         return content.decode("cp1252")
 
 
-async def _warm_up(url: str, *, force: bool = False) -> None:
+async def _warm_up(url: str, *, force: bool = False, lang: str = "en") -> None:
     if url in _warmed and not force:
         return
     try:
         response = await _client.get(url)
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(
-            "elections_financial_returns returned HTTP "
-            f"{exc.response.status_code} during session warm-up."
+        status = exc.response.status_code
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"elections_financial_returns returned HTTP {status} during session warm-up.",
+            f"elections_financial_returns a renvoyé HTTP {status} à l'ouverture de la session.",
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            "elections_financial_returns did not respond in time during session warm-up."
+        raise lang_error(
+            UpstreamUnavailable,
+            lang,
+            "elections_financial_returns did not respond in time during session warm-up.",
+            "elections_financial_returns n'a pas répondu à temps à l'ouverture de la session.",
         ) from exc
     _warmed.add(url)
 
@@ -236,7 +263,7 @@ async def list_elections(*, act: str = "after_2019", lang: str = "en") -> Electi
     to this list over time (a 2026-04-13 by-election was already listed as
     upcoming when this module was built 2026-09-21).
     """
-    act_code = _resolve(constants.ACT_PERIODS, act, "act")
+    act_code = _resolve(constants.ACT_PERIODS, act, "act", lang)
     url = (
         f"{constants.HOME_URLS[lang]}/RefreshEventList"
         f"?selectedAct=CC_{act_code}&selectedEntityCode={constants.ENTITY_CODE_CANDIDATES}"
@@ -249,13 +276,19 @@ async def list_elections(*, act: str = "after_2019", lang: str = "en") -> Electi
             response = await _client.get(url)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"elections_financial_returns:list_elections returned HTTP "
-                f"{exc.response.status_code}."
+            status = exc.response.status_code
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"elections_financial_returns:list_elections returned HTTP {status}.",
+                f"elections_financial_returns:list_elections a renvoyé HTTP {status}.",
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "elections_financial_returns:list_elections did not respond in time."
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                "elections_financial_returns:list_elections did not respond in time.",
+                "elections_financial_returns:list_elections n'a pas répondu à temps.",
             ) from exc
         # Confirmed live: this endpoint's JSON body is itself a JSON-encoded
         # string wrapping the actual array -- two decode passes are needed.
@@ -263,8 +296,12 @@ async def list_elections(*, act: str = "after_2019", lang: str = "en") -> Electi
             inner = json.loads(response.text)
             entries = json.loads(inner)
         except (json.JSONDecodeError, TypeError) as exc:
-            raise UpstreamError(
-                "elections_financial_returns:list_elections returned an unexpected response shape."
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "elections_financial_returns:list_elections returned an unexpected response shape.",
+                "elections_financial_returns:list_elections a renvoyé une réponse de forme "
+                "inattendue.",
             ) from exc
         options: list[ElectionOption] = []
         for entry in entries:
@@ -286,6 +323,7 @@ async def list_elections(*, act: str = "after_2019", lang: str = "en") -> Electi
             url=url,
             cached=was_cached,
             schema_name="elections_financial_returns.ElectionList",
+            lang=lang,
         ),
     )
 
@@ -300,13 +338,18 @@ async def _check_election(election_id: str, act: str, lang: str) -> None:
     elections = (await list_elections(act=act, lang=lang)).elections
     if not any(e.id == election_id for e in elections):
         known = ", ".join(f"{e.id} ({e.label})" for e in elections[:8])
-        raise NotFound(
+        raise lang_error(
+            NotFound,
+            lang,
             f"elections_financial_returns: no election {election_id!r} under act {act!r}; "
-            f"see elections_financial_returns_list_elections (e.g. {known})."
+            f"see elections_financial_returns_list_elections (e.g. {known}).",
+            f"elections_financial_returns : aucune élection {election_id!r} pour la période "
+            f"{act!r} de la loi ; voir elections_financial_returns_list_elections (p. ex. "
+            f"{known}).",
         )
 
 
-async def _search_html(url: str, form: dict[str, str]) -> tuple[str, bool]:
+async def _search_html(url: str, form: dict[str, str], lang: str = "en") -> tuple[str, bool]:
     """One candidate-search POST (cached), re-warming a lost session once."""
     cache_key = f"elections-financial-returns:search:{url}:{sorted(form.items())}"
 
@@ -315,31 +358,42 @@ async def _search_html(url: str, form: dict[str, str]) -> tuple[str, bool]:
             response = await _client.post(url, data=form)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"elections_financial_returns:search_candidates returned HTTP "
-                f"{exc.response.status_code}."
+            status = exc.response.status_code
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"elections_financial_returns:search_candidates returned HTTP {status}.",
+                f"elections_financial_returns:search_candidates a renvoyé HTTP {status}.",
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "elections_financial_returns:search_candidates did not respond in time."
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
+                "elections_financial_returns:search_candidates did not respond in time.",
+                "elections_financial_returns:search_candidates n'a pas répondu à temps.",
             ) from exc
         return response.text
 
     async def fetch() -> str:
         await _LIMITER.acquire()
-        await _warm_up(url)
+        await _warm_up(url, lang=lang)
         html = await post_search()
         if _has_search_results(html):
             return html
 
-        await _warm_up(url, force=True)
+        await _warm_up(url, force=True, lang=lang)
         html = await post_search()
         if not _has_search_results(html):
             _warmed.discard(url)
-            raise UpstreamError(
+            raise lang_error(
+                UpstreamError,
+                lang,
                 "elections_financial_returns:search_candidates: the portal returned its empty "
                 "search form even after refreshing the session, so no results can be trusted. "
-                "Try again shortly."
+                "Try again shortly.",
+                "elections_financial_returns:search_candidates : le portail a renvoyé son "
+                "formulaire de recherche vide même après le renouvellement de la session ; aucun "
+                "résultat n'est fiable. Réessayez sous peu.",
             )
         return html
 
@@ -394,19 +448,28 @@ async def search_candidates(
     returns every match in one response (1,927 for the 45th general
     election), so `offset`/`limit` page over that cached list.
     """
-    act_code = _resolve(constants.ACT_PERIODS, act, "act")
-    report_code = _resolve(constants.REPORT_TYPES, report_type, "report_type")
-    status_code = _resolve(constants.RETURN_STATUS, return_status, "return_status")
+    act_code = _resolve(constants.ACT_PERIODS, act, "act", lang)
+    report_code = _resolve(constants.REPORT_TYPES, report_type, "report_type", lang)
+    status_code = _resolve(constants.RETURN_STATUS, return_status, "return_status", lang)
     election_id = election_id.strip()
     if not election_id:
-        raise InvalidInput("election_id must not be empty.")
+        raise _empty("election_id", lang)
     page_size = constants.CANDIDATE_SEARCH_MAX if limit is None else limit
     if not 1 <= page_size <= constants.CANDIDATE_SEARCH_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.CANDIDATE_SEARCH_MAX}, got {limit}."
+        top = constants.CANDIDATE_SEARCH_MAX
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {top}, got {limit}.",
+            f"limit doit être compris entre 1 et {top} ; reçu {limit}.",
         )
     if offset < 0:
-        raise InvalidInput(f"offset must be 0 or more, got {offset}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"offset must be 0 or more, got {offset}.",
+            f"offset doit être 0 ou plus ; reçu {offset}.",
+        )
     await _check_election(election_id, act, lang)
 
     url = _search_url(act_code, election_id, report_code, status_code, lang)
@@ -419,15 +482,24 @@ async def search_candidates(
         province_id=province_id,
         district_id=district_id,
     )
-    html, was_cached = await _search_html(url, form)
+    html, was_cached = await _search_html(url, form, lang)
     candidates, total_found, parties, provinces = _parse_candidates(html)
     page = candidates[offset : offset + page_size]
     has_more = offset + len(page) < len(candidates)
     coverage = None
     if has_more or offset:
-        coverage = f"candidates {offset + 1}-{offset + len(page)} of {len(candidates)}"
+        shown = f"{offset + 1}-{offset + len(page)}"
+        coverage = fr_or_en(
+            lang,
+            f"candidates {shown} of {len(candidates)}",
+            f"candidats {shown} sur {len(candidates)}",
+        )
         if has_more:
-            coverage += f"; next page: offset={offset + len(page)}"
+            coverage += fr_or_en(
+                lang,
+                f"; next page: offset={offset + len(page)}",
+                f" ; page suivante : offset={offset + len(page)}",
+            )
 
     return CandidateSearchResult(
         election_id=election_id,
@@ -444,6 +516,7 @@ async def search_candidates(
             cached=was_cached,
             schema_name="elections_financial_returns.CandidateSearchResult",
             coverage=coverage,
+            lang=lang,
         ),
     )
 
@@ -461,13 +534,18 @@ async def _check_candidate_in_election(
     """
     report_code = constants.REPORT_TYPES["campaign_returns"]
     url = _search_url(act_code, election_id, report_code, status_code, lang)
-    html, _ = await _search_html(url, _search_form(status_code, lang))
+    html, _ = await _search_html(url, _search_form(status_code, lang), lang)
     candidates, _total, _parties, _provinces = _parse_candidates(html)
     if not any(c.client_id == candidate_client_id for c in candidates):
-        raise NotFound(
+        raise lang_error(
+            NotFound,
+            lang,
             f"elections_financial_returns: candidate {candidate_client_id!r} did not run in "
             f"election {election_id!r}; take client_id from "
-            "elections_financial_returns_search_candidates for the same election."
+            "elections_financial_returns_search_candidates for the same election.",
+            f"elections_financial_returns : le candidat {candidate_client_id!r} ne s'est pas "
+            f"présenté à l'élection {election_id!r} ; prenez client_id dans "
+            "elections_financial_returns_search_candidates pour la même élection.",
         )
 
 
@@ -489,15 +567,21 @@ async def get_financial_return_part(
     """
     candidate_client_id = candidate_client_id.strip()
     if not candidate_client_id:
-        raise InvalidInput("candidate_client_id must not be empty.")
+        raise _empty("candidate_client_id", lang)
     part_code = part.strip().upper()
     if part_code not in constants.PART_LABELS:
-        raise InvalidInput(f"part must be one of {sorted(constants.PART_LABELS)}, got {part!r}.")
-    act_code = _resolve(constants.ACT_PERIODS, act, "act")
-    status_code = _resolve(constants.RETURN_STATUS, return_status, "return_status")
+        parts = sorted(constants.PART_LABELS)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"part must be one of {parts}, got {part!r}.",
+            f"part doit être l'une des valeurs {parts} ; reçu {part!r}.",
+        )
+    act_code = _resolve(constants.ACT_PERIODS, act, "act", lang)
+    status_code = _resolve(constants.RETURN_STATUS, return_status, "return_status", lang)
     election_id = election_id.strip()
     if not election_id:
-        raise InvalidInput("election_id must not be empty.")
+        raise _empty("election_id", lang)
     await _check_election(election_id, act, lang)
     await _check_candidate_in_election(
         candidate_client_id, election_id, act_code, status_code, lang
@@ -527,9 +611,8 @@ async def get_financial_return_part(
             try:
                 return await _client.post(search_url, data=select_form)
             except httpx.HTTPError as exc:
-                raise UpstreamUnavailable(
-                    "elections_financial_returns:get_financial_return_part did not respond "
-                    "in time while selecting the candidate."
+                raise _slow(
+                    "while selecting the candidate", "à la sélection du candidat", lang
                 ) from exc
 
         # A selection POST on an expired session re-renders the form (HTTP
@@ -537,20 +620,29 @@ async def get_financial_return_part(
         # missing redirect as an upstream failure.
         select_response = await select_candidate()
         if select_response.status_code != 302:
-            await _warm_up(search_url, force=True)
+            await _warm_up(search_url, force=True, lang=lang)
             select_response = await select_candidate()
         if select_response.status_code != 302:
             _warmed.discard(search_url)
-            raise UpstreamError(
+            status = select_response.status_code
+            raise lang_error(
+                UpstreamError,
+                lang,
                 "elections_financial_returns:get_financial_return_part: expected a "
-                f"redirect after candidate selection, got HTTP {select_response.status_code}."
+                f"redirect after candidate selection, got HTTP {status}.",
+                "elections_financial_returns:get_financial_return_part : une redirection était "
+                f"attendue après la sélection du candidat ; reçu HTTP {status}.",
             )
         location = select_response.headers.get("location", "")
         query_id_match = re.search(r"queryId=([0-9a-fA-F]+)", location)
         if query_id_match is None:
-            raise NotFound(
+            raise lang_error(
+                NotFound,
+                lang,
                 f"elections_financial_returns:get_financial_return_part: no matching "
-                f"candidate {candidate_client_id!r} for election {election_id!r}."
+                f"candidate {candidate_client_id!r} for election {election_id!r}.",
+                "elections_financial_returns:get_financial_return_part : aucun candidat "
+                f"{candidate_client_id!r} pour l'élection {election_id!r}.",
             )
         query_id = query_id_match.group(1)
         detail_url = f"https://www.elections.ca{location}" if location.startswith("/") else location
@@ -560,9 +652,8 @@ async def get_financial_return_part(
             # -- see module docstring.
             await _client.get(detail_url)
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "elections_financial_returns:get_financial_return_part did not respond "
-                "in time while opening the report session."
+            raise _slow(
+                "while opening the report session", "à l'ouverture de la session du rapport", lang
             ) from exc
 
         return detail_url, (
@@ -577,15 +668,14 @@ async def get_financial_return_part(
         try:
             return await _client.get(download_url)
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "elections_financial_returns:get_financial_return_part did not respond "
-                "in time while downloading the report."
+            raise _slow(
+                "while downloading the report", "au téléchargement du rapport", lang
             ) from exc
 
     async def fetch() -> dict[str, object]:
         search_url = _search_url(act_code, election_id, report_code, status_code, lang)
         await _LIMITER.acquire()
-        await _warm_up(search_url)
+        await _warm_up(search_url, lang=lang)
         detail_url, download_url = await open_report(search_url)
         download_response = await download(download_url)
         if download_response.status_code != 200:
@@ -593,38 +683,57 @@ async def get_financial_return_part(
             # 302) back to the search form rather than erroring. The pairing
             # was checked above, so this is a lost session: re-warm, select
             # again and retry once before giving up.
-            await _warm_up(search_url, force=True)
+            await _warm_up(search_url, force=True, lang=lang)
             detail_url, download_url = await open_report(search_url)
             download_response = await download(download_url)
         if download_response.status_code != 200:
             _warmed.discard(search_url)
-            raise UpstreamUnavailable(
+            status = download_response.status_code
+            raise lang_error(
+                UpstreamUnavailable,
+                lang,
                 "elections_financial_returns:get_financial_return_part: the portal kept "
                 "sending the report download back to its search form after a fresh session "
-                f"(HTTP {download_response.status_code}). Try again shortly."
+                f"(HTTP {status}). Try again shortly.",
+                "elections_financial_returns:get_financial_return_part : le portail renvoie "
+                "toujours le téléchargement du rapport vers son formulaire de recherche après "
+                f"une nouvelle session (HTTP {status}). Réessayez sous peu.",
             )
         try:
             body = json.loads(_decode(download_response.content))
         except json.JSONDecodeError as exc:
-            raise UpstreamError(
+            raise lang_error(
+                UpstreamError,
+                lang,
                 "elections_financial_returns:get_financial_return_part returned a "
-                "non-JSON response."
+                "non-JSON response.",
+                "elections_financial_returns:get_financial_return_part a renvoyé une réponse "
+                "qui n'est pas du JSON.",
             ) from exc
         if not isinstance(body, dict):
-            raise UpstreamError(
+            raise lang_error(
+                UpstreamError,
+                lang,
                 "elections_financial_returns:get_financial_return_part returned an "
-                "unexpected response shape."
+                "unexpected response shape.",
+                "elections_financial_returns:get_financial_return_part a renvoyé une réponse de "
+                "forme inattendue.",
             )
         return {
             "body": body,
             "download_url": download_url,
             # The queryId in download_url belongs to this session and expires
             # with it, so the request chain is spelled out for provenance.
-            "request": (
+            "request": fr_or_en(
+                lang,
                 f"Request (session-bound; the queryId in url expires with the session): GET "
                 f"{search_url} to start a session, POST the same URL with form fields "
                 f"{urlencode(select_form)}, GET the redirect it returns ({detail_url}), then "
-                "GET the Download URL with a fresh queryId."
+                "GET the Download URL with a fresh queryId.",
+                "Requête (liée à la session ; le queryId de url expire avec elle) : GET "
+                f"{search_url} pour ouvrir une session, POST à la même adresse avec les champs "
+                f"{urlencode(select_form)}, GET de la redirection renvoyée ({detail_url}), puis "
+                "GET de l'adresse Download avec un nouveau queryId.",
             ),
         }
 
@@ -644,7 +753,7 @@ async def get_financial_return_part(
         candidate_client_id=candidate_client_id,
         election_id=election_id,
         part_code=part_code,
-        part_label=constants.PART_LABELS[part_code],
+        part_label=(constants.PART_LABELS_FR if lang == "fr" else constants.PART_LABELS)[part_code],
         return_status=return_status,
         export_header={str(k): str(v) for k, v in export_header.items()},
         sections=sections,
@@ -654,5 +763,6 @@ async def get_financial_return_part(
             cached=was_cached,
             schema_name="elections_financial_returns.FinancialReturnPart",
             limits=str(result.get("request") or "") or None,
+            lang=lang,
         ),
     )

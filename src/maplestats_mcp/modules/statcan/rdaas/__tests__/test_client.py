@@ -286,3 +286,19 @@ async def test_classification_indexes_send_accept_language(httpx_mock):
     httpx_mock.add_response(json={"@graph": [_INDEX_ENTRY_JSON]})
     await client.get_classification_indexes("MJRdRiFsfmJAprtT", lang="fr")
     assert httpx_mock.get_request().headers["Accept-Language"] == "fr"
+
+
+async def test_classification_indexes_page_note_in_french(httpx_mock):
+    httpx_mock.add_response(json={"@graph": [_INDEX_ENTRY_JSON, _INDEX_ENTRY_JSON]})
+    result = await client.get_classification_indexes("MJRdRiFsfmJAprtT", lang="fr", limit=1)
+    assert result.provenance.limits == (
+        "1 des 2 entrées correspondantes renvoyées\N{NO-BREAK SPACE}; utilisez limit/offset "
+        "ou query pour la suite"
+    )
+    assert "Licence ouverte de Statistique Canada" in (result.provenance.licence or "")
+
+
+def test_page_note_english_unchanged():
+    assert client._page_note(1, 2, 0) == (
+        "returned 1 of 2 matching entries; use limit/offset or query for the rest"
+    )

@@ -3,8 +3,8 @@
 Discovery calls the portal's CKAN Action API (`package_search`,
 `package_show`) through the shared CKAN helper; a file is read only when
 its dataset lists it, so the tool never fetches arbitrary URLs. API calls
-and downloads share one bucket of one request per 10 seconds (the portal's
-robots.txt crawl delay). Sheet and CSV parsing lives in tables.py.
+and downloads share one bucket of one request per 10 seconds. Sheet and
+CSV parsing lives in tables.py.
 """
 
 from __future__ import annotations
@@ -30,9 +30,10 @@ from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared import file_tables as tables
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action, excerpt
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.i18n import french_spacing, pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.licences import OGL_ALBERTA
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -65,23 +66,26 @@ LICENCE_NOTE = {
     "is false is under other terms: its own licence, or by default the alberta.ca terms "
     "of use (non-commercial); check licence_note before reusing it.",
     "fr": "Presque tous les jeux de données d'Open Alberta relèvent de la Licence du "
-    "gouvernement ouvert - Alberta : licence mondiale, libre de redevances, perpétuelle et "
+    "gouvernement ouvert – Alberta : licence mondiale, libre de redevances, perpétuelle et "
     "non exclusive d'utilisation de l'information, y compris à des fins commerciales, avec "
     "la mention « Contains information licensed under the Open Government Licence – "
     "Alberta. » Un jeu dont ogl_alberta est faux relève d'autres conditions : sa propre "
     "licence ou, par défaut, les conditions d'utilisation d'alberta.ca (usage non "
-    "commercial); lire licence_note avant toute réutilisation.",
+    "commercial) ; lire licence_note avant toute réutilisation.",
 }
 OTHER_LICENCE_NOTE = {
     "en": "NOT under the Open Government Licence - Alberta (licence: {licence}). Other terms "
     "apply: the dataset's own licence or, by default, the alberta.ca terms of use, which "
     "are non-commercial. Do not assume commercial reuse is allowed; check {url}.",
-    "fr": "N'est PAS sous la Licence du gouvernement ouvert - Alberta (licence : {licence}). "
+    "fr": "N'est PAS sous la Licence du gouvernement ouvert – Alberta (licence : {licence}). "
     "D'autres conditions s'appliquent : la licence propre au jeu ou, par défaut, les "
     "conditions d'utilisation d'alberta.ca, qui sont non commerciales. Ne pas supposer que "
-    "la réutilisation commerciale est permise; vérifier {url}.",
+    "la réutilisation commerciale est permise ; vérifier {url}.",
 }
 NO_LICENCE = {"en": "none stated", "fr": "aucune indiquée"}
+# French notes get their no-break spaces once, here.
+LICENCE_NOTE["fr"] = french_spacing(LICENCE_NOTE["fr"])
+OTHER_LICENCE_NOTE["fr"] = french_spacing(OTHER_LICENCE_NOTE["fr"])
 
 
 def _clean(value: Any) -> str | None:
@@ -99,15 +103,21 @@ def _first(value: Any) -> str | None:
     return _clean(value)
 
 
-def parse_download_url(url: str) -> tuple[str, str]:
+def parse_download_url(url: str, lang: str = "en") -> tuple[str, str]:
     """(dataset id, resource id) of an open.alberta.ca download link, or InvalidInput."""
     parsed = urlparse(url)
     match = _DOWNLOAD.match(parsed.path)
     if parsed.scheme != "https" or parsed.hostname != constants.DOMAIN or match is None:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"ab_opendata: url must be an https download link on {constants.DOMAIN} "
-            "(/dataset/<id>/resource/<id>/download/<file>); see ab_opendata_search_datasets."
+            "(/dataset/<id>/resource/<id>/download/<file>); see ab_opendata_search_datasets.",
+            f"ab_opendata : url doit être un lien de téléchargement https sur {constants.DOMAIN} "
+            "(/dataset/<id>/resource/<id>/download/<fichier>) ; voir "
+            "ab_opendata_search_datasets.",
+            lang,
         )
+    assert match is not None
     return match["dataset"], match["resource"]
 
 
@@ -184,11 +194,16 @@ async def _api(method: str, params: dict[str, Any]) -> tuple[Any, bool]:
     return await cached_fetch(key, constants.CACHE_TTL_API_SECONDS, fetch)
 
 
-def _format_filter(fmt: str | None) -> str:
+def _format_filter(fmt: str | None, lang: str = "en") -> str:
     if fmt is None:
         return "(res_format:XLSX OR res_format:XLS OR res_format:CSV)"
     if fmt not in constants.FORMATS:
-        raise InvalidInput(f"ab_opendata: format must be one of {list(constants.FORMATS)}.")
+        raise_localized(
+            InvalidInput,
+            f"ab_opendata: format must be one of {list(constants.FORMATS)}.",
+            f"ab_opendata : format doit valoir l'une des valeurs {list(constants.FORMATS)}.",
+            lang,
+        )
     return f"res_format:{fmt.upper()}"
 
 
@@ -212,21 +227,31 @@ async def _search(
     sort: str,
     rows: int,
     start: int,
+    lang: str = "en",
 ) -> tuple[Any, bool]:
-    filters = ["type:opendata", _format_filter(fmt)]
+    filters = ["type:opendata", _format_filter(fmt, lang)]
     if organization:
         slug = organization.strip().lower()
         if not _SLUG.match(slug):
-            raise InvalidInput(
+            raise_localized(
+                InvalidInput,
                 "ab_opendata: organization is a slug such as 'health' or "
-                "'treasuryboardandfinance' (see ab_opendata_list_organizations)."
+                "'treasuryboardandfinance' (see ab_opendata_list_organizations).",
+                "ab_opendata : organization est un identifiant comme « health » ou "
+                "« treasuryboardandfinance » (voir ab_opendata_list_organizations).",
+                lang,
             )
         filters.append(f"organization:{slug}")
     if ogl_only:
         filters.append(f"license_id:{constants.OGL_LICENCE_ID}")
     order = {"relevance": None, "modified": "metadata_modified desc", "title": "title_string asc"}
     if sort not in order:
-        raise InvalidInput(f"ab_opendata: sort must be one of {list(order)}.")
+        raise_localized(
+            InvalidInput,
+            f"ab_opendata: sort must be one of {list(order)}.",
+            f"ab_opendata : sort doit valoir l'une des valeurs {list(order)}.",
+            lang,
+        )
     params: dict[str, Any] = {
         "q": (query or "").strip(),
         "fq": " AND ".join(filters),
@@ -256,11 +281,21 @@ async def search_datasets(
     lang: Lang = "en",
 ) -> DatasetList:
     if not 1 <= limit <= constants.DATASETS_LIMIT_MAX:
-        raise InvalidInput(f"ab_opendata: limit must be 1 to {constants.DATASETS_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"ab_opendata: limit must be 1 to {constants.DATASETS_LIMIT_MAX}.",
+            f"ab_opendata : limit doit être compris entre 1 et {constants.DATASETS_LIMIT_MAX}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput("ab_opendata: offset must be 0 or more.")
+        raise_localized(
+            InvalidInput,
+            "ab_opendata: offset must be 0 or more.",
+            "ab_opendata : offset doit être égal ou supérieur à 0.",
+            lang,
+        )
     result, cached = await _search(
-        query, organization, format, ogl_alberta_only, sort, limit, offset
+        query, organization, format, ogl_alberta_only, sort, limit, offset, lang
     )
     datasets = [parse_dataset(p, lang) for p in list_or_empty(result, "results")]
     total = int(result.get("count") or 0)
@@ -276,21 +311,33 @@ async def search_datasets(
             url=f"{constants.SITE}/dataset",
             cached=cached,
             schema_name="ab_opendata.DatasetList",
-            freshness="Catalogue metadata, cached for six hours.",
-            coverage="Open datasets (type opendata) with at least one Excel or CSV resource; "
-            "publications, maps and datasets with only PDFs or links are not listed here "
-            "(use ckan_ with portal=ab).",
+            freshness=_CATALOGUE_FRESHNESS[lang],
+            coverage=pick(
+                lang,
+                "Open datasets (type opendata) with at least one Excel or CSV resource; "
+                "publications, maps and datasets with only PDFs or links are not listed here "
+                "(use ckan_ with portal=ab).",
+                "Jeux de données ouverts (type opendata) qui ont au moins une ressource Excel ou "
+                "CSV ; les publications, les cartes et les jeux qui n'ont que des PDF ou des "
+                "liens n'y figurent pas (utilisez ckan_ avec portal=ab). Titres et descriptions "
+                "en anglais, comme sur le portail.",
+            ),
             limits=(
-                f"Showing datasets {offset + 1} to {offset + len(datasets)} of {total}."
+                pick(
+                    lang,
+                    f"Showing datasets {offset + 1} to {offset + len(datasets)} of {total}.",
+                    f"Jeux de données {offset + 1} à {offset + len(datasets)} sur {total}.",
+                )
                 if offset + len(datasets) < total or offset
                 else None
             ),
+            lang=lang,
         ),
     )
 
 
 async def list_organizations(format: str | None = None, lang: Lang = "en") -> OrganizationList:
-    result, cached = await _search(None, None, format, False, "relevance", 1, 0)
+    result, cached = await _search(None, None, format, False, "relevance", 1, 0, lang)
     organizations = _facet_organizations(result)
     return OrganizationList(
         organizations=organizations,
@@ -301,27 +348,49 @@ async def list_organizations(format: str | None = None, lang: Lang = "en") -> Or
             url=f"{constants.SITE}/organization",
             cached=cached,
             schema_name="ab_opendata.OrganizationList",
-            freshness="Catalogue metadata, cached for six hours.",
-            coverage="Counts datasets with an Excel or CSV resource only.",
+            freshness=_CATALOGUE_FRESHNESS[lang],
+            coverage=pick(
+                lang,
+                "Counts datasets with an Excel or CSV resource only.",
+                "Ne compte que les jeux de données qui ont une ressource Excel ou CSV.",
+            ),
+            lang=lang,
         ),
     )
 
 
-def _dataset_id(dataset: str) -> str:
+def _dataset_id(dataset: str, lang: str = "en") -> str:
     text = dataset.strip()
     if not text:
-        raise InvalidInput("ab_opendata: dataset must not be empty.")
+        raise_localized(
+            InvalidInput,
+            "ab_opendata: dataset must not be empty.",
+            "ab_opendata : dataset ne doit pas être vide.",
+            lang,
+        )
     parsed = urlparse(text)
     if parsed.hostname == constants.DOMAIN:
         parts = [p for p in parsed.path.split("/") if p]
         if len(parts) >= 2 and parts[0] == "dataset":
             return parts[1]
-        raise InvalidInput(f"ab_opendata: {text!r} is not a dataset page on {constants.DOMAIN}.")
+        raise_localized(
+            InvalidInput,
+            f"ab_opendata: {text!r} is not a dataset page on {constants.DOMAIN}.",
+            f"ab_opendata : {text!r} n'est pas une page de jeu de données sur {constants.DOMAIN}.",
+            lang,
+        )
     return text
 
 
-async def _package(dataset_id: str) -> tuple[dict[str, Any], bool]:
-    missing = NotFound(f"ab_opendata: no dataset {dataset_id!r} on {constants.DOMAIN}.")
+async def _package(dataset_id: str, lang: str = "en") -> tuple[dict[str, Any], bool]:
+    missing = NotFound(
+        pick(
+            lang,
+            f"ab_opendata: no dataset {dataset_id!r} on {constants.DOMAIN}.",
+            f"Aucune correspondance trouvée : ab_opendata : aucun jeu de données {dataset_id!r} "
+            f"sur {constants.DOMAIN}.",
+        )
+    )
     # Every API call waits its turn in the 10-second bucket, so a name CKAN
     # could never hold (its names and ids are 2-100 of a-z, 0-9, - and _)
     # is refused without asking, and an unknown one is remembered a while.
@@ -342,12 +411,17 @@ async def _package(dataset_id: str) -> tuple[dict[str, Any], bool]:
         raise missing
     package, cached = found
     if not isinstance(package, dict):
-        raise UpstreamError(f"ab_opendata: package_show for {dataset_id!r} returned no object.")
+        raise_localized(
+            UpstreamError,
+            f"ab_opendata: package_show for {dataset_id!r} returned no object.",
+            f"ab_opendata : package_show pour {dataset_id!r} n'a renvoyé aucun objet.",
+            lang,
+        )
     return package, cached or probe_cached
 
 
 async def get_dataset(dataset: str, lang: Lang = "en") -> DatasetDetail:
-    package, cached = await _package(_dataset_id(dataset))
+    package, cached = await _package(_dataset_id(dataset, lang), lang)
     entry = parse_dataset(package, lang)
     return DatasetDetail(
         dataset=entry,
@@ -357,39 +431,70 @@ async def get_dataset(dataset: str, lang: Lang = "en") -> DatasetDetail:
             url=entry.dataset_url,
             cached=cached,
             schema_name="ab_opendata.DatasetDetail",
-            freshness=f"Update frequency: {entry.update_frequency or 'not stated'}; "
-            f"modified {entry.date_modified or 'date not stated'}.",
-            coverage="Every resource of the dataset; only .xlsx, .xls and .csv files hosted "
-            "on open.alberta.ca are readable with ab_opendata_read_resource.",
-            licence=_dataset_licence(entry),
+            freshness=pick(
+                lang,
+                f"Update frequency: {entry.update_frequency or 'not stated'}; "
+                f"modified {entry.date_modified or 'date not stated'}.",
+                f"Fréquence de mise à jour : {entry.update_frequency or 'non précisée'} ; "
+                f"modifié le {entry.date_modified or 'date non précisée'}.",
+            ),
+            coverage=pick(
+                lang,
+                "Every resource of the dataset; only .xlsx, .xls and .csv files hosted "
+                "on open.alberta.ca are readable with ab_opendata_read_resource.",
+                "Toutes les ressources du jeu de données ; seuls les fichiers .xlsx, .xls et "
+                ".csv hébergés sur open.alberta.ca se lisent avec ab_opendata_read_resource. "
+                "Titres et descriptions en anglais, comme sur le portail.",
+            ),
+            licence=_dataset_licence(entry, lang),
+            lang=lang,
         ),
     )
 
 
 async def _context(url: str, lang: Lang) -> tuple[DatasetEntry, ResourceEntry]:
-    dataset_id, resource_id = parse_download_url(url)
-    package, _ = await _package(dataset_id)
+    dataset_id, resource_id = parse_download_url(url, lang)
+    package, _ = await _package(dataset_id, lang)
     entry = parse_dataset(package, lang)
     resource = next((r for r in entry.resources if r.id == resource_id), None)
     if resource is None:
-        raise NotFound(
-            f"ab_opendata: resource {resource_id} is not listed in dataset {entry.name!r}."
+        raise_localized(
+            NotFound,
+            f"ab_opendata: resource {resource_id} is not listed in dataset {entry.name!r}.",
+            f"ab_opendata : la ressource {resource_id} ne figure pas dans le jeu de données "
+            f"{entry.name!r}.",
+            lang,
         )
     if not resource.readable:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"ab_opendata: resource {resource.name!r} (format {resource.format}) is not an "
-            "Excel or CSV file this module reads."
+            "Excel or CSV file this module reads.",
+            f"ab_opendata : la ressource {resource.name!r} (format {resource.format}) n'est pas "
+            "un fichier Excel ou CSV que ce module lit.",
+            lang,
         )
     return entry, resource
+
+
+_CATALOGUE_FRESHNESS = {
+    "en": "Catalogue metadata, cached for six hours.",
+    "fr": "Métadonnées du catalogue, conservées en cache six heures.",
+}
 
 
 def _allow_host(host: str) -> bool:
     return host == constants.DOMAIN
 
 
-async def _body(url: str, size_hint: int | None) -> tuple[bytes, bool]:
+async def _body(url: str, size_hint: int | None, lang: str = "en") -> tuple[bytes, bool]:
     if size_hint and size_hint > constants.MAX_FILE_BYTES:
-        raise UpstreamError(f"ab_opendata: {url} is larger than this tool reads.")
+        raise_localized(
+            UpstreamError,
+            f"ab_opendata: {url} is larger than this tool reads.",
+            f"ab_opendata : {url} dépasse la taille que cet outil peut lire.",
+            lang,
+        )
 
     async def fetch() -> file_download.Downloaded:
         return await file_download.download(
@@ -419,11 +524,15 @@ def _attribution(entry: DatasetEntry) -> str | None:
     return constants.OGL_ATTRIBUTION if entry.ogl_alberta else None
 
 
-def _freshness(entry: DatasetEntry, resource: ResourceEntry) -> str:
-    return (
+def _freshness(entry: DatasetEntry, resource: ResourceEntry, lang: str = "en") -> str:
+    return pick(
+        lang,
         f"As published by the data owner; dataset update frequency: "
         f"{entry.update_frequency or 'not stated'}; file modified "
-        f"{(resource.modified or 'date not stated')[:10]}."
+        f"{(resource.modified or 'date not stated')[:10]}.",
+        f"Tel que publié par le propriétaire des données ; fréquence de mise à jour du jeu : "
+        f"{entry.update_frequency or 'non précisée'} ; fichier modifié le "
+        f"{(resource.modified or 'date non précisée')[:10]}.",
     )
 
 
@@ -431,7 +540,7 @@ async def describe_resource(
     url: str, sheet: str | None = None, lang: Lang = "en"
 ) -> ResourceStructure:
     entry, resource = await _context(url, lang)
-    body, cached = await _body(url, resource.size_bytes)
+    body, cached = await _body(url, resource.size_bytes, lang)
     fmt = tables.detect_format(body, resource.format)
     sizes = await run_parse(tables.sheet_sizes, body, fmt)
     only = _choose_sheet(sizes, sheet, fmt)[0] if sheet is not None else None
@@ -443,11 +552,15 @@ async def describe_resource(
         resource_name=resource.name,
         dataset=entry.name,
         dataset_title=entry.title,
+        # The declared width counts formatted empty columns: the Income Support
+        # workbook declares 14 columns for 5 named ones (live 2026-10-03). Rows
+        # are trimmed of trailing blanks when read, so the width is the one
+        # read_resource uses: one column per name.
         sheets=[
             SheetInfo(
                 name=s.name,
                 rows=s.rows,
-                columns=s.columns,
+                columns=len(s.column_names) if s.column_names else s.columns,
                 header_row=s.header_row,
                 column_names=s.column_names,
                 preview=s.preview,
@@ -465,22 +578,31 @@ async def describe_resource(
             url=url,
             cached=cached,
             schema_name="ab_opendata.ResourceStructure",
-            freshness=_freshness(entry, resource),
+            freshness=_freshness(entry, resource, lang),
             limits=(
-                f"Described the first {tables.MAX_DESCRIBED_SHEETS} of {total} sheets."
+                pick(
+                    lang,
+                    f"Described the first {tables.MAX_DESCRIBED_SHEETS} of {total} sheets.",
+                    f"Description des {tables.MAX_DESCRIBED_SHEETS} premières feuilles sur {total}.",
+                )
                 if total > tables.MAX_DESCRIBED_SHEETS and not only
                 else None
             ),
-            licence=_dataset_licence(entry),
+            licence=_dataset_licence(entry, lang),
+            lang=lang,
         ),
     )
 
 
-def _dataset_licence(entry: DatasetEntry) -> str:
+def _dataset_licence(entry: DatasetEntry, lang: str = "en") -> str:
     """OGL - Alberta for most datasets; otherwise the dataset's own terms and the warning."""
     if entry.ogl_alberta:
         return OGL_ALBERTA
-    named = entry.licence or entry.licence_id or "no licence stated"
+    named = (
+        entry.licence
+        or entry.licence_id
+        or pick(lang, "no licence stated", "aucune licence indiquée")
+    )
     where = f" ({entry.licence_url})" if entry.licence_url else ""
     return f"{named}{where}. {entry.licence_note or ''}".strip()
 
@@ -497,23 +619,45 @@ async def read_resource(
     offset: int = 0,
     lang: Lang = "en",
 ) -> ResourceRows:
-    parse_download_url(url)
-    if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"ab_opendata: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
-    if offset < 0:
-        raise InvalidInput("ab_opendata: offset must be 0 or more.")
-    if header_row is not None and header_row < 1:
-        raise InvalidInput("ab_opendata: header_row is 1-based (1 or more).")
-    if not 1 <= header_rows <= 5:
-        raise InvalidInput("ab_opendata: header_rows must be 1 to 5.")
+    parse_download_url(url, lang)
+    checks = [
+        (
+            not 1 <= limit <= constants.ROWS_LIMIT_MAX,
+            f"ab_opendata: limit must be 1 to {constants.ROWS_LIMIT_MAX}.",
+            f"ab_opendata : limit doit être compris entre 1 et {constants.ROWS_LIMIT_MAX}.",
+        ),
+        (
+            offset < 0,
+            "ab_opendata: offset must be 0 or more.",
+            "ab_opendata : offset doit être égal ou supérieur à 0.",
+        ),
+        (
+            header_row is not None and header_row < 1,
+            "ab_opendata: header_row is 1-based (1 or more).",
+            "ab_opendata : header_row compte à partir de 1 (1 ou plus).",
+        ),
+        (
+            not 1 <= header_rows <= 5,
+            "ab_opendata: header_rows must be 1 to 5.",
+            "ab_opendata : header_rows doit être compris entre 1 et 5.",
+        ),
+    ]
+    for failed, en, fr in checks:
+        if failed:
+            raise_localized(InvalidInput, en, fr, lang)
 
     entry, resource = await _context(url, lang)
-    body, cached = await _body(url, resource.size_bytes)
+    body, cached = await _body(url, resource.size_bytes, lang)
     fmt = tables.detect_format(body, resource.format)
     sizes = await run_parse(tables.sheet_sizes, body, fmt)
     names = [n for n, _, _ in sizes]
     if not names:
-        raise UpstreamError(f"ab_opendata: {url} has no sheets.")
+        raise_localized(
+            UpstreamError,
+            f"ab_opendata: {url} has no sheets.",
+            f"ab_opendata : {url} ne contient aucune feuille.",
+            lang,
+        )
     chosen, how = _choose_sheet(sizes, sheet, fmt)
     attribution = _attribution(entry)
     if chosen is None:
@@ -542,11 +686,19 @@ async def read_resource(
                 url=url,
                 cached=cached,
                 schema_name="ab_opendata.ResourceRows",
-                freshness=_freshness(entry, resource),
-                limits=f"the workbook has {len(names)} sheets of similar size and none was "
-                "requested, so no rows were read: pick one from `sheets` and pass it as "
-                "`sheet` (ab_opendata_describe_resource shows each sheet's header).",
-                licence=_dataset_licence(entry),
+                freshness=_freshness(entry, resource, lang),
+                limits=pick(
+                    lang,
+                    f"the workbook has {len(names)} sheets of similar size and none was "
+                    "requested, so no rows were read: pick one from `sheets` and pass it as "
+                    "`sheet` (ab_opendata_describe_resource shows each sheet's header).",
+                    f"le classeur a {len(names)} feuilles de taille semblable et aucune n'a été "
+                    "demandée : aucune ligne n'a été lue. Choisissez-en une dans `sheets` et "
+                    "passez-la dans `sheet` (ab_opendata_describe_resource montre l'en-tête de "
+                    "chaque feuille).",
+                ),
+                licence=_dataset_licence(entry, lang),
+                lang=lang,
             ),
         )
     result = await run_parse(
@@ -566,14 +718,29 @@ async def read_resource(
     notes = []
     if how == "largest":
         notes.append(
-            f"the workbook has {len(names)} sheets and none was requested, so the largest "
-            f"({chosen!r}) was read; pass sheet= for another"
+            pick(
+                lang,
+                f"the workbook has {len(names)} sheets and none was requested, so the largest "
+                f"({chosen!r}) was read; pass sheet= for another",
+                f"le classeur a {len(names)} feuilles et aucune n'a été demandée : la plus "
+                f"grande ({chosen!r}) a été lue ; passez sheet= pour une autre",
+            )
         )
     if result.capped:
-        notes.append(f"the file was scanned only up to {tables.MAX_SCAN_ROWS} rows")
+        notes.append(
+            pick(
+                lang,
+                f"the file was scanned only up to {tables.MAX_SCAN_ROWS} rows",
+                f"le fichier n'a été parcouru que jusqu'à {tables.MAX_SCAN_ROWS} lignes",
+            )
+        )
     if more:
         notes.append(
-            f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}"
+            pick(
+                lang,
+                f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}",
+                f"lignes {offset + 1} à {offset + len(result.rows)} sur {result.total_rows}",
+            )
         )
     attribution = _attribution(entry)
     return ResourceRows(
@@ -601,9 +768,14 @@ async def read_resource(
             url=url,
             cached=cached,
             schema_name="ab_opendata.ResourceRows",
-            freshness=_freshness(entry, resource),
-            coverage=f"{entry.title}: {resource.name}, sheet {chosen!r} of {len(names)}.",
-            limits="; ".join(notes) or None,
-            licence=_dataset_licence(entry),
+            freshness=_freshness(entry, resource, lang),
+            coverage=pick(
+                lang,
+                f"{entry.title}: {resource.name}, sheet {chosen!r} of {len(names)}.",
+                f"{entry.title} : {resource.name}, feuille {chosen!r} sur {len(names)}.",
+            ),
+            limits=pick(lang, "; ", " ; ").join(notes) or None,
+            licence=_dataset_licence(entry, lang),
+            lang=lang,
         ),
     )

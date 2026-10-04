@@ -11,15 +11,15 @@ CUBE_NOT_AVAILABLE for them, so `wds_available` is False and their titles
 come from the page (English only). Six carry "inactive" in their WDS
 title and end in 2025-12.
 
-StatCan's own real-time viewer service (/rtdat-oadtr-service/) is
-disallowed by its robots.txt and is never called; the tables are read
-through WDS like any other cube.
+StatCan's own real-time viewer service (/rtdat-oadtr-service/) is never
+called; the tables are read through WDS like any other cube.
 """
 
 from __future__ import annotations
 
 from maplestats_mcp.modules.statcan.delta import constants
 from maplestats_mcp.modules.statcan.delta.archive_schemas import RealTimeTable, RealTimeTableList
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared.envelope import make_provenance
 
 PAGE_URL = "https://www.statcan.gc.ca/en/developers/real-time-data-tables"
@@ -206,14 +206,22 @@ def _table_number(product_id: int) -> str:
     return f"{text[:2]}-{text[2:4]}-{text[4:]}"
 
 
-def _note(title: str, available: bool) -> str | None:
+def _note(title: str, available: bool, lang: str) -> str | None:
     if not available:
-        return (
+        return say(
             "Listed on StatCan's real-time page, but WDS getCubeMetadata answered "
-            "CUBE_NOT_AVAILABLE on 2026-10-02."
+            "CUBE_NOT_AVAILABLE on 2026-10-02.",
+            "Figure sur la page des tableaux en temps réel de Statistique Canada, mais "
+            "getCubeMetadata de WDS a répondu CUBE_NOT_AVAILABLE le 2026-10-02 ; titre "
+            "disponible en anglais seulement.",
+            lang,
         )
     if title.endswith(", inactive"):
-        return "WDS titles this table inactive; its data end in 2025-12."
+        return say(
+            "WDS titles this table inactive; its data end in 2025-12.",
+            "WDS indique que ce tableau est inactif ; ses données se terminent en 2025-12.",
+            lang,
+        )
     return None
 
 
@@ -231,30 +239,42 @@ def list_real_time_tables(query: str | None = None, lang: str = "en") -> RealTim
             regular_title_en=reg_en,
             regular_title_fr=reg_fr,
             wds_available=available,
-            note=_note(rt_en, available),
+            note=_note(rt_en, available, lang),
         )
         for rt_id, rt_en, rt_fr, reg_id, reg_en, reg_fr, available in _TABLES
         if needle is None
         or needle in f"{rt_en} {rt_fr or ''} {reg_en} {reg_fr or ''} {rt_id} {reg_id}".casefold()
     ]
-    del lang
     return RealTimeTableList(
         count=len(tables),
         tables=tables,
         notes=[
-            (
+            say(
                 "Each real-time table adds a vintage (release date) dimension to its regular table; "
                 "it is released about a week after the regular table. Use wds_get_cube_metadata for "
                 "the real-time product id's dimensions, then wds_get_data_from_cube_coord or "
-                "wds_get_full_table_download for the data."
+                "wds_get_full_table_download for the data.",
+                "Chaque tableau en temps réel ajoute à son tableau régulier une dimension de "
+                "version (date de diffusion) ; il est diffusé environ une semaine après le tableau "
+                "régulier. Utilisez wds_get_cube_metadata pour les dimensions du tableau en temps "
+                "réel, puis wds_get_data_from_cube_coord ou wds_get_full_table_download pour "
+                "les données.",
+                lang,
             ),
-            (
+            say(
                 "The regular table always shows the latest revision; the revision history lives only "
-                "in the real-time table."
+                "in the real-time table.",
+                "Le tableau régulier présente toujours la dernière révision ; l'historique des "
+                "révisions se trouve seulement dans le tableau en temps réel.",
+                lang,
             ),
-            (
+            say(
                 "The three real-time ids with wds_available False are not served by WDS, so their "
-                "history cannot be fetched here."
+                "history cannot be fetched here.",
+                "Les trois tableaux en temps réel marqués wds_available False ne sont pas offerts "
+                "par WDS ; leur historique ne peut donc pas être obtenu ici, et leur titre n'existe "
+                "qu'en anglais.",
+                lang,
             ),
         ],
         provenance=make_provenance(
@@ -262,7 +282,17 @@ def list_real_time_tables(query: str | None = None, lang: str = "en") -> RealTim
             url=PAGE_URL,
             cached=True,
             schema_name="statcan_delta.RealTimeTableList",
-            freshness="Static list read from StatCan's real-time page and WDS on 2026-10-02.",
-            coverage="All 19 real-time tables the page lists.",
+            freshness=say(
+                "Static list read from StatCan's real-time page and WDS on 2026-10-02.",
+                "Liste fixe tirée de la page des tableaux en temps réel de Statistique Canada et "
+                "de WDS le 2026-10-02.",
+                lang,
+            ),
+            coverage=say(
+                "All 19 real-time tables the page lists.",
+                "Les 19 tableaux en temps réel figurant sur la page.",
+                lang,
+            ),
+            lang=lang,
         ),
     )

@@ -11,6 +11,7 @@ from maplestats_mcp.modules.statcan.census_profile_archive.schemas import (
     DownloadLink,
     GeographyLevelList,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 CensusYear = Literal[2001, 2006, 2011, 2016]
 Lang = Literal["en", "fr"]
@@ -37,8 +38,8 @@ async def statcan_census_profile_archive_list_geography_levels(
     fichier de téléchargement global, niveau géographique, format de
     fichier, profil du recensement.
     """
-    del lang
-    return await client.list_geography_levels(year)
+    use_lang(lang)
+    return await client.list_geography_levels(year, lang=lang)
 
 
 @tool
@@ -68,4 +69,5 @@ async def statcan_census_profile_archive_get_download_link(
     Mots-clés : recensement, archive, historique, téléchargement, fichier de
     téléchargement global, profil du recensement, fichier en français, CSV.
     """
+    use_lang(lang)
     return await client.get_download_link(year, level, file_format, lang)

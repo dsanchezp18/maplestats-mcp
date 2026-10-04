@@ -90,6 +90,16 @@ async def test_search_indicators_rejects_bad_limit():
         await client.search_indicators("canada", limit=0)
 
 
+async def test_errors_are_explained_in_french(httpx_mock):
+    with pytest.raises(InvalidInput, match="limit doit être entre 1 et"):
+        await client.search_indicators("canada", limit=0, lang="fr")
+    httpx_mock.add_response(url=f"{_CANADA_BASE}/fr/meta/99-9-9.json", status_code=404)
+    with pytest.raises(NotFound, match="introuvable à"):
+        await client.get_indicator_metadata("canada", "99-9-9", lang="fr")
+    with pytest.raises(InvalidInput, match="limit must be between 1 and"):
+        await client.search_indicators("canada", limit=0)
+
+
 async def test_search_indicators_global_uses_global_base_url(httpx_mock):
     httpx_mock.add_response(url=f"{_GLOBAL_BASE}/en/meta/all.json", json=_INDEX_JSON)
     result = await client.search_indicators("global")

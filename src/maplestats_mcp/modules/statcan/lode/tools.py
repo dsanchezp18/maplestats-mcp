@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.lode import client, constants
 from maplestats_mcp.modules.statcan.lode.schemas import (
     LodeDatabaseList,
@@ -31,6 +32,7 @@ async def statcan_lode_list_databases(lang: Literal["en", "fr"] = "en") -> LodeD
     hôpitaux, empreintes d'immeubles, écoles, installations sportives,
     éloignement, proximité.
     """
+    use_lang(lang)
     return await client.list_databases(lang)
 
 
@@ -49,6 +51,7 @@ async def statcan_lode_list_files(
     Mots-clés : liens de téléchargement, fichier ZIP, taille du fichier,
     GeoJSON, GeoPackage, CSV, provinces, licence ouverte, date de diffusion.
     """
+    use_lang(lang)
     return await client.list_files(database, lang, sizes)
 
 
@@ -67,6 +70,7 @@ async def statcan_lode_describe(
     champs, colonnes, variables, schéma, couches GeoPackage, type
     d'installation.
     """
+    use_lang(lang)
     return await client.describe(database, file, lang)
 
 
@@ -104,6 +108,7 @@ async def statcan_lode_query(
     pharmacies, écoles, arénas, musées, empreintes d'immeubles, boîte
     englobante, subdivision de recensement, installations par type.
     """
+    use_lang(lang)
     return await client.query(
         database,
         file=file,
@@ -132,7 +137,7 @@ async def statcan_lode_list_zip(url: str, lang: Literal["en", "fr"] = "en") -> L
     Mots-clés : Registre national des adresses, RNA, contenu du ZIP, archive,
     fichiers d'adresses, requête par plage, gros fichier, GTFS.
     """
-    del lang
+    use_lang(lang)
     return await client.list_zip(url)
 
 
@@ -159,5 +164,5 @@ async def statcan_lode_preview_member(
     code postal, aperçu des lignes, fichier CSV, lecture par plage, adresse
     civique.
     """
-    del lang
+    use_lang(lang)
     return await client.preview_member(url, member, match=match, rows=rows, scan_mb=scan_mb)

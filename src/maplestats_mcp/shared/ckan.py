@@ -24,6 +24,7 @@ from typing import Any, NoReturn
 
 import httpx
 
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -75,11 +76,13 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     return _envelope_detail(body) or clean_detail(exc.response.text)
 
 
-def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     detail = _error_detail(exc)
     if status == 404:
-        raise NotFound(f"{context}: no match found ({detail}).") from exc
+        raise_localized(
+            NotFound, f"{context}: no match found ({detail}).", f"{context} ({detail}).", lang
+        )
     if 400 <= status < 500:
         # Every 4xx other than 404 is treated as a caller-input problem, not
         # just a bare 400 - confirmed live that different CKAN deployments
@@ -88,30 +91,74 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
         # Montreal's own deployment returns 409 "Search Error" for the
         # same class of mistake). Narrowing this to status == 400 silently
         # misclassified the 409 case as an UpstreamError.
-        raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise_localized(
+            InvalidInput,
+            f"{context}: rejected the request ({detail}).",
+            f"le portail a refusé la requête {context} ({detail}).",
+            lang,
+        )
+    raise_localized(
+        UpstreamError,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a renvoyé l'erreur HTTP {status} : {detail}",
+        lang,
+    )
 
 
-async def action(config: CkanConfig, method: str, params: dict[str, Any] | None = None) -> Any:
+def _raise_network_error(context: str, exc: httpx.HTTPError, lang: str) -> NoReturn:
+    """shared/upstream_text's typed error, with a French message for `lang="fr"`."""
+    err = network_error(context, exc)
+    if isinstance(exc, httpx.DecodingError):
+        fr = (
+            f"{context} : le service a répondu, mais pas en JSON; il s'agit souvent d'une "
+            "page d'erreur ou de maintenance."
+        )
+    elif isinstance(exc, httpx.TimeoutException):
+        fr = (
+            f"{context} n'a pas répondu à temps ({type(exc).__name__}); la requête a déjà "
+            "été relancée. Réessayez dans quelques instants."
+        )
+    else:
+        fr = (
+            f"{context} n'a pas pu être joint ({type(exc).__name__}); la requête a déjà "
+            "été relancée. Réessayez dans quelques instants."
+        )
+    raise_localized(type(err), str(err), fr, lang)
+
+
+async def action(
+    config: CkanConfig,
+    method: str,
+    params: dict[str, Any] | None = None,
+    *,
+    lang: str = "en",
+) -> Any:
     """Call one CKAN Action API method and unwrap its `{"help","success",
-    "result"}` envelope, raising a typed error instead of returning one."""
+    "result"}` envelope, raising a typed error instead of returning one.
+
+    `lang="fr"` gives the error messages in French; the English ones are
+    unchanged.
+    """
     context = f"{config.source}:{method}"
     await _limiter(config).acquire()
     url = f"{config.base_url}{method}"
     try:
         data = await api_get(url, params=params, timeout=config.timeout)
     except httpx.HTTPStatusError as exc:
-        _raise_for_status_error(exc, context)
+        _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        raise network_error(context, exc) from exc
+        _raise_network_error(context, exc, lang)
     if not isinstance(data, dict) or not data.get("success") or "result" not in data:
         # Only the error part, shortened: the whole envelope can be a full page.
         error = data.get("error") if isinstance(data, dict) else None
         detail = (
             error.get("message") or error.get("__type") if isinstance(error, dict) else None
         ) or repr(data)
-        raise UpstreamError(
-            f"{context} returned an unsuccessful envelope: {clean_detail(str(detail))}"
+        raise_localized(
+            UpstreamError,
+            f"{context} returned an unsuccessful envelope: {clean_detail(str(detail))}",
+            f"{context} a renvoyé une enveloppe CKAN en échec : {clean_detail(str(detail))}",
+            lang,
         )
     return data["result"]
 

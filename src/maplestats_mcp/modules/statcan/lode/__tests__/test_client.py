@@ -151,6 +151,17 @@ async def test_unknown_database_is_input_error() -> None:
         await client.list_files("nope")
 
 
+async def test_errors_and_notes_in_french(httpx_mock: HTTPXMock) -> None:
+    with pytest.raises(InvalidInput, match="Base de données inconnue"):
+        await client.list_files("nope", lang="fr")
+    # Download links are read from the English page even for French calls.
+    httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text="<p>rien</p>")
+    with pytest.raises(NotFound, match="Aucun téléchargement ZIP trouvé"):
+        await client.list_files("odhf", lang="fr", sizes=False)
+    licence, url = client._licence(constants.BY_KEY["odhf"])
+    assert (licence, url) == (constants.OGL_FR, constants.OGL_URL_FR)
+
+
 def _zip_bytes(members: dict[str, bytes]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:

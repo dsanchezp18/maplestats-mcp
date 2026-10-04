@@ -46,8 +46,8 @@ DISTANCE_MAX_METRES = 100_000
 
 # --- StatCan geoanalytics MapServers (CSGE / GAIA apps) ----------------------
 
-# Confirmed live 2026-10-02: no robots.txt (HTTP 404) on gaia.statcan.gc.ca,
-# geoanalytics.cloud.statcan.ca or geo.statcan.gc.ca. These are the services
+# Confirmed live 2026-10-02 on gaia.statcan.gc.ca,
+# geoanalytics.cloud.statcan.ca and geo.statcan.gc.ca. These are the services
 # behind StatCan's public map apps, reached through the portal's anonymous
 # "sharing/servers" proxy; the /server REST folders themselves need a token.
 ANALYTICS_CONFIG_URL = "https://gaia.statcan.gc.ca/csge/infc/app/config/urls/urls-prod.json"
@@ -77,6 +77,15 @@ ANALYTICS_LIMITS = (
     "this tool returns at most 2,000 rows per call, page with result_offset. "
     "Licence: Statistics Canada Open Licence."
 )
+ANALYTICS_LIMITS_FR = (
+    "Points d'accès non documentés derrière les applications cartographiques CSGE/GAIA de "
+    "Statistique Canada, pas une API annoncée : les adresses des services sont lues à "
+    f"l'exécution dans le fichier de configuration des applications ({ANALYTICS_CONFIG_URL}) "
+    "et peuvent changer ou disparaître sans préavis. Le plafond par requête est le "
+    "maxRecordCount de la couche (50 000 pour infc, 2 000 pour hna et qol) ; cet outil renvoie "
+    "au plus 2 000 lignes par appel, paginez avec result_offset. Licence : Licence ouverte de "
+    "Statistique Canada."
+)
 
 # --- National Road Network (NRN) ---------------------------------------------
 
@@ -85,4 +94,10 @@ NRN_LIMITS = (
     "National Road Network (Natural Resources Canada data, hosted by Statistics Canada), "
     "Statistics Canada Open Licence. Per-request cap 2,000 features (maxRecordCount); "
     "this host intermittently answers HTTP 500 on valid requests (retried automatically)."
+)
+NRN_LIMITS_FR = (
+    "Réseau routier national (données de Ressources naturelles Canada, hébergées par "
+    "Statistique Canada), Licence ouverte de Statistique Canada. Plafond de 2 000 entités par "
+    "requête (maxRecordCount) ; ce serveur répond parfois HTTP 500 à des requêtes valides "
+    "(nouvelles tentatives automatiques)."
 )

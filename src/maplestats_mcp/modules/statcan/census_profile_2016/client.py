@@ -25,6 +25,7 @@ from maplestats_mcp.modules.statcan.census_profile_2016.schemas import (
     Census2016GeographyList,
     Census2016Value,
 )
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import (
@@ -45,9 +46,15 @@ _LIMITER = get_limiter(
 )
 
 
-def _rows_as_dicts(payload: Any, context: str) -> list[dict[str, Any]]:
+def _rows_as_dicts(payload: Any, context: str, lang: str = "en") -> list[dict[str, Any]]:
     if not isinstance(payload, dict) or "COLUMNS" not in payload or "DATA" not in payload:
-        raise UpstreamError(f"{context}: unexpected response shape (missing COLUMNS/DATA).")
+        raise UpstreamError(
+            say(
+                f"{context}: unexpected response shape (missing COLUMNS/DATA).",
+                f"{context} : réponse de forme inattendue (COLUMNS ou DATA absents).",
+                lang,
+            )
+        )
     columns = payload["COLUMNS"]
     return [dict(zip(columns, row, strict=False)) for row in payload["DATA"]]
 
@@ -68,14 +75,25 @@ async def list_geographies(
     geo_code = constants.GEOGRAPHY_LEVELS.get(level)
     if geo_code is None:
         raise InvalidInput(
-            f"statcan_census_profile_2016:list_geographies: level must be one of "
-            f"{sorted(constants.GEOGRAPHY_LEVELS)}, got {level!r}."
+            say(
+                f"statcan_census_profile_2016:list_geographies: level must be one of "
+                f"{sorted(constants.GEOGRAPHY_LEVELS)}, got {level!r}.",
+                f"statcan_census_profile_2016:list_geographies : level doit être l'une "
+                f"des valeurs {sorted(constants.GEOGRAPHY_LEVELS)}, reçu {level!r}.",
+                lang,
+            )
         )
     prov_code = constants.PROVINCE_TERRITORY_CODES.get(province_territory)
     if prov_code is None:
         raise InvalidInput(
-            f"statcan_census_profile_2016:list_geographies: province_territory must be one of "
-            f"{sorted(constants.PROVINCE_TERRITORY_CODES)}, got {province_territory!r}."
+            say(
+                f"statcan_census_profile_2016:list_geographies: province_territory must be one "
+                f"of {sorted(constants.PROVINCE_TERRITORY_CODES)}, got {province_territory!r}.",
+                f"statcan_census_profile_2016:list_geographies : province_territory doit "
+                f"être l'une des valeurs {sorted(constants.PROVINCE_TERRITORY_CODES)}, "
+                f"reçu {province_territory!r}.",
+                lang,
+            )
         )
     lang_code = constants.LANG_TO_CODE.get(lang, "E")
     url = f"{constants.BASE_URL}/CR2016Geo.json"
@@ -89,36 +107,63 @@ async def list_geographies(
             status = exc.response.status_code
             if status == 429 or status >= 500:
                 raise UpstreamUnavailable(
-                    f"statcan_census_profile_2016:list_geographies failed with HTTP {status} "
-                    "after retries. Try again shortly."
+                    say(
+                        f"statcan_census_profile_2016:list_geographies failed with HTTP {status} "
+                        "after retries. Try again shortly.",
+                        f"statcan_census_profile_2016:list_geographies a échoué (HTTP {status}) "
+                        "après plusieurs tentatives. Réessayez sous peu.",
+                        lang,
+                    )
                 ) from exc
             if status == 403:
                 raise UpstreamUnavailable(
-                    "statcan_census_profile_2016:list_geographies was refused (HTTP 403). "
-                    + constants.BLOCKED_NOTE
+                    say(
+                        "statcan_census_profile_2016:list_geographies was refused (HTTP 403). "
+                        + constants.BLOCKED_NOTE,
+                        "statcan_census_profile_2016:list_geographies a été refusé (HTTP 403). "
+                        + constants.BLOCKED_NOTE_FR,
+                        lang,
+                    )
                 ) from exc
             raise UpstreamError(
-                f"statcan_census_profile_2016:list_geographies returned HTTP {status}."
+                say(
+                    f"statcan_census_profile_2016:list_geographies returned HTTP {status}.",
+                    f"statcan_census_profile_2016:list_geographies a renvoyé HTTP {status}.",
+                    lang,
+                )
             ) from exc
         except CloudflareChallenge as exc:
+            # The shared challenge text is English; the French note says the same.
             raise CloudflareChallenge(
-                f"statcan_census_profile_2016:list_geographies: {exc} " + constants.BLOCKED_NOTE
+                say(
+                    f"statcan_census_profile_2016:list_geographies: {exc} "
+                    + constants.BLOCKED_NOTE,
+                    "statcan_census_profile_2016:list_geographies : " + constants.BLOCKED_NOTE_FR,
+                    lang,
+                )
             ) from exc
         except httpx.DecodingError as exc:
             # A 200 whose body is not JSON (e.g. the XML this service sends
             # without the Accept header) is a shape problem, not an outage.
             raise UpstreamError(
-                f"statcan_census_profile_2016:list_geographies returned a non-JSON response: {exc}"
+                say(
+                    f"statcan_census_profile_2016:list_geographies returned a non-JSON response: {exc}",
+                    f"statcan_census_profile_2016:list_geographies a renvoyé une réponse qui n'est pas du JSON : {exc}",
+                    lang,
+                )
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_census_profile_2016:list_geographies did not respond in time. "
-                "Try again shortly."
+                say(
+                    "statcan_census_profile_2016:list_geographies did not respond in time. Try again shortly.",
+                    "statcan_census_profile_2016:list_geographies n'a pas répondu à temps. Réessayez sous peu.",
+                    lang,
+                )
             ) from exc
 
     cache_key = f"statcan-census-profile-2016:geo:{geo_code}:{prov_code}:{lang_code}"
     payload, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    rows = _rows_as_dicts(payload, "statcan_census_profile_2016:list_geographies")
+    rows = _rows_as_dicts(payload, "statcan_census_profile_2016:list_geographies", lang)
 
     geographies = [
         Census2016Geography(
@@ -143,6 +188,7 @@ async def list_geographies(
             url=url,
             cached=was_cached,
             schema_name="statcan_census_profile_2016.Census2016GeographyList",
+            lang=lang,
         ),
     )
 
@@ -157,18 +203,34 @@ async def get_data(
 ) -> Census2016DataResult:
     """Fetch 2016 Census Profile data for one geography (by DGUID)."""
     if not dguid.strip():
-        raise InvalidInput("statcan_census_profile_2016:get_data: dguid must not be empty.")
+        raise InvalidInput(
+            say(
+                "statcan_census_profile_2016:get_data: dguid must not be empty.",
+                "statcan_census_profile_2016:get_data : dguid ne doit pas être vide.",
+                lang,
+            )
+        )
     topic_code = constants.TOPICS.get(topic)
     if topic_code is None:
         raise InvalidInput(
-            f"statcan_census_profile_2016:get_data: topic must be one of "
-            f"{sorted(constants.TOPICS)}, got {topic!r}."
+            say(
+                f"statcan_census_profile_2016:get_data: topic must be one of "
+                f"{sorted(constants.TOPICS)}, got {topic!r}.",
+                f"statcan_census_profile_2016:get_data : topic doit être l'une des valeurs "
+                f"{sorted(constants.TOPICS)}, reçu {topic!r}.",
+                lang,
+            )
         )
     stat_code = constants.STATISTIC_TO_CODE.get(statistic)
     if stat_code is None:
         raise InvalidInput(
-            f"statcan_census_profile_2016:get_data: statistic must be one of "
-            f"{sorted(constants.STATISTIC_TO_CODE)}, got {statistic!r}."
+            say(
+                f"statcan_census_profile_2016:get_data: statistic must be one of "
+                f"{sorted(constants.STATISTIC_TO_CODE)}, got {statistic!r}.",
+                f"statcan_census_profile_2016:get_data : statistic doit être l'une des "
+                f"valeurs {sorted(constants.STATISTIC_TO_CODE)}, reçu {statistic!r}.",
+                lang,
+            )
         )
     lang_code = constants.LANG_TO_CODE.get(lang, "E")
     url = f"{constants.BASE_URL}/CPR2016.json"
@@ -188,35 +250,62 @@ async def get_data(
             status = exc.response.status_code
             if status == 429 or status >= 500:
                 raise UpstreamUnavailable(
-                    f"statcan_census_profile_2016:get_data failed with HTTP {status} "
-                    "after retries. Try again shortly."
+                    say(
+                        f"statcan_census_profile_2016:get_data failed with HTTP {status} "
+                        "after retries. Try again shortly.",
+                        f"statcan_census_profile_2016:get_data a échoué (HTTP {status}) "
+                        "après plusieurs tentatives. Réessayez sous peu.",
+                        lang,
+                    )
                 ) from exc
             if status == 403:
                 raise UpstreamUnavailable(
-                    "statcan_census_profile_2016:get_data was refused (HTTP 403). "
-                    + constants.BLOCKED_NOTE
+                    say(
+                        "statcan_census_profile_2016:get_data was refused (HTTP 403). "
+                        + constants.BLOCKED_NOTE,
+                        "statcan_census_profile_2016:get_data a été refusé (HTTP 403). "
+                        + constants.BLOCKED_NOTE_FR,
+                        lang,
+                    )
                 ) from exc
             raise UpstreamError(
-                f"statcan_census_profile_2016:get_data returned HTTP {status}."
+                say(
+                    f"statcan_census_profile_2016:get_data returned HTTP {status}.",
+                    f"statcan_census_profile_2016:get_data a renvoyé HTTP {status}.",
+                    lang,
+                )
             ) from exc
         except CloudflareChallenge as exc:
+            # The shared challenge text is English; the French note says the same.
             raise CloudflareChallenge(
-                f"statcan_census_profile_2016:get_data: {exc} " + constants.BLOCKED_NOTE
+                say(
+                    f"statcan_census_profile_2016:get_data: {exc} " + constants.BLOCKED_NOTE,
+                    "statcan_census_profile_2016:get_data : " + constants.BLOCKED_NOTE_FR,
+                    lang,
+                )
             ) from exc
         except httpx.DecodingError as exc:
             # A 200 whose body is not JSON (e.g. the XML this service sends
             # without the Accept header) is a shape problem, not an outage.
             raise UpstreamError(
-                f"statcan_census_profile_2016:get_data returned a non-JSON response: {exc}"
+                say(
+                    f"statcan_census_profile_2016:get_data returned a non-JSON response: {exc}",
+                    f"statcan_census_profile_2016:get_data a renvoyé une réponse qui n'est pas du JSON : {exc}",
+                    lang,
+                )
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_census_profile_2016:get_data did not respond in time. Try again shortly."
+                say(
+                    "statcan_census_profile_2016:get_data did not respond in time. Try again shortly.",
+                    "statcan_census_profile_2016:get_data n'a pas répondu à temps. Réessayez sous peu.",
+                    lang,
+                )
             ) from exc
 
     cache_key = f"statcan-census-profile-2016:data:{dguid}:{topic_code}:{stat_code}:{lang_code}"
     payload, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    rows = _rows_as_dicts(payload, "statcan_census_profile_2016:get_data")
+    rows = _rows_as_dicts(payload, "statcan_census_profile_2016:get_data", lang)
 
     values = [
         Census2016Value(
@@ -247,5 +336,6 @@ async def get_data(
             url=url,
             cached=was_cached,
             schema_name="statcan_census_profile_2016.Census2016DataResult",
+            lang=lang,
         ),
     )

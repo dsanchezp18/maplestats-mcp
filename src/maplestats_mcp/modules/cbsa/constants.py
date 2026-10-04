@@ -27,6 +27,27 @@ LICENCE = (
     "(https://open.canada.ca/en/open-government-licence-canada). Source: Canada Border "
     "Services Agency."
 )
+LICENCE_FR = (
+    "Contient des informations visées par la Licence du gouvernement ouvert – Canada "
+    "(https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada). Source : Agence "
+    "des services frontaliers du Canada (ASFC)."
+)
+
+FRESHNESS = "file rewritten every few minutes; each crossing has its own update time"
+FRESHNESS_FR = (
+    "fichier réécrit toutes les quelques minutes ; chaque poste frontalier a sa propre "
+    "heure de mise à jour"
+)
+COVERAGE = "about 30 land crossings; most U.S.-bound lanes are not reported ('--')"
+COVERAGE_FR = (
+    "une trentaine de postes frontaliers terrestres ; la plupart des voies vers les "
+    "États-Unis ne sont pas indiquées (« -- »)"
+)
+# The French file translates office names and wait values but not locations.
+LOCATION_NOTE_FR = (
+    "Les noms des bureaux et les temps d'attente viennent du fichier français de l'ASFC ; "
+    "les lieux (« location ») n'y sont pas traduits et restent tels que publiés."
+)
 
 # Time zone abbreviations in the "Last updated" column, English and French,
 # as UTC offsets in hours. Saskatchewan crossings say CST all year.

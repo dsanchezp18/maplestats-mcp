@@ -15,6 +15,7 @@ from maplestats_mcp.modules.statcan.geo.schemas import (
     GeoSpatialLayerList,
     GeoSpatialQueryResult,
 )
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.shared.errors import InvalidInput
 
 Lang = Literal["en", "fr"]
@@ -40,10 +41,11 @@ async def statcan_geo_list_services(year: str, lang: Lang = "en") -> GeoServiceL
     carry French layer names and field aliases.
     Keywords: statcan, geography, boundary files, geospatial, arcgis,
     census geography, cartographic, digital boundary file.
-    Mots-clés : statcan, géographie, fichiers de limites, géospatial,
-    arcgis, géographie du recensement, limites cartographiques,
-    fichier numérique des limites.
+    Mots-clés : Statistique Canada, géographie, fichiers des limites,
+    géospatial, géographie du recensement, limites cartographiques, fichier
+    numérique des limites, couches cartographiques, cartes.
     """
+    use_lang(lang)
     return await client.list_services(year, lang)
 
 
@@ -64,10 +66,11 @@ async def statcan_geo_get_layer_detail(
     comes from `service` itself, so `lang` has no effect here.
     Keywords: statcan, geography, layer, schema, fields, arcgis,
     boundary file, geometry type.
-    Mots-clés : statcan, géographie, couche, schéma, champs, arcgis,
-    fichier de limites, type de géométrie.
+    Mots-clés : Statistique Canada, géographie, couche, schéma, champs,
+    attributs, fichier des limites, type de géométrie, structure de la
+    couche.
     """
-    del lang
+    use_lang(lang)
     return await client.get_layer_detail(year, service, layer_id)
 
 
@@ -122,11 +125,12 @@ async def statcan_geo_query_layer(
     Keywords: statcan, geography, query, boundary, dguid, csd, da,
     fsa, cma, arcgis, geospatial, polygon, geojson, point in polygon,
     latitude longitude, census tract lookup, bounding box.
-    Mots-clés : statcan, géographie, requête, limites, dguid, sdr, ad,
-    rta, rmr, arcgis, géospatial, polygone, geojson, point dans polygone,
-    latitude longitude, secteur de recensement, rectangle englobant.
+    Mots-clés : Statistique Canada, géographie, requête, limites, DGUID,
+    SDR, AD, RTA, RMR, géospatial, polygone, GeoJSON, point dans un
+    polygone, latitude et longitude, secteur de recensement, aire de
+    diffusion, rectangle englobant.
     """
-    del lang
+    use_lang(lang)
     return await client.query_layer_features(
         year,
         service,
@@ -172,12 +176,12 @@ async def statcan_geo_list_spatial_layers(
     Keywords: statcan, geoanalytics, infc, hna, qol, national road
     network, nrn, housing needs assessment, quality of life, deprivation
     index, proximity measures, transit stops, layers.
-    Mots-clés : statcan, géoanalytique, indice de défavorisation
+    Mots-clés : Statistique Canada, géoanalytique, indice de défavorisation
     multiple, évaluation des besoins en logement, qualité de vie, réseau
-    routier national, mesures de proximité, arrêts de transport en
-    commun, couches.
+    routier national, mesures de proximité, arrêts de transport en commun,
+    couches.
     """
-    del lang
+    use_lang(lang)
     return await client.list_spatial_layers(dataset, province=province, road_class=road_class)
 
 
@@ -196,11 +200,11 @@ async def statcan_geo_get_spatial_layer_detail(
     English only, so `lang` has no effect.
     Keywords: statcan, layer schema, fields, geoanalytics, infc, hna,
     qol, national road network, nrn, attribute names, max record count.
-    Mots-clés : statcan, schéma de couche, champs, géoanalytique,
+    Mots-clés : Statistique Canada, schéma de couche, champs, géoanalytique,
     réseau routier national, noms d'attributs, indice de défavorisation,
     qualité de vie, besoins en logement.
     """
-    del lang
+    use_lang(lang)
     return await client.get_spatial_layer_detail(dataset, layer_id)
 
 
@@ -247,17 +251,20 @@ async def statcan_geo_query_spatial_layer(
     spatial access, housing needs assessment, quality of life, transit
     stops, national road network, nrn, road segments, lat lon lookup,
     point in polygon, geoanalytics.
-    Mots-clés : statcan, indice de défavorisation multiple, mesures de
-    proximité, accès spatial, évaluation des besoins en logement,
-    qualité de vie, arrêts de transport en commun, réseau routier
-    national, segments routiers, latitude longitude, point dans polygone.
+    Mots-clés : Statistique Canada, indice de défavorisation multiple,
+    mesures de proximité, accès spatial, évaluation des besoins en logement,
+    qualité de vie, arrêts de transport en commun, réseau routier national,
+    segments routiers, latitude et longitude, point dans un polygone.
     """
-    del lang
+    use_lang(lang)
     if layer_id is None:
         if dataset != "nrn" or not province or not road_class:
             raise InvalidInput(
-                "Give layer_id (from statcan_geo_list_spatial_layers), or for dataset 'nrn' "
-                "both province and road_class."
+                say(
+                    "Give layer_id (from statcan_geo_list_spatial_layers), or for dataset 'nrn' "
+                    "both province and road_class.",
+                    "Donnez layer_id (tiré de statcan_geo_list_spatial_layers) ou, pour le jeu de données « nrn », à la fois province et road_class.",
+                )
             )
         layer_id = await client.resolve_nrn_layer(province, road_class)
     return await client.query_spatial_layer(

@@ -28,6 +28,7 @@ import httpx
 # stdlib for the type hints below.
 from defusedxml import ElementTree as defused_ET
 
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.sdmx import constants
 from maplestats_mcp.modules.statcan.sdmx.schemas import (
     SdmxCode,
@@ -70,7 +71,7 @@ def _limiter():
 
 
 def _say(lang: str, en: str, fr: str) -> str:
-    return fr if lang == "fr" else en
+    return say(en, fr, lang)
 
 
 class _BadBodyError(Exception):
@@ -351,7 +352,13 @@ async def get_structure(
         ]
         page = matching[offset : offset + limit]
         if len(page) < len(matching):
-            notes.append(f"{dim.dimension_id}: {len(page)} of {len(matching)} codes")
+            notes.append(
+                _say(
+                    lang,
+                    f"{dim.dimension_id}: {len(page)} of {len(matching)} codes",
+                    f"{dim.dimension_id} : {len(page)} des {len(matching)} codes",
+                )
+            )
         dimensions.append(dim.model_copy(update={"codes": page, "code_count": len(dim.codes)}))
     return SdmxStructure(
         dataflow_id=dataflow_id,
@@ -362,18 +369,31 @@ async def get_structure(
             cached=False,
             schema_name="statcan.sdmx.SdmxStructure",
             coverage=(
-                "Built from WDS getCubeMetadata because StatCan's SDMX structure document "
-                "for this table is empty or truncated; member ids and names are identical."
+                _say(
+                    lang,
+                    "Built from WDS getCubeMetadata because StatCan's SDMX structure document "
+                    "for this table is empty or truncated; member ids and names are identical.",
+                    "Construit à partir de getCubeMetadata de WDS parce que le document de "
+                    "structure SDMX de Statistique Canada pour ce tableau est vide ou tronqué ; "
+                    "les identifiants et les noms des membres sont identiques.",
+                )
                 if source == "wds"
                 else None
             ),
             limits=(
-                "codes paged ("
-                + "; ".join(notes)
-                + "); use limit/offset, code_query or dimension_position for the rest"
+                _say(
+                    lang,
+                    "codes paged ("
+                    + "; ".join(notes)
+                    + "); use limit/offset, code_query or dimension_position for the rest",
+                    "codes paginés ("
+                    + "; ".join(notes)
+                    + ") ; utilisez limit/offset, code_query ou dimension_position pour la suite",
+                )
                 if notes
                 else None
             ),
+            lang=lang,
         ),
     )
 
@@ -417,7 +437,12 @@ async def get_key_for_dimension(
             url=f"{constants.BASE_URL}structure/Data_Structure_{product_id}",
             cached=False,
             schema_name="statcan.sdmx.SdmxOrKey",
-            coverage=f"{len(leaf_codes)} leaf codes of {len(dimension.codes)} total codes",
+            coverage=_say(
+                lang,
+                f"{len(leaf_codes)} leaf codes of {len(dimension.codes)} total codes",
+                f"{len(leaf_codes)} codes terminaux sur {len(dimension.codes)} codes au total",
+            ),
+            lang=lang,
         ),
     )
 
@@ -558,13 +583,31 @@ async def get_data(
     notes: list[str] = []
     if default_applied:
         notes.append(
-            f"no period filter given: latest {constants.DEFAULT_LAST_N} observations per "
-            "series (pass last_n_observations or start_period/end_period for more)"
+            _say(
+                lang,
+                f"no period filter given: latest {constants.DEFAULT_LAST_N} observations per "
+                "series (pass last_n_observations or start_period/end_period for more)",
+                f"aucun filtre de période : les {constants.DEFAULT_LAST_N} dernières "
+                "observations par série (passez last_n_observations ou "
+                "start_period/end_period pour en obtenir plus)",
+            )
         )
     if any_series_truncated:
-        notes.append(f"newest {constants.MAX_ROWS} rows kept per series")
+        notes.append(
+            _say(
+                lang,
+                f"newest {constants.MAX_ROWS} rows kept per series",
+                f"les {constants.MAX_ROWS} lignes les plus récentes gardées par série",
+            )
+        )
     if series_total > constants.MAX_SERIES:
-        notes.append(f"first {constants.MAX_SERIES} of {series_total} series; narrow the key")
+        notes.append(
+            _say(
+                lang,
+                f"first {constants.MAX_SERIES} of {series_total} series; narrow the key",
+                f"{constants.MAX_SERIES} premières séries sur {series_total} ; précisez la clé",
+            )
+        )
     return SdmxData(
         dataflow_id=dataflow_id,
         key=key,
@@ -577,6 +620,7 @@ async def get_data(
             cached=False,
             schema_name="statcan.sdmx.SdmxData",
             limits="; ".join(notes) if notes else None,
+            lang=lang,
         ),
     )
 

@@ -14,8 +14,6 @@ Facts confirmed live 2026-10-02, not taken from the map's prose:
    Information, including for commercial purposes"; the required attribution
    is "Contains information licensed under the Open Government Licence -
    Alberta." The ArcGIS items themselves carry only a no-warranty disclaimer.
-   `services.arcgis.com/robots.txt` answers HTTP 403 (it is an API host, no
-   robots file); `www.arcgis.com/robots.txt` allows everything.
 2. `Wildfire_year_to_date` holds every fire point of the current year plus
    carry-over fires from earlier years (823 rows on 2026-10-02: 769 wildfires
    and 54 mutual-aid fires). It is the union of the separate "active" and

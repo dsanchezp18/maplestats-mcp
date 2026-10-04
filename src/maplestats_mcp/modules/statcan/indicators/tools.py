@@ -8,6 +8,7 @@ from fastmcp.tools import tool
 
 from maplestats_mcp.modules.statcan.indicators import client, constants
 from maplestats_mcp.modules.statcan.indicators.schemas import IndicatorList
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 Dataset = Literal["all", "economic", "homepage"]
 
@@ -43,4 +44,5 @@ async def statcan_indicators_get_indicators(
     taux de chômage, emploi, inflation, indice des prix à la
     consommation.
     """
+    use_lang(lang)
     return await client.get_indicators(dataset, query, geo_code=geo_code, lang=lang, limit=limit)

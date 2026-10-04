@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from maplestats_mcp import config
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.modules.statcan.pumf import client, codebooks, constants
 from maplestats_mcp.modules.statcan.pumf.schemas import (
     PumfVariable,
@@ -60,7 +61,12 @@ def _pick_member(
         for member in files:
             if member.name.lower() == wanted or member.name.lower().endswith("/" + wanted):
                 return member
-        raise InvalidInput(f"No file {data_file!r} in the ZIP; see statcan_pumf_list_zip.")
+        raise InvalidInput(
+            say(
+                f"No file {data_file!r} in the ZIP; see statcan_pumf_list_zip.",
+                f"Aucun fichier {data_file!r} dans le ZIP ; voir statcan_pumf_list_zip.",
+            )
+        )
     candidates = [
         m
         for m in files
@@ -74,10 +80,18 @@ def _pick_member(
         return pool[0]
     if not pool:
         raise NotFound(
-            "No microdata file found in the ZIP; pass data_file (see statcan_pumf_list_zip)."
+            say(
+                "No microdata file found in the ZIP; pass data_file (see statcan_pumf_list_zip).",
+                "Aucun fichier de microdonnées trouvé dans le ZIP ; passez data_file (voir statcan_pumf_list_zip).",
+            )
         )
     listing = ", ".join(f"{m.name} ({m.size / 1e6:.0f} MB)" for m in pool[:15])
-    raise InvalidInput(f"The ZIP has several data files; pass data_file as one of: {listing}")
+    raise InvalidInput(
+        say(
+            f"The ZIP has several data files; pass data_file as one of: {listing}",
+            f"Le ZIP contient plusieurs fichiers de données ; passez data_file parmi : {listing}",
+        )
+    )
 
 
 def _enforce_cache_cap(root: Path, keep: Path) -> None:
@@ -102,7 +116,12 @@ async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Pat
                     handle.write(chunk)
     except Exception as exc:
         zip_path.unlink(missing_ok=True)
-        raise UpstreamUnavailable(f"statcan_pumf: download of {url} failed: {exc}") from exc
+        raise UpstreamUnavailable(
+            say(
+                f"statcan_pumf: download of {url} failed: {exc}",
+                f"statcan_pumf : le téléchargement de {url} a échoué : {exc}",
+            )
+        ) from exc
 
     def extract() -> None:
         part = target.with_suffix(target.suffix + ".part")
@@ -344,7 +363,10 @@ async def _replicate_source(
     )
     if data is None or layout is None:
         raise NotFound(
-            f"The bootstrap weight file ({file_marker}) or its layout is not in the ZIP."
+            say(
+                f"The bootstrap weight file ({file_marker}) or its layout is not in the ZIP.",
+                f"Le fichier des poids bootstrap ({file_marker}) ou sa disposition ne se trouve pas dans le ZIP.",
+            )
         )
     dct = await remote_zip.read_member(url, layout)
     columns = codebooks.parse_stata_dct(dct.decode("cp1252", errors="replace"))
@@ -405,20 +427,38 @@ async def tabulate(
     min_count: int = 30,
     lang: str = "en",
 ) -> WeightedTable:
+    use_lang(lang)
     if len(rows) > 3:
-        raise InvalidInput("Group by at most 3 variables.")
+        raise InvalidInput(
+            say("Group by at most 3 variables.", "Regroupez selon au plus 3 variables.")
+        )
     if statistic == "mean" and not value_variable:
-        raise InvalidInput("statistic 'mean' needs value_variable.")
+        raise InvalidInput(
+            say(
+                "statistic 'mean' needs value_variable.",
+                "La statistique « mean » exige value_variable.",
+            )
+        )
     variables, _, _ = await client.load_codebook(url, lang)
     by_name = {v.name: v for v in variables}
     weights = client.weight_names(variables)
     chosen_weight = (weight or client.main_weight(variables) or "").upper()
     if not chosen_weight:
-        raise InvalidInput(f"No weight variable found; pass weight (candidates: {weights}).")
+        raise InvalidInput(
+            say(
+                f"No weight variable found; pass weight (candidates: {weights}).",
+                f"Aucune variable de pondération trouvée ; passez weight (candidates : {weights}).",
+            )
+        )
     wanted = [*rows, chosen_weight, *(filters or {}), *([value_variable] if value_variable else [])]
     for name in wanted:
         if not _NAME.match(name) or name.upper() not in by_name:
-            raise InvalidInput(f"{name!r} is not a variable in this PUMF's codebook.")
+            raise InvalidInput(
+                say(
+                    f"{name!r} is not a variable in this PUMF's codebook.",
+                    f"{name!r} n'est pas une variable du dictionnaire de données de ce FMGD.",
+                )
+            )
     upper_rows = [r.upper() for r in rows]
     upper_filters = {k.upper(): [str(c) for c in v] for k, v in (filters or {}).items()}
 
@@ -430,7 +470,12 @@ async def tabulate(
             n for n in wanted if not by_name[n.upper()].position or not by_name[n.upper()].width
         ]
         if missing:
-            raise UpstreamError(f"The codebook gives no column positions for {missing}.")
+            raise UpstreamError(
+                say(
+                    f"The codebook gives no column positions for {missing}.",
+                    f"Le dictionnaire de données ne donne aucune position de colonne pour {missing}.",
+                )
+            )
     path = await local_data_file(url, member)
 
     method = variance_method(url)
@@ -443,7 +488,12 @@ async def tabulate(
     known = {**by_name, **(replicate_source.columns if replicate_source else {})}
     missing_replicates = [w for w in all_weights if w not in known]
     if missing_replicates:
-        raise UpstreamError(f"Replicate weights {missing_replicates[:3]} are not in the codebook.")
+        raise UpstreamError(
+            say(
+                f"Replicate weights {missing_replicates[:3]} are not in the codebook.",
+                f"Les poids répliqués {missing_replicates[:3]} ne sont pas dans le dictionnaire de données.",
+            )
+        )
 
     result_rows, total_n, total_weight = await run_in_pool(
         _run_query,
@@ -493,18 +543,35 @@ async def tabulate(
         and m.name.lower().endswith(".txt")
         and "layout" not in m.name.lower()
     ]
+    shown_replicates = ", ".join(replicates[:5])
     variance_note = (
-        f"Standard errors: {method.description}"
-        if method
-        else "Standard errors are not computed for this PUMF: its variance method has not been "
-        "verified from its user guide"
-        + (f"; replicate weights: {', '.join(replicates[:5])}..." if replicates else "")
-        + (
-            f"; bootstrap weights ship in {bootstrap_files[0]} (joined on the record id)"
-            if bootstrap_files
-            else ""
+        say(
+            f"Standard errors: {method.description}",
+            f"Erreurs types : {method.description} (méthode décrite en anglais, d'après le "
+            "guide de l'utilisateur)",
         )
-        + "."
+        if method
+        else say(
+            "Standard errors are not computed for this PUMF: its variance method has not been "
+            "verified from its user guide"
+            + (f"; replicate weights: {shown_replicates}..." if replicates else "")
+            + (
+                f"; bootstrap weights ship in {bootstrap_files[0]} (joined on the record id)"
+                if bootstrap_files
+                else ""
+            )
+            + ".",
+            "Les erreurs types ne sont pas calculées pour ce FMGD : sa méthode d'estimation "
+            "de la variance n'a pas été vérifiée dans son guide de l'utilisateur"
+            + (f" ; poids répliqués : {shown_replicates}..." if replicates else "")
+            + (
+                f" ; les poids bootstrap sont dans {bootstrap_files[0]} (joints sur "
+                "l'identifiant d'enregistrement)"
+                if bootstrap_files
+                else ""
+            )
+            + ".",
+        )
     )
     return WeightedTable(
         url=url,
@@ -520,14 +587,25 @@ async def tabulate(
         variance_method=method.description if method else None,
         notes=[
             variance_note,
-            (
+            say(
                 f"Cells with fewer than {min_count} respondents are flagged low_count; StatCan "
-                "guidelines usually suppress or qualify them."
+                "guidelines usually suppress or qualify them.",
+                f"Les cellules de moins de {min_count} répondants sont marquées low_count ; les "
+                "lignes directrices de Statistique Canada les suppriment ou les nuancent "
+                "habituellement.",
             ),
-            "Special codes (valid skip, don't know, not stated) are included unless filtered out.",
-            (
+            say(
+                "Special codes (valid skip, don't know, not stated) are included unless filtered "
+                "out.",
+                "Les codes spéciaux (enchaînement valide, ne sait pas, non déclaré) sont inclus "
+                "sauf s'ils sont filtrés.",
+            ),
+            say(
                 "Some variables carry implied decimals (LFS HRLYEARN is in cents); check the "
-                "codebook or user guide before reporting means."
+                "codebook or user guide before reporting means.",
+                "Certaines variables ont des décimales implicites (HRLYEARN de l'EPA est en "
+                "cents) ; vérifiez le dictionnaire de données ou le guide de l'utilisateur avant "
+                "de publier des moyennes.",
             ),
         ],
         provenance=make_provenance(
@@ -535,6 +613,10 @@ async def tabulate(
             url=url,
             cached=False,
             schema_name="statcan_pumf.WeightedTable",
-            limits="computed from the PUMF microdata by this server with DuckDB",
+            limits=say(
+                "computed from the PUMF microdata by this server with DuckDB",
+                "calculé par ce serveur avec DuckDB à partir des microdonnées du FMGD",
+            ),
+            lang=lang,
         ),
     )

@@ -7,6 +7,14 @@ docstring for the full list of what was verified).
 
 BASE_URL = "https://www.bankofcanada.ca/valet/"
 
+# The same Valet API on the Bank's French domain returns every label and
+# description in French (series, groups, observations) and its own error
+# messages in French ("Série X non valide."), with identical JSON shapes
+# and codes (checked live 2026-10-04). The English domain has no language
+# parameter: `?lang=fr` is ignored on /series and rejected on
+# /observations, so the domain is the only way to get French text.
+BASE_URL_FR = "https://www.banqueducanada.ca/valet/"
+
 # Valet publishes no numeric rate-limit figure in its docs
 # (https://www.bankofcanada.ca/valet/docs), and a live response to
 # /valet/series/FXUSDCAD/json and /valet/lists/series/json carried no

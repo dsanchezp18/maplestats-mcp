@@ -23,6 +23,7 @@ import unicodedata
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
 from maplestats_mcp.modules.statcan.surveys import constants
 from maplestats_mcp.modules.statcan.surveys.schemas import (
     RdcHolding,
@@ -75,14 +76,18 @@ async def search_surveys(
     query: str = "", *, lang: str = "en", limit: int = constants.SEARCH_LIMIT_DEFAULT
 ) -> SurveyListResult:
     """Search StatCan's A-Z survey and statistical program directory."""
+    use_lang(lang)
     if lang not in ("en", "fr"):
         raise InvalidInput(
             f"statcan_surveys:search_surveys: lang must be one of ('en', 'fr'), got {lang!r}."
         )
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_surveys:search_surveys: limit must be between 1 and "
-            f"{constants.SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_surveys:search_surveys: limit must be between 1 and "
+                f"{constants.SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_surveys:search_surveys : limit doit être entre 1 et {constants.SEARCH_LIMIT_MAX}, reçu {limit}.",
+            )
         )
     url = _list_url(lang)
 
@@ -104,16 +109,27 @@ async def search_surveys(
             if not _has_survey_links(response.text):
                 _warmed_list_langs.discard(lang)
                 raise UpstreamError(
-                    "statcan_surveys:search_surveys: the directory rendered no surveys even "
-                    "after refreshing its session. Try again shortly."
+                    say(
+                        "statcan_surveys:search_surveys: the directory rendered no surveys even "
+                        "after refreshing its session. Try again shortly.",
+                        "statcan_surveys:search_surveys : le répertoire n'a affiché aucune enquête, même après le renouvellement de sa session. Réessayez sous peu.",
+                    )
                 )
             return response.text
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            raise UpstreamError(f"statcan_surveys:search_surveys returned HTTP {status}.") from exc
+            raise UpstreamError(
+                say(
+                    f"statcan_surveys:search_surveys returned HTTP {status}.",
+                    f"statcan_surveys:search_surveys a renvoyé HTTP {status}.",
+                )
+            ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_surveys:search_surveys did not respond in time. Try again shortly."
+                say(
+                    "statcan_surveys:search_surveys did not respond in time. Try again shortly.",
+                    "statcan_surveys:search_surveys n'a pas répondu à temps. Réessayez sous peu.",
+                )
             ) from exc
 
     cache_key = f"statcan-surveys:list:{lang}"
@@ -145,6 +161,7 @@ async def search_surveys(
             url=url,
             cached=was_cached,
             schema_name="statcan_surveys.SurveyListResult",
+            lang=lang,
         ),
     )
 
@@ -200,12 +217,14 @@ def _parse_survey_metadata(html: str, survey_id: int, url: str, was_cached: bool
             url=url,
             cached=was_cached,
             schema_name="statcan_surveys.SurveyMetadata",
+            lang=current_lang(),
         ),
     )
 
 
 async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMetadata:
     """Fetch a survey's IMDB metadata: status, frequency, description, and subjects."""
+    use_lang(lang)
     if lang not in ("en", "fr"):
         raise InvalidInput(
             f"statcan_surveys:get_survey_metadata: lang must be one of ('en', 'fr'), got {lang!r}."
@@ -219,7 +238,10 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
             return await get_with_retry(_client, url, retry_statuses=RETRY_STATUSES - {500})
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_surveys:get_survey_metadata did not respond in time. Try again shortly."
+                say(
+                    "statcan_surveys:get_survey_metadata did not respond in time. Try again shortly.",
+                    "statcan_surveys:get_survey_metadata n'a pas répondu à temps. Réessayez sous peu.",
+                )
             ) from exc
 
     cache_key = f"statcan-surveys:metadata:{lang}:{survey_id}"
@@ -234,10 +256,18 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
     # deterministic "no such survey" signal, not a generic upstream
     # failure, so it is treated as NotFound rather than UpstreamError.
     if response.status_code in (404, 500) and "srvmsg404" in str(response.url):
-        raise NotFound(f"statcan_surveys:get_survey_metadata: no survey found for id {survey_id}.")
+        raise NotFound(
+            say(
+                f"statcan_surveys:get_survey_metadata: no survey found for id {survey_id}.",
+                f"statcan_surveys:get_survey_metadata : aucune enquête trouvée pour l'identifiant {survey_id}.",
+            )
+        )
     if response.status_code != 200:
         raise UpstreamError(
-            f"statcan_surveys:get_survey_metadata returned HTTP {response.status_code}."
+            say(
+                f"statcan_surveys:get_survey_metadata returned HTTP {response.status_code}.",
+                f"statcan_surveys:get_survey_metadata a renvoyé HTTP {response.status_code}.",
+            )
         )
     return _parse_survey_metadata(response.text, survey_id, url, was_cached)
 
@@ -278,8 +308,11 @@ def _check_lang_and_limit(tool: str, lang: str, limit: int) -> None:
         )
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_surveys:{tool}: limit must be between 1 and "
-            f"{constants.SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_surveys:{tool}: limit must be between 1 and "
+                f"{constants.SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_surveys:{tool} : limit doit être entre 1 et {constants.SEARCH_LIMIT_MAX}, reçu {limit}.",
+            )
         )
 
 
@@ -290,10 +323,18 @@ async def _fetch_page(url: str, tool: str, cache_key: str) -> tuple[str, bool]:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            raise UpstreamError(f"statcan_surveys:{tool} returned HTTP {status}.") from exc
+            raise UpstreamError(
+                say(
+                    f"statcan_surveys:{tool} returned HTTP {status}.",
+                    f"statcan_surveys:{tool} a renvoyé HTTP {status}.",
+                )
+            ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                f"statcan_surveys:{tool} did not respond in time. Try again shortly."
+                say(
+                    f"statcan_surveys:{tool} did not respond in time. Try again shortly.",
+                    f"statcan_surveys:{tool} n'a pas répondu à temps. Réessayez sous peu.",
+                )
             ) from exc
         return response.content.decode("utf-8", errors="replace")
 
@@ -337,14 +378,18 @@ async def search_rdc_holdings(
     query: str = "", *, lang: str = "en", limit: int = constants.SEARCH_LIMIT_DEFAULT
 ) -> RdcSearchResult:
     """Search the datasets available at StatCan's Research Data Centres."""
+    use_lang(lang)
     _check_lang_and_limit("search_rdc_holdings", lang, limit)
     url = constants.RDC_URL_FR if lang == "fr" else constants.RDC_URL_EN
     html, was_cached = await _fetch_page(url, "search_rdc_holdings", f"statcan-surveys:rdc:{lang}")
     holdings = _parse_rdc(html)
     if not holdings:
         raise UpstreamError(
-            "statcan_surveys:search_rdc_holdings: the page rendered no table rows. "
-            "Try again shortly."
+            say(
+                "statcan_surveys:search_rdc_holdings: the page rendered no table rows. "
+                "Try again shortly.",
+                "statcan_surveys:search_rdc_holdings : la page n'a affiché aucune ligne de tableau. Réessayez sous peu.",
+            )
         )
     words = re.findall(r"\w+", _fold(query))
     matched = [
@@ -367,10 +412,15 @@ async def search_rdc_holdings(
             url=url,
             cached=was_cached,
             schema_name="statcan_surveys.RdcSearchResult",
-            limits=(
+            limits=say(
                 "A holdings list, not data: RDC access needs an approved project and security "
-                "clearance. Record number 8006 is a generic bucket, not one survey."
+                "clearance. Record number 8006 is a generic bucket, not one survey.",
+                "Une liste des fonds, pas des données : l'accès aux CDR exige un projet approuvé "
+                "et une habilitation de sécurité. Le numéro d'enregistrement 8006 est une "
+                "catégorie générale, pas une enquête.",
+                lang,
             ),
+            lang=lang,
         ),
     )
 
@@ -438,6 +488,7 @@ async def search_rtra_datasets(
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
 ) -> RtraSearchResult:
     """Search the datasets StatCan offers through Real Time Remote Access (RTRA)."""
+    use_lang(lang)
     _check_lang_and_limit("search_rtra_datasets", lang, limit)
     url = constants.RTRA_URL_FR if lang == "fr" else constants.RTRA_URL_EN
     html, was_cached = await _fetch_page(
@@ -446,8 +497,11 @@ async def search_rtra_datasets(
     datasets = _parse_rtra(html)
     if not datasets:
         raise UpstreamError(
-            "statcan_surveys:search_rtra_datasets: the page rendered no dataset tables. "
-            "Try again shortly."
+            say(
+                "statcan_surveys:search_rtra_datasets: the page rendered no dataset tables. "
+                "Try again shortly.",
+                "statcan_surveys:search_rtra_datasets : la page n'a affiché aucun tableau d'ensembles de données. Réessayez sous peu.",
+            )
         )
     words = re.findall(r"\w+", _fold(query))
     wanted = deleted_variable.strip().upper() if deleted_variable else None
@@ -472,9 +526,15 @@ async def search_rtra_datasets(
             url=url,
             cached=was_cached,
             schema_name="statcan_surveys.RtraSearchResult",
-            limits=(
+            limits=say(
                 "A list of RTRA datasets and their disclosure settings, not the data: RTRA "
-                "runs on StatCan's server for registered users and returns rounded counts."
+                "runs on StatCan's server for registered users and returns rounded counts.",
+                "Une liste des ensembles de données de l'ADTR et de leurs paramètres de contrôle "
+                "de la divulgation, pas les données : le Système d'accès à distance en temps réel "
+                "s'exécute sur le serveur de Statistique Canada pour les abonnés et renvoie des "
+                "comptes arrondis.",
+                lang,
             ),
+            lang=lang,
         ),
     )

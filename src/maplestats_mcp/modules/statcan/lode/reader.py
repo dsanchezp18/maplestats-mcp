@@ -21,6 +21,7 @@ from typing import Any
 
 import duckdb
 
+from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.lode import constants, geometry
 from maplestats_mcp.modules.statcan.lode.schemas import LodeField, LodeLayer, Scalar
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
@@ -96,7 +97,12 @@ def province_values(text: str) -> frozenset[str]:
         spellings = {code.lower(), pruid, fold(en), fold(fr)}
         if wanted in spellings:
             return frozenset(spellings)
-    raise InvalidInput(f"province must be a code such as ON, a name or a PRUID, got {text!r}.")
+    raise InvalidInput(
+        say(
+            f"province must be a code such as ON, a name or a PRUID, got {text!r}.",
+            f"province doit être un code comme ON, un nom ou un PRUID, reçu {text!r}.",
+        )
+    )
 
 
 def province_code(text: str) -> str:
@@ -119,8 +125,11 @@ def conditions(spec: QuerySpec, columns: list[str]) -> list[Cond]:
         column = role_column(columns, role)
         if column is None:
             raise InvalidInput(
-                f"This file has no {what} column, so that filter cannot apply. "
-                f"Columns: {', '.join(columns)}."
+                say(
+                    f"This file has no {what} column, so that filter cannot apply. "
+                    f"Columns: {', '.join(columns)}.",
+                    f"Ce fichier n'a pas de colonne {what}, donc ce filtre ne peut pas s'appliquer. Colonnes : {', '.join(columns)}.",
+                )
             )
         return column
 
@@ -139,7 +148,12 @@ def conditions(spec: QuerySpec, columns: list[str]) -> list[Cond]:
     for key, value in spec.filters.items():
         column = lower.get(key.lower())
         if column is None:
-            raise InvalidInput(f"No column {key!r}. Columns: {', '.join(columns)}.")
+            raise InvalidInput(
+                say(
+                    f"No column {key!r}. Columns: {', '.join(columns)}.",
+                    f"Aucune colonne {key!r}. Colonnes : {', '.join(columns)}.",
+                )
+            )
         out.append(Cond(column, "eq", fold(value)))
     return out
 
@@ -168,7 +182,10 @@ def _validate_bbox(box: tuple[float, float, float, float]) -> None:
     west, south, east, north = box
     if not (-180 <= west < east <= 180 and -90 <= south < north <= 90):
         raise InvalidInput(
-            "bbox must be west,south,east,north in degrees, e.g. -75.8,45.3,-75.6,45.5."
+            say(
+                "bbox must be west,south,east,north in degrees, e.g. -75.8,45.3,-75.6,45.5.",
+                "bbox doit être ouest,sud,est,nord en degrés, p. ex. -75.8,45.3,-75.6,45.5.",
+            )
         )
 
 
@@ -210,7 +227,9 @@ def gpkg_layers(path: Path) -> list[LodeLayer]:
             )
         return layers
     except sqlite3.DatabaseError as exc:
-        raise UpstreamError(f"Not a readable GeoPackage: {exc}") from exc
+        raise UpstreamError(
+            say(f"Not a readable GeoPackage: {exc}", f"GeoPackage illisible : {exc}")
+        ) from exc
     finally:
         con.close()
 
@@ -236,13 +255,22 @@ def _gpkg_table(con: sqlite3.Connection, layer: str | None) -> tuple[str, str, s
         "WHERE c.data_type = 'features'"
     ).fetchall()
     if not rows:
-        raise UpstreamError("The GeoPackage has no feature layer.")
+        raise UpstreamError(
+            say(
+                "The GeoPackage has no feature layer.", "Le GeoPackage n'a aucune couche d'entités."
+            )
+        )
     if layer:
         for table, column, srs in rows:
             if table.lower() == layer.lower():
                 return table, column, _gpkg_crs(con, srs)
         names = ", ".join(r[0] for r in rows)
-        raise InvalidInput(f"No layer {layer!r}. Layers: {names}.")
+        raise InvalidInput(
+            say(
+                f"No layer {layer!r}. Layers: {names}.",
+                f"Aucune couche {layer!r}. Couches : {names}.",
+            )
+        )
     table, column, srs = rows[0]
     return table, column, _gpkg_crs(con, srs)
 
@@ -281,7 +309,12 @@ def query_gpkg(path: Path, spec: QuerySpec) -> Outcome:
         if spec.bbox:
             _validate_bbox(spec.bbox)
             if kind == "unknown":
-                raise InvalidInput("This file's coordinate system is not supported for bbox.")
+                raise InvalidInput(
+                    say(
+                        "This file's coordinate system is not supported for bbox.",
+                        "Le système de coordonnées de ce fichier n'est pas pris en charge pour bbox.",
+                    )
+                )
             rtree = f"rtree_{table}_{geom_col}"
             has_rtree = con.execute(
                 "SELECT 1 FROM sqlite_master WHERE name = ?", (rtree,)
@@ -343,12 +376,18 @@ def query_gpkg(path: Path, spec: QuerySpec) -> Outcome:
                 break
         if lower:
             notes.append(
-                f"Stopped after {constants.SCAN_ROWS_MAX:,} rows; total_matched is a lower bound. "
-                "Add province, csd or a smaller bbox."
+                say(
+                    f"Stopped after {constants.SCAN_ROWS_MAX:,} rows; total_matched is a lower "
+                    "bound. Add province, csd or a smaller bbox.",
+                    f"Arrêt après {constants.SCAN_ROWS_MAX:,} lignes ; total_matched est une borne "
+                    "inférieure. Ajoutez province, csd ou une bbox plus petite.",
+                )
             )
         return Outcome(columns, records, total, lower, table, crs, notes)
     except sqlite3.DatabaseError as exc:
-        raise UpstreamError(f"GeoPackage could not be read: {exc}") from exc
+        raise UpstreamError(
+            say(f"GeoPackage could not be read: {exc}", f"Le GeoPackage n'a pas pu être lu : {exc}")
+        ) from exc
     finally:
         con.close()
 
@@ -371,13 +410,24 @@ def read_geojson(path: Path) -> tuple[list[dict[str, Any]], str]:
     try:
         data = json.loads(path.read_bytes())
     except ValueError as exc:
-        raise UpstreamError(f"GeoJSON could not be parsed: {exc}") from exc
+        raise UpstreamError(
+            say(
+                f"GeoJSON could not be parsed: {exc}", f"Le GeoJSON n'a pas pu être analysé : {exc}"
+            )
+        ) from exc
     features = data.get("features") if isinstance(data, dict) else None
     if not isinstance(features, list):
-        raise UpstreamError("GeoJSON has no features list.")
+        raise UpstreamError(
+            say("GeoJSON has no features list.", "Le GeoJSON n'a pas de liste features.")
+        )
     kind = _geojson_kind(data)
     if kind == "unknown" and isinstance(data.get("crs"), dict):
-        raise InvalidInput("This GeoJSON uses a coordinate system that is not supported.")
+        raise InvalidInput(
+            say(
+                "This GeoJSON uses a coordinate system that is not supported.",
+                "Ce GeoJSON utilise un système de coordonnées non pris en charge.",
+            )
+        )
     return features, "lonlat" if kind == "unknown" else kind
 
 
@@ -460,7 +510,9 @@ def csv_columns(path: Path) -> list[str]:
             r[0] for r in con.execute(f"DESCRIBE SELECT * FROM {_csv_relation(path)}").fetchall()
         ]
     except duckdb.Error as exc:
-        raise UpstreamError(f"CSV could not be read: {exc}") from exc
+        raise UpstreamError(
+            say(f"CSV could not be read: {exc}", f"Le CSV n'a pas pu être lu : {exc}")
+        ) from exc
     finally:
         con.close()
 
@@ -502,7 +554,12 @@ def query_csv(path: Path, spec: QuerySpec) -> Outcome:
     if spec.bbox:
         _validate_bbox(spec.bbox)
         if coords is None:
-            raise InvalidInput("This file has no coordinates, so bbox cannot apply.")
+            raise InvalidInput(
+                say(
+                    "This file has no coordinates, so bbox cannot apply.",
+                    "Ce fichier n'a pas de coordonnées, donc bbox ne peut pas s'appliquer.",
+                )
+            )
         where.append("__lon BETWEEN ? AND ? AND __lat BETWEEN ? AND ?")
         params.extend([spec.bbox[0], spec.bbox[2], spec.bbox[1], spec.bbox[3]])
     lon_sql, lat_sql = coords if coords else ("NULL", "NULL")
@@ -516,7 +573,9 @@ def query_csv(path: Path, spec: QuerySpec) -> Outcome:
             f"SELECT {select}, __lon, __lat FROM {source}{clause} LIMIT {int(spec.limit)}", params
         ).fetchall()
     except duckdb.Error as exc:
-        raise UpstreamError(f"CSV could not be queried: {exc}") from exc
+        raise UpstreamError(
+            say(f"CSV could not be queried: {exc}", f"Le CSV n'a pas pu être interrogé : {exc}")
+        ) from exc
     finally:
         con.close()
     own = {c.lower() for c in columns}
@@ -537,7 +596,9 @@ def csv_sample(path: Path) -> list[LodeField]:
         names = [d[0] for d in cursor.description]
         row = cursor.fetchone() or [None] * len(names)
     except duckdb.Error as exc:
-        raise UpstreamError(f"CSV could not be read: {exc}") from exc
+        raise UpstreamError(
+            say(f"CSV could not be read: {exc}", f"Le CSV n'a pas pu être lu : {exc}")
+        ) from exc
     finally:
         con.close()
     return [LodeField(name=n, example=tidy(v)) for n, v in zip(names, row, strict=True)]

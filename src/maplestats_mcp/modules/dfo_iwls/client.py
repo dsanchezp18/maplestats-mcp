@@ -25,8 +25,9 @@ from maplestats_mcp.modules.dfo_iwls.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error, truncation_note_lang
 from maplestats_mcp.shared.http import api_get
-from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -36,29 +37,44 @@ _LIMITER = get_limiter(
 )
 
 
-def _raise_for(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
+def _raise_for(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
     status = exc.response.status_code
     try:
         body = exc.response.json()
         detail = "; ".join(body.get("errors") or []) or body.get("message") or ""
     except ValueError:
         detail = exc.response.text[:200]
+    # `detail` is the API's own message, in English only.
     if status == 404:
-        raise NotFound(f"{context}: {detail}") from exc
+        raise lang_error(
+            NotFound, lang, f"{context}: {detail}", f"{context} (message de l'API) : {detail}"
+        ) from exc
     if status == 400:
-        raise InvalidInput(f"{context}: {detail}") from exc
-    raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc
+        raise lang_error(
+            InvalidInput, lang, f"{context}: {detail}", f"{context} (message de l'API) : {detail}"
+        ) from exc
+    raise lang_error(
+        UpstreamError,
+        lang,
+        f"{context} returned HTTP {status}: {detail}",
+        f"{context} a répondu HTTP {status} (message de l'API) : {detail}",
+    ) from exc
 
 
-async def _get(path: str, params: dict[str, Any] | None = None) -> Any:
+async def _get(path: str, params: dict[str, Any] | None = None, lang: str = "en") -> Any:
     await _LIMITER.acquire()
     context = f"dfo_iwls:{path}"
     try:
         return await api_get(f"{constants.BASE_URL}{path}", params=params)
     except httpx.HTTPStatusError as exc:
-        _raise_for(exc, context)
+        _raise_for(exc, context, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{context} did not respond in time. Try again shortly.") from exc
+        raise lang_error(
+            UpstreamUnavailable,
+            lang,
+            f"{context} did not respond in time. Try again shortly.",
+            f"{context} n'a pas répondu à temps. Réessayez dans un instant.",
+        ) from exc
 
 
 def _station(obj: dict[str, Any], lang: str) -> StationSummary:
@@ -79,21 +95,32 @@ def _station(obj: dict[str, Any], lang: str) -> StationSummary:
     )
 
 
-async def _all_stations() -> tuple[list[dict[str, Any]], bool]:
+async def _all_stations(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     async def fetch() -> Any:
-        return await _get("/stations")
+        return await _get("/stations", lang=lang)
 
     return await cached_fetch("dfo-iwls:stations", constants.CACHE_TTL_STATIONS_SECONDS, fetch)
 
 
-async def _station_by_code(code: str) -> dict[str, Any]:
+async def _station_by_code(code: str, lang: str = "en") -> dict[str, Any]:
     code = code.strip()
     if not code.isdigit():
-        raise InvalidInput(f"station_code must be a CHS station code like '07120', got {code!r}.")
-    stations, _ = await _all_stations()
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"station_code must be a CHS station code like '07120', got {code!r}.",
+            f"station_code doit être un code de station du SHC comme « 07120 » ; reçu {code!r}.",
+        )
+    stations, _ = await _all_stations(lang)
     match = next((s for s in stations if s.get("code") == code.zfill(5)), None)
     if match is None:
-        raise NotFound(f"No DFO tide station with code {code!r}. Use dfo_iwls_search_stations.")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"No DFO tide station with code {code!r}. Use dfo_iwls_search_stations.",
+            f"aucune station marégraphique du MPO avec le code {code!r}. Utilisez "
+            "dfo_iwls_search_stations.",
+        )
     return match
 
 
@@ -107,10 +134,13 @@ async def search_stations(
 ) -> StationSearchResult:
     """Case-insensitive substring match on official and alternative names."""
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
-        raise InvalidInput(
-            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"limit must be between 1 and {constants.SEARCH_LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.SEARCH_LIMIT_MAX} ; reçu {limit}.",
         )
-    stations, cached = await _all_stations()
+    stations, cached = await _all_stations(lang)
     needle = query.strip().lower()
     matches = [
         s
@@ -136,20 +166,27 @@ async def search_stations(
             url=f"{constants.BASE_URL}/stations",
             cached=cached,
             schema_name="dfo_iwls.StationSearchResult",
-            limits=(
+            limits=fr_or_en(
+                lang,
                 f"Request: GET {constants.BASE_URL}/stations (the full list); the name "
-                "filter, operating_only and series_code are applied here."
+                "filter, operating_only and series_code are applied here.",
+                f"Requête : GET {constants.BASE_URL}/stations (la liste complète) ; le filtre "
+                "sur le nom, operating_only et series_code sont appliqués ici. Les noms des "
+                "stations sont les noms officiels publiés par le SHC.",
             ),
-            freshness="station list cached 24h",
+            freshness=fr_or_en(
+                lang, "station list cached 24h", "liste des stations mise en cache 24 h"
+            ),
+            lang=lang,
         ),
     )
 
 
 async def get_station(station_code: str, lang: str = "en") -> StationDetail:
-    station = await _station_by_code(station_code)
+    station = await _station_by_code(station_code, lang)
 
     async def fetch() -> Any:
-        return await _get(f"/stations/{station['id']}/metadata")
+        return await _get(f"/stations/{station['id']}/metadata", lang=lang)
 
     meta, cached = await cached_fetch(
         f"dfo-iwls:metadata:{station['id']}", constants.CACHE_TTL_METADATA_SECONDS, fetch
@@ -166,12 +203,18 @@ async def get_station(station_code: str, lang: str = "en") -> StationDetail:
             url=f"{constants.BASE_URL}/stations/{station['id']}/metadata",
             cached=cached,
             schema_name="dfo_iwls.StationDetail",
+            lang=lang,
         ),
     )
 
 
 def _parse_time(
-    value: str | None, name: str, default: datetime, *, end_of_day: bool = False
+    value: str | None,
+    name: str,
+    default: datetime,
+    *,
+    end_of_day: bool = False,
+    lang: str = "en",
 ) -> datetime:
     """Parse a bound; a date-only `end` means the end of that UTC day.
 
@@ -183,7 +226,12 @@ def _parse_time(
     try:
         parsed = datetime.fromisoformat(value)
     except ValueError as exc:
-        raise InvalidInput(f"{name} must be an ISO date or datetime, got {value!r}.") from exc
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"{name} must be an ISO date or datetime, got {value!r}.",
+            f"{name} doit être une date ou une date-heure ISO ; reçu {value!r}.",
+        ) from exc
     if end_of_day and len(value.strip()) == 10:
         parsed += timedelta(days=1)
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
@@ -207,26 +255,40 @@ async def get_water_levels(
     Defaults to today plus 24 hours. `resolution` is ignored for
     `wlp-hilo`, which the API answers with `[]` if one is sent.
     """
-    station = await _station_by_code(station_code)
+    station = await _station_by_code(station_code, lang)
     series = next((ts for ts in station.get("timeSeries") or [] if ts["code"] == series_code), None)
     if series is None:
         available = [ts["code"] for ts in station.get("timeSeries") or []]
-        raise InvalidInput(
-            f"Station {station['code']} has no {series_code!r} series; available: {available}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"Station {station['code']} has no {series_code!r} series; available: {available}.",
+            f"la station {station['code']} n'a pas de série {series_code!r} ; séries "
+            f"disponibles : {available}.",
         )
 
     now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
-    start_dt = _parse_time(start, "start", now)
-    end_dt = _parse_time(end, "end", start_dt + timedelta(days=1), end_of_day=True)
+    start_dt = _parse_time(start, "start", now, lang=lang)
+    end_dt = _parse_time(end, "end", start_dt + timedelta(days=1), end_of_day=True, lang=lang)
     if end_dt <= start_dt:
-        raise InvalidInput(f"end ({end_dt}) must be after start ({start_dt}).")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"end ({end_dt}) must be after start ({start_dt}).",
+            f"end ({end_dt}) doit être postérieur à start ({start_dt}).",
+        )
     cap = timedelta(days=constants.MAX_WINDOW_DAYS)
     whole_day_end = bool(end) and len((end or "").strip()) == 10
     if whole_day_end and cap < end_dt - start_dt <= cap + timedelta(days=1):
         # A date-only end one day past the cap is read as "up to that date".
         end_dt = start_dt + cap
     if end_dt - start_dt > cap:
-        raise InvalidInput(f"The window must be {constants.MAX_WINDOW_DAYS} days or less.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"The window must be {constants.MAX_WINDOW_DAYS} days or less.",
+            f"la période doit être d'au plus {constants.MAX_WINDOW_DAYS} jours.",
+        )
 
     params: dict[str, Any] = {
         "time-series-code": series_code,
@@ -248,7 +310,7 @@ async def get_water_levels(
         params["resolution"] = effective_resolution
 
     async def fetch() -> Any:
-        return await _get(f"/stations/{station['id']}/data", params)
+        return await _get(f"/stations/{station['id']}/data", params, lang)
 
     rows, cached = await cached_fetch(
         f"dfo-iwls:data:{station['id']}:{params}", constants.CACHE_TTL_DATA_SECONDS, fetch
@@ -266,6 +328,7 @@ async def get_water_levels(
     ]
     # Points run oldest first; over the byte budget, keep the most recent.
     kept = fit_to_budget(points[::-1])[::-1]
+    data_url = str(httpx.URL(f"{constants.BASE_URL}/stations/{station['id']}/data", params=params))
     return WaterLevelSeries(
         station_code=station["code"],
         station_name=station.get("officialName") or station["code"],
@@ -277,24 +340,37 @@ async def get_water_levels(
         points=kept,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=str(
-                httpx.URL(f"{constants.BASE_URL}/stations/{station['id']}/data", params=params)
-            ),
+            url=data_url,
             cached=cached,
             schema_name="dfo_iwls.WaterLevelSeries",
             limits=join_limits(
-                f"windows capped at {constants.MAX_WINDOW_DAYS} days per request",
-                f"no resolution was given for a window over one day, so "
-                f"{constants.LONG_WINDOW_RESOLUTION} was used; pass resolution to choose"
+                fr_or_en(
+                    lang,
+                    f"windows capped at {constants.MAX_WINDOW_DAYS} days per request",
+                    f"période limitée à {constants.MAX_WINDOW_DAYS} jours par requête",
+                ),
+                fr_or_en(
+                    lang,
+                    f"no resolution was given for a window over one day, so "
+                    f"{constants.LONG_WINDOW_RESOLUTION} was used; pass resolution to choose",
+                    f"aucune résolution n'a été donnée pour une période de plus d'un jour : "
+                    f"{constants.LONG_WINDOW_RESOLUTION} a été utilisée ; passez resolution "
+                    "pour choisir",
+                )
                 if defaulted
                 else None,
-                truncation_note(
+                truncation_note_lang(
+                    lang,
                     returned=len(kept),
                     total=len(points),
                     unit="points (about 200 KB)",
+                    unit_fr="points (environ 200 Ko)",
                     order="latest",
                     how_to_get_more="shorten the window or pass a coarser resolution",
+                    how_to_get_more_fr="raccourcissez la période ou passez une résolution "
+                    "plus grossière",
                 ),
             ),
+            lang=lang,
         ),
     )

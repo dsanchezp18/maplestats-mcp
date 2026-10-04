@@ -160,6 +160,11 @@ CASES = [
     # StatCan misses found in the 2026-10-02 review.
     ("taux de chômage mensuel en Alberta", "wds_search_cubes"),
     ("communiqués du Quotidien aujourd'hui", "statcan_daily_get_releases"),
+    # StatCan French keyword pass (2026-10-04).
+    ("codes SCIAN et codes de professions CNP", "rdaas_search_classifications"),
+    ("profil du recensement de 2021 revenu médian", "statcan_census_profile_get_data"),
+    ("système d'accès à distance en temps réel ADTR", "statcan_surveys_search_rtra_datasets"),
+    ("commerce international canadien de marchandises CICM", "cimt_get_trade"),
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("émissions de gaz à effet de serre par province inventaire", "sdmx_space_get_data"),
     ("recherche de flux de données information sur l'énergie ccie", "sdmx_space_list_flows"),

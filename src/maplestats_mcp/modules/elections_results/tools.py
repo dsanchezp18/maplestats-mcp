@@ -101,7 +101,9 @@ async def elections_results_get_historical(
     Scholars Portal Dataverse (CC0), which holds party totals, not candidate
     names (use elections_results_get_historical_candidates for those), and
     ends in 2015; use elections_results_get_table for official Elections
-    Canada results of the 38th to 45th.
+    Canada results of the 38th to 45th. The data set is in English only:
+    `lang="fr"` gives errors, notes and provenance in French and leaves
+    the rows as published.
     Keywords: historical election results, federal, Confederation, 1867,
     riding, constituency, party, Liberal, Conservative, CCF, Progressive
     Conservative, Social Credit, Bloc, votes, turnout, history.
@@ -116,6 +118,7 @@ async def elections_results_get_historical(
         party=party,
         limit=limit,
         offset=offset,
+        lang=lang,
     )
 
 
@@ -141,8 +144,11 @@ async def elections_results_get_historical_candidates(
     occupation, tracking one person across elections by candidate_id, and
     by-elections. `election` is the parliament number (1 = 1867, 35 = 1993,
     36 = 1997, 37 = 2000, 44 = 2021) and `year` the election year; leave both
-    out to search every election. `province`, `riding`, `candidate` (name) and
-    `party` are accent-insensitive substring filters. `election_type` is
+    out to search every election; giving both with a year in which that
+    election was not held is an input error. `province`, `riding`, `candidate`
+    (name) and `party` are accent-insensitive substring filters. The data
+    set is in English only: `lang="fr"` gives errors, notes and provenance
+    in French and leaves the rows as published. `election_type` is
     general (default), by-election or all. Source: Sevi's "Who Runs?" data set
     on Harvard Dataverse (CC0), compiled from ParlInfo; it is not an official
     publication, so use elections_results_get_table for the official 38th to
@@ -165,4 +171,5 @@ async def elections_results_get_historical_candidates(
         election_type=election_type,
         limit=limit,
         offset=offset,
+        lang=lang,
     )

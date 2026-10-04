@@ -13,8 +13,9 @@ from pathlib import Path
 import pytest
 
 from maplestats_mcp.modules.yukon_stats import client, constants
+from maplestats_mcp.modules.yukon_stats.schemas import TableEntry
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _HERE = Path(__file__).parent
 _URL = (
@@ -27,6 +28,26 @@ _URL = (
 def _clear_cache():
     cache_module._caches.clear()
     yield
+
+
+@pytest.fixture
+def listed(monkeypatch):
+    """A catalogue holding the rent table only (query_table reads listed URLs only)."""
+    entries = [
+        TableEntry(
+            dataset="economic-statistics",
+            dataset_title="Economic statistics",
+            title="Rent and vacancy rates",
+            url=_URL,
+            size_bytes=None,
+        )
+    ]
+
+    async def catalogue():
+        return entries, False
+
+    monkeypatch.setattr(client, "_catalogue", catalogue)
+    return entries
 
 
 def _csv(with_footnotes: bool = False) -> bytes:
@@ -93,8 +114,7 @@ def _search(*extra: dict) -> dict:
     return {"success": True, "result": {"count": 2, "results": packages}}
 
 
-async def test_query_filters_select_columns_and_page(httpx_mock):
-    httpx_mock.add_response(url=_SEARCH, json=_search())
+async def test_query_filters_select_columns_and_page(httpx_mock, listed):
     httpx_mock.add_response(url=_URL, content=_csv())
     result = await client.query_table(
         _URL, filters={"REGION": "yukon"}, columns=["year", "quarter", "median_rent"], limit=2
@@ -107,23 +127,20 @@ async def test_query_filters_select_columns_and_page(httpx_mock):
     assert "Showing rows 1 to 2" in (result.provenance.limits or "")
 
 
-async def test_footnotes_column_is_dropped(httpx_mock):
-    httpx_mock.add_response(url=_SEARCH, json=_search())
+async def test_footnotes_column_is_dropped(httpx_mock, listed):
     httpx_mock.add_response(url=_URL, content=_csv(with_footnotes=True))
     result = await client.query_table(_URL, limit=1)
     assert "footnotes" not in result.all_columns
     assert "footnotes" not in result.rows[0]
 
 
-async def test_unknown_column_is_invalid_input(httpx_mock):
-    httpx_mock.add_response(url=_SEARCH, json=_search())
+async def test_unknown_column_is_invalid_input(httpx_mock, listed):
     httpx_mock.add_response(url=_URL, content=_csv())
     with pytest.raises(InvalidInput, match="Unknown column"):
         await client.query_table(_URL, filters={"nope": "x"})
 
 
-async def test_html_page_is_not_found(httpx_mock):
-    httpx_mock.add_response(url=_SEARCH, json=_search())
+async def test_html_page_is_not_found(httpx_mock, listed):
     httpx_mock.add_response(url=_URL, content=b"<!DOCTYPE html><html>Not here</html>")
     with pytest.raises(NotFound):
         await client.query_table(_URL)
@@ -141,7 +158,7 @@ async def test_oversized_file_is_refused_before_download(httpx_mock):
         url=_SEARCH,
         json=_search(_resource("Big", "CSV", big, size=constants.MAX_FILE_BYTES + 1)),
     )
-    with pytest.raises(InvalidInput, match="larger than"):
+    with pytest.raises(UpstreamError, match="larger than"):
         await client.query_table(big)
     assert [str(r.url) for r in httpx_mock.get_requests() if "download" in str(r.url)] == []
 
@@ -157,3 +174,61 @@ async def test_catalogue_is_one_call_and_keeps_only_bureau_csvs(httpx_mock):
     assert (await client.list_tables(dataset="social")).tables[0].title == "Crime"
     assert len(httpx_mock.get_requests()) == 1
     assert "Open Government Licence - Yukon" in (everything.provenance.licence or "")
+    assert everything.provenance.coverage == (
+        "CSV tables of the Yukon Bureau of Statistics organization only."
+    )
+
+
+def test_french_url_error():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as caught:
+        client.check_table_url("https://example.com/data/a/b.csv", lang="fr")
+    assert "doit être un lien https" in str(caught.value)
+
+
+async def test_french_unlisted_csv_error(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, json=_search())
+    with pytest.raises(NotFound, match="Aucune correspondance trouvée") as caught:
+        await client.query_table(
+            "https://open.yukon.ca/data/x/resource/y/download/other.csv", lang="fr"
+        )
+    assert "Bureau de la statistique du Yukon" in str(caught.value)
+
+
+async def test_french_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, json=_search())
+    httpx_mock.add_response(url=_URL, content=_csv())
+    result = await client.query_table(_URL, limit=2, lang="fr")
+    assert result.licence == "Licence du gouvernement ouvert – Yukon"
+    assert "Licence du gouvernement ouvert – Yukon" in (result.provenance.licence or "")
+    assert "Bureau de la statistique du Yukon" in (result.provenance.freshness or "")
+    assert "Lignes 1 à 2 sur" in (result.provenance.limits or "")
+
+
+async def test_renamed_file_of_a_listed_resource_is_refused(listed):
+    # Live 2026-10-03: the portal served the rent table for this made-up file
+    # name (it goes by the resource id), so the URL must match the catalogue.
+    bogus = _URL.replace("rent-and", "zz")
+    with pytest.raises(InvalidInput, match="rent-and-vacancy-rates.csv"):
+        await client.query_table(bogus)
+
+
+async def test_unlisted_resource_is_not_found(listed):
+    other = "https://open.yukon.ca/data/x/resource/y/download/other.csv"
+    with pytest.raises(NotFound, match="yukon_stats_list_tables"):
+        await client.query_table(other)
+
+
+async def test_stated_size_over_the_cap_is_refused_before_download(listed):
+    listed[0].size_bytes = constants.MAX_FILE_BYTES + 1
+    with pytest.raises(UpstreamError, match="Download it from the portal"):
+        await client.query_table(_URL)
+
+
+async def test_declared_length_over_the_cap_stops_the_download(httpx_mock, listed):
+    httpx_mock.add_response(
+        url=_URL,
+        content=_csv(),
+        headers={"content-length": str(constants.MAX_FILE_BYTES + 1)},
+    )
+    with pytest.raises(UpstreamError, match="this reader stops at"):
+        await client.query_table(_URL)

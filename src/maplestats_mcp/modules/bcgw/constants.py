@@ -41,6 +41,11 @@ WILDFIRE_TYPE_NAME = "WHSE_LAND_AND_NATURAL_RESOURCE.PROT_CURRENT_FIRE_POLYS_SP"
 WILDFIRE_ATTRIBUTE_FIELDS = (
     "FIRE_NUMBER,FIRE_YEAR,FIRE_SIZE_HECTARES,SOURCE,TRACK_DATE,LOAD_DATE,FIRE_STATUS,FIRE_URL"
 )
+# Extinguished fires; left out of the wildfire tool unless asked for.
+WILDFIRE_OUT_STATUS = "Out"
+# Largest fires first; OBJECTID breaks ties so pages stay stable (a
+# two-key sortBy was accepted live 2026-10-03).
+WILDFIRE_SORT = "FIRE_SIZE_HECTARES D,OBJECTID A"
 
 # Confirmed live 2026-09-22 against a real feature (a Teck Highland Valley
 # Copper claim). TENURE_TYPE_CODE is 'M' (mineral) or 'P' (placer).

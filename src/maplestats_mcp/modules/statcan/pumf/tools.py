@@ -7,6 +7,7 @@ from typing import Literal
 from fastmcp.tools import tool
 
 from maplestats_mcp import config
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.pumf import client, constants, tabulate
 from maplestats_mcp.modules.statcan.pumf.schemas import (
     Codebook,
@@ -33,6 +34,7 @@ async def statcan_pumf_search(
     diffusion, données d'enquête, EPA, ESCC, recensement, Statistique
     Canada.
     """
+    use_lang(lang)
     return await client.search(query, lang=lang, limit=limit)
 
 
@@ -50,6 +52,7 @@ async def statcan_pumf_list_files(
     Mots-clés : téléchargement FMGD, fichier de microdonnées, ZIP, année
     d'enquête, numéro de catalogue, édition, Statistique Canada, année.
     """
+    use_lang(lang)
     return await client.list_files(catalogue_number, lang=lang)
 
 
@@ -67,7 +70,7 @@ async def statcan_pumf_list_zip(url: str, lang: Literal["en", "fr"] = "en") -> Z
     dictionnaire de données, taille, disposition des enregistrements,
     fichier de données, archive ZIP.
     """
-    del lang
+    use_lang(lang)
     return await client.list_zip(url)
 
 
@@ -90,6 +93,7 @@ async def statcan_pumf_get_codebook(
     Mots-clés : dictionnaire de données, variables, étiquettes de valeurs,
     poids d'enquête, poids bootstrap, FMGD, disposition, Statistique Canada.
     """
+    use_lang(lang)
     return await client.get_codebook(url, query=query, lang=lang, limit=limit)
 
 

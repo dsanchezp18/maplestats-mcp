@@ -29,6 +29,7 @@ from maplestats_mcp.modules.statcan.geo.schemas import (
     GeoSpatialQueryResult,
     SpatialFilter,
 )
+from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
 from maplestats_mcp.shared.arcgis import ArcGISHubConfig, get_json, query_layer
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
@@ -56,7 +57,12 @@ _VALID_PATH_SEGMENT = re.compile(r"^[A-Za-z0-9_-]+$")
 
 def _validate_path_segment(value: str, label: str) -> str:
     if not _VALID_PATH_SEGMENT.match(value):
-        raise InvalidInput(f"{label} {value!r} must contain only letters, digits, '_', or '-'.")
+        raise InvalidInput(
+            say(
+                f"{label} {value!r} must contain only letters, digits, '_', or '-'.",
+                f"{label} {value!r} ne doit contenir que des lettres, des chiffres, « _ » ou « - ».",
+            )
+        )
     return value
 
 
@@ -72,6 +78,7 @@ def _service_language(name: str) -> str:
 
 
 async def list_services(year: str, lang: str | None = None) -> GeoServiceList:
+    use_lang(lang)
     year = _validate_path_segment(year, "year")
     cache_key = f"statcan-geo:services:{year}"
 
@@ -95,7 +102,11 @@ async def list_services(year: str, lang: str | None = None) -> GeoServiceList:
             url=f"{constants.BASE_URL}/{year}",
             cached=was_cached,
             schema_name="statcan_geo.GeoServiceList",
-            coverage="years 2019-2025 confirmed live; nothing older is served here",
+            coverage=say(
+                "years 2019-2025 confirmed live; nothing older is served here",
+                "années 2019 à 2025 confirmées en direct ; rien de plus ancien n'est servi ici",
+            ),
+            lang=current_lang(),
         ),
     )
 
@@ -112,18 +123,31 @@ async def _raise_if_unknown(year: str, service: str, layer_id: int) -> None:
     services = await list_services(year)
     if service not in {s.name.rsplit("/", 1)[-1] for s in services.services}:
         raise NotFound(
-            f"No service {service!r} for {year}; statcan_geo_list_services lists the valid names."
+            say(
+                f"No service {service!r} for {year}; statcan_geo_list_services lists the valid names.",
+                f"Aucun service {service!r} pour {year} ; statcan_geo_list_services liste les noms valides.",
+            )
         )
     body = await get_json(CONFIG, "list_layers", f"{constants.BASE_URL}/{year}/{service}/MapServer")
     if layer_id not in {layer.get("id") for layer in list_or_empty(body, "layers")}:
-        raise NotFound(f"Service {service!r} ({year}) has no layer {layer_id}.")
+        raise NotFound(
+            say(
+                f"Service {service!r} ({year}) has no layer {layer_id}.",
+                f"Le service {service!r} ({year}) n'a pas de couche {layer_id}.",
+            )
+        )
 
 
 async def get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDetail:
     year = _validate_path_segment(year, "year")
     service = _validate_path_segment(service, "service")
     if layer_id < 0:
-        raise InvalidInput(f"layer_id must be >= 0, got {layer_id}.")
+        raise InvalidInput(
+            say(
+                f"layer_id must be >= 0, got {layer_id}.",
+                f"layer_id doit être >= 0, reçu {layer_id}.",
+            )
+        )
     cache_key = f"statcan-geo:layer:{year}:{service}:{layer_id}"
     url = f"{constants.BASE_URL}/{year}/{service}/MapServer/{layer_id}"
 
@@ -157,6 +181,7 @@ async def get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDe
             url=url,
             cached=was_cached,
             schema_name="statcan_geo.GeoLayerDetail",
+            lang=current_lang(),
         ),
     )
 
@@ -196,13 +221,26 @@ async def query_layer_features(
     year = _validate_path_segment(year, "year")
     service = _validate_path_segment(service, "service")
     if layer_id < 0:
-        raise InvalidInput(f"layer_id must be >= 0, got {layer_id}.")
+        raise InvalidInput(
+            say(
+                f"layer_id must be >= 0, got {layer_id}.",
+                f"layer_id doit être >= 0, reçu {layer_id}.",
+            )
+        )
     if result_offset < 0:
-        raise InvalidInput(f"result_offset must be >= 0, got {result_offset}.")
+        raise InvalidInput(
+            say(
+                f"result_offset must be >= 0, got {result_offset}.",
+                f"result_offset doit être >= 0, reçu {result_offset}.",
+            )
+        )
     if result_record_count < 1 or result_record_count > constants.QUERY_RECORD_COUNT_MAX:
         raise InvalidInput(
-            f"result_record_count must be between 1 and {constants.QUERY_RECORD_COUNT_MAX}, "
-            f"got {result_record_count}."
+            say(
+                f"result_record_count must be between 1 and {constants.QUERY_RECORD_COUNT_MAX}, "
+                f"got {result_record_count}.",
+                f"result_record_count doit être entre 1 et {constants.QUERY_RECORD_COUNT_MAX}, reçu {result_record_count}.",
+            )
         )
 
     spatial_params, spatial_filter = spatial_query_params(lat, lon, bbox, distance_m)
@@ -246,8 +284,13 @@ async def query_layer_features(
             url=f"{service_url}/{layer_id}/query",
             cached=False,
             schema_name="statcan_geo.GeoQueryResult",
-            coverage=f"{len(features)} features returned"
-            + (" (more available; page with result_offset)" if exceeded else ""),
+            coverage=say(
+                f"{len(features)} features returned"
+                + (" (more available; page with result_offset)" if exceeded else ""),
+                f"{len(features)} entités renvoyées"
+                + (" (il y en a d'autres ; paginez avec result_offset)" if exceeded else ""),
+            ),
+            lang=current_lang(),
         ),
     )
 
@@ -271,15 +314,33 @@ def spatial_query_params(
     nothing.
     """
     if (lat is None) != (lon is None):
-        raise InvalidInput("Give both lat and lon for a point filter, or neither.")
+        raise InvalidInput(
+            say(
+                "Give both lat and lon for a point filter, or neither.",
+                "Donnez à la fois lat et lon pour un filtre par point, ou ni l'un ni l'autre.",
+            )
+        )
     if lat is not None and bbox is not None:
-        raise InvalidInput("Use either lat/lon or bbox as the spatial filter, not both.")
+        raise InvalidInput(
+            say(
+                "Use either lat/lon or bbox as the spatial filter, not both.",
+                "Utilisez soit lat/lon, soit bbox comme filtre spatial, pas les deux.",
+            )
+        )
     if distance_m is not None and lat is None:
-        raise InvalidInput("distance_m needs lat and lon (it is a radius around that point).")
+        raise InvalidInput(
+            say(
+                "distance_m needs lat and lon (it is a radius around that point).",
+                "distance_m exige lat et lon (c'est un rayon autour de ce point).",
+            )
+        )
     if lat is not None and lon is not None:
         if not -90 <= lat <= 90 or not -180 <= lon <= 180:
             raise InvalidInput(
-                f"lat must be within -90..90 and lon within -180..180, got lat={lat}, lon={lon}."
+                say(
+                    f"lat must be within -90..90 and lon within -180..180, got lat={lat}, lon={lon}.",
+                    f"lat doit être entre -90 et 90 et lon entre -180 et 180, reçu lat={lat}, lon={lon}.",
+                )
             )
         params: dict[str, object] = {
             "geometry": f"{lon},{lat}",
@@ -290,8 +351,11 @@ def spatial_query_params(
         if distance_m is not None:
             if not 0 < distance_m <= constants.DISTANCE_MAX_METRES:
                 raise InvalidInput(
-                    f"distance_m must be between 0 and {constants.DISTANCE_MAX_METRES}, "
-                    f"got {distance_m}."
+                    say(
+                        f"distance_m must be between 0 and {constants.DISTANCE_MAX_METRES}, "
+                        f"got {distance_m}.",
+                        f"distance_m doit être entre 0 et {constants.DISTANCE_MAX_METRES}, reçu {distance_m}.",
+                    )
                 )
             params["distance"] = distance_m
             params["units"] = "esriSRUnit_Meter"
@@ -301,12 +365,18 @@ def spatial_query_params(
             xmin, ymin, xmax, ymax = (float(part) for part in bbox.split(","))
         except ValueError:
             raise InvalidInput(
-                f"bbox must be 'min_lon,min_lat,max_lon,max_lat' (four numbers), got {bbox!r}."
+                say(
+                    f"bbox must be 'min_lon,min_lat,max_lon,max_lat' (four numbers), got {bbox!r}.",
+                    f"bbox doit être « min_lon,min_lat,max_lon,max_lat » (quatre nombres), reçu {bbox!r}.",
+                )
             ) from None
         if not (-180 <= xmin < xmax <= 180 and -90 <= ymin < ymax <= 90):
             raise InvalidInput(
-                "bbox must satisfy min_lon < max_lon within -180..180 and "
-                f"min_lat < max_lat within -90..90, got {bbox!r}."
+                say(
+                    "bbox must satisfy min_lon < max_lon within -180..180 and "
+                    f"min_lat < max_lat within -90..90, got {bbox!r}.",
+                    f"bbox doit respecter min_lon < max_lon entre -180 et 180 et min_lat < max_lat entre -90 et 90, reçu {bbox!r}.",
+                )
             )
         params = {
             "geometry": f"{xmin},{ymin},{xmax},{ymax}",
@@ -333,11 +403,24 @@ _NRN_LAYER_NAME = re.compile(r"^([A-Z]{2}) - (.+?)(?: / .*)?$")
 def _dataset_target(dataset: str) -> tuple[ArcGISHubConfig, str | None, str]:
     """Return (client config, fixed service URL or None, limits text)."""
     if dataset == "nrn":
-        return CONFIG, constants.NRN_SERVICE_URL, constants.NRN_LIMITS
+        return (
+            CONFIG,
+            constants.NRN_SERVICE_URL,
+            say(constants.NRN_LIMITS, constants.NRN_LIMITS_FR),
+        )
     if dataset in constants.ANALYTICS_DATASETS:
-        return ANALYTICS_CONFIG, None, constants.ANALYTICS_LIMITS
+        return (
+            ANALYTICS_CONFIG,
+            None,
+            say(constants.ANALYTICS_LIMITS, constants.ANALYTICS_LIMITS_FR),
+        )
     valid = ", ".join([*constants.ANALYTICS_DATASETS, "nrn"])
-    raise InvalidInput(f"dataset {dataset!r} is not one of: {valid}.")
+    raise InvalidInput(
+        say(
+            f"dataset {dataset!r} is not one of: {valid}.",
+            f"dataset {dataset!r} ne fait pas partie de : {valid}.",
+        )
+    )
 
 
 async def analytics_service_url(dataset: str) -> str:
@@ -368,9 +451,12 @@ async def analytics_service_url(dataset: str) -> str:
         or not url.rstrip("/").endswith("/MapServer")
     ):
         raise UpstreamError(
-            f"StatCan's map-app config ({constants.ANALYTICS_CONFIG_URL}) no longer lists a "
-            f"usable MapServer under id {entry_id!r} for dataset {dataset!r} (found {url!r}). "
-            "These endpoints are undocumented and the config has changed; the tool needs an update."
+            say(
+                f"StatCan's map-app config ({constants.ANALYTICS_CONFIG_URL}) no longer lists a "
+                f"usable MapServer under id {entry_id!r} for dataset {dataset!r} (found {url!r}). "
+                "These endpoints are undocumented and the config has changed; the tool needs an update.",
+                f"La configuration de l'application cartographique de Statistique Canada ({constants.ANALYTICS_CONFIG_URL}) ne liste plus de MapServer utilisable sous l'identifiant {entry_id!r} pour le jeu de données {dataset!r} (trouvé {url!r}). Ces points d'accès ne sont pas documentés et la configuration a changé ; l'outil doit être mis à jour.",
+            )
         )
     return url.rstrip("/")
 
@@ -387,7 +473,10 @@ async def _service_info(dataset: str) -> tuple[ArcGISHubConfig, str, dict, bool,
     )
     if not isinstance(info, dict) or not list_or_empty(info, "layers"):
         raise UpstreamError(
-            f"{service_url} answered without a layer list; the {dataset!r} service has changed."
+            say(
+                f"{service_url} answered without a layer list; the {dataset!r} service has changed.",
+                f"{service_url} a répondu sans liste de couches ; le service {dataset!r} a changé.",
+            )
         )
     return config, service_url, info, was_cached, limits
 
@@ -417,7 +506,12 @@ async def list_spatial_layers(
     layers = [_parse_layer(raw) for raw in list_or_empty(info, "layers")]
     if province or road_class:
         if dataset != "nrn":
-            raise InvalidInput("province and road_class filters apply only to dataset 'nrn'.")
+            raise InvalidInput(
+                say(
+                    "province and road_class filters apply only to dataset 'nrn'.",
+                    "Les filtres province et road_class ne s'appliquent qu'au jeu de données « nrn ».",
+                )
+            )
         layers = [
             layer
             for layer in layers
@@ -436,8 +530,9 @@ async def list_spatial_layers(
             url=service_url,
             cached=was_cached,
             schema_name="statcan_geo.GeoSpatialLayerList",
-            coverage=f"{len(layers)} layers listed",
+            coverage=say(f"{len(layers)} layers listed", f"{len(layers)} couches listées"),
             limits=limits,
+            lang=current_lang(),
         ),
     )
 
@@ -452,7 +547,12 @@ async def _checked_layer(
     dataset: str, layer_id: int
 ) -> tuple[ArcGISHubConfig, str, GeoSpatialLayer]:
     if layer_id < 0:
-        raise InvalidInput(f"layer_id must be >= 0, got {layer_id}.")
+        raise InvalidInput(
+            say(
+                f"layer_id must be >= 0, got {layer_id}.",
+                f"layer_id doit être >= 0, reçu {layer_id}.",
+            )
+        )
     config, service_url, info, _, _ = await _service_info(dataset)
     layer = next(
         (_parse_layer(raw) for raw in list_or_empty(info, "layers") if raw.get("id") == layer_id),
@@ -460,13 +560,19 @@ async def _checked_layer(
     )
     if layer is None:
         raise NotFound(
-            f"Dataset {dataset!r} has no layer {layer_id}; statcan_geo_list_spatial_layers "
-            "lists the valid ids."
+            say(
+                f"Dataset {dataset!r} has no layer {layer_id}; statcan_geo_list_spatial_layers "
+                "lists the valid ids.",
+                f"Le jeu de données {dataset!r} n'a pas de couche {layer_id} ; statcan_geo_list_spatial_layers liste les identifiants valides.",
+            )
         )
     if layer.is_group:
         raise InvalidInput(
-            f"Layer {layer_id} ({layer.name!r}) of {dataset!r} is a group of sub-layers with no "
-            "rows of its own; pick one of its sub-layers (statcan_geo_list_spatial_layers)."
+            say(
+                f"Layer {layer_id} ({layer.name!r}) of {dataset!r} is a group of sub-layers with no "
+                "rows of its own; pick one of its sub-layers (statcan_geo_list_spatial_layers).",
+                f"La couche {layer_id} ({layer.name!r}) de {dataset!r} est un groupe de sous-couches sans lignes propres ; choisissez l'une de ses sous-couches (statcan_geo_list_spatial_layers).",
+            )
         )
     return config, service_url, layer
 
@@ -494,6 +600,7 @@ async def get_spatial_layer_detail(dataset: str, layer_id: int) -> GeoSpatialLay
             cached=False,
             schema_name="statcan_geo.GeoSpatialLayerDetail",
             limits=_dataset_target(dataset)[2],
+            lang=current_lang(),
         ),
     )
 
@@ -509,12 +616,20 @@ async def resolve_nrn_layer(province: str, road_class: str) -> int:
         return matches[0].layer_id
     if not matches:
         raise NotFound(
-            f"No NRN layer for province {province!r} and road class {road_class!r}; not every "
-            "province has every class (e.g. Quebec has no toll points). "
-            "statcan_geo_list_spatial_layers(dataset='nrn') lists them."
+            say(
+                f"No NRN layer for province {province!r} and road class {road_class!r}; not every "
+                "province has every class (e.g. Quebec has no toll points). "
+                "statcan_geo_list_spatial_layers(dataset='nrn') lists them.",
+                f"Aucune couche du RRN pour la province {province!r} et la catégorie de route {road_class!r} ; chaque province n'a pas toutes les catégories (p. ex. le Québec n'a pas de postes de péage). statcan_geo_list_spatial_layers(dataset='nrn') les liste.",
+            )
         )
     names = ", ".join(sorted({m.road_class or m.name for m in matches}))
-    raise InvalidInput(f"road_class {road_class!r} matches several NRN layers ({names}); be exact.")
+    raise InvalidInput(
+        say(
+            f"road_class {road_class!r} matches several NRN layers ({names}); be exact.",
+            f"road_class {road_class!r} correspond à plusieurs couches du RRN ({names}) ; soyez exact.",
+        )
+    )
 
 
 async def query_spatial_layer(
@@ -533,11 +648,19 @@ async def query_spatial_layer(
     distance_m: float | None = None,
 ) -> GeoSpatialQueryResult:
     if result_offset < 0:
-        raise InvalidInput(f"result_offset must be >= 0, got {result_offset}.")
+        raise InvalidInput(
+            say(
+                f"result_offset must be >= 0, got {result_offset}.",
+                f"result_offset doit être >= 0, reçu {result_offset}.",
+            )
+        )
     if result_record_count < 1 or result_record_count > constants.QUERY_RECORD_COUNT_MAX:
         raise InvalidInput(
-            f"result_record_count must be between 1 and {constants.QUERY_RECORD_COUNT_MAX}, "
-            f"got {result_record_count}."
+            say(
+                f"result_record_count must be between 1 and {constants.QUERY_RECORD_COUNT_MAX}, "
+                f"got {result_record_count}.",
+                f"result_record_count doit être entre 1 et {constants.QUERY_RECORD_COUNT_MAX}, reçu {result_record_count}.",
+            )
         )
     spatial_params, spatial_filter = spatial_query_params(lat, lon, bbox, distance_m)
     config, service_url, layer = await _checked_layer(dataset, layer_id)
@@ -574,8 +697,13 @@ async def query_spatial_layer(
             url=f"{service_url}/{layer_id}/query",
             cached=False,
             schema_name="statcan_geo.GeoSpatialQueryResult",
-            coverage=f"{len(features)} features returned"
-            + (" (more available; page with result_offset)" if exceeded else ""),
+            coverage=say(
+                f"{len(features)} features returned"
+                + (" (more available; page with result_offset)" if exceeded else ""),
+                f"{len(features)} entités renvoyées"
+                + (" (il y en a d'autres ; paginez avec result_offset)" if exceeded else ""),
+            ),
+            lang=current_lang(),
             limits=_dataset_target(dataset)[2],
         ),
     )

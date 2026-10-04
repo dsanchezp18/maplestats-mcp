@@ -39,8 +39,9 @@ async def sdmx_get_structure(
     metadata instead, with identical member ids.
     Keywords: statcan, sdmx, structure, dimensions, codelist, dsd, keys,
     Statistics Canada.
-    Mots-clés : statcan, sdmx, structure, dimensions, liste de codes, dsd,
-    clés, classification.
+    Mots-clés : Statistique Canada, SDMX, structure, dimensions, liste de
+    codes, définition de structure de données, clés, classification,
+    membres.
     """
     return await client.get_structure(
         product_id,
@@ -65,9 +66,9 @@ async def sdmx_get_key_for_dimension(
     this dimension's position before calling sdmx_get_data.
     Keywords: statcan, sdmx, wildcard, or key, large dimension, leaf
     codes, sparse sample, geography, wildcard dimension.
-    Mots-clés : statcan, sdmx, caractère générique, clé OR, grande
-    dimension, codes terminaux, échantillon partiel, géographie,
-    wildcard.
+    Mots-clés : Statistique Canada, SDMX, caractère de remplacement, clé
+    partielle, plusieurs codes, grande dimension, codes terminaux,
+    échantillon partiel, géographie, membres de dimension.
     """
     return await client.get_key_for_dimension(product_id, dimension_position, lang=lang)
 
@@ -95,8 +96,8 @@ async def sdmx_get_data(
     response at most 200 series; provenance.limits records any cut.
     Keywords: statcan, sdmx, data, filtered, key, dimensions, query,
     observations, slice.
-    Mots-clés : statcan, sdmx, données, filtré, clé, dimensions, requête,
-    observations, découpage.
+    Mots-clés : Statistique Canada, SDMX, données filtrées, clé, dimensions,
+    requête, observations, extraction, série chronologique.
     """
     return await client.get_data(
         product_id,
@@ -123,8 +124,8 @@ async def sdmx_get_vector_data(
     internally, then builds the matching SDMX key).
     Keywords: statcan, sdmx, vector, data, observations, series, query,
     Statistics Canada.
-    Mots-clés : statcan, sdmx, vecteur, données, observations, série,
-    requête, identifiant de vecteur.
+    Mots-clés : Statistique Canada, SDMX, vecteur, données, observations,
+    série, requête, identifiant de vecteur, série chronologique.
     """
     return await client.get_vector_data(
         vector_id,

@@ -63,3 +63,8 @@ UNLISTED_NOTE = (
     "Trademark files come from the 2024-11-20 release on CIPO's server; "
     "open.canada.ca still lists only older, now-removed files."
 )
+UNLISTED_NOTE_FR = (
+    "Les fichiers de marques de commerce viennent de la diffusion du 2024-11-20 sur le "
+    "serveur de l'OPIC ; open.canada.ca ne liste encore que des fichiers plus anciens, "
+    "aujourd'hui retirés."
+)

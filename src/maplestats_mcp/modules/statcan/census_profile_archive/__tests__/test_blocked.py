@@ -23,6 +23,15 @@ async def test_download_link_notes_the_cloudflare_challenge(httpx_mock, cloudfla
     assert "17100123" in result.provenance.limits
 
 
+async def test_blocked_note_follows_lang(httpx_mock, cloudflare_challenge):
+    httpx_mock.add_response(url=constants.REACHABILITY_URL, **cloudflare_challenge)
+    result = await client.get_download_link(2016, "canada_provinces_territories", "csv", "fr")
+    assert result.provenance.limits == constants.BLOCKED_NOTE_FR
+    assert "vérification de sécurité Cloudflare :" in result.provenance.limits
+    english = await client.list_geography_levels(2016)
+    assert english.provenance.limits == constants.BLOCKED_NOTE
+
+
 async def test_download_link_has_no_note_when_www12_answers(httpx_mock):
     httpx_mock.add_response(url=constants.REACHABILITY_URL, text="<html>profile</html>")
     result = await client.get_download_link(2016, "canada_provinces_territories", "csv")

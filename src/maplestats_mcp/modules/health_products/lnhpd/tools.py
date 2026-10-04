@@ -37,9 +37,10 @@ async def hc_nhp_search_products(
     Keywords: natural health products, NPN, natural product number,
     LNHPD, vitamins, herbal supplements, homeopathic medicine, dietary
     supplements, probiotics, licence holder.
-    Mots-clés : produits de santé naturels, NPN, numéro de produit
-    naturel, BDPSNH, vitamines, suppléments à base de plantes, remèdes
-    homéopathiques, suppléments alimentaires, probiotiques, titulaire de licence.
+    Mots-clés : produits de santé naturels, NPN, numéro de produit naturel,
+    BDPSNH, vitamines, suppléments à base de plantes, remèdes
+    homéopathiques, suppléments alimentaires, probiotiques, titulaire de
+    licence, Santé Canada.
     """
     return await client.search_products(
         query, company=company, active_only=active_only, limit=limit, lang=lang
@@ -62,6 +63,6 @@ async def hc_nhp_get_product(npn: str, lang: Lang = "en") -> NhpProductDetail:
     warnings, herbal product label, DIN-HM.
     Mots-clés : numéro NPN, licence de produit naturel, ingrédients
     médicinaux, dose recommandée, usage recommandé, contre-indications,
-    mises en garde, étiquette de produit à base de plantes.
+    mises en garde, étiquette de produit à base de plantes, Santé Canada.
     """
     return await client.get_product(npn, lang=lang)

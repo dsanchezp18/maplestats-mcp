@@ -380,13 +380,59 @@ async def test_french_spellings_hyphens_apostrophes_and_suggestions(httpx_mock):
     china = await client.query_exports(lang="fr", destination="Chine")
     assert {r.destination for r in china.rows} == {"R.P. de Chine"}
     assert china.unit == "milliers de tonnes"
-    with pytest.raises(InvalidInput, match=r"did you mean 'R\.P\. de Chine'"):
+    with pytest.raises(InvalidInput, match=r"vouliez-vous dire 'R\.P\. de Chine'"):
         await client.query_exports(lang="fr", destination="de Chi")
     httpx_mock.add_response(url=_weekly(2025, "fr"), content=FRENCH)
     weekly = await client.query_weekly(
         "Silos-Primaires", crop_year="2025-26", lang="fr", region="Colombie-Britannique"
     )
     assert [(r.region, r.ktonnes) for r in weekly.rows] == [("Colombie britannique", 0.5)]
+
+
+async def test_french_provenance_errors_and_unit(httpx_mock):
+    httpx_mock.add_response(url=_weekly(2025, "fr"), content=FRENCH)
+    weekly = await client.query_weekly("Silos primaires", crop_year="2025-26", lang="fr", limit=1)
+    assert weekly.unit == "milliers de tonnes"
+    prov = weekly.provenance
+    assert "Hebdomadaire\xa0: le fichier" in (prov.freshness or "")
+    assert "Licence du gouvernement ouvert – Canada" in (prov.licence or "")
+    assert "lignes les plus récentes sur 2" in (prov.limits or "")
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: cgc\xa0: aucune valeur 'Orge'"):
+        await client.query_weekly("Silos primaires", crop_year="2025-26", lang="fr", grain="Orge")
+    with pytest.raises(InvalidInput, match="campagne agricole"):
+        client.parse_crop_year("2025-27", lang="fr")
+    with pytest.raises(InvalidInput, match="est postérieur à week_to"):
+        await client.query_weekly(
+            "Silos primaires", crop_year="2025-26", lang="fr", week_from=3, week_to=1
+        )
+    httpx_mock.add_response(url=_weekly(2015, "fr"), text=NOT_FOUND_PAGE)
+    with pytest.raises(NotFound, match="«\xa0page introuvable\xa0»"):
+        await client.describe_weekly("2015-16", lang="fr")
+    httpx_mock.add_response(url=constants.EXPORTS_URL_FR, content=EXPORTS_FR)
+    exports = await client.describe_exports(lang="fr")
+    assert exports.unit == "milliers de tonnes"
+    assert "Mensuelle" in (exports.provenance.freshness or "")
+    with pytest.raises(InvalidInput, match="frequency doit valoir"):
+        await client.query_exports(lang="fr", frequency="week")  # type: ignore[arg-type]
+
+
+async def test_english_messages_are_unchanged(httpx_mock):
+    httpx_mock.add_response(url=_weekly(2026), text=CURRENT)
+    result = await client.query_weekly("Primary", limit=1)
+    assert result.unit == "thousand tonnes"
+    assert result.provenance.freshness == (
+        "Weekly: the crop year's file is replaced each Thursday with the grain week "
+        "that ended the previous Sunday."
+    )
+    assert result.provenance.licence and result.provenance.licence.startswith(
+        "Open Government Licence"
+    )
+    with pytest.raises(InvalidInput, match=r"^cgc: no grain 'Barley' here; values are: "):
+        await client.query_weekly("Primary", grain="Barley")
+    with pytest.raises(InvalidInput, match=r"^week_from \(3\) is after week_to \(1\)"):
+        await client.query_weekly("Primary", week_from=3, week_to=1)
+    with pytest.raises(InvalidInput, match=r"^cgc: crop_year 'last year' should look like"):
+        client.parse_crop_year("last year")
 
 
 def test_keep_latest_drops_oldest_periods_first():

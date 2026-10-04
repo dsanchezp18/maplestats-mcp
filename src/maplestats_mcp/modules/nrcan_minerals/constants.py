@@ -42,3 +42,9 @@ TERMS = (
     "Resources Canada (1990-2018) and Statistics Canada (2019 onward, collected under the "
     "Statistics Act)."
 )
+TERMS_FR = (
+    "Avis de Ressources naturelles Canada sur canada.ca : reproduction à des fins non "
+    "commerciales permise avec attribution ; la reproduction commerciale exige une "
+    "autorisation écrite. Source : Ressources naturelles Canada (1990-2018) et Statistique "
+    "Canada (depuis 2019, données recueillies en vertu de la Loi sur la statistique)."
+)

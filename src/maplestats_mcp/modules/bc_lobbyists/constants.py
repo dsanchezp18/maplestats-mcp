@@ -63,11 +63,11 @@ LABELS: dict[str, tuple[str, str]] = {
     "in_house": ("In-house (organization) registration", "Inscription d'organisation (interne)"),
     "lta": (
         "Lobbyists Transparency Act (from 2020-05-04)",
-        "Loi sur la transparence (dès le 2020-05-04)",
+        "Lobbyists Transparency Act (depuis le 4 mai 2020)",
     ),
     "legacy": (
         "Lobbyists Registration Act (before 2020-05-04)",
-        "Loi sur l'inscription (avant le 2020-05-04)",
+        "Lobbyists Registration Act (avant le 4 mai 2020)",
     ),
     "active": ("Active", "Active"),
     "ended": ("Ended", "Terminée"),

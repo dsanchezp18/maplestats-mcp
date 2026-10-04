@@ -19,6 +19,7 @@ import httpx
 
 from maplestats_mcp.modules.statcan.indicators import constants
 from maplestats_mcp.modules.statcan.indicators.schemas import Indicator, IndicatorList
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
@@ -49,16 +50,23 @@ async def get_indicators(
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
 ) -> IndicatorList:
     """Fetch current StatCan indicators, optionally filtered by keyword and geography."""
+    use_lang(lang)
     url = constants.DATASET_URLS.get(dataset)
     if url is None:
         raise InvalidInput(
-            f"statcan_indicators:get_indicators: dataset must be one of "
-            f"{sorted(constants.DATASET_URLS)}, got {dataset!r}."
+            say(
+                f"statcan_indicators:get_indicators: dataset must be one of "
+                f"{sorted(constants.DATASET_URLS)}, got {dataset!r}.",
+                f"statcan_indicators:get_indicators : dataset doit être l'une des valeurs {sorted(constants.DATASET_URLS)}, reçu {dataset!r}.",
+            )
         )
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_indicators:get_indicators: limit must be between 1 and "
-            f"{constants.SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_indicators:get_indicators: limit must be between 1 and "
+                f"{constants.SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_indicators:get_indicators : limit doit être entre 1 et {constants.SEARCH_LIMIT_MAX}, reçu {limit}.",
+            )
         )
 
     async def fetch() -> Any:
@@ -68,11 +76,17 @@ async def get_indicators(
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             raise UpstreamError(
-                f"statcan_indicators:get_indicators returned HTTP {status}."
+                say(
+                    f"statcan_indicators:get_indicators returned HTTP {status}.",
+                    f"statcan_indicators:get_indicators a renvoyé HTTP {status}.",
+                )
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_indicators:get_indicators did not respond in time. Try again shortly."
+                say(
+                    "statcan_indicators:get_indicators did not respond in time. Try again shortly.",
+                    "statcan_indicators:get_indicators n'a pas répondu à temps. Réessayez sous peu.",
+                )
             ) from exc
 
     cache_key = f"statcan-indicators:{dataset}"
@@ -80,7 +94,10 @@ async def get_indicators(
     results = (payload or {}).get("results") or {}
     if "indicators" not in results:
         raise UpstreamError(
-            "statcan_indicators:get_indicators: unexpected response shape (missing indicators)."
+            say(
+                "statcan_indicators:get_indicators: unexpected response shape (missing indicators).",
+                "statcan_indicators:get_indicators : réponse de forme inattendue (indicators absent).",
+            )
         )
 
     geo_names = {
@@ -99,10 +116,16 @@ async def get_indicators(
         if mapped is None or str(mapped) not in geo_names:
             valid = ", ".join(f"{code}={name}" for code, name in geo_names.items())
             raise InvalidInput(
-                f"statcan_indicators:get_indicators: geo_code {geo_code} is not in this feed. "
-                f"Use one of: {valid} (or a province SGC code such as 48 for Alberta)."
+                say(
+                    f"statcan_indicators:get_indicators: geo_code {geo_code} is not in this feed. "
+                    f"Use one of: {valid} (or a province SGC code such as 48 for Alberta).",
+                    f"statcan_indicators:get_indicators : geo_code {geo_code} ne figure pas dans ce fil. Utilisez l'un de ces codes : {valid} (ou un code de province de la CGT, comme 48 pour l'Alberta).",
+                )
             )
-        note = f"geo_code {geo_code} read as SGC code and mapped to feed code {mapped}"
+        note = say(
+            f"geo_code {geo_code} read as SGC code and mapped to feed code {mapped}",
+            f"geo_code {geo_code} lu comme un code de la CGT et associé au code {mapped} du fil",
+        )
         geo_code = mapped
 
     query_lower = query.strip().lower()
@@ -153,5 +176,6 @@ async def get_indicators(
             cached=was_cached,
             schema_name="statcan_indicators.IndicatorList",
             limits=note,
+            lang=lang,
         ),
     )

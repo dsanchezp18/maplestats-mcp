@@ -19,6 +19,7 @@ from maplestats_mcp.modules.elections_results.schemas import (
 from maplestats_mcp.shared.csv_files import Columns, fetch_rows
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -77,16 +78,38 @@ _NOT_COVERED = {
 }
 
 
+def bad_limit(top: int, lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        f"elections_results: limit must be 1 to {top}.",
+        f"elections_results : limit doit être compris entre 1 et {top}.",
+    )
+
+
+def bad_offset(lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        "elections_results: offset must be 0 or more.",
+        "elections_results : offset doit être 0 ou plus.",
+    )
+
+
 def _fold(text: str) -> str:
     stripped = unicodedata.normalize("NFKD", text)
     return "".join(c for c in stripped if not unicodedata.combining(c)).casefold().strip()
 
 
-def _election(number: int) -> constants.Election:
+def _election(number: int, lang: str = "en") -> constants.Election:
     if number not in constants.ELECTIONS:
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"elections_results: election must be one of {sorted(constants.ELECTIONS)} "
-            "(the 38th to 45th general elections)."
+            "(the 38th to 45th general elections).",
+            f"elections_results : election doit être l'une des valeurs "
+            f"{sorted(constants.ELECTIONS)} (38e à 45e élections générales).",
         )
     return constants.ELECTIONS[number]
 
@@ -95,25 +118,41 @@ def file_url(election: constants.Election, table_number: int) -> str:
     return constants.SITE + election.folder + election.file_pattern.format(n=table_number)
 
 
+def _page_in(lang: Lang, path: str) -> str:
+    """An elections.ca page in the caller's language: the site takes lang=e or lang=f.
+
+    Checked live 2026-10-03: the 45th summary page and the general elections page
+    answer 200 with French titles under lang=f.
+    """
+    return constants.SITE + (path.replace("&lang=e", "&lang=f") if lang == "fr" else path)
+
+
 def list_elections(lang: Lang = "en") -> ElectionList:
     tables = [
         TableInfo(table=name, number=num, description=en if lang == "en" else fr)
         for name, (num, en, fr) in constants.TABLES.items()
     ]
     elections = [
-        ElectionInfo(election=e.number, date=e.date, page=constants.SITE + e.page)
+        ElectionInfo(election=e.number, date=e.date, page=_page_in(lang, e.page))
         for e in constants.ELECTIONS.values()
     ]
     return ElectionList(
         elections=elections,
         tables=tables,
-        not_covered=_NOT_COVERED[lang],
+        not_covered=[french_spacing(n) for n in _NOT_COVERED[lang]]
+        if lang == "fr"
+        else _NOT_COVERED[lang],
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
-            url=constants.SITE + "/content.aspx?section=ele&dir=pas&document=ge&lang=e",
+            url=_page_in(lang, "/content.aspx?section=ele&dir=pas&document=ge&lang=e"),
             cached=False,
             schema_name="elections_results.ElectionList",
-            coverage="General elections 38 to 45 (2004 to 2025).",
+            coverage=fr_or_en(
+                lang,
+                "General elections 38 to 45 (2004 to 2025).",
+                "38e à 45e élections générales (2004 à 2025).",
+            ),
+            lang=lang,
         ),
     )
 
@@ -139,13 +178,18 @@ async def get_table(
     offset: int = 0,
     lang: Lang = "en",
 ) -> ElectionTable:
-    edition = _election(election)
+    edition = _election(election, lang)
     if table not in constants.TABLES:
-        raise InvalidInput(f"elections_results: table must be one of {list(constants.TABLES)}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"elections_results: table must be one of {list(constants.TABLES)}.",
+            f"elections_results : table doit être l'une des valeurs {list(constants.TABLES)}.",
+        )
     if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"elections_results: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+        raise bad_limit(constants.ROWS_LIMIT_MAX, lang)
     if offset < 0:
-        raise InvalidInput("elections_results: offset must be 0 or more.")
+        raise bad_offset(lang)
 
     number, description_en, description_fr = constants.TABLES[table]
     url = file_url(edition, number)
@@ -160,9 +204,13 @@ async def get_table(
     if province:
         column = _first_column(columns, starts=("province",))
         if column is None:
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"elections_results: table {table!r} has no province column (provinces are "
-                "its columns); read the row for the party you want."
+                "its columns); read the row for the party you want.",
+                f"elections_results : le tableau {table!r} n'a pas de colonne de province (les "
+                "provinces en sont les colonnes) ; lisez la ligne du parti voulu.",
             )
         wanted = _fold(province)
         rows = [r for r in rows if wanted in _fold(r.get(column, ""))]
@@ -173,7 +221,12 @@ async def get_table(
         )
         number_column = _first_column(columns, starts=("electoral district number",))
         if column is None:
-            raise InvalidInput(f"elections_results: table {table!r} has no electoral district.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"elections_results: table {table!r} has no electoral district.",
+                f"elections_results : le tableau {table!r} n'a pas de circonscription.",
+            )
         wanted = _fold(district)
         rows = [
             r
@@ -187,9 +240,13 @@ async def get_table(
             columns, starts=("candidate/", "elected candidate", "political affiliation")
         )
         if column is None:
-            raise InvalidInput(
+            raise lang_error(
+                InvalidInput,
+                lang,
                 f"elections_results: table {table!r} has no candidate or party column "
-                "to filter (party names are column headers there)."
+                "to filter (party names are column headers there).",
+                f"elections_results : le tableau {table!r} n'a pas de colonne de candidat ou de "
+                "parti à filtrer (les noms de parti y sont des en-têtes de colonne).",
             )
         wanted = _fold(party)
         rows = [r for r in rows if wanted in _fold(r.get(column, ""))]
@@ -197,7 +254,12 @@ async def get_table(
     if winners_only:
         column = _first_column(columns, starts=("majority/",))
         if table != "candidates" or column is None:
-            raise InvalidInput("elections_results: winners_only applies to the candidates table.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                "elections_results: winners_only applies to the candidates table.",
+                "elections_results : winners_only s'applique au tableau candidates.",
+            )
         rows = [r for r in rows if r.get(column, "").strip()]
 
     total = len(rows)
@@ -214,8 +276,14 @@ async def get_table(
     # district outside the province given); say so rather than return a
     # bare empty table.
     no_match = (
-        f"No row matched all of {used}; check each filter on its own (a district or party "
-        "outside the province given matches nothing)."
+        fr_or_en(
+            lang,
+            f"No row matched all of {used}; check each filter on its own (a district or party "
+            "outside the province given matches nothing).",
+            f"Aucune ligne ne correspond à tous les filtres {used} ; vérifiez chaque filtre "
+            "séparément (une circonscription ou un parti hors de la province donnée ne "
+            "correspond à rien).",
+        )
         if total == 0 and used
         else None
     )
@@ -235,14 +303,34 @@ async def get_table(
             url=url,
             cached=cached,
             schema_name="elections_results.ElectionTable",
-            freshness="Official results are final; the 45th general election is the newest.",
-            coverage=f"General election {election} ({edition.date}), table {number}.",
+            freshness=fr_or_en(
+                lang,
+                "Official results are final; the 45th general election is the newest.",
+                "Les résultats officiels sont définitifs ; la 45e élection générale est la plus "
+                "récente.",
+            ),
+            coverage=fr_or_en(
+                lang,
+                f"General election {election} ({edition.date}), table {number}.",
+                f"{election}e élection générale ({edition.date}), tableau {number}.",
+            ),
             limits=join_limits(
-                f"Showing rows {offset + 1} to {offset + len(page)} of {total}; page with "
-                "offset (responses are capped near 200 KB)"
+                fr_or_en(
+                    lang,
+                    f"Showing rows {offset + 1} to {offset + len(page)} of {total}; page with "
+                    "offset (responses are capped near 200 KB)",
+                    f"Lignes {offset + 1} à {offset + len(page)} sur {total} ; paginez avec "
+                    "offset (réponses plafonnées à environ 200 Ko)",
+                )
                 if truncated
                 else None,
                 no_match,
+                # The CSV's own (bilingual) headers and its values are kept as published.
+                "Les en-têtes (bilingues) et les valeurs sont ceux du fichier d'Élections "
+                "Canada, tels que publiés"
+                if lang == "fr"
+                else None,
             ),
+            lang=lang,
         ),
     )

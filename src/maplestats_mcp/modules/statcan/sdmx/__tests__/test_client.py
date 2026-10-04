@@ -119,6 +119,21 @@ async def test_get_key_for_dimension_returns_only_leaf_codes(httpx_mock):
     # alongside their provincial breakdown.
     assert result.leaf_code_count == 2
     assert set(result.or_key.split("+")) == {"2", "3"}
+    assert result.provenance.coverage == "2 leaf codes of 3 total codes"
+    assert "Statistics Canada Open Licence" in (result.provenance.licence or "")
+
+
+async def test_get_key_for_dimension_in_french(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}structure/Data_Structure_18100004",
+        content=_STRUCTURE_XML.encode("utf-8"),
+    )
+    result = await client.get_key_for_dimension(18100004, dimension_position=1, lang="fr")
+    assert result.provenance.coverage == "2 codes terminaux sur 3 codes au total"
+    assert "Licence ouverte de Statistique Canada" in (result.provenance.licence or "")
+    assert (
+        "reproduce_code" in result.provenance.reproduce and "appelez" in result.provenance.reproduce
+    )
 
 
 def test_parse_data_extracts_series_key_attributes_and_observations():

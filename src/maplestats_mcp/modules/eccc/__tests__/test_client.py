@@ -268,3 +268,81 @@ async def test_timeout_raises_upstream_unavailable(httpx_mock):
         httpx_mock.add_exception(httpx.ReadTimeout("timed out"))
     with pytest.raises(UpstreamUnavailable):
         await client.get_collection("hydrometric-realtime")
+
+
+# --- French ------------------------------------------------------------------
+
+NBSP = " "
+
+
+async def test_french_errors_use_the_typed_templates(httpx_mock):
+    with pytest.raises(InvalidInput, match=f"^Entrée invalide{NBSP}: limit doit"):
+        await client.query_items("weather-alerts", limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="ouest, sud, est, nord"):
+        await client.query_items("weather-alerts", bbox=[1.0, 2.0], lang="fr")
+    with pytest.raises(InvalidInput, match="date-heure RFC 3339"):
+        await client.query_items("hydrometric-realtime", datetime_filter="notadate", lang="fr")
+    with pytest.raises(InvalidInput, match="ne doit pas être vide"):
+        await client.get_collection("  ", lang="fr")
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections/weather-alerts/queryables?f=json",
+        json={"properties": {"province": {"type": "string"}}},
+    )
+    with pytest.raises(InvalidInput, match="propriété inconnue"):
+        await client.query_items("weather-alerts", filters={"provinc": "ON"}, lang="fr")
+
+
+async def test_french_not_found_keeps_the_source_message(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections/nope?f=json&lang=fr",
+        status_code=404,
+        json={"code": "NotFound", "description": "Collection not found"},
+    )
+    with pytest.raises(NotFound) as err:
+        await client.get_collection("nope", lang="fr")
+    message = str(err.value)
+    assert message.startswith(f"Aucune correspondance trouvée{NBSP}:")
+    assert "en anglais" in message and "Collection not found" in message
+
+
+async def test_french_items_note_names_the_french_properties(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "ITEMS_BYTES_MAX", 500)
+    feature = _alert_feature()
+    feature["properties"]["status_fr"] = "terminé"
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections/weather-alerts/items?f=json&lang=fr&limit=5&offset=0",
+        json={"type": "FeatureCollection", "features": [feature] * 5, "numberMatched": 900},
+    )
+    result = await client.query_items("weather-alerts", limit=5, lang="fr")
+    assert result.note is not None
+    assert f"en français{NBSP}: status_fr" in result.note
+    assert f"offset={result.number_returned}" in result.note
+    assert (
+        result.provenance.coverage
+        == f"{result.number_returned} entités renvoyées sur 900 correspondantes"
+    )
+    assert result.provenance.limits is not None
+    assert result.provenance.limits.startswith("limit plafonné à 1000 par requête.")
+    assert "Environnement et Changement climatique Canada" in (result.provenance.licence or "")
+
+
+async def test_english_items_have_no_note_when_nothing_is_cut(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections/weather-alerts/items?f=json&lang=en&limit=10&offset=0",
+        json={"type": "FeatureCollection", "features": [_alert_feature()], "numberMatched": 1},
+    )
+    result = await client.query_items("weather-alerts")
+    assert result.note is None
+    assert result.provenance.coverage == "1 of 1 matching items returned"
+
+
+async def test_french_search_coverage_text(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections?f=json&lang=fr", json=_collections_payload_fr()
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections?f=json&lang=en", json=_collections_payload()
+    )
+    result = await client.search_collections("qualité", lang="fr")
+    assert result.provenance.coverage is not None
+    assert "collections examinées" in result.provenance.coverage

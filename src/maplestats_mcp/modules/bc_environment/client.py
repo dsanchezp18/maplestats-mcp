@@ -46,9 +46,10 @@ from maplestats_mcp.modules.bc_environment.schemas import (
 )
 from maplestats_mcp.shared import file_download, remote_zip
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance, raise_typed
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -85,7 +86,15 @@ def _provenance(url: str, cached: bool, schema: str, lang: Lang, **extra: Any) -
 
 def _check_limit(limit: int, maximum: int, lang: Lang) -> None:
     if not 1 <= limit <= maximum:
-        raise_typed(InvalidInput, f"limit must be between 1 and {maximum}; got {limit}.", lang)
+        raise_typed(
+            InvalidInput,
+            pick(
+                lang,
+                f"limit must be between 1 and {maximum}; got {limit}.",
+                f"limit doit être compris entre 1 et {maximum} (reçu {limit}).",
+            ),
+            lang,
+        )
 
 
 def _decode(body: bytes) -> str:
@@ -140,7 +149,11 @@ def bound(text: str | None, *, end: bool, lang: Lang, name: str) -> str | None:
     if not match:
         raise_typed(
             InvalidInput,
-            f"{name} must look like 2026-09-15 or 2026-09-15 08:00; got {text!r}.",
+            pick(
+                lang,
+                f"{name} must look like 2026-09-15 or 2026-09-15 08:00; got {text!r}.",
+                f"{name} doit avoir la forme 2026-09-15 ou 2026-09-15 08:00 (reçu {text!r}).",
+            ),
             lang,
         )
     year, month, day, hour, minute, second = match.groups()
@@ -355,8 +368,17 @@ async def list_air_stations(
             cached,
             "AirStationList",
             lang,
-            freshness="Rewritten every hour (current-hour values).",
-            coverage="Stations reporting now; units are those of the current-hour file.",
+            freshness=pick(
+                lang,
+                "Rewritten every hour (current-hour values).",
+                "Réécrit toutes les heures (valeurs de l'heure courante).",
+            ),
+            coverage=pick(
+                lang,
+                "Stations reporting now; units are those of the current-hour file.",
+                "Stations qui transmettent en ce moment ; les unités sont celles du fichier de "
+                "l'heure courante.",
+            ),
         ),
     )
 
@@ -373,11 +395,24 @@ async def _resolve_air_station(station: str, lang: Lang) -> AirStation:
     if not partial:
         raise_typed(
             NotFound,
-            f"no air monitoring station matches {station!r}; use bc_env_list_air_stations.",
+            pick(
+                lang,
+                f"no air monitoring station matches {station!r}; use bc_env_list_air_stations.",
+                f"aucune station de surveillance de l'air ne correspond à {station!r} ; utilisez "
+                "bc_env_list_air_stations.",
+            ),
             lang,
         )
     names = ", ".join(f"{s.name} ({s.ems_id})" for s in partial[:12])
-    raise_typed(InvalidInput, f"{station!r} matches several stations: {names}.", lang)
+    raise_typed(
+        InvalidInput,
+        pick(
+            lang,
+            f"{station!r} matches several stations: {names}.",
+            f"{station!r} correspond à plusieurs stations : {names}.",
+        ),
+        lang,
+    )
 
 
 _UNIT_ALIASES = {"BAR": "PRESSURE", "PRECIP": "PRECIPITATION", "SNOW": "SNOWDEPTH"}
@@ -413,7 +448,13 @@ async def get_air_station_data(
         if not columns:
             available = ", ".join(c for c in header if c not in fixed)
             raise_typed(
-                NotFound, f"{found.name} has none of {parameters}; it reports {available}.", lang
+                NotFound,
+                pick(
+                    lang,
+                    f"{found.name} has none of {parameters}; it reports {available}.",
+                    f"{found.name} ne mesure aucun de {parameters} ; elle mesure {available}.",
+                ),
+                lang,
             )
     readings: list[AirReading] = []
     for row in rows:
@@ -442,14 +483,22 @@ async def get_air_station_data(
         truncated=truncated,
         readings=kept,
         notes=[
-            (
+            pick(
+                lang,
                 "Unverified raw data: values can change or be removed when the ministry "
                 "validates them. Verified historical data is published only on an ftp:// "
-                "server, which this server cannot read."
+                "server, which this server cannot read.",
+                "Données brutes non vérifiées : les valeurs peuvent changer ou disparaître "
+                "quand le ministère les valide. Les données historiques vérifiées ne sont "
+                "publiées que sur un serveur ftp://, que ce serveur ne peut pas lire.",
             ),
-            (
+            pick(
+                lang,
                 "Units come from the station's current-hour record; _24 and _8 columns are "
-                "rolling means in the base parameter's unit."
+                "rolling means in the base parameter's unit.",
+                "Les unités viennent de l'enregistrement de l'heure courante de la station ; "
+                "les colonnes _24 et _8 sont des moyennes mobiles dans l'unité du paramètre "
+                "de base.",
             ),
         ],
         provenance=_provenance(
@@ -457,8 +506,14 @@ async def get_air_station_data(
             cached,
             "AirSeries",
             lang,
-            freshness="Rewritten every hour; holds the last 30 days.",
-            limits=f"readings capped at {limit}" if truncated else None,
+            freshness=pick(
+                lang,
+                "Rewritten every hour; holds the last 30 days.",
+                "Réécrit toutes les heures ; contient les 30 derniers jours.",
+            ),
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            if truncated
+            else None,
         ),
     )
 
@@ -482,7 +537,11 @@ async def get_air_parameter_data(
     if key not in codes:
         raise_typed(
             InvalidInput,
-            f"unknown parameter {parameter!r}; use one of {', '.join(sorted(codes))}.",
+            pick(
+                lang,
+                f"unknown parameter {parameter!r}; use one of {', '.join(sorted(codes))}.",
+                f"paramètre inconnu {parameter!r} ; utilisez l'un de {', '.join(sorted(codes))}.",
+            ),
             lang,
         )
     folder, name = codes[key]
@@ -531,10 +590,14 @@ async def get_air_parameter_data(
         truncated=truncated,
         readings=kept,
         notes=[
-            (
+            pick(
+                lang,
                 "Unverified raw data (RAW_VALUE as measured, value = REPORTED_VALUE, "
                 "rounded). Verified historical data is published only on an ftp:// server, "
-                "which this server cannot read."
+                "which this server cannot read.",
+                "Données brutes non vérifiées (RAW_VALUE telle que mesurée, value = "
+                "REPORTED_VALUE, arrondie). Les données historiques vérifiées ne sont publiées "
+                "que sur un serveur ftp://, que ce serveur ne peut pas lire.",
             ),
         ],
         provenance=_provenance(
@@ -542,8 +605,14 @@ async def get_air_parameter_data(
             cached,
             "AirSeries",
             lang,
-            freshness="Rewritten every hour; holds the last 30 days for every station.",
-            limits=f"readings capped at {limit}" if truncated else None,
+            freshness=pick(
+                lang,
+                "Rewritten every hour; holds the last 30 days for every station.",
+                "Réécrit toutes les heures ; contient les 30 derniers jours pour chaque station.",
+            ),
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            if truncated
+            else None,
         ),
     )
 
@@ -552,7 +621,15 @@ async def get_aqhi(
     area: str | None = None, history_hours: int = 0, lang: Lang = "en"
 ) -> AqhiResult:
     if not 0 <= history_hours <= 720:
-        raise_typed(InvalidInput, "history_hours must be between 0 and 720.", lang)
+        raise_typed(
+            InvalidInput,
+            pick(
+                lang,
+                "history_hours must be between 0 and 720.",
+                "history_hours doit être compris entre 0 et 720.",
+            ),
+            lang,
+        )
     body, cached = await _file(constants.AQHI_URL, constants.CACHE_TTL_HOURLY_SECONDS, lang)
     header, rows = _rows(body)
     areas: list[AqhiArea] = []
@@ -582,12 +659,28 @@ async def get_aqhi(
         needle = area.strip().casefold()
         areas = [a for a in areas if needle in a.area.casefold() or needle == a.area_id.casefold()]
         if not areas:
-            raise_typed(NotFound, f"no AQHI area matches {area!r}.", lang)
+            raise_typed(
+                NotFound,
+                pick(
+                    lang,
+                    f"no AQHI area matches {area!r}.",
+                    f"aucune zone de la cote air santé (CAS) ne correspond à {area!r}.",
+                ),
+                lang,
+            )
     history: list[AqhiHour] = []
     url = constants.AQHI_URL
     if history_hours:
         if len(areas) != 1 or not areas[0].area_id:
-            raise_typed(InvalidInput, "history_hours needs `area` naming exactly one area.", lang)
+            raise_typed(
+                InvalidInput,
+                pick(
+                    lang,
+                    "history_hours needs `area` naming exactly one area.",
+                    "history_hours exige que `area` désigne une seule zone.",
+                ),
+                lang,
+            )
         url = f"{constants.AIR_RAW}/Station/{areas[0].area_id}.csv"
         hist_body, cached = await _file(url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
         hist_header, hist_rows = _rows(hist_body)
@@ -611,7 +704,11 @@ async def get_aqhi(
             cached,
             "AqhiResult",
             lang,
-            freshness="Rewritten every hour; forecasts are issued by ECCC with the province.",
+            freshness=pick(
+                lang,
+                "Rewritten every hour; forecasts are issued by ECCC with the province.",
+                "Réécrit toutes les heures ; les prévisions sont émises par ECCC avec la province.",
+            ),
         ),
     )
 
@@ -619,7 +716,9 @@ async def get_aqhi(
 # ------------------------------------------------------------------- snow
 
 
-async def _wfs(layer: str, extra: dict[str, str] | None = None) -> list[dict[str, Any]]:
+async def _wfs(
+    layer: str, extra: dict[str, str] | None = None, lang: str = "en"
+) -> list[dict[str, Any]]:
     params = {
         "service": "WFS",
         "version": "2.0.0",
@@ -633,13 +732,21 @@ async def _wfs(layer: str, extra: dict[str, str] | None = None) -> list[dict[str
     await _LIMITER.acquire()
     try:
         payload = await api_get(constants.WFS_URL, params=params, timeout=90.0)
-    except Exception as exc:
-        raise UpstreamUnavailable(
-            f"the BC Geographic Warehouse ({layer}) did not answer: {type(exc).__name__}."
-        ) from exc
+    except Exception as exc:  # noqa: BLE001 (raise_localized re-raises it as UpstreamUnavailable)
+        raise_localized(
+            UpstreamUnavailable,
+            f"the BC Geographic Warehouse ({layer}) did not answer: {type(exc).__name__}.",
+            f"le BC Geographic Warehouse ({layer}) n'a pas répondu ({type(exc).__name__}).",
+            lang,
+        )
     features = payload.get("features") if isinstance(payload, dict) else None
     if not isinstance(features, list):
-        raise UpstreamError(f"the BC Geographic Warehouse returned no features for {layer}.")
+        raise_localized(
+            UpstreamError,
+            f"the BC Geographic Warehouse returned no features for {layer}.",
+            f"le BC Geographic Warehouse n'a renvoyé aucune entité pour {layer}.",
+            lang,
+        )
     return features
 
 
@@ -653,7 +760,7 @@ async def list_snow_stations(
     _check_limit(limit, constants.LIST_LIMIT_MAX, lang)
 
     async def fetch() -> list[SnowStation]:
-        features = await _wfs(constants.SNOW_STATIONS_LAYER)
+        features = await _wfs(constants.SNOW_STATIONS_LAYER, lang=lang)
         out = []
         for feature in features:
             p = feature.get("properties") or {}
@@ -692,8 +799,13 @@ async def list_snow_stations(
             cached,
             "SnowStationList",
             lang,
-            coverage="Automated snow weather stations (layer SSL_SNOW_ASWS_STNS_SP); "
-            "manual snow courses are in bc_env_get_snow_surveys.",
+            coverage=pick(
+                lang,
+                "Automated snow weather stations (layer SSL_SNOW_ASWS_STNS_SP); "
+                "manual snow courses are in bc_env_get_snow_surveys.",
+                "Stations nivométéorologiques automatiques (couche SSL_SNOW_ASWS_STNS_SP) ; "
+                "les parcours nivométriques manuels sont dans bc_env_get_snow_surveys.",
+            ),
         ),
     )
 
@@ -713,14 +825,27 @@ async def get_snow_station_data(
     if not re.fullmatch(r"[0-9][A-Z][0-9]{2}[A-Z]?P", station_id):
         raise_typed(
             InvalidInput,
-            f"station must be an automated snow station id such as 1A01P; got {station!r}.",
+            pick(
+                lang,
+                f"station must be an automated snow station id such as 1A01P; got {station!r}.",
+                "station doit être l'identifiant d'une station nivométrique automatique, p. ex. "
+                "1A01P (reçu {station!r}).",
+            ),
             lang,
         )
     url = f"{constants.SNOW_BASE}/SnowAll/{station_id}.csv"
     try:
         body, cached = await _file(url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
     except NotFound:
-        raise_typed(NotFound, f"no current-season file for snow station {station_id}.", lang)
+        raise_typed(
+            NotFound,
+            pick(
+                lang,
+                f"no current-season file for snow station {station_id}.",
+                f"aucun fichier de la saison en cours pour la station nivométrique {station_id}.",
+            ),
+            lang,
+        )
     header, rows = _rows(body)
     measures = [c for c in header[7:] if not c.startswith(("Unit_", "Grade_"))]
     if variables:
@@ -754,13 +879,25 @@ async def get_snow_station_data(
         truncated=truncated,
         readings=kept,
         notes=[
-            (
+            pick(
+                lang,
                 "Current season only (from 1 October); use bc_env_get_snow_readings with a "
-                "start date for the archive since 2003. Values are provisional."
+                "start date for the archive since 2003. Values are provisional.",
+                "Saison en cours seulement (depuis le 1er octobre) ; utilisez "
+                "bc_env_get_snow_readings avec une date de début pour les archives depuis 2003. "
+                "Les valeurs sont provisoires.",
             )
         ],
         provenance=_provenance(
-            url, cached, "SnowSeries", lang, freshness="Updated hourly during the season."
+            url,
+            cached,
+            "SnowSeries",
+            lang,
+            freshness=pick(
+                lang,
+                "Updated hourly during the season.",
+                "Mis à jour toutes les heures pendant la saison.",
+            ),
         ),
     )
 
@@ -784,7 +921,15 @@ def _pick_columns(
         c for c in columns if any(w == c[1].casefold() or w in c[2].casefold() for w in wanted)
     ]
     if not picked:
-        raise_typed(NotFound, f"no station column matches {stations}.", lang)
+        raise_typed(
+            NotFound,
+            pick(
+                lang,
+                f"no station column matches {stations}.",
+                f"aucune colonne de station ne correspond à {stations}.",
+            ),
+            lang,
+        )
     return picked
 
 
@@ -801,7 +946,12 @@ async def get_snow_readings(
     if code not in constants.SNOW_VARIABLES:
         raise_typed(
             InvalidInput,
-            f"variable must be one of {', '.join(constants.SNOW_VARIABLES)}; got {variable!r}.",
+            pick(
+                lang,
+                f"variable must be one of {', '.join(constants.SNOW_VARIABLES)}; got {variable!r}.",
+                f"variable doit valoir l'une des valeurs {', '.join(constants.SNOW_VARIABLES)} "
+                "(reçu {variable!r}).",
+            ),
             lang,
         )
     label, unit = constants.SNOW_VARIABLES[code]
@@ -811,7 +961,14 @@ async def get_snow_readings(
     body, cached = await _file(current_url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
     header, rows = _rows(body)
     season_start = norm_time(rows[0][0]) if rows and rows[0] else None
-    notes: list[str] = [f"{label} ({unit or 'unit not stated by the source'}), times in UTC."]
+    notes: list[str] = [
+        pick(
+            lang,
+            f"{label} ({unit or 'unit not stated by the source'}), times in UTC.",
+            f"{label} ({unit or 'unité non précisée par la source'}), heures en UTC "
+            "(libellé de la source, en anglais).",
+        )
+    ]
     url = current_url
     cut_short = False
     if low is not None and season_start is not None and low < season_start:
@@ -819,7 +976,11 @@ async def get_snow_readings(
         if archive is None:
             raise_typed(
                 InvalidInput,
-                f"{code} has no archive; its current file starts at {season_start}.",
+                pick(
+                    lang,
+                    f"{code} has no archive; its current file starts at {season_start}.",
+                    f"{code} n'a pas d'archive ; son fichier courant commence le {season_start}.",
+                ),
                 lang,
             )
         url = f"{constants.SNOW_BASE}/{archive}"
@@ -836,8 +997,21 @@ async def get_snow_readings(
                 stop=lambda key: high is not None and key > high,
             )
             if cut_short:
-                notes.append("The archive read stopped at its byte cap; narrow the period.")
-        notes.append("Read from the archive (October 2003 onward, sorted by time).")
+                notes.append(
+                    pick(
+                        lang,
+                        "The archive read stopped at its byte cap; narrow the period.",
+                        "La lecture de l'archive s'est arrêtée à sa limite d'octets ; "
+                        "resserrez la période.",
+                    )
+                )
+        notes.append(
+            pick(
+                lang,
+                "Read from the archive (October 2003 onward, sorted by time).",
+                "Lu dans l'archive (depuis octobre 2003, triée par date).",
+            )
+        )
     columns = _pick_columns(_snow_columns(header), stations, lang)
     readings: list[SnowReading] = []
     for row in rows:
@@ -874,8 +1048,14 @@ async def get_snow_readings(
             cached,
             "SnowSeries",
             lang,
-            freshness="Current-season files update hourly; archives daily.",
-            limits=f"readings capped at {limit}" if truncated else None,
+            freshness=pick(
+                lang,
+                "Current-season files update hourly; archives daily.",
+                "Fichiers de la saison en cours mis à jour toutes les heures ; archives chaque jour.",
+            ),
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            if truncated
+            else None,
         ),
     )
 
@@ -932,7 +1112,11 @@ async def get_snow_surveys(
             cached,
             "SnowSurveyList",
             lang,
-            freshness="Updated after each survey round (1 January to 15 June).",
+            freshness=pick(
+                lang,
+                "Updated after each survey round (1 January to 15 June).",
+                "Mis à jour après chaque tournée de relevés (du 1er janvier au 15 juin).",
+            ),
         ),
     )
 
@@ -964,7 +1148,9 @@ async def list_wells(
 
     async def fetch() -> list[Well]:
         features = await _wfs(
-            constants.WELLS_LAYER, {"CQL_FILTER": "OBSERVATION_WELL_NUMBER IS NOT NULL"}
+            constants.WELLS_LAYER,
+            {"CQL_FILTER": "OBSERVATION_WELL_NUMBER IS NOT NULL"},
+            lang=lang,
         )
         files = await listing(f"{constants.WELL_BASE}/")
         try:
@@ -1024,9 +1210,17 @@ async def list_wells(
             cached,
             "WellList",
             lang,
-            coverage="Wells come from the provincial wells layer (GW_WATER_WELLS_WRBC_SVW); "
-            "region from the groundwater-trends indicator table; data files from "
-            f"{constants.WELL_BASE}/. Depth and ground elevation are in feet as recorded.",
+            coverage=pick(
+                lang,
+                "Wells come from the provincial wells layer (GW_WATER_WELLS_WRBC_SVW); "
+                "region from the groundwater-trends indicator table; data files from "
+                f"{constants.WELL_BASE}/. Depth and ground elevation are in feet as recorded.",
+                "Les puits viennent de la couche provinciale des puits "
+                "(GW_WATER_WELLS_WRBC_SVW) ; la région, du tableau de l'indicateur des "
+                "tendances des eaux souterraines ; les fichiers de données, de "
+                f"{constants.WELL_BASE}/. La profondeur et l'altitude du sol sont en pieds, "
+                "comme consignées.",
+            ),
         ),
     )
 
@@ -1044,14 +1238,30 @@ async def get_well_levels(
     high = bound(end, end=True, lang=lang, name="end")
     text = well.strip().upper().removeprefix("OW")
     if not text.isdigit():
-        raise_typed(InvalidInput, f"well must look like OW002 or 2; got {well!r}.", lang)
+        raise_typed(
+            InvalidInput,
+            pick(
+                lang,
+                f"well must look like OW002 or 2; got {well!r}.",
+                f"well doit avoir la forme OW002 ou 2 (reçu {well!r}).",
+            ),
+            lang,
+        )
     well_id = f"OW{text.zfill(3)}"
     suffix = {"daily": "average", "hourly": "recent", "all": "data"}[series]
     url = f"{constants.WELL_BASE}/{well_id}-{suffix}.csv"
     try:
         body, cached = await _file(url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
     except NotFound:
-        raise_typed(NotFound, f"no {series} file for observation well {well_id}.", lang)
+        raise_typed(
+            NotFound,
+            pick(
+                lang,
+                f"no {series} file for observation well {well_id}.",
+                f"aucun fichier {series} pour le puits d'observation {well_id}.",
+            ),
+            lang,
+        )
     header, rows = _rows(body)
     levels: list[WellLevel] = []
     for row in rows:
@@ -1079,8 +1289,15 @@ async def get_well_levels(
             cached,
             "WellSeries",
             lang,
-            freshness="Active wells update daily; inactive wells keep their last file.",
-            limits=f"levels capped at {limit}" if truncated else None,
+            freshness=pick(
+                lang,
+                "Active wells update daily; inactive wells keep their last file.",
+                "Les puits actifs sont mis à jour chaque jour ; les puits inactifs gardent leur "
+                "dernier fichier.",
+            ),
+            limits=pick(lang, f"levels capped at {limit}", f"niveaux limités à {limit}")
+            if truncated
+            else None,
         ),
     )
 
@@ -1158,16 +1375,26 @@ async def list_hydrometric_stations(
         total_matched=len(found),
         stations=found[:limit],
         notes=[
-            (
+            pick(
+                lang,
                 "Provincial network only: station ids follow the Water Survey of Canada "
                 "sub-basin scheme with four digits (08HA0022) or an H prefix for partner "
                 "stations, and none is a Water Survey of Canada station (compared on "
                 "2026-10-03 with ECCC's 2,324 BC stations); use eccc_ tools for the federal "
-                "network."
+                "network.",
+                "Réseau provincial seulement : les identifiants suivent le découpage en "
+                "sous-bassins de Relevés hydrologiques du Canada avec quatre chiffres "
+                "(08HA0022) ou un préfixe H pour les stations partenaires, et aucune n'est une "
+                "station de Relevés hydrologiques du Canada (comparaison du 2026-10-03 avec "
+                "les 2 324 stations d'ECCC en Colombie-Britannique) ; utilisez les outils "
+                "eccc_ pour le réseau fédéral.",
             ),
-            (
+            pick(
+                lang,
                 "Listed from the current water-year files (since 1 October); discontinued "
-                "stations appear only in the archives."
+                "stations appear only in the archives.",
+                "Liste tirée des fichiers de l'année hydrologique en cours (depuis le "
+                "1er octobre) ; les stations fermées ne figurent que dans les archives.",
             ),
         ],
         provenance=_provenance(
@@ -1175,7 +1402,11 @@ async def list_hydrometric_stations(
             cached_all,
             "HydroStationList",
             lang,
-            freshness="Rewritten hourly.",
+            freshness=pick(
+                lang,
+                "Rewritten hourly.",
+                "Réécrit toutes les heures.",
+            ),
         ),
     )
 
@@ -1193,7 +1424,12 @@ async def get_hydrometric_data(
     if not re.fullmatch(r"H?\d{2}[A-Z]{2}\d{4}", station_id):
         raise_typed(
             InvalidInput,
-            f"station must be a provincial id such as 08HA0022 or H08KC0844; got {station!r}.",
+            pick(
+                lang,
+                f"station must be a provincial id such as 08HA0022 or H08KC0844; got {station!r}.",
+                "station doit être un identifiant provincial, p. ex. 08HA0022 ou H08KC0844 "
+                "(reçu {station!r}).",
+            ),
             lang,
         )
     low = bound(start, end=False, lang=lang, name="start")
@@ -1233,9 +1469,21 @@ async def get_hydrometric_data(
                 stop=lambda key: key[0] != station_id or (high is not None and key[1] > high),
             )
             if cut:
-                notes.append(f"{name}: read stopped at its byte cap; narrow the period.")
+                notes.append(
+                    pick(
+                        lang,
+                        f"{name}: read stopped at its byte cap; narrow the period.",
+                        f"{name} : lecture arrêtée à sa limite d'octets ; resserrez la période.",
+                    )
+                )
             if not rows:
-                notes.append(f"{name}: no rows for {station_id} in the period.")
+                notes.append(
+                    pick(
+                        lang,
+                        f"{name}: no rows for {station_id} in the period.",
+                        f"{name} : aucune ligne pour {station_id} dans la période.",
+                    )
+                )
         for row in rows:
             if len(row) < 10:
                 continue
@@ -1250,8 +1498,13 @@ async def get_hydrometric_data(
     kept, truncated = _newest(ordered, limit)
     if not ordered and station_name is None:
         notes.append(
-            f"No {parameter} rows for {station_id}; check the id with "
-            "bc_env_list_streamflow_gauges, or widen the period."
+            pick(
+                lang,
+                f"No {parameter} rows for {station_id}; check the id with "
+                "bc_env_list_streamflow_gauges, or widen the period.",
+                f"Aucune ligne {parameter} pour {station_id} ; vérifiez l'identifiant avec "
+                "bc_env_list_streamflow_gauges ou élargissez la période.",
+            )
         )
     return HydroSeries(
         station_id=station_id,
@@ -1267,7 +1520,14 @@ async def get_hydrometric_data(
             cached_all,
             "HydroSeries",
             lang,
-            freshness="Current water-year file rewritten hourly; archives per water year.",
-            limits=f"readings capped at {limit}" if truncated else None,
+            freshness=pick(
+                lang,
+                "Current water-year file rewritten hourly; archives per water year.",
+                "Fichier de l'année hydrologique en cours réécrit toutes les heures ; archives par "
+                "année hydrologique.",
+            ),
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            if truncated
+            else None,
         ),
     )

@@ -30,9 +30,12 @@ async def ourcommons_list_members(
 
     Use for: finding who represents a riding, all MPs of a party or province,
     or an MP's person id (needed by ourcommons_get_member_roles). Filters are
-    accent-insensitive substring matches: `province` (e.g. Alberta),
-    `party` (Liberal, Conservative, Bloc Québécois, NDP, Green Party),
-    `constituency` and `name`. The official feed of sitting members.
+    accent-insensitive substring matches: `province` (e.g. Alberta, British
+    Columbia or Colombie-Britannique, or a code such as BC),
+    `party` (Liberal/Libéral, Conservative/Conservateur, Bloc Québécois,
+    NDP/NPD, Green Party/Parti vert), `constituency` and `name`. Province
+    and party work in English or French with either lang; results show the
+    names in the feed's language. The official feed of sitting members.
     Keywords: Member of Parliament, MP, riding, constituency, House of Commons,
     party, caucus, representative, federal, who represents, ourcommons.
     Mots-clés : député, députée, circonscription, Chambre des communes, parti,

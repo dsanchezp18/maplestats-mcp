@@ -132,6 +132,24 @@ async def test_changed_data_for_another_table_is_refused(httpx_mock):
         await client.get_changed_series_data_from_cube_pid_coord(18100004, "2.2")
 
 
+async def test_changed_data_for_another_table_is_refused_in_french(httpx_mock):
+    client.use_lang("fr")
+    httpx_mock.add_response(url=f"{BASE}getSeriesInfoFromCubePidCoord", json=SERIES_INFO_OK)
+    wrong = {
+        "status": "SUCCESS",
+        "object": {
+            "responseStatusCode": 0,
+            "productId": 23100066,
+            "coordinate": "1.2.0.0.0.0.0.0.0.0",
+            "vectorId": 41690973,
+            "vectorDataPoint": [],
+        },
+    }
+    httpx_mock.add_response(url=f"{BASE}getChangedSeriesDataFromVector", json=[wrong])
+    with pytest.raises(UpstreamError, match="a renvoyé le tableau 23100066 pour une série"):
+        await client.get_changed_series_data_from_cube_pid_coord(18100004, "2.2")
+
+
 # M1 ---------------------------------------------------------------------
 
 
@@ -336,6 +354,16 @@ async def test_search_requires_every_content_word_and_ignores_stopwords(httpx_mo
     found = await client.search_cubes("monthly labour force characteristics for the")
     assert [c.product_id for c in found.cubes] == [14100287]
     assert found.provenance.coverage == "4 tables searched"
+    assert found.provenance.freshness == "daily at 8:30am ET"
+
+
+async def test_search_notes_in_french(httpx_mock):
+    client.use_lang("fr")
+    _mock_cubes(httpx_mock)
+    found = await client.search_cubes("monthly labour force characteristics for the")
+    assert found.provenance.coverage == "4 tableaux parcourus"
+    assert found.provenance.freshness == "chaque jour à 8 h 30, HE"
+    assert "Licence ouverte de Statistique Canada" in (found.provenance.licence or "")
 
 
 async def test_search_is_accent_insensitive_across_languages(httpx_mock):

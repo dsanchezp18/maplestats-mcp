@@ -140,6 +140,18 @@ async def test_facility_flows_by_id_name_kind_and_window(httpx_mock):
         await quebec_flows.get_facility_flows("3-130", start="yesterday")
 
 
+async def test_french_provenance_and_errors(httpx_mock):
+    _serve(httpx_mock)
+    result = await quebec_flows.list_facilities(lang="fr")
+    assert (result.provenance.coverage or "").startswith("3 sites sur 3 correspondent ;")
+    assert (result.provenance.licence or "").startswith("Données ouvertes d'Hydro-Québec")
+    assert (result.provenance.limits or "").startswith("Fiche :")
+    with pytest.raises(NotFound, match="aucun site d'Hydro-Québec 'nowhere'"):
+        await quebec_flows.get_facility_flows("nowhere", lang="fr")
+    with pytest.raises(InvalidInput, match="correspond à plusieurs sites"):
+        await quebec_flows.get_facility_flows("la g", lang="fr")
+
+
 async def test_file_without_sites_is_an_upstream_error(httpx_mock):
     _serve(httpx_mock, {"Sites": []})
     with pytest.raises(UpstreamError, match="Site"):

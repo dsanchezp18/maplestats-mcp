@@ -61,7 +61,7 @@ _ROWS = [
 ]
 
 
-async def test_search_crawls_library_until_no_new_indicators(httpx_mock):
+async def test_search_pages_library_until_no_new_indicators(httpx_mock):
     page = '<main><a href="/en/indicators/30-day-stroke-in-hospital-mortality">30-Day Stroke In-Hospital Mortality</a><a href="/en/indicators/hospitalized-strokes">Hospitalized Strokes</a></main>'
     httpx_mock.add_response(url=f"{constants.LIBRARY_URL}?page=0", text=page)
     httpx_mock.add_response(url=f"{constants.LIBRARY_URL}?page=1", text=page)
@@ -204,11 +204,15 @@ async def test_french_search_reads_french_names_and_pairs_english_slugs(httpx_mo
     assert {r.slug for r in plural.indicators} == {_FR_SLUG, "reserve-aux-francophones"}
     english_only = await client.search_indicators("hospital stays", "fr")
     assert [r.english_slug for r in english_only.indicators] == ["english-only-hospital-stays"]
-    assert "No French page" in (english_only.indicators[0].note or "")
-    assert "1 indicator(s) have no French page" in (english_only.note or "")
+    assert "Aucune page en français" in (english_only.indicators[0].note or "")
+    assert "1 indicateur(s) sans page en français" in (english_only.note or "")
+    assert english_only.provenance.freshness == (
+        "listes d'indicateurs mises en cache 7 jours, appariement anglais-français 1 jour"
+    )
+    assert (english_only.provenance.licence or "").startswith("Conditions d'utilisation de l'ICIS")
     french_only = await client.search_indicators("réservés", "fr")
     assert french_only.indicators[0].english_slug is None
-    assert "no English page" in (french_only.indicators[0].note or "")
+    assert "aucune page en anglais" in (french_only.indicators[0].note or "")
 
 
 async def test_french_slug_works_in_either_language(httpx_mock):
@@ -233,3 +237,9 @@ async def test_unknown_slug_in_both_libraries_is_not_found(httpx_mock):
     _mock_pairing(httpx_mock)
     with pytest.raises(NotFound, match="English or French library"):
         await client.get_indicator("nope-nope")
+    for path in (constants.INDICATOR_PATH, constants.FR_INDICATOR_PATH):
+        httpx_mock.add_response(url=f"{constants.BASE_URL}{path}nope-nope", status_code=404)
+    with pytest.raises(NotFound, match=r"^Aucune correspondance trouvée\xa0: cihi\xa0: aucun"):
+        await client.get_indicator("nope-nope", lang="fr")
+    with pytest.raises(InvalidInput, match="identifiant"):
+        await client.get_indicator("Not a slug!", lang="fr")

@@ -54,7 +54,8 @@ async def eccc_coverages_search(
     Mots-clés : projections climatiques, scénarios de changements
     climatiques, modèles climatiques, réduction d'échelle, température
     future, précipitations futures, indices climatiques, degrés-jours,
-    sécheresse, environnement canada, données climatiques.
+    sécheresse, données climatiques, Environnement et Changement
+    climatique Canada (ECCC), Environnement Canada.
     """
     return await client.search_coverages(
         query,
@@ -83,7 +84,8 @@ async def eccc_coverages_describe(collection_id: str, lang: Lang = "en") -> Cove
     description, cmip6, environment canada.
     Mots-clés : métadonnées des projections climatiques, variables,
     unités, scénarios d'émissions, percentiles, ensemble de modèles,
-    période couverte, résolution de la grille, environnement canada.
+    période couverte, résolution de la grille, Environnement et
+    Changement climatique Canada (ECCC), Environnement Canada.
     """
     return await client.describe_coverage(collection_id, lang=lang)
 
@@ -130,7 +132,8 @@ async def eccc_coverages_get_data(
     Mots-clés : projections climatiques, température future,
     précipitations futures, changements climatiques par ville, scénario
     d'émissions, série chronologique, degrés-jours de chauffage, indice
-    de sécheresse, horizon 2050, environnement canada.
+    de sécheresse, horizon 2050, Environnement et Changement climatique
+    Canada (ECCC), Environnement Canada.
     """
     return await client.get_coverage_data(
         collection_id,

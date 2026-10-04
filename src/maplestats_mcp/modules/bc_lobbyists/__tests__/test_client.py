@@ -608,6 +608,12 @@ async def test_summaries_count_distinct_reports(httpx_mock):
     assert [(r.key, r.reports) for r in years.rows] == [("2020", 1), ("2025", 2)]
     months = await client.summarize_activity("month", top=2)
     assert [r.key for r in months.rows] == ["2025-06", "2025-07"]  # latest periods, oldest first
+    # The cut is stated, since `top` means "latest", not "busiest", for periods.
+    assert f"2 most recent of {months.groups_total} periods" in months.note
+    assert "not the busiest" in months.note
+    assert "Forests" not in ministries.note and "most recent" not in ministries.note
+    months_fr = await client.summarize_activity("month", top=2, lang="fr")
+    assert "pas les plus chargées" in months_fr.note
     holders = await client.summarize_activity("office_holder", agency="forests")
     assert {r.key for r in holders.rows} >= {"Trevor Hughes (Forests)", "Michael Snoddon (Forests)"}
     people = await client.summarize_activity("lobbyist")
@@ -694,6 +700,39 @@ async def test_corrupt_zip_is_an_upstream_error(httpx_mock):
     httpx_mock.add_response(url=_REG_URL, content=b"PK\x03\x04 not really a zip")
     with pytest.raises(UpstreamError, match="not a readable ZIP"):
         await client.search_registrations()
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide.*limit doit être compris entre 1"):
+        await client.search_registrations(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="date_from .* est postérieure à date_to"):
+        await client.search_activity_reports(
+            date_from="2025-12-31", date_to="2025-01-01", lang="fr"
+        )
+    with pytest.raises(InvalidInput, match="format AAAA-MM-JJ"):
+        await client.search_registrations(date_from="hier", lang="fr")
+    httpx_mock.add_response(url=_LAR_URL, content=b"<html><body>Sign In</body></html>")
+    with pytest.raises(UpstreamError, match="La source amont .*n'a pas renvoyé de fichier ZIP"):
+        await client.search_activity_reports(lang="fr")
+
+
+async def test_french_provenance_and_english_unchanged(httpx_mock):
+    _mock_registrations(httpx_mock)
+    french = await client.search_registrations(limit=1, lang="fr")
+    licence = french.provenance.licence or ""
+    assert licence.startswith("Licence de données ouvertes du Bureau du registraire")
+    assert french.provenance.freshness == "mensuelle (fichiers de données complets du registraire)"
+    assert (french.provenance.limits or "").startswith("1 inscriptions correspondantes")
+    assert "en anglais seulement" in french.note
+
+    english = await client.search_registrations(limit=1)
+    assert (english.provenance.licence or "").startswith("Open Data Licence for the Office")
+    assert english.provenance.freshness == "monthly (Registrar's mass datasets)"
+    assert (english.provenance.limits or "").startswith("Returned the first 1 of 3")
+    with pytest.raises(
+        InvalidInput, match=r"^date_from \(2025-12-31\) is after date_to \(2025-01-01\)"
+    ):
+        await client.search_registrations(date_from="2025-12-31", date_to="2025-01-01")
 
 
 async def test_results_are_cached_between_calls(httpx_mock):

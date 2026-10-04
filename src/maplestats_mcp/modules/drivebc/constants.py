@@ -13,6 +13,13 @@ LICENCE = (
     "DriveBC, BC Ministry of Transportation and Transit, Open511 API (BC Government API "
     "Terms of Use)."
 )
+LICENCE_FR = (
+    "Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Colombie-Britannique (https://www2.gov.bc.ca/gov/content?id=A519A56BC2BF44E4A008B33FCF527F61). "
+    "Source : DriveBC, ministère des Transports et du Transport en commun de la "
+    "Colombie-Britannique, API Open511 (conditions d'utilisation des API du gouvernement de la "
+    "Colombie-Britannique)."
+)
 
 # Measured 2026-10-03: requests 2-3 s apart alternated 200 and 429.
 RATE_LIMIT_PER_SECOND = 0.2

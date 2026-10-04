@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.reference import client, constants
 from maplestats_mcp.modules.statcan.reference.schemas import ReferenceSearchResult
 
@@ -35,6 +36,7 @@ async def statcan_reference_search_documents(
     méthodes, méthodologie, guide de référence technique, documentation
     d'enquête, numéro au catalogue, publications techniques.
     """
+    use_lang(lang)
     return await client.search_documents(query, count=count, page=page, lang=lang)
 
 
@@ -62,6 +64,7 @@ async def statcan_reference_search_analysis(
     Mots-clés : Statistique Canada, analyse, article analytique, coup d'œil
     sur, revue, périodique, document de travail, études.
     """
+    use_lang(lang)
     return await client.search_analysis(query, count=count, page=page, lang=lang)
 
 
@@ -92,4 +95,5 @@ async def statcan_reference_search_data(
     diffusion, fichier de limites géographiques, données en bloc, produit de
     données, téléchargement, cartes géographiques.
     """
+    use_lang(lang)
     return await client.search_data(query, count=count, page=page, lang=lang)

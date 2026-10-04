@@ -143,3 +143,41 @@ async def test_provenance_reports_cache_hits(httpx_mock):
     first = await client.search(make="Honda", year_from=2019, year_to=2019)
     second = await client.search(make="Honda", year_from=2019, year_to=2019)
     assert (first.provenance.cached, second.provenance.cached) == (False, True)
+
+
+async def test_french_note_errors_and_provenance(httpx_mock):
+    httpx_mock.add_response(json={"ResultSet": [_SEARCH_ROW]})
+    result = await client.search(make="Honda", lang="fr")
+    assert result.recalls[0].make == "HONDA"
+    assert result.note is not None and "sans traduction" in result.note
+    assert "identiques en français et en anglais\xa0:" in result.note
+    assert (result.provenance.limits or "").startswith("Requête\xa0: GET")
+    assert "Licence du gouvernement ouvert – Canada" in (result.provenance.licence or "")
+    with pytest.raises(InvalidInput, match=r"Entrée invalide\xa0: indiquez au moins"):
+        await client.search(lang="fr")
+    with pytest.raises(InvalidInput, match="inversez-les"):
+        await client.search(year_from=2020, year_to=2010, lang="fr")
+    with pytest.raises(InvalidInput, match="composé de chiffres"):
+        await client.get_recall("abc", lang="fr")
+
+
+async def test_french_not_found(httpx_mock):
+    httpx_mock.add_response(json={"ResultSet": []})
+    with pytest.raises(NotFound, match="aucun rappel 1 chez Transports Canada"):
+        await client.get_recall("1", lang="fr")
+
+
+async def test_english_messages_are_unchanged(httpx_mock):
+    httpx_mock.add_response(json={"ResultSet": [_SEARCH_ROW]})
+    result = await client.search(make="Honda")
+    assert result.note is None
+    assert (result.provenance.limits or "").startswith("Request: GET")
+    assert (result.provenance.licence or "").startswith("Open Government Licence")
+    with pytest.raises(InvalidInput) as info:
+        await client.search(year_from=2020, year_to=2010)
+    assert str(info.value) == (
+        "year_from (2020) is after year_to (2010); swap them or widen the range."
+    )
+    with pytest.raises(InvalidInput) as info:
+        await client.search()
+    assert str(info.value) == "Give at least a make, a model, or a model-year range."

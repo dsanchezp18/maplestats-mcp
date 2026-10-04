@@ -47,6 +47,7 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     ReleaseCalendarEntry,
     ReleaseCalendarResult,
 )
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
@@ -94,16 +95,23 @@ async def get_releases(
     subject: str = "all", *, lang: str = "en", limit: int = constants.RELEASES_LIMIT_DEFAULT
 ) -> DailyReleaseList:
     """Fetch recent releases from The Daily for one subject (or "all")."""
+    use_lang(lang)
     code = constants.SUBJECT_TO_CODE.get(subject)
     if code is None:
         raise InvalidInput(
-            f"statcan_daily:get_releases: subject must be one of "
-            f"{sorted(constants.SUBJECT_TO_CODE)}, got {subject!r}."
+            say(
+                f"statcan_daily:get_releases: subject must be one of "
+                f"{sorted(constants.SUBJECT_TO_CODE)}, got {subject!r}.",
+                f"statcan_daily:get_releases : subject doit être l'une des valeurs {sorted(constants.SUBJECT_TO_CODE)}, reçu {subject!r}.",
+            )
         )
     if limit < 1 or limit > constants.RELEASES_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_daily:get_releases: limit must be between 1 and "
-            f"{constants.RELEASES_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_daily:get_releases: limit must be between 1 and "
+                f"{constants.RELEASES_LIMIT_MAX}, got {limit}.",
+                f"statcan_daily:get_releases : limit doit être entre 1 et {constants.RELEASES_LIMIT_MAX}, reçu {limit}.",
+            )
         )
     suffix = constants.LANG_TO_SUFFIX.get(lang, "eng")
     url = f"{constants.BASE_URL}/{code}-{suffix}.atom"
@@ -116,12 +124,18 @@ async def get_releases(
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             raise UpstreamError(
-                f"statcan_daily:get_releases returned HTTP {status} for subject {subject!r}."
+                say(
+                    f"statcan_daily:get_releases returned HTTP {status} for subject {subject!r}.",
+                    f"statcan_daily:get_releases a renvoyé HTTP {status} pour le sujet {subject!r}.",
+                )
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_daily:get_releases did not respond in time "
-                "(already retried by shared/http.py). Try again shortly."
+                say(
+                    "statcan_daily:get_releases did not respond in time "
+                    "(already retried by shared/http.py). Try again shortly.",
+                    "statcan_daily:get_releases n'a pas répondu à temps (nouvelles tentatives déjà faites). Réessayez sous peu.",
+                )
             ) from exc
 
     cache_key = f"statcan-daily:releases:{code}:{suffix}"
@@ -131,7 +145,10 @@ async def get_releases(
         root = ElementTree.fromstring(body)
     except ElementTree.ParseError as exc:
         raise UpstreamError(
-            f"statcan_daily:get_releases: response for subject {subject!r} was not valid XML."
+            say(
+                f"statcan_daily:get_releases: response for subject {subject!r} was not valid XML.",
+                f"statcan_daily:get_releases : la réponse pour le sujet {subject!r} n'était pas du XML valide.",
+            )
         ) from exc
 
     entries = root.findall("atom:entry", constants.ATOM_NS)[:limit]
@@ -145,6 +162,7 @@ async def get_releases(
             url=url,
             cached=was_cached,
             schema_name="statcan_daily.DailyReleaseList",
+            lang=lang,
         ),
     )
 
@@ -154,7 +172,10 @@ def _parse_iso_date(value: str) -> date:
         return date.fromisoformat(value)
     except ValueError as exc:
         raise InvalidInput(
-            f"statcan_daily:search_archive: expected a YYYY-MM-DD date, got {value!r}."
+            say(
+                f"statcan_daily:search_archive: expected a YYYY-MM-DD date, got {value!r}.",
+                f"statcan_daily:search_archive : date attendue au format AAAA-MM-JJ, reçu {value!r}.",
+            )
         ) from exc
 
 
@@ -179,10 +200,14 @@ async def search_archive(
     limit: int = constants.ARCHIVE_SEARCH_LIMIT_DEFAULT,
 ) -> DailyArchiveSearchResult:
     """Search the full Daily release archive (2012-03-14 onward) by title/period and date range."""
+    use_lang(lang)
     if limit < 1 or limit > constants.ARCHIVE_SEARCH_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_daily:search_archive: limit must be between 1 and "
-            f"{constants.ARCHIVE_SEARCH_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_daily:search_archive: limit must be between 1 and "
+                f"{constants.ARCHIVE_SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_daily:search_archive : limit doit être entre 1 et {constants.ARCHIVE_SEARCH_LIMIT_MAX}, reçu {limit}.",
+            )
         )
     parsed_start = _parse_iso_date(start_date) if start_date else None
     parsed_end = _parse_iso_date(end_date) if end_date else None
@@ -199,17 +224,30 @@ async def search_archive(
             return await api_get(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            raise UpstreamError(f"statcan_daily:search_archive returned HTTP {status}.") from exc
+            raise UpstreamError(
+                say(
+                    f"statcan_daily:search_archive returned HTTP {status}.",
+                    f"statcan_daily:search_archive a renvoyé HTTP {status}.",
+                )
+            ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_daily:search_archive did not respond in time "
-                "(already retried by shared/http.py). Try again shortly."
+                say(
+                    "statcan_daily:search_archive did not respond in time "
+                    "(already retried by shared/http.py). Try again shortly.",
+                    "statcan_daily:search_archive n'a pas répondu à temps (nouvelles tentatives déjà faites). Réessayez sous peu.",
+                )
             ) from exc
 
     cache_key = f"statcan-daily:archive:{suffix}"
     payload, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ARCHIVE_SECONDS, fetch)
     if not isinstance(payload, list):
-        raise UpstreamError("statcan_daily:search_archive: expected a JSON array from the archive.")
+        raise UpstreamError(
+            say(
+                "statcan_daily:search_archive: expected a JSON array from the archive.",
+                "statcan_daily:search_archive : tableau JSON attendu de l'archive.",
+            )
+        )
 
     query_lower = query.strip().lower()
     matched: list[DailyArchiveEntry] = []
@@ -256,6 +294,7 @@ async def search_archive(
             url=url,
             cached=was_cached,
             schema_name="statcan_daily.DailyArchiveSearchResult",
+            lang=lang,
         ),
     )
 
@@ -273,11 +312,19 @@ async def _fetch_schedule(url: str, label: str) -> tuple[list[Any], bool]:
             return await api_get(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            raise UpstreamError(f"statcan_daily:release_calendar returned HTTP {status}.") from exc
+            raise UpstreamError(
+                say(
+                    f"statcan_daily:release_calendar returned HTTP {status}.",
+                    f"statcan_daily:release_calendar a renvoyé HTTP {status}.",
+                )
+            ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
-                "statcan_daily:release_calendar did not respond in time "
-                "(already retried by shared/http.py). Try again shortly."
+                say(
+                    "statcan_daily:release_calendar did not respond in time "
+                    "(already retried by shared/http.py). Try again shortly.",
+                    "statcan_daily:release_calendar n'a pas répondu à temps (nouvelles tentatives déjà faites). Réessayez sous peu.",
+                )
             ) from exc
 
     payload, was_cached = await cached_fetch(
@@ -285,7 +332,10 @@ async def _fetch_schedule(url: str, label: str) -> tuple[list[Any], bool]:
     )
     if not isinstance(payload, list):
         raise UpstreamError(
-            f"statcan_daily:release_calendar: expected a JSON array from the {label} schedule."
+            say(
+                f"statcan_daily:release_calendar: expected a JSON array from the {label} schedule.",
+                f"statcan_daily:release_calendar : tableau JSON attendu du calendrier {label}.",
+            )
         )
     return payload, was_cached
 
@@ -330,15 +380,22 @@ async def get_release_calendar(
     limit: int = constants.CALENDAR_LIMIT_DEFAULT,
 ) -> ReleaseCalendarResult:
     """Release calendar: scheduled Daily indicator releases and catalogue product releases."""
+    use_lang(lang)
     if kind not in ("key_indicators", "products", "all"):
         raise InvalidInput(
-            "statcan_daily:get_release_calendar: kind must be one of "
-            f"('key_indicators', 'products', 'all'), got {kind!r}."
+            say(
+                "statcan_daily:get_release_calendar: kind must be one of "
+                f"('key_indicators', 'products', 'all'), got {kind!r}.",
+                f"statcan_daily:get_release_calendar : kind doit être l'une des valeurs ('key_indicators', 'products', 'all'), reçu {kind!r}.",
+            )
         )
     if limit < 1 or limit > constants.CALENDAR_LIMIT_MAX:
         raise InvalidInput(
-            f"statcan_daily:get_release_calendar: limit must be between 1 and "
-            f"{constants.CALENDAR_LIMIT_MAX}, got {limit}."
+            say(
+                f"statcan_daily:get_release_calendar: limit must be between 1 and "
+                f"{constants.CALENDAR_LIMIT_MAX}, got {limit}.",
+                f"statcan_daily:get_release_calendar : limit doit être entre 1 et {constants.CALENDAR_LIMIT_MAX}, reçu {limit}.",
+            )
         )
     parsed_start = _parse_iso_date(start_date) if start_date else None
     parsed_end = _parse_iso_date(end_date) if end_date else None
@@ -395,10 +452,14 @@ async def get_release_calendar(
             url=urls[0],
             cached=all_cached,
             schema_name="statcan_daily.ReleaseCalendarResult",
-            limits=(
+            limits=say(
                 "Dates are StatCan's planned schedule and can change. The products file "
                 "lists catalogue releases up to today only; future dates come from the "
-                "key-indicators file."
+                "key-indicators file.",
+                "Les dates sont le calendrier prévu par Statistique Canada et peuvent changer. "
+                "Le fichier des produits liste les diffusions au catalogue jusqu'à aujourd'hui "
+                "seulement ; les dates futures viennent du fichier des indicateurs clés.",
             ),
+            lang=lang,
         ),
     )

@@ -11,9 +11,8 @@ Transit systems (BC Transit's open-data terms: limited, revocable,
 non-exclusive licence to use, reproduce and redistribute, with attribution).
 BC Transit's host builds each zip on request and answers neither HEAD nor
 Range, so those agencies set `range_requests=False` and are read from a whole
-download held in memory; its robots.txt disallows crawling, which this
-on-demand single-file download from the link BC Transit publishes for
-developers is not (see docs/findings/municipal-sources.md).
+download held in memory, one file on demand from the link BC Transit
+publishes for developers (see docs/findings/municipal-sources.md).
 
 National dataset (2026-10-02): Statistics Canada's Canadian Public Transit
 Network Database (23-26-0003, version 1.0 released 2025-01-31, corrected
@@ -28,9 +27,8 @@ worldwide, royalty-free licence to "use, reproduce, publish, freely distribute,
 or sell the Information" with a source notice, while "intellectual property
 rights that third parties may have in the Information shall remain their
 property", so every response carries the agency's own licence page and
-attribution from data_sources.csv. robots.txt on www150.statcan.gc.ca sets
-`Crawl-delay: 2` and disallows `/*.csv$` and `/*.xlsx$` but not zips, so the
-module makes one request every two seconds to that host. Feeds that overlap a
+attribution from data_sources.csv. The module reads the zip and makes one
+request every two seconds to www150.statcan.gc.ca. Feeds that overlap a
 live agency are listed but refused, TransLink is excluded for its terms, and
 feeds with neither a licence page nor an attribution line are excluded.
 
@@ -95,5 +93,5 @@ MODULE_DESCRIPTION_FR = (
     "prévus à un arrêt à une date donnée, et nombre de voyages et fréquence horaire "
     "d'une ligne. Lus à la demande dans le zip de l'organisme, par plages HTTP (l'hôte "
     "de BC Transit n'offre pas les plages : ses zips sont téléchargés en entier et "
-    "gardés en mémoire dix minutes); rien n'est écrit sur le disque."
+    "gardés en mémoire dix minutes) ; rien n'est écrit sur le disque."
 )

@@ -41,7 +41,8 @@ async def phac_infobase_list_datasets(
     Keywords: PHAC, Health Infobase, public health surveillance, FluWatch,
     influenza, COVID-19, RSV, opioid overdose, wastewater, measles,
     tuberculosis, notifiable diseases.
-    Mots-clés : ASPC, Santé Infobase, surveillance de la santé publique,
+    Mots-clés : ASPC, Agence de la santé publique du Canada, Infobase
+    santé, surveillance de la santé publique,
     ÉpiGrippe, grippe, influenza, COVID-19, VRS, virus respiratoires,
     surdoses d'opioïdes, eaux usées, rougeole, tuberculose, maladies à
     déclaration obligatoire, vaccination.
@@ -63,7 +64,7 @@ async def phac_infobase_describe_dataset(dataset_id: str, lang: Lang = "en") -> 
     English file; `file_language` says which.
     Keywords: PHAC, Health Infobase, data dictionary, columns, coverage,
     last updated, surveillance data, suppressed values, metadata.
-    Mots-clés : ASPC, Santé Infobase, dictionnaire de données, colonnes,
+    Mots-clés : ASPC, Infobase santé, dictionnaire de données, colonnes,
     période couverte, dernière mise à jour, données de surveillance,
     valeurs supprimées, métadonnées.
     """
@@ -106,7 +107,7 @@ async def phac_infobase_query(
     Keywords: PHAC, Health Infobase, surveillance time series, weekly
     cases, percent positivity, overdose deaths, province, wastewater,
     rates per 100,000.
-    Mots-clés : ASPC, Santé Infobase, séries chronologiques de
+    Mots-clés : ASPC, Infobase santé, séries chronologiques de
     surveillance, cas hebdomadaires, pourcentage de positivité, taux de
     positivité, décès par surdose, province, eaux usées, taux pour
     100 000.

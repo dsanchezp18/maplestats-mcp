@@ -138,7 +138,7 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
 
 async def local_table(file: IpHorizonsFile) -> Path:
     """The Parquet copy of one IP Horizons file, downloading it if needed."""
-    # The URL carries the release date, so a new quarterly release is a new key.
+    # The URL carries the release date, so a new release is a new key.
     key = hashlib.sha1(file.url.encode()).hexdigest()[:16]
     target = config.get_ip_horizons_cache_dir() / f"{file.table}_{key}.parquet"
     if target.exists():

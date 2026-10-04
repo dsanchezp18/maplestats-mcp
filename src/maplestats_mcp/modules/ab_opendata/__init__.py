@@ -14,7 +14,7 @@ MODULE_DESCRIPTION = (
     "statistics, post-secondary data. Nearly every dataset is under the Open Government "
     "Licence - Alberta (commercial use allowed with attribution); a dataset under any "
     "other licence is flagged. Discovery uses the portal's CKAN API and file reads wait "
-    "10 seconds between requests (the portal's robots.txt crawl delay). Use ckan_ with "
+    "10 seconds between requests. Use ckan_ with "
     "portal=ab for the rest of the catalogue (resources that are links, maps, PDFs)."
 )
 MODULE_DESCRIPTION_FR = (
@@ -23,8 +23,8 @@ MODULE_DESCRIPTION_FR = (
     "active, de sorte que les fichiers sont le seul accès aux chiffres. Recherche des "
     "jeux de données ouverts de l'Alberta ayant des fichiers .xlsx, .xls ou .csv (filtres "
     ": organisation, texte, format) avec titre, ministère, licence, ressources (format et "
-    "taille) et date de dernière modification; liste des organisations; description des "
-    "feuilles et des colonnes d'un fichier; lecture d'un fichier avec choix des colonnes, "
+    "taille) et date de dernière modification ; liste des organisations ; description des "
+    "feuilles et des colonnes d'un fichier ; lecture d'un fichier avec choix des colonnes, "
     "filtres exacts, filtre de texte, ligne d'en-tête devinée (ou donnée) et pagination. "
     "Couvre les tableaux d'indicateurs d'Alberta Health, le Conseil du Trésor et les "
     "Finances (revue économique, indicateurs en bref, projections de population), les "
@@ -32,8 +32,8 @@ MODULE_DESCRIPTION_FR = (
     "déclarations financières municipales, les redevances énergétiques, les volumes de "
     "circulation et les collisions, les statistiques de l'état civil et les données "
     "postsecondaires. Presque tous les jeux relèvent de la Licence du gouvernement ouvert "
-    "- Alberta (usage commercial permis avec mention de la source); un jeu sous une autre "
+    "– Alberta (usage commercial permis avec mention de la source) ; un jeu sous une autre "
     "licence est signalé. La découverte passe par l'API CKAN du portail et les lectures de "
-    "fichiers attendent 10 secondes entre deux requêtes (délai d'exploration du fichier "
-    "robots.txt). Voir ckan_ avec portal=ab pour le reste du catalogue."
+    "fichiers attendent 10 secondes entre deux requêtes. Voir ckan_ avec portal=ab "
+    "pour le reste du catalogue."
 )

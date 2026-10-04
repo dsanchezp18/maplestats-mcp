@@ -263,8 +263,14 @@ async def test_stm_metro_is_not_reported(httpx_mock):
     _serve(httpx_mock, "stm")
     routes = await client.search_routes("stm")
     assert [r.route_id for r in routes.routes] == ["R1"]
-    with pytest.raises(NotFound, match="no route"):
+    # A métro line exists in the feed: say it is left out, not that it is missing.
+    with pytest.raises(NotFound, match="subway / metro line.*terms of use") as raised:
         await client.get_route_summary("stm", "M1", service_date="2026-10-06")
+    assert "no route" not in str(raised.value)
+    with pytest.raises(NotFound, match="terms of use"):
+        await client.get_route_summary("stm", "R2", service_date="2026-10-06")
+    with pytest.raises(NotFound, match="no route"):
+        await client.get_route_summary("stm", "nope", service_date="2026-10-06")
     departures = await client.get_stop_departures(
         "stm", "S1", service_date="2026-10-06", start_time="08:00"
     )
@@ -429,3 +435,27 @@ def test_quebec_feeds_state_their_terms():
         "rimouski",
         "rouyn_noranda",
     }
+
+
+# French (lang="fr"): errors, licence and provenance text; English unchanged.
+
+
+async def test_french_feed_info_provenance(httpx_mock):
+    _serve(httpx_mock, "calgary")
+    info = await client.get_feed_info("calgary", lang="fr")
+    assert info.provenance.coverage == "Horaire valide du 2026-10-01 au 2026-10-31."
+    assert "Attribution : « Contains information" in (info.provenance.licence or "")
+    english = await client.get_feed_info("calgary")
+    assert "Schedule valid 2026-10-01 to 2026-10-31" in (english.provenance.coverage or "")
+
+
+async def test_french_input_and_lookup_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide"):
+        await client.search_routes("calgary", limit=0, lang="fr")
+    _serve(httpx_mock, "calgary")
+    with pytest.raises(InvalidInput, match="indiquez near_latitude et near_longitude ensemble"):
+        await client.search_stops("calgary", near_latitude=51.0, lang="fr")
+    with pytest.raises(NotFound, match="aucun arrêt dont l'identifiant ou le code"):
+        await client.get_stop_departures("calgary", "ZZ", service_date="2026-10-06", lang="fr")
+    with pytest.raises(NotFound, match="aucune ligne dont l'identifiant ou le numéro"):
+        await client.get_route_summary("calgary", "nope", service_date="2026-10-06", lang="fr")

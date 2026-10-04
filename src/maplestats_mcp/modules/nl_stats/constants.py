@@ -1,7 +1,7 @@
 """Constants for the Newfoundland and Labrador Statistics Agency module.
 
-Fetched live on 2026-09-30. The agency's site (stats.gov.nl.ca, ASP.NET)
-has no robots.txt (404). Its copyright statement (gov.nl.ca/disclaimer)
+Fetched live on 2026-09-30 from the agency's site (stats.gov.nl.ca,
+ASP.NET). Its copyright statement (gov.nl.ca/disclaimer)
 allows use by the public and non-government organizations. Each topic page
 lists Excel and PDF links inside `#ContentPlaceHolder1_links`, grouped
 under <h4> headings; the Excel files sit under /Statistics/Topics/.
@@ -43,6 +43,7 @@ MAX_FILE_BYTES = 25 * 1024 * 1024
 MAX_ROWS_PER_SHEET = 20000
 ROWS_LIMIT_DEFAULT = 50
 ROWS_LIMIT_MAX = 500
+HEADER_ROWS_MAX = 5
 FILES_LIMIT_MAX = 200
 # All topics list about 160 files (43 KB of JSON, live 2026-10-03); a first
 # call shows one compact page, and topic, query or offset reach the rest.

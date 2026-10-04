@@ -485,6 +485,32 @@ async def test_limit_caps_rows_and_says_so(httpx_mock):
     assert "Licence" not in (result.provenance.freshness or "")
 
 
+async def test_french_notes_limits_errors_and_licence(httpx_mock):
+    _mock_pages(httpx_mock)
+    httpx_mock.add_response(url=_url(CAUSE_CSV_PATH), content=CAUSE_CSV, is_reusable=True)
+    result = await client.query_table("3.2.1", limit=2, lang="fr")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Résultat limité à 2 lignes sur 7 (période la plus récente)")
+    assert (result.provenance.licence or "").startswith("Licence du gouvernement ouvert – Canada")
+    assert "Conditions d'utilisation de la BNDF\xa0:" in (result.provenance.licence or "")
+    assert (result.provenance.freshness or "").startswith("Mise à jour quelques fois par année")
+    plain = await client.query_table("3.2.1", province="PE", lang="fr")
+    assert any("se répètent dans le fichier" in n for n in plain.notes)
+    with pytest.raises(InvalidInput, match=r"^Entrée invalide\xa0: colonne 'colour' inconnue"):
+        await client.query_table("3.2.1", filters={"colour": "red"}, lang="fr")
+    with pytest.raises(InvalidInput, match="vouliez-vous dire 'Natural cause'"):
+        await client.query_table("3.2.1", filters={"cause": "natural"}, lang="fr")
+    with pytest.raises(InvalidInput, match="aucune administration 'Atlantis'"):
+        await client.query_table("3.2.1", province="Atlantis", lang="fr")
+
+
+async def test_french_frame_for_a_file_error(httpx_mock):
+    _mock_pages(httpx_mock)
+    httpx_mock.add_response(url=_url(CAUSE_CSV_PATH), content=b"a,b,c\r\n1,2,3\r\n")
+    with pytest.raises(UpstreamError, match="le fichier de la BNDF n'a pas pu être lu"):
+        await client.query_table("3.2.1", lang="fr")
+
+
 async def test_unexpected_columns_are_an_upstream_error(httpx_mock):
     _mock_pages(httpx_mock)
     httpx_mock.add_response(url=_url(CAUSE_CSV_PATH), content=b"a,b,c\r\n1,2,3\r\n")

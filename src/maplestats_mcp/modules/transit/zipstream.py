@@ -16,11 +16,13 @@ import struct
 import zipfile
 import zlib
 from collections.abc import AsyncIterator
+from typing import NoReturn
 
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from maplestats_mcp.modules.transit import constants
+from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import is_retryable, new_client
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
@@ -33,12 +35,56 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
-# www150.statcan.gc.ca asks for a two-second crawl delay (robots.txt), so the
-# national database has its own bucket: one request every two seconds.
+# The national database on www150.statcan.gc.ca has its own bucket: one
+# request every two seconds.
 STATCAN_LIMITER = get_limiter(
     f"{constants.SOURCE}_statcan", rate=constants.NATIONAL_RATE_PER_SECOND, capacity=1.0
 )
 _client = new_client(timeout=90.0, follow_redirects=True)
+
+
+def _raise_http_status(url: str, exc: httpx.HTTPStatusError, lang: str) -> NoReturn:
+    status = exc.response.status_code
+    try:
+        raise_localized(
+            UpstreamError,
+            f"{url} returned HTTP {status}.",
+            f"{url} a renvoyé le code HTTP {status}.",
+            lang,
+        )
+    except UpstreamError as error:
+        raise error from exc
+
+
+def _raise_unreachable(url: str, exc: httpx.HTTPError, lang: str) -> NoReturn:
+    try:
+        raise_localized(
+            UpstreamUnavailable,
+            f"{url} could not be reached.",
+            f"impossible de joindre {url}.",
+            lang,
+        )
+    except UpstreamUnavailable as error:
+        raise error from exc
+
+
+def _raise_method(member: ZipMember, lang: str) -> NoReturn:
+    raise_localized(
+        UpstreamError,
+        f"{member.name} uses ZIP compression method {member.method}.",
+        f"{member.name} utilise la méthode de compression ZIP {member.method}, non prise en "
+        "charge.",
+        lang,
+    )
+
+
+def _raise_inflated(member: ZipMember, limit: int, lang: str) -> NoReturn:
+    raise_localized(
+        UpstreamError,
+        f"{member.name} inflates past the {limit:,}-byte limit.",
+        f"{member.name} dépasse, une fois décompressé, la limite de {limit:,} octets.",
+        lang,
+    )
 
 
 @retry(
@@ -56,7 +102,7 @@ async def _get_range(
     return response
 
 
-async def head(url: str) -> httpx.Response:
+async def head(url: str, *, lang: str = "en") -> httpx.Response:
     """Headers of the feed, following redirects (Calgary's link goes to a CDN).
 
     One HEAD first; the City of Toronto's host answered HEAD with a 502
@@ -74,9 +120,9 @@ async def head(url: str) -> httpx.Response:
     try:
         return await _get_range(url, 0, 0)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        _raise_http_status(url, exc, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        _raise_unreachable(url, exc, lang)
 
 
 @retry(
@@ -85,33 +131,43 @@ async def head(url: str) -> httpx.Response:
     wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
     reraise=True,
 )
-async def _get_whole(url: str) -> tuple[bytes, httpx.Response]:
+async def _get_whole(url: str, lang: str = "en") -> tuple[bytes, httpx.Response]:
     await _LIMITER.acquire()
     limit = constants.WHOLE_MAX_BYTES
     async with _client.stream("GET", url) as response:
         response.raise_for_status()
         declared = response.headers.get("content-length")
         if declared and declared.isdigit() and int(declared) > limit:
-            raise UpstreamError(f"{url} is {int(declared):,} bytes, over the {limit:,}-byte limit.")
+            raise_localized(
+                UpstreamError,
+                f"{url} is {int(declared):,} bytes, over the {limit:,}-byte limit.",
+                f"{url} fait {int(declared):,} octets, au-delà de la limite de {limit:,} octets.",
+                lang,
+            )
         body = bytearray()
         async for chunk in response.aiter_bytes():
             body.extend(chunk)
             if len(body) > limit:
-                raise UpstreamError(f"{url} is over the {limit:,}-byte limit.")
+                raise_localized(
+                    UpstreamError,
+                    f"{url} is over the {limit:,}-byte limit.",
+                    f"{url} dépasse la limite de {limit:,} octets.",
+                    lang,
+                )
     return bytes(body), response
 
 
-async def download_whole(url: str) -> tuple[bytes, httpx.Response]:
+async def download_whole(url: str, *, lang: str = "en") -> tuple[bytes, httpx.Response]:
     """The whole zip and its response, for hosts that cannot serve byte ranges."""
     try:
-        return await _get_whole(url)
+        return await _get_whole(url, lang)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        _raise_http_status(url, exc, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        _raise_unreachable(url, exc, lang)
 
 
-def members_of(blob: bytes, url: str) -> list[ZipMember]:
+def members_of(blob: bytes, url: str, *, lang: str = "en") -> list[ZipMember]:
     """Members of an in-memory zip, with the same offsets the range reader uses."""
     try:
         with zipfile.ZipFile(io.BytesIO(blob)) as archive:
@@ -122,21 +178,30 @@ def members_of(blob: bytes, url: str) -> list[ZipMember]:
                 for i in archive.infolist()
                 if not i.is_dir()
             ]
-    except zipfile.BadZipFile as exc:
-        raise UpstreamError(f"{url} is not a valid ZIP file.") from exc
+    except zipfile.BadZipFile:
+        raise_localized(
+            UpstreamError,
+            f"{url} is not a valid ZIP file.",
+            f"{url} n'est pas un fichier ZIP valide.",
+            lang,
+        )
 
 
-def read_blob_member(blob: bytes, member: ZipMember, *, max_bytes: int) -> bytes:
+def read_blob_member(blob: bytes, member: ZipMember, *, max_bytes: int, lang: str = "en") -> bytes:
     """One member of an in-memory zip, bounded on its inflated size."""
     if member.size > max_bytes:
-        raise UpstreamError(
+        raise_localized(
+            UpstreamError,
             f"{member.name} is {member.size:,} bytes inflated, over this reader's "
-            f"{max_bytes:,}-byte limit."
+            f"{max_bytes:,}-byte limit.",
+            f"{member.name} fait {member.size:,} octets décompressé, au-delà de la limite de "
+            f"{max_bytes:,} octets de ce lecteur.",
+            lang,
         )
     with zipfile.ZipFile(io.BytesIO(blob)) as archive, archive.open(member.name) as handle:
         data = handle.read(max_bytes + 1)
     if len(data) > max_bytes:
-        raise UpstreamError(f"{member.name} inflates past the {max_bytes:,}-byte limit.")
+        _raise_inflated(member, max_bytes, lang)
     return data
 
 
@@ -150,26 +215,30 @@ def total_bytes(response: httpx.Response) -> int | None:
 
 
 async def fetch_range(
-    url: str, start: int, end: int, *, limiter: TokenBucket | None = None
+    url: str, start: int, end: int, *, limiter: TokenBucket | None = None, lang: str = "en"
 ) -> bytes:
     """Bytes `start..end` inclusive, exactly, or a typed error."""
     try:
         response = await _get_range(url, start, end, limiter)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        _raise_http_status(url, exc, lang)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        _raise_unreachable(url, exc, lang)
     expected = end - start + 1
     if response.status_code != 206 or len(response.content) != expected:
-        raise UpstreamError(
+        raise_localized(
+            UpstreamError,
             f"{url} did not honour the byte range {start}-{end} "
-            f"(HTTP {response.status_code}, {len(response.content):,} bytes)."
+            f"(HTTP {response.status_code}, {len(response.content):,} bytes).",
+            f"{url} n'a pas respecté la plage d'octets {start}-{end} "
+            f"(HTTP {response.status_code}, {len(response.content):,} octets).",
+            lang,
         )
     return response.content
 
 
 async def stream_member_lines(
-    url: str, member: ZipMember, *, blob: bytes | None = None
+    url: str, member: ZipMember, *, blob: bytes | None = None, lang: str = "en"
 ) -> AsyncIterator[list[bytes]]:
     """Yield batches of the member's complete lines, line endings removed.
 
@@ -184,19 +253,28 @@ async def stream_member_lines(
 
     async def read_range(start: int, stop: int) -> bytes:
         if blob is None:
-            return await fetch_range(url, start, stop)
+            return await fetch_range(url, start, stop, lang=lang)
         return blob[start : stop + 1]
 
     if member.compressed_size > constants.SCAN_MAX_COMPRESSED_BYTES:
-        raise UpstreamError(
+        raise_localized(
+            UpstreamError,
             f"{member.name} is {member.compressed_size:,} bytes compressed, over the "
-            f"{constants.SCAN_MAX_COMPRESSED_BYTES:,}-byte scan limit."
+            f"{constants.SCAN_MAX_COMPRESSED_BYTES:,}-byte scan limit.",
+            f"{member.name} fait {member.compressed_size:,} octets compressé, au-delà de la "
+            f"limite de lecture de {constants.SCAN_MAX_COMPRESSED_BYTES:,} octets.",
+            lang,
         )
     if member.method not in (0, 8):
-        raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
+        _raise_method(member, lang)
     header = await read_range(member.header_offset, member.header_offset + 29)
     if header[:4] != _LOCAL:
-        raise UpstreamError(f"{url}: the feed changed while it was being read; retry.")
+        raise_localized(
+            UpstreamError,
+            f"{url}: the feed changed while it was being read; retry.",
+            f"{url} : le flux a changé pendant sa lecture ; réessayez.",
+            lang,
+        )
     name_len, extra_len = struct.unpack("<HH", header[26:30])
     position = member.header_offset + 30 + name_len + extra_len
     end = position + member.compressed_size
@@ -217,16 +295,24 @@ async def stream_member_lines(
                     pieces.append(inflater.decompress(pending, _INFLATE_STEP))
                     pending = inflater.unconsumed_tail
             except zlib.error as exc:
-                raise UpstreamError(
+                raise_localized(
+                    UpstreamError,
                     f"{member.name} is not valid deflate data ({exc}); the feed may have "
-                    "been replaced while it was being read, retry."
-                ) from exc
+                    "been replaced while it was being read, retry.",
+                    f"{member.name} n'est pas un flux deflate valide ({exc}); le flux a "
+                    "peut-être été remplacé pendant sa lecture, réessayez.",
+                    lang,
+                )
         data = carry + b"".join(pieces)
         produced += len(data) - len(carry)
         if produced > constants.SCAN_MAX_UNCOMPRESSED_BYTES:
-            raise UpstreamError(
+            raise_localized(
+                UpstreamError,
                 f"{member.name} inflates past the {constants.SCAN_MAX_UNCOMPRESSED_BYTES:,}-byte "
-                "scan limit."
+                "scan limit.",
+                f"{member.name} dépasse, une fois décompressé, la limite de lecture de "
+                f"{constants.SCAN_MAX_UNCOMPRESSED_BYTES:,} octets.",
+                lang,
             )
         lines = data.split(b"\n")
         carry = lines.pop()
@@ -236,28 +322,37 @@ async def stream_member_lines(
         yield [carry.rstrip(b"\r")]
 
 
-async def read_nested_zip(url: str, member: ZipMember) -> bytes:
+async def read_nested_zip(url: str, member: ZipMember, *, lang: str = "en") -> bytes:
     """A whole ZIP stored inside the remote ZIP, inflated into memory.
 
     The national database keeps each feed as gtfs/<id>/gtfs.zip inside one
     archive. A deflated member cannot be read at random, so the member is
-    fetched in `NATIONAL_CHUNK_BYTES` ranges (one request per two seconds,
-    per the host's crawl delay), inflated incrementally and returned for
+    fetched in `NATIONAL_CHUNK_BYTES` ranges (one request per two
+    seconds), inflated incrementally and returned for
     the same in-memory path the BC Transit feeds use. Bounded on both the
     compressed and the actual inflated size.
     """
     if member.compressed_size > constants.NATIONAL_MAX_COMPRESSED_BYTES:
-        raise UpstreamError(
+        raise_localized(
+            UpstreamError,
             f"{member.name} is {member.compressed_size:,} bytes compressed, over the "
-            f"{constants.NATIONAL_MAX_COMPRESSED_BYTES:,}-byte limit."
+            f"{constants.NATIONAL_MAX_COMPRESSED_BYTES:,}-byte limit.",
+            f"{member.name} fait {member.compressed_size:,} octets compressé, au-delà de la "
+            f"limite de {constants.NATIONAL_MAX_COMPRESSED_BYTES:,} octets.",
+            lang,
         )
     if member.method not in (0, 8):
-        raise UpstreamError(f"{member.name} uses ZIP compression method {member.method}.")
+        _raise_method(member, lang)
     header = await fetch_range(
-        url, member.header_offset, member.header_offset + 29, limiter=STATCAN_LIMITER
+        url, member.header_offset, member.header_offset + 29, limiter=STATCAN_LIMITER, lang=lang
     )
     if header[:4] != _LOCAL:
-        raise UpstreamError(f"{url}: malformed ZIP local header for {member.name}.")
+        raise_localized(
+            UpstreamError,
+            f"{url}: malformed ZIP local header for {member.name}.",
+            f"{url} : en-tête local ZIP mal formé pour {member.name}.",
+            lang,
+        )
     name_len, extra_len = struct.unpack("<HH", header[26:30])
     position = member.header_offset + 30 + name_len + extra_len
     end = position + member.compressed_size
@@ -266,7 +361,7 @@ async def read_nested_zip(url: str, member: ZipMember) -> bytes:
     out = bytearray()
     while position < end:
         stop = min(position + constants.NATIONAL_CHUNK_BYTES, end) - 1
-        raw = await fetch_range(url, position, stop, limiter=STATCAN_LIMITER)
+        raw = await fetch_range(url, position, stop, limiter=STATCAN_LIMITER, lang=lang)
         position = stop + 1
         if inflater is None:
             out.extend(raw)
@@ -279,13 +374,23 @@ async def read_nested_zip(url: str, member: ZipMember) -> bytes:
                     if len(out) > limit:
                         break
             except zlib.error as exc:
-                raise UpstreamError(f"{member.name} is not valid deflate data ({exc}).") from exc
+                raise_localized(
+                    UpstreamError,
+                    f"{member.name} is not valid deflate data ({exc}).",
+                    f"{member.name} n'est pas un flux deflate valide ({exc}).",
+                    lang,
+                )
         if len(out) > limit:
-            raise UpstreamError(f"{member.name} inflates past the {limit:,}-byte limit.")
+            _raise_inflated(member, limit, lang)
     if inflater is not None:
         out.extend(inflater.flush())
         if not inflater.eof:
-            raise UpstreamError(f"{member.name}: deflate stream is truncated.")
+            raise_localized(
+                UpstreamError,
+                f"{member.name}: deflate stream is truncated.",
+                f"{member.name} : le flux deflate est tronqué.",
+                lang,
+            )
     if len(out) > limit:
-        raise UpstreamError(f"{member.name} inflates past the {limit:,}-byte limit.")
+        _raise_inflated(member, limit, lang)
     return bytes(out)

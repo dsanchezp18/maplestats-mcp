@@ -224,3 +224,22 @@ async def test_medicines_errors(httpx_mock):
     _mock_index(httpx_mock)
     with pytest.raises(NotFound):
         await client.search_patented_medicines(year=2019)  # a PDF only
+
+
+async def test_french_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.INDEX_PAGE["fr"],
+        text='<main><a href="/fr/x/rapport-annuel-2024.html">Rapport annuel 2024</a></main>',
+    )
+    httpx_mock.add_response(
+        url="https://www.canada.ca/fr/x/rapport-annuel-2024.html", text=_REPORT_FR
+    )
+    result = await client.get_report_table(2024, "Table 7", lang="fr")
+    assert result.provenance.freshness == "une fois par année (chaque rapport annuel)"
+    assert "Avis du site Web du gouvernement du Canada" in (result.provenance.licence or "")
+    with pytest.raises(NotFound, match=r"^Aucune correspondance trouvée\xa0: pmprb\xa0: aucun"):
+        await client.get_report_table(2024, "Table 99", lang="fr")
+    with pytest.raises(InvalidInput, match="statut 'approved' inconnu"):
+        await client.search_patented_medicines(status="approved", lang="fr")
+    with pytest.raises(InvalidInput, match=r"^pmprb: limit must be 1 to"):
+        await client.search_patented_medicines(limit=0)

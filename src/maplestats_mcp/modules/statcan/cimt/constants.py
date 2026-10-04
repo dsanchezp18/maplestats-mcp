@@ -51,7 +51,7 @@ REFERER_BY_DIRECTION = {
     "imports": f"{CODES_BASE_URL}/imp-eng.htm",
 }
 
-# statcan.gc.ca/robots.txt asks for a 2 second crawl delay for all agents.
+# One request every two seconds.
 RATE_LIMIT_SOURCE = "statcan-cimt"
 RATE_LIMIT_PER_SECOND = 0.5
 RATE_LIMIT_CAPACITY = 1.0

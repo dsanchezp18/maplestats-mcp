@@ -6,8 +6,8 @@ Quebec: Elections Quebec's open data host serves one JSON file per general
 election, the same file its results pages draw from. The site's terms of use
 (electionsquebec.qc.ca/notre-institution/conditions-dutilisation/) allow
 downloading and reproducing any element for non-profit purposes without
-permission, if the source and the copyright (c) are named. Its robots.txt asks
-for a 10 second crawl delay, so reads are paced that slowly and cached.
+permission, if the source and the copyright (c) are named. Reads are paced at
+one request per 10 seconds and cached.
 
 Alberta: the official results site (officialresults.elections.ab.ca) has a
 provincial summary page and a winning-candidates page for every event. The
@@ -17,19 +17,17 @@ attributed to Elections Alberta and are not presented as an official version.
 
 British Columbia: the Elections BC Open Data Licence (royalty-free, commercial
 use allowed, attribution required) covers the "Provincial Voting Results"
-dataset on the BC Data Catalogue. elections.bc.ca itself answers robots.txt with
-"Disallow: /" for unknown agents, so only the catalogue's CSV downloads are used
-(its robots.txt asks for a 10 second crawl delay and disallows only /api/).
+dataset on the BC Data Catalogue. Only the catalogue's CSV downloads are used.
 
 Saskatchewan: Elections Saskatchewan (the Chief Electoral Officer's office, a legislative
 office separate from the provincial government) links one poll-by-poll file per general
 election on its results page; the files sit on cdn.elections.sk.ca. Checked 2026-10-02: the
-site has no robots.txt (404), no terms of use, copyright or licence page (the footer links
+site has no terms of use, copyright or licence page (the footer links
 are Accessibility, Privacy policy, Legislation and News releases; the privacy policy covers
 personal information only) and no licence line on the results page; the footer reads
 "Copyright (c) 2025 Elections Saskatchewan". Nothing found prohibits automated access or
-restricts use, and nothing grants an open licence either, so the files are read at the
-project owner's risk and every response says so. The Crown copyright of saskatchewan.ca that
+restricts use, and nothing grants an open licence either, so the files are read as
+published and every response says that no licence is stated. The Crown copyright of saskatchewan.ca that
 ruled out the Saskatchewan Bureau of Statistics is a different body's website and does not
 appear on elections.sk.ca. By-elections have their own files and are not read.
 
@@ -40,7 +38,7 @@ registered voters and rejected and declined ballots) and a zip of results by vot
 all under /downloads/. Checked 2026-10-03: the site publishes no terms of use or licence;
 the footer reads only "(c) 2026. All rights reserved." and the Website Information page
 says only that the printed copies prevail if they differ from the website. The files are
-read at the project owner's risk and every response says so. Results from 1870 to 1995 are
+read as published and every response says that no licence is stated. Results from 1870 to 1995 are
 PDF only and are not read; by-elections are not read.
 
 Ontario is deliberately absent: see BLOCKED.
@@ -99,14 +97,26 @@ SK_ATTRIBUTION = (
     "Elections Saskatchewan'. Not an official version of the results."
 )
 SK_TERMS_NOTICE = (
-    "Elections Saskatchewan publishes no terms of use or licence for these files and no "
-    "robots.txt (checked 2026-10-02); they are read at the project owner's risk. Registered "
+    "Elections Saskatchewan publishes no terms of use or licence for these files "
+    "(checked 2026-10-02); no licence is stated. Registered "
     "voters are not summed (split polls repeat them), so there is no turnout."
 )
 SK_MAX_BYTES = 10 * 1024 * 1024
 
 MB_DOWNLOADS = "https://www.electionsmanitoba.ca/downloads"
 MB_PAGE = "https://www.electionsmanitoba.ca/en/Results/Elections1999AndLater"
+
+# The results page of each province, for list_elections provenance.
+PROVINCE_PAGES: dict[str, str] = {
+    "qc": QC_PAGE,
+    "ab": AB_PAGE,
+    "bc": BC_DATASET_PAGE,
+    "sk": SK_PAGE,
+    "mb": MB_PAGE,
+}
+
+# Party label for a candidate whose source row has no party at all.
+NO_AFFILIATION_LABEL = "No affiliation (blank in source)"
 
 
 @dataclass(frozen=True)
@@ -151,8 +161,7 @@ MB_ATTRIBUTION = (
 )
 MB_TERMS_NOTICE = (
     "Elections Manitoba publishes no terms of use or licence for these files (checked "
-    "2026-10-03; the footer reads only '(c) 2026. All rights reserved.'); they are read at the "
-    "project owner's risk."
+    "2026-10-03; the footer reads only '(c) 2026. All rights reserved.'); no licence is stated."
 )
 MB_MAX_BYTES = 10 * 1024 * 1024
 # Elections Manitoba states no request rate; one file a second keeps the reads light.
@@ -232,15 +241,64 @@ BLOCKED: tuple[Blocked, ...] = (
         "on",
         "Elections Ontario (results.elections.on.ca Election Explorer and CSV downloads)",
         "https://www.elections.on.ca/en/terms-of-use.html",
-        "The terms of use bar using software, scripts or robots (including crawlers) 'to "
-        "scrape the sites or services or otherwise copy data from the sites or services', "
+        "The terms of use do not permit automated access to copy data from the sites, "
         "and allow copying of content 'except for personal use' without prior written "
         "consent. A public server cannot meet that, so Ontario is not built.",
     ),
 )
 
+# French text for lang="fr": the attributions, licence notices, the label
+# for a blank party field and the Ontario reason above, in the same order.
+ATTRIBUTIONS_FR: dict[str, str] = {
+    "qc": "Source : Élections Québec, directeur général des élections du Québec. ©",
+    "ab": (
+        "Source : Elections Alberta. Reproduit à partir des résultats publiés sans modification "
+        "des chiffres ; il ne s'agit pas d'une version officielle des résultats."
+    ),
+    "bc": (
+        "Contient des renseignements visés par la licence de données ouvertes d'Elections BC "
+        "(Elections BC Open Data Licence)"
+    ),
+    "sk": (
+        "Source : Elections Saskatchewan, résultats par bureau de vote (relevés du scrutin du "
+        "directeur général des élections), additionnés par circonscription. Elections "
+        "Saskatchewan ne publie ni conditions d'utilisation ni licence pour ces fichiers ; le "
+        "pied de page du site indique « Copyright (c) 2025 Elections Saskatchewan ». Il ne "
+        "s'agit pas d'une version officielle des résultats."
+    ),
+    "mb": (
+        "Source : Elections Manitoba, résultats officiels (sommaire des votes obtenus, sommaire "
+        "des résultats et résultats par section de vote). Elections Manitoba ne publie ni "
+        "conditions d'utilisation ni licence pour ces fichiers ; le pied de page du site "
+        "indique « (c) 2026. All rights reserved. ». Il ne s'agit pas d'une version officielle "
+        "des résultats : selon Elections Manitoba, ses exemplaires imprimés font foi."
+    ),
+}
+TERMS_NOTICES_FR: dict[str, str] = {
+    "sk": (
+        "Elections Saskatchewan ne publie ni conditions d'utilisation ni licence pour ces "
+        "fichiers (vérifié le 2026-10-02) ; aucune licence n'est donc indiquée. Les électeurs "
+        "inscrits ne sont pas additionnés (les bureaux divisés les répètent) : pas de taux de "
+        "participation."
+    ),
+    "mb": (
+        "Elections Manitoba ne publie ni conditions d'utilisation ni licence pour ces fichiers "
+        "(vérifié le 2026-10-03 ; le pied de page indique seulement « (c) 2026. All rights "
+        "reserved. ») ; aucune licence n'est donc indiquée."
+    ),
+}
+NO_AFFILIATION_LABEL_FR = "Aucune appartenance (vide dans la source)"
+BLOCKED_REASONS_FR: dict[str, str] = {
+    "on": (
+        "Les conditions d'utilisation ne permettent pas l'accès automatisé pour copier les "
+        "données des sites et n'autorisent la copie du contenu « except for personal use » "
+        "(usage personnel) qu'avec un consentement écrit préalable. Un serveur public ne peut "
+        "pas respecter cela : l'Ontario n'est donc pas pris en charge."
+    ),
+}
+
 RATE_LIMIT_SOURCE = "elections-provincial"
-# One request per 10 seconds, the crawl delay Quebec and the BC catalogue ask for.
+# One request per 10 seconds for Quebec and the BC catalogue.
 RATE_LIMIT_PER_SECOND = 0.1
 RATE_LIMIT_CAPACITY = 1.0
 

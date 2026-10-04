@@ -135,6 +135,16 @@ async def test_search_geography_invalid_level_raises():
         await client.search_geography("not_a_real_level", "ontario")
 
 
+async def test_invalid_input_errors_follow_lang():
+    with pytest.raises(InvalidInput) as french:
+        await client.get_data("canada_provinces_territories", [], ["1"], lang="fr")
+    with pytest.raises(InvalidInput) as english:
+        await client.get_data("canada_provinces_territories", [], ["1"])
+    assert str(french.value) != str(english.value)
+    assert any(word in str(french.value) for word in ("doit", "fournir", "au moins"))
+    assert "must" in str(english.value) or "at least" in str(english.value)
+
+
 async def test_search_geography_invalid_limit_raises():
     with pytest.raises(InvalidInput):
         await client.search_geography("canada_provinces_territories", "ontario", limit=0)

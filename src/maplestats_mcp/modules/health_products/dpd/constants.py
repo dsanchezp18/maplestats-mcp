@@ -20,6 +20,7 @@ PATH_COMPANY = "drug/company"
 
 SEARCH_PAGE = "https://health-products.canada.ca/dpd-bdpp/"
 FRESHNESS = "DPD online data, refreshed by Health Canada on business days"
+FRESHNESS_FR = "données en ligne de la BDPP, mises à jour par Santé Canada les jours ouvrables"
 
 # Whole tables change slowly; six hours keeps a busy server off the API.
 TABLE_TTL_SECONDS = 6 * 60 * 60

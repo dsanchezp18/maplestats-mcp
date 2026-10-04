@@ -6,7 +6,12 @@ import pytest
 
 from maplestats_mcp.modules.statcan.census_tables import client
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import CloudflareChallenge, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    CloudflareChallenge,
+    InvalidInput,
+    NotFound,
+    UpstreamUnavailable,
+)
 
 BASE = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/dt-td/"
 
@@ -60,7 +65,7 @@ def test_list_page_rows_and_next_link():
     assert next_url is not None and "StartRow=21" in next_url
 
 
-async def test_search_crawls_pages_and_requires_every_word(httpx_mock):
+async def test_search_walks_pages_and_requires_every_word(httpx_mock):
     httpx_mock.add_response(url=BASE + "index-eng.cfm", text=INDEX_2016)
     httpx_mock.add_response(text=PAGE_1)
     httpx_mock.add_response(text=PAGE_2)
@@ -95,6 +100,26 @@ async def test_service_outage_is_unavailable_not_missing(httpx_mock):
     httpx_mock.add_response(url=offline, headers={"content-type": "text/html"}, is_reusable=True)
     with pytest.raises(UpstreamUnavailable, match="temporarily offline"):
         await client.get_downloads("7")
+
+
+async def test_service_outage_is_explained_in_french(httpx_mock):
+    offline = "https://www12.statcan.gc.ca/census-recensement/srvmsg/srvmsg404.html"
+    for url in (
+        BASE + "CompDataDownload.cfm?LANG=E&PID=7&OFT=CSV",
+        BASE + "OpenDataDownload.cfm?PID=7",
+        BASE + "Download.cfm?PID=7",
+    ):
+        httpx_mock.add_response(url=url, status_code=302, headers={"location": offline})
+    httpx_mock.add_response(url=offline, headers={"content-type": "text/html"}, is_reusable=True)
+    with pytest.raises(UpstreamUnavailable, match="temporairement hors ligne"):
+        await client.get_downloads("7", lang="fr")
+
+
+async def test_bad_pid_is_explained_in_french():
+    with pytest.raises(InvalidInput, match="seulement des chiffres"):
+        await client.get_downloads("abc", lang="fr")
+    with pytest.raises(InvalidInput, match="pid must be digits"):
+        await client.get_downloads("abc")
 
 
 async def test_retired_release_points_to_borealis(httpx_mock):

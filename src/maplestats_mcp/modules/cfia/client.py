@@ -1,8 +1,8 @@
 """HTTP client for Canadian Food Inspection Agency (CFIA) animal disease tables.
 
 Three kinds of HTML page on inspection.canada.ca, all fetched live on
-2026-09-26 in English and French (see constants.py for the URLs, robots
-and terms):
+2026-09-26 in English and French (see constants.py for the URLs and
+terms):
 
 - "Federally reportable diseases for terrestrial animals in Canada": one
   table per year, 2011 to 2026, of confirmed herds or flocks per disease.
@@ -102,7 +102,9 @@ from maplestats_mcp.shared.errors import (
     UpstreamError,
     UpstreamUnavailable,
 )
+from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import t
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -210,6 +212,11 @@ def _lang(lang: str) -> str:
     return lang
 
 
+def _spaced(lang: str, notes: list[str]) -> list[str]:
+    """French notes with French spacing (the source strings use plain spaces)."""
+    return [french_spacing(n) for n in notes] if lang == "fr" else list(notes)
+
+
 def _today() -> date:
     return datetime.now(ZoneInfo(constants.REFERENCE_TZ)).date()
 
@@ -223,18 +230,36 @@ def _as_datetime(value: date | None) -> datetime | None:
     )
 
 
-def _invalid(lang: str, detail: str) -> NoReturn:
-    raise_error(InvalidInput, "error.invalid_input", lang, detail=f"cfia: {detail}")
+def _invalid(lang: str, detail: str, french: str) -> NoReturn:
+    """InvalidInput with its template; `french` is the detail for lang="fr"."""
+    raise_error(
+        InvalidInput,
+        "error.invalid_input",
+        lang,
+        detail=f"cfia: {detail}" if lang != "fr" else f"cfia : {french}",
+    )
+
+
+class _LayoutChanged(UpstreamError):
+    """A page lost the structure the parser checks for; _parsed words it in the call's language."""
+
+    def __init__(self, message: str, url: str, detail: str) -> None:
+        super().__init__(message)
+        self.url = url
+        self.detail = detail
 
 
 def _changed(url: str, detail: str) -> NoReturn:
     """A page no longer has the structure the parser checks for: raise, never guess."""
-    raise_error(
-        UpstreamError,
-        "error.upstream_error",
-        "en",
-        detail=f"cfia: the page layout changed at {url} ({detail}); nothing was returned "
-        "rather than risk wrong figures.",
+    raise _LayoutChanged(
+        t(
+            "error.upstream_error",
+            "en",
+            detail=f"cfia: the page layout changed at {url} ({detail}); nothing was returned "
+            "rather than risk wrong figures.",
+        ),
+        url,
+        detail,
     )
 
 
@@ -359,7 +384,11 @@ def parse_period(text: str, *, end: bool, lang: str) -> date:
             return date(year, month, last if end else 1)
         return date.fromisoformat(value)
     except ValueError:
-        _invalid(lang, f"dates must be YYYY, YYYY-MM or YYYY-MM-DD, got {text!r}.")
+        _invalid(
+            lang,
+            f"dates must be YYYY, YYYY-MM or YYYY-MM-DD, got {text!r}.",
+            f"les dates doivent être au format AAAA, AAAA-MM ou AAAA-MM-JJ ; reçu {text!r}.",
+        )
 
 
 def parse_int(text: str) -> int | None:
@@ -378,7 +407,7 @@ def parse_int(text: str) -> int | None:
 # ---------------------------------------------------------------------------
 
 
-async def _fetch(url: str) -> str:
+async def _fetch(url: str, lang: str = "en") -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
@@ -390,15 +419,23 @@ async def _fetch(url: str) -> str:
         raise_error(
             UpstreamUnavailable if status >= 500 else UpstreamError,
             "error.upstream_unavailable" if status >= 500 else "error.upstream_error",
-            "en",
-            detail=f"cfia: {url} returned HTTP {status}.",
+            lang,
+            detail=fr_or_en(
+                lang,
+                f"cfia: {url} returned HTTP {status}.",
+                f"cfia : {url} a renvoyé HTTP {status}.",
+            ),
         )
     except httpx.HTTPError as exc:
         raise_error(
             UpstreamUnavailable,
             "error.upstream_unavailable",
-            "en",
-            detail=f"cfia: {url} could not be reached ({type(exc).__name__}).",
+            lang,
+            detail=fr_or_en(
+                lang,
+                f"cfia: {url} could not be reached ({type(exc).__name__}).",
+                f"cfia : {url} est injoignable ({type(exc).__name__}).",
+            ),
         )
     if len(response.content) > constants.MAX_PAGE_BYTES:
         _changed(url, "the page is much larger than expected")
@@ -406,15 +443,27 @@ async def _fetch(url: str) -> str:
 
 
 async def _parsed[T](
-    kind: str, url: str, ttl: int, parser: Callable[[str, str], T]
+    kind: str, url: str, ttl: int, parser: Callable[[str, str], T], lang: str = "en"
 ) -> tuple[T, bool]:
     """Fetch and parse `url`, caching the parsed result (never a failed parse)."""
 
     async def fetch() -> T:
-        return parser(await _fetch(url), url)
+        return parser(await _fetch(url, lang), url)
 
     fetcher: Callable[[], Awaitable[T]] = fetch
-    return await cached_fetch(f"cfia:{kind}:{url}", ttl, fetcher)
+    try:
+        return await cached_fetch(f"cfia:{kind}:{url}", ttl, fetcher)
+    except _LayoutChanged as exc:
+        if lang != "fr":
+            raise
+        # The parser's detail (a column list, a row) stays as the page has it.
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "",
+            f"cfia : la structure de la page a changé à {exc.url} ({exc.detail}) ; rien n'est "
+            "renvoyé plutôt que de risquer des chiffres erronés.",
+        ) from exc
 
 
 def _main(soup: BeautifulSoup, url: str) -> Tag:
@@ -569,10 +618,10 @@ _REPORTABLE_NOTES = {
     "fr": [
         (
             "Les chiffres sont les troupeaux ou bandes d'élevage (lieux) confirmés, cumulés jusqu'à "
-            "la fin du mois précédant la mise à jour; le tableau est actualisé le 10 de chaque mois."
+            "la fin du mois précédant la mise à jour ; le tableau est actualisé le 10 de chaque mois."
         ),
         (
-            "Chaque année ne présente que les maladies ayant au moins un cas confirmé; la rage est "
+            "Chaque année ne présente que les maladies ayant au moins un cas confirmé ; la rage est "
             "compilée à part (organisation CKAN cfia-acia), comme les maladies des animaux "
             "aquatiques."
         ),
@@ -581,7 +630,7 @@ _REPORTABLE_NOTES = {
             "déclarables au niveau fédéral chez les animaux terrestres au Canada » (cfia-acia)."
         ),
         (
-            "Pour l'influenza aviaire depuis 2021, le tableau compte les troupeaux; "
+            "Pour l'influenza aviaire depuis 2021, le tableau compte les troupeaux ; "
             "cfia_avian_influenza donne chaque lieu infecté, et ses totaux annuels peuvent "
             "différer d'une ou deux unités."
         ),
@@ -604,7 +653,11 @@ def _check_years(
     year_from: int | None, year_to: int | None, lang: str
 ) -> tuple[int | None, int | None]:
     if year_from is not None and year_to is not None and year_from > year_to:
-        _invalid(lang, "year_from must not be after year_to.")
+        _invalid(
+            lang,
+            "year_from must not be after year_to.",
+            "year_from ne doit pas être postérieur à year_to.",
+        )
     return year_from, year_to
 
 
@@ -618,10 +671,14 @@ async def get_reportable_diseases(
     lang = _lang(lang)
     year_from, year_to = _check_years(year_from, year_to, lang)
     if totals_by not in (None, "year", "disease"):
-        _invalid(lang, "totals_by must be 'year', 'disease' or omitted.")
+        _invalid(
+            lang,
+            "totals_by must be 'year', 'disease' or omitted.",
+            "totals_by doit être « year », « disease » ou omis.",
+        )
     url = constants.REPORTABLE_PAGE[lang]
     page, cached = await _parsed(
-        "reportable", url, constants.REPORTABLE_TTL_SECONDS, parse_reportable_page
+        "reportable", url, constants.REPORTABLE_TTL_SECONDS, parse_reportable_page, lang
     )
     years = sorted({row.year for row in page.rows})
     first, last = years[0], years[-1]
@@ -632,6 +689,9 @@ async def get_reportable_diseases(
             lang,
             f"the page covers {first}-{last}; for 2010 and earlier use the CKAN dataset "
             "'Federally Reportable Diseases for Terrestrial Animals in Canada' (cfia-acia).",
+            f"la page couvre {first}-{last} ; pour 2010 et avant, utilisez le jeu de données "
+            "CKAN « Maladies déclarables au niveau fédéral chez les animaux terrestres au "
+            "Canada » (cfia-acia).",
         )
 
     rows = [row for row in page.rows if low <= row.year <= high]
@@ -645,7 +705,11 @@ async def get_reportable_diseases(
             if row.key in keys or (len(folded) >= 3 and folded in _fold(row.name))
         ]
         if not keys and not rows:
-            _invalid(lang, f"unknown disease {disease!r}; known: {_known_diseases(lang)}.")
+            _invalid(
+                lang,
+                f"unknown disease {disease!r}; known: {_known_diseases(lang)}.",
+                f"maladie {disease!r} inconnue ; maladies connues : {_known_diseases(lang)}.",
+            )
 
     out = [
         DiseaseYearCount(
@@ -684,16 +748,25 @@ async def get_reportable_diseases(
         current_as_of=page.current_as_of,
         years_available=years,
         source_page=url,
-        notes=list(_REPORTABLE_NOTES[lang]),
+        notes=_spaced(lang, _REPORTABLE_NOTES[lang]),
         provenance=make_provenance(
             source=_SOURCE,
             url=url,
             cached=cached,
             schema_name="cfia.ReportableDiseaseResult",
             as_of=_as_datetime(page.modified),
-            freshness="monthly, on the 10th (next business day if a weekend or holiday); "
-            "cached 6 hours",
-            coverage=f"{low}-{high} of {first}-{last}; terrestrial animals, rabies excluded",
+            freshness=fr_or_en(
+                lang,
+                "monthly, on the 10th (next business day if a weekend or holiday); cached 6 hours",
+                "mensuelle, le 10 (jour ouvrable suivant si fin de semaine ou jour férié) ; "
+                "mise en cache 6 heures",
+            ),
+            coverage=fr_or_en(
+                lang,
+                f"{low}-{high} of {first}-{last}; terrestrial animals, rabies excluded",
+                f"{low}-{high} sur {first}-{last} ; animaux terrestres, rage exclue",
+            ),
+            lang=lang,
         ),
     )
 
@@ -807,7 +880,7 @@ async def _detections_for(
     """
     urls = constants.DETECTION_PAGES[key]
     english, cached = await _parsed(
-        "detections", urls["en"], constants.DETECTION_TTL_SECONDS, parse_detection_page
+        "detections", urls["en"], constants.DETECTION_TTL_SECONDS, parse_detection_page, lang
     )
     labels: tuple[_DetectionRow, ...] = english.rows
     french_rows: tuple[_DetectionRow, ...] | None = None
@@ -815,7 +888,11 @@ async def _detections_for(
     if lang == "fr" or both:
         try:
             french, french_cached = await _parsed(
-                "detections", urls["fr"], constants.DETECTION_TTL_SECONDS, parse_detection_page
+                "detections",
+                urls["fr"],
+                constants.DETECTION_TTL_SECONDS,
+                parse_detection_page,
+                lang,
             )
             cached &= french_cached
             if [r.year for r in french.rows] == [r.year for r in english.rows]:
@@ -823,10 +900,12 @@ async def _detections_for(
             else:
                 note = (
                     f"{disease_label(key, 'fr')} : la page française n'a pas les mêmes lignes "
-                    "que la page anglaise; les libellés sont en anglais."
+                    "que la page anglaise ; les libellés sont en anglais."
                 )
         except (UpstreamError, UpstreamUnavailable, NotFound):
-            note = f"{disease_label(key, 'fr')} : page française indisponible; libellés en anglais."
+            note = (
+                f"{disease_label(key, 'fr')} : page française indisponible ; libellés en anglais."
+            )
     if lang == "fr" and french_rows is not None:
         labels = french_rows
     if lang == "en":
@@ -871,7 +950,7 @@ _DETECTION_NOTES = {
     ],
     "fr": [
         (
-            "Une ligne par confirmation, tirée de la page « données par mois » de chaque maladie; "
+            "Une ligne par confirmation, tirée de la page « données par mois » de chaque maladie ; "
             "herds compte les troupeaux ou bandes d'une ligne (« Wapiti (3 troupeaux) »), dont la "
             "somme donne les totaux annuels de cfia_reportable_diseases."
         ),
@@ -880,7 +959,7 @@ _DETECTION_NOTES = {
             "contredisent parfois."
         ),
         (
-            "Non couverts ici : l'anémie infectieuse des équidés (sa page s'arrête en 2019; totaux "
+            "Non couverts ici : l'anémie infectieuse des équidés (sa page s'arrête en 2019 ; totaux "
             "annuels dans cfia_reportable_diseases), la maladie de Newcastle (carte des zones de "
             "contrôle), l'influenza aviaire depuis décembre 2021 (cfia_avian_influenza), la rage "
             "et les maladies des animaux aquatiques (organisation CKAN cfia-acia)."
@@ -901,7 +980,11 @@ async def get_disease_detections(
     lang = _lang(lang)
     year_from, year_to = _check_years(year_from, year_to, lang)
     if counts_by not in (None, "year", "month", "province", "animal_type"):
-        _invalid(lang, "counts_by must be 'year', 'month', 'province', 'animal_type'.")
+        _invalid(
+            lang,
+            "counts_by must be 'year', 'month', 'province', 'animal_type'.",
+            "counts_by doit être « year », « month », « province » ou « animal_type ».",
+        )
     keys = list(constants.DETECTION_PAGES)
     if disease:
         matched = match_diseases(disease)
@@ -915,13 +998,24 @@ async def get_disease_detections(
                     lang,
                     f"{disease!r} has no detection table in the CFIA's usual layout; use "
                     "cfia_reportable_diseases for yearly counts. Supported: " + supported + ".",
+                    f"{disease!r} n'a pas de tableau de détections dans la présentation "
+                    "habituelle de l'ACIA ; utilisez cfia_reportable_diseases pour les totaux "
+                    f"annuels. Maladies prises en charge : {supported}.",
                 )
-            _invalid(lang, f"unknown disease {disease!r}; supported: {supported}.")
+            _invalid(
+                lang,
+                f"unknown disease {disease!r}; supported: {supported}.",
+                f"maladie {disease!r} inconnue ; maladies prises en charge : {supported}.",
+            )
     code = None
     if province:
         code = province_code(province)
         if code is None:
-            _invalid(lang, f"unknown province {province!r}; use a code such as 'SK'.")
+            _invalid(
+                lang,
+                f"unknown province {province!r}; use a code such as 'SK'.",
+                f"province {province!r} inconnue ; utilisez un code comme « SK ».",
+            )
     animal = _fold(animal_type) if animal_type else None
 
     rows: list[_Detection] = []
@@ -997,15 +1091,24 @@ async def get_disease_detections(
         counts=counts,
         source_pages=pages,
         last_modified=modified,
-        notes=notes,
+        notes=_spaced(lang, notes),
         provenance=make_provenance(
             source=_SOURCE,
             url=pages[0] if len(pages) == 1 else constants.REPORTABLE_PAGE[lang],
             cached=all_cached,
             schema_name="cfia.DiseaseDetectionResult",
             as_of=_as_datetime(max(modified.values()) if modified else None),
-            freshness="when a detection is confirmed (CWD monthly); cached 12 hours",
-            coverage=f"{len(keys)} disease page(s): {', '.join(keys)}",
+            freshness=fr_or_en(
+                lang,
+                "when a detection is confirmed (CWD monthly); cached 12 hours",
+                "à chaque détection confirmée (MDC chaque mois) ; mise en cache 12 heures",
+            ),
+            coverage=fr_or_en(
+                lang,
+                f"{len(keys)} disease page(s): {', '.join(keys)}",
+                f"{len(keys)} page(s) de maladie : {', '.join(keys)}",
+            ),
+            lang=lang,
         ),
     )
 
@@ -1276,6 +1379,7 @@ async def _premises(lang: str) -> tuple[list[_Premises], bool, date | None, list
         constants.HPAI_PREMISES_PAGE["en"],
         constants.HPAI_TTL_SECONDS,
         parse_premises_page,
+        lang,
     )
     notes: list[str] = []
     if english.skipped:
@@ -1292,11 +1396,12 @@ async def _premises(lang: str) -> tuple[list[_Premises], bool, date | None, list
                 constants.HPAI_PREMISES_PAGE["fr"],
                 constants.HPAI_TTL_SECONDS,
                 parse_premises_page,
+                lang,
             )
             cached &= french_cached
             french = {(r.province_code, r.number): r for r in page.rows}
         except (UpstreamError, UpstreamUnavailable, NotFound):
-            notes.append("Page française indisponible; les libellés sont en anglais.")
+            notes.append("Page française indisponible ; les libellés sont en anglais.")
 
     out: list[_Premises] = []
     unmatched = differing = 0
@@ -1341,7 +1446,7 @@ async def _premises(lang: str) -> tuple[list[_Premises], bool, date | None, list
         if differing:
             notes.append(
                 f"La page française donne une date différente ou mal formée pour {differing} "
-                "lieu(x); les dates suivent la page anglaise."
+                "lieu(x) ; les dates suivent la page anglaise."
             )
     return out, cached, english.modified, notes
 
@@ -1374,7 +1479,7 @@ _PREMISES_NOTES = {
             "Types de lieu : depuis le 9 novembre 2023, les sites de moins de 1 000 oiseaux (et de "
             "moins de 300 canards ou oies) sont non commerciaux. La classification de l'OMSA "
             "distingue les volailles (oiseaux élevés pour des produits commerciaux) des "
-            "non-volailles; quatre lieux de 2024 étaient touchés par l'influenza aviaire "
+            "non-volailles ; quatre lieux de 2024 étaient touchés par l'influenza aviaire "
             "faiblement pathogène (IAFP)."
         ),
         (
@@ -1397,27 +1502,49 @@ async def get_avian_influenza(
 ) -> AvianInfluenzaResult:
     lang = _lang(lang)
     if status not in ("current", "released", "all"):
-        _invalid(lang, "status must be 'current', 'released' or 'all'.")
+        _invalid(
+            lang,
+            "status must be 'current', 'released' or 'all'.",
+            "status doit être « current », « released » ou « all ».",
+        )
     if counts_by not in ("province", "month", "year", "premises_type"):
-        _invalid(lang, "counts_by must be 'province', 'month', 'year' or 'premises_type'.")
+        _invalid(
+            lang,
+            "counts_by must be 'province', 'month', 'year' or 'premises_type'.",
+            "counts_by doit être « province », « month », « year » ou « premises_type ».",
+        )
     if not 1 <= limit <= constants.HPAI_MAX_LIMIT:
-        _invalid(lang, f"limit must be between 1 and {constants.HPAI_MAX_LIMIT}.")
+        _invalid(
+            lang,
+            f"limit must be between 1 and {constants.HPAI_MAX_LIMIT}.",
+            f"limit doit être compris entre 1 et {constants.HPAI_MAX_LIMIT}.",
+        )
     code = None
     if province:
         code = province_code(province)
         if code is None:
-            _invalid(lang, f"unknown province {province!r}; use a code such as 'BC'.")
+            _invalid(
+                lang,
+                f"unknown province {province!r}; use a code such as 'BC'.",
+                f"province {province!r} inconnue ; utilisez un code comme « BC ».",
+            )
     wanted_type = None
     if premises_type:
         wanted_type, _ = normalize_premises_type(premises_type)
         if wanted_type not in _PREMISES_TYPE_LABELS:
             _invalid(
-                lang, "premises_type must be 'commercial', 'non_commercial' or 'captive_wild'."
+                lang,
+                "premises_type must be 'commercial', 'non_commercial' or 'captive_wild'.",
+                "premises_type doit être « commercial », « non_commercial » ou « captive_wild ».",
             )
     start = parse_period(date_from, end=False, lang=lang) if date_from else None
     end = parse_period(date_to, end=True, lang=lang) if date_to else None
     if start and end and start > end:
-        _invalid(lang, "date_from must not be after date_to.")
+        _invalid(
+            lang,
+            "date_from must not be after date_to.",
+            "date_from ne doit pas être postérieur à date_to.",
+        )
 
     premises, cached, modified, notes = await _premises(lang)
     notes = list(_PREMISES_NOTES[lang]) + notes
@@ -1477,22 +1604,37 @@ async def get_avian_influenza(
         counts=counts,
         province_summary=summary,
         source_page=url,
-        notes=notes,
+        notes=_spaced(lang, notes),
         provenance=make_provenance(
             source=_SOURCE,
             url=url,
             cached=cached,
             schema_name="cfia.AvianInfluenzaResult",
             as_of=_as_datetime(modified),
-            freshness="as detections are confirmed or premises released; cached 1 hour",
-            coverage=f"{len(matched)} of {len(premises)} infected premises since December 2021",
+            freshness=fr_or_en(
+                lang,
+                "as detections are confirmed or premises released; cached 1 hour",
+                "à chaque détection confirmée ou libération de lieu ; mise en cache 1 heure",
+            ),
+            coverage=fr_or_en(
+                lang,
+                f"{len(matched)} of {len(premises)} infected premises since December 2021",
+                f"{len(matched)} sur {len(premises)} lieux infectés depuis décembre 2021",
+            ),
             limits=(
-                f"Returned the most recent {len(shown)} of {len(matched)} matching premises "
-                f"(counts cover all of them); raise limit (max {constants.HPAI_MAX_LIMIT}) or "
-                "narrow by province, dates or status"
+                fr_or_en(
+                    lang,
+                    f"Returned the most recent {len(shown)} of {len(matched)} matching premises "
+                    f"(counts cover all of them); raise limit (max {constants.HPAI_MAX_LIMIT}) "
+                    "or narrow by province, dates or status",
+                    f"Les {len(shown)} lieux les plus récents sur {len(matched)} correspondants "
+                    "sont renvoyés (les décomptes les couvrent tous) ; augmentez limit (max. "
+                    f"{constants.HPAI_MAX_LIMIT}) ou précisez la province, les dates ou le statut",
+                )
                 if len(matched) > limit
                 else None
             ),
+            lang=lang,
         ),
     )
 
@@ -1534,7 +1676,7 @@ def _premises_model(item: _Premises, lang: str) -> InfectedPremises:
 async def _province_summary(lang: str, notes: list[str]) -> ProvinceStatusSummary | None:
     url = constants.HPAI_STATUS_PAGE[lang]
     try:
-        page, _ = await _parsed("status", url, constants.HPAI_TTL_SECONDS, parse_status_page)
+        page, _ = await _parsed("status", url, constants.HPAI_TTL_SECONDS, parse_status_page, lang)
     except (UpstreamError, UpstreamUnavailable, NotFound) as exc:
         notes.append(
             f"The status-by-province table could not be read: {exc}"

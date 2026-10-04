@@ -66,25 +66,25 @@ class Portal:
     note_fr: str | None = None
     # File reader (ckan_describe_resource / ckan_read_resource). `file_hosts`
     # are exact hosts or "*.suffix" patterns a resource URL and every
-    # redirect target must match. `crawl_delay_seconds` is the portal's
-    # robots.txt Crawl-Delay (checked live 2026-10-02), applied to the
+    # redirect target must match. `request_interval_seconds` paces the
     # resource_show and package_show calls the reader makes; downloads use
     # `download_delay_seconds`. `shared_bucket` reuses another module's
     # bucket so two tools over one site cannot double its pace.
     file_hosts: tuple[str, ...] = ()
-    crawl_delay_seconds: float = 10.0
+    request_interval_seconds: float = 10.0
     download_delay_seconds: float = 1.0
     shared_bucket: str | None = None
     # Set when the file reader must not read this portal's files (the reason is
     # given to the caller); the catalogue and DataStore tools still work.
     file_reader_off_reason: str | None = None
+    file_reader_off_reason_fr: str | None = None
 
 
 PORTALS: dict[str, Portal] = {
     "federal": Portal(
         base_url="https://open.canada.ca/data/api/3/action/",
         name_en="Government of Canada Open Data (open.canada.ca)",
-        name_fr="Données ouvertes du gouvernement du Canada (ouvert.canada.ca)",
+        name_fr="Portail du gouvernement ouvert (ouvert.canada.ca)",
         dataset_url="https://open.canada.ca/data/{lang}/dataset/{id}",
         organization_url="https://open.canada.ca/data/{lang}/organization/{id}",
         content_language="bilingual",
@@ -101,7 +101,7 @@ PORTALS: dict[str, Portal] = {
             "de Santé Canada, d'EDSC, du CRTC et d'Élections Canada. Aucun mot-clé "
             "ni groupe CKAN : les thèmes figurent dans le champ bilingue `keywords`. "
             "La recherche plein texte DataStore (`query`) est refusée au-delà de "
-            "100 000 lignes; utilisez plutôt `filters`."
+            "100 000 lignes ; utilisez plutôt `filters`."
         ),
         file_hosts=(
             "open.canada.ca",
@@ -109,7 +109,7 @@ PORTALS: dict[str, Portal] = {
             "*.gc.ca",
             "*.canada.ca",
         ),
-        crawl_delay_seconds=20.0,
+        request_interval_seconds=20.0,
     ),
     "on": Portal(
         base_url="https://data.ontario.ca/api/3/action/",
@@ -184,7 +184,7 @@ PORTALS: dict[str, Portal] = {
         note_fr=(
             "Le DataStore est défaillant du côté du portail : datastore_search et "
             "datastore_info renvoient une erreur HTTP 500 pour chaque ressource "
-            "vérifiée (15 sur 15, en septembre 2026); les requêtes de lignes sont "
+            "vérifiée (15 sur 15, en septembre 2026) ; les requêtes de lignes sont "
             "donc désactivées. Téléchargez plutôt les ressources."
         ),
         file_hosts=("open.alberta.ca",),
@@ -256,7 +256,7 @@ PORTALS: dict[str, Portal] = {
         landing_uses_name=True,
         extra_fields=("update_frequency",),
         note="Content is in French; an unknown `sort` field is silently ignored.",
-        note_fr="Contenu en français; un champ `sort` inconnu est ignoré sans erreur.",
+        note_fr="Contenu en français ; un champ `sort` inconnu est ignoré sans erreur.",
         file_hosts=("donnees.montreal.ca", "montreal-prod.storage.googleapis.com"),
     ),
     "toronto": Portal(
@@ -278,9 +278,15 @@ PORTALS: dict[str, Portal] = {
         ),
         resource_extra_fields=("record_count",),
         file_reader_off_reason=(
-            "Toronto's CKAN host disallows /dataset/*/resource/*/download/* for all crawlers "
-            "in its robots.txt, so this server does not download its files. Rows of resources "
-            "with an active DataStore can be read with ckan_datastore_search."
+            "Toronto's portal does not permit automated file downloads, so this server "
+            "does not download its files. Rows of resources with an active DataStore can be "
+            "read with ckan_datastore_search."
+        ),
+        file_reader_off_reason_fr=(
+            "le serveur CKAN de Toronto interdit à tous les agents automatisés le chemin "
+            "/dataset/*/resource/*/download/*; ce serveur ne télécharge donc pas ses fichiers. "
+            "Les lignes des ressources dont le DataStore est actif se lisent avec "
+            "ckan_datastore_search."
         ),
     ),
     "regina": Portal(
@@ -327,7 +333,7 @@ FILE_CACHE_TTL_SECONDS = 2 * 60 * 60
 FILE_ROWS_DEFAULT = 100
 FILE_ROWS_MAX = 1000
 # Two API calls (resource_show, package_show) make one read; the bucket holds
-# both, then refills at the portal's crawl delay.
+# both, then refills at the portal's request interval.
 RESOLVE_BUCKET_CAPACITY = 2.0
 
 # datastore_search's own cap is far higher (32,000 rows on federal).

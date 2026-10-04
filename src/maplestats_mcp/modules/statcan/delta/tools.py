@@ -14,6 +14,7 @@ from maplestats_mcp.modules.statcan.delta.archive_schemas import (
     RealTimeTableList,
 )
 from maplestats_mcp.modules.statcan.delta.schemas import DeltaFileLink
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 Lang = Literal["en", "fr"]
 
@@ -30,14 +31,14 @@ async def statcan_delta_get_file_link(date: str, lang: Lang = "en") -> DeltaFile
     days that had a release (weekends and holidays will report
     exists=False); check exists before treating the url as
     downloadable. Files can be very large (20261001.zip is 3.9 GB):
-    read size_bytes before downloading. The ZIP carries both English and French metadata, so
-    `lang` has no effect. Keywords: StatCan, delta file, bulk update, daily
+    read size_bytes before downloading. The ZIP carries both English and French metadata;
+    `lang` sets the language of the notes and messages. Keywords: StatCan, delta file, bulk update, daily
     update, all tables, full refresh, changed data, download.
     Mots-clés : Statistique Canada, fichier delta, mise à jour en bloc, mise
     à jour quotidienne, tous les tableaux, actualisation complète, données
     modifiées, téléchargement.
     """
-    del lang
+    use_lang(lang)
     return await client.get_file_link(date)
 
 
@@ -74,10 +75,11 @@ async def statcan_delta_list_tables(
     Keywords: delta file, released today, what changed, changed cubes,
     release calendar, daily release, new cubes, cube metadata, corrections,
     product id.
-    Mots-clés : fichier delta, publié aujourd'hui, quoi de neuf, cubes
+    Mots-clés : fichier delta, publié aujourd'hui, quoi de neuf, tableaux
     modifiés, calendrier de diffusion, diffusion quotidienne, nouveaux
-    cubes, métadonnées de cube, corrections, identifiant de produit.
+    tableaux, métadonnées de tableau, corrections, numéro de tableau.
     """
+    use_lang(lang)
     return await archive.list_tables(
         date,
         product_id=product_id,
@@ -126,6 +128,7 @@ async def statcan_delta_read_table(
     valeurs de vecteur, jour de diffusion, mise à jour en bloc, codes de
     symbole et de statut, facteur d'échelle, lignes delta.
     """
+    use_lang(lang)
     return await archive.read_table(
         date, product_id, vector_ids=vector_ids, max_rows=max_rows, lang=lang
     )
@@ -148,10 +151,11 @@ async def statcan_delta_list_files(
     statcan_delta_read_table with a listed date.
     Keywords: delta file, available dates, retention, release schedule,
     holidays, business days, file sizes, etag, last modified, archive.
-    Mots-clés : fichier delta, dates disponibles, conservation, calendrier
-    de diffusion, jours fériés, jours ouvrables, taille des fichiers, etag,
-    dernière modification, archives.
+    Mots-clés : fichier delta, dates disponibles, période de conservation,
+    calendrier de diffusion, jours fériés, jours ouvrables, taille des
+    fichiers, date de modification, archives.
     """
+    use_lang(lang)
     return await archive.list_files(date=date, include_sizes=include_sizes, lang=lang)
 
 
@@ -178,5 +182,5 @@ async def statcan_delta_list_real_time_tables(
     révisions de données, diffusions historiques, première diffusion,
     données en temps réel, versions de diffusions.
     """
-    del lang
-    return realtime.list_real_time_tables(query)
+    use_lang(lang)
+    return realtime.list_real_time_tables(query, lang)

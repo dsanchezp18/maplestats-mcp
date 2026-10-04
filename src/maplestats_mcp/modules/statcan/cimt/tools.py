@@ -17,6 +17,7 @@ from maplestats_mcp.modules.statcan.cimt.schemas import (
     TopPartnersResult,
     TradeResult,
 )
+from maplestats_mcp.modules.statcan.lang import use_lang
 
 Lang = Literal["en", "fr"]
 Direction = Literal["exports", "imports"]
@@ -33,10 +34,11 @@ async def cimt_get_periods(lang: Lang = "en") -> CimtPeriods:
     commodity-level trade, only aggregates by section and partner.
     Keywords: CIMT, merchandise trade, exports, imports, latest month,
     coverage, reference period, Canadian international merchandise trade.
-    Mots-clés : CIMT, commerce de marchandises, exportations,
-    importations, dernier mois, couverture, période de référence,
-    commerce international canadien de marchandises.
+    Mots-clés : CICM, commerce de marchandises, exportations, importations,
+    dernier mois, couverture, période de référence, commerce international
+    canadien de marchandises, données disponibles.
     """
+    use_lang(lang)
     return await client.get_periods()
 
 
@@ -61,10 +63,11 @@ async def cimt_search_commodities(
     Keywords: HS code, harmonized system, commodity, product, tariff,
     classification, trade, exports, imports, CIMT, search, chapter,
     heading.
-    Mots-clés : code SH, système harmonisé, marchandise, produit,
-    tarif, classification, commerce, exportations, importations, CIMT,
-    recherche, chapitre, position.
+    Mots-clés : code SH, Système harmonisé, marchandise, produit, tarif,
+    classification, commerce, exportations, importations, CICM, recherche,
+    chapitre, position.
     """
+    use_lang(lang)
     return await client.search_commodities(
         query, direction=direction, level=level, lang=lang, limit=limit
     )
@@ -89,9 +92,10 @@ async def cimt_search_partners(
     Keywords: trading partner, country code, US state, province, origin,
     destination, CIMT, trade, exports, imports, partner code, geography.
     Mots-clés : partenaire commercial, code de pays, État américain,
-    province, origine, destination, CIMT, commerce, exportations,
+    province, origine, destination, CICM, commerce, exportations,
     importations, code de partenaire, géographie.
     """
+    use_lang(lang)
     return await client.search_partners(query, kind=kind, lang=lang, limit=limit)
 
 
@@ -130,11 +134,12 @@ async def cimt_get_trade(
     Keywords: CIMT, exports, imports, merchandise trade, HS code,
     commodity, partner, province, US state, monthly trade, trade value,
     Statistics Canada, international trade.
-    Mots-clés : CIMT, exportations, importations, commerce de
-    marchandises, code SH, marchandise, partenaire, province, État
-    américain, commerce mensuel, valeur des échanges, Statistique
-    Canada, commerce international.
+    Mots-clés : CICM, exportations, importations, commerce de marchandises,
+    code SH, marchandise, partenaire, province, État américain, commerce
+    mensuel, valeur des échanges, Statistique Canada, commerce
+    international.
     """
+    use_lang(lang)
     return await client.get_trade(
         direction,
         from_period,
@@ -171,11 +176,11 @@ async def cimt_get_top_partners(
     Keywords: top trading partners, ranking, largest export markets,
     import sources, country, US state, CIMT, exports, imports, share,
     Canada trade.
-    Mots-clés : principaux partenaires commerciaux, classement, plus
-    grands marchés d'exportation, sources d'importation, pays, État
-    américain, CIMT, exportations, importations, part, commerce du
-    Canada.
+    Mots-clés : principaux partenaires commerciaux, classement, plus grands
+    marchés d'exportation, sources d'importation, pays, État américain,
+    CICM, exportations, importations, part, commerce du Canada.
     """
+    use_lang(lang)
     return await client.get_top_partners(
         direction, period=period, hs_chapter=hs_chapter, province=province, view=view, lang=lang
     )
@@ -202,9 +207,10 @@ async def cimt_get_top_commodities(
     imports, HS code, province, partner, CIMT, trade composition,
     leading goods.
     Mots-clés : principales marchandises, plus gros produits, classement,
-    exportations, importations, code SH, province, partenaire, CIMT,
+    exportations, importations, code SH, province, partenaire, CICM,
     composition du commerce, principaux biens.
     """
+    use_lang(lang)
     return await client.get_top_commodities(
         direction,
         period=period,
@@ -237,9 +243,10 @@ async def cimt_get_province_breakdown(
     province of origin, province of clearance, CIMT, regional trade,
     territory, breakdown.
     Mots-clés : commerce par province, exportations provinciales,
-    importations provinciales, province d'origine, province de
-    dédouanement, CIMT, commerce régional, territoire, répartition.
+    importations provinciales, province d'origine, province de dédouanement,
+    CICM, commerce régional, territoire, répartition.
     """
+    use_lang(lang)
     return await client.get_province_breakdown(
         direction,
         period=period,
@@ -272,9 +279,10 @@ async def cimt_get_series(
     Keywords: time series, monthly trend, exports, imports, HS code,
     chapter, commodity, five years, CIMT, quantity, value.
     Mots-clés : série chronologique, tendance mensuelle, exportations,
-    importations, code SH, chapitre, marchandise, cinq ans, CIMT,
-    quantité, valeur.
+    importations, code SH, chapitre, marchandise, cinq ans, CICM, quantité,
+    valeur.
     """
+    use_lang(lang)
     return await client.get_series(
         direction,
         hs_code,

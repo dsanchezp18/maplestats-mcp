@@ -59,14 +59,15 @@ async def wds_search_cubes(
     GDP by industry, CPI, consumer price index, population estimates
     quarterly, retail trade, wages, trade, interprovincial migration,
     time series, real-time table, Alberta, by province, which table has.
-    Mots-clés : statcan, statistique canada, tableau, cube, recherche,
-    productId, numéro de tableau, découverte, wds, catalogue, parcourir,
-    liste, inventaire, population active, taux de chômage mensuel,
-    emploi, PIB par industrie, produit intérieur brut, IPC, indice des
-    prix à la consommation, permis de bâtir, permis de construire,
-    estimations de population trimestrielles, commerce de détail,
-    salaires, commerce, migration interprovinciale, séries
-    chronologiques, tableau en temps réel, révisions.
+    Mots-clés : Statistique Canada, StatCan, chercher un tableau, trouver un
+    tableau, quel tableau, tableau de données, recherche, tableaux,
+    numéro de tableau, découverte, catalogue, parcourir, liste, inventaire,
+    population active, taux de chômage mensuel, emploi, PIB par industrie,
+    produit intérieur brut, IPC, indice des prix à la consommation, permis
+    de bâtir, permis de construire, estimations de population
+    trimestrielles, commerce de détail, salaires, commerce, migration
+    interprovinciale, séries chronologiques, tableau en temps réel,
+    révisions.
     """
     client.use_lang(lang)
     if query is not None and query.strip() and not lite:
@@ -102,9 +103,9 @@ async def wds_get_cube_metadata(
     `member_query` (words in a member name) and `member_offset`.
     Keywords: statcan, metadata, dimensions, members, productId, cube,
     structure, footnotes, wds, coordinate, table number.
-    Mots-clés : statcan, métadonnées, dimensions, membres, productId,
-    cube, structure, notes de bas de page, wds, coordonnée, numéro de
-    tableau.
+    Mots-clés : Statistique Canada, métadonnées, dimensions, membres,
+    structure du tableau, notes de bas de page, coordonnée, numéro de
+    tableau, description du tableau.
     """
     client.use_lang(lang)
     return await client.get_cube_metadata(
@@ -157,8 +158,9 @@ async def wds_get_series_info(
     unit-of-measure codes.
     Keywords: statcan, vector, coordinate, resolve, productId, series
     info, wds, Statistics Canada, conversion, identifier.
-    Mots-clés : statcan, vecteur, coordonnée, résoudre, conversion,
-    productId, information de série, identifiant, wds.
+    Mots-clés : Statistique Canada, vecteur, coordonnée, résoudre,
+    conversion, information de série, identifiant de série, numéro de
+    tableau, numéro de vecteur.
     """
     client.use_lang(lang)
     _vector_or_coord("wds_get_series_info", vector_id, product_id, coordinate, lang)
@@ -181,8 +183,9 @@ async def wds_get_data_from_vectors(
     `scale_multiplier` if a scaled figure is needed.
     Keywords: statcan, vector, observations, latest, data, time series,
     wds, values.
-    Mots-clés : statcan, vecteur, observations, dernières données,
-    données, série chronologique, wds, valeurs.
+    Mots-clés : Statistique Canada, vecteur, observations, dernières
+    données, données récentes, série chronologique, valeurs, dernières
+    périodes.
     """
     client.use_lang(lang)
     return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
@@ -198,8 +201,9 @@ async def wds_get_data_from_cube_coord(
     yet the vector ID.
     Keywords: statcan, coordinate, observations, latest, data, wds,
     productId, Statistics Canada.
-    Mots-clés : statcan, coordonnée, observations, dernières données,
-    données, wds, productId, tableau.
+    Mots-clés : Statistique Canada, coordonnée, observations, dernières
+    données, données récentes, numéro de tableau, tableau, dernières
+    périodes.
     """
     client.use_lang(lang)
     return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
@@ -224,8 +228,9 @@ async def wds_get_bulk_vector_data_by_range(
     `failed`.
     Keywords: statcan, bulk, vectors, date range, release date, history,
     wds, Statistics Canada.
-    Mots-clés : statcan, en masse, vecteurs, vecteurs multiples, plage de
-    dates, date de diffusion, historique, wds.
+    Mots-clés : Statistique Canada, extraction en bloc, vecteurs, plusieurs
+    vecteurs, plage de dates, date de diffusion, historique, séries
+    chronologiques.
     """
     client.use_lang(lang)
     return await client.get_bulk_vector_data_by_range(
@@ -247,9 +252,9 @@ async def wds_get_data_by_reference_period_range(
     Keywords: statcan, reference period, range, between two dates, time
     series for a vector, history, vectors, wds, date range, Statistics
     Canada.
-    Mots-clés : statcan, période de référence, plage, plage de dates,
-    historique, vecteurs, données historiques, série chronologique
-    entre deux dates, wds.
+    Mots-clés : Statistique Canada, période de référence, plage, plage de
+    dates, historique, vecteurs, données historiques, série chronologique
+    entre deux dates.
     """
     client.use_lang(lang)
     return await client.get_data_from_vector_by_reference_period_range(
@@ -266,8 +271,8 @@ async def wds_get_changed_series_list(lang: Lang = "en") -> ChangedSeriesList:
     does not accept a date parameter (unlike wds_get_changed_cube_list).
     Keywords: statcan, changed, updated, series, release, today, wds,
     refresh.
-    Mots-clés : statcan, modifié, mis à jour, série, diffusion,
-    aujourd'hui, wds, actualisation.
+    Mots-clés : Statistique Canada, séries modifiées, mises à jour, série,
+    diffusion, aujourd'hui, actualisation, nouvelles données.
     """
     client.use_lang(lang)
     return await client.get_changed_series_list()
@@ -281,8 +286,8 @@ async def wds_get_changed_cube_list(date: str | None = None, lang: Lang = "en") 
     8:30am ET release. `date` is YYYY-MM-DD (default: today, Eastern).
     Keywords: statcan, changed, updated, cube, table, release, today,
     wds.
-    Mots-clés : statcan, modifié, mis à jour, cube, tableau, diffusion,
-    aujourd'hui, wds.
+    Mots-clés : Statistique Canada, tableaux modifiés, mises à jour,
+    tableau, diffusion, aujourd'hui, actualisation, nouvelles données.
     """
     client.use_lang(lang)
     return await client.get_changed_cube_list(date)
@@ -305,8 +310,8 @@ async def wds_get_changed_series_data(
     series that did not change today gives a "nothing found" error.
     Keywords: statcan, changed, vector, coordinate, delta, updated data,
     wds, Statistics Canada, revisions.
-    Mots-clés : statcan, modifié, vecteur, coordonnée, écart, données
-    mises à jour, série, changements, tableau, wds.
+    Mots-clés : Statistique Canada, données modifiées, vecteur, coordonnée,
+    écart, données mises à jour, série, changements, tableau, révisions.
     """
     client.use_lang(lang)
     _vector_or_coord("wds_get_changed_series_data", vector_id, product_id, coordinate, lang)
@@ -331,8 +336,9 @@ async def wds_get_full_table_download(
     unknown table number is an error, not a dead link.
     Keywords: statcan, csv, sdmx, xml, download, full table, bulk,
     export, wds, Statistics Canada.
-    Mots-clés : statcan, csv, sdmx, xml, téléchargement, tableau complet,
-    en masse, exportation, wds, données complètes.
+    Mots-clés : Statistique Canada, CSV, SDMX, XML, téléchargement, tableau
+    complet, téléchargement en bloc, exportation, données complètes, fichier
+    du tableau.
     """
     client.use_lang(lang)
     if format == "sdmx":
@@ -358,8 +364,8 @@ async def wds_get_code_sets(
     `counts` gives each category's full size.
     Keywords: statcan, code sets, decode, scalar factor, frequency,
     symbol, status, uom, subject, survey, wds, lookup.
-    Mots-clés : statcan, ensembles de codes, décoder, facteur d'échelle,
-    fréquence, symbole, statut, unité de mesure, sujet, enquête, wds,
+    Mots-clés : Statistique Canada, ensembles de codes, décoder, facteur
+    d'échelle, fréquence, symbole, statut, unité de mesure, sujet, enquête,
     référence.
     """
     client.use_lang(lang)

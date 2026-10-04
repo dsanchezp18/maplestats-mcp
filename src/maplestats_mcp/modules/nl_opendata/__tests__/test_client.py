@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from maplestats_mcp.modules.nl_opendata import client, constants
@@ -180,6 +182,76 @@ async def test_invalid_inputs_are_typed():
         await client.get_dataset(" ")
 
 
+# tag_population.html (id=4) and tag_unknown.html (id=999999) are the live tag
+# pages of 2026-10-03, unchanged. The unknown id answers HTTP 200 with a
+# "[There are no Data Sets that match your search.]" card.
+_HERE = Path(__file__).parent
+
+
+def _html(name: str) -> str:
+    return (_HERE / name).read_text(encoding="utf-8")
+
+
+def _mock_page(httpx_mock, query: str, text: str) -> None:
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?{query}", text=text, headers={"content-type": "text/html"}
+    )
+
+
+_TABULAR_WITH_POPULATION = _LISTING_HTML.replace("Hospitals", "Population Estimates").replace(
+    "id=69", "id=70"
+)
+_EXPLORE_WITH_POPULATION = _EXPLORE_HTML.replace(
+    "</div>", '<a href="/public/opendata/page/?page-id=datasets-tag&amp;id=4">population</a></div>'
+)
+
+
+async def test_unknown_tag_id_is_invalid_input(httpx_mock):
+    _mock_page(httpx_mock, "page-id=datasets-tag&id=999999", _html("tag_unknown.html"))
+    _mock_page(httpx_mock, "page-id=explore", _EXPLORE_WITH_POPULATION)
+    with pytest.raises(InvalidInput, match="'999999' is not a tag on the portal"):
+        await client.search_datasets(tag_id="999999")
+
+
+async def test_known_tag_with_no_datasets_is_an_empty_success(httpx_mock):
+    _mock_page(httpx_mock, "page-id=datasets-tag&id=35", _html("tag_unknown.html"))
+    _mock_page(httpx_mock, "page-id=explore", _EXPLORE_WITH_POPULATION)
+    result = await client.search_datasets(tag_id="35")
+    assert result.total_count == 0
+
+
+async def test_tag_search_fills_dataset_type_from_the_listings(httpx_mock):
+    _mock_page(httpx_mock, "page-id=datasets-tag&id=4", _html("tag_population.html"))
+    _mock_page(httpx_mock, "page-id=datasets-tabular", _TABULAR_WITH_POPULATION)
+    _mock_page(
+        httpx_mock,
+        "page-id=datasets-spatial",
+        "<div id='Master_ContentPlaceHolder1_DataSets'></div>",
+    )
+    result = await client.search_datasets(tag_id="4", limit=10)
+    kinds = {d.id: d.dataset_type for d in result.datasets}
+    # Live tag 4 lists datasets 65, 62, 70 and 241; the fixture listing has 65 and 70.
+    assert set(kinds) == {"65", "62", "70", "241"}
+    assert kinds["65"] == "tabular" and kinds["70"] == "tabular"
+    assert kinds["62"] is None and kinds["241"] is None
+    assert "2 tagged dataset(s) are in neither" in (result.provenance.coverage or "")
+
+
+async def test_query_matches_every_word_in_any_order(httpx_mock):
+    _mock_page(httpx_mock, "page-id=datasets-tabular", _TABULAR_WITH_POPULATION)
+    # Live 2026-10-03 this phrase found nothing: it was matched as one substring.
+    result = await client.search_datasets(
+        "population estimates newfoundland", dataset_type="tabular"
+    )
+    assert [d.title for d in result.datasets] == ["Population Estimates"]
+    assert (
+        await client.search_datasets("ESTIMATES Population", dataset_type="tabular")
+    ).total_count == 1
+    assert (
+        await client.search_datasets("population births", dataset_type="tabular")
+    ).total_count == 0
+
+
 async def test_missing_listing_container_is_upstream_error(httpx_mock):
     httpx_mock.add_response(
         url=f"{constants.BASE_URL}?page-id=datasets-tabular",
@@ -188,3 +260,46 @@ async def test_missing_listing_container_is_upstream_error(httpx_mock):
     )
     with pytest.raises(UpstreamError):
         await client.search_datasets("x", dataset_type="tabular")
+
+
+# French (lang="fr"): errors, provenance text and licence; English unchanged.
+
+
+async def test_french_search_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?page-id=datasets-tabular",
+        text=_LISTING_HTML,
+        headers={"content-type": "text/html"},
+    )
+    result = await client.search_datasets("birth", dataset_type="tabular", limit=5, lang="fr")
+    assert (result.provenance.coverage or "").startswith(
+        "1 jeux de données renvoyés sur 1 correspondants."
+    )
+    assert "pagination côté serveur" in (result.provenance.limits or "")
+    assert "Licence du gouvernement ouvert – Terre-Neuve-et-Labrador" in (
+        result.provenance.licence or ""
+    )
+
+
+async def test_english_search_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?page-id=datasets-tabular",
+        text=_LISTING_HTML,
+        headers={"content-type": "text/html"},
+    )
+    result = await client.search_datasets("birth", dataset_type="tabular", limit=5)
+    assert result.provenance.coverage == "1 of 1 matching records returned"
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide : limit doit être compris"):
+        await client.search_datasets(limit=0, lang="fr")
+    with pytest.raises(InvalidInput, match="dataset_id ne doit pas être vide"):
+        await client.get_dataset(" ", lang="fr")
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}?page-id=datasetdetails&id=999999",
+        text="<html><title>Dataset Details</title></html>",
+        headers={"content-type": "text/html"},
+    )
+    with pytest.raises(NotFound, match="est introuvable"):
+        await client.get_dataset("999999", lang="fr")

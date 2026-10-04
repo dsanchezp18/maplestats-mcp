@@ -34,9 +34,10 @@ from maplestats_mcp.modules.ckan.schemas import (
 from maplestats_mcp.shared import file_download, file_tables
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.ckan import CkanConfig, action, to_bool
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
 _RESOURCE_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
@@ -73,7 +74,7 @@ def _origin(portal: Portal) -> str:
 
 
 def _buckets(key: str, portal: Portal) -> tuple[CkanConfig, TokenBucket]:
-    """The API config (crawl-delay pacing) and the download bucket for one portal."""
+    """The API config (request pacing) and the download bucket for one portal."""
     if portal.shared_bucket:
         rate = 1.0 / portal.download_delay_seconds
         config = CkanConfig(
@@ -87,7 +88,7 @@ def _buckets(key: str, portal: Portal) -> tuple[CkanConfig, TokenBucket]:
     config = CkanConfig(
         source=f"ckan-resolve-{key}",
         base_url=portal.base_url,
-        rate_limit_per_second=1.0 / portal.crawl_delay_seconds,
+        rate_limit_per_second=1.0 / portal.request_interval_seconds,
         rate_limit_capacity=constants.RESOLVE_BUCKET_CAPACITY,
         timeout=portal.timeout_seconds,
     )
@@ -99,12 +100,16 @@ def _text(value: Any) -> str | None:
     return client._text(value)
 
 
-def _file_url(portal: Portal, resource: dict[str, Any]) -> str:
+def _file_url(portal: Portal, resource: dict[str, Any], lang: str = "en") -> str:
     raw = (_text(resource.get("url")) or "").strip()
     if not raw:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             "ckan_read_resource: this resource has no file URL (it is a record without a "
-            "file); see ckan_get_resource."
+            "file); see ckan_get_resource.",
+            "ckan_read_resource : cette ressource n'a pas d'URL de fichier (c'est une fiche "
+            "sans fichier); voir ckan_get_resource.",
+            lang,
         )
     url = urljoin(_origin(portal) + "/", raw)
     # Older records list plain-http links (BC's local-government workbooks on
@@ -121,7 +126,7 @@ def _suffix(url: str) -> str:
     return path[path.rfind(".") :] if "." in path.rsplit("/", 1)[-1] else ""
 
 
-def _check_tabular(declared: str | None, url: str, landing: str | None) -> None:
+def _check_tabular(declared: str | None, url: str, landing: str | None, lang: str = "en") -> None:
     """Refuse a resource that is plainly not a table before downloading it.
 
     The file name outranks the portal's label: DFO's NuSEDS "CSV" resource is a
@@ -138,10 +143,15 @@ def _check_tabular(declared: str | None, url: str, landing: str | None) -> None:
         shown = declared or fmt
     else:
         return
-    raise InvalidInput(
+    raise_localized(
+        InvalidInput,
         f"ckan_read_resource reads CSV, TSV, XLS and XLSX files; this resource is {shown!r}"
         f" (portal format {declared!r}), which is not parsed"
-        + (f" (dataset page: {landing})." if landing else ".")
+        + (f" (dataset page: {landing})." if landing else "."),
+        f"ckan_read_resource lit les fichiers CSV, TSV, XLS et XLSX ; cette ressource est "
+        f"{shown!r} (format indiqué par le portail : {declared!r}), qui n'est pas lu"
+        + (f" (page du jeu de données : {landing})." if landing else "."),
+        lang,
     )
 
 
@@ -170,19 +180,31 @@ class _Resolved:
         title = client._translated(package, "title", self.lang) or package.get("name")
         org_title = client._translated(organization, "title", self.lang) if organization else None
         licence_url = _text(package.get("license_url"))
-        shown = licence_title or licence_id or "none stated"
+        shown = licence_title or licence_id or pick(self.lang, "none stated", "aucune indiquée")
         warn = licences.warning(status, shown, licence_url or landing or "", self.lang)
         name = client._translated(resource, "name", self.lang) or _text(resource.get("name"))
         size = client._to_int(resource.get("size"))
         modified = _text(resource.get("last_modified")) or _text(resource.get("metadata_modified"))
-        citation = (
+        tail = (
+            (f", {landing}" if landing else ""),
+            (f" ({licence_id})" if licence_id and licence_id != shown else ""),
+        )
+        citation = pick(
+            self.lang,
             f"Source: {org_title or 'publisher not stated'}, "
             f"“{title or 'dataset'}”"
-            + (f", {landing}" if landing else "")
+            + tail[0]
             + f". Licence: {shown}"
-            + (f" ({licence_id})" if licence_id and licence_id != shown else "")
+            + tail[1]
             + (f", modified {modified[:10]}" if modified else "")
-            + "."
+            + ".",
+            f"Source : {org_title or 'éditeur non indiqué'}, "
+            f"« {title or 'jeu de données'} »"
+            + tail[0]
+            + f". Licence : {shown}"
+            + tail[1]
+            + (f", modifié le {modified[:10]}" if modified else "")
+            + ".",
         )
         return FileSource(
             portal=self.key,
@@ -207,27 +229,50 @@ class _Resolved:
     def limits(self, *notes: str | None) -> str | None:
         parts = [n for n in notes if n]
         if (_text(self.resource.get("url")) or "").lower().startswith("http://"):
-            parts.append("the portal lists a plain-http link; it was fetched over https")
+            parts.append(
+                pick(
+                    self.lang,
+                    "the portal lists a plain-http link; it was fetched over https",
+                    "le portail donne un lien en http simple ; le fichier a été téléchargé en https",
+                )
+            )
         return "; ".join(parts) or None
 
 
 async def _resolve(portal_key: str, resource_id: str, lang: str) -> tuple[_Resolved, bool]:
-    portal = client._portal(portal_key)
+    portal = client._portal(portal_key, lang)
     if portal.file_reader_off_reason:
-        raise InvalidInput(f"ckan file reader: {portal.file_reader_off_reason}")
+        raise_localized(
+            InvalidInput,
+            f"ckan file reader: {portal.file_reader_off_reason}",
+            "lecteur de fichiers CKAN : "
+            f"{portal.file_reader_off_reason_fr or portal.file_reader_off_reason}",
+            lang,
+        )
     if not portal.file_hosts:
-        raise InvalidInput(f"ckan file reader: portal {portal_key!r} has no file hosts configured.")
+        raise_localized(
+            InvalidInput,
+            f"ckan file reader: portal {portal_key!r} has no file hosts configured.",
+            f"lecteur de fichiers CKAN : aucun hôte de fichiers n'est configuré pour le "
+            f"portail {portal_key!r}.",
+            lang,
+        )
     rid = resource_id.strip()
     if not _RESOURCE_ID.match(rid):
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             "ckan_read_resource: resource_id must be a resource id from ckan_get_dataset or "
             "ckan_get_resource (letters, digits, hyphens), not a URL; the file link is "
-            "taken from the portal's own record."
+            "taken from the portal's own record.",
+            "ckan_read_resource : resource_id doit être l'identifiant d'une ressource obtenu "
+            "avec ckan_get_dataset ou ckan_get_resource (lettres, chiffres, traits d'union), "
+            "et non une URL ; le lien du fichier est tiré de la fiche du portail.",
+            lang,
         )
     config, _ = _buckets(portal_key, portal)
 
     async def show_resource() -> Any:
-        return await action(config, "resource_show", params={"id": rid})
+        return await action(config, "resource_show", params={"id": rid}, lang=lang)
 
     resource, cached_resource = await cached_fetch(
         f"ckan:{portal_key}:files:resource:{rid}",
@@ -235,14 +280,19 @@ async def _resolve(portal_key: str, resource_id: str, lang: str) -> tuple[_Resol
         show_resource,
     )
     if not isinstance(resource, dict):
-        raise UpstreamError(f"ckan_read_resource: resource_show for {rid!r} returned no object.")
+        raise_localized(
+            UpstreamError,
+            f"ckan_read_resource: resource_show for {rid!r} returned no object.",
+            f"ckan_read_resource : resource_show n'a renvoyé aucun objet pour {rid!r}.",
+            lang,
+        )
     package_id = _text(resource.get("package_id"))
     package: dict[str, Any] = {}
     cached_package = True
     if package_id:
 
         async def show_package() -> Any:
-            return await action(config, "package_show", params={"id": package_id})
+            return await action(config, "package_show", params={"id": package_id}, lang=lang)
 
         loaded, cached_package = await cached_fetch(
             f"ckan:{portal_key}:files:package:{package_id}",
@@ -259,9 +309,13 @@ async def _fetch_file(resolved: _Resolved, url: str) -> tuple[file_download.Down
     portal = resolved.portal
     size = client._to_int(resolved.resource.get("size"))
     if size and size > constants.FILE_MAX_BYTES:
-        raise UpstreamError(
+        raise_localized(
+            UpstreamError,
             f"ckan_read_resource: the portal lists this file as {size:,} bytes; this reader "
-            f"stops at {constants.FILE_MAX_BYTES:,}. Download it from {url}."
+            f"stops at {constants.FILE_MAX_BYTES:,}. Download it from {url}.",
+            f"ckan_read_resource : le portail indique que ce fichier fait {size:,} octets; "
+            f"ce lecteur s'arrête à {constants.FILE_MAX_BYTES:,}. Téléchargez-le à {url}.",
+            resolved.lang,
         )
     _, files_bucket = _buckets(resolved.key, portal)
 
@@ -289,12 +343,15 @@ def _choose_sheet(
 
 
 def _prepare(resolved: _Resolved, declared_check: bool = True) -> str:
-    url = _file_url(resolved.portal, resolved.resource)
+    url = _file_url(resolved.portal, resolved.resource, resolved.lang)
     file_download.check_url(url, host_matcher(resolved.portal), "ckan_read_resource")
     if declared_check:
         landing = client._dataset_url(resolved.portal, resolved.package, resolved.lang)
         _check_tabular(
-            _text(resolved.resource.get("format")), url, landing if resolved.package else None
+            _text(resolved.resource.get("format")),
+            url,
+            landing if resolved.package else None,
+            resolved.lang,
         )
     return url
 
@@ -304,18 +361,45 @@ def _sniff(body: bytes, resolved: _Resolved, url: str) -> file_tables.FileFormat
     try:
         return file_tables.detect_format(body, _text(resolved.resource.get("format")))
     except UpstreamError as exc:
-        raise UpstreamError(f"ckan_read_resource: {url}: {exc}") from exc
+        raise_localized(
+            UpstreamError,
+            f"ckan_read_resource: {url}: {exc}",
+            f"ckan_read_resource : le fichier {url} n'a pas pu être lu comme un tableau ({exc})",
+            resolved.lang,
+        )
 
 
-def _validate_paging(limit: int, offset: int, header_row: int | None, header_rows: int) -> None:
+def _validate_paging(
+    limit: int, offset: int, header_row: int | None, header_rows: int, lang: str = "en"
+) -> None:
     if not 1 <= limit <= constants.FILE_ROWS_MAX:
-        raise InvalidInput(f"ckan_read_resource: limit must be 1 to {constants.FILE_ROWS_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"ckan_read_resource: limit must be 1 to {constants.FILE_ROWS_MAX}.",
+            f"ckan_read_resource : limit doit être entre 1 et {constants.FILE_ROWS_MAX}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput("ckan_read_resource: offset must be 0 or more.")
+        raise_localized(
+            InvalidInput,
+            "ckan_read_resource: offset must be 0 or more.",
+            "ckan_read_resource : offset doit être 0 ou plus.",
+            lang,
+        )
     if header_row is not None and header_row < 1:
-        raise InvalidInput("ckan_read_resource: header_row is 1-based (1 or more).")
+        raise_localized(
+            InvalidInput,
+            "ckan_read_resource: header_row is 1-based (1 or more).",
+            "ckan_read_resource : header_row commence à 1 (1 ou plus).",
+            lang,
+        )
     if not 1 <= header_rows <= 5:
-        raise InvalidInput("ckan_read_resource: header_rows must be 1 to 5.")
+        raise_localized(
+            InvalidInput,
+            "ckan_read_resource: header_rows must be 1 to 5.",
+            "ckan_read_resource : header_rows doit être entre 1 et 5.",
+            lang,
+        )
 
 
 async def describe_resource(
@@ -356,21 +440,43 @@ async def describe_resource(
             url=url,
             cached=cached and api_cached,
             schema_name="ckan.FileStructure",
-            freshness=f"File modified {(source.last_modified or 'date not stated')[:10]}; "
-            f"cached up to {constants.FILE_CACHE_TTL_SECONDS // 3600} hours.",
+            freshness=_file_freshness(source, lang),
             coverage=source.licence_warning or source.citation,
             limits=resolved.limits(
-                f"described the first {file_tables.MAX_DESCRIBED_SHEETS} of {total} sheets"
+                pick(
+                    lang,
+                    f"described the first {file_tables.MAX_DESCRIBED_SHEETS} of {total} sheets",
+                    f"seules les {file_tables.MAX_DESCRIBED_SHEETS} premières feuilles sur "
+                    f"{total} sont décrites",
+                )
                 if len(summaries) < shown
                 else None
             ),
-            licence=_licence_line(source),
+            licence=_licence_line(source, lang),
+            lang=lang,
         ),
     )
 
 
-def _licence_line(source: FileSource) -> str:
-    shown = source.licence_title or source.licence_id or "none stated"
+def _file_freshness(source: FileSource, lang: str) -> str:
+    hours = constants.FILE_CACHE_TTL_SECONDS // 3600
+    if source.last_modified:
+        return pick(
+            lang,
+            f"File modified {source.last_modified[:10]}; cached up to {hours} hours.",
+            f"Fichier modifié le {source.last_modified[:10]}; mis en cache jusqu'à {hours} heures.",
+        )
+    return pick(
+        lang,
+        f"File modified date not stated; cached up to {hours} hours.",
+        f"Date de modification du fichier non indiquée ; mis en cache jusqu'à {hours} heures.",
+    )
+
+
+def _licence_line(source: FileSource, lang: str = "en") -> str:
+    shown = (
+        source.licence_title or source.licence_id or pick(lang, "none stated", "aucune indiquée")
+    )
     base = f"{shown} ({source.licence_id})" if source.licence_id else shown
     return f"{base}. {source.licence_warning}" if source.licence_warning else base
 
@@ -401,13 +507,15 @@ async def _read_datastore(
             fields=",".join(columns) if columns else None,
             limit=limit,
             offset=offset,
+            lang=resolved.lang,
         )
     except NotFound:
         # Confirmed live: some resources keep datastore_active true after the table
         # was dropped, and datastore_search then answers 404; the file still reads.
         return None
     names = [f.id for f in result.fields if f.id not in _DATASTORE_HIDDEN]
-    source = resolved.source(_file_url(resolved.portal, resolved.resource))
+    lang = resolved.lang
+    source = resolved.source(_file_url(resolved.portal, resolved.resource, lang))
     more = offset + result.returned_count < result.total_count
     return FileRows(
         source=source,
@@ -428,18 +536,35 @@ async def _read_datastore(
             url=result.provenance.url,
             cached=result.provenance.cached,
             schema_name="ckan.FileRows",
-            freshness="DataStore rows; the portal's DataStore may differ from its file.",
+            freshness=pick(
+                lang,
+                "DataStore rows; the portal's DataStore may differ from its file.",
+                "Lignes du DataStore ; le DataStore du portail peut différer de son fichier.",
+            ),
             coverage=source.licence_warning or source.citation,
             limits=resolved.limits(
-                "DataStore rows (sheet, header_row and header_rows do not apply; filters are "
-                "case-sensitive exact matches, and `contains` is the DataStore's full-text "
-                "search on whole words, not the file reader's substring match)",
-                f"showing rows {offset + 1} to {offset + result.returned_count} of "
-                f"{result.total_count}"
+                pick(
+                    lang,
+                    "DataStore rows (sheet, header_row and header_rows do not apply; filters are "
+                    "case-sensitive exact matches, and `contains` is the DataStore's full-text "
+                    "search on whole words, not the file reader's substring match)",
+                    "lignes du DataStore (sheet, header_row et header_rows ne s'appliquent pas ; "
+                    "les filtres sont des correspondances exactes sensibles à la casse, et "
+                    "`contains` est la recherche plein texte du DataStore sur des mots entiers, "
+                    "et non la recherche de sous-chaîne du lecteur de fichiers)",
+                ),
+                pick(
+                    lang,
+                    f"showing rows {offset + 1} to {offset + result.returned_count} of "
+                    f"{result.total_count}",
+                    f"lignes {offset + 1} à {offset + result.returned_count} sur "
+                    f"{result.total_count}",
+                )
                 if more
                 else None,
             ),
-            licence=_licence_line(source),
+            licence=_licence_line(source, lang),
+            lang=lang,
         ),
     )
 
@@ -462,6 +587,7 @@ def _sheet_list(
     offset: int,
 ) -> FileRows:
     """No rows: the workbook has several comparable sheets and none was requested."""
+    lang = resolved.lang
     source = resolved.source(url)
     return FileRows(
         source=source,
@@ -482,14 +608,28 @@ def _sheet_list(
             url=url,
             cached=cached,
             schema_name="ckan.FileRows",
-            freshness=f"File modified {(source.last_modified or 'date not stated')[:10]}.",
+            freshness=pick(
+                lang,
+                f"File modified {(source.last_modified or 'date not stated')[:10]}.",
+                f"Fichier modifié le {source.last_modified[:10]}."
+                if source.last_modified
+                else "Date de modification du fichier non indiquée.",
+            ),
             coverage=source.licence_warning or source.citation,
             limits=resolved.limits(
-                f"the workbook has {len(sizes)} sheets of similar size and none was requested, "
-                "so no rows were read: pick one from `sheets` and pass it as `sheet` "
-                "(ckan_describe_resource shows each sheet's header and a preview)"
+                pick(
+                    lang,
+                    f"the workbook has {len(sizes)} sheets of similar size and none was "
+                    "requested, so no rows were read: pick one from `sheets` and pass it as "
+                    "`sheet` (ckan_describe_resource shows each sheet's header and a preview)",
+                    f"le classeur compte {len(sizes)} feuilles de taille semblable et aucune "
+                    "n'a été demandée, donc aucune ligne n'a été lue : choisissez-en une dans "
+                    "`sheets` et passez-la dans `sheet` (ckan_describe_resource montre l'en-tête "
+                    "et un aperçu de chaque feuille)",
+                )
             ),
-            licence=_licence_line(source),
+            licence=_licence_line(source, lang),
+            lang=lang,
         ),
     )
 
@@ -507,7 +647,7 @@ async def read_resource(
     offset: int = 0,
     lang: str = "en",
 ) -> FileRows:
-    _validate_paging(limit, offset, header_row, header_rows)
+    _validate_paging(limit, offset, header_row, header_rows, lang)
     resolved, api_cached = await _resolve(portal, resource_id, lang)
     datastore_active = to_bool(resolved.resource.get("datastore_active"))
     if datastore_active and resolved.portal.has_datastore:
@@ -520,7 +660,12 @@ async def read_resource(
     fmt = _sniff(body, resolved, url)
     sizes = await run_parse(file_tables.sheet_sizes, body, fmt)
     if not sizes:
-        raise UpstreamError(f"ckan_read_resource: {url} has no sheets.")
+        raise_localized(
+            UpstreamError,
+            f"ckan_read_resource: {url} has no sheets.",
+            f"ckan_read_resource : {url} n'a aucune feuille.",
+            lang,
+        )
     chosen, how = _choose_sheet(sizes, sheet, fmt)
     if chosen is None:
         return _sheet_list(resolved, url, sizes, fmt, cached and api_cached, offset)
@@ -542,17 +687,38 @@ async def read_resource(
     notes: list[str | None] = []
     if how == "largest":
         notes.append(
-            f"the workbook has {len(sizes)} sheets and none was requested, so the largest "
-            f"({chosen!r}) was read; pass sheet= for another"
+            pick(
+                lang,
+                f"the workbook has {len(sizes)} sheets and none was requested, so the largest "
+                f"({chosen!r}) was read; pass sheet= for another",
+                f"le classeur compte {len(sizes)} feuilles et aucune n'a été demandée, donc la "
+                f"plus grande ({chosen!r}) a été lue ; passez sheet= pour une autre",
+            )
         )
     if result.capped:
-        notes.append(f"the file was scanned only up to {file_tables.MAX_SCAN_ROWS} rows")
+        notes.append(
+            pick(
+                lang,
+                f"the file was scanned only up to {file_tables.MAX_SCAN_ROWS} rows",
+                f"le fichier n'a été parcouru que jusqu'à {file_tables.MAX_SCAN_ROWS} lignes",
+            )
+        )
     if more:
         notes.append(
-            f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}"
+            pick(
+                lang,
+                f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}",
+                f"lignes {offset + 1} à {offset + len(result.rows)} sur {result.total_rows}",
+            )
         )
     if datastore_active and resolved.portal.has_datastore:
-        notes.append("the DataStore answered 404 for this resource, so the file was read")
+        notes.append(
+            pick(
+                lang,
+                "the DataStore answered 404 for this resource, so the file was read",
+                "le DataStore a répondu 404 pour cette ressource, donc le fichier a été lu",
+            )
+        )
     return FileRows(
         source=source,
         read_via="file",
@@ -572,13 +738,17 @@ async def read_resource(
             url=url,
             cached=cached and api_cached,
             schema_name="ckan.FileRows",
-            freshness=f"File modified {(source.last_modified or 'date not stated')[:10]}; "
-            f"cached up to {constants.FILE_CACHE_TTL_SECONDS // 3600} hours.",
-            coverage=(
+            freshness=_file_freshness(source, lang),
+            coverage=pick(
+                lang,
                 f"{source.dataset_title or 'dataset'}: {source.resource_name or resource_id}, "
-                f"sheet {chosen!r} of {len(sizes)}. " + (source.licence_warning or source.citation)
-            ),
+                f"sheet {chosen!r} of {len(sizes)}. ",
+                f"{source.dataset_title or 'jeu de données'} : "
+                f"{source.resource_name or resource_id}, feuille {chosen!r} sur {len(sizes)}. ",
+            )
+            + (source.licence_warning or source.citation),
             limits=resolved.limits(*notes),
-            licence=_licence_line(source),
+            licence=_licence_line(source, lang),
+            lang=lang,
         ),
     )

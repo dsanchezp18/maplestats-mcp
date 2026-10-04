@@ -115,6 +115,25 @@ async def test_unknown_topic_and_empty_search_are_invalid(httpx_mock):
         await client.search_indicators(topic="zzz")
 
 
+async def test_french_search_provenance_and_errors(httpx_mock):
+    httpx_mock.add_response(url=CATALOGUE, json=_catalogue())
+    result = await client.search_indicators("GDP growth", lang="fr")
+    assert (result.provenance.freshness or "").endswith("par année ; les valeurs sont annuelles.")
+    assert "indicateurs) ; chaque mot" in (result.provenance.coverage or "")
+    assert (result.provenance.licence or "").startswith("Source : Banque mondiale")
+    assert (
+        "reproduce_code" in result.provenance.reproduce and "appelez" in result.provenance.reproduce
+    )
+    with pytest.raises(InvalidInput, match="^Entrée invalide : thème WDI inconnu"):
+        await client.search_indicators(topic="zzz", lang="fr")
+    with pytest.raises(NotFound, match="n'est pas un code des Indicateurs"):
+        await client.get_indicator("NOPE.X", lang="fr")
+    with pytest.raises(InvalidInput, match="pas les deux"):
+        await client.get_canada_series(
+            "NY.GDP.MKTP.KD.ZG", start_year=2000, most_recent=3, lang="fr"
+        )
+
+
 async def test_get_indicator_not_in_wdi_is_not_found(httpx_mock):
     httpx_mock.add_response(url=CATALOGUE, json=_catalogue())
     detail = await client.get_indicator("SL.UEM.TOTL.ZS")

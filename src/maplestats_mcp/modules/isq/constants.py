@@ -15,6 +15,9 @@ MAX_BYTES = 20 * 1024 * 1024
 
 SEARCH_LIMIT_DEFAULT = 25
 SEARCH_LIMIT_MAX = 200
+# With lang="fr", search reads the page title of this many hits (one paced
+# request each on a cold cache, about 1 s apiece) to give titles with accents.
+SEARCH_TITLES_MAX = 10
 ROWS_DEFAULT = 200
 ROWS_MAX = 5000
 

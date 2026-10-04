@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.surveys import client, constants
 from maplestats_mcp.modules.statcan.surveys.schemas import (
     RdcSearchResult,
@@ -34,6 +35,7 @@ async def statcan_surveys_search_surveys(
     répertoire des enquêtes, numéro d'enquête, source de données, liste des
     enquêtes, enquêtes statistiques.
     """
+    use_lang(lang)
     return await client.search_surveys(query, lang=lang, limit=limit)
 
 
@@ -59,6 +61,7 @@ async def statcan_surveys_get_survey_metadata(
     méthodologie, population cible, statut de l'enquête, fréquence,
     description de l'enquête.
     """
+    use_lang(lang)
     return await client.get_survey_metadata(survey_id, lang=lang)
 
 
@@ -87,6 +90,7 @@ async def statcan_surveys_search_rdc_holdings(
     numéro d'enregistrement, Statistique Canada, données de recherche,
     enquête.
     """
+    use_lang(lang)
     return await client.search_rdc_holdings(query, lang=lang, limit=limit)
 
 
@@ -115,10 +119,12 @@ async def statcan_surveys_search_rtra_datasets(
     base, weight variable, deleted variables, disclosure control,
     microdata, tag name, Canadian Community Health Survey, Canadian
     Cancer Registry.
-    Mots-clés : Accès en temps réel à distance, ADTR, accès à distance,
-    base d'arrondissement, variable de pondération, variables éliminées,
-    contrôle de la divulgation, microdonnées, préfixe, Statistique Canada.
+    Mots-clés : Système d'accès à distance en temps réel, ADTR, accès à
+    distance, base d'arrondissement, variable de pondération, variables
+    supprimées, contrôle de la divulgation, microdonnées, préfixe,
+    Statistique Canada.
     """
+    use_lang(lang)
     return await client.search_rtra_datasets(
         query, lang=lang, deleted_variable=deleted_variable, limit=limit
     )

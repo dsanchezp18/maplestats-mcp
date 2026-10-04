@@ -60,8 +60,9 @@ from maplestats_mcp.modules.pmprb.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error, truncation_note_lang
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
+from maplestats_mcp.shared.limits import fit_to_budget
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -84,19 +85,39 @@ def _text(node: Tag | NavigableString) -> str:
     return _SPACES.sub(" ", node.get_text(" ")).strip()
 
 
-async def _fetch(url: str) -> str:
+async def _fetch(url: str, lang: str = "en") -> str:
     await _LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=60.0)
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status in (404, 410):
-            raise NotFound(f"pmprb: {url} is gone (HTTP {status}); the page moved.") from exc
-        raise UpstreamError(f"pmprb: {url} returned HTTP {status}.") from exc
+            raise lang_error(
+                NotFound,
+                lang,
+                f"pmprb: {url} is gone (HTTP {status}); the page moved.",
+                f"pmprb : {url} n'existe plus (HTTP {status}) ; la page a été déplacée.",
+            ) from exc
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"pmprb: {url} returned HTTP {status}.",
+            f"pmprb : {url} a renvoyé HTTP {status}.",
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"pmprb: {url} did not respond in time.") from exc
+        raise lang_error(
+            UpstreamUnavailable,
+            lang,
+            f"pmprb: {url} did not respond in time.",
+            f"pmprb : {url} n'a pas répondu à temps.",
+        ) from exc
     if len(response.content) > constants.MAX_PAGE_BYTES:
-        raise UpstreamError(f"pmprb: {url} is much larger than expected; the page changed.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"pmprb: {url} is much larger than expected; the page changed.",
+            f"pmprb : {url} est beaucoup plus volumineux que prévu ; la page a changé.",
+        )
     return response.text
 
 
@@ -106,15 +127,19 @@ def _provenance(
     schema: str,
     coverage: str | None = None,
     limits: str | None = None,
+    lang: str = "en",
 ) -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
         cached=cached,
         schema_name=f"pmprb.{schema}",
-        freshness="once a year (each annual report)",
+        freshness=fr_or_en(
+            lang, "once a year (each annual report)", "une fois par année (chaque rapport annuel)"
+        ),
         coverage=coverage,
         limits=limits,
+        lang=lang,
     )
 
 
@@ -147,9 +172,14 @@ async def _reports(lang: str) -> tuple[list[PmprbReport], bool]:
     url = constants.INDEX_PAGE[lang]
 
     async def fetch() -> list[PmprbReport]:
-        found = parse_index(await _fetch(url), url)
+        found = parse_index(await _fetch(url, lang), url)
         if not any(r.kind == "annual_report" for r in found):
-            raise UpstreamError("pmprb: the annual reports index lists no HTML report.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "pmprb: the annual reports index lists no HTML report.",
+                "pmprb : l'index des rapports annuels ne liste aucun rapport HTML.",
+            )
         return found
 
     return await cached_fetch(f"pmprb:index:{lang}", constants.INDEX_TTL_SECONDS, fetch)
@@ -162,7 +192,17 @@ async def _report(year: int, kind: str, lang: str) -> PmprbReport:
             return report
     years = sorted(r.year for r in reports if r.kind == kind)
     what = "annual report" if kind == "annual_report" else "patented medicines list"
-    raise NotFound(f"pmprb: no HTML {what} for {year}; available: {years}.")
+    what_fr = (
+        "aucun rapport annuel HTML"
+        if kind == "annual_report"
+        else "aucune liste HTML des médicaments brevetés"
+    )
+    raise lang_error(
+        NotFound,
+        lang,
+        f"pmprb: no HTML {what} for {year}; available: {years}.",
+        f"pmprb : {what_fr} pour {year} ; années offertes : {years}.",
+    )
 
 
 # ------------------------------------------------------------------ tables
@@ -293,9 +333,14 @@ async def _report_tables(year: int, lang: str) -> tuple[PmprbReport, list[PmprbT
     report = await _report(year, "annual_report", lang)
 
     async def fetch() -> list[PmprbTable]:
-        tables = parse_report(await _fetch(report.url), year, lang)
+        tables = parse_report(await _fetch(report.url, lang), year, lang)
         if not tables:
-            raise UpstreamError(f"pmprb: the {year} report page has no tables; it changed.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"pmprb: the {year} report page has no tables; it changed.",
+                f"pmprb : la page du rapport {year} n'a aucun tableau ; elle a changé.",
+            )
         return tables
 
     tables, cached = await cached_fetch(
@@ -325,7 +370,11 @@ async def list_report_tables(
             reports=reports,
             total_matched=0,
             provenance=_provenance(
-                constants.INDEX_PAGE[lang], cached, "PmprbTableList", "pass a year or a query"
+                constants.INDEX_PAGE[lang],
+                cached,
+                "PmprbTableList",
+                fr_or_en(lang, "pass a year or a query", "passez une année ou une requête"),
+                lang=lang,
             ),
         )
     loaded = await asyncio.gather(*(_report_tables(y, lang) for y in years))
@@ -339,7 +388,12 @@ async def list_report_tables(
             url,
             all(c for _, _, c in loaded),
             "PmprbTableList",
-            f"annual reports {min(years)}-{max(years)}",
+            fr_or_en(
+                lang,
+                f"annual reports {min(years)}-{max(years)}",
+                f"rapports annuels {min(years)}-{max(years)}",
+            ),
+            lang=lang,
         ),
     )
 
@@ -352,7 +406,12 @@ async def get_report_table(year: int, table: str, *, lang: str = "en") -> PmprbT
     """Tables of one report picked by position ('12') or title ('Figure 1', 'Table 5')."""
     wanted = table.strip()
     if not wanted:
-        raise InvalidInput("pmprb: pass a table position like '12' or a title like 'Figure 1'.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "pmprb: pass a table position like '12' or a title like 'Figure 1'.",
+            "pmprb : passez la position d'un tableau comme « 12 » ou un titre comme « Figure 1 ».",
+        )
     report, tables, cached = await _report_tables(year, lang)
     if wanted.isdigit():
         chosen = [t for t in tables if t.info.index == int(wanted)]
@@ -364,13 +423,17 @@ async def get_report_table(year: int, table: str, *, lang: str = "en") -> PmprbT
             if t.info.label and re.match(re.escape(prefix) + r"(?!\d)", _selector(t.info.label))
         ]
     if not chosen:
-        raise NotFound(
-            f"pmprb: no table {wanted!r} in the {year} report; see pmprb_list_report_tables."
+        raise lang_error(
+            NotFound,
+            lang,
+            f"pmprb: no table {wanted!r} in the {year} report; see pmprb_list_report_tables.",
+            f"pmprb : aucun tableau {wanted!r} dans le rapport {year} ; voir "
+            "pmprb_list_report_tables.",
         )
     return PmprbTableResult(
         report=report,
         tables=chosen,
-        provenance=_provenance(report.url, cached, "PmprbTableResult"),
+        provenance=_provenance(report.url, cached, "PmprbTableResult", lang=lang),
     )
 
 
@@ -427,15 +490,32 @@ async def search_patented_medicines(
 ) -> PmprbMedicineList:
     """Patented medicines reported for a year, filtered by words, company, ATC or status."""
     if not 1 <= limit <= constants.MEDICINES_MAX_LIMIT:
-        raise InvalidInput(f"pmprb: limit must be 1 to {constants.MEDICINES_MAX_LIMIT}.")
+        top = constants.MEDICINES_MAX_LIMIT
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"pmprb: limit must be 1 to {top}.",
+            f"pmprb : limit doit être compris entre 1 et {top}.",
+        )
     if status and status not in constants.STATUSES:
-        raise InvalidInput(f"pmprb: unknown status {status!r}; use {list(constants.STATUSES)}.")
+        codes = list(constants.STATUSES)
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"pmprb: unknown status {status!r}; use {codes}.",
+            f"pmprb : statut {status!r} inconnu ; utilisez {codes}.",
+        )
     report = await _report(year, "patented_medicines_list", lang)
 
     async def fetch() -> list[PmprbMedicine]:
-        found = parse_medicines(await _fetch(report.url), lang)
+        found = parse_medicines(await _fetch(report.url, lang), lang)
         if not found:
-            raise UpstreamError(f"pmprb: the {year} medicines list has no rows; it changed.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"pmprb: the {year} medicines list has no rows; it changed.",
+                f"pmprb : la liste des médicaments de {year} n'a aucune ligne ; elle a changé.",
+            )
         return found
 
     medicines, cached = await cached_fetch(
@@ -469,13 +549,23 @@ async def search_patented_medicines(
             report.url,
             cached,
             "PmprbMedicineList",
-            f"{len(medicines)} medicines reported",
-            truncation_note(
+            fr_or_en(
+                lang,
+                f"{len(medicines)} medicines reported",
+                f"{len(medicines)} médicaments déclarés",
+            ),
+            truncation_note_lang(
+                lang,
                 returned=len(shown),
                 total=len(matched),
                 unit="matching medicines",
+                unit_fr="médicaments correspondants",
                 how_to_get_more="narrow with query, company, atc or status, or raise limit "
                 f"(max {constants.MEDICINES_MAX_LIMIT}; responses are capped near 200 KB)",
+                how_to_get_more_fr="précisez avec query, company, atc ou status, ou augmentez "
+                f"limit (max. {constants.MEDICINES_MAX_LIMIT} ; les réponses sont plafonnées à "
+                "environ 200 Ko)",
             ),
+            lang=lang,
         ),
     )

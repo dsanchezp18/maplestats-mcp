@@ -27,36 +27,65 @@ from maplestats_mcp.modules.drivebc.schemas import (
     RoadEvent,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _FRESHNESS = "Live: DriveBC updates events as they change; cached here for three minutes."
+_FRESHNESS_FR = (
+    "En direct : DriveBC met à jour les événements à mesure qu'ils changent ; conservés ici en "
+    "cache trois minutes."
+)
 
 
-async def _get(url: str, params: dict[str, Any]) -> Any:
+async def _get(url: str, params: dict[str, Any], lang: str = "en") -> Any:
     await get_limiter(c.SOURCE, c.RATE_LIMIT_PER_SECOND, c.RATE_LIMIT_CAPACITY).acquire()
     try:
         return await api_get(url, params={"format": "json", **params}, timeout=60.0)
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 429:
-            raise UpstreamUnavailable(
-                "DriveBC's Open511 API is rate-limiting requests (HTTP 429); try again in a minute."
-            ) from exc
+            raise_localized(
+                UpstreamUnavailable,
+                "DriveBC's Open511 API is rate-limiting requests (HTTP 429); try again in a minute.",
+                "l'API Open511 de DriveBC limite le nombre de requêtes (HTTP 429) ; réessayez dans "
+                "une minute.",
+                lang,
+            )
         if status >= 500:
-            raise UpstreamUnavailable(f"DriveBC's Open511 API answered HTTP {status}.") from exc
-        raise UpstreamError(f"DriveBC's Open511 API answered HTTP {status} for {url}.") from exc
+            raise_localized(
+                UpstreamUnavailable,
+                f"DriveBC's Open511 API answered HTTP {status}.",
+                f"l'API Open511 de DriveBC a répondu par une erreur HTTP {status}.",
+                lang,
+            )
+        raise_localized(
+            UpstreamError,
+            f"DriveBC's Open511 API answered HTTP {status} for {url}.",
+            f"l'API Open511 de DriveBC a répondu par une erreur HTTP {status} pour {url}.",
+            lang,
+        )
     except (httpx.TimeoutException, httpx.NetworkError) as exc:
-        raise UpstreamUnavailable(f"DriveBC's Open511 API did not answer: {exc}") from exc
-    except httpx.DecodingError as exc:
-        raise UpstreamError(f"DriveBC's Open511 API returned non-JSON from {url}.") from exc
+        raise_localized(
+            UpstreamUnavailable,
+            f"DriveBC's Open511 API did not answer: {exc}",
+            f"l'API Open511 de DriveBC n'a pas répondu ({exc})",
+            lang,
+        )
+    except httpx.DecodingError:
+        raise_localized(
+            UpstreamError,
+            f"DriveBC's Open511 API returned non-JSON from {url}.",
+            f"l'API Open511 de DriveBC a renvoyé autre chose que du JSON pour {url}.",
+            lang,
+        )
 
 
-async def _events() -> tuple[list[dict[str, Any]], bool]:
+async def _events(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     """Every ACTIVE event, all pages (the API reports no total, only an offset)."""
 
     async def fetch() -> list[dict[str, Any]]:
@@ -65,26 +94,42 @@ async def _events() -> tuple[list[dict[str, Any]], bool]:
             body = await _get(
                 c.EVENTS_URL,
                 {"status": "ACTIVE", "limit": c.PAGE_SIZE, "offset": page * c.PAGE_SIZE},
+                lang,
             )
             if not isinstance(body, dict) or "events" not in body:
-                raise UpstreamError("DriveBC's Open511 events response has no 'events' list.")
+                raise_localized(
+                    UpstreamError,
+                    "DriveBC's Open511 events response has no 'events' list.",
+                    "la réponse des événements de l'API Open511 de DriveBC n'a pas de liste "
+                    "« events ».",
+                    lang,
+                )
             batch = list_or_empty(body, "events")
             events.extend(batch)
             if len(batch) < c.PAGE_SIZE:
                 return events
-        raise UpstreamError(
+        raise_localized(
+            UpstreamError,
             f"DriveBC listed more than {c.PAGE_SIZE * c.MAX_PAGES} active events; refusing to "
-            "page further."
+            "page further.",
+            f"DriveBC liste plus de {c.PAGE_SIZE * c.MAX_PAGES} événements actifs ; la lecture "
+            "s'arrête là.",
+            lang,
         )
 
     return await cached_fetch("drivebc:events", c.CACHE_TTL_EVENTS, fetch)
 
 
-async def _areas() -> tuple[list[dict[str, Any]], bool]:
+async def _areas(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     async def fetch() -> list[dict[str, Any]]:
-        body = await _get(c.AREAS_URL, {})
+        body = await _get(c.AREAS_URL, {}, lang)
         if not isinstance(body, dict) or "areas" not in body:
-            raise UpstreamError("DriveBC's Open511 areas response has no 'areas' list.")
+            raise_localized(
+                UpstreamError,
+                "DriveBC's Open511 areas response has no 'areas' list.",
+                "la réponse des districts de l'API Open511 de DriveBC n'a pas de liste « areas ».",
+                lang,
+            )
         return list_or_empty(body, "areas")
 
     return await cached_fetch("drivebc:areas", c.CACHE_TTL_AREAS, fetch)
@@ -147,39 +192,62 @@ def _record(raw: dict[str, Any]) -> RoadEvent:
     )
 
 
-def _provenance(schema: str, cached: bool, coverage: str | None = None) -> Provenance:
+def _provenance(
+    schema: str, cached: bool, coverage: str | None = None, lang: str = "en"
+) -> Provenance:
     return make_provenance(
         source=c.SOURCE,
         url=f"{c.EVENTS_URL}?format=json&status=ACTIVE&limit={c.PAGE_SIZE}",
         cached=cached,
         schema_name=schema,
-        freshness=_FRESHNESS,
+        freshness=pick(lang, _FRESHNESS, _FRESHNESS_FR),
         coverage=coverage,
-        limits=(
+        limits=pick(
+            lang,
             "Active events on provincial highways managed by the BC government; municipal "
-            "streets are not covered. Text is English only."
+            "streets are not covered. Text is English only.",
+            "Événements actifs sur les routes provinciales gérées par le gouvernement de la "
+            "Colombie-Britannique ; les rues municipales ne sont pas couvertes. Les textes "
+            "(titres, descriptions, noms de routes et de districts) n'existent qu'en anglais "
+            "à la source.",
         ),
-        licence=c.LICENCE,
+        licence=pick(lang, c.LICENCE, c.LICENCE_FR),
+        lang=lang,
     )
 
 
-def _upper(value: str | None, allowed: tuple[str, ...], name: str) -> str | None:
+def _upper(value: str | None, allowed: tuple[str, ...], name: str, lang: str = "en") -> str | None:
     if value is None or not value.strip():
         return None
     wanted = value.strip().upper().replace(" ", "_")
     if wanted not in allowed:
-        raise InvalidInput(f"{name} must be one of {', '.join(allowed)}; got '{value}'.")
+        raise_localized(
+            InvalidInput,
+            f"{name} must be one of {', '.join(allowed)}; got '{value}'.",
+            f"{name} doit valoir l'une des valeurs {', '.join(allowed)} (reçu « {value} »).",
+            lang,
+        )
     return wanted
 
 
-def _bbox(bbox: list[float] | None) -> tuple[float, float, float, float] | None:
+def _bbox(bbox: list[float] | None, lang: str = "en") -> tuple[float, float, float, float] | None:
     if bbox is None:
         return None
     if len(bbox) != 4:
-        raise InvalidInput("bbox is [min_lon, min_lat, max_lon, max_lat].")
+        raise_localized(
+            InvalidInput,
+            "bbox is [min_lon, min_lat, max_lon, max_lat].",
+            "bbox s'écrit [min_lon, min_lat, max_lon, max_lat].",
+            lang,
+        )
     min_lon, min_lat, max_lon, max_lat = bbox
     if not (min_lon < max_lon and min_lat < max_lat):
-        raise InvalidInput(f"bbox must have min < max on both axes, got {bbox}.")
+        raise_localized(
+            InvalidInput,
+            f"bbox must have min < max on both axes, got {bbox}.",
+            f"bbox doit avoir min < max sur les deux axes (reçu {bbox}).",
+            lang,
+        )
     return min_lon, min_lat, max_lon, max_lat
 
 
@@ -233,10 +301,11 @@ def _filter(
     road: str | None,
     bbox: list[float] | None,
     query: str | None,
+    lang: str = "en",
 ) -> list[dict[str, Any]]:
-    kind = _upper(event_type, c.EVENT_TYPES, "event_type")
-    level = _upper(severity, c.SEVERITIES, "severity")
-    box = _bbox(bbox)
+    kind = _upper(event_type, c.EVENT_TYPES, "event_type", lang)
+    level = _upper(severity, c.SEVERITIES, "severity", lang)
+    box = _bbox(bbox, lang)
     sub = subtype.strip().upper().replace(" ", "_") if subtype and subtype.strip() else None
     needle = query.strip().casefold() if query and query.strip() else None
     kept = []
@@ -280,10 +349,16 @@ async def search_events(
     bbox: list[float] | None = None,
     query: str | None = None,
     limit: int = c.LIMIT_DEFAULT,
+    lang: str = "en",
 ) -> EventSearch:
     """Active events matching every filter given, MAJOR first, newest first."""
     if not 1 <= limit <= c.LIMIT_MAX:
-        raise InvalidInput(f"limit must be between 1 and {c.LIMIT_MAX}, got {limit}.")
+        raise_localized(
+            InvalidInput,
+            f"limit must be between 1 and {c.LIMIT_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {c.LIMIT_MAX} (reçu {limit}).",
+            lang,
+        )
     filters = {
         "event_type": event_type,
         "severity": severity,
@@ -293,9 +368,9 @@ async def search_events(
         "bbox": bbox,
         "query": query,
     }
-    _filter([], **filters)  # bad arguments fail before any request
-    events, cached = await _events()
-    kept = _filter(events, **filters)
+    _filter([], **filters, lang=lang)  # bad arguments fail before any request
+    events, cached = await _events(lang)
+    kept = _filter(events, **filters, lang=lang)
     _sort(kept)
     return EventSearch(
         total_active=len(events),
@@ -304,17 +379,29 @@ async def search_events(
         provenance=_provenance(
             "drivebc.EventSearch",
             cached,
-            f"{len(kept)} of {len(events)} active events match; showing {min(limit, len(kept))}.",
+            pick(
+                lang,
+                f"{len(kept)} of {len(events)} active events match; showing "
+                f"{min(limit, len(kept))}.",
+                f"{len(kept)} événements actifs sur {len(events)} correspondent ; "
+                f"{min(limit, len(kept))} affichés.",
+            ),
+            lang,
         ),
     )
 
 
-async def get_event(event_id: str) -> EventDetail:
+async def get_event(event_id: str, lang: str = "en") -> EventDetail:
     """One active event with its full GeoJSON geometry."""
     wanted = event_id.strip()
     if not wanted:
-        raise InvalidInput("event_id must not be empty (e.g. 'drivebc.ca/RIDE-102765').")
-    events, cached = await _events()
+        raise_localized(
+            InvalidInput,
+            "event_id must not be empty (e.g. 'drivebc.ca/RIDE-102765').",
+            "event_id ne doit pas être vide (p. ex. « drivebc.ca/RIDE-102765 »).",
+            lang,
+        )
+    events, cached = await _events(lang)
     for raw in events:
         ident = str(raw.get("id", ""))
         if wanted in (ident, ident.removeprefix("drivebc.ca/")):
@@ -323,10 +410,14 @@ async def get_event(event_id: str) -> EventDetail:
                 event=_record(raw),
                 geometry=raw.get("geography") or {},
                 linear_reference_km=float(km) if isinstance(km, int | float) else None,
-                provenance=_provenance("drivebc.EventDetail", cached),
+                provenance=_provenance("drivebc.EventDetail", cached, lang=lang),
             )
-    raise NotFound(
-        f"No active DriveBC event '{event_id}'. It may have ended; use drivebc_search_events."
+    raise_localized(
+        NotFound,
+        f"No active DriveBC event '{event_id}'. It may have ended; use drivebc_search_events.",
+        f"aucun événement DriveBC actif « {event_id} ». Il est peut-être terminé ; utilisez "
+        "drivebc_search_events.",
+        lang,
     )
 
 
@@ -349,10 +440,16 @@ async def summarize_events(
     severity: str | None = None,
     area: str | None = None,
     road: str | None = None,
+    lang: str = "en",
 ) -> EventSummary:
     """Counts of active events by one field, after the same filters as the search."""
     if group_by not in c.GROUP_FIELDS:
-        raise InvalidInput(f"group_by must be one of {', '.join(c.GROUP_FIELDS)}.")
+        raise_localized(
+            InvalidInput,
+            f"group_by must be one of {', '.join(c.GROUP_FIELDS)}.",
+            f"group_by doit valoir l'une des valeurs {', '.join(c.GROUP_FIELDS)}.",
+            lang,
+        )
     _filter(
         [],
         event_type=event_type,
@@ -362,8 +459,9 @@ async def summarize_events(
         road=road,
         bbox=None,
         query=None,
+        lang=lang,
     )
-    events, cached = await _events()
+    events, cached = await _events(lang)
     kept = _filter(
         events,
         event_type=event_type,
@@ -373,6 +471,7 @@ async def summarize_events(
         road=road,
         bbox=None,
         query=None,
+        lang=lang,
     )
     totals: Counter[str] = Counter()
     major: Counter[str] = Counter()
@@ -387,14 +486,14 @@ async def summarize_events(
             EventCount(value=value, events=count, major=major[value])
             for value, count in totals.most_common()
         ],
-        provenance=_provenance("drivebc.EventSummary", cached),
+        provenance=_provenance("drivebc.EventSummary", cached, lang=lang),
     )
 
 
-async def list_areas() -> AreaList:
+async def list_areas(lang: str = "en") -> AreaList:
     """The 11 Ministry districts, with the number of active events in each."""
-    areas, areas_cached = await _areas()
-    events, events_cached = await _events()
+    areas, areas_cached = await _areas(lang)
+    events, events_cached = await _events(lang)
     counts: Counter[str] = Counter(
         str(a.get("id", "")) for raw in events for a in list_or_empty(raw, "areas")
     )
@@ -413,7 +512,13 @@ async def list_areas() -> AreaList:
             url=f"{c.AREAS_URL}?format=json",
             cached=areas_cached and events_cached,
             schema_name="drivebc.AreaList",
-            freshness="Districts are static; event counts are live (cached three minutes).",
-            licence=c.LICENCE,
+            freshness=pick(
+                lang,
+                "Districts are static; event counts are live (cached three minutes).",
+                "Les districts ne changent pas ; les nombres d'événements sont en direct (en "
+                "cache trois minutes). Noms de districts en anglais, comme à la source.",
+            ),
+            licence=pick(lang, c.LICENCE, c.LICENCE_FR),
+            lang=lang,
         ),
     )

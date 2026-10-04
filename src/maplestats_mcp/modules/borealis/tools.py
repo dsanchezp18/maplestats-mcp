@@ -34,8 +34,9 @@ async def borealis_search_ivt(
     word of the query must match the dataset or file. Each hit gives the
     download URL, size, whether a Borealis login is needed, and an R
     snippet using canivt (mountainMath), the only maintained IVT reader.
-    An empty query lists IVT files by relevance. `lang` has no effect;
-    dataset titles are as deposited (English or French).
+    An empty query lists IVT files by relevance. `lang="fr"` gives
+    notes, errors and provenance in French; dataset titles are as
+    deposited (English or French).
     Keywords: Beyond 20/20, IVT, Borealis, Dataverse, Data Liberation
     Initiative, historical census, Canadian Business Patterns, Labour
     Force Historical Review, canivt, custom tabulation, research data
@@ -45,8 +46,7 @@ async def borealis_search_ivt(
     industries canadiennes, Revue chronologique de la population active,
     totalisation personnalisée.
     """
-    del lang
-    return await client.search_ivt(query, limit=limit)
+    return await client.search_ivt(query, limit=limit, lang=lang)
 
 
 OdesiCollection = Literal[
@@ -75,8 +75,8 @@ async def borealis_odesi_search_datasets(
     (about 414 datasets, e.g. the Postal Code Conversion File) is
     skipped on purpose: its data files are restricted to DLI-member
     institutions. A hit does not say which files are open; call
-    borealis_odesi_get_dataset with its persistent_id for that. `lang`
-    has no effect; titles are as deposited.
+    borealis_odesi_get_dataset with its persistent_id for that. `lang="fr"`
+    gives notes, errors and provenance in French; titles are as deposited.
     Keywords: ODESI, Borealis, Dataverse, DDI, PUMF, public use
     microdata file, Labour Force microdata, public opinion poll,
     CORA, Data Liberation Initiative, codebook, social science data.
@@ -85,9 +85,8 @@ async def borealis_odesi_search_datasets(
     d'opinion publique, Initiative de démocratisation des données,
     livre de codes, données des sciences sociales.
     """
-    del lang
     return await client.search_odesi_datasets(
-        query, collection=collection, limit=limit, start=start
+        query, collection=collection, limit=limit, start=start, lang=lang
     )
 
 
@@ -105,15 +104,15 @@ async def borealis_odesi_get_dataset(persistent_id: str, lang: Lang = "en") -> O
     redistribution (many PUMFs are for non-profit research and
     teaching). persistent_id is a DOI such as "doi:10.5683/SP3/TVVQPG".
     For variable names and labels use borealis_odesi_search_variables.
-    `lang` has no effect.
+    `lang="fr"` gives the access summary, errors and provenance in
+    French; the DDI text is as deposited.
     Keywords: ODESI, DDI, codebook, PUMF download, dataset metadata,
     terms of use, restricted files, DLI licence, Borealis, DOI, poll.
     Mots-clés : ODESI, DDI, livre de codes, téléchargement FMGD,
     métadonnées du jeu de données, conditions d'utilisation, fichiers
     restreints, licence IDD, Borealis, DOI.
     """
-    del lang
-    return await client.get_odesi_dataset(persistent_id)
+    return await client.get_odesi_dataset(persistent_id, lang=lang)
 
 
 @tool
@@ -132,7 +131,8 @@ async def borealis_odesi_search_variables(
     query lists the first variables. Datasets whose data were not
     ingested as tabular files have no variable-level DDI: the result is
     empty with a note saying so, not an error. persistent_id is a DOI
-    from borealis_odesi_search_datasets. `lang` has no effect.
+    from borealis_odesi_search_datasets. `lang="fr"` gives notes, errors
+    and provenance in French; labels are as deposited.
     Keywords: ODESI, DDI, variable list, variable labels, codebook,
     PUMF variables, poll questions, microdata dictionary, Borealis,
     Dataverse, microdata variables.
@@ -140,5 +140,4 @@ async def borealis_odesi_search_variables(
     variables, livre de codes, variables FMGD, questions de sondage,
     dictionnaire de données, microdonnées, Borealis.
     """
-    del lang
-    return await client.search_odesi_variables(persistent_id, query, limit=limit)
+    return await client.search_odesi_variables(persistent_id, query, limit=limit, lang=lang)

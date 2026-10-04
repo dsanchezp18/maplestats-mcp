@@ -24,7 +24,9 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -112,7 +114,9 @@ def _parse(body: bytes) -> tuple[list[dict[str, object]], dict[str, str]]:
     return [dict(zip(header, r, strict=False)) for r in rows[1:]], names
 
 
-async def _dataset() -> tuple[tuple[list[dict[str, object]], dict[str, str]], bool]:
+async def _dataset(
+    lang: str = "en",
+) -> tuple[tuple[list[dict[str, object]], dict[str, str]], bool]:
     async def fetch() -> tuple[list[dict[str, object]], dict[str, str]]:
         await _LIMITER.acquire()
         # Borealis answers 303 with a signed storage URL; the shared client does
@@ -127,27 +131,49 @@ async def _dataset() -> tuple[tuple[list[dict[str, object]], dict[str, str]], bo
                 if exc.response.status_code in (301, 302, 303, 307, 308) and location:
                     current = str(exc.response.url.join(location))
                     if not current.startswith("https://"):
-                        raise UpstreamError(
-                            "elections_results: redirect to a non-https URL."
+                        raise lang_error(
+                            UpstreamError,
+                            lang,
+                            "elections_results: redirect to a non-https URL.",
+                            "elections_results : redirection vers une adresse non https.",
                         ) from exc
                     continue
-                raise UpstreamError(
-                    f"elections_results: Borealis returned HTTP {exc.response.status_code}."
+                raise lang_error(
+                    UpstreamError,
+                    lang,
+                    f"elections_results: Borealis returned HTTP {exc.response.status_code}.",
+                    f"elections_results : Borealis a renvoyé HTTP {exc.response.status_code}.",
                 ) from exc
             except httpx.HTTPError as exc:
-                raise UpstreamUnavailable(
-                    "elections_results: Borealis did not respond in time."
+                raise lang_error(
+                    UpstreamUnavailable,
+                    lang,
+                    "elections_results: Borealis did not respond in time.",
+                    "elections_results : Borealis n'a pas répondu à temps.",
                 ) from exc
         else:
-            raise UpstreamError("elections_results: Borealis redirected too many times.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "elections_results: Borealis redirected too many times.",
+                "elections_results : Borealis a redirigé trop de fois.",
+            )
         if len(response.content) > MAX_FILE_BYTES:
-            raise UpstreamError(
-                "elections_results: the historical workbook is larger than expected."
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "elections_results: the historical workbook is larger than expected.",
+                "elections_results : le classeur historique est plus volumineux que prévu.",
             )
         try:
             return await run_parse(_parse, response.content)
         except Exception as exc:  # openpyxl raises several unrelated types
-            raise UpstreamError(f"elections_results: could not read the workbook: {exc}") from exc
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"elections_results: could not read the workbook: {exc}",
+                f"elections_results : lecture du classeur impossible : {exc}",
+            ) from exc
 
     return await cached_fetch("elections_results:historical", CACHE_TTL_SECONDS, fetch)
 
@@ -186,18 +212,33 @@ async def get_historical(
     party: str | None = None,
     limit: int = ROWS_LIMIT_DEFAULT,
     offset: int = 0,
+    lang: str = "en",
 ) -> HistoricalResult:
     if election is not None and not FIRST_ELECTION <= election <= LAST_ELECTION:
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"elections_results: election must be {FIRST_ELECTION} to {LAST_ELECTION} "
-            "(1867 to 2015) for historical results."
+            "(1867 to 2015) for historical results.",
+            f"elections_results : election doit être entre {FIRST_ELECTION} et {LAST_ELECTION} "
+            "(1867 à 2015) pour les résultats historiques.",
         )
     if not 1 <= limit <= ROWS_LIMIT_MAX:
-        raise InvalidInput(f"elections_results: limit must be 1 to {ROWS_LIMIT_MAX}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"elections_results: limit must be 1 to {ROWS_LIMIT_MAX}.",
+            f"elections_results : limit doit être compris entre 1 et {ROWS_LIMIT_MAX}.",
+        )
     if offset < 0:
-        raise InvalidInput("elections_results: offset must be 0 or more.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "elections_results: offset must be 0 or more.",
+            "elections_results : offset doit être 0 ou plus.",
+        )
 
-    (rows, names), cached = await _dataset()
+    (rows, names), cached = await _dataset(lang)
     if election is not None:
         rows = [r for r in rows if _int(r.get("parliament_number")) == election]
     if province:
@@ -234,7 +275,11 @@ async def get_historical(
         total_ridings=total,
         offset=offset,
         truncated=offset + limit < total,
-        licence="CC0 1.0 (public domain dedication)",
+        licence=fr_or_en(
+            lang,
+            "CC0 1.0 (public domain dedication)",
+            "CC0 1.0 (dévouement au domaine public)",
+        ),
         citation=(
             "Winer, S. L. and Ferris, J. S., with Mou, H., Olmstead, D. E. H. and Archambault, J. "
             "Data Set on Federal Elections, With Superconstituencies, Canada 1867 - 2015, "
@@ -245,14 +290,36 @@ async def get_historical(
             url=DATASET_DOI,
             cached=cached,
             schema_name="elections_results.HistoricalResult",
-            freshness="A 2019 release covering the 1st to 42nd general elections; no later "
-            "elections. Use the 38th to 45th tables for official Elections Canada results.",
-            coverage="Party totals per constituency, not candidate names. Vote counts were "
-            "corrected by the authors where the source figures were inconsistent.",
-            limits=(
-                f"Showing rows {offset + 1} to {offset + len(page)} of {total}."
-                if offset + limit < total
-                else None
+            freshness=fr_or_en(
+                lang,
+                "A 2019 release covering the 1st to 42nd general elections; no later "
+                "elections. Use the 38th to 45th tables for official Elections Canada results.",
+                "Version de 2019 couvrant les 1re à 42e élections générales, sans élections "
+                "ultérieures. Utilisez les tableaux des 38e à 45e pour les résultats officiels "
+                "d'Élections Canada.",
             ),
+            coverage=fr_or_en(
+                lang,
+                "Party totals per constituency, not candidate names. Vote counts were "
+                "corrected by the authors where the source figures were inconsistent.",
+                "Totaux par parti et par circonscription, sans noms de candidats. Les auteurs "
+                "ont corrigé les votes là où les chiffres de la source étaient incohérents.",
+            ),
+            limits=join_limits(
+                fr_or_en(
+                    lang,
+                    f"Showing rows {offset + 1} to {offset + len(page)} of {total}.",
+                    f"Lignes {offset + 1} à {offset + len(page)} sur {total}.",
+                )
+                if offset + limit < total
+                else None,
+                fr_or_en(
+                    lang,
+                    "",
+                    "Les noms de circonscriptions, de partis et de provinces viennent du jeu de données, en anglais seulement",
+                )
+                or None,
+            ),
+            lang=lang,
         ),
     )

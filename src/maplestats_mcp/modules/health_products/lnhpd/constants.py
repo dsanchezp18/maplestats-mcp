@@ -18,6 +18,10 @@ PATH_DOSE = "natural-licences/productdose"
 
 PRODUCT_PAGE = "https://health-products.canada.ca/lnhpd-bdpsnh/info?licence={npn}"
 FRESHNESS = "LNHPD online data, updated by Health Canada as licences are issued or revised"
+FRESHNESS_FR = (
+    "données en ligne de la BDPSNH, mises à jour par Santé Canada à mesure que les "
+    "licences sont délivrées ou révisées"
+)
 
 INDEX_TTL_SECONDS = 24 * 60 * 60
 LOOKUP_TTL_SECONDS = 6 * 60 * 60

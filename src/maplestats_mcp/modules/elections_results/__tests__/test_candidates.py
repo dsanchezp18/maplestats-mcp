@@ -144,6 +144,31 @@ async def test_by_elections_are_separate_and_accent_insensitive(dataset):
     assert every.total_candidates == 4 and every.truncated
 
 
+async def test_year_that_contradicts_the_election_is_invalid(dataset):
+    # Live 2026-10-03: year=2000 with election=36 (held in 1997) returned 0 rows.
+    with pytest.raises(InvalidInput, match="election 37 .* held in 2000, not 1997"):
+        await candidates.get_candidates(election=37, year=1997)
+    agreed = await candidates.get_candidates(election=37, year=2000)
+    assert agreed.total_candidates == 2
+    # A by-election year inside the parliament is fine for by-election rows.
+    by = await candidates.get_candidates(election=37, year=2002, election_type="by-election")
+    assert by.total_candidates == 1
+    with pytest.raises(InvalidInput, match="2002"):
+        await candidates.get_candidates(election=37, year=2000, election_type="by-election")
+
+
+async def test_french_messages_and_provenance(dataset):
+    result = await candidates.get_candidates(election=37, lang="fr")
+    assert result.candidates[0].candidate_name == "DAY, Judy"
+    assert result.licence == "CC0 1.0 (dévouement au domaine public)"
+    assert "en anglais seulement" in (result.provenance.limits or "")
+    assert (result.provenance.coverage or "").startswith("Compilé par l'auteur")
+    with pytest.raises(InvalidInput, match="a eu lieu en 2000, pas en 1997"):
+        await candidates.get_candidates(election=37, year=1997, lang="fr")
+    with pytest.raises(InvalidInput, match="offset doit être 0 ou plus"):
+        await candidates.get_candidates(offset=-1, lang="fr")
+
+
 async def test_validation_errors():
     with pytest.raises(InvalidInput):
         await candidates.get_candidates(election=0)

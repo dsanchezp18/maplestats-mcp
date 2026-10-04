@@ -10,14 +10,16 @@ from __future__ import annotations
 
 import calendar
 from datetime import date
-from typing import Any
+from typing import Any, NoReturn
+from urllib.parse import urlparse
 
 from maplestats_mcp.modules.cer import constants
 from maplestats_mcp.modules.cer.schemas import CerDataset, CerDatasetList, CerFile, CerRows
 from maplestats_mcp.modules.ckan import client as ckan
 from maplestats_mcp.shared import csv_files
-from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -27,10 +29,30 @@ _LIMITER = get_limiter(
 )
 
 
+# English files sit under /open/ and French ones under /ouvert/; a French
+# call reading an English file is told where the French twin is.
+_ENGLISH_FILE_FR = french_spacing(
+    "Ce fichier est la version anglaise : ses colonnes et ses valeurs sont en anglais. "
+    "La version française se trouve sous /ouvert/ (voir cer_list_datasets avec lang='fr')."
+)
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English text unchanged; French goes through the typed-error template."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
 async def list_datasets(query: str = "", *, limit: int = 10, lang: str = "en") -> CerDatasetList:
     """CER datasets with CSV files, each file in the requested language."""
     if limit < 1 or limit > 25:
-        raise InvalidInput(f"limit must be between 1 and 25, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and 25, got {limit}.",
+            f"limit doit être compris entre 1 et 25, reçu {limit}.",
+            lang,
+        )
     found = await ckan.search_datasets(
         "federal",
         query,
@@ -58,16 +80,44 @@ async def list_datasets(query: str = "", *, limit: int = 10, lang: str = "en") -
             url=found.provenance.url,
             cached=found.provenance.cached,
             schema_name="cer.CerDatasetList",
-            coverage=f"{len(datasets)} of {found.total_count} CER datasets with CSV files",
+            coverage=(
+                f"{len(datasets)} of {found.total_count} CER datasets with CSV files"
+                if lang != "fr"
+                else f"{len(datasets)} jeux de données de la Régie de l'énergie du Canada "
+                f"avec fichiers CSV, sur {found.total_count}"
+            ),
+            lang=lang,
         ),
     )
 
 
-async def _download(url: str) -> tuple[list[dict[str, str]], bool]:
+async def _download(url: str, lang: str = "en") -> tuple[list[dict[str, str]], bool]:
+    # The shared CSV helpers word their errors in English only; a French call
+    # checks the URL here first and rewords a missing-file answer itself.
+    if lang == "fr":
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname not in constants.ALLOWED_HOSTS:
+            raise_typed(
+                InvalidInput,
+                f"cer : url doit être un lien https sur {sorted(constants.ALLOWED_HOSTS)}.",
+                "fr",
+            )
+        if not parsed.path.lower().endswith(".csv"):
+            raise_typed(InvalidInput, "cer : url doit pointer vers un fichier .csv.", "fr")
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "cer")
-    return await csv_files.fetch_rows(
-        url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="cer"
-    )
+    try:
+        return await csv_files.fetch_rows(
+            url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="cer"
+        )
+    except NotFound:
+        if lang != "fr":
+            raise
+        raise_typed(
+            NotFound,
+            f"cer : aucun fichier CSV à {url} (adresse introuvable, ou page web renvoyée au "
+            "lieu d'un CSV).",
+            "fr",
+        )
 
 
 def _row_date(value: str) -> date | None:
@@ -82,7 +132,9 @@ def _row_date(value: str) -> date | None:
         return None
 
 
-def _parse_bound(value: str | None, name: str, *, is_end: bool = False) -> date | None:
+def _parse_bound(
+    value: str | None, name: str, *, is_end: bool = False, lang: str = "en"
+) -> date | None:
     """A start or end bound; a year or month `end` covers the whole period.
 
     end="2024" used to mean 2024-01-01, so a query for 2024 kept only
@@ -93,7 +145,12 @@ def _parse_bound(value: str | None, name: str, *, is_end: bool = False) -> date 
     value = value.strip()
     parsed = _row_date(value)
     if parsed is None:
-        raise InvalidInput(f"{name} must be YYYY, YYYY-MM or YYYY-MM-DD, got {value!r}.")
+        _raise(
+            InvalidInput,
+            f"{name} must be YYYY, YYYY-MM or YYYY-MM-DD, got {value!r}.",
+            f"{name} doit être au format AAAA, AAAA-MM ou AAAA-MM-JJ, reçu {value!r}.",
+            lang,
+        )
     if is_end and len(value) == 4:
         return date(parsed.year, 12, 31)
     if is_end and len(value) == 7:
@@ -110,6 +167,7 @@ async def query_file(
     start: str | None = None,
     end: str | None = None,
     limit: int = constants.ROWS_DEFAULT,
+    lang: str = "en",
 ) -> CerRows:
     """Filter a CER CSV by exact (case-insensitive) column values and dates.
 
@@ -117,11 +175,24 @@ async def query_file(
     date or year column, otherwise the first `limit`.
     """
     if limit < 1 or limit > constants.ROWS_MAX:
-        raise InvalidInput(f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.")
-    start_date = _parse_bound(start, "start")
-    end_date = _parse_bound(end, "end", is_end=True)
-    rows, cached = await _download(url)
+        _raise(
+            InvalidInput,
+            f"limit must be between 1 and {constants.ROWS_MAX}, got {limit}.",
+            f"limit doit être compris entre 1 et {constants.ROWS_MAX}, reçu {limit}.",
+            lang,
+        )
+    start_date = _parse_bound(start, "start", lang=lang)
+    end_date = _parse_bound(end, "end", is_end=True, lang=lang)
+    rows, cached = await _download(url, lang)
     columns_lookup = csv_files.Columns(rows)
+    if lang == "fr":
+        unknown = [n for n in [*(filters or {}), *(columns or [])] if columns_lookup.get(n) is None]
+        if unknown:
+            raise_typed(
+                InvalidInput,
+                f"colonne inconnue {unknown[0]!r} ; les colonnes sont {columns_lookup.names}.",
+                "fr",
+            )
     filtered = csv_files.exact_filter(rows, columns_lookup, filters)
     date_column = columns_lookup.first_of(constants.DATE_COLUMNS)
 
@@ -156,6 +227,12 @@ async def query_file(
             url=url,
             cached=cached,
             schema_name="cer.CerRows",
-            coverage=f"{len(kept)} of {len(matching)} matching rows",
+            coverage=(
+                f"{len(kept)} of {len(matching)} matching rows"
+                if lang != "fr"
+                else f"{len(kept)} lignes correspondantes sur {len(matching)}"
+            ),
+            limits=_ENGLISH_FILE_FR if lang == "fr" and "/open/" in url else None,
+            lang=lang,
         ),
     )

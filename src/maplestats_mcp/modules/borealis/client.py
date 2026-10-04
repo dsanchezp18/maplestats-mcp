@@ -43,6 +43,7 @@ from maplestats_mcp.modules.borealis.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.licences import terms_not_stated
@@ -75,25 +76,44 @@ def r_snippet(file_id: str, file_name: str) -> str:
     )
 
 
-async def _get(url: str, params: dict[str, Any], context: str) -> Any:
+def _http_error(context: str, status: int, lang: str) -> UpstreamError:
+    return lang_error(
+        UpstreamError,
+        lang,
+        f"borealis:{context} returned HTTP {status}.",
+        f"borealis:{context} a renvoyé HTTP {status}.",
+    )
+
+
+def _no_answer(context: str, lang: str) -> UpstreamUnavailable:
+    return lang_error(
+        UpstreamUnavailable,
+        lang,
+        f"borealis:{context} did not respond in time. Try again shortly.",
+        f"borealis:{context} n'a pas répondu à temps. Réessayez dans un instant.",
+    )
+
+
+async def _get(url: str, params: dict[str, Any], context: str, lang: str = "en") -> Any:
     async def fetch() -> Any:
         await _LIMITER.acquire()
         try:
             return await api_get(url, params=params, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"borealis:{context} returned HTTP {exc.response.status_code}."
-            ) from exc
+            raise _http_error(context, exc.response.status_code, lang) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                f"borealis:{context} did not respond in time. Try again shortly."
-            ) from exc
+            raise _no_answer(context, lang) from exc
 
     key = f"borealis:{url}:{sorted(params.items())}"
     payload, _ = await cached_fetch(key, constants.CACHE_TTL_SECONDS, fetch)
     data = payload.get("data") if isinstance(payload, dict) else None
     if data is None:
-        raise UpstreamError(f"borealis:{context}: unexpected response shape (missing data).")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"borealis:{context}: unexpected response shape (missing data).",
+            f"borealis:{context} : réponse de forme inattendue (data absent).",
+        )
     return data
 
 
@@ -121,9 +141,9 @@ def _ivt_file(
     )
 
 
-async def _dataset_files(dataset: dict[str, Any]) -> list[IvtFile]:
+async def _dataset_files(dataset: dict[str, Any], lang: str = "en") -> list[IvtFile]:
     pid = str(dataset.get("global_id") or "")
-    listing = await _get(constants.FILES_URL, {"persistentId": pid}, "dataset_files")
+    listing = await _get(constants.FILES_URL, {"persistentId": pid}, "dataset_files", lang)
     entries = listing if isinstance(listing, list) else []
     names = [str(e.get("label") or "") for e in entries]
     others = sorted(n for n in names if n.lower().endswith(constants.DATA_EXTENSIONS))
@@ -148,11 +168,17 @@ async def _dataset_files(dataset: dict[str, Any]) -> list[IvtFile]:
     return files
 
 
-async def search_ivt(query: str = "", *, limit: int = constants.LIMIT_DEFAULT) -> IvtSearchResult:
+async def search_ivt(
+    query: str = "", *, limit: int = constants.LIMIT_DEFAULT, lang: str = "en"
+) -> IvtSearchResult:
     """Beyond 20/20 files in Borealis datasets matching every word of the query."""
     if limit < 1 or limit > constants.LIMIT_MAX:
-        raise InvalidInput(
-            f"borealis:search_ivt: limit must be between 1 and {constants.LIMIT_MAX}, got {limit}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"borealis:search_ivt: limit must be between 1 and {constants.LIMIT_MAX}, got {limit}.",
+            f"borealis:search_ivt : limit doit être compris entre 1 et {constants.LIMIT_MAX} ; "
+            f"reçu {limit}.",
         )
     files: list[IvtFile] = []
     datasets_matched = 0
@@ -165,10 +191,11 @@ async def search_ivt(query: str = "", *, limit: int = constants.LIMIT_DEFAULT) -
                 "per_page": constants.DATASETS_MAX,
             },
             "search_datasets",
+            lang,
         )
         datasets_matched = int(found.get("total_count") or 0)
         batches = await asyncio.gather(
-            *(_dataset_files(item) for item in list_or_empty(found, "items"))
+            *(_dataset_files(item, lang) for item in list_or_empty(found, "items"))
         )
         files = [f for batch in batches for f in batch][:limit]
     if not files:
@@ -176,6 +203,7 @@ async def search_ivt(query: str = "", *, limit: int = constants.LIMIT_DEFAULT) -
             constants.SEARCH_URL,
             {"q": solr_query(query, ivt_files=True), "type": "file", "per_page": limit},
             "search_files",
+            lang,
         )
         files = [
             _ivt_file(
@@ -200,8 +228,18 @@ async def search_ivt(query: str = "", *, limit: int = constants.LIMIT_DEFAULT) -
             url=constants.SEARCH_URL,
             cached=False,
             schema_name="borealis.IvtSearchResult",
-            coverage=f"IVT files from the top {constants.DATASETS_MAX} matching datasets",
-            limits="Only canivt (R) reads IVT files; other_formats lists any CSV twin.",
+            coverage=fr_or_en(
+                lang,
+                f"IVT files from the top {constants.DATASETS_MAX} matching datasets",
+                f"fichiers IVT des {constants.DATASETS_MAX} jeux de données les plus pertinents",
+            ),
+            limits=fr_or_en(
+                lang,
+                "Only canivt (R) reads IVT files; other_formats lists any CSV twin.",
+                "Seul canivt (R) lit les fichiers IVT ; other_formats liste un éventuel "
+                "équivalent CSV. Les titres sont ceux du dépôt (en anglais ou en français).",
+            ),
+            lang=lang,
         ),
     )
 
@@ -222,14 +260,18 @@ async def search_ivt(query: str = "", *, limit: int = constants.LIMIT_DEFAULT) -
 #    universe come as escaped HTML (&lt;p&gt;) and are flattened to text.
 
 
-def _doi(persistent_id: str) -> str:
+def _doi(persistent_id: str, lang: str = "en") -> str:
     """Normalise 'doi:...', 'https://doi.org/...' or '10.5683/...' to 'doi:10.5683/...'."""
     text = persistent_id.strip()
     text = re.sub(r"^(https?://(dx\.)?doi\.org/|doi:)", "", text, flags=re.IGNORECASE)
     if not re.fullmatch(r"10\.\d{4,9}/\S+", text):
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"borealis:odesi: persistent_id must be a DOI such as 'doi:10.5683/SP3/TVVQPG', "
-            f"got {persistent_id!r}."
+            f"got {persistent_id!r}.",
+            "borealis:odesi : persistent_id doit être un DOI comme « doi:10.5683/SP3/TVVQPG » ; "
+            f"reçu {persistent_id!r}.",
         )
     return f"doi:{text}"
 
@@ -248,7 +290,7 @@ def _plain(text: str | None, *, chars: int | None = None) -> str | None:
     return flat
 
 
-async def _get_ddi(persistent_id: str, exporter: str, context: str) -> str | None:
+async def _get_ddi(persistent_id: str, exporter: str, context: str, lang: str = "en") -> str | None:
     """DDI XML text, or None when Borealis cannot export it (HTTP 403 'Export Failed')."""
     params = {"exporter": exporter, "persistentId": persistent_id}
 
@@ -261,14 +303,15 @@ async def _get_ddi(persistent_id: str, exporter: str, context: str) -> str | Non
             if status == 403:
                 return None
             if status == 404:
-                raise NotFound(
-                    f"borealis:{context}: no dataset found for {persistent_id}."
+                raise lang_error(
+                    NotFound,
+                    lang,
+                    f"borealis:{context}: no dataset found for {persistent_id}.",
+                    f"borealis:{context} : aucun jeu de données pour {persistent_id}.",
                 ) from exc
-            raise UpstreamError(f"borealis:{context} returned HTTP {status}.") from exc
+            raise _http_error(context, status, lang) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                f"borealis:{context} did not respond in time. Try again shortly."
-            ) from exc
+            raise _no_answer(context, lang) from exc
         return response.content.decode("utf-8", errors="replace")
 
     body, _ = await cached_fetch(
@@ -277,11 +320,16 @@ async def _get_ddi(persistent_id: str, exporter: str, context: str) -> str | Non
     return body
 
 
-def _parse_xml(body: str, context: str) -> ElementTree.Element:
+def _parse_xml(body: str, context: str, lang: str = "en") -> ElementTree.Element:
     try:
         return ElementTree.fromstring(body)
     except ElementTree.ParseError as exc:
-        raise UpstreamError(f"borealis:{context}: the DDI record was not valid XML.") from exc
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"borealis:{context}: the DDI record was not valid XML.",
+            f"borealis:{context} : la notice DDI n'est pas un XML valide.",
+        ) from exc
 
 
 def _texts(root: ElementTree.Element, path: str) -> list[str]:
@@ -315,23 +363,38 @@ async def search_odesi_datasets(
     collection: str = "all_public",
     limit: int = constants.LIMIT_DEFAULT,
     start: int = 0,
+    lang: str = "en",
 ) -> OdesiSearchResult:
     """ODESI datasets whose title, description or keywords match every word of the query."""
     if limit < 1 or limit > constants.LIMIT_MAX:
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"borealis:search_odesi_datasets: limit must be between 1 and "
-            f"{constants.LIMIT_MAX}, got {limit}."
+            f"{constants.LIMIT_MAX}, got {limit}.",
+            f"borealis:search_odesi_datasets : limit doit être compris entre 1 et "
+            f"{constants.LIMIT_MAX} ; reçu {limit}.",
         )
     if start < 0:
-        raise InvalidInput(f"borealis:search_odesi_datasets: start must be 0 or more, got {start}.")
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"borealis:search_odesi_datasets: start must be 0 or more, got {start}.",
+            f"borealis:search_odesi_datasets : start doit être 0 ou plus ; reçu {start}.",
+        )
     if collection == "all_public":
         aliases = constants.ODESI_PUBLIC_ALIASES
     elif collection in constants.ODESI_COLLECTIONS:
         aliases = constants.ODESI_COLLECTIONS[collection]
     else:
-        raise InvalidInput(
+        names = sorted(constants.ODESI_COLLECTIONS)
+        raise lang_error(
+            InvalidInput,
+            lang,
             "borealis:search_odesi_datasets: collection must be 'all_public' or one of "
-            f"{sorted(constants.ODESI_COLLECTIONS)}, got {collection!r}."
+            f"{names}, got {collection!r}.",
+            "borealis:search_odesi_datasets : collection doit être « all_public » ou l'une "
+            f"des valeurs {names} ; reçu {collection!r}.",
         )
     found = await _get(
         constants.SEARCH_URL,
@@ -343,6 +406,7 @@ async def search_odesi_datasets(
             "start": start,
         },
         "search_odesi_datasets",
+        lang,
     )
     datasets = [_search_dataset(item) for item in list_or_empty(found, "items")]
     return OdesiSearchResult(
@@ -351,30 +415,51 @@ async def search_odesi_datasets(
         datasets=datasets,
         returned_count=len(datasets),
         total_matched=int(found.get("total_count") or 0),
-        access_note=(
+        access_note=fr_or_en(
+            lang,
             "Searches the public ODESI collections only. The DLI-licensed collection (about "
             "414 datasets, e.g. the Postal Code Conversion File) is left out: its data files "
             "need a login at a DLI-member institution. Use borealis_odesi_get_dataset to see, "
-            "per dataset, which files can be downloaded without one."
+            "per dataset, which files can be downloaded without one.",
+            "Recherche dans les collections publiques d'ODESI seulement. La collection sous "
+            "licence de l'IDD (environ 414 jeux de données, p. ex. le Fichier de conversion des "
+            "codes postaux) est exclue : ses fichiers exigent une connexion dans un "
+            "établissement membre de l'IDD. Utilisez borealis_odesi_get_dataset pour voir, jeu "
+            "par jeu, quels fichiers se téléchargent sans connexion. Titres et descriptions "
+            "sont ceux du dépôt (en anglais ou en français).",
         ),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=constants.SEARCH_URL,
             cached=False,
             schema_name="borealis.OdesiSearchResult",
-            coverage=f"ODESI collection on Borealis: {', '.join(aliases)}",
-            limits="Every word must match; results are by Borealis relevance.",
+            coverage=fr_or_en(
+                lang,
+                f"ODESI collection on Borealis: {', '.join(aliases)}",
+                f"collection ODESI sur Borealis : {', '.join(aliases)}",
+            ),
+            limits=fr_or_en(
+                lang,
+                "Every word must match; results are by Borealis relevance.",
+                "Chaque mot doit correspondre ; résultats classés selon la pertinence de Borealis.",
+            ),
+            lang=lang,
         ),
     )
 
 
-async def get_odesi_dataset(persistent_id: str) -> OdesiDatasetDetail:
+async def get_odesi_dataset(persistent_id: str, lang: str = "en") -> OdesiDatasetDetail:
     """Study-level DDI metadata and file access for one ODESI dataset."""
-    pid = _doi(persistent_id)
-    body = await _get_ddi(pid, "oai_ddi", "get_odesi_dataset")
+    pid = _doi(persistent_id, lang)
+    body = await _get_ddi(pid, "oai_ddi", "get_odesi_dataset", lang)
     if body is None:
-        raise NotFound(f"borealis:get_odesi_dataset: no DDI record for {pid}.")
-    root = _parse_xml(body, "get_odesi_dataset")
+        raise lang_error(
+            NotFound,
+            lang,
+            f"borealis:get_odesi_dataset: no DDI record for {pid}.",
+            f"borealis:get_odesi_dataset : aucune notice DDI pour {pid}.",
+        )
+    root = _parse_xml(body, "get_odesi_dataset", lang)
     study = "d:stdyDscr/"
 
     periods = [
@@ -383,7 +468,11 @@ async def get_odesi_dataset(persistent_id: str) -> OdesiDatasetDetail:
     ]
     start_end = {p.split(" ", 1)[0]: p.split(" ", 1)[1] for p in periods if " " in p}
     time_period = (
-        f"{start_end['start']} to {start_end['end']}"
+        fr_or_en(
+            lang,
+            f"{start_end['start']} to {start_end['end']}",
+            f"{start_end['start']} au {start_end['end']}",
+        )
         if "start" in start_end and "end" in start_end
         else "; ".join(start_end.values()) or None
     )
@@ -392,7 +481,9 @@ async def get_odesi_dataset(persistent_id: str) -> OdesiDatasetDetail:
     terms = " ".join(part for part in (restriction, licence) if part) or None
     keywords = [k for k in _texts(root, f"{study}d:stdyInfo/d:subject/d:keyword")]
 
-    listing = await _get(constants.FILES_URL, {"persistentId": pid}, "get_odesi_dataset_files")
+    listing = await _get(
+        constants.FILES_URL, {"persistentId": pid}, "get_odesi_dataset_files", lang
+    )
     entries = listing if isinstance(listing, list) else []
     public: list[OdesiFile] = []
     restricted: list[str] = []
@@ -415,18 +506,30 @@ async def get_odesi_dataset(persistent_id: str) -> OdesiDatasetDetail:
         )
     total = len(entries)
     if total == 0:
-        summary = "The dataset lists no files."
+        summary = fr_or_en(
+            lang, "The dataset lists no files.", "Le jeu de données ne liste aucun fichier."
+        )
     elif not restricted:
-        summary = f"All {total} files are public: download without a login."
+        summary = fr_or_en(
+            lang,
+            f"All {total} files are public: download without a login.",
+            f"Les {total} fichiers sont publics : téléchargement sans connexion.",
+        )
     elif not public:
-        summary = (
+        summary = fr_or_en(
+            lang,
             f"All {total} files are restricted (DLI-licensed): they need a login at a "
-            "DLI-member institution, so no download links are given."
+            "DLI-member institution, so no download links are given.",
+            f"Les {total} fichiers sont restreints (licence de l'IDD) : ils exigent une "
+            "connexion dans un établissement membre de l'IDD, aucun lien n'est donc donné.",
         )
     else:
-        summary = (
+        summary = fr_or_en(
+            lang,
             f"{len(public)} of {total} files are public; {len(restricted)} are restricted "
-            "(DLI-licensed) and have no link here."
+            "(DLI-licensed) and have no link here.",
+            f"{len(public)} fichiers sur {total} sont publics ; {len(restricted)} sont "
+            "restreints (licence de l'IDD) et n'ont pas de lien ici.",
         )
     version = _first(root, "d:docDscr/d:citation/d:verStmt/d:version")
     return OdesiDatasetDetail(
@@ -456,40 +559,67 @@ async def get_odesi_dataset(persistent_id: str) -> OdesiDatasetDetail:
             url=f"{constants.DDI_EXPORT_URL}?exporter=oai_ddi&persistentId={pid}",
             cached=False,
             schema_name="borealis.OdesiDatasetDetail",
-            limits=(
+            limits=fr_or_en(
+                lang,
                 "File 'public' means no Borealis login; the terms of use can still limit "
-                "redistribution or commercial use."
+                "redistribution or commercial use.",
+                "Un fichier « public » ne demande pas de connexion à Borealis ; les conditions "
+                "d'utilisation peuvent tout de même limiter la redistribution ou l'usage "
+                "commercial. Résumé, univers et conditions sont ceux de la notice DDI déposée "
+                "(souvent en anglais).",
             ),
             # The dataset's own DDI terms, the same text as terms_of_use.
             licence=(
-                f"Dataset terms of use (from its DDI record): {terms}"
+                fr_or_en(
+                    lang,
+                    f"Dataset terms of use (from its DDI record): {terms}",
+                    f"Conditions d'utilisation du jeu de données (tirées de sa notice DDI) : "
+                    f"{terms}",
+                )
                 if terms
-                else terms_not_stated(
-                    "the dataset's depositor on Borealis",
-                    f"https://doi.org/{pid.removeprefix('doi:')}",
+                else fr_or_en(
+                    lang,
+                    terms_not_stated(
+                        "the dataset's depositor on Borealis",
+                        f"https://doi.org/{pid.removeprefix('doi:')}",
+                    ),
+                    "Conditions non précisées par l'éditeur (le déposant du jeu de données sur "
+                    "Borealis) : aucune licence ni condition d'utilisation n'a été trouvée à "
+                    f"https://doi.org/{pid.removeprefix('doi:')}. Ne présumez pas une licence "
+                    "ouverte ; vérifiez auprès de l'éditeur avant toute redistribution.",
                 )
             ),
+            lang=lang,
         ),
     )
 
 
 async def search_odesi_variables(
-    persistent_id: str, query: str = "", *, limit: int = constants.VARIABLES_LIMIT_DEFAULT
+    persistent_id: str,
+    query: str = "",
+    *,
+    limit: int = constants.VARIABLES_LIMIT_DEFAULT,
+    lang: str = "en",
 ) -> OdesiVariableResult:
     """Variable names and labels from one dataset's variable-level DDI."""
-    pid = _doi(persistent_id)
+    pid = _doi(persistent_id, lang)
     if limit < 1 or limit > constants.VARIABLES_LIMIT_MAX:
-        raise InvalidInput(
+        raise lang_error(
+            InvalidInput,
+            lang,
             f"borealis:search_odesi_variables: limit must be between 1 and "
-            f"{constants.VARIABLES_LIMIT_MAX}, got {limit}."
+            f"{constants.VARIABLES_LIMIT_MAX}, got {limit}.",
+            f"borealis:search_odesi_variables : limit doit être compris entre 1 et "
+            f"{constants.VARIABLES_LIMIT_MAX} ; reçu {limit}.",
         )
-    body = await _get_ddi(pid, "ddi", "search_odesi_variables")
+    body = await _get_ddi(pid, "ddi", "search_odesi_variables", lang)
     url = f"{constants.DDI_EXPORT_URL}?exporter=ddi&persistentId={pid}"
     provenance = make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
         cached=False,
         schema_name="borealis.OdesiVariableResult",
+        lang=lang,
     )
     if body is None:
         return OdesiVariableResult(
@@ -498,14 +628,19 @@ async def search_odesi_variables(
             returned_count=0,
             total_matched=0,
             total_variables=0,
-            note=(
+            note=fr_or_en(
+                lang,
                 "Borealis has no variable-level DDI for this dataset (its export fails when "
                 "the data are not ingested as tabular files). Read the codebook among its "
-                "files (borealis_odesi_get_dataset) instead."
+                "files (borealis_odesi_get_dataset) instead.",
+                "Borealis n'a pas de DDI au niveau des variables pour ce jeu de données (son "
+                "exportation échoue quand les données ne sont pas versées comme fichiers "
+                "tabulaires). Consultez plutôt le livre de codes parmi ses fichiers "
+                "(borealis_odesi_get_dataset).",
             ),
             provenance=provenance,
         )
-    root = _parse_xml(body, "search_odesi_variables")
+    root = _parse_xml(body, "search_odesi_variables", lang)
     file_names = {
         f.get("ID"): _first(f, "d:fileTxt/d:fileName")
         for f in root.findall("d:fileDscr", constants.DDI_NAMESPACE)

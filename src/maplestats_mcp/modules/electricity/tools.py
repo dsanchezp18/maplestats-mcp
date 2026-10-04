@@ -49,7 +49,8 @@ async def electricity_ontario_get_hourly_demand(
     not covered.
     Keywords: Ontario, IESO, electricity demand, hourly demand, peak demand,
     load, MW, market demand, Ontario demand, power grid, consumption.
-    Mots-clés : Ontario, SIERE, demande d'électricité, demande horaire, pointe,
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), demande d'électricité, demande horaire, pointe,
     charge, MW, demande du marché, réseau électrique, consommation.
     """
     return await client.get_hourly_demand(year, start_date, end_date, limit, lang=lang)
@@ -68,7 +69,8 @@ async def electricity_ontario_get_realtime_demand(
     grid conditions in Ontario.
     Keywords: Ontario, IESO, real-time demand, 5-minute, current load, live,
     electricity, MW, dispatch, grid, now.
-    Mots-clés : Ontario, SIERE, demande en temps réel, 5 minutes, charge
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), demande en temps réel, 5 minutes, charge
     actuelle, électricité, MW, réseau, maintenant, répartition.
     """
     return await client.get_realtime_demand(date, hour, lang=lang)
@@ -95,8 +97,9 @@ async def electricity_ontario_get_supply_by_fuel(
     supply by fuel type, clean electricity share.
     Keywords: Ontario, IESO, generation mix, supply by fuel, nuclear, gas,
     hydro, wind, solar, biofuel, output, MW, MWh, energy mix.
-    Mots-clés : Ontario, SIERE, bouquet énergétique, production par
-    combustible, nucléaire, gaz, hydroélectricité, éolien, solaire, MW, MWh.
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), bouquet énergétique, production par combustible,
+    nucléaire, gaz, hydroélectricité, éolien, solaire, MW, MWh.
     """
     return await client.get_supply_by_fuel(year, start_date, end_date, limit, lang=lang)
 
@@ -122,7 +125,8 @@ async def electricity_ontario_get_prices(
     Ontario (IESO) only; Alberta pool prices are not covered.
     Keywords: Ontario, IESO, electricity price, zonal price, OZP, day-ahead,
     real-time, LMP, CAD/MWh, wholesale, spot, market renewal, congestion.
-    Mots-clés : Ontario, SIERE, prix de l'électricité, prix zonal, prévisionnel,
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), prix de l'électricité, prix zonal, prévisionnel,
     temps réel, prix marginal, $/MWh, gros, marché au comptant, congestion.
     """
     return await client.get_zonal_prices(market, date, hour, lang=lang)
@@ -141,8 +145,10 @@ async def electricity_ontario_get_hoep_history(
     trends before the 2025 market renewal.
     Keywords: Ontario, IESO, HOEP, hourly Ontario energy price, historical
     price, monthly average, on-peak, off-peak, weighted average, wholesale.
-    Mots-clés : Ontario, SIERE, PHEO, prix horaire de l'énergie de l'Ontario,
-    historique des prix, moyenne mensuelle, période de pointe, hors pointe.
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), prix horaire de l'énergie en Ontario (PHEO),
+    historique des prix, moyenne mensuelle, période de pointe, hors pointe,
+    moyenne pondérée, prix de gros de l'électricité.
     """
     return await client.get_hoep_history(year, lang=lang)
 
@@ -161,8 +167,10 @@ async def electricity_ontario_get_adequacy_outlook(
     demand, supply outlook, generator outages.
     Keywords: Ontario, IESO, adequacy, outlook, reserve margin, excess
     capacity, forecast demand, supply, outages, reliability, MW.
-    Mots-clés : Ontario, SIERE, suffisance, perspective, marge de réserve,
-    capacité excédentaire, demande prévue, approvisionnement, pannes, fiabilité.
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), suffisance, perspective, marge de réserve,
+    capacité excédentaire, demande prévue, approvisionnement, pannes,
+    fiabilité.
     """
     return await client.get_adequacy_outlook(date, lang=lang)
 
@@ -180,8 +188,10 @@ async def electricity_ontario_get_intertie_flows(
     United States, interprovincial power flows.
     Keywords: Ontario, IESO, intertie, imports, exports, Quebec, Manitoba,
     New York, Michigan, Minnesota, flows, schedule, interprovincial, trade.
-    Mots-clés : Ontario, SIERE, interconnexion, importations, exportations,
-    Québec, Manitoba, New York, flux, échanges d'électricité, interprovincial.
+    Mots-clés : Ontario, Société indépendante d'exploitation du réseau
+    d'électricité (SIERE), interconnexion, importations, exportations,
+    Québec, Manitoba, New York, flux, échanges d'électricité,
+    interprovincial.
     """
     return await client.get_intertie_flows(date, lang=lang)
 
@@ -289,8 +299,7 @@ async def electricity_quebec_list_facilities(
     de crues, barrage, apport naturel, centrale, réservoir, hydroélectricité,
     rivières du Québec.
     """
-    del lang
-    return await quebec_flows.list_facilities(query, region, kind, limit)
+    return await quebec_flows.list_facilities(query, region, kind, limit, lang)
 
 
 @tool
@@ -320,5 +329,4 @@ async def electricity_quebec_get_facility_flows(
     apport naturel, barrage, centrale, hydroélectricité, série
     chronologique, m3/s.
     """
-    del lang
-    return await quebec_flows.get_facility_flows(facility, kind, start, end)
+    return await quebec_flows.get_facility_flows(facility, kind, start, end, lang)

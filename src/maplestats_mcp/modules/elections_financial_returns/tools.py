@@ -32,7 +32,7 @@ async def elections_financial_returns_list_elections(
     Keywords: elections canada, election list, by-election, general
     election, candidate, political financing, act period, election id,
     writ, campaign return.
-    Mots-clés : élections canada, liste des élections, élection partielle,
+    Mots-clés : Élections Canada, liste des élections, élection partielle,
     élection générale, candidat, financement politique, période de la
     loi, identifiant d'élection, bref, rapport de campagne, don, dons,
     contributions politiques, donateurs, financement des partis.
@@ -71,7 +71,7 @@ async def elections_financial_returns_search_candidates(
     Keywords: elections canada, candidate search, political financing,
     campaign return, client id, party, electoral district, province,
     financial disclosure.
-    Mots-clés : élections canada, recherche de candidats, financement
+    Mots-clés : Élections Canada, recherche de candidats, financement
     politique, rapport de campagne, identifiant, parti, circonscription,
     province, divulgation financière, don, dons, contributions
     politiques, donateurs, financement des partis.
@@ -124,7 +124,7 @@ async def elections_financial_returns_get_financial_return_part(
     Keywords: elections canada, campaign finance, financial return,
     candidate expenses, contributions received, official agent,
     election spending, political financing, donor, campaign loan.
-    Mots-clés : élections canada, financement de campagne, rapport
+    Mots-clés : Élections Canada, financement de campagne, rapport
     financier, dépenses de candidat, contributions reçues, agent
     officiel, dépenses électorales, financement politique, donateur,
     prêt de campagne, don, dons, contributions politiques, donateurs,

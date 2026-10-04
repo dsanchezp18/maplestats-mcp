@@ -13,6 +13,7 @@ PATH_IDENTIFIER = "medical-devices/deviceidentifier"
 
 SEARCH_PAGE = "https://health-products.canada.ca/mdall-limh/"
 FRESHNESS = "MDALL, refreshed daily by Health Canada"
+FRESHNESS_FR = "LIMH, mise à jour chaque jour par Santé Canada"
 
 TABLE_TTL_SECONDS = 6 * 60 * 60
 LOOKUP_TTL_SECONDS = 6 * 60 * 60

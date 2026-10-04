@@ -33,10 +33,11 @@ from maplestats_mcp.modules.nwt_stats.schemas import (
 from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared import file_tables as tables
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -80,13 +81,17 @@ def topic_url(topic: str) -> str:
     return constants.SITE + constants.TOPICS[topic][0]
 
 
-def normalize_url(url: str) -> str:
+def normalize_url(url: str, lang: Lang = "en") -> str:
     """The canonical https link on www.statsnwt.ca with the path percent-encoded."""
     parsed = urlparse(url.strip())
     if parsed.scheme not in ("http", "https") or (parsed.hostname or "") not in constants.HOSTS:
-        raise InvalidInput(
+        raise_localized(
+            InvalidInput,
             f"nwt_stats: url must be a link on {constants.DOMAIN} (see nwt_stats_list_files); "
-            f"got {url!r}."
+            f"got {url!r}.",
+            f"nwt_stats : url doit être un lien sur {constants.DOMAIN} (voir "
+            f"nwt_stats_list_files) ; reçu {url!r}.",
+            lang,
         )
     path = quote(unquote(parsed.path), safe=_PATH_SAFE)
     return parsed._replace(scheme="https", netloc=constants.DOMAIN, path=path).geturl()
@@ -219,30 +224,39 @@ def page_name(html: str) -> str | None:
     return name or None
 
 
-async def _page(url: str) -> tuple[str, bool]:
+async def _page(url: str, lang: Lang = "en") -> tuple[str, bool]:
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
             response = await get_raw(url, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"nwt_stats: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"nwt_stats: {url} did not respond in time.") from exc
+            status = exc.response.status_code
+            raise_localized(
+                UpstreamError,
+                f"nwt_stats: {url} returned HTTP {status}.",
+                f"nwt_stats : {url} a renvoyé le code HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            raise_localized(
+                UpstreamUnavailable,
+                f"nwt_stats: {url} did not respond in time.",
+                f"nwt_stats : {url} n'a pas répondu à temps.",
+                lang,
+            )
         return response.text
 
     return await cached_fetch(f"nwt_stats:page:{url}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
 
 
-async def _topic_files(topic: str) -> tuple[list[FileEntry], bool]:
+async def _topic_files(topic: str, lang: Lang = "en") -> tuple[list[FileEntry], bool]:
     url = topic_url(topic)
-    html, cached = await _page(url)
+    html, cached = await _page(url, lang)
     files = parse_page(html, url, topic)
     prefix = constants.SUBPAGE_PREFIXES.get(topic)
     if prefix:
         subpages = subpage_links(html, url, prefix)
-        loaded = await asyncio.gather(*(_page(u) for u in subpages))
+        loaded = await asyncio.gather(*(_page(u, lang) for u in subpages))
         known = {f.url for f in files}
         for sub_url, (sub_html, sub_cached) in zip(subpages, loaded, strict=True):
             cached &= sub_cached
@@ -261,15 +275,25 @@ def _topics(lang: Lang) -> list[TopicInfo]:
     ]
 
 
-def _check_limit(limit: int) -> None:
+def _check_limit(limit: int, lang: Lang = "en") -> None:
     if not 1 <= limit <= constants.FILES_LIMIT_MAX:
-        raise InvalidInput(f"nwt_stats: limit must be 1 to {constants.FILES_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"nwt_stats: limit must be 1 to {constants.FILES_LIMIT_MAX}.",
+            f"nwt_stats : limit doit être entre 1 et {constants.FILES_LIMIT_MAX}.",
+            lang,
+        )
 
 
-def _check_topic(topic: str) -> str:
+def _check_topic(topic: str, lang: Lang = "en") -> str:
     key = topic.strip().lower()
     if key not in constants.TOPICS:
-        raise InvalidInput(f"nwt_stats: topic must be one of {list(constants.TOPICS)}.")
+        raise_localized(
+            InvalidInput,
+            f"nwt_stats: topic must be one of {list(constants.TOPICS)}.",
+            f"nwt_stats : topic doit être l'un de {list(constants.TOPICS)}.",
+            lang,
+        )
     return key
 
 
@@ -287,7 +311,13 @@ def _file_list(
     page = files[offset : offset + limit]
     more = offset + limit < total
     if more or offset:
-        notes.append(f"showing files {offset + 1} to {offset + len(page)} of {total}")
+        notes.append(
+            pick(
+                lang,
+                f"showing files {offset + 1} to {offset + len(page)} of {total}",
+                f"fichiers {offset + 1} à {offset + len(page)} sur {total}",
+            )
+        )
     return FileList(
         topics=_topics(lang),
         files=page,
@@ -299,8 +329,13 @@ def _file_list(
             url=url,
             cached=cached,
             schema_name="nwt_stats.FileList",
-            freshness="Pages cached up to 6 hours; the Bureau updates tables monthly, "
-            "quarterly or yearly as each release comes out.",
+            freshness=pick(
+                lang,
+                "Pages cached up to 6 hours; the Bureau updates tables monthly, "
+                "quarterly or yearly as each release comes out.",
+                "Pages en cache jusqu'à 6 heures ; le Bureau met ses tableaux à jour chaque "
+                "mois, chaque trimestre ou chaque année, au fil des diffusions.",
+            ),
             coverage=coverage,
             limits="; ".join(notes) or None,
             licence=constants.LICENCE[lang],
@@ -315,9 +350,14 @@ async def list_files(
     offset: int = 0,
     lang: Lang = "en",
 ) -> FileList:
-    _check_limit(limit)
+    _check_limit(limit, lang)
     if offset < 0:
-        raise InvalidInput("nwt_stats: offset must be 0 or more.")
+        raise_localized(
+            InvalidInput,
+            "nwt_stats: offset must be 0 or more.",
+            "nwt_stats : offset doit être égal ou supérieur à 0.",
+            lang,
+        )
     if topic is None:
         return _file_list(
             [],
@@ -326,12 +366,17 @@ async def list_files(
             True,
             lang,
             constants.SITE + "/",
-            f"{len(constants.TOPICS)} topics; name one as `topic` to list its Excel files, "
-            "or search every topic with nwt_stats_search_files.",
+            pick(
+                lang,
+                f"{len(constants.TOPICS)} topics; name one as `topic` to list its Excel files, "
+                "or search every topic with nwt_stats_search_files.",
+                f"{len(constants.TOPICS)} sujets; nommez-en un dans `topic` pour lister ses "
+                "fichiers Excel, ou cherchez dans tous les sujets avec nwt_stats_search_files.",
+            ),
             [],
         )
-    key = _check_topic(topic)
-    files, cached = await _topic_files(key)
+    key = _check_topic(topic, lang)
+    files, cached = await _topic_files(key, lang)
     return _file_list(
         files,
         limit,
@@ -339,8 +384,13 @@ async def list_files(
         cached,
         lang,
         topic_url(key),
-        f"Excel files linked from the {topic_title(key, 'en')} page "
-        "(PDF releases on the page are not listed).",
+        pick(
+            lang,
+            f"Excel files linked from the {topic_title(key, 'en')} page "
+            "(PDF releases on the page are not listed).",
+            f"Fichiers Excel liés depuis la page « {topic_title(key, 'fr')} » (les diffusions "
+            "en PDF de la page ne sont pas listées). Titres des fichiers en anglais seulement.",
+        ),
         [],
     )
 
@@ -351,12 +401,17 @@ async def search_files(
     limit: int = constants.FILES_LIMIT_DEFAULT,
     lang: Lang = "en",
 ) -> FileList:
-    _check_limit(limit)
+    _check_limit(limit, lang)
     words = _fold(query).split()
     if not words:
-        raise InvalidInput("nwt_stats: query must have at least one word.")
-    chosen = [_check_topic(topic)] if topic else list(constants.TOPICS)
-    loaded = await asyncio.gather(*(_topic_files(t) for t in chosen), return_exceptions=True)
+        raise_localized(
+            InvalidInput,
+            "nwt_stats: query must have at least one word.",
+            "nwt_stats : query doit contenir au moins un mot.",
+            lang,
+        )
+    chosen = [_check_topic(topic, lang)] if topic else list(constants.TOPICS)
+    loaded = await asyncio.gather(*(_topic_files(t, lang) for t in chosen), return_exceptions=True)
     files: list[FileEntry] = []
     failed: list[str] = []
     cached = True
@@ -391,7 +446,17 @@ async def search_files(
         if key not in seen and all(w in haystack for w in words):
             seen.add(key)
             matches.append(entry)
-    notes = [f"pages that did not answer and were skipped: {failed}"] if failed else []
+    notes = (
+        [
+            pick(
+                lang,
+                f"pages that did not answer and were skipped: {failed}",
+                f"pages sans réponse, ignorées : {failed}",
+            )
+        ]
+        if failed
+        else []
+    )
     return _file_list(
         matches,
         limit,
@@ -399,8 +464,14 @@ async def search_files(
         cached,
         lang,
         topic_url(chosen[0]) if topic else constants.SITE + "/",
-        "Excel files whose title, surrounding text, heading, topic or file name contains "
-        f"every word of {query!r}, across {len(chosen)} topic page(s).",
+        pick(
+            lang,
+            "Excel files whose title, surrounding text, heading, topic or file name contains "
+            f"every word of {query!r}, across {len(chosen)} topic page(s).",
+            "Fichiers Excel dont le titre, le texte voisin, l'intertitre, le sujet ou le nom "
+            f"de fichier contient chacun des mots de {query!r}, sur {len(chosen)} page(s) "
+            "thématique(s). Titres des fichiers en anglais seulement.",
+        ),
         notes,
     )
 
@@ -424,15 +495,37 @@ async def _download(url: str) -> tuple[file_download.Downloaded, bool]:
     )
 
 
-def _validate(limit: int, offset: int, header_row: int | None, header_rows: int) -> None:
+def _validate(
+    limit: int, offset: int, header_row: int | None, header_rows: int, lang: Lang = "en"
+) -> None:
     if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
-        raise InvalidInput(f"nwt_stats: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+        raise_localized(
+            InvalidInput,
+            f"nwt_stats: limit must be 1 to {constants.ROWS_LIMIT_MAX}.",
+            f"nwt_stats : limit doit être entre 1 et {constants.ROWS_LIMIT_MAX}.",
+            lang,
+        )
     if offset < 0:
-        raise InvalidInput("nwt_stats: offset must be 0 or more.")
+        raise_localized(
+            InvalidInput,
+            "nwt_stats: offset must be 0 or more.",
+            "nwt_stats : offset doit être égal ou supérieur à 0.",
+            lang,
+        )
     if header_row is not None and header_row < 1:
-        raise InvalidInput("nwt_stats: header_row is 1-based (1 or more).")
+        raise_localized(
+            InvalidInput,
+            "nwt_stats: header_row is 1-based (1 or more).",
+            "nwt_stats : header_row commence à 1 (1 ou plus).",
+            lang,
+        )
     if not 1 <= header_rows <= 5:
-        raise InvalidInput("nwt_stats: header_rows must be 1 to 5.")
+        raise_localized(
+            InvalidInput,
+            "nwt_stats: header_rows must be 1 to 5.",
+            "nwt_stats : header_rows doit être entre 1 et 5.",
+            lang,
+        )
 
 
 async def read_file(
@@ -447,21 +540,35 @@ async def read_file(
     offset: int = 0,
     lang: Lang = "en",
 ) -> FileRows:
-    _validate(limit, offset, header_row, header_rows)
-    url = normalize_url(url)
+    _validate(limit, offset, header_row, header_rows, lang)
+    url = normalize_url(url, lang)
     if not _is_excel(url):
-        raise InvalidInput(
-            f"nwt_stats: url must be an .xlsx or .xls link (see nwt_stats_list_files); got {url!r}."
+        raise_localized(
+            InvalidInput,
+            f"nwt_stats: url must be an .xlsx or .xls link (see nwt_stats_list_files); got {url!r}.",
+            "nwt_stats : url doit être un lien vers un fichier .xlsx ou .xls (voir "
+            f"nwt_stats_list_files) ; reçu {url!r}.",
+            lang,
         )
     downloaded, cached = await _download(url)
     body = downloaded.body
     try:
         fmt = tables.detect_format(body, None)
     except UpstreamError as exc:
-        raise UpstreamError(f"nwt_stats: {url}: {exc}") from exc
+        raise_localized(
+            UpstreamError,
+            f"nwt_stats: {url}: {exc}",
+            f"nwt_stats : {url} n'est pas un classeur Excel lisible ({exc})",
+            lang,
+        )
     sizes = await run_parse(tables.sheet_sizes, body, fmt)
     if not sizes:
-        raise UpstreamError(f"nwt_stats: {url} has no sheets.")
+        raise_localized(
+            UpstreamError,
+            f"nwt_stats: {url} has no sheets.",
+            f"nwt_stats : {url} ne contient aucune feuille.",
+            lang,
+        )
     chosen, how = tables.choose_sheet(sizes, sheet, fmt, "nwt_stats")
     sheet_sizes = [SheetSize(name=n, rows=r, columns=c) for n, r, c in sizes]
 
@@ -471,7 +578,12 @@ async def read_file(
             url=url,
             cached=cached,
             schema_name="nwt_stats.FileRows",
-            freshness="As published by the NWT Bureau of Statistics; files cached up to 6 hours.",
+            freshness=pick(
+                lang,
+                "As published by the NWT Bureau of Statistics; files cached up to 6 hours.",
+                "Tel que publié par le Bureau de la statistique des Territoires du Nord-Ouest ; "
+                "fichiers en cache jusqu'à 6 heures.",
+            ),
             coverage=coverage,
             limits="; ".join(limits) or None,
             licence=constants.LICENCE[lang],
@@ -496,13 +608,21 @@ async def read_file(
             licence=constants.LICENCE[lang],
             provenance=provenance(
                 [
-                    (
+                    pick(
+                        lang,
                         f"the workbook has {len(sizes)} sheets of similar size and none was "
                         "requested, so no rows were read: pick one from `sheets` and pass it "
-                        "as `sheet`"
+                        "as `sheet`",
+                        f"le classeur compte {len(sizes)} feuilles de taille semblable et aucune "
+                        "n'a été demandée, donc aucune ligne n'a été lue : choisissez-en une "
+                        "dans `sheets` et passez-la dans `sheet`",
                     )
                 ],
-                f"Sheet list of a {len(sizes)}-sheet workbook.",
+                pick(
+                    lang,
+                    f"Sheet list of a {len(sizes)}-sheet workbook.",
+                    f"Liste des feuilles d'un classeur de {len(sizes)} feuilles.",
+                ),
             ),
         )
 
@@ -525,14 +645,29 @@ async def read_file(
     notes: list[str] = []
     if how == "largest":
         notes.append(
-            f"the workbook has {len(sizes)} sheets and none was requested, so the largest "
-            f"({chosen!r}) was read; pass sheet= for another"
+            pick(
+                lang,
+                f"the workbook has {len(sizes)} sheets and none was requested, so the largest "
+                f"({chosen!r}) was read; pass sheet= for another",
+                f"le classeur compte {len(sizes)} feuilles et aucune n'a été demandée, donc la "
+                f"plus grande ({chosen!r}) a été lue ; passez sheet= pour une autre",
+            )
         )
     if result.capped:
-        notes.append(f"the sheet was scanned only up to {tables.MAX_SCAN_ROWS} rows")
+        notes.append(
+            pick(
+                lang,
+                f"the sheet was scanned only up to {tables.MAX_SCAN_ROWS} rows",
+                f"la feuille n'a été parcourue que jusqu'à {tables.MAX_SCAN_ROWS} lignes",
+            )
+        )
     if more:
         notes.append(
-            f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}"
+            pick(
+                lang,
+                f"showing rows {offset + 1} to {offset + len(result.rows)} of {result.total_rows}",
+                f"lignes {offset + 1} à {offset + len(result.rows)} sur {result.total_rows}",
+            )
         )
     return FileRows(
         url=url,
@@ -551,7 +686,13 @@ async def read_file(
         licence=constants.LICENCE[lang],
         provenance=provenance(
             notes,
-            f"Sheet {chosen!r} of {len(sizes)}, layout as published (title rows, years "
-            "across columns, footnotes at the bottom).",
+            pick(
+                lang,
+                f"Sheet {chosen!r} of {len(sizes)}, layout as published (title rows, years "
+                "across columns, footnotes at the bottom).",
+                f"Feuille {chosen!r} sur {len(sizes)}, mise en page telle que publiée (lignes "
+                "de titre, années en colonnes, notes en bas). Contenu des feuilles en anglais "
+                "seulement.",
+            ),
         ),
     )

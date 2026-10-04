@@ -47,6 +47,44 @@ async def test_members_filter_by_province_and_party_accent_insensitive(httpx_moc
     assert (await client.list_members(name="ziad aboultaif")).total_members == 1
 
 
+async def test_members_filters_accept_english_names_on_the_french_feed(httpx_mock):
+    # members_fr.xml keeps 12 entries of the live French feed (2026-10-03):
+    # 5 "NPD", 1 "Parti vert", 6 in "Colombie-Britannique". Before, party="NDP"
+    # with lang="fr" matched 0.
+    httpx_mock.add_response(
+        url=constants.MEMBERS_URL.format(lang="fr"),
+        content=_bytes("members_fr.xml"),
+        is_reusable=True,
+    )
+    ndp = await client.list_members(party="NDP", lang="fr")
+    assert ndp.total_members == 5 and {m.party for m in ndp.members} == {"NPD"}
+    assert (await client.list_members(party="New Democratic Party", lang="fr")).total_members == 5
+    green = await client.list_members(party="Green Party", lang="fr")
+    assert [m.party for m in green.members] == ["Parti vert"]
+    bc = await client.list_members(province="British Columbia", lang="fr")
+    assert bc.total_members == 6 and {m.province for m in bc.members} == {"Colombie-Britannique"}
+    assert (await client.list_members(province="bc", party="ndp", lang="fr")).total_members == 3
+    assert (await client.list_members(party="Liberal", lang="fr")).total_members == 2
+
+
+async def test_members_filters_accept_french_names_on_the_english_feed(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.MEMBERS_URL.format(lang="en"),
+        content=_bytes("members_en.xml"),
+        is_reusable=True,
+    )
+    everyone = await client.list_members(limit=100)
+    conservatives = await client.list_members(party="Conservateur")
+    assert conservatives.total_members == sum(m.party == "Conservative" for m in everyone.members)
+    assert conservatives.total_members >= 1
+    alberta = await client.list_members(province="AB")
+    assert alberta.total_members == sum(m.province == "Alberta" for m in everyone.members)
+    # A plain substring still narrows as before ("Party" is only "Green Party").
+    assert (await client.list_members(party="Party")).total_members == sum(
+        m.party == "Green Party" for m in everyone.members
+    )
+
+
 async def test_members_limit_truncates(httpx_mock):
     httpx_mock.add_response(
         url=constants.MEMBERS_URL.format(lang="en"), content=_bytes("members_en.xml")
@@ -120,6 +158,19 @@ async def test_party_standings_in_french(httpx_mock):
     )
     standings = await client.get_party_standings(lang="fr")
     assert "Libéral" in {t.party for t in standings.by_party}
+    assert standings.provenance.freshness == "Répartition actuelle des députés en fonction."
+    assert (standings.provenance.licence or "").startswith("Autorisation du Président")
+
+
+async def test_french_errors(httpx_mock):
+    url = constants.ROLES_URL.format(lang="fr", person_id=2500)
+    httpx_mock.add_response(url=url, status_code=302, headers={"location": "/error"})
+    with pytest.raises(NotFound, match=r"^Aucune correspondance trouvée\xa0: ourcommons\xa0: "):
+        await client.get_member_roles(2500, lang="fr")
+    with pytest.raises(InvalidInput, match="person_id doit être un entier positif"):
+        await client.get_member_roles(0, lang="fr")
+    with pytest.raises(InvalidInput, match=r"^ourcommons: person_id must be a positive integer\.$"):
+        await client.get_member_roles(0)
 
 
 async def test_ministry_in_precedence_order(httpx_mock):

@@ -165,3 +165,32 @@ def test_to_bool_handles_real_bools_and_ckan_string_booleans():
     assert to_bool("false") is False
     assert to_bool("False") is False
     assert to_bool(None) is False
+
+
+async def test_action_errors_in_french(httpx_mock):
+    httpx_mock.add_response(
+        url="https://example.invalid/api/3/action/package_search?sort=bogus",
+        status_code=409,
+        json={"success": False, "error": {"__type": "Search Error", "message": "bad sort"}},
+    )
+    with pytest.raises(InvalidInput) as exc:
+        await action(_CONFIG, "package_search", params={"sort": "bogus"}, lang="fr")
+    assert str(exc.value) == (
+        "Entrée invalide : le portail a refusé la requête ckan-test:package_search (bad sort)."
+    )
+
+
+async def test_action_timeout_in_french(httpx_mock):
+    httpx_mock.add_exception(httpx.ReadTimeout("slow"), is_reusable=True)
+    with pytest.raises(UpstreamUnavailable, match="temporairement inaccessible") as exc:
+        await action(_CONFIG, "site_read", lang="fr")
+    assert "n'a pas répondu à temps" in str(exc.value)
+
+
+async def test_action_unsuccessful_envelope_in_french(httpx_mock):
+    httpx_mock.add_response(
+        url="https://example.invalid/api/3/action/site_read",
+        json={"success": False, "error": {"message": "boom"}},
+    )
+    with pytest.raises(UpstreamError, match="enveloppe CKAN en échec"):
+        await action(_CONFIG, "site_read", lang="fr")

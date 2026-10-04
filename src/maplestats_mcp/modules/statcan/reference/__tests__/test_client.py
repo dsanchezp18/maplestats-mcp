@@ -118,6 +118,15 @@ async def test_search_documents_invalid_page_raises():
         await client.search_documents("housing", page=-1)
 
 
+async def test_invalid_arguments_are_explained_in_french():
+    with pytest.raises(InvalidInput, match="page doit être >= 0, reçu -1"):
+        await client.search_documents("logement", page=-1, lang="fr")
+    with pytest.raises(InvalidInput, match="count doit être entre 1 et"):
+        await client.search_analysis("logement", count=0, lang="fr")
+    with pytest.raises(InvalidInput, match="page must be >= 0, got -1"):
+        await client.search_documents("housing", page=-1)
+
+
 async def test_search_documents_missing_results_container_raises(httpx_mock):
     httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")
     httpx_mock.add_response(

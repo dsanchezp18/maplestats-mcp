@@ -414,3 +414,55 @@ def test_resolve_prefers_the_exact_header():
     assert client._first_present(columns, ("Indicator",)) == "Indicator"
     assert client._first_present(columns, ("cycle", "Indicator")) == "Cycle"
     assert client._first_present(columns, ("nope",)) is None
+
+
+_MEASLES_CSV = "pruid,pt_name,num_new_cases,num_cases,last_onset_epi_week\n48,Alberta,0,311,22\n"
+
+
+async def test_french_provenance_notes_and_errors(httpx_mock):
+    entry = BY_ID["measles_cases_by_province"]
+    assert entry.url_fr is None
+    httpx_mock.add_response(url=_url(entry.url_en), text=_MEASLES_CSV)
+    result = await client.query("measles_cases_by_province", lang="fr")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("nombre de lignes plafonné à")
+    assert "proviennent du fichier anglais" in limits and "données\xa0:" in limits
+    assert (result.provenance.coverage or "").startswith("1 des 1 lignes correspondantes")
+    assert "Licence du gouvernement ouvert – Canada" in (result.provenance.licence or "")
+    described = await client.describe_dataset("measles_cases_by_province", lang="fr")
+    assert "fichier anglais" in (described.provenance.limits or "")
+    with pytest.raises(InvalidInput, match=r"Entrée invalide\xa0: colonne inconnue"):
+        await client.query("measles_cases_by_province", filters={"x": "y"}, lang="fr")
+    with pytest.raises(InvalidInput, match="pas de colonne de date"):
+        await client.query("measles_cases_by_province", start="2024", lang="fr")
+    with pytest.raises(NotFound, match="Infobase santé"):
+        await client.query("no_such_dataset", lang="fr")
+    with pytest.raises(InvalidInput, match="AAAA-MM-JJ"):
+        await client.query("rvdss_weekly_detections", start="last week", lang="fr")
+    listed = client.list_datasets(lang="fr")
+    assert "fichiers retenus de l'Infobase santé\xa0;" in (listed.provenance.coverage or "")
+    with pytest.raises(InvalidInput, match="thème inconnu"):
+        client.list_datasets(topic="nutrition", lang="fr")
+
+
+async def test_french_upstream_errors(httpx_mock):
+    url = _url(BY_ID["fluwatch_outbreaks"].url_en)
+    httpx_mock.add_response(url=url, status_code=503, is_reusable=True)
+    with pytest.raises(UpstreamError, match=r"phac_infobase\xa0: .* a répondu HTTP 503"):
+        await client.describe_dataset("fluwatch_outbreaks", lang="fr")
+
+
+async def test_english_messages_are_unchanged(httpx_mock):
+    entry = BY_ID["measles_cases_by_province"]
+    httpx_mock.add_response(url=_url(entry.url_en), text=_MEASLES_CSV)
+    result = await client.query("measles_cases_by_province")
+    assert result.provenance.limits == f"rows capped at {constants.ROWS_DEFAULT}"
+    assert result.provenance.coverage == "1 of 1 matching rows"
+    assert (result.provenance.licence or "").startswith("Open Government Licence")
+    with pytest.raises(InvalidInput) as info:
+        await client.query("measles_cases_by_province", start="2024")
+    assert str(info.value) == "measles_cases_by_province has no date column; use filters instead."
+    assert client.list_datasets().provenance.coverage == (
+        f"{len(DATASETS)} of {len(DATASETS)} curated Health Infobase files; dashboards "
+        "without downloadable files (CCDSS, current CCDI) are not listed"
+    )

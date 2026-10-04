@@ -34,6 +34,7 @@ from maplestats_mcp.modules.statcan.cimt.schemas import (
     TradeResult,
     TradeRow,
 )
+from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -53,6 +54,15 @@ _CAVEAT = (
     "its methods and code lists may change without notice."
 )
 _UNIT_NOTE = "Values are Canadian dollars at current prices; quantities use the commodity's unit."
+_CAVEAT_FR = (
+    "API non documentée d'une application Web de Statistique Canada (trouvée dans le "
+    "JavaScript de la page du CICM) ; ses méthodes et ses listes de codes peuvent changer sans "
+    "préavis."
+)
+_UNIT_NOTE_FR = (
+    "Les valeurs sont en dollars canadiens courants ; les quantités sont dans l'unité de la "
+    "marchandise."
+)
 
 _PERIOD = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])(?:-01)?$")
 _DIGITS = re.compile(r"^\d+$")
@@ -82,13 +92,23 @@ def _validate_lang(lang: str) -> str:
 
 def _validate_direction(direction: str) -> str:
     if direction not in constants.TRADE_TYPE:
-        raise InvalidInput(f"direction must be 'exports' or 'imports', got {direction!r}.")
+        raise InvalidInput(
+            say(
+                f"direction must be 'exports' or 'imports', got {direction!r}.",
+                f"direction doit être « exports » ou « imports », reçu {direction!r}.",
+            )
+        )
     return direction
 
 
 def _validate_limit(limit: int, maximum: int) -> int:
     if limit < 1 or limit > maximum:
-        raise InvalidInput(f"limit must be between 1 and {maximum}, got {limit}.")
+        raise InvalidInput(
+            say(
+                f"limit must be between 1 and {maximum}, got {limit}.",
+                f"limit doit être entre 1 et {maximum}, reçu {limit}.",
+            )
+        )
     return limit
 
 
@@ -97,7 +117,10 @@ def _parse_period(value: str, name: str) -> str:
     match = _PERIOD.match(value.strip())
     if not match:
         raise InvalidInput(
-            f"{name} must be a month as YYYY-MM (for example 2026-07), got {value!r}."
+            say(
+                f"{name} must be a month as YYYY-MM (for example 2026-07), got {value!r}.",
+                f"{name} doit être un mois au format AAAA-MM (par exemple 2026-07), reçu {value!r}.",
+            )
         )
     return f"{match.group(1)}-{match.group(2)}-01"
 
@@ -107,13 +130,21 @@ def _clean_hs(value: str, *, allow_empty: bool = True) -> str:
     if not code:
         if allow_empty:
             return ""
-        raise InvalidInput("hs_code is required.")
+        raise InvalidInput(say("hs_code is required.", "hs_code est obligatoire."))
     if not _DIGITS.match(code):
-        raise InvalidInput(f"hs_code must be digits only, got {value!r}.")
+        raise InvalidInput(
+            say(
+                f"hs_code must be digits only, got {value!r}.",
+                f"hs_code ne doit contenir que des chiffres, reçu {value!r}.",
+            )
+        )
     # A one-digit code or an odd length is a 406 upstream (confirmed live).
     if len(code) not in (2, 4, 6, 8, 10):
         raise InvalidInput(
-            f"hs_code must have 2 (chapter), 4 (heading), 6, 8 or 10 digits, got {len(code)}."
+            say(
+                f"hs_code must have 2 (chapter), 4 (heading), 6, 8 or 10 digits, got {len(code)}.",
+                f"hs_code doit avoir 2 (chapitre), 4 (position), 6, 8 ou 10 chiffres, reçu {len(code)}.",
+            )
         )
     return code
 
@@ -125,7 +156,12 @@ def _clean_chapter(value: str) -> str:
     if chapter.isdigit() and len(chapter) == 1:
         chapter = f"0{chapter}"
     if not re.match(r"^\d{2}$", chapter):
-        raise InvalidInput(f"hs_chapter must be a 2-digit HS chapter such as '27', got {value!r}.")
+        raise InvalidInput(
+            say(
+                f"hs_chapter must be a 2-digit HS chapter such as '27', got {value!r}.",
+                f"hs_chapter doit être un chapitre SH à 2 chiffres comme « 27 », reçu {value!r}.",
+            )
+        )
     return chapter
 
 
@@ -157,16 +193,24 @@ def _map_http_error(context: str, exc: httpx.HTTPStatusError) -> Exception:
     status = exc.response.status_code
     if status == 406:
         return InvalidInput(
-            f"{context}: the CIMT service rejected the parameters (HTTP 406). "
-            "Check the HS code length and the partner and province codes."
+            say(
+                f"{context}: the CIMT service rejected the parameters (HTTP 406). "
+                "Check the HS code length and the partner and province codes.",
+                f"{context} : le service du CICM a rejeté les paramètres (HTTP 406). Vérifiez la longueur du code SH et les codes de partenaire et de province.",
+            )
         )
     if status == 404:
         return UpstreamError(
-            f"{context}: HTTP 404. The CIMT service answers 404 when it no longer accepts "
-            "the application's Referer header or has moved; the API is undocumented and "
-            "may have changed."
+            say(
+                f"{context}: HTTP 404. The CIMT service answers 404 when it no longer accepts "
+                "the application's Referer header or has moved; the API is undocumented and "
+                "may have changed.",
+                f"{context} : HTTP 404. Le service du CICM répond 404 quand il n'accepte plus l'en-tête Referer de l'application ou qu'il a été déplacé ; cette API n'est pas documentée et peut avoir changé.",
+            )
         )
-    return UpstreamError(f"{context} returned HTTP {status}.")
+    return UpstreamError(
+        say(f"{context} returned HTTP {status}.", f"{context} a renvoyé HTTP {status}.")
+    )
 
 
 async def _get_json(context: str, url: str, referer: str) -> Any:
@@ -177,8 +221,11 @@ async def _get_json(context: str, url: str, referer: str) -> Any:
         raise _map_http_error(context, exc) from exc
     except httpx.HTTPError as exc:
         raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). "
-            "Try again shortly."
+            say(
+                f"{context} did not respond in time (already retried by shared/http.py). "
+                "Try again shortly.",
+                f"{context} n'a pas répondu à temps (nouvelles tentatives déjà faites). Réessayez sous peu.",
+            )
         ) from exc
 
 
@@ -208,9 +255,10 @@ def _provenance(
         cached=cached,
         schema_name=f"statcan_cimt.{schema}",
         as_of=datetime.fromisoformat(latest).replace(tzinfo=UTC) if latest else None,
-        freshness="monthly, 1988-01 onward",
-        coverage=f"{_CAVEAT} {_UNIT_NOTE}",
+        freshness=say("monthly, 1988-01 onward", "mensuel, depuis 1988-01"),
+        coverage=say(f"{_CAVEAT} {_UNIT_NOTE}", f"{_CAVEAT_FR} {_UNIT_NOTE_FR}"),
         limits=limits,
+        lang=current_lang(),
     )
 
 
@@ -221,7 +269,12 @@ async def get_periods() -> CimtPeriods:
     try:
         first, latest = str(body["start"]), str(body["current"])
     except (KeyError, TypeError) as exc:
-        raise UpstreamError("getPeriods did not return start and current months.") from exc
+        raise UpstreamError(
+            say(
+                "getPeriods did not return start and current months.",
+                "getPeriods n'a pas renvoyé les mois de début et le mois courant.",
+            )
+        ) from exc
     return CimtPeriods(
         first_period=first[:7],
         latest_period=latest[:7],
@@ -240,7 +293,10 @@ async def _check_in_range(*periods: tuple[str, str]) -> None:
     for name, value in periods:
         if value < first or value > latest:
             raise InvalidInput(
-                f"{name} {value[:7]} is outside the published range {first[:7]} to {latest[:7]}."
+                say(
+                    f"{name} {value[:7]} is outside the published range {first[:7]} to {latest[:7]}.",
+                    f"{name} {value[:7]} est hors de la période publiée, de {first[:7]} à {latest[:7]}.",
+                )
             )
 
 
@@ -275,15 +331,26 @@ async def _fetch_list(name: str) -> list[dict[str, str | int]]:
         response = await get_raw(url, timeout=constants.CODES_TIMEOUT_SECONDS)
     except httpx.HTTPStatusError as exc:
         raise UpstreamError(
-            f"statcan_cimt: code list {name}.js returned HTTP {exc.response.status_code}."
+            say(
+                f"statcan_cimt: code list {name}.js returned HTTP {exc.response.status_code}.",
+                f"statcan_cimt : la liste de codes {name}.js a renvoyé HTTP {exc.response.status_code}.",
+            )
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"statcan_cimt: code list {name}.js did not respond.") from exc
+        raise UpstreamUnavailable(
+            say(
+                f"statcan_cimt: code list {name}.js did not respond.",
+                f"statcan_cimt : la liste de codes {name}.js n'a pas répondu.",
+            )
+        ) from exc
     # The files start with a byte-order mark.
     objects = _parse_objects(response.content.decode("utf-8-sig"))
     if not objects:
         raise UpstreamError(
-            f"statcan_cimt: code list {name}.js held no entries; the format may have changed."
+            say(
+                f"statcan_cimt: code list {name}.js held no entries; the format may have changed.",
+                f"statcan_cimt : la liste de codes {name}.js ne contenait aucune entrée ; son format a peut-être changé.",
+            )
         )
     return objects
 
@@ -414,9 +481,19 @@ def _pick(
         return partial[0]
     options = exact or partial
     if not options:
-        raise NotFound(f"No {kind} matches {value!r}. Search with cimt_search_partners.")
+        raise NotFound(
+            say(
+                f"No {kind} matches {value!r}. Search with cimt_search_partners.",
+                f"Aucun {kind} ne correspond à {value!r}. Cherchez avec cimt_search_partners.",
+            )
+        )
     shown = ", ".join(f"{names[c]} ({c})" for c in options[:6])
-    raise InvalidInput(f"{kind} {value!r} is ambiguous: {shown}. Pass the numeric code.")
+    raise InvalidInput(
+        say(
+            f"{kind} {value!r} is ambiguous: {shown}. Pass the numeric code.",
+            f"{kind} {value!r} est ambigu : {shown}. Passez le code numérique.",
+        )
+    )
 
 
 async def _resolve_country(partner: str, lang: str) -> tuple[int, str]:
@@ -467,7 +544,12 @@ async def _resolve_partner_pair(
         if not partner.strip():
             country_id, country_name = await _resolve_country("US", lang)
         if country_id != constants.US_ID:
-            raise InvalidInput("us_state can only be used with the United States as partner.")
+            raise InvalidInput(
+                say(
+                    "us_state can only be used with the United States as partner.",
+                    "us_state ne s'utilise qu'avec les États-Unis comme partenaire.",
+                )
+            )
     return country_id, country_name, state_id, state_name
 
 
@@ -489,11 +571,17 @@ async def search_commodities(
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
 ) -> CommoditySearchResult:
     """Search HS commodity codes by code prefix or by words in either language."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     _validate_limit(limit, constants.SEARCH_LIMIT_MAX)
     if level not in ("chapter", "heading", "hs6", "national"):
-        raise InvalidInput(f"level must be chapter, heading, hs6 or national, got {level!r}.")
+        raise InvalidInput(
+            say(
+                f"level must be chapter, heading, hs6 or national, got {level!r}.",
+                f"level doit être chapter, heading, hs6 ou national, reçu {level!r}.",
+            )
+        )
 
     entries = await _commodities(level, direction)
     units = await _unit_labels(lang)
@@ -531,7 +619,10 @@ async def search_commodities(
             "CommoditySearchResult",
             f"{constants.CODES_BASE_URL}/{'exp' if direction == 'exports' else 'imp'}-eng.htm",
             cached=True,
-            limits=f"Showing up to {limit} of {len(found)} matching codes.",
+            limits=say(
+                f"Showing up to {limit} of {len(found)} matching codes.",
+                f"Jusqu'à {limit} des {len(found)} codes correspondants affichés.",
+            ),
         ),
     )
 
@@ -544,10 +635,16 @@ async def search_partners(
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
 ) -> PartnerSearchResult:
     """Search trading-partner countries, US states or Canadian provinces by name or code."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     _validate_limit(limit, constants.SEARCH_LIMIT_MAX)
     if kind not in ("country", "us_state", "province"):
-        raise InvalidInput(f"kind must be country, us_state or province, got {kind!r}.")
+        raise InvalidInput(
+            say(
+                f"kind must be country, us_state or province, got {kind!r}.",
+                f"kind doit être country, us_state ou province, reçu {kind!r}.",
+            )
+        )
 
     rows: list[PartnerMatch] = []
     if kind == "country":
@@ -601,7 +698,10 @@ async def search_partners(
             "PartnerSearchResult",
             f"{constants.CODES_BASE_URL}/countriesF.js",
             cached=True,
-            limits=f"Showing up to {limit} of {len(found)} matches.",
+            limits=say(
+                f"Showing up to {limit} of {len(found)} matches.",
+                f"Jusqu'à {limit} des {len(found)} correspondances affichées.",
+            ),
         ),
     )
 
@@ -613,15 +713,23 @@ async def search_partners(
 
 def _check_hs_for_level(hs_code: str, hs_level: str, direction: str) -> None:
     if hs_level not in ("hs6", "national"):
-        raise InvalidInput(f"hs_level must be 'hs6' or 'national', got {hs_level!r}.")
+        raise InvalidInput(
+            say(
+                f"hs_level must be 'hs6' or 'national', got {hs_level!r}.",
+                f"hs_level doit être « hs6 » ou « national », reçu {hs_level!r}.",
+            )
+        )
     # The service matches a code by prefix only at the level the flag selects;
     # a longer code returns no rows (confirmed live), so say so up front.
     longest = 6 if hs_level == "hs6" else (8 if direction == "exports" else 10)
     if len(hs_code) > longest:
         hint = "pass hs_level='national'" if hs_level == "hs6" else "use a shorter code"
         raise InvalidInput(
-            f"A {len(hs_code)}-digit code does not match at hs_level={hs_level!r} for "
-            f"{direction}: {hint}."
+            say(
+                f"A {len(hs_code)}-digit code does not match at hs_level={hs_level!r} for "
+                f"{direction}: {hint}.",
+                f"Un code à {len(hs_code)} chiffres ne correspond pas à hs_level={hs_level!r} pour {direction} : {hint}.",
+            )
         )
 
 
@@ -644,6 +752,7 @@ async def get_trade(
     lang: str = "en",
 ) -> TradeResult:
     """Merchandise trade rows by month (or calendar year), commodity, partner and province."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     _validate_limit(limit, constants.ROWS_MAX)
@@ -652,7 +761,12 @@ async def get_trade(
     start = _parse_period(from_period, "from_period")
     end = _parse_period(to_period, "to_period")
     if start > end:
-        raise InvalidInput(f"from_period {start[:7]} is after to_period {end[:7]}.")
+        raise InvalidInput(
+            say(
+                f"from_period {start[:7]} is after to_period {end[:7]}.",
+                f"from_period {start[:7]} est après to_period {end[:7]}.",
+            )
+        )
     await _check_in_range(("from_period", start), ("to_period", end))
 
     country_id, _, state_id, _ = await _resolve_partner_pair(partner, us_state, lang)
@@ -732,10 +846,18 @@ async def get_trade(
             cached=was_cached,
             latest=end,
             limits=(
-                f"Row limit {limit}; the query matches {total} rows, so the rows returned are "
-                "an arbitrary subset. Narrow the commodity, partner, province or period."
+                say(
+                    f"Row limit {limit}; the query matches {total} rows, so the rows returned are "
+                    "an arbitrary subset. Narrow the commodity, partner, province or period.",
+                    f"Limite de {limit} lignes ; la requête correspond à {total} lignes, donc les "
+                    "lignes renvoyées en sont un sous-ensemble arbitraire. Précisez la "
+                    "marchandise, le partenaire, la province ou la période.",
+                )
                 if truncated
-                else f"Row limit {limit}; not reached."
+                else say(
+                    f"Row limit {limit}; not reached.",
+                    f"Limite de {limit} lignes ; non atteinte.",
+                )
             ),
         ),
     )
@@ -773,10 +895,16 @@ async def get_top_partners(
     lang: str = "en",
 ) -> TopPartnersResult:
     """The 15 largest partners (countries, or US states) for one month."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     if view not in ("country", "us_state"):
-        raise InvalidInput(f"view must be 'country' or 'us_state', got {view!r}.")
+        raise InvalidInput(
+            say(
+                f"view must be 'country' or 'us_state', got {view!r}.",
+                f"view doit être « country » ou « us_state », reçu {view!r}.",
+            )
+        )
     chapter = _clean_chapter(hs_chapter)
     refper = await _resolve_period(period)
     province_id, province_name = await _resolve_province(province, lang)
@@ -814,7 +942,10 @@ async def get_top_partners(
             url,
             cached=was_cached,
             latest=refper,
-            limits="The service returns its 15 largest partners only.",
+            limits=say(
+                "The service returns its 15 largest partners only.",
+                "Le service ne renvoie que ses 15 plus grands partenaires.",
+            ),
         ),
     )
 
@@ -831,10 +962,16 @@ async def get_top_commodities(
     lang: str = "en",
 ) -> TopCommoditiesResult:
     """The largest commodities for one month, optionally within a chapter, partner or province."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     if hs_level not in ("hs6", "national"):
-        raise InvalidInput(f"hs_level must be 'hs6' or 'national', got {hs_level!r}.")
+        raise InvalidInput(
+            say(
+                f"hs_level must be 'hs6' or 'national', got {hs_level!r}.",
+                f"hs_level doit être « hs6 » ou « national », reçu {hs_level!r}.",
+            )
+        )
     chapter = _clean_chapter(hs_chapter)
     refper = await _resolve_period(period)
     province_id, province_name = await _resolve_province(province, lang)
@@ -876,7 +1013,10 @@ async def get_top_commodities(
             url,
             cached=was_cached,
             latest=refper,
-            limits="The service returns its largest commodities only (about 25).",
+            limits=say(
+                "The service returns its largest commodities only (about 25).",
+                "Le service ne renvoie que ses principales marchandises (environ 25).",
+            ),
         ),
     )
 
@@ -891,6 +1031,7 @@ async def get_province_breakdown(
     lang: str = "en",
 ) -> ProvinceBreakdownResult:
     """Trade by province for one month. Exports: province of origin. Imports: of clearance."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     chapter = _clean_chapter(hs_chapter)
@@ -930,7 +1071,11 @@ async def get_province_breakdown(
             url,
             cached=was_cached,
             latest=refper,
-            limits="Province values are exports domestic plus re-exports shipped from the province.",
+            limits=say(
+                "Province values are exports domestic plus re-exports shipped from the province.",
+                "Les valeurs provinciales sont les exportations de produits canadiens plus les "
+                "réexportations expédiées depuis la province.",
+            ),
         ),
     )
 
@@ -946,13 +1091,17 @@ async def get_series(
     lang: str = "en",
 ) -> SeriesResult:
     """A five-year monthly series ending at `period`, for a chapter or one commodity."""
+    use_lang(lang)
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     hs = _clean_hs(hs_code, allow_empty=False)
     if len(hs) == 4:
         raise InvalidInput(
-            "hs_code must be a 2-digit chapter or a 6-, 8- or 10-digit commodity; "
-            "the service has no 4-digit series."
+            say(
+                "hs_code must be a 2-digit chapter or a 6-, 8- or 10-digit commodity; "
+                "the service has no 4-digit series.",
+                "hs_code doit être un chapitre à 2 chiffres ou une marchandise à 6, 8 ou 10 chiffres ; le service n'a aucune série à 4 chiffres.",
+            )
         )
     refper = await _resolve_period(period)
     province_id, province_name = await _resolve_province(province, lang)
@@ -1014,10 +1163,17 @@ async def get_series(
             cached=was_cached,
             latest=refper,
             limits=(
-                "Five years of months ending at the requested period. Exports: total exports "
-                "are domestic_value plus reexport_value."
+                say(
+                    "Five years of months ending at the requested period. Exports: total exports "
+                    "are domestic_value plus reexport_value.",
+                    "Cinq ans de mois se terminant à la période demandée. Exportations : le total "
+                    "des exportations est domestic_value plus reexport_value.",
+                )
                 if direction == "exports" and method == "getCommodityChart"
-                else "Five years of months ending at the requested period."
+                else say(
+                    "Five years of months ending at the requested period.",
+                    "Cinq ans de mois se terminant à la période demandée.",
+                )
             ),
         ),
     )

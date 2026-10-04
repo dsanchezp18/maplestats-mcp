@@ -57,6 +57,7 @@ from maplestats_mcp.modules.statcan.delta.archive_schemas import (
     DeltaTableData,
     DeltaTableList,
 )
+from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
@@ -110,6 +111,11 @@ _BOM = chr(0xFEFF)
 _TAG = re.compile(r"<[^>]+>")
 _PAGE_FILE = re.compile(r"/delta/(\d{8})\.zip")
 _WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+_WEEKDAYS_FR = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+
+
+def _weekday(day: date_cls) -> str:
+    return say(_WEEKDAYS[day.weekday()], _WEEKDAYS_FR[day.weekday()])
 
 
 @dataclass(frozen=True)
@@ -128,7 +134,12 @@ def _parse_date(date: str) -> tuple[date_cls, str]:
     try:
         parsed = date_cls.fromisoformat(date)
     except ValueError as exc:
-        raise InvalidInput(f"Expected a YYYY-MM-DD date, got {date!r}.") from exc
+        raise InvalidInput(
+            say(
+                f"Expected a YYYY-MM-DD date, got {date!r}.",
+                f"Date attendue au format AAAA-MM-JJ, reçu {date!r}.",
+            )
+        ) from exc
     return parsed, ARCHIVE_URL.format(date=parsed.strftime("%Y%m%d"))
 
 
@@ -150,9 +161,14 @@ async def _head(url: str) -> httpx.Response:
     try:
         return await _head_once(url)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{url} returned HTTP {exc.response.status_code}.") from exc
+        status = exc.response.status_code
+        raise UpstreamError(
+            say(f"{url} returned HTTP {status}.", f"{url} a renvoyé HTTP {status}.")
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{url} could not be reached.") from exc
+        raise UpstreamUnavailable(
+            say(f"{url} could not be reached.", f"{url} est injoignable.")
+        ) from exc
 
 
 def _as_of(last_modified: str | None) -> datetime | None:
@@ -196,17 +212,23 @@ async def _fetch_archive(parsed: date_cls, url: str) -> Archive:
     except KeyError as exc:
         names = ", ".join(by_name) or "none"
         raise UpstreamError(
-            f"{url} does not hold the expected codeSet.xml, {stamp}.xml and {stamp}.csv "
-            f"(members: {names})."
+            say(
+                f"{url} does not hold the expected codeSet.xml, {stamp}.xml and {stamp}.csv "
+                f"(members: {names}).",
+                f"{url} ne contient pas les fichiers attendus codeSet.xml, {stamp}.xml et "
+                f"{stamp}.csv (membres : {names}).",
+            )
         ) from exc
 
 
 async def _missing_message(parsed: date_cls) -> str:
     """Why a date has no file: weekend, holiday, past retention or not yet published."""
     status = await _date_status(parsed, None)
-    return (
+    return say(
         f"No Delta File exists for {parsed.isoformat()}: {status}. "
-        "Use statcan_delta_list_files for the dates that are available."
+        "Use statcan_delta_list_files for the dates that are available.",
+        f"Aucun fichier delta n'existe pour le {parsed.isoformat()} : {status}. "
+        "Utilisez statcan_delta_list_files pour les dates disponibles.",
     )
 
 
@@ -214,12 +236,22 @@ async def _page_dates() -> list[str]:
     try:
         response = await get_raw(PAGE_URL)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(f"{PAGE_URL} returned HTTP {exc.response.status_code}.") from exc
+        status = exc.response.status_code
+        raise UpstreamError(
+            say(f"{PAGE_URL} returned HTTP {status}.", f"{PAGE_URL} a renvoyé HTTP {status}.")
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{PAGE_URL} could not be reached.") from exc
+        raise UpstreamUnavailable(
+            say(f"{PAGE_URL} could not be reached.", f"{PAGE_URL} est injoignable.")
+        ) from exc
     dates = sorted(set(_PAGE_FILE.findall(response.text)))
     if not dates:
-        raise UpstreamError(f"{PAGE_URL} lists no Delta File links; the page may have changed.")
+        raise UpstreamError(
+            say(
+                f"{PAGE_URL} lists no Delta File links; the page may have changed.",
+                f"{PAGE_URL} ne liste aucun lien de fichier delta ; la page a peut-être changé.",
+            )
+        )
     return dates
 
 
@@ -227,17 +259,29 @@ async def _date_status(parsed: date_cls, listed: list[str] | None) -> str:
     stamps = listed if listed is not None else await _page_dates()
     stamp = parsed.strftime("%Y%m%d")
     if stamp in stamps:
-        return "available"
+        return say("available", "disponible")
     oldest, newest = stamps[0], stamps[-1]
     if stamp < oldest:
-        return (
+        return say(
             f"past retention (the oldest file kept is {_iso(oldest)}; about "
-            f"{RETENTION_BUSINESS_DAYS} business days are available)"
+            f"{RETENTION_BUSINESS_DAYS} business days are available)",
+            f"hors de la période de conservation (le plus ancien fichier gardé est du {_iso(oldest)} ; "
+            f"environ {RETENTION_BUSINESS_DAYS} jours ouvrables sont disponibles)",
         )
     if stamp > newest:
-        return f"not yet published (the newest file is {_iso(newest)}; released about 8:30 ET)"
-    kind = "a weekend" if parsed.weekday() >= 5 else "a holiday or a day without a release"
-    return f"no release that day ({kind})"
+        return say(
+            f"not yet published (the newest file is {_iso(newest)}; released about 8:30 ET)",
+            f"pas encore publié (le fichier le plus récent est du {_iso(newest)} ; diffusion vers "
+            "8 h 30, HE)",
+        )
+    if parsed.weekday() >= 5:
+        return say(
+            "no release that day (a weekend)", "aucune diffusion ce jour-là (fin de semaine)"
+        )
+    return say(
+        "no release that day (a holiday or a day without a release)",
+        "aucune diffusion ce jour-là (jour férié ou jour sans diffusion)",
+    )
 
 
 def _iso(stamp: str) -> str:
@@ -336,7 +380,12 @@ async def _read_cubes(
                     cubes.append(_cube(element, lang=lang, detail=wanted))
                     element.clear()
         except ElementTree.ParseError as exc:
-            raise UpstreamError(f"{archive.metadata.name} is not valid XML: {exc}.") from exc
+            raise UpstreamError(
+                say(
+                    f"{archive.metadata.name} is not valid XML: {exc}.",
+                    f"{archive.metadata.name} n'est pas du XML valide : {exc}.",
+                )
+            ) from exc
         return cubes
 
     key = f"delta:cubes:{archive.date}:{archive.etag}:{lang}:{detail_for}"
@@ -353,10 +402,18 @@ async def list_tables(
     max_tables: int = 200,
     lang: str = "en",
 ) -> DeltaTableList:
+    use_lang(lang)
     if max_tables < 1:
-        raise InvalidInput("max_tables must be at least 1.")
+        raise InvalidInput(
+            say("max_tables must be at least 1.", "max_tables doit être d'au moins 1.")
+        )
     if detail and product_id is None:
-        raise InvalidInput("detail=True needs a product_id (members and corrections are long).")
+        raise InvalidInput(
+            say(
+                "detail=True needs a product_id (members and corrections are long).",
+                "detail=True exige un product_id (les membres et les corrections sont longs).",
+            )
+        )
     archive = await _open_archive(date)
     cubes, cached = await _read_cubes(archive, lang=lang, detail_for=product_id if detail else None)
     chosen = cubes
@@ -364,8 +421,13 @@ async def list_tables(
         chosen = [c for c in cubes if c.product_id == product_id]
         if not chosen:
             raise NotFound(
-                f"Table {product_id} was not released in the Delta File of {archive.date}; "
-                "call statcan_delta_list_tables without product_id for the tables that were."
+                say(
+                    f"Table {product_id} was not released in the Delta File of {archive.date}; "
+                    "call statcan_delta_list_tables without product_id for the tables that were.",
+                    f"Le tableau {product_id} ne figure pas dans le fichier delta du {archive.date} ; "
+                    "appelez statcan_delta_list_tables sans product_id pour la liste des tableaux "
+                    "diffusés.",
+                )
             )
     if query:
         needle = query.casefold()
@@ -374,13 +436,18 @@ async def list_tables(
         ]
     shown = chosen[:max_tables]
     notes = [
-        (
+        say(
             "A table appears when its data or metadata changed that day; no rows are ever deleted, "
-            "and a correction arrives in the next day's file."
+            "and a correction arrives in the next day's file.",
+            "Un tableau figure dans le fichier quand ses données ou ses métadonnées ont changé ce "
+            "jour-là ; aucune ligne n'est jamais supprimée et une correction arrive dans le "
+            "fichier du lendemain.",
         ),
-        (
+        say(
             "Files are published on business days about 8:30 ET. Read one table's rows with "
-            "statcan_delta_read_table."
+            "statcan_delta_read_table.",
+            "Les fichiers sont publiés les jours ouvrables vers 8 h 30, HE. Lisez les lignes "
+            "d'un tableau avec statcan_delta_read_table.",
         ),
     ]
     return DeltaTableList(
@@ -400,10 +467,22 @@ async def list_tables(
             cached=cached,
             schema_name="statcan_delta.DeltaTableList",
             as_of=_as_of(archive.last_modified),
-            freshness="One file per business day, about 8:30 ET; about 47 business days kept.",
-            coverage=f"{len(cubes)} tables released on {archive.date}.",
-            limits=f"Read by range requests from the {archive.size:,}-byte zip; "
-            "only the metadata member was fetched.",
+            freshness=say(
+                "One file per business day, about 8:30 ET; about 47 business days kept.",
+                "Un fichier par jour ouvrable, vers 8 h 30, HE ; environ 47 jours ouvrables "
+                "conservés.",
+            ),
+            coverage=say(
+                f"{len(cubes)} tables released on {archive.date}.",
+                f"{len(cubes)} tableaux diffusés le {archive.date}.",
+            ),
+            limits=say(
+                f"Read by range requests from the {archive.size:,}-byte zip; "
+                "only the metadata member was fetched.",
+                f"Lu par requêtes de plage dans le ZIP de {archive.size:,} octets ; seul le "
+                "fichier de métadonnées a été récupéré.",
+            ),
+            lang=lang,
         ),
     )
 
@@ -445,7 +524,12 @@ async def _codeset(archive: Archive) -> dict[str, dict[int, tuple[str, str]]]:
         try:
             return _parse_codeset(raw)
         except ElementTree.ParseError as exc:
-            raise UpstreamError(f"{archive.codeset.name} is not valid XML: {exc}.") from exc
+            raise UpstreamError(
+                say(
+                    f"{archive.codeset.name} is not valid XML: {exc}.",
+                    f"{archive.codeset.name} n'est pas du XML valide : {exc}.",
+                )
+            ) from exc
 
     codes, _ = await cached_fetch(f"delta:codeset:{archive.date}:{archive.etag}", 3600, fetch)
     return codes
@@ -522,8 +606,12 @@ def _column_index(header: str, member: str) -> dict[str, int]:
     missing = [name for name in _EXPECTED_COLUMNS if name not in index]
     if missing:
         raise UpstreamError(
-            f"{member} lacks the columns {', '.join(missing)}; "
-            "the Delta CSV layout may have changed."
+            say(
+                f"{member} lacks the columns {', '.join(missing)}; "
+                "the Delta CSV layout may have changed.",
+                f"Il manque à {member} les colonnes {', '.join(missing)} ; la structure du CSV "
+                "delta a peut-être changé.",
+            )
         )
     return index
 
@@ -542,26 +630,53 @@ def _ceiling_message(
     total = archive.data.compressed_size
     share = stream.offset / total if total else 0.0
     saved = (
-        "Progress is saved: calling statcan_delta_read_table again with the same arguments "
-        "continues from there, about as far again per call"
+        say(
+            "Progress is saved: calling statcan_delta_read_table again with the same arguments "
+            "continues from there, about as far again per call",
+            "La progression est enregistrée : rappeler statcan_delta_read_table avec les mêmes "
+            "arguments reprend à cet endroit, à peu près aussi loin à chaque appel",
+        )
         if stream.points
-        else "No resume point was saved (the scan was too short), so calling again repeats it"
+        else say(
+            "No resume point was saved (the scan was too short), so calling again repeats it",
+            "Aucun point de reprise n'a été enregistré (lecture trop courte) ; un nouvel appel "
+            "la recommence",
+        )
     )
-    origin = f" from byte {started_at:,} (a saved resume point)" if started_at else ""
-    return (
+    origin = (
+        say(
+            f" from byte {started_at:,} (a saved resume point)",
+            f" à partir de l'octet {started_at:,} (un point de reprise enregistré)",
+        )
+        if started_at
+        else ""
+    )
+    return say(
         f"Table {product_id} was not reached in the Delta File of {archive.date} within one "
         f"call's ceiling ({_size(max_scan_bytes)} or {max_seconds:.0f} s): "
         f"{_size(exc.scanned)} of the {_size(total)} compressed CSV were "
         f"read{origin}, up to productId {reached} ({share:.0%} of the file). {saved}. Faster routes: wds_get_changed_series_data "
         "(the series that changed) or wds_get_full_table_download (the whole table as CSV), or "
-        f"download {archive.url} yourself."
+        f"download {archive.url} yourself.",
+        f"Le tableau {product_id} n'a pas été atteint dans le fichier delta du {archive.date} "
+        f"dans la limite d'un appel ({_size(max_scan_bytes)} ou {max_seconds:.0f} s) : "
+        f"{_size(exc.scanned)} des {_size(total)} du CSV compressé ont été lus{origin}, "
+        f"jusqu'au productId {reached} ({share:.0%} du fichier). {saved}. Solutions plus "
+        "rapides : wds_get_changed_series_data (les séries modifiées) ou "
+        "wds_get_full_table_download (tout le tableau en CSV), ou téléchargez vous-même "
+        f"{archive.url}.",
     )
 
 
 def _leading_id(line: bytes) -> int:
     head = line.split(b",", 1)[0]
     if not head.isdigit():
-        raise UpstreamError(f"A Delta CSV line does not start with a productId: {line[:60]!r}.")
+        raise UpstreamError(
+            say(
+                f"A Delta CSV line does not start with a productId: {line[:60]!r}.",
+                f"Une ligne du CSV delta ne commence pas par un productId : {line[:60]!r}.",
+            )
+        )
     return int(head)
 
 
@@ -573,10 +688,21 @@ async def read_table(
     max_rows: int = 1000,
     lang: str = "en",
 ) -> DeltaTableData:
+    use_lang(lang)
     if not 1 <= max_rows <= MAX_ROWS_CAP:
-        raise InvalidInput(f"max_rows must be between 1 and {MAX_ROWS_CAP:,}.")
+        raise InvalidInput(
+            say(
+                f"max_rows must be between 1 and {MAX_ROWS_CAP:,}.",
+                f"max_rows doit être entre 1 et {MAX_ROWS_CAP:,}.",
+            )
+        )
     if vector_ids is not None and len(vector_ids) > MAX_VECTOR_FILTER:
-        raise InvalidInput(f"vector_ids takes at most {MAX_VECTOR_FILTER:,} ids.")
+        raise InvalidInput(
+            say(
+                f"vector_ids takes at most {MAX_VECTOR_FILTER:,} ids.",
+                f"vector_ids accepte au plus {MAX_VECTOR_FILTER:,} identifiants.",
+            )
+        )
     called = time.monotonic()
     wanted = set(vector_ids) if vector_ids else None
     archive = await _open_archive(date)
@@ -587,9 +713,15 @@ async def read_table(
     cube = next((c for c in cubes if c.product_id == product_id), None)
     if cube is None:
         raise NotFound(
-            f"Table {product_id} was not released in the Delta File of {archive.date} "
-            f"({len(cubes)} tables were); call statcan_delta_list_tables for that list, or "
-            "wds_get_full_table_download for the table's current data."
+            say(
+                f"Table {product_id} was not released in the Delta File of {archive.date} "
+                f"({len(cubes)} tables were); call statcan_delta_list_tables for that list, or "
+                "wds_get_full_table_download for the table's current data.",
+                f"Le tableau {product_id} ne figure pas dans le fichier delta du {archive.date} "
+                f"({len(cubes)} tableaux y figurent) ; appelez statcan_delta_list_tables pour "
+                "cette liste, ou wds_get_full_table_download pour les données actuelles du "
+                "tableau.",
+            )
         )
     codes = await _codeset(archive)
 
@@ -639,7 +771,12 @@ async def read_table(
             first = _leading_id(block[: block.find(b"\n")] if b"\n" in block else block)
             last = _leading_id(block[block.rfind(b"\n") + 1 :])
             if first > last:
-                raise UpstreamError(f"{archive.data.name} is not sorted by productId.")
+                raise UpstreamError(
+                    say(
+                        f"{archive.data.name} is not sorted by productId.",
+                        f"{archive.data.name} n'est pas trié par productId.",
+                    )
+                )
             reached = last
             if last < product_id:
                 continue
@@ -686,30 +823,61 @@ async def read_table(
         scan_index.record(saved, header_line, stream.points)
 
     notes = [
-        "Values are raw: the scalar factor is not applied (see legend.scalar_factors).",
-        (
+        say(
+            "Values are raw: the scalar factor is not applied (see legend.scalar_factors).",
+            "Les valeurs sont brutes : le facteur d'échelle n'est pas appliqué (voir "
+            "legend.scalar_factors).",
+        ),
+        say(
             "Deltas carry changed data points only, with no deletions; a correction arrives in the "
-            "next business day's file."
+            "next business day's file.",
+            "Les fichiers delta ne contiennent que les points de données modifiés, sans "
+            "suppression ; une correction arrive dans le fichier du jour ouvrable suivant.",
         ),
     ]
     if not rows and not truncated:
         notes.append(
-            "No CSV rows for this table"
-            + (" matched vector_ids." if wanted else " (a metadata-only change).")
+            say(
+                "No CSV rows for this table"
+                + (" matched vector_ids." if wanted else " (a metadata-only change)."),
+                "Aucune ligne du CSV pour ce tableau"
+                + (
+                    " ne correspond à vector_ids."
+                    if wanted
+                    else " (changement des métadonnées seulement)."
+                ),
+            )
         )
     if truncated:
-        notes.append(f"Stopped at max_rows={max_rows:,}; filter with vector_ids or raise max_rows.")
+        notes.append(
+            say(
+                f"Stopped at max_rows={max_rows:,}; filter with vector_ids or raise max_rows.",
+                f"Arrêt à max_rows={max_rows:,} ; filtrez avec vector_ids ou augmentez max_rows.",
+            )
+        )
     if not block_complete:
         notes.append(
-            f"Incomplete: the scan ceiling ({_size(max_scan_bytes)} or "
-            f"{max_seconds:.0f} s) stopped inside this table's rows, so only its first rows were "
-            "read and matching rows further on are missing. For the whole table use "
-            "wds_get_full_table_download; for a few series, wds_get_changed_series_data."
+            say(
+                f"Incomplete: the scan ceiling ({_size(max_scan_bytes)} or "
+                f"{max_seconds:.0f} s) stopped inside this table's rows, so only its first rows were "
+                "read and matching rows further on are missing. For the whole table use "
+                "wds_get_full_table_download; for a few series, wds_get_changed_series_data.",
+                f"Incomplet : la limite de lecture ({_size(max_scan_bytes)} ou "
+                f"{max_seconds:.0f} s) a été atteinte dans les lignes de ce tableau ; seules ses "
+                "premières lignes ont été lues et les lignes suivantes manquent. Pour tout le "
+                "tableau, utilisez wds_get_full_table_download ; pour quelques séries, "
+                "wds_get_changed_series_data.",
+            )
         )
     if resume is not None:
         notes.append(
-            f"Started at compressed byte {started_at:,} (productId {resume.product_id}), a resume "
-            "point saved by an earlier scan of this file, instead of at byte 0."
+            say(
+                f"Started at compressed byte {started_at:,} (productId {resume.product_id}), a resume "
+                "point saved by an earlier scan of this file, instead of at byte 0.",
+                f"Lecture commencée à l'octet compressé {started_at:,} (productId "
+                f"{resume.product_id}), un point de reprise enregistré par une lecture précédente "
+                "de ce fichier, plutôt qu'à l'octet 0.",
+            )
         )
     return DeltaTableData(
         date=archive.date,
@@ -736,10 +904,21 @@ async def read_table(
             cached=False,
             schema_name="statcan_delta.DeltaTableData",
             as_of=_as_of(archive.last_modified),
-            freshness="One file per business day, about 8:30 ET.",
-            coverage=f"Table {product_id} in the release of {archive.date}.",
-            limits=f"{stream.scanned:,} of {archive.data.compressed_size:,} compressed CSV bytes "
-            f"read from byte {started_at:,}; rows capped at {max_rows:,}.",
+            freshness=say(
+                "One file per business day, about 8:30 ET.",
+                "Un fichier par jour ouvrable, vers 8 h 30, HE.",
+            ),
+            coverage=say(
+                f"Table {product_id} in the release of {archive.date}.",
+                f"Tableau {product_id} dans la diffusion du {archive.date}.",
+            ),
+            limits=say(
+                f"{stream.scanned:,} of {archive.data.compressed_size:,} compressed CSV bytes "
+                f"read from byte {started_at:,}; rows capped at {max_rows:,}.",
+                f"{stream.scanned:,} des {archive.data.compressed_size:,} octets compressés du "
+                f"CSV lus à partir de l'octet {started_at:,} ; lignes limitées à {max_rows:,}.",
+            ),
+            lang=lang,
         ),
     )
 
@@ -747,7 +926,7 @@ async def read_table(
 async def _file_headers(stamp: str) -> DeltaFileEntry:
     url = ARCHIVE_URL.format(date=stamp)
     parsed = date_cls(int(stamp[:4]), int(stamp[4:6]), int(stamp[6:]))
-    entry = DeltaFileEntry(date=parsed.isoformat(), weekday=_WEEKDAYS[parsed.weekday()], url=url)
+    entry = DeltaFileEntry(date=parsed.isoformat(), weekday=_weekday(parsed), url=url)
     try:
         head = await _head(url)
     except (UpstreamError, UpstreamUnavailable):
@@ -764,7 +943,7 @@ async def _file_headers(stamp: str) -> DeltaFileEntry:
 async def list_files(
     *, date: str | None = None, include_sizes: bool = False, lang: str = "en"
 ) -> DeltaFileList:
-    del lang
+    use_lang(lang)
     requested = _parse_date(date)[0] if date else None
     stamps = await _page_dates()
     if include_sizes:
@@ -776,23 +955,31 @@ async def list_files(
             files.append(
                 DeltaFileEntry(
                     date=parsed.isoformat(),
-                    weekday=_WEEKDAYS[parsed.weekday()],
+                    weekday=_weekday(parsed),
                     url=ARCHIVE_URL.format(date=stamp),
                 )
             )
     files.sort(key=lambda f: f.date, reverse=True)
     notes = [
-        (
+        say(
             f"The page lists {len(stamps)} files, about {RETENTION_BUSINESS_DAYS} business days; "
-            "older files are removed (the user guide's '5 releases' is out of date)."
+            "older files are removed (the user guide's '5 releases' is out of date).",
+            f"La page liste {len(stamps)} fichiers, soit environ {RETENTION_BUSINESS_DAYS} jours "
+            "ouvrables ; les fichiers plus anciens sont retirés (les « 5 diffusions » du guide de "
+            "l'utilisateur ne sont plus à jour).",
         ),
-        (
+        say(
             "A file appears on business days about 8:30 ET. Holidays (for example 2026-09-30) have "
-            "none. Corrections arrive in the next day's file; nothing is deleted."
+            "none. Corrections arrive in the next day's file; nothing is deleted.",
+            "Un fichier paraît les jours ouvrables vers 8 h 30, HE. Les jours fériés (par exemple "
+            "le 2026-09-30) n'en ont pas. Les corrections arrivent dans le fichier du lendemain ; "
+            "rien n'est supprimé.",
         ),
-        (
+        say(
             "Each zip holds codeSet.xml, YYYYMMDD.xml (cube metadata) and YYYYMMDD.csv (data); the "
-            f"metadata schema is at {SCHEMA_URL}."
+            f"metadata schema is at {SCHEMA_URL}.",
+            "Chaque ZIP contient codeSet.xml, AAAAMMJJ.xml (métadonnées des tableaux) et "
+            f"AAAAMMJJ.csv (données) ; le schéma des métadonnées est à {SCHEMA_URL}.",
         ),
     ]
     return DeltaFileList(
@@ -808,9 +995,22 @@ async def list_files(
             url=PAGE_URL,
             cached=False,
             schema_name="statcan_delta.DeltaFileList",
-            freshness="Updated each business day about 8:30 ET.",
-            coverage=f"{len(files)} files, {files[-1].date} to {files[0].date}." if files else None,
-            limits="Sizes, ETags and Last-Modified come from HEAD requests, only with "
-            "include_sizes=True.",
+            freshness=say(
+                "Updated each business day about 8:30 ET.",
+                "Mis à jour chaque jour ouvrable vers 8 h 30, HE.",
+            ),
+            coverage=say(
+                f"{len(files)} files, {files[-1].date} to {files[0].date}.",
+                f"{len(files)} fichiers, du {files[-1].date} au {files[0].date}.",
+            )
+            if files
+            else None,
+            limits=say(
+                "Sizes, ETags and Last-Modified come from HEAD requests, only with "
+                "include_sizes=True.",
+                "Les tailles, ETag et Last-Modified viennent de requêtes HEAD, seulement avec "
+                "include_sizes=True.",
+            ),
+            lang=lang,
         ),
     )

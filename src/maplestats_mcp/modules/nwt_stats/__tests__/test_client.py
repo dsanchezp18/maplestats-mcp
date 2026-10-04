@@ -182,3 +182,34 @@ async def test_bad_paging_and_non_excel_links_are_refused():
         await client.read_file(_GDP, limit=0)
     with pytest.raises(InvalidInput):
         await client.read_file("https://www.statsnwt.ca/economy/gdp/May2026_GDP.pdf")
+
+
+async def test_french_errors():
+    with pytest.raises(InvalidInput, match="Entrée invalide") as caught:
+        await client.list_files(topic="weather", lang="fr")
+    assert "topic doit être l'un de" in str(caught.value)
+    with pytest.raises(InvalidInput, match="doit être un lien sur www.statsnwt.ca"):
+        client.normalize_url("https://example.com/a.xlsx", lang="fr")
+
+
+async def test_french_provenance_and_licence(httpx_mock):
+    httpx_mock.add_response(url=_GDP, content=_bytes("gdp_by_industry.xlsx"))
+    data = await client.read_file(_GDP, contains="All industries", limit=1, lang="fr")
+    assert "Licence du gouvernement ouvert – Territoires du Nord-Ouest" in data.licence
+    assert data.provenance.licence == data.licence
+    assert "Bureau de la statistique des Territoires du Nord-Ouest" in (
+        data.provenance.freshness or ""
+    )
+    assert (data.provenance.coverage or "").startswith("Feuille ")
+    topics = await client.list_files(lang="fr")
+    assert topics.topics[0].title == "Produit intérieur brut"
+    assert (topics.provenance.coverage or "").startswith("49 sujets")
+
+
+async def test_english_provenance_unchanged(httpx_mock):
+    httpx_mock.add_response(url=_GDP, content=_bytes("gdp_by_industry.xlsx"))
+    data = await client.read_file(_GDP, contains="All industries", limit=1)
+    assert data.provenance.freshness == (
+        "As published by the NWT Bureau of Statistics; files cached up to 6 hours."
+    )
+    assert data.licence.startswith("Two statements apply. (1) Open Government Licence - ")

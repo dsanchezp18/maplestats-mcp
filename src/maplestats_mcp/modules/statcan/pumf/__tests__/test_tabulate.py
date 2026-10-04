@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.pumf import tabulate
 from maplestats_mcp.modules.statcan.pumf.schemas import PumfVariable
 from maplestats_mcp.shared.errors import InvalidInput
@@ -58,6 +59,18 @@ def test_pick_member_prefers_csv_and_asks_when_ambiguous():
     with pytest.raises(InvalidInput, match="pub0125.csv"):
         tabulate._pick_member(monthly, None)
     assert tabulate._pick_member(monthly, "pub0225.csv").name == "pub0225.csv"
+
+
+async def test_member_errors_in_french():
+    use_lang("fr")
+    monthly = [ZipMember(f"pub0{m}25.csv", 0, 12_000_000, 8, 0) for m in (1, 2)]
+    with pytest.raises(InvalidInput, match="plusieurs fichiers de données"):
+        tabulate._pick_member(monthly, None)
+    with pytest.raises(InvalidInput, match="Aucun fichier 'x.csv' dans le ZIP"):
+        tabulate._pick_member(monthly, "x.csv")
+    use_lang("en")
+    with pytest.raises(InvalidInput, match="several data files"):
+        tabulate._pick_member(monthly, None)
 
 
 def test_census_2021_standard_error_matches_the_user_guide_example():

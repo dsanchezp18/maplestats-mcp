@@ -881,3 +881,51 @@ async def test_search_400_is_invalid_input(httpx_mock):
     )
     with pytest.raises(InvalidInput, match="bad filter"):
         await client.search_flows("ccei", "x", filters={"Nope": ["x"]})
+
+
+# ----------------------------------------------------------------- French
+
+NBSP = "\N{NO-BREAK SPACE}"
+
+
+async def test_french_list_flows_notes_and_licence(httpx_mock):
+    httpx_mock.add_response(url=LIST_URL, json=LIST_PAYLOAD)
+    page = await client.list_flows("ccei", limit=2, offset=2, lang="fr")
+    assert page.provenance.limits == f"2 des 6 flux correspondants{NBSP}; utilisez limit/offset"
+    assert "Statistique Canada n'a pas déclaré" in (page.provenance.coverage or "")
+    assert "Licence du gouvernement ouvert – Canada" in (page.provenance.licence or "")
+    assert "Licence ouverte de Statistique Canada" in (page.provenance.licence or "")
+
+
+async def test_english_list_flows_wording_is_unchanged(httpx_mock):
+    httpx_mock.add_response(url=LIST_URL, json=LIST_PAYLOAD)
+    page = await client.list_flows("ccei", limit=2, offset=2)
+    assert page.provenance.limits == "2 of 6 matching flows; use limit/offset"
+    assert (page.provenance.coverage or "").startswith("Every dataflow in this space")
+    assert "Open Government Licence - Canada" in (page.provenance.licence or "")
+
+
+async def test_french_errors(httpx_mock):
+    with pytest.raises(InvalidInput, match="space doit être"):
+        await client.list_flows("nope", lang="fr")
+    httpx_mock.add_response(url=LIST_URL, json={"data": {"dataflows": []}})
+    with pytest.raises(UpstreamError, match="La liste de flux de données est vide"):
+        await client.list_flows("ccei", lang="fr")
+
+
+async def test_french_data_notes_and_csv_errors(httpx_mock):
+    _mock_structure(httpx_mock)
+    body = _csv(_row("CA", "2024", "1"), _row("CA", "2023", "2.5"), newline=False)[:-6]
+    httpx_mock.add_response(url=f"{DATA_BASE}/A.CA.0?lastNObservations=12", text=body)
+    result = await client.get_data("ccei", "CCEI,GHG_IPCC_TABLE", "A.CA.0", lang="fr")
+    assert "aucun filtre de période" in (result.provenance.limits or "")
+    assert f"(tronquée){NBSP};" in (result.provenance.limits or "")
+    httpx_mock.add_response(url=f"{DATA_BASE}/A.CA.0?lastNObservations=12", text="a,b\n1,2\n")
+    with pytest.raises(UpstreamError, match=f"en-tête{NBSP}:"):
+        await client.get_data("ccei", "CCEI,GHG_IPCC_TABLE", "A.CA.0", lang="fr")
+
+
+async def test_french_search_error(httpx_mock):
+    httpx_mock.add_response(url=SEARCH_URL, method="POST", json={"unexpected": True})
+    with pytest.raises(UpstreamError, match="n'a pas la forme attendue"):
+        await client.search_flows("ccei", "x", lang="fr")

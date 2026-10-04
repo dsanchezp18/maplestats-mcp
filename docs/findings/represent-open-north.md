@@ -12,7 +12,7 @@ municipal officials and a postal code or point lookup.
 - `/api/` documents every endpoint and states "Represent is free up to 60
   requests per minute (86,400 queries/day)"; above that the server may answer
   HTTP 503. The shared limiter paces calls to 1 a second.
-- `/robots.txt` answers 404 (no rules). `/privacy/` covers server logs only.
+- `/privacy/` covers server logs only.
   `/terms/` and `/about/` are 404. No general terms of use exist, and nothing
   forbids automated use; the API page invites bulk download ("send a request to
   `/representatives/?limit=1000` and follow the next link").
@@ -52,7 +52,11 @@ election).
   2013 federal representation orders (last updated 2011-11-28 and 2017-08-23) as
   well as the 2023 one (2024-12-17); representatives point to the current set.
 - **`representatives_concordance` is absent, not null,** on many postal codes,
-  and both representative keys disappear when `sets=` is used.
+  With `sets=`, only `representatives_centroid` comes back, and only for sets a
+  representative set uses: K2J6B6 with the 2023 order returns its MP, with
+  `federal-electoral-districts` (the unsuffixed slug, which is the 2013 order)
+  no representative key at all (checked 2026-10-03). The tool adds a note in
+  that case.
 - **A postal code can miss a level.** H3B4W8 (Montreal) returned a mayor and an
   MNA but no MP, while the point 45.524, -73.596 returned the MP. The tool adds
   a note when federal or provincial is absent.

@@ -324,9 +324,274 @@ SOURCE_LICENCES: dict[str, str] = {
 }
 
 
+# French text for a licence, keyed by its English text, so a call made with
+# lang="fr" reads its terms in French whichever source carries them. Names and
+# URLs are the publishers' own French ones, checked on 2026-10-04; a licence
+# not listed here stays in English. The IESO notice is quoted in English
+# because the IESO requires that exact wording on every reproduction.
+LICENCES_FR: dict[str, str] = {
+    OGL_CANADA: (
+        "Licence du gouvernement ouvert – Canada 2.0 "
+        "(https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada). Attribution : "
+        "« Contient des informations visées par la Licence du gouvernement ouvert – Canada. »"
+    ),
+    CANADA_CA_TERMS: (
+        "Avis du site Web du gouvernement du Canada (https://www.canada.ca/fr/transparence/"
+        "avis.html) : la reproduction non commerciale est permise sans autorisation, en citant "
+        "le titre, l'auteur et l'adresse URL de la source ; la redistribution commerciale exige "
+        "une autorisation écrite."
+    ),
+    BOC_TERMS: (
+        "Conditions d'utilisation de la Banque du Canada "
+        "(https://www.banqueducanada.ca/conditions-utilisation-avis/) : indiquer la Banque du "
+        "Canada comme source et signaler toute modification, sans laisser entendre que la "
+        "Banque approuve l'utilisation ; le contenu transmis par un service payant doit être "
+        "présenté comme provenant du site Web de la Banque."
+    ),
+    ECCC_LICENCE: (
+        "Licence d'utilisation finale des serveurs de données d'Environnement et Changement "
+        "climatique Canada (https://eccc-msc.github.io/open-data/licence/readme_fr/). "
+        "Attribution : « Source des données : Environnement et Changement climatique Canada. »"
+    ),
+    CMHC_TERMS: (
+        "Conditions d'utilisation de la SCHL "
+        "(https://www.cmhc-schl.gc.ca/info-schl/conditions-dutilisation) : le contenu peut être "
+        "copié, téléchargé et imprimé pour un usage personnel ; la redistribution ou la "
+        "republication exige le consentement écrit de la SCHL. Mentionner la Société "
+        "canadienne d'hypothèques et de logement (SCHL)."
+    ),
+    PBO_TERMS: (
+        "Conditions du directeur parlementaire du budget (https://www.pbo-dpb.ca/fr) : les "
+        "documents du DPB peuvent être utilisés et reproduits à des fins personnelles et non "
+        "commerciales sans autorisation, sans modification et en mentionnant le DPB."
+    ),
+    IESO_TERMS: (
+        "Conditions d'utilisation de la Société indépendante d'exploitation du réseau "
+        "d'électricité (SIERE) (https://www.ieso.ca/en/Terms-of-Use) : licence limitée "
+        "d'utilisation et de reproduction, à condition que chaque reproduction porte l'avis "
+        "suivant, en anglais : 'Copyright 2004-2022 Independent Electricity System Operator, "
+        "all rights reserved. This information is subject to the Terms of Use set out in the "
+        "IESO's website (www.ieso.ca).'"
+    ),
+    PER_RECORD_LICENCE: (
+        "Les licences diffèrent d'un jeu de données à l'autre sur cette plateforme : la licence "
+        "de chaque jeu de données figure dans ses champs de licence. Vérifiez-la avant toute "
+        "réutilisation."
+    ),
+    SOURCE_LICENCES["aer"]: (
+        "Conditions de droit d'auteur de l'Alberta Energy Regulator "
+        "(https://www.aer.ca/copyright-disclaimer) : la reproduction non commerciale est "
+        "permise sans autorisation, en indiquant l'AER comme source et sans la présenter comme "
+        "officielle ; la redistribution commerciale exige l'autorisation écrite de l'AER."
+    ),
+    SOURCE_LICENCES["crea"]: (
+        "Source : Association canadienne de l'immeuble (ACI), Indice des prix des propriétés "
+        "MLS®. Les conditions de l'ACI (https://www.crea.ca/fr/renseignements-juridiques/) "
+        "s'appliquent ; il ne s'agit pas d'une licence ouverte."
+    ),
+    SOURCE_LICENCES["worldbank-wdi"]: (
+        "Source : Banque mondiale, Indicateurs du développement dans le monde. Licence Creative "
+        "Commons Attribution 4.0 (https://datacatalog.worldbank.org/public-licenses)."
+    ),
+    SOURCE_LICENCES["electricity"]: (
+        "Les conditions diffèrent selon l'exploitant ; voir les conditions de l'exploitant dans "
+        "ce résultat."
+    ),
+    SOURCE_LICENCES["ab_wildfire"]: (
+        "Licence du gouvernement ouvert – Alberta (https://open.alberta.ca/licence). "
+        "Attribution : « Contient des informations visées par la Licence du gouvernement "
+        "ouvert – Alberta. » Mention : Alberta Wildfire, gouvernement de l'Alberta."
+    ),
+    CIHI_TERMS: (
+        "Conditions d'utilisation de l'ICIS (https://www.cihi.ca/fr/conditions-dutilisation) : "
+        "utilisation gratuite à des fins d'éducation, de recherche non commerciale, de "
+        "consultation interne et d'étude personnelle, en citant l'ICIS comme source ; "
+        "l'utilisation commerciale exige l'autorisation écrite de l'ICIS."
+    ),
+    HOUSE_OF_COMMONS_TERMS: (
+        "Autorisation du Président de la Chambre des communes "
+        "(https://www.noscommunes.ca/fr/avis-importants) : la reproduction des délibérations "
+        "est permise si elle est exacte et n'est pas présentée comme une version officielle ; "
+        "elle ne s'étend pas à l'usage commercial ni à un gain financier."
+    ),
+    SENATE_TERMS: (
+        "Propriété intellectuelle du Sénat du Canada "
+        "(https://sencanada.ca/fr/propriete-intellectuelle/) : la reproduction des "
+        "délibérations est permise si elle est exacte et sans but lucratif ; indiquer le Sénat "
+        "comme auteur, avec le titre et l'adresse URL de la source."
+    ),
+    ELECTIONS_CANADA_TERMS: (
+        "Avis d'Élections Canada "
+        "(https://www.elections.ca/content.aspx?section=pri&document=index&lang=f) : la "
+        "reproduction non commerciale est permise en citant le titre, l'auteur et l'adresse URL "
+        "de la source ; la redistribution commerciale exige une autorisation écrite."
+    ),
+    REPRESENT_TERMS: (
+        "L'API Represent d'Open North (https://represent.opennorth.ca) n'énonce aucune licence "
+        "propre. Les ensembles de limites relèvent de la licence de leur éditeur (licence_url de "
+        "chaque ensemble) ; les fiches des élus proviennent de sites officiels et leurs "
+        "conditions de réutilisation ne sont pas précisées."
+    ),
+    SOURCE_LICENCES["elections-provincial"]: (
+        "Les conditions varient selon l'organisme électoral ; voir les notes de licence par "
+        "province dans limits."
+    ),
+    SOURCE_LICENCES["dfo-iwls"]: (
+        "Conditions non précisées par l'éditeur (Pêches et Océans Canada, Service hydrographique "
+        "du Canada) : aucune licence ni condition d'utilisation n'a été trouvée à "
+        "https://api-iwls.dfo-mpo.gc.ca. Ne présumez pas une licence ouverte ; vérifiez auprès "
+        "de l'éditeur avant toute redistribution."
+    ),
+    SOURCE_LICENCES["harvard-dataverse-who-runs-federal-candidates"]: (
+        "Conditions du jeu de données Harvard Dataverse : voir la page du jeu de données pour sa "
+        "licence (Dataverse applique CC0 1.0 par défaut, sauf si le déposant fixe d'autres "
+        "conditions)."
+    ),
+    SOURCE_LICENCES["borealis-winer-ferris-federal-elections"]: (
+        "Conditions du jeu de données Borealis : voir la page du jeu de données pour sa licence "
+        "et ses conditions d'utilisation."
+    ),
+}
+
+
+def licence_in(text: str, lang: str = "en") -> str:
+    """`text` in French when lang is "fr" and a translation exists, else as given."""
+    if lang.strip().lower().startswith("fr"):
+        return LICENCES_FR.get(text, text)
+    return text
+
+
 # Platform families name their source after the portal ("ckan-on",
 # "arcgis-halifax", "socrata-calgary") or the feed ("transit:stm").
 _FAMILY_PREFIXES = ("arcgis-", "ckan-", "socrata-")
+
+
+# French text for the provincial, territorial, municipal and portal
+# sources, added to LICENCES_FR under each English text. Official licence
+# names take an en dash ("Licence du gouvernement ouvert – Alberta"), as the
+# governments write them.
+STATCAN_LICENCE_FR = t("provenance.statcan_licence", "fr")
+
+OGL_ALBERTA_FR = (
+    "Licence du gouvernement ouvert – Alberta (https://open.alberta.ca/licence). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Alberta. »"
+)
+
+OGL_BC_FR = (
+    "Licence du gouvernement ouvert – Colombie-Britannique 2.0 "
+    "(https://www2.gov.bc.ca/gov/content/data/policy-standards/open-data/open-government-licence-bc). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Colombie-Britannique. »"
+)
+
+OGL_YUKON_FR = (
+    "Licence du gouvernement ouvert – Yukon (https://open.yukon.ca/open-government-licence-yukon). "
+    "Attribution : « Contient des renseignements visés par la Licence du gouvernement ouvert – "
+    "Yukon. »"
+)
+
+OGL_NL_FR = (
+    "Licence du gouvernement ouvert – Terre-Neuve-et-Labrador 1.0 "
+    "(https://opendata.gov.nl.ca/public/opendata/page/?page-id=licence). Attribution : « Contient "
+    "des renseignements visés par la Licence du gouvernement ouvert – Terre-Neuve-et-Labrador. »"
+)
+
+EDMONTON_TERMS_FR = (
+    "Conditions d'utilisation des données ouvertes de la Ville d'Edmonton (City of Edmonton Open "
+    "Data Terms of Use, "
+    "https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/). "
+    "Mention de la source : Ville d'Edmonton."
+)
+
+
+def terms_not_stated_fr(publisher: str, url: str) -> str:
+    """terms_not_stated() in French."""
+    return (
+        f"Conditions non précisées par l'éditeur ({publisher}) : aucune licence ni condition "
+        f"d'utilisation n'a été trouvée à {url}. Ne supposez pas que ces données sont sous licence "
+        "ouverte ; vérifiez auprès de l'éditeur avant de les redistribuer."
+    )
+
+
+def derived_from_statcan_fr(own_licence: str) -> str:
+    """derived_from_statcan() in French."""
+    return f"{own_licence} Données sous-jacentes de Statistique Canada : {STATCAN_LICENCE_FR}"
+
+
+NL_STATS_TERMS_FR = derived_from_statcan_fr(
+    "Conditions du site Web du gouvernement de Terre-Neuve-et-Labrador "
+    "(https://www.gov.nl.ca/disclaimer/) : le public peut utiliser l'information de ses sites. "
+    "Mention de la source : Newfoundland and Labrador Statistics Agency (agence de la statistique "
+    "de Terre-Neuve-et-Labrador)."
+)
+
+_PROVINCIAL_FR: dict[str, str] = {
+    "ab-economic": (
+        f"{OGL_ALBERTA_FR} Les indicateurs que le tableau de bord tire de tableaux de Statistique "
+        f"Canada (le champ source nomme le tableau) relèvent aussi de : {STATCAN_LICENCE_FR}"
+    ),
+    "ab-opendata": OGL_ALBERTA_FR,
+    "open-alberta": OGL_ALBERTA_FR,
+    "epcor": terms_not_stated_fr("EPCOR", "https://apps.epcor.ca"),
+    "eps": terms_not_stated_fr(
+        "Service de police d'Edmonton", "https://communitysafetydataportal.edmontonpolice.ca"
+    ),
+    "ets": EDMONTON_TERMS_FR,
+    "bc_lobbyists": (
+        "Licence de données ouvertes du Bureau du registraire des lobbyistes de la "
+        "Colombie-Britannique (Open Data Licence for the Office of the Registrar of Lobbyists for "
+        "British Columbia, https://www.lobbyistsregistrar.bc.ca/media/1285/open-data-licence-for-"
+        "the-office-of-the-registrar-of-lobbyists-for-british-columbia.pdf). Attribution "
+        "demandée, en anglais : « Contains information licensed under the Open Data Licence for "
+        "the Office of the Registrar of Lobbyists for British Columbia. » La licence n'accorde "
+        "aucun droit sur les renseignements personnels."
+    ),
+    "bcgw": OGL_BC_FR
+    + " Certaines couches du BC Geographic Warehouse relèvent d'autres conditions ; consultez la "
+    "fiche de la couche.",
+    "drivebc": OGL_BC_FR
+    + " L'API Open511 relève aussi des conditions d'utilisation des API du gouvernement de la "
+    "Colombie-Britannique (BC Government API Terms of Use).",
+    "yukon-stats": OGL_YUKON_FR,
+    "yukon-bureau-of-statistics": OGL_YUKON_FR,
+    "nl-opendata": OGL_NL_FR,
+    "nl-stats": NL_STATS_TERMS_FR,
+    "nl-statistics-agency": NL_STATS_TERMS_FR,
+    "bc-environment": (
+        f"{OGL_BC_FR} Source : ministère de l'Environnement et des Parcs de la "
+        "Colombie-Britannique."
+    ),
+    "nwt-bureau-of-statistics": (
+        "Licence du gouvernement ouvert – Territoires du Nord-Ouest, selon le catalogue de "
+        "données ouvertes du territoire pour ces fichiers ; les conditions générales d'utilisation "
+        "liées depuis statsnwt.ca demandent une autorisation avant tout usage commercial. "
+        "Vérifiez lesquelles s'appliquent à votre usage."
+    ),
+    "oeb": (
+        "Source : Commission de l'énergie de l'Ontario, données ouvertes "
+        "(https://www.oeb.ca/ontarios-energy-sector/open-data). Contient des renseignements "
+        "utilisés en vertu de la Licence du gouvernement ouvert – Ontario."
+    ),
+    "isq": (
+        "Droits d'auteur du gouvernement du Québec (https://www.quebec.ca/en/copyright) : la "
+        "reproduction, l'adaptation ou la publication exige l'autorisation préalable du "
+        "gouvernement du Québec. Mention : « Source : Institut de la statistique du Québec. »"
+    ),
+    "transit": (
+        "Chaque flux de transport en commun porte la licence et la mention de source de son "
+        "organisme (champs licence et attribution de chaque organisme)."
+    ),
+    "transit:statcan": derived_from_statcan_fr(
+        "Compilation de la Base de données ouvertes sur les réseaux de transport en commun "
+        "canadiens ; chaque flux porte aussi les conditions de son organisme (licence_url, "
+        "attribution)."
+    ),
+}
+LICENCES_FR.update(
+    {SOURCE_LICENCES[source]: text for source, text in _PROVINCIAL_FR.items()}
+    | {OGL_ALBERTA: OGL_ALBERTA_FR, OGL_BC: OGL_BC_FR, OGL_YUKON: OGL_YUKON_FR, OGL_NL: OGL_NL_FR}
+)
 
 
 def licence_for(source: str, url: str) -> str | None:
