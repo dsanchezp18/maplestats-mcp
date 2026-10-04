@@ -56,13 +56,14 @@ async def ised_cipo_search_trademarks(
     max_return only caps how many top-ranked matches come back in one
     call -- there is no way to page past that count. The search API
     answers in English only (status and mark-type labels), confirmed
-    live 2026-09-23, so `lang` has no effect. Keywords: CIPO,
+    live 2026-09-23, so `lang` changes only this server's own messages
+    and notes. Keywords: CIPO,
     ISED, trademark, brand, mark, owner, applicant, Nice classification,
     Vienna code, trademark status, registered, abandoned, expunged.
-    Mots-clés : OPIC, ISDE, recherche de marques de commerce, marque de
-    commerce, marque, propriétaire,
-    demandeur, classification de Nice, code de Vienne, statut de la
-    marque, enregistrée, abandonnée, radiée.
+    Mots-clés : Office de la propriété intellectuelle du Canada (OPIC),
+    ISDE, recherche de marques de commerce, marque de commerce, marque
+    déposée, propriétaire de la marque, requérant, classification de Nice,
+    code de Vienne, statut de la marque, marque enregistrée, abandonnée,
+    radiée.
     """
-    del lang
-    return await client.search_trademarks(search_field, criteria, max_return=max_return)
+    return await client.search_trademarks(search_field, criteria, max_return=max_return, lang=lang)

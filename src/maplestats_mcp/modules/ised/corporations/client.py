@@ -26,7 +26,7 @@ which now 301-redirects here). Three real quirks found and handled:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 
@@ -40,9 +40,10 @@ from maplestats_mcp.modules.ised.corporations.schemas import (
     DirectorLimits,
 )
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -54,6 +55,19 @@ _LIMITER = get_limiter(
 
 _LANG_TO_API = {"en": "eng", "fr": "fra"}
 _LANG_INDEX = {"en": 0, "fr": 1}
+
+# Said in French only: the English output carries no limits text.
+_ENGLISH_SLOT_FR = (
+    "La fiche française de cette société est vide à la source ; la fiche anglaise "
+    "est reproduite telle quelle."
+)
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English stays the plain message; French gets the typed template."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
 
 
 def _is_not_found_body(body: Any) -> bool:
@@ -99,12 +113,22 @@ def _activity(entry: dict[str, Any]) -> Activity:
 async def get_corporation(id_or_business_number: str, lang: str = "en") -> CorporationDetail:
     """Look up one federal corporation by its corporation id or 9-digit business number."""
     query = id_or_business_number.strip()
+    tool = "ised_corporations:get_corporation"
     if not query:
-        raise InvalidInput("id_or_business_number must not be empty.")
+        _raise(
+            InvalidInput,
+            "id_or_business_number must not be empty.",
+            "id_or_business_number ne doit pas être vide.",
+            lang,
+        )
     if not query.isdigit():
-        raise InvalidInput(
+        _raise(
+            InvalidInput,
             f"id_or_business_number must be numeric (a corporation id or 9-digit "
-            f"business number), got {id_or_business_number!r}."
+            f"business number), got {id_or_business_number!r}.",
+            f"id_or_business_number doit être numérique (un numéro de société ou un "
+            f"numéro d'entreprise à 9 chiffres), reçu {id_or_business_number!r}.",
+            lang,
         )
     api_lang = _LANG_TO_API.get(lang, "eng")
 
@@ -117,35 +141,53 @@ async def get_corporation(id_or_business_number: str, lang: str = "en") -> Corpo
             status = exc.response.status_code
             detail = exc.response.text[:200]
             if status == 404:
-                raise NotFound(f"ised_corporations:get_corporation: {detail}") from exc
+                _raise(NotFound, f"{tool}: {detail}", f"{tool} : {detail}", lang)
             if 400 <= status < 500:
-                raise InvalidInput(f"ised_corporations:get_corporation: {detail}") from exc
-            raise UpstreamError(
-                f"ised_corporations:get_corporation returned HTTP {status}: {detail}"
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "ised_corporations:get_corporation did not respond in time "
-                "(already retried by shared/http.py). Try again shortly."
-            ) from exc
+                _raise(InvalidInput, f"{tool}: {detail}", f"{tool} : {detail}", lang)
+            _raise(
+                UpstreamError,
+                f"{tool} returned HTTP {status}: {detail}",
+                f"{tool} a renvoyé HTTP {status} : {detail}",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                f"{tool} did not respond in time "
+                "(already retried by shared/http.py). Try again shortly.",
+                f"{tool} n'a pas répondu à temps (déjà relancé). Réessayez sous peu.",
+                lang,
+            )
 
     body, was_cached = await cached_fetch(
         f"ised-corporations:get:{query}:{api_lang}", constants.CACHE_TTL_SECONDS, fetch
     )
     if _is_not_found_body(body):
-        raise NotFound(
-            f"ised_corporations:get_corporation: no match for {id_or_business_number!r}."
+        _raise(
+            NotFound,
+            f"{tool}: no match for {id_or_business_number!r}.",
+            f"{tool} : aucune société pour {id_or_business_number!r}.",
+            lang,
         )
     if not isinstance(body, list) or len(body) != 2:
-        raise UpstreamError(
-            f"ised_corporations:get_corporation: unexpected response shape for {id_or_business_number!r}."
+        _raise(
+            UpstreamError,
+            f"{tool}: unexpected response shape for {id_or_business_number!r}.",
+            f"{tool} : forme de réponse inattendue pour {id_or_business_number!r}.",
+            lang,
         )
     preferred_index = _LANG_INDEX.get(lang, 0)
     record = body[preferred_index] or body[1 - preferred_index]
     if not isinstance(record, dict):
-        raise UpstreamError(
-            f"ised_corporations:get_corporation: no record data for {id_or_business_number!r}."
+        _raise(
+            UpstreamError,
+            f"{tool}: no record data for {id_or_business_number!r}.",
+            f"{tool} : aucune donnée de fiche pour {id_or_business_number!r}.",
+            lang,
         )
+    limits = None
+    if lang == "fr" and not body[preferred_index]:
+        limits = french_spacing(_ENGLISH_SLOT_FR)
 
     director_limits_raw = record.get("directorLimits") or {}
     business_numbers = record.get("businessNumbers") or {}
@@ -172,6 +214,7 @@ async def get_corporation(id_or_business_number: str, lang: str = "en") -> Corpo
             url=f"{constants.BASE_URL}/{query}.json?lang={api_lang}",
             cached=was_cached,
             schema_name="ised_corporations.CorporationDetail",
+            limits=limits,
             lang=lang,
         ),
     )

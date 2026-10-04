@@ -124,3 +124,40 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
         httpx_mock.add_response(url=f"{constants.BASE_URL}/1007.json?lang=eng", status_code=500)
     with pytest.raises(UpstreamError):
         await client.get_corporation("1007")
+
+
+async def test_french_errors_use_the_french_template():
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.get_corporation("not-a-number", lang="fr")
+    assert str(excinfo.value).startswith("Entrée invalide : id_or_business_number doit")
+
+
+async def test_french_not_found_is_french(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/999999999999.json?lang=fra",
+        json=["could not find corporation 999999999999", "Corporation 999999999999 est inconnu."],
+    )
+    with pytest.raises(NotFound) as excinfo:
+        await client.get_corporation("999999999999", lang="fr")
+    assert str(excinfo.value).startswith("Aucune correspondance trouvée :")
+    assert "aucune société pour '999999999999'" in str(excinfo.value)
+
+
+async def test_french_fallback_to_english_slot_is_said_in_french(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/1007.json?lang=fra",
+        json=[_ENGLISH_RECORD, None],
+    )
+    result = await client.get_corporation("1007", lang="fr")
+    assert result.provenance.limits is not None
+    assert "fiche anglaise" in result.provenance.limits
+    assert " ;" in result.provenance.limits
+
+
+async def test_english_provenance_has_no_limits_text(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/1007.json?lang=eng",
+        json=[_ENGLISH_RECORD, None],
+    )
+    result = await client.get_corporation("1007")
+    assert result.provenance.limits is None

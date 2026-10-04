@@ -124,3 +124,24 @@ async def test_date_fields_become_iso_dates_and_as_of_is_the_last_edit(httpx_moc
     assert result.provenance.as_of is not None
     assert result.provenance.as_of.date().isoformat() == "2024-02-08"
     assert "no refresh has followed" in (result.provenance.freshness or "")
+
+
+async def test_french_bad_limit_is_french():
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.query_licences(limit=0, lang="fr")
+    assert str(excinfo.value).startswith("Entrée invalide : limit doit être compris")
+
+
+async def test_french_provenance_text_is_french(httpx_mock, layer_info):
+    httpx_mock.add_response(
+        url=(
+            f"{_LAYER_URL}/query?where=1%3D1&outFields=%2A&f=json"
+            "&resultRecordCount=10&resultOffset=0&returnGeometry=false"
+        ),
+        json={"features": [{"attributes": _SAMPLE_ATTRIBUTES}], "exceededTransferLimit": False},
+    )
+    result = await client.query_licences(lang="fr")
+    assert (result.provenance.coverage or "").startswith("environ 840 000 fiches")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("lignes plafonnées")
+    assert "qu'en anglais ;" in limits

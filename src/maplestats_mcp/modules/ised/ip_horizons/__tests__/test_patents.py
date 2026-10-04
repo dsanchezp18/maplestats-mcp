@@ -85,7 +85,7 @@ def parquet_tables(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
 def tables(parquet_tables: dict[str, Path], monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     paths = parquet_tables
 
-    async def patent_files(table: str) -> list[IpHorizonsFile]:
+    async def patent_files(table: str, lang: str = "en") -> list[IpHorizonsFile]:
         return [_file(table)]
 
     async def local_table(file: IpHorizonsFile) -> Path:

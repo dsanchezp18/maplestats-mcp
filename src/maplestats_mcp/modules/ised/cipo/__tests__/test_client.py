@@ -162,3 +162,33 @@ async def test_number_fields_drop_thousands_separators(httpx_mock):
     httpx_mock.add_response(url=constants.BASE_URL, json={"numFound": 1, "docs": [_SAMPLE_DOC]})
     await client.search_trademarks("registration_number", "TMA700,000")
     assert _sent_body(httpx_mock)["textfield1"] == "TMA700,000"
+
+
+async def test_french_invalid_field_is_french():
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.search_trademarks("not_a_real_field", "maple", lang="fr")
+    message = str(excinfo.value)
+    assert message.startswith("Entrée invalide : ised_cipo:search_trademarks :")
+    assert "search_field doit valoir" in message
+
+
+async def test_french_limits_are_french_and_spaced(httpx_mock):
+    httpx_mock.add_response(url=constants.BASE_URL, json={"numFound": 1, "docs": [_SAMPLE_DOC]})
+    result = await client.search_trademarks("all", "maple", max_return=5, lang="fr")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Requête : POST")
+    assert "qu'en anglais ;" in limits
+    assert "No pagination" not in limits
+
+
+async def test_english_limits_unchanged(httpx_mock):
+    httpx_mock.add_response(url=constants.BASE_URL, json={"numFound": 1, "docs": [_SAMPLE_DOC]})
+    result = await client.search_trademarks("all", "maple", max_return=5)
+    assert (result.provenance.limits or "").startswith(f"Request: POST {constants.BASE_URL}")
+
+
+async def test_french_bad_nice_class_is_french(httpx_mock):
+    with pytest.raises(InvalidInput) as excinfo:
+        await client.search_trademarks("nice_classification", "46", lang="fr")
+    assert "les classes de Nice vont de 0 à 45" in str(excinfo.value)
+    assert httpx_mock.get_requests() == []

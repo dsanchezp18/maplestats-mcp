@@ -46,9 +46,10 @@ async def ised_spectrum_query_licences(
     Keywords: ISED, ISDE, spectrum,
     radio licence, wireless, telecommunications, frequency, licensee,
     transmitter, antenna, tower, Spectrum Management System, SMS.
-    Mots-clés : ISDE, spectre, licence radio, sans fil,
-    télécommunications, fréquence, titulaire de licence, émetteur,
-    antenne, tour, Système de gestion du spectre, SGS.
+    Mots-clés : ISDE, spectre radioélectrique, licence de spectre,
+    licence radio, sans fil, télécommunications, fréquence, titulaire de
+    licence, émetteur, antenne, pylône, tour de télécommunication,
+    Système de gestion du spectre, SGS.
     """
     return await client.query_licences(
         where=where, out_fields=out_fields, order_by=order_by, limit=limit, offset=offset, lang=lang

@@ -42,7 +42,7 @@ import unicodedata
 import zipfile
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import certifi
 import httpx
@@ -63,10 +63,11 @@ from maplestats_mcp.modules.ised.ip_horizons.schemas import (
 )
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import api_get, is_retryable, new_client
+from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -83,6 +84,25 @@ _FILE = re.compile(
     re.IGNORECASE,
 )
 _HEADER_CELLS = ("variable name", "attribute name")
+
+
+def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
+    """English stays the plain message; French gets the typed template."""
+    if lang == "fr":
+        raise_typed(exc_cls, fr, "fr")
+    raise exc_cls(en)
+
+
+def _pick(en: str, fr: str, lang: str) -> str:
+    """The English text, or the French one with no-break spaces."""
+    return french_spacing(fr) if lang == "fr" else en
+
+
+def _dataset_page(ip_type: str, lang: str) -> str:
+    # open.canada.ca serves the same dataset page in French under /data/fr/.
+    url = constants.DATASET_PAGE_URL.format(id=constants.PACKAGE_IDS[ip_type])
+    return url.replace("/data/en/", "/data/fr/") if lang == "fr" else url
+
 
 _TLS = ssl.create_default_context(cafile=certifi.where())
 _TLS.load_verify_locations(Path(__file__).with_name("rapidssl_tls_rsa_ca_g1.pem"))
@@ -150,19 +170,27 @@ def _as_of(release: date | None) -> datetime | None:
     return datetime(release.year, release.month, release.day, tzinfo=UTC) if release else None
 
 
-def _freshness(release: date | None) -> str:
+def _freshness(release: date | None, lang: str = "en") -> str:
     # Derived from the files read rather than a fixed promise: CIPO's
     # releases were quarterly until 2024 and none has followed since.
     if release is None:
-        return "bulk releases; release date unknown"
-    return (
+        return _pick(
+            "bulk releases; release date unknown",
+            "diffusions en bloc ; date de diffusion inconnue",
+            lang,
+        )
+    return _pick(
         f"bulk releases, no fixed schedule; this is the {release.isoformat()} release, "
         "the newest open release CIPO has published, so records filed or changed "
-        "after that date are missing"
+        "after that date are missing",
+        f"diffusions en bloc, sans calendrier fixe ; voici la diffusion du "
+        f"{release.isoformat()}, la plus récente que l'OPIC a publiée en données ouvertes : "
+        "les dossiers déposés ou modifiés après cette date n'y sont pas",
+        lang,
     )
 
 
-async def _package(ip_type: IpType) -> tuple[dict[str, Any], bool]:
+async def _package(ip_type: IpType, lang: str = "en") -> tuple[dict[str, Any], bool]:
     package_id = constants.PACKAGE_IDS[ip_type]
 
     async def fetch() -> Any:
@@ -170,34 +198,50 @@ async def _package(ip_type: IpType) -> tuple[dict[str, Any], bool]:
         try:
             return await api_get(constants.CKAN_BASE_URL, params={"id": package_id})
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"ised_ip_horizons: open.canada.ca package {package_id} returned "
-                f"HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                "ised_ip_horizons: open.canada.ca did not respond in time. Try again shortly."
-            ) from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"ised_ip_horizons: open.canada.ca package {package_id} returned HTTP {status}.",
+                f"ised_ip_horizons : le paquet open.canada.ca {package_id} a renvoyé "
+                f"HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                "ised_ip_horizons: open.canada.ca did not respond in time. Try again shortly.",
+                "ised_ip_horizons : open.canada.ca n'a pas répondu à temps. Réessayez sous peu.",
+                lang,
+            )
 
     payload, was_cached = await cached_fetch(
         f"ised-ip-horizons:package:{package_id}", constants.CATALOGUE_TTL_SECONDS, fetch
     )
     result = payload.get("result") if isinstance(payload, dict) else None
     if not isinstance(result, dict):
-        raise UpstreamError(f"ised_ip_horizons: package {package_id} had no 'result'.")
+        _raise(
+            UpstreamError,
+            f"ised_ip_horizons: package {package_id} had no 'result'.",
+            f"ised_ip_horizons : le paquet {package_id} n'avait pas de 'result'.",
+            lang,
+        )
     return result, was_cached
 
 
 async def list_files(
-    ip_type: IpType, *, table: str | None = None, latest_only: bool = True
+    ip_type: IpType, *, table: str | None = None, latest_only: bool = True, lang: str = "en"
 ) -> IpHorizonsCatalogue:
     """The bulk data files of one IP Horizons dataset."""
     if ip_type not in constants.PACKAGE_IDS:
-        raise InvalidInput(
-            f"ised_ip_horizons:list_files: ip_type must be one of "
-            f"{sorted(constants.PACKAGE_IDS)}, got {ip_type!r}."
+        types = sorted(constants.PACKAGE_IDS)
+        _raise(
+            InvalidInput,
+            f"ised_ip_horizons:list_files: ip_type must be one of {types}, got {ip_type!r}.",
+            f"ised_ip_horizons:list_files : ip_type doit valoir l'une de {types}, "
+            f"reçu {ip_type!r}.",
+            lang,
         )
-    package, was_cached = await _package(ip_type)
+    package, was_cached = await _package(ip_type, lang)
     parsed = [
         parse_file_url(ip_type, str(res.get("url") or ""), str(res.get("name") or ""))
         for res in list_or_empty(package, "resources")
@@ -220,9 +264,13 @@ async def list_files(
     if table:
         wanted = table.strip().lower()
         if wanted not in all_tables:
-            raise InvalidInput(
+            _raise(
+                InvalidInput,
                 f"ised_ip_horizons:list_files: no {ip_type} table {table!r}; "
-                f"tables are {all_tables}."
+                f"tables are {all_tables}.",
+                f"ised_ip_horizons:list_files : aucune table {ip_type} {table!r} ; "
+                f"les tables sont {all_tables}.",
+                lang,
             )
         files = [item for item in files if item.table == wanted]
     files.sort(
@@ -230,24 +278,38 @@ async def list_files(
     )
     release_dates = [f.release_date for f in files if f.release_date]
     newest_release = max(release_dates) if release_dates else None
+    unlisted = ip_type in constants.UNLISTED_RELEASES
+    coverage = _pick(
+        f"newest release folder per table (latest {newest_release})"
+        if latest_only and newest_release
+        else "every release folder the package lists",
+        f"dossier de diffusion le plus récent par table (dernier : {newest_release})"
+        if latest_only and newest_release
+        else "tous les dossiers de diffusion que liste le paquet",
+        lang,
+    )
+    limits = _pick(
+        "Lists download links only; files are ZIPs of pipe-delimited UTF-8 CSV."
+        + (f" {constants.UNLISTED_NOTE}" if unlisted else ""),
+        "Liens de téléchargement seulement ; chaque fichier est un ZIP d'un CSV UTF-8 "
+        "délimité par des barres verticales. Les noms de tables viennent des URL de "
+        "téléchargement, en anglais." + (f" {constants.UNLISTED_NOTE_FR}" if unlisted else ""),
+        lang,
+    )
     return IpHorizonsCatalogue(
         files=files,
         returned_count=len(files),
         tables=all_tables,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=constants.DATASET_PAGE_URL.format(id=constants.PACKAGE_IDS[ip_type]),
+            url=_dataset_page(ip_type, lang),
             cached=was_cached,
             schema_name="ised_ip_horizons.IpHorizonsCatalogue",
             as_of=_as_of(newest_release),
-            freshness=_freshness(newest_release),
-            coverage=(
-                f"newest release folder per table (latest {newest_release})"
-                if latest_only and newest_release
-                else "every release folder the package lists"
-            ),
-            limits="Lists download links only; files are ZIPs of pipe-delimited UTF-8 CSV."
-            + (f" {constants.UNLISTED_NOTE}" if ip_type in constants.UNLISTED_RELEASES else ""),
+            freshness=_freshness(newest_release, lang),
+            coverage=coverage,
+            limits=limits,
+            lang=lang,
         ),
     )
 
@@ -298,13 +360,20 @@ def parse_dictionary(workbook_bytes: bytes) -> tuple[list[DictionaryField], list
     return fields, notes
 
 
-async def get_dictionary(ip_type: IpType, *, table: str | None = None) -> IpHorizonsDictionary:
+async def get_dictionary(
+    ip_type: IpType, *, table: str | None = None, lang: str = "en"
+) -> IpHorizonsDictionary:
     """The data dictionary of one IP Horizons dataset."""
     url = constants.DICTIONARY_URLS.get(ip_type)
     if url is None:
-        raise InvalidInput(
+        types = sorted(constants.DICTIONARY_URLS)
+        _raise(
+            InvalidInput,
             f"ised_ip_horizons:get_dictionary: CIPO publishes dictionaries only for "
-            f"{sorted(constants.DICTIONARY_URLS)}, got {ip_type!r}."
+            f"{types}, got {ip_type!r}.",
+            f"ised_ip_horizons:get_dictionary : l'OPIC ne publie de dictionnaire que pour "
+            f"{types}, reçu {ip_type!r}.",
+            lang,
         )
 
     async def fetch() -> Any:
@@ -312,20 +381,39 @@ async def get_dictionary(ip_type: IpType, *, table: str | None = None) -> IpHori
         try:
             body = await _get_cipo_file(url)
         except httpx.HTTPStatusError as exc:
-            raise UpstreamError(
-                f"ised_ip_horizons: {url} returned HTTP {exc.response.status_code}."
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(f"ised_ip_horizons: {url} did not respond in time.") from exc
+            status = exc.response.status_code
+            _raise(
+                UpstreamError,
+                f"ised_ip_horizons: {url} returned HTTP {status}.",
+                f"ised_ip_horizons : {url} a renvoyé HTTP {status}.",
+                lang,
+            )
+        except httpx.HTTPError:
+            _raise(
+                UpstreamUnavailable,
+                f"ised_ip_horizons: {url} did not respond in time.",
+                f"ised_ip_horizons : {url} n'a pas répondu à temps.",
+                lang,
+            )
         if len(body) > constants.MAX_DICTIONARY_BYTES:
-            raise UpstreamError(f"ised_ip_horizons: {url} is larger than expected.")
+            _raise(
+                UpstreamError,
+                f"ised_ip_horizons: {url} is larger than expected.",
+                f"ised_ip_horizons : {url} est plus volumineux que prévu.",
+                lang,
+            )
         try:
             with zipfile.ZipFile(io.BytesIO(body)) as archive:
                 member = next(n for n in archive.namelist() if n.lower().endswith(".xlsx"))
                 return parse_dictionary(archive.read(member))
-        except (zipfile.BadZipFile, StopIteration) as exc:
+        except (zipfile.BadZipFile, StopIteration):
             # opic-cipo.ca serves its HTML 404 page for a missing file.
-            raise UpstreamError(f"ised_ip_horizons: {url} is not a dictionary ZIP.") from exc
+            _raise(
+                UpstreamError,
+                f"ised_ip_horizons: {url} is not a dictionary ZIP.",
+                f"ised_ip_horizons : {url} n'est pas un ZIP de dictionnaire.",
+                lang,
+            )
 
     (fields, notes), was_cached = await cached_fetch(
         f"ised-ip-horizons:dictionary:{ip_type}", constants.DICTIONARY_TTL_SECONDS, fetch
@@ -334,9 +422,13 @@ async def get_dictionary(ip_type: IpType, *, table: str | None = None) -> IpHori
     if table:
         wanted = table.strip().lower()
         if wanted not in tables:
-            raise InvalidInput(
+            _raise(
+                InvalidInput,
                 f"ised_ip_horizons:get_dictionary: no {ip_type} table {table!r}; "
-                f"tables are {tables}."
+                f"tables are {tables}.",
+                f"ised_ip_horizons:get_dictionary : aucune table {ip_type} {table!r} ; "
+                f"les tables sont {tables}.",
+                lang,
             )
         fields = [f for f in fields if f.table == wanted]
     return IpHorizonsDictionary(
@@ -349,6 +441,15 @@ async def get_dictionary(ip_type: IpType, *, table: str | None = None) -> IpHori
             url=url,
             cached=was_cached,
             schema_name="ised_ip_horizons.IpHorizonsDictionary",
+            # English output has no limits text here; French says what stays English.
+            limits=french_spacing(
+                "Les notes d'aperçu du classeur de l'OPIC n'existent qu'en anglais ; elles "
+                "sont reproduites telles quelles. Chaque champ a son nom, son type et sa "
+                "description en anglais et en français."
+            )
+            if lang == "fr"
+            else None,
+            lang=lang,
         ),
     )
 
@@ -363,8 +464,8 @@ _IPC = re.compile(r"^([A-H])(\d{2})([A-Z])(?:\s*(\d{1,4})(?:/(\d{1,6}))?)?$")
 _MAX_LIMIT = 100
 
 
-async def _patent_files(table: str) -> list[IpHorizonsFile]:
-    catalogue = await list_files("patent", table=table)
+async def _patent_files(table: str, lang: str = "en") -> list[IpHorizonsFile]:
+    catalogue = await list_files("patent", table=table, lang=lang)
     files = [f for f in catalogue.files if not f.text_format]
     # The IPC release lists one unsplit ZIP (twice) next to its two split
     # parts holding the same rows; prefer the parts.
@@ -487,27 +588,57 @@ def _parquet(paths: list[Path]) -> str:
     return f"read_parquet([{quoted}])"
 
 
+async def _local(file: IpHorizonsFile, lang: str) -> Path:
+    """store.local_table, with its errors in French for a French call."""
+    try:
+        return await store.local_table(file)
+    except NotFound:
+        if lang == "fr":
+            raise_typed(NotFound, f"ised_ip_horizons : {file.url} n'est plus publié.", "fr")
+        raise
+    except UpstreamUnavailable:
+        if lang == "fr":
+            raise_typed(
+                UpstreamUnavailable,
+                f"ised_ip_horizons : le téléchargement de {file.url} a échoué.",
+                "fr",
+            )
+        raise
+
+
 def _release(files: list[IpHorizonsFile]) -> date | None:
     dates = [f.release_date for f in files if f.release_date]
     return max(dates) if dates else None
 
 
-async def get_patent(number: int, *, include_classifications: bool = False) -> PatentRecord:
+async def get_patent(
+    number: int, *, include_classifications: bool = False, lang: str = "en"
+) -> PatentRecord:
     """One Canadian patent with its parties, and optionally its IPC classes."""
     context = "ised_ip_horizons:get_patent"
     if number < 1:
-        raise InvalidInput(f"{context}: patent_number must be positive, got {number}.")
-    main_file = _covering(await _patent_files("main"), number)
-    party_file = _covering(await _patent_files("interested_party"), number)
+        _raise(
+            InvalidInput,
+            f"{context}: patent_number must be positive, got {number}.",
+            f"{context} : patent_number doit être positif, reçu {number}.",
+            lang,
+        )
+    main_file = _covering(await _patent_files("main", lang), number)
+    party_file = _covering(await _patent_files("interested_party", lang), number)
     if main_file is None or party_file is None:
-        raise NotFound(f"{context}: no IP Horizons file covers patent {number}.")
+        _raise(
+            NotFound,
+            f"{context}: no IP Horizons file covers patent {number}.",
+            f"{context} : aucun fichier Horizons PI ne couvre le brevet {number}.",
+            lang,
+        )
     used = [main_file, party_file]
     if include_classifications:
-        ipc_file = _covering(await _patent_files("ipc_classification"), number)
+        ipc_file = _covering(await _patent_files("ipc_classification", lang), number)
         if ipc_file is not None:
             used.append(ipc_file)
     # Downloads start together; see search_patents.
-    local = await asyncio.gather(*(store.local_table(f) for f in used))
+    local = await asyncio.gather(*(_local(f, lang) for f in used))
     main_path, party_path = local[0], local[1]
     ipc_path: Path | None = local[2] if len(local) > 2 else None
 
@@ -526,7 +657,12 @@ async def get_patent(number: int, *, include_classifications: bool = False) -> P
 
     main, parties, classes = await run_in_pool(run)
     if not main:
-        raise NotFound(f"{context}: patent {number} is not in the IP Horizons data.")
+        _raise(
+            NotFound,
+            f"{context}: patent {number} is not in the IP Horizons data.",
+            f"{context} : le brevet {number} n'est pas dans les données Horizons PI.",
+            lang,
+        )
     release = _release(used)
     return PatentRecord(
         patent=_summary(main[0]),
@@ -540,8 +676,15 @@ async def get_patent(number: int, *, include_classifications: bool = False) -> P
             cached=False,
             schema_name="ised_ip_horizons.PatentRecord",
             as_of=_as_of(release),
-            freshness=_freshness(release),
-            limits="Owners, status and classes are as of the release date, not today.",
+            freshness=_freshness(release, lang),
+            limits=_pick(
+                "Owners, status and classes are as of the release date, not today.",
+                "Les titulaires, le statut et les classes sont ceux de la date de diffusion, "
+                "pas d'aujourd'hui. Les codes et les noms de parties sont reproduits tels que "
+                "publiés ; les titres existent en anglais et en français.",
+                lang,
+            ),
+            lang=lang,
         ),
     )
 
@@ -555,6 +698,7 @@ async def search_patents(
     filed_from: date | None = None,
     filed_to: date | None = None,
     limit: int = 25,
+    lang: str = "en",
 ) -> PatentSearchResult:
     """Canadian patents matching party, IPC class, title and filing-date filters."""
     context = "ised_ip_horizons:search_patents"
@@ -562,29 +706,62 @@ async def search_patents(
     title = (title or "").strip() or None
     ipc_text = " ".join((ipc or "").upper().split()) or None
     if not any([party_name, ipc_text, title, filed_from, filed_to]):
-        raise InvalidInput(f"{context}: give at least one of party_name, ipc, title or a date.")
+        _raise(
+            InvalidInput,
+            f"{context}: give at least one of party_name, ipc, title or a date.",
+            f"{context} : donnez au moins party_name, ipc, title ou une date.",
+            lang,
+        )
     if limit < 1 or limit > _MAX_LIMIT:
-        raise InvalidInput(f"{context}: limit must be between 1 and {_MAX_LIMIT}, got {limit}.")
+        _raise(
+            InvalidInput,
+            f"{context}: limit must be between 1 and {_MAX_LIMIT}, got {limit}.",
+            f"{context} : limit doit être compris entre 1 et {_MAX_LIMIT}, reçu {limit}.",
+            lang,
+        )
+    # shared check_range speaks English only; the French call says it here first.
+    if lang == "fr" and filed_from and filed_to and filed_from > filed_to:
+        raise_typed(
+            InvalidInput,
+            f"filed_from ({filed_from}) est après filed_to ({filed_to}) ; inversez-les "
+            "ou élargissez l'intervalle.",
+            "fr",
+        )
     check_range(filed_from, filed_to, "filed_from", "filed_to")
     party_key = party_type.lower() if party_type else None
     if party_key and party_key not in _PARTY_TYPES:
-        raise InvalidInput(f"{context}: party_type must be one of {sorted(_PARTY_TYPES)}.")
+        _raise(
+            InvalidInput,
+            f"{context}: party_type must be one of {sorted(_PARTY_TYPES)}.",
+            f"{context} : party_type doit valoir l'une de {sorted(_PARTY_TYPES)}.",
+            lang,
+        )
     if party_key and not party_name:
-        raise InvalidInput(f"{context}: party_type needs a party_name.")
+        _raise(
+            InvalidInput,
+            f"{context}: party_type needs a party_name.",
+            f"{context} : party_type exige un party_name.",
+            lang,
+        )
     ipc_match = _IPC.match(ipc_text) if ipc_text else None
     if ipc_text and ipc_match is None:
-        raise InvalidInput(f"{context}: ipc must look like 'H01M', 'H01M 10' or 'H01M 10/0525'.")
+        _raise(
+            InvalidInput,
+            f"{context}: ipc must look like 'H01M', 'H01M 10' or 'H01M 10/0525'.",
+            f"{context} : ipc doit avoir la forme 'H01M', 'H01M 10' ou 'H01M 10/0525'.",
+            lang,
+        )
 
-    main_files = await _patent_files("main")
-    party_files = await _patent_files("interested_party") if party_name else []
-    ipc_files = await _patent_files("ipc_classification") if ipc_match else []
+    main_files = await _patent_files("main", lang)
+    party_files = await _patent_files("interested_party", lang) if party_name else []
+    ipc_files = await _patent_files("ipc_classification", lang) if ipc_match else []
     used = [*main_files, *party_files, *ipc_files]
     # Start every needed download together, so a first call that times out
     # leaves all of them running rather than only the first.
     paths = dict(
         zip(
             [f.url for f in used],
-            await asyncio.gather(*(store.local_table(f) for f in used)),
+            await asyncio.gather(*(_local(f, lang) for f in used)),
             strict=True,
         )
     )
@@ -666,15 +843,23 @@ async def search_patents(
         release_date=release,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=constants.DATASET_PAGE_URL.format(id=constants.PACKAGE_IDS["patent"]),
+            url=_dataset_page("patent", lang),
             cached=False,
             schema_name="ised_ip_horizons.PatentSearchResult",
             as_of=_as_of(release),
-            freshness=_freshness(release),
-            coverage=f"newest {len(rows)} by filing date of {total} matches",
-            limits=(
-                "Name and title filters are case-insensitive substring matches; "
-                "the title filter also ignores accents."
+            freshness=_freshness(release, lang),
+            coverage=_pick(
+                f"newest {len(rows)} by filing date of {total} matches",
+                f"les {len(rows)} plus récents par date de dépôt sur {total} résultats",
+                lang,
             ),
+            limits=_pick(
+                "Name and title filters are case-insensitive substring matches; "
+                "the title filter also ignores accents.",
+                "Les filtres sur le nom et le titre cherchent une sous-chaîne, sans égard "
+                "à la casse ; le filtre sur le titre ignore aussi les accents.",
+                lang,
+            ),
+            lang=lang,
         ),
     )
