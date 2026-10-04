@@ -23,8 +23,11 @@ async def cer_list_datasets(query: str = "", limit: int = 10, lang: Lang = "en")
     `lang="fr"` returns the French files and titles.
     Keywords: CER, Canada Energy Regulator, NEB, pipeline, throughput,
     capacity, oil exports, natural gas exports, LNG, tolls, incidents.
-    Mots-clés : Régie de l'énergie du Canada, ONE, pipeline, débit,
-    capacité, exportations de pétrole, gaz naturel, GNL, droits, incidents.
+    Mots-clés : Régie de l'énergie du Canada (REC), Office national de
+    l'énergie (ONE), pipelines, débit des pipelines, capacité,
+    exportations de pétrole brut, exportations de gaz naturel, GNL,
+    droits pipeliniers, incidents, raffineries, Avenir énergétique du
+    Canada.
     """
     return await client.list_datasets(query, limit=limit, lang=lang)
 
@@ -51,9 +54,10 @@ async def cer_query_file(
     The file's own language decides the column names.
     Keywords: CER, pipeline throughput, capacity utilization, exports,
     volumes, tolls, time series, CSV, oil, natural gas.
-    Mots-clés : Régie de l'énergie, débit des pipelines, taux d'utilisation,
-    exportations, volumes, droits, séries chronologiques, pipelines, gaz
-    naturel.
+    Mots-clés : Régie de l'énergie du Canada (REC), débit des pipelines,
+    taux d'utilisation, capacité disponible, exportations, volumes,
+    droits pipeliniers, séries chronologiques, pétrole brut, gaz naturel.
     """
-    del lang
-    return await client.query_file(url, filters, columns=columns, start=start, end=end, limit=limit)
+    return await client.query_file(
+        url, filters, columns=columns, start=start, end=end, limit=limit, lang=lang
+    )

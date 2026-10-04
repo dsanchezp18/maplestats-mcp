@@ -148,6 +148,48 @@ async def test_get_production_volumes_link_invalid_product_raises():
         await client.get_production_volumes_link("not-a-product")
 
 
+async def test_french_invalid_day_error_is_french():
+    with pytest.raises(InvalidInput, match="Entrée invalide : day doit être"):
+        await client.get_well_licences_daily("someday", lang="fr")
+
+
+async def test_french_year_error_is_french():
+    with pytest.raises(InvalidInput, match="l'archive ST1 de l'AER commence en 2017"):
+        await client.get_well_licence_archive_link(1850, lang="fr")
+
+
+async def test_french_daily_report_has_french_note_and_provenance(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.WELL_LICENCE_DAILY_URL.format(day_code="TUE"), text=_SAMPLE_DAILY_TEXT
+    )
+    result = await client.get_well_licences_daily("tuesday", lang="fr")
+    assert result.note is not None
+    assert "Voici la liste du 2026-09-15 :" in result.note
+    assert "n'existent qu'en anglais ;" in result.note
+    assert result.provenance.freshness is not None
+    assert "publié chaque nuit" in result.provenance.freshness
+    assert result.provenance.reproduce.startswith("Pour obtenir")
+
+
+async def test_french_missing_archive_note_is_french(httpx_mock):
+    url = constants.WELL_LICENCE_YEARLY_ZIP_URL_OLD.format(year=2018)
+    httpx_mock.add_response(url=url, status_code=404)
+    result = await client.get_well_licence_archive_link(2018, lang="fr")
+    assert result.note is not None
+    assert result.note.startswith("L'AER n'a aucun fichier")
+
+
+async def test_french_production_volumes_provenance(httpx_mock):
+    url = constants.PRODUCTION_VOLUMES_URL.format(product_path="Oil")
+    httpx_mock.add_response(url=url)
+    result = await client.get_production_volumes_link("oil", lang="fr")
+    assert result.provenance.freshness == "ST3 est publié chaque mois, avec un mois de décalage"
+    assert result.provenance.limits is not None and "anglais" in result.provenance.limits
+    english = await client.get_production_volumes_link("oil")
+    assert english.provenance.freshness == "ST3 is released monthly, one month in arrears"
+    assert english.provenance.limits is None
+
+
 async def test_get_production_volumes_link_oil_prices_uses_prices_oil_path(httpx_mock):
     url = constants.PRODUCTION_VOLUMES_URL.format(product_path="prices_oil")
     httpx_mock.add_response(url=url)

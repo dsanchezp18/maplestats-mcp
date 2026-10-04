@@ -72,6 +72,33 @@ async def test_rejects_non_cer_urls_and_unknown_columns(httpx_mock):
         await client.query_file(_URL, start="June 2025")
 
 
+async def test_french_errors_are_french(httpx_mock):
+    with pytest.raises(InvalidInput, match="Entrée invalide : cer : url doit être"):
+        await client.query_file("https://example.com/data.csv", lang="fr")
+    with pytest.raises(InvalidInput, match="AAAA-MM-JJ"):
+        await client.query_file(_URL, start="June 2025", lang="fr")
+    httpx_mock.add_response(url=_URL, content=_THROUGHPUT)
+    with pytest.raises(InvalidInput, match="colonne inconnue 'Bogus'"):
+        await client.query_file(_URL, {"Bogus": "x"}, lang="fr")
+
+
+async def test_french_html_page_is_french_not_found(httpx_mock):
+    httpx_mock.add_response(url=_URL, text="<!DOCTYPE html><html><body>Page</body></html>")
+    with pytest.raises(NotFound, match="aucun fichier CSV"):
+        await client.query_file(_URL, lang="fr")
+
+
+async def test_french_provenance_and_english_file_note(httpx_mock):
+    httpx_mock.add_response(url=_URL, content=_THROUGHPUT)
+    result = await client.query_file(_URL, limit=2, lang="fr")
+    assert result.provenance.coverage == "2 lignes correspondantes sur 4"
+    assert result.provenance.limits is not None
+    assert "version anglaise :" in result.provenance.limits
+    english = await client.query_file(_URL, limit=2)
+    assert english.provenance.coverage == "2 of 4 matching rows"
+    assert english.provenance.limits is None
+
+
 async def test_html_error_page_is_not_found(httpx_mock):
     httpx_mock.add_response(url=_URL, text="<!DOCTYPE html><html><body>Page</body></html>")
     with pytest.raises(NotFound, match="web page"):
