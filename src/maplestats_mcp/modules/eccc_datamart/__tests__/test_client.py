@@ -139,9 +139,29 @@ async def test_browse_sorts_folders_first_and_links_the_catalogue(httpx_mock):
     assert result.title == "PDGES"
     assert result.catalogue_url == "https://open.canada.ca/data/fr/dataset/a8ba"
     assert result.files == 3 and result.folders == 1
-    assert result.provenance.licence and "Open Government Licence - Canada" in (
+    assert result.provenance.licence and "Licence du gouvernement ouvert – Canada" in (
         result.provenance.licence
     )
+    assert result.attribution.startswith("Contient des informations")
+    assert (result.provenance.coverage or "").startswith("Les listes et les fichiers")
+    english = await client.browse(folder)
+    assert english.provenance.licence and "Open Government Licence - Canada" in (
+        english.provenance.licence
+    )
+
+
+async def test_french_errors_and_notes(httpx_mock):
+    with pytest.raises(InvalidInput, match="^Entrée invalide : eccc_datamart : offset"):
+        await client.browse("/", offset=-1, lang="fr")
+    _mock_listing(httpx_mock, constants.NPRI_FOLDER, _listing("/x", NPRI_ITEMS))
+    with pytest.raises(InvalidInput, match="aucun tableau annuel de l'INRP pour 2015"):
+        await client.npri_facilities(year=2015, lang="fr")
+    with pytest.raises(InvalidInput, match="province inconnue"):
+        await client.npri_facilities(province="Atlantis", lang="fr")
+    _mock_file(httpx_mock, f"{constants.NPRI_FOLDER}/{NPRI_NAME}", NPRI_BODY)
+    result = await client.npri_facilities(npri_id="1", lang="fr")
+    assert "furannes) ; ne comparer" in result.notes[0]
+    assert (result.provenance.coverage or "").startswith("Une ligne par installation")
 
 
 async def test_browse_unknown_path_is_not_found(httpx_mock):
