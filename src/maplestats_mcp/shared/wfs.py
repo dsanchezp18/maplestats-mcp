@@ -82,11 +82,33 @@ def _extract_exception_text(body: bytes) -> str:
     return body[:200].decode("utf-8", errors="replace")
 
 
+_OUTAGE_MARKERS = (
+    "unable to obtain connection",
+    "hikaripool",
+    "sessions_per_user",
+    "ora-0",
+    "too many connections",
+    "connection pool",
+)
+
+
+def _is_backend_outage(detail: str) -> bool:
+    """True when an error text describes the server's own database or pool failing."""
+    text = detail.lower()
+    return any(marker in text for marker in _OUTAGE_MARKERS)
+
+
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
     status = exc.response.status_code
     detail = _extract_exception_text(exc.response.content)
     if status == 404:
         raise NotFound(f"{context}: no match found ({detail}).") from exc
+    if status == 429 or (400 <= status < 500 and _is_backend_outage(detail)):
+        # Some servers answer a database-pool failure (or throttling) with a 4xx; that
+        # is the service being unavailable, not a mistake in the request.
+        raise UpstreamUnavailable(
+            f"{context}: the service is temporarily unavailable ({detail}). Try again shortly."
+        ) from exc
     if 400 <= status < 500:
         raise InvalidInput(f"{context}: rejected the request ({detail}).") from exc
     raise UpstreamError(f"{context} returned HTTP {status}: {detail}") from exc

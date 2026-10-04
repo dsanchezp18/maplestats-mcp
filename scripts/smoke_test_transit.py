@@ -121,20 +121,27 @@ def _independent_counts(key: str, day: date) -> dict[str, str | int]:
     today, yesterday = active(day), active(day - timedelta(days=1))
     trip_service = {r["trip_id"]: r["service_id"] for r in rows("trips.txt")}
     stops = rows("stops.txt")
-    target = next(
-        r
+    # Every stop near the core: the first one can have no service on the probe day
+    # (weekend-only or seasonal), so the busiest is checked instead.
+    near = {
+        r["stop_id"]
         for r in stops
         if abs(float(r["stop_lat"]) - CORES[key][0]) < 0.003
         and abs(float(r["stop_lon"]) - CORES[key][1]) < 0.003
-    )["stop_id"]
-    count = 0
+    }
+    counts: dict[str, int] = {}
     for r in rows("stop_times.txt"):
-        if r["stop_id"] != target:
+        if r["stop_id"] not in near:
             continue
         hours = int((r["departure_time"] or r["arrival_time"]).split(":")[0])
         service = trip_service.get(r["trip_id"])
-        count += service in today
-        count += service in yesterday and hours >= 24
+        counts[r["stop_id"]] = (
+            counts.get(r["stop_id"], 0)
+            + (service in today)
+            + (service in yesterday and hours >= 24)
+        )
+    target = max(near, key=lambda stop_id: (counts.get(stop_id, 0), stop_id))
+    count = counts.get(target, 0)
     return {
         "routes": len(rows("routes.txt")),
         "stops": len(stops),
