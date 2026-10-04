@@ -126,9 +126,7 @@ async def test_french_coverage_licence_and_errors(httpx_mock, monkeypatch):
     monkeypatch.setattr(constants, "SEARCH_RESULTS_MAX", 1)
     httpx_mock.add_response(url=constants.URL_FR, html=_REGISTRY_HTML)
     result = await client.search_registrants(lang="fr")
-    assert result.provenance.coverage == (
-        "les 1 premiers résultats sur 3 : précisez la requête"
-    )
+    assert result.provenance.coverage == ("les 1 premiers résultats sur 3 : précisez la requête")
     assert (result.provenance.licence or "").startswith("Avis du site Web du gouvernement")
 
 
