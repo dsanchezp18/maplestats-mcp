@@ -76,7 +76,6 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
 from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.licences_fr import licence_for_lang
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -114,7 +113,7 @@ _MONTHS = {
 
 def _lang(lang: str) -> str:
     if lang not in ("en", "fr"):
-        raise InvalidInput(f"cdc: lang must be 'en' or 'fr', got {lang!r}.")
+        raise InvalidInput(f"cdc: lang must be 'en' or 'fr', got {lang!r}.")  # no language known
     return lang
 
 
@@ -128,9 +127,17 @@ def _provenance(lang: str, url: str, **fields: Any):
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
-        licence=licence_for_lang(constants.RATE_LIMIT_SOURCE, url, lang),
         lang=lang,
         **fields,
+    )
+
+
+def _year_order(lang: str) -> InvalidInput:
+    return lang_error(
+        InvalidInput,
+        lang,
+        "cdc: year_from must not be after year_to.",
+        "cdc : year_from ne doit pas être postérieur à year_to.",
     )
 
 
@@ -523,12 +530,17 @@ def catalogue(lang: str = "en") -> CdcCatalogue:
     return CdcCatalogue(
         datasets=datasets,
         related_sources=related,
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=f"{constants.SITE}/{lang}",
+        provenance=_provenance(
+            lang,
+            f"{constants.SITE}/{lang}",
             cached=False,
             schema_name="cdc.CdcCatalogue",
-            coverage="Curated list, checked live 2026-09-26; no upstream call is made.",
+            coverage=fr_or_en(
+                lang,
+                "Curated list, checked live 2026-09-26; no upstream call is made.",
+                "Liste établie à la main, vérifiée en direct le 2026-09-26 ; aucun appel à la "
+                "source n'est fait.",
+            ),
         ),
     )
 
@@ -538,7 +550,7 @@ def catalogue(lang: str = "en") -> CdcCatalogue:
 # ---------------------------------------------------------------------------
 
 
-def parse_component_rows(rows: list[dict[str, str]]) -> list[ComponentPrice]:
+def parse_component_rows(rows: list[dict[str, str]], lang: str = "en") -> list[ComponentPrice]:
     if not rows:
         return []
     columns = Columns(rows)
@@ -554,7 +566,12 @@ def parse_component_rows(rows: list[dict[str, str]]) -> list[ComponentPrice]:
         ["Other solids($/kg)", "Other solids ($/kg)", "Autres solides($/kg)"]
     )
     if not (class_col and date_col and fat_col and protein_col and other_col):
-        raise UpstreamError(f"cdc: component price columns changed: {columns.names}.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cdc: component price columns changed: {columns.names}.",
+            f"cdc : les colonnes du fichier des prix des composants ont changé : {columns.names}.",
+        )
     parsed = []
     for row in rows:
         code = normalize_class(row.get(class_col) or "")
@@ -603,7 +620,7 @@ _COMPONENT_NOTES = {
         ),
         (
             "La classe 3(d) (mozzarella pour pizzas fraîches en restauration) est fixée du "
-            "1er février au 31 janvier; les classes 4(a), 4(m) et 5 changent chaque mois."
+            "1er février au 31 janvier ; les classes 4(a), 4(m) et 5 changent chaque mois."
         ),
     ],
 }
@@ -623,22 +640,30 @@ async def get_component_prices(
     if year_from is None:
         year_from = year_to
     if year_from > year_to:
-        raise InvalidInput("cdc: year_from must not be after year_to.")
+        raise _year_order(lang)
     if year_from < constants.COMPONENT_PRICES_FIRST_YEAR or year_to > current_year + 1:
-        raise InvalidInput(
-            f"cdc: component prices are published from {constants.COMPONENT_PRICES_FIRST_YEAR} "
-            f"to {current_year}; got {year_from}-{year_to}."
+        first = constants.COMPONENT_PRICES_FIRST_YEAR
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cdc: component prices are published from {first} "
+            f"to {current_year}; got {year_from}-{year_to}.",
+            f"cdc : les prix des composants sont publiés de {first} à {current_year} ; reçu "
+            f"{year_from}-{year_to}.",
         )
     code = None
     if milk_class:
         code = normalize_class(milk_class)
         if code not in COMPONENT_CLASS_CODES:
-            raise InvalidInput(
-                f"cdc: milk_class must be one of "
-                f"{[class_label(c) for c in COMPONENT_CLASS_CODES]}, got {milk_class!r}."
+            classes = [class_label(c) for c in COMPONENT_CLASS_CODES]
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"cdc: milk_class must be one of {classes}, got {milk_class!r}.",
+                f"cdc : milk_class doit être l'une des classes {classes} ; reçu {milk_class!r}.",
             )
 
-    notes = list(_COMPONENT_NOTES[lang])
+    notes = _fr(lang, list(_COMPONENT_NOTES[lang]))
 
     async def year_rows(year: int) -> tuple[list[ComponentPrice], bool, str]:
         url = constants.COMPONENT_PRICES_URL.format(year=year)
@@ -648,7 +673,7 @@ async def get_component_prices(
             else constants.PAST_YEAR_TTL_SECONDS
         )
         raw, cached = await fetch_rows(url, limiter=_LIMITER, ttl=ttl, context="cdc:component")
-        return parse_component_rows(raw), cached, url
+        return parse_component_rows(raw, lang), cached, url
 
     rows: list[ComponentPrice] = []
     files: list[str] = []
@@ -673,7 +698,12 @@ async def get_component_prices(
         all_cached &= cached
     if not fetched_years:
         if not defaulted:
-            raise NotFound(f"cdc: no component price file for {year_from}-{year_to} yet.")
+            raise lang_error(
+                NotFound,
+                lang,
+                f"cdc: no component price file for {year_from}-{year_to} yet.",
+                f"cdc : pas encore de fichier des prix des composants pour {year_from}-{year_to}.",
+            )
         parsed, all_cached, url = await year_rows(current_year - 1)
         rows, files, fetched_years = parsed, [url], [current_year - 1]
     year_from, year_to = fetched_years[0], fetched_years[-1]
@@ -688,12 +718,16 @@ async def get_component_prices(
         row_count=len(rows),
         source_files=files,
         notes=notes,
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=files[0] if len(files) == 1 else constants.COMPONENT_PRICES_PAGE[lang],
+        provenance=_provenance(
+            lang,
+            files[0] if len(files) == 1 else constants.COMPONENT_PRICES_PAGE[lang],
             cached=all_cached,
             schema_name="cdc.ComponentPriceResult",
-            freshness="monthly; next month's prices are announced by the 15th",
+            freshness=fr_or_en(
+                lang,
+                "monthly; next month's prices are announced by the 15th",
+                "mensuelle ; les prix du mois suivant sont annoncés au plus tard le 15",
+            ),
             coverage=f"{year_from}-{year_to}",
         ),
     )
@@ -713,11 +747,16 @@ def parse_number(text: str) -> float | None:
         return None
 
 
-def parse_support_prices(page: str) -> list[SupportPrice]:
+def parse_support_prices(page: str, lang: str = "en") -> list[SupportPrice]:
     main = _main(page)
     table = main.find("table")
     if not isinstance(table, Tag):
-        raise UpstreamError("cdc: the support price page no longer has its table.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "cdc: the support price page no longer has its table.",
+            "cdc : la page des prix de soutien n'a plus son tableau.",
+        )
     rows = []
     for tr in table.find_all("tr"):
         cells = [_clean_text(c) for c in tr.find_all("td")]
@@ -738,7 +777,12 @@ def parse_support_prices(page: str) -> list[SupportPrice]:
             )
         )
     if not rows:
-        raise UpstreamError("cdc: the support price table is empty.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "cdc: the support price table is empty.",
+            "cdc : le tableau des prix de soutien est vide.",
+        )
     return rows
 
 
@@ -768,8 +812,8 @@ async def _french_support_labels(rows: list[SupportPrice]) -> list[SupportPrice]
 async def get_butter_support_prices(lang: str = "en") -> SupportPriceResult:
     lang = _lang(lang)
     url = constants.SUPPORT_PRICES_PAGE["en"]
-    page, cached = await _page(url)
-    rows = parse_support_prices(page)
+    page, cached = await _page(url, lang)
+    rows = parse_support_prices(page, lang)
     if lang == "fr":
         rows = await _french_support_labels(rows)
     notes = {
@@ -785,27 +829,32 @@ async def get_butter_support_prices(lang: str = "en") -> SupportPriceResult:
         ],
         "fr": [
             (
-                "La CCL achète et vend le beurre à ce prix dans le cadre de ses programmes; elle "
+                "La CCL achète et vend le beurre à ce prix dans le cadre de ses programmes ; elle "
                 "a cessé d'acheter de la poudre de lait écrémé en 2017, il n'y a donc plus de "
                 "prix de soutien pour la poudre."
             ),
             (
-                "Une année seule signifie une entrée en vigueur le 1er février; un mois entre "
+                "Une année seule signifie une entrée en vigueur le 1er février ; un mois entre "
                 "parenthèses indique un changement le premier de ce mois."
             ),
         ],
     }[lang]
+    notes = _fr(lang, notes)
     return SupportPriceResult(
         rows=rows,
         row_count=len(rows),
         source_page=constants.SUPPORT_PRICES_PAGE[lang],
         notes=notes,
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=url,
+        provenance=_provenance(
+            lang,
+            url,
             cached=cached,
             schema_name="cdc.SupportPriceResult",
-            freshness="yearly, announced in the fall for February 1",
+            freshness=fr_or_en(
+                lang,
+                "yearly, announced in the fall for February 1",
+                "annuelle, annoncée à l'automne pour le 1er février",
+            ),
         ),
     )
 
@@ -878,22 +927,31 @@ async def get_national_quota(
 ) -> QuotaResult:
     lang = _lang(lang)
     index_url = constants.NATIONAL_QUOTA_INDEX["en"]
-    index_page, index_cached = await _page(index_url)
+    index_page, index_cached = await _page(index_url, lang)
     years = parse_quota_index(index_page, index_url)
     if not years:
-        raise UpstreamError("cdc: the national quota index lists no years.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "cdc: the national quota index lists no years.",
+            "cdc : l'index du quota national n'indique aucune année.",
+        )
     latest = max(years)
     if year_to is None:
         year_to = latest if year_from is None else max(year_from, min(latest, _today().year))
     if year_from is None:
         year_from = year_to
     if year_from > year_to:
-        raise InvalidInput("cdc: year_from must not be after year_to.")
+        raise _year_order(lang)
     missing = [y for y in range(year_from, year_to + 1) if y not in years]
     if missing:
-        raise NotFound(
+        raise lang_error(
+            NotFound,
+            lang,
             f"cdc: no national quota page for {missing}; the CDC publishes {min(years)}-"
-            f"{latest} (earlier years by email request)."
+            f"{latest} (earlier years by email request).",
+            f"cdc : aucune page du quota national pour {missing} ; la CCL publie "
+            f"{min(years)}-{latest} (années antérieures sur demande par courriel).",
         )
     # Figures are read from the English pages (the layouts parse_quota_page
     # knows); with lang="fr" the French page of each year is linked instead.
@@ -902,12 +960,17 @@ async def get_national_quota(
     pages: list[str] = []
     all_cached = index_cached
     for year in range(year_from, year_to + 1):
-        page, cached = await _page(years[year])
+        page, cached = await _page(years[year], lang)
         all_cached &= cached
         pages.append(linked.get(year, years[year]))
         year_rows = parse_quota_page(page, year)
         if not year_rows:
-            raise UpstreamError(f"cdc: the {year} national quota page has no monthly figures.")
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cdc: the {year} national quota page has no monthly figures.",
+                f"cdc : la page du quota national de {year} n'a aucun chiffre mensuel.",
+            )
         rows.extend(r for r in year_rows if year_from <= r.year <= year_to)
 
     notes = [
@@ -950,14 +1013,18 @@ async def get_national_quota(
         rows=rows,
         row_count=len(rows),
         source_pages=pages,
-        notes=notes,
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=pages[0] if len(pages) == 1 else constants.NATIONAL_QUOTA_INDEX[lang],
+        notes=_fr(lang, notes),
+        provenance=_provenance(
+            lang,
+            pages[0] if len(pages) == 1 else constants.NATIONAL_QUOTA_INDEX[lang],
             cached=all_cached,
             schema_name="cdc.QuotaResult",
-            freshness="monthly",
-            coverage=f"{year_from}-{year_to}; pages exist for {min(years)}-{latest}",
+            freshness=fr_or_en(lang, "monthly", "mensuelle"),
+            coverage=fr_or_en(
+                lang,
+                f"{year_from}-{year_to}; pages exist for {min(years)}-{latest}",
+                f"{year_from}-{year_to} ; des pages existent pour {min(years)}-{latest}",
+            ),
         ),
     )
 
@@ -995,25 +1062,39 @@ def parse_milk_classes(page: str) -> list[MilkClass]:
 async def get_milk_classes(milk_class: str | None = None, lang: str = "en") -> MilkClassResult:
     lang = _lang(lang)
     url = constants.MILK_CLASSES_PAGE[lang]
-    page, cached = await _page(url)
+    page, cached = await _page(url, lang)
     classes = parse_milk_classes(page)
     if not classes:
-        raise UpstreamError("cdc: the milk class page no longer has its class tables.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            "cdc: the milk class page no longer has its class tables.",
+            "cdc : la page des classes de lait n'a plus ses tableaux de classes.",
+        )
     if milk_class:
         wanted = normalize_class(milk_class)
         classes = [c for c in classes if normalize_class(c.milk_class).startswith(wanted)]
         if not classes:
-            raise NotFound(f"cdc: no milk class matches {milk_class!r}.")
+            raise lang_error(
+                NotFound,
+                lang,
+                f"cdc: no milk class matches {milk_class!r}.",
+                f"cdc : aucune classe de lait ne correspond à {milk_class!r}.",
+            )
     return MilkClassResult(
         classes=classes,
         class_count=len(classes),
         source_page=url,
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=url,
+        provenance=_provenance(
+            lang,
+            url,
             cached=cached,
             schema_name="cdc.MilkClassResult",
-            freshness="changes when provinces agree on new classes",
+            freshness=fr_or_en(
+                lang,
+                "changes when provinces agree on new classes",
+                "change lorsque les provinces s'entendent sur de nouvelles classes",
+            ),
         ),
     )
 
@@ -1068,7 +1149,7 @@ def _unit(segment_en: str) -> str:
     return match.group(1) if match else "count"
 
 
-def _parse_period(text: str, *, end: bool) -> date:
+def _parse_period(text: str, *, end: bool, lang: str = "en") -> date:
     value = text.strip()
     try:
         if re.fullmatch(r"\d{4}", value):
@@ -1079,8 +1160,11 @@ def _parse_period(text: str, *, end: bool) -> date:
             return date(year, month, day)
         return date.fromisoformat(value)
     except ValueError as exc:
-        raise InvalidInput(
-            f"cdc: dates must be YYYY, YYYY-MM or YYYY-MM-DD, got {text!r}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cdc: dates must be YYYY, YYYY-MM or YYYY-MM-DD, got {text!r}.",
+            f"cdc : les dates doivent être au format AAAA, AAAA-MM ou AAAA-MM-JJ ; reçu {text!r}.",
         ) from exc
 
 
@@ -1103,12 +1187,12 @@ _MARKET_NOTES = {
     ],
     "fr": [
         (
-            "P10 désigne les dix provinces; la région Est comprend T.-N.-L., Î.-P.-É., N.-É., "
+            "P10 désigne les dix provinces ; la région Est comprend T.-N.-L., Î.-P.-É., N.-É., "
             "N.-B., Qc et Ont., la région Ouest Man., Sask., Alb. et C.-B."
         ),
         (
             "Les données confidentielles sont regroupées avec la classe voisine la plus "
-            "utilisée : dans sales_p10, 1A1 inclut 1A2, 1A3, 1C et 1D; dans sales_by_region, "
+            "utilisée : dans sales_p10, 1A1 inclut 1A2, 1A3, 1C et 1D ; dans sales_by_region, "
             "1A inclut 1C et 1D, 3C inclut 3B, 4D inclut 4B, 4C et 4M, et 5B inclut 5C."
         ),
         (
@@ -1133,26 +1217,50 @@ async def query_market_data(
 ) -> MarketDataResult:
     lang = _lang(lang)
     if dataset not in _DATASET_PREFIXES.values():
-        raise InvalidInput(
-            f"cdc: dataset must be one of {sorted(_DATASET_PREFIXES.values())}, got {dataset!r}."
+        names = sorted(_DATASET_PREFIXES.values())
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cdc: dataset must be one of {names}, got {dataset!r}.",
+            f"cdc : dataset doit être l'une des valeurs {names} ; reçu {dataset!r}.",
         )
     if not 1 <= limit <= constants.MARKET_DATA_MAX_LIMIT:
-        raise InvalidInput(f"cdc: limit must be 1-{constants.MARKET_DATA_MAX_LIMIT}.")
+        top = constants.MARKET_DATA_MAX_LIMIT
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cdc: limit must be 1-{top}.",
+            f"cdc : limit doit être compris entre 1 et {top}.",
+        )
     prov = province.strip().upper() if province else None
     if prov and prov not in PROVINCES:
-        raise InvalidInput(
-            f"cdc: province must be a two-letter code {PROVINCES}, got {province!r}."
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cdc: province must be a two-letter code {PROVINCES}, got {province!r}.",
+            f"cdc : province doit être un code à deux lettres {PROVINCES} ; reçu {province!r}.",
         )
     reg = None
     if region:
         reg = _REGIONS.get(region.strip().lower())
         if reg is None:
-            raise InvalidInput(f"cdc: region must be 'East' or 'West', got {region!r}.")
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"cdc: region must be 'East' or 'West', got {region!r}.",
+                f"cdc : region doit être « Est » (East) ou « Ouest » (West) ; reçu {region!r}.",
+            )
     if segment is not None and segment not in _SEGMENTS.values():
-        raise InvalidInput(f"cdc: segment must be one of {sorted(_SEGMENTS.values())}.")
+        segments = sorted(_SEGMENTS.values())
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"cdc: segment must be one of {segments}.",
+            f"cdc : segment doit être l'une des valeurs {segments}.",
+        )
     wanted_class = normalize_class(milk_class) if milk_class else None
-    start = _parse_period(date_from, end=False) if date_from else None
-    end = _parse_period(date_to, end=True) if date_to else None
+    start = _parse_period(date_from, end=False, lang=lang) if date_from else None
+    end = _parse_period(date_to, end=True, lang=lang) if date_to else None
 
     raw, cached = await fetch_rows(
         constants.MARKET_DATA_URL,
@@ -1170,7 +1278,12 @@ async def query_market_data(
     ]
     missing = [name for name in required if name not in names]
     if missing:
-        raise UpstreamError(f"cdc: the market data file lost columns {missing}.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cdc: the market data file lost columns {missing}.",
+            f"cdc : le fichier des données du marché a perdu les colonnes {missing}.",
+        )
 
     labels = _LABEL_COLUMNS[lang]
     matched: list[MarketDataRow] = []
@@ -1221,7 +1334,12 @@ async def query_market_data(
             )
         )
     if not dataset_seen:
-        raise UpstreamError(f"cdc: the market data file has no {dataset!r} rows any more.")
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"cdc: the market data file has no {dataset!r} rows any more.",
+            f"cdc : le fichier des données du marché n'a plus de lignes {dataset!r}.",
+        )
     matched.sort(
         key=lambda r: (
             -r.period_end.toordinal(),
@@ -1238,14 +1356,29 @@ async def query_market_data(
         rows=matched[:limit],
         latest_date=matched[0].period_end if matched else None,
         dictionary_url=constants.MARKET_DATA_DICTIONARY[lang],
-        notes=_MARKET_NOTES[lang],
-        provenance=make_provenance(
-            source=constants.RATE_LIMIT_SOURCE,
-            url=constants.MARKET_DATA_URL,
+        notes=_fr(lang, _MARKET_NOTES[lang]),
+        provenance=_provenance(
+            lang,
+            constants.MARKET_DATA_URL,
             cached=cached,
             schema_name="cdc.MarketDataResult",
-            freshness="monthly (the file is regenerated daily on AAFC's open-data server)",
-            limits=f"newest {limit} rows returned" if len(matched) > limit else None,
-            coverage=f"{len(matched)} matching rows",
+            freshness=fr_or_en(
+                lang,
+                "monthly (the file is regenerated daily on AAFC's open-data server)",
+                "mensuelle (le fichier est régénéré chaque jour sur le serveur de données "
+                "ouvertes d'AAC)",
+            ),
+            limits=(
+                fr_or_en(
+                    lang,
+                    f"newest {limit} rows returned",
+                    f"les {limit} lignes les plus récentes sont renvoyées",
+                )
+                if len(matched) > limit
+                else None
+            ),
+            coverage=fr_or_en(
+                lang, f"{len(matched)} matching rows", f"{len(matched)} lignes correspondantes"
+            ),
         ),
     )
