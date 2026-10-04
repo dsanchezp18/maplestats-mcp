@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import re
 
+from maplestats_mcp.shared.i18n import french_text
+
 FR: dict[str, str] = {
     # Housing
     "Housing: starts, rents, prices, mortgages": (
@@ -821,9 +823,9 @@ FR: dict[str, str] = {
     "Delta (BC)": "Delta (C.-B.)",
     "Saint John (New Brunswick)": "Saint John (Nouveau-Brunswick)",
 }
-# French spaces a semicolon, as reproduce_code's French notes and the website
-# do; the entries above are typed "x; y" like the English they sit beside.
-FR = {english: re.sub(r"(?<=\S);", " ;", french) for english, french in FR.items()}
+# The entries are typed with ordinary spaces ("x; y", "a : b"); french_text
+# gives them French no-break spacing, as every French server message has.
+FR = {english: french_text(french) for english, french in FR.items()}
 
 # "search with portal='x' (...)": one rule for the many portal steps.
 _SEARCH = re.compile(r"^search with (portal=.+?)(?: \((.+)\))?$")
@@ -837,30 +839,33 @@ _SEARCH_NOTES = {
 # A city's English name is its French name unless FR says otherwise.
 _SAME_IN_FRENCH = re.compile(r"^[A-Z][A-Za-z.\- ]*(?: \((?:Ontario|Alberta)\))?$")
 
-GUIDANCE_FR = (
-    (
-        "Exécutez les étapes dans l'ordre pour chaque sujet ; la provenance de chaque résultat "
-        "donne l'URL et la date de la source à citer."
-    ),
-    (
-        "Avant de combiner des sources, harmonisez la géographie (province, RMR, ville), la "
-        "période (année civile ou exercice, mois ou trimestre) et les unités, et signalez les "
-        "écarts."
-    ),
-    (
-        "Citez la source de chaque chiffre ; ne fusionnez pas en une seule série des chiffres de "
-        "sources différentes."
-    ),
-    "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
+GUIDANCE_FR = tuple(
+    french_text(line)
+    for line in (
+        (
+            "Exécutez les étapes dans l'ordre pour chaque sujet ; la provenance de chaque résultat "
+            "donne l'URL et la date de la source à citer."
+        ),
+        (
+            "Avant de combiner des sources, harmonisez la géographie (province, RMR, ville), la "
+            "période (année civile ou exercice, mois ou trimestre) et les unités, et signalez les "
+            "écarts."
+        ),
+        (
+            "Citez la source de chaque chiffre ; ne fusionnez pas en une seule série des chiffres de "
+            "sources différentes."
+        ),
+        "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
+    )
 )
-LIMITS_FR = (
+LIMITS_FR = french_text(
     "carte organisée des sujets et des lieux ; tous les outils n'y figurent pas, utilisez "
     "search_tools pour tout ce que le plan ne couvre pas"
 )
 
 
 def out_of_scope_fr(foreign: str) -> str:
-    return (
+    return french_text(
         f"La question porte sur {foreign}, hors du Canada ; ce serveur ne contient que des "
         "données publiques canadiennes, donc aucun plan n'est proposé. Nommez un lieu "
         "canadien, ou posez une question sur le commerce, les taux de change ou la migration "
@@ -882,12 +887,12 @@ def fr(text: str, *, place: bool = False) -> str | None:
         if note is None:
             return f"recherche avec {portal}"
         note_fr = _SEARCH_NOTES.get(note)
-        return None if note_fr is None else f"recherche avec {portal} ({note_fr})"
+        return None if note_fr is None else french_text(f"recherche avec {portal} ({note_fr})")
     if place and _SAME_IN_FRENCH.match(text):
         return text
     return None
 
 
 def to_french(text: str, *, place: bool = False) -> str:
-    """French for a planner string ; the English when none exists (a test keeps that empty)."""
+    """French for a planner string; the English when none exists (a test keeps that empty)."""
     return fr(text, place=place) or text
