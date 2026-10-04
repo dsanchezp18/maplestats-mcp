@@ -49,7 +49,7 @@ async def hc_drug_search_products(
     Mots-clés : Base de données sur les produits pharmaceutiques, BDPP,
     numéro d'identification du médicament, DIN, médicaments sur ordonnance,
     médicaments génériques, médicaments commercialisés, fabricant
-    pharmaceutique, classification ATC, drogues contrôlées.
+    pharmaceutique, classification ATC, drogues contrôlées, Santé Canada.
     """
     return await client.search_products(
         din=din,
@@ -82,7 +82,7 @@ async def hc_drug_get_product(
     packaging, Health Canada drug record.
     Mots-clés : fiche du médicament, numéro DIN, concentration de
     l'ingrédient actif, forme posologique, voie d'administration, annexe du
-    médicament, code ATC, emballage, statut du produit.
+    médicament, code ATC, emballage, statut du produit, Santé Canada.
     """
     return await client.get_product(din, drug_code, lang=lang)
 
@@ -102,6 +102,7 @@ async def hc_drug_search_ingredients(
     Keywords: active ingredient, medicinal ingredient, drug substance,
     generic name, INN, drug strength, salt form, molecule, DPD ingredient.
     Mots-clés : ingrédient actif, principe actif, substance médicamenteuse,
-    dénomination commune, DCI, concentration du médicament, sel, molécule.
+    dénomination commune, DCI, concentration du médicament, sel, molécule,
+    Santé Canada.
     """
     return await client.search_ingredients(name, limit=limit, lang=lang)
