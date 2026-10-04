@@ -324,6 +324,89 @@ SOURCE_LICENCES: dict[str, str] = {
 }
 
 
+# French text for a licence, keyed by its English text, so a call made with
+# lang="fr" reads its terms in French whichever source carries them. Names and
+# URLs are the publishers' own French ones, checked on 2026-10-04; a licence
+# not listed here stays in English. The IESO notice is quoted in English
+# because the IESO requires that exact wording on every reproduction.
+LICENCES_FR: dict[str, str] = {
+    OGL_CANADA: (
+        "Licence du gouvernement ouvert – Canada 2.0 "
+        "(https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada). Attribution : "
+        "« Contient des informations visées par la Licence du gouvernement ouvert – Canada. »"
+    ),
+    CANADA_CA_TERMS: (
+        "Avis du site Web du gouvernement du Canada (https://www.canada.ca/fr/transparence/"
+        "avis.html) : la reproduction non commerciale est permise sans autorisation, en citant "
+        "le titre, l'auteur et l'adresse URL de la source ; la redistribution commerciale exige "
+        "une autorisation écrite."
+    ),
+    BOC_TERMS: (
+        "Conditions d'utilisation de la Banque du Canada "
+        "(https://www.banqueducanada.ca/conditions-utilisation-avis/) : indiquer la Banque du "
+        "Canada comme source et signaler toute modification, sans laisser entendre que la "
+        "Banque approuve l'utilisation ; le contenu transmis par un service payant doit être "
+        "présenté comme provenant du site Web de la Banque."
+    ),
+    ECCC_LICENCE: (
+        "Licence d'utilisation finale des serveurs de données d'Environnement et Changement "
+        "climatique Canada (https://eccc-msc.github.io/open-data/licence/readme_fr/). "
+        "Attribution : « Source des données : Environnement et Changement climatique Canada. »"
+    ),
+    CMHC_TERMS: (
+        "Conditions d'utilisation de la SCHL "
+        "(https://www.cmhc-schl.gc.ca/info-schl/conditions-dutilisation) : le contenu peut être "
+        "copié, téléchargé et imprimé pour un usage personnel ; la redistribution ou la "
+        "republication exige le consentement écrit de la SCHL. Mentionner la Société "
+        "canadienne d'hypothèques et de logement (SCHL)."
+    ),
+    PBO_TERMS: (
+        "Conditions du directeur parlementaire du budget (https://www.pbo-dpb.ca/fr) : les "
+        "documents du DPB peuvent être utilisés et reproduits à des fins personnelles et non "
+        "commerciales sans autorisation, sans modification et en mentionnant le DPB."
+    ),
+    IESO_TERMS: (
+        "Conditions d'utilisation de la Société indépendante d'exploitation du réseau "
+        "d'électricité (SIERE) (https://www.ieso.ca/en/Terms-of-Use) : licence limitée "
+        "d'utilisation et de reproduction, à condition que chaque reproduction porte l'avis "
+        "suivant, en anglais : 'Copyright 2004-2022 Independent Electricity System Operator, "
+        "all rights reserved. This information is subject to the Terms of Use set out in the "
+        "IESO's website (www.ieso.ca).'"
+    ),
+    PER_RECORD_LICENCE: (
+        "Les licences diffèrent d'un jeu de données à l'autre sur cette plateforme : la licence "
+        "de chaque jeu de données figure dans ses champs de licence. Vérifiez-la avant toute "
+        "réutilisation."
+    ),
+    SOURCE_LICENCES["aer"]: (
+        "Conditions de droit d'auteur de l'Alberta Energy Regulator "
+        "(https://www.aer.ca/copyright-disclaimer) : la reproduction non commerciale est "
+        "permise sans autorisation, en indiquant l'AER comme source et sans la présenter comme "
+        "officielle ; la redistribution commerciale exige l'autorisation écrite de l'AER."
+    ),
+    SOURCE_LICENCES["crea"]: (
+        "Source : Association canadienne de l'immeuble (ACI), Indice des prix des propriétés "
+        "MLS®. Les conditions de l'ACI (https://www.crea.ca/fr/renseignements-juridiques/) "
+        "s'appliquent ; il ne s'agit pas d'une licence ouverte."
+    ),
+    SOURCE_LICENCES["worldbank-wdi"]: (
+        "Source : Banque mondiale, Indicateurs du développement dans le monde. Licence Creative "
+        "Commons Attribution 4.0 (https://datacatalog.worldbank.org/public-licenses)."
+    ),
+    SOURCE_LICENCES["electricity"]: (
+        "Les conditions diffèrent selon l'exploitant ; voir les conditions de l'exploitant dans "
+        "ce résultat."
+    ),
+}
+
+
+def licence_in(text: str, lang: str = "en") -> str:
+    """`text` in French when lang is "fr" and a translation exists, else as given."""
+    if lang.strip().lower().startswith("fr"):
+        return LICENCES_FR.get(text, text)
+    return text
+
+
 # Platform families name their source after the portal ("ckan-on",
 # "arcgis-halifax", "socrata-calgary") or the feed ("transit:stm").
 _FAMILY_PREFIXES = ("arcgis-", "ckan-", "socrata-")

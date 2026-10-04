@@ -59,7 +59,7 @@ def test_french_provenance_has_french_shared_phrases():
         lang="fr",
     )
     assert prov.licence is not None
-    assert prov.licence.startswith("Source : Statistique Canada.")
+    assert prov.licence.startswith("Source : Statistique Canada.")
     assert "https://www.statcan.gc.ca/fr/reference/licence" in prov.licence
     assert "approuvées par Statistique Canada" in prov.licence
     assert "reproduce_code" in prov.reproduce and "appelez" in prov.reproduce
@@ -72,7 +72,7 @@ def test_english_provenance_is_unchanged_by_default():
 
 
 def test_raise_typed_picks_the_class_template():
-    with pytest.raises(NotFound, match="^Aucune correspondance trouvée : rien$"):
+    with pytest.raises(NotFound, match="^Aucune correspondance trouvée : rien$"):
         raise_typed(NotFound, "rien", lang="fr")
     with pytest.raises(InvalidInput, match="^Invalid input: bad$"):
         raise_typed(InvalidInput, "bad")
@@ -92,3 +92,28 @@ def test_other_sources_have_no_licence_note():
         source="boc-valet", url="https://www.bankofcanada.ca/x", cached=False, schema_name="t.M"
     )
     assert prov.licence is None
+
+
+def test_french_text_gets_no_break_spaces():
+    assert i18n.french_spacing("Source : « ECCC » ; 5 % ? https://x.ca/?q=1") == (
+        "Source : « ECCC » ; 5 % ? https://x.ca/?q=1"
+    )
+    assert i18n.french_spacing(i18n.french_spacing("a : b")) == "a : b"
+    assert i18n.t("error.invalid_input", "en", detail="x : y") == "Invalid input: x : y"
+
+
+def test_french_provenance_translates_a_known_licence():
+    prov = make_provenance(
+        source="boc",
+        url="https://www.bankofcanada.ca/valet",
+        cached=False,
+        schema_name="t",
+        lang="fr",
+    )
+    assert prov.licence is not None
+    assert prov.licence.startswith("Conditions d'utilisation de la Banque du Canada")
+    assert " : indiquer" in prov.licence
+    ogl = make_provenance(source="cer", url="https://x", cached=False, schema_name="t", lang="fr")
+    assert ogl.licence is not None and "Licence du gouvernement ouvert – Canada" in ogl.licence
+    english = make_provenance(source="cer", url="https://x", cached=False, schema_name="t")
+    assert english.licence is not None and english.licence.startswith("Open Government Licence")
