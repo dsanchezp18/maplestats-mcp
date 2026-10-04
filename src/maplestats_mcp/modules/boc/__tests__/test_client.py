@@ -145,6 +145,18 @@ async def test_get_observations_parses_string_value_to_float(httpx_mock):
     result = await client.get_observations(["FXUSDCAD"], recent=1)
     assert result.observations[0].values == {"FXUSDCAD": 1.3917}
     assert result.series["FXUSDCAD"].label == "USD/CAD"
+    # as_of is the newest observation date.
+    assert result.provenance.as_of is not None
+    assert result.provenance.as_of.date().isoformat() == "2026-09-15"
+
+
+async def test_get_group_with_null_group_series_has_no_members(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}groups/EMPTY_GROUP/json",
+        json={"groupDetails": {"name": "EMPTY_GROUP", "label": "x", "groupSeries": None}},
+    )
+    result = await client.get_group("EMPTY_GROUP")
+    assert result.series == []
 
 
 async def test_get_observations_treats_empty_value_as_none():

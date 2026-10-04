@@ -59,6 +59,7 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime, time
 from typing import Any, NoReturn, Protocol
 from urllib.parse import quote
 
@@ -199,6 +200,13 @@ def _observations_from_json(rows: list[dict[str, Any]]) -> list[Observation]:
         }
         observations.append(Observation(ref_date=ref_date, values=values))
     return observations
+
+
+def _latest_date(observations: list[Observation]) -> datetime | None:
+    """The newest observation date, as provenance as_of."""
+    if not observations:
+        return None
+    return datetime.combine(max(o.ref_date for o in observations), time(), tzinfo=UTC)
 
 
 def _series_info_from_json(series_detail: dict[str, Any]) -> dict[str, SeriesInfoBrief]:
@@ -355,7 +363,8 @@ async def get_group(name: str) -> GroupDetail:
     detail = obj["groupDetails"]
     members = [
         GroupMemberSeries(name=code, label=e.get("label", ""), link=e.get("link"))
-        for code, e in detail.get("groupSeries", {}).items()
+        # `or {}`: an explicit null would otherwise crash .items().
+        for code, e in (detail.get("groupSeries") or {}).items()
     ]
     return GroupDetail(
         name=detail["name"],
@@ -400,13 +409,15 @@ async def get_observations(
         return await _get(path, params=params)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
+    observations = _observations_from_json(list_or_empty(obj, "observations"))
     return ObservationsResult(
         series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
-        observations=_observations_from_json(list_or_empty(obj, "observations")),
+        observations=observations,
         provenance=make_provenance(
             source="boc",
             url=f"{constants.BASE_URL}{path}",
             cached=was_cached,
+            as_of=_latest_date(observations),
             schema_name="boc.ObservationsResult",
         ),
     )
@@ -439,6 +450,7 @@ async def get_group_observations(
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     group_detail = obj.get("groupDetail", {}) or {}
+    observations = _observations_from_json(list_or_empty(obj, "observations"))
     return GroupObservationsResult(
         # "groupDetail" (unlike GroupDetail's "groupDetails") has no
         # "name" field - see this module's docstring and schemas.py's.
@@ -449,11 +461,12 @@ async def get_group_observations(
             link=group_detail.get("link"),
         ),
         series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
-        observations=_observations_from_json(list_or_empty(obj, "observations")),
+        observations=observations,
         provenance=make_provenance(
             source="boc",
             url=f"{constants.BASE_URL}{path}",
             cached=was_cached,
+            as_of=_latest_date(observations),
             schema_name="boc.GroupObservationsResult",
         ),
     )
