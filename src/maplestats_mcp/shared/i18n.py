@@ -2,9 +2,10 @@
 
 Not a replacement for gettext, just a flat dict — tool bodies carry
 their own EN/FR text directly via a `lang: Literal["en", "fr"]`
-parameter; this module is only for the handful of shared, reused
-strings (error messages) that every module's errors.py exceptions
-render through.
+parameter; this module is for the shared, reused strings: the typed
+error templates (raised through envelope.raise_error/raise_typed), the
+provenance phrases make_provenance adds, and any templates a module
+registers for itself with register().
 """
 
 from __future__ import annotations
@@ -32,12 +33,72 @@ LABELS: dict[str, dict[str, str]] = {
         "en": "StatCan data is locked for its daily update (data returns at 8:30am ET): {detail}",
         "fr": "Les données de StatCan sont verrouillées pour leur mise à jour quotidienne (retour à 8 h 30, HE) : {detail}",
     },
+    "provenance.reproduce": {
+        "en": (
+            "For R, Python, Stata and Julia scripts that fetch and clean this data, call "
+            "reproduce_code with this tool's name and arguments."
+        ),
+        "fr": (
+            "Pour obtenir des scripts R, Python, Stata et Julia qui récupèrent et nettoient "
+            "ces données, appelez reproduce_code avec le nom de cet outil et ses arguments."
+        ),
+    },
+    "provenance.statcan_licence": {
+        "en": (
+            "Source: Statistics Canada. Contains information licensed under the Statistics "
+            "Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). Adapted or "
+            "summarised data must not be presented as endorsed by Statistics Canada."
+        ),
+        "fr": (
+            "Source : Statistique Canada. Contient des renseignements visés par la Licence "
+            "ouverte de Statistique Canada (https://www.statcan.gc.ca/fr/reference/licence). "
+            "Les données adaptées ou résumées ne doivent pas être présentées comme approuvées "
+            "par Statistique Canada."
+        ),
+    },
+}
+
+# The template key for each typed error, so a module can raise with only a
+# detail and a language (envelope.raise_typed). Keyed by class name to keep
+# this module free of imports from errors.py.
+ERROR_KEYS: dict[str, str] = {
+    "InvalidInput": "error.invalid_input",
+    "NotFound": "error.not_found",
+    "UpstreamError": "error.upstream_error",
+    "UpstreamUnavailable": "error.upstream_unavailable",
+    "DataLocked": "error.data_locked",
 }
 
 
+def normalize_lang(lang: str | None) -> str:
+    """'fr' for any French tag ('fr', 'fr-CA', 'FR'), else 'en'."""
+    return "fr" if (lang or "").strip().lower().startswith("fr") else "en"
+
+
 def t(key: str, lang: str = "en", **kwargs: Any) -> str:
+    """The `lang` text for `key`, formatted; English when no French exists.
+
+    An unknown key is returned as is, so a module can pass a literal
+    message where a template is expected.
+    """
     entry = LABELS.get(key)
     if entry is None:
         return key
-    template = entry.get(lang, entry.get("en", key))
+    template = entry.get(normalize_lang(lang), entry.get("en", key))
     return template.format(**kwargs)
+
+
+def register(labels: dict[str, dict[str, str]]) -> None:
+    """Add a module's own bilingual templates, e.g. {"cmhc.no_rows": {"en": ..., "fr": ...}}.
+
+    Keys should start with the module's name. Re-registering a key with the
+    same text is allowed (module reloads in tests); different text is an
+    error, because two modules would otherwise overwrite each other.
+    """
+    for key, entry in labels.items():
+        if "en" not in entry:
+            raise ValueError(f"i18n label {key!r} has no English text.")
+        existing = LABELS.get(key)
+        if existing is not None and existing != entry:
+            raise ValueError(f"i18n label {key!r} is already registered with other text.")
+        LABELS[key] = dict(entry)

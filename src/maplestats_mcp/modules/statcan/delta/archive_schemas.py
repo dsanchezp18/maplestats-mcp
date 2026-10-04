@@ -114,6 +114,20 @@ class DeltaTableData(BaseModel):
         description="False when the table is in the release's metadata but has no CSV rows."
     )
     compressed_bytes_scanned: int
+    scan_started_at_byte: int = Field(
+        default=0,
+        description=(
+            "Compressed CSV offset this call started at: 0, or a resume point saved by an "
+            "earlier scan of the same file, which skips the bytes before it."
+        ),
+    )
+    block_complete: bool = Field(
+        default=True,
+        description=(
+            "False when the scan ceiling stopped inside this table's rows: the rows are the "
+            "first ones only."
+        ),
+    )
     rows: list[DeltaRow]
     legend: DeltaLegend
     notes: list[str] = Field(default_factory=list)

@@ -34,12 +34,16 @@ module makes one request every two seconds to that host. Feeds that overlap a
 live agency are listed but refused, TransLink is excluded for its terms, and
 feeds with neither a licence page nor an attribution line are excluded.
 
-Terms checked live 2026-10-01: TTC (Open Government Licence - Toronto),
-STM (CC BY 4.0), OC Transpo (City of Ottawa open data terms) and Calgary
-Transit (Open Government Licence - City of Calgary) permit reuse and
-redistribution with attribution. TransLink is not included: its terms
-require users to identify themselves to TransLink and reserve the right to
-impose conditions, which a public server cannot satisfy (docs/ROADMAP.md).
+Terms checked live 2026-10-01: STM (CC BY 4.0), OC Transpo (City of
+Ottawa open data terms) and Calgary Transit (Open Government Licence - City
+of Calgary) permit reuse and redistribution with attribution. TransLink is
+not included: its terms require users to identify themselves to TransLink
+and reserve the right to impose conditions, which a public server cannot
+satisfy (docs/ROADMAP.md). The Toronto Transit Commission's own download
+was removed on 2026-10-03 (not available for automated access under its
+terms); its feed in the national database, which records the Open
+Government Licence - Toronto and an attribution line for it, is served
+like any other national feed.
 
 Confirmed live 2026-10-01 (see docs/ROADMAP.md for the full table):
 
@@ -60,7 +64,7 @@ Confirmed live 2026-10-01 (see docs/ROADMAP.md for the full table):
 
 MODULE_NAME = "transit"
 MODULE_DESCRIPTION = (
-    "Static GTFS schedules of open Canadian transit agencies (TTC, STM bus, OC "
+    "Static GTFS schedules of open Canadian transit agencies (STM bus, OC "
     "Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express and 12 BC Transit "
     "systems, plus about 100 more agencies from Statistics Canada's 2025 Canadian Public "
     "Transit Network Database): list agencies and feeds, search routes and stops, a stop's scheduled "
@@ -71,7 +75,7 @@ MODULE_DESCRIPTION = (
 )
 MODULE_DESCRIPTION_FR = (
     "Horaires GTFS statiques d'organismes de transport en commun canadiens à données "
-    "ouvertes (TTC, STM autobus, OC Transpo, Calgary Transit, VIA Rail, GO Transit, "
+    "ouvertes (STM autobus, OC Transpo, Calgary Transit, VIA Rail, GO Transit, "
     "UP Express et 12 réseaux de BC Transit, plus une centaine d'autres organismes de la "
     "Base de données du réseau de transport en commun canadien de Statistique Canada, 2025) : "
     "liste des organismes et des flux, recherche de lignes et d'arrêts, passages "

@@ -15,6 +15,7 @@ from datetime import date, datetime
 from typing import Any
 
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.executor import check_deadline
 
 # A header row is the first of the first rows with this many filled cells.
 HEADER_MIN_CELLS = 3
@@ -70,6 +71,8 @@ def read_sheet(body: bytes, sheet: str, max_rows: int) -> tuple[list[list[str]],
             if len(rows) >= max_rows:
                 capped = True
                 break
+            if len(rows) % 100 == 0:
+                check_deadline()
             rows.append([cell_text(c) for c in raw])
         return trim_rows(rows), capped
     finally:

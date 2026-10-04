@@ -53,8 +53,8 @@ async def nrcan_geo_search_names(
     (whole kilometres; default 10), or
     `bbox` [west, south, east, north]. `lang="fr"` returns French feature
     types. `province` in results is the SGC code ("48" for Alberta).
-    Keywords: place names, toponymy, gazetteer, geographical names, lake,
-    river, mountain, official name, NRCan, CGNDB.
+    Keywords: geographic names lookup, place names, toponymy, gazetteer,
+    geographical names, lake, river, mountain, official name, NRCan, CGNDB.
     Mots-clés : noms géographiques, toponymie, répertoire toponymique,
     lac, rivière, montagne, nom officiel, RNCan, BDTC.
     """

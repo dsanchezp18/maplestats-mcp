@@ -26,13 +26,13 @@ from fastmcp.client.transports import StdioTransport
 CALLS: list[tuple[str, dict[str, Any]]] = [
     ("plan_query", {"question": "rents and interest rates in Calgary"}),
     ("boc_search_series", {"query": "exchange rate"}),
-    ("parliament_search_votes", {"limit": 5}),
+    ("senate_list_votes", {"limit": 5}),
     ("earthquakes_search", {"min_magnitude": 3}),
     ("cihi_search_indicators", {"query": "wait"}),
-    ("canadabuys_search_tenders", {"query": "snow"}),
+    ("gc_infobase_list_files", {}),
     ("gazette_list_issues", {}),
     ("wds_search_cubes", {"query": "consumer price index"}),
-    ("parliament_get_bill", {"session": "45-1", "number": "C-99999"}),  # fails: bad number
+    ("ourcommons_get_member_roles", {"person_id": -1}),  # fails: bad id
     ("no_such_tool", {}),  # fails: unknown tool
 ]
 

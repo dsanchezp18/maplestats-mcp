@@ -60,6 +60,7 @@ from maplestats_mcp.modules.ised.ip_horizons.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import api_get, is_retryable, new_client
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -480,7 +481,7 @@ async def get_patent(number: int, *, include_classifications: bool = False) -> P
             )
         return main, parties, classes
 
-    main, parties, classes = await asyncio.to_thread(run)
+    main, parties, classes = await run_in_pool(run)
     if not main:
         raise NotFound(f"{context}: patent {number} is not in the IP Horizons data.")
     return PatentRecord(
@@ -603,7 +604,7 @@ async def search_patents(
         )
         return total, rows
 
-    total, rows = await asyncio.to_thread(run)
+    total, rows = await run_in_pool(run)
     return PatentSearchResult(
         patents=[_summary(row) for row in rows],
         returned_count=len(rows),

@@ -62,7 +62,8 @@ async def wds_search_cubes(
     Mots-clés : statcan, statistique canada, tableau, cube, recherche,
     productId, numéro de tableau, découverte, wds, catalogue, parcourir,
     liste, inventaire, population active, taux de chômage mensuel,
-    emploi, PIB par industrie, IPC, indice des prix à la consommation,
+    emploi, PIB par industrie, produit intérieur brut, IPC, indice des
+    prix à la consommation, permis de bâtir, permis de construire,
     estimations de population trimestrielles, commerce de détail,
     salaires, commerce, migration interprovinciale, séries
     chronologiques, tableau en temps réel, révisions.

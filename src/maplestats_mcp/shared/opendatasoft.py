@@ -39,9 +39,10 @@ from typing import Any, NoReturn
 
 import httpx
 
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.upstream_text import clean_detail, network_error
 
 
 @dataclass(frozen=True)
@@ -68,7 +69,7 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
     try:
         body = exc.response.json()
     except ValueError:
-        return exc.response.text[:200]
+        return clean_detail(exc.response.text)
     if isinstance(body, dict):
         message = body.get("message")
         error_code = body.get("error_code")
@@ -76,7 +77,7 @@ def _error_detail(exc: httpx.HTTPStatusError) -> str:
             return f"{error_code}: {message}" if error_code else message
         if isinstance(error_code, str) and error_code:
             return error_code
-    return exc.response.text[:200]
+    return clean_detail(exc.response.text)
 
 
 def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoReturn:
@@ -96,9 +97,7 @@ async def _get(config: OpendatasoftConfig, context: str, url: str, params: dict[
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context)
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"{context} did not respond in time (already retried by shared/http.py). Try again shortly."
-        ) from exc
+        raise network_error(context, exc) from exc
 
 
 def _search_where(query: str) -> str | None:

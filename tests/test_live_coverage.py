@@ -154,7 +154,7 @@ def test_every_tool_has_a_live_step():
                 continue
             if not any(re.search(rf"\b{call}\b", own) for call in calls):
                 missing.append(tool)
-    assert checked > 300, f"found only {checked} tools; the tools.py scan is broken"
+    assert checked > 250, f"found only {checked} tools; the tools.py scan is broken"
     assert not missing, f"Tools without a live smoke step: {missing}"
 
 

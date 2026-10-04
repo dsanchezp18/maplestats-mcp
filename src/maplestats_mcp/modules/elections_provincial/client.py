@@ -1,6 +1,7 @@
-"""Provincial general election results for Quebec, Alberta and British Columbia.
+"""Provincial general election results for Quebec, Alberta, BC, Saskatchewan and Manitoba.
 
-Each province's reader (quebec.py, alberta.py, british_columbia.py) turns that
+Each province's reader (quebec.py, alberta.py, british_columbia.py, saskatchewan.py,
+manitoba.py) turns that
 province's published files into the same district and candidate shape; this module
 picks the election, applies the filters and builds the responses.
 """
@@ -13,6 +14,7 @@ from maplestats_mcp.modules.elections_provincial import (
     alberta,
     british_columbia,
     constants,
+    manitoba,
     quebec,
     saskatchewan,
 )
@@ -26,14 +28,24 @@ from maplestats_mcp.modules.elections_provincial.schemas import (
     PartySummary,
     ResultRow,
     SeatSummary,
+    VotingAreaResults,
+    VotingAreaRow,
+    VotingAreaSummary,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.remote_zip import ZipMember
 
 Lang = Literal["en", "fr"]
 
-_DETAIL = {"qc": "candidate", "bc": "candidate", "ab": "party", "sk": "candidate"}
+_DETAIL = {
+    "qc": "candidate",
+    "bc": "candidate",
+    "ab": "party",
+    "sk": "candidate",
+    "mb": "candidate",
+}
 
 _NOTES = {
     "en": [
@@ -57,6 +69,14 @@ _NOTES = {
             "'Copyright (c) 2025 Elections Saskatchewan' in the footer), so they are read at the "
             "project owner's risk. Registered voters are not summed (split polls repeat them), "
             "so there is no turnout."
+        ),
+        (
+            "Manitoba, 1999 to 2023: every candidate, from Elections Manitoba's summaries of "
+            "votes received and of results (registered voters, rejected ballots, turnout), and "
+            "votes by voting area (elections_provincial_get_voting_areas). The site publishes "
+            "no terms of use or licence for them (only '(c) 2026. All rights reserved.' in the "
+            "footer), so they are read at the project owner's risk. 1870 to 1995 are PDF only "
+            "and not read."
         ),
         (
             "Ontario is not covered: its terms of use forbid scraping and limit copying to "
@@ -91,6 +111,15 @@ _NOTES = {
             "pas de taux de participation."
         ),
         (
+            "Manitoba, 1999 à 2023 : tous les candidats, d'après les sommaires des votes obtenus "
+            "et des résultats d'Elections Manitoba (électeurs inscrits, bulletins rejetés, "
+            "participation), et les votes par section de vote "
+            "(elections_provincial_get_voting_areas). Le site ne publie ni conditions "
+            "d'utilisation ni licence pour ces fichiers (seulement « © 2026. All rights "
+            "reserved. » en pied de page) : ils sont lus aux risques du propriétaire du projet. "
+            "Les résultats de 1870 à 1995 sont en PDF seulement et ne sont pas lus."
+        ),
+        (
             "L'Ontario n'est pas couvert : ses conditions d'utilisation interdisent le moissonnage "
             "et limitent la copie à un usage personnel (voir « blocked »). Les résultats fédéraux "
             "sont dans elections_results_."
@@ -107,6 +136,8 @@ def _source_url(election: constants.Election) -> str:
         return alberta.results_url(election.source_key)
     if election.province == "sk":
         return saskatchewan.file_url(election.source_key)
+    if election.province == "mb":
+        return manitoba.files(election.source_key).votes
     return constants.BC_DATASET_PAGE
 
 
@@ -116,14 +147,16 @@ def _attribution(province: str) -> str:
         "ab": constants.AB_ATTRIBUTION,
         "bc": constants.BC_ATTRIBUTION,
         "sk": constants.SK_ATTRIBUTION,
+        "mb": constants.MB_ATTRIBUTION,
     }[province]
 
 
 def _limits(province: str, limit: str | None) -> str | None:
-    """The response's limits, with Saskatchewan's missing-terms notice added."""
-    if province != "sk":
+    """The response's limits, with Saskatchewan's or Manitoba's missing-terms notice added."""
+    notices = {"sk": constants.SK_TERMS_NOTICE, "mb": constants.MB_TERMS_NOTICE}
+    if province not in notices:
         return limit
-    notice = constants.SK_TERMS_NOTICE
+    notice = notices[province]
     return f"{limit} {notice}" if limit else notice
 
 
@@ -164,6 +197,8 @@ async def _load(election: constants.Election) -> tuple[list[District], bool]:
             return await quebec.fetch(election.source_key)
         if election.province == "sk":
             return await saskatchewan.fetch(election.source_key)
+        if election.province == "mb":
+            return await manitoba.fetch(election.source_key)
         return await alberta.fetch(election.source_key)
 
     return await cached_fetch(
@@ -206,7 +241,7 @@ def list_elections(province: str | None = None, lang: Lang = "en") -> ElectionLi
             cached=False,
             schema_name="elections_provincial.ElectionList",
             coverage="General elections: Quebec 1973-2022, Alberta 2008-2023, British "
-            "Columbia 2005-2024, Saskatchewan 2011-2024.",
+            "Columbia 2005-2024, Saskatchewan 2011-2024, Manitoba 1999-2023.",
         ),
     )
 
@@ -357,5 +392,145 @@ async def get_seats(province: str, election: str | None = None) -> SeatSummary:
             freshness="Computed from the district rows; by-elections are not included.",
             coverage=f"{constants.PROVINCES[code][0]} general election of {edition.date}.",
             limits=_limits(code, "Independent candidates appear under the label each source uses."),
+        ),
+    )
+
+
+async def _area_files(number: str) -> list[ZipMember]:
+    members, _cached = await cached_fetch(
+        f"elections_provincial:mb-zip:{number}",
+        constants.CACHE_TTL_SECONDS,
+        lambda: manitoba.list_area_files(number),
+    )
+    return members
+
+
+async def _areas(number: str, district: District) -> tuple[list[manitoba.Area], bool]:
+    """One district's voting areas, read from the election's zip by range."""
+    members = await _area_files(number)
+    wanted = manitoba.key(district.name)
+    by_district = [m for m in members if manitoba.member_key(m.name) == wanted]
+    # 1999, 2003 and 2011 have one workbook for every division; it is read whole, once.
+    member = by_district[0] if by_district else (members[0] if len(members) == 1 else None)
+    if member is None:
+        raise UpstreamError(
+            f"elections_provincial: no voting-area file for {district.name} in "
+            f"{manitoba.files(number).by_area}."
+        )
+    parsed, cached = await cached_fetch(
+        f"elections_provincial:mb-areas:{number}:{member.name}",
+        constants.CACHE_TTL_SECONDS,
+        lambda: manitoba.read_area_file(number, member),
+    )
+    if "" in parsed:
+        return parsed[""], cached
+    for label, areas in parsed.items():
+        if manitoba.key(label) == wanted:
+            return areas, cached
+    raise UpstreamError(
+        f"elections_provincial: {member.name} has no voting areas for {district.name}."
+    )
+
+
+async def get_voting_areas(
+    province: str,
+    district: str,
+    election: str | None = None,
+    voting_area: str | None = None,
+    party: str | None = None,
+    candidate: str | None = None,
+    limit: int = constants.ROWS_LIMIT_DEFAULT,
+    offset: int = 0,
+) -> VotingAreaResults:
+    code = _province(province)
+    if code != "mb":
+        raise InvalidInput(
+            "elections_provincial: results by voting area are read for Manitoba (mb) only."
+        )
+    if not district.strip():
+        raise InvalidInput("elections_provincial: district is required (one Manitoba division).")
+    if not 1 <= limit <= constants.ROWS_LIMIT_MAX:
+        raise InvalidInput(f"elections_provincial: limit must be 1 to {constants.ROWS_LIMIT_MAX}.")
+    if offset < 0:
+        raise InvalidInput("elections_provincial: offset must be 0 or more.")
+    edition = _election(code, election)
+    districts, _cached = await _load(edition)
+    wanted = fold(district)
+    exact = [d for d in districts if fold(d.name) == wanted]
+    matches = exact or [d for d in districts if wanted in fold(d.name)]
+    if len(matches) != 1:
+        names = [d.name for d in matches] or sorted(d.name for d in districts)
+        raise InvalidInput(
+            f"elections_provincial: district must name one Manitoba division of {edition.date}; "
+            f"{'it matches' if matches else 'choose from'} {names}."
+        )
+    chosen = matches[0]
+    areas, cached = await _areas(edition.source_key, chosen)
+
+    rows: list[VotingAreaRow] = []
+    for area in areas:
+        if voting_area and fold(voting_area) != fold(area.label):
+            continue
+        for vote in area.votes:
+            if party and not (
+                fold(party) in fold(vote.party) or _squash(party) in _squash(vote.party_code)
+            ):
+                continue
+            if candidate and fold(candidate) not in fold(vote.name or ""):
+                continue
+            rows.append(
+                VotingAreaRow(
+                    district=chosen.name,
+                    voting_area=area.label,
+                    voting_place=area.place,
+                    candidate=vote.name,
+                    party=vote.party,
+                    party_code=vote.party_code,
+                    votes=vote.votes,
+                )
+            )
+    total = len(rows)
+    page = rows[offset : offset + limit]
+    truncated = offset + limit < total
+    areas_valid = sum(v.votes for a in areas for v in a.votes)
+    official = chosen.valid_votes or 0
+    limits = [f"Showing rows {offset + 1} to {offset + len(page)} of {total}."] if truncated else []
+    if areas_valid != official:
+        # Checked 2026-10-03: twelve divisions of 2003, 2007, 2016 and 2019 do not add up.
+        limits.append(
+            f"The voting-area file's votes for {chosen.name} add up to {areas_valid:,}, not "
+            f"the {official:,} of the official summary of votes received; the summary is final."
+        )
+    return VotingAreaResults(
+        province=code,
+        election_date=edition.date,
+        district=chosen.name,
+        rows=page,
+        areas=[
+            VotingAreaSummary(
+                voting_area=a.label,
+                voting_place=a.place,
+                electors=a.electors,
+                valid_votes=sum(v.votes for v in a.votes),
+                rejected_ballots=a.rejected,
+                declined_ballots=a.declined,
+            )
+            for a in areas
+        ],
+        total_rows=total,
+        offset=offset,
+        truncated=truncated,
+        district_valid_votes=official,
+        areas_valid_votes=areas_valid,
+        attribution=_attribution(code),
+        provenance=make_provenance(
+            source=constants.PROVENANCE_SOURCE,
+            url=manitoba.files(edition.source_key).by_area,
+            cached=cached,
+            schema_name="elections_provincial.VotingAreaResults",
+            freshness="Official results are final; by-elections are not included.",
+            coverage=f"Manitoba general election of {edition.date}, {chosen.name}, "
+            f"{len(areas)} voting areas and special polls.",
+            limits=_limits(code, " ".join(limits) or None),
         ),
     )

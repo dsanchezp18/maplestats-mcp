@@ -34,7 +34,8 @@ async def elections_financial_returns_list_elections(
     writ, campaign return.
     Mots-clés : élections canada, liste des élections, élection partielle,
     élection générale, candidat, financement politique, période de la
-    loi, identifiant d'élection, bref, rapport de campagne.
+    loi, identifiant d'élection, bref, rapport de campagne, don, dons,
+    contributions politiques, donateurs, financement des partis.
     """
     return await client.list_elections(act=act, lang=lang)
 
@@ -72,7 +73,8 @@ async def elections_financial_returns_search_candidates(
     financial disclosure.
     Mots-clés : élections canada, recherche de candidats, financement
     politique, rapport de campagne, identifiant, parti, circonscription,
-    province, divulgation financière.
+    province, divulgation financière, don, dons, contributions
+    politiques, donateurs, financement des partis.
     """
     return await client.search_candidates(
         election_id,
@@ -125,7 +127,8 @@ async def elections_financial_returns_get_financial_return_part(
     Mots-clés : élections canada, financement de campagne, rapport
     financier, dépenses de candidat, contributions reçues, agent
     officiel, dépenses électorales, financement politique, donateur,
-    prêt de campagne.
+    prêt de campagne, don, dons, contributions politiques, donateurs,
+    financement des partis.
     """
     return await client.get_financial_return_part(
         candidate_client_id,

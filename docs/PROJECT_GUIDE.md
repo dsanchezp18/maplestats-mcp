@@ -172,9 +172,8 @@ servers before implementing each source adaptor, to absorb strong
 design and reliability ideas rather than reinvent them. The goal
 remains one coherent Canada MCP, not a wrapper around a collection of
 separate MCPs. Specific repositories, authors, and registry entries
-reviewed during this research are not named here — see
-[README.md](README.md#acknowledgments) for credit to the projects
-whose patterns most directly informed this implementation.
+reviewed during this research are not named here; see
+[README.md](README.md#acknowledgments) for the acknowledgements.
 
 ### Primary architectural benchmark
 
@@ -230,14 +229,7 @@ merged upstream.
 
 ### Later-release adjacent MCPs
 
-A Parliament MCP wrapping the unofficial OpenParliament.ca API was
-found, covering bills, votes, MPs, Hansard, committees and daily
-monitoring with caching/rate-limit handling and a best-effort HTML
-fallback for full-text Hansard search — relevant to a later
-legislation/parliamentary layer, noting the upstream API itself is
-unofficial. A small procurement MCP covering CanadaBuys tender
-notices and federal contract awards was also found, relevant to later
-procurement expansion. A narrow MCP for one specific federal dataset
+A narrow MCP for one specific federal dataset
 (cultural facilities) was found and is worth keeping only as an
 example of a dataset-specific Canadian MCP, not a general StatCan
 architecture reference.
@@ -442,8 +434,7 @@ Treat as part of the broader Canada MCP rather than a standalone MCP
 - Inventory provincial and territorial legislation sources and normalize
   access where feasible.
 - Add bills, votes, Hansard, committees and legislative-history sources
-  where useful, benchmarking OpenParliament and other existing
-  interfaces.
+  where an official source allows automated access.
 - Preserve jurisdiction, version/effective dates, source URLs and
   legislative provenance.
 - Keep legislation/regulatory access behind the same discovery and
@@ -567,9 +558,9 @@ economically useful, and poorly served by generic catalogue search.
   overlapping StatCan labour statistics.
 - **Elections Canada** — election results, candidates, political
   financing/contributions, polling divisions and electoral geography.
-- **Public Services and Procurement Canada / CanadaBuys** — tenders,
-  procurement notices, contract awards and procurement metadata. Build
-  beyond the narrow existing Canada Tenders MCP benchmark where useful.
+- **Public Services and Procurement Canada** — procurement data.
+  CanadaBuys was built and removed on 2026-10-03: not available for
+  automated access under its terms.
 - **Treasury Board of Canada Secretariat (TBS)** — proactive disclosure,
   government expenditures, contracts, travel/hospitality, workforce and
   other federal administrative information.

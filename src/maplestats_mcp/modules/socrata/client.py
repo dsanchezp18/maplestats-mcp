@@ -12,6 +12,7 @@ code differed only in the domain; they now share this client keyed by
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from maplestats_mcp.modules.socrata import constants
@@ -44,6 +45,22 @@ from maplestats_mcp.shared.socrata import (
     parse_epoch_seconds,
     query_rows,
 )
+
+# Socrata's "four-by-four" dataset id. Checked before it goes into a URL path,
+# so a value like "../x" or "abcd-1234?$where=" cannot reach another resource.
+_DATASET_ID = re.compile(r"^[a-z0-9]{4}-[a-z0-9]{4}$")
+
+
+def _dataset_id(dataset_id: str) -> str:
+    cleaned = dataset_id.strip().lower()
+    if not cleaned:
+        raise InvalidInput("dataset_id must not be empty.")
+    if not _DATASET_ID.match(cleaned):
+        raise InvalidInput(
+            "dataset_id must be a Socrata id of the form 'abcd-1234' (two groups of four "
+            f"letters or digits), as returned by socrata_search_datasets; got {dataset_id!r}."
+        )
+    return cleaned
 
 
 def _config(portal: str) -> SocrataConfig:
@@ -159,8 +176,7 @@ async def search_datasets(
 async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> DatasetDetail:
     del lang
     config = _config(portal)
-    if not dataset_id.strip():
-        raise InvalidInput("dataset_id must not be empty.")
+    dataset_id = _dataset_id(dataset_id)
 
     async def fetch() -> dict[str, Any]:
         return await get_view(config, dataset_id)
@@ -212,8 +228,7 @@ async def query_dataset_rows(
     """Run a SoQL query against one dataset's rows; ``lang`` is accepted for consistency."""
     del lang
     config = _config(portal)
-    if not dataset_id.strip():
-        raise InvalidInput("dataset_id must not be empty.")
+    dataset_id = _dataset_id(dataset_id)
     if limit < 1 or limit > constants.ROWS_LIMIT_MAX:
         raise InvalidInput(f"limit must be between 1 and {constants.ROWS_LIMIT_MAX}, got {limit}.")
     if offset < 0:

@@ -8,7 +8,6 @@ back as published text with a guessed header row.
 
 from __future__ import annotations
 
-import asyncio
 import io
 from datetime import date, datetime
 from typing import Any, Literal
@@ -28,6 +27,7 @@ from maplestats_mcp.modules.nl_stats.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -263,7 +263,7 @@ async def _workbook(url: str) -> tuple[dict[str, list[list[str]]], bool]:
             raise NotFound(f"nl_stats: {url} returned a web page, not an Excel file.")
         parse = _parse_xlsx if url.lower().endswith(".xlsx") else _parse_xls
         try:
-            return await asyncio.to_thread(parse, body)
+            return await run_parse(parse, body)
         except Exception as exc:  # openpyxl and xlrd raise several unrelated types
             raise UpstreamError(f"nl_stats: could not read {url}: {exc}") from exc
 

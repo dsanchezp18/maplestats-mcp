@@ -25,11 +25,11 @@ async def reproduce_code(
     reproducibly. Pass the tool name and the arguments you called it
     with; the server writes the scripts, ready to run. Tools that return
     documents or text (StatCan articles and Daily releases, Gazette
-    notices, Hansard) get no script. It rebuilds the exact request: from
+    notices) get no script. It rebuilds the exact request: from
     the arguments (StatCan tables via cansim, Beyond 20/20 via canivt,
     Valet, Socrata, CKAN), or by recording the upstream request the tool
     makes (every query parameter, POST body and header). Where the tool
-    filters a downloaded file itself (CanadaBuys, CER, GC InfoBase, CIHI,
+    filters a downloaded file itself (CER, GC InfoBase, CIHI,
     IRCC, PHAC Health Infobase, IP Horizons patents) or parses HTML tables
     (CFIA), the script repeats those steps. Scripts
     follow a header plus numbered sections (setup, read, check, prepare),

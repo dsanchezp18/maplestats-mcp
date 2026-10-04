@@ -26,6 +26,7 @@ from itertools import chain, islice
 from typing import Any, Literal
 
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.executor import check_deadline
 from maplestats_mcp.shared.xlsx_sheets import cell_text as _shared_cell_text
 
 FileFormat = Literal["xlsx", "xls", "csv"]
@@ -44,6 +45,10 @@ ROWS_LIMIT_DEFAULT = 50
 HEADER_CANDIDATES_MAX = 5
 # Declared sheet sizes above this are formatting, not data (see _fix_dimensions).
 SUSPICIOUS_SHEET_CELLS = 10_000_000
+# Rows between checks of the parse budget (shared/executor.py): often enough
+# that a 16,000-column row cannot run long between checks, rare enough to cost
+# nothing on a plain CSV.
+_DEADLINE_EVERY = 100
 
 _XLSX_MAGIC = b"PK\x03\x04"
 _XLS_MAGIC = b"\xd0\xcf\x11\xe0"
@@ -276,7 +281,9 @@ def _csv_rows(body: bytes) -> Iterator[list[str]]:
     text = decode(body)
     first = next((line for line in text[:20000].splitlines()[:20] if line.strip()), "")
     delimiter = max(_DELIMITERS, key=first.count) if first else ","
-    for row in csv.reader(io.StringIO(text), delimiter=delimiter):
+    for index, row in enumerate(csv.reader(io.StringIO(text), delimiter=delimiter)):
+        if index % _DEADLINE_EVERY == 0:
+            check_deadline()
         yield [cell.strip() for cell in row]
 
 
@@ -295,7 +302,9 @@ def _trim(row: list[str]) -> list[str]:
 
 
 def _xlsx_rows(sheet: Any) -> Iterator[list[str]]:
-    for raw in sheet.iter_rows(values_only=True):
+    for index, raw in enumerate(sheet.iter_rows(values_only=True)):
+        if index % _DEADLINE_EVERY == 0:
+            check_deadline()
         yield _trim([cell_text(c) for c in raw])
 
 
@@ -338,6 +347,8 @@ def _xls_rows(book: Any, sheet: Any) -> Iterator[list[str]]:
     import xlrd
 
     for r in range(min(sheet.nrows, MAX_SCAN_ROWS + 1)):
+        if r % _DEADLINE_EVERY == 0:
+            check_deadline()
         row: list[str] = []
         for c in range(sheet.ncols):
             cell = sheet.cell(r, c)
@@ -376,6 +387,48 @@ def largest_sheet(sizes: list[tuple[str, int, int]]) -> str:
     the first sheet is a poor default; the table is usually the biggest one.
     """
     return max(sizes, key=lambda s: s[1] * s[2])[0]
+
+
+SheetChoice = Literal["request", "largest", "only", "none"]
+# A sheet is read unasked only when it holds this share of the declared cells.
+DOMINANT_SHEET_SHARE = 0.8
+
+
+def choose_sheet(
+    sizes: list[tuple[str, int, int]], sheet: str | None, fmt: FileFormat, context: str
+) -> tuple[str | None, SheetChoice]:
+    """(sheet name, how it was chosen); a None name means the caller must choose.
+
+    One policy for every file reader (ckan_read_resource, ab_opendata):
+    with several sheets and none requested, a sheet is read only when it
+    holds at least 80% of the workbook's declared cells (a notes sheet beside
+    the table). Otherwise guessing would read an arbitrary sheet of a
+    multi-table workbook (Montreal's budget has 85), so the sheet list comes
+    back. A CSV has no sheets: `sheet` must be left unset (or be "csv").
+    """
+    names = [n for n, _, _ in sizes]
+    if fmt == "csv":
+        if sheet is not None and sheet.strip().casefold() != CSV_SHEET:
+            raise InvalidInput(
+                f"{context}: this file is a CSV, which has no sheets; leave sheet unset "
+                f"(got {sheet!r})."
+            )
+        return CSV_SHEET, "only"
+    if sheet is None:
+        if len(names) == 1:
+            return names[0], "only"
+        cells = [rows * cols for _, rows, cols in sizes]
+        # A declared size above this is formatting, not data, so it says nothing
+        # about which sheet holds the table (NWT's traffic workbooks).
+        trusted = max(cells) <= SUSPICIOUS_SHEET_CELLS
+        if trusted and sum(cells) and max(cells) >= DOMINANT_SHEET_SHARE * sum(cells):
+            return largest_sheet(sizes), "largest"
+        return None, "none"
+    wanted = sheet.strip().casefold()
+    for name in names:
+        if name.casefold() == wanted:
+            return name, "request"
+    raise InvalidInput(f"{context}: no sheet {sheet!r}; sheets are {names}.")
 
 
 def _summary(name: str, declared: tuple[int | None, int | None], rows: Iterator[list[str]]):

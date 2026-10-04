@@ -49,8 +49,8 @@ async def eccc_list_collections(lang: Lang = "en") -> CollectionList:
     Use for: a full inventory scan. Prefer eccc_search_collections for
     a topic search, or docs://eccc/well-known-collections for the
     collections that matter most - this returns the entire catalogue,
-    including many specialized downscaled-climate-projection families
-    most callers will not need.
+    including the downscaled-climate-projection families (`climate:*`),
+    which are gridded coverages read with eccc_coverages_get_data.
     Keywords: environment canada, eccc, msc, geomet, weather, climate,
     list, inventory, all collections, catalogue, full list.
     Mots-clés : environnement canada, smc, geomet, météo, climat, liste,
@@ -120,10 +120,13 @@ async def eccc_query_items(
     conditions, swob, observation, aqhi, air quality, climate
     normal, hydrometric, water level, flow, marine forecast, query,
     data, filter, bbox, station.
-    Mots-clés : environnement canada, smc, geomet, alerte météo,
-    conditions actuelles, observation, cote air santé, qualité de
-    l'air, normale climatique, hydrométrique, niveau d'eau, débit,
-    prévision maritime, requête, données, filtre, station.
+    Mots-clés : environnement canada, Environnement et Changement
+    climatique Canada, ECCC, smc, geomet, météo, prévisions météo,
+    prévisions, alerte météo, alertes météorologiques, conditions
+    actuelles, observation, cote air santé, qualité de l'air, normale
+    climatique, hydrométrique, rivière, cours d'eau, hydrogramme, niveau
+    d'eau, débit, débit journalier, prévision maritime, requête, données,
+    filtre, station.
     """
     return await client.query_items(
         collection_id,

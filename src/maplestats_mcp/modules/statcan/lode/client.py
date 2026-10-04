@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 import json
@@ -30,6 +29,7 @@ from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -356,7 +356,7 @@ async def query(
             "gpkg": reader.query_gpkg,
             "csv": reader.query_csv,
         }[kind]
-        outcome = await asyncio.to_thread(runner, path, remaining)
+        outcome = await run_in_pool(runner, path, remaining)
         records.extend(outcome.records)
         total_matched += outcome.total
         lower = lower or outcome.lower_bound
@@ -520,8 +520,8 @@ async def describe(database: str, file: str | None = None, lang: str = "en") -> 
             if local is None and total <= constants.DESCRIBE_DOWNLOAD_BYTES:
                 local, _ = await files.local_member(item.url, data.name)
             if local is not None:
-                layers = await asyncio.to_thread(reader.gpkg_layers, local)
-                sample, _ = await asyncio.to_thread(reader.gpkg_schema, local, None)
+                layers = await run_in_pool(reader.gpkg_layers, local)
+                sample, _ = await run_in_pool(reader.gpkg_schema, local, None)
                 sources.append(f"GeoPackage schema of {data.name}")
             else:
                 notes.append(

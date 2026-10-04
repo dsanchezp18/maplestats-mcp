@@ -124,7 +124,10 @@ analysis (`weather:rdpa:*`), seasonal forecast models
 (`climate:cmip5:*`, `climate:cangrd:*`, `climate:candcsu6:*`,
 `climate:dcs:*`, `climate:spei-*`, `climate:indices:*`) are all real
 MSC GeoMet collections not detailed here - use
-eccc_search_collections(query=...) to find them.
+eccc_search_collections(query=...) to find them. The `climate:*`
+collections are gridded coverages, not features: read them with
+eccc_coverages_search, eccc_coverages_describe and
+eccc_coverages_get_data, not eccc_query_items.
 """
 
 _GOTCHAS_DOC = """\

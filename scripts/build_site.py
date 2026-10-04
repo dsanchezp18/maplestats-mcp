@@ -293,6 +293,17 @@ SOURCES: dict[str, Source] = {
         row="provincial_agency",
     ),
     "arcgis_hub": Source("ArcGIS Hub portals", "Portails ArcGIS Hub", "catalogue", "ArcGIS Hub"),
+    "bc_environment": Source(
+        "BC Ministry of Environment: air quality, snow, groundwater and streamflow",
+        "Ministère de l'Environnement de la C.-B. : qualité de l'air, neige, eaux "
+        "souterraines et débits",
+        "provincial",
+        "BC Environment",
+        "Environnement C.-B.",
+        domain="environment",
+        places=("BC",),
+        row="provincial_agency",
+    ),
     "bc_lobbyists": Source(
         "BC Registrar of Lobbyists: registrations and activity reports",
         "Registraire des lobbyistes de la C.-B. : inscriptions et rapports d'activité",
@@ -330,7 +341,6 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
-    "canadabuys": Source("CanadaBuys", "AchatsCanada", "national", domain="money"),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
@@ -396,6 +406,14 @@ SOURCES: dict[str, Source] = {
         "ARC",
         domain="business",
     ),
+    "crea": Source(
+        "The Canadian Real Estate Association: MLS® Home Price Index links",
+        "L'Association canadienne de l'immeuble : liens vers l'IPP MLS®",
+        "national",
+        "CREA",
+        "ACI",
+        domain="housing",
+    ),
     "dfo_iwls": Source(
         "Fisheries and Oceans Canada: tides and water levels",
         "Pêches et Océans Canada : marées et niveaux d'eau",
@@ -411,6 +429,14 @@ SOURCES: dict[str, Source] = {
         "national",
         "ECCC",
         "ECCC",
+        domain="environment",
+    ),
+    "eccc_datamart": Source(
+        "ECCC Data Catalogue files (NPRI, GHGRP, NAPS)",
+        "Fichiers du Catalogue de données d'ECCC (INRP, PDGES, SNPA)",
+        "national",
+        "ECCC Data Catalogue",
+        "Catalogue de données d'ECCC",
         domain="environment",
     ),
     "electricity": Source(
@@ -431,12 +457,16 @@ SOURCES: dict[str, Source] = {
         domain="government",
     ),
     "elections_provincial": Source(
-        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan",
-        "Résultats des élections générales provinciales : Québec, Alberta, Colombie-Britannique, Saskatchewan",
+        "Provincial general election results: Quebec, Alberta, British Columbia, Saskatchewan, "
+        "Manitoba",
+        "Résultats des élections générales provinciales : Québec, Alberta, "
+        "Colombie-Britannique, Saskatchewan, Manitoba",
         "provincial",
-        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan",
-        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan",
-        places=("QC", "AB", "BC", "SK"),
+        "Elections Quebec, Elections Alberta, Elections BC, Elections Saskatchewan, "
+        "Elections Manitoba",
+        "Élections Québec, Elections Alberta, Elections BC, Elections Saskatchewan, "
+        "Élections Manitoba",
+        places=("QC", "AB", "BC", "SK", "MB"),
         row="provincial_agency",
     ),
     "elections_financial_returns": Source(
@@ -527,6 +557,14 @@ SOURCES: dict[str, Source] = {
         places=("NL",),
         row="provincial_agency",
     ),
+    "worldbank": Source(
+        "World Bank World Development Indicators (Canada and peers)",
+        "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",
+        "national",
+        "World Bank WDI",
+        "Banque mondiale (WDI)",
+        domain="statistics",
+    ),
     "yukon_stats": Source(
         "Yukon Bureau of Statistics",
         "Bureau de la statistique du Yukon",
@@ -534,6 +572,15 @@ SOURCES: dict[str, Source] = {
         "Yukon Statistics",
         "Statistique Yukon",
         places=("YT",),
+        row="provincial_agency",
+    ),
+    "nwt_stats": Source(
+        "NWT Bureau of Statistics",
+        "Bureau de la statistique des Territoires du Nord-Ouest",
+        "provincial",
+        "NWT Statistics",
+        "Statistique T.N.-O.",
+        places=("NT",),
         row="provincial_agency",
     ),
     "ourcommons": Source(
@@ -552,6 +599,15 @@ SOURCES: dict[str, Source] = {
         "Données ouvertes T.-N.-L.",
         places=("NL",),
         row="provincial_catalogue",
+    ),
+    "oeb": Source(
+        "Ontario Energy Board",
+        "Commission de l'énergie de l'Ontario",
+        "provincial",
+        "OEB",
+        "CEO",
+        places=("ON",),
+        row="provincial_agency",
     ),
     "nrcan_energy_use": Source(
         "Natural Resources Canada: energy use",
@@ -601,14 +657,6 @@ SOURCES: dict[str, Source] = {
         "Vancouver",
         places=("BC",),
         row="municipal_catalogue",
-    ),
-    "openparliament": Source(
-        "House of Commons, via OpenParliament.ca",
-        "Chambre des communes, par OpenParliament.ca",
-        "national",
-        "OpenParliament",
-        "OpenParliament",
-        domain="government",
     ),
     "pbo": Source(
         "Parliamentary Budget Officer",
@@ -687,6 +735,8 @@ FAMILIES: dict[str, tuple[str, str]] = {
         "Portail de l'information sur le marché de l'habitation",
     ),
     "cmhc/data_tables": ("Data tables (Excel)", "Tableaux de données (Excel)"),
+    "eccc/": ("Weather, water and climate observations", "Observations météo, eau et climat"),
+    "eccc/coverages": ("Climate projections (gridded)", "Projections climatiques (grilles)"),
     "ircc/": ("Express Entry rounds", "Rondes d'invitations Entrée express"),
     "ircc/monthly": ("Monthly IRCC Updates", "Mises à jour mensuelles d'IRCC"),
     "ised/cipo": ("Trademarks (CIPO)", "Marques de commerce (OPIC)"),
@@ -781,7 +831,6 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
     },
     "arcgis_hub": {
         "mb": ("MB", _P),
-        "sk": ("SK", _P),
         "pe": ("PE", _P),
         "alberta_geological_survey": ("AB", _P),
         "london": ("ON", _M),
@@ -2771,7 +2820,7 @@ def square_places(lang: Lang) -> list[str]:
 
 
 def chat_demo_context(lang: Lang) -> dict[str, str]:
-    """The prompt on the home page: five questions to five different publishers,
+    """The prompt on the home page: four questions to four different publishers,
     each answered from a recorded call (site/_data/cases), played by assets/site.js."""
     en = lang == "en"
     prompts = {call["name"]: call["response"] for call in load_case("prompts")["calls"]}
@@ -2868,22 +2917,6 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
             f"pour {this_year[0]}."
         )
 
-    # One federal contract award.
-    award = prompts["canadabuys_search_awards"]["awards"][0]
-    value = award["total_contract_value"]
-    if en:
-        award_html = (
-            f"<strong>{esc(award['supplier_name'])}</strong> of {esc(award['supplier_city'])}, "
-            f"{esc(award['supplier_province'])}, won the {esc(award['title'])} for "
-            f"${number(value, lang)} on {long_date(award['award_date'], lang)}."
-        )
-    else:
-        award_html = (
-            f"<strong>{esc(award['supplier_name'])}</strong>, de {esc(award['supplier_city'])} "
-            f"({esc(award['supplier_province'])}), a remporté le contrat « {esc(award['title'])} » "
-            f"pour {number(value, lang)} $ le {long_date(award['award_date'], lang)}."
-        )
-
     examples = [
         {
             "label": "Meat prices" if en else "Prix de la viande",
@@ -2950,26 +2983,6 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
             "cite": "source · Parliamentary Budget Officer"
             if en
             else "source · Directeur parlementaire du budget",
-        },
-        {
-            "label": "Contracts" if en else "Contrats",
-            "client": "VS Code",
-            "user": "Who won the National Research Council's window replacement contract?"
-            if en
-            else "Qui a remporté le contrat de remplacement des fenêtres du Conseil national de recherches ?",
-            "tool": "canadabuys_search_awards",
-            "html": award_html,
-            "code": rows(
-                [
-                    (
-                        "value" if en else "valeur",
-                        f"${number(value, lang)}" if en else f"{number(value, lang)} $",
-                    ),
-                    ("awarded" if en else "attribué", award["award_date"]),
-                    ("buyer" if en else "acheteur", "NRC"),
-                ]
-            ),
-            "cite": "source · CanadaBuys" if en else "source · AchatsCanada",
         },
     ]
     payload = json.dumps(examples, ensure_ascii=False).replace("</", "<" + chr(92) + "/")
@@ -3053,7 +3066,7 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
             micro["unweighted_n"],
             "census records in one tabulation"
             if en
-            else "fiches du recensement dans une tabulation",
+            else "fiches du recensement dans une totalisation",
         ),
         (
             counts["boc_search_series"]["total_count"],
@@ -3814,7 +3827,9 @@ _SPACED = (
     (re.compile(r"(^|\S)\s?(:)(?=\s|$)"), NBSP),
     (re.compile(r"(^|\S)\s?(»)"), NBSP),
 )
-_OPEN_QUOTE = re.compile(r"«\s?(?=\S)")
+# A « that ends a text is followed by an element, as in "« <span>": it
+# needs its space too.
+_OPEN_QUOTE = re.compile(r"«\s?(?=\S|$)")
 _PERCENT = re.compile(r"(\d)\s?%")
 
 

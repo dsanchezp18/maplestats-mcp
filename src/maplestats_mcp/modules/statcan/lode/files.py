@@ -30,6 +30,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt
 from maplestats_mcp.modules.statcan.lode import constants
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import (
     is_retryable,
     new_client,
@@ -98,7 +99,7 @@ async def _download(url: str, member: str, target: Path) -> Path:
             archive.unlink(missing_ok=True)
         _enforce_cap(target)
 
-    await asyncio.to_thread(extract)
+    await run_in_pool(extract)
     return target
 
 

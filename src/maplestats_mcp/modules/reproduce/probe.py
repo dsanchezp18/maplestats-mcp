@@ -43,7 +43,7 @@ def choose(
 
     The endpoint the result names as its source wins: a search tool that
     then looks up each hit (cer_list_datasets) or checks files with HEAD
-    (canadabuys_list_bulk_files) still reproduces the search. Otherwise
+    still reproduces the search. Otherwise
     the last successful GET or POST is the data request.
     """
     ok = [

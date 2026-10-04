@@ -41,7 +41,9 @@ async def electricity_ontario_get_hourly_demand(
     with no dates, the latest `limit` hours of `year` (default the current
     year). Use electricity_ontario_get_realtime_demand for the current hour.
     Use for: Ontario electricity load, peak demand, daily or seasonal demand
-    profile, demand history, how much power Ontario uses.
+    profile, demand history, how much power Ontario uses. Electricity
+    data here is Ontario (IESO) and Québec (Hydro-Québec) only; Alberta is
+    not covered.
     Keywords: Ontario, IESO, electricity demand, hourly demand, peak demand,
     load, MW, market demand, Ontario demand, power grid, consumption.
     Mots-clés : Ontario, SIERE, demande d'électricité, demande horaire, pointe,
@@ -113,7 +115,8 @@ async def electricity_ontario_get_prices(
     files are kept about three months. Older HOEP averages:
     electricity_ontario_get_hoep_history.
     Use for: Ontario wholesale electricity price, day-ahead price, spot price
-    now, price spikes, congestion and loss components.
+    now, price spikes, congestion and loss components. Prices are
+    Ontario (IESO) only; Alberta pool prices are not covered.
     Keywords: Ontario, IESO, electricity price, zonal price, OZP, day-ahead,
     real-time, LMP, CAD/MWh, wholesale, spot, market renewal, congestion.
     Mots-clés : Ontario, SIERE, prix de l'électricité, prix zonal, prévisionnel,
@@ -195,7 +198,8 @@ async def electricity_quebec_get_demand(
     hourly average MW from 2019-01-01 to 2025-01-01 only. Timestamps are UTC.
     Licence CC BY-NC 4.0: credit Hydro-Quebec, non-commercial use only.
     Use for: how much electricity Quebec is using now, Quebec peak demand,
-    Hydro-Quebec load history, winter peaks.
+    Hydro-Quebec load history, winter peaks. Electricity data here is
+    Ontario (IESO) and Québec (Hydro-Québec) only; Alberta is not covered.
     Keywords: Quebec, Hydro-Quebec, electricity demand, load, MW, peak
     demand, 15-minute, hourly, open data, power grid, consumption.
     Mots-clés : Québec, Hydro-Québec, demande d'électricité, charge, MW,

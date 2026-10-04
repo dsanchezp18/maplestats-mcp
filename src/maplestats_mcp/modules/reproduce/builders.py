@@ -3,7 +3,7 @@ or whose filtering happens in MapleStats after the download.
 
 Every other tool is reproduced from the requests recorded while it ran
 (probe.py). A builder here is needed when that recording is not enough:
-the tool downloads a whole file and filters it itself (CanadaBuys, CER,
+the tool downloads a whole file and filters it itself (CER,
 GC InfoBase, CIHI, IRCC, StatCan indicators, PHAC Health Infobase in
 phac_infobase.py, IP Horizons), the tool parses HTML tables itself (CFIA
 in cfia.py), or a better
@@ -17,10 +17,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable
-from datetime import datetime
 from typing import Any
 from urllib.parse import urlencode
-from zoneinfo import ZoneInfo
 
 from maplestats_mcp.modules.reproduce.spec import Code, Filter, Spec
 from maplestats_mcp.shared.errors import InvalidInput
@@ -258,147 +256,6 @@ async def _boc(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 # Files the tool filters itself ------------------------------------------------------
 
 
-def _canadabuys_terms(stems: tuple[str, ...], args: dict[str, Any]) -> list[Filter]:
-    query = str(args.get("query") or "").strip()
-    if not query:
-        return []
-    suffix = _suffix(args)
-    columns = [
-        "referenceNumber-numeroReference",
-        "solicitationNumber-numeroSollicitation",
-        *(f"{stem}-{suffix}" for stem in stems),
-    ]
-    return [Filter("terms", columns, query)]
-
-
-def _canadabuys_common(args: dict[str, Any]) -> list[Filter]:
-    from maplestats_mcp.modules.canadabuys.client import _category_code
-
-    filters: list[Filter] = []
-    code = _category_code(args.get("category"))
-    if code:
-        filters.append(Filter("contains", ["procurementCategory-categorieApprovisionnement"], code))
-    suffix = _suffix(args)
-    if args.get("buyer"):
-        column = f"contractingEntityName-nomEntitContractante-{suffix}"
-        filters.append(Filter("contains", [column], args["buyer"]))
-    return filters
-
-
-_CANADABUYS_NOTE = (
-    "Text filters use the {language} columns; the tool falls back to English where "
-    "a French cell is empty."
-)
-
-
-async def _canadabuys_tenders(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.canadabuys import constants
-
-    notice_set = str(args.get("notice_set", "open"))
-    url = constants.OPEN_TENDERS_URL if notice_set == "open" else constants.NEW_TENDERS_URL
-    stems = ("title-titre", "tenderDescription-descriptionAppelOffres", "unspscDescription")
-    filters = _canadabuys_terms(stems, args) + _canadabuys_common(args)
-    suffix = _suffix(args)
-    if args.get("region"):
-        filters.append(
-            Filter("contains", [f"regionsOfDelivery-regionsLivraison-{suffix}"], args["region"])
-        )
-    notes = [_CANADABUYS_NOTE.format(language="English" if suffix == "eng" else "French")]
-    if notice_set == "open":
-        now = datetime.now(ZoneInfo(constants.FISCAL_YEAR_TIMEZONE)).strftime("%Y-%m-%dT%H:%M:%S")
-        filters.append(Filter("ge", ["tenderClosingDate-appelOffresDateCloture"], now))
-        notes.append(
-            f"Tenders that closed before {now} (Ottawa time, when this script was made) are "
-            "dropped, as the tool drops them; update the date to rerun later."
-        )
-    return Spec(
-        kind="csv",
-        url=url,
-        file_name=url.rsplit("/", 1)[-1],
-        method=_FILTERED,
-        title=f"CanadaBuys {notice_set} tender notices",
-        filters=filters,
-        sort_by="tenderClosingDate-appelOffresDateCloture",
-        notes=notes,
-    )
-
-
-async def _canadabuys_awards(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.canadabuys import constants
-    from maplestats_mcp.modules.canadabuys.client import current_fiscal_year
-
-    year = str(args.get("fiscal_year") or current_fiscal_year())
-    url = constants.AWARDS_URL_TEMPLATE.format(fiscal_year=year)
-    stems = (
-        "title-titre",
-        "awardDescription-descriptionAttribution",
-        "unspscDescription",
-        "supplierLegalName-nomLegalFournisseur",
-        "contractingEntityName-nomEntitContractante",
-    )
-    filters = _canadabuys_terms(stems, args) + _canadabuys_common(args)
-    if args.get("supplier"):
-        column = f"supplierLegalName-nomLegalFournisseur-{_suffix(args)}"
-        filters.append(Filter("contains", [column], args["supplier"]))
-    return Spec(
-        kind="csv",
-        url=url,
-        file_name=url.rsplit("/", 1)[-1],
-        method=_FILTERED,
-        title=f"CanadaBuys award notices, fiscal year {year}",
-        filters=filters,
-        sort_by="publicationDate-datePublication",
-        sort_descending=True,
-    )
-
-
-async def _canadabuys_contracts(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.canadabuys import constants
-    from maplestats_mcp.modules.canadabuys.client import _CONTRACT_STEMS, current_fiscal_year
-
-    year = str(args.get("fiscal_year") or current_fiscal_year())
-    url = constants.CONTRACTS_URL_TEMPLATE.format(fiscal_year=year)
-    filters = _canadabuys_terms(_CONTRACT_STEMS, args) + _canadabuys_common(args)
-    if args.get("supplier"):
-        columns = [
-            f"supplierLegalName-nomLegalFournisseur-{_suffix(args)}",
-            f"supplierStandardizedName-nomNormaliseFournisseur-{_suffix(args)}",
-        ]
-        filters.append(Filter("terms", columns, args["supplier"]))
-    if args.get("min_value") is not None:
-        filters.append(
-            Filter("ge", ["totalContractValue-valeurTotaleContrat"], float(args["min_value"]))
-        )
-    return Spec(
-        kind="csv",
-        url=url,
-        file_name=url.rsplit("/", 1)[-1],
-        method=_FILTERED,
-        title=f"CanadaBuys contract history, fiscal year {year}",
-        filters=filters,
-        sort_by="totalContractValue-valeurTotaleContrat",
-        sort_descending=True,
-        notes=[
-            (
-                "Each amendment is its own row; the tool keeps the latest row per reference "
-                "number. Group by referenceNumber to do the same."
-            )
-        ],
-    )
-
-
-async def _canadabuys_notice(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    url = str(result.get("provenance", {}).get("url") or "")
-    return Spec(
-        kind="csv",
-        url=url,
-        file_name=url.rsplit("/", 1)[-1],
-        method=_FILTERED,
-        title=f"CanadaBuys notice {args['reference_number']}",
-        filters=[Filter("is", ["referenceNumber-numeroReference"], args["reference_number"])],
-    )
-
-
 async def _header(url: str) -> list[str]:
     from maplestats_mcp.shared.csv_files import fetch_rows
     from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -602,10 +459,6 @@ BUILDERS: dict[str, Builder] = {
     "ckan_datastore_search": _ckan,
     "boc_get_observations": _boc,
     "statcan_census_tables_get_downloads": _census_table,
-    "canadabuys_search_tenders": _canadabuys_tenders,
-    "canadabuys_search_awards": _canadabuys_awards,
-    "canadabuys_search_contracts": _canadabuys_contracts,
-    "canadabuys_get_notice": _canadabuys_notice,
     "cer_query_file": _cer_file,
     "gc_infobase_query": _gc_infobase,
     "cihi_get_indicator_data": _cihi,
@@ -629,9 +482,6 @@ ARGUMENT_ONLY = {
     "ckan_datastore_search",
     "boc_get_observations",
     "statcan_census_tables_get_downloads",
-    "canadabuys_search_tenders",
-    "canadabuys_search_awards",
-    "canadabuys_search_contracts",
     # The PHAC builders load the file (through the tool's cache) and run the
     # tool's own query on it, so running the tool first would repeat that.
     "phac_infobase_query",

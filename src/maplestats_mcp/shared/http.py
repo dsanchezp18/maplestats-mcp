@@ -29,6 +29,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
@@ -234,14 +236,35 @@ _RETRY_AFTER_CAP_SECONDS = 30.0
 _backoff = wait_exponential(multiplier=1, min=1, max=10)
 
 
+def retry_after_seconds(header: str, now: datetime | None = None) -> float | None:
+    """Seconds a Retry-After header asks for, in either form RFC 9110 allows.
+
+    A whole number of seconds, or an HTTP date (`Wed, 21 Oct 2015 07:28:00
+    GMT`), read as the time until that date (0 when it has passed). None
+    when the header is absent or unreadable.
+    """
+    header = header.strip()
+    if not header:
+        return None
+    if header.isdigit():
+        return float(header)
+    try:
+        when = parsedate_to_datetime(header)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - (now or datetime.now(UTC))).total_seconds())
+
+
 def _wait_honouring_retry_after(state: RetryCallState) -> float:
     """Exponential backoff, or the server's Retry-After (capped) when it sent one."""
     wait = _backoff(state)
     exc = state.outcome.exception() if state.outcome else None
     if isinstance(exc, httpx.HTTPStatusError):
-        header = exc.response.headers.get("retry-after", "")
-        if header.isdigit():
-            return max(wait, min(float(header), _RETRY_AFTER_CAP_SECONDS))
+        asked = retry_after_seconds(exc.response.headers.get("retry-after", ""))
+        if asked is not None:
+            return max(wait, min(asked, _RETRY_AFTER_CAP_SECONDS))
     return wait
 
 
