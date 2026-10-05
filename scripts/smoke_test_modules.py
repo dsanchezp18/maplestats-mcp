@@ -1539,6 +1539,15 @@ async def main(modules: set[str]) -> int:
             if step.expect_error is not None:
                 if result.is_error and step.expect_error in text:
                     print(f"OK   {label} {args} (refused as expected)")
+                elif (
+                    os.environ.get("GITHUB_ACTIONS") == "true"
+                    and result.is_error
+                    and "could not be reached" in text
+                ):
+                    # The refusal is decided from the feed itself, so a feed the runner
+                    # cannot reach (STM's zip, 2026-10-05; it downloads fine elsewhere)
+                    # leaves nothing to check. Never skipped off CI.
+                    print(f"SKIP {label}: upstream not reachable from this GitHub runner")
                 else:
                     failures.append(label)
                     print(f"FAIL {label} {args}: expected an error with {step.expect_error!r}")
