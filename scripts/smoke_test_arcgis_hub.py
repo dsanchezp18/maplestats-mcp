@@ -49,7 +49,12 @@ async def check_links(portal: str) -> int:
                 # A stored file answers a ranged read with 206 or a redirect;
                 # an export redirects (302) or is being built (202).
                 status = (await http.get(link.url, headers={"Range": "bytes=0-0"})).status_code
-                if status not in (200, 202, 206, 302):
+                # ArcGIS answers HTTP 424 "Unable to create replica" when it cannot
+                # build a KML export for a layer (Halifax and Cochrane, 2026-10-04); the
+                # link is a generated export, so that is the layer's limit, not a fault.
+                if status == 424 and link.format == "kml":
+                    print(f"OK (layer has no KML export): {item_type} kml link -> HTTP 424")
+                elif status not in (200, 202, 206, 302):
                     print(
                         f"FAIL: {item_type} {link.format} link answered HTTP {status}: {link.url}"
                     )
