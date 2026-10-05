@@ -77,9 +77,9 @@ TOPICS = {
 STATISTIC_TO_CODE = {"counts": 0, "rate": 1}
 LANG_TO_CODE = {"en": "E", "fr": "F"}
 
-# Checked 2026-10-02: www12.statcan.gc.ca answers every path, this REST API
-# included, with HTTP 403 and a Cloudflare managed challenge ("Just a
-# moment..."), which only a browser can pass. MapleStats does not try to get
+# Checked 2026-10-02 and 2026-10-05: www12.statcan.gc.ca answers every
+# path, this REST API included, with HTTP 403 and a Cloudflare managed
+# challenge ("Just a moment..."), which only a browser can pass. MapleStats does not try to get
 # past it; the tools report the block and point to the same data elsewhere.
 BLOCKED_NOTE = (
     "Statistics Canada's www12 host, which serves the 2016 Census Profile service, is "
