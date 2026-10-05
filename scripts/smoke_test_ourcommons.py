@@ -3,13 +3,32 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
+
+import httpx
 
 from maplestats_mcp.modules.ourcommons import client
 from maplestats_mcp.shared.http import new_client
 
 
+async def blocked_on_ci() -> bool:
+    """True on a GitHub runner that ourcommons.ca answers with HTTP 403 (seen 2026-10-04).
+
+    The same request succeeds from other networks, so this is a block on the
+    runner's address range, not a fault in the module. Never skips off CI.
+    """
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return False
+    async with httpx.AsyncClient(timeout=30) as http:
+        response = await http.get("https://www.ourcommons.ca/members/en/search/xml")
+    return response.status_code == 403
+
+
 async def main() -> int:
+    if await blocked_on_ci():
+        print("SKIP: ourcommons.ca answers HTTP 403 to this GitHub runner")
+        return 0
     failures = 0
     async with new_client():
         members = await client.list_members(limit=400)

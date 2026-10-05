@@ -587,7 +587,7 @@ async def test_error_text_follows_lang(httpx_mock):
         with pytest.raises(InvalidInput, match="Aucun|AAAA-MM-JJ"):
             await client.get_changed_cube_list("16/09/2026")
         httpx_mock.add_response(url=f"{BASE}getChangedSeriesList", status_code=409)
-        with pytest.raises(Exception, match="verrouillée"):
+        with pytest.raises(Exception, match="HTTP 409"):
             await client.get_changed_series_list()
     finally:
         client.use_lang("en")

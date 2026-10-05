@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -84,6 +85,18 @@ DOWN_TOOLS: dict[str, str] = {
     "nrcan_energy_use_list_tables": _OEE_DOWN,
     "nrcan_energy_use_get_table": _OEE_DOWN,
 }
+
+
+async def _ourcommons_blocked_on_ci() -> bool:
+    """True on a GitHub runner that ourcommons.ca answers with HTTP 403 (seen 2026-10-04)."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return False
+    import httpx
+
+    async with httpx.AsyncClient(timeout=30) as http:
+        response = await http.get("https://www.ourcommons.ca/members/en/search/xml")
+    return response.status_code == 403
+
 
 STEPS: list[Step] = [
     # Alberta Economic Dashboard
@@ -918,7 +931,7 @@ STEPS: list[Step] = [
         },
         lambda data: (
             not data["name"].startswith("Comptes")
-            and "EN only" in (data["provenance"]["limits"] or "")
+            and "qu'en anglais" in (data["provenance"]["limits"] or "")
         ),
     ),
     # ISED, tool level (client calls are in the smoke_test_ised_*.py scripts).
@@ -1501,6 +1514,9 @@ def _text(result: Any) -> str:
 async def main(modules: set[str]) -> int:
     ctx: Context = {}
     failures: list[str] = []
+    if await _ourcommons_blocked_on_ci():
+        print("SKIP ourcommons: ourcommons.ca answers HTTP 403 to this GitHub runner")
+        DOWN_MODULES["ourcommons"] = "blocked on this runner (HTTP 403)"
     async with Client(mcp) as client:
         for step in STEPS:
             if modules and step.module not in modules:

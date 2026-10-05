@@ -23,7 +23,7 @@ from mcp.types import TextContent
 
 from maplestats_mcp.modules.statcan.wds import client
 from maplestats_mcp.server import mcp
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import DataLocked, InvalidInput, NotFound
 from maplestats_mcp.shared.http import new_client
 
 CPI_PID = 18100004
@@ -133,7 +133,12 @@ async def main() -> int:
     )
 
     # wds_get_changed_series_list / wds_get_changed_series_data
-    changed = await client.get_changed_series_list()
+    try:
+        changed = await client.get_changed_series_list()
+    except DataLocked as exc:
+        # StatCan locks the changed-series methods from 12am to 8:30am ET (HTTP 409).
+        print(f"SKIP: changed series ({str(exc)[:90]})")
+        return 0 if ok else 1
     ok &= check(True, "changed series today", len(changed.series))
     if changed.series:
         first = changed.series[0]

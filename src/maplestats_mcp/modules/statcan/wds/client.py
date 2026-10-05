@@ -134,16 +134,20 @@ def _upstream_message(exc: httpx.HTTPStatusError) -> str:
 def _raise_if_locked(exc: httpx.HTTPStatusError, method: str) -> NoReturn:
     """Map a WDS HTTP status to the typed error it means (confirmed live
     2026-10-02: 406 = rejected parameter with a reason, 404 = nothing found,
-    409 = lock window)."""
+    409 = lock window, or no release yet today: body "The product is not released yet" on a Sunday evening, 2026-10-04)."""
     status = exc.response.status_code
     reason = _upstream_message(exc)
     if status == 409:
         raise DataLocked(
             _m(
-                f"{method} is locked during StatCan's daily update window "
-                "(12am-8:30am ET). Retry after 8:30am ET.",
-                f"{method} est verrouillée pendant la mise à jour quotidienne de Statistique "
-                "Canada (0 h - 8 h 30 HE). Réessayez après 8 h 30 HE.",
+                f"{method} answered HTTP 409" + (f" ({reason})" if reason else "") + ". "
+                "StatCan locks it during the 12am-8:30am ET update window and until a "
+                "release is out (confirmed live 2026-10-04, a Sunday evening: 'The product "
+                "is not released yet'). Retry after 8:30am ET on a release day.",
+                f"{method} a répondu HTTP 409" + (f" ({reason})" if reason else "") + ". "
+                "Statistique Canada la verrouille pendant la mise à jour quotidienne "
+                "(0 h - 8 h 30 HE) et tant qu'aucune diffusion n'est parue (constaté le "
+                "2026-10-04, un dimanche soir). Réessayez après 8 h 30 HE un jour de diffusion.",
             )
         ) from exc
     if status == 406:

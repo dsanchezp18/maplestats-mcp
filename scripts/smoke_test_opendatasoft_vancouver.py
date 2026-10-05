@@ -42,7 +42,7 @@ async def main() -> int:
         return 1
 
     try:
-        await client.get_dataset("__maple_missing_dataset__")
+        await client.get_dataset("maple-missing-dataset")
     except NotFound:
         print("OK: unknown dataset raises NotFound")
     except Exception as exc:  # noqa: BLE001
