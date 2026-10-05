@@ -41,14 +41,17 @@ MAX_PAGES_PER_THEME = 60
 SEARCH_LIMIT_DEFAULT = 25
 SEARCH_LIMIT_MAX = 200
 
-# Checked 2026-10-02: every www12.statcan.gc.ca path, the table lists and the
-# download links alike, answers scripts with a Cloudflare managed challenge
-# (HTTP 403). MapleStats does not try to pass it; it reports the block.
+# Checked 2026-10-02 and again 2026-10-05: every www12.statcan.gc.ca path, the
+# table lists and the download links alike, answers scripts with a Cloudflare
+# managed challenge (HTTP 403). No StatCan notice about it as of 2026-10-05.
+# MapleStats does not try to pass it; it reports the block.
 BLOCKED_NOTE = (
     "Statistics Canada's www12 host, which serves these census tables, is currently behind "
     "a Cloudflare bot challenge that scripts cannot pass (a browser can still open the "
     "pages). Other routes to census data: 2021 tables are WDS tables (wds_search_cubes, "
-    "98-10-xxxx); an indicator subset of the 2016 profile (down to health regions) is in WDS tables 17100122 and 17100123; copies of "
+    "98-10-xxxx); the 2021 Census Profile, down to dissemination areas, is on a separate "
+    "host that still works (statcan_census_profile_*); an indicator subset of the 2016 "
+    "profile (down to health regions) is in WDS tables 17100122 and 17100123; copies of "
     "older tables are on Borealis (borealis_search_ivt)."
 )
 # Passed through lang.say(), which adds the French no-break spaces.
@@ -57,7 +60,9 @@ BLOCKED_NOTE_FR = (
     "actuellement derrière une vérification de sécurité Cloudflare que les scripts ne peuvent "
     "pas franchir (un navigateur peut encore ouvrir les pages). Autres sources de données du "
     "recensement : les tableaux de 2021 sont des tableaux du WDS (wds_search_cubes, "
-    "98-10-xxxx) ; un sous-ensemble d'indicateurs du profil de 2016 (jusqu'aux régions "
+    "98-10-xxxx) ; le Profil du recensement de 2021, jusqu'aux aires de diffusion, est sur "
+    "un autre serveur qui fonctionne toujours (statcan_census_profile_*) ; un "
+    "sous-ensemble d'indicateurs du profil de 2016 (jusqu'aux régions "
     "sociosanitaires) se trouve dans les tableaux 17100122 et 17100123 du WDS ; des copies "
     "des tableaux plus anciens sont dans Borealis (borealis_search_ivt)."
 )
