@@ -140,8 +140,8 @@ YEAR_CONFIG: dict[int, dict] = {
 
 # These downloads sit on www12.statcan.gc.ca. Checked 2026-10-02 and
 # 2026-10-05 it answers scripts with a Cloudflare managed challenge (HTTP
-# 403); a browser passes it. MapleStats only builds the URLs and reports the block, it does not try to
-# get past it.
+# 403); a browser passes it. MapleStats only builds the URLs and reports
+# the block, it does not try to get past it.
 REACHABILITY_URL = "https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/index.cfm?Lang=E"
 PROBE_TTL_SECONDS = 15 * 60
 BLOCKED_NOTE = (
