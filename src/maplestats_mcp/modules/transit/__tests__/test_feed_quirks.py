@@ -118,7 +118,12 @@ def _zip(files: dict[str, str]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for name, text in files.items():
-            archive.writestr(name, text, compress_type=zipfile.ZIP_DEFLATED)
+            # A fixed timestamp: these bytes are parametrize ids, and a clock-stamped
+            # zip gives each pytest-xdist worker different test ids ("Different tests
+            # were collected", CI 3.12, 2026-10-05).
+            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, text)
     return buffer.getvalue()
 
 
