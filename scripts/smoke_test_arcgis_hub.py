@@ -54,6 +54,12 @@ async def check_links(portal: str) -> int:
                 # link is a generated export, so that is the layer's limit, not a fault.
                 if status == 424 and link.format == "kml":
                     print(f"OK (layer has no KML export): {item_type} kml link -> HTTP 424")
+                elif item_type == "Feature Service" and status in (400, 424, 500, 502, 503):
+                    # A Feature Service export is built on request; ArcGIS refuses or fails
+                    # some builds at random (Port Moody csv/geojson 500, Cochrane filegdb 400,
+                    # Greater Sudbury csv 424 in one run, 302 minutes later). A 404 or 403
+                    # would still mean the link itself is wrong.
+                    print(f"OK (export not built): {item_type} {link.format} link -> HTTP {status}")
                 elif status not in (200, 202, 206, 302):
                     print(
                         f"FAIL: {item_type} {link.format} link answered HTTP {status}: {link.url}"

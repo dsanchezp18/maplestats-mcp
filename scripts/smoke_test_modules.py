@@ -1544,6 +1544,15 @@ async def main(modules: set[str]) -> int:
                     print(f"FAIL {label} {args}: expected an error with {step.expect_error!r}")
                 continue
             if result.is_error:
+                # A Cloudflare challenge on a GitHub runner is that runner's block, not
+                # the module's fault (api.economicdata.alberta.ca answers the same call
+                # from other networks, 2026-10-04); never skipped off CI.
+                if (
+                    os.environ.get("GITHUB_ACTIONS") == "true"
+                    and "Cloudflare bot challenge" in text
+                ):
+                    print(f"SKIP {label}: Cloudflare challenge for this GitHub runner")
+                    continue
                 failures.append(label)
                 print(f"FAIL {label} {args}: {text[:300]}")
                 continue
