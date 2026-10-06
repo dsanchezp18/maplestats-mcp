@@ -21,7 +21,6 @@ import asyncio
 import hashlib
 import math
 import re
-import shutil
 import zipfile
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -38,6 +37,7 @@ from maplestats_mcp.modules.statcan.pumf.schemas import (
     WeightedTable,
 )
 from maplestats_mcp.shared import remote_zip
+from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
@@ -111,9 +111,15 @@ async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Pat
     try:
         async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
             response.raise_for_status()
+            written = 0
             with zip_path.open("wb") as handle:
                 async for chunk in response.aiter_bytes(1 << 20):
+                    written += len(chunk)
+                    check_size(written, config.get_pumf_cache_max_bytes(), url)
                     handle.write(chunk)
+    except FileTooLarge:
+        zip_path.unlink(missing_ok=True)
+        raise
     except Exception as exc:
         zip_path.unlink(missing_ok=True)
         raise UpstreamUnavailable(
@@ -125,14 +131,28 @@ async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Pat
 
     def extract() -> None:
         part = target.with_suffix(target.suffix + ".part")
-        with (
-            zipfile.ZipFile(zip_path) as archive,
-            archive.open(member.name) as source,
-            part.open("wb") as sink,
-        ):
-            shutil.copyfileobj(source, sink, 1 << 20)
-        target.with_suffix(target.suffix + ".part").replace(target)
-        zip_path.unlink(missing_ok=True)
+        try:
+            with (
+                zipfile.ZipFile(zip_path) as archive,
+                archive.open(member.name) as source,
+                part.open("wb") as sink,
+            ):
+                copy_capped(
+                    source, sink, config.get_pumf_cache_max_bytes(), f"{member.name} in {url}"
+                )
+            part.replace(target)
+        except FileTooLarge:
+            raise
+        except (zipfile.BadZipFile, KeyError, OSError) as exc:
+            raise UpstreamError(
+                say(
+                    f"statcan_pumf: {url} could not be unpacked: {exc}",
+                    f"statcan_pumf : {url} n'a pas pu être décompressé : {exc}",
+                )
+            ) from exc
+        finally:
+            part.unlink(missing_ok=True)
+            zip_path.unlink(missing_ok=True)
         _enforce_cache_cap(config.get_pumf_cache_dir(), target)
 
     await run_in_pool(extract)

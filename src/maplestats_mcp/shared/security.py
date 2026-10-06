@@ -36,22 +36,30 @@ def _header(scope: dict, name: bytes) -> str | None:
     return None
 
 
-def _client_key(scope: dict, *, trust_proxy_headers: bool) -> str:
+def _client_key(scope: dict, *, trust_proxy_headers: bool, proxy_hops: int = 1) -> str:
     """Identify the caller for rate limiting.
 
     `X-Forwarded-For` is only honored when `trust_proxy_headers` is
     explicitly enabled — trusting it unconditionally would let any
     direct caller spoof a different rate-limit bucket per request. Set
     MAPLE_TRUST_PROXY_HEADERS only when this process sits behind a
-    reverse proxy/load balancer that itself sets (and cannot be told to
-    forward a spoofed) X-Forwarded-For; otherwise every request behind
-    such a proxy would key off the proxy's own address and the
-    per-client limit degrades into one shared global limit.
+    reverse proxy/load balancer; otherwise every request behind such a
+    proxy would key off the proxy's own address and the per-client limit
+    degrades into one shared global limit.
+
+    The address is read from the right: each trusted proxy appends the
+    address it received the request from, so with `proxy_hops` trusted
+    proxies the entry `proxy_hops` places from the end is the client as the
+    outermost trusted proxy saw it. Everything to its left is whatever the
+    caller wrote in the header, so reading the leftmost entry would let a
+    caller pick a new rate-limit bucket on every request.
     """
     if trust_proxy_headers:
         forwarded_for = _header(scope, b"x-forwarded-for")
         if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
+            entries = [e.strip() for e in forwarded_for.split(",") if e.strip()]
+            if entries:
+                return entries[max(0, len(entries) - max(1, proxy_hops))]
     client = scope.get("client")
     if isinstance(client, (tuple, list)) and client:
         return str(client[0])
@@ -84,6 +92,7 @@ def with_http_security(
     rate_limit_requests: int = 120,
     rate_limit_window_seconds: float = 60.0,
     trust_proxy_headers: bool = False,
+    trusted_proxy_hops: int = 1,
 ) -> ASGIApp:
     """Protect MCP requests while leaving health checks and stdio untouched.
 
@@ -114,28 +123,15 @@ def with_http_security(
             await inner_app(scope, receive, send)
             return
 
-        if auth_token:
-            authorization = _header(scope, b"authorization") or ""
-            scheme, _, token = authorization.partition(" ")
-            # Compare bytes, not str: hmac.compare_digest raises TypeError on
-            # non-ASCII str input, which would surface as a 500 instead of a
-            # 401. Header values were decoded as latin-1, so re-encoding that
-            # way recovers the raw bytes the client sent.
-            valid = scheme.lower() == "bearer" and hmac.compare_digest(
-                token.encode("latin-1"), auth_token.encode("utf-8")
-            )
-            if not valid:
-                await _json_response(
-                    send,
-                    401,
-                    {"error": "A valid Bearer token is required for /mcp."},
-                    [(b"www-authenticate", b"Bearer")],
-                )
-                return
-
+        # The rate limit comes before the token check so that guessing tokens
+        # spends the guesser's own budget like any other request.
         if rate_limit_requests:
             now = time.monotonic()
-            client_key = _client_key(scope, trust_proxy_headers=trust_proxy_headers)
+            client_key = _client_key(
+                scope,
+                trust_proxy_headers=trust_proxy_headers,
+                proxy_hops=trusted_proxy_hops,
+            )
             async with rate_lock:
                 # Opportunistically drop any other client's entry once its
                 # hits have all aged out of the window — otherwise every
@@ -163,6 +159,25 @@ def with_http_security(
                     return
                 hits.append(now)
                 rate_hits[client_key] = hits
+
+        if auth_token:
+            authorization = _header(scope, b"authorization") or ""
+            scheme, _, token = authorization.partition(" ")
+            # Compare bytes, not str: hmac.compare_digest raises TypeError on
+            # non-ASCII str input, which would surface as a 500 instead of a
+            # 401. Header values were decoded as latin-1, so re-encoding that
+            # way recovers the raw bytes the client sent.
+            valid = scheme.lower() == "bearer" and hmac.compare_digest(
+                token.encode("latin-1"), auth_token.encode("utf-8")
+            )
+            if not valid:
+                await _json_response(
+                    send,
+                    401,
+                    {"error": "A valid Bearer token is required for /mcp."},
+                    [(b"www-authenticate", b"Bearer")],
+                )
+                return
 
         # A GET on /mcp is the Streamable HTTP transport's long-lived
         # server-to-client SSE stream, held open for the whole session.

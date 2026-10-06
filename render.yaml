@@ -25,6 +25,12 @@ services:
       # Render's proxy sets X-Forwarded-For, so per-client rate limits work.
       - key: MAPLE_TRUST_PROXY_HEADERS
         value: "1"
+      # The client address is read this many entries from the right of
+      # X-Forwarded-For (what the caller writes sits on the left and can be
+      # forged). Check it against a real request to /mcp if the limit ever
+      # looks shared between callers.
+      - key: MAPLE_TRUSTED_PROXY_HOPS
+        value: "1"
       # Counts calls per tool name and day, in memory, public at /stats; no
       # arguments or addresses are kept (shared/usage.py).
       - key: MAPLE_USAGE_STATS

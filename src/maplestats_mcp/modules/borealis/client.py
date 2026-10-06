@@ -28,6 +28,8 @@ from xml.etree import ElementTree
 
 import httpx
 from bs4 import BeautifulSoup
+from defusedxml import DefusedXmlException
+from defusedxml import ElementTree as DefusedET
 
 from maplestats_mcp.modules.borealis import constants
 from maplestats_mcp.modules.borealis.schemas import (
@@ -322,8 +324,8 @@ async def _get_ddi(persistent_id: str, exporter: str, context: str, lang: str = 
 
 def _parse_xml(body: str, context: str, lang: str = "en") -> ElementTree.Element:
     try:
-        return ElementTree.fromstring(body)
-    except ElementTree.ParseError as exc:
+        return DefusedET.fromstring(body)
+    except (ElementTree.ParseError, DefusedXmlException) as exc:
         raise lang_error(
             UpstreamError,
             lang,

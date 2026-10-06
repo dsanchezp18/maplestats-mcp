@@ -40,6 +40,8 @@ from typing import Any, NoReturn
 from xml.etree import ElementTree
 
 import httpx
+from defusedxml import DefusedXmlException
+from defusedxml import ElementTree as DefusedET
 
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import call_error
@@ -75,8 +77,8 @@ def _extract_exception_text(body: bytes) -> str:
     traceback if that ever changes).
     """
     try:
-        root = ElementTree.fromstring(body)
-    except ElementTree.ParseError:
+        root = DefusedET.fromstring(body)
+    except (ElementTree.ParseError, DefusedXmlException):
         return body[:200].decode("utf-8", errors="replace")
     text_el = root.find(f".//{_OWS_NS}ExceptionText")
     if text_el is not None and text_el.text:

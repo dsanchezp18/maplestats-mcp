@@ -16,7 +16,6 @@ import asyncio
 import codecs
 import csv
 import hashlib
-import shutil
 import struct
 import zipfile
 import zlib
@@ -30,6 +29,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt
 from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.lode import constants
 from maplestats_mcp.shared import remote_zip
+from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import (
@@ -90,9 +90,15 @@ async def _download(url: str, member: str, target: Path) -> Path:
     try:
         async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
             response.raise_for_status()
+            written = 0
             with archive.open("wb") as handle:
                 async for chunk in response.aiter_bytes(1 << 20):
+                    written += len(chunk)
+                    check_size(written, constants.cache_max_bytes(), url)
                     handle.write(chunk)
+    except FileTooLarge:
+        archive.unlink(missing_ok=True)
+        raise
     except Exception as exc:
         archive.unlink(missing_ok=True)
         raise UpstreamUnavailable(
@@ -106,8 +112,11 @@ async def _download(url: str, member: str, target: Path) -> Path:
         part = target.with_suffix(target.suffix + ".part")
         try:
             with zipfile.ZipFile(archive) as zf, zf.open(member) as source, part.open("wb") as sink:
-                shutil.copyfileobj(source, sink, 1 << 20)
+                copy_capped(source, sink, constants.cache_max_bytes(), f"{member} in {url}")
             part.replace(target)
+        except FileTooLarge:
+            part.unlink(missing_ok=True)
+            raise
         except (zipfile.BadZipFile, KeyError, OSError) as exc:
             part.unlink(missing_ok=True)
             raise UpstreamError(
