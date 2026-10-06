@@ -18,10 +18,10 @@ since the same data ship as GeoPackage and Parquet needs a new dependency).
 
 from __future__ import annotations
 
-import os
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+from maplestats_mcp import config
 
 ALLOWED_HOST = "www150.statcan.gc.ca"
 LANDING_URL = {
@@ -58,28 +58,17 @@ SCAN_ROWS_MAX = 2_000_000
 
 def max_download_bytes() -> int:
     """Largest archive one call may download (MAPLE_LODE_MAX_DOWNLOAD_MB; 0 turns downloads off)."""
-    raw = os.environ.get("MAPLE_LODE_MAX_DOWNLOAD_MB", "").strip()
-    try:
-        value = float(raw) if raw else float(DEFAULT_MAX_DOWNLOAD_MB)
-    except ValueError:
-        value = float(DEFAULT_MAX_DOWNLOAD_MB)
-    return int(max(0.0, value) * 1_000_000)
+    return config.get_lode_max_download_bytes(DEFAULT_MAX_DOWNLOAD_MB)
 
 
 def cache_dir() -> Path:
     """Where downloaded archives are unpacked (MAPLE_LODE_CACHE_DIR; a hosted instance should use a persistent volume)."""
-    raw = os.environ.get("MAPLE_LODE_CACHE_DIR", "").strip()
-    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "lode"
+    return config.get_lode_cache_dir()
 
 
 def cache_max_bytes() -> int:
     """Cap on the unpacked cache (MAPLE_LODE_CACHE_MAX_GB, default 3); least recently used files go first."""
-    raw = os.environ.get("MAPLE_LODE_CACHE_MAX_GB", "").strip()
-    try:
-        value = float(raw) if raw else 3.0
-    except ValueError:
-        value = 3.0
-    return int(max(0.5, value) * 1024**3)
+    return config.get_lode_cache_max_bytes()
 
 
 PROVINCES: dict[str, tuple[str, str, str]] = {

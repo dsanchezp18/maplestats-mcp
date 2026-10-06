@@ -234,6 +234,36 @@ def get_ip_horizons_cache_max_bytes() -> int:
     return int(max(0.5, value) * 1024**3)
 
 
+def get_lode_cache_dir() -> Path:
+    """Where StatCan open-database (LODE) archives are unpacked.
+
+    A hosted deployment should point it at a persistent volume, or every
+    restart downloads them again.
+    """
+    raw = os.environ.get("MAPLE_LODE_CACHE_DIR", "").strip()
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "lode"
+
+
+def get_lode_cache_max_bytes() -> int:
+    """Cap on the LODE cache (MAPLE_LODE_CACHE_MAX_GB, default 3); least recently used files go first."""
+    raw = os.environ.get("MAPLE_LODE_CACHE_MAX_GB", "").strip()
+    try:
+        value = float(raw) if raw else 3.0
+    except ValueError:
+        value = 3.0
+    return int(max(0.5, value) * 1024**3)
+
+
+def get_lode_max_download_bytes(default_mb: float) -> int:
+    """Largest LODE archive one call may download (MAPLE_LODE_MAX_DOWNLOAD_MB; 0 turns downloads off)."""
+    raw = os.environ.get("MAPLE_LODE_MAX_DOWNLOAD_MB", "").strip()
+    try:
+        value = float(raw) if raw else float(default_mb)
+    except ValueError:
+        value = float(default_mb)
+    return int(max(0.0, value) * 1_000_000)
+
+
 DEFAULT_ALLOWED_ORIGINS = (
     "https://dsanchezp18.github.io",
     "http://localhost:*",
