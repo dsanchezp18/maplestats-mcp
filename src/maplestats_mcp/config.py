@@ -197,7 +197,9 @@ def get_delta_max_scan_seconds() -> float:
         value = float(raw)
     except ValueError:
         value = 75.0
-    return max(5.0, min(value, get_tool_timeout_seconds() - 30.0))
+    # Never above the tool timeout minus 30 s, even when that leaves less than
+    # the 5 s floor (a tool timeout set near its own minimum).
+    return min(max(5.0, value), max(1.0, get_tool_timeout_seconds() - 30.0))
 
 
 def get_delta_index_dir() -> Path | None:
@@ -262,6 +264,16 @@ def get_allowed_origins() -> tuple[str, ...]:
 def get_trust_proxy_headers() -> bool:
     raw = os.environ.get("MAPLE_TRUST_PROXY_HEADERS", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+def get_trusted_proxy_hops() -> int:
+    """How many trusted reverse proxies append to X-Forwarded-For (MAPLE_TRUSTED_PROXY_HOPS, default 1)."""
+    raw = os.environ.get("MAPLE_TRUSTED_PROXY_HOPS", "1")
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 1
+    return min(10, max(1, value))
 
 
 def get_ssl_certfile() -> str | None:

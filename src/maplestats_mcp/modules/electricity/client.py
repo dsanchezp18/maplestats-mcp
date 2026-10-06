@@ -38,6 +38,8 @@ from datetime import UTC, date, datetime, timedelta, timezone
 from typing import NoReturn
 
 import httpx
+from defusedxml import DefusedXmlException
+from defusedxml import ElementTree as DefusedET
 
 from maplestats_mcp.modules.electricity import constants
 from maplestats_mcp.modules.electricity.schemas import (
@@ -184,8 +186,8 @@ def _number(value: str | None) -> float | None:
 
 def _parse_xml(text: str, context: str, lang: str = "en") -> ET.Element:
     try:
-        return ET.fromstring(text.encode("utf-8"))
-    except ET.ParseError as exc:
+        return DefusedET.fromstring(text.encode("utf-8"))
+    except (ET.ParseError, DefusedXmlException) as exc:
         raise _error(
             UpstreamError,
             f"electricity:{context} returned XML that did not parse.",

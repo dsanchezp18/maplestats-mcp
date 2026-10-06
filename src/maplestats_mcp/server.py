@@ -329,9 +329,12 @@ def build_server() -> FastMCP:
             mcp.add_provider(ModuleProvider(root=module_dir))
     mcp.add_middleware(ValidationErrorMiddleware())
     mcp.add_middleware(CallLanguageMiddleware())
-    mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
+    # Usage counting goes outside the timeout: a timeout cancels the call
+    # beneath it, which an inner counter never sees as an error, so a call
+    # that timed out would be missing from /stats.
     if config.get_usage_stats_enabled():
         mcp.add_middleware(UsageMiddleware(STATS))
+    mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
     mcp.add_transform(
         AnnotatedBM25SearchTransform(
             max_results=5,

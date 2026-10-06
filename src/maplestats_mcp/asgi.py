@@ -32,6 +32,7 @@ def build_asgi_app():
         rate_limit_requests=config.get_rate_limit_requests(),
         rate_limit_window_seconds=config.get_rate_limit_window_seconds(),
         trust_proxy_headers=config.get_trust_proxy_headers(),
+        trusted_proxy_hops=config.get_trusted_proxy_hops(),
     )
     cors = with_cors(secured, allowed_origins=config.get_allowed_origins())
     png = (ASSETS_DIR / "favicon.png").read_bytes()

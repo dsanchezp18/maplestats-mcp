@@ -23,7 +23,7 @@ jobs:
     outputs:
       scripts: ${{ steps.list.outputs.scripts }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # Same glob as scripts/verify.ps1, so a new smoke_test_*.py is picked
       # up without editing this file. stress_test.py does not match: it is a
       # transport load test, not an upstream check.
@@ -48,8 +48,8 @@ jobs:
         script: ${{ fromJSON(needs.discover.outputs.scripts) }}
     name: ${{ matrix.script }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: "3.12"
       - run: uv sync --locked

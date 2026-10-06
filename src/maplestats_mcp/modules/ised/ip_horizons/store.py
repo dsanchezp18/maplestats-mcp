@@ -22,13 +22,13 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import re
-import shutil
 import zipfile
 from pathlib import Path
 
 from maplestats_mcp import config
 from maplestats_mcp.modules.ised.ip_horizons.schemas import IpHorizonsFile
-from maplestats_mcp.shared.errors import NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
+from maplestats_mcp.shared.errors import NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
 
 _downloads: dict[str, asyncio.Task[Path]] = {}
@@ -93,8 +93,11 @@ async def _fetch_zip(file: IpHorizonsFile, zip_path: Path) -> None:
         # refuse an HTML body with any other status rather than unzip it.
         if "html" in response.headers.get("content-type", ""):
             raise NotFound(f"ised_ip_horizons: {file.url} is no longer published.")
+        written = 0
         with zip_path.open("wb") as handle:
             async for chunk in response.aiter_bytes(1 << 20):
+                written += len(chunk)
+                check_size(written, config.get_ip_horizons_cache_max_bytes(), file.url)
                 handle.write(chunk)
 
 
@@ -105,7 +108,7 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
         try:
             await _fetch_zip(file, zip_path)
             break
-        except NotFound:
+        except (NotFound, FileTooLarge):
             zip_path.unlink(missing_ok=True)
             raise
         except Exception as exc:
@@ -123,10 +126,16 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
         csv_path = target.with_suffix(".csv.part")
         try:
             with zipfile.ZipFile(zip_path) as archive:
-                member = next(n for n in archive.namelist() if n.lower().endswith(".csv"))
+                member = next((n for n in archive.namelist() if n.lower().endswith(".csv")), None)
+                if member is None:
+                    raise UpstreamError(f"ised_ip_horizons: {file.url} has no CSV file inside.")
                 with archive.open(member) as source, csv_path.open("wb") as sink:
-                    shutil.copyfileobj(source, sink, 1 << 20)
+                    copy_capped(source, sink, config.get_ip_horizons_cache_max_bytes(), member)
             convert_csv(csv_path, target)
+        except (zipfile.BadZipFile, OSError) as exc:
+            raise UpstreamError(
+                f"ised_ip_horizons: {file.url} could not be unpacked: {exc}"
+            ) from exc
         finally:
             csv_path.unlink(missing_ok=True)
             zip_path.unlink(missing_ok=True)

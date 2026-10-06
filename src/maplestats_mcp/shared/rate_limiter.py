@@ -20,24 +20,29 @@ class TokenBucket:
     _lock: asyncio.Lock = field(init=False, default_factory=asyncio.Lock)
 
     def __post_init__(self) -> None:
+        if self.rate <= 0 or self.capacity < 1:
+            raise ValueError("TokenBucket needs a rate above 0 and a capacity of at least 1.")
         self._tokens = self.capacity
         self._last_refill = time.monotonic()
 
     async def acquire(self) -> None:
-        async with self._lock:
-            now = time.monotonic()
-            elapsed = now - self._last_refill
-            self._tokens = min(self.capacity, self._tokens + elapsed * self.rate)
-            self._last_refill = now
+        # A loop, not a recursive call: under heavy contention a waiter can
+        # lose the race for the refilled token several times, and recursion
+        # would deepen the call stack each time.
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                elapsed = now - self._last_refill
+                self._tokens = min(self.capacity, self._tokens + elapsed * self.rate)
+                self._last_refill = now
 
-            if self._tokens >= 1:
-                self._tokens -= 1
-                return
+                if self._tokens >= 1:
+                    self._tokens -= 1
+                    return
 
-            wait_seconds = (1 - self._tokens) / self.rate
+                wait_seconds = (1 - self._tokens) / self.rate
 
-        await asyncio.sleep(wait_seconds)
-        await self.acquire()
+            await asyncio.sleep(wait_seconds)
 
 
 _limiters: dict[str, TokenBucket] = {}

@@ -37,6 +37,8 @@ from xml.etree import ElementTree
 from zoneinfo import ZoneInfo
 
 import httpx
+from defusedxml import DefusedXmlException
+from defusedxml import ElementTree as DefusedET
 
 from maplestats_mcp.modules.statcan.daily import constants
 from maplestats_mcp.modules.statcan.daily.schemas import (
@@ -142,8 +144,8 @@ async def get_releases(
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
 
     try:
-        root = ElementTree.fromstring(body)
-    except ElementTree.ParseError as exc:
+        root = DefusedET.fromstring(body)
+    except (ElementTree.ParseError, DefusedXmlException) as exc:
         raise UpstreamError(
             say(
                 f"statcan_daily:get_releases: response for subject {subject!r} was not valid XML.",

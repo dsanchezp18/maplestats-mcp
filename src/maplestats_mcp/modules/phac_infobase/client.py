@@ -279,7 +279,17 @@ def zip_member(body: bytes, pattern: str | None, url: str, lang: str = "en") -> 
             f"phac_infobase: {url} unpacks to more than this tool reads.",
             f"phac_infobase : {url} décompressé dépasse la taille que cet outil lit.",
         )
-    return archive.read(members[0])
+    try:
+        return archive.read(members[0])
+    except (zipfile.BadZipFile, OSError) as exc:
+        # zipfile stops at the size the header declares and checks the CRC, so a
+        # corrupt member fails here rather than inflating past the cap.
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"phac_infobase: {url} has a damaged ZIP member ({exc}).",
+            f"phac_infobase : {url} contient un fichier ZIP endommagé ({exc}).",
+        ) from exc
 
 
 def parse_api(body: bytes, url: str, lang: str = "en") -> tuple[list[str], list[dict[str, str]]]:

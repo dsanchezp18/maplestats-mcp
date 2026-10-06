@@ -16,6 +16,9 @@ services:
       # itself sets X-Forwarded-For — trusting it directly would let any
       # caller spoof a different rate-limit bucket per request.
       MAPLE_TRUST_PROXY_HEADERS: "${MAPLE_TRUST_PROXY_HEADERS:-0}"
+      # How many proxies in front append to X-Forwarded-For; the client is
+      # read that many entries from the right (see shared/security.py).
+      MAPLE_TRUSTED_PROXY_HOPS: "${MAPLE_TRUSTED_PROXY_HOPS:-1}"
       MAPLE_CACHE_MAX_ENTRIES: "${MAPLE_CACHE_MAX_ENTRIES:-2000}"
       MAPLE_TOOL_TIMEOUT_SECONDS: "${MAPLE_TOOL_TIMEOUT_SECONDS:-120}"
       MAPLE_PUMF_CACHE_DIR: "/data/pumf"
