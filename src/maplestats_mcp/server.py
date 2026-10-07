@@ -282,7 +282,55 @@ docs://eccc/, and docs://cmhc/ resources for those sources.
 Every result carries a provenance block (source URL, query time,
 freshness, limits). Failures are raised as errors, never returned as
 empty successes.
+
+If a tool misbehaves (an error that looks like a server fault, data that
+contradicts its provenance or the source, a response that does not match
+its description), tell the user and offer to draft a report for the
+maintainers, who appreciate them. Read docs://report-issue for the
+template. Never file or send anything without the user's explicit yes.
 """.strip()
+
+
+REPORT_ISSUE_TEMPLATE = """\
+# Reporting a MapleStats MCP issue
+
+Offer this when something looks wrong: an error that looks like a server
+fault rather than bad input, data that contradicts its provenance block or
+the source itself, a response shape that does not match the tool's
+description, or a source that appears to have moved or changed. Do not offer
+it for the user's own typos, empty results that are correct, or a source that
+is temporarily down and returned the typed upstream-unavailable error.
+
+Ask once, in a sentence: "That looks like a bug in the server. Would you like
+me to draft a report for the maintainers?" On a yes, fill in the template
+below and show it so the user can edit it. Only file it if they ask you to
+(https://github.com/dsanchezp18/maplestats-mcp/issues/new?template=bug_report.yml);
+otherwise hand them the text to paste. Never file, send or post anything
+without an explicit yes.
+
+## Template
+
+**Tool name:** <exact tool name, e.g. statcan_get_data_from_vectors>
+
+**Arguments and result:**
+- Arguments (as passed to call_tool): <JSON>
+- What came back: <the error text, or a short snippet of the response>
+
+**What you expected:** <one or two sentences, with the source's own figure or
+page if it was checked>
+
+**Why it looks wrong:** <the evidence: provenance as-of date versus the
+source, a field that is null or missing, a count that does not match>
+
+**Version:** <output of `uvx maplestats-mcp --version`, or the server version>
+
+## Before sending
+
+- Keep only the tool call and the response. Strip personal identifiers, file
+  paths, keys and the rest of the conversation.
+- Say what was already tried (a retry, different arguments, `lang`).
+- One issue per report.
+"""
 
 
 def _build_module_catalogue() -> str:
@@ -347,6 +395,12 @@ def build_server() -> FastMCP:
         by name and description — use this to see what a source covers in
         French before deciding which tools to call."""
         return _build_module_catalogue()
+
+    @mcp.resource("docs://report-issue")
+    def report_issue_doc() -> str:
+        """When and how to offer the user a bug report for this server, with
+        the template to fill in. Read it when a tool misbehaves."""
+        return REPORT_ISSUE_TEMPLATE
 
     return mcp
 
