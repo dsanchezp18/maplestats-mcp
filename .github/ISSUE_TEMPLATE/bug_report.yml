@@ -2,6 +2,10 @@ name: Bug report
 description: A tool returned wrong data, an error, or nothing when it should have.
 labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Your AI client may have drafted and filed this for you (the server offers a template at `docs://report-issue`). Please remove personal identifiers, file paths and keys before submitting.
   - type: input
     id: tool
     attributes:
@@ -20,6 +24,11 @@ body:
     id: expected
     attributes:
       label: What you expected
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Why it looks wrong
+      description: Anything that shows the problem, such as the source's own figure, a null field, or a provenance as-of date that disagrees with the source.
   - type: input
     id: version
     attributes:
