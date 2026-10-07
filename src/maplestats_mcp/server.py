@@ -287,9 +287,9 @@ If a tool misbehaves (an error that looks like a server fault, data that
 contradicts its provenance or the source, a response that does not match
 its description), tell the user and offer to draft a report for the
 maintainers, who appreciate them. Say the user will not have to write or
-file it by hand: you can submit it to GitHub for them. Read
-docs://report-issue for the template and the steps. Never file anything
-without the user's explicit yes.
+file it by hand: you can submit it to GitHub for them, after they have read
+and approved the exact text. Read docs://report-issue for the template and
+the steps. Never file anything before the user approves the final text.
 """.strip()
 
 
@@ -305,21 +305,30 @@ is temporarily down and returned the typed upstream-unavailable error.
 
 Ask once, in a sentence: "That looks like a bug in the server. Want me to
 report it to the maintainers? You won't need to write or file anything
-yourself; I'll draft it and submit it to GitHub for you." On a yes, fill in
-the template below and show it in one short block, then file it:
+yourself; I'll draft it, show you the exact text, and submit it to GitHub
+only after you approve it." On a yes, fill in the template below from what
+you know about the failed call. The conversation may hold personal details,
+file paths or keys: leave out anything the report does not need.
+
+Then show the complete final title and body in one short block and STOP.
+Do not file in the same turn. Wait for the user's next message: it must
+approve that exact text (or ask for changes). If they ask for edits, redraft,
+show the whole report again, and wait again. File only after an explicit
+approval of the text as last shown. A yes to the question above is not
+approval of the text.
 
 1. If a GitHub tool or the `gh` CLI is available and signed in, create the
    issue in dsanchezp18/maplestats-mcp with the label `bug` (for `gh`:
    `gh issue create --repo dsanchezp18/maplestats-mcp --label bug --title
    "<tool name>: <short symptom>" --body-file <file>`). Search open issues
    first (`gh issue list --search "<tool name>"`) and comment on a matching
-   one instead of opening a duplicate.
+   one instead of opening a duplicate. File the approved text unchanged.
 2. Otherwise give the user one prefilled link to click:
    https://github.com/dsanchezp18/maplestats-mcp/issues/new?template=bug_report.yml&title=<url-encoded title>
    and the body text to paste. Never put the report in the URL beyond the title.
 3. Return the issue link. If filing fails, say so and fall back to step 2.
 
-The user's yes covers this one report only. Never file, comment or post
+The user's approval covers this one report only. Never file, comment or post
 anything without it, and never as a side effect of another task.
 
 ## Template

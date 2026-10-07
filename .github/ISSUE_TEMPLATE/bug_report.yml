@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Your AI client may have drafted and filed this for you (the server offers a template at `docs://report-issue`). Please remove personal identifiers, file paths and keys before submitting.
+        Your AI client may have drafted this for you, and filed it after you approved the text (the server offers a template at `docs://report-issue`). Please check that it contains no personal identifiers, file paths or keys, and remove personal identifiers, file paths and keys before submitting.
   - type: input
     id: tool
     attributes:

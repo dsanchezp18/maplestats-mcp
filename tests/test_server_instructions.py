@@ -67,3 +67,20 @@ def test_portal_counts_are_not_hard_coded():
     # Portal families grow by one constants entry at a time; a count in
     # this text goes stale on the next addition.
     assert not re.search(r"\(\d+ (provinces|portals|cities)", SERVER_INSTRUCTIONS)
+
+
+def test_bug_report_requires_approval_before_filing():
+    # The draft comes from the conversation, which can hold personal details,
+    # so the client must show the final text and wait for the user's approval
+    # before anything becomes a public GitHub issue.
+    from maplestats_mcp.server import REPORT_ISSUE_TEMPLATE
+
+    assert "Never file anything before the user approves" in SERVER_INSTRUCTIONS
+    flat = " ".join(REPORT_ISSUE_TEMPLATE.split())
+    assert "show the complete final title and body" in flat
+    assert "STOP" in flat
+    assert "File only after an explicit approval" in flat
+    assert "redraft" in flat
+    assert "Search open issues first" in flat
+    assert "one report only" in flat
+    assert "then file it" not in flat
