@@ -98,8 +98,9 @@ The default is the hosted server: nothing to install, no account, no key.
    (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
    maplestats-mcp` entry for other clients (see [Install](#install)).
 
-The hosted server is a free instance: the first request after a quiet spell can
-take up to a minute, each client gets 60 requests a minute, and the microdata
+The hosted server is a free instance: a ping every 10 minutes keeps it awake,
+so cold starts are rare, but the first request after an idle spell can take up
+to a minute. Each client gets 60 requests a minute, and the microdata
 tabulation tool is switched off there. Your agent's tool calls (a search phrase, a table number) reach the server and its host, Render, and the code stores none of them. Check Render's [terms](https://render.com/terms) and [privacy policy](https://render.com/privacy); for full privacy, run it locally. What it logs:
 [FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#hosted). Other
 clients: the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html)
