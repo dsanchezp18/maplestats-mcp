@@ -277,7 +277,10 @@ def _exo(
         city=city,
         province="QC",
         timezone="America/Toronto",
-        feed_url=f"https://exo.quebec/xdata/{code}/google_transit.zip",
+        feed_url=(
+            "https://exo.quebec/uploads/ressources-telechargeables/a-propos/donnees-ouvertes/"
+            f"{code}/google_transit.zip"
+        ),
         source_page=f"{_DQ}{dataset}"
         if dataset
         else "https://exo.quebec/fr/a-propos/donnees-ouvertes",

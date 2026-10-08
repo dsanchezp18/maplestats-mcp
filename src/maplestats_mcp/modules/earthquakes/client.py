@@ -28,6 +28,10 @@ _LIMITER = get_limiter(
 )
 _KM_PER_DEGREE = 111.19
 _EVENT_ID = re.compile(r"^\d{8}\.\d{4}(\d{3})?$")
+# Since 2026 the catalogue's own ids look like 'ca2026sykh', and the service
+# rejects them in `eventid` (confirmed live 2026-10-08: "eventid must be in the
+# form YYYYMMDD.HHmm"), so a lookup has to go by the event's UTC minute.
+_CATALOGUE_ID = re.compile(r"^[a-z]{2}\d{4}[a-z0-9]+$")
 
 
 async def _fetch(params: dict[str, Any], lang: str = "en") -> tuple[str, bool]:
@@ -115,10 +119,12 @@ def parse_text(text: str, lang: Literal["en", "fr"] = "en") -> list[Earthquake]:
     quakes = []
     for line in lines[1:]:
         row = dict(zip(header, (v.strip() for v in line.split("|")), strict=False))
+        when = _time(row.get("time"))
         quakes.append(
             Earthquake(
                 event_id=row.get("eventid", ""),
-                time=_time(row.get("time")),
+                lookup_id=when.strftime("%Y%m%d.%H%M") if when else None,
+                time=when,
                 latitude=_float(row.get("latitude")),
                 longitude=_float(row.get("longitude")),
                 depth_km=_float(row.get("depth/km")),
@@ -169,15 +175,24 @@ async def search(
     params: dict[str, Any] = {"format": "text"}
     if event_id:
         event_id = event_id.strip()
+        if _CATALOGUE_ID.match(event_id):
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"The service cannot look up {event_id!r} directly. Pass the event's UTC "
+                "minute as event_id, in the form 20260924.1414 (the lookup_id of each result).",
+                f"Le service ne peut pas chercher {event_id!r} directement. Donnez la minute "
+                "UTC de l'événement comme event_id, sous la forme 20260924.1414 (le lookup_id "
+                "de chaque résultat).",
+            )
         if not _EVENT_ID.match(event_id):
             raise lang_error(
                 InvalidInput,
                 lang,
-                f"event_id must look like 20260924.1414001 or 20260924.1414, got {event_id!r}.",
-                f"event_id doit avoir la forme 20260924.1414001 ou 20260924.1414 ; reçu "
-                f"{event_id!r}.",
+                f"event_id must look like 20260924.1414 (a UTC minute), got {event_id!r}.",
+                f"event_id doit avoir la forme 20260924.1414 (une minute UTC) ; reçu {event_id!r}.",
             )
-        # The service looks up by minute only; narrow to the exact event after.
+        # The service looks up by minute only, so every event in that minute comes back.
         params["eventid"] = event_id[:13]
     else:
         end_date = _date(end, "end", lang) or datetime.now(UTC).date()
@@ -244,8 +259,6 @@ async def search(
         params["limit"] = limit + 1
     text, cached = await _fetch(params, lang)
     quakes = parse_text(text, lang)
-    if event_id and len(event_id) > 13:
-        quakes = [q for q in quakes if q.event_id == event_id]
     if event_id and not quakes:
         raise lang_error(
             NotFound,

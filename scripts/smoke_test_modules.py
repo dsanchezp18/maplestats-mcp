@@ -727,7 +727,7 @@ STEPS: list[Step] = [
     Step(
         "earthquakes",
         "earthquakes_search",
-        lambda ctx: {"event_id": ctx["earthquakes_search"]["earthquakes"][0]["event_id"]},
+        lambda ctx: {"event_id": ctx["earthquakes_search"]["earthquakes"][0]["lookup_id"]},
         lambda data: data["returned_count"] == 1,
     ),
     # Five years at limit 2: only limit + 1 rows travel (it was all 34,973).

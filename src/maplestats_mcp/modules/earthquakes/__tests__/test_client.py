@@ -60,13 +60,22 @@ async def test_no_data_statuses_are_empty(httpx_mock):
         await client.search(event_id="20260901.1000")
 
 
-async def test_event_id_queries_by_minute_then_matches_exactly(httpx_mock):
+async def test_event_id_queries_by_minute_and_returns_that_minute(httpx_mock):
     httpx_mock.add_response(text=_TEXT)
-    result = await client.search(event_id="20260910.0315002", lang="fr")
-    assert [q.event_id for q in result.earthquakes] == ["20260910.0315002"]
+    result = await client.search(event_id="20260910.0315", lang="fr")
+    assert result.earthquakes[0].lookup_id == "20260910.0315"
     assert result.earthquakes[0].location == "Île de Vancouver, BC"
     query = parse_qs(urlparse(str(httpx_mock.get_request().url)).query)
     assert query["eventid"] == ["20260910.0315"]
+
+
+async def test_catalogue_id_is_refused_with_the_minute_form(httpx_mock):
+    # Live 2026-10-08: ids like ca2026sykh are returned but rejected by `eventid`.
+    with pytest.raises(InvalidInput, match=r"20260924\.1414"):
+        await client.search(event_id="ca2026sykh")
+    with pytest.raises(InvalidInput, match="minute UTC"):
+        await client.search(event_id="ca2026sykh", lang="fr")
+    assert httpx_mock.get_requests() == []
 
 
 async def test_422_is_invalid_input(httpx_mock):
