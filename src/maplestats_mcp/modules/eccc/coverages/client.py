@@ -69,6 +69,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _SOURCE = "eccc"
@@ -641,7 +642,7 @@ def _time_labels(
 ) -> list[str | None]:
     if domain_t is None:
         return [None] * count
-    values = [str(v) for v in domain_t.get("values", [])]
+    values = [str(v) for v in list_or_empty(domain_t, "values")]
     if len(values) == count:
         labels: list[str | None] = list(values)
         return labels

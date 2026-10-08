@@ -46,10 +46,11 @@ async def transit_list_agencies(lang: Lang = "en") -> AgencyList:
     Keywords: transit, GTFS, static schedule, STM, OC Transpo,
     Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, exo, RTC,
     STL, STS, ferries, Quebec, agencies, licence, attribution, bus, timetable data.
-    Mots-clés : transport en commun, GTFS, horaire statique, STM,
-    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit,
-    exo, RTC, STL, STS, traversiers, sociétés de transport du Québec,
-    organismes, licence, attribution, autobus, données d'horaires.
+    Mots-clés : réseaux de transport en commun disponibles, agences de
+    transport, sociétés de transport, GTFS, horaire statique, STM,
+    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express,
+    BC Transit, exo, RTC, STL, STS, traversiers, licence d'utilisation,
+    mention de la source, flux d'horaires d'autobus.
     """
     return await client.list_agencies(lang=lang)
 
@@ -114,9 +115,11 @@ async def transit_get_feed_info(agency: AgencyRef, lang: Lang = "en") -> FeedInf
     Keywords: transit, GTFS, feed info, schedule validity, feed version,
     routes count, stops count, STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit,
     static schedule.
-    Mots-clés : transport en commun, GTFS, métadonnées du flux, validité
-    de l'horaire, version du flux, nombre de lignes, nombre d'arrêts,
-    STM, OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, BC Transit, horaire statique.
+    Mots-clés : le flux GTFS d'une agence, métadonnées du flux, horaire
+    à jour, période couverte par l'horaire, version du flux, combien de
+    lignes d'autobus, combien d'arrêts, contenu du fichier GTFS, STM,
+    OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express,
+    BC Transit.
     """
     return await client.get_feed_info(agency, lang=lang)
 

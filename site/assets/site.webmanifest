@@ -1,0 +1,14 @@
+{
+  "name": "MapleStats MCP",
+  "short_name": "MapleStats",
+  "description": "One MCP server for Canadian open data, in English and French.",
+  "start_url": "../",
+  "scope": "../",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#d8261c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

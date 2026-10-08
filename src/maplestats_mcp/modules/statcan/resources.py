@@ -62,11 +62,91 @@ _GOTCHAS_DOC = """\
 
 @resource("docs://statcan/addressing")
 def statcan_addressing_doc() -> str:
-    """Explain StatCan's productId/vectorId/coordinate addressing system."""
+    """Explain StatCan's productId/vectorId/coordinate addressing system. French version: docs://statcan/fr/adressage."""
     return _ADDRESSING_DOC
 
 
 @resource("docs://statcan/gotchas")
 def statcan_gotchas_doc() -> str:
-    """List known StatCan API quirks that are easy to get wrong."""
+    """List known StatCan API quirks that are easy to get wrong. French version: docs://statcan/fr/pieges."""
     return _GOTCHAS_DOC
+
+
+_ADDRESSING_DOC_FR = """\
+# Système d'adressage de Statistique Canada
+
+Statistique Canada identifie ses données de trois façons, toutes
+convertibles les unes dans les autres :
+
+- **productId (PID)** : identifiant de tableau à 8 chiffres (18100004
+  désigne le tableau 18-10-0004). Les chiffres 1 et 2 donnent le code
+  de sujet, les chiffres 3 et 4 le type de produit, et les chiffres 5 à
+  8 le numéro séquentiel. Statistique Canada imprime les numéros de
+  tableau sous la forme 18-10-0004-01 ; les 2 derniers chiffres sont un
+  suffixe de vue que le SDW n'accepte pas : les outils wds_ prennent
+  donc 18100004, 18-10-0004, 18-10-0004-01 ou 1810000401 et les
+  ramènent à 8 chiffres.
+- **vectorId** : un « V » suivi d'au plus 10 chiffres, qui identifie une
+  série chronologique. Il est repris des anciens numéros de tableaux
+  CANSIM pour la compatibilité.
+- **coordonnée** : chaîne de numéros de membres séparés par des points,
+  un par dimension, toujours exactement 10 positions (les dimensions
+  inutilisées étant remplies par « 0 »), par exemple
+  "2.2.0.0.0.0.0.0.0.0".
+
+Utilisez wds_get_series_info (avec vector_id, ou product_id et
+coordinate) pour passer de la coordonnée au vectorId et inversement.
+Les requêtes SDMX emploient une clé plus courte : seulement les
+dimensions autres que le temps, sans remplissage de zéros à la fin
+(voir sdmx_get_structure pour savoir combien un tableau a de dimensions
+hors temps).
+"""
+
+_GOTCHAS_DOC_FR = """\
+# Pièges connus des API de Statistique Canada
+
+- **Le facteur scalaire (scalarFactorCode) n'est jamais appliqué
+  automatiquement.** La `value` brute d'une observation n'est PAS
+  multipliée par son scalarFactorCode (par exemple « milliers »).
+  Appelez wds_get_code_sets pour voir les codes scalaires, ou
+  multipliez par le scale_multiplier de l'observation
+  (10 ** scalar_factor_code).
+- **Tableaux en temps réel.** Les tableaux de données en temps réel de
+  Statistique Canada (historiques de révisions comme « Historical
+  (real-time) releases of Consumer Price Index statistics », 18100259)
+  sont des tableaux ordinaires dans le SDW. wds_search_cubes les marque
+  real_time=true. MapleStats les lit uniquement par le SDW, et non par
+  le service distinct de visualisation en temps réel.
+- **Fenêtre de verrouillage quotidienne, de minuit à 8 h 30 (heure de
+  l'Est).** Le SDW renvoie HTTP 409 pour certaines méthodes pendant la
+  mise à jour des données. Cela ressort ici comme une erreur
+  DataLocked, et non comme un échec générique : cela veut dire
+  « réessayez après 8 h 30, heure de l'Est », pas « quelque chose est
+  en panne ».
+- **Le caractère générique SDMX sur une grande dimension n'est pas
+  fiable.** Laisser générique une dimension de plus d'une trentaine de
+  codes dans une clé SDMX renvoie un échantillon partiel et
+  imprévisible, pas l'ensemble complet. Utilisez
+  sdmx_get_key_for_dimension pour obtenir une clé OR complète.
+- **`lastNObservations` ne se combine pas avec `startPeriod` ni
+  `endPeriod`** dans les requêtes SDMX : Statistique Canada répond par
+  HTTP 406 pour cette combinaison.
+- **Le point d'accès REST SDMX de Statistique Canada renvoie du SDMX-ML
+  (XML), pas du SDMX-JSON**, quel que soit le paramètre de requête
+  `format` ou l'en-tête Accept : ce module analyse directement le XML
+  réel.
+"""
+
+
+@resource("docs://statcan/fr/adressage")
+def statcan_addressing_doc_fr() -> str:
+    """Explique le système d'adressage de Statistique Canada : productId,
+    vectorId et coordonnée. Version française de docs://statcan/addressing."""
+    return _ADDRESSING_DOC_FR
+
+
+@resource("docs://statcan/fr/pieges")
+def statcan_gotchas_doc_fr() -> str:
+    """Pièges connus des API de Statistique Canada, faciles à manquer.
+    Version française de docs://statcan/gotchas."""
+    return _GOTCHAS_DOC_FR

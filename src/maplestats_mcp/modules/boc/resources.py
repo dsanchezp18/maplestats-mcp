@@ -91,14 +91,113 @@ _GOTCHAS_DOC = """\
 """
 
 
+_WELL_KNOWN_SERIES_DOC_FR = """\
+# Séries et groupes courants de l'API Valet de la Banque du Canada
+
+Vérifié en direct sur https://www.bankofcanada.ca/valet/ pour cette
+session. Servez-vous de boc_search_series et boc_search_groups pour
+trouver les autres : cette liste est un point de départ pour les séries
+les plus utiles à l'analyse économique, pas un inventaire des quelque
+16 000 séries de Valet. Les identifiants de séries restent identiques
+en anglais et en français ; seuls les libellés changent.
+
+## Taux de change
+
+- `FXUSDCAD` : taux de change moyen quotidien USD/CAD.
+- `FXEURCAD` : taux de change moyen quotidien EUR/CAD.
+- Groupe `FX_RATES_DAILY` : taux de change moyens quotidiens d'environ
+  27 devises par rapport au dollar canadien (publiés chaque jour
+  ouvrable, vers 16 h 30, heure de l'Est).
+- Famille de groupes `CEER` : indices du taux de change effectif du
+  dollar canadien (pondérés selon les échanges commerciaux, donc pas un
+  taux bilatéral).
+
+## Principaux taux d'intérêt
+
+- `V39079` : cible du taux au jour le jour (quotidien, jours ouvrables),
+  aussi appelée taux directeur.
+- `STATIC_ATABLE_V39079` : la même cible du taux au jour le jour, mais à
+  fréquence de fin de mois plutôt que quotidienne.
+- `V80691311` : taux préférentiel (le taux de base que les institutions
+  financières fixent à partir du taux directeur).
+
+## IPC et inflation
+
+- `V41690973` : IPC global (l'indice des prix à la consommation de
+  l'ensemble des produits, mensuel).
+- `V41690914` : IPC global, désaisonnalisé.
+- `STATIC_TOTALCPICHANGE` : IPC global, variation en pourcentage sur
+  douze mois (non désaisonnalisé).
+- `CPI_TRIM`, `CPI_MEDIAN`, `CPI_COMMON` : les trois mesures de
+  l'inflation fondamentale privilégiées par la Banque (IPC-tronq,
+  IPC-méd et IPC-comm).
+- Groupe `CPI_MONTHLY` : l'IPC global et toutes les mesures
+  fondamentales ci-dessus dans un même groupe.
+
+## Prix des produits de base
+
+- `W.BCPI` : indice hebdomadaire des prix des produits de base de la
+  Banque du Canada (IPPB), total.
+- Groupes `BCPI_WEEKLY`, `BCPI_MONTHLY`, `BCPI_ANNUAL` : la famille de
+  l'IPPB (total et par groupe de produits : énergie, métaux et
+  minéraux, produits forestiers, agriculture, pêche) à chaque
+  fréquence de publication.
+"""
+
+_GOTCHAS_DOC_FR = """\
+# Pièges connus de l'API Valet de la Banque du Canada
+
+- **`recent`, `recent_weeks`, `recent_months` et `recent_years` ne se
+  combinent pas avec `start_date` et `end_date`.** Valet répond par une
+  erreur HTTP 400 ; boc_get_observations et boc_get_group_observations
+  lèvent InvalidInput avant d'envoyer la requête.
+- **Les lignes d'observations de plusieurs séries ne sont pas toujours
+  fusionnées par date.** Des séries de même fréquence de publication
+  (deux taux de change quotidiens, par exemple) sont fusionnées en une
+  ligne par date. Des séries de fréquences vraiment différentes
+  (un taux de change quotidien et un IPC mensuel) demandées ensemble
+  avec un filtre `recent*` donnent des lignes séparées et non fusionnées :
+  le `values` de chaque ligne ne contient que la série qui a une donnée
+  à cette date. Vérifiez les clés de chaque ligne au lieu de supposer
+  que chaque série demandée y figure.
+- **Les valeurs d'observation sont des chaînes JSON, pas des nombres**,
+  même pour une série purement numérique. Le ObservationsResult de ce
+  module les convertit déjà en `float | None`, mais il faut le savoir si
+  vous comparez avec une réponse brute de Valet.
+- **Le nom des champs diffère entre la réponse d'une série et celle des
+  observations.** `/series/{name}/json` utilise `seriesDetails` (pluriel,
+  avec un champ `name`) ; `/observations/.../json` utilise `seriesDetail`
+  (singulier, indexé par code de série, sans champ `name` dans chaque
+  entrée). La même scission existe pour les groupes (`groupDetails` et
+  `groupDetail`), et `groupDetail` n'a en plus aucun champ `name` :
+  GroupObservationsResult.group.name est donc rempli à partir de
+  l'argument group_name de l'appelant.
+"""
+
+
 @resource("docs://boc/well-known-series")
 def boc_well_known_series_doc() -> str:
     """List well-known Bank of Canada Valet series/groups for FX, interest
-    rates, CPI/inflation, and commodity prices."""
+    rates, CPI/inflation, and commodity prices. French version: docs://boc/fr/series-courantes."""
     return _WELL_KNOWN_SERIES_DOC
 
 
 @resource("docs://boc/gotchas")
 def boc_gotchas_doc() -> str:
-    """List known Bank of Canada Valet API quirks that are easy to get wrong."""
+    """List known Bank of Canada Valet API quirks that are easy to get wrong. French version: docs://boc/fr/pieges."""
     return _GOTCHAS_DOC
+
+
+@resource("docs://boc/fr/series-courantes")
+def boc_well_known_series_doc_fr() -> str:
+    """Liste des séries et groupes courants de l'API Valet de la Banque du
+    Canada : taux de change, taux d'intérêt, IPC et inflation, prix des
+    produits de base. Version française de docs://boc/well-known-series."""
+    return _WELL_KNOWN_SERIES_DOC_FR
+
+
+@resource("docs://boc/fr/pieges")
+def boc_gotchas_doc_fr() -> str:
+    """Pièges connus de l'API Valet de la Banque du Canada, faciles à
+    manquer. Version française de docs://boc/gotchas."""
+    return _GOTCHAS_DOC_FR

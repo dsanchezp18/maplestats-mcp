@@ -31,6 +31,7 @@ import importlib.util
 import inspect
 import json
 import math
+import os
 import re
 import shutil
 import tempfile
@@ -38,7 +39,7 @@ import time
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, date, datetime
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
@@ -142,7 +143,7 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
     ),
     (
         "user",
-        "https://mcprush.com/daniel-sanchez-pazmino/maplestats-mcp",
+        "https://mcprush.com/dsanchezp18/maplestats-mcp",
         f"{_SHIELDS}/badge/Mcprush-listed-B6F24B",
         "Listed on Mcprush",
         "Répertorié sur Mcprush",
@@ -1882,6 +1883,20 @@ MONTHS_FR = (
     "novembre",
     "décembre",
 )
+
+
+def build_date() -> date:
+    """The day of this build, or SOURCE_DATE_EPOCH's day, for a reproducible build."""
+    epoch = os.environ.get("SOURCE_DATE_EPOCH")
+    if epoch:
+        return datetime.fromtimestamp(int(epoch), tz=UTC).date()
+    return datetime.now(UTC).date()
+
+
+def month_year(day: date, lang: Lang) -> str:
+    """September 2026 / septembre 2026."""
+    name = f"{day:%B}" if lang == "en" else MONTHS_FR[day.month - 1]
+    return f"{name} {day.year}"
 
 
 def long_date(iso: str, lang: Lang) -> str:
@@ -4134,6 +4149,7 @@ def _write_site(
     (out / "llms.txt").write_text(llms_txt(modules, counts), encoding="utf-8")
 
     pages = sorted(p for p in SITE.glob("*.html"))
+    build_day = build_date()
     cases = {lang: case_context(lang, modules) for lang in LANGS}
     for lang in LANGS:
         root = "" if lang == "en" else "../"
@@ -4152,6 +4168,8 @@ def _write_site(
                 "page": page.name,
                 "alt_href": (f"fr/{page.name}" if lang == "en" else f"../{page.name}"),
                 "site_url": SITE_URL,
+                "build_date": long_date(build_day.isoformat(), lang),
+                "build_month": month_year(build_day, lang),
                 "canonical": page_url(page.name, lang),
                 "url_en": page_url(page.name, "en"),
                 "url_fr": page_url(page.name, "fr"),
@@ -4192,7 +4210,7 @@ def _write_site(
             # After the typography, so a French preview is spaced as the page is.
             rendered = social_meta(rendered)
             (target_dir / page.name).write_text(rendered, encoding="utf-8")
-    (out / "sitemap.xml").write_text(sitemap([p.name for p in pages]), encoding="utf-8")
+    (out / "sitemap.xml").write_text(sitemap([p.name for p in pages], build_day), encoding="utf-8")
     (out / "robots.txt").write_text(
         f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}sitemap.xml\n", encoding="utf-8"
     )
@@ -4200,8 +4218,11 @@ def _write_site(
     return len(pages) * len(LANGS)
 
 
-def sitemap(names: list[str]) -> str:
-    """Every page in both languages, each naming its other-language twin."""
+def sitemap(names: list[str], lastmod: date) -> str:
+    """Every page in both languages, each naming its other-language twin.
+
+    Every page is regenerated on each build, so each one's lastmod is the build date.
+    """
     entries = []
     # The home page first; the rest in file order.
     for name in sorted(names, key=lambda n: (n != "index.html", n)):
@@ -4210,7 +4231,10 @@ def sitemap(names: list[str]) -> str:
             f'<xhtml:link rel="alternate" hreflang="{code}" href="{page_url(name, lang)}"/>'
             for code, lang in alternates
         )
-        entries += [f"<url><loc>{page_url(name, lang)}</loc>{links}</url>" for lang in LANGS]
+        entries += [
+            f"<url><loc>{page_url(name, lang)}</loc><lastmod>{lastmod.isoformat()}</lastmod>{links}</url>"
+            for lang in LANGS
+        ]
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
@@ -4220,6 +4244,10 @@ def sitemap(names: list[str]) -> str:
 
 def not_found_page() -> str:
     """404.html, in both languages on one page.
+
+    One bilingual page, not a fr/404.html as well: GitHub Pages serves only the
+    404.html at the site root, whatever the path that was missed, so a French
+    twin would never be shown. The French section is marked lang="fr".
 
     GitHub Pages serves it for any missing path under the site, at whatever
     depth, so every link and asset is absolute from the site's own path.
@@ -4236,6 +4264,8 @@ def not_found_page() -> str:
 <link rel="stylesheet" href="{base}assets/fonts.css">
 <link rel="stylesheet" href="{base}assets/site.css">
 <link rel="icon" href="{base}assets/mark.svg" type="image/svg+xml">
+<link rel="icon" href="{base}assets/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="{base}assets/apple-touch-icon.png">
 <script>try{{var t=localStorage.getItem("maplestats:theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}}catch(e){{}}</script>
 </head>
 <body>

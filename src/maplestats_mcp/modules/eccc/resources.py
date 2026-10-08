@@ -191,11 +191,221 @@ _GOTCHAS_DOC = """\
 @resource("docs://eccc/well-known-collections")
 def eccc_well_known_collections_doc() -> str:
     """List well-known MSC GeoMet collections for alerts, current conditions,
-    AQHI, climate normals/observations, hydrometric, and marine data."""
+    AQHI, climate normals/observations, hydrometric, and marine data. French version: docs://eccc/fr/collections-courantes."""
     return _WELL_KNOWN_COLLECTIONS_DOC
 
 
 @resource("docs://eccc/gotchas")
 def eccc_gotchas_doc() -> str:
-    """List known MSC GeoMet-OGC-API quirks that are easy to get wrong."""
+    """List known MSC GeoMet-OGC-API quirks that are easy to get wrong. French version: docs://eccc/fr/pieges."""
     return _GOTCHAS_DOC
+
+
+_WELL_KNOWN_COLLECTIONS_DOC_FR = """\
+# Collections courantes de MSC GeoMet
+
+Vérifié en direct sur https://api.weather.gc.ca pour cette session.
+Passez n'importe quel `collection_id` ci-dessous à eccc_get_collection
+(pour la liste complète de ses propriétés interrogeables) ou à
+eccc_query_items (pour obtenir des lignes). Les identifiants de
+collection et les noms de propriétés sont les mêmes en français et en
+anglais ; `lang="fr"` ne change que les titres et descriptions des
+collections.
+
+## Phénomènes météorologiques violents et alertes
+
+- `weather-alerts` : veilles, avertissements, avis et bulletins en
+  vigueur ou récents. Filtrez par `province` (code à 2 lettres, par
+  exemple "QC") ou par `alert_type` ("warning", "watch", "advisory",
+  "statement"). Chaque entité porte `alert_text_en` et `alert_text_fr`
+  (le texte complet de l'alerte), `risk_colour_en`, `feature_name_en`
+  (le secteur touché) et `status_en` ("alert" ou "ended"). Cette
+  collection ne prend PAS en charge `datetime_filter` (voir
+  docs://eccc/fr/pieges).
+
+## Conditions actuelles et observations de surface
+
+- `swob-realtime` : observations météorologiques de surface en temps
+  réel provenant d'environ 2 800 stations. Les propriétés portent des
+  abréviations de style OMM, chacune sous forme d'un triplet
+  `<nom>-value`, `<nom>-uom` et `<nom>-qa`, par exemple
+  `air_temp-value` (degrés Celsius) ou `avg_wnd_spd_10m_pst10mts-value`
+  (vitesse moyenne du vent sur 10 minutes). Filtrez par
+  `stn_nam-value` ou par bbox ; consultez d'abord `swob-stations` pour
+  les identifiants et les noms de stations.
+- `swob-stations`, `swob-partner-stations`, `swob-marine-stations` :
+  répertoires de stations associés à la collection précédente.
+- `citypageweather-realtime` (jugée expérimentale par ECCC) :
+  conditions actuelles par ville et prévisions textuelles sur plusieurs
+  jours.
+
+## Qualité de l'air (CAS)
+
+- `aqhi-observations-realtime` : dernière valeur de la cote air santé
+  (CAS, échelle de 1 à 10 et plus) par emplacement (`aqhi`,
+  `location_id`, `location_name_en`, `observation_datetime`).
+- `aqhi-forecasts-realtime` : valeurs prévues de la CAS par
+  emplacement.
+- `aqhi-stations` : répertoire des stations et emplacements de la CAS
+  (identifiants, noms, coordonnées) pour retrouver un `location_id`.
+
+## Normales et observations climatiques
+
+- `climate-stations` : répertoire principal des stations (`STN_ID`,
+  `STATION_NAME`, `CLIMATE_IDENTIFIER`, `PROV_STATE_TERR_CODE`,
+  indicateurs `HAS_NORMALS_DATA` et `HAS_HOURLY_DATA`). **Les
+  propriétés `LATITUDE` et `LONGITUDE` sont des entiers multipliés par
+  1e7, pas des degrés décimaux** : utilisez la `geometry` GeoJSON de
+  l'entité pour les vraies coordonnées (voir docs://eccc/fr/pieges).
+- `climate-normals` : normales climatiques de 1981-2010 par `STN_ID`
+  ou `CLIMATE_IDENTIFIER` et par `MONTH` (1 à 12 ; cherchez
+  `PERIOD == "NORM"`), une ligne par élément normal
+  (`E_NORMAL_ELEMENT_NAME` et `F_NORMAL_ELEMENT_NAME`, par exemple
+  « Température moyenne quotidienne °C ») avec sa `VALUE`. Les noms
+  d'éléments en français et en anglais sont les seuls champs bilingues
+  de cette collection (confirmé en direct : le reste, y compris
+  `STATION_NAME`, n'existe qu'en anglais).
+- `climate-daily`, `climate-hourly`, `climate-monthly` : observations
+  historiques des stations à chaque fréquence, filtrables par
+  `CLIMATE_IDENTIFIER` ou `STN_ID`. Ces collections sont volumineuses :
+  filtrez toujours par station ou par bbox raisonnablement étroite au
+  lieu de parcourir tout le pays.
+- `ltce-temperature`, `ltce-precipitation`, `ltce-snowfall`,
+  `ltce-stations` : extrêmes à long terme pour les villes (records
+  quotidiens de chaleur et de froid de stations climatiques
+  « virtuelles » de grandes villes).
+
+## DCCAH (données climatologiques canadiennes ajustées et homogénéisées)
+
+Séries climatiques de long terme et de qualité ajustée, distinctes des
+collections brutes `climate-*` ci-dessus. Il est confirmé en direct
+qu'elles suivent une convention de noms de champs et de valeurs
+manquantes différente de toutes les autres collections traitées ici
+(voir docs://eccc/fr/pieges). Les identifiants gardent le préfixe
+`ahccd-`, du nom anglais Adjusted and Homogenized Canadian Climate
+Data.
+
+- `ahccd-stations` : répertoire des stations (`station_id__id_station`,
+  `station_name__nom_station`, `province__province`,
+  `measurement_type__type_mesure`, par exemple "snow",
+  `start_date__date_debut` et `end_date__date_fin`).
+- `ahccd-annual`, `ahccd-monthly`, `ahccd-seasonal` : séries
+  homogénéisées de température, de précipitations, de pression et de
+  vent à chaque fréquence, par `station_id__id_station` et
+  `year__annee` (les séries mensuelles et saisonnières ajoutent
+  `date` et `period_value__valeur_periode`, par exemple "Sep" ou
+  "Fal").
+- `ahccd-trends` : tendances de long terme précalculées
+  (`trend_value__valeur_tendance`) par station, par période et par
+  `measurement_type__type_mesure`.
+
+## Hydrologie (niveau d'eau et débit)
+
+- `hydrometric-stations` : répertoire des stations (`STATION_NUMBER`,
+  `STATION_NAME`, `PROV_TERR_STATE_LOC`).
+- `hydrometric-realtime` : `LEVEL` (m) et `DISCHARGE` (m3/s) en temps
+  réel par `STATION_NUMBER`. Plus de 435 000 lignes mesurées en
+  direct : filtrez toujours par station ou par `datetime_filter`
+  (confirmé comme fonctionnel pour cette collection).
+- `hydrometric-daily-mean`, `hydrometric-monthly-mean`,
+  `hydrometric-annual-peaks`, `hydrometric-annual-statistics` :
+  archive historique HYDAT à chaque niveau d'agrégation.
+
+## Météo marine
+
+- `marineweather-realtime` (jugée expérimentale par ECCC) : prévisions
+  et avertissements marins par zone.
+- `marine-standard-forecast-zones` : limites des zones de prévisions
+  marines pour lesquelles ces prévisions sont émises.
+
+## Tout le reste
+
+Les trajectoires d'ouragans (`hurricanes-*-realtime`), l'analyse des
+précipitations dérivée du radar (`weather:rdpa:*`), les modèles de
+prévisions saisonnières (`weather:cansips:*`) et les familles de
+projections climatiques à échelle réduite (`climate:cmip5:*`,
+`climate:cangrd:*`, `climate:candcsu6:*`, `climate:dcs:*`,
+`climate:spei-*`, `climate:indices:*`) sont toutes de vraies
+collections de MSC GeoMet qui ne sont pas détaillées ici : utilisez
+eccc_search_collections(query=...) pour les trouver. Les collections
+`climate:*` sont des couvertures maillées et non des entités : lisez-
+les avec eccc_coverages_search, eccc_coverages_describe et
+eccc_coverages_get_data, pas avec eccc_query_items.
+"""
+
+_GOTCHAS_DOC_FR = """\
+# Pièges connus de MSC GeoMet (OGC-API)
+
+- **Un nom de propriété inconnu ou mal orthographié est ignoré en
+  silence, pas rejeté.** `?not_a_real_property=xyz` renvoie HTTP 200
+  avec `numberMatched: 0` (confirmé en direct) : on dirait exactement
+  « aucune ligne ne correspond à votre filtre ». eccc_query_items
+  compare les noms de `filters`, `fields` et `sortby` aux `/queryables`
+  de la collection et lève une erreur claire nommant la clé fautive,
+  mais cela n'attrape qu'une faute de frappe sur une propriété que la
+  collection pourrait avoir : cela ne peut pas dire que votre *valeur*
+  est mauvaise (par exemple un numéro de station inexistant).
+- **La prise en charge de `datetime_filter` varie vraiment d'une
+  collection à l'autre et n'est déclarée nulle part dans les
+  métadonnées de la collection.** Confirmé en direct :
+  `hydrometric-realtime` filtre correctement sur `datetime` ;
+  `weather-alerts` renvoie HTTP 500 pour *toute* valeur de `datetime`.
+  L'étendue de `/collections/{id}` ne mentionne qu'un bloc `spatial`,
+  jamais de bloc `temporal` pour ces deux collections ; on ne peut donc
+  pas le vérifier d'avance. Si une requête avec `datetime_filter`
+  échoue, recommencez sans lui et filtrez par `filters` ou `bbox`.
+- **Aucun plafond côté serveur pour `limit`.** `limit=100000` sur une
+  collection de 88 lignes a été honoré en entier (confirmé en direct).
+  Plusieurs collections comptent des centaines de milliers de lignes
+  (`hydrometric-realtime` : plus de 435 000 lignes mesurées en direct) ;
+  eccc_query_items plafonne `limit` à 1000 et attend une pagination par
+  `offset` au-delà, au lieu de se fier à une requête non bornée.
+- **`LATITUDE` et `LONGITUDE` de `climate-stations` sont des entiers
+  à l'échelle, pas des degrés décimaux.** `LATITUDE: 485500000` et
+  `LONGITUDE: -1234200000` signifient 48,55 N et 123,42 O (divisez par
+  1e7), ce qui est confirmé en direct. Le champ GeoJSON `geometry` de
+  l'entité porte déjà des coordonnées décimales correctes : préférez-le
+  aux propriétés brutes dès qu'il faut de vraies longitude et latitude.
+- **`lang` ne change que les titres et descriptions des collections, et
+  les noms de champs bilingues ne sont PAS cohérents d'une collection à
+  l'autre.** `lang="fr"` renvoie les métadonnées de collection en
+  français (le paramètre `lang` de GeoMet sur /collections) ; les
+  lignes sont les mêmes dans les deux langues, le contenu bilingue
+  étant retourné dans des propriétés séparées d'une même réponse. Il
+  est confirmé en direct qu'au moins trois conventions de noms
+  coexistent selon la collection : des suffixes `_en` et `_fr`
+  (`weather-alerts` : `alert_text_en` et `alert_text_fr`), des préfixes
+  `E_` et `F_` (`climate-normals` : `E_NORMAL_ELEMENT_NAME` et
+  `F_NORMAL_ELEMENT_NAME`), et un seul champ par concept dont le nom
+  anglais et le nom français sont joints par un double trait de
+  soulignement (chaque collection `ahccd-*` :
+  `station_name__nom_station`, qui n'est pas du tout deux champs
+  distincts). Consultez les propriétés de la collection avec
+  eccc_get_collection au lieu de supposer l'une de ces conventions.
+- **Les collections `ahccd-*` utilisent `-9999.9` comme valeur
+  sentinelle de donnée manquante, au moins pour les champs de pression
+  et de température, de façon incohérente à côté d'un vrai `null`.**
+  Confirmé en direct dans `ahccd-annual` : le même champ
+  (`temp_mean__temp_moyenne`) valait `null` pour les données manquantes
+  dans la plupart des lignes, mais `-9999.9` dans au moins une autre ;
+  les deux signifient « aucune lecture », mais un seul est détectable
+  comme `null`. Traiter `-9999.9` comme une vraie mesure fausse sans
+  bruit toute statistique (une moyenne, par exemple) calculée sur une
+  série DCCAH comportant des périodes manquantes : vérifiez-le
+  explicitement, en plus de `null`, avant d'utiliser une valeur.
+"""
+
+
+@resource("docs://eccc/fr/collections-courantes")
+def eccc_well_known_collections_doc_fr() -> str:
+    """Collections courantes de MSC GeoMet : alertes, conditions actuelles,
+    cote air santé, normales et observations climatiques, hydrométrie et
+    météo marine. Version française de docs://eccc/well-known-collections."""
+    return _WELL_KNOWN_COLLECTIONS_DOC_FR
+
+
+@resource("docs://eccc/fr/pieges")
+def eccc_gotchas_doc_fr() -> str:
+    """Pièges connus de MSC GeoMet (OGC-API), faciles à manquer.
+    Version française de docs://eccc/gotchas."""
+    return _GOTCHAS_DOC_FR

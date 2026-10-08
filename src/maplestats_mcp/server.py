@@ -273,7 +273,7 @@ open.canada.ca datasets -- use ckan_search_datasets with portal="federal"
 and fq="organization:<org>" (cic, cra-arc, osfi-bsif, ic, aafc-aac,
 cfia-acia).
 
-Language: most tools accept lang "en"|"fr". On single-language or
+Language: every tool accepts lang "en"|"fr". On single-language or
 already-bilingual sources it is a documented no-op; each module's
 docstring says which. Read docs://statcan/addressing and
 docs://statcan/gotchas before StatCan work, and the docs://boc/,

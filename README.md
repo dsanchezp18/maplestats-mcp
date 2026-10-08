@@ -18,7 +18,7 @@
     <a href="https://mcplookup.com/server/io.github.dsanchezp18/maplestats-mcp"><img src="https://mcplookup.com/badge/io.github.dsanchezp18/maplestats-mcp" alt="MCPLookup Trust Index"></a>
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>
     <a href="https://smithery.ai/servers/dsanchezp998/maplestats-mcp"><img src="https://img.shields.io/badge/Smithery-listed-FF5601" alt="Listed on Smithery"></a>
-    <a href="https://mcprush.com/daniel-sanchez-pazmino/maplestats-mcp"><img src="https://img.shields.io/badge/Mcprush-listed-B6F24B" alt="Listed on Mcprush"></a>
+    <a href="https://mcprush.com/dsanchezp18/maplestats-mcp"><img src="https://img.shields.io/badge/Mcprush-listed-B6F24B" alt="Listed on Mcprush"></a>
     <a href="https://lobehub.com/mcp/dsanchezp18-maplestats-mcp"><img src="https://img.shields.io/badge/LobeHub-listed-1F1F1F" alt="Listed on LobeHub"></a>
     <a href="https://www.piwheels.org/project/maplestats-mcp/"><img src="https://img.shields.io/badge/piwheels-Raspberry%20Pi-C51A4A" alt="Wheels for Raspberry Pi on piwheels"></a>
     <a href="https://registry.modelcontextprotocol.io/?q=io.github.dsanchezp18/maplestats-mcp"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry.modelcontextprotocol.io%2Fv0%2Fservers%2Fio.github.dsanchezp18%252Fmaplestats-mcp%2Fversions%2Flatest&query=%24.server.version&label=MCP%20Registry&prefix=v&color=blue" alt="MCP Registry version"></a>
@@ -135,10 +135,14 @@ Tools are found through search rather than listed flat: call
 `plan_query` turns a question into an ordered, multi-source plan, and
 `reproduce_code` writes the R, Python, Stata or Julia script (or an Excel
 Power Query) that fetches the same data straight from the source;
-`reproduce_workbook` returns the rows as a formatted Excel workbook. Most tools accept `lang: "en"|"fr"`
-(a documented no-op on single-language sources), and every response has a
-`provenance` block: source, URL, query time, freshness and limits.
-`docs://catalogue` describes every module in both languages.
+`reproduce_workbook` returns the rows as a formatted Excel workbook. Every tool accepts `lang: "en"|"fr"`;
+some sources only publish English content (for example Yukon's CKAN portal,
+the World Bank's indicator definitions and the PMPRB), so there `lang`
+changes the labels MapleStats adds, not the source's own text. Every response
+has a `provenance` block: source, URL, query time, freshness and limits.
+`docs://catalogue` describes every module in both languages. The guided
+prompts take `lang` too, and each `docs://<module>/...` resource has a French
+twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
 ## What it covers
 
@@ -158,7 +162,7 @@ Power Query) that fetches the same data straight from the source;
 | International | `worldbank_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
-| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express 12 BC Transit systems and 19 Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus about 100 further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
+| Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, the BC Transit systems and the Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
 
 Other federal series (CRA, OSFI, ISED insolvency) are ordinary
 open.canada.ca datasets, reachable with
@@ -169,7 +173,11 @@ not built, because their terms or download hosts do not permit automated
 access. CanadaBuys, OpenParliament.ca and the Toronto Transit Commission's
 own schedule download were removed for the same reason (the TTC schedule is
 still served from Statistics Canada's national transit database), and the
-Saskatchewan GeoHub portal was removed. The
+Saskatchewan GeoHub portal was removed. Justice Laws (federal statutes and
+regulations) is out of scope, because legislation text is not data this
+server carries, and the Saskatchewan Bureau of Statistics' Provincial
+Economic Accounts were not built: they are under Crown copyright, for
+non-commercial reuse only, and the site's terms bar automated access. The
 [roadmap](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/ROADMAP.md)
 records each decision.
 
@@ -220,7 +228,15 @@ server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 
 ## License
 
-MIT
+MIT. Third-party notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+## Security and conduct
+
+Report a vulnerability privately through GitHub's
+[private vulnerability reporting](https://github.com/dsanchezp18/maplestats-mcp/security/advisories/new);
+see [`SECURITY.md`](SECURITY.md). Changes are recorded in
+[`CHANGELOG.md`](CHANGELOG.md), and community expectations in
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## Acknowledgments
 
