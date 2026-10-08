@@ -98,8 +98,9 @@ async def arcgis_hub_get_dataset(portal: PortalKey, item_id: str, lang: Lang = "
     allows, one stored-file link for a file item, none for an Image
     Service. Keywords: ArcGIS Hub, dataset detail, FeatureServer,
     MapServer, metadata, licence, download, CSV, shapefile, GeoJSON, KML.
-    Mots-clés : ArcGIS Hub, détail du jeu de données, FeatureServer,
-    MapServer, métadonnées, licence, téléchargement, CSV, shapefile,
+    Mots-clés : fiche d'un jeu de données, description d'une couche,
+    métadonnées, URL du service FeatureServer, MapServer, licence
+    d'utilisation, liens de téléchargement, exporter en CSV, shapefile,
     GeoJSON, KML.
     """
     return await client.get_dataset(portal, item_id, lang)

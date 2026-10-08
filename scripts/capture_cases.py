@@ -73,6 +73,21 @@ CASES: dict[str, list[dict[str, Any]]] = {
         }
         for city in ("Edmonton", "Calgary")
     ],
+    # The same two calls in French: IRCC's table labels and the provenance
+    # come back in French (a <key>_fr capture replaces <key> on the French page).
+    "ircc_fr": [
+        {
+            "name": "ircc_monthly_query",
+            "arguments": {
+                "table_id": "ODP-PR-PT_CMA",
+                "filters": {"census_metropolitan_area": city},
+                "period": "year",
+                "year_from": 2015,
+                "lang": "fr",
+            },
+        }
+        for city in ("Edmonton", "Calgary")
+    ],
     # Urban planners: housing starts by dwelling type, Canada, every month
     # since 1990 (CMHC table 5.6.1, centres of 10,000 people or more). The
     # second call counts CMHC's data categories for the verse.
@@ -88,6 +103,10 @@ CASES: dict[str, list[dict[str, Any]]] = {
         },
         {"name": "cmhc_list_categories", "arguments": {}},
     ],
+    # No housing_fr twin on purpose: in French CMHC resolves this series to a
+    # different table (5.7.1, urban and rural areas combined) than the English
+    # 5.6.1 (centres of 10,000 people or more), so a French capture would show
+    # other numbers under the same chart.
     # Microeconomists: the low-income rate (LIM-AT) by immigrant generation,
     # from the same Census microdata with replicate-weight standard errors.
     # Only valid codes, so "not available" is not counted as either outcome.
@@ -167,6 +186,17 @@ CASES: dict[str, list[dict[str, Any]]] = {
         {
             "name": "boc_get_observations",
             "arguments": {"series_names": ["V39079"], "start_date": "2015-01-01"},
+        },
+    ],
+    # The same call in French: the Bank of Canada labels the series in French.
+    "boc_fr": [
+        {
+            "name": "boc_get_observations",
+            "arguments": {
+                "series_names": ["V39079"],
+                "start_date": "2015-01-01",
+                "lang": "fr",
+            },
         },
     ],
     # The Statistics Canada page walks one series from search to SDMX: find

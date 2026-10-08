@@ -766,6 +766,95 @@ FR: dict[str, str] = {
     "StatCan lumber production and forestry GDP": (
         "production de bois d'oeuvre et PIB forestier de Statistique Canada"
     ),
+    # Ontario Energy Board
+    "Ontario Energy Board utility files: reliability (SAIDI/SAIFI), customers, "
+    "scorecards, licences; query=<topic>": (
+        "fichiers de la Commission de l'énergie de l'Ontario sur les services publics : "
+        "fiabilité (SAIDI/SAIFI), clients, fiches de rendement, licences ; query=<sujet>"
+    ),
+    "Ontario utility rates or Regulated Price Plan prices: table='electricity_residential', "
+    "'natural_gas_residential' or 'rpp_time_of_use'": (
+        "tarifs des services publics de l'Ontario ou prix de la grille tarifaire réglementée : "
+        "table='electricity_residential', 'natural_gas_residential' ou 'rpp_time_of_use'"
+    ),
+    # BC Ministry of Environment
+    "British Columbia AQHI now and forecasts by area": (
+        "cote air santé de la Colombie-Britannique, actuelle et prévue, par région"
+    ),
+    "BC snow weather stations (snow water equivalent, depth)": (
+        "stations météorologiques de neige de la C.-B. (équivalent en eau de la neige, épaisseur)"
+    ),
+    "BC groundwater observation wells and their water levels": (
+        "puits d'observation des eaux souterraines de la C.-B. et leurs niveaux d'eau"
+    ),
+    "BC provincial hydrometric gauges": "stations hydrométriques provinciales de la C.-B.",
+    # ECCC Data Catalogue
+    "National Pollutant Release Inventory releases by facility: year, province, substance": (
+        "rejets de l'Inventaire national des rejets de polluants par installation : "
+        "year, province, substance"
+    ),
+    "greenhouse gas emissions of large facilities: year, province, company": (
+        "émissions de gaz à effet de serre des grandes installations : year, province, company"
+    ),
+    "ECCC Data Catalogue emissions and pollutant files: query=<topic>": (
+        "fichiers du Catalogue de données d'ECCC sur les émissions et les polluants : query=<sujet>"
+    ),
+    # Health products
+    "Drugs, natural health products, medical devices and adverse reactions": (
+        "Médicaments, produits de santé naturels, instruments médicaux et réactions indésirables"
+    ),
+    "drug products by DIN, brand, company, ingredient or status": (
+        "produits pharmaceutiques par DIN, marque, entreprise, ingrédient ou statut"
+    ),
+    "one drug's ingredients, schedule and status history": (
+        "ingrédients, annexe et historique du statut d'un médicament"
+    ),
+    "licensed natural health products by name or company": (
+        "produits de santé naturels homologués par nom ou entreprise"
+    ),
+    "medical device licences by name or company": (
+        "licences d'instruments médicaux par nom ou entreprise"
+    ),
+    "Canada Vigilance adverse reaction reports by reaction term": (
+        "rapports de réactions indésirables de Canada Vigilance par terme de réaction"
+    ),
+    "These are Health Canada product registers and spontaneous adverse-reaction reports, "
+    "not prices or sales; a report does not prove a product caused the reaction.": (
+        "Ce sont des registres de produits de Santé Canada et des rapports spontanés de "
+        "réactions indésirables, non des prix ou des ventes ; un rapport ne prouve pas "
+        "qu'un produit a causé la réaction."
+    ),
+    # Taxation
+    "CRA tax statistics: T1 returns, tax filers, GST/HST, TFSA, charities": (
+        "Statistiques fiscales de l'ARC : déclarations T1, contribuables, TPS/TVH, CELI, "
+        "organismes de bienfaisance"
+    ),
+    "CRA statistics: portal='federal', fq='organization:cra-arc', query='T1 final "
+    "statistics' (now titled Individual Income Tax Return Statistics)": (
+        "statistiques de l'ARC : portal='federal', fq='organization:cra-arc', query='T1 final "
+        "statistics' (désormais intitulées Individual Income Tax Return Statistics)"
+    ),
+    "rows of a CRA resource whose DataStore is active (charity lists): "
+    "the same portal and its resource_id": (
+        "lignes d'une ressource de l'ARC dont le DataStore est actif (listes d'organismes "
+        "de bienfaisance) : le même portal et son resource_id"
+    ),
+    "businesses registered for the simplified GST/HST, by name or business number": (
+        "entreprises inscrites au régime simplifié de la TPS/TVH, par nom ou numéro d'entreprise"
+    ),
+    "StatCan tables built from tax records (tax filers and dependants, family incomes)": (
+        "tableaux de Statistique Canada tirés de données fiscales (déclarants et personnes "
+        "à charge, revenus des familles)"
+    ),
+    "CRA's T1 statistics are published about two years after the tax year and are "
+    "revised later; each edition is its own dataset, so compare editions with care.": (
+        "Les statistiques T1 de l'ARC paraissent environ deux ans après l'année d'imposition "
+        "et sont révisées par la suite ; chaque édition est un jeu de données distinct, "
+        "il faut donc comparer les éditions avec prudence."
+    ),
+    "Check each dataset's licence before reusing it.": (
+        "Vérifiez la licence de chaque jeu de données avant de le réutiliser."
+    ),
     # Fallback
     "StatCan data products on the topic": "produits de données de Statistique Canada sur le sujet",
     "StatCan tables by keyword": "tableaux de Statistique Canada par mot-clé",

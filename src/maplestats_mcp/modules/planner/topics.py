@@ -633,8 +633,27 @@ TOPICS: tuple[Topic, ...] = (
             "electricite",
             "puits",
             "gaz naturel",
+            "ontario energy board",
+            "oeb",
+            "saidi",
+            "saifi",
+            "power outage",
+            "regulated price plan",
+            "commission de l'energie de l'ontario",
         ),
         (
+            PlanStep(
+                "oeb_list_datasets",
+                "Ontario Energy Board utility files: reliability (SAIDI/SAIFI), customers, "
+                "scorecards, licences; query=<topic>",
+                ("ontario energy board", "oeb", "saidi", "saifi", "power outage"),
+            ),
+            PlanStep(
+                "oeb_rates",
+                "Ontario utility rates or Regulated Price Plan prices: table='electricity_residential', "
+                "'natural_gas_residential' or 'rpp_time_of_use'",
+                ("regulated price plan", "rpp"),
+            ),
             PlanStep(
                 "cer_list_datasets",
                 "CER pipeline throughput, exports and tolls",
@@ -714,8 +733,32 @@ TOPICS: tuple[Topic, ...] = (
             "hydrometric",
             "weather forecast",
             "previsions meteo",
+            "aqhi",
+            "air quality health index",
+            "cote air sante",
+            "groundwater",
+            "eaux souterraines",
+            "snowpack",
+            "snow water equivalent",
+            "snow survey",
         ),
         (
+            PlanStep(
+                "bc_env_get_aqhi",
+                "British Columbia AQHI now and forecasts by area",
+                ("aqhi", "air quality health index", "cote air sante"),
+            ),
+            PlanStep(
+                "bc_env_list_snow_stations",
+                "BC snow weather stations (snow water equivalent, depth)",
+                ("snowpack", "snow water equivalent", "snow survey"),
+            ),
+            PlanStep(
+                "bc_env_list_wells",
+                "BC groundwater observation wells and their water levels",
+                ("groundwater", "eaux souterraines"),
+            ),
+            PlanStep("bc_env_list_streamflow_gauges", "BC provincial hydrometric gauges"),
             PlanStep(
                 "eccc_search_collections",
                 "ECCC weather, climate, hydrometric, air quality: query=<topic>",
@@ -1633,6 +1676,12 @@ EMISSIONS = Topic(
         "ges",
         "carbone",
         "polluant atmospherique",
+        "npri",
+        "national pollutant release inventory",
+        "ghgrp",
+        "large emitter",
+        "grand emetteur",
+        "grands emetteurs",
     ),
     (
         PlanStep(
@@ -1642,7 +1691,21 @@ EMISSIONS = Topic(
         ),
         PlanStep("sdmx_space_get_structure", "dimensions and codes of the flow found"),
         PlanStep("sdmx_space_get_data", "the series: flow and key from the steps before"),
+        PlanStep(
+            "eccc_datamart_npri_facilities",
+            "National Pollutant Release Inventory releases by facility: year, province, substance",
+            ("npri", "national pollutant release inventory"),
+        ),
+        PlanStep(
+            "eccc_datamart_ghgrp_facilities",
+            "greenhouse gas emissions of large facilities: year, province, company",
+            ("ghgrp", "large emitter", "grand emetteur", "grands emetteurs"),
+        ),
         PlanStep("wds_search_cubes", "StatCan physical flow accounts for GHG by industry"),
+        PlanStep(
+            "eccc_datamart_search",
+            "ECCC Data Catalogue emissions and pollutant files: query=<topic>",
+        ),
     ),
     (
         (
@@ -1822,7 +1885,174 @@ FORESTRY = Topic(
     ),
     shadows=("forest fire", "feu de foret", "feux de foret"),
 )
-TOPICS = (*TOPICS, EMISSIONS, SDG, FACILITIES, LOBBYING, REPRESENTATIVES, FORESTRY)
+HEALTH_PRODUCTS = Topic(
+    "health_products",
+    "Drugs, natural health products, medical devices and adverse reactions",
+    (
+        "drug product",
+        "drug database",
+        "din",
+        "active ingredient",
+        "natural health product",
+        "npn",
+        "medical device",
+        "device licence",
+        "device license",
+        "adverse reaction",
+        "side effect",
+        "canada vigilance",
+        "base de donnees sur les produits pharmaceutiques",
+        "produit de sante naturel",
+        "produits de sante naturels",
+        "instrument medical",
+        "instruments medicaux",
+        "effet indesirable",
+        "effets indesirables",
+        "reaction indesirable",
+        "reactions indesirables",
+    ),
+    (
+        PlanStep(
+            "hc_drug_search_products",
+            "drug products by DIN, brand, company, ingredient or status",
+            ("drug product", "drug database", "din", "active ingredient"),
+        ),
+        PlanStep("hc_drug_get_product", "one drug's ingredients, schedule and status history"),
+        PlanStep(
+            "hc_nhp_search_products",
+            "licensed natural health products by name or company",
+            (
+                "natural health product",
+                "npn",
+                "produit de sante naturel",
+                "produits de sante naturels",
+            ),
+        ),
+        PlanStep(
+            "hc_device_search_licences",
+            "medical device licences by name or company",
+            (
+                "medical device",
+                "device licence",
+                "device license",
+                "instrument medical",
+                "instruments medicaux",
+            ),
+        ),
+        PlanStep(
+            "hc_vigilance_search_reactions",
+            "Canada Vigilance adverse reaction reports by reaction term",
+            (
+                "adverse reaction",
+                "side effect",
+                "canada vigilance",
+                "effet indesirable",
+                "effets indesirables",
+                "reaction indesirable",
+                "reactions indesirables",
+            ),
+        ),
+    ),
+    (
+        (
+            "These are Health Canada product registers and spontaneous adverse-reaction "
+            "reports, not prices or sales; a report does not prove a product caused the reaction."
+        ),
+    ),
+)
+TAXATION = Topic(
+    "taxation",
+    "CRA tax statistics: T1 returns, tax filers, GST/HST, TFSA, charities",
+    (
+        "t1 general",
+        "t1 final",
+        "t1 return",
+        "individual income tax return",
+        "income tax return",
+        "tax return statistics",
+        "tax filer",
+        "tax filers",
+        "taxfiler",
+        "personal income tax",
+        "canada revenue agency",
+        "cra",
+        "gst/hst",
+        "gst hst",
+        "tfsa",
+        "list of charities",
+        "registered charity",
+        "registered charities",
+        "statistiques de l'impot",
+        "declaration de revenus",
+        "declarations de revenus",
+        "agence du revenu du canada",
+        "contribuables",
+        "tps/tvh",
+        "organismes de bienfaisance",
+    ),
+    (
+        PlanStep(
+            "ckan_search_datasets",
+            "CRA statistics: portal='federal', fq='organization:cra-arc', query='T1 final "
+            "statistics' (now titled Individual Income Tax Return Statistics)",
+            (
+                "t1 general",
+                "t1 final",
+                "t1 return",
+                "individual income tax return",
+                "income tax return",
+                "tax return statistics",
+                "tax filer",
+                "tax filers",
+                "personal income tax",
+                "canada revenue agency",
+                "cra",
+                "statistiques de l'impot",
+                "declaration de revenus",
+                "agence du revenu du canada",
+            ),
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "rows of a CRA resource whose DataStore is active (charity lists): "
+            "the same portal and its resource_id",
+            (
+                "list of charities",
+                "registered charity",
+                "registered charities",
+                "organismes de bienfaisance",
+            ),
+        ),
+        PlanStep(
+            "cra_digital_economy_registry_search",
+            "businesses registered for the simplified GST/HST, by name or business number",
+            ("gst/hst", "gst hst", "tps/tvh"),
+        ),
+        PlanStep(
+            "wds_search_cubes",
+            "StatCan tables built from tax records (tax filers and dependants, family incomes)",
+            ("tax filer", "tax filers", "taxfiler", "contribuables"),
+        ),
+    ),
+    (
+        (
+            "CRA's T1 statistics are published about two years after the tax year and are "
+            "revised later; each edition is its own dataset, so compare editions with care."
+        ),
+        "Check each dataset's licence before reusing it.",
+    ),
+)
+TOPICS = (
+    *TOPICS,
+    EMISSIONS,
+    SDG,
+    FACILITIES,
+    LOBBYING,
+    REPRESENTATIVES,
+    FORESTRY,
+    HEALTH_PRODUCTS,
+    TAXATION,
+)
 
 # Places this server has no data for. A question naming one of them, with no
 # Canadian place and nothing that crosses the border (trade, exchange rates,

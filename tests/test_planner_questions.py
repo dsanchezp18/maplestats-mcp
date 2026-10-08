@@ -104,6 +104,30 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("Quality of life indicators", "sdg", "sdmx_space_list_flows"),
     ("List of hospitals in Manitoba", "facilities", "statcan_lode_list_databases"),
     ("Forest harvest volumes by province", "forestry", "nfd_list_tables"),
+    ("Ontario Energy Board SAIDI reliability by distributor", "energy", "oeb_list_datasets"),
+    ("Regulated Price Plan time-of-use rates", "energy", "oeb_rates"),
+    ("Air Quality Health Index in Kelowna", "environment", "bc_env_get_aqhi"),
+    ("Groundwater levels in British Columbia", "environment", "bc_env_list_wells"),
+    ("NPRI releases by facility in Alberta", "emissions", "eccc_datamart_npri_facilities"),
+    ("Greenhouse gas large emitter facilities", "emissions", "eccc_datamart_ghgrp_facilities"),
+    ("Drug product database lookup by DIN", "health_products", "hc_drug_search_products"),
+    (
+        "Side effects reported to Canada Vigilance",
+        "health_products",
+        "hc_vigilance_search_reactions",
+    ),
+    ("CRA T1 General personal income tax return statistics", "taxation", "ckan_search_datasets"),
+    ("T1 final statistics by tax year", "taxation", "ckan_search_datasets"),
+    (
+        "Statistiques de l'Agence du revenu du Canada sur les déclarations de revenus",
+        "taxation",
+        "ckan_search_datasets",
+    ),
+    (
+        "Who is registered for the simplified GST/HST?",
+        "taxation",
+        "cra_digital_economy_registry_search",
+    ),
     ("Credit cards with no annual fee in Ontario", "banking", "fcac_search_credit_cards"),
     ("Milk production by province and butterfat quota", "dairy", "cdc_query_market_data"),
     ("Canola deliveries this crop year", "agriculture", "cgc_weekly_query"),
@@ -137,12 +161,8 @@ OUT_OF_SCOPE = ["US unemployment rate", "Weather in Paris next week", "Inflation
 
 # Modules being added or removed elsewhere: reported, never failed on.
 PENDING = {
-    "health_products",
-    "eccc_datamart",
     "intl_indicators",
     "nwt_stats",
-    "bc_environment",
-    "oeb",
     "drivebc",
     "federal_misc",
 }

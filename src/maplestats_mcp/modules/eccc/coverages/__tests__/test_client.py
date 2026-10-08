@@ -444,3 +444,10 @@ async def test_french_no_data_is_french(router):
         await client.get_coverage_data(
             CANDCS, lat=50.0, lon=-135.0, scenarios=["SSP245"], lang="fr"
         )
+
+
+def test_time_labels_null_values_is_a_typed_error():
+    # A JSON null for the time axis values (key present, value null) must
+    # reach the typed alignment error, not a TypeError from iterating None.
+    with pytest.raises(UpstreamError, match="0 labels for 3 values"):
+        client._time_labels({"values": None}, 3, [])

@@ -249,8 +249,9 @@ def test_capturing_a_case_captures_its_french_twin():
     capture = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(capture)
     assert capture.with_twins(["cards"]) == ["cards", "cards_fr"]
-    assert capture.with_twins(["cards_fr", "boc"]) == ["cards", "cards_fr", "boc"]
-    assert capture.with_twins(["boc", "boc"]) == ["boc"]
+    assert capture.with_twins(["cards_fr", "curve"]) == ["cards", "cards_fr", "curve"]
+    assert capture.with_twins(["boc"]) == ["boc", "boc_fr"]
+    assert capture.with_twins(["curve", "curve"]) == ["curve"]
     # Every French capture on disk has a twin in CASES, so a recapture keeps them in step.
     for path in site.CASES_DIR.glob("*_fr.json"):
         assert path.stem in capture.CASES and path.stem.removesuffix("_fr") in capture.CASES
@@ -770,3 +771,126 @@ def test_stylesheets_close_every_block():
                 line = text[: match.start()].count("\n") + 1
                 assert depth == 0, f"{sheet.name}: section at line {line} opens inside a block"
         assert depth == 0, sheet.name
+
+
+# --------------------------------------------------------------------------
+# Hand-typed figures, icons, dates and policy files.
+# --------------------------------------------------------------------------
+
+COUNT_PATTERN = re.compile(r"(\d+) tools in (\d+) modules")
+
+
+@pytest.mark.parametrize("name", ["README.md", "docs/ROADMAP.md"])
+def test_hand_typed_counts_match_the_registry(name: str, site_build: tuple[Path, dict[str, int]]):
+    """The README and the roadmap state the tool and module counts by hand."""
+    _, stats = site_build
+    text = (ROOT / name).read_text(encoding="utf-8")
+    found = COUNT_PATTERN.findall(text)
+    assert found, f"{name} no longer states 'N tools in M modules'"
+    for tools, modules in found:
+        assert (int(tools), int(modules)) == (stats["tools"], stats["modules"]), name
+
+
+def test_readme_transit_row_has_no_counts_that_go_stale():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    row = next(line for line in readme.splitlines() if line.startswith("| Transit schedules"))
+    assert not re.search(r"\b\d+\s+(BC Transit|Quebec)|about \d+", row)
+
+
+def test_updated_and_checked_dates_come_from_the_build_date(built_site: Path):
+    today = site.build_date()
+    expected = {
+        "faq.html": {
+            "en": f"Last updated {site.long_date(today.isoformat(), 'en')}.",
+            "fr": f"Dernière mise à jour : {site.long_date(today.isoformat(), 'fr')}",
+        },
+        "about.html": {
+            "en": f"checked in {site.month_year(today, 'en')}.",
+            "fr": f"vérifiées en {site.month_year(today, 'fr')}.",
+        },
+    }
+    for name, by_lang in expected.items():
+        for lang, phrase in by_lang.items():
+            path = built_site / name if lang == "en" else built_site / "fr" / name
+            text = html.unescape(path.read_text(encoding="utf-8")).replace(" ", " ")
+            assert phrase.replace(" ", " ") in text, f"{lang}/{name}: {phrase}"
+
+
+def test_french_month_year_and_dates():
+    from datetime import date
+
+    assert site.long_date("2026-10-03", "fr") == "3 octobre 2026"
+    assert site.long_date("2026-02-01", "fr") == "1er février 2026"
+    assert site.month_year(date(2026, 8, 5), "fr") == "août 2026"
+    assert site.month_year(date(2026, 9, 5), "en") == "September 2026"
+
+
+def test_icons_manifest_and_sitemap_lastmod(built_site: Path):
+    touch = built_site / "assets" / "apple-touch-icon.png"
+    header = touch.read_bytes()[:24]
+    assert header[:8] == b"\x89PNG\r\n\x1a\n"
+    assert int.from_bytes(header[16:20], "big") == 180
+    assert int.from_bytes(header[20:24], "big") == 180
+    assert (built_site / "assets" / "favicon.ico").read_bytes()[:4] == b"\x00\x00\x01\x00"
+    manifest = json.loads((built_site / "assets" / "site.webmanifest").read_text("utf-8"))
+    for icon in manifest["icons"]:
+        assert (built_site / "assets" / icon["src"]).is_file(), icon
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        root = "../" if page.parent.name == "fr" else ""
+        for tag in (
+            f'<link rel="apple-touch-icon" href="{root}assets/apple-touch-icon.png">',
+            f'<link rel="icon" href="{root}assets/favicon.ico" sizes="48x48">',
+            f'<link rel="manifest" href="{root}assets/site.webmanifest">',
+        ):
+            assert tag in text, f"{page}: {tag}"
+    sitemap = (built_site / "sitemap.xml").read_text(encoding="utf-8")
+    lastmods = re.findall(r"<lastmod>([^<]+)</lastmod>", sitemap)
+    assert len(lastmods) == len(re.findall(r"<loc>", sitemap))
+    assert set(lastmods) == {site.build_date().isoformat()}
+
+
+def test_not_found_page_is_one_bilingual_page(built_site: Path):
+    """GitHub Pages serves only the root 404.html, so a fr/404.html would never show."""
+    assert not (built_site / "fr" / "404.html").exists()
+    text = (built_site / "404.html").read_text(encoding="utf-8")
+    assert '<html lang="en"' in text and '<section lang="fr">' in text
+    assert "Page not found" in text and "Page introuvable" in text
+    assert "assets/apple-touch-icon.png" in text
+
+
+def test_sources_not_built_are_named_on_the_faq_and_in_the_readme(built_site: Path):
+    readme = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())
+    assert "Justice Laws" in readme and "Saskatchewan Bureau of Statistics" in readme
+    en = (built_site / "faq.html").read_text(encoding="utf-8")
+    fr = (built_site / "fr" / "faq.html").read_text(encoding="utf-8")
+    assert "Justice Laws" in en and "Saskatchewan Bureau of Statistics" in en
+    assert "Lois sur la justice" in fr and "Bureau de la statistique de la Saskatchewan" in fr
+
+
+def test_policy_files_exist_and_are_linked(built_site: Path):
+    for name in ("SECURITY.md", "CODE_OF_CONDUCT.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md"):
+        assert (ROOT / name).is_file(), name
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "SECURITY.md" in readme and "security/advisories/new" in readme
+    notices = f"{site.REPO}/blob/main/THIRD_PARTY_NOTICES.md"
+    advisory = f"{site.REPO}/security/advisories/new"
+    for lang_dir in (built_site, built_site / "fr"):
+        assert notices in (lang_dir / "faq.html").read_text(encoding="utf-8")
+        assert notices in (lang_dir / "index.html").read_text(encoding="utf-8")
+        assert advisory in (lang_dir / "contributing.html").read_text(encoding="utf-8")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert f"## [{site.__version__}]" in changelog
+
+
+def test_inline_svgs_are_hidden_or_named(built_site: Path):
+    """A decorative SVG is aria-hidden; any other is role=img with an aria-label and a title."""
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        for match in re.finditer(r"<svg\b[^>]*>(.{0,400})", text, re.DOTALL):
+            tag = match.group(0).split(">", 1)[0]
+            if 'aria-hidden="true"' in tag:
+                continue
+            assert 'role="img"' in tag and "aria-label=" in tag, f"{page}: {tag[:120]}"
+            if "data-chart" in tag:
+                assert "<title>" in match.group(1), f"{page}: chart without a title"

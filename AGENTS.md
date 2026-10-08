@@ -30,7 +30,13 @@ A source with more than one distinct sub-API splits into subfolders
 instead, each with its own `constants.py`/`schemas.py`/`client.py`/
 `tools.py` — see `modules/statcan/{wds,sdmx,rdaas}/` for the pattern.
 The top-level `statcan/__init__.py`, `resources.py`, and `prompts.py`
-stay shared across the sub-APIs.
+stay shared across the sub-APIs. `modules/health_products/` follows the
+same split, and its sub-API tests live in
+`health_products/__tests__/`, not in per-subfolder `__tests__/`.
+
+`modules/planner/` and `modules/reproduce/` are infrastructure modules,
+not data sources: they have no `constants.py` and no `__tests__/` (their
+tests live in `tests/`, as `test_planner*.py` and `test_reproduce*.py`).
 
 A new portal on a platform this server already covers (ArcGIS Hub,
 Socrata, CKAN) is **not** a new module: add one entry to that family's
