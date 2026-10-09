@@ -74,10 +74,12 @@ INSTALL_SOURCE = PACKAGE if ON_PYPI else f"git+{REPO}"
 UVX_ARGS: list[str] = [PACKAGE] if ON_PYPI else ["--from", INSTALL_SOURCE, PACKAGE]
 UVX_COMMAND = " ".join(["uvx", *UVX_ARGS])
 
-# Where GitHub Pages serves the site (.github/workflows/pages.yml). Canonical,
-# hreflang and Open Graph URLs, the sitemap and the 404 page are absolute
-# from here, because a crawler or a link preview has no page to resolve from.
-SITE_URL = "https://dsanchezp18.github.io/maplestats-mcp/"
+# Where GitHub Pages serves the site (.github/workflows/pages.yml), on the
+# custom domain set in Settings > Pages (DNS: a CNAME record from maplestats
+# to dsanchezp18.github.io). Canonical, hreflang and Open Graph URLs, the
+# sitemap and the 404 page are absolute from here, because a crawler or a
+# link preview has no page to resolve from.
+SITE_URL = "https://maplestats.danielstats.io/"
 
 # Badges, the same ones as README.md's: (group, link, image, alt EN, alt FR).
 # "user" badges sit under the install prompt on the home and Connect pages,

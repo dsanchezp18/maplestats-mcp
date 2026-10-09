@@ -66,7 +66,7 @@ def manifest(tools: list[dict]) -> dict:
         ),
         "author": {"name": "Daniel Sánchez Pazmiño", "url": "https://github.com/dsanchezp18"},
         "repository": {"type": "git", "url": REPO},
-        "homepage": "https://dsanchezp18.github.io/maplestats-mcp/",
+        "homepage": "https://maplestats.danielstats.io/",
         "documentation": f"{REPO}#readme",
         "support": f"{REPO}/issues",
         "server": {

@@ -388,7 +388,7 @@ def build_server() -> FastMCP:
         "maplestats-mcp",
         version=__version__,
         instructions=SERVER_INSTRUCTIONS,
-        website_url="https://dsanchezp18.github.io/maplestats-mcp/",
+        website_url="https://maplestats.danielstats.io/",
         icons=[icon],
         # Replaced by CachedDereferenceMiddleware below: same output, but each
         # schema is dereferenced once instead of on every search_tools/call_tool.

@@ -617,7 +617,7 @@ def test_sitemap_robots_and_not_found_page(built_site: Path):
     robots = (built_site / "robots.txt").read_text(encoding="utf-8")
     assert f"Sitemap: {site.SITE_URL}sitemap.xml" in robots
     missing = (built_site / "404.html").read_text(encoding="utf-8")
-    base = "/maplestats-mcp/"
+    base = "/"
     assert f'href="{base}assets/site.css"' in missing
     assert f'href="{base}fr/"' in missing and '<section lang="fr">' in missing
     # Every link and asset is absolute: the page is served at any depth.

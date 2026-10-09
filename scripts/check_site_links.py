@@ -23,7 +23,7 @@ import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SITE = ROOT / "build" / "site"
-SITE_URL = "https://dsanchezp18.github.io/maplestats-mcp/"
+SITE_URL = "https://maplestats.danielstats.io/"
 
 # Links a browser hands to another program, or that only an MCP client can use.
 SKIP_SCHEMES = ("mailto:", "cursor:", "vscode:", "data:", "javascript:")
