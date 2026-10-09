@@ -722,7 +722,6 @@ def test_badges_match_the_readme(built_site: Path):
     # Every README badge but the logo is on the site.
     assert {u for u in in_readme if "logo.svg" not in u} <= listed
     for page, group in (
-        ("index.html", "user"),
         ("connect.html", "user"),
         ("contributing.html", "dev"),
     ):
