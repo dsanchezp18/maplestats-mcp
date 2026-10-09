@@ -3381,6 +3381,16 @@ mark {
   color: var(--accent);
 }
 
+/* ---------- Home: the chat demo ---------- */
+
+.try-demo .prompts,
+.try-demo .notice {
+  max-width: 780px;
+}
+
+.try-demo .notice {
+  margin-top: 20px;
+}
 
 @media (max-width: 900px) {
   .sources-feature a {
