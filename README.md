@@ -12,7 +12,7 @@
     <a href="https://github.com/dsanchezp18/maplestats-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dsanchezp18/maplestats-mcp" alt="License: MIT"></a>
     <a href="https://pypistats.org/packages/maplestats-mcp"><img src="https://img.shields.io/pypi/dm/maplestats-mcp" alt="PyPI downloads per month"></a>
     <a href="https://github.com/dsanchezp18/maplestats-mcp/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/ci.yml?branch=main&label=CI" alt="CI status"></a>
-    <a href="https://dsanchezp18.github.io/maplestats-mcp/"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/pages.yml?branch=main&label=website" alt="Website build status"></a>
+    <a href="https://maplestats.danielstats.io/"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/pages.yml?branch=main&label=website" alt="Website build status"></a>
     <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
     <a href="https://mcplookup.com/server/io.github.dsanchezp18/maplestats-mcp"><img src="https://mcplookup.com/badge/io.github.dsanchezp18/maplestats-mcp" alt="MCPLookup Trust Index"></a>
@@ -38,7 +38,7 @@ ouvertes canadiennes par un seul serveur, en français et en anglais.*
 
 Project vision: [`docs/PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/PROJECT_GUIDE.md).
 Source coverage: [`docs/ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/ROADMAP.md).
-Website: <https://dsanchezp18.github.io/maplestats-mcp/>.
+Website: <https://maplestats.danielstats.io/>.
 
 ## The easiest way: ask your agent
 
@@ -102,8 +102,8 @@ The hosted server is a free instance: a ping every 10 minutes keeps it awake,
 so cold starts are rare, but the first request after an idle spell can take up
 to a minute. Each client gets 60 requests a minute, and the microdata
 tabulation tool is switched off there. Your agent's tool calls (a search phrase, a table number) reach the server and its host, Render, and the code stores none of them. Check Render's [terms](https://render.com/terms) and [privacy policy](https://render.com/privacy); for full privacy, run it locally. What it logs:
-[FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#hosted). Other
-clients: the [Connect](https://dsanchezp18.github.io/maplestats-mcp/connect.html)
+[FAQ](https://maplestats.danielstats.io/faq.html#hosted). Other
+clients: the [Connect](https://maplestats.danielstats.io/connect.html)
 page.
 
 ## Install locally (optional)
@@ -250,4 +250,4 @@ Lucet ([rgovcan](https://github.com/VLucet/rgovcan)), and others. Thanks
 to them, and to everyone who publishes Canadian data in the open.
 
 For other ways to get Canadian data, see the
-[alternatives](https://dsanchezp18.github.io/maplestats-mcp/about.html#alternatives).
+[alternatives](https://maplestats.danielstats.io/about.html#alternatives).

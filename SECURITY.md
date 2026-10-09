@@ -41,5 +41,5 @@ Only the latest release receives fixes.
 ## What the server does with your requests
 
 The hosted server receives your agent's tool calls. See the
-[FAQ](https://dsanchezp18.github.io/maplestats-mcp/faq.html#queries) for what
+[FAQ](https://maplestats.danielstats.io/faq.html#queries) for what
 is and is not kept. For full privacy, run the server locally.
