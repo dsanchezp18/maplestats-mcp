@@ -4,6 +4,7 @@ naming quirks confirmed live 2026-09-22 (see the module docstring).
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import httpx
@@ -150,6 +151,20 @@ async def test_get_daily_water_quality_live_shape_and_cache(httpx_mock):
     assert first.provenance.cached is False
     assert second.provenance.cached is True
     assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_as_of_skips_a_blank_newest_row(httpx_mock):
+    # Live 2026-10-08: the page listed OCT-07 with every value blank.
+    page = re.sub(r'(<span id="(?!Date)[A-Za-z]+Label3">)[^<]*(</span>)', r"", _LIVE_PAGE)
+    httpx_mock.add_response(
+        url=f"{constants.DAILY_URL}?zone=Rossdale",
+        content=page.encode("utf-8"),
+        headers={"Content-Type": "text/html; charset=utf-8"},
+    )
+    result = await client.get_daily_water_quality("rossdale")
+    assert result.readings[-1].total_hardness is None
+    assert result.provenance.as_of is not None
+    assert result.provenance.as_of.date() == result.readings[-2].date
 
 
 async def test_els_plant_uses_els_zone(httpx_mock):

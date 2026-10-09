@@ -31,7 +31,9 @@ async def earthquakes_search(
     Use for: recent or historical earthquakes by date range (YYYY-MM-DD,
     default the last 30 days), magnitude, distance from a point
     (latitude, longitude, radius_km, e.g. near Vancouver), or a
-    [west, south, east, north] bbox. Pass event_id alone for one event.
+    [west, south, east, north] bbox. Pass event_id alone, as the event's UTC
+    minute (YYYYMMDD.HHmm, the lookup_id of each result), for the events in
+    that minute.
     Results are most recent first, with time (UTC), location, depth
     and magnitude; the newest `limit` come back, with has_more true (and
     total_matches null) when more match. Use nrcan_geo_locate to turn a

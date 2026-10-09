@@ -148,8 +148,16 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
         f"epcor:daily:{plant}", constants.CACHE_TTL_DAILY_SECONDS, fetch
     )
     readings = parse_daily_page(page, today, lang=lang)
-    # The newest day the page reports (OCT-02 on 2026-10-03), at local midnight.
-    days = [r.date for r in readings if r.date is not None]
+    # The newest day with at least one value, at local midnight. The page lists
+    # today's row before anything is published (OCT-07 was blank for both plants on
+    # 2026-10-08) and Rossdale's pH and chlorine lag a few days, so the newest row
+    # alone is not a data date.
+    days = [
+        r.date
+        for r in readings
+        if r.date is not None
+        and any(getattr(r, field) is not None for field, _unit in constants.MEASURES.values())
+    ]
     as_of = (
         datetime.combine(max(days), time(), tzinfo=ZoneInfo(constants.TIMEZONE)) if days else None
     )

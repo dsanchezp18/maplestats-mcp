@@ -108,3 +108,5 @@ pythonVersion = "3.12"
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
+# chat/ is a separate project with its own dependencies (chat/pyproject.toml).
+include = ["src", "tests", "scripts", "conftest.py"]

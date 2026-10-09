@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MapleStats Chat</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --fg: #1d1b19; --muted: #6b665f; --line: #e3dfd8;
+    --card: #ffffff; --accent: #c8102e; --user: #f3ece6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141312; --fg: #ece8e2; --muted: #9a948b; --line: #2e2b28;
+      --card: #1c1a18; --accent: #ef4a63; --user: #26211d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 1.35rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chips button {
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit;
+    font-size: .9rem;
+  }
+  .chips button:hover { border-color: var(--accent); }
+  .msg { margin: 14px 0; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--card); overflow-x: auto; }
+  .msg.user { background: var(--user); }
+  .msg p:first-child { margin-top: 0; } .msg p:last-child { margin-bottom: 0; }
+  .msg table { border-collapse: collapse; font-size: .92rem; }
+  .msg th, .msg td { border: 1px solid var(--line); padding: 4px 8px; }
+  details { margin-top: 10px; color: var(--muted); font-size: .85rem; }
+  details code { display: block; white-space: pre-wrap; word-break: break-all; }
+  .err { color: var(--accent); }
+  form {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg);
+    border-top: 1px solid var(--line); padding: 12px 16px;
+  }
+  .row { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; }
+  input {
+    flex: 1; padding: 10px 12px; font: inherit; color: var(--fg);
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .send {
+    padding: 10px 16px; font: inherit; border: 0; border-radius: 8px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .send:disabled { opacity: .5; cursor: wait; }
+  .note { max-width: 760px; margin: 6px auto 0; color: var(--muted); font-size: .8rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MapleStats Chat</h1>
+  <p class="sub">Ask about Canadian open data. A small, cheap model looks the answer up
+    live through the MapleStats MCP server, and shows you which tools it called.</p>
+  <div class="chips" id="chips"></div>
+  <div id="log"></div>
+</main>
+<form id="form">
+  <div class="row">
+    <input id="box" autocomplete="off" maxlength="1000"
+      placeholder="Ask a question, in English or French">
+    <button class="send" id="send">Ask</button>
+  </div>
+  <div class="note">Demo only: answers can be wrong, so check the source it names.
+    Questions are sent to the model provider.</div>
+</form>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+  const examples = [
+    "What is Canada's unemployment rate right now?",
+    "Compare the population of Alberta and British Columbia",
+    "Quel est le taux d'inflation au Canada?",
+    "What were Canada's top exports to the US last year?",
+  ];
+  const log = document.getElementById("log");
+  const box = document.getElementById("box");
+  const send = document.getElementById("send");
+  const history = [];
+
+  for (const text of examples) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = text;
+    b.onclick = () => { box.value = text; ask(); };
+    document.getElementById("chips").appendChild(b);
+  }
+
+  function add(role, html) {
+    const div = document.createElement("div");
+    div.className = "msg " + role;
+    div.innerHTML = html;
+    log.appendChild(div);
+    div.scrollIntoView({ block: "end" });
+    return div;
+  }
+
+  const escapeText = (s) => { const d = document.createElement("div");
+    d.textContent = s; return d.innerHTML; };
+
+  async function ask() {
+    const text = box.value.trim();
+    if (!text) return;
+    box.value = ""; send.disabled = true;
+    history.push({ role: "user", content: text });
+    add("user", "<p>" + escapeText(text) + "</p>");
+    const pending = add("bot", "<p>Looking it up. The first question can take up to a minute while the data server wakes.</p>");
+    try {
+      const res = await fetch("api/chat", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: history }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      history.push({ role: "assistant", content: data.answer });
+      let html = DOMPurify.sanitize(marked.parse(data.answer || "(no answer)"));
+      if (data.tools_used.length) {
+        html += "<details><summary>" + data.tools_used.length +
+          " tool call(s)</summary>" + data.tools_used.map((t) =>
+          "<code>" + escapeText(t.name + " " + JSON.stringify(t.arguments)) +
+          "</code>").join("") + "</details>";
+      }
+      pending.innerHTML = html;
+    } catch (err) {
+      history.pop();
+      pending.innerHTML = '<p class="err">' + escapeText(err.message) + "</p>";
+    } finally {
+      send.disabled = false; box.focus();
+    }
+  }
+  document.getElementById("form").onsubmit = (e) => { e.preventDefault(); ask(); };
+</script>
+</body>
+</html>

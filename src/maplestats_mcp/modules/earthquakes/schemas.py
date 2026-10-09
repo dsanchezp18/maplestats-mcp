@@ -11,6 +11,14 @@ from maplestats_mcp.shared.models import Provenance
 
 class Earthquake(BaseModel):
     event_id: str
+    lookup_id: str | None = Field(
+        default=None,
+        description=(
+            "UTC minute of the event as YYYYMMDD.HHmm. The service looks up one event "
+            "only by this form (it rejects event_id values like 'ca2026sykh'); pass it "
+            "as event_id to earthquakes_search to get every event in that minute."
+        ),
+    )
     time: datetime | None = None
     latitude: float | None = None
     longitude: float | None = None

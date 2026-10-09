@@ -25,6 +25,9 @@ async def epcor_get_daily_water_quality(
     the university area) or "rossdale" (mainly downtown, east,
     northeast, southeast). EPCOR marks these as unvalidated monitoring
     values; EPCOR's verified figures are in its monthly reports (PDF).
+    The newest days can be blank or partly filled (today's row is listed
+    before it is published; Rossdale's pH and chlorine lag a few days),
+    and provenance.as_of is the newest day with at least one value.
     Use for: how hard is Edmonton tap water, chlorine levels, recent
     water temperature or pH in Edmonton.
     Keywords: Edmonton, EPCOR, drinking water, water quality, hardness,

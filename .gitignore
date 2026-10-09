@@ -12,3 +12,6 @@ build/
 data/
 
 .claude/
+
+# Local secrets (chat demo API key)
+.env

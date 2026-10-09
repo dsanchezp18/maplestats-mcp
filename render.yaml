@@ -45,3 +45,24 @@ services:
       # PUMF and IP Horizons cache directories) at it.
       # MAPLE_ALLOWED_ORIGINS is left unset: browser clients from the project
       # website and localhost may call /mcp; other browser origins get 403.
+
+  # Chat demo (chat/): holds the model API key and calls the public MCP above.
+  # Set CHAT_API_KEY in the Render dashboard; never commit it.
+  - type: web
+    name: maplestats-chat
+    runtime: docker
+    dockerfilePath: ./chat/Dockerfile
+    dockerContext: ./chat
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: CHAT_PROVIDER
+        value: anthropic
+      - key: CHAT_MODEL
+        value: claude-haiku-5-5
+      - key: CHAT_API_KEY
+        sync: false
+      - key: CHAT_RATE_PER_HOUR
+        value: "20"
+      - key: CHAT_DAILY_LIMIT
+        value: "500"
