@@ -66,3 +66,25 @@ def test_unwraps_call_tool():
         "call_tool", {"name": "wds_get_series_info", "arguments": {"v": 1}}
     )
     assert call == {"name": "wds_get_series_info", "arguments": {"v": 1}}
+
+
+class Block:
+    def __init__(self, type, text=""):
+        self.type = type
+        self.text = text
+
+
+def test_final_text_drops_narration_before_tools():
+    content = [
+        Block("text", "I'll check whether the tool can aggregate."),
+        Block("mcp_tool_use"),
+        Block("mcp_tool_result"),
+        Block("text", "Crude oil was the largest export."),
+    ]
+    assert chat_app.final_text(content) == "Crude oil was the largest export."
+
+
+def test_final_text_without_tools_keeps_everything():
+    assert chat_app.final_text([Block("text", "Hello"), Block("text", " there")]) == (
+        "Hello there"
+    )

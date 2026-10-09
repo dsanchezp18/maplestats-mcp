@@ -60,9 +60,17 @@ SYSTEM_PROMPT = (
     "agencies and other federal sources) using the MapleStats tools.\n"
     "- For any data question, call plan_query first, then follow its plan with "
     "search_tools and call_tool. Never answer a numeric question from memory.\n"
+    "- For rankings, totals and 'top N' questions, first call search_tools with "
+    "the words 'top' or 'ranking' plus the topic, and use a purpose-built tool "
+    "(for example cimt_get_top_commodities for trade) instead of a raw-row tool. "
+    "If a result says it was truncated or returned only part of the rows, never "
+    "rank, total or compare from it: call a tool that aggregates, or say plainly "
+    "that you could not get the full result.\n"
     "- Quote the figures the tools returned, with the reference period and the "
     "source table or agency. If a tool fails or returns nothing, say so; do not "
     "guess.\n"
+    "- Write only the final answer. Do not narrate your steps or mention tools "
+    "you are about to try.\n"
     "- Answer in the user's language (English or French), briefly. Use a small "
     "table when comparing several values."
 )
@@ -127,6 +135,22 @@ def parse_arguments(raw: str) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def final_text(content: list[Any]) -> str:
+    """Return only the text written after the last tool block.
+
+    Text before a tool call is the model thinking aloud ("I'll check whether...");
+    joining it with the real answer showed visitors a conclusion next to a
+    half-finished plan.
+    """
+    last_tool = max(
+        (i for i, block in enumerate(content) if block.type.startswith("mcp_tool")),
+        default=-1,
+    )
+    return "".join(
+        block.text for block in content[last_tool + 1 :] if block.type == "text"
+    ).strip()
+
+
 async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Let Anthropic's MCP connector call the public MapleStats server."""
     client = AsyncAnthropic(api_key=API_KEY or None)
@@ -152,8 +176,7 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
             break
         conversation.append({"role": "assistant", "content": response.content})
 
-    answer = "".join(block.text for block in response.content if block.type == "text")
-    return {"answer": answer, "tools_used": tools_used}
+    return {"answer": final_text(response.content), "tools_used": tools_used}
 
 
 _openai_tools: list[dict[str, Any]] = []
