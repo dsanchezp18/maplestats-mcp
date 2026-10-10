@@ -88,3 +88,71 @@ def test_final_text_without_tools_keeps_everything():
     assert chat_app.final_text([Block("text", "Hello"), Block("text", " there")]) == (
         "Hello there"
     )
+
+
+def test_follow_up_accepts_a_long_assistant_reply():
+    messages = [
+        {"role": "user", "content": "GDP?"},
+        {"role": "assistant", "content": "a" * 5000},
+        {"role": "user", "content": "Why?"},
+    ]
+    assert post(TestClient(chat_app.app), messages).status_code == 200
+
+
+def test_unlimited_assistant_history_is_rejected():
+    messages = [{"role": "assistant", "content": "a" * 1000}] * 10000
+    messages.append({"role": "user", "content": "GDP?"})
+    assert isinstance(chat_app.validate_messages({"messages": messages}), str)
+
+
+def test_messages_must_alternate():
+    messages = [{"role": "user", "content": "GDP?"}] * 2
+    assert post(TestClient(chat_app.app), messages).status_code == 400
+
+
+def test_total_conversation_size_is_bounded(monkeypatch):
+    monkeypatch.setattr(chat_app, "MAX_CONVERSATION_CHARS", 12)
+    messages = [
+        {"role": "user", "content": "GDP?"},
+        {"role": "assistant", "content": "long answer"},
+        {"role": "user", "content": "Why?"},
+    ]
+    assert post(TestClient(chat_app.app), messages).status_code == 400
+    assert chat_app._daily_count["n"] == 0
+
+
+def test_declared_body_limit_applies_before_model_call(monkeypatch):
+    monkeypatch.setattr(chat_app, "MAX_BODY_BYTES", 32)
+    response = post(TestClient(chat_app.app), [{"role": "user", "content": "x" * 200}])
+    assert response.status_code == 413
+    assert chat_app._daily_count["n"] == 0
+
+
+def test_streamed_body_without_length_is_bounded(monkeypatch):
+    monkeypatch.setattr(chat_app, "MAX_BODY_BYTES", 32)
+    response = TestClient(chat_app.app).post(
+        "/api/chat",
+        content=iter([b"x" * 20, b"y" * 20]),
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 413
+    assert chat_app._daily_count["n"] == 0
+
+
+def test_own_answers_stay_within_history_limit(monkeypatch):
+    monkeypatch.setattr(chat_app, "MAX_ASSISTANT_CHARS", 1200)
+
+    async def long_answer(messages):
+        return {"answer": "a" * 3000, "tools_used": []}
+
+    monkeypatch.setattr(chat_app, "ask_model", long_answer)
+    client = TestClient(chat_app.app)
+    messages = [{"role": "user", "content": "GDP?"}]
+    first = post(client, messages)
+    assert first.status_code == 200
+    assert len(first.json()["answer"]) == 1200
+    messages += [
+        {"role": "assistant", "content": first.json()["answer"]},
+        {"role": "user", "content": "Why?"},
+    ]
+    assert post(client, messages).status_code == 200

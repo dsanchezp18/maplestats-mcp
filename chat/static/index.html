@@ -108,7 +108,7 @@
 
   async function ask() {
     const text = box.value.trim();
-    if (!text) return;
+    if (!text || send.disabled) return;
     box.value = ""; send.disabled = true;
     history.push({ role: "user", content: text });
     add("user", "<p>" + escapeText(text) + "</p>");

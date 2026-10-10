@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Privacy policy{fr}Politique de confidentialité{/} · MapleStats MCP</title>
+<meta name="description" content="{en}What the hosted MapleStats MCP server receives, what it keeps, who else sees a request, and how to reach the maintainer.{fr}Ce que le serveur MapleStats MCP hébergé reçoit, ce qu'il conserve, qui d'autre voit une requête et comment joindre le responsable.{/}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Privacy policy{fr}Politique de confidentialité{/}</p>
+  <h1>{en}Privacy policy{fr}Politique de confidentialité{/}</h1>
+  <p class="lede">{en}MapleStats MCP has no accounts. Requests are processed using the data handling described below. This page covers the hosted endpoint at <code>https://maplestats-mcp.onrender.com/mcp</code>. Last updated 9 October 2026.{fr}MapleStats MCP n'a aucun compte. Les requêtes sont traitées selon les pratiques décrites ci-dessous. Cette page porte sur le point d'accès hébergé à l'adresse <code>https://maplestats-mcp.onrender.com/mcp</code>. Dernière mise à jour : 9 octobre 2026.{/}</p>
+</section>
+
+<section class="wrap faq" id="policy">
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Data we collect{fr}Données recueillies{/}</h2>
+    <p>{en}The server asks for no sign-in. It receives a network address and the arguments sent with each tool call. To answer a request it receives the tool name and arguments your AI assistant sends, such as a search phrase, a table number or a city name. It does not automatically receive your full conversation, but arguments can contain text from it. The data it returns comes from public sources.{fr}Le serveur ne demande aucune connexion. Il reçoit une adresse réseau et les arguments envoyés avec chaque appel d'outil. Pour répondre à une requête, il reçoit le nom de l'outil et les arguments que votre assistant IA envoie, comme une expression de recherche, un numéro de tableau ou le nom d'une ville. Il ne reçoit pas automatiquement toute votre conversation, mais les arguments peuvent en contenir des passages. Les données qu'il renvoie viennent de sources publiques.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}How the data is used and stored{fr}Utilisation et conservation{/}</h2>
+    <ul>
+      <li>{en}Tool arguments are used to run the request. Tool failure logs omit argument values and exception text. HTTP access logs can include the network address, method, path and status of a request.{fr}Les arguments servent à exécuter la requête. Les journaux d'erreurs des outils omettent les valeurs des arguments et le texte des exceptions. Les journaux d'accès HTTP peuvent inclure l'adresse réseau, la méthode, le chemin et l'état d'une requête.{/}</li>
+      <li>{en}A count of tool runs is kept in memory by tool name, day and success or failure, and is public at <code>/stats</code>. It holds no arguments, no client addresses and nothing that identifies a person. It resets when the server restarts.{fr}Un compte des exécutions est gardé en mémoire par nom d'outil, par jour et selon la réussite ou l'échec, et il est public à <code>/stats</code>. Il ne contient ni arguments, ni adresses de clients, ni rien qui identifie une personne. Il repart à zéro au redémarrage du serveur.{/}</li>
+      <li>{en}A client's network address is held in memory to apply the rate limit (60 requests a minute). Entries with no requests in the last minute are removed when another client makes a request; they can remain longer while the server is idle.{fr}L'adresse réseau d'un client est gardée en mémoire pour appliquer la limite de débit (60 requêtes par minute). Les entrées sans requête depuis une minute sont supprimées lors d'une requête d'un autre client; elles peuvent rester plus longtemps si le serveur est inactif.{/}</li>
+      <li>{en}Recent responses from the public sources are cached in memory to save time. The cache can include search phrases and filters in its keys or responses. Entries expire or are removed as space is needed, and the in-memory cache disappears when the server stops. Public source files can also be cached on temporary disk until removed or cleared by the host.{fr}Les réponses récentes des sources publiques sont gardées en mémoire cache pour gagner du temps. Les clés ou les réponses du cache peuvent contenir des expressions de recherche et des filtres. Les entrées expirent ou sont supprimées selon l'espace disponible, et le cache en mémoire disparaît à l'arrêt du serveur. Des fichiers de sources publiques peuvent aussi être gardés sur un disque temporaire jusqu'à leur suppression ou au nettoyage par l'hébergeur.{/}</li>
+    </ul>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Retention{fr}Durée de conservation{/}</h2>
+    <p>{en}The in-memory items above last until expiry, cleanup or the end of the server process. Public source files can remain on temporary disk. HTTP access logs are retained under the host's practices. Files that a tool returns, such as an Excel workbook, are sent to you in the response and are not kept.{fr}Les éléments en mémoire décrits plus haut restent jusqu'à leur expiration, leur nettoyage ou la fin du processus du serveur. Des fichiers de sources publiques peuvent rester sur le disque temporaire. Les journaux d'accès HTTP sont conservés selon les pratiques de l'hébergeur. Les fichiers qu'un outil renvoie, comme un classeur Excel, vous sont envoyés dans la réponse et ne sont pas conservés.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Who else sees a request{fr}Qui d'autre voit une requête{/}</h2>
+    <ul>
+      <li>{en}<b>The publisher of the data.</b> To run a tool, the server sends a request to the publisher's service, such as Statistics Canada, the Bank of Canada or a city's open-data portal. The publisher sees that request and the server's address, not yours, under its own terms.{fr}<b>L'éditeur des données.</b> Pour exécuter un outil, le serveur envoie une requête au service de l'éditeur, comme Statistique Canada, la Banque du Canada ou le portail de données ouvertes d'une ville. L'éditeur voit cette requête et l'adresse du serveur, non la vôtre, selon ses propres conditions.{/}</li>
+      <li>{en}<b>The host.</b> The endpoint runs on Render, which keeps its own request logs under its <a href="https://render.com/privacy">privacy policy</a> and <a href="https://render.com/terms">terms</a>.{fr}<b>L'hébergeur.</b> Le point d'accès fonctionne sur Render, qui tient ses propres journaux de requêtes selon sa <a href="https://render.com/privacy">politique de confidentialité</a> et ses <a href="https://render.com/terms">conditions</a>.{/}</li>
+      <li>{en}<b>Your AI assistant.</b> Claude or any other client handles your conversation under its own privacy policy. MapleStats receives only what the client includes in tool calls.{fr}<b>Votre assistant IA.</b> Claude ou tout autre client traite votre conversation selon sa propre politique de confidentialité. MapleStats reçoit uniquement ce que le client inclut dans les appels d'outils.{/}</li>
+    </ul>
+    <p>{en}MapleStats does not sell data, share it with advertisers, run analytics or tracking services, or use requests to train models.{fr}MapleStats ne vend aucune donnée, ne la partage avec aucun annonceur, n'utilise aucun service d'analytique ou de suivi et n'emploie pas les requêtes pour entraîner des modèles.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Keeping everything on your machine{fr}Tout garder sur votre machine{/}</h2>
+    <p>{en}MapleStats is open source. If you run it <a href="{{root}}connect.html#by-hand">locally</a>, nothing reaches the hosted server, and the only outside requests are those to the publishers.{fr}MapleStats est un logiciel libre. Si vous l'<a href="{{root}}connect.html#by-hand">exécutez en local</a>, rien n'atteint le serveur hébergé et les seules requêtes externes sont celles envoyées aux éditeurs.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Children{fr}Enfants{/}</h2>
+    <p>{en}The service is not directed at children. The request handling described above applies to all users.{fr}Le service ne s'adresse pas aux enfants. Les pratiques décrites ci-dessus s'appliquent à tous les utilisateurs.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Changes and contact{fr}Modifications et contact{/}</h2>
+    <p>{en}Changes to this policy are published on this page with a new date, and the full history is in the <a href="{{repo}}/commits/main/site/privacy.html">repository</a>. For questions, <a href="{{repo}}/issues">open an issue</a>; for a security problem, use the <a href="{{repo}}/security/advisories/new">private vulnerability report</a>. The maintainer is <a href="{{root}}about.html">Daniel Sánchez Pazmiño</a>.{fr}Les modifications de cette politique sont publiées sur cette page avec une nouvelle date, et l'historique complet se trouve dans le <a href="{{repo}}/commits/main/site/privacy.html">dépôt</a>. Pour une question, <a href="{{repo}}/issues">ouvrez un signalement</a>; pour un problème de sécurité, utilisez le <a href="{{repo}}/security/advisories/new">signalement privé de vulnérabilité</a>. Le responsable est <a href="{{root}}about.html">Daniel Sánchez Pazmiño</a>.{/}</p>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

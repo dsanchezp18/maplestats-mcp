@@ -13,7 +13,7 @@ from maplestats_mcp.shared.usage import MAX_DAYS, STATS, UsageStats
 
 
 def test_counts_by_tool_day_and_outcome() -> None:
-    stats = UsageStats()
+    stats = UsageStats(("boc_get_observations", "wds_search_cubes"))
     stats.record("boc_get_observations", True)
     stats.record("boc_get_observations", False)
     stats.record("wds_search_cubes", True)
@@ -25,7 +25,7 @@ def test_counts_by_tool_day_and_outcome() -> None:
 
 
 def test_caller_text_is_never_stored() -> None:
-    stats = UsageStats()
+    stats = UsageStats(("boc_get_observations", "wds_search_cubes"))
     stats.record("what is my neighbour's income?", True)
     stats.record("x" * 500, True)
     assert list(stats.snapshot()["by_tool"]) == ["other"]
@@ -33,7 +33,7 @@ def test_caller_text_is_never_stored() -> None:
 
 
 def test_old_days_are_dropped() -> None:
-    stats = UsageStats()
+    stats = UsageStats(("boc_get_observations", "wds_search_cubes"))
     for n in range(100):
         stats.days[f"2020-01-01-{n:03d}"] = Counter({True: 1})
     stats.record("boc_get_observations", True)
@@ -65,3 +65,18 @@ async def test_stats_route_serves_the_snapshot() -> None:
     await app({"type": "http", "path": "/stats", "method": "GET"}, receive, send)
     assert sent[0]["status"] == 200
     assert json.loads(sent[1]["body"]) == {"calls": 7}
+
+
+async def test_unknown_tool_name_is_never_published():
+    marker = "private_identifier_in_unknown_tool"
+    async with Client(mcp) as client:
+        await client.call_tool("call_tool", {"name": marker, "arguments": {}}, raise_on_error=False)
+    assert marker not in json.dumps(STATS.snapshot())
+    assert "other" in STATS.snapshot()["by_tool"]
+
+
+def test_names_with_valid_spelling_still_need_registration():
+    stats = UsageStats(("boc_get_observations",))
+    for n in range(100):
+        stats.record(f"private_name_{n}", False)
+    assert stats.snapshot()["by_tool"] == {"other": {"ok": 0, "error": 100}}

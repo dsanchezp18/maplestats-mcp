@@ -75,7 +75,8 @@ async def reproduce_workbook(
     source URL, dates, licence and attribution. lang sets the labels
     (English or French). A hosted server returns the file as base64
     (decode it and save it as file_name), so keep max_rows small (default
-    2,000, at most 20,000; the file is capped at 2 MB); a local server
+    2,000, at most 20,000; at most 256 columns, 200,000 cells and
+    8 million text characters; the file is capped at 2 MB); a local server
     saves it to your Downloads folder (or MAPLE_EXPORT_DIR) instead. For
     a refreshable query over the full data, use reproduce_code with
     language "excel".

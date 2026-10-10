@@ -29,6 +29,7 @@ from mcp.types import Icon, ToolAnnotations
 from maplestats_mcp import __version__, config
 from maplestats_mcp.shared import search
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
+from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware
 from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
@@ -36,8 +37,8 @@ from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationE
 MODULES_ROOT = Path(__file__).parent / "modules"
 _COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
 
-# Every tool only reads public data, so the MCP behaviour hints are the
-# same everywhere and set once here rather than on each @tool. Modules in
+# Data tools read public sources. The workbook export can save a local file;
+# its own annotations and the call_tool wrapper describe that exception. Modules in
 # _LOCAL_MODULES compute from bundled metadata without calling a source,
 # so they are not open-world.
 _LOCAL_MODULES = frozenset({"planner"})
@@ -49,6 +50,16 @@ def _read_only_annotations(open_world: bool) -> ToolAnnotations:
         destructive_hint=False,
         idempotent_hint=True,
         open_world_hint=open_world,
+    )
+
+
+def _export_annotations() -> ToolAnnotations:
+    local_exports = config.get_transport() == "stdio"
+    return ToolAnnotations(
+        read_only_hint=not local_exports,
+        destructive_hint=local_exports,
+        idempotent_hint=not local_exports,
+        open_world_hint=True,
     )
 
 
@@ -77,8 +88,12 @@ class ModuleProvider(FileSystemProvider):
         for file_path in files:
             module = import_module_from_file(file_path, provider_root=self._root)
             for component in extract_components(module):
-                if isinstance(component, Tool) and component.annotations is None:
-                    component.annotations = annotations
+                if isinstance(component, Tool):
+                    STATS.register_tools((component.name,))
+                    if component.name == "reproduce_workbook":
+                        component.annotations = _export_annotations()
+                    elif component.annotations is None:
+                        component.annotations = annotations
                 # Directories such as Claude's require a human-readable title.
                 if isinstance(component, Tool) and component.title is None:
                     component.title = component.name.replace("_", " ").capitalize()
@@ -87,8 +102,7 @@ class ModuleProvider(FileSystemProvider):
 
 
 class AnnotatedBM25SearchTransform(BM25SearchTransform):
-    """BM25 search whose synthetic search_tools/call_tool carry the same
-    read-only hints as the module tools (call_tool can only reach them)."""
+    """Search is read-only; call_tool also reaches the local workbook export."""
 
     def _make_search_tool(self) -> Tool:
         search_tool = super()._make_search_tool()
@@ -106,7 +120,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
 
     def _make_call_tool(self) -> Tool:
         call_tool = super()._make_call_tool()
-        call_tool.annotations = _read_only_annotations(open_world=True)
+        call_tool.annotations = _export_annotations()
         call_tool.title = "Call a tool"
         call_tool.description = _CALL_TOOL_DESCRIPTION
         _describe_param(
@@ -147,9 +161,9 @@ _CALL_TOOL_DESCRIPTION = """\
 Run one data tool found through search_tools or plan_query.
 
 Use for: executing a tool by exact name with arguments that match the
-inputSchema search_tools returned for it. Every reachable tool is
-read-only: it fetches public data from the upstream agency (StatCan,
-Bank of Canada, open-data portals) and changes nothing. Returns that
+inputSchema search_tools returned for it. Data tools read public sources
+(StatCan, Bank of Canada, open-data portals). reproduce_workbook can save
+an Excel file on a local stdio server; hosted exports return base64. Returns that
 tool's typed result, including a provenance block (source, URL, query
 time, freshness).
 Errors come back as MCP tool errors, not as data: an unknown or
@@ -377,6 +391,8 @@ def _build_module_catalogue() -> str:
 
 
 def build_server() -> FastMCP:
+    configure_private_logs()
+    STATS.register_tools(("search_tools", "call_tool", "plan_query"))
     search.install()
     icon_png = (Path(__file__).parent / "assets" / "favicon.png").read_bytes()
     icon = Icon(

@@ -40,10 +40,14 @@ from typing import Any, Literal
 from maplestats_mcp.modules.reproduce.schemas import ExcelWorkbook
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.executor import check_deadline, run_parse
 from maplestats_mcp.shared.i18n import NBSP, french_text, normalize_lang
 
 MAX_ROWS = 20_000
 DEFAULT_ROWS = 2_000
+MAX_COLUMNS = 256
+MAX_CELLS = 200_000
+MAX_TEXT_CHARS = 8_000_000
 # The workbook file; base64 adds a third, and the client sees it twice.
 MAX_BYTES = 2_000_000
 MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -105,6 +109,10 @@ LABELS: dict[str, dict[str, str]] = {
         "max_rows": "max_rows must be between 1 and {limit}, got {got}.",
         "no_call": "Pass tool_name (and its arguments), or the rows to write.",
         "not_data": "{tool} does not return data rows to write to a workbook.",
+        "too_wide": (
+            "The workbook exceeds {columns} columns, {cells} cells or 8 million text "
+            "characters. Select fewer columns or rows."
+        ),
         "delivery": "delivery must be 'auto', 'base64' or 'file'.",
         "hosted": "This is a hosted server: it cannot write to your disk. Use delivery='base64'.",
         "rows_shape": "rows must be a list of objects, one per row.",
@@ -177,6 +185,10 @@ LABELS: dict[str, dict[str, str]] = {
         "max_rows": "max_rows doit être compris entre 1 et {limit}; valeur reçue : {got}.",
         "no_call": "Indiquez tool_name (et ses arguments), ou les lignes à écrire.",
         "not_data": "{tool} ne renvoie pas de lignes de données à écrire dans un classeur.",
+        "too_wide": (
+            "Le classeur dépasse {columns} colonnes, {cells} cellules ou 8 millions de "
+            "caractères. Choisissez moins de colonnes ou de lignes."
+        ),
         "delivery": "delivery doit valoir 'auto', 'base64' ou 'file'.",
         "hosted": (
             "Ce serveur est hébergé : il ne peut pas écrire sur votre disque. Utilisez "
@@ -263,6 +275,7 @@ def _record_lists(payload: Any) -> list[list[dict[str, Any]]]:
 
 def _flatten(record: dict[str, Any], prefix: str = "") -> dict[str, Any]:
     """Nested objects become dotted names; lists become text."""
+    check_deadline()
     flat: dict[str, Any] = {}
     for key, value in record.items():
         if key == "provenance":
@@ -335,11 +348,15 @@ def clean_name(name: str) -> str:
 def clean_names(names: list[str]) -> list[str]:
     """janitor's clean_names: snake_case, and names that clean alike numbered."""
     cleaned = [clean_name(n) for n in names]
-    counts: dict[str, int] = {}
+    taken: set[str] = set()
     out = []
     for name in cleaned:
-        counts[name] = counts.get(name, 0) + 1
-        out.append(name if counts[name] == 1 else f"{name}_{counts[name]}")
+        candidate, suffix = name, 2
+        while candidate in taken:
+            candidate = f"{name}_{suffix}"
+            suffix += 1
+        taken.add(candidate)
+        out.append(candidate)
     return out
 
 
@@ -354,10 +371,11 @@ def _convert(text: str) -> Any:
         # A code such as "01" or "0042" keeps its leading zeros.
         if len(text) > 1 and text[0] == "0" and text[1] != ".":
             return text
+        # Excel preserves at most 15 significant digits; long codes must stay text.
+        if re.fullmatch(r"[-+]?\d+", text):
+            return text if len(text.lstrip("-+")) > 15 else int(text)
         number = float(text)
-        if not math.isfinite(number):
-            return text
-        return int(number) if re.fullmatch(r"[-+]?\d+", text) else number
+        return number if math.isfinite(number) else text
     if _DATE.fullmatch(text):
         try:
             return date.fromisoformat(text)
@@ -373,15 +391,27 @@ def _convert(text: str) -> Any:
     return text
 
 
-def clean_rows(rows: list[dict[str, Any]]) -> tuple[list[str], list[list[Any]]]:
+def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str], list[list[Any]]]:
     """Column names and cleaned values; a column converts only if all its values do."""
     columns: list[str] = []
+    seen: set[str] = set()
+    text_chars = 0
     for row in rows:
-        for key in row:
-            if key not in columns:
+        check_deadline()
+        for key, value in row.items():
+            if key not in seen:
+                seen.add(key)
                 columns.append(key)
+            text_chars += len(value) if isinstance(value, str) else 0
+            if (
+                len(columns) > MAX_COLUMNS
+                or len(columns) * len(rows) > MAX_CELLS
+                or text_chars > MAX_TEXT_CHARS
+            ):
+                raise InvalidInput(_say(lang, "too_wide", columns=MAX_COLUMNS, cells=MAX_CELLS))
     table: list[list[Any]] = []
     for row in rows:
+        check_deadline()
         values = []
         for column in columns:
             value = row.get(column)
@@ -389,9 +419,14 @@ def clean_rows(rows: list[dict[str, Any]]) -> tuple[list[str], list[list[Any]]]:
                 value = value.strip() or None
             elif isinstance(value, float) and not math.isfinite(value):
                 value = None
+            elif (
+                isinstance(value, int) and not isinstance(value, bool) and len(str(abs(value))) > 15
+            ):
+                value = str(value)
             values.append(value)
         table.append(values)
     for index in range(len(columns)):
+        check_deadline()
         texts = [r[index] for r in table if isinstance(r[index], str)]
         if not texts:
             continue
@@ -484,9 +519,11 @@ def _write_table(ws: Any, header: list[str], rows: list[list[Any]], table_name: 
     for cell in ws[1]:
         cell.font = Font(bold=True)
     for row in rows:
+        check_deadline()
         ws.append([_cell_value(v) for v in row])
     kinds = []
     for index, name in enumerate(header, start=1):
+        check_deadline()
         values = [row[index - 1] for row in rows]
         kind = _column_kind(name, values)
         kinds.append(kind)
@@ -639,7 +676,7 @@ def build_workbook(
     from openpyxl import Workbook
 
     labels = _labels(lang)
-    header, table = clean_rows(rows)
+    header, table = clean_rows(rows, lang)
     wb = Workbook()
     taken: set[str] = set()
     data_ws = wb.worksheets[0]
@@ -685,7 +722,9 @@ def build_workbook(
     wb.properties.title = title
     wb.properties.creator = "MapleStats MCP"
     buffer = io.BytesIO()
+    check_deadline()
     wb.save(buffer)
+    check_deadline()
     return buffer.getvalue(), wb.sheetnames, chart
 
 
@@ -729,17 +768,19 @@ async def export(
     if rows is None:
         payload = await _call(str(tool_name), arguments or {}, lang)
         provenance = payload_provenance(payload)
-        records = rows_from_payload(payload)
+        records = await run_parse(rows_from_payload, payload)
+        available = len(records)
     else:
         if not all(isinstance(row, dict) for row in rows):
             raise InvalidInput(_say(lang, "rows_shape"))
-        records = [_flatten(row) for row in rows]
+        available = len(rows)
+        records = await run_parse(lambda: [_flatten(row) for row in rows[:max_rows]])
     if not records:
         what = tool_name or _labels(lang)["the_rows"]
         raise NotFound(_say(lang, "no_rows", what=what))
-    available = len(records)
     title = (title or tool_name or _labels(lang)["default_title"]).strip()[:120]
-    content, sheets, chart = build_workbook(
+    content, sheets, chart = await run_parse(
+        build_workbook,
         records[:max_rows],
         title=title,
         tool=tool_name or "",

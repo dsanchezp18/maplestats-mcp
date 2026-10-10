@@ -11,3 +11,44 @@ def test_http_client_logs_stay_quiet() -> None:
 
     for name in ("httpx", "httpcore"):
         assert logging.getLogger(name).getEffectiveLevel() >= logging.WARNING, name
+
+
+async def test_tool_errors_keep_arguments_in_client_response_only(caplog):
+    from fastmcp import Client
+
+    from maplestats_mcp.server import mcp
+
+    marker = "private_argument_marker"
+    caplog.set_level(logging.WARNING, logger="fastmcp.server.server")
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "call_tool",
+            {"name": "wds_get_cube_metadata", "arguments": {"product_id": marker}},
+            raise_on_error=False,
+        )
+        unknown = await client.call_tool(
+            "call_tool", {"name": marker, "arguments": {}}, raise_on_error=False
+        )
+        invalid = await client.call_tool(
+            "call_tool",
+            {"name": "boc_get_observations", "arguments": {"series_names": marker}},
+            raise_on_error=False,
+        )
+    assert result.is_error and marker in str(result.content)
+    assert unknown.is_error and invalid.is_error
+    assert marker not in caplog.text
+    assert "MCP tool call failed" in caplog.text
+
+
+def test_unexpected_exception_text_is_not_logged(caplog):
+    from maplestats_mcp.shared.private_logs import configure_private_logs
+
+    configure_private_logs()
+    logger = logging.getLogger("fastmcp.server.server")
+    with caplog.at_level(logging.ERROR, logger=logger.name):
+        try:
+            raise RuntimeError("private_exception_marker")
+        except RuntimeError:
+            logger.exception("Error calling tool 'private_tool_marker'")
+    assert "private" not in caplog.text
+    assert "RuntimeError" in caplog.text

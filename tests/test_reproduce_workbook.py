@@ -272,3 +272,77 @@ async def test_french_errors_notes_and_chart(hosted, monkeypatch):
     english = await workbook.export(None, None, rows, "Rows", "en", 10, "base64")
     assert english.notes[0] == "Wrote the first 10 of 1,500 rows (max_rows)."
     assert english.chart is not None and english.chart.startswith("bar chart of montant")
+
+
+async def test_large_identifiers_stay_exact_in_saved_workbook(hosted):
+    rows = [{"code": "9007199254740993"}, {"code": 9007199254740995}]
+    result = await workbook.export(None, None, rows, "Identifiers", "en", 2000, "base64")
+    data = _open(result).worksheets[0]
+    assert data["A2"].value == "9007199254740993"
+    assert data["A3"].value == "9007199254740995"
+    assert data["A2"].data_type == data["A3"].data_type == "s"
+
+
+async def test_headers_remain_unique_when_suffixes_already_exist(hosted):
+    rows = [{"a": 1, "A": 2, "a_2": 3}]
+    result = await workbook.export(None, None, rows, "Columns", "en", 2000, "base64")
+    data = _open(result).worksheets[0]
+    assert [c.value for c in data[1]] == ["a", "a_2", "a_2_2"]
+    assert [c.value for c in data[2]] == [1, 2, 3]
+
+
+async def test_workbook_size_limits_apply_before_writing(hosted, monkeypatch):
+    with pytest.raises(InvalidInput, match="columns"):
+        await workbook.export(
+            None,
+            None,
+            [{f"c{n}": n for n in range(workbook.MAX_COLUMNS + 1)}],
+            None,
+            "en",
+            2000,
+            "base64",
+        )
+    monkeypatch.setattr(workbook, "MAX_CELLS", 4)
+    with pytest.raises(InvalidInput, match="cellules"):
+        await workbook.export(None, None, [{"a": 1, "b": 2}] * 3, None, "fr", 2000, "base64")
+    monkeypatch.setattr(workbook, "MAX_TEXT_CHARS", 3)
+    with pytest.raises(InvalidInput, match="characters"):
+        await workbook.export(None, None, [{"a": "long text"}], None, "en", 2000, "base64")
+
+
+async def test_export_yields_to_the_tool_deadline(hosted, monkeypatch):
+    import threading
+
+    from fastmcp.exceptions import ToolError
+    from fastmcp.server.middleware import MiddlewareContext
+    from mcp.types import CallToolRequestParams
+
+    from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
+
+    started = threading.Event()
+    release = threading.Event()
+    stopped = threading.Event()
+
+    def slow_workbook(*args, **kwargs):
+        started.set()
+        try:
+            release.wait(2)
+            return b"xlsx", ["Data"], None
+        finally:
+            stopped.set()
+
+    monkeypatch.setattr(workbook, "build_workbook", slow_workbook)
+
+    async def export(context):
+        return await workbook.export(None, None, [{"a": 1}], None, "en", 2000, "base64")
+
+    context = MiddlewareContext(
+        message=CallToolRequestParams(name="reproduce_workbook", arguments={})
+    )
+    try:
+        with pytest.raises(ToolError, match="did not finish"):
+            await ToolTimeoutMiddleware(0.1).on_call_tool(context, export)
+        assert started.is_set() and not stopped.is_set()
+    finally:
+        release.set()
+        assert stopped.wait(2)

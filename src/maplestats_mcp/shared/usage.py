@@ -8,17 +8,12 @@ included) starts them again; `/stats` reports the period they cover.
 
 from __future__ import annotations
 
-import re
 from collections import Counter
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
-
-# A tool name is lower-case words and digits. Anything else a client sends in
-# the name field is counted as "other" rather than stored, so the counters
-# cannot be filled with caller-supplied text.
-_TOOL_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
 
 # Days kept; older ones are dropped so the counters stay small.
 MAX_DAYS = 90
@@ -27,13 +22,18 @@ MAX_DAYS = 90
 class UsageStats:
     """Calls per tool and per day, split into succeeded and failed."""
 
-    def __init__(self) -> None:
+    def __init__(self, tool_names: Iterable[str] = ()) -> None:
+        self.tool_names = set(tool_names)
         self.since = datetime.now(UTC)
         self.tools: Counter[tuple[str, bool]] = Counter()
         self.days: dict[str, Counter[bool]] = {}
 
+    def register_tools(self, names: Iterable[str]) -> None:
+        """Accept names from the server registry, never from a request."""
+        self.tool_names.update(names)
+
     def record(self, tool: str, ok: bool) -> None:
-        name = tool if _TOOL_NAME.fullmatch(tool) else "other"
+        name = tool if tool in self.tool_names else "other"
         self.tools[(name, ok)] += 1
         day = datetime.now(UTC).date().isoformat()
         self.days.setdefault(day, Counter())[ok] += 1

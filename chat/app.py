@@ -46,6 +46,9 @@ EFFORT = os.environ.get("CHAT_EFFORT", "low")
 # Limits protect the key's budget: this endpoint is public and every call costs money.
 MAX_USER_TURNS = int(os.environ.get("CHAT_MAX_USER_TURNS", "8"))
 MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS", "1000"))
+MAX_ASSISTANT_CHARS = int(os.environ.get("CHAT_MAX_ASSISTANT_CHARS", "16000"))
+MAX_CONVERSATION_CHARS = int(os.environ.get("CHAT_MAX_CONVERSATION_CHARS", "120000"))
+MAX_BODY_BYTES = int(os.environ.get("CHAT_MAX_BODY_BYTES", "524288"))
 MAX_OUTPUT_TOKENS = int(os.environ.get("CHAT_MAX_OUTPUT_TOKENS", "2000"))
 MAX_TOOL_STEPS = int(os.environ.get("CHAT_MAX_TOOL_STEPS", "8"))
 TOOL_RESULT_CHARS = int(os.environ.get("CHAT_TOOL_RESULT_CHARS", "20000"))
@@ -258,14 +261,23 @@ def validate_messages(payload: Any) -> list[dict[str, str]] | str:
     if not isinstance(raw, list) or not raw:
         return "Send a non-empty 'messages' list."
 
+    if len(raw) > 2 * MAX_USER_TURNS - 1:
+        return "This conversation is long enough. Please start a new one."
     messages: list[dict[str, str]] = []
-    for item in raw:
+    total_chars = 0
+    for index, item in enumerate(raw):
         role = item.get("role") if isinstance(item, dict) else None
         content = item.get("content") if isinstance(item, dict) else None
         if role not in ("user", "assistant") or not isinstance(content, str):
             return "Each message needs a 'role' (user or assistant) and text 'content'."
-        if not content.strip() or len(content) > MAX_MESSAGE_CHARS:
-            return f"Messages must be 1 to {MAX_MESSAGE_CHARS} characters."
+        if role != ("user" if index % 2 == 0 else "assistant"):
+            return "Messages must alternate between user and assistant, starting with user."
+        limit = MAX_MESSAGE_CHARS if role == "user" else MAX_ASSISTANT_CHARS
+        if not content.strip() or len(content) > limit:
+            return f"{role.capitalize()} messages must be 1 to {limit} characters."
+        total_chars += len(content)
+        if total_chars > MAX_CONVERSATION_CHARS:
+            return "This conversation is too large. Please start a new one."
         messages.append({"role": role, "content": content})
 
     if messages[-1]["role"] != "user":
@@ -277,8 +289,21 @@ def validate_messages(payload: Any) -> list[dict[str, str]] | str:
 
 async def chat(request: Request) -> JSONResponse:
     try:
-        payload = await request.json()
-    except ValueError:
+        # Check both declared and streamed sizes: chunked requests have no length header.
+        declared = request.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+            return JSONResponse(
+                {"error": "Request body is too large."}, status_code=413
+            )
+        body = bytearray()
+        async for chunk in request.stream():
+            if len(body) + len(chunk) > MAX_BODY_BYTES:
+                return JSONResponse(
+                    {"error": "Request body is too large."}, status_code=413
+                )
+            body.extend(chunk)
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
         return JSONResponse({"error": "Body must be JSON."}, status_code=400)
 
     messages = validate_messages(payload)
@@ -290,7 +315,15 @@ async def chat(request: Request) -> JSONResponse:
         return JSONResponse({"error": reason}, status_code=429)
 
     try:
-        return JSONResponse(await ask_model(messages))
+        result = await ask_model(messages)
+        # Keep our own answers valid when the browser sends them back on the next turn.
+        answer = str(result.get("answer") or "").strip()
+        if not answer:
+            return JSONResponse(
+                {"error": "The model returned no answer. Try again."}, status_code=502
+            )
+        result["answer"] = answer[:MAX_ASSISTANT_CHARS]
+        return JSONResponse(result)
     except Exception:
         logger.exception("Model backend failed")
         return JSONResponse(

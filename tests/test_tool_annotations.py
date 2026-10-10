@@ -1,4 +1,4 @@
-"""Every tool declares the MCP read-only behaviour hints.
+"""Every tool declares accurate MCP behaviour hints.
 
 Clients and MCP directories use these hints to decide whether a tool
 needs confirmation; a tool registered without them looks potentially
@@ -8,21 +8,19 @@ covered automatically.
 
 from __future__ import annotations
 
-from maplestats_mcp.server import mcp
+from maplestats_mcp import config
+from maplestats_mcp.server import AnnotatedBM25SearchTransform, _export_annotations, mcp
 
 
-async def test_every_module_tool_is_annotated_read_only():
-    tools = await mcp._list_tools()
-    unannotated = sorted(
-        tool.name
-        for tool in tools
-        if tool.annotations is None
-        or tool.annotations.read_only_hint is not True
-        or tool.annotations.destructive_hint is not False
-        or tool.annotations.idempotent_hint is not True
-        or tool.annotations.open_world_hint is None
-    )
-    assert not unannotated, f"tools missing read-only annotations: {unannotated}"
+async def test_every_module_tool_has_accurate_annotations():
+    for tool in await mcp._list_tools():
+        annotations = tool.annotations
+        assert annotations is not None, tool.name
+        writes_file = tool.name == "reproduce_workbook" and config.get_transport() == "stdio"
+        assert annotations.read_only_hint is not writes_file, tool.name
+        assert annotations.destructive_hint is writes_file, tool.name
+        assert annotations.idempotent_hint is not writes_file, tool.name
+        assert annotations.open_world_hint is not None, tool.name
 
 
 async def test_visible_search_tools_are_annotated():
@@ -30,7 +28,9 @@ async def test_visible_search_tools_are_annotated():
     for name in ("search_tools", "call_tool", "plan_query"):
         annotations = visible[name]
         assert annotations is not None, name
-        assert annotations.read_only_hint is True, name
+        assert annotations.read_only_hint is (
+            name != "call_tool" or config.get_transport() != "stdio"
+        ), name
         if name != "call_tool":
             assert annotations.open_world_hint is False, name
 
@@ -40,3 +40,13 @@ async def test_every_tool_has_a_title():
     untitled = sorted(tool.name for tool in await mcp._list_tools() if not tool.title)
     untitled += sorted(tool.name for tool in await mcp.list_tools() if not tool.title)
     assert not untitled, f"tools missing a title: {untitled}"
+
+
+async def test_hosted_exports_and_wrapper_declare_no_file_writes(monkeypatch):
+    monkeypatch.setenv("MAPLE_TRANSPORT", "http")
+    expected = _export_annotations()
+    assert expected.read_only_hint is True
+    assert expected.destructive_hint is False
+    assert expected.idempotent_hint is True
+    transform = AnnotatedBM25SearchTransform()
+    assert transform._make_call_tool().annotations == expected

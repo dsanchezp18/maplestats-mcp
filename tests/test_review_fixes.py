@@ -32,7 +32,7 @@ def test_usage_middleware_wraps_the_timeout_middleware_on_the_real_server() -> N
 
 
 async def test_a_timed_out_call_is_counted_as_an_error() -> None:
-    stats = UsageStats()
+    stats = UsageStats(("slow",))
     server = FastMCP("t")
     server.add_middleware(UsageMiddleware(stats))  # same order as server.py
     server.add_middleware(ToolTimeoutMiddleware(0.05))

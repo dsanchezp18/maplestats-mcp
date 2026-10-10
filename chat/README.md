@@ -36,9 +36,14 @@ page.
 
 The endpoint is public and every call costs money. Defaults, all overridable by
 environment variable: 20 questions per address per hour (`CHAT_RATE_PER_HOUR`), 500
-per day in total (`CHAT_DAILY_LIMIT`), 1,000 characters per message, 8 user turns per
-conversation, 2,000 output tokens, 8 tool steps. Also set a monthly spend limit on
+per day in total (`CHAT_DAILY_LIMIT`), 1,000 characters per user message,
+16,000 per assistant reply, 120,000 per conversation, a 512 KiB request body,
+8 user turns per conversation, 2,000 output tokens, 8 tool steps. Also set a monthly spend limit on
 the provider's dashboard; the in-memory counters reset on every restart.
 
 `CHAT_ALLOWED_ORIGINS` (comma-separated) lets another site call `/api/chat` from a
 browser; leave it unset when the page is served from this service.
+
+Conversation limits can be set with `CHAT_MAX_MESSAGE_CHARS`,
+`CHAT_MAX_ASSISTANT_CHARS`, `CHAT_MAX_CONVERSATION_CHARS` and `CHAT_MAX_BODY_BYTES`.
+Messages must alternate between user and assistant, starting and ending with user.
