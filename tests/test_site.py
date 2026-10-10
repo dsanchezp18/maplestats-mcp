@@ -617,7 +617,7 @@ def test_sitemap_robots_and_not_found_page(built_site: Path):
     robots = (built_site / "robots.txt").read_text(encoding="utf-8")
     assert f"Sitemap: {site.SITE_URL}sitemap.xml" in robots
     missing = (built_site / "404.html").read_text(encoding="utf-8")
-    base = "/"
+    base = urlsplit(site.SITE_URL).path or "/"
     assert f'href="{base}assets/site.css"' in missing
     assert f'href="{base}fr/"' in missing and '<section lang="fr">' in missing
     # Every link and asset is absolute: the page is served at any depth.
@@ -632,6 +632,8 @@ def test_internal_links_resolve(built_site: Path):
     assert spec and spec.loader
     checker = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(checker)
+    # A different copy would class the site's own absolute links as external.
+    assert checker.SITE_URL == site.SITE_URL
     broken, external = checker.scan(built_site)
     assert not broken, "Broken links:\n" + "\n".join(broken[:25])
     assert external  # the scan saw the outside links too

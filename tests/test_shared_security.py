@@ -143,7 +143,7 @@ def _hosted(**security_options):
     return with_cors(secured, allowed_origins=config.DEFAULT_ALLOWED_ORIGINS)
 
 
-_SITE = [(b"origin", b"https://dsanchezp18.github.io")]
+_SITE = [(b"origin", b"https://maplestats.danielstats.io")]
 
 
 async def test_preflight_from_allowed_origin_gets_cors_headers():
@@ -153,7 +153,7 @@ async def test_preflight_from_allowed_origin_gets_cors_headers():
     ]
     status, headers = await _response(_hosted(), _scope("OPTIONS", headers=preflight))
     assert status == 204
-    assert headers[b"access-control-allow-origin"] == b"https://dsanchezp18.github.io"
+    assert headers[b"access-control-allow-origin"] == b"https://maplestats.danielstats.io"
     allow_headers = headers[b"access-control-allow-headers"].lower()
     for name in (b"content-type", b"mcp-session-id", b"mcp-protocol-version", b"authorization"):
         assert name in allow_headers
@@ -198,7 +198,7 @@ async def test_allowed_origin_response_exposes_session_id():
 async def test_error_responses_carry_cors_headers():
     status, headers = await _response(_hosted(auth_token="secret"), _scope(headers=_SITE))
     assert status == 401
-    assert headers[b"access-control-allow-origin"] == b"https://dsanchezp18.github.io"
+    assert headers[b"access-control-allow-origin"] == b"https://maplestats.danielstats.io"
 
 
 def test_origin_patterns():
@@ -232,12 +232,14 @@ def test_hosted_app_answers_preflight_and_rejects_foreign_origin():
         preflight = client.options(
             "/mcp",
             headers={
-                "Origin": "https://dsanchezp18.github.io",
+                "Origin": "https://maplestats.danielstats.io",
                 "Access-Control-Request-Method": "POST",
             },
         )
         assert preflight.status_code == 204
-        assert preflight.headers["access-control-allow-origin"] == ("https://dsanchezp18.github.io")
+        assert preflight.headers["access-control-allow-origin"] == (
+            "https://maplestats.danielstats.io"
+        )
         evil = client.post(
             "/mcp",
             json={"jsonrpc": "2.0", "id": 1, "method": "ping"},

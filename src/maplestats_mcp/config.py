@@ -266,8 +266,6 @@ def get_lode_max_download_bytes(default_mb: float) -> int:
 
 DEFAULT_ALLOWED_ORIGINS = (
     "https://maplestats.danielstats.io",
-    # The site's old GitHub Pages address, which now redirects to the one above.
-    "https://dsanchezp18.github.io",
     "http://localhost:*",
     "https://localhost:*",
     "http://127.0.0.1:*",
