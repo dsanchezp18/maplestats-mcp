@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
@@ -58,6 +59,11 @@ class UsageStats:
         }
 
 
+# True while a counted call runs. reproduce_code and reproduce_workbook call the
+# server again in-process; that inner call is part of the outer one, not a second
+# call by the caller, and the variable reaches it because tasks inherit context.
+_inside_call: ContextVar[bool] = ContextVar("maplestats_usage_inside_call", default=False)
+
 # The process-wide counters the middleware fills and /stats reports.
 STATS = UsageStats()
 
@@ -69,17 +75,22 @@ class UsageMiddleware(Middleware):
         self.stats = stats
 
     async def on_call_tool(self, context: MiddlewareContext, call_next: CallNext) -> Any:
+        if _inside_call.get():
+            return await call_next(context)
         params = context.message
         name = getattr(params, "name", "other")
         arguments = getattr(params, "arguments", None) or {}
         if name == "call_tool" and isinstance(arguments, dict):
             target = arguments.get("name")
             name = target if isinstance(target, str) else "other"
+        token = _inside_call.set(True)
         try:
             result = await call_next(context)
         except Exception:
             self.stats.record(str(name), False)
             raise
+        finally:
+            _inside_call.reset(token)
         # A tool that raises comes back as an error result, not an exception.
         self.stats.record(str(name), not getattr(result, "is_error", False))
         return result

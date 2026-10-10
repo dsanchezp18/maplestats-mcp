@@ -25,9 +25,29 @@ import httpx
 
 from maplestats_mcp.modules.reproduce.spec import Spec
 from maplestats_mcp.shared.http import RecordedRequest, new_client
+from maplestats_mcp.shared.remote_zip import redirect_allowed
 
 _MAX_PROBE_BYTES = 30 * 1024 * 1024
+
+
+class RedirectRefused(httpx.HTTPError):
+    """A replayed request was redirected somewhere other than its own site or a file host."""
+
+
+async def _check_redirect(response: httpx.Response) -> None:
+    # Same rule as shared/remote_zip.py: never to an IP address, localhost or plain http.
+    if not response.is_redirect:
+        return
+    target = response.request.url.join(response.headers.get("location", ""))
+    if not redirect_allowed(response.request.url, target):
+        raise RedirectRefused(f"redirected to {target.host!r}, which is not the same site")
+
+
 _client = new_client(timeout=120.0, follow_redirects=True)
+_client.event_hooks = {
+    "request": _client.event_hooks["request"],
+    "response": [*_client.event_hooks["response"], _check_redirect],
+}
 _SESSION_FIELDS = ("__VIEWSTATE", "__RequestVerificationToken", "__EVENTVALIDATION")
 
 
@@ -167,7 +187,12 @@ def _request_fields(request: RecordedRequest) -> dict[str, Any]:
         fields["headers"] = {"Accept": request.accept}
     if request.method == "POST" and request.body:
         if "json" in request.content_type:
-            fields["post_json"] = json.loads(request.body)
+            try:
+                fields["post_json"] = json.loads(request.body)
+            except ValueError:
+                # A body the source calls JSON but is not (or a streamed, empty one):
+                # keep the bytes as text rather than failing the whole reproduction.
+                fields["post_form"] = dict(parse_qsl(request.body.decode("utf-8", "replace")))
         else:
             fields["post_form"] = dict(parse_qsl(request.body.decode("utf-8", "replace")))
     return fields

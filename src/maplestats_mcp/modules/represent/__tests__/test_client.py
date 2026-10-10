@@ -541,7 +541,7 @@ async def test_postcode_notes_follow_lang_fr(httpx_mock):
     )
     result = await client.lookup_postcode("K2J6B6", sets="federal-electoral-districts", lang="fr")
     assert any("ordonnance de 2013" in n for n in result.notes)
-    assert any("Retirer sets" in n for n in result.notes)
+    assert any("Retirez sets" in n for n in result.notes)
     assert not any("order)" in n or "Drop sets" in n for n in result.notes)
 
 

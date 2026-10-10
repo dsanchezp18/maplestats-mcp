@@ -161,10 +161,10 @@ _GOTCHAS_DOC_FR = """\
   à cette date. Vérifiez les clés de chaque ligne au lieu de supposer
   que chaque série demandée y figure.
 - **Les valeurs d'observation sont des chaînes JSON, pas des nombres**,
-  même pour une série purement numérique. Le ObservationsResult de ce
+  même pour une série purement numérique. L'objet ObservationsResult de ce
   module les convertit déjà en `float | None`, mais il faut le savoir si
   vous comparez avec une réponse brute de Valet.
-- **Le nom des champs diffère entre la réponse d'une série et celle des
+- **Les noms de champs diffèrent entre la réponse d'une série et celle des
   observations.** `/series/{name}/json` utilise `seriesDetails` (pluriel,
   avec un champ `name`) ; `/observations/.../json` utilise `seriesDetail`
   (singulier, indexé par code de série, sans champ `name` dans chaque

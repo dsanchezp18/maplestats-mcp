@@ -19,6 +19,7 @@ from maplestats_mcp.shared.http import (
     _RETRYABLE_STATUSES,
     _request_headers,
     is_retryable,
+    retry_after_seconds,
 )
 
 RETRY_ATTEMPTS = 4
@@ -30,7 +31,9 @@ RETRY_STATUSES = _RETRYABLE_STATUSES
 def retry_delay(response: httpx.Response | None, attempt: int) -> float:
     """Seconds to wait before retry number `attempt` (0-based)."""
     retry_after = response.headers.get("retry-after", "") if response is not None else ""
-    delay = float(retry_after) if retry_after.isdigit() else RETRY_BASE_SECONDS * 2**attempt
+    # The same reading as shared/http.py: whole seconds or an HTTP date.
+    asked = retry_after_seconds(retry_after)
+    delay = asked if asked is not None else RETRY_BASE_SECONDS * 2**attempt
     return min(delay, RETRY_MAX_SECONDS)
 
 

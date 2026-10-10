@@ -74,7 +74,7 @@ async def test_missing_zip_falls_back_to_the_hpi_tool_page(httpx_mock):
     assert result.zip_url is None
     assert result.zip_confirmed is False
     assert "essayez-loutil-ipp-mls" in result.download_from
-    assert result.attribution.startswith("Source : L'Association canadienne de l'immeuble")
+    assert result.attribution.startswith("Source : l'Association canadienne de l'immeuble")
     assert result.provenance.url == result.download_from
     assert "seulement ; publier" in (result.provenance.limits or "")
     assert result.terms_summary[0].startswith("Usage privé et non commercial :")

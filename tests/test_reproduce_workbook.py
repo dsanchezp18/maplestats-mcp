@@ -267,7 +267,7 @@ async def test_french_errors_notes_and_chart(hosted, monkeypatch):
     assert result.notes[0] == "Les 10 premières lignes sur 1 500 ont été écrites (max_rows)."
     assert result.notes[1].startswith("Décodez workbook_base64")
     assert result.chart is not None and result.chart.startswith("graphique à barres de montant")
-    assert (result.provenance.limits or "").startswith("au plus 20 000 lignes")
+    assert (result.provenance.limits or "").startswith("au maximum 20 000 lignes")
     assert result.provenance.reproduce.startswith("Pour obtenir")
     english = await workbook.export(None, None, rows, "Rows", "en", 10, "base64")
     assert english.notes[0] == "Wrote the first 10 of 1,500 rows (max_rows)."
@@ -346,3 +346,18 @@ async def test_export_yields_to_the_tool_deadline(hosted, monkeypatch):
     finally:
         release.set()
         assert stopped.wait(2)
+
+
+def test_signed_leading_zero_codes_stay_text():
+    from maplestats_mcp.modules.reproduce.workbook import _convert
+
+    assert _convert("-0123") == "-0123"
+    assert _convert("+007") == "+007"
+    assert _convert("-0.5") == -0.5
+
+
+def test_long_code_makes_whole_column_text():
+    from maplestats_mcp.modules.reproduce.workbook import clean_rows
+
+    _, table = clean_rows([{"id": 12345678901234567890}, {"id": 3}])
+    assert [r[0] for r in table] == ["12345678901234567890", "3"]

@@ -156,3 +156,66 @@ def test_own_answers_stay_within_history_limit(monkeypatch):
         {"role": "user", "content": "Why?"},
     ]
     assert post(client, messages).status_code == 200
+
+
+def test_deeply_nested_json_is_a_400_not_a_crash():
+    response = TestClient(chat_app.app).post(
+        "/api/chat",
+        content=b"[" * 400000,
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 400
+
+
+def test_backend_failure_refunds_the_budget_and_logs_only_the_type(monkeypatch, caplog):
+    async def failing_model(messages):
+        raise RuntimeError("the secret question text")
+
+    monkeypatch.setattr(chat_app, "ask_model", failing_model)
+    client = TestClient(chat_app.app)
+    response = post(client, [{"role": "user", "content": "hi"}])
+    assert response.status_code == 502
+    assert chat_app._daily_count["n"] == 0
+    assert chat_app._hits_by_client == {}
+    assert "RuntimeError" in caplog.text
+    assert "secret question" not in caplog.text
+
+
+def test_empty_answer_refunds_the_budget(monkeypatch):
+    async def empty_model(messages):
+        return {"answer": "  ", "tools_used": []}
+
+    monkeypatch.setattr(chat_app, "ask_model", empty_model)
+    response = post(TestClient(chat_app.app), [{"role": "user", "content": "hi"}])
+    assert response.status_code == 502
+    assert chat_app._daily_count["n"] == 0
+
+
+def test_idle_clients_are_evicted(monkeypatch):
+    chat_app._hits_by_client["198.51.100.7"] = chat_app.deque([0.0])
+    assert chat_app.over_limit("203.0.113.9") is None
+    assert list(chat_app._hits_by_client) == ["203.0.113.9"]
+
+
+def test_concurrent_first_requests_do_not_duplicate_tools(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(chat_app, "_openai_tools", [])
+
+    class FakeMcp:
+        async def list_tools(self):
+            await asyncio.sleep(0.01)
+            return [
+                SimpleNamespace(name=n, description="d", inputSchema={})
+                for n in ("search_tools", "call_tool", "plan_query")
+            ]
+
+    mcp = FakeMcp()
+
+    async def burst():
+        await asyncio.gather(*(chat_app.load_openai_tools(mcp) for _ in range(5)))
+
+    asyncio.run(burst())
+    names = [tool["function"]["name"] for tool in chat_app._openai_tools]
+    assert names == ["search_tools", "call_tool", "plan_query"]

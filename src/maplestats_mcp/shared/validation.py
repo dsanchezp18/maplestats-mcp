@@ -15,10 +15,11 @@ from __future__ import annotations
 from typing import Any
 
 from fastmcp.exceptions import DisabledError, NotFoundError, ToolError
+from fastmcp.exceptions import ValidationError as ArgumentValidationError
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from pydantic import ValidationError
 
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.i18n import reset_call_lang, set_call_lang, t
 
 _TEMPLATES: dict[str, dict[str, str]] = {
@@ -66,6 +67,10 @@ class InvalidArguments(ToolError, InvalidInput):
     internal server error; FastMCP turns only ToolError into an isError
     result there, so this is both.
     """
+
+
+class UpstreamShapeError(ToolError, UpstreamError):
+    """UpstreamError raised from middleware, for a response that did not fit our model."""
 
 
 def _kind(error_type: str) -> str:
@@ -125,12 +130,32 @@ def describe(exc: ValidationError, lang: str = "en", parameters: list[str] | Non
     return detail
 
 
-def _validation_error(exc: BaseException) -> ValidationError | None:
+def _any_pydantic_error(exc: BaseException) -> bool:
     seen: set[int] = set()
     current: BaseException | None = exc
     while current is not None and id(current) not in seen:
         if isinstance(current, ValidationError):
-            return current
+            return True
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def _validation_error(exc: BaseException) -> ValidationError | None:
+    """The pydantic error from validating the call's own arguments, or None.
+
+    FastMCP raises its own ValidationError (caused by the pydantic one) only
+    when the arguments fail; a pydantic error raised inside a tool body (an
+    upstream payload that does not fit our model) is not the caller's fault
+    and must stay an upstream error, so it is not matched here.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, ArgumentValidationError) and isinstance(
+            current.__cause__, ValidationError
+        ):
+            return current.__cause__
         seen.add(id(current))
         current = current.__cause__ or current.__context__
     return None
@@ -145,6 +170,18 @@ class ValidationErrorMiddleware(Middleware):
         except Exception as exc:
             validation = _validation_error(exc)
             if validation is None:
+                if _any_pydantic_error(exc):
+                    # Not the caller's arguments: an upstream payload that did not fit
+                    # our model. Say so, without echoing the offending values.
+                    _, arguments = call_arguments(context)
+                    lang = str(arguments.get("lang", "en"))
+                    raise UpstreamShapeError(
+                        t(
+                            "error.upstream_error",
+                            lang,
+                            detail="the source answered in a shape this tool does not expect",
+                        )
+                    ) from None
                 raise
             params = context.message
             name = str(getattr(params, "name", "tool"))

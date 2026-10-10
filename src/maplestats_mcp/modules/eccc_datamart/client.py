@@ -90,13 +90,13 @@ NOTES = {
         "fr": "Les tableaux annuels par installation existent pour {years}. Les années "
         "antérieures (depuis 1993) ne figurent que dans les fichiers en vrac toutes années "
         "({bulk} : le fichier des rejets fait environ 375 Mo) et une base de données ZIP de "
-        "175 Mo, trop volumineux pour ce lecteur ; les télécharger depuis le catalogue.",
+        "175 Mo, trop volumineux pour ce lecteur ; téléchargez-les depuis le catalogue.",
     },
     "npri_units": {
         "en": "Quantities are in the row's units (tonnes, kg, grams, or g TEQ for dioxins "
         "and furans); compare rows only within one substance.",
         "fr": "Les quantités sont dans les unités de la ligne (tonnes, kg, grammes ou g ÉQT "
-        "pour les dioxines et furannes) ; ne comparer que des lignes d'une même substance.",
+        "pour les dioxines et furannes) ; ne comparez que des lignes d'une même substance.",
     },
     "npri_largest": {
         "en": "order=largest ranks by grand total converted to tonnes (kg and grams "
@@ -109,10 +109,10 @@ NOTES = {
         "over the whole series. From 2022, CO2 from biomass combustion is reported but "
         "excluded from total_co2e. Facilities report above a threshold (10 kt CO2e from "
         "2017, 50 kt before), so counts jump in 2017.",
-        "fr": "Les éq. CO2 utilisent les potentiels de réchauffement planétaire du cinquième "
+        "fr": "Les éq. CO₂ utilisent les potentiels de réchauffement planétaire du cinquième "
         "rapport d'évaluation du GIEC pour toute la série. Depuis 2022, le CO2 issu de la "
         "combustion de biomasse est déclaré mais exclu de total_co2e. Les installations "
-        "déclarent au-delà d'un seuil (10 kt éq. CO2 depuis 2017, 50 kt avant), d'où la "
+        "déclarent au-delà d'un seuil (10 kt éq. CO₂ depuis 2017, 50 kt avant), d'où la "
         "hausse du nombre d'installations en 2017.",
     },
     "ghgrp_contacts": {

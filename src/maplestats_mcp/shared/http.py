@@ -254,7 +254,7 @@ def retry_after_seconds(header: str, now: datetime | None = None) -> float | Non
     header = header.strip()
     if not header:
         return None
-    if header.isdigit():
+    if header.isascii() and header.isdigit():
         return float(header)
     try:
         when = parsedate_to_datetime(header)

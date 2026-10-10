@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+_TOOL_FAILURE_PREFIXES = ("Error calling tool", "Invalid arguments for tool")
+
 
 class PrivateToolLogs(logging.Filter):
     """Clients receive the detailed error; logs keep only its exception type.
@@ -14,7 +16,8 @@ class PrivateToolLogs(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if record.levelno >= logging.WARNING:
+        # Other warnings on this logger (startup, configuration) stay as written.
+        if str(record.msg).startswith(_TOOL_FAILURE_PREFIXES):
             kind = (
                 record.exc_info[0].__name__
                 if record.exc_info and record.exc_info[0]

@@ -64,7 +64,7 @@ _LIMITS = {
         "1 par seconde. Les licences varient selon l'ensemble de limites (voir licence_url ; les "
         "circonscriptions fédérales relèvent de la Licence du gouvernement ouvert – Canada). Les "
         "fiches d'élus sont extraites de sites officiels et leur licence n'est pas vérifiée. Les "
-        "ensembles d'élus n'ont pas de date de mise à jour et certains sont périmés : vérifier "
+        "ensembles d'élus n'ont pas de date de mise à jour et certains sont périmés : vérifiez "
         "sur la page officielle (source_url)."
     ),
 }
@@ -77,7 +77,7 @@ _POSTCODE_NOTE = {
     "fr": (
         "Un code postal sert au tri du courrier et non à délimiter une circonscription : il peut "
         "chevaucher plusieurs limites, et l'appariement par centroïde n'utilise que son point "
-        "central. Utiliser une latitude et une longitude (represent_lookup_point) pour une "
+        "central. Utilisez une latitude et une longitude (represent_lookup_point) pour une "
         "exactitude totale."
     ),
 }
@@ -126,7 +126,7 @@ _SETS_NO_REPS_NOTE = {
         "élus des ensembles de limites utilisés par un ensemble d'élus (p. ex. "
         f"{constants.CURRENT_FEDERAL_BOUNDARY_SET} pour les députés fédéraux) ; les ordonnances "
         "remplacées comme federal-electoral-districts (2013) et les ensembles de recensement "
-        "n'en ont aucun. Retirer sets pour obtenir tous les élus."
+        "n'en ont aucun. Retirez sets pour obtenir tous les élus."
     ),
 }
 _SEARCH_NO_MATCH_NOTE = {
@@ -170,7 +170,7 @@ _MISSING_LEVEL_NOTE = {
     "fr": (
         "Aucun élu de palier {levels} ne correspond à ce code postal (exemple réel : H3B4W8 ne "
         "renvoie aucun député fédéral). Le code peut chevaucher des circonscriptions ou le palier "
-        "n'est pas couvert ; essayer represent_lookup_point ou le filtre sets."
+        "n'est pas couvert ; essayez represent_lookup_point ou le filtre sets."
     ),
 }
 _LEVEL_FR = {"federal": "fédéral", "provincial": "provincial", "municipal": "municipal"}

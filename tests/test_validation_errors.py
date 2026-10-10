@@ -61,3 +61,30 @@ async def test_french_call_gets_a_french_message():
 async def test_errors_raised_by_a_tool_body_are_untouched():
     text = await _error_text("no_such_tool_anywhere", {}, via_call_tool=True)
     assert "Unknown tool" in text
+
+
+async def test_upstream_model_failure_is_not_reported_as_invalid_input():
+    from fastmcp import FastMCP
+    from pydantic import BaseModel
+
+    from maplestats_mcp.shared.validation import ValidationErrorMiddleware
+
+    class Row(BaseModel):
+        value: int
+
+    server = FastMCP("t")
+    server.add_middleware(ValidationErrorMiddleware())
+
+    @server.tool
+    async def upstream_shaped(q: str) -> str:
+        Row(value="not-a-number")  # type: ignore[arg-type]
+        return q
+
+    async with Client(server) as client:
+        result = await client.call_tool("upstream_shaped", {"q": "ok"}, raise_on_error=False)
+        bad_args = await client.call_tool("upstream_shaped", {"q": 1}, raise_on_error=False)
+    assert result.is_error
+    assert "Invalid input" not in result.content[0].text  # type: ignore[union-attr]
+    assert "not-a-number" not in result.content[0].text  # type: ignore[union-attr]
+    assert bad_args.is_error
+    assert bad_args.content[0].text.startswith("Invalid input: upstream_shaped")  # type: ignore[union-attr]

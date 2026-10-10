@@ -511,7 +511,7 @@ async def get_air_station_data(
                 "Rewritten every hour; holds the last 30 days.",
                 "Réécrit toutes les heures ; contient les 30 derniers jours.",
             ),
-            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limitées à {limit}")
             if truncated
             else None,
         ),
@@ -610,7 +610,7 @@ async def get_air_parameter_data(
                 "Rewritten every hour; holds the last 30 days for every station.",
                 "Réécrit toutes les heures ; contient les 30 derniers jours pour chaque station.",
             ),
-            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limitées à {limit}")
             if truncated
             else None,
         ),
@@ -1053,7 +1053,7 @@ async def get_snow_readings(
                 "Current-season files update hourly; archives daily.",
                 "Fichiers de la saison en cours mis à jour toutes les heures ; archives chaque jour.",
             ),
-            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limitées à {limit}")
             if truncated
             else None,
         ),
@@ -1526,7 +1526,7 @@ async def get_hydrometric_data(
                 "Fichier de l'année hydrologique en cours réécrit toutes les heures ; archives par "
                 "année hydrologique.",
             ),
-            limits=pick(lang, f"readings capped at {limit}", f"lectures limités à {limit}")
+            limits=pick(lang, f"readings capped at {limit}", f"lectures limitées à {limit}")
             if truncated
             else None,
         ),

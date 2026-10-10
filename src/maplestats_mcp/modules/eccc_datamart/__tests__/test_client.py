@@ -160,7 +160,7 @@ async def test_french_errors_and_notes(httpx_mock):
         await client.npri_facilities(province="Atlantis", lang="fr")
     _mock_file(httpx_mock, f"{constants.NPRI_FOLDER}/{NPRI_NAME}", NPRI_BODY)
     result = await client.npri_facilities(npri_id="1", lang="fr")
-    assert "furannes) ; ne comparer" in result.notes[0]
+    assert "furannes) ; ne comparez" in result.notes[0]
     assert (result.provenance.coverage or "").startswith("Une ligne par installation")
 
 

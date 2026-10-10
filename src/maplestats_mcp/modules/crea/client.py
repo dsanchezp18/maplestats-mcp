@@ -48,7 +48,7 @@ _PAGE_TITLES = {
 _ATTRIBUTION = {
     "en": "Source: The Canadian Real Estate Association (CREA), MLS® Home Price Index",
     "fr": (
-        "Source : L'Association canadienne de l'immeuble (ACI), Indice des prix des propriétés MLS®"
+        "Source : l'Association canadienne de l'immeuble (ACI), Indice des prix des propriétés MLS®"
     ),
 }
 

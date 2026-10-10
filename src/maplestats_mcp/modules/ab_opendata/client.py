@@ -79,8 +79,8 @@ OTHER_LICENCE_NOTE = {
     "are non-commercial. Do not assume commercial reuse is allowed; check {url}.",
     "fr": "N'est PAS sous la Licence du gouvernement ouvert – Alberta (licence : {licence}). "
     "D'autres conditions s'appliquent : la licence propre au jeu ou, par défaut, les "
-    "conditions d'utilisation d'alberta.ca, qui sont non commerciales. Ne pas supposer que "
-    "la réutilisation commerciale est permise ; vérifier {url}.",
+    "conditions d'utilisation d'alberta.ca, qui sont non commerciales. Ne supposez pas que "
+    "la réutilisation commerciale est permise ; vérifiez {url}.",
 }
 NO_LICENCE = {"en": "none stated", "fr": "aucune indiquée"}
 # French notes get their no-break spaces once, here.

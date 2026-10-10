@@ -76,3 +76,15 @@ async def test_statcan_hosts_get_connection_close(httpx_mock):
     async with new_client() as client:
         await retrying.get_with_retry(client, url)
     assert httpx_mock.get_requests()[0].headers["connection"] == "close"
+
+
+def test_retry_delay_reads_seconds_dates_and_ignores_unicode_digits():
+    def reply(value: str) -> httpx.Response:
+        return httpx.Response(503, headers=[(b"retry-after", value.encode("latin-1"))])
+
+    assert retrying.retry_delay(reply("7"), 0) == 7.0
+    assert retrying.retry_delay(reply("9999"), 0) == retrying.RETRY_MAX_SECONDS
+    # A past HTTP date means retry now.
+    assert retrying.retry_delay(reply("Wed, 21 Oct 2015 07:28:00 GMT"), 0) == 0.0
+    # "²".isdigit() is true but float() rejects it; fall back to the backoff.
+    assert retrying.retry_delay(reply("²"), 1) == retrying.RETRY_BASE_SECONDS * 2

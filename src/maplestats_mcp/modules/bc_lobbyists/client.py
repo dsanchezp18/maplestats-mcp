@@ -747,7 +747,7 @@ def _subject_ids(text: str, subjects: dict[str, str], lang: str = "en") -> froze
             InvalidInput,
             f"bc_lobbyists: no subject matter matches {text!r}; "
             "see bc_lobbyists_list_codes(kind='subject_matters').",
-            f"bc_lobbyists : aucun objet de lobbying ne correspond à {text!r}; voir "
+            f"bc_lobbyists : aucun objet de lobbyisme ne correspond à {text!r}; voir "
             "bc_lobbyists_list_codes(kind='subject_matters'). Les objets sont en anglais.",
             lang,
         )
@@ -1079,7 +1079,7 @@ def _activity_note(lang: str) -> str:
         "Lobbying activity reports since 2020-05-04 (Lobbyists Transparency Act): one "
         "report per client, month and communication, naming the senior public office "
         "holders reached. Registrations are searched with bc_lobbyists_search_registrations.",
-        "Rapports d'activité de lobbying depuis le 4 mai 2020 (Lobbyists Transparency Act) : "
+        "Rapports d'activité de lobbyisme depuis le 4 mai 2020 (Lobbyists Transparency Act) : "
         "un rapport par client, par mois et par communication, qui nomme les titulaires de "
         "charge publique désignés joints. Les inscriptions se cherchent avec "
         "bc_lobbyists_search_registrations. Les noms et les sujets viennent du registre, en "

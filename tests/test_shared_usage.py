@@ -80,3 +80,32 @@ def test_names_with_valid_spelling_still_need_registration():
     for n in range(100):
         stats.record(f"private_name_{n}", False)
     assert stats.snapshot()["by_tool"] == {"other": {"ok": 0, "error": 100}}
+
+
+async def test_a_call_made_inside_a_tool_is_not_counted_again() -> None:
+    from fastmcp import FastMCP
+
+    from maplestats_mcp.shared.usage import UsageMiddleware
+
+    stats = UsageStats(("outer_tool", "inner_tool"))
+    server = FastMCP("t")
+    server.add_middleware(UsageMiddleware(stats))
+
+    @server.tool
+    async def inner_tool() -> str:
+        return "x"
+
+    @server.tool
+    async def outer_tool() -> str:
+        async with Client(server) as inner:
+            await inner.call_tool("inner_tool", {})
+        return "y"
+
+    async with Client(server) as client:
+        await client.call_tool("outer_tool", {})
+        await client.call_tool("inner_tool", {})
+    snap = stats.snapshot()
+    assert snap["by_tool"] == {
+        "outer_tool": {"ok": 1, "error": 0},
+        "inner_tool": {"ok": 1, "error": 0},
+    }

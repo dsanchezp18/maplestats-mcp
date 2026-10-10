@@ -15,7 +15,7 @@ import logging
 import os
 import time
 from collections import deque
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +25,7 @@ from openai import AsyncOpenAI
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from starlette.requests import Request
+from starlette.requests import ClientDisconnect, Request
 from starlette.responses import FileResponse, JSONResponse
 from starlette.routing import Route
 
@@ -81,7 +81,7 @@ SYSTEM_PROMPT = (
 # 1. Rate limiting ----
 
 _hits_by_client: dict[str, deque[float]] = {}
-_daily_count: dict[str, Any] = {"day": date.today(), "n": 0}
+_daily_count: dict[str, Any] = {"day": datetime.now(UTC).date(), "n": 0}
 
 
 def client_address(request: Request) -> str:
@@ -99,21 +99,38 @@ def client_address(request: Request) -> str:
 def over_limit(address: str) -> str | None:
     """Record one request and return a reason if the caller or the day is over."""
     now = time.time()
-    today = date.today()
+    today = datetime.now(UTC).date()
     if _daily_count["day"] != today:
         _daily_count.update(day=today, n=0)
     if _daily_count["n"] >= DAILY_LIMIT:
         return "The demo has reached its daily limit. Please try again tomorrow."
 
+    # Drop every client whose hits have all aged out, so the table holds only
+    # addresses seen in the last hour instead of every address ever seen.
+    for key in list(_hits_by_client):
+        old_hits = _hits_by_client[key]
+        while old_hits and now - old_hits[0] > 3600:
+            old_hits.popleft()
+        if not old_hits:
+            del _hits_by_client[key]
+
     hits = _hits_by_client.setdefault(address, deque())
-    while hits and now - hits[0] > 3600:
-        hits.popleft()
     if len(hits) >= RATE_PER_HOUR:
         return "Too many questions from this address. Please try again later."
 
     hits.append(now)
     _daily_count["n"] += 1
     return None
+
+
+def refund(address: str) -> None:
+    """Give back the request over_limit just counted, when the backend failed."""
+    hits = _hits_by_client.get(address)
+    if hits:
+        hits.pop()
+        if not hits:
+            del _hits_by_client[address]
+    _daily_count["n"] = max(0, _daily_count["n"] - 1)
 
 
 # 2. Model backends ----
@@ -156,28 +173,29 @@ def final_text(content: list[Any]) -> str:
 
 async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Let Anthropic's MCP connector call the public MapleStats server."""
-    client = AsyncAnthropic(api_key=API_KEY or None)
     conversation: list[dict[str, Any]] = list(messages)
     tools_used: list[dict[str, Any]] = []
 
-    for _ in range(MAX_TOOL_STEPS):
-        response = await client.beta.messages.create(
-            model=MODEL,
-            max_tokens=MAX_OUTPUT_TOKENS,
-            betas=["mcp-client-2025-11-20"],
-            system=SYSTEM_PROMPT,
-            output_config={"effort": EFFORT},
-            mcp_servers=[{"type": "url", "url": MCP_URL, "name": "maplestats"}],
-            tools=[{"type": "mcp_toolset", "mcp_server_name": "maplestats"}],
-            messages=conversation,
-        )
-        for block in response.content:
-            if block.type == "mcp_tool_use":
-                tools_used.append(describe_call(block.name, block.input))
-        # pause_turn means the server paused a long turn; resume it unchanged.
-        if response.stop_reason != "pause_turn":
-            break
-        conversation.append({"role": "assistant", "content": response.content})
+    # The client owns an HTTP connection pool, so close it when the request ends.
+    async with AsyncAnthropic(api_key=API_KEY or None) as client:
+        for _ in range(max(1, MAX_TOOL_STEPS)):
+            response = await client.beta.messages.create(
+                model=MODEL,
+                max_tokens=MAX_OUTPUT_TOKENS,
+                betas=["mcp-client-2025-11-20"],
+                system=SYSTEM_PROMPT,
+                output_config={"effort": EFFORT},
+                mcp_servers=[{"type": "url", "url": MCP_URL, "name": "maplestats"}],
+                tools=[{"type": "mcp_toolset", "mcp_server_name": "maplestats"}],
+                messages=conversation,
+            )
+            for block in response.content:
+                if block.type == "mcp_tool_use":
+                    tools_used.append(describe_call(block.name, block.input))
+            # pause_turn means the server paused a long turn; resume it unchanged.
+            if response.stop_reason != "pause_turn":
+                break
+            conversation.append({"role": "assistant", "content": response.content})
 
     return {"answer": final_text(response.content), "tools_used": tools_used}
 
@@ -185,36 +203,51 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
 _openai_tools: list[dict[str, Any]] = []
 
 
+async def load_openai_tools(mcp: Client) -> list[dict[str, Any]]:
+    """The server's tools in OpenAI format, fetched once per process.
+
+    The list is built locally and assigned in one step: two first requests
+    arriving together would otherwise both append, leaving duplicate function
+    names that the API rejects on every later request.
+    """
+    if not _openai_tools:
+        built = [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "parameters": tool.inputSchema,
+                },
+            }
+            for tool in await mcp.list_tools()
+        ]
+        _openai_tools[:] = built
+    return _openai_tools
+
+
 async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Run the tool loop here, against any OpenAI-compatible chat API."""
-    client = AsyncOpenAI(api_key=API_KEY, base_url=BASE_URL or None)
     conversation: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         *messages,
     ]
     tools_used: list[dict[str, Any]] = []
 
-    async with Client(MCP_URL) as mcp:
+    # The OpenAI client owns an HTTP connection pool, so close it when the request ends.
+    async with (
+        AsyncOpenAI(api_key=API_KEY, base_url=BASE_URL or None) as client,
+        Client(MCP_URL) as mcp,
+    ):
         # The server exposes three tools and they do not change per request.
-        if not _openai_tools:
-            for tool in await mcp.list_tools():
-                _openai_tools.append(
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": tool.name,
-                            "description": tool.description or "",
-                            "parameters": tool.inputSchema,
-                        },
-                    }
-                )
+        tools = await load_openai_tools(mcp)
 
         for _ in range(MAX_TOOL_STEPS):
             response = await client.chat.completions.create(
                 model=MODEL,
                 max_tokens=MAX_OUTPUT_TOKENS,
                 messages=conversation,
-                tools=_openai_tools,
+                tools=tools,
             )
             message = response.choices[0].message
             if not message.tool_calls:
@@ -303,14 +336,19 @@ async def chat(request: Request) -> JSONResponse:
                 )
             body.extend(chunk)
         payload = json.loads(body)
-    except (ValueError, UnicodeDecodeError):
+    except ClientDisconnect:
+        # Nobody is left to answer; 499 is the conventional "client closed request".
+        return JSONResponse({"error": "Client disconnected."}, status_code=499)
+    except (ValueError, UnicodeDecodeError, RecursionError):
+        # RecursionError: deeply nested brackets overflow json.loads, and it is not a ValueError.
         return JSONResponse({"error": "Body must be JSON."}, status_code=400)
 
     messages = validate_messages(payload)
     if isinstance(messages, str):
         return JSONResponse({"error": messages}, status_code=400)
 
-    reason = over_limit(client_address(request))
+    address = client_address(request)
+    reason = over_limit(address)
     if reason:
         return JSONResponse({"error": reason}, status_code=429)
 
@@ -319,13 +357,16 @@ async def chat(request: Request) -> JSONResponse:
         # Keep our own answers valid when the browser sends them back on the next turn.
         answer = str(result.get("answer") or "").strip()
         if not answer:
+            refund(address)
             return JSONResponse(
                 {"error": "The model returned no answer. Try again."}, status_code=502
             )
         result["answer"] = answer[:MAX_ASSISTANT_CHARS]
         return JSONResponse(result)
-    except Exception:
-        logger.exception("Model backend failed")
+    except Exception as error:  # noqa: BLE001 - any backend failure is a 502
+        # Only the type: SDK exception text can echo the question or the request.
+        logger.error("Model backend failed (%s)", type(error).__name__)
+        refund(address)
         return JSONResponse(
             {"error": "The model or the data server did not answer. Try again."},
             status_code=502,

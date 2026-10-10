@@ -33,7 +33,7 @@ LABELS: dict[str, dict[str, str]] = {
     },
     "error.data_locked": {
         "en": "StatCan data is locked for its daily update (data returns at 8:30am ET): {detail}",
-        "fr": "Les données de StatCan sont verrouillées pour leur mise à jour quotidienne (retour à 8 h 30, HE) : {detail}",
+        "fr": "Les données de Statistique Canada sont verrouillées pour leur mise à jour quotidienne (retour à 8 h 30, HE) : {detail}",
     },
     "provenance.reproduce": {
         "en": (

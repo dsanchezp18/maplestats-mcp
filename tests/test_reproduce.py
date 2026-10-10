@@ -1032,3 +1032,49 @@ def test_generated_period_helpers_match_the_client(language, tmp_path):
     assert out.returncode == 0, out.stderr
     expected = [str(phac_client.parse_period(v) or "NA") for v in _PERIODS]
     assert out.stdout.split("\n")[: len(_PERIODS)] == expected
+
+
+async def test_keyerror_for_a_supplied_argument_is_not_blamed_on_the_caller(monkeypatch):
+    from maplestats_mcp.modules.reproduce import client as reproduce_client
+
+    async def broken_spec(tool, arguments, lang="en"):
+        raise KeyError("x")
+
+    monkeypatch.setattr(reproduce_client, "_spec", broken_spec)
+    with pytest.raises(KeyError):
+        await reproduce_client.reproduce("any_tool", {"x": 1})
+
+
+async def test_missing_argument_is_still_reported(monkeypatch):
+    from maplestats_mcp.modules.reproduce import client as reproduce_client
+    from maplestats_mcp.shared.errors import InvalidInput
+
+    async def needs_x(tool, arguments, lang="en"):
+        return arguments["x"]
+
+    monkeypatch.setattr(reproduce_client, "_spec", needs_x)
+    with pytest.raises(InvalidInput, match="no field 'x'"):
+        await reproduce_client.reproduce("any_tool", {})
+
+
+def test_json_post_body_that_is_not_json_does_not_fail():
+    from maplestats_mcp.modules.reproduce import probe
+    from maplestats_mcp.shared.http import RecordedRequest
+
+    request = RecordedRequest("POST", "https://a.example/x", b"a=1&b=2", "application/json")
+    assert probe._request_fields(request)["post_form"] == {"a": "1", "b": "2"}
+
+
+async def test_probe_replay_refuses_a_redirect_to_an_address(httpx_mock):
+    import httpx
+
+    from maplestats_mcp.modules.reproduce import probe
+    from maplestats_mcp.shared.http import RecordedRequest
+
+    httpx_mock.add_response(
+        url="https://data.statcan.gc.ca/x",
+        status_code=302,
+        headers={"location": "http://169.254.169.254/latest"},
+    )
+    with pytest.raises(httpx.HTTPError):
+        await probe._fetch(RecordedRequest("GET", "https://data.statcan.gc.ca/x", b"", ""))

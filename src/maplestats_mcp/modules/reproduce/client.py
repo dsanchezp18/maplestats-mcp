@@ -200,11 +200,18 @@ async def reproduce(
     try:
         spec = await _spec(tool, arguments, lang)
     except KeyError as exc:
+        # A KeyError cannot tell a key the caller left out of `arguments` from a field
+        # the source's response lacks, so the message names both possibilities.
+        missing = exc.args[0] if exc.args else None
+        if not isinstance(missing, str) or missing in arguments:
+            raise
         raise InvalidInput(
             _say(
                 lang,
-                f"{tool} is missing the argument {exc.args[0]!r}.",
-                f"Il manque l'argument {exc.args[0]!r} à {tool}.",
+                f"{tool} is missing the argument {missing!r}, or the source's response has "
+                f"no field {missing!r}.",
+                f"Il manque l'argument {missing!r} à {tool}, ou la réponse de la source n'a "
+                f"pas de champ {missing!r}.",
             )
         ) from exc
     except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable, DataLocked):

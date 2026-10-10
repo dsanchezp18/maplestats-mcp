@@ -597,7 +597,7 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
             freshness=pick(
                 lang,
                 "Each agency's zip is checked with a HEAD request (cached 10 minutes).",
-                "Le zip de chaque organisme est vérifié par une requête HEAD (en cache "
+                "Le ZIP de chaque organisme est vérifié par une requête HEAD (en cache "
                 "10 minutes).",
             ),
             limits=pick(
@@ -608,8 +608,8 @@ async def list_agencies(*, lang: str = "en") -> AgencyList:
                 "configured; hosts without range support (BC Transit) are downloaded whole.",
                 f"Requête : une requête HEAD vers le feed_url de chacun des {len(feeds)} "
                 "organismes (l'url de la provenance est le premier d'entre eux ; les hôtes qui "
-                "construisent le zip à la demande ne sont pas sondés). Seuls les organismes qui "
-                "publient un zip GTFS statique ouvert, sans clé, sont configurés ; les hôtes "
+                "construisent le ZIP à la demande ne sont pas sondés). Seuls les organismes qui "
+                "publient un ZIP GTFS statique ouvert, sans clé, sont configurés ; les hôtes "
                 "qui n'acceptent pas les requêtes partielles (BC Transit) sont téléchargés en "
                 "entier.",
             ),

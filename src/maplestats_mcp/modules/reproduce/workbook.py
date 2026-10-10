@@ -90,7 +90,7 @@ LABELS: dict[str, dict[str, str]] = {
             "Not stated in the tool's provenance: check the publisher's terms at the source URL."
         ),
         "ogl_attribution": (
-            "Contains information licensed under the Open Government Licence - Canada."
+            "Contains information licensed under the Open Government Licence - {region}."
         ),
         "cite": "Cite the publisher and the source URL above.",
         "cleaning_text": (
@@ -152,7 +152,7 @@ LABELS: dict[str, dict[str, str]] = {
         "coverage": "Couverture",
         "limits": "Limites",
         "licence": "Licence",
-        "attribution": "Attribution",
+        "attribution": "Mention de la source",
         "rows": "Lignes",
         "cleaning": "Nettoyage",
         "reproduce": "Reproduire",
@@ -165,13 +165,13 @@ LABELS: dict[str, dict[str, str]] = {
             "l'éditeur à l'URL de la source."
         ),
         "ogl_attribution": (
-            "Contient des renseignements visés par la Licence du gouvernement ouvert – Canada."
+            "Contient des renseignements visés par la Licence du gouvernement ouvert – {region}."
         ),
         "cite": "Citez l'éditeur et l'URL de la source ci-dessus.",
         "cleaning_text": (
             "Noms en snake_case (comme janitor::clean_names en R), espaces superflus retirés "
             "du texte, texte vide traité comme valeur manquante, nombres et dates ISO stockés "
-            "comme texte convertis ; codes à zéros initiaux conservés comme texte."
+            "sous forme de texte, convertis en valeurs ; codes à zéros initiaux conservés comme texte."
         ),
         "reproduce_text": (
             "Appelez reproduce_code avec le même outil et les mêmes arguments pour obtenir des "
@@ -214,10 +214,29 @@ LABELS: dict[str, dict[str, str]] = {
             "language='excel' pour toutes les données."
         ),
         "limits_text": (
-            "au plus {rows} lignes (max_rows, {default} par défaut) et {size} octets par classeur"
+            "au maximum {rows} lignes (max_rows, {default} par défaut) et {size} octets par classeur"
         ),
     },
 }
+
+
+# The jurisdiction named in an Open Government Licence, as the licence spells it
+# in English and in French; an unknown jurisdiction gets the generic citation line.
+_OGL_REGIONS = (
+    ("british columbia", "British Columbia", "Colombie-Britannique"),
+    ("colombie-britannique", "British Columbia", "Colombie-Britannique"),
+    ("alberta", "Alberta", "Alberta"),
+    ("ontario", "Ontario", "Ontario"),
+    ("canada", "Canada", "Canada"),
+)
+
+
+def _licence_region(licence: str | None, lang: str) -> str | None:
+    text = (licence or "").lower()
+    for key, english, french in _OGL_REGIONS:
+        if key in text:
+            return french if normalize_lang(lang) == "fr" else english
+    return None
 
 
 def _labels(lang: str) -> dict[str, str]:
@@ -241,9 +260,20 @@ def _say(lang: str, key: str, **values: object) -> str:
 async def _call(tool: str, arguments: dict[str, Any], lang: str = "en") -> Any:
     """The tool's structured result, called through the server like any client."""
     from fastmcp import Client
+    from fastmcp.exceptions import DisabledError, NotFoundError
     from mcp.types import TextContent
 
     from maplestats_mcp.server import mcp
+
+    # A French workbook needs the source text in French too: ask for it when the tool
+    # takes a lang argument and the caller did not choose one.
+    if normalize_lang(lang) == "fr" and "lang" not in arguments:
+        try:
+            target = await mcp.get_tool(tool)
+        except (NotFoundError, DisabledError):  # an unknown tool is reported by the call below
+            target = None
+        if target is not None and "lang" in target.parameters.get("properties", {}):
+            arguments = {**arguments, "lang": "fr"}
 
     async with Client(mcp) as client:
         result = await client.call_tool(
@@ -369,11 +399,12 @@ def _convert(text: str) -> Any:
     """A number or date written as text, else the text (type_convert in R)."""
     if _NUMBER.fullmatch(text):
         # A code such as "01" or "0042" keeps its leading zeros.
-        if len(text) > 1 and text[0] == "0" and text[1] != ".":
+        unsigned = text.lstrip("-+")
+        if len(unsigned) > 1 and unsigned[0] == "0" and unsigned[1] != ".":
             return text
         # Excel preserves at most 15 significant digits; long codes must stay text.
         if re.fullmatch(r"[-+]?\d+", text):
-            return text if len(text.lstrip("-+")) > 15 else int(text)
+            return text if len(unsigned) > 15 else int(text)
         number = float(text)
         return number if math.isfinite(number) else text
     if _DATE.fullmatch(text):
@@ -410,10 +441,11 @@ def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str],
             ):
                 raise InvalidInput(_say(lang, "too_wide", columns=MAX_COLUMNS, cells=MAX_CELLS))
     table: list[list[Any]] = []
+    long_int_columns: set[int] = set()
     for row in rows:
         check_deadline()
         values = []
-        for column in columns:
+        for index, column in enumerate(columns):
             value = row.get(column)
             if isinstance(value, str):
                 value = value.strip() or None
@@ -423,6 +455,7 @@ def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str],
                 isinstance(value, int) and not isinstance(value, bool) and len(str(abs(value))) > 15
             ):
                 value = str(value)
+                long_int_columns.add(index)
             values.append(value)
         table.append(values)
     for index in range(len(columns)):
@@ -438,6 +471,12 @@ def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str],
         for r in table:
             if isinstance(r[index], str):
                 r[index] = lookup[r[index]]
+    # A code too long for Excel's 15 digits makes its whole column text, so it
+    # never mixes numbers and text.
+    for index in long_int_columns:
+        for r in table:
+            if isinstance(r[index], int) and not isinstance(r[index], bool):
+                r[index] = str(r[index])
     return clean_names(columns), table
 
 
@@ -688,7 +727,8 @@ def build_workbook(
 
     licence = _licence(provenance)
     open_licence = re.search(r"open government licen|gouvernement ouvert", (licence or "").lower())
-    attribution = labels["ogl_attribution"] if open_licence else labels["cite"]
+    region = _licence_region(licence, lang) if open_licence else None
+    attribution = labels["ogl_attribution"].format(region=region) if region else labels["cite"]
     capped = labels["rows_capped"] if len(table) < available else ""
     notes = [
         (labels["title"], title),

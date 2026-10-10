@@ -19,6 +19,10 @@ async def test_tool_errors_keep_arguments_in_client_response_only(caplog):
     from maplestats_mcp.server import mcp
 
     marker = "private_argument_marker"
+    # FastMCP stops this logger propagating once its logging is configured, so
+    # attach the capture handler to the logger itself to make the test order-proof.
+    tool_logger = logging.getLogger("fastmcp.server.server")
+    tool_logger.addHandler(caplog.handler)
     caplog.set_level(logging.WARNING, logger="fastmcp.server.server")
     async with Client(mcp) as client:
         result = await client.call_tool(
@@ -36,6 +40,7 @@ async def test_tool_errors_keep_arguments_in_client_response_only(caplog):
         )
     assert result.is_error and marker in str(result.content)
     assert unknown.is_error and invalid.is_error
+    tool_logger.removeHandler(caplog.handler)
     assert marker not in caplog.text
     assert "MCP tool call failed" in caplog.text
 
@@ -52,3 +57,11 @@ def test_unexpected_exception_text_is_not_logged(caplog):
             logger.exception("Error calling tool 'private_tool_marker'")
     assert "private" not in caplog.text
     assert "RuntimeError" in caplog.text
+
+
+def test_unrelated_warnings_are_not_relabelled():
+    from maplestats_mcp.shared.private_logs import PrivateToolLogs
+
+    record = logging.LogRecord("x", logging.WARNING, "f", 1, "Server is unnamed", None, None)
+    PrivateToolLogs().filter(record)
+    assert record.getMessage() == "Server is unnamed"

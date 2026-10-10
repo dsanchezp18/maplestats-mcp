@@ -206,3 +206,10 @@ async def test_every_main_path_helper_sends_connection_close_to_www150(httpx_moc
     sent = httpx_mock.get_requests()
     assert len(sent) == 5
     assert all(request.headers["Connection"] == "close" for request in sent)
+
+
+def test_retry_after_ignores_non_ascii_digits():
+    from maplestats_mcp.shared.http import retry_after_seconds
+
+    assert retry_after_seconds("²") is None
+    assert retry_after_seconds("12") == 12.0
