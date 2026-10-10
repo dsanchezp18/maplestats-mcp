@@ -4254,7 +4254,7 @@ def not_found_page() -> str:
     GitHub Pages serves it for any missing path under the site, at whatever
     depth, so every link and asset is absolute from the site's own path.
     """
-    base = "/" + SITE_URL.split("://", 1)[1].split("/", 1)[1]
+    base = urlsplit(SITE_URL).path or "/"
     return french_typography(
         f"""<!doctype html>
 <html lang="en" data-root="{base}">
