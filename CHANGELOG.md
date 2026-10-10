@@ -22,6 +22,8 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 - Website: "See it in action" section linking a chat demo, and Claude and
   ChatGPT custom-connector steps on the Connect page.
 - Website: touch icon, favicon fallback and web manifest; sitemap `lastmod`.
+- Website: a privacy page. Server error logs keep only the exception type, not
+  tool arguments or error text.
 - Security policy, code of conduct and this changelog. Dependabot keeps the
   pinned actions, Docker base image and Python dependencies current.
 
