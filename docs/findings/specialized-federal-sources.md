@@ -2856,3 +2856,33 @@ responses say the flows may change or disappear.
   pollutant, black carbon, energy use and drinking water advisory datasets); a
   per-flow licence is not published by the service. Responses carry the StatCan
   Open Licence, plus a caveat for CCEI-agency and ECCC/ISC flows.
+
+## First Nations long-term drinking water advisories (ISC / CESI)
+
+**Status:** Not built as a module (investigated 2026-10-10).
+
+The CESI dataset `57b86ac5-e127-41bc-94b8-14b2d89aed0b` is published by
+Environment and Climate Change Canada, not Indigenous Services Canada, and is
+a frozen snapshot: a 1.1 kB CSV (not DataStore-active) tracking the 78
+advisories "as of April 2016" for the 2016-2019 strategy, last modified
+2019-08-28, with English and French CSV files on canada.ca and HTML method
+pages. It is a handful of rows, so `ckan_get_dataset` and `ckan_read_resource`
+already cover it. A package search for drinking water advisories found no
+current ISC advisory dataset on open.canada.ca; the live ISC figures are on
+sac-isc.gc.ca web pages (not probed further), and the "Boil water advisories"
+ECCC dataset (`eeaf1efa-d124-4ddc-b1fc-66ae8fd52482`, 2025-02-26) and the
+Statistics Canada infrastructure tables are ordinary CKAN and WDS content.
+
+## House of Commons votes and LEGISinfo bills
+
+**Status:** Not built; blocked from this machine (probed 2026-10-10).
+
+`ourcommons.ca/members/en/votes/xml`, `parl.ca/legisinfo/en/bills/json?parlsession=45-1`
+(and the XML and single-bill variants) all answer HTTP 403 from a Microsoft
+Azure Application Gateway page, with the project's shared client over HTTP/2
+and HTTP/1.1, with and without a browser User-Agent, and with curl. The
+`ourcommons` module's own existing feeds (`members/en/search/xml`) and the
+open-data page return the same 403 from here, so it is the host (or this
+network's address) that is blocked, not the votes path. No recorded fixture
+exists in the repository, and the field names were not verified, so no code was
+written. Retry from another network before building.

@@ -834,6 +834,11 @@ FR: dict[str, str] = {
         "statistiques de l'ARC : portal='federal', fq='organization:cra-arc', query='T1 final "
         "statistics' (désormais intitulées Individual Income Tax Return Statistics)"
     ),
+    "find a registered charity by name, city or business number, then "
+    "cra_charities_get_charity or cra_charities_get_directors": (
+        "trouver un organisme de bienfaisance enregistré par nom, ville ou numéro "
+        "d'entreprise, puis cra_charities_get_charity ou cra_charities_get_directors"
+    ),
     "rows of a CRA resource whose DataStore is active (charity lists): "
     "the same portal and its resource_id": (
         "lignes d'une ressource de l'ARC dont le DataStore est actif (listes d'organismes "

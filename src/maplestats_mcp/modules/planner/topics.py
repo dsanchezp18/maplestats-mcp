@@ -2013,6 +2013,17 @@ TAXATION = Topic(
             ),
         ),
         PlanStep(
+            "cra_charities_search",
+            "find a registered charity by name, city or business number, then "
+            "cra_charities_get_charity or cra_charities_get_directors",
+            (
+                "list of charities",
+                "registered charity",
+                "registered charities",
+                "organismes de bienfaisance",
+            ),
+        ),
+        PlanStep(
             "ckan_datastore_search",
             "rows of a CRA resource whose DataStore is active (charity lists): "
             "the same portal and its resource_id",

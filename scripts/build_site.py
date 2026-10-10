@@ -410,6 +410,14 @@ SOURCES: dict[str, Source] = {
         "Bureau de la concurrence",
         domain="business",
     ),
+    "cra_charities": Source(
+        "CRA registered charities",
+        "Organismes de bienfaisance enregistrés de l'ARC",
+        "national",
+        "CRA",
+        "ARC",
+        domain="business",
+    ),
     "cra_digital_economy_registry": Source(
         "CRA digital economy registry",
         "Registre de l'économie numérique de l'ARC",

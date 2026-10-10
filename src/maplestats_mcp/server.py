@@ -243,7 +243,8 @@ Sources, by tool-name prefix:
   health products), hc_device_ (medical device licences), hc_vigilance_
   (adverse reaction reports), ircc_
   (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
-  cra_digital_economy_registry_, gc_infobase_ (federal spending, FTEs),
+  cra_digital_economy_registry_, cra_charities_ (registered charities, directors),
+  gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
   nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
   (burned areas), nrcan_minerals_ (annual mineral production by

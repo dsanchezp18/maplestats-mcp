@@ -146,7 +146,7 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
 ## What it covers
 
-358 tools in 69 modules. Run `docs://catalogue` for the full, bilingual list.
+361 tools in 70 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|

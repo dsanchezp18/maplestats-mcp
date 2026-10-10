@@ -6,6 +6,12 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+### Added
+
+- `cra_charities` module: search CRA's annual List of charities by name, city, province
+  or designation, look one up by business number, and list its directors and officers
+  (open.canada.ca DataStore, Open Government Licence - Canada).
+
 ## [0.3.0] - 2026-10-10
 
 ### Added

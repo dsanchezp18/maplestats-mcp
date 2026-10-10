@@ -542,6 +542,24 @@ STEPS: list[Step] = [
         {"concluded_from": "2024-13", "limit": 1},
         expect_error="real YYYY-MM",
     ),
+    Step(
+        "cra_charities",
+        "cra_charities_search",
+        {"query": "food bank", "province": "ON", "limit": 5},
+        lambda data: data["total_count"] > 0 and bool(data["charities"][0]["business_number"]),
+    ),
+    Step(
+        "cra_charities",
+        "cra_charities_get_charity",
+        {"business_number": "119219814"},
+        lambda data: data["charity"]["province"] == "NB" and data["fiscal_period_end"] is not None,
+    ),
+    Step(
+        "cra_charities",
+        "cra_charities_get_directors",
+        {"business_number": "119219814RR0001", "lang": "fr"},
+        lambda data: data["total_count"] > 0 and bool(data["directors"][0]["last_name"]),
+    ),
     # CRA digital economy platform operators: dates were locale text
     # ("July 1, 2023", "1 juillet 2021") before they became ISO dates.
     Step(

@@ -155,7 +155,7 @@ CASES = [
     ("wheat exports by destination", "cgc_exports_query"),
     ("opioid overdose deaths", "phac_infobase_list_datasets"),
     ("federal budget spending by department", "gc_infobase_query"),
-    ("charities registered with CRA", "ckan_search_datasets"),
+    ("charities registered with CRA", "cra_charities_search"),
     ("digital platform operators registry", "cra_digital_economy_registry_search"),
     ("bus service disruptions Edmonton", "ets_get_service_alerts"),
     ("where is my bus Edmonton live location", "ets_get_vehicle_positions"),
