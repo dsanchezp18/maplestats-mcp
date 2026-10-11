@@ -7,7 +7,7 @@ the tool downloads a whole file and filters it itself (CER,
 GC InfoBase, CIHI, IRCC, StatCan indicators, PHAC Health Infobase in
 phac_infobase.py, IP Horizons), the tool parses HTML tables itself (CFIA
 in cfia.py), or a better
-native path exists (cansim for StatCan tables, canivt for Beyond 20/20).
+native path exists (cansim for StatCan tables).
 
 Each builder takes the tool's arguments and its result payload (the tool
 has already run) and returns a Spec.
@@ -202,49 +202,6 @@ async def _pumf(args: dict[str, Any], result: dict[str, Any]) -> Spec:
             (
                 "Where the ZIP has no CSV, read the fixed-width file with the Stata .dct/.do or "
                 "SPSS/SAS command files StatCan ships in the same ZIP."
-            ),
-        ],
-    )
-
-
-async def _census_table(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    from maplestats_mcp.modules.statcan.census_tables.constants import HOST, RELEASES
-
-    pid, release = str(args["pid"]), str(args.get("release", "2016"))
-    base = f"{HOST}{RELEASES[release].path}"
-    ivt_url = f"{base}Download.cfm?PID={pid}"
-    canivt = Code(
-        ["canivt"],
-        (
-            '# Install once with remotes::install_github("mountainMath/canivt").\n\n'
-            f'download.file("{ivt_url}", "data/raw/table_{pid}.ivt", mode = "wb")\n'
-            f'data <- read_ivt("data/raw/table_{pid}.ivt") |>\n  ivt_tidy()\n'
-        ),
-    )
-    if release == "2016":
-        return Spec(
-            kind="zip_csv",
-            url=f"{base}CompDataDownload.cfm?LANG=E&PID={pid}&OFT=CSV",
-            file_name=f"census_table_{pid}.zip",
-            method="exact: full-table CSV from the PID",
-            title=f"Census {release} data table {pid}",
-            native={"r": canivt},
-            notes=[
-                "The R version reads the Beyond 20/20 file with canivt, which keeps dimension labels."
-            ],
-        )
-    return Spec(
-        kind="ivt",
-        url=ivt_url,
-        file_name=f"table_{pid}.ivt",
-        method="exact: Beyond 20/20 file from the PID",
-        title=f"Census {release} data table {pid}",
-        native={"r": canivt},
-        languages=("r",),
-        notes=[
-            (
-                f"{release} tables have no full-table CSV; an SDMX ZIP is at "
-                f"{base}OpenDataDownload.cfm?PID={pid} for non-R languages."
             ),
         ],
     )
@@ -552,7 +509,6 @@ BUILDERS: dict[str, Builder] = {
     "socrata_query_dataset_rows": _socrata,
     "ckan_datastore_search": _ckan,
     "boc_get_observations": _boc,
-    "statcan_census_tables_get_downloads": _census_table,
     "cer_query_file": _cer_file,
     "gc_infobase_query": _gc_infobase,
     "cihi_get_indicator_data": _cihi,
@@ -575,7 +531,6 @@ ARGUMENT_ONLY = {
     "socrata_query_dataset_rows",
     "ckan_datastore_search",
     "boc_get_observations",
-    "statcan_census_tables_get_downloads",
     # The PHAC builders load the file (through the tool's cache) and run the
     # tool's own query on it, so running the tool first would repeat that.
     "phac_infobase_query",

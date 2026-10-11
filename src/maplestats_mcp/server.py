@@ -206,8 +206,7 @@ Sources, by tool-name prefix:
   series), sdmx_space_ (extra SDMX spaces: CCEI energy with ECCC emissions
   and NRCan indicators, and the shared space), rdaas_ (classifications,
   e.g. NAICS), statcan_census_profile_ (2021),
-  statcan_census_profile_2016_, statcan_census_profile_archive_ (2001-2016
-  bulk links), statcan_census_tables_ (2006-2016 cross-tabulations),
+  statcan_census_profile_archive_ (2001-2016 bulk links),
   statcan_daily_ (The Daily, release calendar), statcan_indicators_,
   statcan_delta_ (daily bulk-update files, vintage tables),
   statcan_reference_ (definitions, methods, analysis), statcan_surveys_

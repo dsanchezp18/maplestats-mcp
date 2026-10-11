@@ -826,14 +826,9 @@ FAMILIES: dict[str, tuple[str, str]] = {
     "ised/spectrum": ("Spectrum licences", "Licences de spectre"),
     "statcan/cimt": ("Merchandise trade by commodity", "Commerce de marchandises par produit"),
     "statcan/census_profile": ("2021 Census Profile", "Profil du recensement de 2021"),
-    "statcan/census_profile_2016": ("2016 Census Profile", "Profil du recensement de 2016"),
     "statcan/census_profile_archive": (
         "Census Profile archive, 2001-2016",
         "Archives des profils du recensement, 2001-2016",
-    ),
-    "statcan/census_tables": (
-        "Census data tables, 2006-2016",
-        "Tableaux de données du recensement, 2006-2016",
     ),
     "statcan/daily": (
         "The Daily and the release calendar",
@@ -3279,7 +3274,7 @@ STATCAN_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "Census",
         "Recensement",
-        ("census_profile", "census_profile_2016", "census_profile_archive", "census_tables"),
+        ("census_profile", "census_profile_archive"),
     ),
     ("Microdata", "Microdonnées", ("pumf",)),
     ("Geography and open databases", "Géographie et bases de données ouvertes", ("geo", "lode")),

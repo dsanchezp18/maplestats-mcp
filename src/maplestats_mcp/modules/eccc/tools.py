@@ -123,7 +123,8 @@ async def eccc_query_items(
     or on `climate-stations`' LATITUDE/LONGITUDE properties.
     Keywords: environment canada, eccc, msc, geomet, weather alert,
     weather forecast, snow, rain, temperature, tomorrow, current
-    conditions, swob, observation, aqhi, air quality, climate
+    conditions, swob, observation, aqhi, air quality health index, air quality,
+    climate
     normal, hydrometric, water level, flow, marine forecast, query,
     data, filter, bbox, station.
     Mots-clés : Environnement Canada, Environnement et Changement

@@ -6,6 +6,15 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+### Removed
+
+- `statcan/census_tables` (`statcan_census_tables_*`) and `statcan/census_profile_2016`
+  (`statcan_census_profile_2016_*`): Statistics Canada's www12 host answers automated
+  clients with a bot challenge, 503 errors or timeouts. The 2021 profile, the archive
+  download links and WDS tables 17100122 and 17100123 (2016 indicators down to health
+  regions) remain. The matching `reproduce_code` builder, planner steps and smoke tests
+  went with them.
+
 ### Added
 
 - `cra_charities` module: search CRA's annual List of charities by name, city, province

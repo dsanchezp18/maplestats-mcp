@@ -205,8 +205,10 @@ Two real quirks handled, both confirmed live and reproduced with a bare
    bulk-download-only coverage, confirmed live end-to-end (Canada's 2016
    population, 35,151,728, matches the known published figure). New module
    `modules/statcan/census_profile_2016/` (2 tools: list_geographies,
-   get_data) covers all 12 geography levels and 14 topics, with separate
-   total/male/female values and suppression symbols preserved.
+   get_data) covered all 12 geography levels and 14 topics, with separate
+   total/male/female values and suppression symbols preserved. Removed
+   2026-10-10 (see the census data tables section below): www12 now answers
+   automated clients with a bot challenge, 503 errors or timeouts.
 5. The Delta File (`www150.statcan.gc.ca/delta/{YYYYMMDD}.zip`, StatCan's
    own "preferred mechanism ... for large updates") is a deterministic daily
    bulk-update archive containing every table/vector data and metadata
@@ -1341,7 +1343,18 @@ See docs/archive/pumf-beyond2020-scope.md.
 
 ## Census data tables 2006-2016 (Beyond 20/20)
 
-**Status:** Shipped.
+**Status:** Removed.
+
+Removed 2026-10-10, together with the 2016 Census Profile service
+(`statcan_census_profile_2016_*`): StatCan's www12 host answers automated
+clients with a bot challenge (Cloudflare, HTTP 403), 503 errors or timeouts,
+so `statcan_census_tables_*` and `statcan_census_profile_2016_*` could not be
+kept working, and MapleStats does not try to get past the challenge. Nearest
+alternatives: WDS tables 17100122 and 17100123 (the indicator subset of the
+2016 census profile down to health regions), 2021 via `statcan_census_profile_*`
+and 98-10-xxxx WDS tables, Beyond 20/20 copies via `borealis_search_ivt`, and
+the bulk links in `statcan_census_profile_archive_*`. The history below
+describes the removed module.
 
 Checked 2026-09-25: StatCan has retired the 2011 Census tabulations (index
 and downloads redirect to its page-not-found notice; 2011 NHS, 2006 and 2016

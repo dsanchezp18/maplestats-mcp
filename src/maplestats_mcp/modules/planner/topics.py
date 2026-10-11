@@ -449,10 +449,6 @@ TOPICS: tuple[Topic, ...] = (
                 "statcan_census_profile_get_data",
                 "2021 values: the same level, geography_codes and characteristic_codes",
             ),
-            PlanStep(
-                "statcan_census_profile_2016_get_data", "2016 values (dguid), to compare over time"
-            ),
-            PlanStep("statcan_census_tables_search", "2006-2016 cross-tabulations (2021: wds_)"),
             PlanStep("borealis_search_ivt", "older or custom census tables in Beyond 20/20 format"),
             PlanStep(
                 "statcan_census_profile_archive_list_geography_levels",

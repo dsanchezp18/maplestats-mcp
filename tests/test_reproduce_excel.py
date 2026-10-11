@@ -248,11 +248,6 @@ def test_filters_and_sort_repeat_the_tool():
 async def test_all_includes_excel_and_explains_a_missing_query():
     result = await client.reproduce("wds_get_cube_metadata", {"product_id": 18100004})
     assert [s.language for s in result.scripts] == ["r", "python", "stata", "julia", "excel"]
-    ivt = await client.reproduce(
-        "statcan_census_tables_get_downloads", {"pid": "93658", "release": "2006"}, "excel"
-    )
-    assert ivt.scripts == []
-    assert any("No excel script" in note for note in ivt.notes)
 
 
 def test_kinds_m_cannot_read_get_no_query():

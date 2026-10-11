@@ -146,11 +146,11 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
 ## What it covers
 
-361 tools in 70 modules. Run `docs://catalogue` for the full, bilingual list.
+357 tools in 70 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
-| Statistics Canada | `wds_`, `sdmx_`, `sdmx_space_`, `rdaas_`, `cimt_`, `statcan_*` | Tables and series, the extra SDMX spaces (energy information, shared data), classifications, Census Profiles 2001–2021 and census tables 2006–2016, public use microdata (codebooks, weighted tables), merchandise trade by commodity (CIMT), open databases (LODE), The Daily, delta files, indicators, surveys, census geography |
+| Statistics Canada | `wds_`, `sdmx_`, `sdmx_space_`, `rdaas_`, `cimt_`, `statcan_*` | Tables and series, the extra SDMX spaces (energy information, shared data), classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), merchandise trade by commodity (CIMT), open databases (LODE), The Daily, delta files, indicators, surveys, census geography |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
 | Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, energy, mineral production, oceans, grain, forestry, immigration, border wait times, budgets, mergers, elections, earthquakes, university-library data tables |
@@ -173,7 +173,7 @@ not built, because their terms or download hosts do not permit automated
 access. CanadaBuys, OpenParliament.ca and the Toronto Transit Commission's
 own schedule download were removed for the same reason (the TTC schedule is
 still served from Statistics Canada's national transit database), and the
-Saskatchewan GeoHub portal was removed. Justice Laws (federal statutes and
+Saskatchewan GeoHub portal was removed. The 2006-2016 census data tables and the 2016 Census Profile service were removed because Statistics Canada's www12 host answers automated clients with a bot challenge, 503 errors or timeouts (the 2021 profile and the WDS tables remain). Justice Laws (federal statutes and
 regulations) is out of scope, because legislation text is not data this
 server carries, and the Saskatchewan Bureau of Statistics' Provincial
 Economic Accounts were not built: they are under Crown copyright, for

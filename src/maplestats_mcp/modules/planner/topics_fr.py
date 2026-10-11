@@ -152,10 +152,6 @@ FR: dict[str, str] = {
     "2021 values: the same level, geography_codes and characteristic_codes": (
         "valeurs de 2021 : les mêmes level, geography_codes et characteristic_codes"
     ),
-    "2016 values (dguid), to compare over time": (
-        "valeurs de 2016 (dguid), pour comparer dans le temps"
-    ),
-    "2006-2016 cross-tabulations (2021: wds_)": "totalisations croisées de 2006 à 2016 (2021 : wds_)",
     "older or custom census tables in Beyond 20/20 format": (
         "tableaux de recensement anciens ou personnalisés au format Beyond 20/20"
     ),

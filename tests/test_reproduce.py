@@ -124,15 +124,6 @@ async def test_vectors_flatten_one_object_per_vector():
     assert "scalarFactorCode" in code
 
 
-async def test_ivt_only_table_gets_r_only():
-    result = await client.reproduce(
-        "statcan_census_tables_get_downloads", {"pid": "93658", "release": "2006"}
-    )
-    assert [s.language for s in result.scripts] == ["r"]
-    assert "read_ivt" in result.scripts[0].code and "library(canivt)" in result.scripts[0].code
-    assert any("canivt" in note for note in result.notes)
-
-
 async def test_bad_requests():
     with pytest.raises(InvalidInput):
         await client.reproduce("plan_query", {})

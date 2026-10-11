@@ -51,7 +51,6 @@ CASES = [
         "rencontres de lobbyistes avec les ministères en Colombie-Britannique",
         "bc_lobbyists_search_activity_reports",
     ),
-    ("tableaux de données du recensement de 2016", "statcan_census_tables_search"),
     ("fichiers de microdonnées à grande diffusion", "statcan_pumf_search"),
     ("exportations par code SH vers les États-Unis", "cimt_get_trade"),
     ("chercher le code SH d'un produit", "cimt_search_commodities"),

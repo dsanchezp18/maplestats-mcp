@@ -100,13 +100,6 @@ _NOTES: list[tuple[str, Template]] = [
         ),
     ),
     (
-        r"The R version reads the Beyond 20/20 file with canivt, which keeps dimension labels\.",
-        (
-            "La version R lit le fichier Beyond 20/20 avec canivt, qui conserve les libellés "
-            "des dimensions."
-        ),
-    ),
-    (
         (
             r"(?P<release>\d{4}) tables have no full-table CSV; an SDMX ZIP is at (?P<url>\S+) for "
             r"non-R languages\."
