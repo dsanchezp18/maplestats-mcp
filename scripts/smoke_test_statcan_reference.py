@@ -4,6 +4,10 @@ real "Reference resources" catalogue search (not mocks), per AGENTS.md's
 proves the code matches assumptions the tests share with it, not that those
 assumptions are correct.
 
+A sustained HTTP 429 from www150.statcan.gc.ca (seen on GitHub runners, where
+many StatCan smoke jobs share IPs, even after the shared client's retries) is
+skipped rather than failed: it is StatCan's rate limit, not a module fault.
+
 Usage:
     uv run python scripts/smoke_test_statcan_reference.py
 """
@@ -14,7 +18,7 @@ import asyncio
 import sys
 
 from maplestats_mcp.modules.statcan.reference import client
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
 
 async def main() -> int:
@@ -77,5 +81,16 @@ async def main() -> int:
     return 0 if ok else 1
 
 
+async def run() -> int:
+    try:
+        return await main()
+    except UpstreamError as exc:
+        # Skip only a rate limit; assertion failures and other errors still fail.
+        if "HTTP 429" not in str(exc):
+            raise
+        print(f"SKIP: StatCan rate-limited this runner ({exc})")
+        return 0
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(run()))
