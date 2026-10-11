@@ -8,7 +8,7 @@ from collections.abc import Awaitable
 from typing import Any
 
 from maplestats_mcp.modules.ckan import client, constants
-from maplestats_mcp.shared.errors import NotFound
+from maplestats_mcp.shared.errors import CloudflareChallenge, NotFound
 
 # One DataStore-active resource per portal, confirmed live when each
 # portal was added. Alberta has no DataStore-active resources (checked
@@ -81,12 +81,17 @@ async def check_portal(portal: str) -> int:
 async def main() -> int:
     portals = sys.argv[1:] or list(constants.PORTALS)
     failures = 0
+    skipped = 0
     for portal in portals:
         try:
             failures += await check_portal(portal)
+        except CloudflareChallenge as exc:
+            # The host blocks automated clients and MapleStats never bypasses it.
+            print(f"SKIP: {portal} blocked by a Cloudflare challenge ({exc})")
+            skipped += 1
         except Exception:  # noqa: BLE001
             failures += 1
-    print(f"\n{len(portals) - failures}/{len(portals)} portals passed")
+    print(f"\n{len(portals) - failures - skipped}/{len(portals)} portals passed, {skipped} skipped")
     return 1 if failures else 0
 
 

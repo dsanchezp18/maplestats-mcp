@@ -11,8 +11,12 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import is_upstream_outage
+
 from maplestats_mcp.modules.statcan.indicators import client
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+
+SOURCE = "the StatCan Indicators feeds"
 
 
 async def main() -> int:
@@ -53,5 +57,16 @@ async def main() -> int:
     return 0 if ok else 1
 
 
+async def run() -> int:
+    try:
+        return await main()
+    except (UpstreamError, UpstreamUnavailable) as exc:
+        # Skip only a timeout or HTTP 5xx; a 4xx or a changed shape still fails.
+        if not is_upstream_outage(exc):
+            raise
+        print(f"SKIP: {SOURCE} unavailable ({exc})")
+        return 0
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(run()))

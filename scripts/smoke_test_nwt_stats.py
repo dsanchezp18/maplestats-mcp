@@ -5,8 +5,13 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import is_upstream_outage
+
 from maplestats_mcp.modules.nwt_stats import client, constants
+from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import new_client
+
+SOURCE = "statsnwt.ca"
 
 
 def fail(message: str) -> int:
@@ -85,5 +90,16 @@ async def main() -> int:
     return 1 if failures else 0
 
 
+async def run() -> int:
+    try:
+        return await main()
+    except (UpstreamError, UpstreamUnavailable) as exc:
+        # Skip only a timeout or HTTP 5xx; a 4xx or a changed shape still fails.
+        if not is_upstream_outage(exc):
+            raise
+        print(f"SKIP: {SOURCE} unavailable ({exc})")
+        return 0
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(run()))

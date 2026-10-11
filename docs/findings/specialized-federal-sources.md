@@ -205,7 +205,7 @@ Two real quirks handled, both confirmed live and reproduced with a bare
    bulk-download-only coverage, confirmed live end-to-end (Canada's 2016
    population, 35,151,728, matches the known published figure). New module
    `modules/statcan/census_profile_2016/` (2 tools: list_geographies,
-   get_data) covered all 12 geography levels and 14 topics, with separate
+   get_data; module since removed) covered all 12 geography levels and 14 topics, with separate
    total/male/female values and suppression symbols preserved. Removed
    2026-10-10 (see the census data tables section below): www12 now answers
    automated clients with a bot challenge, 503 errors or timeouts.

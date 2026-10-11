@@ -16,8 +16,15 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import is_upstream_outage
+
 from maplestats_mcp.modules.statcan.geo import client
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 
 async def main() -> int:
@@ -160,8 +167,10 @@ async def main() -> int:
 async def run() -> int:
     try:
         return await main()
-    except UpstreamError as exc:
-        # Skip only upstream outages; assertion failures still fail the run.
+    except (UpstreamError, UpstreamUnavailable) as exc:
+        # Skip only a timeout or HTTP 5xx; a 4xx or a changed shape still fails.
+        if not is_upstream_outage(exc):
+            raise
         print(f"SKIP: StatCan geo service unavailable ({exc})")
         return 0
 

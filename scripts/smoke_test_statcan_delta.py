@@ -14,8 +14,12 @@ import sys
 import tempfile
 from datetime import UTC, datetime, timedelta
 
+from _smoke_common import is_upstream_outage
+
 from maplestats_mcp.modules.statcan.delta import archive, client, realtime, scan_index
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+
+SOURCE = "the StatCan Delta File archive"
 
 
 async def _resume_step(date: str, product_id: int) -> bool:
@@ -125,5 +129,16 @@ async def main() -> int:
     return 0 if ok else 1
 
 
+async def run() -> int:
+    try:
+        return await main()
+    except (UpstreamError, UpstreamUnavailable) as exc:
+        # Skip only a timeout or HTTP 5xx; a 4xx or a changed shape still fails.
+        if not is_upstream_outage(exc):
+            raise
+        print(f"SKIP: {SOURCE} unavailable ({exc})")
+        return 0
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(run()))

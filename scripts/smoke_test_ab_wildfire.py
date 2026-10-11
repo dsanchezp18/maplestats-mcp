@@ -167,8 +167,9 @@ async def main() -> int:
     outside = await _check("get_fire_danger(Vancouver)", client.get_fire_danger(49.28, -123.12))
     _require(outside.danger_class is None and outside.note, "Vancouver should be unrated")
     overview = await _check("summarize_fire_danger()", client.summarize_fire_danger())
-    # The layer's polygon count varies by season (550 on 2026-10-03, 89 on 2026-10-11, over 700 earlier).
-    _require(overview.total_polygons > 0, "low rating polygon count")
+    # The layer's polygon count varies by season (550 on 2026-10-03, 89 on 2026-10-11, over 700 earlier);
+    # 50 is a floor below the seasonal low, to catch a partial layer.
+    _require(overview.total_polygons >= 50, "low rating polygon count")
     region = await _check(
         "summarize_fire_danger(bbox)", client.summarize_fire_danger([-118.0, 54.0, -116.0, 55.0])
     )
