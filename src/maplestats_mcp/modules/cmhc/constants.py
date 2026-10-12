@@ -37,8 +37,7 @@ CACHE_TTL_TABLE_DATA_SECONDS = 6 * 60 * 60  # 6h
 # UTF-8 or strict ISO-8859-1 (a byte 0x97 em-dash in a table title
 # decodes to an unprintable C1 control character under true latin-1,
 # but to U+2014 EM DASH under cp1252) -- this is a Windows/IIS server,
-# so cp1252 (Windows-1252) is the correct encoding, not "latin-1" as
-# one community reference package's own code comment claims.
+# so cp1252 (Windows-1252) is the encoding to use rather than latin-1.
 CSV_ENCODING = "cp1252"
 
 # Confirmed live: value cells using these tokens are not numeric data

@@ -38,9 +38,8 @@ access pattern" this project's docs/PROJECT_GUIDE.md asks to investigate):
   `GeographyTypeId`, `TableName`, and (genuinely misspelled in CMHC's
   own payload, confirmed live - read verbatim, do not "fix" it)
   `GeograghyName`. This is what lets `TableId`/`GeographyTypeId` be
-  resolved live from category names with no hardcoded table catalogue -
-  unlike the reference R package, which hardcodes its entire table
-  registry by hand because it never uses this discovery path. The same
+  resolved live from category names with no hardcoded table catalogue
+  (the R package keeps a hand-built table registry instead). The same
   model also carries `AvailableFilters` (e.g. `season`: April/October,
   `dwelling_type_desc_en`: Row/Apartment/Row-Apartment for a Rental
   Market Survey table) - confirmed live these are extra filter

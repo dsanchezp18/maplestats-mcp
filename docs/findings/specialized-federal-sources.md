@@ -513,15 +513,14 @@ time series or current cross-tab.
 
 No hardcoded table catalogue — categories and their valid breakdowns are
 discovered live from HMIP's own navigation, and each table's `TableId` is
-resolved live from an embedded JSON blob rather than a hand-built lookup (an
-improvement over the reference `mountainMath/cmhc` R package, read as the
-"existing community access pattern" this row asked to investigate, which
-hardcodes its entire table registry by hand). Verified live 2026-09-19: an
-unresolvable category/geography/TableId returns HTTP 500 with an ASP.NET
-error page, not a clean 404; the CSV export is cp1252 (Windows-1252)
-encoded, not UTF-8 or strict latin-1 (confirmed against a real em-dash byte,
-correcting the reference package's own "latin1" comment); a cell can hold a
-suppressed ("**") or not-applicable ("++") marker instead of a number;
+resolved live from an embedded JSON blob rather than a hand-built lookup (the
+`mountainMath/cmhc` R package, read as the "existing community access pattern"
+this row asked to investigate, keeps a hand-built table registry instead).
+Verified live 2026-09-19: an unresolvable category/geography/TableId returns
+HTTP 500 with an ASP.NET error page, not a clean 404; the CSV export is cp1252
+(Windows-1252) encoded, not UTF-8 or strict latin-1 (confirmed against a real
+em-dash byte); a cell can hold a suppressed ("**") or not-applicable ("++")
+marker instead of a number;
 `lang` genuinely changes category names (not just prose) since HMIP's
 `/en/`/`/fr/` categories are different strings per language; only
 Canada/province-level geography is covered — no live CMA/city-level
