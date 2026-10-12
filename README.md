@@ -241,11 +241,13 @@ see [`SECURITY.md`](SECURITY.md). Changes are recorded in
 ## Acknowledgments
 
 MapleStats owes its architecture to
-[EcuDataMCP](https://github.com/DweskZ/EcuDataMCP), my MCP server for
-Ecuador's open data. Its approach to Canadian data owes much to the R
-developers who got there first: Jens von Bergmann
-([mountainMath](https://github.com/mountainMath)) and his co-authors,
-Thierry Warin ([statcanR](https://github.com/warint/statcanR)), Valentin
+[EcuDataMCP](https://github.com/DweskZ/EcuDataMCP), the MCP server for
+Ecuador's open data that I help maintain with
+[DweskZ](https://github.com/DweskZ) and its other contributors. Its
+approach to Canadian data owes much to the R developers who got there
+first: Jens von Bergmann ([mountainMath](https://github.com/mountainMath))
+and his co-authors, including Dmitry Shkolnik
+([dshkol](https://github.com/dshkol)), Thierry Warin ([statcanR](https://github.com/warint/statcanR)), Valentin
 Lucet ([rgovcan](https://github.com/VLucet/rgovcan)), and others. Thanks
 to them, and to everyone who publishes Canadian data in the open.
 
