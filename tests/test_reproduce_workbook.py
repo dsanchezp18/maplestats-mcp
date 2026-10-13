@@ -361,3 +361,46 @@ def test_long_code_makes_whole_column_text():
 
     _, table = clean_rows([{"id": 12345678901234567890}, {"id": 3}])
     assert [r[0] for r in table] == ["12345678901234567890", "3"]
+
+
+@pytest.mark.parametrize(
+    ("licence", "lang", "region"),
+    [
+        ("Open Government Licence - Canada 2.0 (https://open.canada.ca/)", "en", "Canada"),
+        (
+            "Open Government Licence - British Columbia 2.0 (https://www2.gov.bc.ca/)",
+            "fr",
+            "Colombie-Britannique",
+        ),
+        ("Open Government Licence - Yukon (https://open.yukon.ca/)", "en", "Yukon"),
+        (
+            "Open Government Licence - Newfoundland and Labrador 1.0 (https://www.gov.nl.ca/)",
+            "en",
+            "Newfoundland and Labrador",
+        ),
+        (
+            "Licence du gouvernement ouvert – Terre-Neuve-et-Labrador 1.0",
+            "en",
+            "Newfoundland and Labrador",
+        ),
+        (
+            "Open Government Licence - Northwest Territories, as the territory's open data",
+            "fr",
+            "Territoires du Nord-Ouest",
+        ),
+        ("Open Government Licence - Ontario as the terms of the portal", "en", "Ontario"),
+        ("Open Government Licence - City of Calgary", "en", None),
+        ("Statistics Canada Open Licence", "en", None),
+    ],
+)
+def test_licence_region_follows_the_licence_text(licence, lang, region):
+    assert workbook._licence_region(licence, lang) == region
+
+
+def test_territorial_licence_gets_its_own_attribution():
+    attribution = workbook.LABELS["en"]["ogl_attribution"].format(
+        region=workbook._licence_region("Open Government Licence - Yukon", "en")
+    )
+    assert attribution == (
+        "Contains information licensed under the Open Government Licence - Yukon."
+    )

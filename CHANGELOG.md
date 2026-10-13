@@ -21,6 +21,24 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   or designation, look one up by business number, and list its directors and officers
   (open.canada.ca DataStore, Open Government Licence - Canada).
 
+### Fixed
+
+- Chat demo: a request that fails after a billed model call stays counted against the
+  hourly and daily limits (only a failure before any call is refunded), and the failure
+  log names the HTTP status.
+- Logs: failed resource reads and prompt renders no longer log their arguments or
+  tracebacks, as failed tool calls already did not.
+- `reproduce_workbook`: the attribution line names the licence's own jurisdiction
+  (Yukon, Newfoundland and Labrador, Northwest Territories and others), not only
+  Canada, Alberta, British Columbia and Ontario.
+- `reproduce_code`: a request body that is neither JSON nor form fields now gives no
+  script, with a note, instead of a script that silently drops the body; a missing
+  response field is an upstream error, not invalid input.
+- `cra_charities`: each tool uses the newest list that has the table it reads, business
+  numbers accept ASCII digits only, and a truncated directors list says so.
+- Smoke scripts: an upstream outage skips only the checks after it, so earlier failures
+  still fail the run.
+
 ## [0.3.0] - 2026-10-10
 
 ### Added

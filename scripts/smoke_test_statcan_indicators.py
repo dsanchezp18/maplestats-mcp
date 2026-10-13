@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from _smoke_common import is_upstream_outage
+from _smoke_common import skip_outage
 
 from maplestats_mcp.modules.statcan.indicators import client
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
@@ -22,51 +22,43 @@ SOURCE = "the StatCan Indicators feeds"
 async def main() -> int:
     ok = True
 
-    econ = await client.get_indicators("economic", limit=5)
-    print(f"OK: get_indicators(economic) -> {econ.returned_count} of {econ.total_matched}")
-    ok &= econ.total_matched > 0
-    sample = econ.indicators[0]
-    print("  sample:", sample.model_dump())
-    ok &= bool(sample.title)
-    # Some feed entries carry no level (26 of 230 on 2026-09-29, including
-    # the first, a same-day release), so require a value on some, not the first.
-    every_economic = await client.get_indicators("economic", limit=300)
-    ok &= any(i.value for i in every_economic.indicators)
-
-    population = await client.get_indicators("all", "population estimate")
-    print(f"OK: get_indicators(all, 'population estimate') -> {population.total_matched}")
-    ok &= population.total_matched > 0
-
-    canada_only = await client.get_indicators("all", "population estimate", geo_code=0)
-    print(f"OK: get_indicators(geo_code=0) -> {canada_only.total_matched}")
-    ok &= canada_only.total_matched > 0
-    ok &= all(i.geo_code == 0 for i in canada_only.indicators)
-
-    fr = await client.get_indicators("homepage", lang="fr", limit=3)
-    print(f"OK: get_indicators(homepage, lang=fr) -> {fr.returned_count}")
-    ok &= fr.returned_count > 0
-
     try:
-        await client.get_indicators("not_a_real_dataset")
-        print("FAIL: expected InvalidInput for a bogus dataset")
-        ok = False
-    except InvalidInput:
-        print("OK: bogus dataset raises InvalidInput as expected")
+        econ = await client.get_indicators("economic", limit=5)
+        print(f"OK: get_indicators(economic) -> {econ.returned_count} of {econ.total_matched}")
+        ok &= econ.total_matched > 0
+        sample = econ.indicators[0]
+        print("  sample:", sample.model_dump())
+        ok &= bool(sample.title)
+        # Some feed entries carry no level (26 of 230 on 2026-09-29, including
+        # the first, a same-day release), so require a value on some, not the first.
+        every_economic = await client.get_indicators("economic", limit=300)
+        ok &= any(i.value for i in every_economic.indicators)
+
+        population = await client.get_indicators("all", "population estimate")
+        print(f"OK: get_indicators(all, 'population estimate') -> {population.total_matched}")
+        ok &= population.total_matched > 0
+
+        canada_only = await client.get_indicators("all", "population estimate", geo_code=0)
+        print(f"OK: get_indicators(geo_code=0) -> {canada_only.total_matched}")
+        ok &= canada_only.total_matched > 0
+        ok &= all(i.geo_code == 0 for i in canada_only.indicators)
+
+        fr = await client.get_indicators("homepage", lang="fr", limit=3)
+        print(f"OK: get_indicators(homepage, lang=fr) -> {fr.returned_count}")
+        ok &= fr.returned_count > 0
+
+        try:
+            await client.get_indicators("not_a_real_dataset")
+            print("FAIL: expected InvalidInput for a bogus dataset")
+            ok = False
+        except InvalidInput:
+            print("OK: bogus dataset raises InvalidInput as expected")
+    except (UpstreamError, UpstreamUnavailable) as exc:
+        skip_outage(SOURCE, exc)
 
     print("\nSTATCAN INDICATORS SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 
 
-async def run() -> int:
-    try:
-        return await main()
-    except (UpstreamError, UpstreamUnavailable) as exc:
-        # Skip only a timeout or HTTP 5xx; a 4xx or a changed shape still fails.
-        if not is_upstream_outage(exc):
-            raise
-        print(f"SKIP: {SOURCE} unavailable ({exc})")
-        return 0
-
-
 if __name__ == "__main__":
-    sys.exit(asyncio.run(run()))
+    sys.exit(asyncio.run(main()))

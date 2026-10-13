@@ -34,7 +34,7 @@ from maplestats_mcp.modules.reproduce.spec import Filter, Spec
 
 PACKAGES = ["Power Query (built into Excel 2016 or later and Microsoft 365)"]
 
-_SKIPPED_KINDS = ("ivt", "feed", "file", "zip", "none")
+_SKIPPED_KINDS = ("feed", "file", "zip", "none")
 
 
 def m_text(value: Any) -> str:

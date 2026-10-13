@@ -70,6 +70,21 @@ def _say(lang: str, english: str, french_text: str) -> str:
     return pick(lang, english, french_text)
 
 
+class MissingArgument(KeyError):
+    """A builder asked for an argument the caller did not give."""
+
+
+class _Arguments(dict[str, Any]):
+    """The caller's arguments, raising MissingArgument for an absent key.
+
+    A bare KeyError from a builder could be the caller's missing argument or a
+    field the source's response lacks; only the first comes from this mapping.
+    """
+
+    def __missing__(self, key: str) -> Any:
+        raise MissingArgument(key)
+
+
 async def _run_tool(
     tool: str, args: dict[str, Any], lang: str = "en"
 ) -> tuple[dict[str, Any], list[RecordedRequest]]:
@@ -198,20 +213,23 @@ async def reproduce(
             )
         )
     try:
-        spec = await _spec(tool, arguments, lang)
-    except KeyError as exc:
-        # A KeyError cannot tell a key the caller left out of `arguments` from a field
-        # the source's response lacks, so the message names both possibilities.
-        missing = exc.args[0] if exc.args else None
-        if not isinstance(missing, str) or missing in arguments:
-            raise
+        spec = await _spec(tool, _Arguments(arguments), lang)
+    except MissingArgument as exc:
         raise InvalidInput(
             _say(
                 lang,
-                f"{tool} is missing the argument {missing!r}, or the source's response has "
-                f"no field {missing!r}.",
-                f"Il manque l'argument {missing!r} à {tool}, ou la réponse de la source n'a "
-                f"pas de champ {missing!r}.",
+                f"{tool} is missing the argument {exc.args[0]!r}.",
+                f"Il manque l'argument {exc.args[0]!r} à {tool}.",
+            )
+        ) from exc
+    except KeyError as exc:
+        # Not an argument (those raise MissingArgument): the source's response changed shape.
+        field = exc.args[0] if exc.args else "?"
+        raise UpstreamError(
+            _say(
+                lang,
+                f"The source's response for {tool} has no field {field!r}.",
+                f"La réponse de la source pour {tool} n'a pas de champ {field!r}.",
             )
         ) from exc
     except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable, DataLocked):
@@ -243,7 +261,6 @@ async def reproduce(
     notes = list(spec.notes)
     if skipped and spec.kind not in ("none",):
         reason = {
-            "ivt": "Beyond 20/20 files are read only by canivt (R)",
             "html_table": "Julia has no maintained HTML table reader",
             "feed": "Julia has no maintained RSS/Atom reader",
         }.get(spec.kind, "this language cannot read the source")

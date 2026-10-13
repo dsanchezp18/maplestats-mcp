@@ -6,7 +6,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.cra_charities import client
+from maplestats_mcp.modules.cra_charities import client, constants
 from maplestats_mcp.modules.cra_charities.schemas import (
     CharityDetail,
     CharityDirectors,
@@ -21,7 +21,7 @@ async def cra_charities_search(
     query: str = "",
     province: str = "",
     designation: str = "",
-    limit: int = 20,
+    limit: int = constants.LIMIT_DEFAULT,
     offset: int = 0,
     lang: Lang = "en",
 ) -> CharitySearchResult:

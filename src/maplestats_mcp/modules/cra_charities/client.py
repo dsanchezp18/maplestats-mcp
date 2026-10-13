@@ -44,7 +44,8 @@ _CONFIG = CkanConfig(
     rate_limit_capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _TITLE = re.compile(constants.DATASET_TITLE_PATTERN)
-_BN_FULL = re.compile(r"^\d{9}RR\d{4}$")
+_BN_NINE = re.compile(r"[0-9]{9}")
+_BN_FULL = re.compile(r"[0-9]{9}RR[0-9]{4}")
 _PROVINCE = re.compile(r"^[A-Z]{2}$")
 
 
@@ -71,15 +72,15 @@ def _compact(raw: str) -> str:
 
 def _is_bn(raw: str) -> bool:
     compact = _compact(raw)
-    return bool(re.fullmatch(r"\d{9}", compact) or _BN_FULL.match(compact))
+    return bool(_BN_NINE.fullmatch(compact) or _BN_FULL.fullmatch(compact))
 
 
 def normalize_bn(raw: str, lang: str = "en") -> str:
     """A 9-digit BN or a 15-character BN (spaces, dashes and case ignored) as in the files."""
     cleaned = _compact(raw)
-    if re.fullmatch(r"\d{9}", cleaned):
+    if _BN_NINE.fullmatch(cleaned):
         return cleaned + "RR0001"
-    if _BN_FULL.match(cleaned):
+    if _BN_FULL.fullmatch(cleaned):
         return cleaned
     _bad_bn(raw, lang)
 
@@ -94,8 +95,12 @@ def _bad_bn(raw: str, lang: str) -> NoReturn:
     )
 
 
-async def _list_resources(lang: str) -> tuple[int, str, dict[str, str]]:
-    """(year, package id, DataStore resource ids by name) for the newest list."""
+async def _list_resources(lang: str, needed: tuple[str, ...]) -> tuple[int, str, dict[str, str]]:
+    """(year, package id, DataStore resource ids by name) of the newest list with all `needed`.
+
+    Each tool names the tables it reads, so a newest list that is still missing one
+    (a table not yet DataStore-active) does not hide an older list that has it.
+    """
 
     async def fetch() -> Any:
         return await action(
@@ -112,22 +117,21 @@ async def _list_resources(lang: str) -> tuple[int, str, dict[str, str]]:
     result, _ = await cached_fetch(
         "cra-charities:discovery", constants.CACHE_TTL_DISCOVERY_SECONDS, fetch
     )
-    best: tuple[int, dict[str, Any]] | None = None
+    lists: list[tuple[int, dict[str, Any]]] = []
     for package in list_or_empty(result, "results"):
         title = package.get("title")
         match = _TITLE.match(title) if isinstance(title, str) else None
-        if match and (best is None or int(match.group(1)) > best[0]):
-            best = (int(match.group(1)), package)
-    if best is not None:
-        year, package = best
+        if match:
+            lists.append((int(match.group(1)), package))
+    for year, package in sorted(lists, key=lambda found: found[0], reverse=True):
         by_name: dict[str, str] = {}
         for res in list_or_empty(package, "resources"):
             name = res.get("name")
             if isinstance(name, str) and res.get("datastore_active"):
                 by_name.setdefault(name.strip(), res["id"])
-        needed = (constants.RESOURCE_IDENTIFICATION, constants.RESOURCE_GENERAL)
         if all(name in by_name for name in needed):
             return year, package["id"], by_name
+    # No published list has every table: the pinned 2024 list, whose year the response states.
     return (
         constants.FALLBACK_YEAR,
         constants.FALLBACK_PACKAGE_ID,
@@ -187,7 +191,9 @@ def _limits(lang: str) -> str:
     )
 
 
-def _provenance(year: int, resource: str, cached: bool, schema: str, lang: str) -> Provenance:
+def _provenance(
+    year: int, resource: str, cached: bool, schema: str, lang: str, note: str | None = None
+) -> Provenance:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=f"{constants.BASE_URL}datastore_search?resource_id={resource}",
@@ -198,7 +204,7 @@ def _provenance(year: int, resource: str, cached: bool, schema: str, lang: str) 
             f"{year} List of charities (CRA T3010 data)",
             f"Liste des organismes de bienfaisance {year} (données T3010 de l'ARC)",
         ),
-        limits=_limits(lang),
+        limits=f"{_limits(lang)} {note}" if note else _limits(lang),
         licence=OGL_CANADA,
         lang=lang,
     )
@@ -250,7 +256,7 @@ async def search_charities(
         raise_localized(
             InvalidInput, f"offset must be >= 0, got {offset}.", "offset doit être >= 0.", lang
         )
-    year, _, resources = await _list_resources(lang)
+    year, _, resources = await _list_resources(lang, (constants.RESOURCE_IDENTIFICATION,))
     resource = resources[constants.RESOURCE_IDENTIFICATION]
     filters: dict[str, str] = {}
     if prov:
@@ -286,7 +292,9 @@ async def search_charities(
 async def get_charity(business_number: str, lang: str = "en") -> CharityDetail:
     """One charity from the Identification table, plus its fiscal period end and programs."""
     bn = normalize_bn(business_number, lang)
-    year, package_id, resources = await _list_resources(lang)
+    year, package_id, resources = await _list_resources(
+        lang, (constants.RESOURCE_IDENTIFICATION, constants.RESOURCE_GENERAL)
+    )
     ident, cached = await _datastore(
         resources[constants.RESOURCE_IDENTIFICATION],
         {"filters": json.dumps({"BN": bn}), "limit": 1},
@@ -330,15 +338,8 @@ async def get_charity(business_number: str, lang: str = "en") -> CharityDetail:
 async def get_directors(business_number: str, lang: str = "en") -> CharityDirectors:
     """Directors and officers of one charity from the directors/officers table."""
     bn = normalize_bn(business_number, lang)
-    year, _, resources = await _list_resources(lang)
-    resource = resources.get(constants.RESOURCE_DIRECTORS)
-    if resource is None:
-        raise_localized(
-            NotFound,
-            f"The {year} list has no directors/officers resource.",
-            f"La liste {year} n'a pas de ressource sur les administrateurs.",
-            lang,
-        )
+    year, _, resources = await _list_resources(lang, (constants.RESOURCE_DIRECTORS,))
+    resource = resources[constants.RESOURCE_DIRECTORS]
     # Exact BN filter only: full-text q is refused on resources over 100,000 rows.
     result, cached = await _datastore(
         resource,
@@ -353,11 +354,23 @@ async def get_directors(business_number: str, lang: str = "en") -> CharityDirect
             f"Aucun administrateur ou dirigeant pour {bn} dans la liste {year}.",
             lang,
         )
+    total = int(result.get("total", len(rows)))
+    # The table is read in one request with no paging, so a longer list is cut here.
+    cut_note = (
+        pick(
+            lang,
+            f"Only the first {len(rows)} of {total} director and officer rows are returned.",
+            f"Seules les {len(rows)} premières des {total} lignes d'administrateurs et de "
+            "dirigeants sont renvoyées.",
+        )
+        if total > len(rows)
+        else None
+    )
     return CharityDirectors(
         list_year=year,
         business_number=bn,
         fiscal_period_end=_date(rows[0].get("FPE")),
-        total_count=int(result.get("total", len(rows))),
+        total_count=total,
         returned_count=len(rows),
         directors=[
             CharityDirector(
@@ -371,5 +384,5 @@ async def get_directors(business_number: str, lang: str = "en") -> CharityDirect
             )
             for r in rows
         ],
-        provenance=_provenance(year, resource, cached, "CharityDirectors", lang),
+        provenance=_provenance(year, resource, cached, "CharityDirectors", lang, cut_note),
     )

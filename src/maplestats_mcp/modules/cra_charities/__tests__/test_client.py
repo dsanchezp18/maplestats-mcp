@@ -186,3 +186,77 @@ async def test_get_directors_parses_flags_and_dates(httpx_mock):
     assert result.directors[0].at_arms_length is True
     assert result.directors[1].at_arms_length is False
     assert result.directors[1].end_date == date(2023, 6, 25)
+    assert "Only the first 2 of 20" in (result.provenance.limits or "")
+
+
+async def test_directors_limit_note_is_absent_when_the_list_is_complete(httpx_mock):
+    _discovery(httpx_mock)
+    row = {"BN": _ROW["BN"], "FPE": "2024-03-31", "Last Name": "HUBBS", "Position": "CHAIR"}
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([row]))
+    result = await client.get_directors("119219814", lang="fr")
+    assert "premières" not in (result.provenance.limits or "")
+
+
+def _package(year, names):
+    return {
+        "id": f"pkg{year}",
+        "title": f"{year} List of charities",
+        "resources": [
+            {"id": f"{year}-{name.split()[0]}", "name": name, "datastore_active": True}
+            for name in names
+        ],
+    }
+
+
+_ALL_TABLES = [
+    constants.RESOURCE_IDENTIFICATION,
+    constants.RESOURCE_GENERAL,
+    constants.RESOURCE_DIRECTORS,
+]
+
+
+async def test_each_tool_uses_the_newest_list_that_has_its_table(httpx_mock):
+    # 2025 has no directors table yet; 2024 has all three.
+    packages = [
+        _package(2025, [constants.RESOURCE_IDENTIFICATION, constants.RESOURCE_GENERAL]),
+        _package(2024, _ALL_TABLES),
+    ]
+    httpx_mock.add_response(
+        url=re.compile(r".*package_search.*"),
+        json={"success": True, "result": {"results": packages}},
+    )
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([_ROW]))
+    row = {"BN": _ROW["BN"], "FPE": "2024-03-31", "Last Name": "HUBBS", "Position": "CHAIR"}
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([row]))
+
+    search = await client.search_charities("red cross")
+    assert search.list_year == 2025
+    directors = await client.get_directors("119219814")
+    assert directors.list_year == 2024
+    assert "resource_id=2024-Charities" in str(httpx_mock.get_requests()[-1].url)
+
+
+async def test_a_list_missing_the_identification_table_is_skipped_not_pinned(httpx_mock):
+    packages = [
+        _package(2025, [constants.RESOURCE_GENERAL]),
+        _package(2024, _ALL_TABLES),
+    ]
+    httpx_mock.add_response(
+        url=re.compile(r".*package_search.*"),
+        json={"success": True, "result": {"results": packages}},
+    )
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([_ROW]))
+    result = await client.search_charities("red cross")
+    assert result.list_year == 2024
+    request = httpx_mock.get_requests()[-1]
+    assert "resource_id=2024-Identification" in str(request.url)
+
+
+def test_business_numbers_accept_ascii_digits_only():
+    assert client.normalize_bn("119-219-814") == "119219814RR0001"
+    arabic_indic = "١٢٣٤٥٦٧٨٩"
+    fullwidth = "１２３４５６７８９"
+    for text in (arabic_indic, fullwidth):
+        assert not client._is_bn(text)
+        with pytest.raises(InvalidInput):
+            client.normalize_bn(text)

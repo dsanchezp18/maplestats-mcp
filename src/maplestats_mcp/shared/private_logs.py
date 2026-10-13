@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import logging
 
-_TOOL_FAILURE_PREFIXES = ("Error calling tool", "Invalid arguments for tool")
+# Every FastMCP message on this logger that carries a failed call's arguments:
+# tools, resource reads (the URI) and prompt renders.
+_CALL_FAILURE_PREFIXES = (
+    "Error calling tool",
+    "Invalid arguments for tool",
+    "Error reading resource",
+    "Error rendering prompt",
+)
 
 
 class PrivateToolLogs(logging.Filter):
@@ -17,7 +24,7 @@ class PrivateToolLogs(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         # Other warnings on this logger (startup, configuration) stay as written.
-        if str(record.msg).startswith(_TOOL_FAILURE_PREFIXES):
+        if str(record.msg).startswith(_CALL_FAILURE_PREFIXES):
             kind = (
                 record.exc_info[0].__name__
                 if record.exc_info and record.exc_info[0]

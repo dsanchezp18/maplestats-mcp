@@ -124,7 +124,7 @@ def over_limit(address: str) -> str | None:
 
 
 def refund(address: str) -> None:
-    """Give back the request over_limit just counted, when the backend failed."""
+    """Give back the request over_limit just counted, when no model call was billed."""
     hits = _hits_by_client.get(address)
     if hits:
         hits.pop()
@@ -171,31 +171,48 @@ def final_text(content: list[Any]) -> str:
     ).strip()
 
 
+class BackendFailure(Exception):
+    """A backend error, with whether a model call had already completed.
+
+    A completed call has been billed, so the request still counts against the
+    limits; only a failure before any call completed is given back.
+    """
+
+    def __init__(self, billed: bool) -> None:
+        super().__init__("Model backend failed")
+        self.billed = billed
+
+
 async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Let Anthropic's MCP connector call the public MapleStats server."""
     conversation: list[dict[str, Any]] = list(messages)
     tools_used: list[dict[str, Any]] = []
+    billed = False
 
-    # The client owns an HTTP connection pool, so close it when the request ends.
-    async with AsyncAnthropic(api_key=API_KEY or None) as client:
-        for _ in range(max(1, MAX_TOOL_STEPS)):
-            response = await client.beta.messages.create(
-                model=MODEL,
-                max_tokens=MAX_OUTPUT_TOKENS,
-                betas=["mcp-client-2025-11-20"],
-                system=SYSTEM_PROMPT,
-                output_config={"effort": EFFORT},
-                mcp_servers=[{"type": "url", "url": MCP_URL, "name": "maplestats"}],
-                tools=[{"type": "mcp_toolset", "mcp_server_name": "maplestats"}],
-                messages=conversation,
-            )
-            for block in response.content:
-                if block.type == "mcp_tool_use":
-                    tools_used.append(describe_call(block.name, block.input))
-            # pause_turn means the server paused a long turn; resume it unchanged.
-            if response.stop_reason != "pause_turn":
-                break
-            conversation.append({"role": "assistant", "content": response.content})
+    try:
+        # The client owns an HTTP connection pool, so close it when the request ends.
+        async with AsyncAnthropic(api_key=API_KEY or None) as client:
+            for _ in range(max(1, MAX_TOOL_STEPS)):
+                response = await client.beta.messages.create(
+                    model=MODEL,
+                    max_tokens=MAX_OUTPUT_TOKENS,
+                    betas=["mcp-client-2025-11-20"],
+                    system=SYSTEM_PROMPT,
+                    output_config={"effort": EFFORT},
+                    mcp_servers=[{"type": "url", "url": MCP_URL, "name": "maplestats"}],
+                    tools=[{"type": "mcp_toolset", "mcp_server_name": "maplestats"}],
+                    messages=conversation,
+                )
+                billed = True
+                for block in response.content:
+                    if block.type == "mcp_tool_use":
+                        tools_used.append(describe_call(block.name, block.input))
+                # pause_turn means the server paused a long turn; resume it unchanged.
+                if response.stop_reason != "pause_turn":
+                    break
+                conversation.append({"role": "assistant", "content": response.content})
+    except Exception as error:  # reported with whether it cost money
+        raise BackendFailure(billed) from error
 
     return {"answer": final_text(response.content), "tools_used": tools_used}
 
@@ -233,43 +250,48 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
         *messages,
     ]
     tools_used: list[dict[str, Any]] = []
+    billed = False
 
-    # The OpenAI client owns an HTTP connection pool, so close it when the request ends.
-    async with (
-        AsyncOpenAI(api_key=API_KEY, base_url=BASE_URL or None) as client,
-        Client(MCP_URL) as mcp,
-    ):
-        # The server exposes three tools and they do not change per request.
-        tools = await load_openai_tools(mcp)
+    try:
+        # The OpenAI client owns an HTTP connection pool, so close it when the request ends.
+        async with (
+            AsyncOpenAI(api_key=API_KEY, base_url=BASE_URL or None) as client,
+            Client(MCP_URL) as mcp,
+        ):
+            # The server exposes three tools and they do not change per request.
+            tools = await load_openai_tools(mcp)
 
-        for _ in range(MAX_TOOL_STEPS):
-            response = await client.chat.completions.create(
-                model=MODEL,
-                max_tokens=MAX_OUTPUT_TOKENS,
-                messages=conversation,
-                tools=tools,
-            )
-            message = response.choices[0].message
-            if not message.tool_calls:
-                return {"answer": message.content or "", "tools_used": tools_used}
+            for _ in range(MAX_TOOL_STEPS):
+                response = await client.chat.completions.create(
+                    model=MODEL,
+                    max_tokens=MAX_OUTPUT_TOKENS,
+                    messages=conversation,
+                    tools=tools,
+                )
+                billed = True
+                message = response.choices[0].message
+                if not message.tool_calls:
+                    return {"answer": message.content or "", "tools_used": tools_used}
 
-            conversation.append(message.model_dump(exclude_none=True))
-            for call in message.tool_calls:
-                arguments = parse_arguments(call.function.arguments)
-                tools_used.append(describe_call(call.function.name, arguments))
-                result = await mcp.call_tool(
-                    call.function.name, arguments, raise_on_error=False
-                )
-                text = "\n".join(
-                    part.text for part in result.content if hasattr(part, "text")
-                )
-                conversation.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": call.id,
-                        "content": text[:TOOL_RESULT_CHARS],
-                    }
-                )
+                conversation.append(message.model_dump(exclude_none=True))
+                for call in message.tool_calls:
+                    arguments = parse_arguments(call.function.arguments)
+                    tools_used.append(describe_call(call.function.name, arguments))
+                    result = await mcp.call_tool(
+                        call.function.name, arguments, raise_on_error=False
+                    )
+                    text = "\n".join(
+                        part.text for part in result.content if hasattr(part, "text")
+                    )
+                    conversation.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": text[:TOOL_RESULT_CHARS],
+                        }
+                    )
+    except Exception as error:  # reported with whether it cost money
+        raise BackendFailure(billed) from error
 
     return {
         "answer": "I could not finish within the tool-call limit. Try a narrower "
@@ -357,16 +379,24 @@ async def chat(request: Request) -> JSONResponse:
         # Keep our own answers valid when the browser sends them back on the next turn.
         answer = str(result.get("answer") or "").strip()
         if not answer:
-            refund(address)
+            # The model call completed and was billed, so the request stays counted.
             return JSONResponse(
                 {"error": "The model returned no answer. Try again."}, status_code=502
             )
         result["answer"] = answer[:MAX_ASSISTANT_CHARS]
         return JSONResponse(result)
     except Exception as error:  # noqa: BLE001 - any backend failure is a 502
-        # Only the type: SDK exception text can echo the question or the request.
-        logger.error("Model backend failed (%s)", type(error).__name__)
-        refund(address)
+        failure = error if isinstance(error, BackendFailure) else None
+        cause = error.__cause__ if failure and error.__cause__ else error
+        # Only the type and status: SDK exception text can echo the question or the request.
+        logger.error(
+            "Model backend failed (%s, HTTP status %s)",
+            type(cause).__name__,
+            getattr(cause, "status_code", None),
+        )
+        # A failure after a billed call stays counted, so retries cannot dodge the caps.
+        if not (failure and failure.billed):
+            refund(address)
         return JSONResponse(
             {"error": "The model or the data server did not answer. Try again."},
             status_code=502,

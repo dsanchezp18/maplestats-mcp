@@ -181,6 +181,12 @@ def _layout(sample: str) -> tuple[str, int, bool]:
     return delimiter, header, notes_after
 
 
+def _form_fields(body: bytes) -> dict[str, str]:
+    text = body.decode("utf-8", "replace")
+    # Blank values are kept ("a=&b=2"), but text with no "=" is not a form at all.
+    return dict(parse_qsl(text, keep_blank_values=True)) if "=" in text else {}
+
+
 def _request_fields(request: RecordedRequest) -> dict[str, Any]:
     fields: dict[str, Any] = {}
     if request.accept and request.accept != "*/*":
@@ -190,12 +196,22 @@ def _request_fields(request: RecordedRequest) -> dict[str, Any]:
             try:
                 fields["post_json"] = json.loads(request.body)
             except ValueError:
-                # A body the source calls JSON but is not (or a streamed, empty one):
-                # keep the bytes as text rather than failing the whole reproduction.
-                fields["post_form"] = dict(parse_qsl(request.body.decode("utf-8", "replace")))
+                # Some sources label a form-encoded body as JSON: read it as a form.
+                # A body that is neither leaves both fields unset (see _body_is_lost).
+                fields["post_form"] = _form_fields(request.body)
         else:
-            fields["post_form"] = dict(parse_qsl(request.body.decode("utf-8", "replace")))
+            fields["post_form"] = _form_fields(request.body)
     return fields
+
+
+def _body_is_lost(request: RecordedRequest, fields: dict[str, Any]) -> bool:
+    """True when the request has a body that neither JSON nor form fields can hold."""
+    return bool(
+        request.method == "POST"
+        and request.body
+        and "post_json" not in fields
+        and not fields.get("post_form")
+    )
 
 
 async def _fetch(request: RecordedRequest) -> tuple[str, bytes, bool]:
@@ -240,6 +256,21 @@ async def spec_from_request(request: RecordedRequest, pages: int) -> Spec:
                     f"{', '.join(session)} tokens from an earlier page), so a script cannot "
                     "replay it. Cite the URL and retrieval date, or keep the tool's output as "
                     "the raw input."
+                )
+            ],
+        )
+    if _body_is_lost(request, fields):
+        # Replaying it would send a different request than the tool made, so say so.
+        return Spec(
+            kind="none",
+            url=request.url,
+            file_name="",
+            method=method,
+            notes=[
+                (
+                    "The request body is neither JSON nor form fields, so a script cannot send "
+                    "it. Cite the URL and retrieval date, or keep the tool's output as the raw "
+                    "input."
                 )
             ],
         )

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
 
 def test_http_client_logs_stay_quiet() -> None:
     """httpx logs each upstream URL, with its query string, at INFO; the entrypoint mutes that."""
@@ -43,6 +45,27 @@ async def test_tool_errors_keep_arguments_in_client_response_only(caplog):
     tool_logger.removeHandler(caplog.handler)
     assert marker not in caplog.text
     assert "MCP tool call failed" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Error reading resource 'docs://private_uri_marker'",
+        "Error rendering prompt 'private_prompt_marker'",
+    ],
+)
+def test_resource_and_prompt_failures_are_scrubbed_too(caplog, message):
+    from maplestats_mcp.shared.private_logs import configure_private_logs
+
+    configure_private_logs()
+    logger = logging.getLogger("fastmcp.server.server")
+    with caplog.at_level(logging.ERROR, logger=logger.name):
+        try:
+            raise RuntimeError("private_exception_marker")
+        except RuntimeError:
+            logger.exception(message)
+    assert "private" not in caplog.text
+    assert "RuntimeError" in caplog.text
 
 
 def test_unexpected_exception_text_is_not_logged(caplog):

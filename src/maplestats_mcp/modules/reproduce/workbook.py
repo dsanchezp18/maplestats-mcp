@@ -220,22 +220,37 @@ LABELS: dict[str, dict[str, str]] = {
 }
 
 
-# The jurisdiction named in an Open Government Licence, as the licence spells it
-# in English and in French; an unknown jurisdiction gets the generic citation line.
+# The federal, provincial and territorial governments that issue an Open Government
+# Licence, in English and in French. A licence from anyone else (a city, say) gets the
+# generic citation line rather than a jurisdiction we would have to guess.
 _OGL_REGIONS = (
-    ("british columbia", "British Columbia", "Colombie-Britannique"),
-    ("colombie-britannique", "British Columbia", "Colombie-Britannique"),
-    ("alberta", "Alberta", "Alberta"),
-    ("ontario", "Ontario", "Ontario"),
-    ("canada", "Canada", "Canada"),
+    ("Canada", "Canada"),
+    ("Alberta", "Alberta"),
+    ("British Columbia", "Colombie-Britannique"),
+    ("Ontario", "Ontario"),
+    ("Yukon", "Yukon"),
+    ("Newfoundland and Labrador", "Terre-Neuve-et-Labrador"),
+    ("Northwest Territories", "Territoires du Nord-Ouest"),
+    ("Nova Scotia", "Nouvelle-Écosse"),
+    ("New Brunswick", "Nouveau-Brunswick"),
+    ("Saskatchewan", "Saskatchewan"),
+    ("Manitoba", "Manitoba"),
+)
+
+# "Open Government Licence - <jurisdiction>" and its French form, hyphen or en dash.
+_OGL_NAME = re.compile(
+    r"(?:open government licen[cs]e|licence du gouvernement ouvert)\s*[-–—]\s*(?P<rest>[^.;:(]*)",
+    re.IGNORECASE,
 )
 
 
 def _licence_region(licence: str | None, lang: str) -> str | None:
-    text = (licence or "").lower()
-    for key, english, french in _OGL_REGIONS:
-        if key in text:
-            return french if normalize_lang(lang) == "fr" else english
+    """The jurisdiction the licence text names, in the workbook's language."""
+    for named in _OGL_NAME.finditer(licence or ""):
+        rest = named.group("rest").strip().lower()
+        for english, french in _OGL_REGIONS:
+            if rest.startswith((english.lower(), french.lower())):
+                return french if normalize_lang(lang) == "fr" else english
     return None
 
 
