@@ -100,16 +100,6 @@ _NOTES: list[tuple[str, Template]] = [
         ),
     ),
     (
-        (
-            r"(?P<release>\d{4}) tables have no full-table CSV; an SDMX ZIP is at (?P<url>\S+) for "
-            r"non-R languages\."
-        ),
-        (
-            "Les tableaux de {release} n'ont pas de CSV complet ; un ZIP SDMX se trouve à {url} "
-            "pour les langages autres que R."
-        ),
-    ),
-    (
         r"Date bounds compare (?P<column>.+) as ISO text \(YYYY-MM-DD\)\.",
         "Les bornes de dates comparent {column} comme texte ISO (AAAA-MM-JJ).",
     ),
@@ -145,6 +135,17 @@ _NOTES: list[tuple[str, Template]] = [
             "jetons {tokens} obtenus d'une page précédente) ; un script ne peut donc pas la "
             "rejouer. Citez l'URL et la date de consultation, ou conservez la sortie de l'outil "
             "comme donnée brute."
+        ),
+    ),
+    (
+        (
+            r"The request body is neither JSON nor form fields, so a script cannot send it\. "
+            r"Cite the URL and retrieval date, or keep the tool's output as the raw input\."
+        ),
+        (
+            "Le corps de la requête n'est ni du JSON ni des champs de formulaire ; un script ne "
+            "peut donc pas l'envoyer. Citez l'URL et la date de consultation, ou conservez la "
+            "sortie de l'outil comme donnée brute."
         ),
     ),
     (
@@ -269,10 +270,6 @@ _NOTES: list[tuple[str, Template]] = [
             "L'outil a appliqué lui-même ces arguments après le téléchargement ; le script "
             "renvoie donc la réponse non filtrée : {arguments}."
         ),
-    ),
-    (
-        r"No (?P<languages>.+) script: Beyond 20/20 files are read only by canivt \(R\)\.",
-        "Pas de script {languages} : seul canivt (R) lit les fichiers Beyond 20/20.",
     ),
     (
         r"No (?P<languages>.+) script: Julia has no maintained HTML table reader\.",

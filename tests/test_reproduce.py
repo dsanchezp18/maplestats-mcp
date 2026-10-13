@@ -1025,15 +1025,18 @@ def test_generated_period_helpers_match_the_client(language, tmp_path):
     assert out.stdout.split("\n")[: len(_PERIODS)] == expected
 
 
-async def test_keyerror_for_a_supplied_argument_is_not_blamed_on_the_caller(monkeypatch):
+async def test_missing_field_in_the_response_is_an_upstream_error(monkeypatch):
     from maplestats_mcp.modules.reproduce import client as reproduce_client
+    from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
-    async def broken_spec(tool, arguments, lang="en"):
-        raise KeyError("x")
+    async def reads_a_response_field(tool, arguments, lang="en"):
+        return {"rows": []}["records"]
 
-    monkeypatch.setattr(reproduce_client, "_spec", broken_spec)
-    with pytest.raises(KeyError):
-        await reproduce_client.reproduce("any_tool", {"x": 1})
+    monkeypatch.setattr(reproduce_client, "_spec", reads_a_response_field)
+    # Even when a caller's argument has the same name, the fault is the response's.
+    with pytest.raises(UpstreamError, match="no field 'records'") as raised:
+        await reproduce_client.reproduce("any_tool", {"records": 1})
+    assert not isinstance(raised.value, InvalidInput)
 
 
 async def test_missing_argument_is_still_reported(monkeypatch):
@@ -1044,8 +1047,10 @@ async def test_missing_argument_is_still_reported(monkeypatch):
         return arguments["x"]
 
     monkeypatch.setattr(reproduce_client, "_spec", needs_x)
-    with pytest.raises(InvalidInput, match="no field 'x'"):
+    with pytest.raises(InvalidInput, match="missing the argument 'x'"):
         await reproduce_client.reproduce("any_tool", {})
+    with pytest.raises(InvalidInput, match="Il manque l'argument 'x'"):
+        await reproduce_client.reproduce("any_tool", {}, lang="fr")
 
 
 def test_json_post_body_that_is_not_json_does_not_fail():
@@ -1054,6 +1059,27 @@ def test_json_post_body_that_is_not_json_does_not_fail():
 
     request = RecordedRequest("POST", "https://a.example/x", b"a=1&b=2", "application/json")
     assert probe._request_fields(request)["post_form"] == {"a": "1", "b": "2"}
+
+
+@pytest.mark.parametrize("body", [b'{"a": 1,', b"plain text body"])
+async def test_body_neither_json_nor_form_is_not_replayed_without_it(body):
+    from maplestats_mcp.modules.reproduce import probe
+    from maplestats_mcp.shared.http import RecordedRequest
+
+    request = RecordedRequest("POST", "https://a.example/x", body, "application/json")
+    spec = await probe.spec_from_request(request, 1)
+    assert spec.kind == "none" and "neither JSON nor form fields" in spec.notes[0]
+    assert spec.post_json is None and not spec.post_form
+
+
+def test_blank_form_values_are_kept():
+    from maplestats_mcp.modules.reproduce import probe
+    from maplestats_mcp.shared.http import RecordedRequest
+
+    request = RecordedRequest(
+        "POST", "https://a.example/x", b"a=&b=2", "application/x-www-form-urlencoded"
+    )
+    assert probe._request_fields(request)["post_form"] == {"a": "", "b": "2"}
 
 
 async def test_probe_replay_refuses_a_redirect_to_an_address(httpx_mock):

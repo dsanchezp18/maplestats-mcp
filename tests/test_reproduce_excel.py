@@ -251,7 +251,7 @@ async def test_all_includes_excel_and_explains_a_missing_query():
 
 
 def test_kinds_m_cannot_read_get_no_query():
-    for kind in ("feed", "ivt", "file", "zip"):
+    for kind in ("feed", "file", "zip"):
         assert render_excel(_spec(kind=kind), "tool") is None
     assert render_excel(_spec(native={"python": Code([], "x")}), "tool") is None
 

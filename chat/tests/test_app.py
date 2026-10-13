@@ -181,14 +181,78 @@ def test_backend_failure_refunds_the_budget_and_logs_only_the_type(monkeypatch, 
     assert "secret question" not in caplog.text
 
 
-def test_empty_answer_refunds_the_budget(monkeypatch):
+def test_empty_answer_stays_counted(monkeypatch):
     async def empty_model(messages):
         return {"answer": "  ", "tools_used": []}
 
     monkeypatch.setattr(chat_app, "ask_model", empty_model)
     response = post(TestClient(chat_app.app), [{"role": "user", "content": "hi"}])
     assert response.status_code == 502
+    # The model call ran and was billed, so retrying cannot get it for free.
+    assert chat_app._daily_count["n"] == 1
+    assert len(chat_app._hits_by_client) == 1
+
+
+def test_failure_after_a_billed_call_stays_counted(monkeypatch, caplog):
+    class ApiError(Exception):
+        status_code = 529
+
+    async def late_failure(messages):
+        try:
+            raise ApiError("secret question text")
+        except ApiError as error:
+            raise chat_app.BackendFailure(billed=True) from error
+
+    monkeypatch.setattr(chat_app, "ask_model", late_failure)
+    response = post(TestClient(chat_app.app), [{"role": "user", "content": "hi"}])
+    assert response.status_code == 502
+    assert chat_app._daily_count["n"] == 1
+    assert "ApiError" in caplog.text and "529" in caplog.text
+    assert "secret question" not in caplog.text
+
+
+def test_failure_before_any_billed_call_is_refunded(monkeypatch):
+    async def early_failure(messages):
+        raise chat_app.BackendFailure(billed=False)
+
+    monkeypatch.setattr(chat_app, "ask_model", early_failure)
+    response = post(TestClient(chat_app.app), [{"role": "user", "content": "hi"}])
+    assert response.status_code == 502
     assert chat_app._daily_count["n"] == 0
+    assert chat_app._hits_by_client == {}
+
+
+@pytest.mark.parametrize(("fail_on_call", "billed"), [(1, False), (2, True)])
+def test_anthropic_backend_reports_whether_a_call_was_billed(
+    monkeypatch, fail_on_call, billed
+):
+    import asyncio
+    from types import SimpleNamespace
+
+    calls = 0
+
+    class FakeMessages:
+        async def create(self, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == fail_on_call:
+                raise RuntimeError("upstream down")
+            return SimpleNamespace(content=[], stop_reason="pause_turn")
+
+    class FakeClient:
+        beta = SimpleNamespace(messages=FakeMessages())
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(chat_app, "AsyncAnthropic", lambda **kwargs: FakeClient())
+    with pytest.raises(chat_app.BackendFailure) as raised:
+        asyncio.run(chat_app.ask_anthropic([{"role": "user", "content": "hi"}]))
+    assert raised.value.billed is billed
+    assert isinstance(raised.value.__cause__, RuntimeError)
 
 
 def test_idle_clients_are_evicted(monkeypatch):

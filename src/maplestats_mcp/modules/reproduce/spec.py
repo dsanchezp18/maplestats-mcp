@@ -20,7 +20,6 @@ Kind = Literal[
     "sdmx",  # SDMX-ML GenericData (StatCan's SDMX service): one row per observation
     "html_table",
     "feed",  # RSS or Atom
-    "ivt",  # Beyond 20/20, read only by canivt in R
     "file",  # downloaded as is (fixed-width text, SDMX-ML, GTFS-RT); notes say how to read it
     "none",  # nothing a script can fetch; notes say why
 ]
