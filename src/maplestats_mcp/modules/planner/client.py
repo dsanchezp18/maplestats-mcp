@@ -91,6 +91,16 @@ def _pattern_hits(topic: Topic, text: str) -> list[re.Match[str]]:
     return [found for pattern in topic.patterns if (found := re.search(pattern, text))]
 
 
+def _pair_hits(topic: Topic, text: str) -> list[str]:
+    hits = []
+    for cues, signals in topic.pairs:
+        cue = next((word for word in cues if _matches(word, text)), None)
+        signal = next((word for word in signals if _matches(word, text)), None)
+        if cue and signal:
+            hits.append(f"{cue.rstrip('*')} + {signal.rstrip('*')}")
+    return hits
+
+
 def _blank(text: str, phrases: tuple[str, ...]) -> str:
     for phrase in phrases:
         text = _pattern(phrase).sub(" | ", text)
@@ -110,7 +120,9 @@ def _ordered(topic: Topic, text: str, labels: list[str]) -> list[StepOut]:
     # question starts with the earthquake tool), then steps for the place it
     # names; the sort is stable, so a chain of steps keeps its order.
     def score(step: PlanStep) -> int:
-        term_hit = any(_matches(term, text) for term in step.terms)
+        term_hit = any(_matches(term, text) for term in step.terms) or any(
+            re.search(pattern, text) for pattern in step.patterns
+        )
         return 2 * term_hit + _place_score(step, labels)
 
     steps = sorted(topic.steps, key=score, reverse=True)
@@ -203,6 +215,7 @@ def plan(question: str, lang: str = "en") -> QueryPlan:
             topic_text = _blank(text, topic.shadows)
             hits = [term.rstrip("*") for term in topic.terms if _matches(term, topic_text)]
             hits += [found.group(0) for found in _pattern_hits(topic, topic_text)]
+            hits += _pair_hits(topic, topic_text)
             if hits:
                 scored.append((len(hits), topic, hits, topic_text))
     scored.sort(key=lambda item: item[0], reverse=True)

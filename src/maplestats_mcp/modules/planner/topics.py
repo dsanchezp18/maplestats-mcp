@@ -10,7 +10,8 @@ topic when the question used one of them, so an earthquake question
 starts with the earthquake tool, not the first weather step. A topic's
 `shadows` are phrases blanked out before its terms are tried ("house of
 commons" is not housing); its `patterns` are regexes for cues no word list
-can name, such as a table number. tests/test_planner.py checks that every tool
+can name, such as a table number, and its `pairs` are cue-plus-signal word
+lists for words too common to trigger a topic on their own. tests/test_planner.py checks that every tool
 named here is registered, so a renamed tool cannot leave a plan pointing
 at nothing, and that each step's required arguments are named in its
 purpose or come from an earlier step of the same source.
@@ -26,6 +27,9 @@ class PlanStep:
     tool: str
     purpose: str
     terms: tuple[str, ...] = ()
+    # Regexes for cues a word list cannot name (a vector ID like v41690973);
+    # one that matches moves the step forward, as a term does.
+    patterns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,10 @@ class Topic:
     # Regexes tried on the normalized question, for cues a word list cannot
     # name (a StatCan table number); each one that matches counts as a term hit.
     patterns: tuple[str, ...] = ()
+    # (cues, signals) pairs for words too common to trigger a topic alone: the
+    # pair counts as one hit only when the question holds a cue ("statcan") and
+    # a signal ("csv", "bulk"), so "CSV download of wildfires" stays out.
+    pairs: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = ()
 
 
 _TRADE_TERMS = (
@@ -1659,36 +1667,74 @@ STATCAN_UPDATES = Topic(
 )
 TOPICS = (*TOPICS, STATCAN_UPDATES)
 
-# A table number (36-10-0222 or 36-10-0222-01), as people write it.
-_TABLE_NUMBER = r"(?<![0-9-])\d{2}-\d{2}-\d{4}(?:-\d{2})?(?![0-9])"
+# A StatCan table number (36-10-0222, 36-10-0222-01): subject 10 to 49 or 98,
+# product type 10, a serial below 1900. That keeps numeric dates ("12-31-2024",
+# "10-10-2024"), phone numbers and years out; a table written as eight digits
+# needs the word "table" in front.
+_TABLE_NUMBER = r"(?<![0-9-])(?:[1-4]\d|98)-10-(?:0\d{3}|1[0-8]\d{2})(?:-\d{2})?(?![0-9])"
+_TABLE_PID = r"\b(?:table|tableau|productid|product id|pid)\s*#?\s*\d{8}\b"
+# A vector as people write it: v41690973, "vector 41690973", "vecteurs 41690973".
+_VECTOR_ID = r"(?<![a-z0-9])v\d{4,10}(?![a-z0-9])|\bvect(?:or|eur)s?\s+v?\d{3,10}\b"
+# Asking for a whole table, in either language ("tableaux" is why this is a
+# regex: the word lists only add an s).
+_FULL_TABLE = (
+    r"\b(?:download|export|get|pull|fetch)\s+(?:the\s+|a\s+)?(?:full|whole|entire|complete)\s+tables?\b",
+    r"\b(?:full|whole|entire|complete)\s+table\s+(?:download|csv)\b",
+    r"\btableaux?\s+compl[a-z]*\b",
+    r"\btout\s+le\s+tableau\b",
+    r"\bla\s+table\s+complete\b",
+)
+_STATCAN_CUES = (
+    "statcan",
+    "statistics canada",
+    "statistique canada",
+    "statistiques canada",
+    "cansim",
+    "wds",
+)
+# Words that point at bulk work once StatCan is named.
+_BULK_SIGNALS = (
+    "csv",
+    "bulk",
+    "offline",
+    "reconcil*",
+    "workbook",
+    "spreadsheet",
+    "vector",
+    "series id",
+    "hundreds of series",
+    "thousands of series",
+    "dozens of series",
+    "many series",
+    "all series",
+    "en vrac",
+    "en bloc",
+    "hors ligne",
+    "rapproch*",
+    "concili*",
+    "classeur",
+    "chiffrier",
+    "tableur",
+    "vecteur",
+    "centaines de series",
+    "milliers de series",
+    "plusieurs series",
+)
 
 STATCAN_TABLES = Topic(
     "statcan_tables",
     "StatCan whole tables, bulk series and vector IDs",
     (
-        "full table",
-        "whole table",
-        "entire table",
-        "complete table",
-        "table download",
-        "download the table",
-        "csv download",
-        "download csv",
-        "bulk download",
-        "bulk data",
-        "bulk series",
-        "vector",
-        "vector id",
         "cansim",
-        "reconcil*",
-        "tableau complet",
-        "tout le tableau",
-        "telecharger le tableau",
-        "telechargement en bloc",
-        "telechargement csv",
-        "vecteur",
+        "vector id",
+        "vector number",
+        "statcan vector",
+        "statistics canada vector",
+        "cansim vector",
+        "numero de vecteur",
         "identifiant de vecteur",
-        "rapprochement",
+        "id de vecteur",
+        "vecteur statcan",
     ),
     (
         PlanStep(
@@ -1698,8 +1744,8 @@ STATCAN_TABLES = Topic(
         PlanStep("wds_get_cube_metadata", "the table's dimensions and members, to size a request"),
         PlanStep(
             "wds_get_full_table_download",
-            "the whole table as one CSV: a download link only, no rows; the file has a VECTOR "
-            "column to join on",
+            "the whole table as a ZIP holding the CSV: a download link only, no rows; the file "
+            "has a VECTOR column, with values like v39050",
             terms=(
                 "full table",
                 "whole table",
@@ -1709,48 +1755,71 @@ STATCAN_TABLES = Topic(
                 "csv",
                 "download",
                 "bulk",
+                "series id",
                 "reconcil*",
                 "offline",
+                "workbook",
+                "spreadsheet",
+                "hundreds",
                 "tableau complet",
                 "tout le tableau",
                 "telecharg*",
-                "rapprochement",
+                "en vrac",
+                "rapproch*",
+                "concili*",
+                "classeur",
+                "chiffrier",
+                "centaines",
             ),
+            patterns=_FULL_TABLE,
         ),
         PlanStep(
             "wds_get_series_info",
             "one vector ID to its table and coordinate, or the reverse",
             terms=("vector", "vecteur"),
+            patterns=(_VECTOR_ID,),
         ),
         PlanStep(
             "wds_get_data_from_vectors",
-            "latest observations for a few known vectors, returned inline",
+            "latest observations for a few known vectors, in the response itself",
             terms=("vector", "vecteur"),
+            patterns=(_VECTOR_ID,),
         ),
         PlanStep(
             "wds_get_data_by_reference_period_range",
-            "a date window for a few known vectors, returned inline",
+            "a date window for a few known vectors, in the response itself",
             terms=("vector", "vecteur"),
+            patterns=(_VECTOR_ID,),
         ),
     ),
     (
         (
-            "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
-            "tools. A large table can hold hundreds of thousands of rows across every "
-            "geography and measure, so filter after downloading."
+            "wds_get_full_table_download gives a link to a ZIP, not rows: download and unzip it "
+            "with your own tools. A large table can hold hundreds of thousands of rows across "
+            "every geography and measure, so filter after downloading."
         ),
         (
-            "The vector tools return every observation inline, several fields each: fine for a "
-            "handful of series, the wrong tool for hundreds."
+            "The vector tools return every observation in the response, several fields each: "
+            "fine for a handful of series, the wrong tool for hundreds."
         ),
         (
-            "When both sources carry a vector ID, join on it: it is an exact key, where "
+            "When both sources carry a vector ID, join on it, after removing the leading v from "
+            "the CSV's VECTOR column (v39050 is vector 39050): it is an exact key, where "
             "line-item names are not."
         ),
     ),
-    patterns=(_TABLE_NUMBER,),
+    shadows=(
+        "vector borne",
+        "vector-borne",
+        "vector tile",
+        "vector map",
+        "vector graphic",
+        "vector autoregression",
+        "disease vector",
+    ),
+    patterns=(_TABLE_NUMBER, _TABLE_PID, _VECTOR_ID, *_FULL_TABLE),
+    pairs=((_STATCAN_CUES, _BULK_SIGNALS),),
 )
-TOPICS = (*TOPICS, STATCAN_TABLES)
 
 
 EMISSIONS = Topic(
@@ -2156,6 +2225,9 @@ TOPICS = (
     FORESTRY,
     HEALTH_PRODUCTS,
     TAXATION,
+    # Last on purpose: topics are ranked by hits and ties keep this order, so a
+    # specific source (NPRI, a drug database) wins a tie against a generic cue.
+    STATCAN_TABLES,
 )
 
 # Places this server has no data for. A question naming one of them, with no

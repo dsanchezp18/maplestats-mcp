@@ -118,6 +118,30 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "wds_get_full_table_download",
     ),
     ("Which table does a StatCan vector belong to?", "statcan_tables", "wds_get_series_info"),
+    ("What is v41690973?", "statcan_tables", "wds_get_series_info"),
+    ("Compare v41690973 and v41690914 for 2020", "statcan_tables", "wds_get_series_info"),
+    (
+        "Get hundreds of series from Statistics Canada",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
+    (
+        "I have 400 series IDs from StatCan and need their values",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
+    ("Download table 36100222", "statcan_tables", "wds_get_full_table_download"),
+    (
+        "Télécharger les tableaux complets de Statistique Canada",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
+    (
+        "Rapprocher mon classeur avec un tableau de Statistique Canada",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
+    ("Quel est le numéro de vecteur de cette série?", "statcan_tables", "wds_get_series_info"),
     (
         "Télécharger le tableau complet 36-10-0222 en CSV",
         "statcan_tables",
@@ -232,6 +256,21 @@ def test_cross_border_questions_stay_in_scope():
         ("Nuclear fusion research funding", "competition"),
         ("Food safety recall for peanut butter", "transport"),
         ("Product safety recalls on toys", "crime"),
+        # statcan_tables: generic words and numbers that are not StatCan cues.
+        ("Vector-borne disease surveillance in Ontario", "statcan_tables"),
+        ("West Nile virus mosquito vector Manitoba", "statcan_tables"),
+        ("Vector tiles for Toronto map", "statcan_tables"),
+        ("What is the vector autoregression forecast for Canadian GDP?", "statcan_tables"),
+        ("Reconcile the federal budget with provincial deficits", "statcan_tables"),
+        ("CSV download of Alberta wildfires", "statcan_tables"),
+        ("Bulk data on grain deliveries", "statcan_tables"),
+        ("Housing starts on 12-31-2024 in Vancouver", "statcan_tables"),
+        ("Housing starts from 31-12-2024 in Vancouver", "statcan_tables"),
+        ("Unemployment on 01-02-2024 in Alberta", "statcan_tables"),
+        ("Rent on 10-10-2024 in Calgary", "statcan_tables"),
+        ("Dataset 12-34-5678 housing", "statcan_tables"),
+        ("Call 604-555-1234 about housing", "statcan_tables"),
+        ("Wildfires between 2019-20-2021", "statcan_tables"),
     ],
 )
 def test_false_positive_terms(question: str, absent: str):
@@ -311,3 +350,53 @@ async def test_report_unrouted_modules():
         warnings.warn(f"modules not yet in any plan (pending): {pending}", stacklevel=1)
     failing = [m for m in unrouted if m not in pending]
     assert not failing, f"modules no plan reaches: {failing}"
+
+
+@pytest.mark.parametrize(
+    ("question", "topic", "first_tool"),
+    [
+        ("Bulk download of NPRI facility data", "emissions", "eccc_datamart_npri_facilities"),
+        (
+            "Bulk download of the drug product database",
+            "health_products",
+            "hc_drug_search_products",
+        ),
+        ("Bulk download of Ontario schools", "facilities", "statcan_lode_list_databases"),
+    ],
+)
+def test_statcan_tables_does_not_outrank_a_specific_source(question, topic, first_tool):
+    # statcan_tables is the last topic, so a generic word never wins a tie.
+    result = client.plan(question)
+    assert result.topics[0].topic == topic, question
+    assert result.topics[0].steps[0].tool == first_tool, question
+    assert "statcan_tables" not in {t.topic for t in result.topics}, question
+
+
+@pytest.mark.parametrize(
+    ("question", "matched"),
+    [
+        ("Download table 36-10-0222-01 as CSV", "36-10-0222-01"),
+        ("Download table 36100222", "table 36100222"),
+        ("Download the census table 98-10-0001", "98-10-0001"),
+        ("What does v41690973 measure?", "v41690973"),
+        ("Pull vectors 41690973 and 41690914", "vectors 41690973"),
+        ("Get hundreds of series from Statistics Canada", "statistics canada + hundreds of series"),
+        ("Download the whole table for me", "download the whole table"),
+    ],
+)
+def test_statcan_tables_matches_its_cues(question, matched):
+    result = client.plan(question)
+    topic = next(t for t in result.topics if t.topic == "statcan_tables")
+    assert matched in topic.matched_terms, (question, topic.matched_terms)
+
+
+def test_statcan_tables_french_plan_is_french():
+    result = client.plan("Télécharger les tableaux complets de Statistique Canada", lang="fr")
+    topic = result.topics[0]
+    assert topic.topic == "statcan_tables"
+    assert topic.matched_terms == ["tableaux complets"]
+    assert topic.label.startswith("Tableaux complets")
+    assert "ZIP" in topic.steps[0].purpose
+    assert "décompressez" in topic.caveats[0]
+    english = client.plan("Télécharger les tableaux complets de Statistique Canada")
+    assert [step.tool for step in topic.steps] == [step.tool for step in english.topics[0].steps]

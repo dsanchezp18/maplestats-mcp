@@ -17,11 +17,13 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Added
 
-- `plan_query`: a `statcan_tables` topic for whole tables, bulk series and vector IDs. It is
-  chosen by words such as "full table", "CSV download", "vector" and "reconcile", or by a
-  table number like 36-10-0222, and starts with `wds_get_full_table_download`. A question
-  about reconciling a workbook of vector IDs against a published table used to get only
-  provincial portals.
+- `plan_query`: a `statcan_tables` topic for whole tables, bulk series and vector IDs, in English
+  and French. It is chosen by a table number such as 36-10-0222, a vector ID such as v41690973,
+  a request for a whole table, or a StatCan cue together with a bulk word (CSV, workbook,
+  reconcile, hundreds of series), not by those words alone, and it ranks last so a specific
+  source wins a tie. It starts with `wds_get_full_table_download`, a link to a ZIP holding the
+  CSV; the CSV's `VECTOR` values carry a leading v (v39050). A question about reconciling a
+  workbook of vector IDs against a published table used to get only provincial portals.
 - `cra_charities` module: search CRA's annual List of charities by name, city, province
   or designation, look one up by business number, and list its directors and officers
   (open.canada.ca DataStore, Open Government Licence - Canada).
