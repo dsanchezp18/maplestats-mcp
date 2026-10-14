@@ -177,8 +177,8 @@ async def wds_get_data_from_vectors(
     """Get the latest N observations for one or more StatCan vectors.
 
     Use for: fetching recent values of one or more known time series.
-    Results come back inline, so this suits a handful of series; for a
-    whole table or hundreds of vectors use wds_get_full_table_download.
+    Results come back in the response, so this suits a handful of series;
+    for a whole table or a large pull use wds_get_full_table_download.
     Vectors WDS cannot serve are listed in `failed`; the others still
     come back. Note: scalarFactorCode in each observation is NOT
     pre-applied to value: multiply `value` by the observation's
@@ -224,7 +224,7 @@ async def wds_get_bulk_vector_data_by_range(
 
     Use for: bulk historical retrieval across several series at once,
     filtered by release date (not reference period). Results come back
-    inline; for hundreds of series use wds_get_full_table_download.
+    in the response; for a large pull use wds_get_full_table_download.
     `start_release_datetime`/`end_release_datetime` are
     "YYYY-MM-DDTHH:MM" (e.g. "2024-01-01T08:30"); a bare date is widened
     to the start/end of that day. Vectors WDS cannot serve are listed in
@@ -251,9 +251,9 @@ async def wds_get_data_by_reference_period_range(
     Use for: retrieving a specific historical window (e.g. 2015-01-01 to
     2020-12-01) rather than "latest N." `start_ref_period`/`end_ref_period`
     are "YYYY-MM-DD"; a "YYYY-MM" month is widened to its first/last
-    day. Results come back inline, so this suits a handful of series;
-    for hundreds use wds_get_full_table_download. Vectors WDS cannot
-    serve are listed in `failed`.
+    day. Results come back in the response, so this suits a handful of
+    series; for a large pull use wds_get_full_table_download. Vectors WDS
+    cannot serve are listed in `failed`.
     Keywords: statcan, reference period, range, between two dates, time
     series for a vector, history, vectors, wds, date range, Statistics
     Canada.
@@ -337,17 +337,23 @@ async def wds_get_full_table_download(
 
     Use for: bulk/offline analysis of an entire table rather than
     individual series, in CSV or SDMX format — hands back a URL, does
-    not fetch the file. Also the way to get hundreds of series, or to
-    reconcile a workbook of vector IDs against a published table: the
-    CSV has a VECTOR column to join on, where the vector tools return
-    every observation inline. `lang` picks the CSV language edition. An
-    unknown table number is an error, not a dead link.
+    not fetch the file. For CSV the URL is a ZIP holding the table and a
+    metadata CSV. Also the way to get hundreds of series, or to reconcile a
+    workbook of vector IDs against a published table: the CSV has a
+    VECTOR column to join on, where the vector tools return every
+    observation in the response. VECTOR values carry a leading v
+    (v39050); the vector tools take the number alone, so strip the v to
+    match. `lang` picks the CSV language edition. An unknown table
+    number is an error, not a dead link.
     Keywords: statcan, csv, sdmx, xml, download, full table, bulk,
     export, wds, Statistics Canada, vector column, join, reconcile,
     hundreds of series, offline.
-    Mots-clés : Statistique Canada, CSV, SDMX, XML, téléchargement, tableau
-    complet, téléchargement en bloc, exportation, données complètes, fichier
-    du tableau, colonne VECTOR, jointure, rapprochement, centaines de séries.
+    Mots-clés : Statistique Canada, CSV, SDMX, XML, téléchargement, télécharger
+    un tableau, télécharger tout le tableau, tableau complet, téléchargement en
+    bloc, données en vrac, exportation, données complètes, fichier CSV complet,
+    fichier ZIP, colonne VECTOR, identifiant de vecteur, numéro de vecteur,
+    jointure, réconcilier, rapprocher, classeur, comparer une liste de vecteurs,
+    centaines de séries.
     """
     client.use_lang(lang)
     if format == "sdmx":

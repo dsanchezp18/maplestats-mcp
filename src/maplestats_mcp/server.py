@@ -148,7 +148,8 @@ Use for: locating a tool when you know roughly what data you want
 (a StatCan table, Bank of Canada series, a city's open-data portal).
 Returns the best-matching tool definitions, ranked by relevance, each
 with its name, description and full input schema, in the same format
-as list_tools. Read-only; it searches this server's catalogue only and
+as list_tools, except that each result schema shows the shared provenance
+block as a one-line description. Read-only; it searches this server's catalogue only and
 calls no external API.
 Use plan_query instead when a question may span several sources or you
 do not know where to start; use call_tool to run a tool once you have
@@ -196,9 +197,9 @@ plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
 plain-language query (English or French). Then call_tool with the name.
 For a whole StatCan table, or hundreds of series, use
-wds_get_full_table_download (a CSV link: the rows are not returned) rather
-than the vector tools, which return every observation inline and suit a
-handful of series.
+wds_get_full_table_download (a link to a ZIP holding the CSV: the rows are
+not returned) rather than the vector tools, which return every observation
+in the response and suit a handful of series.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
 and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns

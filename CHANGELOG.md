@@ -28,12 +28,16 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Changed
 
-- `search_tools` answers are about 38% smaller (22 KB to 13 KB for a typical query): the
-  Provenance schema that every tool's result carries is shown once as a short description
-  instead of five full copies. Input schemas and the tools' own result schemas are unchanged.
+- `search_tools` answers are about a third smaller (36% on average over 20 varied queries,
+  30 to 43% each): the Provenance schema that every tool's result carries is shown once as a
+  short description instead of five full copies. Input schemas and the tools' own result
+  schemas are unchanged.
 - The server instructions and the docstrings of the WDS vector tools now say that vectors come
-  back inline and suit a handful of series, and point to `wds_get_full_table_download` (a CSV
-  link with a `VECTOR` column) for a whole table or hundreds of series.
+  back in the response and suit a handful of series, and point to `wds_get_full_table_download`
+  (a link to a ZIP holding the CSV, whose `VECTOR` values carry a leading v) for a whole table or
+  hundreds of series. The French keywords of that tool now cover télécharger, vecteur,
+  identifiant, réconcilier, classeur and en vrac, so French queries about whole tables find it.
+  The StatCan page of the website says the same.
 
 ### Fixed
 

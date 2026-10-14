@@ -140,43 +140,64 @@ def install() -> None:
 PROVENANCE_STUB: dict[str, Any] = {
     "type": "object",
     "description": (
-        "Where the result came from, the same in every tool: source, url, queried_at, "
-        "cached and schema_name, plus as_of, freshness, coverage, limits, licence and "
-        "reproduce when known."
+        "Where the result came from, the same in every tool: source, url, queried_at "
+        "(datetime), cached (bool), schema_name and reproduce, plus as_of (datetime), "
+        "freshness, coverage, limits and licence when known."
     ),
 }
+_PROVENANCE_REF = "#/$defs/Provenance"
+# What marks the shared model: another field that happens to be called
+# "provenance" keeps its own schema.
+_PROVENANCE_FIELDS = {"schema_name", "queried_at"}
+
+
+def _refers_to(value: Any, ref: str) -> bool:
+    if isinstance(value, dict):
+        return value.get("$ref") == ref or any(_refers_to(v, ref) for v in value.values())
+    if isinstance(value, list):
+        return any(_refers_to(v, ref) for v in value)
+    return False
 
 
 def _is_provenance(schema: Any, defs: dict[str, Any]) -> bool:
     """The shared Provenance schema, inlined or as a `$ref` into `$defs`."""
     if not isinstance(schema, dict):
         return False
-    if schema.get("$ref") == "#/$defs/Provenance":
-        return "schema_name" in defs.get("Provenance", {}).get("properties", {})
-    # Another field that happens to be called "provenance" keeps its own schema.
-    return "schema_name" in schema.get("properties", {})
+    if schema.get("$ref") == _PROVENANCE_REF:
+        schema = defs.get("Provenance", {})
+    return _PROVENANCE_FIELDS <= set(schema.get("properties", {}))
+
+
+def collapse_provenance(schema: Any) -> None:
+    """Replace the shared Provenance schema inside one output schema, in place.
+
+    The server's middleware inlines every `$ref` before results are built, so
+    the block normally arrives inline; the `$ref` form is handled too, for a
+    transform run without that middleware. Its `$defs` entry is dropped only
+    when nothing else in the schema still points at it.
+    """
+    if not isinstance(schema, dict):
+        return
+    properties = schema.get("properties")
+    defs = schema.get("$defs", {})
+    if not isinstance(properties, dict) or not isinstance(defs, dict):
+        return
+    if not _is_provenance(properties.get("provenance"), defs):
+        return
+    properties["provenance"] = dict(PROVENANCE_STUB)
+    rest = {key: value for key, value in schema.items() if key != "$defs"}
+    other_defs = {key: value for key, value in defs.items() if key != "Provenance"}
+    if "Provenance" in defs and not (
+        _refers_to(rest, _PROVENANCE_REF) or _refers_to(other_defs, _PROVENANCE_REF)
+    ):
+        del defs["Provenance"]
+        if not defs:
+            del schema["$defs"]
 
 
 def serialize_tools_compact(tools: Sequence[Tool]) -> list[dict[str, Any]]:
-    """Search results in list_tools format, with the Provenance schema collapsed.
-
-    The server's middleware inlines every `$ref` before results are built, so the
-    block normally arrives inline; the `$ref` form is handled too, for a transform
-    run without that middleware, and its now unused `$defs` entry is dropped.
-    """
+    """Search results in list_tools format, with the Provenance schema collapsed."""
     results = serialize_tools_for_output_json(tools)
     for result in results:
-        schema = result.get("outputSchema")
-        if not isinstance(schema, dict):
-            continue
-        properties = schema.get("properties")
-        if not isinstance(properties, dict):
-            continue
-        defs = schema.get("$defs", {})
-        if _is_provenance(properties.get("provenance"), defs):
-            properties["provenance"] = dict(PROVENANCE_STUB)
-            if isinstance(defs, dict):
-                defs.pop("Provenance", None)
-                if not defs:
-                    schema.pop("$defs", None)
+        collapse_provenance(result.get("outputSchema"))
     return results

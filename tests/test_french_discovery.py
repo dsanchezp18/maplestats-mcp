@@ -24,6 +24,22 @@ CASES = [
     ("classification des industries SCIAN", "rdaas_get_classification"),
     ("mises en chantier", "cmhc_list_categories"),
     ("taux directeur", "boc_search_series"),
+    # Whole-table downloads and vector reconciliation (2026-10-14): none of these
+    # reached the tool before its Mots-clés line held télécharger, vecteur,
+    # identifiant, réconcilier, classeur and en vrac.
+    (
+        "rapprocher un classeur d'identifiants de vecteurs avec un tableau publié",
+        "wds_get_full_table_download",
+    ),
+    (
+        "réconcilier mes données avec un tableau de Statistique Canada",
+        "wds_get_full_table_download",
+    ),
+    ("comparer ma liste de vecteurs avec le tableau 36-10-0222", "wds_get_full_table_download"),
+    ("télécharger toutes les données d'un tableau StatCan", "wds_get_full_table_download"),
+    ("données en vrac Statistique Canada", "wds_get_full_table_download"),
+    ("jointure sur l'identifiant de vecteur", "wds_get_full_table_download"),
+    ("centaines de séries de Statistique Canada à la fois", "wds_get_full_table_download"),
     ("projections climatiques température future 2050 scénario", "eccc_coverages_get_data"),
     ("recherche de marques de commerce", "ised_cipo_search_trademarks"),
     ("ronde d'invitations entrée express", "ircc_list_express_entry_rounds"),
