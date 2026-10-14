@@ -195,6 +195,10 @@ How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
 plain-language query (English or French). Then call_tool with the name.
+For a whole StatCan table, or hundreds of series, use
+wds_get_full_table_download (a CSV link: the rows are not returned) rather
+than the vector tools, which return every observation inline and suit a
+handful of series.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
 and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns
@@ -428,6 +432,7 @@ def build_server() -> FastMCP:
             always_visible=["search_tools", "plan_query"],
             search_tool_name="search_tools",
             call_tool_name="call_tool",
+            search_result_serializer=search.serialize_tools_compact,
         )
     )
 

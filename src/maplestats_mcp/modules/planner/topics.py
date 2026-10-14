@@ -9,7 +9,8 @@ a stem and matches any word it begins ("affordab*" meets
 topic when the question used one of them, so an earthquake question
 starts with the earthquake tool, not the first weather step. A topic's
 `shadows` are phrases blanked out before its terms are tried ("house of
-commons" is not housing). tests/test_planner.py checks that every tool
+commons" is not housing); its `patterns` are regexes for cues no word list
+can name, such as a table number. tests/test_planner.py checks that every tool
 named here is registered, so a renamed tool cannot leave a plan pointing
 at nothing, and that each step's required arguments are named in its
 purpose or come from an earlier step of the same source.
@@ -35,6 +36,9 @@ class Topic:
     steps: tuple[PlanStep, ...]
     caveats: tuple[str, ...] = ()
     shadows: tuple[str, ...] = ()
+    # Regexes tried on the normalized question, for cues a word list cannot
+    # name (a StatCan table number); each one that matches counts as a term hit.
+    patterns: tuple[str, ...] = ()
 
 
 _TRADE_TERMS = (
@@ -1654,6 +1658,99 @@ STATCAN_UPDATES = Topic(
     ),
 )
 TOPICS = (*TOPICS, STATCAN_UPDATES)
+
+# A table number (36-10-0222 or 36-10-0222-01), as people write it.
+_TABLE_NUMBER = r"(?<![0-9-])\d{2}-\d{2}-\d{4}(?:-\d{2})?(?![0-9])"
+
+STATCAN_TABLES = Topic(
+    "statcan_tables",
+    "StatCan whole tables, bulk series and vector IDs",
+    (
+        "full table",
+        "whole table",
+        "entire table",
+        "complete table",
+        "table download",
+        "download the table",
+        "csv download",
+        "download csv",
+        "bulk download",
+        "bulk data",
+        "bulk series",
+        "vector",
+        "vector id",
+        "cansim",
+        "reconcil*",
+        "tableau complet",
+        "tout le tableau",
+        "telecharger le tableau",
+        "telechargement en bloc",
+        "telechargement csv",
+        "vecteur",
+        "identifiant de vecteur",
+        "rapprochement",
+    ),
+    (
+        PlanStep(
+            "wds_search_cubes",
+            "the table and its productId, by title words or a table number such as 36-10-0222",
+        ),
+        PlanStep("wds_get_cube_metadata", "the table's dimensions and members, to size a request"),
+        PlanStep(
+            "wds_get_full_table_download",
+            "the whole table as one CSV: a download link only, no rows; the file has a VECTOR "
+            "column to join on",
+            terms=(
+                "full table",
+                "whole table",
+                "entire table",
+                "complete table",
+                "table download",
+                "csv",
+                "download",
+                "bulk",
+                "reconcil*",
+                "offline",
+                "tableau complet",
+                "tout le tableau",
+                "telecharg*",
+                "rapprochement",
+            ),
+        ),
+        PlanStep(
+            "wds_get_series_info",
+            "one vector ID to its table and coordinate, or the reverse",
+            terms=("vector", "vecteur"),
+        ),
+        PlanStep(
+            "wds_get_data_from_vectors",
+            "latest observations for a few known vectors, returned inline",
+            terms=("vector", "vecteur"),
+        ),
+        PlanStep(
+            "wds_get_data_by_reference_period_range",
+            "a date window for a few known vectors, returned inline",
+            terms=("vector", "vecteur"),
+        ),
+    ),
+    (
+        (
+            "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
+            "tools. A large table can hold hundreds of thousands of rows across every "
+            "geography and measure, so filter after downloading."
+        ),
+        (
+            "The vector tools return every observation inline, several fields each: fine for a "
+            "handful of series, the wrong tool for hundreds."
+        ),
+        (
+            "When both sources carry a vector ID, join on it: it is an exact key, where "
+            "line-item names are not."
+        ),
+    ),
+    patterns=(_TABLE_NUMBER,),
+)
+TOPICS = (*TOPICS, STATCAN_TABLES)
 
 
 EMISSIONS = Topic(

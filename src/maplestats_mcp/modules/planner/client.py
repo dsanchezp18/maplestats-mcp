@@ -87,6 +87,10 @@ def _matches(term: str, text: str) -> bool:
     return _pattern(term).search(text) is not None
 
 
+def _pattern_hits(topic: Topic, text: str) -> list[re.Match[str]]:
+    return [found for pattern in topic.patterns if (found := re.search(pattern, text))]
+
+
 def _blank(text: str, phrases: tuple[str, ...]) -> str:
     for phrase in phrases:
         text = _pattern(phrase).sub(" | ", text)
@@ -198,6 +202,7 @@ def plan(question: str, lang: str = "en") -> QueryPlan:
         for topic in TOPICS:
             topic_text = _blank(text, topic.shadows)
             hits = [term.rstrip("*") for term in topic.terms if _matches(term, topic_text)]
+            hits += [found.group(0) for found in _pattern_hits(topic, topic_text)]
             if hits:
                 scored.append((len(hits), topic, hits, topic_text))
     scored.sort(key=lambda item: item[0], reverse=True)
