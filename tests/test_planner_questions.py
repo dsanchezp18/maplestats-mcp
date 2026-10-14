@@ -102,6 +102,27 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "statcan_sdg_search_indicators",
     ),
     ("Quality of life indicators", "sdg", "sdmx_space_list_flows"),
+    # Whole tables and vector IDs (2026-10-14): a plan for reconciling a workbook of
+    # vectors against a published table once held only Alberta portals.
+    (
+        "Download the full table 36-10-0222 as a CSV",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
+    (
+        (
+            "I have a workbook of vector IDs and want to reconcile it with the published "
+            "StatCan table 36-10-0222 for 1981 to 2024"
+        ),
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
+    ("Which table does a StatCan vector belong to?", "statcan_tables", "wds_get_series_info"),
+    (
+        "Télécharger le tableau complet 36-10-0222 en CSV",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
     ("List of hospitals in Manitoba", "facilities", "statcan_lode_list_databases"),
     ("Forest harvest volumes by province", "forestry", "nfd_list_tables"),
     ("Ontario Energy Board SAIDI reliability by distributor", "energy", "oeb_list_datasets"),

@@ -17,9 +17,23 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Added
 
+- `plan_query`: a `statcan_tables` topic for whole tables, bulk series and vector IDs. It is
+  chosen by words such as "full table", "CSV download", "vector" and "reconcile", or by a
+  table number like 36-10-0222, and starts with `wds_get_full_table_download`. A question
+  about reconciling a workbook of vector IDs against a published table used to get only
+  provincial portals.
 - `cra_charities` module: search CRA's annual List of charities by name, city, province
   or designation, look one up by business number, and list its directors and officers
   (open.canada.ca DataStore, Open Government Licence - Canada).
+
+### Changed
+
+- `search_tools` answers are about 38% smaller (22 KB to 13 KB for a typical query): the
+  Provenance schema that every tool's result carries is shown once as a short description
+  instead of five full copies. Input schemas and the tools' own result schemas are unchanged.
+- The server instructions and the docstrings of the WDS vector tools now say that vectors come
+  back inline and suit a handful of series, and point to `wds_get_full_table_download` (a CSV
+  link with a `VECTOR` column) for a whole table or hundreds of series.
 
 ### Fixed
 

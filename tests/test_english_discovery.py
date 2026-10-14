@@ -166,6 +166,8 @@ CASES = [
     ("hospital beds staffed by province", "cihi_search_indicators"),
     ("drug price review board annual report", "pmprb_list_report_tables"),
     ("download full StatCan table as CSV", "wds_get_full_table_download"),
+    ("reconcile a workbook of vector IDs against a published table", "wds_get_full_table_download"),
+    ("get hundreds of StatCan series at once", "wds_get_full_table_download"),
     ("Quebec population estimates ISQ", "isq_search_tables"),
     ("research data repository Canadian universities", "borealis_search_ivt"),
     ("place name gazetteer coordinates", "nrcan_geo_search_names"),

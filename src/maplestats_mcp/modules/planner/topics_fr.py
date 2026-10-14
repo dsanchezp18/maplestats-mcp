@@ -670,6 +670,47 @@ FR: dict[str, str] = {
         "Seules les 19 statistiques qui ont un tableau en temps réel ont un historique des "
         "révisions; le tableau ordinaire affiche la dernière révision."
     ),
+    # StatCan whole tables and vectors
+    "StatCan whole tables, bulk series and vector IDs": (
+        "Tableaux complets, séries en bloc et identifiants de vecteur de Statistique Canada"
+    ),
+    "the table and its productId, by title words or a table number such as 36-10-0222": (
+        "le tableau et son productId, par mots du titre ou par numéro de tableau comme 36-10-0222"
+    ),
+    "the table's dimensions and members, to size a request": (
+        "les dimensions et les membres du tableau, pour jauger la taille d'une requête"
+    ),
+    "the whole table as one CSV: a download link only, no rows; the file has a VECTOR "
+    "column to join on": (
+        "tout le tableau en un seul CSV : un lien de téléchargement seulement, sans lignes; "
+        "le fichier a une colonne VECTOR pour les jointures"
+    ),
+    "one vector ID to its table and coordinate, or the reverse": (
+        "d'un identifiant de vecteur à son tableau et sa coordonnée, ou l'inverse"
+    ),
+    "latest observations for a few known vectors, returned inline": (
+        "dernières observations de quelques vecteurs connus, retournées directement"
+    ),
+    "a date window for a few known vectors, returned inline": (
+        "une plage de dates pour quelques vecteurs connus, retournée directement"
+    ),
+    "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
+    "tools. A large table can hold hundreds of thousands of rows across every "
+    "geography and measure, so filter after downloading.": (
+        "wds_get_full_table_download donne un lien, pas des lignes : récupérez le fichier avec "
+        "vos propres outils. Un grand tableau peut compter des centaines de milliers de lignes "
+        "pour toutes les géographies et mesures; filtrez après le téléchargement."
+    ),
+    "The vector tools return every observation inline, several fields each: fine for a "
+    "handful of series, the wrong tool for hundreds.": (
+        "Les outils de vecteurs retournent chaque observation directement, avec plusieurs "
+        "champs; ils conviennent pour une poignée de séries, pas pour des centaines."
+    ),
+    "When both sources carry a vector ID, join on it: it is an exact key, where "
+    "line-item names are not.": (
+        "Quand les deux sources portent un identifiant de vecteur, joignez-les avec lui : "
+        "c'est une clé exacte, ce que ne sont pas les libellés de postes."
+    ),
     # GHG
     "Greenhouse gas emissions and air pollutants": (
         "Émissions de gaz à effet de serre et polluants atmosphériques"
