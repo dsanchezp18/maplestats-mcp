@@ -34,6 +34,14 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 - The server instructions and the docstrings of the WDS vector tools now say that vectors come
   back inline and suit a handful of series, and point to `wds_get_full_table_download` (a CSV
   link with a `VECTOR` column) for a whole table or hundreds of series.
+- Discovery: `search_tools` now puts `wds_search_cubes` first for "consumer price index monthly"
+  and "population estimates by province" (they led with a real-estate index and PUMF
+  tabulation), and `bcgw_get_active_wildfires` ahead of the BC air-quality tool for
+  "wildfires British Columbia". Docstring keywords only; the three cases are in
+  `tests/test_english_discovery.py`.
+- `search_tools` keeps the Provenance definition when another field still refers to it, instead
+  of leaving a dangling `$ref`. The compact-answer test now compares sizes against the same
+  tools' full schemas over several queries rather than a fixed byte limit.
 
 ### Fixed
 

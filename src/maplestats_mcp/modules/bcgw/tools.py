@@ -38,8 +38,8 @@ async def bcgw_get_active_wildfires(
     enum. Without a status, fires that are "Out" (most of the layer) are
     left out; set include_out true to list them too. Leave
     include_geometry false unless the fire polygon itself is needed.
-    Keywords: British Columbia, BC, wildfire, forest fire, fire
-    perimeter, fire status, fire centre, hectares burned, BC Wildfire
+    Keywords: British Columbia, BC, wildfire, wildfires British Columbia,
+    forest fire, fire perimeter, fire status, fire centre, hectares burned, BC Wildfire
     Service, active fire, out of control, being held.
     Mots-clés : Colombie-Britannique, feu de forêt, incendie, périmètre
     d'incendie, statut du feu, hectares brûlés, service des incendies de

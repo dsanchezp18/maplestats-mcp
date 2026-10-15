@@ -179,6 +179,11 @@ CASES = [
     # 5, or the wrong one first).
     ("population estimates by province quarterly", "wds_search_cubes"),
     ("monthly unemployment rate for Alberta", "wds_search_cubes"),
+    # Found in the 2026-10-14 review: CPI and population queries had no StatCan
+    # table tool in the top 3, and the AQHI tool outranked BC's wildfire layer.
+    ("consumer price index monthly", "wds_search_cubes"),
+    ("population estimates by province", "wds_search_cubes"),
+    ("wildfires British Columbia", "bcgw_get_active_wildfires"),
     ("time series for a vector between two dates", "wds_get_data_by_reference_period_range"),
     ("NOC occupation classification", "rdaas_search_classifications"),
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.

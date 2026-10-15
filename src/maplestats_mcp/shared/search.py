@@ -147,11 +147,23 @@ PROVENANCE_STUB: dict[str, Any] = {
 }
 
 
+PROVENANCE_REF = "#/$defs/Provenance"
+
+
+def _refers_to(node: Any, ref: str) -> bool:
+    """Whether any `$ref` anywhere inside `node` points at `ref`."""
+    if isinstance(node, dict):
+        return node.get("$ref") == ref or any(_refers_to(value, ref) for value in node.values())
+    if isinstance(node, list):
+        return any(_refers_to(value, ref) for value in node)
+    return False
+
+
 def _is_provenance(schema: Any, defs: dict[str, Any]) -> bool:
     """The shared Provenance schema, inlined or as a `$ref` into `$defs`."""
     if not isinstance(schema, dict):
         return False
-    if schema.get("$ref") == "#/$defs/Provenance":
+    if schema.get("$ref") == PROVENANCE_REF:
         return "schema_name" in defs.get("Provenance", {}).get("properties", {})
     # Another field that happens to be called "provenance" keeps its own schema.
     return "schema_name" in schema.get("properties", {})
@@ -176,7 +188,16 @@ def serialize_tools_compact(tools: Sequence[Tool]) -> list[dict[str, Any]]:
         if _is_provenance(properties.get("provenance"), defs):
             properties["provenance"] = dict(PROVENANCE_STUB)
             if isinstance(defs, dict):
-                defs.pop("Provenance", None)
+                # Keep the definition while another field still points at it.
+                still_used = _refers_to(
+                    [
+                        {key: value for key, value in schema.items() if key != "$defs"},
+                        {key: value for key, value in defs.items() if key != "Provenance"},
+                    ],
+                    PROVENANCE_REF,
+                )
+                if not still_used:
+                    defs.pop("Provenance", None)
                 if not defs:
                     schema.pop("$defs", None)
     return results
