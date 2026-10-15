@@ -28,7 +28,7 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Changed
 
-- `search_tools` answers are about 38% smaller (22 KB to 13 KB for a typical query): the
+- `search_tools` answers are about 38% smaller (a compact answer is 12 to 20 KB, by query): the
   Provenance schema that every tool's result carries is shown once as a short description
   instead of five full copies. Input schemas and the tools' own result schemas are unchanged.
 - The server instructions and the docstrings of the WDS vector tools now say that vectors come
@@ -45,6 +45,15 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Fixed
 
+- `plan_query`: the `statcan_tables` topic no longer fires on unrelated questions. "Reconcile"
+  and "rapprochement" count only within 60 characters of a data cue (vector, table, workbook,
+  series), and "truth and reconciliation" and "bank reconciliation" are ignored; "vector" and
+  "vecteur" ignore the disease sense ("vector-borne", "vector control", "maladies à
+  vecteur"); and a table number must be a real StatCan one (subject 10 to 46 or 98, product
+  type 10, sequence not a year), so dates such as 15-01-2024 or 10-10-2023 no longer match.
+  Added: a bare productId next to the word "table" ("table 14100287", "table 3610022201") and
+  the French plurals "tableaux complets" and "télécharger les tableaux". The full-table step now
+  says that `product_id` is the table number.
 - Chat demo: a request that fails after a billed model call stays counted against the
   hourly and daily limits (only a failure before any call is refunded), and the failure
   log names the HTTP status.

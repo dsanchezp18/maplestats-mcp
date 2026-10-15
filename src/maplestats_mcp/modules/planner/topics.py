@@ -1659,8 +1659,37 @@ STATCAN_UPDATES = Topic(
 )
 TOPICS = (*TOPICS, STATCAN_UPDATES)
 
-# A table number (36-10-0222 or 36-10-0222-01), as people write it.
-_TABLE_NUMBER = r"(?<![0-9-])\d{2}-\d{2}-\d{4}(?:-\d{2})?(?![0-9])"
+# A table number (36-10-0222 or 36-10-0222-01), as people write it. Checked on
+# 2026-10-14 against WDS getAllCubesListLite: all 8,277 tables are SS10NNNN, with a
+# subject (SS) of 10 to 46 or 98 and a sequence (NNNN) of at most 1214. The shape
+# alone also fits dates, so "15-01-2024" (subject 15, product 01) and "10-10-2023" are
+# refused: a product type other than 10 is not a table, and a sequence that reads as
+# a year (1900 to 2099) is a date.
+_SUBJECT = r"(?:[1-3]\d|4[0-6]|98)"
+_SEQUENCE = r"(?!(?:19|20)\d{2})\d{4}"
+_TABLE_NUMBER = rf"(?<![0-9-]){_SUBJECT}-10-{_SEQUENCE}(?:-\d{{2}})?(?![0-9])"
+
+# The same number without dashes, as the 8-digit productId or the 10-digit form with
+# the table suffix, counted only right after a word that names a table ("table
+# 14100287", "tableau 3610022201", "product_id 14100287"): a bare run of digits is
+# anything.
+_PRODUCT_ID = (
+    r"(?<![a-z0-9])(?:tables?|tableaux?|cubes?|product ?id)\s+(?:(?:id|no|number|numero)\s+)?"
+    rf"{_SUBJECT}10{_SEQUENCE}(?:\d{{2}})?(?![0-9])"
+)
+
+# "Reconcile" and "rapprochement" are mostly not about data (a Truth and Reconciliation
+# Commission, a bank reconciliation, "le rapprochement des partis"), so they count only
+# within 60 characters of a data cue, in either order.
+_DATA_CUE = (
+    r"(?:vectors?|vecteurs?|tables?|tableaux?|workbooks?|classeurs?|spreadsheets?|"
+    r"series?|statcan)"
+)
+_RECONCILE = r"(?:reconcil\w*|rapproch\w*)"
+_RECONCILE_DATA = (
+    rf"(?<![a-z0-9]){_RECONCILE}\b.{{0,60}}?\b{_DATA_CUE}\b"
+    rf"|(?<![a-z0-9]){_DATA_CUE}\b.{{0,60}}?\b{_RECONCILE}\b"
+)
 
 STATCAN_TABLES = Topic(
     "statcan_tables",
@@ -1680,15 +1709,16 @@ STATCAN_TABLES = Topic(
         "vector",
         "vector id",
         "cansim",
-        "reconcil*",
         "tableau complet",
+        "tableaux complets",
         "tout le tableau",
         "telecharger le tableau",
+        "telecharger les tableaux",
+        "telecharger des tableaux",
         "telechargement en bloc",
         "telechargement csv",
         "vecteur",
         "identifiant de vecteur",
-        "rapprochement",
     ),
     (
         PlanStep(
@@ -1698,8 +1728,10 @@ STATCAN_TABLES = Topic(
         PlanStep("wds_get_cube_metadata", "the table's dimensions and members, to size a request"),
         PlanStep(
             "wds_get_full_table_download",
-            "the whole table as one CSV: a download link only, no rows; the file has a VECTOR "
-            "column to join on",
+            "the whole table as one CSV from its product_id (the table number): a download link "
+            "only, no rows; the file has a VECTOR column to join on",
+            # Ordering only: the topic already matched, so a bare "reconcil*" here cannot
+            # route an unrelated question, only put this step first for a reconcile request.
             terms=(
                 "full table",
                 "whole table",
@@ -1712,6 +1744,7 @@ STATCAN_TABLES = Topic(
                 "reconcil*",
                 "offline",
                 "tableau complet",
+                "tableaux complets",
                 "tout le tableau",
                 "telecharg*",
                 "rapprochement",
@@ -1748,7 +1781,18 @@ STATCAN_TABLES = Topic(
             "line-item names are not."
         ),
     ),
-    patterns=(_TABLE_NUMBER,),
+    # "vector" and "vecteur" also name the disease carrier ("vector-borne", French
+    # "maladies a vecteur"), and the two reconciliation phrases are not data work.
+    shadows=(
+        "vector-borne",
+        "vector borne",
+        "disease vector",
+        "vector control",
+        "a vecteur",
+        "truth and reconciliation",
+        "bank reconciliation",
+    ),
+    patterns=(_TABLE_NUMBER, _PRODUCT_ID, _RECONCILE_DATA),
 )
 TOPICS = (*TOPICS, STATCAN_TABLES)
 

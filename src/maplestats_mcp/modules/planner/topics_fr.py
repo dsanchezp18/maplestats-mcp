@@ -680,10 +680,11 @@ FR: dict[str, str] = {
     "the table's dimensions and members, to size a request": (
         "les dimensions et les membres du tableau, pour jauger la taille d'une requête"
     ),
-    "the whole table as one CSV: a download link only, no rows; the file has a VECTOR "
-    "column to join on": (
-        "tout le tableau en un seul CSV : un lien de téléchargement seulement, sans lignes; "
-        "le fichier a une colonne VECTOR pour les jointures"
+    "the whole table as one CSV from its product_id (the table number): a download link "
+    "only, no rows; the file has a VECTOR column to join on": (
+        "tout le tableau en un seul CSV à partir de son product_id (le numéro du tableau) : "
+        "un lien de téléchargement seulement, sans lignes; le fichier a une colonne VECTOR "
+        "pour les jointures"
     ),
     "one vector ID to its table and coordinate, or the reverse": (
         "d'un identifiant de vecteur à son tableau et sa coordonnée, ou l'inverse"

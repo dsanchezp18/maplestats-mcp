@@ -123,6 +123,15 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "statcan_tables",
         "wds_get_full_table_download",
     ),
+    # A bare productId counts only next to the word "table"; a French plural on a
+    # non-final word ("tableaux complets") used to miss the topic.
+    ("Get table 3610022201", "statcan_tables", "wds_search_cubes"),
+    ("Download table 14100287", "statcan_tables", "wds_get_full_table_download"),
+    (
+        "Je veux télécharger les tableaux complets du PIB",
+        "statcan_tables",
+        "wds_get_full_table_download",
+    ),
     ("List of hospitals in Manitoba", "facilities", "statcan_lode_list_databases"),
     ("Forest harvest volumes by province", "forestry", "nfd_list_tables"),
     ("Ontario Energy Board SAIDI reliability by distributor", "energy", "oeb_list_datasets"),
@@ -232,10 +241,52 @@ def test_cross_border_questions_stay_in_scope():
         ("Nuclear fusion research funding", "competition"),
         ("Food safety recall for peanut butter", "transport"),
         ("Product safety recalls on toys", "crime"),
+        # statcan_tables (2026-10-14): "reconcile" and "vector" have other senses, and a
+        # dd-mm-yyyy date has the shape of a table number.
+        ("Truth and Reconciliation Commission calls to action", "statcan_tables"),
+        ("Bank reconciliation for charities in BC", "statcan_tables"),
+        ("Rapprochement entre le Canada et la France", "statcan_tables"),
+        ("Lyme disease and other vector-borne diseases in Ontario", "statcan_tables"),
+        ("Mosquito vector control programs in Manitoba", "statcan_tables"),
+        ("maladies à vecteur comme la maladie de Lyme au Québec", "statcan_tables"),
+        ("Elections held on 15-01-2024 in Ontario", "statcan_tables"),
+        ("Immigrants who arrived 01-15-2023 by province", "statcan_tables"),
+        ("Elections on 10-10-2023 in Ontario", "statcan_tables"),
+        ("Births registered on 12-25-2023", "statcan_tables"),
+        ("Population on 20-10-2010 by province", "statcan_tables"),
+        ("Télécharger les données sur le logement à Montréal", "statcan_tables"),
     ],
 )
 def test_false_positive_terms(question: str, absent: str):
     assert absent not in {t.topic for t in client.plan(question).topics}, question
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Reconcile my workbook of vectors with the published table",
+        "Vectors I need to reconcile against StatCan",
+        "Rapprochement des vecteurs avec le tableau 36-10-0222",
+        "Réconcilier mon classeur avec le tableau 14-10-0287",
+        "Table 98-10-0001-01 as a CSV",
+        "Which table does vector v41690973 belong to?",
+    ],
+)
+def test_statcan_tables_cues_still_match(question: str):
+    assert "statcan_tables" in {t.topic for t in client.plan(question).topics}, question
+
+
+def test_full_table_purpose_names_product_id_in_both_languages():
+    # Reordering by term hits can put this step first, so it must say where product_id
+    # comes from.
+    for lang, text in (("en", "(the table number)"), ("fr", "(le numéro du tableau)")):
+        topic = next(
+            t
+            for t in client.plan("Download table 14100287", lang).topics
+            if t.topic == "statcan_tables"
+        )
+        step = next(s for s in topic.steps if s.tool == "wds_get_full_table_download")
+        assert "product_id" in step.purpose and text in step.purpose, (lang, step.purpose)
 
 
 @pytest.mark.parametrize(
