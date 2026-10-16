@@ -3384,8 +3384,38 @@ mark {
 /* ---------- Home: the chat demo ---------- */
 
 .try-demo .prompts,
-.try-demo .notice {
+.try-demo .notice,
+.try-demo .sources-feature {
   max-width: 780px;
+}
+
+/* Each question opens the chat demo with that question asked, so the whole
+   row is the link and carries the prompt mark. */
+.try-demo .prompts li {
+  padding: 0;
+}
+
+.try-demo .prompts li::before {
+  content: none;
+}
+
+.try-demo .prompts a {
+  display: block;
+  padding: 14px 18px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.try-demo .prompts a::before {
+  content: "›";
+  margin-right: 10px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.try-demo .prompts li:has(a:hover),
+.try-demo .prompts li:has(a:focus-visible) {
+  border-color: var(--accent);
 }
 
 .try-demo .notice {
@@ -4538,8 +4568,11 @@ html:not(.js) .chips {
   }
 }
 
+/* minmax(0, 1fr): a long tool name must wrap, not widen the window past
+   its column and clip the right edge on a phone. */
 .ask {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
   border: 1px solid var(--rule);
   border-radius: 14px;
@@ -4614,6 +4647,8 @@ html:not(.js) .chips {
 }
 
 .ask-tool code {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--ink-2);
 }
 
