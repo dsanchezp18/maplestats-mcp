@@ -18,8 +18,9 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 ### Added
 
 - `plan_query`: a `statcan_tables` topic for whole tables, bulk series and vector IDs. It is
-  chosen by words such as "full table", "CSV download", "vector" and "reconcile", or by a
-  table number like 36-10-0222, and starts with `wds_get_full_table_download`. A question
+  chosen by words such as "full table", a CSV or a vector near "StatCan", and "reconcile"
+  near a workbook of vectors, or by a table number like 36-10-0222 or a vector ID like
+  v41690973, and starts with `wds_get_full_table_download`. A question
   about reconciling a workbook of vector IDs against a published table used to get only
   provincial portals.
 - `cra_charities` module: search CRA's annual List of charities by name, city, province
@@ -58,6 +59,10 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   workbook or a published table, so "reconciliation with First Nations: table of land claims"
   and "le rapprochement des partis selon les séries de sondages" no longer pick
   `statcan_tables`; "truth and reconciliation" and "bank reconciliation" never count.
+- `plan_query`: "CSV", "bulk download", "bulk data" and "téléchargement en bloc" count only
+  within 60 characters of a word that names StatCan (StatCan, Statistics Canada, CANSIM, WDS,
+  a cube, a vector), so "CSV download of Toronto building permits" and "bulk data on Calgary
+  property assessments" no longer get a plan for StatCan tables.
 - `plan_query`: a table number must be a real StatCan one (subject 10 to 46 or 98, product
   type 10, sequence not a year), so dates such as 15-01-2024 or 10-10-2023 no longer match.
   New cues: a vector ID on its own ("v41690973", which also puts `wds_get_series_info` first),

@@ -267,6 +267,11 @@ def test_cross_border_questions_stay_in_scope():
         ("Rapprochement des partis au Québec selon les séries de sondages", "statcan_tables"),
         ("Reconcile my household budget spreadsheet with CPI inflation", "statcan_tables"),
         ("V8 engine sales in Canada", "statcan_tables"),
+        # A CSV or bulk download from a city or province is that portal's data.
+        ("CSV download of Toronto building permits", "statcan_tables"),
+        ("Bulk data on Calgary property assessments", "statcan_tables"),
+        ("Téléchargement CSV des permis de bâtir de Montréal", "statcan_tables"),
+        ("Bulk download of Ontario open data", "statcan_tables"),
     ],
 )
 def test_false_positive_terms(question: str, absent: str):
@@ -285,6 +290,10 @@ def test_false_positive_terms(question: str, absent: str):
         "Which table does a StatCan vector belong to?",
         "Quel est le tableau du vecteur v41690973?",
         "Reconcile my numbers with the published table",
+        "Download the full StatCan table as a CSV",
+        "Download StatCan cubes as CSV",
+        "Bulk download from StatCan",
+        "Téléchargement en bloc de Statistique Canada",
     ],
 )
 def test_statcan_tables_cues_still_match(question: str):

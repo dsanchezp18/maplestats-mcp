@@ -1719,6 +1719,16 @@ _RECONCILE_CUE = (
 )
 _RECONCILE_DATA = _near(r"reconcil\w*|rapproch\w*", _RECONCILE_CUE)
 
+# A CSV or a bulk download is just as often a city's or a province's open data ("CSV
+# download of Toronto building permits", "bulk data on Calgary property assessments"),
+# which the place steps already cover, so it counts only near a word that names
+# StatCan or its tables' parts. A table number counts on its own.
+_STATCAN_CUE = (
+    r"(?:statcan|statistics canada|statistique canada|statistiques canada|cansim|wds|"
+    r"cubes?|vectors?|vecteurs?|v\d{5,10})"
+)
+_BULK_DOWNLOAD = _near(r"csvs?|bulk downloads?|bulk data|telechargements? en bloc", _STATCAN_CUE)
+
 STATCAN_TABLES = Topic(
     "statcan_tables",
     "StatCan whole tables, bulk series and vector IDs",
@@ -1729,10 +1739,6 @@ STATCAN_TABLES = Topic(
         "complete table",
         "table download",
         "download the table",
-        "csv download",
-        "download csv",
-        "bulk download",
-        "bulk data",
         "bulk series",
         "vector id",
         "cansim",
@@ -1742,8 +1748,6 @@ STATCAN_TABLES = Topic(
         "telecharger le tableau",
         "telecharger les tableaux",
         "telecharger des tableaux",
-        "telechargement en bloc",
-        "telechargement csv",
         "identifiant de vecteur",
     ),
     (
@@ -1828,7 +1832,14 @@ STATCAN_TABLES = Topic(
         "truth and reconciliation",
         "bank reconciliation",
     ),
-    patterns=(_TABLE_NUMBER, _PRODUCT_ID, _VECTOR_ID, _VECTOR_DATA, _RECONCILE_DATA),
+    patterns=(
+        _TABLE_NUMBER,
+        _PRODUCT_ID,
+        _VECTOR_ID,
+        _VECTOR_DATA,
+        _RECONCILE_DATA,
+        _BULK_DOWNLOAD,
+    ),
 )
 TOPICS = (*TOPICS, STATCAN_TABLES)
 
