@@ -28,6 +28,9 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Changed
 
+- CI: a new `Docker images` workflow builds the server and chat images and checks that the
+  server image starts and answers `/health`. Render deploys from those Dockerfiles, and no
+  workflow built them before. CI also runs the chat demo's lint and tests (`chat/`).
 - `search_tools` answers are about 38% smaller (a compact answer is 12 to 20 KB, by query): the
   Provenance schema that every tool's result carries is shown once as a short description
   instead of five full copies. Input schemas and the tools' own result schemas are unchanged.
@@ -45,15 +48,35 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Fixed
 
-- `plan_query`: the `statcan_tables` topic no longer fires on unrelated questions. "Reconcile"
-  and "rapprochement" count only within 60 characters of a data cue (vector, table, workbook,
-  series), and "truth and reconciliation" and "bank reconciliation" are ignored; "vector" and
-  "vecteur" ignore the disease sense ("vector-borne", "vector control", "maladies à
-  vecteur"); and a table number must be a real StatCan one (subject 10 to 46 or 98, product
+- `plan_query`: the `statcan_tables` topic no longer fires on the disease or map sense of
+  "vector". "Vector" and "vecteur" count only within 60 characters of a word that places them
+  in a table (table, series, StatCan, CANSIM, workbook, ID, a v-number), so "tick vectors",
+  "maladies transmises par les vecteurs" and "vector GIS data" get the usual `search_tools`
+  fallback instead of a plan for StatCan vectors; "vector-borne", "vector control", "maladies
+  à vecteur", "vector data", "vector file", "vector layer" and "vector map" never count.
+- `plan_query`: "reconcile" and "rapprochement" count only within 60 characters of a vector, a
+  workbook or a published table, so "reconciliation with First Nations: table of land claims"
+  and "le rapprochement des partis selon les séries de sondages" no longer pick
+  `statcan_tables`; "truth and reconciliation" and "bank reconciliation" never count.
+- `plan_query`: a table number must be a real StatCan one (subject 10 to 46 or 98, product
   type 10, sequence not a year), so dates such as 15-01-2024 or 10-10-2023 no longer match.
-  Added: a bare productId next to the word "table" ("table 14100287", "table 3610022201") and
-  the French plurals "tableaux complets" and "télécharger les tableaux". The full-table step now
-  says that `product_id` is the table number.
+  New cues: a vector ID on its own ("v41690973", which also puts `wds_get_series_info` first),
+  a bare productId next to the word "table" ("table 14100287", "table 3610022201"), and the
+  French plurals "tableaux complets" and "télécharger les tableaux". `matched_terms` names the
+  cue word ("reconcile"), not the whole stretch of the question around it, and the full-table
+  step says that `product_id` is the table number.
+- Discovery in French: "estimations de population par province" now starts with
+  `wds_search_cubes`, as its English twin already did. The PUMF tabulation tool's French
+  keywords still said "estimation de population"; they now say "total pondéré", matching the
+  English "weighted total".
+- Chat demo: the page can no longer be framed by another site (`frame-ancestors 'none'`,
+  `X-Frame-Options: DENY`), and a `?q=` link sends its question by itself only when it comes
+  from the website; from anywhere else it fills the box and waits for a click. Each question
+  is a billed model call, so a page that embedded or linked the demo could otherwise spend
+  its daily limit through its own visitors' browsers. A question that fails is put back in
+  the box, so trying again does not mean retyping it.
+- Chat demo image: `chat/Dockerfile` installs from `chat/uv.lock` with `--locked`, as the
+  server's image does, instead of resolving the newest versions at build time.
 - Chat demo: a request that fails after a billed model call stays counted against the
   hourly and daily limits (only a failure before any call is refunded), and the failure
   log names the HTTP status.

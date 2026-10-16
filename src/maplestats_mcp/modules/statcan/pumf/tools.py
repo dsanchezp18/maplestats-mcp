@@ -127,7 +127,7 @@ if config.get_pumf_tabulate_enabled():
         Keywords: weighted estimate, tabulation, crosstab, microdata analysis,
         survey weight, weighted total, PUMF, LFS.
         Mots-clés : estimation pondérée, totalisation, tableau croisé,
-        microdonnées, poids d'enquête, estimation de population, FMGD,
+        microdonnées, poids d'enquête, total pondéré, FMGD,
         Statistique Canada.
         """
         return await tabulate.tabulate(

@@ -138,6 +138,8 @@
       pending.scrollIntoView({ block: "start" });
     } catch (err) {
       history.pop();
+      // Give the question back, so "try again" is one click, not retyping it.
+      if (!box.value) box.value = text;
       pending.innerHTML = '<p class="err">' + escapeText(err.message) + "</p>";
     } finally {
       send.disabled = false; box.focus();
@@ -146,11 +148,17 @@
   document.getElementById("form").onsubmit = (e) => { e.preventDefault(); ask(); };
 
   // The website's example questions link here as ?q=...; ask it on arrival.
+  // Every question is a billed model call, so only a link from the website itself
+  // sends one by itself. A link from anywhere else fills the box and waits for a
+  // click: otherwise any page could spend the demo's daily budget through the
+  // browsers of its own visitors.
+  const SITE = "https://maplestats.danielstats.io";
   const linked = new URLSearchParams(location.search).get("q");
   if (linked) {
     window.history.replaceState(null, "", location.pathname);
     box.value = linked.slice(0, 1000);
-    ask();
+    const fromSite = document.referrer === SITE || document.referrer.startsWith(SITE + "/");
+    if (fromSite) ask(); else box.focus();
   }
 </script>
 </body>

@@ -283,3 +283,11 @@ def test_concurrent_first_requests_do_not_duplicate_tools(monkeypatch):
     asyncio.run(burst())
     names = [tool["function"]["name"] for tool in chat_app._openai_tools]
     assert names == ["search_tools", "call_tool", "plan_query"]
+
+
+def test_page_cannot_be_framed():
+    # A framed page arriving with ?q= would spend a billed call per visitor.
+    response = TestClient(chat_app.app).get("/?q=GDP")
+    assert response.status_code == 200
+    assert response.headers["content-security-policy"] == "frame-ancestors 'none'"
+    assert response.headers["x-frame-options"] == "DENY"

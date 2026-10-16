@@ -255,6 +255,18 @@ def test_cross_border_questions_stay_in_scope():
         ("Births registered on 12-25-2023", "statcan_tables"),
         ("Population on 20-10-2010 by province", "statcan_tables"),
         ("Télécharger les données sur le logement à Montréal", "statcan_tables"),
+        # 2026-10-16 review: a bare "vector" was a disease carrier or a GIS format, and a
+        # table, series or spreadsheet near "reconcile" did not make it data work.
+        ("Lyme disease tick vectors in Ontario", "statcan_tables"),
+        ("Mosquito vectors of West Nile virus in Manitoba", "statcan_tables"),
+        ("Maladies transmises par les vecteurs au Québec", "statcan_tables"),
+        ("A table of vector-borne diseases by province", "statcan_tables"),
+        ("Where can I get vector GIS data for Toronto neighbourhoods?", "statcan_tables"),
+        ("Download vector boundary files for census divisions", "statcan_tables"),
+        ("Reconciliation with First Nations: table of land claims", "statcan_tables"),
+        ("Rapprochement des partis au Québec selon les séries de sondages", "statcan_tables"),
+        ("Reconcile my household budget spreadsheet with CPI inflation", "statcan_tables"),
+        ("V8 engine sales in Canada", "statcan_tables"),
     ],
 )
 def test_false_positive_terms(question: str, absent: str):
@@ -270,10 +282,28 @@ def test_false_positive_terms(question: str, absent: str):
         "Réconcilier mon classeur avec le tableau 14-10-0287",
         "Table 98-10-0001-01 as a CSV",
         "Which table does vector v41690973 belong to?",
+        "Which table does a StatCan vector belong to?",
+        "Quel est le tableau du vecteur v41690973?",
+        "Reconcile my numbers with the published table",
     ],
 )
 def test_statcan_tables_cues_still_match(question: str):
     assert "statcan_tables" in {t.topic for t in client.plan(question).topics}, question
+
+
+@pytest.mark.parametrize("question", ["v41690973", "Latest values for v41690973 and v2062815"])
+def test_a_bare_vector_id_starts_with_a_vector_tool(question: str):
+    # The usual way to write a vector ID has no word "vector" in it.
+    topic = next(t for t in client.plan(question).topics if t.topic == "statcan_tables")
+    assert topic.steps[0].tool == "wds_get_series_info", question
+    assert "v41690973" in topic.matched_terms
+
+
+def test_statcan_tables_reports_the_cue_word_not_the_span():
+    question = "I have 300 vector IDs in an Excel workbook to reconcile against the published table"
+    topic = next(t for t in client.plan(question).topics if t.topic == "statcan_tables")
+    assert "reconcile" in topic.matched_terms
+    assert all(len(term) <= 20 for term in topic.matched_terms), topic.matched_terms
 
 
 def test_full_table_purpose_names_product_id_in_both_languages():

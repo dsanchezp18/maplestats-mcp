@@ -26,6 +26,8 @@ class PlanStep:
     tool: str
     purpose: str
     terms: tuple[str, ...] = ()
+    # Regexes that, like `terms`, move the step first when the question matches.
+    patterns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -37,7 +39,8 @@ class Topic:
     caveats: tuple[str, ...] = ()
     shadows: tuple[str, ...] = ()
     # Regexes tried on the normalized question, for cues a word list cannot
-    # name (a StatCan table number); each one that matches counts as a term hit.
+    # name (a StatCan table number); each one that matches counts as a term hit,
+    # reported as its first named group that matched, or else the whole match.
     patterns: tuple[str, ...] = ()
 
 
@@ -1678,18 +1681,43 @@ _PRODUCT_ID = (
     rf"{_SUBJECT}10{_SEQUENCE}(?:\d{{2}})?(?![0-9])"
 )
 
-# "Reconcile" and "rapprochement" are mostly not about data (a Truth and Reconciliation
-# Commission, a bank reconciliation, "le rapprochement des partis"), so they count only
-# within 60 characters of a data cue, in either order.
-_DATA_CUE = (
-    r"(?:vectors?|vecteurs?|tables?|tableaux?|workbooks?|classeurs?|spreadsheets?|"
-    r"series?|statcan)"
+# A StatCan vector ID as people write it, "v41690973": a v and 5 to 10 digits, so "v8"
+# or "v12" (an engine, a version) is not one.
+_VECTOR_ID = r"(?<![a-z0-9])v\d{5,10}(?![0-9])"
+
+
+def _near(word: str, cue: str) -> str:
+    """`word` within 60 characters of `cue`, in either order.
+
+    The named groups catch `word` itself, which is what the plan reports as the
+    matched term, rather than the whole span between the two.
+    """
+    return (
+        rf"(?<![a-z0-9])(?P<cue>{word})\b.{{0,60}}?\b{cue}\b"
+        rf"|(?<![a-z0-9]){cue}\b.{{0,60}}?\b(?P<cue_after>{word})\b"
+    )
+
+
+# "Vector" is mostly not a StatCan series: a disease carrier ("tick vectors", "maladies
+# transmises par les vecteurs") or a GIS format ("vector GIS data"). It counts only near
+# a word that places it in a table: a table, series, StatCan, an ID or a v-number.
+_VECTOR_CUE = (
+    r"(?:tables?|tableaux?|series?|statcan|statistics canada|statistique canada|cansim|"
+    r"workbooks?|classeurs?|spreadsheets?|ids?|identifiants?|numbers?|numeros?|"
+    r"coordinates?|coordonnees?|v\d{5,10})"
 )
-_RECONCILE = r"(?:reconcil\w*|rapproch\w*)"
-_RECONCILE_DATA = (
-    rf"(?<![a-z0-9]){_RECONCILE}\b.{{0,60}}?\b{_DATA_CUE}\b"
-    rf"|(?<![a-z0-9]){_DATA_CUE}\b.{{0,60}}?\b{_RECONCILE}\b"
+_VECTOR_DATA = _near(r"vectors?|vecteurs?", _VECTOR_CUE)
+
+# "Reconcile" and "rapprochement" are mostly not about data either (a Truth and
+# Reconciliation Commission, "reconciliation with First Nations", a bank reconciliation,
+# "le rapprochement des partis"). A table, a series or a spreadsheet is too common a
+# neighbour to tell them apart, so they count only near a vector, a workbook or a
+# published table; a table number counts on its own.
+_RECONCILE_CUE = (
+    r"(?:vectors?|vecteurs?|workbooks?|classeurs?|cansim|published tables?|"
+    r"tableaux? publies?|v\d{5,10})"
 )
+_RECONCILE_DATA = _near(r"reconcil\w*|rapproch\w*", _RECONCILE_CUE)
 
 STATCAN_TABLES = Topic(
     "statcan_tables",
@@ -1706,7 +1734,6 @@ STATCAN_TABLES = Topic(
         "bulk download",
         "bulk data",
         "bulk series",
-        "vector",
         "vector id",
         "cansim",
         "tableau complet",
@@ -1717,7 +1744,6 @@ STATCAN_TABLES = Topic(
         "telecharger des tableaux",
         "telechargement en bloc",
         "telechargement csv",
-        "vecteur",
         "identifiant de vecteur",
     ),
     (
@@ -1750,20 +1776,24 @@ STATCAN_TABLES = Topic(
                 "rapprochement",
             ),
         ),
+        # Ordering only, like "reconcil*" above: a bare "vector" no longer picks the topic.
         PlanStep(
             "wds_get_series_info",
             "one vector ID to its table and coordinate, or the reverse",
             terms=("vector", "vecteur"),
+            patterns=(_VECTOR_ID,),
         ),
         PlanStep(
             "wds_get_data_from_vectors",
             "latest observations for a few known vectors, returned inline",
             terms=("vector", "vecteur"),
+            patterns=(_VECTOR_ID,),
         ),
         PlanStep(
             "wds_get_data_by_reference_period_range",
             "a date window for a few known vectors, returned inline",
             terms=("vector", "vecteur"),
+            patterns=(_VECTOR_ID,),
         ),
     ),
     (
@@ -1781,18 +1811,24 @@ STATCAN_TABLES = Topic(
             "line-item names are not."
         ),
     ),
-    # "vector" and "vecteur" also name the disease carrier ("vector-borne", French
-    # "maladies a vecteur"), and the two reconciliation phrases are not data work.
+    # Phrases where "vector" or "reconciliation" cannot be data work, blanked before the
+    # patterns run, so that even a nearby cue ("a table of vector-borne diseases") cannot
+    # count them.
     shadows=(
         "vector-borne",
         "vector borne",
         "disease vector",
         "vector control",
         "a vecteur",
+        "vector data",
+        "vector file",
+        "vector layer",
+        "vector map",
+        "vector graphic",
         "truth and reconciliation",
         "bank reconciliation",
     ),
-    patterns=(_TABLE_NUMBER, _PRODUCT_ID, _RECONCILE_DATA),
+    patterns=(_TABLE_NUMBER, _PRODUCT_ID, _VECTOR_ID, _VECTOR_DATA, _RECONCILE_DATA),
 )
 TOPICS = (*TOPICS, STATCAN_TABLES)
 
