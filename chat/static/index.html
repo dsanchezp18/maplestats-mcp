@@ -48,6 +48,9 @@
     flex: 1; padding: 10px 12px; font: inherit; color: var(--fg);
     background: var(--card); border: 1px solid var(--line); border-radius: 8px;
   }
+  input:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
   .send {
     padding: 10px 16px; font: inherit; border: 0; border-radius: 8px;
     background: var(--accent); color: #fff; cursor: pointer;
@@ -99,7 +102,7 @@
     div.className = "msg " + role;
     div.innerHTML = html;
     log.appendChild(div);
-    div.scrollIntoView({ block: "end" });
+    div.scrollIntoView({ block: "nearest" });
     return div;
   }
 
@@ -118,17 +121,21 @@
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ messages: history }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
+      // A gateway error while the host wakes comes back as an HTML page, not JSON.
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.answer !== "string") throw new Error(data.error ||
+        "The demo server did not answer. It may still be waking up: try again in a minute.");
       history.push({ role: "assistant", content: data.answer });
       let html = DOMPurify.sanitize(marked.parse(data.answer || "(no answer)"));
-      if (data.tools_used.length) {
+      if (data.tools_used && data.tools_used.length) {
         html += "<details><summary>" + data.tools_used.length +
           " tool call(s)</summary>" + data.tools_used.map((t) =>
           "<code>" + escapeText(t.name + " " + JSON.stringify(t.arguments)) +
           "</code>").join("") + "</details>";
       }
       pending.innerHTML = html;
+      // A long answer is read from its first line, not its last.
+      pending.scrollIntoView({ block: "start" });
     } catch (err) {
       history.pop();
       pending.innerHTML = '<p class="err">' + escapeText(err.message) + "</p>";
@@ -137,6 +144,14 @@
     }
   }
   document.getElementById("form").onsubmit = (e) => { e.preventDefault(); ask(); };
+
+  // The website's example questions link here as ?q=...; ask it on arrival.
+  const linked = new URLSearchParams(location.search).get("q");
+  if (linked) {
+    window.history.replaceState(null, "", location.pathname);
+    box.value = linked.slice(0, 1000);
+    ask();
+  }
 </script>
 </body>
 </html>
