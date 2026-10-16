@@ -3381,49 +3381,195 @@ mark {
   color: var(--accent);
 }
 
-/* ---------- Home: the chat demo ---------- */
+/* ---------- Home: the chat demo ----------
+   A chat window in the look of the animated card above (window bar, the ›
+   prompt mark), holding a plain GET form to the chat demo and four example
+   questions; the demo's caveats sit beside it. From 1000px the two take the
+   halves of the section head, so the window sits under the headline and the
+   caveats under the lede. */
 
-/* The questions, notice and link run the full width, under both halves of
-   the head; on wide screens the questions pair up on the head's two columns. */
+/* minmax(0, 1fr) here and in the form: the text field must shrink to fit
+   a phone, not hold the window open at its default width. */
+.try-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 3vw, 40px);
+  max-width: 780px;
+}
+
 @media (min-width: 1000px) {
-  .try-demo .prompts {
+  .try-body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: clamp(24px, 2.5vw, 32px);
+    align-items: start;
+    max-width: none;
   }
 }
 
-/* Each question opens the chat demo with that question asked, so the whole
-   row is the link and carries the prompt mark. */
-.try-demo .prompts li {
+.try-card .ask-title {
+  color: var(--ink-2);
+}
+
+.try-host {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.try-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 22px 20px 20px;
+}
+
+/* The field reads as the card's question line: the red mark, then serif
+   text at the size the animated card types its questions in. */
+.try-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--ink-3);
+  border-radius: 10px;
+  background: var(--ground);
+}
+
+.try-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.try-mark {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.try-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 600 1.125rem/1.3 var(--font-display);
+}
+
+.try-field input::placeholder {
+  color: var(--ink-3);
+  font-weight: 400;
+  opacity: 1;
+}
+
+.try-field button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 1rem/1 var(--font-text);
+  cursor: pointer;
+}
+
+.try-field button:hover {
+  background: var(--accent-hover);
+}
+
+.try-picks {
+  padding: 16px 20px 12px;
+  border-top: 1px solid var(--rule);
+  background: var(--ground-2);
+}
+
+.try-picks ul {
+  margin: 6px 0 0;
   padding: 0;
+  list-style: none;
 }
 
-.try-demo .prompts li::before {
-  content: none;
+.try-picks li + li {
+  border-top: 1px dotted var(--rule);
 }
 
-.try-demo .prompts a {
-  display: block;
-  height: 100%;
-  padding: 14px 18px;
+/* Each example opens the chat demo with that question asked. */
+.try-picks a {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
   color: var(--ink);
   text-decoration: none;
+  line-height: 1.4;
 }
 
-.try-demo .prompts a::before {
+.try-picks a::before {
   content: "›";
-  margin-right: 10px;
   font-family: var(--font-mono);
   color: var(--accent);
 }
 
-.try-demo .prompts li:has(a:hover),
-.try-demo .prompts li:has(a:focus-visible) {
-  border-color: var(--accent);
+.try-picks a:hover {
+  color: var(--accent);
 }
 
-.try-demo .notice {
-  margin-top: 20px;
+/* The caveats: three short points under one heading, ruled like the
+   claims and steps elsewhere on the page. */
+.try-notice {
+  padding-left: 20px;
+  border-left: 3px solid var(--accent);
+}
+
+.try-notice-title {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.try-notice ul {
+  display: grid;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.try-notice li {
+  padding-block: 12px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+
+.try-notice li:last-child {
+  padding-bottom: 0;
+}
+
+.try-notice b {
+  display: block;
+  color: var(--ink);
+}
+
+@media (max-width: 480px) {
+  .try-host {
+    display: none;
+  }
+
+  .try-form,
+  .try-picks {
+    padding-inline: 14px;
+  }
+
+  .try-field button {
+    padding: 0 14px;
+  }
 }
 
 @media (max-width: 900px) {
