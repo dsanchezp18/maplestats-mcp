@@ -6,8 +6,10 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv==0.11.7
 
-COPY pyproject.toml ./
-RUN uv sync --no-dev
+# --locked: install exactly what chat/uv.lock pins, and fail the build if the lock
+# is out of date with pyproject.toml, as the server's image does.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev
 
 COPY app.py ./
 COPY static/ static/

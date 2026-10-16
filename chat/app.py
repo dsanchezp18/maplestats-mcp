@@ -407,8 +407,17 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "provider": PROVIDER, "model": MODEL})
 
 
+# The page asks a ?q= question on arrival when the website links to it, and every
+# question is a billed model call. A page that framed it could spend the daily
+# budget from its own visitors' browsers, and so past the per-address limit.
+NO_FRAMING = {
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "X-Frame-Options": "DENY",
+}
+
+
 async def index(request: Request) -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_FRAMING)
 
 
 app = Starlette(

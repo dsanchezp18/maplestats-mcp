@@ -1,0 +1,40 @@
+name: Docker images
+
+# Render deploys the server and the chat demo straight from these Dockerfiles
+# (render.yaml), so a base-image bump or a dependency without a wheel for the
+# image's Python must fail here, not on the next deploy. ci.yml's test matrix
+# runs uv's own Python, not the image. Kept out of ci.yml so a registry outage
+# cannot hold back the website, which publishes only after CI passes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: docker build -t maplestats-mcp .
+      - name: The image starts and answers /health
+        run: |
+          docker run -d --name mcp -p 8000:8000 maplestats-mcp
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs mcp
+          exit 1
+
+  chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: docker build -t maplestats-chat -f chat/Dockerfile chat

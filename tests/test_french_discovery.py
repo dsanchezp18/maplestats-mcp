@@ -159,6 +159,11 @@ CASES = [
     # StatCan misses found in the 2026-10-02 review.
     ("taux de chômage mensuel en Alberta", "wds_search_cubes"),
     ("communiqués du Quotidien aujourd'hui", "statcan_daily_get_releases"),
+    # The French twins of the 2026-10-14 English fixes: "estimation de population" in
+    # the PUMF tabulation tool's French keywords still put it first on 2026-10-16.
+    ("estimations de population par province", "wds_search_cubes"),
+    ("indice des prix à la consommation mensuel", "wds_search_cubes"),
+    ("feux de forêt Colombie-Britannique", "bcgw_get_active_wildfires"),
     # StatCan French keyword pass (2026-10-04).
     ("codes SCIAN et codes de professions CNP", "rdaas_search_classifications"),
     ("profil du recensement de 2021 revenu médian", "statcan_census_profile_get_data"),
@@ -216,3 +221,16 @@ def top_names() -> dict[str, list[str]]:
 def test_french_query_finds_tool(query: str, expected: str, top_names: dict[str, list[str]]):
     names = top_names[query]
     assert expected in names, f"{query!r} -> {names}"
+
+
+# Queries whose right tool must come first, not just within TOP_N: with the PUMF
+# tabulation tool first and wds_search_cubes second, the case above still passed.
+FIRST = [
+    ("estimations de population par province", "wds_search_cubes"),
+    ("feux de forêt Colombie-Britannique", "bcgw_get_active_wildfires"),
+]
+
+
+@pytest.mark.parametrize(("query", "expected"), FIRST)
+def test_french_query_ranks_tool_first(query: str, expected: str, top_names: dict[str, list[str]]):
+    assert top_names[query][:1] == [expected], f"{query!r} -> {top_names[query]}"
