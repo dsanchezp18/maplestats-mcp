@@ -3383,10 +3383,13 @@ mark {
 
 /* ---------- Home: the chat demo ---------- */
 
-.try-demo .prompts,
-.try-demo .notice,
-.try-demo .sources-feature {
-  max-width: 780px;
+/* The questions, notice and link run the full width, under both halves of
+   the head; on wide screens the questions pair up on the head's two columns. */
+@media (min-width: 1000px) {
+  .try-demo .prompts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(24px, 2.5vw, 32px);
+  }
 }
 
 /* Each question opens the chat demo with that question asked, so the whole
@@ -3401,6 +3404,7 @@ mark {
 
 .try-demo .prompts a {
   display: block;
+  height: 100%;
   padding: 14px 18px;
   color: var(--ink);
   text-decoration: none;
