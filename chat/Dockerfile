@@ -1,5 +1,8 @@
 # Build from the repository root: docker build -f chat/Dockerfile chat
-FROM python:3.12-slim
+# The same base as the server's image (../Dockerfile): tag for readers, digest for
+# reproducible builds (the digest wins). Refresh both files together:
+# docker buildx imagetools inspect python:3.14-slim
+FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
 
 RUN groupadd -r appuser && useradd -r -g appuser -m appuser
 WORKDIR /app

@@ -79,9 +79,17 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   from the website; from anywhere else it fills the box and waits for a click. Each question
   is a billed model call, so a page that embedded or linked the demo could otherwise spend
   its daily limit through its own visitors' browsers. A question that fails is put back in
-  the box, so trying again does not mean retyping it.
+  the box, so trying again does not mean retyping it. Every website page now states its
+  referrer policy (`strict-origin-when-cross-origin`), so the demo can tell a visitor came
+  from the website without relying on a host header or browser default, and a test checks
+  that the origin the demo trusts is the website's.
 - Chat demo image: `chat/Dockerfile` installs from `chat/uv.lock` with `--locked`, as the
-  server's image does, instead of resolving the newest versions at build time.
+  server's image does, instead of resolving the newest versions at build time. It now uses
+  the server image's base, `python:3.14-slim` pinned by digest, instead of an unpinned
+  `python:3.12-slim`, and Dependabot bumps both digests in one pull request.
+- `plan_query`: a vector ID beside the word "vector" ("vector v41690973") counts as one
+  `statcan_tables` cue, not two; the ID counted once as itself and again as the word's
+  neighbour.
 - Chat demo: a request that fails after a billed model call stays counted against the
   hourly and daily limits (only a failure before any call is refunded), and the failure
   log names the HTTP status.

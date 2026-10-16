@@ -308,6 +308,16 @@ def test_a_bare_vector_id_starts_with_a_vector_tool(question: str):
     assert "v41690973" in topic.matched_terms
 
 
+def test_a_vector_id_beside_the_word_vector_counts_once():
+    # The ID is the cue; "vector" next to it adds no second, independent hit.
+    topic = next(
+        t
+        for t in client.plan("Latest value of vector v41690973").topics
+        if t.topic == "statcan_tables"
+    )
+    assert topic.matched_terms == ["v41690973"]
+
+
 def test_statcan_tables_reports_the_cue_word_not_the_span():
     question = "I have 300 vector IDs in an Excel workbook to reconcile against the published table"
     topic = next(t for t in client.plan(question).topics if t.topic == "statcan_tables")

@@ -589,6 +589,21 @@ def test_every_page_has_canonical_and_social_metadata(built_site: Path):
     assert image.stat().st_size < 150_000
 
 
+def test_pages_tell_the_chat_demo_where_a_visitor_came_from(built_site: Path):
+    """The chat demo asks a ?q= question by itself only for a visitor from this site.
+
+    It knows by the referrer, so every page states the policy that sends the site's
+    origin, rather than leaving it to a host header or a browser default, and the
+    origin the demo trusts is this site's.
+    """
+    for page in _pages(built_site):
+        text = page.read_text(encoding="utf-8")
+        assert '<meta name="referrer" content="strict-origin-when-cross-origin">' in text, page
+    chat_page = (ROOT / "chat" / "static" / "index.html").read_text(encoding="utf-8")
+    trusted = re.search(r'const SITE = "([^"]+)";', chat_page)
+    assert trusted and trusted.group(1) == site.SITE_URL.rstrip("/")
+
+
 def test_home_pages_carry_structured_data(built_site: Path):
     """The home page, in each language, describes the site and the server as JSON-LD."""
     for page in _pages(built_site):

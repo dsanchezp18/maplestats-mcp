@@ -25,7 +25,15 @@ updates:
         patterns:
           - "*"
 
+  # The server's and the chat demo's images share one base, so one grouped pull
+  # request moves both digests together.
   - package-ecosystem: docker
-    directory: /
+    directories:
+      - /
+      - /chat
     schedule:
       interval: weekly
+    groups:
+      base-image:
+        patterns:
+          - "*"

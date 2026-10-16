@@ -1700,11 +1700,12 @@ def _near(word: str, cue: str) -> str:
 
 # "Vector" is mostly not a StatCan series: a disease carrier ("tick vectors", "maladies
 # transmises par les vecteurs") or a GIS format ("vector GIS data"). It counts only near
-# a word that places it in a table: a table, series, StatCan, an ID or a v-number.
+# a word that places it in a table: a table, series, StatCan or an ID. A v-number is
+# not a cue here: _VECTOR_ID already counts it, and "vector v41690973" is one cue, not two.
 _VECTOR_CUE = (
     r"(?:tables?|tableaux?|series?|statcan|statistics canada|statistique canada|cansim|"
     r"workbooks?|classeurs?|spreadsheets?|ids?|identifiants?|numbers?|numeros?|"
-    r"coordinates?|coordonnees?|v\d{5,10})"
+    r"coordinates?|coordonnees?)"
 )
 _VECTOR_DATA = _near(r"vectors?|vecteurs?", _VECTOR_CUE)
 
