@@ -129,7 +129,7 @@ def _local_datetime(value: object) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        local = datetime.strptime(value.strip(), "%Y/%m/%d %H:%M:%S")  # noqa: DTZ007 - zone added below
+        local = datetime.strptime(value.strip(), "%Y/%m/%d %H:%M:%S")  # naive; zone added below
     except ValueError:
         return None
     return local.replace(tzinfo=_ALBERTA).astimezone(UTC)
