@@ -148,7 +148,7 @@ def test_xlsx_sheets_largest_sheet_is_default_and_dates_are_text():
         {
             "Report Parameters": [["@PeriodFrom", "2025"], ["@PeriodTo", "2025"]],
             "Data": [["Project", "Year", "Revenue"]]
-            + [[f"P{i}", datetime(2025, 1, 1), i * 1.5] for i in range(30)],  # noqa: DTZ001,
+            + [[f"P{i}", datetime(2025, 1, 1), i * 1.5] for i in range(30)],
         }
     )
     sizes = tables.sheet_sizes(body, "xlsx")
