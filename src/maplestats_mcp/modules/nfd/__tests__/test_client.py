@@ -179,7 +179,7 @@ def _dictionary(title: str, source: str) -> bytes:
     for row in (
         ("Title", title),
         ("Filename", "NFD - x - EN FR"),
-        ("Last update", datetime(2026, 6, 17)),  # noqa: DTZ001
+        ("Last update", datetime(2026, 6, 17)),
         ("Source(s)", source),
     ):
         english.append(row)
@@ -187,7 +187,7 @@ def _dictionary(title: str, source: str) -> bytes:
     for row in (
         ("Titre", f"{title} (fr)"),
         ("Nom de fichier", "x"),
-        ("Dernière mise à jour", datetime(2026, 6, 17)),  # noqa: DTZ001
+        ("Dernière mise à jour", datetime(2026, 6, 17)),
         ("Source(s)", f"{source} (fr)"),
     ):
         french.append(row)
