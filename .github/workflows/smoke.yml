@@ -52,6 +52,7 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
       - run: uv sync --locked
       # One retry after a pause: of eight failed jobs on 2026-09-26/27, seven
       # were StatCan and portal blips (503, 429, 500, timeouts) that passed

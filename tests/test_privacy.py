@@ -47,25 +47,72 @@ async def test_tool_errors_keep_arguments_in_client_response_only(caplog):
     assert "MCP tool call failed" in caplog.text
 
 
-@pytest.mark.parametrize(
-    "message",
-    [
-        "Error reading resource 'docs://private_uri_marker'",
-        "Error rendering prompt 'private_prompt_marker'",
-    ],
-)
-def test_resource_and_prompt_failures_are_scrubbed_too(caplog, message):
+# FastMCP logs each failure from the module that handles it: tool calls and
+# resource reads from server.server, a failed prompt render from
+# prompts.function_prompt. A logger's filter only sees records logged on that
+# logger itself, so each one needs the scrubbing filter.
+_FASTMCP_LOGGERS = ("fastmcp.server.server", "fastmcp.prompts.function_prompt")
+
+
+@pytest.fixture
+def fastmcp_logs(caplog):
+    """Capture FastMCP's own loggers, which stop propagating to the root logger."""
     from maplestats_mcp.shared.private_logs import configure_private_logs
 
     configure_private_logs()
-    logger = logging.getLogger("fastmcp.server.server")
-    with caplog.at_level(logging.ERROR, logger=logger.name):
-        try:
-            raise RuntimeError("private_exception_marker")
-        except RuntimeError:
-            logger.exception(message)
-    assert "private" not in caplog.text
-    assert "RuntimeError" in caplog.text
+    loggers = [logging.getLogger(name) for name in _FASTMCP_LOGGERS]
+    for logger in loggers:
+        logger.addHandler(caplog.handler)
+    caplog.set_level(logging.WARNING)
+    yield caplog
+    for logger in loggers:
+        logger.removeHandler(caplog.handler)
+
+
+def test_the_scrubbing_filter_sits_on_each_logger_fastmcp_reports_failures_from():
+    from maplestats_mcp.shared.private_logs import PrivateToolLogs, configure_private_logs
+
+    configure_private_logs()
+    configure_private_logs()
+    for name in _FASTMCP_LOGGERS:
+        filters = logging.getLogger(name).filters
+        assert sum(isinstance(f, PrivateToolLogs) for f in filters) == 1, name
+
+
+async def test_a_failing_prompt_render_keeps_arguments_and_exception_text_out_of_logs(
+    fastmcp_logs,
+):
+    from fastmcp import Client, FastMCP
+
+    server = FastMCP("t")
+
+    @server.prompt
+    def failing_prompt(topic: str) -> str:
+        raise RuntimeError("private_exception_marker")
+
+    async with Client(server) as client:
+        with pytest.raises(Exception, match="failing_prompt"):
+            await client.get_prompt("failing_prompt", {"topic": "private_argument_marker"})
+    assert "private" not in fastmcp_logs.text
+    assert "RuntimeError" in fastmcp_logs.text
+
+
+async def test_a_failing_resource_read_keeps_the_uri_and_exception_text_out_of_logs(
+    fastmcp_logs,
+):
+    from fastmcp import Client, FastMCP
+
+    server = FastMCP("t")
+
+    @server.resource("docs://private_uri_marker")
+    def failing_resource() -> str:
+        raise RuntimeError("private_exception_marker")
+
+    async with Client(server) as client:
+        with pytest.raises(Exception, match="resource"):
+            await client.read_resource("docs://private_uri_marker")
+    assert "private" not in fastmcp_logs.text
+    assert "RuntimeError" in fastmcp_logs.text
 
 
 def test_unexpected_exception_text_is_not_logged(caplog):

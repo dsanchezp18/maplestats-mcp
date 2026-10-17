@@ -2,11 +2,13 @@
 
 Transport picked from MAPLE_TRANSPORT (default "stdio"). stdio bypasses
 the ASGI security layer entirely — it's a local-process transport with
-no network exposure to protect.
+no network exposure to protect. `--version` prints the version and exits
+without starting a server.
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
 
 from maplestats_mcp import __version__, config
@@ -19,7 +21,15 @@ for _noisy in ("httpx", "httpcore"):
 logger = logging.getLogger("maplestats_mcp")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="maplestats-mcp",
+        description="MapleStats MCP server. The transport comes from MAPLE_TRANSPORT.",
+    )
+    # The bare version, so a bug report can paste it as it is.
+    parser.add_argument("--version", action="version", version=__version__)
+    parser.parse_args(argv)
+
     transport = config.get_transport()
 
     if transport == "stdio":
@@ -35,18 +45,12 @@ def main() -> None:
 
     host = config.get_host()
     port = config.get_port()
-    auth_token = config.get_auth_token()
     certfile = config.get_ssl_certfile()
     keyfile = config.get_ssl_keyfile()
-    loopback = host in {"127.0.0.1", "localhost", "::1"}
 
-    if config.get_require_auth() and not auth_token:
-        raise RuntimeError("MAPLE_REQUIRE_AUTH is set but MAPLE_AUTH_TOKEN is empty.")
-    if not loopback and not auth_token:
-        logger.warning(
-            "MCP HTTP endpoint is bound externally without MAPLE_AUTH_TOKEN; "
-            "set a token before exposing it beyond a trusted network."
-        )
+    # The MAPLE_REQUIRE_AUTH refusal and the external-bind warning live in
+    # build_asgi_app(), which the import above has already run, so that
+    # `uvicorn maplestats_mcp.asgi:app` enforces them too.
     if bool(certfile) != bool(keyfile):
         raise RuntimeError("MAPLE_SSL_CERTFILE and MAPLE_SSL_KEYFILE must both be set, or neither.")
 

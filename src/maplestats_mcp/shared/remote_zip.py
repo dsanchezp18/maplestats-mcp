@@ -42,6 +42,12 @@ _LOCATOR64 = b"PK\x06\x07"
 _MAX32 = 0xFFFFFFFF
 _MAX16 = 0xFFFF
 _TAIL_BYTES = 256 * 1024
+# Largest central directory read into memory: a real archive's directory is about
+# 100 bytes per member (the Delta file's is under a megabyte), so 64 MB is far
+# above any honest listing and bounds what a corrupt or hostile end record can ask for.
+_MAX_DIRECTORY_BYTES = 64 * 1024 * 1024
+# Smallest central directory entry, before its name, extra field and comment.
+_CENTRAL_ENTRY_MIN = 46
 
 # Object-storage hosts a publisher's link may hand off to (federal download
 # links answer 302 to an Azure blob, Montreal's to Google Cloud Storage,
@@ -134,13 +140,36 @@ _RETRY = retry(
 )
 
 
+@dataclass(frozen=True)
+class _RangeAnswer:
+    """What a ranged GET returned: its status, headers and (at most the range's) body."""
+
+    status_code: int
+    headers: httpx.Headers
+    content: bytes
+
+
 @_RETRY
-async def _get_range(url: str, start: int, end: int) -> httpx.Response:
-    response = await _client.get(
-        url, headers=request_headers(url, {"Range": f"bytes={start}-{end}"})
-    )
-    response.raise_for_status()
-    return response
+async def _get_range(url: str, start: int, end: int) -> _RangeAnswer:
+    """GET bytes `start..end`, streamed so a host that ignores Range cannot fill memory.
+
+    A host that stops honouring `Range` answers 200 with the whole file (the 3.9 GB
+    Delta zip): anything but a 206 comes back with an empty body, unread, and a 206
+    body is read only up to one byte past the range asked for.
+    """
+    expected = end - start + 1
+    async with _client.stream(
+        "GET", url, headers=request_headers(url, {"Range": f"bytes={start}-{end}"})
+    ) as response:
+        response.raise_for_status()
+        if response.status_code != 206:
+            return _RangeAnswer(response.status_code, response.headers, b"")
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            body.extend(chunk)
+            if len(body) > expected:
+                break
+        return _RangeAnswer(response.status_code, response.headers, bytes(body[: expected + 1]))
 
 
 async def _range(url: str, start: int, end: int) -> bytes:
@@ -166,12 +195,15 @@ async def _range(url: str, start: int, end: int) -> bytes:
     # clamps the range); slicing ZIP structures out of a short body would
     # misread them silently, so the length is checked, not assumed.
     expected = end - start + 1
-    if len(response.content) != expected:
+    got = len(response.content)
+    if got != expected:
+        # A longer body was cut one byte past the range, so only "more than" is known.
         raise call_error(
             UpstreamError,
-            f"{url} returned {len(response.content):,} bytes for a {expected:,}-byte range.",
-            f"{url} a renvoyé {fr_number(len(response.content))} octets pour une plage de "
-            f"{fr_number(expected)} octets.",
+            f"{url} returned {'more than ' if got > expected else ''}{got:,} bytes for a "
+            f"{expected:,}-byte range.",
+            f"{url} a renvoyé {'plus de ' if got > expected else ''}{fr_number(got)} octets pour "
+            f"une plage de {fr_number(expected)} octets.",
         )
     return response.content
 
@@ -235,6 +267,17 @@ async def list_members(url: str) -> tuple[list[ZipMember], int]:
     _, _, _, _, count, cd_size, cd_offset, _ = struct.unpack("<4sHHHHIIH", tail[eocd : eocd + 22])
     if _MAX32 in (cd_offset, cd_size) or count == _MAX16:
         count, cd_size, cd_offset = await _zip64_directory(url, tail, tail_start, eocd)
+    if cd_size > _MAX_DIRECTORY_BYTES or count * _CENTRAL_ENTRY_MIN > cd_size:
+        # The end record is what the archive claims: refuse a directory too big to
+        # hold in memory, or one too small for the number of entries it announces.
+        raise call_error(
+            UpstreamError,
+            f"{url}: implausible ZIP central directory ({count:,} entries in {cd_size:,} bytes; "
+            f"this reader stops at {_MAX_DIRECTORY_BYTES:,} bytes).",
+            f"{url} : répertoire central ZIP invraisemblable ({fr_number(count)} entrées dans "
+            f"{fr_number(cd_size)} octets ; ce lecteur s'arrête à "
+            f"{fr_number(_MAX_DIRECTORY_BYTES)} octets).",
+        )
     if cd_offset >= tail_start:
         directory = tail[cd_offset - tail_start : cd_offset - tail_start + cd_size]
     else:

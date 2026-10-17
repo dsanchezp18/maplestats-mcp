@@ -203,13 +203,15 @@ for the contributor guide and how to add a source module.
 serves HTTP instead of stdio; `docker compose up --build` does the same in
 Docker. Docker is optional and unnecessary on a personal computer. If the
 server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
-`MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version.
+`MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version. `GET /stats`
+is public, needs no token and reports calls per tool name and day (see
+`MAPLE_USAGE_STATS` below).
 
 | Env var | Default | Purpose |
 |---|---|---|
 | `MAPLE_TRANSPORT` | `stdio` | `stdio` for local clients, `http` for hosting |
 | `MAPLE_HOST` / `MAPLE_PORT` | `127.0.0.1` / `8000` | HTTP bind address |
-| `MAPLE_AUTH_TOKEN`, `MAPLE_REQUIRE_AUTH` | unset, `0` | Bearer token required on `/mcp`; refuse to start without one if `1` |
+| `MAPLE_AUTH_TOKEN`, `MAPLE_REQUIRE_AUTH` | unset, `0` | Bearer token required on `/mcp`; refuse to start without one if `1`. `docker-compose.yml` defaults `MAPLE_REQUIRE_AUTH` to `1` |
 | `MAPLE_RATE_LIMIT_REQUESTS` / `MAPLE_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Per-client rate limit |
 | `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | In-flight request cap; the excess waits 5 s, then gets 503 |
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS in-process |
@@ -222,7 +224,11 @@ server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
+| `MAPLE_LODE_CACHE_DIR`, `MAPLE_LODE_CACHE_MAX_GB` | system temp, `3` | Where StatCan open-database (LODE) archives are unpacked, and the size cap (least recently used files go first); use a persistent volume when hosted |
+| `MAPLE_LODE_MAX_DOWNLOAD_MB` | `300` | Largest open-database archive one call may download; `0` turns downloads off |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
+| `MAPLE_EXPORT_DIR` | Downloads folder (home folder if there is none) | Where `reproduce_workbook` saves Excel workbooks on a local server |
+| `MAPLE_USAGE_STATS` | `1` | Counts calls per tool name and UTC day (never arguments or addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
 | `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |
 

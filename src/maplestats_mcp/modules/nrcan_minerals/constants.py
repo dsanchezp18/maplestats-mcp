@@ -1,6 +1,7 @@
 """Constants for the NRCan mineral production module (checked live 2026-10-03)."""
 
-SITE = "https://mmsd.nrcan-rncan.gc.ca"
+HOST = "mmsd.nrcan-rncan.gc.ca"
+SITE = f"https://{HOST}"
 ANNUAL_PAGE = SITE + "/prod-prod/ann-ann-eng.aspx"
 CSV_URL = SITE + "/PDF/MIS{year}TableG01-en.csv"
 

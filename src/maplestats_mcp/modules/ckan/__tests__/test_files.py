@@ -175,7 +175,7 @@ async def test_redirect_to_a_host_off_the_list_is_refused_before_it_is_requested
     httpx_mock.add_response(
         url=FED_FILE, status_code=302, headers={"Location": "https://evil.example.com/x.csv"}
     )
-    with pytest.raises(InvalidInput, match="evil.example.com"):
+    with pytest.raises(UpstreamError, match="evil.example.com"):
         await files.read_resource("federal", RES)
     requested = [str(r.url) for r in httpx_mock.get_requests()]
     assert not any("evil.example.com" in u for u in requested)
@@ -186,7 +186,7 @@ async def test_redirect_to_http_is_refused(httpx_mock):
     httpx_mock.add_response(
         url=FED_FILE, status_code=302, headers={"Location": "http://open.canada.ca/x.csv"}
     )
-    with pytest.raises(InvalidInput, match="https"):
+    with pytest.raises(UpstreamError, match="https"):
         await files.read_resource("federal", RES)
 
 

@@ -260,3 +260,29 @@ def test_business_numbers_accept_ascii_digits_only():
         assert not client._is_bn(text)
         with pytest.raises(InvalidInput):
             client.normalize_bn(text)
+
+
+# The datastore sends "total": null when it did not count (the key is present,
+# so a dict.get default does not apply); int(None) raised TypeError.
+
+
+async def test_search_with_a_null_total_falls_back_to_the_rows_returned(httpx_mock):
+    _discovery(httpx_mock)
+    httpx_mock.add_response(
+        url=re.compile(r".*datastore_search.*"),
+        json={"success": True, "result": {"records": [_ROW], "total": None}},
+    )
+    result = await client.search_charities("red cross")
+    assert result.total_count == 1 and result.returned_count == 1
+
+
+async def test_directors_with_a_null_total_fall_back_to_the_rows_returned(httpx_mock):
+    _discovery(httpx_mock)
+    row = {"BN": _ROW["BN"], "FPE": "2024-03-31", "Last Name": "HUBBS", "Position": "CHAIR"}
+    httpx_mock.add_response(
+        url=re.compile(r".*datastore_search.*"),
+        json={"success": True, "result": {"records": [row], "total": None}},
+    )
+    result = await client.get_directors("119219814")
+    assert result.total_count == 1 and result.returned_count == 1
+    assert "Only the first" not in (result.provenance.limits or "")

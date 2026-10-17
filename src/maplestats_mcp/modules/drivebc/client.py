@@ -83,6 +83,16 @@ async def _get(url: str, params: dict[str, Any], lang: str = "en") -> Any:
             f"l'API Open511 de DriveBC a renvoyé autre chose que du JSON pour {url}.",
             lang,
         )
+    except httpx.HTTPError as exc:
+        # What is left after the cases above: a server that drops the
+        # connection mid-response (RemoteProtocolError) or loops through
+        # redirects (TooManyRedirects). Neither is a typed error otherwise.
+        raise_localized(
+            UpstreamUnavailable,
+            f"DriveBC's Open511 API could not be read ({type(exc).__name__}: {exc}).",
+            f"l'API Open511 de DriveBC n'a pas pu être lue ({type(exc).__name__} : {exc}).",
+            lang,
+        )
 
 
 async def _events(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:

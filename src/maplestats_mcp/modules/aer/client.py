@@ -21,8 +21,13 @@ from maplestats_mcp.modules.aer.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
-from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
+from maplestats_mcp.shared.http import new_client, send_with_retry
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -107,8 +112,28 @@ async def get_well_licences_daily(
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
-            response = await _client.get(url)
+            # Retries 429/5xx with backoff like every other source; a status
+            # that is not retryable (a 404 for a file AER moved or has not
+            # posted) comes back as a response and is typed below.
+            response = await send_with_retry(_client, "GET", url)
             response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status == 404:
+                _raise(
+                    NotFound,
+                    f"aer: no daily well-licence file at {url} (HTTP 404); the file may have "
+                    "moved.",
+                    f"aer : aucun fichier quotidien des permis de puits à {url} (HTTP 404) ; "
+                    "le fichier a peut-être été déplacé.",
+                    lang,
+                )
+            _raise(
+                UpstreamError,
+                f"aer: {url} returned HTTP {status}.",
+                f"aer : {url} a répondu HTTP {status}.",
+                lang,
+            )
         except httpx.HTTPError:
             _raise(
                 UpstreamUnavailable,

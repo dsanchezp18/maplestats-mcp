@@ -62,6 +62,12 @@ def _decode(body: bytes) -> str:
         return body.decode("cp1252").removeprefix("ï»¿")
 
 
+def _count(text: str) -> int:
+    """VOTES_CONSIDERED as a whole number; a thousands comma ("1,234") is tolerated."""
+    cleaned = text.replace(",", "").strip()
+    return int(cleaned) if cleaned else 0
+
+
 def _first_last(name: str) -> str:
     last, _, first = name.partition(",")
     return f"{first.strip()} {last.strip()}".strip() if first else name.strip()
@@ -85,7 +91,7 @@ def parse(body: bytes) -> dict[str, list[District]]:
         if "general election" not in event or "by-election" in event:
             continue
         year, district = row["EVENT_YEAR"], row["ED_NAME"].strip()
-        count = int(row["VOTES_CONSIDERED"] or 0)
+        count = _count(row["VOTES_CONSIDERED"])
         abbreviations[(year, district)] = row["ED_ABBREVIATION"]
         if row["VOTE_CATEGORY"] == "Rejected":
             rejected[(year, district)] += count
@@ -137,7 +143,15 @@ async def fetch(year: str) -> tuple[list[District], bool]:
         body = await fetch_bytes(
             url, context=f"elections_provincial:bc:{year}", max_bytes=constants.BC_MAX_BYTES
         )
-        return await run_parse(parse, body)
+        try:
+            return await run_parse(parse, body)
+        except UpstreamError:
+            raise
+        except Exception as exc:  # a bad cell raises ValueError or KeyError, not a typed error
+            raise UpstreamError(
+                f"elections_provincial: could not read the BC results file {url} "
+                f"for {year}: {exc!r}"
+            ) from exc
 
     by_year, cached = await cached_fetch(
         f"elections_provincial:bc-file:{url}", constants.CACHE_TTL_SECONDS, load

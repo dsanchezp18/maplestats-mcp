@@ -173,7 +173,7 @@ design and reliability ideas rather than reinvent them. The goal
 remains one coherent Canada MCP, not a wrapper around a collection of
 separate MCPs. Specific repositories, authors, and registry entries
 reviewed during this research are not named here; see
-[README.md](README.md#acknowledgments) for the acknowledgements.
+[README.md](../README.md#acknowledgments) for the acknowledgements.
 
 ### Primary architectural benchmark
 
@@ -194,7 +194,7 @@ README and its repository description — treat any such count as
 project-reported and version-sensitive, not canonical, when comparing
 against it. Benchmark the module architecture, discovery layer,
 shared infrastructure and source implementations before designing
-equivalents (see [`AGENTS.md`](AGENTS.md) for how this repo's own
+equivalents (see [`AGENTS.md`](../AGENTS.md) for how this repo's own
 module pattern turned out).
 
 ### Statistics Canada benchmarks

@@ -1016,12 +1016,16 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
         if specific:
             prepare.append(specific.body)
         prepare.append(cleaning.GENERIC["stata"].body)
+    # The log name sits inside a string literal, so it keeps only characters that
+    # cannot close it or start a macro; reproduce_code also refuses tool names the
+    # server does not register, but this line must not depend on that.
+    log_name = re.sub(r"[^A-Za-z0-9_]", "", tool)[:32] or "reproduce"
     setup = _join(
         "version 18\nclear all\nset more off\n",
         "* 0. Setup\n",
         'capture mkdir "logs"\n'
         "capture log close\n"
-        f'log using "logs/{tool[:32]}.log", replace\n'
+        f'log using "logs/{log_name}.log", replace\n'
         'capture mkdir "data"\n'
         'capture mkdir "data/raw"\n',
     )
@@ -1075,7 +1079,9 @@ def _jl_request(spec: Spec, path: str) -> str:
     body = ""
     if spec.post_json is not None:
         headers["Content-Type"] = "application/json"
-        body = f', method = "POST", input = IOBuffer({jl_quote(jl_quote(spec.post_json))})'
+        # One quoting step: the JSON text is the literal's content, so a "$" in it
+        # is escaped for Julia once and the body Julia sends is still valid JSON.
+        body = f', method = "POST", input = IOBuffer({jl_quote(json.dumps(spec.post_json))})'
     elif spec.post_form:
         headers["Content-Type"] = "application/x-www-form-urlencoded"
         body = f', method = "POST", input = IOBuffer({jl_quote(urlencode(spec.post_form))})'

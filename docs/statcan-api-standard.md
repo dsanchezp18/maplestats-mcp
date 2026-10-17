@@ -2,7 +2,7 @@
 
 Investigated 2026-09-14. Covers the official StatCan API surface itself,
 plus what the two dedicated StatCan-specific MCP benchmarks named in the
-[project guide](../PROJECT_GUIDE.md) (`Aryan-Jhaveri/mcp-statcan`,
+[project guide](PROJECT_GUIDE.md) (`Aryan-Jhaveri/mcp-statcan`,
 `pipeworx-io/mcp-statcan`) actually implement against it — so the gap
 analysis for MapleStats's StatCan module is grounded in code, not just the
 official docs.

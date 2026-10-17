@@ -59,10 +59,11 @@ async def oeb_describe_dataset(
     with example values, the record count, the years and the distributors.
 
     dataset is a slug from oeb_list_datasets or words of its title ("system
-    reliability", "2.1.5.4"). file is a number from the file list or words of
-    the file name (default: the first current file); release picks an archived
-    release by date ("2024-08-27"); sheet picks an Excel worksheet. Reads the
-    whole file (the largest, the trial balance, is 62 MB).
+    reliability", "2.1.5.4"). file is a number from the file list (counted within
+    the release when release is given) or words of the file name (default: the
+    first current file); release picks an archived release by date
+    ("2024-08-27"); sheet picks an Excel worksheet. Reads the whole file (the
+    largest, the trial balance, is 62 MB).
     Use for: seeing which measures an RRR file has before querying it.
     Keywords: OEB, Ontario Energy Board, dataset fields, columns, RRR file,
     data dictionary, archived release, distributors list, years covered.

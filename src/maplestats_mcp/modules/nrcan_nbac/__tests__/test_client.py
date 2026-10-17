@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import re
+
+import httpx
 import pytest
 
 from maplestats_mcp.modules.nrcan_nbac import client, constants
 from maplestats_mcp.shared import cache as cache_module
+from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 
@@ -347,3 +351,96 @@ async def test_geometry_limit_and_byte_budget(httpx_mock, monkeypatch):
     assert result.fires[1].geometry is None
     assert result.geometry_omitted == 1
     assert result.note is not None
+
+
+# With geometry the response is read through the streaming reader: GeoServer
+# answers chunked, so the cap is enforced while reading. The geometry request
+# is the one asking for `constants.GEOMETRY_ROWS_MAX` rows; the attribute-only
+# probe that follows a failure asks for one row of `year`.
+
+_GEOMETRY_REQUEST = re.compile(rf".*count={constants.GEOMETRY_ROWS_MAX}&.*")
+_PROBE_REQUEST = re.compile(r".*propertyName=year.*")
+
+
+class _EndlessBody(httpx.AsyncByteStream):
+    """A body with no Content-Length that never ends: only a capped reader returns."""
+
+    def __init__(self, chunk: int = 1024) -> None:
+        self.chunk = chunk
+        self.sent = 0
+
+    async def __aiter__(self):
+        while True:
+            self.sent += self.chunk
+            yield b"x" * self.chunk
+
+
+async def test_geometry_response_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "GEOMETRY_RESPONSE_BYTES_MAX", 2 * 1024 * 1024)
+    body = _EndlessBody()
+    httpx_mock.add_response(url=_GEOMETRY_REQUEST, stream=body)
+    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION)
+    with pytest.raises(UpstreamError, match=r"over the 2 MB response limit.*limit=1"):
+        await client.query_fires(include_geometry=True)
+    assert body.sent < 2 * 1024 * 1024 + 4 * body.chunk
+
+
+async def test_geometry_response_over_the_cap_in_french(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "GEOMETRY_RESPONSE_BYTES_MAX", 1024 * 1024)
+    httpx_mock.add_response(url=_GEOMETRY_REQUEST, stream=_EndlessBody())
+    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION)
+    with pytest.raises(UpstreamError, match="dépasse la limite de 1 Mo"):
+        await client.query_fires(include_geometry=True, lang="fr")
+
+
+async def test_geometry_response_declared_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "GEOMETRY_RESPONSE_BYTES_MAX", 1024 * 1024)
+    httpx_mock.add_response(url=_GEOMETRY_REQUEST, content=b"x" * (2 * 1024 * 1024))
+    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION)
+    with pytest.raises(UpstreamError, match="response limit"):
+        await client.query_fires(include_geometry=True)
+
+
+async def test_geometry_request_the_service_rejects_is_invalid_input(httpx_mock):
+    # The streaming reader reports a 400 as an upstream error; the follow-up
+    # attribute-only probe recovers the service's own reason for the caller.
+    report = (
+        b'<?xml version="1.0" encoding="UTF-8"?>'
+        b'<ows:ExceptionReport xmlns:ows="http://www.opengis.net/ows/1.1" version="2.0.0">'
+        b'<ows:Exception exceptionCode="NoApplicableCode">'
+        b"<ows:ExceptionText>Could not parse CQL filter list.</ows:ExceptionText>"
+        b"</ows:Exception></ows:ExceptionReport>"
+    )
+    headers = {"Content-Type": "application/xml"}
+    httpx_mock.add_response(url=_GEOMETRY_REQUEST, status_code=400, content=report, headers=headers)
+    httpx_mock.add_response(url=_PROBE_REQUEST, status_code=400, content=report, headers=headers)
+    with pytest.raises(InvalidInput, match="Could not parse CQL filter list"):
+        await client.query_fires(cql_filter="garbage===", include_geometry=True)
+
+
+async def test_geometry_is_trimmed_before_it_is_cached(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "GEOMETRY_BYTES_MAX", 200)
+    ring = [[-120.0 + i / 100, 55.0] for i in range(8)]
+    small = {"type": "Polygon", "coordinates": [ring]}
+    large = {"type": "Polygon", "coordinates": [ring * 3]}
+    httpx_mock.add_response(
+        json={
+            "type": "FeatureCollection",
+            "features": [{**_FEATURE, "geometry": small}, {**_FEATURE, "geometry": large}],
+            "numberMatched": 2,
+        },
+    )
+    first = await client.query_fires(include_geometry=True, limit=2)
+    assert first.geometry_omitted == 1
+
+    # What the cache holds is the trimmed body, not the polygon that was dropped.
+    async def not_called():
+        raise AssertionError("the query should have been cached")
+
+    key = "nrcan-nbac:query:None:True:None:2:0"
+    stored, was_cached = await cached_fetch(key, constants.CACHE_TTL_QUERY_SECONDS, not_called)
+    assert was_cached
+    assert [f["geometry"] for f in stored["features"]] == [small, None]
+    again = await client.query_fires(include_geometry=True, limit=2)
+    assert again.geometry_omitted == 1 and again.provenance.cached
+    assert len(httpx_mock.get_requests()) == 1

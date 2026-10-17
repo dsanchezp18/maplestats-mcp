@@ -1,6 +1,7 @@
 """Constants for the Finance Canada module (checked live 2026-10-03)."""
 
 SITE = "https://www.canada.ca"
+HOST = "www.canada.ca"
 # The publications pages are filled by a script from this feed (every
 # Finance publication with its type, title, links and date in both languages).
 FEED_URL = SITE + "/content/dam/fin/documents/publications/pub-rep/json.json"

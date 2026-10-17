@@ -58,7 +58,7 @@ from maplestats_mcp.shared.ckan import (
     to_bool,
 )
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 
@@ -460,9 +460,18 @@ async def _all_fields_list(
                 params={"all_fields": "true", "limit": constants.ROSTER_PAGE, "offset": offset},
                 lang=lang,
             )
-            fresh = [
-                e for e in (page if isinstance(page, list) else []) if e.get("name") not in seen
-            ]
+            if not isinstance(page, list):
+                # Checked before len(page): None would raise a bare TypeError
+                # and a dict would end the loop as if the roster were empty.
+                raise_localized(
+                    UpstreamError,
+                    f"CKAN portal {key!r} answered {method} with {type(page).__name__}, "
+                    "not a list of entries.",
+                    f"le portail CKAN {key!r} a répondu à {method} par {type(page).__name__} "
+                    "et non par une liste d'entrées.",
+                    lang,
+                )
+            fresh = [e for e in page if e.get("name") not in seen]
             entries.extend(fresh)
             seen.update(str(e.get("name")) for e in fresh)
             if len(page) < constants.ROSTER_PAGE or not fresh:

@@ -466,3 +466,35 @@ async def test_english_messages_are_unchanged(httpx_mock):
         f"{len(DATASETS)} of {len(DATASETS)} curated Health Infobase files; dashboards "
         "without downloadable files (CCDSS, current CCDI) are not listed"
     )
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_file_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 1_000)
+    url = _url(BY_ID["measles_outbreaks"].url_en)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=url, stream=body)
+    with pytest.raises(UpstreamError, match="larger than this tool reads"):
+        await client.describe_dataset("measles_outbreaks")
+    assert body.pulled <= 3
+
+
+async def test_redirect_to_another_host_is_refused(httpx_mock):
+    url = _url(BY_ID["measles_outbreaks"].url_en)
+    httpx_mock.add_response(
+        url=url, status_code=302, headers={"Location": "https://evil.example/x"}
+    )
+    with pytest.raises(UpstreamError, match="unexpected host"):
+        await client.describe_dataset("measles_outbreaks")
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["health-infobase.canada.ca"]

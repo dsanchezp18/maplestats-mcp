@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import csv
 import io
-import warnings
 import zipfile
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
@@ -28,7 +27,10 @@ from typing import Any, Literal
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.executor import check_deadline
 from maplestats_mcp.shared.fr_typography import call_error
+from maplestats_mcp.shared.xlsx_sheets import SUSPICIOUS_SHEET_CELLS
 from maplestats_mcp.shared.xlsx_sheets import cell_text as _shared_cell_text
+from maplestats_mcp.shared.xlsx_sheets import fix_dimensions as _fix_dimensions
+from maplestats_mcp.shared.xlsx_sheets import open_workbook as _open_xlsx
 
 FileFormat = Literal["xlsx", "xls", "csv"]
 CSV_SHEET = "csv"
@@ -44,8 +46,6 @@ MAX_DESCRIBED_SHEETS = 25
 CELL_MAX_CHARS = 500
 ROWS_LIMIT_DEFAULT = 50
 HEADER_CANDIDATES_MAX = 5
-# Declared sheet sizes above this are formatting, not data (see _fix_dimensions).
-SUSPICIOUS_SHEET_CELLS = 10_000_000
 # Rows between checks of the parse budget (shared/executor.py): often enough
 # that a 16,000-column row cannot run long between checks, rare enough to cost
 # nothing on a plain CSV.
@@ -54,6 +54,9 @@ _DEADLINE_EVERY = 100
 _XLSX_MAGIC = b"PK\x03\x04"
 _XLS_MAGIC = b"\xd0\xcf\x11\xe0"
 _UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
+_UTF8_BOM = b"\xef\xbb\xbf"
+# Leading bytes read to tell HTML, XML and JSON apart: room for a BOM and some whitespace.
+_SNIFF_BYTES = 4096
 _DELIMITERS = (",", ";", "\t", "|")
 
 csv.field_size_limit(CSV_FIELD_LIMIT)
@@ -120,7 +123,9 @@ def detect_format(body: bytes, declared: str | None) -> FileFormat:
         )
     if body.startswith(_XLS_MAGIC):
         return "xls"
-    head = body.lstrip()[:15].lower()
+    # Only a small prefix is inspected (lstrip() on the body would copy up to 40 MB),
+    # and a UTF-8 byte-order mark in front of an HTML page must not hide it.
+    head = body[:_SNIFF_BYTES].removeprefix(_UTF8_BOM).lstrip()[:15].lower()
     if head.startswith((b"<!doc", b"<html")):
         raise call_error(
             UpstreamError,
@@ -331,35 +336,6 @@ def _xlsx_rows(sheet: Any) -> Iterator[list[str]]:
         if index % _DEADLINE_EVERY == 0:
             check_deadline()
         yield _trim([cell_text(c) for c in raw])
-
-
-def _fix_dimensions(sheet: Any) -> None:
-    """Re-read a sheet whose declared <dimension> cannot be trusted.
-
-    Two writer bugs, both confirmed live:
-
-    - a lone A1 on a full sheet, so openpyxl yields one row;
-    - an inflated range from formatted blank cells: the NWT traffic workbook
-      declares 65,536 rows by 16,217 columns for about 9,800 rows of 109, and
-      openpyxl pads every row to the declared width, so one pass took 250 s
-      (7.5 s once the dimensions were reset).
-
-    Resetting is not free: a sheet with millions of styled empty rows (a 3.8 MB
-    workbook of 30 real rows) takes 10 s per pass, so ordinary dimensions are
-    kept.
-    """
-    rows, columns = sheet.max_row or 0, sheet.max_column or 0
-    if (rows <= 1 and columns <= 1) or rows * columns > SUSPICIOUS_SHEET_CELLS:
-        sheet.reset_dimensions()
-
-
-def _open_xlsx(body: bytes) -> Any:
-    from openpyxl import load_workbook  # ~0.7 s to import, so loaded on first use
-
-    with warnings.catch_warnings():
-        # Agency workbooks carry print-area names openpyxl cannot set; harmless for reading.
-        warnings.simplefilter("ignore", UserWarning)
-        return load_workbook(io.BytesIO(body), read_only=True, data_only=True)
 
 
 def _open_xls(body: bytes) -> Any:

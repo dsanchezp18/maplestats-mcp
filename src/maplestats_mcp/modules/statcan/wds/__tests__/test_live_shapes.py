@@ -278,6 +278,44 @@ async def test_download_link_for_a_known_table(httpx_mock):
     assert link.download_url.endswith("18100004-eng.zip")
 
 
+@pytest.mark.parametrize("fmt", ["csv", "sdmx"])
+async def test_download_link_failed_envelope_raises_instead_of_returning_its_text(httpx_mock, fmt):
+    """A FAILED envelope's error text used to come back as the download URL."""
+    _mock_cubes(httpx_mock)
+    path = (
+        "getFullTableDownloadCSV/18100004/en"
+        if fmt == "csv"
+        else "getFullTableDownloadSDMX/18100004"
+    )
+    httpx_mock.add_response(
+        url=f"{BASE}{path}",
+        json={"status": "FAILED", "object": "Internal error. Error code = 500"},
+    )
+    fetch = (
+        client.get_full_table_download_csv if fmt == "csv" else client.get_full_table_download_sdmx
+    )
+    with pytest.raises(UpstreamError, match="FAILED"):
+        await fetch(18100004)
+
+
+async def test_download_link_envelope_saying_the_table_does_not_exist_is_not_found(httpx_mock):
+    _mock_cubes(httpx_mock)
+    httpx_mock.add_response(
+        url=f"{BASE}getFullTableDownloadCSV/18100004/en",
+        json={"status": "FAILED", "object": "The cube product ID 18100004 does not exist"},
+    )
+    with pytest.raises(NotFound, match="does not exist"):
+        await client.get_full_table_download_csv(18100004)
+
+
+async def test_code_sets_failed_envelope_raises_upstream_error_not_key_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BASE}getCodeSets", json={"status": "FAILED", "object": "Service busy"}
+    )
+    with pytest.raises(UpstreamError, match="getCodeSets"):
+        await client.get_code_sets()
+
+
 # M4 ---------------------------------------------------------------------
 
 
@@ -329,6 +367,31 @@ async def test_one_bad_vector_does_not_fail_the_batch(httpx_mock):
     assert [f.vector_id for f in result.failed] == [999999999]
     assert result.series[0].observations[0].scale_multiplier == 1
     assert result.provenance.limits is not None and "1 vector" in result.provenance.limits
+
+
+async def test_failed_vector_keeps_its_id_when_the_cached_batch_is_asked_in_reverse(httpx_mock):
+    """The cache key sorts the ids, so a reversed call reads the first call's envelopes."""
+    httpx_mock.add_response(url=f"{BASE}getDataFromVectorsAndLatestNPeriods", json=BATCH_PARTIAL)
+    first = await client.get_data_from_vectors_and_latest_n_periods([41690973, 999999999], 1)
+    reversed_call = await client.get_data_from_vectors_and_latest_n_periods(
+        [999999999, 41690973], 1
+    )  # served from the cache: no second response is mocked
+    assert reversed_call.provenance.cached is True
+    assert [f.vector_id for f in first.failed] == [999999999]
+    assert [f.vector_id for f in reversed_call.failed] == [999999999]
+    assert [s.vector_id for s in reversed_call.series] == [41690973]
+
+
+async def test_failed_vector_without_an_echoed_id_falls_back_to_its_position(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BASE}getDataFromVectorsAndLatestNPeriods",
+        json=[
+            {"status": "SUCCESS", "object": _vector_object()},
+            {"status": "FAILED", "object": "Vector does not exist. Error code = 3"},
+        ],
+    )
+    result = await client.get_data_from_vectors_and_latest_n_periods([41690973, 999999999], 1)
+    assert [f.vector_id for f in result.failed] == [999999999]
 
 
 async def test_a_batch_of_only_bad_vectors_is_not_found(httpx_mock):

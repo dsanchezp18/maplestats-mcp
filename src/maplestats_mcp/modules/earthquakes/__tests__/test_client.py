@@ -9,7 +9,7 @@ import pytest
 
 from maplestats_mcp.modules.earthquakes import client
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 # Real shape, captured live 2026-09-24.
 _TEXT = (
@@ -114,3 +114,21 @@ async def test_french_provenance_and_errors(httpx_mock):
 async def test_english_messages_are_unchanged(httpx_mock):
     with pytest.raises(InvalidInput, match=r"^start 2026-09-10 is after end 2026-09-01\.$"):
         await client.search(start="2026-09-10", end="2026-09-01")
+
+
+async def test_404_is_an_upstream_fault_not_an_empty_result(httpx_mock):
+    # FDSN answers 204 for "no event matches", so a 404 is a moved endpoint.
+    # It used to read as "no earthquakes" and was cached for 5 minutes.
+    httpx_mock.add_response(status_code=404)
+    with pytest.raises(UpstreamError, match="HTTP 404.*endpoint may have moved"):
+        await client.search(start="2026-09-01", end="2026-09-02")
+    httpx_mock.add_response(text=_TEXT)
+    result = await client.search(start="2026-09-01", end="2026-09-02")
+    # The failed attempt was not cached as an empty answer.
+    assert result.returned_count > 0
+
+
+async def test_404_is_reported_in_french(httpx_mock):
+    httpx_mock.add_response(status_code=404)
+    with pytest.raises(UpstreamError, match="a répondu HTTP 404"):
+        await client.search(start="2026-09-01", end="2026-09-02", lang="fr")

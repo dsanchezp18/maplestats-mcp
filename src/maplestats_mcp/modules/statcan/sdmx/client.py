@@ -40,6 +40,7 @@ from maplestats_mcp.modules.statcan.sdmx.schemas import (
     SdmxStructure,
 )
 from maplestats_mcp.modules.statcan.wds import client as wds_client
+from maplestats_mcp.modules.statcan.wds import constants as wds_constants
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import (
@@ -109,6 +110,26 @@ async def _fetch_xml(
         status = exc.response.status_code
         if status == 404:
             raise NotFound(_say(lang, f"{url} was not found.", f"{url} est introuvable.")) from exc
+        # 400/401/403 are not transient: retrying changed nothing and neither
+        # will the caller, so do not tell them to "try again shortly".
+        if status == 400:
+            raise InvalidInput(
+                _say(
+                    lang,
+                    f"StatCan's SDMX service rejected the request (HTTP 400). {hint}",
+                    f"Le service SDMX de StatCan a rejeté la requête (HTTP 400). {hint}",
+                ).strip()
+            ) from exc
+        if status in (401, 403):
+            raise UpstreamError(
+                _say(
+                    lang,
+                    f"StatCan's SDMX service refused access to {url} (HTTP {status}); "
+                    "this is not a temporary outage.",
+                    f"Le service SDMX de StatCan a refusé l'accès à {url} (HTTP {status}) ; "
+                    "il ne s'agit pas d'une panne temporaire.",
+                )
+            ) from exc
         raise UpstreamUnavailable(
             _say(
                 lang,
@@ -251,8 +272,25 @@ async def _structure_from_wds(product_id: int, lang: str) -> list[SdmxDimension]
     this is a faithful substitute when the SDMX structure document is empty
     or truncated (14100063 returned HTTP 200 with zero bytes).
     """
+    # get_cube_metadata caps each dimension's member list per call (default
+    # 100). A truncated list would hide most of a geography or NAICS
+    # dimension and misread parents whose children were cut as leaves, so ask
+    # for the largest page and walk member_offset until every dimension's
+    # members_matched is covered. The metadata object is cached, so the extra
+    # pages cost no further upstream request.
+    page_size = wds_constants.MEMBER_LIMIT_MAX
     try:
-        metadata = await wds_client.get_cube_metadata(product_id)
+        metadata = await wds_client.get_cube_metadata(
+            product_id, member_limit=page_size, member_offset=0
+        )
+        members = {d.dimension_position_id: list(d.members) for d in metadata.dimensions}
+        longest = max((d.members_matched for d in metadata.dimensions), default=0)
+        for offset in range(page_size, longest, page_size):
+            page = await wds_client.get_cube_metadata(
+                product_id, member_limit=page_size, member_offset=offset
+            )
+            for dim in page.dimensions:
+                members[dim.dimension_position_id].extend(dim.members)
     except (InvalidInput, NotFound, UpstreamError) as exc:
         raise _no_table(product_id, lang) from exc
     dimensions: list[SdmxDimension] = []
@@ -264,7 +302,7 @@ async def _structure_from_wds(product_id: int, lang: str) -> list[SdmxDimension]
                 name_fr=m.member_name_fr,
                 parent_id=str(m.parent_member_id) if m.parent_member_id is not None else None,
             )
-            for m in dim.members
+            for m in members[dim.dimension_position_id]
         ]
         dim_id = _dimension_id(dim.dimension_name_en)
         dimensions.append(

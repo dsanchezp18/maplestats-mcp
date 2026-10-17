@@ -13,7 +13,8 @@ premises table is sorted and filtered client-side by wet-boew's
 data-wb-tables and data-wb-fieldflow attributes over the inline HTML.
 """
 
-SITE = "https://inspection.canada.ca"
+HOST = "inspection.canada.ca"
+SITE = f"https://{HOST}"
 _EN = SITE + "/en/animal-health/terrestrial-animals/diseases/reportable"
 _FR = SITE + "/fr/sante-animaux/animaux-terrestres/maladies/declaration-obligatoire"
 

@@ -101,7 +101,7 @@ async def test_search_uses_all_public_collections_and_not_dli(httpx_mock):
     query = request.url.query.decode()
     assert query.count("subtree=") == 6
     assert "subtree=dli" not in query
-    assert "labour+AND+force" in query or "labour%20AND%20force" in query
+    assert "%22labour%22+AND+%22force%22" in query or "%22labour%22%20AND%20%22force%22" in query
 
 
 async def test_search_collection_narrows_subtree(httpx_mock):

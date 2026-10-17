@@ -198,6 +198,7 @@ async def get_table(
         limiter=_LIMITER,
         ttl=constants.CACHE_TTL_SECONDS,
         context=f"elections_results:{election}:{table}",
+        allowed_hosts=constants.ALLOWED_HOSTS,
     )
     columns = Columns(rows)
 

@@ -16,18 +16,22 @@ has already run) and returns a Spec.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Awaitable, Callable
 from typing import Any
 from urllib.parse import urlencode
 
 from maplestats_mcp.modules.reproduce.spec import Code, Filter, Spec
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.fr_typography import call_error
 
 Builder = Callable[[dict[str, Any], dict[str, Any]], Awaitable[Spec]]
 _WDS = "https://www150.statcan.gc.ca/t1/wds/rest/"
 _SDMX = "https://www150.statcan.gc.ca/t1/wds/sdmx/statcan/rest/"
 _EXACT = "exact: rebuilt from the tool's arguments"
 _FILTERED = "exact: the source file, then the tool's filters"
+# Every registered tool name matches (tests/test_reproduce.py checks it).
+_TOOL_NAME = re.compile(r"[a-z][a-z0-9_]*")
 
 
 def _suffix(args: dict[str, Any]) -> str:
@@ -185,9 +189,11 @@ async def _sdmx_vector(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 
 async def _pumf(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    url = str(args["url"])
-    if not url.endswith(".zip"):
-        raise InvalidInput("statcan_pumf tools reproduce from a PUMF ZIP url.")
+    from maplestats_mcp.modules.statcan.pumf.client import _check_url
+
+    # This builder runs without the tool, which is what refuses other hosts: the
+    # script it writes downloads and unzips the url, so it must check it too.
+    url = _check_url(str(args["url"]))
     return Spec(
         kind="zip",
         url=url,
@@ -544,8 +550,25 @@ ARGUMENT_ONLY = {
 }
 
 
+def _require_tool_name(tool: str) -> None:
+    """Refuse a name no registered tool can have before a name prefix picks a builder.
+
+    The product-id and PUMF routes match on a prefix and skip the tool, so a name
+    that only starts like a StatCan tool must not reach them. client._spec then
+    checks that the name is registered.
+    """
+    if not _TOOL_NAME.fullmatch(tool):
+        raise call_error(
+            InvalidInput,
+            f"{tool!r} is not a tool name: tool names hold lowercase letters, digits and '_'.",
+            f"{tool!r} n'est pas un nom d'outil : les noms d'outils ne contiennent que des "
+            "lettres minuscules, des chiffres et '_'.",
+        )
+
+
 def builder_for(tool: str, args: dict[str, Any]) -> Builder | None:
     """The builder for a tool, including the product-id and PUMF families."""
+    _require_tool_name(tool)
     if tool in BUILDERS:
         return BUILDERS[tool]
     if "product_id" in args and tool.startswith(("wds_", "sdmx_")):
@@ -556,6 +579,7 @@ def builder_for(tool: str, args: dict[str, Any]) -> Builder | None:
 
 
 def argument_only(tool: str, args: dict[str, Any]) -> bool:
+    _require_tool_name(tool)
     if tool == "sdmx_get_vector_data" and (args.get("start_period") or args.get("end_period")):
         return False  # the SDMX key comes from the tool's WDS lookup
     if tool in ARGUMENT_ONLY:

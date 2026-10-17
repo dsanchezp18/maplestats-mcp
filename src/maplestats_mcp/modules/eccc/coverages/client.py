@@ -209,6 +209,14 @@ async def _fetch(
             lang,
             exc,
         )
+    if response.is_error:
+        # get_raw hands 406 and 409 back unraised (StatCan's own meaning for
+        # them); here they are failures like any other 4xx, and their JSON error
+        # body must not be read as data.
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            _raise_for(exc, path, lang)
     if response.status_code == 204 or not response.content:
         return None
     try:

@@ -7,6 +7,7 @@ file is 16.6 MB.
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.elections_results import candidates
@@ -108,9 +109,11 @@ def dataset(httpx_mock):
     httpx_mock.add_response(
         url=candidates.DATASET_FILE_URL,
         status_code=303,
-        headers={"location": "https://storage.example/who-runs.tab"},
+        headers={"location": "https://dvn-cloud-iqss.s3.amazonaws.com/who-runs.tab"},
     )
-    httpx_mock.add_response(url="https://storage.example/who-runs.tab", content=_BODY)
+    httpx_mock.add_response(
+        url="https://dvn-cloud-iqss.s3.amazonaws.com/who-runs.tab", content=_BODY
+    )
 
 
 async def test_candidate_rows_carry_names_party_and_votes(dataset):
@@ -182,3 +185,39 @@ async def test_unexpected_layout_is_an_upstream_error(httpx_mock):
     httpx_mock.add_response(url=candidates.DATASET_FILE_URL, content=b"a\tb\n1\t2\n")
     with pytest.raises(UpstreamError):
         await candidates.get_candidates()
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_file_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(candidates, "MAX_FILE_BYTES", 1_000)
+    storage = "https://dvn-cloud-iqss.s3.amazonaws.com/who-runs.tab"
+    httpx_mock.add_response(
+        url=candidates.DATASET_FILE_URL, status_code=303, headers={"location": storage}
+    )
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=storage, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await candidates.get_candidates()
+    assert body.pulled <= 3
+
+
+async def test_redirect_to_an_unlisted_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=candidates.DATASET_FILE_URL,
+        status_code=303,
+        headers={"location": "https://evil.s3.amazonaws.com/who-runs.tab"},
+    )
+    with pytest.raises(UpstreamError, match="evil.s3.amazonaws.com"):
+        await candidates.get_candidates()
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["dataverse.harvard.edu"]

@@ -19,6 +19,7 @@ import re
 import zipfile
 from datetime import date
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.bc_lobbyists import client, constants
@@ -742,3 +743,41 @@ async def test_results_are_cached_between_calls(httpx_mock):
     assert first.provenance.cached is False
     assert second.provenance.cached is True
     assert len(httpx_mock.get_requests(url=re.compile(re.escape(constants.DOWNLOAD_URL)))) == 1
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_zip_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_ZIP_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=_LAR_URL, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.search_activity_reports()
+    # The old code read all 25,000 bytes first and compared the length afterwards.
+    assert body.pulled <= 3
+
+
+async def test_declared_length_over_the_cap_is_refused_before_the_body(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_ZIP_BYTES", 1_000)
+    httpx_mock.add_response(url=_LAR_URL, content=b"PK", headers={"Content-Length": "9000"})
+    with pytest.raises(UpstreamError, match="stops at 1,000"):
+        await client.search_activity_reports()
+
+
+async def test_redirect_off_the_registrar_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=_LAR_URL, status_code=302, headers={"Location": "https://evil.example/x.zip"}
+    )
+    with pytest.raises(UpstreamError, match="evil.example"):
+        await client.search_activity_reports()
+    assert all(r.url.host == "www.lobbyistsregistrar.bc.ca" for r in httpx_mock.get_requests())

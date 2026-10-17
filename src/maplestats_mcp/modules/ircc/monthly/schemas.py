@@ -47,7 +47,11 @@ class IrccTableDescription(BaseModel):
     first_period: str | None = None
     last_period: str | None = None
     row_count: int
-    suppressed_cells: int
+    suppressed_cells: int = Field(description="Cells shown as '--' (a count of 1 to 4).")
+    unreadable_cells: int = Field(
+        default=0,
+        description="TOTAL cells that were not counts (for example '<5'); read as unknown.",
+    )
     dimensions: list[IrccDimension] = Field(default_factory=list)
     value_column: str
     note: str

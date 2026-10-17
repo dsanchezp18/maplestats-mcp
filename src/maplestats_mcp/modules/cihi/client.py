@@ -26,6 +26,7 @@ from maplestats_mcp.modules.cihi.schemas import (
     IndicatorRef,
     IndicatorSearchResult,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -118,6 +119,18 @@ async def _library(lang: str = "en") -> tuple[list[IndicatorRef], bool]:
             if not new:
                 break
             seen.update({r.slug: r for r in new})
+        if not seen:
+            # A redesigned library page, or an error page served with 200, has
+            # no indicator links. Caching [] for 7 days would make every search
+            # report "0 matches" instead of failing.
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"cihi: {library_url} lists no indicators ({path} links); the page layout "
+                "may have changed.",
+                f"cihi : {library_url} ne liste aucun indicateur (liens {path}) ; la mise en "
+                "page a peut-être changé.",
+            )
         return list(seen.values())
 
     key = "cihi:library:fr" if french else "cihi:library"
@@ -433,18 +446,21 @@ async def _tables(
         )
 
     async def fetch() -> dict[str, tuple[str, list[str], list[list[str]]]]:
-        response = await _get(url, lang)
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                f"cihi: {url} is larger than this tool reads.",
-                f"cihi : {url} dépasse la taille que cet outil peut lire.",
-            )
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, an undeclared one stops at the cap, and
+        # every redirect hop must stay on CIHI's host.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host in constants.ALLOWED_HOSTS,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="cihi",
+            timeout=120.0,
+        )
         try:
             # Parsing a ~2 MB workbook held the event loop for ~1.8 s (measured
             # 2026-09-24), stalling every other request on the server meanwhile.
-            return await run_parse(_parse_workbook, response.content)
+            return await run_parse(_parse_workbook, downloaded.body)
         except Exception as exc:  # openpyxl raises several unrelated types
             raise lang_error(
                 UpstreamError,

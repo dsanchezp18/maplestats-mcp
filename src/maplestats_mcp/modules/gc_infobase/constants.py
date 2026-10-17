@@ -13,6 +13,11 @@ Confirmed live 2026-09-23:
 PACKAGE_ID = "a35cf382-690c-4221-a971-cf0fd189a46f"
 ALLOWED_HOSTS = frozenset({"open.canada.ca", "www.tbs-sct.canada.ca", "cdn-rdc.ea-ad.ca"})
 
+# Where open.canada.ca download links redirect (confirmed live: a 302 to a
+# signed opencanada.blob.core.windows.net URL). Accepted only as a redirect
+# target, never as a link a caller may pass directly.
+REDIRECT_HOSTS = frozenset({"opencanada.blob.core.windows.net"})
+
 RATE_LIMIT_SOURCE = "gc-infobase"
 RATE_LIMIT_PER_SECOND = 2.0
 RATE_LIMIT_CAPACITY = 4.0

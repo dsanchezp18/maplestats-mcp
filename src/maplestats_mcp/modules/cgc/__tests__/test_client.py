@@ -16,7 +16,7 @@ import pytest
 
 from maplestats_mcp.modules.cgc import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 TODAY = date(2026, 9, 26)
 
@@ -452,3 +452,31 @@ async def test_exports_largest_first_within_a_period(httpx_mock):
         ("2024-25", "Japan"),
     ]
     assert result.truncated and result.total_matched == 5
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_file_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=_weekly(2026), stream=body)
+    with pytest.raises(UpstreamError, match="larger than this tool reads"):
+        await client.describe_weekly("2026-27")
+    assert body.pulled <= 3
+
+
+async def test_streamed_file_keeps_its_last_modified_header(httpx_mock):
+    modified = "Thu, 24 Sep 2026 15:00:00 GMT"
+    httpx_mock.add_response(url=_weekly(2026), text=CURRENT, headers={"Last-Modified": modified})
+    result = await client.describe_weekly("2026-27")
+    assert f"Last-Modified: {modified}" in (result.provenance.freshness or "")

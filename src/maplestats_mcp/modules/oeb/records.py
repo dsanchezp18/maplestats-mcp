@@ -36,6 +36,9 @@ _ESCAPE = re.compile(r"_x([0-9A-Fa-f]{4})_")
 _SPACES = re.compile(r"\s+")
 _NUMBER = re.compile(r"^-?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$")
 _XSD = "http://www.w3.org/2001/XMLSchema"
+# Beyond this many digits a whole number is an identifier, not an amount (a
+# float holds 15 digits exactly, and json would otherwise round the rest).
+MAX_INT_DIGITS = 15
 HEADER_SEARCH_ROWS = 30
 HEADER_MIN_CELLS = 3
 
@@ -57,6 +60,13 @@ def to_cell(text: str | None) -> Cell:
     if not value:
         return None
     if _NUMBER.match(value):
+        digits = value.removeprefix("-")
+        # Zero-padded ("000510") or very long digit strings are identifiers
+        # (licence, account and postal-style codes); an int would drop the padding.
+        if digits.isdigit() and (
+            (len(digits) > 1 and digits.startswith("0")) or len(digits) > MAX_INT_DIGITS
+        ):
+            return value
         number = float(value)
         if "." not in value and "e" not in value.lower() and abs(number) < 2**53:
             return int(value)

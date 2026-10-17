@@ -549,3 +549,23 @@ async def test_non_json_answer_is_an_upstream_error(httpx_mock):
     )
     with pytest.raises(UpstreamError, match="did not return JSON"):
         await client.search_datasets(PORTAL)
+
+
+async def test_cloudflare_challenge_on_download_api_still_returns_the_detail(httpx_mock):
+    # The links are optional: a bot challenge on the download API (raised as a
+    # CloudflareChallenge, which is not an httpx error) must not fail get_dataset.
+    item_id = "d440a761c86c4cb98e6597e8e107915c"
+    url = "https://services5.arcgis.com/YRpe0VKTJytZSSIB/arcgis/rest/services/Plan/FeatureServer/0"
+    httpx_mock.add_response(
+        url=f"{_COLLECTION_URL}/items/{item_id}", json=_detail(item_id, "Feature Layer", url)
+    )
+    httpx_mock.add_response(
+        url=f"https://{constants.PORTALS[PORTAL].domain}/api/download/v1/items/{item_id}/_?layers=0",
+        status_code=403,
+        headers={"cf-mitigated": "challenge"},
+        text="<html>Just a moment...</html>",
+    )
+    result = await client.get_dataset(PORTAL, item_id)
+    assert result.title == "An item"
+    assert result.download_urls == []
+    assert result.service_url == url

@@ -16,6 +16,7 @@ import asyncio
 import codecs
 import csv
 import hashlib
+import logging
 import struct
 import zipfile
 import zlib
@@ -41,6 +42,7 @@ from maplestats_mcp.shared.http import (
 
 _client = new_client(timeout=600.0, follow_redirects=True)
 _downloads: dict[str, asyncio.Task[Path]] = {}
+_log = logging.getLogger(__name__)
 
 
 def check_url(url: str) -> str:
@@ -73,15 +75,37 @@ def cached(url: str, member: str) -> Path | None:
 
 
 def _enforce_cap(keep: Path) -> None:
+    """Remove the least recently used cached files until the cache fits its cap.
+
+    Never removes `keep` (the member the current call just unpacked and is
+    about to read), and never a `.part` file: that is another call's download
+    in progress. A file that cannot be removed (Windows refuses while a reader
+    has it open) or that vanishes mid-scan is logged and skipped, because
+    failing to make room must not fail a call whose own data is already on disk.
+    """
     root = constants.cache_dir()
-    files = sorted((p for p in root.rglob("*") if p.is_file()), key=lambda p: p.stat().st_mtime)
-    total = sum(p.stat().st_size for p in files)
-    for path in files:
+    entries: list[tuple[float, int, Path]] = []
+    for path in root.rglob("*"):
+        if path.name.endswith(".part") or not path.is_file():
+            continue
+        try:
+            info = path.stat()
+        except OSError:
+            continue
+        entries.append((info.st_mtime, info.st_size, path))
+    entries.sort(key=lambda entry: entry[0])
+    total = sum(size for _, size, _ in entries)
+    for _, size, path in entries:
         if total <= constants.cache_max_bytes():
             break
-        if path != keep:
-            total -= path.stat().st_size
+        if path == keep:
+            continue
+        try:
             path.unlink(missing_ok=True)
+        except OSError as exc:
+            _log.warning("LODE cache: could not remove %s: %s", path.name, exc)
+            continue
+        total -= size
 
 
 async def _download(url: str, member: str, target: Path) -> Path:

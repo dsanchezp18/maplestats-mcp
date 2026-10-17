@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.ised.clean_growth import client, constants
@@ -23,10 +24,22 @@ def _clear_cache():
 
 
 def test_amounts_and_percentages_in_both_languages():
-    assert client.parse_amount("0.20 billion") == 200_000_000
-    assert client.parse_amount("0,20\xa0milliards") == 200_000_000
-    assert client.parse_percent("16\xa0%") == 16.0
-    assert client.parse_amount("n/a") is None
+    assert client.parse_amount("0.20 billion", "en") == 200_000_000
+    assert client.parse_amount("0,20\xa0milliards", "fr") == 200_000_000
+    assert client.parse_percent("16\xa0%", "fr") == 16.0
+    assert client.parse_amount("n/a", "en") is None
+
+
+def test_comma_is_thousands_in_english_and_decimal_in_french():
+    # The old parser read every comma as a decimal mark: "1,200 million" became 1.2 million.
+    assert client.parse_amount("1,200 million", "en") == 1_200_000_000
+    assert client.parse_amount("$1,200.5 million", "en") == 1_200_500_000
+    assert client.parse_amount("1,5 milliard", "fr") == 1_500_000_000
+    assert client.parse_amount("1,5\xa0milliards", "fr") == 1_500_000_000
+    # French groups thousands with a (no-break) space, not a comma.
+    assert client.parse_amount("1\u202f200 millions", "fr") == 1_200_000_000
+    assert client.parse_percent("16,5\xa0%", "fr") == 16.5
+    assert client.parse_percent("1,000%", "en") == 1000.0
 
 
 def test_headline_from_prose():
@@ -42,7 +55,7 @@ def test_headline_from_prose():
 
 
 def test_tables_drop_footnote_markers():
-    by_year, by_province, by_subsector = client.parse_tables(_EN)
+    by_year, by_province, by_subsector = client.parse_tables(_EN, "en")
     assert by_year[0].label == "2016" and by_year[0].value_cad == 200_000_000
     # The yearly values add up to the $29 billion headline (29.64).
     assert round(sum(r.value_cad or 0 for r in by_year) / 1e9, 2) == 29.64
@@ -51,7 +64,7 @@ def test_tables_drop_footnote_markers():
 
 
 def test_french_labels_and_notes():
-    by_year, by_province, _ = client.parse_tables(_FR)
+    by_year, by_province, _ = client.parse_tables(_FR, "fr")
     assert by_province[0].label == "Provinces de l'Atlantique"
     assert by_year[-1].value_cad == 4_340_000_000
     notes = client.parse_notes(_FR)
@@ -93,3 +106,31 @@ async def test_french_missing_tables_error_is_french(httpx_mock):
         await client.federal_investment("fr")
     assert str(excinfo.value).startswith("La source amont a renvoyé une réponse inattendue :")
     assert "trois tableaux" in str(excinfo.value)
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_page_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_PAGE_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=constants.PAGE_URLS["en"], stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.federal_investment("en")
+    assert body.pulled <= 3
+
+
+async def test_oversized_page_error_is_in_the_language_asked_for(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_PAGE_BYTES", 1_000)
+    httpx_mock.add_response(url=constants.PAGE_URLS["en"], stream=_CountingStream(50, 500))
+    with pytest.raises(UpstreamError, match="dépasse"):
+        await client.federal_investment("fr")

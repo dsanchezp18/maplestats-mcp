@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import io
+import logging
+import os
 import re
+import time
 import zipfile
 from pathlib import Path
 
@@ -301,3 +304,58 @@ def test_check_url_only_allows_statcan_zips() -> None:
     ):
         with pytest.raises(InvalidInput):
             files.check_url(bad)
+
+
+def _cache_file(path: Path, size: int, age_seconds: float) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"x" * size)
+    stamp = time.time() - age_seconds
+    os.utime(path, (stamp, stamp))
+    return path
+
+
+def test_enforce_cap_never_removes_the_target_or_part_files(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(constants, "cache_max_bytes", lambda: 15)
+    root = constants.cache_dir()
+    oldest = _cache_file(root / "a" / "old.csv", 10, 400)
+    target = _cache_file(root / "b" / "target.csv", 10, 300)  # older than `newer`
+    newer = _cache_file(root / "c" / "newer.csv", 10, 100)
+    partial = _cache_file(root / "d" / "archive.zip.part", 500, 900)
+    in_progress = _cache_file(root / "e" / "data.csv.part", 500, 800)
+
+    files._enforce_cap(target)
+
+    assert target.exists()  # the member this call is about to read stays, though not newest
+    assert not oldest.exists()
+    assert not newer.exists()  # still over the cap, so the next-oldest goes
+    assert partial.exists()  # another call's download in progress
+    assert in_progress.exists()
+
+
+def test_enforce_cap_survives_a_file_it_cannot_remove(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Windows refuses to delete a file a reader has open; that must not fail the call."""
+    monkeypatch.setattr(constants, "cache_max_bytes", lambda: 5)
+    root = constants.cache_dir()
+    locked = _cache_file(root / "a" / "locked.csv", 10, 500)
+    removable = _cache_file(root / "b" / "removable.csv", 10, 400)
+    target = _cache_file(root / "c" / "target.csv", 10, 100)
+    real_unlink = Path.unlink
+
+    def unlink(self: Path, missing_ok: bool = False) -> None:
+        if self.name == "locked.csv":
+            raise PermissionError("[WinError 32] file in use")
+        real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", unlink)
+
+    with caplog.at_level(logging.WARNING):
+        files._enforce_cap(target)
+
+    assert locked.exists()
+    assert not removable.exists()  # eviction went on past the locked file
+    assert target.exists()
+    assert "locked.csv" in caplog.text

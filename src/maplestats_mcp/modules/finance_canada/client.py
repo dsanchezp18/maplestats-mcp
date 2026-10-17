@@ -48,11 +48,11 @@ from maplestats_mcp.modules.finance_canada.schemas import (
     FrtTableList,
     Value,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.executor import check_deadline, run_parse
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -64,7 +64,8 @@ _LIMITER = get_limiter(
 _MARKER = re.compile(r"^\s*(?:Table|Tableau)\s+(\d+)\s*$", re.IGNORECASE)
 _UNIT = re.compile(r"^\(.*\)$")
 _NUMERIC = re.compile(r"^-?\d+(?:\.\d+)?$")
-_EMPTY_VALUES = {"-", "–", "—", "..", "...", "n/a", "s.o."}
+_EMPTY_VALUES = {"", "-", "–", "—", "..", "...", "n/a", "s.o."}
+_SPACES = re.compile(r"[\s\u00a0\u202f]+")
 
 
 def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
@@ -84,47 +85,35 @@ def fold(text: str) -> str:
     return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
 
 
-async def fetch(url: str, max_bytes: int, lang: str = "en") -> httpx.Response:
-    await _LIMITER.acquire()
-    try:
-        response = await get_raw(url, timeout=60.0)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status in (301, 302, 404, 410):
-            _raise(
-                NotFound,
-                f"finance_canada: nothing at {url} (HTTP {status}).",
-                f"finance_canada : rien à {url} (HTTP {status}).",
-                lang,
-            )
-        _raise(
-            UpstreamError,
-            f"finance_canada: {url} returned HTTP {status}.",
-            f"finance_canada : {url} a renvoyé HTTP {status}.",
-            lang,
-        )
-    except httpx.HTTPError:
-        _raise(
-            UpstreamUnavailable,
-            f"finance_canada: {url} did not respond in time.",
-            f"finance_canada : {url} n'a pas répondu à temps.",
-            lang,
-        )
-    if len(response.content) > max_bytes:
-        _raise(
-            UpstreamError,
-            f"finance_canada: {url} is much larger than expected.",
-            f"finance_canada : {url} est beaucoup plus volumineux que prévu.",
-            lang,
-        )
-    return response
+async def fetch(url: str, max_bytes: int, lang: str = "en") -> file_download.Downloaded:
+    """GET one canada.ca file, streamed under `max_bytes`.
+
+    The body is never read past the cap and a redirect is followed only to
+    canada.ca itself (shared/file_download.py), so a feed or workbook that
+    grows, or a hop to another host, fails as an UpstreamError before it
+    fills memory.
+    """
+    return await file_download.download(
+        url,
+        allow_host=lambda host: host == constants.HOST,
+        limiter_for=lambda _host: _LIMITER,
+        max_bytes=max_bytes,
+        context="finance_canada",
+        timeout=60.0,
+    )
+
+
+def body_text(downloaded: file_download.Downloaded) -> str:
+    """The page as text, decoded the way httpx's `.text` did (Content-Type charset, else UTF-8)."""
+    headers = {"content-type": downloaded.content_type}
+    return httpx.Response(200, headers=headers, content=downloaded.body).text
 
 
 async def feed(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     """Every entry of the Finance publications feed."""
 
     async def load() -> list[dict[str, Any]]:
-        body = (await fetch(constants.FEED_URL, constants.FEED_MAX_BYTES, lang)).content
+        body = (await fetch(constants.FEED_URL, constants.FEED_MAX_BYTES, lang)).body
         try:
             entries = json.loads(body.decode("utf-8-sig"))["data"]
         except (ValueError, KeyError, TypeError):
@@ -202,7 +191,35 @@ def _text(value: Any) -> str:
     return " ".join(str(value).split())
 
 
-def _number(value: Any) -> Value:
+def parse_number(text: str, lang: str = "en", *, parentheses_negative: bool = True) -> Value:
+    """'(7,711)' -> -7711, '17 121' (fr) -> 17121, '5,2' (fr) -> 5.2; text stays text.
+
+    The one text-number reader of the Fiscal Reference Tables workbooks and the
+    Fiscal Monitor pages (monitor.py). English groups thousands with commas;
+    French groups them with spaces and writes the decimal as a comma, so a
+    French "1,5" is 1.5 where the English one is 1,500. An empty or dash cell
+    is None. A workbook cell like "(1)" is a footnote marker, not -1, so the
+    workbook reader turns `parentheses_negative` off.
+    """
+    raw = _SPACES.sub(" ", text).strip()
+    if raw.casefold() in _EMPTY_VALUES:
+        return None
+    # French groups thousands with spaces, and English Fiscal Monitor cells have
+    # carried a stray no-break space ("− 1,234"), so spaces are dropped in both.
+    compact = raw.replace(" ", "")
+    negative = parentheses_negative and compact.startswith("(") and compact.endswith(")")
+    if negative:
+        compact = compact[1:-1]
+    compact = compact.replace("\u2212", "-")
+    compact = compact.replace(",", ".") if lang == "fr" else compact.replace(",", "")
+    if not _NUMERIC.match(compact):
+        return raw
+    value = float(compact)
+    value = -value if negative else value
+    return int(value) if value.is_integer() and "." not in compact else value
+
+
+def _number(value: Any, lang: str = "en") -> Value:
     if value is None:
         return None
     if isinstance(value, bool):
@@ -210,20 +227,19 @@ def _number(value: Any) -> Value:
     if isinstance(value, int | float):
         rounded = round(float(value), 6)
         return int(rounded) if rounded.is_integer() and abs(rounded) < 1e15 else rounded
-    text = " ".join(str(value).split())
-    if not text or text.casefold() in _EMPTY_VALUES:
-        return None
-    cleaned = text.replace(",", "")
-    if _NUMERIC.match(cleaned):
-        return _number(float(cleaned))
-    return text
+    parsed = parse_number(str(value), lang, parentheses_negative=False)
+    # A number written as text gets the same float-noise rounding as a numeric cell.
+    return _number(parsed) if isinstance(parsed, float) else parsed
 
 
-def _is_value(value: Any) -> bool:
+def _is_value(value: Any, lang: str = "en") -> bool:
     if isinstance(value, int | float) and not isinstance(value, bool):
         return True
     text = _text(value)
-    return bool(text) and (text in _EMPTY_VALUES or bool(_NUMERIC.match(text.replace(",", ""))))
+    return bool(text) and (
+        text in _EMPTY_VALUES
+        or isinstance(parse_number(text, lang, parentheses_negative=False), int | float)
+    )
 
 
 def _join(parts: list[str]) -> str:
@@ -239,7 +255,7 @@ def _join(parts: list[str]) -> str:
 
 
 def parse_block(
-    grid: list[list[Any]], number: int, sheet: str, part: str | None
+    grid: list[list[Any]], number: int, sheet: str, part: str | None, lang: str = "en"
 ) -> ParsedTable | None:
     """One table: the rows after its 'Table N' marker row."""
     width = max((len(r) for r in grid), default=0)
@@ -249,7 +265,9 @@ def parse_block(
         return [i for i, v in enumerate(row) if _text(v)]
 
     is_data = [
-        bool(_text(r[0])) and not _UNIT.match(_text(r[0])) and any(_is_value(v) for v in r[1:])
+        bool(_text(r[0]))
+        and not _UNIT.match(_text(r[0]))
+        and any(_is_value(v, lang) for v in r[1:])
         for r in rows
     ]
     if not any(is_data):
@@ -308,7 +326,7 @@ def parse_block(
         if is_data[index]:
             record: dict[str, Value] = {names[0]: label}
             for name, c in zip(names[1:], used[1:], strict=True):
-                record[name] = _number(row[c])
+                record[name] = _number(row[c], lang)
             if section:
                 record["section"] = section
             data.append(record)
@@ -362,7 +380,7 @@ def parse_workbook(body: bytes, lang: str) -> list[ParsedTable]:
                 block = [
                     r for r in grid[start + 1 : end] if not _MARKER.match(_text(r[0]) if r else "")
                 ]
-                parsed = parse_block(block, number, sheet.title, part)
+                parsed = parse_block(block, number, sheet.title, part, lang)
                 if parsed is not None:
                     tables.append(parsed)
         return tables
@@ -399,14 +417,24 @@ async def _edition(edition: int | None, lang: str) -> FrtEdition:
 async def _tables(edition: FrtEdition, lang: str) -> tuple[list[ParsedTable], bool]:
     async def load() -> list[ParsedTable]:
         response = await fetch(edition.workbook_url, constants.MAX_WORKBOOK_BYTES, lang)
-        if not response.content.startswith(b"PK"):
+        if response.final_url != edition.workbook_url:
+            # Editions that are gone answer a redirect to an error page.
+            _raise(
+                NotFound,
+                f"finance_canada: nothing at {edition.workbook_url} (redirected to "
+                f"{response.final_url}).",
+                f"finance_canada : rien à {edition.workbook_url} (redirigé vers "
+                f"{response.final_url}).",
+                lang,
+            )
+        if not response.body.startswith(b"PK"):
             _raise(
                 UpstreamError,
                 f"finance_canada: {edition.workbook_url} is not an Excel file.",
                 f"finance_canada : {edition.workbook_url} n'est pas un fichier Excel.",
                 lang,
             )
-        tables = await run_parse(parse_workbook, response.content, lang)
+        tables = await run_parse(parse_workbook, response.body, lang)
         if len(tables) < 20:
             _raise(
                 UpstreamError,

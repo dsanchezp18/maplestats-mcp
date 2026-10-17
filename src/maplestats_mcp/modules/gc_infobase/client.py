@@ -196,8 +196,14 @@ async def query(
     name, language_note = await _own_language_name(resource, lang)
     url = resource.url or ""
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "gc_infobase")
+    # open.canada.ca answers the download link with a 302 to a signed Azure
+    # blob URL, so the redirect allow-list is wider than the one for the link.
     rows, cached = await csv_files.fetch_rows(
-        url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="gc_infobase"
+        url,
+        limiter=_LIMITER,
+        ttl=constants.CACHE_TTL_FILE_SECONDS,
+        context="gc_infobase",
+        allowed_hosts=constants.ALLOWED_HOSTS | constants.REDIRECT_HOSTS,
     )
     lookup = csv_files.Columns(rows)
     matching = csv_files.exact_filter(rows, lookup, filters)

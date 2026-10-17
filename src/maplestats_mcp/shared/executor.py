@@ -112,7 +112,9 @@ async def run_parse[**P, T](
     )
     try:
         return await asyncio.wait_for(future, timeout=budget)
-    except TimeoutError as exc:
+    except (TimeoutError, ParseBudgetExceeded) as exc:
+        # The worker's own check_deadline() can fire a moment before the wait
+        # above times out. Both end up here so the caller reads one message.
         name = getattr(func, "__name__", "parser")
         raise ParseBudgetExceeded(
             f"Parsing the file ({name}) took longer than {budget:.0f} s and was stopped; "

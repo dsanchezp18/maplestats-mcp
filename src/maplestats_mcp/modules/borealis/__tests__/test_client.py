@@ -41,9 +41,23 @@ _FILE_HIT = {
 
 def test_solr_query_requires_every_word_and_drops_syntax():
     # Bare words are OR'd by Solr; a stray colon or parenthesis would break q.
-    assert client.solr_query("labour force", ivt_files=False) == "labour AND force"
-    assert client.solr_query("pay:(test)", ivt_files=True) == "pay AND test AND fileName:*.ivt"
+    assert client.solr_query("labour force", ivt_files=False) == '"labour" AND "force"'
+    assert client.solr_query("pay:(test)", ivt_files=True) == '"pay" AND "test" AND fileName:*.ivt'
     assert client.solr_query("", ivt_files=False) == "*"
+    assert client.solr_query("", ivt_files=True) == "fileName:*.ivt"
+
+
+def test_solr_query_keeps_operator_looking_words_literal():
+    # A bare -2021 is a prohibit operator and a bare AND/OR/NOT an operator
+    # (live 2026-10-17); quoted, they are ordinary terms.
+    assert client.solr_query("census -2021", ivt_files=False) == '"census" AND "-2021"'
+    assert client.solr_query("census AND 2021", ivt_files=False) == (
+        '"census" AND "AND" AND "2021"'
+    )
+    assert client.solr_query("not or and", ivt_files=False) == '"not" AND "or" AND "and"'
+    # A lone hyphen has no term in it.
+    assert client.solr_query("census - 2021", ivt_files=False) == '"census" AND "2021"'
+    assert client.solr_query("-", ivt_files=False) == "*"
 
 
 async def test_dataset_search_lists_ivt_files_and_twins(httpx_mock):
@@ -57,7 +71,7 @@ async def test_dataset_search_lists_ivt_files_and_twins(httpx_mock):
     assert item.other_formats == ["Table-024.csv"]
     assert 'read_ivt("data/raw/Table-024.ivt")' in item.r_snippet
     search = httpx_mock.get_requests()[0]
-    assert search.url.params["q"] == "labour AND force AND historical AND review"
+    assert search.url.params["q"] == '"labour" AND "force" AND "historical" AND "review"'
     assert search.url.params["type"] == "dataset"
 
 
@@ -68,7 +82,7 @@ async def test_falls_back_to_file_search(httpx_mock):
     httpx_mock.add_response(url=_SEARCH, json={"data": {"total_count": 1, "items": [_FILE_HIT]}})
     result = await client.search_ivt("dec07da", limit=5)
     assert [f.file_id for f in result.files] == ["3393"]
-    assert httpx_mock.get_requests()[-1].url.params["q"] == "dec07da AND fileName:*.ivt"
+    assert httpx_mock.get_requests()[-1].url.params["q"] == '"dec07da" AND fileName:*.ivt'
 
 
 async def test_bad_input_and_shapes(httpx_mock):
@@ -77,3 +91,32 @@ async def test_bad_input_and_shapes(httpx_mock):
     httpx_mock.add_response(url=_SEARCH, json={"status": "ERROR"})
     with pytest.raises(UpstreamError):
         await client.search_ivt("")
+
+
+async def test_search_with_operator_looking_words_sends_them_quoted(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, json={"data": {"total_count": 0, "items": []}})
+    httpx_mock.add_response(url=_SEARCH, json={"data": {"total_count": 0, "items": []}})
+    result = await client.search_ivt("census -2021", limit=5)
+    assert result.files == []
+    first = httpx_mock.get_requests()[0]
+    assert first.url.params["q"] == '"census" AND "-2021"'
+    assert first.url.params["type"] == "dataset"
+
+
+async def test_search_400_is_invalid_input_not_an_upstream_fault(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, status_code=400, json={"status": "ERROR"})
+    with pytest.raises(InvalidInput, match="could not parse the query"):
+        await client.search_ivt("census")
+
+
+async def test_search_400_is_invalid_input_in_french(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, status_code=400, json={"status": "ERROR"})
+    with pytest.raises(InvalidInput, match="n'a pas pu interpr"):
+        await client.search_ivt("recensement", lang="fr")
+
+
+async def test_non_search_400_stays_an_upstream_error(httpx_mock):
+    httpx_mock.add_response(url=_SEARCH, json={"data": {"total_count": 1, "items": [_DATASET]}})
+    httpx_mock.add_response(url=_FILES, status_code=400, json={})
+    with pytest.raises(UpstreamError, match="HTTP 400"):
+        await client.search_ivt("labour")

@@ -1095,3 +1095,124 @@ async def test_probe_replay_refuses_a_redirect_to_an_address(httpx_mock):
     )
     with pytest.raises(httpx.HTTPError):
         await probe._fetch(RecordedRequest("GET", "https://data.statcan.gc.ca/x", b"", ""))
+
+
+# 2026-10-16 review fixes ---------------------------------------------------------------
+
+HOSTILE_TOOL = 'wds_"\nshell calc\n*'
+PUMF_URL = "https://www150.statcan.gc.ca/n1/pub/45-25-0001/2021001/csv/data.zip"
+
+
+@pytest.mark.parametrize("language", ["stata", "all"])
+async def test_hostile_tool_name_gets_no_script(language):
+    # The product-id route skips the tool, so the name went straight into the
+    # do-file's `log using "logs/<name>.log"` line, closing the string and
+    # starting a command of the caller's choosing.
+    with pytest.raises(InvalidInput):
+        await client.reproduce(HOSTILE_TOOL, {"product_id": 18100004}, language)
+
+
+async def test_a_name_that_only_starts_like_a_statcan_tool_gets_no_script():
+    # Well-formed, but no such tool: the argument-only routes never run the tool,
+    # so the server's own registry is what refuses it.
+    with pytest.raises(InvalidInput, match="not a tool on this server"):
+        await client.reproduce("wds_not_a_tool", {"product_id": 18100004}, "python")
+    with pytest.raises(InvalidInput, match="not a tool on this server"):
+        await client.reproduce("statcan_pumf_not_a_tool", {"url": PUMF_URL}, "python")
+    with pytest.raises(InvalidInput, match="n'est pas un outil de ce serveur"):
+        await client.reproduce("sdmx_not_a_tool", {"product_id": 18100004}, "r", "fr")
+
+
+@pytest.mark.parametrize("name", [HOSTILE_TOOL, 'wds_"', "wds_x ", "wds-x", "WDS_x", "1wds", ""])
+def test_builders_refuse_a_name_no_tool_can_have(name):
+    from maplestats_mcp.modules.reproduce import builders
+
+    with pytest.raises(InvalidInput):
+        builders.builder_for(name, {"product_id": 18100004})
+    with pytest.raises(InvalidInput):
+        builders.argument_only(name, {"product_id": 18100004})
+
+
+async def test_every_registered_tool_name_passes_the_builders_name_check():
+    from maplestats_mcp.modules.reproduce.builders import _TOOL_NAME
+    from maplestats_mcp.server import mcp
+
+    refused = sorted(t.name for t in await mcp._list_tools() if not _TOOL_NAME.fullmatch(t.name))
+    assert not refused, refused
+
+
+def test_stata_log_name_keeps_only_safe_characters():
+    spec = Spec(kind="csv", url="https://example.ca/data/file.csv", file_name="f.csv", method="m")
+    do, _ = RENDERERS["stata"](spec, HOSTILE_TOOL)
+    assert 'log using "logs/wds_shellcalc.log", replace\n' in do
+    assert not any(line.lstrip().startswith("shell") for line in do.splitlines())
+    # Nothing usable left: a fixed name. A long name is cut to 32 characters.
+    do, _ = RENDERERS["stata"](spec, '"\n*')
+    assert 'log using "logs/reproduce.log", replace\n' in do
+    do, _ = RENDERERS["stata"](spec, "a" * 40)
+    assert f'log using "logs/{"a" * 32}.log", replace\n' in do
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://evil.example/payload.zip",
+        "http://www150.statcan.gc.ca/n1/payload.zip",
+        "https://www150.statcan.gc.ca.evil.example/payload.zip",
+        "https://www150.statcan.gc.ca@evil.example/payload.zip",
+    ],
+)
+async def test_pumf_script_is_refused_for_a_url_the_tool_refuses(url):
+    # reproduce_code returned scripts that download and unzip this url, because the
+    # argument-only PUMF builder checked only the ".zip" ending.
+    with pytest.raises(InvalidInput, match=r"www150\.statcan\.gc\.ca download link"):
+        await client.reproduce("statcan_pumf_list_zip", {"url": url})
+
+
+async def test_pumf_url_error_follows_the_language():
+    with pytest.raises(InvalidInput, match="doit être un lien de téléchargement"):
+        await client.reproduce(
+            "statcan_pumf_list_zip", {"url": "https://evil.example/payload.zip"}, lang="fr"
+        )
+
+
+async def test_pumf_script_for_a_statcan_zip_still_comes_back():
+    result = await client.reproduce("statcan_pumf_list_zip", {"url": PUMF_URL}, "python")
+    assert result.method == "exact: the PUMF ZIP" and result.source_url == PUMF_URL
+    assert PUMF_URL in result.scripts[0].code
+
+
+async def test_reproduce_workbook_is_not_run_to_reproduce_it(monkeypatch):
+    # Running it writes an .xlsx (into Downloads on a local server) as a side effect.
+    async def must_not_run(*args, **kwargs):
+        raise AssertionError("reproduce_workbook was run")
+
+    monkeypatch.setattr(client, "_run_tool", must_not_run)
+    arguments = {"tool_name": "wds_get_cube_metadata", "arguments": {"product_id": 18100004}}
+    with pytest.raises(InvalidInput, match="does not fetch data"):
+        await client.reproduce("reproduce_workbook", arguments)
+
+
+def test_reproduce_code_refuses_every_tool_reproduce_workbook_refuses():
+    from maplestats_mcp.modules.reproduce import workbook
+
+    assert set(workbook._NOT_DATA) <= set(client._NOT_DATA)
+
+
+def test_julia_post_body_is_valid_json_after_one_unquoting():
+    spec = Spec(
+        kind="json",
+        url="https://example.ca/api",
+        file_name="api.json",
+        method="m",
+        post_json={"q": "a$b", "n": [1, 2]},
+    )
+    rendered = RENDERERS["julia"](spec, "tool")
+    assert rendered is not None
+    found = re.search(r"input = IOBuffer\((.*)\),", rendered[0])
+    assert found is not None
+    literal = found.group(1)
+    # Julia reads "\$" as "$" (so it never interpolates); the rest is JSON's own escapes.
+    body = json.loads(literal.replace("\\$", "$"))
+    assert json.loads(body) == spec.post_json
+    assert "a\\$b" in literal

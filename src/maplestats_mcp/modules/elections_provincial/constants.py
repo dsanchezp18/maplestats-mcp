@@ -47,6 +47,7 @@ Ontario is deliberately absent: see BLOCKED.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 PROVINCES: dict[str, tuple[str, str]] = {
     "qc": ("Quebec", "Québec"),
@@ -105,6 +106,14 @@ SK_MAX_BYTES = 10 * 1024 * 1024
 
 MB_DOWNLOADS = "https://www.electionsmanitoba.ca/downloads"
 MB_PAGE = "https://www.electionsmanitoba.ca/en/Results/Elections1999AndLater"
+
+# Cap for a file whose province sets none (Quebec's results JSON, Alberta's HTML
+# pages: a few MB each), and the only hosts a download or redirect may reach.
+DEFAULT_MAX_BYTES = 25 * 1024 * 1024
+DOWNLOAD_HOSTS = frozenset(
+    urlparse(url).hostname or ""
+    for url in (QC_BASE, AB_BASE, BC_RESOURCE_BASE, MB_DOWNLOADS, *SK_FILES.values())
+)
 
 # The results page of each province, for list_elections provenance.
 PROVINCE_PAGES: dict[str, str] = {

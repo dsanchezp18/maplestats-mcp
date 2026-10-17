@@ -15,6 +15,7 @@ import logging
 import os
 import time
 from collections import deque
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,22 @@ ALLOWED_ORIGINS = [
     origin for origin in os.environ.get("CHAT_ALLOWED_ORIGINS", "").split(",") if origin
 ]
 
+
+def trusts_proxy_headers(environ: Mapping[str, str]) -> bool:
+    """Whether the rate limit may read X-Forwarded-For.
+
+    The header is forgeable unless a trusted proxy sits in front, so it is read
+    only when CHAT_TRUST_PROXY_HEADERS says so. Render sets RENDER for every
+    service it runs and always puts its proxy in front, so the flag defaults on
+    there and off everywhere else.
+    """
+    default = "1" if environ.get("RENDER") else "0"
+    raw = environ.get("CHAT_TRUST_PROXY_HEADERS", default)
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+TRUST_PROXY_HEADERS = trusts_proxy_headers(os.environ)
+
 SYSTEM_PROMPT = (
     "You answer questions about Canadian open data (Statistics Canada, provincial "
     "agencies and other federal sources) using the MapleStats tools.\n"
@@ -85,13 +102,16 @@ _daily_count: dict[str, Any] = {"day": datetime.now(UTC).date(), "n": 0}
 
 
 def client_address(request: Request) -> str:
-    """Return the caller's address, read one hop from the right of X-Forwarded-For.
+    """Return the caller's address for the rate limit.
 
-    What the caller writes sits on the left and can be forged; the host's proxy
-    appends the real address on the right (same rule as the MCP server).
+    With CHAT_TRUST_PROXY_HEADERS on (the default on Render), read one hop from
+    the right of X-Forwarded-For: what the caller writes sits on the left and
+    can be forged, while the host's proxy appends the real address on the right
+    (same rule as the MCP server). With it off, the header is ignored, because
+    a service reached directly would let any caller choose its own bucket.
     """
     forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
+    if TRUST_PROXY_HEADERS and forwarded:
         return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
@@ -343,6 +363,17 @@ def validate_messages(payload: Any) -> list[dict[str, str]] | str:
 
 
 async def chat(request: Request) -> JSONResponse:
+    # A page on any other site can send a "simple" cross-site POST (text/plain,
+    # no preflight) from its visitors' browsers; CORSMiddleware only withholds
+    # response headers and never rejects the request. A JSON content type is not
+    # a simple one, so the browser must preflight it, and the preflight fails
+    # for every origin not in CHAT_ALLOWED_ORIGINS.
+    content_type = request.headers.get("content-type", "").strip().lower()
+    if not content_type.startswith("application/json"):
+        return JSONResponse(
+            {"error": "Content-Type must be application/json."}, status_code=415
+        )
+
     try:
         # Check both declared and streamed sizes: chunked requests have no length header.
         declared = request.headers.get("content-length", "")

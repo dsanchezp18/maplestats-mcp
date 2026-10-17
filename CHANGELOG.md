@@ -105,6 +105,82 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   numbers accept ASCII digits only, and a truncated directors list says so.
 - Smoke scripts: an upstream outage skips only the checks after it, so earlier failures
   still fail the run.
+- Downloads stop at their byte cap instead of reading the whole file first and rejecting
+  it afterwards: `csv_files` (CER, GC InfoBase, CDC, election results), `remote_zip` (a
+  host that stops honouring `Range` no longer makes the server buffer a multi-gigabyte
+  archive), and the file readers in bc_lobbyists, recalls, cgc, ircc_monthly, nfd,
+  finance_canada, phac_infobase, elections_provincial, cfia, ised_clean_growth, isq,
+  nl_stats, cihi, pmra, nrcan_minerals and pmprb. A central directory larger than 64 MB
+  is refused.
+- A page whose expected content is missing is now an upstream error instead of an empty
+  result cached as a success: `cmhc_list_categories` and `cmhc_list_provinces` (24 h),
+  CIHI's indicator library (7 days), NL Stats topic pages (6 h), and an Earthquakes
+  Canada 404 (which read as "no earthquakes").
+- `statcan_surveys_get_survey_metadata`: a 5xx answer is no longer cached for a day.
+- `sdmx_get_structure` and `sdmx_get_key_for_dimension`: when the SDMX structure document
+  is empty and the dimensions are rebuilt from WDS, every member is read (paged at 2,000),
+  not the first 100; a geography or NAICS dimension with more than 100 members used to be
+  silently truncated and its OR key incomplete.
+- `plan_query`: the French word for gold ("or") no longer matches the English conjunction
+  and sends questions to the minerals tools; "yield" and "dollar" alone no longer put the
+  Bank of Canada first for "canola yield" or "a million dollar question"; duplicate plural
+  terms no longer double-count a topic; "minéraux critiques" and "tps/tvh" match again;
+  "London, England" and "Victoria, Australia" are out of scope instead of Ontario or BC.
+- `electricity` (Hydro-Québec): the recent-generation and trade queries share the 5-minute
+  cache again; the cutoff time was written to the second into the cache key.
+- `boc`: a Valet payload missing `seriesDetails`, `groupDetails` or a date column is an
+  upstream error naming the field, not a `KeyError`.
+- `oeb_get_dataset_file`: a numeric `file` position counts within the chosen release; "0"
+  and positions past the end are invalid input. Zero-padded codes stay strings.
+- `reproduce_code("reproduce_workbook", ...)` is invalid input and no longer writes a
+  workbook as a side effect; `reproduce_workbook` writes header cells as text, so a series
+  name starting with "=" cannot become a formula; the Julia POST body is escaped once, so
+  a "$" in it yields valid JSON.
+- Typed errors where a bare exception or the wrong class escaped: PUMF tabulation
+  (DuckDB errors, a missing replicate id variable, cache eviction on Windows), Delta CSV
+  rows, CIMT province codes, WDS failed-envelope links and code sets, SDMX 400/403,
+  AER daily well licences (a 404 was "did not respond"), DriveBC protocol errors,
+  Health Canada non-JSON answers, BC election results, Borealis searches (Solr operators
+  in the query are now literal, a 400 is invalid input), CKAN organization lists,
+  ECCC coverage 406/409 answers, Competition Bureau weekly rows, CRA charities null
+  totals, NRCan Geonames bounding boxes (validated before the request), the arcgis_hub
+  download-format probe, and IRCC monthly totals (an unreadable cell is counted and
+  noted instead of failing the table).
+- French: `transit` stop-time errors, the `_example` template's `lang`, and the CMHC,
+  Finance Canada and ISED clean-growth number parsers (a French decimal comma was read
+  as a thousands separator or the reverse).
+- `MAPLE_TRANSPORT` accepts only `stdio` or `http` and `MAPLE_PORT` must be an integer;
+  a typo used to start an HTTP server while the client waited on stdin, or bind 8000
+  while the health check probed the typo. Other numeric variables warn once when ignored.
+- `uvicorn maplestats_mcp.asgi:app` now applies the `MAPLE_REQUIRE_AUTH` refusal and the
+  external-bind warning, which only `python -m maplestats_mcp` did before.
+- `maplestats-mcp --version` prints the version, as SECURITY.md asks reporters to run.
+- A subdomain wildcard in `MAPLE_ALLOWED_ORIGINS` matches an origin with a port.
+- CI runs the tests that execute the generated R and Julia scripts on the 3.12 leg; they
+  skipped on every run because the runner had neither. `setup-uv` is pinned to the
+  Dockerfiles' uv version, every workflow declares `permissions`, Dependabot covers
+  `chat/uv.lock`, and `server.json` lists the hosted Streamable HTTP endpoint.
+- Docs: the README environment table lists `MAPLE_USAGE_STATS`, the LODE cache variables
+  and `MAPLE_EXPORT_DIR`; four broken relative links in `docs/`; the roadmap's release
+  and monitoring rows; the connect page's volume count.
+
+### Security
+
+- `reproduce_code`: the tool name is validated against the registry and sanitised before it
+  is written into the Stata `log using` line; a crafted name used to inject a `shell` line
+  into the generated do-file. The PUMF builder checks the ZIP URL against StatCan's host
+  the way the PUMF tools do, instead of emitting a script that downloads and unzips any
+  URL it was given.
+- `isq`: a table URL is accepted only when its host is exactly `statistique.quebec.ca`;
+  a string-prefix check let `statistique.quebec.ca.example.net` and
+  `statistique.quebec.ca@example.net` through (server-side request forgery).
+- `csv_files` and `nfd` re-check the host allow-list on every redirect hop; the chat demo's
+  `/api/chat` requires `Content-Type: application/json` (a cross-site "simple" POST from
+  any web page could spend the model budget) and trusts `X-Forwarded-For` only on Render
+  or when `CHAT_TRUST_PROXY_HEADERS=1`; its CDN scripts carry integrity hashes and
+  DOMPurify is 3.4.17; the Smithery publish step installs from a lockfile with integrity
+  checks instead of `npx`; a repeated `X-Forwarded-For` header line can no longer choose
+  its own rate-limit bucket.
 
 ## [0.3.0] - 2026-10-10
 

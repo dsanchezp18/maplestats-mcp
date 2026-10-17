@@ -41,7 +41,17 @@ async def _fetch(params: dict[str, Any], lang: str = "en") -> tuple[str, bool]:
             response = await get_raw(constants.BASE_URL, params=params, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
-                return ""
+                # "No event matches" is HTTP 204 on this service (constants.py),
+                # so a 404 means the endpoint moved. An empty result here would
+                # be cached for 5 minutes and read as "no earthquakes".
+                raise lang_error(
+                    UpstreamError,
+                    lang,
+                    f"earthquakes: {constants.BASE_URL} answered HTTP 404; this service answers "
+                    "204 when no event matches, so the endpoint may have moved.",
+                    f"earthquakes : {constants.BASE_URL} a répondu HTTP 404 ; ce service répond "
+                    "204 quand aucun événement ne correspond, l'adresse a donc peut-être changé.",
+                ) from exc
             if exc.response.status_code in (400, 422):
                 raise lang_error(
                     InvalidInput,

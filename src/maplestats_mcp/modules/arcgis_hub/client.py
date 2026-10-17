@@ -266,7 +266,13 @@ async def _download_links(
             layer_index = await default_layer_index(config, service_url)
         except (InvalidInput, NotFound, UpstreamUnavailable, UpstreamError):
             return []
-    formats = await supported_download_formats(config, download_id, layer_index)
+    # Optional as well: a CloudflareChallenge (an UpstreamUnavailable) from the
+    # download API is not caught inside supported_download_formats, and would
+    # otherwise fail the whole get_dataset for the sake of its links.
+    try:
+        formats = await supported_download_formats(config, download_id, layer_index)
+    except (InvalidInput, NotFound, UpstreamUnavailable, UpstreamError):
+        return []
     return [
         DownloadLink(
             format=fmt, url=download_url(config, download_id, fmt, layer_index=layer_index)

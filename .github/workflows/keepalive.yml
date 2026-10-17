@@ -9,6 +9,9 @@ on:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
+# Only pings the public endpoint with curl: no checkout, no token scopes.
+permissions: {}
+
 jobs:
   ping:
     runs-on: ubuntu-latest

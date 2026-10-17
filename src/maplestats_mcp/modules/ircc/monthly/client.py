@@ -46,12 +46,13 @@ from maplestats_mcp.modules.ircc.monthly.schemas import (
     IrccTableDescription,
     Period,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import api_get, get_raw
-from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.i18n import fr_number, french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -101,6 +102,10 @@ class ParsedTable:
     periods: list[Period]
     rows: list[_Row]
     delimiter: str = "	"
+    # TOTAL cells that were neither a count nor IRCC's "--" (for instance
+    # "<5" or "n/a"): read as unknown, like a suppressed cell, and reported.
+    unreadable_cells: int = 0
+    unreadable_example: str | None = None
 
 
 # ---------------------------------------------------------------- catalogue
@@ -230,19 +235,29 @@ def _key(column: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", column.removeprefix("EN_").lower()).strip("_")
 
 
-def _count(cell: str, lang: str = "en") -> int | None:
+def _count(cell: str) -> tuple[int | None, bool]:
+    """(count, readable). A suppressed or blank cell is (None, True); a cell that is
+    not a number is (None, False), so one odd cell does not fail a 30 MB table."""
     cell = cell.strip()
     if cell == constants.SUPPRESSED or not cell:
-        return None
+        return None, True
     try:
-        return int(cell.replace(",", ""))
+        return int(cell.replace(",", "")), True
     except ValueError:
-        _raise(
-            UpstreamError,
-            f"ircc_monthly: unexpected count {cell!r}.",
-            f"ircc_monthly : nombre inattendu {cell!r}.",
-            lang,
-        )
+        return None, False
+
+
+def _unreadable_note(parsed: ParsedTable, lang: str) -> str:
+    if not parsed.unreadable_cells:
+        return ""
+    return _fr(
+        f" {parsed.unreadable_cells:,} TOTAL cells were not counts (for example "
+        f"{parsed.unreadable_example!r}); they are read as unknown, like suppressed cells.",
+        f" {fr_number(parsed.unreadable_cells)} cellules TOTAL n'étaient pas des nombres (par exemple "
+        f"{parsed.unreadable_example!r}) ; elles sont lues comme inconnues, comme les cellules "
+        "supprimées.",
+        lang,
+    )
 
 
 def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
@@ -291,6 +306,7 @@ def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
 
     rows: list[_Row] = []
     interned: dict[str, str] = {}
+    unreadable: list[str] = []
     for cells in reader:
         if len(cells) <= value_index or not any(c.strip() for c in cells):
             continue
@@ -313,13 +329,16 @@ def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
         quarter = int(quarter_text[1]) if re.fullmatch(r"Q[1-4]", quarter_text) else None
         if quarter is None and month is not None:
             quarter = (month - 1) // 3 + 1
+        value, readable = _count(cells[value_index])
+        if not readable:
+            unreadable.append(cells[value_index].strip())
         rows.append(
             _Row(
                 year=int(year_text) if year_text.isdigit() else None,
                 quarter=quarter,
                 month=month,
                 labels=tuple(labels),
-                value=_count(cells[value_index], lang),
+                value=value,
             )
         )
 
@@ -330,46 +349,40 @@ def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
         periods = ["quarter", "year"]
     elif "year" in time_index:
         periods = ["year"]
-    return ParsedTable(dims, header[value_index], periods, rows, delimiter)
+    return ParsedTable(
+        dims,
+        header[value_index],
+        periods,
+        rows,
+        delimiter,
+        unreadable_cells=len(unreadable),
+        unreadable_example=unreadable[0] if unreadable else None,
+    )
 
 
 async def _load(table: IrccTable, lang: str = "en") -> tuple[ParsedTable, bool]:
     url = table.csv_url
 
     async def fetch() -> ParsedTable:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=180.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            _raise(
-                UpstreamError,
-                f"ircc_monthly: {url} returned HTTP {status}.",
-                f"ircc_monthly : {url} a renvoyé HTTP {status}.",
-                lang,
-            )
-        except httpx.HTTPError:
-            _raise(
-                UpstreamUnavailable,
-                f"ircc_monthly: {url} did not respond in time.",
-                f"ircc_monthly : {url} n'a pas répondu à temps.",
-                lang,
-            )
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            _raise(
-                UpstreamError,
-                f"ircc_monthly: {url} is larger than expected.",
-                f"ircc_monthly : {url} est plus volumineux que prévu.",
-                lang,
-            )
-        if response.content.lstrip()[:15].lower().startswith((b"<!doctype", b"<html")):
+        # Streamed under MAX_FILE_BYTES and kept to IRCC's file host on every
+        # redirect hop, so a grown file is refused before it fills memory.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.FILE_HOST,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="ircc_monthly",
+            timeout=180.0,
+        )
+        body = downloaded.body
+        if body.lstrip()[:15].lower().startswith((b"<!doctype", b"<html")):
             _raise(
                 UpstreamError,
                 f"ircc_monthly: {url} returned a web page, not data.",
                 f"ircc_monthly : {url} a renvoyé une page Web, pas des données.",
                 lang,
             )
-        return parse_table(response.content, lang)
+        return parse_table(body, lang)
 
     return await cached_fetch(f"ircc-monthly:{table.table_id}", constants.TABLE_TTL_SECONDS, fetch)
 
@@ -436,10 +449,13 @@ async def describe_table(table_id: str, *, lang: str = "en") -> IrccTableDescrip
         first_period=labels[0] if labels else None,
         last_period=labels[-1] if labels else None,
         row_count=len(parsed.rows),
-        suppressed_cells=sum(1 for r in parsed.rows if r.value is None),
+        # Unreadable cells are also None, so they are kept out of the suppressed count.
+        suppressed_cells=sum(1 for r in parsed.rows if r.value is None) - parsed.unreadable_cells,
+        unreadable_cells=parsed.unreadable_cells,
         dimensions=dimensions,
         value_column=parsed.value_column,
-        note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang),
+        note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang)
+        + _unreadable_note(parsed, lang),
         provenance=_provenance(table, cached, "IrccTableDescription", lang),
     )
 
@@ -579,6 +595,7 @@ async def query_table(
         group_by=[parsed.dimensions[i].key for i in kept],
         period=grain,
         value_column=parsed.value_column,
-        note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang),
+        note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang)
+        + _unreadable_note(parsed, lang),
         provenance=_provenance(table, cached, "IrccQueryResult", lang),
     )

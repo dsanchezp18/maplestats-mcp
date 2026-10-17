@@ -91,6 +91,8 @@ class UsageMiddleware(Middleware):
             raise
         finally:
             _inside_call.reset(token)
-        # A tool that raises comes back as an error result, not an exception.
+        # fastmcp 4.1 re-raises a failing tool as ToolError, which the except
+        # branch above counts; an error result only gets here when a tool returned
+        # ToolResult(is_error=True) itself.
         self.stats.record(str(name), not getattr(result, "is_error", False))
         return result

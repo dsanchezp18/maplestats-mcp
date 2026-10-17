@@ -184,6 +184,42 @@ async def _get(path: str, params: dict[str, Any] | None = None, lang: str = "en"
         ) from exc
 
 
+def _shape_error(where: str, field: str, lang: str = "en") -> ValueError:
+    """An UpstreamError naming the field a 200 payload lacks.
+
+    A changed Valet payload would otherwise surface as a bare KeyError, which
+    is not a ValueError and so bypasses the typed-error mapping.
+    """
+    return _error(
+        UpstreamError,
+        f"{where}: the Valet response has no usable {field!r} field; its payload may have changed.",
+        f"{where} : la réponse de Valet n'a pas de champ {field!r} utilisable ; son format "
+        "a peut-être changé.",
+        lang,
+    )
+
+
+def _require_mapping(obj: Any, field: str, where: str, lang: str = "en") -> dict[str, Any]:
+    """`obj[field]` as a dict, or an UpstreamError naming `field`."""
+    value = obj.get(field) if isinstance(obj, dict) else None
+    if not isinstance(value, dict):
+        raise _shape_error(where, field, lang)
+    return value
+
+
+def _check_observation_rows(obj: Any, where: str, lang: str = "en") -> dict[str, Any]:
+    """The observations payload, after checking every row carries its date "d".
+
+    Run inside the cached fetch, so a malformed payload is never cached.
+    """
+    if not isinstance(obj, dict):
+        raise _shape_error(where, "observations", lang)
+    for row in list_or_empty(obj, "observations"):
+        if not isinstance(row, dict) or "d" not in row:
+            raise _shape_error(where, "d", lang)
+    return obj
+
+
 def _parse_value(raw: str | None) -> float | None:
     """Valet sends "v" as a JSON string even for numeric series; treat a
     missing or empty value as no data rather than a parse failure."""
@@ -259,9 +295,13 @@ def _observation_params(
     return params
 
 
-def _observations_from_json(rows: list[dict[str, Any]]) -> list[Observation]:
+def _observations_from_json(
+    rows: list[dict[str, Any]], where: str = "observations", lang: str = "en"
+) -> list[Observation]:
     observations = []
     for row in rows:
+        if not isinstance(row, dict) or "d" not in row:
+            raise _shape_error(where, "d", lang)
         ref_date = row["d"]
         values = {
             code: _parse_value(entry.get("v"))
@@ -317,9 +357,10 @@ async def _cached_inventory[Entry: _NamedEntry](
 
     async def fetch() -> list[Entry]:
         obj = await _get(path, lang=lang)
+        container = _require_mapping(obj, container_key, path, lang)
         return [
             item_type(name=code, label=e.get("label", ""), description=e.get("description", ""))
-            for code, e in obj[container_key].items()
+            for code, e in container.items()
         ]
 
     return await cached_fetch(_cache_key(cache_key, lang), constants.CACHE_TTL_LISTS_SECONDS, fetch)
@@ -539,11 +580,16 @@ async def get_series(name: str, lang: str = "en") -> SeriesDetail:
     name = _require_name(name, "Series", lang)
     cache_key = _cache_key(f"boc:series/{name}", lang)
 
-    async def fetch() -> dict[str, Any]:
-        return await _get(f"series/{_path_segment(name)}/json", lang=lang)
+    path = f"series/{_path_segment(name)}/json"
 
-    obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
-    detail = obj["seriesDetails"]
+    async def fetch() -> dict[str, Any]:
+        obj = await _get(path, lang=lang)
+        detail = _require_mapping(obj, "seriesDetails", path, lang)
+        if not detail.get("name"):
+            raise _shape_error(path, "seriesDetails.name", lang)
+        return detail
+
+    detail, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
     return SeriesDetail(
         name=detail["name"],
         label=detail.get("label", ""),
@@ -562,11 +608,16 @@ async def get_group(name: str, lang: str = "en") -> GroupDetail:
     name = _require_name(name, "Group", lang)
     cache_key = _cache_key(f"boc:group/{name}", lang)
 
-    async def fetch() -> dict[str, Any]:
-        return await _get(f"groups/{_path_segment(name)}/json", lang=lang)
+    path = f"groups/{_path_segment(name)}/json"
 
-    obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
-    detail = obj["groupDetails"]
+    async def fetch() -> dict[str, Any]:
+        obj = await _get(path, lang=lang)
+        detail = _require_mapping(obj, "groupDetails", path, lang)
+        if not detail.get("name"):
+            raise _shape_error(path, "groupDetails.name", lang)
+        return detail
+
+    detail, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
     members = [
         GroupMemberSeries(name=code, label=e.get("label", ""), link=e.get("link"))
         # `or {}`: an explicit null would otherwise crash .items().
@@ -620,10 +671,10 @@ async def get_observations(
     cache_key = _cache_key(f"boc:{path}:{sorted(params.items())}", lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(path, params=params, lang=lang)
+        return _check_observation_rows(await _get(path, params=params, lang=lang), path, lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
-    observations = _observations_from_json(list_or_empty(obj, "observations"))
+    observations = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
     kept = _keep_latest(observations)
     return ObservationsResult(
         series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
@@ -665,11 +716,11 @@ async def get_group_observations(
     cache_key = _cache_key(f"boc:{path}:{sorted(params.items())}", lang)
 
     async def fetch() -> dict[str, Any]:
-        return await _get(path, params=params, lang=lang)
+        return _check_observation_rows(await _get(path, params=params, lang=lang), path, lang)
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     group_detail = obj.get("groupDetail", {}) or {}
-    observations = _observations_from_json(list_or_empty(obj, "observations"))
+    observations = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
     kept = _keep_latest(observations)
     return GroupObservationsResult(
         # "groupDetail" (unlike GroupDetail's "groupDetails") has no

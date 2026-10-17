@@ -12,7 +12,12 @@ Checked live 2026-09-25 against borealisdata.ca:
    files are skipped.
 2. `q` is Solr syntax and bare words are OR'd ("labour force" alone
    matched unrelated census profiles), so every word is joined with AND
-   and Solr's special characters are dropped from user text.
+   and Solr's special characters are dropped from user text. Each word is
+   also quoted so it stays literal: a bare `-2021` is a prohibit operator
+   (live 2026-10-17: "census AND -2021" matched 3,970 datasets, the census
+   ones without 2021, where "census" AND "-2021" matched the 563 with it) and
+   a bare `AND`, `OR` or `NOT` is an operator. The endpoint answers HTTP 400
+   for a query it cannot parse, which is reported as InvalidInput.
 3. When no dataset matches, a file-name search (`fileName:*.ivt`) is
    used instead; an empty query lists IVT files (3,347 in total).
 4. Files download anonymously from /api/access/datafile/{id} (HTTP 206 to
@@ -59,11 +64,18 @@ _LIMITER = get_limiter(
 
 
 def solr_query(text: str, *, ivt_files: bool) -> str:
-    """Every word of `text` required; restricted to .ivt files for a file search."""
+    """Every word of `text` required; restricted to .ivt files for a file search.
+
+    Each word is a quoted term, so `-2021`, `AND`, `OR` and `NOT` are literal
+    text and not Solr operators. The word pattern admits no quote or backslash,
+    so a word cannot end its own quotes.
+    """
     words = re.findall(r"[\w'-]+", text)
+    # A word with no letter or digit (a lone "-") would be an empty phrase.
+    terms = [f'"{word}"' for word in words if re.search(r"[^\W_]", word)]
     if ivt_files:
-        words.append("fileName:*.ivt")
-    return " AND ".join(words) or "*"
+        terms.append("fileName:*.ivt")
+    return " AND ".join(terms) or "*"
 
 
 def r_snippet(file_id: str, file_name: str) -> str:
@@ -102,7 +114,19 @@ async def _get(url: str, params: dict[str, Any], context: str, lang: str = "en")
         try:
             return await api_get(url, params=params, timeout=60.0)
         except httpx.HTTPStatusError as exc:
-            raise _http_error(context, exc.response.status_code, lang) from exc
+            status = exc.response.status_code
+            if status == 400 and url == constants.SEARCH_URL:
+                # The search endpoint answers 400 for a query Solr cannot parse:
+                # the caller's words, not an upstream fault.
+                raise lang_error(
+                    InvalidInput,
+                    lang,
+                    f"borealis:{context}: Borealis could not parse the query "
+                    f"{params.get('q')!r}; use plain words.",
+                    f"borealis:{context} : Borealis n'a pas pu interpréter la requête "
+                    f"{params.get('q')!r} ; utilisez des mots simples.",
+                ) from exc
+            raise _http_error(context, status, lang) from exc
         except httpx.HTTPError as exc:
             raise _no_answer(context, lang) from exc
 

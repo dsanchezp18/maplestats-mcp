@@ -91,9 +91,22 @@ def _rows(page: str, lang: str = "en") -> list[list[str]]:
     return rows
 
 
-def parse_current(page: str) -> list[MergerReview]:
+def parse_current(page: str) -> tuple[list[MergerReview], int]:
+    """The weekly report's reviews, and how many rows were left out.
+
+    The report has five columns. A row with only four cells (`_rows` keeps
+    rows of four or more, for the archive) cannot be placed: there is no
+    telling which field is absent, and a guess would put a NAICS code in a
+    date column. Such a row is counted instead of unpacked, and the search
+    result says how many were left out.
+    """
     reviews = []
-    for parties, opened, concluded, naics, outcome in (r[:5] for r in _rows(page)):
+    skipped = 0
+    for cells in _rows(page):
+        if len(cells) < 5:
+            skipped += 1
+            continue
+        parties, opened, concluded, naics, outcome = cells[:5]
         reviews.append(
             MergerReview(
                 parties=parties,
@@ -106,7 +119,7 @@ def parse_current(page: str) -> list[MergerReview]:
                 report="current",
             )
         )
-    return reviews
+    return reviews, skipped
 
 
 def parse_archive(page: str) -> list[MergerReview]:
@@ -152,12 +165,15 @@ async def _page(url: str, lang: str = "en") -> str:
     return response.text
 
 
-async def _all_reviews(lang: str = "en") -> tuple[list[MergerReview], bool]:
-    async def fetch() -> list[MergerReview]:
+async def _all_reviews(lang: str = "en") -> tuple[tuple[list[MergerReview], int], bool]:
+    """((reviews, weekly rows left out), cached)."""
+
+    async def fetch() -> tuple[list[MergerReview], int]:
         current, archive = await asyncio.gather(
             _page(constants.CURRENT_URL, lang), _page(constants.ARCHIVE_URL, lang)
         )
-        return parse_current(current) + parse_archive(archive)
+        weekly, skipped = parse_current(current)
+        return weekly + parse_archive(archive), skipped
 
     return await cached_fetch("competition-bureau:reviews", constants.CACHE_TTL_SECONDS, fetch)
 
@@ -218,7 +234,7 @@ async def search_mergers(
         "concluded_from",
         "concluded_to",
     )
-    reviews, cached = await _all_reviews(lang)
+    (reviews, skipped), cached = await _all_reviews(lang)
     words = party.lower().split()
     prefix = (naics or "").strip()
     # Bounds compare months: the archive has no day, so a day is ignored.
@@ -267,6 +283,17 @@ async def search_mergers(
                 "2023. Les noms des parties sont reproduits tels que publiés dans le rapport "
                 "anglais.",
                 lang,
+            )
+            + (
+                _text(
+                    f" {skipped} row(s) of the weekly report have fewer than 5 cells and are "
+                    "left out.",
+                    f" {skipped} ligne(s) du rapport hebdomadaire ont moins de 5 cellules et "
+                    "sont omises.",
+                    lang,
+                )
+                if skipped
+                else ""
             ),
             lang=lang,
         ),

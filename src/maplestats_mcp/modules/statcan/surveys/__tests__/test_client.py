@@ -4,6 +4,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.surveys import client, constants
 from maplestats_mcp.shared import cache as cache_module
+from maplestats_mcp.shared import retrying
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 
@@ -111,6 +112,32 @@ async def test_get_survey_metadata_genuine_500_becomes_upstream_error(httpx_mock
     httpx_mock.add_response(url=url, status_code=500)
     with pytest.raises(UpstreamError):
         await client.get_survey_metadata(5108)
+
+
+async def test_get_survey_metadata_failure_is_not_cached(httpx_mock, monkeypatch):
+    """A 503 that outlasts the retries must not poison the cache for 24 h."""
+
+    async def no_sleep(seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr(retrying.asyncio, "sleep", no_sleep)
+    url = f"{constants.IMDB_BASE_URL_EN}?Function=getSurvey&SDDS=5108"
+    for _ in range(retrying.RETRY_ATTEMPTS):
+        httpx_mock.add_response(url=url, status_code=503)
+    with pytest.raises(UpstreamError, match="503"):
+        await client.get_survey_metadata(5108)
+    httpx_mock.add_response(url=url, html=_METADATA_HTML)
+    result = await client.get_survey_metadata(5108)
+    assert result.name == "Aboriginal Children's Survey (ACS)"
+    assert result.provenance.cached is False
+
+
+async def test_get_survey_metadata_success_is_still_cached(httpx_mock):
+    url = f"{constants.IMDB_BASE_URL_EN}?Function=getSurvey&SDDS=5108"
+    httpx_mock.add_response(url=url, html=_METADATA_HTML)
+    first = await client.get_survey_metadata(5108)
+    second = await client.get_survey_metadata(5108)  # no second request is mocked
+    assert (first.provenance.cached, second.provenance.cached) == (False, True)
 
 
 async def test_get_survey_metadata_invalid_lang_raises():

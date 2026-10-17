@@ -572,6 +572,9 @@ def _write_table(ws: Any, header: list[str], rows: list[list[Any]], table_name: 
     ws.append(header)
     for cell in ws[1]:
         cell.font = Font(bold=True)
+        # Chart headers are series values from the data, so a name starting with
+        # "=" must stay text: a formula header breaks the table's column names.
+        cell.data_type = "s"
     for row in rows:
         check_deadline()
         ws.append([_cell_value(v) for v in row])

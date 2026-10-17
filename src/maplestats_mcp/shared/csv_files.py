@@ -11,26 +11,34 @@ from __future__ import annotations
 
 import csv
 import io
+import ipaddress
 from collections.abc import Iterable
 from typing import Any
 from urllib.parse import urlparse
 
-import httpx
-
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.fr_typography import call_error
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 MAX_FILE_BYTES = 40 * 1024 * 1024
 
 
 def decode(body: bytes) -> str:
+    """UTF-8 (BOM allowed), else Windows-1252, else latin-1.
+
+    Windows-1252 leaves five byte values undefined (0x81, 0x8d, 0x8f, 0x90,
+    0x9d); latin-1 is the last resort so one stray byte never loses a file
+    (the same order as shared/file_tables.decode).
+    """
     try:
         return body.decode("utf-8-sig")
     except UnicodeDecodeError:
-        return body.decode("cp1252")
+        try:
+            return body.decode("cp1252")
+        except UnicodeDecodeError:
+            return body.decode("latin-1")
 
 
 def check_url(url: str, allowed_hosts: Iterable[str], context: str) -> None:
@@ -49,70 +57,61 @@ def check_url(url: str, allowed_hosts: Iterable[str], context: str) -> None:
         )
 
 
-async def _get_following_redirects(url: str, context: str) -> httpx.Response:
-    """GET, following up to 3 https redirects.
+def _public_host(host: str) -> bool:
+    """False for localhost and IP-literal hosts.
 
-    open.canada.ca download links answer 302 to a signed Azure blob URL
-    and legacy neb-one.gc.ca links answer 301 to cer-rec.gc.ca (both
-    confirmed live 2026-09-23); the shared client does not follow them.
+    The hop rule when the caller names no allow-list: a redirect is how a
+    public link would reach a private network, so it is never followed there.
     """
-    current = url
-    for _ in range(4):
-        try:
-            return await get_raw(current, timeout=120.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            location = exc.response.headers.get("location")
-            if status in (301, 302, 303, 307, 308) and location:
-                target = str(exc.response.url.join(location))
-                if urlparse(target).scheme != "https":
-                    raise call_error(
-                        UpstreamError,
-                        f"{context}: {url} redirected to a non-https URL.",
-                        f"{context} : {url} a redirigé vers une URL non https.",
-                    ) from exc
-                current = target
-                continue
-            if status == 404:
-                raise call_error(
-                    NotFound,
-                    f"{context}: no file at {url}.",
-                    f"{context} : aucun fichier à {url}.",
-                ) from exc
-            raise call_error(
-                UpstreamError,
-                f"{context}: {url} returned HTTP {status}.",
-                f"{context} : {url} a renvoyé HTTP {status}.",
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise call_error(
-                UpstreamUnavailable,
-                f"{context}: {url} did not respond in time.",
-                f"{context} : {url} n'a pas répondu à temps.",
-            ) from exc
-    raise call_error(
-        UpstreamError,
-        f"{context}: {url} redirected too many times.",
-        f"{context} : {url} a redirigé trop de fois.",
-    )
+    lowered = host.lower()
+    if lowered == "localhost" or lowered.endswith(".localhost"):
+        return False
+    try:
+        ipaddress.ip_address(lowered.strip("[]"))
+    except ValueError:
+        return True
+    return False
 
 
 async def fetch_rows(
-    url: str, *, limiter: TokenBucket, ttl: int, context: str
+    url: str,
+    *,
+    limiter: TokenBucket,
+    ttl: int,
+    context: str,
+    allowed_hosts: Iterable[str] | None = None,
 ) -> tuple[list[dict[str, str]], bool]:
-    """Every row of a CSV file as a dict, cached for `ttl` seconds, plus was_cached."""
+    """Every row of a CSV file as a dict, cached for `ttl` seconds, plus was_cached.
+
+    The file is streamed through shared/file_download.download(): a declared
+    Content-Length above MAX_FILE_BYTES is refused without reading the body, a
+    body that outgrows the cap is aborted mid-stream, and the URL and every
+    redirect hop must be https. open.canada.ca download links answer 302 to a
+    signed Azure blob URL and legacy neb-one.gc.ca links answer 301 to
+    cer-rec.gc.ca (both confirmed live 2026-09-23); the shared client does not
+    follow redirects, so download() follows them one hop at a time.
+
+    `allowed_hosts` is the caller's host allow-list, applied to the URL and to
+    every redirect hop (list the redirect targets too). Without it, any https
+    host is accepted except localhost and IP addresses.
+    """
+    hosts = None if allowed_hosts is None else frozenset(allowed_hosts)
+
+    def allow_host(host: str) -> bool:
+        return _public_host(host) if hosts is None else host in hosts
 
     async def fetch() -> list[dict[str, str]]:
-        await limiter.acquire()
-        response = await _get_following_redirects(url, context)
-        if len(response.content) > MAX_FILE_BYTES:
-            raise call_error(
-                UpstreamError,
-                f"{context}: {url} is larger than this tool reads.",
-                f"{context} : {url} dépasse la taille que cet outil lit.",
-            )
-        text = decode(response.content)
-        if text.lstrip().lower().startswith(("<!doctype", "<html")):
+        downloaded = await file_download.download(
+            url,
+            allow_host=allow_host,
+            limiter_for=lambda _host: limiter,
+            max_bytes=MAX_FILE_BYTES,
+            context=context,
+            timeout=120.0,
+        )
+        text = decode(downloaded.body)
+        # A mistyped path can answer HTTP 200 with an HTML page; only the start is read.
+        if text[:1024].lstrip().lower().startswith(("<!doctype", "<html")):
             raise call_error(
                 NotFound,
                 f"{context}: {url} returned a web page, not a CSV file.",

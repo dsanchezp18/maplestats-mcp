@@ -437,6 +437,21 @@ async def test_partner_resolution_errors(httpx_mock):
         await client.get_trade("exports", "2026-06", "2026-07", partner="China", us_state="Texas")
 
 
+async def test_province_abbreviation_missing_from_cimts_list_is_an_upstream_error(httpx_mock):
+    """The fixture list has no id 59: "BC" used to escape as KeyError: 59."""
+    _mock_codes(httpx_mock)
+    _mock_periods(httpx_mock)
+    with pytest.raises(UpstreamError, match="province code list changed"):
+        await client.get_trade("exports", "2026-07", "2026-07", hs_code="87", provinces=["BC"])
+
+
+async def test_province_abbreviation_error_follows_lang(httpx_mock):
+    _mock_codes(httpx_mock)
+    _mock_periods(httpx_mock)
+    with pytest.raises(UpstreamError, match="liste des codes de province a changé"):
+        await client.get_top_commodities("exports", province="BC", lang="fr")
+
+
 async def test_upstream_406_becomes_invalid_input(httpx_mock):
     _mock_codes(httpx_mock)
     _mock_periods(httpx_mock)

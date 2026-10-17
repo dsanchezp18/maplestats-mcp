@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, NoReturn
 
 import httpx
@@ -43,6 +44,48 @@ def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
     if lang == "fr":
         raise_typed(exc_cls, fr, "fr")
     raise exc_cls(en)
+
+
+def _check_bbox(bbox: list[float], lang: str) -> None:
+    """[west, south, east, north] in degrees, or InvalidInput before any request.
+
+    An unchecked box went to the service as is, and a reversed or out-of-range
+    one came back as a 404 that this client reports as a rejected parameter,
+    which blames the client for what the caller sent.
+    """
+    numbers = [
+        v
+        for v in bbox
+        if isinstance(v, int | float) and not isinstance(v, bool) and math.isfinite(v)
+    ]
+    if len(bbox) != 4 or len(numbers) != 4:
+        _raise(
+            InvalidInput,
+            "bbox must be [west, south, east, north]: four numbers in degrees.",
+            "bbox doit être [ouest, sud, est, nord] : quatre nombres en degrés.",
+            lang,
+        )
+    west, south, east, north = bbox
+    if not (
+        -180 <= west <= 180 and -180 <= east <= 180 and -90 <= south <= 90 and -90 <= north <= 90
+    ):
+        _raise(
+            InvalidInput,
+            f"bbox {bbox} is out of range: longitudes must be within -180 and 180, "
+            "latitudes within -90 and 90.",
+            f"bbox {bbox} est hors limites : les longitudes doivent être comprises entre -180 "
+            "et 180, les latitudes entre -90 et 90.",
+            lang,
+        )
+    if west >= east or south >= north:
+        _raise(
+            InvalidInput,
+            f"bbox {bbox} is reversed or empty: west must be less than east and south less "
+            "than north.",
+            f"bbox {bbox} est inversée ou vide : l'ouest doit être inférieur à l'est et le sud "
+            "inférieur au nord.",
+            lang,
+        )
 
 
 async def _get(url: str, params: dict[str, Any], ttl: int, lang: str = "en") -> tuple[Any, bool]:
@@ -294,13 +337,7 @@ async def search_names(
         # works (confirmed live 2026-10-03), and a float arrives from JSON.
         params.update(lat=latitude, lon=longitude, radius=max(1, round(radius)))
     if bbox is not None:
-        if len(bbox) != 4:
-            _raise(
-                InvalidInput,
-                "bbox must be [west, south, east, north].",
-                "bbox doit être [ouest, sud, est, nord].",
-                lang,
-            )
+        _check_bbox(bbox, lang)
         params["bbox"] = ",".join(str(v) for v in bbox)
     if len(params) == 1:
         _raise(

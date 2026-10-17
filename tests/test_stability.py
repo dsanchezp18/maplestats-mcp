@@ -26,6 +26,22 @@ async def test_slow_tool_fails_with_named_error_instead_of_hanging():
     assert "slow_tool did not finish within 0 s" in result.content[0].text  # type: ignore[union-attr]
 
 
+def test_version_flag_exits_without_starting_a_server():
+    from maplestats_mcp import __version__
+
+    # stdin is closed: a stdio server started by mistake would exit with an error, not print.
+    result = subprocess.run(
+        [sys.executable, "-m", "maplestats_mcp", "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr[-300:]
+    assert result.stdout.strip() == __version__
+
+
 def test_startup_does_not_import_module_tests():
     # A fresh interpreter: pytest itself has already imported the test modules here.
     probe = (

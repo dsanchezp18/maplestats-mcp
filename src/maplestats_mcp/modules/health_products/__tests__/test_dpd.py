@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import re
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.health_products import api
 from maplestats_mcp.modules.health_products.dpd import client
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import (
+    CloudflareChallenge,
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 BASE = "https://health-products.canada.ca/api/drug/"
 
@@ -233,3 +240,47 @@ async def test_stream_objects_rejects_a_cut_short_answer(httpx_mock):
     httpx_mock.add_response(url=_url("drugproduct", r"type=json$"), text='[{"name": "A"}, {"na')
     with pytest.raises(UpstreamError, match="cut short"):
         _ = [r async for r in api.stream_objects("drug/drugproduct", lang=None)]
+
+
+async def test_html_200_body_is_an_upstream_error_not_unavailable(httpx_mock):
+    # A 200 answer that is an HTML page (a maintenance or error page) is not
+    # JSON: the server answered, so this is UpstreamError, not "unreachable".
+    httpx_mock.add_response(
+        url=_url("drugproduct", r"id=1"),
+        status_code=200,
+        headers={"content-type": "text/html"},
+        text="<html><body>Service temporarily unavailable</body></html>",
+    )
+    with pytest.raises(UpstreamError, match="did not return JSON") as caught:
+        await api.get_json("drug/drugproduct", {"id": "1"})
+    assert not isinstance(caught.value, UpstreamUnavailable)
+
+
+async def test_cloudflare_challenge_passes_through_get_json_unchanged(httpx_mock):
+    httpx_mock.add_response(
+        url=_url("drugproduct", r"id=1"),
+        status_code=403,
+        headers={"cf-mitigated": "challenge"},
+        text="<html>Just a moment...</html>",
+    )
+    with pytest.raises(CloudflareChallenge, match="Cloudflare bot challenge"):
+        await api.get_json("drug/drugproduct", {"id": "1"})
+
+
+async def test_network_failure_is_still_upstream_unavailable(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectError("refused"))
+    with pytest.raises(UpstreamUnavailable, match="could not be reached"):
+        await api.get_json("drug/drugproduct", {"id": "1"})
+
+
+async def test_stream_objects_undecodable_body_is_an_upstream_error(httpx_mock):
+    # A body declared gzip that is not gzip fails to decode inside httpx.
+    httpx_mock.add_response(
+        url=_url("drugproduct", r"type=json$"),
+        headers={"content-encoding": "gzip"},
+        content=b"this is not a gzip stream",
+    )
+    with pytest.raises(UpstreamError, match="could not be decoded") as caught:
+        _ = [r async for r in api.stream_objects("drug/drugproduct", lang=None)]
+    assert not isinstance(caught.value, UpstreamUnavailable)

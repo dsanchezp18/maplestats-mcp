@@ -16,16 +16,15 @@ import csv
 import io
 from typing import Literal
 
-import httpx
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.modules.elections_results.historical import _fold
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -34,6 +33,12 @@ DATASET_DOI = "https://doi.org/10.7910/DVN/ABFNSQ"
 DATASET_FILE_URL = "https://dataverse.harvard.edu/api/access/datafile/10100743"
 CACHE_TTL_SECONDS = 24 * 60 * 60
 MAX_FILE_BYTES = 40 * 1024 * 1024
+# Dataverse answers 303 with a signed link to the bucket that holds the file
+# (dvn-cloud-iqss.s3.amazonaws.com, seen live 2026-10-17); only these buckets
+# are followed, not every amazonaws.com tenant.
+DOWNLOAD_HOSTS = frozenset(
+    {"dataverse.harvard.edu", "dvn-cloud-iqss.s3.amazonaws.com", "dvn-cloud.s3.amazonaws.com"}
+)
 ROWS_LIMIT_DEFAULT = 50
 ROWS_LIMIT_MAX = 1000
 FIRST_ELECTION = 1
@@ -96,56 +101,17 @@ def _parse(body: bytes) -> list[dict[str, str]] | None:
 
 async def _dataset(lang: str = "en") -> tuple[list[dict[str, str]], bool]:
     async def fetch() -> list[dict[str, str]]:
-        await _LIMITER.acquire()
-        # Dataverse answers 303 with a signed storage URL; the shared client
-        # does not follow redirects.
-        current = DATASET_FILE_URL
-        for _ in range(4):
-            try:
-                response = await get_raw(current, timeout=180.0)
-                break
-            except httpx.HTTPStatusError as exc:
-                location = exc.response.headers.get("location")
-                if exc.response.status_code in (301, 302, 303, 307, 308) and location:
-                    current = str(exc.response.url.join(location))
-                    if not current.startswith("https://"):
-                        raise lang_error(
-                            UpstreamError,
-                            lang,
-                            "elections_results: redirect to a non-https URL.",
-                            "elections_results : redirection vers une adresse non https.",
-                        ) from exc
-                    continue
-                raise lang_error(
-                    UpstreamError,
-                    lang,
-                    f"elections_results: Harvard Dataverse returned HTTP "
-                    f"{exc.response.status_code}.",
-                    f"elections_results : Harvard Dataverse a renvoyé HTTP "
-                    f"{exc.response.status_code}.",
-                ) from exc
-            except httpx.HTTPError as exc:
-                raise lang_error(
-                    UpstreamUnavailable,
-                    lang,
-                    "elections_results: Harvard Dataverse did not respond in time.",
-                    "elections_results : Harvard Dataverse n'a pas répondu à temps.",
-                ) from exc
-        else:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                "elections_results: Harvard Dataverse redirected too many times.",
-                "elections_results : Harvard Dataverse a redirigé trop de fois.",
-            )
-        if len(response.content) > MAX_FILE_BYTES:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                "elections_results: the candidate file is larger than expected.",
-                "elections_results : le fichier des candidats est plus volumineux que prévu.",
-            )
-        rows = await run_parse(_parse, response.content)
+        # Streamed under MAX_FILE_BYTES; the 303 to signed storage is followed
+        # only to the hosts in DOWNLOAD_HOSTS, over https.
+        downloaded = await file_download.download(
+            DATASET_FILE_URL,
+            allow_host=lambda host: host in DOWNLOAD_HOSTS,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=MAX_FILE_BYTES,
+            context="elections_results",
+            timeout=180.0,
+        )
+        rows = await run_parse(_parse, downloaded.body)
         if rows is None:
             raise lang_error(
                 UpstreamError,

@@ -13,7 +13,12 @@ import pytest
 
 from maplestats_mcp.modules.cmhc import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -380,7 +385,7 @@ async def test_timeout_raises_upstream_unavailable(httpx_mock):
 
 
 async def test_french_errors_and_provenance(httpx_mock):
-    with pytest.raises(InvalidInput, match="^Entrée invalide : category_level_2 ne doit"):
+    with pytest.raises(InvalidInput, match="^Entrée invalide\u00a0: category_level_2 ne doit"):
         await client.get_table_data("Primary Rental Market", "  ", "2", "TIMESERIES", lang="fr")
     with pytest.raises(InvalidInput, match="l'identifiant est '1' \\(Canada\\)"):
         await client.list_categories(geography_type="Country", geography_id="2", lang="fr")
@@ -391,3 +396,95 @@ async def test_french_errors_and_provenance(httpx_mock):
     provinces = await client.list_provinces(lang="fr")
     assert (provinces.provenance.licence or "").startswith("Conditions d'utilisation de la SCHL")
     assert "appelez reproduce_code" in provinces.provenance.reproduce
+
+
+async def test_list_categories_without_anchors_raises_and_is_not_cached(httpx_mock):
+    # A 200 page with no a[data-category-link] is a changed layout (or an
+    # expired session), not "no categories": it must not be cached for 24 h.
+    url = f"{constants.BASE_URL}/en/TableMapChart?geographyType=Country&geographyId=1"
+    httpx_mock.add_response(url=url, text="<html><body><p>Maintenance</p></body></html>")
+    with pytest.raises(UpstreamError, match="no category links"):
+        await client.list_categories()
+    httpx_mock.add_response(url=url, text=_CATEGORIES_HTML)
+    result = await client.list_categories()
+    assert result.total_count == 2
+    assert result.provenance.cached is False
+
+
+async def test_list_categories_without_anchors_is_bilingual(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/fr/TableMapChart?geographyType=Country&geographyId=1",
+        text="<html><body></body></html>",
+    )
+    with pytest.raises(UpstreamError, match="aucun lien de catégorie"):
+        await client.list_categories(lang="fr")
+
+
+async def test_list_provinces_without_anchors_raises_and_is_not_cached(httpx_mock):
+    url = f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1"
+    httpx_mock.add_response(url=url, text="<div class='ProvinceContainer'></div>")
+    with pytest.raises(UpstreamError, match="no province links"):
+        await client.list_provinces()
+    httpx_mock.add_response(url=url, text=_PROVINCES_HTML)
+    result = await client.list_provinces()
+    assert [p.id for p in result.provinces] == ["10", "12"]
+    assert result.provenance.cached is False
+
+
+async def test_list_provinces_without_anchors_is_bilingual(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/fr/Navigation/ProvincesByCountry?countryId=1",
+        text="<div></div>",
+    )
+    with pytest.raises(UpstreamError, match="aucun lien de province"):
+        await client.list_provinces(lang="fr")
+
+
+def test_parse_value_cell_french_comma_is_the_decimal_mark():
+    assert client._parse_value_cell("1,5", "", "fr").value == 1.5
+    assert client._parse_value_cell("1 013,5", "", "fr").value == 1013.5
+    # No-break and narrow no-break spaces group thousands in French typography.
+    assert client._parse_value_cell("1\u00a0013,5", "", "fr").value == 1013.5
+    assert client._parse_value_cell("1\u202f013", "", "fr").value == 1013.0
+    assert client._parse_value_cell("3,4", "a", "fr").flag == "a"
+
+
+def test_parse_value_cell_english_comma_is_a_thousands_separator():
+    assert client._parse_value_cell("1,234", "").value == 1234.0
+    assert client._parse_value_cell("1,234", "", "en").value == 1234.0
+    assert client._parse_value_cell("2,222.5", "", "en").value == 2222.5
+
+
+def test_parse_value_cell_french_keeps_special_tokens():
+    assert client._parse_value_cell("**", "", "fr").value is None
+    assert client._parse_value_cell("-", "", "fr").value == 0.0
+    cell = client._parse_value_cell("abc", "", "fr")
+    assert cell.value is None
+    assert cell.flag == "abc"
+
+
+async def test_get_table_data_french_export_reads_comma_as_decimal(httpx_mock):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/fr/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1&CategoryLevel1=Marche+locatif+primaire"
+            "&CategoryLevel2=Taux+d%27inoccupation&ColumnField=2&RowField=TIMESERIES"
+        ),
+        text=_TABLE_MATCHING_CRITERIA_HTML_SCSS,
+    )
+    httpx_mock.add_response(
+        method="POST",
+        url=f"{constants.BASE_URL}/fr/TableMapChart/ExportTable",
+        content=_csv_bytes(
+            'Mises en chantier\nAout 2026\n,Unifamilial,Total,\nCalgary,"1,5","1\u00a0013,5",\n'
+        ),
+    )
+    result = await client.get_table_data(
+        "Marche locatif primaire",
+        "Taux d'inoccupation",
+        "2",
+        "TIMESERIES",
+        lang="fr",
+    )
+    values = {name: cell.value for name, cell in result.rows[0].values.items()}
+    assert values == {"Unifamilial": 1.5, "Total": 1013.5}

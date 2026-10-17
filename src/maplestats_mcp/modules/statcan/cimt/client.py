@@ -528,6 +528,18 @@ async def _resolve_province(province: str, lang: str) -> tuple[int, str]:
     names = {int(e["id"]): _province_name(e, lang) for e in entries}
     abbreviation = constants.PROVINCE_ABBREVIATIONS.get(province.strip().upper())
     if abbreviation is not None:
+        if abbreviation not in names:
+            # The abbreviation table is ours; the province list is CIMT's. A
+            # code missing from it means CIMT renumbered or dropped one.
+            raise UpstreamError(
+                say(
+                    f"CIMT's province list no longer has id {abbreviation} (for {province!r}); "
+                    "the province code list changed. Search with cimt_search_partners.",
+                    f"La liste des provinces du CICM n'a plus l'identifiant {abbreviation} "
+                    f"(pour {province!r}) ; la liste des codes de province a changé. Cherchez "
+                    "avec cimt_search_partners.",
+                )
+            )
         return abbreviation, names[abbreviation]
     candidates = [(int(e["id"]), [str(e.get("en", "")), str(e.get("fr", ""))]) for e in entries]
     code = _pick(province, "province", candidates, names)

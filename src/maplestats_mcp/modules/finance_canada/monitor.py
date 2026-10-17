@@ -31,7 +31,15 @@ from typing import Any
 from bs4 import BeautifulSoup, Tag
 
 from maplestats_mcp.modules.finance_canada import constants
-from maplestats_mcp.modules.finance_canada.client import _raise, _say, feed, fetch, fold
+from maplestats_mcp.modules.finance_canada.client import (
+    _raise,
+    _say,
+    body_text,
+    feed,
+    fetch,
+    fold,
+    parse_number,
+)
 from maplestats_mcp.modules.finance_canada.schemas import (
     MonitorIssue,
     MonitorIssueList,
@@ -45,8 +53,6 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _PERIOD = re.compile(r"/(\d{4})/(\d{2})\.html$")
 _SPACES = re.compile(r"[\s   ]+")
-_NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
-_NONE = {"", "-", "–", "—", "n/a", "s.o.", "...", ".."}
 
 
 def issues_from_feed(entries: list[dict[str, Any]], lang: str) -> list[MonitorIssue]:
@@ -99,23 +105,6 @@ async def list_issues(*, lang: str = "en") -> MonitorIssueList:
         issues=issues,
         provenance=_provenance(constants.FEED_URL, cached, "MonitorIssueList", lang),
     )
-
-
-def parse_number(text: str, lang: str = "en") -> Value:
-    """'(7,711)' -> -7711, '17 121' (fr) -> 17121, '5,2' (fr) -> 5.2; text stays text."""
-    raw = _SPACES.sub(" ", text).strip()
-    if raw.casefold() in _NONE:
-        return None
-    compact = raw.replace(" ", "")
-    negative = compact.startswith("(") and compact.endswith(")")
-    compact = compact.strip("()").replace("−", "-")
-    # English groups thousands with commas; French with spaces and a decimal comma.
-    compact = compact.replace(",", ".") if lang == "fr" else compact.replace(",", "")
-    if not _NUMBER.match(compact):
-        return raw
-    value = float(compact)
-    value = -value if negative else value
-    return int(value) if value.is_integer() and "." not in compact else value
 
 
 def _cell_text(cell: Tag) -> str:
@@ -253,7 +242,7 @@ async def get_tables(period: str = "", *, table: str = "", lang: str = "en") -> 
 
     async def load() -> list[MonitorTable]:
         response = await fetch(issue.url, constants.MAX_PAGE_BYTES, lang)
-        found = parse_issue(response.text, lang)
+        found = parse_issue(body_text(response), lang)
         if not found:
             _raise(
                 UpstreamError,

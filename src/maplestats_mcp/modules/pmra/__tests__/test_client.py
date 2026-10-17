@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.pmra import client, constants
@@ -198,3 +199,43 @@ async def test_french_errors():
         await client.get_residue_limits(lang="fr")
     with pytest.raises(InvalidInput, match="ne contient que des chiffres"):
         await client.get_product("abc", lang="fr")
+
+
+# An extract is read only up to the cap. The first body declares no
+# Content-Length and never ends, so a reader that buffers it would not return.
+
+
+class _EndlessBody(httpx.AsyncByteStream):
+    def __init__(self, chunk: int = 1024) -> None:
+        self.chunk = chunk
+        self.sent = 0
+
+    async def __aiter__(self):
+        while True:
+            self.sent += self.chunk
+            yield b"x" * self.chunk
+
+
+async def test_extract_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_EXTRACT_BYTES", 10_000)
+    body = _EndlessBody()
+    httpx_mock.add_response(url=f"{_BASE}product", stream=body)
+    with pytest.raises(UpstreamError, match="larger than 10,000 bytes"):
+        await client.search_products("roundup")
+    assert body.sent < 10_000 + 4 * body.chunk
+
+
+async def test_extract_declared_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_EXTRACT_BYTES", 10_000)
+    httpx_mock.add_response(url=f"{_BASE}mrl", content=b"x" * 20_000)
+    with pytest.raises(UpstreamError, match="is 20,000 bytes"):
+        await client.get_residue_limits("glyphosate")
+
+
+async def test_extract_redirect_off_the_registry_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_BASE}mrl", status_code=302, headers={"location": "https://attacker.example/mrl"}
+    )
+    with pytest.raises(UpstreamError, match="attacker.example"):
+        await client.get_residue_limits("glyphosate")
+    assert len(httpx_mock.get_requests()) == 1

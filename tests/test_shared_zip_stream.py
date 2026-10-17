@@ -305,3 +305,34 @@ async def test_bytes_after_the_final_block_do_not_stall_the_stream(httpx_mock, m
     )
     out = await asyncio.wait_for(_read_all(stream), 10)
     assert out.decode() == text.rstrip("\n")
+
+
+async def test_inflating_runs_in_the_parsing_pool_not_the_default_executor(httpx_mock, monkeypatch):
+    # asyncio.to_thread shares the event loop's default executor with DNS lookups
+    # (shared/executor.py explains why parsing has a pool of its own).
+    import threading
+
+    names: list[str] = []
+    real = zip_stream.run_in_pool
+
+    async def spy(func, *args):
+        def traced(*inner):
+            names.append(threading.current_thread().name)
+            return func(*inner)
+
+        return await real(traced, *args)
+
+    async def forbidden(*args, **kwargs):
+        raise AssertionError("inflating used asyncio.to_thread")
+
+    monkeypatch.setattr(zip_stream, "run_in_pool", spy)
+    monkeypatch.setattr(asyncio, "to_thread", forbidden)
+    text = _delta_text(3000)
+    body, member = _member_zip(text)
+    httpx_mock.add_callback(_serve(body), url=URL, is_reusable=True)
+    stream = MemberStream(
+        URL, member, chunk_bytes=10**6, max_scan_bytes=10**9, max_inflated_bytes=10**9
+    )
+    assert (await _read_all(stream)).decode() == text.rstrip("\n")
+    assert names
+    assert all(name.startswith("maple-parse") for name in names)

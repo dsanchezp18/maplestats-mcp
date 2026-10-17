@@ -423,13 +423,36 @@ def _select_file(files: list[OebFile], file: str | None, release: str | None, la
             )
         return current[0]
     text = str(file).strip()
-    # A small number is a position in the list; a year ("2025") is matched
-    # against file names like the rates databases' "2025 Annual Rates Database".
-    if text.isdigit() and int(text) <= len(files):
-        return files[int(text) - 1]
+    # A small number is a 1-based position in the pool (the release's files when
+    # a release is given, so "1" with release="2023-04-30" is that release's
+    # first file); a year ("2025") past the end of the pool is matched against
+    # file names like the rates databases' "2025 Annual Rates Database".
+    if text.isdigit():
+        position = int(text)
+        if position == 0:
+            raise_localized(
+                InvalidInput,
+                "File positions start at 1; call oeb_describe_dataset for the file list.",
+                "les positions de fichier commencent à 1; appelez oeb_describe_dataset pour "
+                "la liste des fichiers.",
+                lang,
+            )
+        if position <= len(pool):
+            return pool[position - 1]
     wanted = norm(text)
     matches = [f for f in pool if wanted in norm(f"{f.name} {f.caption or ''}")]
     if not matches:
+        if text.isdigit():
+            raise_localized(
+                InvalidInput,
+                f"No file at position {text} and no file name contains it; "
+                f"{len(pool)} file(s) are available here (positions 1 to {len(pool)}); call "
+                "oeb_describe_dataset for the file list.",
+                f"aucun fichier à la position {text} et aucun nom de fichier ne la contient; "
+                f"{len(pool)} fichier(s) disponible(s) ici (positions 1 à {len(pool)}); "
+                "appelez oeb_describe_dataset pour la liste des fichiers.",
+                lang,
+            )
         raise_localized(
             InvalidInput,
             f"No file matches {file!r}; call oeb_describe_dataset for the file list.",

@@ -6,6 +6,9 @@
 # Outputs: pass/fail
 # ============================================================
 
+import re
+from types import SimpleNamespace
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -291,3 +294,96 @@ def test_page_cannot_be_framed():
     assert response.status_code == 200
     assert response.headers["content-security-policy"] == "frame-ancestors 'none'"
     assert response.headers["x-frame-options"] == "DENY"
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"content-type": "text/plain"},
+        {"content-type": "application/x-www-form-urlencoded"},
+        {"content-type": "multipart/form-data; boundary=x"},
+        {},
+    ],
+)
+def test_non_json_post_is_rejected_before_the_model(monkeypatch, headers):
+    # A cross-site page can send these without a preflight; none may spend a call.
+    reached_model = []
+
+    async def spy_model(messages):
+        reached_model.append(messages)
+        return {"answer": "ok", "tools_used": []}
+
+    monkeypatch.setattr(chat_app, "ask_model", spy_model)
+    body = b'{"messages": [{"role": "user", "content": "GDP?"}]}'
+    response = TestClient(chat_app.app).post("/api/chat", content=body, headers=headers)
+    assert response.status_code == 415
+    assert "application/json" in response.json()["error"]
+    assert reached_model == []
+    assert chat_app._daily_count["n"] == 0
+    assert chat_app._hits_by_client == {}
+
+
+def test_json_content_type_with_charset_is_accepted():
+    response = TestClient(chat_app.app).post(
+        "/api/chat",
+        content=b'{"messages": [{"role": "user", "content": "GDP?"}]}',
+        headers={"content-type": "Application/JSON; charset=utf-8"},
+    )
+    assert response.status_code == 200
+
+
+class FakeRequest:
+    def __init__(self, headers, host="203.0.113.5"):
+        self.headers = headers
+        self.client = SimpleNamespace(host=host)
+
+
+def test_forwarded_for_is_ignored_unless_proxy_headers_are_trusted(monkeypatch):
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", False)
+    request = FakeRequest({"x-forwarded-for": "198.51.100.9, 192.0.2.1"})
+    assert chat_app.client_address(request) == "203.0.113.5"
+
+
+def test_forwarded_for_is_read_from_the_right_when_trusted(monkeypatch):
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", True)
+    request = FakeRequest({"x-forwarded-for": "198.51.100.9, 192.0.2.1"})
+    assert chat_app.client_address(request) == "192.0.2.1"
+    assert chat_app.client_address(FakeRequest({})) == "203.0.113.5"
+
+
+def test_a_forged_header_cannot_dodge_the_limit_when_untrusted(monkeypatch):
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", False)
+    monkeypatch.setattr(chat_app, "RATE_PER_HOUR", 2)
+    client = TestClient(chat_app.app)
+    body = {"messages": [{"role": "user", "content": "hi"}]}
+    statuses = [
+        client.post(
+            "/api/chat", json=body, headers={"x-forwarded-for": f"198.51.100.{n}"}
+        ).status_code
+        for n in range(3)
+    ]
+    assert statuses == [200, 200, 429]
+
+
+@pytest.mark.parametrize(
+    ("environ", "expected"),
+    [
+        ({}, False),
+        ({"RENDER": "true"}, True),
+        ({"RENDER": "true", "CHAT_TRUST_PROXY_HEADERS": "0"}, False),
+        ({"CHAT_TRUST_PROXY_HEADERS": "1"}, True),
+    ],
+)
+def test_proxy_header_default_follows_render(environ, expected):
+    assert chat_app.trusts_proxy_headers(environ) is expected
+
+
+def test_third_party_scripts_carry_integrity_hashes():
+    # The page renders model output through innerHTML, so the sanitiser it loads
+    # from a CDN must be pinned by hash, not trusted by URL alone.
+    page = (chat_app.STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    tags = re.findall(r"<script\b[^>]*\bsrc=[^>]*>", page)
+    assert len(tags) == 2
+    for tag in tags:
+        assert re.search(r'integrity="sha384-[A-Za-z0-9+/]{64}"', tag), tag
+        assert 'crossorigin="anonymous"' in tag, tag

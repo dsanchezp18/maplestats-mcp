@@ -85,6 +85,22 @@ def test_client_key_reads_the_address_the_trusted_proxy_appended() -> None:
     assert _client_key(scope, trust_proxy_headers=False) == "10.0.0.1"
 
 
+def _two_line_scope(first: str, second: str) -> dict:
+    scope = _scope(None)
+    scope["headers"] = [
+        (b"x-forwarded-for", first.encode()),
+        (b"X-Forwarded-For", second.encode()),
+    ]
+    return scope
+
+
+def test_repeated_forwarded_for_lines_are_read_as_one_joined_header() -> None:
+    # A proxy may append its own line instead of joining onto the caller's.
+    scope = _two_line_scope("6.6.6.6", "203.0.113.9")
+    assert _client_key(scope, trust_proxy_headers=True) == "203.0.113.9"
+    assert _client_key(scope, trust_proxy_headers=True, proxy_hops=2) == "6.6.6.6"
+
+
 async def _status(app, scope) -> int:
     messages: list[dict] = []
 
@@ -109,6 +125,14 @@ async def test_a_spoofed_leftmost_address_does_not_give_a_fresh_rate_limit_bucke
     )
     statuses = [await _status(app, _scope(f"1.1.1.{n}, 203.0.113.9")) for n in range(3)]
     assert statuses == [200, 200, 429]
+
+
+async def test_a_second_forwarded_for_line_does_not_give_a_fresh_rate_limit_bucket() -> None:
+    app = with_http_security(
+        _ok, rate_limit_requests=2, rate_limit_window_seconds=60, trust_proxy_headers=True
+    )
+    scopes = [_two_line_scope(f"1.1.1.{n}", "203.0.113.9") for n in range(3)]
+    assert [await _status(app, scope) for scope in scopes] == [200, 200, 429]
 
 
 async def test_wrong_tokens_spend_the_rate_limit() -> None:

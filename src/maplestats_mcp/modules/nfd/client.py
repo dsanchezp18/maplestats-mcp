@@ -44,10 +44,11 @@ from collections.abc import Awaitable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.modules.nfd import constants
 from maplestats_mcp.modules.nfd.schemas import (
@@ -71,7 +72,13 @@ from maplestats_mcp.shared.fr_typography import (
     lang_error,
     truncation_note_lang,
 )
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.http import (
+    is_retryable,
+    new_client,
+    raise_if_cloudflare_challenge,
+    request_headers,
+    wait_honouring_retry_after,
+)
 from maplestats_mcp.shared.licences import LICENCES_FR, OGL_CANADA
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -164,36 +171,101 @@ async def _in_lang[T](awaitable: Awaitable[T], lang: str) -> T:
 # ----------------------------------------------------------------- download
 
 
-async def _download(url: str, context: str) -> httpx.Response:
-    """GET one file, following up to two redirects (the site may move to https)."""
+# The site is plain http on purpose (see constants.py), so shared/file_download.py,
+# which is https only, cannot read it. This is its streamed twin: the body is read
+# in chunks and refused at MAX_FILE_BYTES, and the Last-Modified header is kept.
+_REDIRECTS = frozenset({301, 302, 303, 307, 308})
+_client = new_client(timeout=constants.DOWNLOAD_TIMEOUT_SECONDS, follow_redirects=False)
+
+
+@dataclass(frozen=True)
+class _File:
+    content: bytes
+    last_modified: str | None
+
+
+def _check_hop(url: str, context: str) -> None:
+    """The first request and every redirect target: http(s) on the NFD host only.
+
+    A plain-http site is open to a rewritten Location header, so a redirect to
+    another host (an internal address, say) is refused, not followed.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or parsed.hostname not in constants.ALLOWED_HOSTS:
+        raise UpstreamError(
+            f"{context}: refusing {url}; the NFD's files are read only from "
+            f"{constants.HOST} over http or https."
+        )
+
+
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_honouring_retry_after,
+    reraise=True,
+)
+async def _fetch_chain(url: str, context: str) -> _File:
     current = url
-    for _ in range(3):
+    for _ in range(constants.MAX_REDIRECTS + 1):
+        _check_hop(current, context)
         await _LIMITER.acquire()
-        try:
-            response = await get_raw(current, timeout=constants.DOWNLOAD_TIMEOUT_SECONDS)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            location = exc.response.headers.get("location")
-            if status in (301, 302, 303, 307, 308) and location:
+        async with _client.stream(
+            "GET", current, headers=request_headers(current, None)
+        ) as response:
+            location = response.headers.get("location")
+            if response.status_code in _REDIRECTS and location:
                 current = urljoin(current, location)
                 continue
-            if status == 404:
-                raise NotFound(f"{context}: no file at {current}.") from exc
-            raise UpstreamError(f"{context}: {current} returned HTTP {status}.") from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailable(
-                f"{context}: nfdp.ccfm.org did not answer for {current} "
-                f"({type(exc).__name__}); try again shortly."
-            ) from exc
-        # get_raw returns 406/409 unraised (StatCan uses them); without this
-        # check a 409 error page was parsed as data and reported as NotFound
-        # "returned a web page" (test_client_edges, 2026-10-03).
-        if response.is_error:
-            raise UpstreamError(f"{context}: {current} returned HTTP {response.status_code}.")
-        if len(response.content) > constants.MAX_FILE_BYTES:
-            raise UpstreamError(f"{context}: {current} is larger than this tool reads.")
-        return response
+            if not response.is_success:
+                # Plain http: an on-path party could answer with a huge error
+                # page, so only the start of it is read (enough for the
+                # Cloudflare check, which looks at the first bytes).
+                error_body = bytearray()
+                async for piece in response.aiter_bytes():
+                    error_body.extend(piece)
+                    if len(error_body) >= 4096:
+                        break
+                answer = httpx.Response(
+                    response.status_code,
+                    headers=[
+                        (k, v)
+                        for k, v in response.headers.multi_items()
+                        if k.lower()
+                        not in ("content-encoding", "content-length", "transfer-encoding")
+                    ],
+                    content=bytes(error_body[:4096]),
+                    request=response.request,
+                )
+                raise_if_cloudflare_challenge(answer)
+                answer.raise_for_status()
+            declared = response.headers.get("content-length", "")
+            if declared.isdigit() and int(declared) > constants.MAX_FILE_BYTES:
+                raise UpstreamError(f"{context}: {current} is larger than this tool reads.")
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in response.aiter_bytes():
+                total += len(chunk)
+                if total > constants.MAX_FILE_BYTES:
+                    raise UpstreamError(f"{context}: {current} is larger than this tool reads.")
+                chunks.append(chunk)
+            return _File(b"".join(chunks), response.headers.get("last-modified"))
     raise UpstreamError(f"{context}: {url} redirected too many times.")
+
+
+async def _download(url: str, context: str) -> _File:
+    """GET one file, following up to two redirects (the site may move to https)."""
+    try:
+        return await _fetch_chain(url, context)
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 404:
+            raise NotFound(f"{context}: no file at {exc.request.url}.") from exc
+        raise UpstreamError(f"{context}: {exc.request.url} returned HTTP {status}.") from exc
+    except httpx.HTTPError as exc:
+        raise UpstreamUnavailable(
+            f"{context}: {constants.HOST} did not answer for {url} "
+            f"({type(exc).__name__}); try again shortly."
+        ) from exc
 
 
 def _file_url(path: str) -> str:
@@ -541,7 +613,7 @@ async def _load_dataset(entry: CatalogueEntry) -> tuple[Dataset, bool]:
         text = decode(response.content)
         if text.lstrip().lower().startswith(("<!doctype", "<html")):
             raise NotFound(f"nfd table {entry.table_id}: {url} returned a web page, not a CSV.")
-        return parse_table(text, url, response.headers.get("last-modified"))
+        return parse_table(text, url, response.last_modified)
 
     return await cached_fetch(f"nfd:table:{url}", constants.TABLE_TTL_SECONDS, fetch)
 

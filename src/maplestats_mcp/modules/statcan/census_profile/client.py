@@ -34,6 +34,7 @@ Confirmed live 2026-09-20. Two real quirks handled:
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx
@@ -54,6 +55,12 @@ from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUn
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
+
+# Every code in the live codelists is letters, digits, "_" or "-" (checked
+# 2026-10-17 on CL_CHARACTERISTIC and seven CL_GEO_* lists: 12,441 codes). "." and
+# "+" are deliberately not allowed: they separate the key's dimensions and
+# alternatives, so a code containing one would silently shift the key.
+_CODE = re.compile(r"[A-Za-z0-9_-]+")
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -240,6 +247,22 @@ async def search_characteristic(
     )
 
 
+def _check_codes(name: str, codes: list[str], lang: str) -> None:
+    """Reject a code that would reshape the request path or the SDMX key."""
+    for code in codes:
+        if not _CODE.fullmatch(code):
+            raise InvalidInput(
+                say(
+                    f"statcan_census_profile:get_data: {name} entry {code!r} must contain only "
+                    "letters, digits, '_' or '-' (take codes from the search tools).",
+                    f"statcan_census_profile:get_data\u00a0: l'élément {code!r} de {name} ne doit "
+                    "contenir que des lettres, des chiffres, « _ » ou « - » (prenez les codes "
+                    "dans les outils de recherche).",
+                    lang,
+                )
+            )
+
+
 async def get_data(
     level: str,
     geography_codes: list[str],
@@ -278,6 +301,8 @@ async def get_data(
                 lang,
             )
         )
+    _check_codes("geography_codes", geography_codes, lang)
+    _check_codes("characteristic_codes", characteristic_codes, lang)
     gender_code = constants.GENDER_TO_CODE.get(gender)
     if gender_code is None:
         raise InvalidInput(

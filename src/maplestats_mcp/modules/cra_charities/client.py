@@ -33,7 +33,7 @@ from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.i18n import pick
-from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 from maplestats_mcp.shared.licences import OGL_CANADA
 from maplestats_mcp.shared.models import Provenance
 
@@ -280,7 +280,7 @@ async def search_charities(
         query=text or None,
         province=prov,
         designation=desig,
-        total_count=int(result.get("total", len(rows))),
+        total_count=int(get_or(result, "total", len(rows))),
         returned_count=len(rows),
         offset=offset,
         limit=limit,
@@ -354,7 +354,7 @@ async def get_directors(business_number: str, lang: str = "en") -> CharityDirect
             f"Aucun administrateur ou dirigeant pour {bn} dans la liste {year}.",
             lang,
         )
-    total = int(result.get("total", len(rows)))
+    total = int(get_or(result, "total", len(rows)))
     # The table is read in one request with no paging, so a longer list is cut here.
     cut_note = (
         pick(

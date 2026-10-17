@@ -30,10 +30,16 @@ _QUEUE_TIMEOUT_SECONDS = 5.0
 
 
 def _header(scope: dict, name: bytes) -> str | None:
-    for key, value in scope.get("headers", []):
-        if key.lower() == name:
-            return value.decode("latin-1")
-    return None
+    """The header's value; repeated lines are joined with ", " (RFC 9110 section 5.3).
+
+    Reading only the first line would let a caller who writes their own
+    `X-Forwarded-For` line pick the address the rate limit keys on when the
+    proxy appends a second line instead of joining onto the first.
+    """
+    values = [
+        value.decode("latin-1") for key, value in scope.get("headers", []) if key.lower() == name
+    ]
+    return ", ".join(values) if values else None
 
 
 def _client_key(scope: dict, *, trust_proxy_headers: bool, proxy_hops: int = 1) -> str:
@@ -213,8 +219,9 @@ def origin_allowed(origin: str, allowed_origins: Sequence[str]) -> bool:
 
     Entries are exact origins (`https://example.org`), `*` for any origin,
     a port wildcard (`http://localhost:*`), or a subdomain wildcard
-    (`https://*.example.org`, which does not match the bare domain).
-    Comparison ignores case and a trailing slash.
+    (`https://*.example.org`, which does not match the bare domain and
+    matches any port unless the entry names one). Comparison ignores case
+    and a trailing slash.
     """
     origin = origin.strip().rstrip("/").lower()
     for entry in allowed_origins:
@@ -231,7 +238,13 @@ def origin_allowed(origin: str, allowed_origins: Sequence[str]) -> bool:
             scheme, _, domain = entry.partition("://*.")
             prefix = scheme + "://"
             host = origin[len(prefix) :] if origin.startswith(prefix) else ""
-            if host.endswith("." + domain) and "/" not in host:
+            # A port is not part of the host name: compare the suffix without it
+            # (an entry that names a port is matched against the full host as before).
+            name, _, port = host.rpartition(":")
+            bare_host = name if name and port.isdigit() else host
+            if "/" not in host and (
+                host.endswith("." + domain) or bare_host.endswith("." + domain)
+            ):
                 return True
     return False
 

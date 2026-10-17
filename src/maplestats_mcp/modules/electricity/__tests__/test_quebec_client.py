@@ -224,3 +224,54 @@ async def test_upstream_status_mapping(httpx_mock):
     )
     with pytest.raises(InvalidInput):
         await quebec_client.get_trade()
+
+
+def _freeze_now(monkeypatch, moment: datetime) -> None:
+    monkeypatch.setattr(quebec_client, "_now", lambda: moment)
+
+
+def test_cutoff_is_floored_to_the_cache_window(monkeypatch):
+    # Seconds inside one 5-minute window must give one `where` string, because
+    # it is also the cache key.
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 1, 7, tzinfo=UTC))
+    first = quebec_client._where(None, None, None, cutoff=True)
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 4, 59, tzinfo=UTC))
+    second = quebec_client._where(None, None, None, cutoff=True)
+    assert first == second == 'date <= "2026-10-03T12:00:00Z"'
+    # The next window starts a new key; the cutoff only ever moves earlier.
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 5, 0, tzinfo=UTC))
+    assert quebec_client._where(None, None, None, cutoff=True) == 'date <= "2026-10-03T12:05:00Z"'
+
+
+async def test_trade_calls_within_one_window_share_a_cache_key(httpx_mock, monkeypatch):
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    httpx_mock.add_response(
+        url=_exports("importations-exportations-avec-transits"),
+        json=[_trade_row(now - timedelta(hours=3), 610.0, 203.8)],
+    )
+    httpx_mock.add_response(
+        url=_records("importations-exportations-avec-transits"), json={"total_count": 48}
+    )
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 1, 7, tzinfo=UTC))
+    first = await quebec_client.get_trade(limit=1)
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 3, 41, tzinfo=UTC))
+    second = await quebec_client.get_trade(limit=1)
+    assert first.provenance.cached is False
+    assert second.provenance.cached is True
+    # One exports request and one count request in total, not two of each.
+    assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_generation_recent_calls_within_one_window_share_a_cache_key(httpx_mock, monkeypatch):
+    httpx_mock.add_response(
+        url=_exports("production-electricite-quebec"),
+        json=[{"date": "2026-10-03T11:30:00+00:00", "valeurs_hydraulique": 10779.0}],
+    )
+    httpx_mock.add_response(url=_records("production-electricite-quebec"), json={"total_count": 30})
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 0, 1, tzinfo=UTC))
+    first = await quebec_client.get_generation()
+    _freeze_now(monkeypatch, datetime(2026, 10, 3, 12, 4, 30, tzinfo=UTC))
+    second = await quebec_client.get_generation()
+    assert first.provenance.cached is False
+    assert second.provenance.cached is True
+    assert len(httpx_mock.get_requests()) == 2

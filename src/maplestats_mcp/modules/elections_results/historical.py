@@ -17,15 +17,14 @@ import unicodedata
 import warnings
 from datetime import date
 
-import httpx
 from pydantic import BaseModel, Field
 
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -43,6 +42,12 @@ ROWS_LIMIT_MAX = 500
 _PAIRS = 13
 
 _LIMITER = get_limiter("borealis-elections", rate=0.5, capacity=2.0)
+
+
+def _download_host(host: str) -> bool:
+    """Borealis answers 303 with a signed link on a Scholars Portal storage node
+    (olrc2.scholarsportal.info, seen live 2026-10-17); nothing else is followed."""
+    return host == "borealisdata.ca" or host.endswith(".scholarsportal.info")
 
 
 class PartyVotes(BaseModel):
@@ -118,55 +123,18 @@ async def _dataset(
     lang: str = "en",
 ) -> tuple[tuple[list[dict[str, object]], dict[str, str]], bool]:
     async def fetch() -> tuple[list[dict[str, object]], dict[str, str]]:
-        await _LIMITER.acquire()
-        # Borealis answers 303 with a signed storage URL; the shared client does
-        # not follow redirects.
-        current = DATASET_FILE_URL
-        for _ in range(4):
-            try:
-                response = await get_raw(current, timeout=180.0)
-                break
-            except httpx.HTTPStatusError as exc:
-                location = exc.response.headers.get("location")
-                if exc.response.status_code in (301, 302, 303, 307, 308) and location:
-                    current = str(exc.response.url.join(location))
-                    if not current.startswith("https://"):
-                        raise lang_error(
-                            UpstreamError,
-                            lang,
-                            "elections_results: redirect to a non-https URL.",
-                            "elections_results : redirection vers une adresse non https.",
-                        ) from exc
-                    continue
-                raise lang_error(
-                    UpstreamError,
-                    lang,
-                    f"elections_results: Borealis returned HTTP {exc.response.status_code}.",
-                    f"elections_results : Borealis a renvoyé HTTP {exc.response.status_code}.",
-                ) from exc
-            except httpx.HTTPError as exc:
-                raise lang_error(
-                    UpstreamUnavailable,
-                    lang,
-                    "elections_results: Borealis did not respond in time.",
-                    "elections_results : Borealis n'a pas répondu à temps.",
-                ) from exc
-        else:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                "elections_results: Borealis redirected too many times.",
-                "elections_results : Borealis a redirigé trop de fois.",
-            )
-        if len(response.content) > MAX_FILE_BYTES:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                "elections_results: the historical workbook is larger than expected.",
-                "elections_results : le classeur historique est plus volumineux que prévu.",
-            )
+        # Streamed under MAX_FILE_BYTES; the 303 to signed storage is followed
+        # only to Borealis and Scholars Portal hosts, over https.
+        downloaded = await file_download.download(
+            DATASET_FILE_URL,
+            allow_host=_download_host,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=MAX_FILE_BYTES,
+            context="elections_results",
+            timeout=180.0,
+        )
         try:
-            return await run_parse(_parse, response.content)
+            return await run_parse(_parse, downloaded.body)
         except Exception as exc:  # openpyxl raises several unrelated types
             raise lang_error(
                 UpstreamError,

@@ -21,10 +21,38 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: ${{ matrix.python-version }}
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
       - run: uv sync --locked
       - run: uv run ruff check src tests scripts
       - run: uv run ruff format --check src tests scripts
       - run: uv run pyright
+      # R and Julia, on one leg only: tests/test_reproduce.py and
+      # tests/test_reproduce_cfia.py run the R and Julia scripts that
+      # reproduce_code generates, offline, and skip when the language or one of
+      # these packages is missing, so without these steps a regression in the
+      # generated code merges green. purrr and jsonlite are loaded by the
+      # generated scripts and helper tests but are not in the tests' own skip
+      # probes; the Julia standard libraries (Dates, Downloads, Unicode) need
+      # no install, and the runner image ships Julia itself.
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        if: matrix.python-version == '3.12'
+        with:
+          r-version: release
+      - name: R packages for the reproduce tests
+        if: matrix.python-version == '3.12'
+        # setup-r points R_LIBS_USER at a temp folder and serves binary
+        # packages from Posit Package Manager. Two tests start R with a
+        # trimmed environment (only HOME, PATH and LANG), so R_LIBS_USER also
+        # goes into ~/.Renviron, or those R processes would not see the
+        # packages. install.packages only warns about a package it cannot
+        # install, so the last call fails the step instead of letting the
+        # tests skip.
+        run: |
+          echo "R_LIBS_USER=$R_LIBS_USER" >> ~/.Renviron
+          Rscript -e 'pkgs <- c("dplyr", "httr2", "janitor", "jsonlite", "purrr", "readr", "rvest", "stringi", "stringr", "tibble", "tidyr", "xml2"); install.packages(pkgs); stopifnot(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))'
+      - name: Julia packages for the reproduce tests
+        if: matrix.python-version == '3.12'
+        run: julia -e 'using Pkg; Pkg.add(["Cascadia", "DataFrames", "Gumbo", "JSON3", "TidierData"]); using Cascadia, DataFrames, Gumbo, JSON3, TidierData'
       # pytest-xdist, one worker per core (4 on a standard runner). loadfile
       # keeps each test file on one worker, so a module-scoped fixture (the
       # built website, one search session for the discovery queries) is set
@@ -42,6 +70,7 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .

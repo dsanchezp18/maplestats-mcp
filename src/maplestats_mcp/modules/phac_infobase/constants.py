@@ -32,6 +32,8 @@ RATE_LIMIT_CAPACITY = 4.0
 
 CACHE_TTL_FILE_SECONDS = 6 * 60 * 60
 MAX_FILE_BYTES = 40 * 1024 * 1024
+# /api/<database> answers a one-line JSON object with updatedAt.
+MAX_META_BYTES = 1024 * 1024
 MAX_REDIRECTS = 3
 
 ROWS_DEFAULT = 100

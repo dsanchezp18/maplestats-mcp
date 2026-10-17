@@ -1,12 +1,25 @@
 # Dependabot version updates. The workflows pin actions and the Dockerfile
 # pins its base image by digest, so these entries are what keep those pins
-# current. Python dependencies are locked in uv.lock; Dependabot's `uv`
-# ecosystem updates pyproject.toml and the lockfile together.
+# current. Python dependencies are locked in uv.lock (and chat/uv.lock);
+# Dependabot's `uv` ecosystem updates pyproject.toml and the lockfile together.
 version: 2
 
 updates:
   - package-ecosystem: uv
     directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The chat demo is its own project with its own lock, and it holds the model
+  # API key, so it needs update pull requests more than the root project does.
+  - package-ecosystem: uv
+    directory: /chat
     schedule:
       interval: weekly
     open-pull-requests-limit: 5

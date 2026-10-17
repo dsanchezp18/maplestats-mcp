@@ -1,6 +1,7 @@
 """Constants for statistique.quebec.ca's detailed tables (checked 2026-09-26)."""
 
-SITE = "https://statistique.quebec.ca"
+HOST = "statistique.quebec.ca"
+SITE = f"https://{HOST}"
 SITEMAP_URL = SITE + "/sitemap.xml"
 TABLE_PATH = "/produit/tableau/"
 KEN = SITE + "/pls/ken/ken411_data_explt_v2."

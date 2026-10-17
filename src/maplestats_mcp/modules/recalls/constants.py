@@ -18,7 +18,8 @@ Confirmed live 2026-09-26:
   the site's RSS feeds carry only the last few items, so neither is used.
 """
 
-SITE = "https://recalls-rappels.canada.ca"
+HOST = "recalls-rappels.canada.ca"
+SITE = f"https://{HOST}"
 DUMP_URLS = {
     "en": SITE + "/sites/default/files/opendata-donneesouvertes/HCRSAMOpenData.json",
     "fr": SITE + "/sites/default/files/opendata-donneesouvertes/SCRSAMDonneesOuvertes.json",
@@ -55,6 +56,10 @@ RATE_LIMIT_CAPACITY = 4.0
 DUMP_CACHE_TTL_SECONDS = 6 * 60 * 60
 PAGE_CACHE_TTL_SECONDS = 6 * 60 * 60
 DUMP_TIMEOUT_SECONDS = 90.0
+# The dumps are 15.7 MB (English) and 20.8 MB (French); a recall page is a few
+# hundred KB. A body past these is refused as it streams in.
+DUMP_MAX_BYTES = 64 * 1024 * 1024
+PAGE_MAX_BYTES = 8 * 1024 * 1024
 
 LIMIT_DEFAULT = 25
 LIMIT_MAX = 200

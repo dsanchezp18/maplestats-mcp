@@ -64,8 +64,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import NamedTuple
 
-import httpx
-
 from maplestats_mcp.modules.bc_lobbyists import constants
 from maplestats_mcp.modules.bc_lobbyists.schemas import (
     CodeKind,
@@ -82,11 +80,11 @@ from maplestats_mcp.modules.bc_lobbyists.schemas import (
     OrlRegistrationList,
     OrlTopic,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.executor import run_parse
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.models import Provenance
@@ -578,43 +576,18 @@ def _zip_url(name: str) -> str:
 
 async def _download(name: str, lang: str = "en") -> bytes:
     url = _zip_url(name)
-    await _LIMITER.acquire()
-    try:
-        response = await get_raw(
-            constants.DOWNLOAD_URL,
-            params={"file": name},
-            timeout=constants.DOWNLOAD_TIMEOUT_SECONDS,
-        )
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status in (404, 410):
-            raise_localized(
-                NotFound,
-                f"bc_lobbyists: {url} is gone (HTTP {status}); the file moved.",
-                f"bc_lobbyists : {url} n'existe plus (HTTP {status}) ; le fichier a été déplacé.",
-                lang,
-            )
-        raise_localized(
-            UpstreamError,
-            f"bc_lobbyists: {url} returned HTTP {status}.",
-            f"bc_lobbyists : {url} a répondu par une erreur HTTP {status}.",
-            lang,
-        )
-    except httpx.HTTPError:
-        raise_localized(
-            UpstreamUnavailable,
-            f"bc_lobbyists: {url} did not respond in time.",
-            f"bc_lobbyists : {url} n'a pas répondu à temps.",
-            lang,
-        )
-    body = response.content
-    if len(body) > constants.MAX_ZIP_BYTES:
-        raise_localized(
-            UpstreamError,
-            f"bc_lobbyists: {url} is much larger than expected; it changed.",
-            f"bc_lobbyists : {url} est beaucoup plus volumineux que prévu ; le fichier a changé.",
-            lang,
-        )
+    # Streamed under MAX_ZIP_BYTES (a grown file is refused from its
+    # Content-Length or mid-stream, not after 150 MB are in memory) and
+    # limited to the registrar's own host on every redirect hop.
+    downloaded = await file_download.download(
+        url,
+        allow_host=lambda host: host == constants.HOST,
+        limiter_for=lambda _host: _LIMITER,
+        max_bytes=constants.MAX_ZIP_BYTES,
+        context="bc_lobbyists",
+        timeout=constants.DOWNLOAD_TIMEOUT_SECONDS,
+    )
+    body = downloaded.body
     # An expired session or maintenance page answers 200 with HTML, not a zip.
     if not body.startswith(b"PK"):
         raise_localized(

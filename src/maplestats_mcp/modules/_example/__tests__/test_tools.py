@@ -18,6 +18,21 @@ async def test_example_echo_rejects_empty_message():
         await example_echo("   ")
 
 
+async def test_example_echo_passes_lang_through_to_the_client():
+    # The template's `lang` must reach the client: errors and provenance follow it.
+    with pytest.raises(InvalidInput) as french:
+        await example_echo("   ", lang="fr")
+    assert "message ne doit pas être vide" in str(french.value)
+    assert str(french.value).startswith("Entrée invalide")
+    with pytest.raises(InvalidInput) as english:
+        await example_echo("   ", lang="en")
+    assert str(english.value) == "message must not be empty."
+    result = await example_echo("bonjour", lang="fr")
+    assert result.provenance.reproduce is not None
+    english_result = await example_echo("hello")
+    assert result.provenance.reproduce != english_result.provenance.reproduce
+
+
 def test_docstring_has_use_for_and_keywords():
     doc = example_echo.__doc__ or ""
     assert "Use for:" in doc

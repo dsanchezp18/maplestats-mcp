@@ -1,5 +1,6 @@
 """Constants for the Clean Growth Hub's federal cleantech investment page."""
 
+HOST = "ised-isde.canada.ca"
 PAGE_URLS = {
     "en": "https://ised-isde.canada.ca/site/clean-growth-hub/en/federal-investment-clean-technology-2016-2024",
     "fr": (

@@ -6,6 +6,7 @@ import io
 import re
 import struct
 import zipfile
+from collections.abc import AsyncIterator
 
 import httpx
 import pytest
@@ -200,4 +201,83 @@ async def test_zip64_without_locator_is_an_error(httpx_mock):
     body[-42:-38] = b"XXXX"
     httpx_mock.add_callback(_serve(bytes(body)), url=URL, is_reusable=True)
     with pytest.raises(UpstreamError, match="locator"):
+        await remote_zip.list_members(URL)
+
+
+class _Body:
+    """A response body that counts the chunks the reader actually pulled."""
+
+    def __init__(self, chunks: int, size: int = 16_384) -> None:
+        self.total = chunks
+        self.chunk = b"x" * size
+        self.pulled = 0
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        for _ in range(self.total):
+            self.pulled += 1
+            yield self.chunk
+
+
+async def test_host_that_ignores_range_is_refused_without_reading_the_body(httpx_mock):
+    # A host that stops honouring Range answers 200 with the whole file (the 3.9 GB
+    # Delta zip): the body must not be pulled before the status is checked.
+    body = _Body(chunks=1000)  # 16 MB on offer
+    httpx_mock.add_response(method="HEAD", url=URL, headers={"content-length": "4000000000"})
+    httpx_mock.add_callback(lambda request: httpx.Response(200, content=body), url=URL)
+    with pytest.raises(UpstreamError, match="does not support range requests"):
+        await remote_zip.list_members(URL)
+    assert body.pulled == 0
+
+
+async def test_206_body_longer_than_the_range_is_cut_and_refused(httpx_mock):
+    body = _Body(chunks=1000)
+    httpx_mock.add_callback(lambda request: httpx.Response(206, content=body), url=URL)
+    with pytest.raises(UpstreamError, match="more than"):
+        await remote_zip.fetch_range(URL, 0, 99)
+    assert body.pulled <= 2
+
+
+async def test_size_by_range_when_head_fails_and_host_ignores_range(httpx_mock):
+    body = _Body(chunks=1000)
+    httpx_mock.add_response(method="HEAD", url=URL, status_code=405)
+    httpx_mock.add_callback(lambda request: httpx.Response(200, content=body), url=URL)
+    with pytest.raises(UpstreamError, match="reports no size"):
+        await remote_zip.remote_size(URL)
+    assert body.pulled == 0
+
+
+async def test_range_error_status_is_still_an_upstream_error(httpx_mock):
+    httpx_mock.add_response(url=URL, status_code=403)
+    with pytest.raises(UpstreamError, match="HTTP 403"):
+        await remote_zip.fetch_range(URL, 0, 99)
+
+
+def _with_end_record(*, count: int, cd_size: int, cd_offset: int = 0) -> bytes:
+    eocd = struct.pack("<4sHHHHIIH", b"PK\x05\x06", 0, 0, count, count, cd_size, cd_offset, 0)
+    return b"\0" * 100 + eocd
+
+
+@pytest.mark.parametrize(
+    ("count", "cd_size"),
+    [
+        (1, 100_000_000),  # larger than the 64 MB cap
+        (2_000, 500),  # 2,000 entries cannot fit in 500 bytes
+    ],
+)
+async def test_implausible_central_directory_is_refused(httpx_mock, count, cd_size):
+    body = _with_end_record(count=count, cd_size=cd_size)
+    httpx_mock.add_callback(_serve(body), url=URL, is_reusable=True)
+    with pytest.raises(UpstreamError, match="central directory"):
+        await remote_zip.list_members(URL)
+
+
+async def test_zip64_directory_over_the_cap_is_refused(httpx_mock):
+    body = bytearray(_zip64_archive(claimed_usize=5_000_000_000))
+    # The ZIP64 end record sits 98 bytes before the end of the archive (56-byte
+    # record, 20-byte locator, 22-byte end record); its directory size is at +40.
+    record = len(body) - 98
+    assert body[record : record + 4] == b"PK\x06\x06"
+    body[record + 40 : record + 48] = struct.pack("<Q", 5_000_000_000_000)
+    httpx_mock.add_callback(_serve(bytes(body)), url=URL, is_reusable=True)
+    with pytest.raises(UpstreamError, match="central directory"):
         await remote_zip.list_members(URL)

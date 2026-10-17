@@ -143,6 +143,34 @@ async def test_cancelled_owner_does_not_strand_waiters():
     assert not cache_module._inflight
 
 
+async def test_waiter_cancelled_as_the_owner_is_cancelled_stays_cancelled():
+    started = asyncio.Event()
+    calls = 0
+
+    async def fetcher():
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            started.set()
+            await asyncio.Event().wait()
+        return "late"
+
+    owner = asyncio.create_task(cached_fetch("single-flight-both", ttl=60, fetcher=fetcher))
+    await started.wait()
+    waiter = asyncio.create_task(cached_fetch("single-flight-both", ttl=60, fetcher=fetcher))
+    await asyncio.sleep(0)
+    # Both cancellations land in one loop turn, owner first, so the waiter finds the
+    # shared fetch cancelled too. It must not mistake its own cancellation for it.
+    owner.cancel()
+    waiter.cancel()
+    done, _ = await asyncio.wait({owner, waiter}, timeout=2)
+    assert done == {owner, waiter}
+    assert owner.cancelled()
+    assert waiter.cancelled()
+    assert calls == 1
+    assert not cache_module._inflight
+
+
 async def test_recording_reads_through_the_cache():
     calls = 0
 

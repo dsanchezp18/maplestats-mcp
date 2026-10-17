@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import io
 import re
+from urllib.parse import unquote
 
 import pytest
 from openpyxl import Workbook
 
 from maplestats_mcp.modules.oeb import client, constants, pages, records, tools
+from maplestats_mcp.modules.oeb.schemas import OebFile
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
@@ -479,3 +481,78 @@ async def test_query_provenance_english_unchanged(httpx_mock):
         "First 5 matching rows. Blank values the distributors left were published as zeros "
         "in many RRR files (as the dataset pages state)."
     )
+
+
+def _release_files() -> list[OebFile]:
+    def page_file(name: str, release: str) -> pages.PageFile:
+        return pages.PageFile(
+            url=f"https://www.oeb.ca/{name}",
+            name=name,
+            caption=None,
+            release=release,
+            format="xml",
+        )
+
+    return client._files(
+        pages.DatasetPage(
+            slug="s",
+            title="t",
+            description="",
+            file_types=[],
+            update_frequency=None,
+            last_updated=None,
+            fr_path=None,
+            files=[
+                page_file("current-a.xml", "current"),
+                page_file("current-b.xml", "current"),
+                page_file("old-a.xml", "2023-04-30"),
+                page_file("old-b.xml", "2023-04-30"),
+            ],
+        )
+    )
+
+
+def test_select_file_position_indexes_the_release_filtered_pool():
+    files = _release_files()
+    # "1" with a release is that release's first file, not the page's first.
+    assert client._select_file(files, "1", "2023-04-30", "en").name == "old-a.xml"
+    assert client._select_file(files, "2", "2023-04-30", "en").name == "old-b.xml"
+    # Without a release the position still counts over the whole page.
+    assert client._select_file(files, "3", None, "en").name == "old-a.xml"
+
+
+def test_select_file_rejects_position_zero_and_past_the_end():
+    files = _release_files()
+    with pytest.raises(InvalidInput, match="start at 1"):
+        client._select_file(files, "0", None, "en")
+    with pytest.raises(InvalidInput, match="start at 1"):
+        client._select_file(files, "0", "2023-04-30", "en")
+    # Two files in the release: position 3 exists on the page but not there.
+    with pytest.raises(InvalidInput, match="positions 1 to 2"):
+        client._select_file(files, "3", "2023-04-30", "en")
+    with pytest.raises(InvalidInput, match="positions 1 à 2"):
+        client._select_file(files, "3", "2023-04-30", "fr")
+    with pytest.raises(InvalidInput, match="positions 1 to 4"):
+        client._select_file(files, "9", None, "en")
+
+
+async def test_query_release_with_file_position_reads_that_release(httpx_mock):
+    _mock_catalogue(httpx_mock)
+    httpx_mock.add_response(url=OLD_URL, content=ACCESS_XML)
+    result = await tools.oeb_query_dataset(REL_SLUG, file="1", release="2024-08-27")
+    assert result.file.release == "2024-08-27"
+    assert unquote(result.file.url) == unquote(OLD_URL)
+
+
+def test_to_cell_keeps_identifiers_as_strings():
+    # Zero padding and very long digit runs are identifiers, not amounts.
+    assert records.to_cell("000510") == "000510"
+    assert records.to_cell("-007") == "-007"
+    assert records.to_cell("00") == "00"
+    assert records.to_cell("12345678901234567890") == "12345678901234567890"
+    # Plain numbers still convert, including a lone zero and decimals.
+    assert records.to_cell("0") == 0
+    assert records.to_cell("510") == 510
+    assert records.to_cell("0.5") == 0.5
+    assert records.to_cell("-12") == -12
+    assert records.to_cell("123456789012345") == 123456789012345

@@ -134,6 +134,26 @@ def _source_value(record: dict[str, Any], market: str, source: str) -> float | N
     return None
 
 
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _cutoff_stamp() -> str:
+    """Now, floored to the start of the current cache window, as an ODSQL timestamp.
+
+    The `where` string is also the cache key, so a stamp to the second made
+    every call a cache miss (two upstream requests each) and left one key per
+    call behind. Flooring to the TTL window gives every call within it the
+    same string. It never admits an hour not yet reached, since it only moves
+    the cutoff earlier, and costs at most one window of freshness, which the
+    cache already allows.
+    """
+    window = constants.QUEBEC_CACHE_TTL_RECENT_SECONDS
+    seconds = int(_now().timestamp())
+    floored = datetime.fromtimestamp(seconds - seconds % window, UTC)
+    return floored.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _where(start: date | None, end: date | None, not_null: str | None, cutoff: bool) -> str | None:
     clauses = []
     if start:
@@ -142,7 +162,7 @@ def _where(start: date | None, end: date | None, not_null: str | None, cutoff: b
         clauses.append(f'date < "{(end + timedelta(days=1)).isoformat()}T00:00:00Z"')
     if cutoff:
         # Placeholder rows for hours not yet reached would otherwise read as zeros.
-        clauses.append(f'date <= "{datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}"')
+        clauses.append(f'date <= "{_cutoff_stamp()}"')
     if not_null:
         clauses.append(f"{not_null} is not null")
     return " and ".join(clauses) or None
