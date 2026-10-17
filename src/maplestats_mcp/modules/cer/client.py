@@ -107,7 +107,11 @@ async def _download(url: str, lang: str = "en") -> tuple[list[dict[str, str]], b
     csv_files.check_url(url, constants.ALLOWED_HOSTS, "cer")
     try:
         return await csv_files.fetch_rows(
-            url, limiter=_LIMITER, ttl=constants.CACHE_TTL_FILE_SECONDS, context="cer"
+            url,
+            limiter=_LIMITER,
+            ttl=constants.CACHE_TTL_FILE_SECONDS,
+            context="cer",
+            allowed_hosts=constants.ALLOWED_HOSTS,
         )
     except NotFound:
         if lang != "fr":

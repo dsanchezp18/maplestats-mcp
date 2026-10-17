@@ -459,3 +459,25 @@ async def test_french_input_and_lookup_errors(httpx_mock):
         await client.get_stop_departures("calgary", "ZZ", service_date="2026-10-06", lang="fr")
     with pytest.raises(NotFound, match="aucune ligne dont l'identifiant ou le numéro"):
         await client.get_route_summary("calgary", "nope", service_date="2026-10-06", lang="fr")
+
+
+async def test_french_stop_times_scan_errors_are_french(httpx_mock):
+    # _scan_stop_times used to default lang to "en", so a feed without
+    # stop_times.txt answered a French call in English.
+    feed = {k: v for k, v in FILES.items() if k != "stop_times.txt"}
+    _serve(httpx_mock, "calgary", feed)
+    with pytest.raises(UpstreamError, match="le flux ne contient pas stop_times.txt"):
+        await client.get_stop_departures(
+            "calgary", "S1", service_date="2026-10-06", start_time="08:00", lang="fr"
+        )
+    with pytest.raises(UpstreamError, match="le flux ne contient pas stop_times.txt"):
+        await client.get_route_summary("calgary", "10", service_date="2026-10-06", lang="fr")
+
+
+async def test_english_stop_times_scan_errors_stay_english(httpx_mock):
+    feed = {k: v for k, v in FILES.items() if k != "stop_times.txt"}
+    _serve(httpx_mock, "calgary", feed)
+    with pytest.raises(UpstreamError, match="the feed has no stop_times.txt"):
+        await client.get_stop_departures(
+            "calgary", "S1", service_date="2026-10-06", start_time="08:00"
+        )

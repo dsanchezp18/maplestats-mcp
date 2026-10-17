@@ -211,3 +211,43 @@ async def test_get_data_upstream_5xx_becomes_upstream_unavailable(httpx_mock):
         )
     with pytest.raises(UpstreamUnavailable):
         await client.get_data("canada_provinces_territories", ["2021A000235"], ["1"])
+
+
+@pytest.mark.parametrize(
+    "bad_code",
+    [
+        "2021A000235/DF_CD",
+        "2021A000235#frag",
+        "2021A000235?x=1",
+        "2021 A000235",
+        " ",
+        "",
+        "1.2",
+        "1+2",
+        "2021A000235\n",
+    ],
+)
+@pytest.mark.parametrize("which", ["geography", "characteristic"])
+async def test_get_data_rejects_a_code_that_would_reshape_the_url(httpx_mock, bad_code, which):
+    """No request is made (httpx_mock fails the test on an unexpected one)."""
+    geography, characteristic = ["2021A000235"], ["1"]
+    if which == "geography":
+        geography = ["2021A000235", bad_code]
+    else:
+        characteristic = [bad_code]
+    with pytest.raises(InvalidInput, match=f"{which}_codes entry"):
+        await client.get_data("canada_provinces_territories", geography, characteristic)
+
+
+async def test_get_data_code_error_follows_lang():
+    with pytest.raises(InvalidInput, match="l'élément 'a/b' de geography_codes"):
+        await client.get_data("canada_provinces_territories", ["a/b"], ["1"], lang="fr")
+
+
+async def test_get_data_accepts_hyphens_and_underscores_in_codes(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/data/{constants.AGENCY},DF_PR/A5.ab-1_c.1.1.1?format=jsondata",
+        json=_DATA_RESPONSE,
+    )
+    result = await client.get_data("canada_provinces_territories", ["ab-1_c"], ["1"])
+    assert len(result.values) == 1

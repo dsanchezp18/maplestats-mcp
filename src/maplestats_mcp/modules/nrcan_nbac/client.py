@@ -17,11 +17,13 @@ from typing import Any, NoReturn
 
 from maplestats_mcp.modules.nrcan_nbac import constants
 from maplestats_mcp.modules.nrcan_nbac.schemas import FireQueryResult, FireRecord
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.i18n import french_spacing
-from maplestats_mcp.shared.wfs import WfsConfig, get_features
+from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.wfs import WfsConfig, feature_url, get_features
 
 CONFIG = WfsConfig(
     source=constants.RATE_LIMIT_SOURCE,
@@ -72,6 +74,88 @@ def _fire_record(feature: dict[str, Any]) -> FireRecord:
         version=props.get("version") or None,
         geometry=feature.get("geometry"),
     )
+
+
+async def _geometry_features(request: dict[str, Any], lang: str) -> dict[str, Any]:
+    """GetFeature with geometry, read under GEOMETRY_RESPONSE_BYTES_MAX.
+
+    `get_features` buffers and parses the whole response, which for polygons
+    can be tens of MB, so this goes through the streaming reader: a declared
+    Content-Length above the cap is refused unread, and an undeclared one
+    (GeoServer's usual chunked answer) stops at the cap.
+    """
+    url = feature_url(CONFIG, constants.TYPE_NAME, **request)
+    limiter = get_limiter(
+        CONFIG.source, rate=CONFIG.rate_limit_per_second, capacity=CONFIG.rate_limit_capacity
+    )
+    try:
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: limiter,
+            max_bytes=constants.GEOMETRY_RESPONSE_BYTES_MAX,
+            context="nrcan_nbac",
+            timeout=120.0,
+        )
+    except UpstreamError as exc:
+        # The streaming reader calls every refused request "HTTP 400", and the
+        # service's own reason (a malformed CQL filter) is what the caller
+        # needs. Ask for one attribute-only row: it raises InvalidInput with
+        # that reason when the request itself is bad, and succeeds when the
+        # failure was the size or the service.
+        await get_features(
+            CONFIG,
+            constants.TYPE_NAME,
+            cql_filter=request["cql_filter"],
+            property_names="year",
+            sort_by=request["sort_by"],
+            count=1,
+        )
+        megabytes = constants.GEOMETRY_RESPONSE_BYTES_MAX // (1024 * 1024)
+        _raise(
+            UpstreamError,
+            f"nrcan_nbac: the request with geometry failed or is over the {megabytes} MB "
+            f"response limit. Ask for fewer fires (limit=1) or set include_geometry=false. "
+            f"Cause: {exc}",
+            f"nrcan_nbac : la requête avec géométrie a échoué ou dépasse la limite de "
+            f"{megabytes} Mo. Demandez moins de feux (limit=1) ou passez "
+            f"include_geometry=false. Cause : {exc}",
+            lang,
+        )
+    try:
+        body = json.loads(downloaded.body)
+    except ValueError:
+        body = None
+    if not isinstance(body, dict):
+        _raise(
+            UpstreamError,
+            "nrcan_nbac: the geometry response was not a GeoJSON object.",
+            "nrcan_nbac : la réponse avec géométrie n'est pas un objet GeoJSON.",
+            lang,
+        )
+    return body
+
+
+def _trim_geometry(body: dict[str, Any]) -> dict[str, Any]:
+    """The body with polygons past GEOMETRY_BYTES_MAX dropped, and how many.
+
+    Trimmed before the result is cached, so the cache holds the budgeted
+    result and not the full GeoJSON (five 2023 BC fires were 33 MB).
+    """
+    omitted = 0
+    used = 0
+    for feature in body.get("features") or []:
+        geometry = feature.get("geometry")
+        if geometry is None:
+            continue
+        size = len(json.dumps(geometry, separators=(",", ":")))
+        if used + size > constants.GEOMETRY_BYTES_MAX:
+            feature["geometry"] = None
+            omitted += 1
+        else:
+            used += size
+    body["geometry_omitted"] = omitted
+    return body
 
 
 async def latest_year() -> int | None:
@@ -131,34 +215,25 @@ async def query_fires(
 
     property_names = None if include_geometry else constants.ATTRIBUTE_FIELDS
 
+    request: dict[str, Any] = {
+        "cql_filter": cql_filter,
+        "property_names": property_names,
+        "srs_name": constants.DEFAULT_SRS,
+        "sort_by": sort_by,
+        "count": limit,
+        "start_index": offset,
+    }
+
     async def fetch() -> dict[str, Any]:
-        return await get_features(
-            CONFIG,
-            constants.TYPE_NAME,
-            cql_filter=cql_filter,
-            property_names=property_names,
-            srs_name=constants.DEFAULT_SRS,
-            sort_by=sort_by,
-            count=limit,
-            start_index=offset,
-        )
+        if not include_geometry:
+            return await get_features(CONFIG, constants.TYPE_NAME, **request)
+        return _trim_geometry(await _geometry_features(request, lang))
 
     cache_key = f"nrcan-nbac:query:{cql_filter}:{include_geometry}:{sort_by}:{limit}:{offset}"
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_QUERY_SECONDS, fetch)
     features = body.get("features") or []
     fires = [_fire_record(feature) for feature in features]
-    omitted = 0
-    if include_geometry:
-        used = 0
-        for fire in fires:
-            if fire.geometry is None:
-                continue
-            size = len(json.dumps(fire.geometry, separators=(",", ":")))
-            if used + size > constants.GEOMETRY_BYTES_MAX:
-                fire.geometry = None
-                omitted += 1
-            else:
-                used += size
+    omitted = int(body.get("geometry_omitted") or 0)
     total_matched = body.get("numberMatched") or body.get("totalFeatures") or len(fires)
     last_year = await latest_year()
     notes: list[str] = []

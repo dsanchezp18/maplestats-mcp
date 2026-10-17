@@ -42,7 +42,18 @@ per day in total (`CHAT_DAILY_LIMIT`), 1,000 characters per user message,
 the provider's dashboard; the in-memory counters reset on every restart.
 
 `CHAT_ALLOWED_ORIGINS` (comma-separated) lets another site call `/api/chat` from a
-browser; leave it unset when the page is served from this service.
+browser; leave it unset when the page is served from this service. `/api/chat`
+answers 415 to any POST whose `Content-Type` is not `application/json`: browsers
+send other types (such as `text/plain`) cross-site without a preflight, so a
+third-party page could otherwise spend the budget from its visitors' browsers.
+
+`CHAT_TRUST_PROXY_HEADERS` decides whether the per-address limit reads the
+caller's address from `X-Forwarded-For` (one hop from the right, as the MCP server
+does) or uses the socket address. It defaults to `1` when the `RENDER` variable is
+set, because Render's proxy always sits in front, and to `0` everywhere else: run
+directly, as in the section above, any caller could write that header and choose
+its own bucket. Set it to `1` yourself only behind a proxy you control that appends
+the real address.
 
 Conversation limits can be set with `CHAT_MAX_MESSAGE_CHARS`,
 `CHAT_MAX_ASSISTANT_CHARS`, `CHAT_MAX_CONVERSATION_CHARS` and `CHAT_MAX_BODY_BYTES`.

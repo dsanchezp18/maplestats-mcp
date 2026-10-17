@@ -149,6 +149,11 @@ CITY_SHADOWS: dict[str, tuple[str, ...]] = {
     "delta": ("delta file", "delta files", "fichier delta", "fichiers delta", "statcan delta"),
 }
 
+# City aliases that are also well-known foreign cities. When the question names a
+# foreign place as well ("London, England", "Victoria, Australia"), the name is
+# the foreign city's, so it must not attach a Canadian portal.
+SHARED_CITY_NAMES: frozenset[str] = frozenset({"london", "victoria"})
+
 CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "toronto": ("Toronto", (_ckan("toronto"), _arcgis("toronto_police"))),
     "montreal": ("Montreal", (_ckan("montreal"),)),

@@ -759,16 +759,23 @@ def _vector_data_set(
     A batch is one HTTP call but one envelope per vector: confirmed live
     2026-10-02, [41690973, 999999999] gives SUCCESS for the first and FAILED
     (responseStatusCode 3) for the second, so one bad id must not fail the rest.
-    Items come back in request order.
+    Items come back in request order, but the cached copy is shared by every
+    ordering of the same ids, so a failed envelope is labelled with the
+    `vectorId` it echoes (confirmed live for FAILED envelopes), and only falls
+    back to its position in this call's list when it carries none.
     """
     series: list[VectorSeries] = []
     failed: list[FailedVector] = []
     for position, item in enumerate(items):
-        vector_id = vector_ids[position] if position < len(vector_ids) else 0
         try:
             series.append(_series_from_json(_unwrap_one(item, method)))
         except (NotFound, UpstreamError) as exc:
             detail = item.get("object")
+            echoed = detail.get("vectorId") if isinstance(detail, dict) else None
+            if isinstance(echoed, int) and not isinstance(echoed, bool) and echoed > 0:
+                vector_id = echoed
+            else:
+                vector_id = vector_ids[position] if position < len(vector_ids) else 0
             code = detail.get("responseStatusCode") if isinstance(detail, dict) else None
             reason = (
                 f"no data for this vector (WDS responseStatusCode {code})"
@@ -1073,6 +1080,15 @@ async def _require_known_table(pid: int) -> None:
         )
 
 
+def _download_url(body: Any, method: str) -> str:
+    """The link inside a download method's envelope; a FAILED one raises.
+
+    Without the status check a FAILED envelope's error text was returned as
+    the download URL.
+    """
+    return str(_unwrap_one(body, method)) if isinstance(body, dict) else str(body)
+
+
 async def get_full_table_download_csv(
     product_id: int | str, lang: str = "en"
 ) -> FullTableDownloadLink:
@@ -1084,7 +1100,7 @@ async def get_full_table_download_csv(
         product_id=pid,
         format="csv",
         language=lang,
-        download_url=data.get("object", data) if isinstance(data, dict) else str(data),
+        download_url=_download_url(data, method),
         provenance=make_provenance(
             source="statcan-wds",
             url=f"{constants.BASE_URL}{method}/{pid}/{lang}",
@@ -1108,7 +1124,7 @@ async def get_full_table_download_sdmx(product_id: int | str) -> FullTableDownlo
         product_id=pid,
         format="sdmx",
         language="en+fr",
-        download_url=data.get("object", data) if isinstance(data, dict) else str(data),
+        download_url=_download_url(data, method),
         provenance=make_provenance(
             source="statcan-wds",
             url=f"{constants.BASE_URL}{method}/{pid}",
@@ -1134,8 +1150,7 @@ async def get_code_sets(
     cache_key = "wds:getCodeSets"
 
     async def fetch() -> dict[str, Any]:
-        data = await _get("getCodeSets")
-        return data["object"]
+        return _unwrap_one(await _get("getCodeSets"), "getCodeSets")
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_CODE_SETS_SECONDS, fetch)
     words = _fold(query).split() if query else []

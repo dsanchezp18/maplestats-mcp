@@ -28,11 +28,11 @@ from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.ised.clean_growth import constants
 from maplestats_mcp.modules.ised.clean_growth.schemas import FederalInvestment, Headline, ValueRow
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
-from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.i18n import french_spacing, reset_call_lang, set_call_lang
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -66,18 +66,30 @@ def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
 _SCALE = {"billion": 1e9, "milliard": 1e9, "milliards": 1e9, "million": 1e6, "millions": 1e6}
 
 
-def parse_amount(text: str) -> float | None:
-    """'0.20 billion' or '0,20 milliards' as dollars."""
-    match = re.search(r"([\d.,]+)\s*([a-z]+)", text.replace("\xa0", " ").lower())
+def _to_float(digits: str, lang: str) -> float:
+    """English groups thousands with commas ("1,200"); French writes the decimal as a
+    comma ("1,5") and groups with spaces, so "1,5" is 1.5 in French and 15 in English."""
+    return float(digits.replace(",", ".")) if lang == "fr" else float(digits.replace(",", ""))
+
+
+def _spaces(text: str, lang: str) -> str:
+    """The text with no-break spaces as plain ones; in French, a space between digit
+    groups ("1 200 milliards") is a thousands separator and is removed."""
+    plain = text.replace("\xa0", " ").replace("\u202f", " ")
+    return re.sub(r"(?<=\d) (?=\d{3}\b)", "", plain) if lang == "fr" else plain
+
+
+def parse_amount(text: str, lang: str) -> float | None:
+    """'0.20 billion' (en) or '0,20 milliards' (fr) as dollars; '1,200 million' is 1.2e9."""
+    match = re.search(r"([\d.,]+)\s*([a-z]+)", _spaces(text, lang).lower())
     if match is None:
         return None
-    number = float(match.group(1).replace(",", "."))
-    return round(number * _SCALE.get(match.group(2), 1.0), 2)
+    return round(_to_float(match.group(1), lang) * _SCALE.get(match.group(2), 1.0), 2)
 
 
-def parse_percent(text: str) -> float | None:
-    match = re.search(r"([\d.,]+)\s*%", text.replace("\xa0", " "))
-    return float(match.group(1).replace(",", ".")) if match else None
+def parse_percent(text: str, lang: str) -> float | None:
+    match = re.search(r"([\d.,]+)\s*%", _spaces(text, lang))
+    return _to_float(match.group(1), lang) if match else None
 
 
 def _clean(node: Any) -> str:
@@ -86,7 +98,8 @@ def _clean(node: Any) -> str:
     return " ".join(node.get_text(" ").split())
 
 
-def parse_tables(page: str) -> list[list[ValueRow]]:
+def parse_tables(page: str, lang: str) -> list[list[ValueRow]]:
+    """The page's tables; `lang` is the page's language, which decides what a comma means."""
     soup = BeautifulSoup(page, "html.parser")
     tables = []
     for table in soup.find_all("table"):
@@ -99,8 +112,8 @@ def parse_tables(page: str) -> list[list[ValueRow]]:
             rows.append(
                 ValueRow(
                     label=cells[0],
-                    value_cad=None if is_share else parse_amount(cells[1]),
-                    share_percent=parse_percent(cells[1]) if is_share else None,
+                    value_cad=None if is_share else parse_amount(cells[1], lang),
+                    share_percent=parse_percent(cells[1], lang) if is_share else None,
                 )
             )
         tables.append(rows)
@@ -158,32 +171,23 @@ async def _page(lang: str, msg_lang: str = "en") -> tuple[str, bool]:
     url = constants.PAGE_URLS[lang]
 
     async def fetch() -> str:
-        await _LIMITER.acquire()
+        # Streamed under MAX_PAGE_BYTES and kept to ISED's own host on every
+        # redirect hop (the older edition's URL redirects here). The shared
+        # download writes its errors in the call's language, so set it to msg_lang.
+        token = set_call_lang(msg_lang)
         try:
-            response = await get_raw(url, timeout=60.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            _raise(
-                UpstreamError,
-                f"ised_clean_growth: {url} returned HTTP {status}.",
-                f"ised_clean_growth : {url} a renvoyé HTTP {status}.",
-                msg_lang,
+            downloaded = await file_download.download(
+                url,
+                allow_host=lambda host: host == constants.HOST,
+                limiter_for=lambda _host: _LIMITER,
+                max_bytes=constants.MAX_PAGE_BYTES,
+                context="ised_clean_growth",
+                timeout=60.0,
             )
-        except httpx.HTTPError:
-            _raise(
-                UpstreamUnavailable,
-                f"ised_clean_growth: {url} did not respond in time.",
-                f"ised_clean_growth : {url} n'a pas répondu à temps.",
-                msg_lang,
-            )
-        if len(response.content) > constants.MAX_PAGE_BYTES:
-            _raise(
-                UpstreamError,
-                f"ised_clean_growth: {url} is larger than expected.",
-                f"ised_clean_growth : {url} est plus volumineuse que prévu.",
-                msg_lang,
-            )
-        return response.text
+        finally:
+            reset_call_lang(token)
+        headers = {"content-type": downloaded.content_type}
+        return httpx.Response(200, headers=headers, content=downloaded.body).text
 
     return await cached_fetch(f"ised-clean-growth:{lang}", constants.CACHE_TTL_SECONDS, fetch)
 
@@ -194,7 +198,7 @@ async def federal_investment(lang: str = "en") -> FederalInvestment:
     # The headline figures are read from the English prose (see module docstring).
     english, cached = await _page("en", lang)
     page, page_cached = (english, cached) if lang == "en" else await _page(lang, lang)
-    tables = parse_tables(page)
+    tables = parse_tables(page, lang)
     if len(tables) < 3 or not all(tables[:3]):
         _raise(
             UpstreamError,

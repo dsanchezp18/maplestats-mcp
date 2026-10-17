@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import re
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.isq import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _SITEMAP = (
     "<urlset>"
@@ -294,3 +295,88 @@ async def test_french_errors():
         await client.search_tables("  ", lang="fr")
     with pytest.raises(InvalidInput, match="n'est ni un identifiant de tableau"):
         await client.get_table("Pas un slug!", lang="fr")
+
+
+# The table argument may be a page URL: only the real host is accepted. A
+# string-prefix check passed both "statistique.quebec.ca.attacker.example" and
+# "statistique.quebec.ca@attacker.example" (whose host is the part after "@").
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://statistique.quebec.ca.attacker.example/produit/tableau/x",
+        "https://statistique.quebec.ca@attacker.example/produit/tableau/x",
+        "https://attacker.example/produit/tableau/x?https://statistique.quebec.ca",
+        "https://attacker.example\\@statistique.quebec.ca/produit/tableau/x",
+        "http://statistique.quebec.ca/produit/tableau/x",
+        "https://statistique.quebec.ca:8443/produit/tableau/x",
+        "https://statistique.quebec.ca/fr/document/autre",
+        "https://statistique.quebec.ca/?next=/produit/tableau/x",
+    ],
+)
+async def test_table_url_must_be_the_real_host(url):
+    with pytest.raises(InvalidInput, match="statistique.quebec.ca table page"):
+        await client.get_table(url)
+    with pytest.raises(InvalidInput, match="doit être une page de tableau"):
+        await client.get_table(url, lang="fr")
+
+
+async def test_table_url_off_site_sends_no_request(httpx_mock):
+    with pytest.raises(InvalidInput):
+        await client.get_table("https://statistique.quebec.ca@attacker.example/produit/tableau/x")
+    assert httpx_mock.get_requests() == []
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        f"{constants.SITE}/fr{constants.TABLE_PATH}4074",
+        f"{constants.SITE}/en{constants.TABLE_PATH}some-table-slug",
+        f"https://STATISTIQUE.QUEBEC.CA:443/fr{constants.TABLE_PATH}4074",
+    ],
+)
+def test_real_table_url_is_accepted(url):
+    assert client._page_url(url, "en") == url
+
+
+# A body is read only up to the cap: the first one declares no Content-Length
+# and never ends, so a reader that buffers the whole response would not return.
+
+
+class _EndlessBody(httpx.AsyncByteStream):
+    def __init__(self, chunk: int = 1024) -> None:
+        self.chunk = chunk
+        self.sent = 0
+
+    async def __aiter__(self):
+        while True:
+            self.sent += self.chunk
+            yield b"x" * self.chunk
+
+
+async def test_body_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_BYTES", 10_000)
+    body = _EndlessBody()
+    httpx_mock.add_response(url=constants.SITEMAP_URL, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 10,000 bytes"):
+        await client.search_tables("movie")
+    assert body.sent < 10_000 + 4 * body.chunk
+
+
+async def test_declared_size_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_BYTES", 10_000)
+    httpx_mock.add_response(url=constants.SITEMAP_URL, content=b"x" * 20_000)
+    with pytest.raises(UpstreamError, match="is 20,000 bytes"):
+        await client.search_tables("movie")
+
+
+async def test_off_site_redirect_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.SITEMAP_URL,
+        status_code=302,
+        headers={"location": "https://attacker.example/sitemap.xml"},
+    )
+    with pytest.raises(UpstreamError, match="attacker.example"):
+        await client.search_tables("movie")
+    assert len(httpx_mock.get_requests()) == 1

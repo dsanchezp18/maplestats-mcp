@@ -37,6 +37,7 @@ from maplestats_mcp.modules.reproduce.schemas import (
     Script,
 )
 from maplestats_mcp.modules.reproduce.spec import Spec
+from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import (
     DataLocked,
@@ -48,7 +49,15 @@ from maplestats_mcp.shared.errors import (
 from maplestats_mcp.shared.http import RecordedRequest, recording
 from maplestats_mcp.shared.i18n import pick
 
-_NOT_DATA = ("reproduce_code", "plan_query", "search_tools", "call_tool")
+# reproduce_workbook writes an .xlsx when it runs, so it must never be run here
+# to find a request to repeat.
+_NOT_DATA = (
+    "reproduce_code",
+    "reproduce_workbook",
+    "plan_query",
+    "search_tools",
+    "call_tool",
+)
 # Tools that return documents or text (articles, release notices,
 # regulations), not data: no script is written for them.
 _DOCUMENTS = (
@@ -124,9 +133,32 @@ async def _run_tool(
     return (payload if isinstance(payload, dict) else {}), list(requests)
 
 
+async def _require_registered(tool: str, lang: str) -> None:
+    """Refuse a name the server does not register.
+
+    _run_tool needs no such check (call_tool answers an unknown name with an
+    error), but a tool rebuilt from its arguments alone never runs, and a name
+    that only starts like a StatCan tool would otherwise get a script.
+    """
+    # Lazy import: the server imports this module's tools at startup.
+    from maplestats_mcp.server import mcp
+
+    if await mcp.get_tool(tool) is None:
+        raise InvalidInput(
+            _say(
+                lang,
+                f"{tool!r} is not a tool on this server; search_tools finds the name.",
+                f"{tool!r} n'est pas un outil de ce serveur ; search_tools trouve son nom.",
+            )
+        )
+
+
 async def _spec(tool: str, args: dict[str, Any], lang: str = "en") -> Spec:
+    # The PUMF builder's url check words its error through StatCan's call language.
+    use_lang(lang)
     builder = builders.builder_for(tool, args)
     if builder is not None and builders.argument_only(tool, args):
+        await _require_registered(tool, lang)
         return await builder(args, {})
     payload, requests = await _run_tool(tool, args, lang)
     if tool in _IP_HORIZONS:

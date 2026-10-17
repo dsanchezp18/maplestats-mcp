@@ -43,7 +43,12 @@ from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.upstream_text import clean_detail, network_error
+from maplestats_mcp.shared.upstream_text import (
+    clean_detail,
+    is_unavailable_status,
+    network_error,
+    unavailable_status_error,
+)
 
 
 @dataclass(frozen=True)
@@ -91,6 +96,10 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str 
             f"{context} : aucune correspondance ({detail}).",
             lang,
         )
+    if is_unavailable_status(status, detail):
+        # A rate limit that outlasted shared/http.py's retries is the portal being
+        # unavailable, not a mistake in the request (same rule as shared/arcgis.py).
+        raise unavailable_status_error(context, status, detail, lang) from exc
     if 400 <= status < 500:
         raise_localized(
             InvalidInput,
@@ -119,17 +128,7 @@ async def _get(
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        error = network_error(context, exc)
-        if lang == "fr":
-            french = (
-                f"{context} : le portail a répondu, mais pas en JSON (souvent une page d'erreur "
-                "ou de maintenance)."
-                if isinstance(error, UpstreamError)
-                else f"{context} : le portail n'a pas répondu ({type(exc).__name__}) malgré les "
-                "nouvelles tentatives. Réessayez sous peu."
-            )
-            raise_localized(type(error), str(error), french, lang)
-        raise error from exc
+        raise network_error(context, exc, lang) from exc
 
 
 def _search_where(query: str) -> str | None:

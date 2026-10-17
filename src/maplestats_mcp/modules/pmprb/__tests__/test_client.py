@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.pmprb import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _EN = "https://www.canada.ca/en/patented-medicine-prices-review/services"
 
@@ -243,3 +244,45 @@ async def test_french_provenance_and_errors(httpx_mock):
         await client.search_patented_medicines(status="approved", lang="fr")
     with pytest.raises(InvalidInput, match=r"^pmprb: limit must be 1 to"):
         await client.search_patented_medicines(limit=0)
+
+
+# A page is read only up to the cap. The first body declares no Content-Length
+# and never ends, so a reader that buffers it would not return.
+
+
+class _EndlessBody(httpx.AsyncByteStream):
+    def __init__(self, chunk: int = 1024) -> None:
+        self.chunk = chunk
+        self.sent = 0
+
+    async def __aiter__(self):
+        while True:
+            self.sent += self.chunk
+            yield b"x" * self.chunk
+
+
+async def test_page_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_PAGE_BYTES", 10_000)
+    body = _EndlessBody()
+    httpx_mock.add_response(url=constants.INDEX_PAGE["en"], stream=body)
+    with pytest.raises(UpstreamError, match="larger than 10,000 bytes"):
+        await client.list_report_tables()
+    assert body.sent < 10_000 + 4 * body.chunk
+
+
+async def test_page_declared_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_PAGE_BYTES", 10_000)
+    httpx_mock.add_response(url=constants.INDEX_PAGE["en"], content=b"x" * 20_000)
+    with pytest.raises(UpstreamError, match="is 20,000 bytes"):
+        await client.list_report_tables()
+
+
+async def test_page_redirect_off_canada_ca_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.INDEX_PAGE["en"],
+        status_code=302,
+        headers={"location": "https://attacker.example/annual-reports.html"},
+    )
+    with pytest.raises(UpstreamError, match="attacker.example"):
+        await client.list_report_tables()
+    assert len(httpx_mock.get_requests()) == 1

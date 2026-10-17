@@ -34,8 +34,6 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, NoReturn
 
-import httpx
-
 from maplestats_mcp.modules.pmra import constants
 from maplestats_mcp.modules.pmra.schemas import (
     ActiveIngredient,
@@ -45,10 +43,10 @@ from maplestats_mcp.modules.pmra.schemas import (
     ResidueLimit,
     ResidueLimitList,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -92,35 +90,20 @@ def _url(kind: str, lang: str, key: str = "") -> str:
     return url + "?lang=fr" if lang == "fr" else url
 
 
-async def _get(url: str, lang: str = "en") -> bytes:
-    await _LIMITER.acquire()
-    try:
-        response = await get_raw(url, timeout=180.0)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status == 404:
-            _raise(NotFound, f"pmra: no record at {url}.", f"pmra : aucune fiche à {url}.", lang)
-        _raise(
-            UpstreamError,
-            f"pmra: {url} returned HTTP {status}.",
-            f"pmra : {url} a renvoyé HTTP {status}.",
-            lang,
-        )
-    except httpx.HTTPError:
-        _raise(
-            UpstreamUnavailable,
-            f"pmra: {url} did not respond in time.",
-            f"pmra : {url} n'a pas répondu à temps.",
-            lang,
-        )
-    if len(response.content) > constants.MAX_EXTRACT_BYTES:
-        _raise(
-            UpstreamError,
-            f"pmra: {url} is much larger than expected; it changed.",
-            f"pmra : {url} est beaucoup plus volumineux que prévu ; il a changé.",
-            lang,
-        )
-    return response.content
+async def _get(url: str) -> bytes:
+    # Streamed under the cap: a declared Content-Length above it is refused
+    # before the body is read, an undeclared one stops at the cap, and every
+    # redirect hop must stay on the registry's host. Errors are typed by the
+    # shared reader and follow the running call's `lang`.
+    downloaded = await file_download.download(
+        url,
+        allow_host=lambda host: host == constants.HOST,
+        limiter_for=lambda _host: _LIMITER,
+        max_bytes=constants.MAX_EXTRACT_BYTES,
+        context="pmra",
+        timeout=180.0,
+    )
+    return downloaded.body
 
 
 def parse_extract(body: bytes, columns: int, what: str, lang: str = "en") -> list[list[str]]:
@@ -176,7 +159,7 @@ def to_product(cells: tuple[str, ...] | list[str], lang: str) -> PesticideProduc
 async def _products(lang: str) -> tuple[list[_Product], bool]:
     async def fetch() -> list[_Product]:
         rows = parse_extract(
-            await _get(_url("product", lang), lang), constants.PRODUCT_COLUMNS, "product", lang
+            await _get(_url("product", lang)), constants.PRODUCT_COLUMNS, "product", lang
         )
         if len(rows) < 1000:
             _raise(
@@ -301,7 +284,7 @@ async def search_products(
 async def _ingredients(lang: str = "en") -> tuple[dict[str, list[str]], bool]:
     async def fetch() -> dict[str, list[str]]:
         rows = parse_extract(
-            await _get(_url("ingredient", "en"), lang),
+            await _get(_url("ingredient", "en")),
             constants.INGREDIENT_COLUMNS,
             "ingredient",
             lang,
@@ -316,7 +299,7 @@ async def _mrls(lang: str, msg_lang: str | None = None) -> tuple[list[list[str]]
     say = msg_lang or lang
 
     async def fetch() -> list[list[str]]:
-        rows = parse_extract(await _get(_url("mrl", lang), say), constants.MRL_COLUMNS, "mrl", say)
+        rows = parse_extract(await _get(_url("mrl", lang)), constants.MRL_COLUMNS, "mrl", say)
         if len(rows) < 1000:
             _raise(
                 UpstreamError,
@@ -340,7 +323,7 @@ async def get_product(registration_number: str, *, lang: str = "en") -> Pesticid
     if not _REGISTRATION.match(number):
         _raise(InvalidInput, _DIGITS_EN, _DIGITS_FR, lang)
     url = _url("product", lang, number)
-    rows = parse_extract(await _get(url, lang), constants.PRODUCT_COLUMNS, "product", lang)
+    rows = parse_extract(await _get(url), constants.PRODUCT_COLUMNS, "product", lang)
     if not rows:
         _raise(
             NotFound,

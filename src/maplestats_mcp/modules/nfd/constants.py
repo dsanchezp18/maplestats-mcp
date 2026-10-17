@@ -9,7 +9,11 @@ follows that redirect (see client._download).
 
 from __future__ import annotations
 
-BASE_URL = "http://nfdp.ccfm.org"
+HOST = "nfdp.ccfm.org"
+BASE_URL = f"http://{HOST}"
+# A download and every redirect hop must stay on these hosts, over http or https.
+ALLOWED_HOSTS = frozenset({HOST})
+MAX_REDIRECTS = 2
 PAGE_EN = f"{BASE_URL}/en/download.php"
 PAGE_FR = f"{BASE_URL}/fr/download.php"
 TERMS_URL = f"{BASE_URL}/en/terms.php"

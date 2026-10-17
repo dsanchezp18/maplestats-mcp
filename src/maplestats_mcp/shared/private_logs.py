@@ -13,6 +13,8 @@ _CALL_FAILURE_PREFIXES = (
     "Error rendering prompt",
 )
 
+_FASTMCP_LOGGERS = ("fastmcp.server.server", "fastmcp.prompts.function_prompt")
+
 
 class PrivateToolLogs(logging.Filter):
     """Clients receive the detailed error; logs keep only its exception type.
@@ -42,6 +44,12 @@ def configure_private_logs() -> None:
     """Apply to in-process, stdio and hosted servers, once per logger."""
     for name in ("httpx", "httpcore"):
         logging.getLogger(name).setLevel(logging.WARNING)
-    logger = logging.getLogger("fastmcp.server.server")
-    if not any(isinstance(f, PrivateToolLogs) for f in logger.filters):
-        logger.addFilter(PrivateToolLogs())
+    # A logger's filters only see records logged on that logger itself, never
+    # ones that propagate up from a child, so a filter on "fastmcp" would catch
+    # nothing. Name each module FastMCP 4.1 logs a failed call from: tool calls
+    # and resource reads from server.server, prompt renders (arguments in the
+    # traceback frames) from prompts.function_prompt.
+    for name in _FASTMCP_LOGGERS:
+        logger = logging.getLogger(name)
+        if not any(isinstance(f, PrivateToolLogs) for f in logger.filters):
+            logger.addFilter(PrivateToolLogs())

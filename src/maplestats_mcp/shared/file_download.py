@@ -43,6 +43,9 @@ from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 MAX_REDIRECTS = 4
 CACHE_BUDGET_BYTES = 96 * 1024 * 1024
+# An error answer is only inspected (the status, a Cloudflare challenge page), so
+# a server that streams a huge error body costs at most this much memory.
+ERROR_BODY_MAX_BYTES = 64 * 1024
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 
 _client = new_client(timeout=60.0, follow_redirects=False)
@@ -57,6 +60,32 @@ class Downloaded:
 
 HostCheck = Callable[[str], bool]
 LimiterFor = Callable[[str], TokenBucket]
+
+
+async def _read_error_answer(response: httpx.Response) -> httpx.Response:
+    """The same answer with at most ERROR_BODY_MAX_BYTES of its body read.
+
+    `response.aread()` would pull a whole error page into memory. The copy keeps
+    the status, headers and request (raise_for_status and the Cloudflare check
+    read those and the start of the body) and drops the encoding headers, since
+    aiter_bytes() already decoded what was read.
+    """
+    body = bytearray()
+    async for chunk in response.aiter_bytes():
+        body.extend(chunk)
+        if len(body) >= ERROR_BODY_MAX_BYTES:
+            break
+    headers = [
+        (name, value)
+        for name, value in response.headers.multi_items()
+        if name.lower() not in ("content-encoding", "content-length", "transfer-encoding")
+    ]
+    return httpx.Response(
+        response.status_code,
+        headers=headers,
+        content=bytes(body[:ERROR_BODY_MAX_BYTES]),
+        request=response.request,
+    )
 
 
 def _refuse(url: str, context: str) -> InvalidInput:
@@ -83,6 +112,32 @@ def check_url(url: str, allow_host: HostCheck, context: str) -> None:
         raise _refuse(url, context)
 
 
+class RedirectRefused(UpstreamError):
+    """A redirect hop left the allowed hosts or https; a module may map it (nrcan_minerals
+    turns the portal's 302-to-error-page into NotFound) without catching every upstream fault."""
+
+
+def check_redirect(origin: str, target: str, allow_host: HostCheck, context: str) -> None:
+    """The same rule as check_url for a redirect hop, raised as RedirectRefused (an UpstreamError).
+
+    The caller chose `origin`; the publisher chose `target`. A hop to a host this
+    reader does not follow (a new CDN, an error page on another domain) is the
+    upstream's doing, so it must not read as invalid input, which would send an
+    MCP client off to change its arguments.
+    """
+    parsed = urlparse(target)
+    if parsed.scheme != "https" or not parsed.hostname or not allow_host(parsed.hostname):
+        host = parsed.hostname or target
+        raise call_error(
+            RedirectRefused,
+            f"{context}: {origin} redirected to {host}, which this reader does not follow "
+            f"(only https links on the portal's data hosts). Open {target} in a browser.",
+            f"{context} : {origin} a redirigé vers {host}, que ce lecteur ne suit pas "
+            f"(seuls les liens https vers les hôtes de données du portail). "
+            f"Ouvrez {target} dans un navigateur.",
+        )
+
+
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
@@ -98,9 +153,13 @@ async def _fetch_chain(
     timeout: float,
     context: str,
 ) -> Downloaded:
+    # The first URL is the caller's (InvalidInput if refused); every hop after it
+    # is the publisher's (UpstreamError if refused).
+    check_url(url, allow_host, context)
     current = url
     for _ in range(MAX_REDIRECTS + 1):
-        check_url(current, allow_host, context)
+        if current != url:
+            check_redirect(url, current, allow_host, context)
         await limiter_for(urlparse(current).hostname or "").acquire()
         async with _client.stream("GET", current, timeout=timeout) as response:
             status = response.status_code
@@ -115,9 +174,9 @@ async def _fetch_chain(
                 current = urljoin(str(response.url), location)
                 continue
             if status >= 400:
-                await response.aread()
-                raise_if_cloudflare_challenge(response)
-                response.raise_for_status()
+                answer = await _read_error_answer(response)
+                raise_if_cloudflare_challenge(answer)
+                answer.raise_for_status()
             declared = response.headers.get("content-length", "")
             if declared.isdigit() and int(declared) > max_bytes:
                 raise call_error(

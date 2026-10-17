@@ -36,7 +36,7 @@ import httpx
 
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import api_get, new_client, request_headers
+from maplestats_mcp.shared.http import NotJsonResponse, api_get, new_client, request_headers
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -120,6 +120,10 @@ async def get_json(
     await _LIMITER.acquire()
     try:
         return await api_get(url, params=query, timeout=timeout)
+    except NotJsonResponse as exc:
+        # Before httpx.HTTPError below: it is a DecodingError, so the server
+        # answered and the fault is its body (an HTML error page), not the network.
+        raise UpstreamError(f"health-products.canada.ca did not return JSON for {path}.") from exc
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 404 and missing_ok:
@@ -143,6 +147,10 @@ async def get_json(
         raise UpstreamUnavailable(
             f"health-products.canada.ca could not be reached for {path} ({type(exc).__name__})."
         ) from exc
+    except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable):
+        # Typed errors api_get already raised (CloudflareChallenge is an
+        # UpstreamUnavailable): the ValueError clause below must not relabel them.
+        raise
     except ValueError as exc:
         raise UpstreamError(f"health-products.canada.ca sent invalid JSON for {path}.") from exc
 
@@ -260,6 +268,12 @@ async def stream_objects(
                 buffer = buffer[pos:]
             if buffer.strip(" \r\n\t,]"):
                 raise UpstreamError(f"health-products.canada.ca cut short its answer for {path}.")
+    except httpx.DecodingError as exc:
+        # Before httpx.HTTPError below: a body that will not decode (a corrupt
+        # gzip stream) means the server answered badly, not that the network failed.
+        raise UpstreamError(
+            f"health-products.canada.ca sent a body for {path} that could not be decoded."
+        ) from exc
     except httpx.TimeoutException as exc:
         raise UpstreamUnavailable(
             f"health-products.canada.ca did not finish sending {path} in time."

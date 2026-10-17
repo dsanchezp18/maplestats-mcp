@@ -5,12 +5,13 @@ from __future__ import annotations
 import io
 import re
 
+import httpx
 import pytest
 from openpyxl import Workbook
 
 from maplestats_mcp.modules.cihi import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 
 @pytest.fixture(autouse=True)
@@ -243,3 +244,62 @@ async def test_unknown_slug_in_both_libraries_is_not_found(httpx_mock):
         await client.get_indicator("nope-nope", lang="fr")
     with pytest.raises(InvalidInput, match="identifiant"):
         await client.get_indicator("Not a slug!", lang="fr")
+
+
+# A library page without indicator links (a redesign, or an error page served
+# with 200) is an upstream fault: [] was cached for 7 days and every search
+# then reported "0 matches".
+
+
+async def test_library_without_indicator_links_raises_and_is_not_cached(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.LIBRARY_URL}?page=0", text="<html><main><p>Maintenance</p></main></html>"
+    )
+    with pytest.raises(UpstreamError, match="lists no indicators"):
+        await client.search_indicators("stroke")
+    page = '<main><a href="/en/indicators/hospitalized-strokes">Hospitalized Strokes</a></main>'
+    httpx_mock.add_response(url=f"{constants.LIBRARY_URL}?page=0", text=page)
+    httpx_mock.add_response(url=f"{constants.LIBRARY_URL}?page=1", text=page)
+    result = await client.search_indicators("stroke")
+    assert [r.slug for r in result.indicators] == ["hospitalized-strokes"]
+
+
+async def test_french_library_without_indicator_links_raises(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.FR_LIBRARY_URL}?page=0", text="<html><main></main></html>"
+    )
+    with pytest.raises(UpstreamError, match="ne liste aucun indicateur"):
+        await client._library("fr")
+
+
+# The data workbook is read only up to the cap. The first body declares no
+# Content-Length and never ends, so a reader that buffers it would not return.
+
+
+class _EndlessBody(httpx.AsyncByteStream):
+    def __init__(self, chunk: int = 1024) -> None:
+        self.chunk = chunk
+        self.sent = 0
+
+    async def __aiter__(self):
+        while True:
+            self.sent += self.chunk
+            yield b"x" * self.chunk
+
+
+async def test_data_file_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 10_000)
+    body = _EndlessBody()
+    httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
+    httpx_mock.add_response(url=_EN_FILE, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 10,000 bytes"):
+        await client.get_indicator_data(_SLUG)
+    assert body.sent < 10_000 + 4 * body.chunk
+
+
+async def test_data_file_declared_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 10_000)
+    httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
+    httpx_mock.add_response(url=_EN_FILE, content=b"x" * 20_000)
+    with pytest.raises(UpstreamError, match="is 20,000 bytes"):
+        await client.get_indicator_data(_SLUG)

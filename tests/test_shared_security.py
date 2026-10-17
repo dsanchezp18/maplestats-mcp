@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any, cast
+
+import pytest
 
 from maplestats_mcp import config
 from maplestats_mcp.shared import security
@@ -216,11 +219,59 @@ def test_origin_patterns():
     assert origin_allowed("https://anything.example", ["*"])
 
 
+def test_subdomain_wildcard_matches_an_origin_with_a_port():
+    allowed = ["https://*.dev.example"]
+    assert origin_allowed("https://app.dev.example", allowed)
+    assert origin_allowed("https://app.dev.example:3000", allowed)
+    assert origin_allowed("https://APP.dev.example:443/", allowed)
+    assert not origin_allowed("https://dev.example:3000", allowed)
+    assert not origin_allowed("https://app.dev.example:30x0", allowed)
+    assert not origin_allowed("https://app.dev.example.evil.example:3000", allowed)
+    assert not origin_allowed("http://app.dev.example:3000", allowed)
+    # A port written into the entry itself still has to match exactly.
+    pinned = ["https://*.dev.example:8443"]
+    assert origin_allowed("https://app.dev.example:8443", pinned)
+    assert not origin_allowed("https://app.dev.example:9000", pinned)
+    assert not origin_allowed("https://app.dev.example", pinned)
+
+
 def test_allowed_origins_env(monkeypatch):
     monkeypatch.delenv("MAPLE_ALLOWED_ORIGINS", raising=False)
     assert config.get_allowed_origins() == config.DEFAULT_ALLOWED_ORIGINS
     monkeypatch.setenv("MAPLE_ALLOWED_ORIGINS", " https://*.office.com , https://a.example ")
     assert config.get_allowed_origins() == ("https://*.office.com", "https://a.example")
+
+
+def test_hosted_app_refuses_require_auth_without_a_token(monkeypatch):
+    from maplestats_mcp.asgi import build_asgi_app
+
+    # `uvicorn maplestats_mcp.asgi:app` imports this module and never runs
+    # __main__.main(), so the refusal has to happen while the app is built.
+    monkeypatch.setenv("MAPLE_REQUIRE_AUTH", "1")
+    monkeypatch.delenv("MAPLE_AUTH_TOKEN", raising=False)
+    with pytest.raises(RuntimeError, match="MAPLE_REQUIRE_AUTH"):
+        build_asgi_app()
+    monkeypatch.setenv("MAPLE_AUTH_TOKEN", "secret")
+    assert build_asgi_app() is not None
+
+
+def test_external_bind_without_a_token_is_warned_about(monkeypatch, caplog):
+    from maplestats_mcp.asgi import check_hosting_config
+
+    monkeypatch.delenv("MAPLE_REQUIRE_AUTH", raising=False)
+    monkeypatch.delenv("MAPLE_AUTH_TOKEN", raising=False)
+    with caplog.at_level(logging.WARNING, logger="maplestats_mcp.asgi"):
+        monkeypatch.setenv("MAPLE_HOST", "0.0.0.0")
+        check_hosting_config()
+        assert "bound externally without MAPLE_AUTH_TOKEN" in caplog.text
+        caplog.clear()
+        # Quiet for a loopback bind, and for an external one that has a token.
+        monkeypatch.setenv("MAPLE_HOST", "127.0.0.1")
+        check_hosting_config()
+        monkeypatch.setenv("MAPLE_HOST", "0.0.0.0")
+        monkeypatch.setenv("MAPLE_AUTH_TOKEN", "secret")
+        check_hosting_config()
+        assert caplog.text == ""
 
 
 def test_hosted_app_answers_preflight_and_rejects_foreign_origin():

@@ -8,11 +8,17 @@ from __future__ import annotations
 
 from datetime import date
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.aer import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 _SAMPLE_DAILY_TEXT = """                                        ALBERTA ENERGY REGULATOR
 
@@ -195,3 +201,51 @@ async def test_get_production_volumes_link_oil_prices_uses_prices_oil_path(httpx
     httpx_mock.add_response(url=url)
     result = await client.get_production_volumes_link("oil_prices")
     assert result.url == url
+
+
+# A non-2xx answer for the daily file used to be reported as "did not respond
+# in time" (UpstreamUnavailable): the raw client call skipped the shared retry
+# rules and the one handler caught HTTPStatusError with every network error.
+
+_MONDAY = constants.WELL_LICENCE_DAILY_URL.format(day_code="MON")
+
+
+async def test_daily_file_404_is_not_found(httpx_mock):
+    httpx_mock.add_response(url=_MONDAY, status_code=404)
+    with pytest.raises(NotFound, match=r"WELLSMON\.TXT.*HTTP 404"):
+        await client.get_well_licences_daily("monday")
+    assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_daily_file_404_in_french(httpx_mock):
+    httpx_mock.add_response(url=_MONDAY, status_code=404)
+    with pytest.raises(NotFound, match="aucun fichier quotidien"):
+        await client.get_well_licences_daily("monday", lang="fr")
+
+
+async def test_daily_file_403_is_an_upstream_error(httpx_mock):
+    httpx_mock.add_response(url=_MONDAY, status_code=403)
+    with pytest.raises(UpstreamError, match="returned HTTP 403"):
+        await client.get_well_licences_daily("monday")
+
+
+async def test_daily_file_5xx_is_retried_then_an_upstream_error(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_response(url=_MONDAY, status_code=503)
+    with pytest.raises(UpstreamError, match="returned HTTP 503"):
+        await client.get_well_licences_daily("monday")
+    assert len(httpx_mock.get_requests()) == 3
+
+
+async def test_daily_file_recovers_after_a_transient_5xx(httpx_mock):
+    httpx_mock.add_response(url=_MONDAY, status_code=502)
+    httpx_mock.add_response(url=_MONDAY, text=_SAMPLE_DAILY_TEXT)
+    result = await client.get_well_licences_daily("monday")
+    assert "FISHER" in result.raw_text
+
+
+async def test_daily_file_network_error_is_unavailable(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"), url=_MONDAY)
+    with pytest.raises(UpstreamUnavailable, match="did not respond in time"):
+        await client.get_well_licences_daily("monday")

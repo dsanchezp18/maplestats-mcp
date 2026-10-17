@@ -26,6 +26,7 @@ from maplestats_mcp.modules.nl_stats.schemas import (
     SheetInfo,
     TopicInfo,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -72,11 +73,20 @@ def _title_for(link: Tag) -> str:
     return title
 
 
-def parse_topic_page(html: str, topic: str) -> list[FileEntry]:
+def parse_topic_page(html: str, topic: str, lang: Lang = "en") -> list[FileEntry]:
     soup = BeautifulSoup(html, "html.parser")
     container = soup.find(id="ContentPlaceHolder1_links")
     if container is None:
-        return []
+        # A redesigned page or an error page served with 200 has no link list;
+        # an empty list would be cached for hours as "this topic has no files".
+        raise_localized(
+            UpstreamError,
+            f"nl_stats: the {topic} topic page does not contain its file list "
+            "(#ContentPlaceHolder1_links); the page layout may have changed.",
+            f"nl_stats : la page du sujet {topic} ne contient pas sa liste de fichiers "
+            "(#ContentPlaceHolder1_links) ; la mise en page a peut-être changé.",
+            lang,
+        )
     files: list[FileEntry] = []
     seen: set[tuple[str, str]] = set()
     for link in container.find_all("a", href=True):
@@ -123,7 +133,7 @@ async def _topic_files(topic: str, lang: Lang = "en") -> tuple[list[FileEntry], 
                 f"nl_stats : {url} n'a pas répondu à temps.",
                 lang,
             )
-        return parse_topic_page(response.text, topic)
+        return parse_topic_page(response.text, topic, lang)
 
     return await cached_fetch(f"nl_stats:topic:{topic}", constants.CACHE_TTL_PAGE_SECONDS, fetch)
 
@@ -315,39 +325,18 @@ def _parse_xls(body: bytes) -> dict[str, list[list[str]]]:
 
 async def _workbook(url: str, lang: Lang = "en") -> tuple[dict[str, list[list[str]]], bool]:
     async def fetch() -> dict[str, list[list[str]]]:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=120.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            if status == 404:
-                raise_localized(
-                    NotFound,
-                    f"nl_stats: no file at {url}.",
-                    f"nl_stats : aucun fichier à {url}.",
-                    lang,
-                )
-            raise_localized(
-                UpstreamError,
-                f"nl_stats: {url} returned HTTP {status}.",
-                f"nl_stats : {url} a renvoyé le code HTTP {status}.",
-                lang,
-            )
-        except httpx.HTTPError:
-            raise_localized(
-                UpstreamUnavailable,
-                f"nl_stats: {url} did not respond in time.",
-                f"nl_stats : {url} n'a pas répondu à temps.",
-                lang,
-            )
-        body = response.content
-        if len(body) > constants.MAX_FILE_BYTES:
-            raise_localized(
-                UpstreamError,
-                f"nl_stats: {url} is larger than this tool reads.",
-                f"nl_stats : {url} dépasse la taille que cet outil peut lire.",
-                lang,
-            )
+        # Streamed under the cap: a declared Content-Length above it is refused
+        # before the body is read, an undeclared one stops at the cap, and
+        # every redirect hop must stay on the agency's host.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="nl_stats",
+            timeout=120.0,
+        )
+        body = downloaded.body
         if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
             raise_localized(
                 NotFound,

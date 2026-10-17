@@ -153,6 +153,10 @@ class Router:
             return httpx.Response(204)
         if self.coverage_status == 500:
             return httpx.Response(500, text="<title>500 Internal Server Error</title>")
+        if self.coverage_status in (406, 409):
+            # get_raw returns these two unraised, so _fetch must refuse them itself.
+            body = {"code": "NotAcceptable", "description": "Not acceptable"}
+            return httpx.Response(self.coverage_status, json=body)
         payload = self.coverage[cid]
         return httpx.Response(200, json=payload(params) if callable(payload) else payload)
 
@@ -451,3 +455,19 @@ def test_time_labels_null_values_is_a_typed_error():
     # reach the typed alignment error, not a TypeError from iterating None.
     with pytest.raises(UpstreamError, match="0 labels for 3 values"):
         client._time_labels({"values": None}, 3, [])
+
+
+@pytest.mark.parametrize("status", [406, 409])
+async def test_passthrough_statuses_are_upstream_errors_not_data(router, status):
+    router.coverage_status = status
+    with pytest.raises(UpstreamError, match=f"HTTP {status}"):
+        await client.get_coverage_data(CANDCS, lat=53.5, lon=-113.5, scenarios=["SSP245"])
+
+
+async def test_passthrough_status_error_is_french(router):
+    router.coverage_status = 409
+    with pytest.raises(UpstreamError, match="HTTP 409") as excinfo:
+        await client.get_coverage_data(
+            CANDCS, lat=53.5, lon=-113.5, scenarios=["SSP245"], lang="fr"
+        )
+    assert "la source a renvoyé HTTP 409" in str(excinfo.value)

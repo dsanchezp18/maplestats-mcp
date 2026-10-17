@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.drivebc import client, constants
@@ -241,3 +242,29 @@ async def test_french_not_found(httpx_mock):
     httpx_mock.add_response(url=EVENTS_RE, json=_page(EVENTS))
     with pytest.raises(NotFound, match="aucun événement DriveBC actif"):
         await client.get_event("NOPE-1", lang="fr")
+
+
+# httpx errors outside Timeout/Network/Decoding used to escape untyped.
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        httpx.RemoteProtocolError("peer closed connection without sending complete message"),
+        httpx.TooManyRedirects("Exceeded maximum allowed redirects."),
+    ],
+)
+async def test_other_http_errors_are_unavailable(httpx_mock, error):
+    httpx_mock.add_exception(error, url=EVENTS_RE, is_reusable=True)
+    with pytest.raises(UpstreamUnavailable, match=type(error).__name__):
+        await client.search_events()
+
+
+async def test_other_http_errors_are_unavailable_in_french(httpx_mock):
+    httpx_mock.add_exception(
+        httpx.TooManyRedirects("Exceeded maximum allowed redirects."),
+        url=EVENTS_RE,
+        is_reusable=True,
+    )
+    with pytest.raises(UpstreamUnavailable, match="n'a pas pu être lue"):
+        await client.search_events(lang="fr")

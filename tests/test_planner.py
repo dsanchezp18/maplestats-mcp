@@ -11,8 +11,18 @@ import pytest
 from maplestats_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
 from maplestats_mcp.modules.ckan.constants import PORTALS as CKAN_PORTALS
 from maplestats_mcp.modules.planner import client, topics_fr
-from maplestats_mcp.modules.planner.places import CITIES, PROVINCES
-from maplestats_mcp.modules.planner.topics import FALLBACK_STEPS, TOPICS
+from maplestats_mcp.modules.planner.places import (
+    CITIES,
+    CITY_SHADOWS,
+    PROVINCE_ALIASES,
+    PROVINCES,
+)
+from maplestats_mcp.modules.planner.topics import (
+    CROSS_BORDER_TERMS,
+    FALLBACK_STEPS,
+    FOREIGN_PLACES,
+    TOPICS,
+)
 from maplestats_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.errors import InvalidInput
@@ -229,3 +239,45 @@ def test_english_plan_unchanged_by_default():
     result = client.plan("rents in Montreal")
     assert result.places[0].place == "Montreal"
     assert result.guidance[0].startswith("Run the steps")
+
+
+def _every_term():
+    for topic in TOPICS:
+        groups = [topic.terms, topic.shadows, *(step.terms for step in topic.steps)]
+        for term in (t for group in groups for t in group):
+            yield topic.key, term
+    for term in (*FOREIGN_PLACES, *CROSS_BORDER_TERMS):
+        yield "places", term
+    for key in (*CITIES, *PROVINCES, *PROVINCE_ALIASES):
+        yield "place keys", key
+    for shadows in CITY_SHADOWS.values():
+        for term in shadows:
+            yield "city shadows", term
+
+
+def test_every_term_is_written_as_the_question_is_normalized():
+    # _normalize strips accents and turns "/" into a space before any term is tried,
+    # so a term kept with an accent or a slash ("minéraux critiques", "gst/hst") can
+    # never match; a trailing "*" marks a stem and is not part of the text.
+    unmatchable = [
+        (where, term)
+        for where, term in _every_term()
+        if client._normalize(term.rstrip("*")) != term.rstrip("*")
+    ]
+    assert not unmatchable, unmatchable
+
+
+def test_no_topic_lists_a_term_twice_or_in_two_plural_forms():
+    # Each term that matches is one hit and a topic's score is its hits, so a plural
+    # listed beside its singular ("pesticide", "pesticides") counted one word twice.
+    # A term's own pattern already takes an English or French plural on its last word.
+    repeated = []
+    for topic in TOPICS:
+        for term in topic.terms:
+            if topic.terms.count(term) > 1:
+                repeated.append((topic.key, term, "listed twice"))
+            for other in topic.terms:
+                found = client._pattern(term).search(other)
+                if other != term and found and found.group(0) == other:
+                    repeated.append((topic.key, term, other))
+    assert not repeated, repeated

@@ -15,7 +15,12 @@ import pytest
 
 from maplestats_mcp.modules.boc import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -382,3 +387,73 @@ def test_french_page_limits_use_no_break_thousands():
         "Seuls les 50 premiers groupes sur 2 538 sont renvoyés ; "
         "cherchez avec query ou augmentez limit (max. 1000)."
     )
+
+
+async def test_get_series_without_series_details_raises_upstream_error(httpx_mock):
+    # A changed payload must be a typed UpstreamError naming the field, not
+    # a bare KeyError (which bypasses the typed-error mapping).
+    url = f"{constants.BASE_URL}series/FXUSDCAD/json"
+    httpx_mock.add_response(url=url, json={"terms": {}, "message": "moved"})
+    with pytest.raises(UpstreamError, match="seriesDetails"):
+        await client.get_series("FXUSDCAD")
+    # The bad payload was not cached: the next call reaches Valet again.
+    httpx_mock.add_response(url=url, json={"seriesDetails": {"name": "FXUSDCAD", "label": "x"}})
+    assert (await client.get_series("FXUSDCAD")).name == "FXUSDCAD"
+
+
+async def test_get_series_details_without_name_raises_upstream_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}series/FXUSDCAD/json",
+        json={"seriesDetails": {"label": "USD/CAD"}},
+    )
+    with pytest.raises(UpstreamError, match="seriesDetails.name"):
+        await client.get_series("FXUSDCAD")
+
+
+async def test_get_group_without_group_details_raises_upstream_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}groups/FX_RATES_DAILY/json", json={"terms": {}}
+    )
+    with pytest.raises(UpstreamError, match="groupDetails"):
+        await client.get_group("FX_RATES_DAILY")
+
+
+async def test_list_series_without_container_raises_upstream_error(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.BASE_URL}lists/series/json", json={"terms": {}})
+    with pytest.raises(UpstreamError, match="'series'"):
+        await client.list_series()
+
+
+async def test_list_groups_with_non_object_container_raises_upstream_error(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.BASE_URL}lists/groups/json", json={"groups": []})
+    with pytest.raises(UpstreamError, match="'groups'"):
+        await client.list_groups()
+
+
+async def test_get_observations_row_without_date_raises_upstream_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}observations/FXUSDCAD/json?recent=1",
+        json={"observations": [{"FXUSDCAD": {"v": "1.39"}}]},
+    )
+    with pytest.raises(UpstreamError, match="'d'"):
+        await client.get_observations(["FXUSDCAD"], recent=1)
+
+
+async def test_get_group_observations_row_without_date_raises_upstream_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}observations/group/FX_RATES_DAILY/json?recent=1",
+        json={"observations": ["2026-09-15"]},
+    )
+    with pytest.raises(UpstreamError, match="'d'"):
+        await client.get_group_observations("FX_RATES_DAILY", recent=1)
+
+
+def test_observations_from_json_names_the_missing_date_field_in_french():
+    with pytest.raises(UpstreamError, match="La source amont a renvoy.*champ 'd' utilisable"):
+        client._observations_from_json([{"FXUSDCAD": {"v": "1"}}], "observations/X/json", "fr")
+
+
+async def test_get_series_missing_series_details_message_is_french(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.BASE_URL_FR}series/V39079/json", json={})
+    with pytest.raises(UpstreamError, match="seriesDetails"):
+        await client.get_series("V39079", lang="fr")

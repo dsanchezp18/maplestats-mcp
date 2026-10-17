@@ -165,10 +165,17 @@ async def cached_fetch(
         # shield: a waiter being cancelled must not cancel the fetch the
         # other waiters share. A fetch cancelled with its owner leaves no
         # result, so loop and either find one cached or start a new fetch.
+        task = asyncio.current_task()
+        cancel_requests = task.cancelling() if task else 0
         try:
             return await asyncio.shield(pending), False
         except asyncio.CancelledError:
-            if not pending.cancelled():
+            # The owner's fetch and this waiter can be cancelled in the same
+            # turn, and then `pending.cancelled()` alone cannot tell them
+            # apart: a new cancel request on this task means it was cancelled
+            # itself, whatever happened to the fetch.
+            cancelled_itself = task is not None and task.cancelling() > cancel_requests
+            if cancelled_itself or not pending.cancelled():
                 raise
 
     future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()

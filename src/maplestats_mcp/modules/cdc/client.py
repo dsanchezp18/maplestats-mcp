@@ -70,12 +70,12 @@ from maplestats_mcp.modules.cdc.schemas import (
     SupportPrice,
     SupportPriceResult,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.csv_files import Columns, fetch_rows
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -185,36 +185,18 @@ def _clean_text(node: Tag) -> str:
 
 async def _page(url: str, lang: str = "en") -> tuple[str, bool]:
     async def fetch() -> str:
-        await _LIMITER.acquire()
-        try:
-            response = await get_raw(url, timeout=60.0)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            if status == 404:
-                raise lang_error(
-                    NotFound, lang, f"cdc: no page at {url}.", f"cdc : aucune page à {url}."
-                ) from exc
-            raise lang_error(
-                UpstreamError,
-                lang,
-                f"cdc: {url} returned HTTP {status}.",
-                f"cdc : {url} a renvoyé HTTP {status}.",
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise lang_error(
-                UpstreamUnavailable,
-                lang,
-                f"cdc: {url} did not respond in time.",
-                f"cdc : {url} n'a pas répondu à temps.",
-            ) from exc
-        if len(response.content) > constants.MAX_PAGE_BYTES:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                f"cdc: {url} is larger than expected.",
-                f"cdc : {url} est plus volumineux que prévu.",
-            )
-        return response.text
+        # Streamed under MAX_PAGE_BYTES and kept to the CDC's own host on every
+        # redirect hop, so a grown page is refused before it fills memory.
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host in constants.PAGE_HOSTS,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_PAGE_BYTES,
+            context="cdc",
+            timeout=60.0,
+        )
+        headers = {"content-type": downloaded.content_type}
+        return httpx.Response(200, headers=headers, content=downloaded.body).text
 
     return await cached_fetch(f"cdc:page:{url}", constants.PAGE_TTL_SECONDS, fetch)
 
@@ -672,7 +654,13 @@ async def get_component_prices(
             if year >= current_year
             else constants.PAST_YEAR_TTL_SECONDS
         )
-        raw, cached = await fetch_rows(url, limiter=_LIMITER, ttl=ttl, context="cdc:component")
+        raw, cached = await fetch_rows(
+            url,
+            limiter=_LIMITER,
+            ttl=ttl,
+            context="cdc:component",
+            allowed_hosts=constants.CSV_HOSTS,
+        )
         return parse_component_rows(raw, lang), cached, url
 
     rows: list[ComponentPrice] = []
@@ -1267,6 +1255,7 @@ async def query_market_data(
         limiter=_LIMITER,
         ttl=constants.MARKET_DATA_TTL_SECONDS,
         context="cdc:market_data",
+        allowed_hosts=constants.CSV_HOSTS,
     )
     names = set(raw[0]) if raw else set()
     required = [

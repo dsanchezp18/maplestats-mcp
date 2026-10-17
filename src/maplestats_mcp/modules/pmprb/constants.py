@@ -1,6 +1,7 @@
 """Constants for the PMPRB module (checked live 2026-09-27)."""
 
-SITE = "https://www.canada.ca"
+HOST = "www.canada.ca"
+SITE = f"https://{HOST}"
 # The annual reports index lists every report and patented medicines list;
 # reports from 2017 back link to the retired pmprb-cepmb.gc.ca site.
 INDEX_PAGE = {

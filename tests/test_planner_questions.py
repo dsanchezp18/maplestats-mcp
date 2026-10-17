@@ -411,3 +411,150 @@ async def test_report_unrouted_modules():
         warnings.warn(f"modules not yet in any plan (pending): {pending}", stacklevel=1)
     failing = [m for m in unrouted if m not in pending]
     assert not failing, f"modules no plan reaches: {failing}"
+
+
+# 2026-10-16 review (M-8): planner term data -------------------------------------------
+
+
+def _topic_keys(question: str) -> set[str]:
+    return {t.topic for t in client.plan(question).topics}
+
+
+def _place_names(question: str) -> list[str]:
+    return [p.place for p in client.plan(question).places]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "rents or interest rates",
+        "Quebec or Ontario population",
+        "Employment or unemployment in Alberta",
+    ],
+)
+def test_the_conjunction_or_is_not_a_mineral(question: str):
+    assert "minerals" not in _topic_keys(question), question
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Gold production by province",
+        "Prix de l'or et production d'or",
+        "Le prix de l’or en 2024",
+        "Minéraux critiques au Canada",
+        "Production de mineraux critiques",
+    ],
+)
+def test_minerals_still_match_in_both_languages(question: str):
+    # "or" (gold) is now "l'or", and "minéraux critiques" was stored with its accent,
+    # which the normalized question never has.
+    assert "minerals" in _topic_keys(question), question
+
+
+@pytest.mark.parametrize(
+    ("question", "topic", "terms"),
+    [
+        ("Pesticides registered for canola", "pesticides", ["pesticide"]),
+        ("Which herbicides contain glyphosate?", "pesticides", ["herbicide", "glyphosate"]),
+        ("Where are the mines in Ontario?", "minerals", ["mine"]),
+        ("Annual precipitation in Alberta", "environment", ["precipitation"]),
+        ("Tax filers by province", "taxation", ["tax filer"]),
+        ("Registered charities in Manitoba", "taxation", ["registered charity"]),
+    ],
+)
+def test_a_plural_is_one_hit_not_two(question: str, topic: str, terms: list[str]):
+    # The singular's own pattern already matches the plural; a second entry for the
+    # plural counted one word twice and put its topic ahead of the others.
+    match = next(t for t in client.plan(question).topics if t.topic == topic)
+    assert match.matched_terms == terms
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "canola yield in Saskatchewan",
+        "Wheat yield per hectare",
+        "Crop yield per hectare in Alberta",
+    ],
+)
+def test_a_crop_yield_is_agriculture_not_rates(question: str):
+    assert client.plan(question).topics[0].topic == "agriculture", question
+
+
+def test_dollar_amounts_are_not_rates():
+    question = "How many dollars did the federal government spend on defence?"
+    assert "rates" not in _topic_keys(question)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Bond yield on 10-year Government of Canada bonds",
+        "Government of Canada yield curve",
+        "US dollar to Canadian dollar in 2024",
+        "The loonie against the greenback",
+        "Le dollar canadien en 2024",
+        "Cours du dollar américain",
+    ],
+)
+def test_rates_questions_still_reach_rates(question: str):
+    assert client.plan(question).topics[0].topic == "rates", question
+
+
+@pytest.mark.parametrize(
+    ("question", "term"),
+    [("Who is registered for the simplified GST/HST?", "gst hst"), ("TPS/TVH inscrits", "tps tvh")],
+)
+def test_terms_with_a_slash_match_after_normalization(question: str, term: str):
+    taxation = next(t for t in client.plan(question).topics if t.topic == "taxation")
+    assert taxation.matched_terms == [term]
+
+
+@pytest.mark.parametrize(
+    ("question", "country"),
+    [
+        ("London, England population", "england"),
+        ("Victoria, Australia unemployment rate", "australia"),
+        ("Rents in London, UK", "UK"),
+        ("Housing in Victoria, Australia", "australia"),
+    ],
+)
+def test_a_shared_city_name_beside_a_foreign_place_is_out_of_scope(question: str, country: str):
+    # "london" and "victoria" are Canadian aliases, so the foreign check was skipped
+    # and an Ontario or BC portal was attached.
+    result = client.plan(question)
+    assert result.out_of_scope and country in result.out_of_scope, question
+    assert not result.places and not result.topics and not result.fallback_steps
+
+
+@pytest.mark.parametrize(
+    ("question", "places"),
+    [
+        ("London, Ontario unemployment rate", ["London (Ontario)", "Ontario"]),
+        ("Victoria, BC rents", ["Victoria", "British Columbia"]),
+        ("Population of London", ["London (Ontario)"]),
+        ("Crime in Victoria", ["Victoria"]),
+        ("Paris, Ontario population", ["Ontario"]),
+    ],
+)
+def test_shared_city_names_stay_canadian_without_a_foreign_place(question: str, places: list[str]):
+    assert client.plan(question).out_of_scope is None, question
+    assert _place_names(question) == places
+
+
+def test_a_shared_city_name_beside_a_foreign_place_attaches_no_portal_when_in_scope():
+    # Crossing the border keeps the question in scope, but London is England's.
+    result = client.plan("Canadian exports to London, England")
+    assert result.out_of_scope is None
+    assert result.places == []
+    assert "economy" in {t.topic for t in result.topics}
+
+
+def test_dotted_province_codes_name_the_province():
+    # "N.B." and "B.C." are the same codes as "NB" and "BC"; lower-case "n.b." is not.
+    assert "New Brunswick" in _place_names("Housing starts in N.B. last year")
+    assert "New Brunswick" in _place_names("Housing starts in NB")
+    assert "New Brunswick" in _place_names("Housing starts in New Brunswick")
+    assert "New Brunswick" not in _place_names("n.b. housing starts")
+    assert "British Columbia" in _place_names("Rents in B.C. cities")

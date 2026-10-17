@@ -24,6 +24,7 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 import httpx
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.modules.phac_infobase import constants
 from maplestats_mcp.modules.phac_infobase.catalogue import BY_ID, DATASETS, TOPICS, Dataset
@@ -42,7 +43,13 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.http import (
+    is_retryable,
+    new_client,
+    raise_if_cloudflare_challenge,
+    request_headers,
+    wait_honouring_retry_after,
+)
 from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -53,6 +60,10 @@ _LIMITER = get_limiter(
 )
 _SOURCE = "phac-infobase"
 _REDIRECTS = frozenset({301, 302, 303, 307, 308})
+# Streamed by a client of its own because the Last-Modified header is part of the
+# answer (shared/file_download.py does not return it) and a missing file is a
+# redirect to /404.html that must not be followed.
+_client = new_client(timeout=120.0, follow_redirects=False)
 # French files write quarters "2025 T3" (trimestre); English ones "2025 Q3".
 _ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
 _QUARTER = re.compile(r"^(\d{4})\s*-?\s*[QT]([1-4])\b", re.IGNORECASE)
@@ -146,28 +157,84 @@ def _check_host(url: str, lang: str = "en") -> None:
         )
 
 
-async def _get(url: str, lang: str = "en") -> httpx.Response:
-    """GET with manual redirects: a missing file answers 302 to /404.html."""
+class _TooLarge(Exception):
+    """The file passed the byte cap while it was being read."""
+
+
+@dataclass(frozen=True)
+class _Hop:
+    """One answer: the body and Last-Modified, or the Location of a redirect."""
+
+    content: bytes
+    last_modified: str | None
+    redirect: str | None
+
+
+async def _error_answer(response: httpx.Response) -> httpx.Response:
+    """A copy of an error answer with at most 4 KB of its body, enough for the status
+    and Cloudflare checks without reading a whole error page into memory."""
+    head = b""
+    async for chunk in response.aiter_bytes():
+        head += chunk
+        if len(head) >= 4096:
+            break
+    keep = {
+        k: v for k, v in response.headers.items() if k.lower() in ("cf-mitigated", "retry-after")
+    }
+    return httpx.Response(
+        response.status_code, headers=keep, content=head[:4096], request=response.request
+    )
+
+
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_honouring_retry_after,
+    reraise=True,
+)
+async def _read(url: str, max_bytes: int) -> _Hop:
+    """GET one URL without following redirects; the body is refused past `max_bytes`."""
+    async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
+        location = response.headers.get("location")
+        if response.status_code in _REDIRECTS and location:
+            return _Hop(b"", None, str(response.url.join(location)))
+        if not response.is_success:
+            answer = await _error_answer(response)
+            raise_if_cloudflare_challenge(answer)
+            answer.raise_for_status()
+        declared = response.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > max_bytes:
+            raise _TooLarge
+        chunks: list[bytes] = []
+        total = 0
+        async for chunk in response.aiter_bytes():
+            total += len(chunk)
+            if total > max_bytes:
+                raise _TooLarge
+            chunks.append(chunk)
+        return _Hop(b"".join(chunks), response.headers.get("last-modified"), None)
+
+
+async def _get(url: str, lang: str = "en", max_bytes: int | None = None) -> _Hop:
+    """GET with manual redirects, every hop on an allowed host: a missing file answers
+    302 to /404.html. The body is streamed and refused past `max_bytes`
+    (constants.MAX_FILE_BYTES unless a smaller cap is given)."""
+    cap = constants.MAX_FILE_BYTES if max_bytes is None else max_bytes
     current = url
     for _ in range(constants.MAX_REDIRECTS + 1):
         _check_host(current, lang)
         await _LIMITER.acquire()
         try:
-            return await get_raw(current, timeout=120.0)
+            hop = await _read(current, cap)
+        except _TooLarge as exc:
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"phac_infobase: {url} is larger than this tool reads.",
+                f"phac_infobase : {url} dépasse la taille que cet outil lit.",
+            ) from exc
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            location = exc.response.headers.get("location")
-            if status in _REDIRECTS and location:
-                target = str(exc.response.url.join(location))
-                if urlparse(target).path == constants.NOT_FOUND_PAGE:
-                    raise lang_error(
-                        NotFound,
-                        lang,
-                        f"phac_infobase: no file at {url} (moved or removed).",
-                        f"phac_infobase : aucun fichier à {url} (déplacé ou retiré).",
-                    ) from exc
-                current = target
-                continue
             if status == 404:
                 raise lang_error(
                     NotFound,
@@ -188,6 +255,16 @@ async def _get(url: str, lang: str = "en") -> httpx.Response:
                 f"phac_infobase: {url} did not respond in time.",
                 f"phac_infobase : {url} n'a pas répondu à temps.",
             ) from exc
+        if hop.redirect is None:
+            return hop
+        if urlparse(hop.redirect).path == constants.NOT_FOUND_PAGE:
+            raise lang_error(
+                NotFound,
+                lang,
+                f"phac_infobase: no file at {url} (moved or removed).",
+                f"phac_infobase : aucun fichier à {url} (déplacé ou retiré).",
+            )
+        current = hop.redirect
     raise lang_error(
         UpstreamError,
         lang,
@@ -323,7 +400,7 @@ async def _api_updated_at(url: str) -> str | None:
     if len(parts) < 3:
         return None
     try:
-        response = await _get(f"{constants.API_URL}/{parts[2]}")
+        response = await _get(f"{constants.API_URL}/{parts[2]}", max_bytes=constants.MAX_META_BYTES)
         value = json.loads(response.content).get("updatedAt")
     except (NotFound, UpstreamError, UpstreamUnavailable, ValueError, AttributeError):
         return None
@@ -337,13 +414,6 @@ async def load(dataset: Dataset, lang: str) -> tuple[Table, bool, str, str]:
     async def fetch() -> Table:
         response = await _get(url, lang)
         body = response.content
-        if len(body) > constants.MAX_FILE_BYTES:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                f"phac_infobase: {url} is larger than this tool reads.",
-                f"phac_infobase : {url} dépasse la taille que cet outil lit.",
-            )
         if dataset.kind == "api":
             columns, rows = await run_parse(parse_api, body, url, lang)
             return Table(columns, rows, "json", await _api_updated_at(url))
@@ -355,7 +425,7 @@ async def load(dataset: Dataset, lang: str) -> tuple[Table, bool, str, str]:
         # The 20 MB survey files take about a second to parse; keep it off
         # the event loop so other requests are not stalled.
         columns, rows, used = await run_parse(parse)
-        return Table(columns, rows, used, response.headers.get("last-modified"))
+        return Table(columns, rows, used, response.last_modified)
 
     table, cached = await cached_fetch(
         f"phac_infobase:{url}#{member or ''}", constants.CACHE_TTL_FILE_SECONDS, fetch

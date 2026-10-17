@@ -319,3 +319,46 @@ async def test_french_errors_are_french():
         await client.locate("Banff", limit=0, lang="fr")
     with pytest.raises(InvalidInput, match="donnez une requête"):
         await client.search_names(lang="fr")
+
+
+# A bbox is checked before any request: a reversed or out-of-range box came
+# back as a 404 that was reported as "rejected a parameter".
+
+
+@pytest.mark.parametrize(
+    ("bbox", "message"),
+    [
+        ([1.0, 2.0], "four numbers in degrees"),
+        ([1.0, 2.0, 3.0, 4.0, 5.0], "four numbers in degrees"),
+        ([-115.0, "51.0", -114.0, 52.0], "four numbers in degrees"),
+        ([-115.0, True, -114.0, 52.0], "four numbers in degrees"),
+        ([-115.0, float("nan"), -114.0, 52.0], "four numbers in degrees"),
+        ([-114.0, 51.0, -115.0, 52.0], "reversed or empty"),
+        ([-115.0, 52.0, -114.0, 51.0], "reversed or empty"),
+        ([-115.0, 51.0, -115.0, 52.0], "reversed or empty"),
+        ([-190.0, 51.0, -114.0, 52.0], "out of range"),
+        ([-115.0, 51.0, 181.0, 52.0], "out of range"),
+        ([-115.0, -91.0, -114.0, 52.0], "out of range"),
+        ([-115.0, 51.0, -114.0, 90.5], "out of range"),
+    ],
+)
+async def test_bad_bbox_is_refused_before_any_request(httpx_mock, bbox, message):
+    with pytest.raises(InvalidInput, match=message):
+        await client.search_names(bbox=bbox)
+    assert httpx_mock.get_requests() == []
+
+
+async def test_bad_bbox_is_refused_in_french(httpx_mock):
+    with pytest.raises(InvalidInput, match="inversée ou vide"):
+        await client.search_names(bbox=[-114.0, 51.0, -115.0, 52.0], lang="fr")
+    with pytest.raises(InvalidInput, match="hors limites"):
+        await client.search_names(bbox=[-190.0, 51.0, -114.0, 52.0], lang="fr")
+    assert httpx_mock.get_requests() == []
+
+
+async def test_a_valid_bbox_is_sent_as_given(httpx_mock):
+    httpx_mock.add_response(url=_NAMES, json={"items": []})
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    await client.search_names(bbox=[-117.5, 50.6, -115.0, 52.6])
+    request = next(r for r in httpx_mock.get_requests() if "geonames.json" in str(r.url))
+    assert parse_qs(urlparse(str(request.url)).query)["bbox"] == ["-117.5,50.6,-115.0,52.6"]

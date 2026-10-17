@@ -87,4 +87,9 @@ class LayerQueryResult(BaseModel):
     limit: int
     offset: int
     cql_filter: str | None = None
+    geometry_omitted: int = Field(
+        default=0,
+        description="Rows returned without their geometry because of the geometry byte budget.",
+    )
+    note: str | None = None
     provenance: Provenance

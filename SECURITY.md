@@ -15,8 +15,10 @@ Please include:
 - what you found and which part is affected (the server, a tool, the
   hosted endpoint, or the website);
 - the steps or the exact tool call that shows it;
-- the version (`maplestats-mcp --version`, or the version on the website's
-  footer) and whether you ran it locally or used the hosted server.
+- the version (`maplestats-mcp --version`, or, if your release has no such
+  option, `uv run python -c "import maplestats_mcp; print(maplestats_mcp.__version__)"`;
+  the website's footer also shows a version) and whether you ran it locally
+  or used the hosted server.
 
 You can expect an acknowledgement within a few days. This is a one-person
 open source project, so there is no formal response-time guarantee, but a

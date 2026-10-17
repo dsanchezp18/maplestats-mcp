@@ -13,6 +13,9 @@ from dataclasses import dataclass
 
 DOMAIN = "www.elections.ca"
 SITE = f"https://{DOMAIN}"
+# The only host a results table download (and any redirect hop) may reach; the
+# tables answered 200 with no redirect on 2026-10-17.
+ALLOWED_HOSTS = frozenset({DOMAIN})
 
 
 @dataclass(frozen=True)

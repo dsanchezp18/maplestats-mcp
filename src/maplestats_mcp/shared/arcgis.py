@@ -79,10 +79,15 @@ import httpx
 
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import raise_localized
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.upstream_text import clean_detail, is_backend_outage, network_error
+from maplestats_mcp.shared.upstream_text import (
+    clean_detail,
+    is_unavailable_status,
+    network_error,
+    unavailable_status_error,
+)
 
 DOWNLOAD_FORMATS = ("csv", "shapefile", "geojson", "kml", "filegdb")
 # A Hub item id is 32 hex digits; a layer-level item adds "_<layer id>".
@@ -178,18 +183,11 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str 
             f"{context} : rien ne correspond ({detail}).",
             lang,
         )
-    if status == 429 or (400 <= status < 500 and is_backend_outage(detail)):
+    if is_unavailable_status(status, detail):
         # A rate limit that outlasted shared/http.py's retries, or a 4xx naming the
         # server's own database or pool, is the service being unavailable, not a
         # mistake in the request (same rule as shared/wfs.py).
-        raise_localized(
-            UpstreamUnavailable,
-            f"{context}: the service is temporarily unavailable (HTTP {status}: {detail}). "
-            "Try again shortly.",
-            f"{context} : le service est temporairement indisponible (HTTP {status} : "
-            f"{detail}). Réessayez sous peu.",
-            lang,
-        )
+        raise unavailable_status_error(context, status, detail, lang) from exc
     if 400 <= status < 500:
         raise_localized(
             InvalidInput,
@@ -205,25 +203,6 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str 
     )
 
 
-def _network_error_fr(context: str, exc: httpx.HTTPError) -> str:
-    """French text for upstream_text.network_error, which writes English only."""
-    if isinstance(exc, httpx.DecodingError):
-        start = clean_detail(getattr(exc, "body_start", ""), 120)
-        seen = "" if start == clean_detail("") else f" (début de la réponse : {start})"
-        return (
-            f"{context} : le service a répondu, mais pas en JSON{seen}; c'est souvent une "
-            "page d'erreur ou de maintenance en HTML."
-        )
-    kind = type(exc).__name__
-    if isinstance(exc, httpx.TimeoutException):
-        reason = f"n'a pas répondu à temps ({kind})"
-    else:
-        message = str(exc).strip()
-        detail = f" : {clean_detail(message, 120)}" if message else ", connexion interrompue"
-        reason = f"est injoignable ({kind}{detail})"
-    return f"{context} {reason}; la requête a déjà été relancée. Réessayez sous peu."
-
-
 async def _get(
     config: ArcGISHubConfig, context: str, url: str, params: dict[str, Any], lang: str = "en"
 ) -> Any:
@@ -234,8 +213,7 @@ async def _get(
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        error = network_error(context, exc)
-        raise_localized(type(error), str(error), _network_error_fr(context, exc), lang)
+        raise network_error(context, exc, lang) from exc
 
 
 def collection_url(config: ArcGISHubConfig) -> str:

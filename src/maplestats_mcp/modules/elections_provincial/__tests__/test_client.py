@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.elections_provincial import (
@@ -360,3 +361,56 @@ async def test_bc_year_missing_from_the_file_is_an_error(httpx_mock):
     httpx_mock.add_response(url=constants.BC_FILE_BY_VA, content=_bytes("bc_by_place.csv"))
     with pytest.raises(UpstreamError, match="2017"):
         await client.get_results("bc", "2017")
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_bc_oversized_file_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "BC_MAX_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=constants.BC_FILE_BY_VA, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.get_results("bc", "2020")
+    assert body.pulled <= 3
+
+
+async def test_redirect_to_another_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=QC_2022, status_code=302, headers={"Location": "https://evil.example/results.json"}
+    )
+    with pytest.raises(UpstreamError, match="evil.example"):
+        await client.get_results("qc")
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["donnees.electionsquebec.qc.ca"]
+
+
+def _bc_with_row(votes: str) -> bytes:
+    row = (
+        "2024GEABS0106,2024 Provincial General Election,2024,ABS,Abbotsford South,,,"
+        f'Clarion Hotel & Conference Centre,2969742,Advance voting,"Test, Tom",N,Test Party,{votes},'
+        "Valid,N,\r\n"
+    )
+    body = _bytes("bc_by_place.csv")
+    newline = b"\r\n" if b"\r\n" in body else b"\n"
+    return body.rstrip(b"\r\n") + newline + row.replace("\r\n", newline.decode()).encode()
+
+
+def test_bc_votes_with_a_thousands_comma_are_counted():
+    by_year = british_columbia.parse(_bc_with_row('"1,234"'))
+    district = next(d for d in by_year["2024"] if d.name == "Abbotsford South")
+    assert next(c for c in district.candidates if c.name == "Tom Test").votes == 1234
+
+
+async def test_bc_bad_votes_cell_names_the_file_and_year(httpx_mock):
+    httpx_mock.add_response(url=constants.BC_FILE_BY_PLACE, content=_bc_with_row("n/a"))
+    with pytest.raises(UpstreamError, match="could not read the BC results file.*for 2024"):
+        await client.get_results("bc", "2024")

@@ -20,6 +20,18 @@ DEFAULT_SORT_FIELD = "OBJECTID"
 
 ROWS_LIMIT_DEFAULT = 20
 ROWS_LIMIT_MAX = 1000
+# bcgw_query_layer with geometry: a polygon layer can hold megabytes per
+# feature, and 1000 rows of it would be returned to the model and cached.
+# With geometry at most this many rows are requested per call, the polygons
+# returned stop at GEOMETRY_BYTES_MAX (later ones come back without their
+# geometry, with a note), and the GeoJSON is read only up to
+# GEOMETRY_RESPONSE_BYTES_MAX (GeoServer streams it chunked with no
+# Content-Length, so the cap is enforced while reading). Parsed, 20 MB is on
+# the order of 100 MB of Python objects, which the hosted instance (512 MB)
+# can hold once. The same limits the NBAC module applies to its polygons.
+GEOMETRY_ROWS_MAX = 25
+GEOMETRY_BYTES_MAX = 2_000_000
+GEOMETRY_RESPONSE_BYTES_MAX = 20 * 1024 * 1024
 
 # Current-fire status changes during a fire season; short TTL so a caller
 # never gets a stale "Out of Control" fire that has since been contained.

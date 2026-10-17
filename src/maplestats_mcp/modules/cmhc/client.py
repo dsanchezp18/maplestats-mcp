@@ -386,7 +386,27 @@ def _extract_table_model(body: str, lang: str = "en") -> dict[str, Any]:
         ) from exc
 
 
-def _parse_value_cell(raw_value: str, raw_flag: str) -> TableCell:
+# Thousands separators a French export can use: space, no-break space, and the
+# narrow no-break space (U+202F) that French typography prescribes.
+_FRENCH_THOUSANDS_RE = re.compile(r"[ \u00a0\u202f]")
+
+
+def _parse_number(raw_value: str, lang: str) -> float:
+    """Parse a value cell's number, raising ValueError when it is not one.
+
+    English (confirmed live): a comma is a thousands separator ("1,013").
+    French: a comma is the decimal mark and a space or no-break space groups
+    thousands ("1 013,5", "1,5"), as in French Canadian typography. The
+    French export's number format has not been confirmed against a live
+    download yet; stripping every comma there would turn "1,5" into 15.0
+    without any error, so the French rule is the safer reading.
+    """
+    if lang == "fr":
+        return float(_FRENCH_THOUSANDS_RE.sub("", raw_value).replace(",", "."))
+    return float(raw_value.replace(",", ""))
+
+
+def _parse_value_cell(raw_value: str, raw_flag: str, lang: str = "en") -> TableCell:
     raw_value = raw_value.strip()
     raw_flag = raw_flag.strip()
     if raw_value in constants.SUPPRESSED_VALUE_TOKENS:
@@ -402,8 +422,9 @@ def _parse_value_cell(raw_value: str, raw_flag: str) -> TableCell:
         # Confirmed live: values >= 1,000 use a thousands-comma
         # separator inside the quoted CSV field (e.g. "1,013") - Python's
         # float() does not accept that, unlike the value's own literal
-        # meaning, so it is stripped before parsing.
-        return TableCell(value=float(raw_value.replace(",", "")), flag=raw_flag or None)
+        # meaning, so it is stripped before parsing (see _parse_number for
+        # the French reading).
+        return TableCell(value=_parse_number(raw_value, lang), flag=raw_flag or None)
     except ValueError:
         return TableCell(value=None, flag=raw_flag or raw_value)
 
@@ -492,7 +513,7 @@ def _parse_csv_export(
         for name, value_idx, flag_idx in column_specs:
             raw_value = raw_row[value_idx] if value_idx < len(raw_row) else ""
             raw_flag = raw_row[flag_idx] if flag_idx is not None and flag_idx < len(raw_row) else ""
-            values[name] = _parse_value_cell(raw_value, raw_flag)
+            values[name] = _parse_value_cell(raw_value, raw_flag, lang)
         rows.append(TableDataRow(period=period, values=values))
 
     return columns, rows, notes
@@ -511,7 +532,19 @@ async def list_categories(
 
     async def fetch() -> list[CategoryOption]:
         body = await _get_html(url, params, lang)
-        return _parse_categories(body)
+        found = _parse_categories(body)
+        if not found:
+            # Raised inside fetch so the empty page is never cached for 24 h.
+            _raise(
+                UpstreamError,
+                f"HMIP's category page for {geography_type} {geography_id!r} held no "
+                "category links (a[data-category-link]); the page layout may have changed.",
+                f"la page des catégories du PIMH pour {geography_type} {geography_id!r} ne "
+                "contenait aucun lien de catégorie (a[data-category-link]) ; la mise en page "
+                "a peut-être changé.",
+                lang,
+            )
+        return found
 
     categories, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_CATEGORIES_SECONDS, fetch
@@ -592,7 +625,19 @@ async def list_provinces(*, lang: str = "en") -> ProvinceList:
 
     async def fetch() -> list[ProvinceOption]:
         body = await _get_html(url, params, lang)
-        return _parse_provinces(body)
+        found = _parse_provinces(body)
+        if not found:
+            # Raised inside fetch so the empty page is never cached for 24 h
+            # (after which _check_geography would reject every province id).
+            _raise(
+                UpstreamError,
+                'HMIP\'s province list held no province links (a[data-type="Province"]); '
+                "the page layout may have changed.",
+                "la liste des provinces du PIMH ne contenait aucun lien de province "
+                '(a[data-type="Province"]) ; la mise en page a peut-être changé.',
+                lang,
+            )
+        return found
 
     provinces, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_PROVINCES_SECONDS, fetch

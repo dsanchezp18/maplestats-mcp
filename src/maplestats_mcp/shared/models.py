@@ -8,7 +8,6 @@ so every result documents where it came from and how complete it is.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -58,12 +57,3 @@ class Provenance(BaseModel):
         ),
         description="How to get retrieval and cleaning code for this result.",
     )
-
-
-class ErrorPayload(BaseModel):
-    """The shape carried by a raised error before it becomes an MCP isError result."""
-
-    code: str
-    message: str
-    lang: str = "en"
-    extra: dict[str, Any] = Field(default_factory=dict)

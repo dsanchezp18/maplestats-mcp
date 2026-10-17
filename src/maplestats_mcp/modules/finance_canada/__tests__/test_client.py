@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 
+import httpx
 import pytest
 from openpyxl import Workbook
 
@@ -318,3 +319,85 @@ async def test_monitor_french_provenance_and_errors(httpx_mock):
         await monitor.get_tables("juillet 2026", lang="fr")
     with pytest.raises(NotFound, match="aucune revue financière pour 2026-05"):
         await monitor.get_tables("2026-05", lang="fr")
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_workbook_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    httpx_mock.add_response(url=constants.FEED_URL, content=json.dumps(_FEED).encode())
+    monkeypatch.setattr(constants, "MAX_WORKBOOK_BYTES", 1_000)
+    url = "https://www.canada.ca/content/dam/fin/publications/frt-trf/2025/frt-trf-25-eng.xlsx"
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=url, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.list_frt_tables()
+    assert body.pulled <= 3
+
+
+async def test_redirected_workbook_is_not_found_not_an_excel_error(httpx_mock):
+    # Editions that are gone answer a redirect to an error page on canada.ca.
+    httpx_mock.add_response(url=constants.FEED_URL, content=json.dumps(_FEED).encode())
+    url = "https://www.canada.ca/content/dam/fin/publications/frt-trf/2025/frt-trf-25-eng.xlsx"
+    error_page = "https://www.canada.ca/en/error.html"
+    httpx_mock.add_response(url=url, status_code=302, headers={"Location": error_page})
+    httpx_mock.add_response(url=error_page, html="<html>Page not found</html>")
+    with pytest.raises(NotFound, match="redirected to"):
+        await client.list_frt_tables()
+
+
+async def test_redirect_to_another_host_is_refused(httpx_mock):
+    httpx_mock.add_response(url=constants.FEED_URL, content=json.dumps(_FEED).encode())
+    url = "https://www.canada.ca/content/dam/fin/publications/frt-trf/2025/frt-trf-25-eng.xlsx"
+    httpx_mock.add_response(
+        url=url, status_code=302, headers={"Location": "https://evil.example/x"}
+    )
+    with pytest.raises(UpstreamError, match="evil.example"):
+        await client.list_frt_tables()
+
+
+def test_one_number_parser_serves_the_workbooks_and_the_monitor():
+    assert monitor.parse_number is client.parse_number
+    # French: space thousands and a decimal comma. English: comma thousands.
+    assert client.parse_number("1 234,5", "fr") == 1234.5
+    assert client.parse_number("17\u00a0121", "fr") == 17121
+    assert client.parse_number("1,5", "fr") == 1.5
+    assert client.parse_number("1,500", "en") == 1500
+    assert client.parse_number("(7 711)", "fr") == -7711
+    assert client.parse_number("s.o.", "fr") is None
+
+
+def _french_workbook() -> bytes:
+    """A sheet in the French file's layout whose numbers are text with a decimal comma."""
+    wb = Workbook()
+    assert wb.active is not None
+    wb.active.title = "3 - Revenus"
+    for row in [
+        ["Tableau 3"],
+        ["Revenus"],
+        ["Année", "Impôt sur le revenu", "Total"],
+        [None, "(en millions de dollars)"],
+        ["2023-24", "1 234,5", "5,2"],
+        ["2024-25", "17 121", "-"],
+    ]:
+        wb.active.append(row)
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
+def test_french_workbook_text_numbers_use_the_decimal_comma():
+    (table,) = client.parse_workbook(_french_workbook(), "fr")
+    assert table.rows == [
+        {"Année": "2023-24", "Impôt sur le revenu": 1234.5, "Total": 5.2},
+        {"Année": "2024-25", "Impôt sur le revenu": 17121, "Total": None},
+    ]

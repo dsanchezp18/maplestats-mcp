@@ -15,3 +15,6 @@ data/
 
 # Local secrets (chat demo API key)
 .env
+
+# Review reports are working notes, never tracked.
+quality_reports/

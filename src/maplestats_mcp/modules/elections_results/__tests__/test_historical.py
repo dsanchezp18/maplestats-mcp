@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import io
 
+import httpx
 import pytest
 from openpyxl import Workbook
 
 from maplestats_mcp.modules.elections_results import historical
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
 _HEADER = (
     ["parliament_number", "election_date", "election_year", "parliament_duration", "sitting_days"]
@@ -116,9 +117,9 @@ def workbook(httpx_mock):
     httpx_mock.add_response(
         url=historical.DATASET_FILE_URL,
         status_code=303,
-        headers={"location": "https://storage.example/winer.xlsx"},
+        headers={"location": "https://olrc2.scholarsportal.info/winer.xlsx"},
     )
-    httpx_mock.add_response(url="https://storage.example/winer.xlsx", content=_workbook())
+    httpx_mock.add_response(url="https://olrc2.scholarsportal.info/winer.xlsx", content=_workbook())
 
 
 async def test_riding_rows_carry_votes_names_and_leading_party(workbook):
@@ -170,3 +171,39 @@ async def test_out_of_range_election_is_invalid_input():
     for bad in (0, 43, 45):
         with pytest.raises(InvalidInput):
             await historical.get_historical(election=bad)
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_workbook_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(historical, "MAX_FILE_BYTES", 1_000)
+    storage = "https://olrc2.scholarsportal.info/winer.xlsx"
+    httpx_mock.add_response(
+        url=historical.DATASET_FILE_URL, status_code=303, headers={"location": storage}
+    )
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=storage, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await historical.get_historical()
+    assert body.pulled <= 3
+
+
+async def test_redirect_to_an_unlisted_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=historical.DATASET_FILE_URL,
+        status_code=303,
+        headers={"location": "https://scholarsportal.info.evil.example/winer.xlsx"},
+    )
+    with pytest.raises(UpstreamError, match="evil.example"):
+        await historical.get_historical()
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["borealisdata.ca"]

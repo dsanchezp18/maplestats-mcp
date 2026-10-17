@@ -523,3 +523,18 @@ def test_french_portal_names():
     assert names["federal"] == "Portail du gouvernement ouvert (ouvert.canada.ca)"
     assert names["on"].startswith("Catalogue de données de l'Ontario")
     assert names["qc"].startswith("Données Québec")
+
+
+@pytest.mark.parametrize("answer", [None, {"unexpected": "shape"}, "oops"])
+async def test_roster_page_that_is_not_a_list_is_an_upstream_error(httpx_mock, answer):
+    # len(None) was a bare TypeError; a dict ended the loop as an empty roster
+    # that was then cached.
+    httpx_mock.add_response(json=_ok(answer))
+    with pytest.raises(UpstreamError, match="not a list of entries"):
+        await client.list_organizations("yt")
+
+
+async def test_group_roster_page_that_is_not_a_list_is_bilingual(httpx_mock):
+    httpx_mock.add_response(json=_ok({"unexpected": "shape"}))
+    with pytest.raises(UpstreamError, match="et non par une liste"):
+        await client.list_groups("regina", lang="fr")

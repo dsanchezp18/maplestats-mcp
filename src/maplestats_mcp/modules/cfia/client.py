@@ -94,6 +94,7 @@ from maplestats_mcp.modules.cfia.schemas import (
     ProvinceStatusSummary,
     ReportableDiseaseResult,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_error
 from maplestats_mcp.shared.errors import (
@@ -103,7 +104,6 @@ from maplestats_mcp.shared.errors import (
     UpstreamUnavailable,
 )
 from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import t
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -408,38 +408,41 @@ def parse_int(text: str) -> int | None:
 
 
 async def _fetch(url: str, lang: str = "en") -> str:
-    await _LIMITER.acquire()
+    """The page text, streamed under MAX_PAGE_BYTES and kept to the CFIA's own host.
+
+    A page past the cap is refused from its Content-Length, or mid-stream, as a
+    layout change: it is never read whole first.
+    """
     try:
-        response = await get_raw(url, timeout=60.0)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status in (404, 410):
-            # The site answers 410 Gone for pages it retired or moved.
-            _changed(url, f"HTTP {status}, the page moved")
-        raise_error(
-            UpstreamUnavailable if status >= 500 else UpstreamError,
-            "error.upstream_unavailable" if status >= 500 else "error.upstream_error",
-            lang,
-            detail=fr_or_en(
-                lang,
-                f"cfia: {url} returned HTTP {status}.",
-                f"cfia : {url} a renvoyé HTTP {status}.",
-            ),
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.HOST,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_PAGE_BYTES,
+            context="cfia",
+            timeout=60.0,
         )
-    except httpx.HTTPError as exc:
-        raise_error(
-            UpstreamUnavailable,
-            "error.upstream_unavailable",
-            lang,
-            detail=fr_or_en(
+    except NotFound:
+        # The site answers 410 Gone (or 404) for pages it retired or moved.
+        _changed(url, "HTTP 404 or 410, the page moved")
+    except UpstreamError as exc:
+        # download() reports every other bad status as UpstreamError; a 5xx
+        # is the site being down, which callers retry, so it stays "unavailable".
+        cause = exc.__cause__
+        if isinstance(cause, httpx.HTTPStatusError) and cause.response.status_code >= 500:
+            raise_error(
+                UpstreamUnavailable,
+                "error.upstream_unavailable",
                 lang,
-                f"cfia: {url} could not be reached ({type(exc).__name__}).",
-                f"cfia : {url} est injoignable ({type(exc).__name__}).",
-            ),
-        )
-    if len(response.content) > constants.MAX_PAGE_BYTES:
-        _changed(url, "the page is much larger than expected")
-    return response.text
+                detail=fr_or_en(
+                    lang,
+                    f"cfia: {url} returned HTTP {cause.response.status_code}.",
+                    f"cfia : {url} a renvoyé HTTP {cause.response.status_code}.",
+                ),
+            )
+        raise
+    headers = {"content-type": downloaded.content_type}
+    return httpx.Response(200, headers=headers, content=downloaded.body).text
 
 
 async def _parsed[T](

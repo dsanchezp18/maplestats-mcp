@@ -38,7 +38,6 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, NoReturn
 
-import httpx
 from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.nrcan_minerals import constants
@@ -47,10 +46,10 @@ from maplestats_mcp.modules.nrcan_minerals.schemas import (
     MineralRow,
     MineralSeries,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -175,40 +174,32 @@ def parse_csv(text: str, year: int, lang: str = "en") -> _Year:
     return _Year(year=year, title=title, rows=tuple(rows))
 
 
-async def _fetch(url: str, lang: str = "en") -> httpx.Response:
-    await _LIMITER.acquire()
+async def _fetch(url: str, lang: str = "en") -> bytes:
+    # Streamed under the cap: a declared Content-Length above it is refused
+    # before the body is read, an undeclared one stops at the cap, and every
+    # redirect hop must stay on the portal's host. Errors are typed by the
+    # shared reader and follow the running call's `lang`.
     try:
-        response = await get_raw(url, timeout=60.0)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status in (301, 302, 404, 410):
-            _raise(
-                NotFound,
-                f"nrcan_minerals: no file at {url} (HTTP {status}).",
-                f"nrcan_minerals : aucun fichier à {url} (HTTP {status}).",
-                lang,
-            )
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.HOST,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.MAX_FILE_BYTES,
+            context="nrcan_minerals",
+            timeout=60.0,
+        )
+    except file_download.RedirectRefused:
+        # The URL is built here from the host and a year, so the only way the
+        # reader refuses it is a redirect off the portal. A year (or a French
+        # name) with no file answers 302 to https://www.nrcan.gc.ca/error, a
+        # host this reader does not follow (checked live 2026-10-17).
         _raise(
-            UpstreamError,
-            f"nrcan_minerals: {url} returned HTTP {status}.",
-            f"nrcan_minerals : {url} a renvoyé HTTP {status}.",
+            NotFound,
+            f"nrcan_minerals: no file at {url} (it redirects off the portal).",
+            f"nrcan_minerals : aucun fichier à {url} (redirection hors du portail).",
             lang,
         )
-    except httpx.HTTPError:
-        _raise(
-            UpstreamUnavailable,
-            f"nrcan_minerals: {url} did not respond in time.",
-            f"nrcan_minerals : {url} n'a pas répondu à temps.",
-            lang,
-        )
-    if len(response.content) > constants.MAX_FILE_BYTES:
-        _raise(
-            UpstreamError,
-            f"nrcan_minerals: {url} is much larger than expected.",
-            f"nrcan_minerals : {url} est beaucoup plus volumineux que prévu.",
-            lang,
-        )
-    return response
+    return downloaded.body
 
 
 def parse_years(html: str) -> list[int]:
@@ -225,7 +216,9 @@ def parse_years(html: str) -> list[int]:
 
 async def _years(lang: str = "en") -> tuple[list[int], bool]:
     async def fetch() -> list[int]:
-        years = parse_years((await _fetch(constants.ANNUAL_PAGE, lang)).text)
+        years = parse_years(
+            (await _fetch(constants.ANNUAL_PAGE, lang)).decode("utf-8", errors="replace")
+        )
         if not years:
             _raise(
                 UpstreamError,
@@ -242,8 +235,7 @@ async def _year(year: int, lang: str = "en") -> tuple[_Year, bool]:
     url = constants.CSV_URL.format(year=year)
 
     async def fetch() -> _Year:
-        response = await _fetch(url, lang)
-        text = response.content.decode("utf-8-sig", errors="replace")
+        text = (await _fetch(url, lang)).decode("utf-8-sig", errors="replace")
         if text.lstrip().lower().startswith(("<!doctype", "<html")):
             _raise(
                 NotFound,

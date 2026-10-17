@@ -58,6 +58,21 @@ async def test_slow_parse_fails_at_the_budget_and_the_thread_stops(monkeypatch):
     assert stopped.wait(2)
 
 
+async def test_the_workers_own_deadline_gives_the_same_message(monkeypatch):
+    # check_deadline() in the worker can fire a moment before the awaiting side times
+    # out; the caller must read the same budget message either way.
+    monkeypatch.setattr(config, "get_parse_timeout_seconds", lambda: 30.0)
+
+    def worker_stops_itself() -> None:
+        raise executor.ParseBudgetExceeded("file parsing ran past its time budget")
+
+    with pytest.raises(executor.ParseBudgetExceeded) as caught:
+        await executor.run_parse(worker_stops_itself)
+    message = str(caught.value)
+    assert "worker_stops_itself) took longer than 30 s" in message
+    assert "ran past its time budget" not in message
+
+
 async def test_csv_scan_honours_the_budget(monkeypatch):
     monkeypatch.setattr(config, "get_parse_timeout_seconds", lambda: 0.05)
     real_check = executor.check_deadline

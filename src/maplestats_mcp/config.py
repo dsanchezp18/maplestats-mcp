@@ -6,9 +6,48 @@ as another MCP server without an env var collision.
 
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 from pathlib import Path
+
+logger = logging.getLogger("maplestats_mcp.config")
+
+# Getters run on hot paths (the cache reads its byte cap on every store), so a
+# bad value is reported once, not on every call.
+_warned: set[tuple[str, str]] = set()
+
+
+def _warn_unparsable(name: str, raw: str, default: float) -> None:
+    if (name, raw) not in _warned:
+        _warned.add((name, raw))
+        logger.warning(
+            "%s=%r is not a number; ignoring it and using the default %s.", name, raw, default
+        )
+
+
+def _env_int(name: str, default: int) -> int:
+    """An integer environment variable; unset or empty gives the default, junk warns."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        _warn_unparsable(name, raw, default)
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    """A numeric environment variable; unset or empty gives the default, junk warns."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        _warn_unparsable(name, raw, default)
+        return default
 
 
 def get_host() -> str:
@@ -16,18 +55,28 @@ def get_host() -> str:
 
 
 def get_port() -> int:
-    raw = os.environ.get("MAPLE_PORT", "8000")
+    """The HTTP port. An unparsable value raises: falling back to 8000 would bind
+    a port the operator did not ask for while health checks probe the one they set."""
+    raw = os.environ.get("MAPLE_PORT", "").strip()
+    if not raw:
+        return 8000
     try:
         return int(raw)
     except ValueError:
-        return 8000
+        raise ValueError(
+            f"MAPLE_PORT={raw!r} is not a port number; set it to an integer."
+        ) from None
 
 
 def get_transport() -> str:
     # Local MCP clients launch the package as a stdio subprocess. Hosted
     # deployments set MAPLE_TRANSPORT=http explicitly in their service config.
+    # Anything else raises: a misspelling such as "sdtio" must not start an HTTP
+    # server while the MCP client waits on stdin.
     raw = os.environ.get("MAPLE_TRANSPORT", "stdio").strip().lower()
-    return "stdio" if raw == "stdio" else "http"
+    if raw not in {"stdio", "http"}:
+        raise ValueError(f"MAPLE_TRANSPORT={raw!r} is not supported; use 'stdio' or 'http'.")
+    return raw
 
 
 def get_auth_token() -> str | None:
@@ -47,29 +96,17 @@ def get_require_auth() -> bool:
 
 
 def get_max_concurrent_requests() -> int:
-    raw = os.environ.get("MAPLE_MAX_CONCURRENT_REQUESTS", "8")
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 8
+    value = _env_int("MAPLE_MAX_CONCURRENT_REQUESTS", 8)
     return min(256, max(1, value))
 
 
 def get_rate_limit_requests() -> int:
-    raw = os.environ.get("MAPLE_RATE_LIMIT_REQUESTS", "120")
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 120
+    value = _env_int("MAPLE_RATE_LIMIT_REQUESTS", 120)
     return min(10_000, max(0, value))
 
 
 def get_rate_limit_window_seconds() -> float:
-    raw = os.environ.get("MAPLE_RATE_LIMIT_WINDOW_SECONDS", "60")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 60.0
+    value = _env_float("MAPLE_RATE_LIMIT_WINDOW_SECONDS", 60.0)
     return min(3600.0, max(1.0, value))
 
 
@@ -82,11 +119,7 @@ def get_cache_max_entries() -> int:
     resource id — without a cap, a long-running hosted instance's cache
     grows with usage diversity, not with time.
     """
-    raw = os.environ.get("MAPLE_CACHE_MAX_ENTRIES", "2000")
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 2000
+    value = _env_int("MAPLE_CACHE_MAX_ENTRIES", 2000)
     return max(1, value)
 
 
@@ -96,11 +129,7 @@ def get_cache_max_bytes() -> int:
     MAPLE_CACHE_MAX_MB, default 128: a quarter of a 512 MB free hosting
     instance, leaving room for the interpreter, parsing and file downloads.
     """
-    raw = os.environ.get("MAPLE_CACHE_MAX_MB", "128")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 128.0
+    value = _env_float("MAPLE_CACHE_MAX_MB", 128.0)
     return int(max(1.0, value) * 1024**2)
 
 
@@ -111,11 +140,7 @@ def get_tool_timeout_seconds() -> float:
     that never answers leaves some MCP clients waiting on a dead request
     and eventually dropping the connection.
     """
-    raw = os.environ.get("MAPLE_TOOL_TIMEOUT_SECONDS", "120")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 120.0
+    value = _env_float("MAPLE_TOOL_TIMEOUT_SECONDS", 120.0)
     return min(1800.0, max(5.0, value))
 
 
@@ -125,21 +150,13 @@ def get_parse_workers() -> int:
     Kept small: parsing is CPU-bound and the free hosting tier has a
     fraction of one CPU, so more threads only add memory.
     """
-    raw = os.environ.get("MAPLE_PARSE_WORKERS", "4")
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 4
+    value = _env_int("MAPLE_PARSE_WORKERS", 4)
     return min(32, max(1, value))
 
 
 def get_parse_timeout_seconds() -> float:
     """Wall-clock budget for one file parse, including the wait for a worker."""
-    raw = os.environ.get("MAPLE_PARSE_TIMEOUT_SECONDS", "60")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 60.0
+    value = _env_float("MAPLE_PARSE_TIMEOUT_SECONDS", 60.0)
     return min(1800.0, max(1.0, value))
 
 
@@ -167,11 +184,7 @@ def get_pumf_tabulate_enabled() -> bool:
 
 def get_pumf_cache_max_bytes() -> int:
     """Cap on the PUMF cache; the least recently used files are removed past it."""
-    raw = os.environ.get("MAPLE_PUMF_CACHE_MAX_GB", "5")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 5.0
+    value = _env_float("MAPLE_PUMF_CACHE_MAX_GB", 5.0)
     return int(max(0.5, value) * 1024**3)
 
 
@@ -182,21 +195,13 @@ def get_delta_max_scan_bytes() -> int:
     request and 5 to 7 MB/s with two or three in flight, so 400 MB fits the
     scan's time ceiling. A host with a faster link can raise it.
     """
-    raw = os.environ.get("MAPLE_DELTA_MAX_SCAN_MB", "400")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 400.0
+    value = _env_float("MAPLE_DELTA_MAX_SCAN_MB", 400.0)
     return int(min(4096.0, max(1.0, value)) * 1024 * 1024)
 
 
 def get_delta_max_scan_seconds() -> float:
     """Seconds one Delta scan may run, kept 30 s under the tool timeout."""
-    raw = os.environ.get("MAPLE_DELTA_MAX_SCAN_SECONDS", "75")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 75.0
+    value = _env_float("MAPLE_DELTA_MAX_SCAN_SECONDS", 75.0)
     # Never above the tool timeout minus 30 s, even when that leaves less than
     # the 5 s floor (a tool timeout set near its own minimum).
     return min(max(5.0, value), max(1.0, get_tool_timeout_seconds() - 30.0))
@@ -226,11 +231,7 @@ def get_ip_horizons_cache_dir() -> Path:
 
 def get_ip_horizons_cache_max_bytes() -> int:
     """Cap on the IP Horizons cache; the least recently used files are removed past it."""
-    raw = os.environ.get("MAPLE_IP_HORIZONS_CACHE_MAX_GB", "3")
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 3.0
+    value = _env_float("MAPLE_IP_HORIZONS_CACHE_MAX_GB", 3.0)
     return int(max(0.5, value) * 1024**3)
 
 
@@ -246,21 +247,13 @@ def get_lode_cache_dir() -> Path:
 
 def get_lode_cache_max_bytes() -> int:
     """Cap on the LODE cache (MAPLE_LODE_CACHE_MAX_GB, default 3); least recently used files go first."""
-    raw = os.environ.get("MAPLE_LODE_CACHE_MAX_GB", "").strip()
-    try:
-        value = float(raw) if raw else 3.0
-    except ValueError:
-        value = 3.0
+    value = _env_float("MAPLE_LODE_CACHE_MAX_GB", 3.0)
     return int(max(0.5, value) * 1024**3)
 
 
 def get_lode_max_download_bytes(default_mb: float) -> int:
     """Largest LODE archive one call may download (MAPLE_LODE_MAX_DOWNLOAD_MB; 0 turns downloads off)."""
-    raw = os.environ.get("MAPLE_LODE_MAX_DOWNLOAD_MB", "").strip()
-    try:
-        value = float(raw) if raw else float(default_mb)
-    except ValueError:
-        value = float(default_mb)
+    value = _env_float("MAPLE_LODE_MAX_DOWNLOAD_MB", float(default_mb))
     return int(max(0.0, value) * 1_000_000)
 
 
@@ -298,11 +291,7 @@ def get_trust_proxy_headers() -> bool:
 
 def get_trusted_proxy_hops() -> int:
     """How many trusted reverse proxies append to X-Forwarded-For (MAPLE_TRUSTED_PROXY_HOPS, default 1)."""
-    raw = os.environ.get("MAPLE_TRUSTED_PROXY_HOPS", "1")
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 1
+    value = _env_int("MAPLE_TRUSTED_PROXY_HOPS", 1)
     return min(10, max(1, value))
 
 

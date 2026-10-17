@@ -1,6 +1,7 @@
 """Constants for the BC lobbyists registry module (checked live 2026-10-02)."""
 
 SITE = "https://www.lobbyistsregistrar.bc.ca"
+HOST = "www.lobbyistsregistrar.bc.ca"
 DOWNLOAD_URL = SITE + "/app/secure/orl/lrs/do/mssDtstRprt"
 OPEN_DATA_PAGE = SITE + "/the-registry/open-data/"
 LICENCE_URL = (

@@ -28,7 +28,12 @@ from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.upstream_text import clean_detail, network_error
+from maplestats_mcp.shared.upstream_text import (
+    clean_detail,
+    is_unavailable_status,
+    network_error,
+    unavailable_status_error,
+)
 
 
 @dataclass(frozen=True)
@@ -83,8 +88,12 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str 
         raise_localized(
             NotFound, f"{context}: no match found ({detail}).", f"{context} ({detail}).", lang
         )
+    if is_unavailable_status(status, detail):
+        # A rate limit that outlasted shared/http.py's retries is the portal being
+        # unavailable, not a mistake in the request (same rule as shared/arcgis.py).
+        raise unavailable_status_error(context, status, detail, lang) from exc
     if 400 <= status < 500:
-        # Every 4xx other than 404 is treated as a caller-input problem, not
+        # Every other 4xx is treated as a caller-input problem, not
         # just a bare 400 - confirmed live that different CKAN deployments
         # use different status codes for the same kind of mistake (federal
         # returns 400 "Search Query Error" for a malformed fq/sort;
@@ -103,27 +112,6 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str, lang: str 
         f"{context} a renvoyé l'erreur HTTP {status} : {detail}",
         lang,
     )
-
-
-def _raise_network_error(context: str, exc: httpx.HTTPError, lang: str) -> NoReturn:
-    """shared/upstream_text's typed error, with a French message for `lang="fr"`."""
-    err = network_error(context, exc)
-    if isinstance(exc, httpx.DecodingError):
-        fr = (
-            f"{context} : le service a répondu, mais pas en JSON; il s'agit souvent d'une "
-            "page d'erreur ou de maintenance."
-        )
-    elif isinstance(exc, httpx.TimeoutException):
-        fr = (
-            f"{context} n'a pas répondu à temps ({type(exc).__name__}); la requête a déjà "
-            "été relancée. Réessayez dans quelques instants."
-        )
-    else:
-        fr = (
-            f"{context} n'a pas pu être joint ({type(exc).__name__}); la requête a déjà "
-            "été relancée. Réessayez dans quelques instants."
-        )
-    raise_localized(type(err), str(err), fr, lang)
 
 
 async def action(
@@ -147,7 +135,7 @@ async def action(
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:
-        _raise_network_error(context, exc, lang)
+        raise network_error(context, exc, lang) from exc
     if not isinstance(data, dict) or not data.get("success") or "result" not in data:
         # Only the error part, shortened: the whole envelope can be a full page.
         error = data.get("error") if isinstance(data, dict) else None

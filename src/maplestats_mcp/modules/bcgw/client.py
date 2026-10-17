@@ -23,6 +23,7 @@ come back."
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any
 
@@ -34,10 +35,12 @@ from maplestats_mcp.modules.bcgw.schemas import (
     WildfireQueryResult,
     WildfireRecord,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.i18n import pick
+from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.wfs import (
     WfsConfig,
     describe_feature_type,
@@ -329,6 +332,90 @@ async def _geometry_field(type_name: str, lang: str = "en") -> str:
     )
 
 
+async def _geometry_features(
+    type_name: str, request: dict[str, Any], lang: str = "en"
+) -> dict[str, Any]:
+    """GetFeature with geometry, read under GEOMETRY_RESPONSE_BYTES_MAX.
+
+    `get_features` buffers and parses the whole response, which for polygons
+    can be tens of MB, so this goes through the streaming reader: a declared
+    Content-Length above the cap is refused unread, and an undeclared one
+    (GeoServer's usual chunked answer) stops at the cap.
+    """
+    url = feature_url(CONFIG, type_name, **request)
+    limiter = get_limiter(
+        CONFIG.source, rate=CONFIG.rate_limit_per_second, capacity=CONFIG.rate_limit_capacity
+    )
+    try:
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host == constants.DOMAIN,
+            limiter_for=lambda _host: limiter,
+            max_bytes=constants.GEOMETRY_RESPONSE_BYTES_MAX,
+            context="bcgw",
+            timeout=120.0,
+        )
+    except UpstreamError as exc:
+        # The streaming reader calls every refused request "HTTP 400", and the
+        # service's own reason (a malformed CQL filter, an unknown layer or
+        # field) is what the caller needs. Ask for one row of the sort field:
+        # it raises InvalidInput with that reason when the request itself is
+        # bad, and succeeds when the failure was the size or the service.
+        await get_features(
+            CONFIG,
+            type_name,
+            cql_filter=request["cql_filter"],
+            property_names=constants.DEFAULT_SORT_FIELD,
+            sort_by=request["sort_by"],
+            count=1,
+        )
+        megabytes = constants.GEOMETRY_RESPONSE_BYTES_MAX // (1024 * 1024)
+        raise_localized(
+            UpstreamError,
+            f"bcgw: the request with geometry failed or is over the {megabytes} MB response "
+            f"limit. Ask for fewer features (limit=1), a narrower cql_filter, or set "
+            f"include_geometry=false. Cause: {exc}",
+            f"bcgw : la requête avec géométrie a échoué ou dépasse la limite de {megabytes} Mo. "
+            f"Demandez moins d'entités (limit=1), un cql_filter plus étroit, ou passez "
+            f"include_geometry=false. Cause : {exc}",
+            lang,
+        )
+    try:
+        body = json.loads(downloaded.body)
+    except ValueError:
+        body = None
+    if not isinstance(body, dict):
+        raise_localized(
+            UpstreamError,
+            "bcgw: the geometry response was not a GeoJSON object.",
+            "bcgw : la réponse avec géométrie n'est pas un objet GeoJSON.",
+            lang,
+        )
+    return body
+
+
+def _trim_geometry(body: dict[str, Any]) -> dict[str, Any]:
+    """The body with geometries past GEOMETRY_BYTES_MAX dropped, and how many.
+
+    Trimmed before the result is cached, so the cache holds the budgeted
+    result and not the full GeoJSON.
+    """
+    omitted = 0
+    used = 0
+    for feature in body.get("features") or []:
+        geometry = feature.get("geometry")
+        if geometry is None:
+            continue
+        size = len(json.dumps(geometry, separators=(",", ":")))
+        if used + size > constants.GEOMETRY_BYTES_MAX:
+            feature["geometry"] = None
+            omitted += 1
+        else:
+            used += size
+    body["geometry_omitted"] = omitted
+    return body
+
+
 async def query_layer(
     type_name: str,
     *,
@@ -384,6 +471,10 @@ async def query_layer(
         if geometry_field.upper() not in listed:
             requested_fields = f"{property_names},{geometry_field}"
 
+    requested = limit
+    if include_geometry:
+        limit = min(limit, constants.GEOMETRY_ROWS_MAX)
+
     request: dict[str, Any] = {
         "cql_filter": cql_filter,
         "property_names": requested_fields,
@@ -394,11 +485,14 @@ async def query_layer(
     }
 
     async def fetch() -> dict[str, Any]:
-        return await get_features(CONFIG, type_name, **request)
+        if not include_geometry:
+            return await get_features(CONFIG, type_name, **request)
+        return _trim_geometry(await _geometry_features(type_name, request, lang))
 
     cache_key = f"bcgw:layer:{type_name}:{cql_filter}:{property_names}:{include_geometry}:{sort_by}:{limit}:{offset}"
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_GENERIC_SECONDS, fetch)
     features = body.get("features") or []
+    omitted = int(body.get("geometry_omitted") or 0)
     records = [
         {**(feature.get("properties") or {}), "geometry": feature.get("geometry")}
         if include_geometry
@@ -406,6 +500,32 @@ async def query_layer(
         for feature in features
     ]
     total_matched = body.get("numberMatched") or body.get("totalFeatures") or len(records)
+    notes: list[str] = []
+    budget_mb = constants.GEOMETRY_BYTES_MAX // 1_000_000
+    if limit < requested:
+        notes.append(
+            pick(
+                lang,
+                f"With geometry, at most {limit} features are returned per call (a polygon "
+                f"layer can hold megabytes per feature); continue with "
+                f"offset={offset + len(records)}.",
+                f"Avec la géométrie, au plus {limit} entités sont renvoyées par appel (une "
+                f"couche de polygones peut peser plusieurs Mo par entité) ; continuez avec "
+                f"offset={offset + len(records)}.",
+            )
+        )
+    if omitted:
+        notes.append(
+            pick(
+                lang,
+                f"{omitted} geometry(ies) left out: together the geometries exceed the "
+                f"{budget_mb} MB budget. Ask for those features one at a time with a "
+                "narrower cql_filter.",
+                f"{omitted} géométrie(s) omise(s) : ensemble, les géométries dépassent le "
+                f"budget de {budget_mb} Mo. Demandez ces entités une à la fois avec un "
+                "cql_filter plus étroit.",
+            )
+        )
 
     return LayerQueryResult(
         type_name=type_name,
@@ -415,6 +535,8 @@ async def query_layer(
         limit=limit,
         offset=offset,
         cql_filter=cql_filter,
+        geometry_omitted=omitted,
+        note=" ".join(notes) or None,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=feature_url(CONFIG, type_name, **request),

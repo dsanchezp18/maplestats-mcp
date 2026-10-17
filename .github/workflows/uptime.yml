@@ -10,6 +10,9 @@ on:
     - cron: "17 * * * *"
   workflow_dispatch:
 
+# Only calls the public endpoint with curl: no checkout, no token scopes.
+permissions: {}
+
 jobs:
   mcp:
     runs-on: ubuntu-latest

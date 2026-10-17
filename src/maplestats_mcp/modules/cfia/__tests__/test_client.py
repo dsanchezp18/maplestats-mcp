@@ -14,6 +14,7 @@ import collections
 from datetime import date
 from pathlib import Path
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.cfia import client, constants, tools
@@ -535,3 +536,35 @@ async def test_english_errors_are_unchanged(httpx_mock):
         InvalidInput, match=r"^Invalid input: cfia: year_from must not be after year_to\.$"
     ):
         await client.get_reportable_diseases(2015, 2012)
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_page_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_PAGE_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=constants.REPORTABLE_PAGE["en"], stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.get_reportable_diseases()
+    assert body.pulled <= 3
+
+
+async def test_page_redirect_to_another_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.REPORTABLE_PAGE["en"],
+        status_code=302,
+        headers={"Location": "https://evil.example/reportable"},
+    )
+    with pytest.raises(UpstreamError, match="evil.example"):
+        await client.get_reportable_diseases()
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["inspection.canada.ca"]

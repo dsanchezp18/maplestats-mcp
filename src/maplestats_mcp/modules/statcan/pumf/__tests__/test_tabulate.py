@@ -6,12 +6,17 @@ Checked live 2026-09-24 against LFS January 2025 (Alberta: 4.00 M aged
 
 from __future__ import annotations
 
+import logging
+import os
+import time
+from pathlib import Path
+
 import pytest
 
 from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.pumf import tabulate
 from maplestats_mcp.modules.statcan.pumf.schemas import PumfVariable
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 CSV = "PROV,LFSSTAT,FINALWT,HRLYEARN\n48,1,100,3000\n48,3,50,\n35,1,200,4000\n35,1,100,2000\n"
@@ -148,3 +153,138 @@ def test_replicate_weights_are_joined_from_a_separate_file(tmp_path):
         ("48", 1, 100.0, 100.0, 110.0, 110.0, 90.0, 90.0),
     ]
     assert (n, total) == (2, 300.0)
+
+
+def test_duckdb_failure_becomes_upstream_error(tmp_path):
+    """A file DuckDB cannot read (here: a column the CSV lacks) is not a raw BinderException."""
+    path = tmp_path / "data.csv"
+    path.write_text(CSV)
+    source = tabulate.DataSource(path, False, _vars())
+    with pytest.raises(UpstreamError, match="could not be tabulated"):
+        tabulate._run_query(source, ["NOT_A_COLUMN"], ["FINALWT"], "total", None, {})
+
+
+def test_unreadable_data_file_becomes_upstream_error(tmp_path):
+    source = tabulate.DataSource(tmp_path / "gone.csv", False, _vars())
+    with pytest.raises(UpstreamError, match="could not be tabulated"):
+        tabulate._run_query(source, ["PROV"], ["FINALWT"], "total", None, {})
+
+
+_EICS_URL = "https://www150.statcan.gc.ca/n1/pub/89m0025x/2022001/2024.zip"
+
+
+def _bootstrap_setup(monkeypatch, tmp_path, *, main_has_id: bool, layout_has_id: bool):
+    """Stub the network and file layers so tabulate() reaches the replicate-id check."""
+    method = tabulate.variance_method(_EICS_URL)
+    assert method is not None and method.id_variable == "PUMFID"
+    main_columns = {
+        "PROV": PumfVariable(name="PROV", position=6, width=2, values=[]),
+        "WTPM": PumfVariable(name="WTPM", position=8, width=5, values=[]),
+    }
+    if main_has_id:
+        main_columns["PUMFID"] = PumfVariable(name="PUMFID", position=1, width=5, values=[])
+    layout_columns = {
+        name: PumfVariable(name=name, position=6 + i, width=5, values=[])
+        for i, name in enumerate(method.replicates)
+    }
+    if layout_has_id:
+        layout_columns["PUMFID"] = PumfVariable(name="PUMFID", position=1, width=5, values=[])
+    main_path = tmp_path / "main.txt"
+    main_path.write_text("0000148  100\n")
+
+    async def load_codebook(url, lang="en"):
+        return list(main_columns.values()), [], False
+
+    async def members(url):
+        return [ZipMember("pumf_main.txt", 0, 5_000_000, 8, 0)], 1, False
+
+    async def local_data_file(url, member, *, also_keep=()):
+        return main_path
+
+    async def replicate_source(url, members, file_marker, main_path=None):
+        return tabulate.DataSource(tmp_path / "bsw.txt", True, layout_columns)
+
+    monkeypatch.setattr(tabulate.client, "load_codebook", load_codebook)
+    monkeypatch.setattr(tabulate.client, "_members", members)
+    monkeypatch.setattr(tabulate, "local_data_file", local_data_file)
+    monkeypatch.setattr(tabulate, "_replicate_source", replicate_source)
+
+
+@pytest.mark.parametrize(
+    ("main_has_id", "layout_has_id", "where"),
+    [(False, True, "main codebook"), (True, False, "bootstrap weight layout")],
+)
+async def test_missing_record_id_is_named_not_a_bare_key_error(
+    monkeypatch, tmp_path, main_has_id, layout_has_id, where
+):
+    _bootstrap_setup(monkeypatch, tmp_path, main_has_id=main_has_id, layout_has_id=layout_has_id)
+    with pytest.raises(InvalidInput, match=f"'PUMFID'.*{where}"):
+        await tabulate.tabulate(_EICS_URL, rows=["PROV"], weight="WTPM")
+
+
+async def test_missing_record_id_message_follows_lang(monkeypatch, tmp_path):
+    _bootstrap_setup(monkeypatch, tmp_path, main_has_id=False, layout_has_id=True)
+    with pytest.raises(InvalidInput, match="'PUMFID'.*dictionnaire principal"):
+        await tabulate.tabulate(_EICS_URL, rows=["PROV"], weight="WTPM", lang="fr")
+    use_lang("en")
+
+
+def _cache_file(path, size, age_seconds):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"x" * size)
+    stamp = time.time() - age_seconds
+    os.utime(path, (stamp, stamp))
+    return path
+
+
+def test_cache_cap_removes_oldest_files_but_never_the_target_or_part_files(monkeypatch, tmp_path):
+    monkeypatch.setattr(tabulate.config, "get_pumf_cache_max_bytes", lambda: 15)
+    oldest = _cache_file(tmp_path / "a" / "old.csv", 10, 400)
+    target = _cache_file(tmp_path / "b" / "target.csv", 10, 300)  # older than `newer`
+    newer = _cache_file(tmp_path / "c" / "newer.csv", 10, 100)
+    partial = _cache_file(tmp_path / "d" / "archive.zip.part", 500, 900)
+    in_progress = _cache_file(tmp_path / "e" / "data.csv.part", 500, 800)
+
+    tabulate._enforce_cache_cap(tmp_path, target)
+
+    assert target.exists()  # the file this call is about to read stays, though not newest
+    assert not oldest.exists()
+    assert not newer.exists()  # still over the cap, so the next-oldest goes
+    assert partial.exists()  # another call's download in progress
+    assert in_progress.exists()
+
+
+def test_cache_cap_also_keeps_files_the_same_call_still_needs(monkeypatch, tmp_path):
+    monkeypatch.setattr(tabulate.config, "get_pumf_cache_max_bytes", lambda: 5)
+    main = _cache_file(tmp_path / "a" / "main.txt", 10, 500)
+    other = _cache_file(tmp_path / "b" / "other.txt", 10, 400)
+    replicates = _cache_file(tmp_path / "c" / "bsw.txt", 10, 300)
+
+    tabulate._enforce_cache_cap(tmp_path, replicates, main)
+
+    assert main.exists() and replicates.exists()
+    assert not other.exists()
+
+
+def test_cache_cap_survives_a_file_it_cannot_remove(monkeypatch, tmp_path, caplog):
+    """Windows refuses to delete a file a reader has open; that must not fail the call."""
+    monkeypatch.setattr(tabulate.config, "get_pumf_cache_max_bytes", lambda: 5)
+    locked = _cache_file(tmp_path / "a" / "locked.csv", 10, 500)
+    removable = _cache_file(tmp_path / "b" / "removable.csv", 10, 400)
+    target = _cache_file(tmp_path / "c" / "target.csv", 10, 100)
+    real_unlink = Path.unlink
+
+    def unlink(self, missing_ok=False):
+        if self.name == "locked.csv":
+            raise PermissionError("[WinError 32] file in use")
+        real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", unlink)
+
+    with caplog.at_level(logging.WARNING):
+        tabulate._enforce_cache_cap(tmp_path, target)
+
+    assert locked.exists()
+    assert not removable.exists()  # eviction went on past the locked file
+    assert target.exists()
+    assert "locked.csv" in caplog.text

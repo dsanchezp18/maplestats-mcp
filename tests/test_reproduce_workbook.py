@@ -404,3 +404,22 @@ def test_territorial_licence_gets_its_own_attribution():
     assert attribution == (
         "Contains information licensed under the Open Government Licence - Yukon."
     )
+
+
+async def test_series_named_like_a_formula_keeps_text_chart_headers(hosted, recwarn):
+    # The chart sheet's header is made of the data's series values, so a value that
+    # starts with "=" became a formula cell, openpyxl warned that column headings must
+    # be strings, and the Table's column names no longer matched its header cells.
+    formula = '=HYPERLINK("http://x","go")'
+    rows = [
+        {"period": f"2026-0{month}-01", "geography": name, "value": 100.0 + month + shift}
+        for month in (1, 2, 3)
+        for shift, name in enumerate(("Canada", formula))
+    ]
+    result = await workbook.export(None, None, rows, "Series", "en", 2000, "base64")
+    book = _open(result)
+    chart_header = {cell.value: cell for cell in book["Chart data"][1]}
+    assert set(chart_header) == {"period", "Canada", formula}
+    assert all(cell.data_type == "s" for cell in chart_header.values())
+    assert len(_charts(book["Chart"])) == 1
+    assert not [w for w in recwarn if "column headings" in str(w.message)]

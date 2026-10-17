@@ -45,6 +45,7 @@ from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 import httpx
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.modules.cgc import constants
 from maplestats_mcp.modules.cgc.schemas import (
@@ -67,7 +68,13 @@ from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.http import (
+    is_retryable,
+    new_client,
+    raise_if_cloudflare_challenge,
+    request_headers,
+    wait_honouring_retry_after,
+)
 from maplestats_mcp.shared.licences import OGL_CANADA
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -80,6 +87,9 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
+# Streamed by a client of its own because the Last-Modified header is part of the
+# answer (shared/file_download.py does not return it). Redirects are not followed.
+_client = new_client(timeout=constants.DOWNLOAD_TIMEOUT_SECONDS, follow_redirects=False)
 
 WEEKLY_DIMENSIONS: tuple[WeeklyDimension, ...] = (
     "worksheet",
@@ -367,6 +377,52 @@ def _as_of(day: date | None) -> datetime | None:
 # ----------------------------------------------------------------- download
 
 
+class _TooLarge(Exception):
+    """The file passed MAX_FILE_BYTES while it was being read."""
+
+
+async def _error_answer(response: httpx.Response) -> httpx.Response:
+    """A copy of an error answer with at most 4 KB of its body, enough for the status
+    and Cloudflare checks without reading a whole error page into memory."""
+    head = b""
+    async for chunk in response.aiter_bytes():
+        head += chunk
+        if len(head) >= 4096:
+            break
+    keep = {
+        k: v for k, v in response.headers.items() if k.lower() in ("cf-mitigated", "retry-after")
+    }
+    return httpx.Response(
+        response.status_code, headers=keep, content=head[:4096], request=response.request
+    )
+
+
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_honouring_retry_after,
+    reraise=True,
+)
+async def _read(url: str) -> tuple[bytes, str | None, int]:
+    """(body, Last-Modified, status), streamed and refused past MAX_FILE_BYTES."""
+    async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
+        if not response.is_success:
+            answer = await _error_answer(response)
+            raise_if_cloudflare_challenge(answer)
+            answer.raise_for_status()
+        declared = response.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > constants.MAX_FILE_BYTES:
+            raise _TooLarge
+        chunks: list[bytes] = []
+        total = 0
+        async for chunk in response.aiter_bytes():
+            total += len(chunk)
+            if total > constants.MAX_FILE_BYTES:
+                raise _TooLarge
+            chunks.append(chunk)
+        return b"".join(chunks), response.headers.get("last-modified"), response.status_code
+
+
 async def _download(url: str, context: str, lang: str = "en") -> tuple[str, str | None]:
     """The file's text and Last-Modified header, retrying failed handshakes."""
     context_fr = _CONTEXT_FR.get(context, context)
@@ -374,7 +430,14 @@ async def _download(url: str, context: str, lang: str = "en") -> tuple[str, str 
     for _ in range(constants.DOWNLOAD_PASSES):
         await _LIMITER.acquire()
         try:
-            response = await get_raw(url, timeout=constants.DOWNLOAD_TIMEOUT_SECONDS)
+            body, modified, status = await _read(url)
+        except _TooLarge as exc:
+            raise lang_error(
+                UpstreamError,
+                lang,
+                f"{context}: {url} is larger than this tool reads.",
+                f"{context_fr} : {url} dépasse la taille que cet outil peut lire.",
+            ) from exc
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 404:
@@ -395,20 +458,12 @@ async def _download(url: str, context: str, lang: str = "en") -> tuple[str, str 
             # drops some TLS handshakes outright (see constants.py).
             last_error = exc
             continue
-        if response.status_code != 200:
+        if status != 200:
             raise lang_error(
                 UpstreamError,
                 lang,
-                f"{context}: {url} returned HTTP {response.status_code}.",
-                f"{context_fr} : {url} a renvoyé HTTP {response.status_code}.",
-            )
-        body = response.content
-        if len(body) > constants.MAX_FILE_BYTES:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                f"{context}: {url} is larger than this tool reads.",
-                f"{context_fr} : {url} dépasse la taille que cet outil peut lire.",
+                f"{context}: {url} returned HTTP {status}.",
+                f"{context_fr} : {url} a renvoyé HTTP {status}.",
             )
         head = body[:200].lstrip().lower()
         if head.startswith((b"<!doctype", b"<html")):
@@ -419,7 +474,7 @@ async def _download(url: str, context: str, lang: str = "en") -> tuple[str, str 
                 f"{context}: {url} returned the site's 'page not found' page.",
                 f"{context_fr} : {url} a renvoyé la page « page introuvable » du site.",
             )
-        return decode(body), response.headers.get("last-modified")
+        return decode(body), modified
     error_name = type(last_error).__name__ if last_error else None
     raise lang_error(
         UpstreamUnavailable,

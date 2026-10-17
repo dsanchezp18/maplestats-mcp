@@ -29,6 +29,7 @@ come from its page. Checked live 2026-09-26:
 from __future__ import annotations
 
 import html
+import json
 import re
 import unicodedata
 from collections import Counter
@@ -41,7 +42,7 @@ from typing import Any
 import httpx
 from bs4 import BeautifulSoup
 from bs4.element import Comment, NavigableString, Tag
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt
 
 from maplestats_mcp.modules.recalls import constants
 from maplestats_mcp.modules.recalls.schemas import (
@@ -54,12 +55,20 @@ from maplestats_mcp.modules.recalls.schemas import (
     RecallSummary,
     RecallTable,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.arg_checks import format_choices
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
-from maplestats_mcp.shared.http import decode_json, get_raw, is_retryable, new_client
+from maplestats_mcp.shared.fr_typography import call_error, fr_or_en, lang_error
+from maplestats_mcp.shared.http import (
+    is_retryable,
+    new_client,
+    raise_if_cloudflare_challenge,
+    request_headers,
+    wait_honouring_retry_after,
+)
+from maplestats_mcp.shared.i18n import fr_number
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -67,9 +76,9 @@ _LIMITER = get_limiter(
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
-# /{lang}/node/{nid} answers with a 302 to the page's slug, so pages need
-# a client that follows redirects; the shared one does not.
-_pages = new_client(timeout=30.0, follow_redirects=True)
+# The dump is read by a client of its own because its Last-Modified header is the
+# provenance's as-of date, which shared/file_download.py does not return.
+_dump_client = new_client(timeout=constants.DUMP_TIMEOUT_SECONDS, follow_redirects=False)
 
 _INVISIBLE = dict.fromkeys(map(ord, "\u200b\u200c\u200d\ufeff"), None)
 _TC_NUMBER = re.compile(r" - (\d{6,8})\s*(?:-|$)")
@@ -244,14 +253,64 @@ def _check_lang(lang: str) -> str:
     return lang
 
 
+def _too_big(url: str) -> UpstreamError:
+    cap = constants.DUMP_MAX_BYTES
+    return call_error(
+        UpstreamError,
+        f"recalls: {url} is larger than {cap:,} bytes; this reader stops there.",
+        f"recalls : {url} dépasse {fr_number(cap)} octets ; ce lecteur s'arrête là.",
+    )
+
+
+async def _error_answer(response: httpx.Response) -> httpx.Response:
+    """A copy of an error answer with at most 4 KB of its body, enough for the status
+    and Cloudflare checks without reading a whole error page into memory."""
+    head = b""
+    async for chunk in response.aiter_bytes():
+        head += chunk
+        if len(head) >= 4096:
+            break
+    keep = {
+        k: v for k, v in response.headers.items() if k.lower() in ("cf-mitigated", "retry-after")
+    }
+    return httpx.Response(
+        response.status_code, headers=keep, content=head[:4096], request=response.request
+    )
+
+
+@retry(
+    retry=retry_if_exception(is_retryable),
+    stop=stop_after_attempt(3),
+    wait=wait_honouring_retry_after,
+    reraise=True,
+)
+async def _read_dump(url: str) -> tuple[bytes, str | None]:
+    """The dump's bytes and Last-Modified, streamed and refused past DUMP_MAX_BYTES."""
+    await _LIMITER.acquire()
+    async with _dump_client.stream("GET", url, headers=request_headers(url, None)) as response:
+        if not response.is_success:
+            answer = await _error_answer(response)
+            raise_if_cloudflare_challenge(answer)
+            answer.raise_for_status()
+        declared = response.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > constants.DUMP_MAX_BYTES:
+            raise _too_big(url)
+        chunks: list[bytes] = []
+        total = 0
+        async for chunk in response.aiter_bytes():
+            total += len(chunk)
+            if total > constants.DUMP_MAX_BYTES:
+                raise _too_big(url)
+            chunks.append(chunk)
+        return b"".join(chunks), response.headers.get("last-modified")
+
+
 async def _load_dump(lang: str) -> tuple[_Dump, bool]:
     url = constants.DUMP_URLS[lang]
 
     async def fetch() -> _Dump:
-        await _LIMITER.acquire()
         try:
-            response = await get_raw(url, timeout=constants.DUMP_TIMEOUT_SECONDS)
-            rows = decode_json(response, url)
+            body, modified = await _read_dump(url)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             raise lang_error(
@@ -260,19 +319,21 @@ async def _load_dump(lang: str) -> tuple[_Dump, bool]:
                 f"recalls: open-data file returned HTTP {status}.",
                 f"recalls : le fichier de données ouvertes a renvoyé HTTP {status}.",
             ) from exc
-        except httpx.DecodingError as exc:
-            raise lang_error(
-                UpstreamError,
-                lang,
-                "recalls: open-data file is not valid JSON.",
-                "recalls : le fichier de données ouvertes n'est pas un JSON valide.",
-            ) from exc
         except httpx.HTTPError as exc:
             raise lang_error(
                 UpstreamUnavailable,
                 lang,
                 "recalls: open-data file could not be downloaded.",
                 "recalls : le fichier de données ouvertes n'a pas pu être téléchargé.",
+            ) from exc
+        try:
+            rows = json.loads(body)
+        except ValueError as exc:
+            raise lang_error(
+                UpstreamError,
+                lang,
+                "recalls: open-data file is not valid JSON.",
+                "recalls : le fichier de données ouvertes n'est pas un JSON valide.",
             ) from exc
         if not isinstance(rows, list) or not rows:
             raise lang_error(
@@ -293,7 +354,6 @@ async def _load_dump(lang: str) -> tuple[_Dump, bool]:
         records = [r for r in (_record(row, keys) for row in rows if isinstance(row, dict)) if r]
         records.sort(key=_sort_key, reverse=True)
         as_of = None
-        modified = response.headers.get("last-modified")
         if modified:
             try:
                 as_of = parsedate_to_datetime(modified)
@@ -636,48 +696,32 @@ async def summarize(
 # ---------------------------------------------------------------- recall page
 
 
-@retry(
-    retry=retry_if_exception(is_retryable),
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10),
-    reraise=True,
-)
-async def _get_page(url: str) -> httpx.Response:
-    response = await _pages.get(url)
-    response.raise_for_status()
-    return response
-
-
 async def _fetch_page(nid: int, lang: str) -> tuple[tuple[str, str], bool]:
     url = constants.NODE_URL.format(lang=lang, nid=nid)
 
     async def fetch() -> tuple[str, str]:
-        await _LIMITER.acquire()
+        # /{lang}/node/{nid} answers 302 to the page's slug. The download is
+        # retried on 429/5xx, checked for a Cloudflare challenge, refused past
+        # PAGE_MAX_BYTES, and follows the redirect only within recalls-rappels.canada.ca.
         try:
-            response = await _get_page(url)
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            if status == 404:
-                raise lang_error(
-                    NotFound,
-                    lang,
-                    f"No recall or alert with id {nid}.",
-                    f"aucun rappel ni avis portant l'identifiant {nid}.",
-                ) from exc
+            downloaded = await file_download.download(
+                url,
+                allow_host=lambda host: host == constants.HOST,
+                limiter_for=lambda _host: _LIMITER,
+                max_bytes=constants.PAGE_MAX_BYTES,
+                context="recalls",
+                timeout=30.0,
+            )
+        except NotFound as exc:
             raise lang_error(
-                UpstreamError,
+                NotFound,
                 lang,
-                f"recalls: {url} returned HTTP {status}.",
-                f"recalls : {url} a renvoyé HTTP {status}.",
+                f"No recall or alert with id {nid}.",
+                f"aucun rappel ni avis portant l'identifiant {nid}.",
             ) from exc
-        except httpx.HTTPError as exc:
-            raise lang_error(
-                UpstreamUnavailable,
-                lang,
-                f"recalls: {url} could not be reached.",
-                f"recalls : {url} est injoignable.",
-            ) from exc
-        return str(response.url), response.text
+        headers = {"content-type": downloaded.content_type}
+        text = httpx.Response(200, headers=headers, content=downloaded.body).text
+        return downloaded.final_url, text
 
     return await cached_fetch(f"recalls:page:{lang}:{nid}", constants.PAGE_CACHE_TTL_SECONDS, fetch)
 

@@ -41,6 +41,7 @@ from dataclasses import dataclass
 
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.remote_zip import ZipMember
 
@@ -422,8 +423,10 @@ class MemberStream:
                 self.offset += len(raw)
                 schedule()
                 # zlib releases the GIL while inflating, so the ranges in
-                # flight keep downloading while this one is inflated.
-                data = await asyncio.to_thread(process, raw, next_start >= end and not pending)
+                # flight keep downloading while this one is inflated. The parsing
+                # pool, not asyncio.to_thread: that shares the event loop's default
+                # executor with DNS lookups (see shared/executor.py).
+                data = await run_in_pool(process, raw, next_start >= end and not pending)
                 self.inflated += len(data)
                 if self.inflated > self.max_inflated_bytes:
                     raise ScanLimitExceeded(

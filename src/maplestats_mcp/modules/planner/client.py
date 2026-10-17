@@ -17,6 +17,7 @@ from maplestats_mcp.modules.planner.places import (
     PROVINCE_ALIASES,
     PROVINCE_CODES,
     PROVINCES,
+    SHARED_CITY_NAMES,
 )
 from maplestats_mcp.modules.planner.schemas import PlaceMatch, QueryPlan, StepOut, TopicMatch
 from maplestats_mcp.modules.planner.topics import (
@@ -130,12 +131,14 @@ def _steps(steps: tuple[PlanStep, ...]) -> list[StepOut]:
     return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps]
 
 
-def _places(question: str, text: str) -> list[PlaceMatch]:
+def _places(question: str, text: str, foreign: str | None = None) -> list[PlaceMatch]:
     # An English possessive ("Alberta's population") must still name the place.
     text = re.sub(r"(\w)'s\b", r"\1", text)
     places: list[PlaceMatch] = []
     seen: set[str] = set()
     for alias, (label, steps) in CITIES.items():
+        if foreign and alias in SHARED_CITY_NAMES:
+            continue
         city_text = _blank(text, CITY_SHADOWS.get(alias, ()))
         if f" {alias} " in f" {city_text} " and label not in seen:
             seen.add(label)
@@ -144,7 +147,9 @@ def _places(question: str, text: str) -> list[PlaceMatch]:
     province_keys |= {
         target for alias, target in PROVINCE_ALIASES.items() if f" {alias} " in f" {text} "
     }
-    # Codes count only in capitals as typed: "QC" and "NL", not French "nu".
+    # Codes count only in capitals as typed: "QC" and "NL", not French "nu". Dotted
+    # forms ("B.C.", "N.B.") are the same codes: in a data question "N.B." is New
+    # Brunswick far more often than a Latin nota bene.
     capitals = set(re.findall(r"\b[A-Z]{2}\b", question.replace(".", "")))
     province_keys |= {target for code, target in PROVINCE_CODES.items() if code in capitals}
     # "Quebec" alone is the province; "Quebec City" was taken as the city above.
@@ -189,11 +194,11 @@ def plan(question: str, lang: str = "en") -> QueryPlan:
             "La question ne doit pas être vide." if french else "question must not be empty."
         )
     text = _normalize(question)
-    places = _places(question, text)
+    foreign = _foreign_place(question, text)
+    places = _places(question, text, foreign)
     labels = [place.place for place in places]
 
     out_of_scope = None
-    foreign = _foreign_place(question, text)
     crosses = any(_matches(term, text) for term in CROSS_BORDER_TERMS)
     if foreign and not places and not crosses:
         out_of_scope = (

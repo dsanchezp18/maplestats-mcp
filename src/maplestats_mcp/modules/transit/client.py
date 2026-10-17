@@ -1038,7 +1038,7 @@ async def get_stop_departures(
     route_record = await _resolve_route(agency_key, route, lang) if route else None
 
     async def fetch() -> list[StopCall]:
-        rows = await _scan_stop_times(agency_key, stop_ids=stop_ids)
+        rows = await _scan_stop_times(agency_key, stop_ids=stop_ids, lang=lang)
         trips = await _trips(agency_key, trip_ids=frozenset(r.trip_id for r in rows), lang=lang)
         by_trip = {t.trip_id: t for t in trips}
         return [StopCall(r, by_trip[r.trip_id]) for r in rows if r.trip_id in by_trip]
@@ -1142,7 +1142,9 @@ async def get_route_summary(
     trip_ids = frozenset(t.trip_id for t in trips)
 
     async def fetch() -> list[gtfs.StopTimeRow]:
-        return await _scan_stop_times(agency_key, trip_ids=trip_ids) if trip_ids else []
+        if not trip_ids:
+            return []
+        return await _scan_stop_times(agency_key, trip_ids=trip_ids, lang=lang)
 
     rows, scan_cached = await cached_fetch(
         f"transit:route:{agency_key}:{record.route_id}:{day}",

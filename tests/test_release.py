@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import re
@@ -10,9 +11,12 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+import yaml
+
 from maplestats_mcp import __version__
 
 ROOT = Path(__file__).resolve().parents[1]
+WORKFLOWS = ROOT / ".github" / "workflows"
 
 
 def test_versions_match_everywhere():
@@ -65,3 +69,97 @@ def test_smithery_bundle_launches_this_release(tmp_path, monkeypatch):
     assert manifest["server"]["type"] == "python"
     assert manifest["server"]["mcp_config"]["args"] == [f"maplestats-mcp=={__version__}"]
     assert manifest["tools"] and all("inputSchema" in tool for tool in manifest["tools"])
+
+
+def _workflow(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _steps(workflow: dict) -> list[dict]:
+    return [step for job in workflow["jobs"].values() for step in job.get("steps", [])]
+
+
+def test_every_action_is_pinned_by_commit_sha():
+    # A tag can be moved to different code; a full commit SHA cannot.
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        for step in _steps(_workflow(path)):
+            uses = step.get("uses")
+            if uses and not uses.startswith("./"):
+                assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", uses), (path.name, uses)
+
+
+def test_every_workflow_sets_token_permissions():
+    # Without a top-level block a workflow gets the repository's default token scopes.
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        assert "permissions" in _workflow(path), path.name
+
+
+def test_setup_uv_matches_the_dockerfile_pin():
+    pins = {
+        name: re.search(r"uv==([0-9.]+)", (ROOT / name).read_text(encoding="utf-8"))
+        for name in ("Dockerfile", "chat/Dockerfile")
+    }
+    assert all(pins.values()), pins
+    versions = {match.group(1) for match in pins.values() if match}
+    assert len(versions) == 1, "the two Dockerfiles must pin the same uv"
+    seen = 0
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        for step in _steps(_workflow(path)):
+            if str(step.get("uses", "")).startswith("astral-sh/setup-uv@"):
+                seen += 1
+                assert str(step["with"].get("version")) in versions, path.name
+    assert seen > 0
+
+
+def test_smithery_cli_is_installed_from_a_lockfile():
+    # The publish step holds SMITHERY_API_KEY, so the CLI must come from a lockfile
+    # whose hashes npm checks, not from `npx -y` resolving a version at run time.
+    release = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    assert "npx" not in release
+    assert "npm ci --ignore-scripts --prefix .github/smithery" in release
+    assert ".github/smithery/node_modules/.bin/smithery" in release
+    folder = ROOT / ".github" / "smithery"
+    package = json.loads((folder / "package.json").read_text(encoding="utf-8"))
+    version = package["dependencies"]["@smithery/cli"]
+    assert re.fullmatch(r"[0-9]+[.][0-9]+[.][0-9]+", version), "pin an exact version"
+    lock = json.loads((folder / "package-lock.json").read_text(encoding="utf-8"))
+    assert lock["packages"]["node_modules/@smithery/cli"]["version"] == version
+    for name, entry in lock["packages"].items():
+        if name:
+            assert entry["integrity"].startswith("sha512-"), name
+
+
+def test_ci_runs_the_r_and_julia_reproduce_tests():
+    # tests/test_reproduce*.py skip when R, Julia or one of their packages is
+    # missing, so without these steps a regression in the generated scripts
+    # merges green.
+    steps = _steps(_workflow(WORKFLOWS / "ci.yml"))
+    gated = [step for step in steps if step.get("if") == "matrix.python-version == '3.12'"]
+    assert any(str(step.get("uses", "")).startswith("r-lib/actions/setup-r@") for step in gated)
+    commands = " ".join(str(step.get("run", "")) for step in gated)
+    assert "julia -e" in commands and "Rscript -e" in commands
+    source = ast.parse((ROOT / "tests" / "test_reproduce_cfia.py").read_text(encoding="utf-8"))
+    probed = next(
+        ast.literal_eval(node.value)
+        for node in source.body
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "_R_SCRIPT_PACKAGES"
+            for target in node.targets
+        )
+    )
+    # purrr is loaded by the generated scripts and jsonlite by test_reproduce.py,
+    # though neither is in the tests' own skip probes.
+    for package in (*probed, "purrr", "jsonlite"):
+        assert f'"{package}"' in commands, f"R package {package} is not installed in CI"
+    for package in ("Cascadia", "DataFrames", "Gumbo", "JSON3", "TidierData"):
+        assert f'"{package}"' in commands, f"Julia package {package} is not installed in CI"
+
+
+def test_server_json_lists_the_hosted_endpoint():
+    server = json.loads((ROOT / "server.json").read_text(encoding="utf-8"))
+    assert server["remotes"] == [
+        {"type": "streamable-http", "url": "https://maplestats-mcp.onrender.com/mcp"}
+    ]
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert server["remotes"][0]["url"] in readme

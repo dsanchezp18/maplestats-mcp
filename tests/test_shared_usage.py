@@ -6,6 +6,7 @@ import json
 from collections import Counter
 
 from fastmcp import Client
+from fastmcp.tools import ToolResult
 
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.security import with_stats_endpoint
@@ -80,6 +81,42 @@ def test_names_with_valid_spelling_still_need_registration():
     for n in range(100):
         stats.record(f"private_name_{n}", False)
     assert stats.snapshot()["by_tool"] == {"other": {"ok": 0, "error": 100}}
+
+
+async def test_a_tool_that_raises_is_counted_as_an_error() -> None:
+    from fastmcp import FastMCP
+
+    from maplestats_mcp.shared.usage import UsageMiddleware
+
+    stats = UsageStats(("failing_tool",))
+    server = FastMCP("t")
+    server.add_middleware(UsageMiddleware(stats))
+
+    @server.tool
+    async def failing_tool() -> str:
+        raise ValueError("upstream said no")
+
+    async with Client(server) as client:
+        await client.call_tool("failing_tool", {}, raise_on_error=False)
+    assert stats.snapshot()["by_tool"] == {"failing_tool": {"ok": 0, "error": 1}}
+
+
+async def test_a_result_flagged_as_an_error_is_counted_as_an_error() -> None:
+    from fastmcp import FastMCP
+
+    from maplestats_mcp.shared.usage import UsageMiddleware
+
+    stats = UsageStats(("flagged_tool",))
+    server = FastMCP("t")
+    server.add_middleware(UsageMiddleware(stats))
+
+    @server.tool
+    async def flagged_tool() -> ToolResult:
+        return ToolResult(content="refused", is_error=True)
+
+    async with Client(server) as client:
+        await client.call_tool("flagged_tool", {}, raise_on_error=False)
+    assert stats.snapshot()["by_tool"] == {"flagged_tool": {"ok": 0, "error": 1}}
 
 
 async def test_a_call_made_inside_a_tool_is_not_counted_again() -> None:

@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.nl_stats import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _HERE = Path(__file__).parent
 _XLSX = (
@@ -217,3 +218,66 @@ async def test_french_provenance_and_english_unchanged(httpx_mock):
     assert english.provenance.freshness == "As published by the NL Statistics Agency."
     assert english.provenance.coverage == "Sheet 'Quarterly' of " + str(len(english.sheets)) + "."
     assert "Statistics Canada" in (english.provenance.licence or "")
+
+
+class _EndlessBody(httpx.AsyncByteStream):
+    """A body with no Content-Length that never ends: only a capped reader returns."""
+
+    def __init__(self, chunk: int = 1024) -> None:
+        self.chunk = chunk
+        self.sent = 0
+
+    async def __aiter__(self):
+        while True:
+            self.sent += self.chunk
+            yield b"x" * self.chunk
+
+
+async def test_workbook_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 10_000)
+    body = _EndlessBody()
+    httpx_mock.add_response(url=_XLSX, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 10,000 bytes"):
+        await client.read_file(_XLSX)
+    assert body.sent < 10_000 + 4 * body.chunk
+
+
+async def test_workbook_declared_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 10_000)
+    httpx_mock.add_response(url=_XLSX, content=b"x" * 20_000)
+    with pytest.raises(UpstreamError, match="is 20,000 bytes"):
+        await client.read_file(_XLSX)
+
+
+async def test_workbook_redirect_off_the_agency_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=_XLSX, status_code=302, headers={"location": "https://attacker.example/a.xlsx"}
+    )
+    with pytest.raises(UpstreamError, match="attacker.example"):
+        await client.read_file(_XLSX)
+    assert len(httpx_mock.get_requests()) == 1
+
+
+# A topic page without its link list (a redesign, or an error page served with
+# 200) is an upstream fault: an empty list was cached for 6 hours as "no files".
+
+
+def test_topic_page_without_its_link_list_raises():
+    with pytest.raises(UpstreamError, match="ContentPlaceHolder1_links"):
+        client.parse_topic_page("<html><body><h1>Maintenance</h1></body></html>", "population")
+    with pytest.raises(UpstreamError, match="la page du sujet population"):
+        client.parse_topic_page("<html></html>", "population", "fr")
+
+
+async def test_topic_page_without_its_link_list_is_not_cached(httpx_mock):
+    httpx_mock.add_response(url=_page_url("population"), text="<html><body>Oops</body></html>")
+    with pytest.raises(UpstreamError):
+        await client.list_files(topic="population")
+    httpx_mock.add_response(url=_page_url("population"), content=_bytes("topic_population.html"))
+    result = await client.list_files(topic="population")
+    assert result.total_files >= 10
+
+
+def test_topic_page_with_an_empty_link_list_is_not_an_error():
+    html = '<html><div id="ContentPlaceHolder1_links"></div></html>'
+    assert client.parse_topic_page(html, "population") == []

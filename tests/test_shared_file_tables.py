@@ -187,7 +187,7 @@ def test_wrong_dimension_in_a_sheet_does_not_hide_rows():
         for item in src.infolist():
             data = src.read(item.filename)
             if item.filename == "xl/worksheets/sheet1.xml":
-                data = re.sub(rb'<dimension ref="[^"]*"/>', b'<dimension ref="A1"/>', data)
+                data = re.sub(rb'<dimension ref="[^"]*"\s*/>', b'<dimension ref="A1"/>', data)
             dst.writestr(item, data)
     result = tables.scan(
         out.getvalue(),
@@ -223,7 +223,7 @@ def test_inflated_dimensions_from_blank_formatting_do_not_make_a_pass_take_minut
             data = src.read(item.filename)
             if item.filename == "xl/worksheets/sheet1.xml":
                 data = re.sub(
-                    rb'<dimension ref="[^"]*"/>', b'<dimension ref="A1:XFD1048576"/>', data
+                    rb'<dimension ref="[^"]*"\s*/>', b'<dimension ref="A1:XFD1048576"/>', data
                 )
             dst.writestr(item, data)
     result = tables.scan(
@@ -240,3 +240,91 @@ def test_inflated_dimensions_from_blank_formatting_do_not_make_a_pass_take_minut
     )
     assert result.total_rows == 2
     assert result.all_columns == ["a", "b", "c"]
+
+
+def _with_part(body: bytes, part: str, change) -> bytes:
+    """The workbook with `change(xml)` applied to one of its XML parts."""
+    import zipfile
+
+    src = zipfile.ZipFile(io.BytesIO(body))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as dst:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            if item.filename == part:
+                data = change(data)
+            dst.writestr(item, data)
+    return out.getvalue()
+
+
+def _with_dimension(body: bytes, ref: bytes) -> bytes:
+    import re
+
+    return _with_part(
+        body,
+        "xl/worksheets/sheet1.xml",
+        lambda xml: re.sub(
+            rb'<dimension ref="[^"]*"\s*/>', b'<dimension ref="' + ref + b'"/>', xml
+        ),
+    )
+
+
+def test_xlsx_sheets_read_sheet_survives_a_lone_a1_dimension():
+    # shared/xlsx_sheets.read_sheet (bc_stats) used to open workbooks without the
+    # dimension fix file_tables applies, so a lone A1 gave a one-row sheet.
+    from maplestats_mcp.shared import xlsx_sheets
+
+    body = _xlsx({"S": [["a", "b", "c"], [1, 2, 3], [4, 5, 6]]})
+    rows, capped = xlsx_sheets.read_sheet(_with_dimension(body, b"A1"), "S", max_rows=100)
+    assert rows == [["a", "b", "c"], ["1", "2", "3"], ["4", "5", "6"]]
+    assert capped is False
+
+
+def test_xlsx_sheets_read_sheet_survives_an_inflated_dimension():
+    from maplestats_mcp.shared import xlsx_sheets
+
+    body = _xlsx({"S": [["a", "b", "c"], [1, 2, 3]]})
+    inflated = _with_dimension(body, b"A1:XFD1048576")
+    rows, _ = xlsx_sheets.read_sheet(inflated, "S", max_rows=100)
+    assert rows == [["a", "b", "c"], ["1", "2", "3"]]
+
+
+def test_xlsx_sheets_opens_workbooks_without_the_print_area_warning():
+    # Agency workbooks carry a print-area name openpyxl cannot set; it warns, and the
+    # warning is noise for a reader (file_tables already silenced it).
+    import warnings
+
+    from maplestats_mcp.shared import xlsx_sheets
+
+    body = _xlsx({"S": [["a", "b", "c"], [1, 2, 3]]})
+    names = b'<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">foo'
+    names += b"</definedName></definedNames>"
+    odd = _with_part(body, "xl/workbook.xml", lambda xml: xml.replace(b"<definedNames />", names))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        rows, _ = xlsx_sheets.read_sheet(odd, "S", max_rows=100)
+        dimensions = xlsx_sheets.sheet_dimensions(odd)
+    assert rows[0] == ["a", "b", "c"]
+    assert dimensions[0][0] == "S"
+
+
+def test_detect_format_sees_html_behind_a_utf8_bom():
+    bom = b"\xef\xbb\xbf"
+    with pytest.raises(UpstreamError, match="web page"):
+        tables.detect_format(bom + b"<!DOCTYPE html><html><body>Error</body></html>", "CSV")
+    with pytest.raises(UpstreamError, match="web page"):
+        tables.detect_format(bom + b" \r\n\t<html lang='en'>", "XLSX")
+    with pytest.raises(UpstreamError, match="JSON"):
+        tables.detect_format(bom + b'{"error": "x"}', "CSV")
+    # A BOM on a real CSV is still just a CSV.
+    assert tables.detect_format(bom + b"a,b\n1,2\n", "XLSX") == "csv"
+
+
+def test_detect_format_does_not_copy_the_whole_body():
+    class Body(bytes):
+        def lstrip(self, *args):  # a copy of up to 40 MB, the thing being avoided
+            raise AssertionError("detect_format stripped the whole body")
+
+    assert tables.detect_format(Body(b"a,b\n1,2\n" * 1000), "CSV") == "csv"
+    with pytest.raises(UpstreamError, match="web page"):
+        tables.detect_format(Body(b"   <html>" + b"x" * 1000), "CSV")

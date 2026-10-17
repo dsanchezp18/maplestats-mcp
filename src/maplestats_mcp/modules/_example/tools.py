@@ -34,4 +34,4 @@ async def example_echo(message: str, lang: Literal["en", "fr"] = "en") -> EchoRe
     Mots-clés : écho, test, exemple, gabarit, bilingue, langue, message,
     démo.
     """
-    return await client.echo(message)
+    return await client.echo(message, lang=lang)

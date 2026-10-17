@@ -7,6 +7,12 @@ data file is the one open.canada.ca links to.
 
 DOMAIN = "cdc-ccl.ca"
 SITE = f"https://{DOMAIN}"
+MARKET_DATA_HOST = "od-do.agr.gc.ca"
+# Hosts a page download may reach (the URL and every redirect hop), and the hosts
+# the CSV files come from: the component price files are on the CDC site and the
+# market data file is on AAFC's open-data server (no redirects seen live 2026-10-17).
+PAGE_HOSTS = frozenset({DOMAIN, f"www.{DOMAIN}"})
+CSV_HOSTS = PAGE_HOSTS | {MARKET_DATA_HOST}
 
 # Special milk class component prices, one static CSV per calendar year
 # (2002 onward). The site's "History of Special Milk Class Prices" form
@@ -27,7 +33,7 @@ NATIONAL_QUOTA_INDEX = {"en": SITE + "/en/node/653", "fr": SITE + "/fr/node/653"
 # "Dairy statistics and market information" (open.canada.ca dataset
 # 308a7041-413a-47a0-9604-ae1c55676693, organization aafc-aac, Open
 # Government Licence - Canada): four CDC datasets in one bilingual CSV.
-MARKET_DATA_URL = "https://od-do.agr.gc.ca/CDC_CCL.csv"
+MARKET_DATA_URL = f"https://{MARKET_DATA_HOST}/CDC_CCL.csv"
 MARKET_DATA_DATASET_ID = "308a7041-413a-47a0-9604-ae1c55676693"
 MARKET_DATA_DICTIONARY = {
     "en": "https://od-do.agr.gc.ca/CDCDictionaryEn.html",

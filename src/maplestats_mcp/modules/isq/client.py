@@ -33,16 +33,17 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.isq import constants
 from maplestats_mcp.modules.isq.schemas import IsqSearchResult, IsqTable, IsqTableHit, Value
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.search import tokenize
@@ -58,37 +59,21 @@ _NUMBER = re.compile(r"^-?\d+(,\d+)?$")
 _SPACES = re.compile(r"[\s  ]")
 
 
-async def _get(url: str, params: dict[str, Any] | None = None, lang: str = "en") -> str:
-    await _LIMITER.acquire()
-    try:
-        response = await get_raw(url, params=params, timeout=90.0)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status == 404:
-            raise_localized(
-                NotFound, f"isq: {url} does not exist.", f"isq : {url} n'existe pas.", lang
-            )
-        raise_localized(
-            UpstreamError,
-            f"isq: {url} returned HTTP {status}.",
-            f"isq : {url} a répondu par une erreur HTTP {status}.",
-            lang,
-        )
-    except httpx.HTTPError:
-        raise_localized(
-            UpstreamUnavailable,
-            f"isq: {url} did not respond in time.",
-            f"isq : {url} n'a pas répondu à temps.",
-            lang,
-        )
-    if len(response.content) > constants.MAX_BYTES:
-        raise_localized(
-            UpstreamError,
-            f"isq: {url} is larger than expected.",
-            f"isq : {url} est plus volumineux que prévu.",
-            lang,
-        )
-    return response.content.decode("utf-8", errors="replace")
+async def _get(url: str, params: dict[str, Any] | None = None) -> str:
+    # Streamed under the cap (a declared Content-Length above it is refused
+    # before the body is read, an undeclared one stops at the cap), and pinned
+    # to statistique.quebec.ca on every hop. Errors are typed by the shared
+    # reader and follow the running call's `lang`.
+    full_url = str(httpx.URL(url, params=params)) if params else url
+    downloaded = await file_download.download(
+        full_url,
+        allow_host=lambda host: host == constants.HOST,
+        limiter_for=lambda _host: _LIMITER,
+        max_bytes=constants.MAX_BYTES,
+        context="isq",
+        timeout=90.0,
+    )
+    return downloaded.body.decode("utf-8", errors="replace")
 
 
 def _text(fragment: str) -> str:
@@ -100,7 +85,7 @@ def _text(fragment: str) -> str:
 
 async def _sitemap(lang: str = "en") -> tuple[list[str], bool]:
     async def fetch() -> list[str]:
-        urls = [u for u in _LOC.findall(await _get(constants.SITEMAP_URL, lang=lang))]
+        urls = [u for u in _LOC.findall(await _get(constants.SITEMAP_URL))]
         tables = [u for u in urls if constants.TABLE_PATH in u]
         if not tables:
             raise_localized(
@@ -356,10 +341,37 @@ def parse_static(fragment: str) -> list[list[str]]:
     return cells
 
 
+def _is_table_page_url(url: str) -> bool:
+    """True for an https table page on statistique.quebec.ca itself.
+
+    A string-prefix test is not a host test: "https://statistique.quebec.ca"
+    is also the start of "https://statistique.quebec.ca.attacker.example/..."
+    and of "https://statistique.quebec.ca@attacker.example/...", whose host is
+    the part after the "@". The host is read from the parsed URL, compared
+    exactly, and must agree with the host httpx will actually connect to.
+    """
+    if "\\" in url or any(char.isspace() for char in url):
+        return False
+    try:
+        parsed = urlparse(url)
+        connects_to = httpx.URL(url).host
+        port = parsed.port
+    except (ValueError, httpx.InvalidURL):
+        return False
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname == constants.HOST
+        and connects_to == constants.HOST
+        and parsed.username is None
+        and port in (None, 443)
+        and constants.TABLE_PATH in parsed.path
+    )
+
+
 def _page_url(table: str, lang: str) -> str:
     table = table.strip()
     if table.startswith("http"):
-        if not table.startswith(constants.SITE) or constants.TABLE_PATH not in table:
+        if not _is_table_page_url(table):
             raise_localized(
                 InvalidInput,
                 "isq: table must be a statistique.quebec.ca table page.",
@@ -380,7 +392,7 @@ def _page_url(table: str, lang: str) -> str:
 
 async def _page(url: str, lang: str = "en") -> dict[str, Any]:
     async def fetch() -> dict[str, Any]:
-        match = _NEXT_DATA.search(await _get(url, lang=lang))
+        match = _NEXT_DATA.search(await _get(url))
         data = json.loads(match.group(1))["props"]["pageProps"].get("data") if match else None
         if not data or "type" not in data:
             raise_localized(
@@ -397,9 +409,7 @@ async def _page(url: str, lang: str = "en") -> dict[str, Any]:
 
 async def _dynamic(number: int, lang: str = "en") -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
-        header = json.loads(
-            await _get(constants.KEN + "p_retrn_header", {"p_id_tabl": number}, lang)
-        )
+        header = json.loads(await _get(constants.KEN + "p_retrn_header", {"p_id_tabl": number}))
         config = header.get("tableConfig", header)
         source = config.get("dataSource") or {}
         fields = str(source.get("fields") or "").replace(" ", "")
@@ -420,19 +430,15 @@ async def _dynamic(number: int, lang: str = "en") -> tuple[dict[str, Any], bool]
             tree.insert(0, {"field": group})
             tree = [n for n in tree if not (n.get("type") == "group" and n.get("field") == group)]
         return {
-            "title": _text(
-                await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number}, lang)
-            ),
+            "title": _text(await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number})),
             "tree": tree,
-            "data": await _get(constants.KEN + "p_retrn_data", params, lang),
+            "data": await _get(constants.KEN + "p_retrn_data", params),
             # The engine is French only: p_lang=en returned the same French
             # notes on 7 of 7 tables with an English page, and p_retrn_titre
             # or p_retrn_header with p_lang answer 404 (checked 2026-10-03).
             "notes": _text(
                 await _get(
-                    constants.KEN + "p_retrn_note_html",
-                    {"p_id_tabl": number, "p_lang": "fr"},
-                    lang,
+                    constants.KEN + "p_retrn_note_html", {"p_id_tabl": number, "p_lang": "fr"}
                 )
             ),
         }

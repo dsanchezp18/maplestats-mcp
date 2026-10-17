@@ -9,7 +9,13 @@ import pytest
 
 from maplestats_mcp.modules.recalls import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import (
+    CloudflareChallenge,
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 EN_URL = constants.DUMP_URLS["en"]
 FR_URL = constants.DUMP_URLS["fr"]
@@ -508,5 +514,59 @@ async def test_get_recall_retries_then_reports_outage(httpx_mock):
     url = constants.NODE_URL.format(lang="en", nid=3)
     for _ in range(3):
         httpx_mock.add_exception(httpx.ConnectTimeout("slow"), url=url)
-    with pytest.raises(Exception, match="could not be reached"):
+    with pytest.raises(UpstreamUnavailable, match="did not respond"):
         await client.get_recall(3)
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_dump_stops_at_the_cap_instead_of_loading_it(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "DUMP_MAX_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=EN_URL, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.search()
+    assert body.pulled <= 3
+
+
+async def test_dump_keeps_its_last_modified_date_when_streamed(httpx_mock):
+    _dump(httpx_mock)
+    result = await client.search()
+    assert result.provenance.as_of is not None and result.provenance.as_of.year == 2026
+
+
+async def test_oversized_recall_page_is_refused_without_reading_it_all(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "PAGE_MAX_BYTES", 1_000)
+    url = constants.NODE_URL.format(lang="en", nid=7)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=url, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.get_recall(7)
+    assert body.pulled <= 3
+
+
+async def test_recall_page_retries_429_through_the_shared_path(httpx_mock):
+    # The page used to be fetched with a raw client call and raise_for_status.
+    url = constants.NODE_URL.format(lang="fr", nid=48704)
+    httpx_mock.add_response(url=url, status_code=429, headers={"Retry-After": "0"})
+    httpx_mock.add_response(url=url, text=LEGACY_PAGE)
+    detail = await client.get_recall("48704", lang="fr")
+    assert detail.layout == "legacy"
+    assert len(httpx_mock.get_requests(url=url)) == 2
+
+
+async def test_recall_page_cloudflare_challenge_is_recognised(httpx_mock, cloudflare_challenge):
+    url = constants.NODE_URL.format(lang="en", nid=8)
+    httpx_mock.add_response(url=url, **cloudflare_challenge)
+    with pytest.raises(CloudflareChallenge):
+        await client.get_recall(8)

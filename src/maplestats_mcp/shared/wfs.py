@@ -47,7 +47,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.upstream_text import is_backend_outage, network_error
+from maplestats_mcp.shared.upstream_text import is_unavailable_status, network_error
 
 _OWS_NS = "{http://www.opengis.net/ows/1.1}"
 
@@ -95,7 +95,7 @@ def _raise_for_status_error(exc: httpx.HTTPStatusError, context: str) -> NoRetur
             f"{context}: no match found ({detail}).",
             f"{context} : aucune correspondance ({detail}).",
         ) from exc
-    if status == 429 or (400 <= status < 500 and is_backend_outage(detail)):
+    if is_unavailable_status(status, detail):
         # Some servers answer a database-pool failure (or throttling) with a 4xx; that
         # is the service being unavailable, not a mistake in the request.
         raise call_error(

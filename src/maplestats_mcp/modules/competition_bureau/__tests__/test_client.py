@@ -29,8 +29,9 @@ def pages(httpx_mock):
 
 
 def test_current_report_reads_dates_and_ongoing():
-    reviews = client.parse_current(_CURRENT)
+    reviews, skipped = client.parse_current(_CURRENT)
     assert len(reviews) == 9  # header and footnote rows skipped
+    assert skipped == 0
     ongoing = reviews[0]
     assert ongoing.outcome == "Ongoing" and ongoing.concluded is None
     assert ongoing.opened == date(2026, 8, 10)
@@ -113,3 +114,48 @@ async def test_impossible_months_and_days_raise_before_fetching(httpx_mock, name
 async def test_real_month_and_leap_day_are_accepted(pages):
     assert (await client.search_mergers(concluded_from="2024-02-29")).total_matched >= 0
     assert (await client.search_mergers(concluded_to="2024-12")).total_matched >= 0
+
+
+# A weekly-report row with four cells used to fail the whole call with a bare
+# ValueError ("not enough values to unpack"): `_rows` keeps rows of four or
+# more cells for the archive. Which cell is missing cannot be told, so the row
+# is left out and counted.
+
+
+def _with_a_four_cell_row(page: str) -> str:
+    row = (
+        "<tr><td>Short Row Inc / Other Corp</td><td>2026-09-01</td><td>2026-09-08</td>"
+        "<td>2111</td></tr>"
+    )
+    return (
+        page.replace("</tbody>", row + "</tbody>")
+        if "</tbody>" in page
+        else page.replace("</table>", row + "</table>")
+    )
+
+
+def test_a_four_cell_weekly_row_is_left_out_and_counted():
+    page = _with_a_four_cell_row(_CURRENT)
+    assert "Short Row Inc" in page
+    reviews, skipped = client.parse_current(page)
+    assert skipped == 1 and len(reviews) == 9
+    assert not any("Short Row" in r.parties for r in reviews)
+
+
+async def test_search_reports_the_rows_it_left_out(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.CURRENT_URL, text=_with_a_four_cell_row(_CURRENT), is_reusable=True
+    )
+    httpx_mock.add_response(url=constants.ARCHIVE_URL, text=_ARCHIVE, is_reusable=True)
+    english = await client.search_mergers("tamarack")
+    assert english.total_matched == 1
+    assert "1 row(s) of the weekly report have fewer than 5 cells" in (
+        english.provenance.limits or ""
+    )
+    french = await client.search_mergers("tamarack", lang="fr")
+    assert "1 ligne(s) du rapport hebdomadaire" in (french.provenance.limits or "")
+
+
+async def test_search_without_short_rows_has_no_such_note(pages):
+    result = await client.search_mergers("tamarack")
+    assert "left out" not in (result.provenance.limits or "")

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import math
 import re
 import zipfile
@@ -50,6 +51,7 @@ _DATA_EXT = (".csv", ".dat", ".txt")
 _NOT_DATA = ("bsw", "readme", "lisez", "layout", "frq", "codebook", "record", "_i.", "_o.")
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _client = new_client(timeout=600.0, follow_redirects=True)
+_log = logging.getLogger(__name__)
 
 
 def _pick_member(
@@ -94,18 +96,44 @@ def _pick_member(
     )
 
 
-def _enforce_cache_cap(root: Path, keep: Path) -> None:
-    files = sorted((p for p in root.rglob("*") if p.is_file()), key=lambda p: p.stat().st_mtime)
-    total = sum(p.stat().st_size for p in files)
-    for path in files:
+def _enforce_cache_cap(root: Path, keep: Path, *also_keep: Path) -> None:
+    """Remove the least recently used cached files until the cache fits its cap.
+
+    Never removes `keep` (the file just written) or `also_keep` (other files
+    this call is about to read), and never a `.part` file: that is another
+    call's download in progress. A file that cannot be removed (Windows
+    refuses while a reader has it open) or that vanishes mid-scan is logged
+    and skipped, because failing to make room must not fail a call whose own
+    data is already on disk.
+    """
+    protected = {keep, *also_keep}
+    entries: list[tuple[float, int, Path]] = []
+    for path in root.rglob("*"):
+        if path.name.endswith(".part") or not path.is_file():
+            continue
+        try:
+            info = path.stat()
+        except OSError:
+            continue
+        entries.append((info.st_mtime, info.st_size, path))
+    entries.sort(key=lambda entry: entry[0])
+    total = sum(size for _, size, _ in entries)
+    for _, size, path in entries:
         if total <= config.get_pumf_cache_max_bytes():
             break
-        if path != keep:
-            total -= path.stat().st_size
+        if path in protected:
+            continue
+        try:
             path.unlink(missing_ok=True)
+        except OSError as exc:
+            _log.warning("PUMF cache: could not remove %s: %s", path.name, exc)
+            continue
+        total -= size
 
 
-async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Path:
+async def _download(
+    url: str, member: remote_zip.ZipMember, target: Path, also_keep: tuple[Path, ...] = ()
+) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     zip_path = target.parent / "archive.zip.part"
     try:
@@ -153,13 +181,20 @@ async def _download(url: str, member: remote_zip.ZipMember, target: Path) -> Pat
         finally:
             part.unlink(missing_ok=True)
             zip_path.unlink(missing_ok=True)
-        _enforce_cache_cap(config.get_pumf_cache_dir(), target)
+        _enforce_cache_cap(config.get_pumf_cache_dir(), target, *also_keep)
 
     await run_in_pool(extract)
     return target
 
 
-async def local_data_file(url: str, member: remote_zip.ZipMember) -> Path:
+async def local_data_file(
+    url: str, member: remote_zip.ZipMember, *, also_keep: tuple[Path, ...] = ()
+) -> Path:
+    """The extracted member's path, downloading it first when it is not cached.
+
+    `also_keep` names files the same call has already found and still needs,
+    so making room for this download cannot evict them.
+    """
     key = hashlib.sha1(f"{url}|{member.name}".encode()).hexdigest()[:16]
     target = config.get_pumf_cache_dir() / key / Path(member.name).name
     if target.exists():
@@ -167,7 +202,7 @@ async def local_data_file(url: str, member: remote_zip.ZipMember) -> Path:
         return target
     task = _downloads.get(key)
     if task is None or task.done():
-        task = asyncio.create_task(_download(url, member, target))
+        task = asyncio.create_task(_download(url, member, target, also_keep))
         _downloads[key] = task
     # shield: if the tool call times out, the download still finishes for a retry.
     return await asyncio.shield(task)
@@ -284,10 +319,20 @@ def _run_query(
     # needs it, so server startup stays faster (2026-09-24).
     import duckdb
 
-    with duckdb.connect() as connection:
-        connection.execute("SET enable_progress_bar = false")
-        rows = connection.execute(sql, params).fetchall()
-        total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
+    try:
+        with duckdb.connect() as connection:
+            connection.execute("SET enable_progress_bar = false")
+            rows = connection.execute(sql, params).fetchall()
+            total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
+    except duckdb.Error as exc:
+        # A ragged CSV row, a column the file does not have, or a bad join key
+        # is a fault in the file, not in the caller's arguments.
+        raise UpstreamError(
+            say(
+                f"statcan_pumf: the data file could not be tabulated: {exc}",
+                f"statcan_pumf : le fichier de données n'a pas pu être tabulé : {exc}",
+            )
+        ) from exc
     return rows, int(total_n or 0), float(total_weight or 0.0)
 
 
@@ -374,7 +419,7 @@ VARIANCE_METHODS: tuple[VarianceMethod, ...] = (
 
 
 async def _replicate_source(
-    url: str, members: list[remote_zip.ZipMember], file_marker: str
+    url: str, members: list[remote_zip.ZipMember], file_marker: str, main_path: Path
 ) -> DataSource:
     """The separate bootstrap-weight file, with its layout from its own .dct."""
     data = next((m for m in members if m.name.lower().endswith(file_marker)), None)
@@ -390,7 +435,7 @@ async def _replicate_source(
         )
     dct = await remote_zip.read_member(url, layout)
     columns = codebooks.parse_stata_dct(dct.decode("cp1252", errors="replace"))
-    path = await local_data_file(url, data)
+    path = await local_data_file(url, data, also_keep=(main_path,))
     return DataSource(path, fixed_width=True, columns=columns)
 
 
@@ -504,7 +549,7 @@ async def tabulate(
     all_weights = [chosen_weight, *(method.replicates if method else [])]
     replicate_source = None
     if method and method.replicate_file:
-        replicate_source = await _replicate_source(url, members, method.replicate_file)
+        replicate_source = await _replicate_source(url, members, method.replicate_file, path)
     known = {**by_name, **(replicate_source.columns if replicate_source else {})}
     missing_replicates = [w for w in all_weights if w not in known]
     if missing_replicates:
@@ -514,6 +559,36 @@ async def tabulate(
                 f"Les poids répliqués {missing_replicates[:3]} ne sont pas dans le dictionnaire de données.",
             )
         )
+    if method and method.id_variable and replicate_source is not None:
+        # The replicate join reads the record id from both files by position
+        # (fixed width) or by name; without it in the layout the query would
+        # fail on a bare KeyError instead of saying which variable is missing.
+        id_name = method.id_variable
+        absent = [
+            (en, fr)
+            for en, fr, present in (
+                (
+                    "the main codebook",
+                    "le dictionnaire principal",
+                    id_name in by_name or not fixed_width,
+                ),
+                (
+                    "the bootstrap weight layout",
+                    "la disposition des poids bootstrap",
+                    id_name in replicate_source.columns,
+                ),
+            )
+            if not present
+        ]
+        if absent:
+            raise InvalidInput(
+                say(
+                    f"The record id variable {id_name!r}, needed to join the bootstrap weights, "
+                    f"is not in {' or '.join(en for en, _ in absent)}.",
+                    f"La variable d'identifiant {id_name!r}, nécessaire pour joindre les poids "
+                    f"bootstrap, ne figure pas dans {' ni '.join(fr for _, fr in absent)}.",
+                )
+            )
 
     result_rows, total_n, total_weight = await run_in_pool(
         _run_query,

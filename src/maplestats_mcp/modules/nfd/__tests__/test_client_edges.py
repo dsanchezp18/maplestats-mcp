@@ -8,10 +8,11 @@ network; every response is mocked with pytest-httpx.
 
 from __future__ import annotations
 
+import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from maplestats_mcp.modules.nfd import client
+from maplestats_mcp.modules.nfd import client, constants
 from maplestats_mcp.modules.nfd.__tests__.test_client import (
     CAUSE_CSV,
     CAUSE_CSV_PATH,
@@ -142,7 +143,7 @@ async def test_persistent_503_gives_up_after_three_tries(httpx_mock: HTTPXMock) 
 
 
 async def test_passthrough_status_is_not_parsed_as_data(httpx_mock: HTTPXMock) -> None:
-    """get_raw hands 406/409 back unraised (StatCan needs them), so _download must check."""
+    """A 406/409 error answer (StatCan's lock window) is an error, never parsed as data."""
     _mock_pages(httpx_mock)
     httpx_mock.add_response(
         url=_url(CAUSE_CSV_PATH), status_code=409, text="<html><body>Conflict</body></html>"
@@ -179,3 +180,72 @@ async def test_cp1252_csv_without_bom_decodes(httpx_mock: HTTPXMock) -> None:
     result = await client.query_table("3.2.1", province="PE", lang="fr")
     assert {r.jurisdiction for r in result.rows} == {"Île-du-Prince-Édouard"}
     assert {r.dimensions["cause"] for r in result.rows} == {"Activité humaine"}
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_file_stops_at_the_cap_instead_of_loading_it(
+    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_pages(httpx_mock)
+    # The two catalogue pages are 3.5 KB each; the CSV is cut off at 10 KB.
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 10_000)
+    body = _CountingStream(chunks=50, size=6_000)
+    httpx_mock.add_response(url=_url(CAUSE_CSV_PATH), stream=body)
+    with pytest.raises(UpstreamError, match="larger than this tool reads"):
+        await client.query_table("3.2.1")
+    assert body.pulled <= 3
+
+
+async def test_declared_length_over_the_cap_is_refused_before_the_body(
+    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_pages(httpx_mock)
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 10_000)
+    httpx_mock.add_response(
+        url=_url(CAUSE_CSV_PATH), content=b"Year", headers={"Content-Length": "50000"}
+    )
+    with pytest.raises(UpstreamError, match="larger than this tool reads"):
+        await client.query_table("3.2.1")
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "http://169.254.169.254/latest/meta-data/",
+        "https://evil.example/en/download.php",
+        "ftp://nfdp.ccfm.org/en/download.php",
+        "http://nfdp.ccfm.org.evil.example/en/download.php",
+        "http://nfdp.ccfm.org@evil.example/en/download.php",
+    ],
+)
+async def test_redirect_to_another_host_or_scheme_is_refused(
+    httpx_mock: HTTPXMock, target: str
+) -> None:
+    httpx_mock.add_response(url=constants.PAGE_EN, status_code=302, headers={"location": target})
+    with pytest.raises(UpstreamError, match="refusing"):
+        await client.list_tables()
+    # Nothing was requested from the redirect target.
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["nfdp.ccfm.org"]
+
+
+async def test_redirect_within_the_nfd_host_may_change_scheme_and_path(
+    httpx_mock: HTTPXMock,
+) -> None:
+    httpx_mock.add_response(
+        url=constants.PAGE_EN, status_code=301, headers={"location": "/en/moved/download.php"}
+    )
+    httpx_mock.add_response(url="http://nfdp.ccfm.org/en/moved/download.php", text="<html></html>")
+    httpx_mock.add_response(url=constants.PAGE_FR, text="<html></html>")
+    with pytest.raises(UpstreamError, match="no tables found"):
+        await client.list_tables()

@@ -76,8 +76,16 @@
   <div class="note">Demo only: answers can be wrong, so check the source it names.
     Questions are sent to the model provider.</div>
 </form>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<!-- Subresource Integrity: the browser refuses a file whose SHA-384 differs from
+     these, so a tampered CDN copy cannot run in a page that renders model output.
+     To bump a version, download the new file and recompute the hash with
+     openssl dgst -sha384 -binary FILE | openssl base64 -A -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"
+  integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
+  crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js"
+  integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx"
+  crossorigin="anonymous"></script>
 <script>
   const examples = [
     "What is Canada's unemployment rate right now?",

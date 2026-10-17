@@ -499,6 +499,33 @@ async def test_missing_csv_column_is_an_error(httpx_mock):
         await archive.read_table(DAY, 10100001)
 
 
+@pytest.mark.parametrize(
+    ("original", "damaged", "column"),
+    [
+        ("101000010,", "10x00010,", "vectorId"),
+        (",0.25,2026-10-02T08:30,", ",n/a,2026-10-02T08:30,", "value"),
+        (",2026-10-02T08:30,0,2,6", ",2026-10-02T08:30,0,two,6", "decimals"),
+    ],
+)
+async def test_a_non_numeric_csv_field_names_its_column(
+    httpx_mock, small_chunks, original, damaged, column
+):
+    """A bad cell used to surface as `invalid literal for int()` with no column."""
+    csv = _csv(BLOCKS)
+    assert original in csv
+    _mock_day(httpx_mock, csv=csv.replace(original, damaged, 1))
+    with pytest.raises(UpstreamError, match=f"column {column}"):
+        await archive.read_table(DAY, 10100001)
+
+
+async def test_a_short_csv_row_names_the_missing_column(httpx_mock, small_chunks):
+    csv = _csv(BLOCKS)
+    first_row = csv.split("\n")[1]
+    _mock_day(httpx_mock, csv=csv.replace(first_row, ",".join(first_row.split(",")[:6]), 1))
+    with pytest.raises(UpstreamError, match="no .* column"):
+        await archive.read_table(DAY, 10100001)
+
+
 async def test_archive_without_the_three_members_is_an_error(httpx_mock):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as bundle:

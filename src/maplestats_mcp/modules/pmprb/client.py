@@ -42,7 +42,6 @@ import unicodedata
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
-import httpx
 from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
 
@@ -57,11 +56,11 @@ from maplestats_mcp.modules.pmprb.schemas import (
     PmprbTableResult,
     Value,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error, truncation_note_lang
-from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.limits import fit_to_budget
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -86,39 +85,19 @@ def _text(node: Tag | NavigableString) -> str:
 
 
 async def _fetch(url: str, lang: str = "en") -> str:
-    await _LIMITER.acquire()
-    try:
-        response = await get_raw(url, timeout=60.0)
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        if status in (404, 410):
-            raise lang_error(
-                NotFound,
-                lang,
-                f"pmprb: {url} is gone (HTTP {status}); the page moved.",
-                f"pmprb : {url} n'existe plus (HTTP {status}) ; la page a été déplacée.",
-            ) from exc
-        raise lang_error(
-            UpstreamError,
-            lang,
-            f"pmprb: {url} returned HTTP {status}.",
-            f"pmprb : {url} a renvoyé HTTP {status}.",
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise lang_error(
-            UpstreamUnavailable,
-            lang,
-            f"pmprb: {url} did not respond in time.",
-            f"pmprb : {url} n'a pas répondu à temps.",
-        ) from exc
-    if len(response.content) > constants.MAX_PAGE_BYTES:
-        raise lang_error(
-            UpstreamError,
-            lang,
-            f"pmprb: {url} is much larger than expected; the page changed.",
-            f"pmprb : {url} est beaucoup plus volumineux que prévu ; la page a changé.",
-        )
-    return response.text
+    # Streamed under the cap: a declared Content-Length above it is refused
+    # before the body is read, an undeclared one stops at the cap, and every
+    # redirect hop must stay on canada.ca. Errors are typed by the shared
+    # reader and follow the running call's `lang`.
+    downloaded = await file_download.download(
+        url,
+        allow_host=lambda host: host == constants.HOST,
+        limiter_for=lambda _host: _LIMITER,
+        max_bytes=constants.MAX_PAGE_BYTES,
+        context="pmprb",
+        timeout=60.0,
+    )
+    return downloaded.body.decode("utf-8", errors="replace")
 
 
 def _provenance(

@@ -1575,7 +1575,7 @@ reviews). Checked 2026-09-25: the merger-review reports are full HTML tables
 (about 830 reviews since Nov 2023, weekly; about 1,725 from 2015-2023) with
 parties, dates, NAICS and outcome; the Tribunal's decisions site refuses
 automated requests, and enforcement and market studies are PDFs.
-[Details](docs/findings/competition-bureau.md)
+[Details](competition-bureau.md)
 
 ## Financial Consumer Agency of Canada (FCAC)
 

@@ -20,6 +20,7 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
       - run: uv sync --locked
       # Same gate as ci.yml, so a tag on a commit that failed CI cannot publish.
       - run: uv run ruff check src tests scripts
@@ -83,18 +84,25 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
       - run: uv sync --locked
       # The bundle launches the PyPI release with uvx, so it must follow the
       # pypi job; it carries the tool list read from this commit's server.
       - run: uv run python scripts/build_smithery_bundle.py dist
-      # Pinned, like mcp-publisher above: this step holds the Smithery key.
+      # The next step holds the Smithery key, so the CLI is installed from
+      # .github/smithery/package-lock.json, whose sha512 hashes npm checks,
+      # with install scripts off, in a step that does not see the key. To bump
+      # it, change the version in .github/smithery/package.json and run
+      # npm install --package-lock-only --ignore-scripts in that folder.
+      - name: Install the Smithery CLI
+        run: npm ci --ignore-scripts --prefix .github/smithery
       # SMITHERY_API_KEY is a repository secret from smithery.ai account settings.
       - name: Publish to Smithery
         env:
           SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
         run: |
           test -n "$SMITHERY_API_KEY" || { echo "::error::SMITHERY_API_KEY secret is not set"; exit 1; }
-          npx -y @smithery/cli@4.11.1 mcp publish "dist/maplestats-mcp-${GITHUB_REF_NAME#v}.mcpb" -n dsanchezp998/maplestats-mcp
+          .github/smithery/node_modules/.bin/smithery mcp publish "dist/maplestats-mcp-${GITHUB_REF_NAME#v}.mcpb" -n dsanchezp998/maplestats-mcp
 
   github-release:
     # The tag's GitHub Release, with notes GitHub writes from the pull

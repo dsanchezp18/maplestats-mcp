@@ -6,6 +6,8 @@ these."""
 
 from __future__ import annotations
 
+import copy
+
 import httpx
 import pytest
 
@@ -16,7 +18,12 @@ from maplestats_mcp.modules.statcan.sdmx.__tests__.test_client import (
     _parse,
 )
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -173,6 +180,21 @@ async def test_get_data_5xx_is_unavailable_not_raw_httpx(httpx_mock):
         await client.get_data(1, "1")
 
 
+@pytest.mark.parametrize(
+    ("status", "error"),
+    [(400, InvalidInput), (401, UpstreamError), (403, UpstreamError)],
+)
+async def test_get_data_non_transient_4xx_is_not_reported_as_unavailable(httpx_mock, status, error):
+    """400/401/403 are not retried, so "(already retried)" and "try again" mislead."""
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=100", status_code=status
+    )
+    with pytest.raises(error, match=f"HTTP {status}") as exc_info:
+        await client.get_data(1, "1")
+    assert not isinstance(exc_info.value, UpstreamUnavailable)
+    assert "already retried" not in str(exc_info.value)
+
+
 async def test_get_data_network_failure_is_unavailable(httpx_mock):
     for _ in range(3):
         httpx_mock.add_exception(httpx.ConnectTimeout("timed out"))
@@ -262,3 +284,38 @@ async def test_vector_data_takes_dimension_count_from_wds_not_sdmx_structure(htt
     )
     result = await client.get_vector_data(5, last_n_observations=2)
     assert result.key == "2.7"
+
+
+async def test_structure_from_wds_reads_every_page_of_a_large_dimension(httpx_mock):
+    """A geography or NAICS dimension past one 2000-member page must come back whole.
+
+    Before the fix the fallback asked getCubeMetadata for its default 100
+    members, so the OR key covered 100 codes and `code_count` reported 100.
+    """
+    from maplestats_mcp.modules.statcan.wds import constants as wds_constants
+
+    total = wds_constants.MEMBER_LIMIT_MAX + 500
+    members = [_member(1, None, "Canada")]
+    members += [_member(i, 1, f"Place {i}") for i in range(2, total + 1)]
+    # A parent listed on page one whose only child sits on page two: with the
+    # truncated list it would be misread as a leaf.
+    members[5] = _member(6, 1, "Region with late child")
+    members[total - 1] = _member(total, 6, "Late child")
+    metadata = copy.deepcopy(_WDS_METADATA)
+    metadata[0]["object"]["dimension"][0]["member"] = members
+    httpx_mock.add_response(url=_STRUCTURE_URL, content=b"")
+    httpx_mock.add_response(url=_WDS_METADATA_URL, method="POST", json=metadata)
+
+    structure = await client.get_structure(14100063, dimension_position=1, limit=1)
+    assert structure.dimensions[0].code_count == total
+
+    key = await client.get_key_for_dimension(14100063, 1)
+    ids = key.or_key.split("+")
+    # Leaves: everything except Canada and the one region that has a child.
+    assert key.leaf_code_count == total - 2
+    assert len(ids) == total - 2
+    assert "6" not in ids
+    assert str(total) in ids
+
+    wds_requests = [r for r in httpx_mock.get_requests() if str(r.url) == _WDS_METADATA_URL]
+    assert len(wds_requests) == 1  # the later pages come from the cached metadata

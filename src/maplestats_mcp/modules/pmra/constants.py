@@ -1,6 +1,7 @@
 """Constants for the PMRA pesticide registry module (checked live 2026-10-03)."""
 
-EXTRACT_URL = "https://pest-control.canada.ca/pesticide-registry-api/api/extract/"
+HOST = "pest-control.canada.ca"
+EXTRACT_URL = f"https://{HOST}/pesticide-registry-api/api/extract/"
 DATASET_URL = "https://open.canada.ca/data/{lang}/dataset/e10b0d6e-04ac-4014-a64a-666c3874bbe0"
 
 RATE_LIMIT_SOURCE = "pmra"

@@ -235,7 +235,7 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
         await _LIMITER.acquire()
         try:
             # 500 is IMDB's deterministic unknown-survey answer (see below): no retry.
-            return await get_with_retry(_client, url, retry_statuses=RETRY_STATUSES - {500})
+            response = await get_with_retry(_client, url, retry_statuses=RETRY_STATUSES - {500})
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 say(
@@ -243,32 +243,38 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
                     "statcan_surveys:get_survey_metadata n'a pas répondu à temps. Réessayez sous peu.",
                 )
             ) from exc
+        # Judge the status here, not after cached_fetch: get_with_retry hands
+        # back the last response even when it is still a 5xx, and cached_fetch
+        # stores whatever fetch() returns, so a single 503 blip would otherwise
+        # make every call for this survey fail for the whole 24 h TTL.
+        #
+        # An unknown SDDS number redirects through
+        # .../error-erreur/stc_srvmsg404.html -- StatCan's own dedicated
+        # 404 page -- which itself answers HTTP 500 due to a broken
+        # redirect chain on their end (confirmed live: 302 -> 301 -> 500,
+        # reproduced identically with a raw curl). This is IMDB's
+        # deterministic "no such survey" signal, not a generic upstream
+        # failure, so it is treated as NotFound rather than UpstreamError.
+        if response.status_code in (404, 500) and "srvmsg404" in str(response.url):
+            raise NotFound(
+                say(
+                    f"statcan_surveys:get_survey_metadata: no survey found for id {survey_id}.",
+                    f"statcan_surveys:get_survey_metadata : aucune enquête trouvée pour l'identifiant {survey_id}.",
+                )
+            )
+        if response.status_code != 200:
+            raise UpstreamError(
+                say(
+                    f"statcan_surveys:get_survey_metadata returned HTTP {response.status_code}.",
+                    f"statcan_surveys:get_survey_metadata a renvoyé HTTP {response.status_code}.",
+                )
+            )
+        return response
 
     cache_key = f"statcan-surveys:metadata:{lang}:{survey_id}"
     response, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_METADATA_SECONDS, fetch
     )
-    # An unknown SDDS number redirects through
-    # .../error-erreur/stc_srvmsg404.html -- StatCan's own dedicated
-    # 404 page -- which itself answers HTTP 500 due to a broken
-    # redirect chain on their end (confirmed live: 302 -> 301 -> 500,
-    # reproduced identically with a raw curl). This is IMDB's
-    # deterministic "no such survey" signal, not a generic upstream
-    # failure, so it is treated as NotFound rather than UpstreamError.
-    if response.status_code in (404, 500) and "srvmsg404" in str(response.url):
-        raise NotFound(
-            say(
-                f"statcan_surveys:get_survey_metadata: no survey found for id {survey_id}.",
-                f"statcan_surveys:get_survey_metadata : aucune enquête trouvée pour l'identifiant {survey_id}.",
-            )
-        )
-    if response.status_code != 200:
-        raise UpstreamError(
-            say(
-                f"statcan_surveys:get_survey_metadata returned HTTP {response.status_code}.",
-                f"statcan_surveys:get_survey_metadata a renvoyé HTTP {response.status_code}.",
-            )
-        )
     return _parse_survey_metadata(response.text, survey_id, url, was_cached)
 
 

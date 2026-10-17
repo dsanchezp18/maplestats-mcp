@@ -14,7 +14,7 @@ import pytest
 
 from maplestats_mcp.modules.elections_results import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _HERE = Path(__file__).parent
 
@@ -153,3 +153,12 @@ async def test_html_error_page_is_not_found(httpx_mock):
     )
     with pytest.raises(NotFound):
         await client.get_table(45, "candidates")
+
+
+async def test_table_redirect_to_another_host_is_refused(httpx_mock):
+    httpx_mock.add_response(
+        url=_url(45, 12), status_code=302, headers={"Location": "https://evil.example/t.csv"}
+    )
+    with pytest.raises(UpstreamError, match="evil.example"):
+        await client.get_table(45, "candidates")
+    assert [r.url.host for r in httpx_mock.get_requests()] == ["www.elections.ca"]

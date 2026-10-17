@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.ircc.monthly import client, constants
@@ -209,3 +210,51 @@ async def test_english_note_and_provenance_unchanged(live):
     assert result.provenance.freshness == (
         "monthly; IRCC adds the latest month and may revise earlier ones"
     )
+
+
+class _CountingStream(httpx.AsyncByteStream):
+    """A body with no Content-Length that counts the chunks the client pulled."""
+
+    def __init__(self, chunks: int, size: int) -> None:
+        self.chunks, self.size, self.pulled = chunks, size, 0
+
+    async def __aiter__(self):
+        for _ in range(self.chunks):
+            self.pulled += 1
+            yield b"x" * self.size
+
+
+async def test_oversized_table_stops_at_the_cap_instead_of_loading_it(
+    httpx_mock, catalogue, monkeypatch
+):
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 1_000)
+    body = _CountingStream(chunks=50, size=500)
+    httpx_mock.add_response(url=_PR_URL, stream=body)
+    with pytest.raises(UpstreamError, match="larger than 1,000 bytes"):
+        await client.describe_table("ODP-PR-PT_IMMCAT")
+    assert body.pulled <= 3
+
+
+_ODD_TOTALS = (
+    b"EN_YEAR\tEN_QUARTER\tEN_MONTH\tEN_PROVINCE_TERRITORY\tTOTAL\n"
+    b"2026\tQ3\tJul\tAlberta\t1,205\n"
+    b"2026\tQ3\tJul\tQuebec\t<5\n"
+    b"2026\tQ3\tJul\tOntario\tn/a\n"
+    b"2026\tQ3\tJul\tManitoba\t--\n"
+)
+
+
+def test_an_unreadable_total_cell_is_unknown_not_a_failed_table():
+    parsed = client.parse_table(_ODD_TOTALS)
+    assert [r.value for r in parsed.rows] == [1205, None, None, None]
+    # "--" is IRCC's own suppression mark; "<5" and "n/a" are the odd ones.
+    assert parsed.unreadable_cells == 2 and parsed.unreadable_example == "<5"
+
+
+async def test_unreadable_cells_are_reported_in_the_note(httpx_mock, catalogue):
+    httpx_mock.add_response(url=_PR_URL, content=_ODD_TOTALS, is_reusable=True)
+    described = await client.describe_table("ODP-PR-PT_IMMCAT")
+    assert described.suppressed_cells == 1 and described.unreadable_cells == 2
+    assert "2 TOTAL cells were not counts" in described.note and "'<5'" in described.note
+    queried = await client.query_table("ODP-PR-PT_IMMCAT", lang="fr")
+    assert "2 cellules TOTAL n'étaient pas des nombres" in queried.note

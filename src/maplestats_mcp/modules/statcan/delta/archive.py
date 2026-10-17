@@ -560,21 +560,56 @@ def _legend(
 
 def _row(fields: list[bytes], index: dict[str, int]) -> DeltaRow:
     def text(name: str) -> str:
-        return fields[index[name]].decode("ascii", "replace")
+        try:
+            return fields[index[name]].decode("ascii", "replace")
+        except IndexError as exc:
+            raise UpstreamError(
+                say(
+                    f"A Delta CSV row has {len(fields)} fields and no {name} column; "
+                    "the Delta CSV layout may have changed.",
+                    f"Une ligne du CSV delta compte {len(fields)} champs et n'a pas de colonne "
+                    f"{name} ; la structure du CSV delta a peut-être changé.",
+                )
+            ) from exc
+
+    def whole(name: str) -> int:
+        raw = text(name)
+        try:
+            return int(raw)
+        except ValueError as exc:
+            raise UpstreamError(
+                say(
+                    f"The Delta CSV column {name} holds {raw!r}, not a whole number; "
+                    "the Delta CSV layout may have changed.",
+                    f"La colonne {name} du CSV delta contient {raw!r}, pas un nombre entier ; "
+                    "la structure du CSV delta a peut-être changé.",
+                )
+            ) from exc
 
     raw_value = text("value").strip()
+    try:
+        value = float(raw_value) if raw_value else None
+    except ValueError as exc:
+        raise UpstreamError(
+            say(
+                f"The Delta CSV column value holds {raw_value!r}, not a number; "
+                "the Delta CSV layout may have changed.",
+                f"La colonne value du CSV delta contient {raw_value!r}, pas un nombre ; "
+                "la structure du CSV delta a peut-être changé.",
+            )
+        ) from exc
     return DeltaRow(
-        vector_id=int(text("vectorId")),
+        vector_id=whole("vectorId"),
         coordinate=text("coordinate"),
         ref_period=text("refPer"),
         ref_period_end=text("refPer2") or None,
-        value=float(raw_value) if raw_value else None,
-        symbol_code=int(text("symbolCode")),
-        status_code=int(text("statusCode")),
-        security_level_code=int(text("securityLevelCode")),
-        scalar_factor_code=int(text("scalarFactorCode")),
-        decimals=int(text("decimals")),
-        frequency_code=int(text("frequencyCode")),
+        value=value,
+        symbol_code=whole("symbolCode"),
+        status_code=whole("statusCode"),
+        security_level_code=whole("securityLevelCode"),
+        scalar_factor_code=whole("scalarFactorCode"),
+        decimals=whole("decimals"),
+        frequency_code=whole("frequencyCode"),
         release_time=text("releaseTime"),
     )
 

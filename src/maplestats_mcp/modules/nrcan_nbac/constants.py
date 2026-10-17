@@ -17,6 +17,12 @@ ROWS_LIMIT_MAX = 1000
 # than that comes back without its geometry.
 GEOMETRY_ROWS_MAX = 10
 GEOMETRY_BYTES_MAX = 2_000_000
+# The GeoJSON of a geometry request is read only up to this size: GeoServer
+# streams it chunked, with no Content-Length (live 2026-10-17), so the cap is
+# enforced while reading, and the polygons are trimmed to GEOMETRY_BYTES_MAX
+# before the result is cached. Parsed, 20 MB is on the order of 100 MB of
+# Python objects, which the hosted instance (512 MB) can hold once.
+GEOMETRY_RESPONSE_BYTES_MAX = 20 * 1024 * 1024
 
 # The full set of confirmed-live NBAC attribute fields, minus geometry --
 # used as the default propertyName list when a caller doesn't request

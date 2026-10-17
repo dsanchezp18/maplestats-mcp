@@ -7,6 +7,7 @@ callable shared/security.py's middleware was designed to wrap.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from maplestats_mcp import __version__, config
@@ -22,8 +23,31 @@ from maplestats_mcp.shared.usage import STATS
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 
+logger = logging.getLogger("maplestats_mcp.asgi")
+
+
+def check_hosting_config() -> None:
+    """Refuse or warn about an unsafe hosted configuration.
+
+    Runs inside build_asgi_app(), so it applies however the app is started:
+    `python -m maplestats_mcp` and `uvicorn maplestats_mcp.asgi:app` alike. The
+    bind address is read from MAPLE_HOST; a bind chosen only with uvicorn's own
+    --host flag is not visible here, which is why the refusal below (which does
+    not depend on the address) is the part to rely on.
+    """
+    auth_token = config.get_auth_token()
+    if config.get_require_auth() and not auth_token:
+        raise RuntimeError("MAPLE_REQUIRE_AUTH is set but MAPLE_AUTH_TOKEN is empty.")
+    loopback = config.get_host() in {"127.0.0.1", "localhost", "::1"}
+    if not loopback and not auth_token:
+        logger.warning(
+            "MCP HTTP endpoint is bound externally without MAPLE_AUTH_TOKEN; "
+            "set a token before exposing it beyond a trusted network."
+        )
+
 
 def build_asgi_app():
+    check_hosting_config()
     inner = mcp.http_app()
     secured = with_http_security(
         inner,

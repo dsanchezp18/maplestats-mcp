@@ -173,6 +173,7 @@ async def test_get_code_sets_parses_all_real_field_name_variants(httpx_mock):
     — both confirmed live, both wrong in the first implementation."""
     httpx_mock.add_response(
         json={
+            "status": "SUCCESS",
             "object": {
                 "scalar": [
                     {
@@ -208,7 +209,7 @@ async def test_get_code_sets_parses_all_real_field_name_variants(httpx_mock):
                     }
                 ],
                 "terminated": [{"codeId": 0, "codeTextEn": "active", "codeTextFr": "actif"}],
-            }
+            },
         }
     )
     result = await client.get_code_sets()

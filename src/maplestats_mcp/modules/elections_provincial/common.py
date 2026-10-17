@@ -5,11 +5,8 @@ from __future__ import annotations
 import unicodedata
 from dataclasses import dataclass, field
 
-import httpx
-
 from maplestats_mcp.modules.elections_provincial import constants
-from maplestats_mcp.shared.errors import NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 
 _LIMITER = get_limiter(
@@ -73,17 +70,17 @@ async def fetch_bytes(
 ) -> bytes:
     """One paced GET of a file, with upstream failures turned into typed errors.
 
-    `limiter` replaces the module's 10 second pacing for a source that asks for none.
+    The body is streamed and refused at `max_bytes` (from its Content-Length or
+    mid-stream, never after it is all in memory), and a redirect may only reach
+    the provinces' own hosts (constants.DOWNLOAD_HOSTS). `limiter` replaces the
+    module's 10 second pacing for a source that asks for none.
     """
-    await (limiter or _LIMITER).acquire()
-    try:
-        response = await get_raw(url, timeout=120.0)
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            raise NotFound(f"{context}: no file at {url}.") from exc
-        raise UpstreamError(f"{context}: {url} returned HTTP {exc.response.status_code}.") from exc
-    except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"{context}: {url} did not respond in time.") from exc
-    if max_bytes is not None and len(response.content) > max_bytes:
-        raise UpstreamError(f"{context}: {url} is larger than this tool reads.")
-    return response.content
+    downloaded = await file_download.download(
+        url,
+        allow_host=lambda host: host in constants.DOWNLOAD_HOSTS,
+        limiter_for=lambda _host: limiter or _LIMITER,
+        max_bytes=constants.DEFAULT_MAX_BYTES if max_bytes is None else max_bytes,
+        context=context,
+        timeout=120.0,
+    )
+    return downloaded.body
