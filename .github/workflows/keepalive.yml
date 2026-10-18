@@ -3,7 +3,9 @@ name: keepalive
 # Render's free web service spins down after about 15 minutes idle, and a cold
 # start (50 s or more) looks like a broken server to MCP clients. GitHub's
 # schedule can lag by several minutes, so this reduces sleeps rather than
-# removing them.
+# removing them. A 502 while Render restarts or deploys clears within a minute
+# or two, so the ping retries instead of failing the run; uptime.yml is the
+# workflow that alerts on a lasting outage.
 on:
   schedule:
     - cron: "*/10 * * * *"
@@ -15,6 +17,6 @@ permissions: {}
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
     steps:
-      - run: curl --fail --silent --show-error --max-time 90 https://maplestats-mcp.onrender.com/health
+      - run: curl --fail --silent --show-error --max-time 60 --retry 6 --retry-delay 20 --retry-max-time 240 --retry-all-errors https://maplestats-mcp.onrender.com/health
