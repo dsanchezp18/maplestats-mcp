@@ -695,7 +695,7 @@ async def test_r_french_premises_listed_twice_take_the_last_row(tmp_path, monkey
         url: (pages / name).read_text(encoding="utf-8") for url, name in _PAGES.items() if name
     }
 
-    async def fetch(url: str) -> str:
+    async def fetch(url: str, lang: str = "en") -> str:
         return served[url]
 
     monkeypatch.setattr(cfia, "_fetch", fetch)
