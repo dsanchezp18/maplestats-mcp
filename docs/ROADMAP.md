@@ -413,7 +413,7 @@ Constraints:
 | 3. Contents and variables | Index dataset contents and variable metadata: StatCan cube dimensions, CMHC sheet headings, CKAN column names, data dictionaries. Results carry match explanations and provenance. | Not yet defined. |
 | 4. Integration | Use the index in `plan_query`; incremental refresh; regression tests; lexical fallback when the index is absent or stale. | Not yet defined. |
 
-Phase 1 is being built (2026-10-19) in `tests/discovery_benchmark/`: query fixtures in `queries.json` and a runner (`python -m tests.discovery_benchmark`) that scores `search_tools` and `plan_query` offline. None of it is merged, no baseline is recorded here, and the Phase 1 gate is not met.
+Phase 1 is built (2026-10-19) in `tests/discovery_benchmark/`: 129 English and French query fixtures in `queries.json`, a runner (`python -m tests.discovery_benchmark`) that scores `search_tools` and `plan_query` offline, a pytest with regression floors (`tests/test_discovery_benchmark.py`), an optional live script (`scripts/discovery_benchmark_live.py`), and a recorded baseline ([`baseline.md`](../tests/discovery_benchmark/baseline.md)). The baseline: `search_tools` Recall@5 0.87, Recall@10 0.92, MRR 0.70; `plan_query` Recall@5 0.83 and 0.88 with the expected tool anywhere in the plan. The weakest areas are ambiguous questions in `search_tools` (Recall@5 0.60) and first-rank hits for federal and provincial CKAN questions (Recall@1 0.33 and 0.25). **The Phase 1 gate is not met:** 0 of 129 fixtures have been reviewed (an AI session wrote the expected answers), so every number is a first measurement until someone works through [`REVIEW.md`](../tests/discovery_benchmark/REVIEW.md).
 
 ### Architecture comparison with OpenMCP
 
