@@ -4,7 +4,7 @@ Source coverage plan for MapleStats MCP. This is the authoritative list of
 what the package will cover — scoped by Daniel on 2026-09-14, superseding
 any narrower or broader source list implied elsewhere.
 
-**State at 2026-10-03:** 357 tools in 70 modules. Every source in the tables below is
+**State at 2026-10-19:** 357 tools in 70 modules. Every source in the tables below is
 `Shipped`, `Covered`, or has a recorded reason it is not built (`Blocked`, `Out of scope`,
 `Not built`). Local coverage is 82 ArcGIS Hub portals, 5 Socrata, 10 CKAN and one
 Opendatasoft. What is left is launch work (an always-on hosted endpoint, blog post, clients, outreach)
@@ -362,14 +362,15 @@ From the Notion canonical page; the hosted endpoint, blog post, per-language cli
 
 | Item | Status | Notes |
 |---|---|---|
-| Hosted MCP endpoint | Started (beta) | Live on Render's free tier at `https://maplestats-mcp.onrender.com/mcp` (`render.yaml`, Docker, `/health`; checked 2026-10-01: HTTP 200, 35 s on a cold start). No token; 60 requests a minute per client; `statcan_pumf_tabulate` off. `keepalive.yml` pings it every 10 minutes, which reduces but does not remove the free tier's idle sleep. Launch gate: decide whether this instance is the launch endpoint or moves to an always-on host (Azure Container Apps recipe discussed 2026-09-24: one replica, Azure Files volume for the PUMF cache). |
+| Hosted MCP endpoint | Started (beta) | Live on Render's free tier at `https://maplestats-mcp.onrender.com/mcp` (`render.yaml`, Docker, `/health`; checked 2026-10-01: HTTP 200, 35 s on a cold start; `/health` answered HTTP 200 in under 1 s on 2026-10-19, warm). No token; 60 requests a minute per client; `statcan_pumf_tabulate` off. `keepalive.yml` pings it every 10 minutes, which reduces but does not remove the free tier's idle sleep; since 2026-10-18 the ping retries for up to four minutes, so a brief 502 during a restart does not fail the run. The image runs Python 3.14 (2026-10-15) and the `Docker images` workflow builds the server and chat images on every push and pull request and checks that the server image answers `/health` (2026-10-16). Launch gate: decide whether this instance is the launch endpoint or moves to an always-on host (Azure Container Apps recipe discussed 2026-09-24: one replica, Azure Files volume for the PUMF cache). |
 | ChatGPT app (OpenAI app directory) | Not started | Separate from ChatGPT developer mode. Developer mode (documented in the README) lets a user add the hosted URL as their own custom connector; it works today and is not a listing. Publishing a ChatGPT app means a submission to OpenAI's app directory (checked 2026-10-01): a verified OpenAI organization, HTTPS product, support, privacy and terms pages, five positive and three negative test cases, a video walkthrough and release notes. It assumes an always-on endpoint. |
-| Uptime and usage monitoring | Shipped | Deployed: `uptime.yml` runs hourly on GitHub Actions (successful runs checked 2026-10-17) and `/stats` answers on the hosted server (HTTP 200, same day). It runs a real MCP handshake, tool list and search against the hosted URL and fails, so GitHub emails the owner, when any step does; `keepalive.yml` still pings `/health`. `shared/usage.py` counts calls by tool name, day and outcome in memory, public at `/stats` (`MAPLE_USAGE_STATS`, on by default); it never stores arguments or client addresses, and a restart resets it, so it is a recent-activity view, not a history. The FAQ was updated to say so. |
+| Uptime and usage monitoring | Shipped | Deployed: `uptime.yml` runs hourly on GitHub Actions (the three latest runs, up to 2026-10-19 01:18 UTC, succeeded) and `/stats` answers on the hosted server (HTTP 200, checked 2026-10-17). It runs a real MCP handshake, tool list and search against the hosted URL and fails, so GitHub emails the owner, when any step does; `keepalive.yml` still pings `/health`. `shared/usage.py` counts calls by tool name, day and outcome in memory, public at `/stats` (`MAPLE_USAGE_STATS`, on by default); it never stores arguments or client addresses, and a restart resets it, so it is a recent-activity view, not a history. The FAQ was updated to say so. |
 | Public website | Shipped | Live at maplestats.danielstats.io (moved from dsanchezp18.github.io/maplestats-mcp on 2026-10-09: GitHub Pages with a custom domain): home, sources, tools, connect, StatCan page, about, contributing; English and French. The demos page was removed 2026-09-29. |
+| Chat demo | Shipped (beta) | `chat/`, a separate Render free-tier web service (`maplestats-chat` in `render.yaml`, `https://maplestats-chat.onrender.com/`) that holds the model API key and answers questions by calling the public MCP endpoint; Claude Haiku 5.5 by default (`CHAT_MODEL`). Linked from the website's "See it in action" section (0.3.0). Per-address and daily request limits (`chat/README.md`); a request that fails after a billed model call stays counted. `/health` answered HTTP 200 on 2026-10-19 after a first request that timed out at 60 s (cold start). |
 | Launch blog post "One MCP to Rule Them All" | Not started | Narrative drafted on the Notion page. |
 | Cross-source demos | Removed | Shipped 2026-09-27 as a site page (Alberta's population boom and rental market; what the rate hikes did to new housing), then archived and removed 2026-09-29. `plan_query` and the recorded cases on the demos page cover the same ground. |
-| MCP registries | Shipped (official, Glama, Smithery) | `io.github.dsanchezp18/maplestats-mcp` 0.3.0 (2026-10-10) is the latest version on the official MCP Registry (checked live 2026-10-17; earlier versions are superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Glama and Smithery listing pages resolve (badges in the README). Since then badges were added for Mcprush, LobeHub, piwheels, M8ven and MCPLookup (README and site), and every tool got a human-readable title, which Claude's connector directory requires (2026-09-30). See Directories below. |
-| PyPI package | Shipped | `maplestats-mcp` 0.3.0 (2026-10-10) is the latest release on PyPI (checked live 2026-10-17; 0.1.0, 0.1.1 and 0.2.0 also available). Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). |
+| MCP registries | Shipped (official, Glama, Smithery) | `io.github.dsanchezp18/maplestats-mcp` 0.3.0 (2026-10-10) is the latest version on the official MCP Registry (checked live 2026-10-19; earlier versions are superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). Glama and Smithery listing pages resolve (badges in the README). Since then badges were added for Mcprush, LobeHub, piwheels, M8ven and MCPLookup (README and site), and every tool got a human-readable title, which Claude's connector directory requires (2026-09-30). See Directories below. |
+| PyPI package | Shipped | `maplestats-mcp` 0.3.0 (2026-10-10) is the latest release on PyPI (checked live 2026-10-19; 0.1.0, 0.1.1 and 0.2.0 also available). Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). |
 | Per-language clients | Not started | Lightweight R, Python and Julia clients over the hosted core; `reproduce_code` already generates per-language scripts. |
 | Ecosystem outreach | Not started | cansim maintainers, MountainMath (CMHC, canivt), OSI Data Analyst Network, Edmonton Data Society, Vancouver group, NRCan (Torben), SFU Economics. |
 
@@ -390,6 +391,49 @@ Where MapleStats is listed or could be (checked 2026-10-01 unless stated).
 | Cursor MCP directory | Not submitted | Listed through Cursor's own submission. |
 | Claude connectors directory | Not submitted | Needs a human-readable title on every tool (done 2026-09-30); check Anthropic's current requirements. |
 | ChatGPT app directory | Not started | See the Launch table; not the same as developer mode. |
+
+## Discovery
+
+**Status: Proposed, not implemented.** Plan proposed 2026-10-18. It adds dataset-level and variable-level discovery across sources; `search_tools` and `plan_query` stay as they are until a phase passes its gate.
+
+Today `search_tools` ranks tools: a BM25 index over tool docstrings with accent and plural folding and French stop words (`shared/search.py`). `plan_query` picks tools by rules (`modules/planner/`). Neither ranks datasets, tables or variables across sources.
+
+Constraints:
+
+- Extend the modular FastMCP architecture (a module or shared helper behind the same three visible tools); do not replace it.
+- Metadata and variable discovery only. The index says which table, vector, sheet or column to read; numbers still come from the source adaptor's live call, never from a model or an index.
+- The index is optional: the server works without it, and the lexical `search_tools` stays the fallback.
+- Before adding a dependency, check whether DuckDB (already a dependency, `duckdb>=1.5.5` in `pyproject.toml`, used by the PUMF tabulation, IP Horizons and LODE readers) and the existing tool search are enough. OpenMCP's plan notes that DuckDB's `fts` extension is needed at run time, with offline handling an open question, and does not update incrementally.
+- No production rollout and no model choice before the measurements in Phases 1 and 2.
+
+| Phase | Scope | Gate |
+|---|---|---|
+| 1. Benchmark | A reproducible discovery benchmark of 100 to 150 reviewed English and French queries. Baselines: `search_tools`, `plan_query` and source-specific lexical search. Metrics: Recall@1, @5 and @10, MRR, correct-source and correct-variable selection, latency, error and abstention rates. | Fixtures reviewed; the run is repeatable in CI; a baseline is documented before any embedding work. |
+| 2. Hybrid index | An optional index of metadata only (no data rows): a BM25 baseline, then multilingual embeddings (EmbeddingGemma 2 is one candidate), reciprocal-rank fusion, and exact-match boosts for table IDs, vector IDs and acronyms. Size, memory, cold start and latency are measured. Behind a feature flag. | Better retrieval on the Phase 1 benchmark without regression on exact IDs, French queries or cost. |
+| 3. Contents and variables | Index dataset contents and variable metadata: StatCan cube dimensions, CMHC sheet headings, CKAN column names, data dictionaries. Results carry match explanations and provenance. | Not yet defined. |
+| 4. Integration | Use the index in `plan_query`; incremental refresh; regression tests; lexical fallback when the index is absent or stale. | Not yet defined. |
+
+Phase 1 is being built (2026-10-19) in `tests/discovery_benchmark/`: query fixtures in `queries.json` and a runner (`python -m tests.discovery_benchmark`) that scores `search_tools` and `plan_query` offline. None of it is merged, no baseline is recorded here, and the Phase 1 gate is not met.
+
+### Architecture comparison with OpenMCP
+
+OpenMCP (`opendatafyi/openmcp`, v1.2.0 of 2026-10-09, MIT; the website's alternatives list shows it as opendata.fyi) compared with MapleStats v0.3.0 (2026-10-10). Only OpenMCP's README, CHANGELOG and `implementation.md` were read (2026-10-19, through a summarising fetch); its code and evaluation results were not. Its figures are its own and version-sensitive.
+
+| | MapleStats v0.3.0 | OpenMCP v1.2.0 |
+|---|---|---|
+| Indexed unit | Tools. BM25 over tool docstrings in `search_tools` (accent and plural folding, French stop words) plus the rule-based `plan_query`. No cross-source dataset ranking. | Datasets and tables: 65,092 in one DuckDB catalogue across 7 sources (Government of Canada 34,425, Alberta 17,799, StatCan tables 8,226, BC 1,732, Données Québec 1,532, Ontario 850, Toronto 528). EmbeddingGemma 2 (`google/embeddinggemma-2`) vectors at 768 dimensions, fused by reciprocal rank fusion with live CKAN keyword search. DuckDB BM25 is planned (`implementation.md`). |
+| Data access | 357 typed live-API tools in 70 modules. | 13 generic tools (dataset search and detail, StatCan WDS and Bank of Canada Valet queries, DataStore, remote file, Excel and PDF readers). The Bank of Canada is live-only and not indexed; `implementation.md` proposes indexing Valet groups as catalogue records. |
+| Delivery | Thin: PyPI and `uvx` (stdio), or the hosted Render free-tier endpoint (Streamable HTTP); no catalogue download. | stdio documented in the README (a hosted connector is mentioned without a described transport). A separate `catalog.duckdb`, too large for git, downloaded from the latest GitHub release. `implementation.md` makes torch a query-time dependency (fastembed with ONNX before). |
+| Result contract | Pydantic response models with `provenance`; errors are raised and arrive as `isError` results. | `structuredContent` with `datasets`, `columns`, `rows`, `sources`, `query`, `warnings` and `error` fields, plus a Markdown version. |
+| Evaluation | 165 English and 142 French query-to-tool cases (`tests/test_english_discovery.py`, `tests/test_french_discovery.py`), each passing when the expected tool is among the top results, plus 2 first-rank cases. No Recall@k or MRR; no dataset-level or variable-level cases. | v1.2.0 adds a retrieval evaluation suite and benchmark datasets in `semantic/eval/` (MRR and Hit@K, per the CHANGELOG). `implementation.md` plans 60 to 100 hand-written cases (Recall@5, Recall@10, MRR) with a baseline recorded before any model change. The README mentions no tests or evaluations. |
+
+Implications:
+
+- The gap is dataset-level ranking across sources: `search_tools` finds a tool, not the table or variable that answers a question across StatCan, CMHC and the portals.
+- Keep the adaptors authoritative and the index optional: the index points to a tool call, and the number comes from that call.
+- Benchmark before embeddings (Phase 1 before Phase 2), as OpenMCP does before a model change.
+- Adopt OpenMCP's `catalog_meta` guard: the index records the embedding model, its dimension and a prompt version (and, per `implementation.md`, build time and sources), and the server refuses an index built with a different model than the one it would query with.
+- Memory: the `google/embeddinggemma-2` text backbone has 270 million parameters (`implementation.md`), about 1.1 GB in fp32 (270 million × 4 bytes), against 512 MB on Render's free tier (to confirm). Measure memory and cold start in Phase 2 before any hosted use.
 
 ## Open candidates
 

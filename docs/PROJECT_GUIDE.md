@@ -186,6 +186,16 @@ resources and traceable citations — the closest available reference
 for a cross-source discovery layer once this project has enough
 sources to need one.
 
+Update (2026-10-19): its v1.2.0 release of 2026-10-09 moved the
+semantic index to a multilingual embedding model
+(`google/embeddinggemma-2`, 768-dimension vectors) and added a
+retrieval evaluation suite with benchmark datasets that reports MRR and
+Hit@K, per its CHANGELOG. It then indexed 65,092 datasets and tables
+across seven sources. These figures are project-reported and
+version-sensitive. The plan for a discovery layer here, and an
+architecture comparison with this benchmark, are in
+[`ROADMAP.md`](ROADMAP.md#discovery).
+
 A second, larger modular FastMCP server was found spanning federal,
 provincial and municipal sources, with shared caching, rate limiting,
 bilingual response envelopes, tool discovery/orchestration and a

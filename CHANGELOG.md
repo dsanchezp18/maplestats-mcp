@@ -46,6 +46,19 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 - `search_tools` keeps the Provenance definition when another field still refers to it, instead
   of leaving a dangling `$ref`. The compact-answer test now compares sizes against the same
   tools' full schemas over several queries rather than a fixed byte limit.
+- The server's Docker image is built on `python:3.14-slim` (it was `python:3.12-slim`), pinned
+  by digest. The package classifiers list Python 3.14, and CI tests it.
+- Website: the home page's "See it in action" section is a question box, a plain GET form to
+  the chat demo that works without JavaScript, beside four example questions and the demo's
+  caveats, instead of a stack of example rows.
+- Website: the privacy page also covers the chat demo (questions go to a third-party language
+  model provider, Anthropic by default) and the website itself (GitHub Pages). The FAQ says the
+  server does not write tool arguments down and that HTTP access logs can include the network
+  address.
+- Website: pages count visits with GoatCounter (page, referrer, browser, operating system, screen
+  size and country as aggregate counts; no cookies, no IP address stored), in a GoatCounter site
+  shared with other hostnames, so every path starts with the host. The privacy page and the FAQ
+  say so; the MCP server and the chat demo are not counted.
 
 ### Fixed
 
@@ -148,7 +161,23 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   noted instead of failing the table).
 - French: `transit` stop-time errors, the `_example` template's `lang`, and the CMHC,
   Finance Canada and ISED clean-growth number parsers (a French decimal comma was read
-  as a thousands separator or the reverse).
+  as a thousands separator or the reverse). Notes in `ab_opendata`, `bc_environment`,
+  `bc_lobbyists`, `boc`, `crea`, `eccc_datamart`, `represent` and `transit` now agree in
+  gender and number ("lectures limitées") and address the reader as "vous" ("Ne supposez pas",
+  "vérifiez"); `bc_lobbyists` says "lobbyisme", and the locked-data message names Statistique
+  Canada, not StatCan.
+- Website: the home page's chat card no longer widens past its column on phones, and its
+  example questions open the chat demo with the question asked instead of doing nothing. The
+  chat page asks a `?q=` question on arrival, scrolls to the start of an answer, shows a focus
+  ring, and explains a non-JSON gateway error while the host wakes instead of printing a JSON
+  parse error.
+- `/stats`: `reproduce_code` and `reproduce_workbook` call the server again in-process, and
+  that inner call counted as a second call by the caller; it no longer does.
+- A response that does not fit a tool's model is an upstream error ("the source answered in a
+  shape this tool does not expect"), no longer reported as invalid arguments, and the error
+  does not echo the values.
+- Retries read `Retry-After` as whole seconds or an HTTP date, the same as the rate-limit
+  handling; a header made of non-ASCII digits (such as "²") no longer raises.
 - `MAPLE_TRANSPORT` accepts only `stdio` or `http` and `MAPLE_PORT` must be an integer;
   a typo used to start an HTTP server while the client waited on stdin, or bind 8000
   while the health check probed the typo. Other numeric variables warn once when ignored.
@@ -181,6 +210,9 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   DOMPurify is 3.4.17; the Smithery publish step installs from a lockfile with integrity
   checks instead of `npx`; a repeated `X-Forwarded-For` header line can no longer choose
   its own rate-limit bucket.
+- `reproduce_code` refuses a redirect, on a request it replays, to anywhere other than the
+  request's own site or a file host (never an IP address, localhost or plain http), the rule
+  `remote_zip` already applied.
 
 ## [0.3.0] - 2026-10-10
 
