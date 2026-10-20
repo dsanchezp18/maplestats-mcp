@@ -141,11 +141,11 @@ wheels = [
 
 [[package]]
 name = "certifi"
-version = "2026.7.22"
+version = "2026.10.19"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/c2/24167ea9858356b47a87a50d39908bfdb72ceeefe0041586e704e5376b3a/certifi-2026.7.22.tar.gz", hash = "sha256:741e2c3b351ddf169a738da9f2c048608ff7f2c5cc02f1ebc6b118bb090d5d55", size = 138112, upload-time = "2026-07-22T03:35:12.644Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/bd/1436c50cc46699de0230fbaacc1d1de7bfec413176099949e9d5112e88f2/certifi-2026.10.19.tar.gz", hash = "sha256:035c1e85572b141bf1c3a3eff0e33a8eb74917522f2559075ff8d2fea780a1ae", size = 137598, upload-time = "2026-10-20T02:24:16.604Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl", hash = "sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775", size = 136983, upload-time = "2026-07-22T03:35:11.276Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl", hash = "sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b", size = 136464, upload-time = "2026-10-20T02:24:15.072Z" },
 ]
 
 [[package]]
@@ -380,7 +380,7 @@ resolution-markers = [
     "python_full_version >= '3.15'",
 ]
 dependencies = [
-    { name = "fastmcp-slim", version = "4.0.11", source = { registry = "https://pypi.org/simple" }, extra = ["client", "server"], marker = "python_full_version >= '3.15'" },
+    { name = "fastmcp-slim", version = "4.0.11", source = { registry = "https://pypi.org/simple" }, extra = ["client", "server"] },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e4/ca/e76fde836e6e443f49b1a16ad91fa71715ec220141261a290c9241024857/fastmcp-4.0.11.tar.gz", hash = "sha256:55fc7b8e25d4f8365818ba93f7008d1b6e646ce7fe8ae49342687243ccbef9f2", size = 42606797, upload-time = "2026-10-04T16:58:10.598Z" }
 wheels = [
@@ -396,7 +396,7 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 dependencies = [
-    { name = "fastmcp-slim", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, extra = ["client", "server"], marker = "python_full_version < '3.15'" },
+    { name = "fastmcp-slim", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, extra = ["client", "server"] },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c3/c4/fe4e24af2cb03f4701f45634873d87557c2b5d283d287412345345ad0ede/fastmcp-4.1.0.tar.gz", hash = "sha256:7a8bf4e58cc6c2f3a8552b5a7a17ba1e4682b6fd4cafb7f461920a66dbd2499f", size = 42686511, upload-time = "2026-10-08T22:57:05.652Z" }
 wheels = [
@@ -411,13 +411,13 @@ resolution-markers = [
     "python_full_version >= '3.15'",
 ]
 dependencies = [
-    { name = "mcp-types", marker = "python_full_version >= '3.15'" },
-    { name = "platformdirs", marker = "python_full_version >= '3.15'" },
-    { name = "pydantic", extra = ["email"], marker = "python_full_version >= '3.15'" },
-    { name = "pydantic-settings", marker = "python_full_version >= '3.15'" },
-    { name = "python-dotenv", marker = "python_full_version >= '3.15'" },
-    { name = "rich", marker = "python_full_version >= '3.15'" },
-    { name = "typing-extensions", marker = "python_full_version >= '3.15'" },
+    { name = "mcp-types" },
+    { name = "platformdirs" },
+    { name = "pydantic", extra = ["email"] },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "rich" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/02/d3/8d247edc9120c3be157315acd6df17c9790358c39ea45d0f9dfcec6a094b/fastmcp_slim-4.0.11.tar.gz", hash = "sha256:9152aac74d8837bc37576f5f3d83f17567250a9dfcd8187133c43faaaa9dd06f", size = 722160, upload-time = "2026-10-04T16:56:07.286Z" }
 wheels = [
@@ -426,36 +426,36 @@ wheels = [
 
 [package.optional-dependencies]
 client = [
-    { name = "authlib", marker = "python_full_version >= '3.15'" },
-    { name = "exceptiongroup", marker = "python_full_version >= '3.15'" },
-    { name = "httpx2", marker = "python_full_version >= '3.15'" },
-    { name = "mcp", marker = "python_full_version >= '3.15'" },
-    { name = "opentelemetry-api", marker = "python_full_version >= '3.15'" },
-    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"], marker = "python_full_version >= '3.15'" },
-    { name = "starlette", marker = "python_full_version >= '3.15'" },
+    { name = "authlib" },
+    { name = "exceptiongroup" },
+    { name = "httpx2" },
+    { name = "mcp" },
+    { name = "opentelemetry-api" },
+    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"] },
+    { name = "starlette" },
 ]
 server = [
-    { name = "authlib", marker = "python_full_version >= '3.15'" },
-    { name = "cyclopts", marker = "python_full_version >= '3.15'" },
-    { name = "exceptiongroup", marker = "python_full_version >= '3.15'" },
-    { name = "griffelib", marker = "python_full_version >= '3.15'" },
-    { name = "httpx2", marker = "python_full_version >= '3.15'" },
-    { name = "joserfc", marker = "python_full_version >= '3.15'" },
-    { name = "jsonref", marker = "python_full_version >= '3.15'" },
-    { name = "jsonschema-path", marker = "python_full_version >= '3.15'" },
-    { name = "mcp", marker = "python_full_version >= '3.15'" },
-    { name = "openapi-pydantic", marker = "python_full_version >= '3.15'" },
-    { name = "opentelemetry-api", marker = "python_full_version >= '3.15'" },
-    { name = "packaging", marker = "python_full_version >= '3.15'" },
-    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"], marker = "python_full_version >= '3.15'" },
-    { name = "pyperclip", marker = "python_full_version >= '3.15'" },
-    { name = "python-multipart", marker = "python_full_version >= '3.15'" },
-    { name = "pyyaml", marker = "python_full_version >= '3.15'" },
-    { name = "starlette", marker = "python_full_version >= '3.15'" },
-    { name = "uncalled-for", marker = "python_full_version >= '3.15'" },
-    { name = "uvicorn", marker = "python_full_version >= '3.15'" },
-    { name = "watchfiles", marker = "python_full_version >= '3.15'" },
-    { name = "websockets", marker = "python_full_version >= '3.15'" },
+    { name = "authlib" },
+    { name = "cyclopts" },
+    { name = "exceptiongroup" },
+    { name = "griffelib" },
+    { name = "httpx2" },
+    { name = "joserfc" },
+    { name = "jsonref" },
+    { name = "jsonschema-path" },
+    { name = "mcp" },
+    { name = "openapi-pydantic" },
+    { name = "opentelemetry-api" },
+    { name = "packaging" },
+    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"] },
+    { name = "pyperclip" },
+    { name = "python-multipart" },
+    { name = "pyyaml" },
+    { name = "starlette" },
+    { name = "uncalled-for" },
+    { name = "uvicorn" },
+    { name = "watchfiles" },
+    { name = "websockets" },
 ]
 
 [[package]]
@@ -467,13 +467,13 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 dependencies = [
-    { name = "mcp-types", marker = "python_full_version < '3.15'" },
-    { name = "platformdirs", marker = "python_full_version < '3.15'" },
-    { name = "pydantic", extra = ["email"], marker = "python_full_version < '3.15'" },
-    { name = "pydantic-settings", marker = "python_full_version < '3.15'" },
-    { name = "python-dotenv", marker = "python_full_version < '3.15'" },
-    { name = "rich", marker = "python_full_version < '3.15'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.15'" },
+    { name = "mcp-types" },
+    { name = "platformdirs" },
+    { name = "pydantic", extra = ["email"] },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "rich" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b8/88/85aafec43ec9940a360d75f2d8e9517eda01ac38b8b1610b0e9e125d61d3/fastmcp_slim-4.1.0.tar.gz", hash = "sha256:390b2b430195e0cdd0327aff80fe5dceb862b2421baf71de6d4eec92f80f99f8", size = 734647, upload-time = "2026-10-08T22:56:40.642Z" }
 wheels = [
@@ -482,36 +482,36 @@ wheels = [
 
 [package.optional-dependencies]
 client = [
-    { name = "authlib", marker = "python_full_version < '3.15'" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.15'" },
-    { name = "httpx2", marker = "python_full_version < '3.15'" },
-    { name = "mcp", marker = "python_full_version < '3.15'" },
-    { name = "opentelemetry-api", marker = "python_full_version < '3.15'" },
-    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"], marker = "python_full_version < '3.15'" },
-    { name = "starlette", marker = "python_full_version < '3.15'" },
+    { name = "authlib" },
+    { name = "exceptiongroup" },
+    { name = "httpx2" },
+    { name = "mcp" },
+    { name = "opentelemetry-api" },
+    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"] },
+    { name = "starlette" },
 ]
 server = [
-    { name = "authlib", marker = "python_full_version < '3.15'" },
-    { name = "cyclopts", marker = "python_full_version < '3.15'" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.15'" },
-    { name = "griffelib", marker = "python_full_version < '3.15'" },
-    { name = "httpx2", marker = "python_full_version < '3.15'" },
-    { name = "joserfc", marker = "python_full_version < '3.15'" },
-    { name = "jsonref", marker = "python_full_version < '3.15'" },
-    { name = "jsonschema-path", marker = "python_full_version < '3.15'" },
-    { name = "mcp", marker = "python_full_version < '3.15'" },
-    { name = "openapi-pydantic", marker = "python_full_version < '3.15'" },
-    { name = "opentelemetry-api", marker = "python_full_version < '3.15'" },
-    { name = "packaging", marker = "python_full_version < '3.15'" },
-    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"], marker = "python_full_version < '3.15'" },
-    { name = "pyperclip", marker = "python_full_version < '3.15'" },
-    { name = "python-multipart", marker = "python_full_version < '3.15'" },
-    { name = "pyyaml", marker = "python_full_version < '3.15'" },
-    { name = "starlette", marker = "python_full_version < '3.15'" },
-    { name = "uncalled-for", marker = "python_full_version < '3.15'" },
-    { name = "uvicorn", marker = "python_full_version < '3.15'" },
-    { name = "watchfiles", marker = "python_full_version < '3.15'" },
-    { name = "websockets", marker = "python_full_version < '3.15'" },
+    { name = "authlib" },
+    { name = "cyclopts" },
+    { name = "exceptiongroup" },
+    { name = "griffelib" },
+    { name = "httpx2" },
+    { name = "joserfc" },
+    { name = "jsonref" },
+    { name = "jsonschema-path" },
+    { name = "mcp" },
+    { name = "openapi-pydantic" },
+    { name = "opentelemetry-api" },
+    { name = "packaging" },
+    { name = "py-key-value-aio", extra = ["filetree", "keyring", "memory"] },
+    { name = "pyperclip" },
+    { name = "python-multipart" },
+    { name = "pyyaml" },
+    { name = "starlette" },
+    { name = "uncalled-for" },
+    { name = "uvicorn" },
+    { name = "watchfiles" },
+    { name = "websockets" },
 ]
 
 [[package]]
