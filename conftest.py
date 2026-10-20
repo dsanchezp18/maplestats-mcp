@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import sys
 
 import pytest
 from tenacity import BaseRetrying, wait_none
+
+# Importing maplestats_mcp.asgi marks the process as an HTTP server, which would
+# change how the server module describes its export tools for every test after it.
+os.environ.setdefault("MAPLE_TRANSPORT", "stdio")
 
 from maplestats_mcp.shared import cache, file_download
 from maplestats_mcp.shared.rate_limiter import TokenBucket

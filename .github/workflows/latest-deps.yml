@@ -1,0 +1,28 @@
+name: latest-deps
+
+# The server relies on fastmcp internals (module loader, BM25 search tool
+# builders, the tokenizer hook, logger names), and `uvx maplestats-mcp` users
+# resolve dependencies fresh, so uv.lock does not protect them. This runs the
+# suite weekly against the newest versions the pyproject ranges allow, to see a
+# breaking release before a user does.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.13"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
+      - run: uv sync --upgrade
+      - run: uv pip list
+      - run: uv run pytest -n 4 --dist loadfile -q

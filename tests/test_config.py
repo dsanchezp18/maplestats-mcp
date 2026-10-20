@@ -7,6 +7,23 @@ from maplestats_mcp import __version__, config
 
 def test_transport_defaults_to_stdio_for_local_mcp_clients(monkeypatch):
     monkeypatch.delenv("MAPLE_TRANSPORT", raising=False)
+    monkeypatch.setattr(config, "_serves_http", False)
+
+    assert config.get_transport() == "stdio"
+
+
+def test_a_process_serving_http_without_the_variable_is_http(monkeypatch):
+    # `uvicorn maplestats_mcp.asgi:app` sets no MAPLE_TRANSPORT.
+    monkeypatch.delenv("MAPLE_TRANSPORT", raising=False)
+    monkeypatch.setattr(config, "_serves_http", False)
+    config.mark_serving_http()
+
+    assert config.get_transport() == "http"
+
+
+def test_the_variable_wins_over_a_process_serving_http(monkeypatch):
+    monkeypatch.setattr(config, "_serves_http", True)
+    monkeypatch.setenv("MAPLE_TRANSPORT", "stdio")
 
     assert config.get_transport() == "stdio"
 

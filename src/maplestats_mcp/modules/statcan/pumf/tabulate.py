@@ -37,7 +37,7 @@ from maplestats_mcp.modules.statcan.pumf.schemas import (
     TableGroup,
     WeightedTable,
 )
-from maplestats_mcp.shared import remote_zip
+from maplestats_mcp.shared import duck, remote_zip
 from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -320,7 +320,7 @@ def _run_query(
     import duckdb
 
     try:
-        with duckdb.connect() as connection:
+        with duck.connect() as connection:
             connection.execute("SET enable_progress_bar = false")
             rows = connection.execute(sql, params).fetchall()
             total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
