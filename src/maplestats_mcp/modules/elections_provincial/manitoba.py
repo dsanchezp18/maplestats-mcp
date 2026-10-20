@@ -50,6 +50,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.errors import UpstreamError
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -137,8 +138,10 @@ def _count(value: object) -> int:
     try:
         return int(float(text))
     except ValueError as exc:
-        raise UpstreamError(
-            f"elections_provincial: Manitoba file has the count {value!r}."
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: Manitoba file has the count {value!r}.",
+            f"elections_provincial : le fichier du Manitoba contient le décompte {value!r}.",
         ) from exc
 
 
@@ -200,15 +203,21 @@ def _main_sheet(body: bytes, what: str) -> list[list[object]]:
             continue
         if any(_cell(c) for row in rows for c in row):
             return rows
-    raise UpstreamError(f"elections_provincial: Manitoba {what} has no data sheet.")
+    raise call_error(
+        UpstreamError,
+        f"elections_provincial: Manitoba {what} has no data sheet.",
+        f"elections_provincial : {what} du Manitoba n'a aucune feuille de données.",
+    )
 
 
 def _header_row(rows: list[list[object]], what: str) -> int:
     for i, row in enumerate(rows):
         if row and _header_key(row[0]).startswith("electoraldivision"):
             return i
-    raise UpstreamError(
-        f"elections_provincial: Manitoba {what} has no 'Electoral Division' header."
+    raise call_error(
+        UpstreamError,
+        f"elections_provincial: Manitoba {what} has no 'Electoral Division' header.",
+        f"elections_provincial : {what} du Manitoba n'a pas d'en-tête « Electoral Division ».",
     )
 
 
@@ -239,9 +248,12 @@ def parse_summary(body: bytes) -> dict[str, _Summary]:
     ballots_col = _column(header, "votescast")
     rejected_col = _column(header, "rejected")
     if None in (member_col, registered_col, ballots_col, rejected_col):
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             "elections_provincial: Manitoba summary of results lacks the expected columns "
-            f"(has {[_cell(c) for c in header]})."
+            f"(has {[_cell(c) for c in header]}).",
+            "elections_provincial : le sommaire des résultats du Manitoba n'a pas les colonnes "
+            f"attendues (colonnes présentes : {[_cell(c) for c in header]}).",
         )
     assert member_col is not None and registered_col is not None
     assert ballots_col is not None and rejected_col is not None
@@ -260,7 +272,11 @@ def parse_summary(body: bytes) -> dict[str, _Summary]:
             member=member,
         )
     if not found:
-        raise UpstreamError("elections_provincial: Manitoba summary of results has no rows.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Manitoba summary of results has no rows.",
+            "elections_provincial : le sommaire des résultats du Manitoba n'a aucune ligne.",
+        )
     return found
 
 
@@ -274,9 +290,12 @@ def parse_results(votes_body: bytes, summary_body: bytes) -> list[District]:
     party_col = _column(header, "party", "registeredparty", "political")
     votes_col = _column(header, "votes")
     if None in (candidate_col, party_col, votes_col):
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             "elections_provincial: Manitoba summary of votes received lacks the expected "
-            f"columns (has {[_cell(c) for c in header]})."
+            f"columns (has {[_cell(c) for c in header]}).",
+            "elections_provincial : le sommaire des votes reçus du Manitoba n'a pas les colonnes "
+            f"attendues (colonnes présentes : {[_cell(c) for c in header]}).",
         )
     assert candidate_col is not None and party_col is not None and votes_col is not None
 
@@ -309,8 +328,11 @@ def parse_results(votes_body: bytes, summary_body: bytes) -> list[District]:
         if not name or name.lower() in ("declined", "rejected"):
             continue
         if current is None:
-            raise UpstreamError(
-                f"elections_provincial: Manitoba candidate {name!r} comes before any division."
+            raise call_error(
+                UpstreamError,
+                f"elections_provincial: Manitoba candidate {name!r} comes before any division.",
+                f"elections_provincial : le candidat {name!r} du Manitoba précède toute "
+                "circonscription.",
             )
         party_name, code = party(_cell(row[party_col]))
         current.candidates.append(
@@ -325,8 +347,11 @@ def parse_results(votes_body: bytes, summary_body: bytes) -> list[District]:
 
     missing = [summary[k].name for k in summary if k not in districts]
     if missing:
-        raise UpstreamError(
-            f"elections_provincial: Manitoba summary of votes received lacks divisions {missing}."
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: Manitoba summary of votes received lacks divisions {missing}.",
+            "elections_provincial : le sommaire des votes reçus du Manitoba ne contient pas les "
+            f"circonscriptions {missing}.",
         )
     built = list(districts.values())
     for district in built:
@@ -351,7 +376,11 @@ async def fetch(number: str) -> list[District]:
     except UpstreamError:
         raise
     except Exception as exc:  # xlrd and openpyxl raise several unrelated types
-        raise UpstreamError(f"elections_provincial: could not read {source.votes}: {exc}") from exc
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: could not read {source.votes}: {exc}",
+            f"elections_provincial : impossible de lire {source.votes} : {exc}",
+        ) from exc
 
 
 # --- Results by voting area -------------------------------------------------------------
@@ -362,7 +391,11 @@ def _candidate_heading(text: str) -> AreaVote:
     flat = re.sub(r"\s+", " ", text).strip()
     match = re.fullmatch(r"(.*?)\s*\(([^()]*)\)", flat)
     if not match:
-        raise UpstreamError(f"elections_provincial: Manitoba candidate heading {text!r}.")
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: Manitoba candidate heading {text!r}.",
+            f"elections_provincial : en-tête de candidat du Manitoba {text!r}.",
+        )
     party_name, code = party(match.group(2))
     return AreaVote(name=_person(match.group(1)), party=party_name, party_code=code, votes=0)
 
@@ -405,7 +438,11 @@ def _wide(rows: list[list[object]]) -> list[Area] | None:
         if _cell(header[i])
     ]
     if not heads:
-        raise UpstreamError("elections_provincial: Manitoba voting-area sheet has no candidates.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Manitoba voting-area sheet has no candidates.",
+            "elections_provincial : la feuille des secteurs de vote du Manitoba n'a aucun candidat.",
+        )
 
     def at(row: list[object], col: int | None) -> object:
         return row[col] if col is not None and col < len(row) else None
@@ -455,9 +492,12 @@ def _long(rows: list[list[object]]) -> dict[str, list[Area]]:
     if None in (division_col, area_col, party_col, votes_col) or (
         name_col is None and last_col is None
     ):
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             "elections_provincial: Manitoba voting-area file lacks the expected columns "
-            f"(has {[_cell(c) for c in header]})."
+            f"(has {[_cell(c) for c in header]}).",
+            "elections_provincial : le fichier des secteurs de vote du Manitoba n'a pas les "
+            f"colonnes attendues (colonnes présentes : {[_cell(c) for c in header]}).",
         )
     assert division_col is not None and area_col is not None
     assert party_col is not None and votes_col is not None
@@ -520,7 +560,11 @@ def parse_areas(body: bytes) -> dict[str, list[Area]]:
     else:
         found.update(wide)
     if not found:
-        raise UpstreamError("elections_provincial: Manitoba voting-area file has no results.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Manitoba voting-area file has no results.",
+            "elections_provincial : le fichier des secteurs de vote du Manitoba n'a aucun résultat.",
+        )
     return found
 
 
@@ -549,6 +593,9 @@ async def read_area_file(number: str, member: remote_zip.ZipMember) -> dict[str,
     except UpstreamError:
         raise
     except Exception as exc:  # xlrd and openpyxl raise several unrelated types
-        raise UpstreamError(
-            f"elections_provincial: could not read {member.name} in {files(number).by_area}: {exc}"
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: could not read {member.name} in {files(number).by_area}: {exc}",
+            f"elections_provincial : impossible de lire {member.name} dans "
+            f"{files(number).by_area} : {exc}",
         ) from exc

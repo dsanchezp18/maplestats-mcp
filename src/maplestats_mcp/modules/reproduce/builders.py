@@ -44,8 +44,11 @@ def _suffix(args: dict[str, Any]) -> str:
 def table_spec(product_id: Any, lang: str) -> Spec:
     pid = str(product_id).replace("-", "")[:8]
     if not pid.isdigit() or len(pid) != 8:
-        raise InvalidInput(
-            f"product_id must be an 8- or 10-digit StatCan table id, got {product_id!r}."
+        raise call_error(
+            InvalidInput,
+            f"product_id must be an 8- or 10-digit StatCan table id, got {product_id!r}.",
+            "product_id doit être un identifiant de tableau de Statistique Canada à 8 ou "
+            f"10 chiffres, reçu {product_id!r}.",
         )
     suffix = "eng" if lang == "en" else "fra"
     dashed = f"{pid[:2]}-{pid[2:4]}-{pid[4:8]}-01"
@@ -68,7 +71,11 @@ def _vector_id(value: Any) -> int:
     """A WDS vector id from 41690973, "41690973" or "v41690973"."""
     text = str(value).strip().lstrip("vV")
     if not text.isdigit() or int(text) < 1:
-        raise InvalidInput(f"vector ids must look like 41690973 or v41690973, got {value!r}.")
+        raise call_error(
+            InvalidInput,
+            f"vector ids must look like 41690973 or v41690973, got {value!r}.",
+            f"les identifiants de vecteur doivent ressembler à 41690973 ou v41690973, reçu {value!r}.",
+        )
     return int(text)
 
 
@@ -76,15 +83,27 @@ def _count(value: Any, name: str) -> int:
     try:
         count = int(value)
     except (TypeError, ValueError) as exc:
-        raise InvalidInput(f"{name} must be a whole number, got {value!r}.") from exc
+        raise call_error(
+            InvalidInput,
+            f"{name} must be a whole number, got {value!r}.",
+            f"{name} doit être un nombre entier, reçu {value!r}.",
+        ) from exc
     if count < 1:
-        raise InvalidInput(f"{name} must be >= 1, got {count}.")
+        raise call_error(
+            InvalidInput,
+            f"{name} must be >= 1, got {count}.",
+            f"{name} doit être >= 1, reçu {count}.",
+        )
     return count
 
 
 def vector_spec(vector_ids: Any, latest_n: int) -> Spec:
     if not isinstance(vector_ids, list) or not vector_ids:
-        raise InvalidInput("vector_ids must be a non-empty list of vector ids.")
+        raise call_error(
+            InvalidInput,
+            "vector_ids must be a non-empty list of vector ids.",
+            "vector_ids doit être une liste non vide d'identifiants de vecteur.",
+        )
     ids = [_vector_id(v) for v in vector_ids]
     r_ids = ", ".join(f'"v{i}"' for i in ids)
     # get_cansim_vector() alone returns each vector's whole history (1,960
@@ -124,7 +143,11 @@ def sdmx_spec(data_url: str, args: dict[str, Any], title: str) -> Spec:
     start, end = args.get("start_period"), args.get("end_period")
     last_n = args.get("last_n_observations")
     if last_n not in (None, "") and (start or end):
-        raise InvalidInput("last_n_observations cannot be combined with start_period/end_period.")
+        raise call_error(
+            InvalidInput,
+            "last_n_observations cannot be combined with start_period/end_period.",
+            "last_n_observations ne peut pas être combiné avec start_period/end_period.",
+        )
     params: dict[str, Any] = {}
     if start:
         params["startPeriod"] = start
@@ -159,12 +182,19 @@ async def _sdmx_data(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
     pid = str(args["product_id"]).replace("-", "")[:8]
     if not pid.isdigit() or len(pid) != 8:
-        raise InvalidInput(
-            f"product_id must be an 8- or 10-digit StatCan table id, got {args['product_id']!r}."
+        raise call_error(
+            InvalidInput,
+            f"product_id must be an 8- or 10-digit StatCan table id, got {args['product_id']!r}.",
+            "product_id doit être un identifiant de tableau de Statistique Canada à 8 ou "
+            f"10 chiffres, reçu {args['product_id']!r}.",
         )
     key = str(args["key"])
     if not _KEY.match(key):
-        raise InvalidInput(f"key {key!r} may only contain member ids, '.', and '+'.")
+        raise call_error(
+            InvalidInput,
+            f"key {key!r} may only contain member ids, '.', and '+'.",
+            f"la clé {key!r} ne peut contenir que des identifiants de membre, « . » et « + ».",
+        )
     dashed = f"{pid[:2]}-{pid[2:4]}-{pid[4:8]}-01"
     return sdmx_spec(f"{_SDMX}data/DF_{pid}/{key}", args, f"StatCan table {dashed}, SDMX key {key}")
 
@@ -177,7 +207,11 @@ async def _sdmx_vector(args: dict[str, Any], result: dict[str, Any]) -> Spec:
         # up through WDS; its result names the data URL.
         data_url = str(result.get("provenance", {}).get("url") or "")
         if not data_url.startswith(_SDMX):
-            raise InvalidInput("sdmx_get_vector_data returned no SDMX data URL to reproduce.")
+            raise call_error(
+                InvalidInput,
+                "sdmx_get_vector_data returned no SDMX data URL to reproduce.",
+                "sdmx_get_vector_data n'a renvoyé aucune adresse de données SDMX à reproduire.",
+            )
         return sdmx_spec(data_url, args, f"StatCan vector {args['vector_id']}")
     # Without periods the tool reads the latest N observations, which WDS
     # serves for the same vector as JSON.
@@ -221,7 +255,11 @@ async def _socrata(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
     portal = PORTALS.get(str(args.get("portal")))
     if portal is None:
-        raise InvalidInput(f"Unknown Socrata portal {args.get('portal')!r}.")
+        raise call_error(
+            InvalidInput,
+            f"Unknown Socrata portal {args.get('portal')!r}.",
+            f"Portail Socrata inconnu : {args.get('portal')!r}.",
+        )
     # The tool always sends $limit (default 10); SODA's own default is 1,000
     # rows, so the script sends the tool's limit too.
     values = {"limit": ROWS_LIMIT_DEFAULT, **{k: v for k, v in args.items() if v is not None}}
@@ -251,7 +289,11 @@ async def _ckan(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
     portal = PORTALS.get(str(args.get("portal")))
     if portal is None:
-        raise InvalidInput(f"Unknown CKAN portal {args.get('portal')!r}.")
+        raise call_error(
+            InvalidInput,
+            f"Unknown CKAN portal {args.get('portal')!r}.",
+            f"Portail CKAN inconnu : {args.get('portal')!r}.",
+        )
     limit = _count(args.get("limit") or DATASTORE_ROWS_DEFAULT, "limit")
     offset = int(args.get("offset") or 0)  # the client rejects a negative offset
     # A resource that does not exist would give a script that fails on its
@@ -290,7 +332,11 @@ async def _boc(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
     series = args["series_names"]
     if not isinstance(series, list) or not series:
-        raise InvalidInput("series_names must be a non-empty list of Valet series names.")
+        raise call_error(
+            InvalidInput,
+            "series_names must be a non-empty list of Valet series names.",
+            "series_names doit être une liste non vide de noms de séries Valet.",
+        )
     names = ",".join(str(name) for name in series)
     keys = ("start_date", "end_date", "recent", "recent_weeks", "recent_months", "recent_years")
     params = {key: args[key] for key in keys if args.get(key) not in (None, "")}

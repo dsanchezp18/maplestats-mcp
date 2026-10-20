@@ -33,6 +33,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
     mark_winners,
 )
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.fr_typography import call_error
 
 _FLAGS = re.IGNORECASE
 _ROW_START = re.compile(r"<tr[\s>]", _FLAGS)
@@ -75,18 +76,30 @@ def parse_winners(page: str) -> dict[str, tuple[str, int]]:
 def parse_results(page: str, winners: dict[str, tuple[str, int]]) -> list[District]:
     start = page.lower().find('id="datatbl"')
     if start < 0:
-        raise UpstreamError("elections_provincial: Alberta results page has no results table.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Alberta results page has no results table.",
+            "elections_provincial : la page des résultats de l'Alberta n'a pas de tableau de résultats.",
+        )
     table = page[start:]
     first_row = _ED_LINK.search(table)
     if first_row is None:
-        raise UpstreamError("elections_provincial: Alberta results page has no division rows.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Alberta results page has no division rows.",
+            "elections_provincial : la page des résultats de l'Alberta n'a aucune ligne de circonscription.",
+        )
 
     headers = [_text(h) for h in _HEADER_CELL.findall(table[: first_row.start()])]
     # Headers read ED, ED Name, Voting (Locations) or Number (of Polls), the party codes
     # and Voter (Turnout).
     codes = headers[3:-1]
     if len(codes) < 2:
-        raise UpstreamError("elections_provincial: Alberta results table has no party columns.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Alberta results table has no party columns.",
+            "elections_provincial : le tableau des résultats de l'Alberta n'a aucune colonne de parti.",
+        )
 
     names = dict(_PARTY_ROW.findall(table[table.lower().find("party name") :]))
     names = {_text(k): _text(v) for k, v in names.items()}
@@ -98,9 +111,12 @@ def parse_results(page: str, winners: dict[str, tuple[str, int]]) -> list[Distri
             continue
         cells = [_text(c) for c in _CELL.findall(chunk)]
         if len(cells) != len(codes) + 4:
-            raise UpstreamError(
+            raise call_error(
+                UpstreamError,
                 f"elections_provincial: Alberta division {link.group(1)} has {len(cells)} "
-                f"cells, expected {len(codes) + 4}."
+                f"cells, expected {len(codes) + 4}.",
+                f"elections_provincial : la circonscription {link.group(1)} de l'Alberta compte "
+                f"{len(cells)} cellules, {len(codes) + 4} attendues.",
             )
         ed_code = link.group(1)
         district = District(name=cells[1], number=ed_code)
@@ -128,7 +144,11 @@ def parse_results(page: str, winners: dict[str, tuple[str, int]]) -> list[Distri
         finish_shares(district)
         districts.append(district)
     if not districts:
-        raise UpstreamError("elections_provincial: Alberta results page has no divisions.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Alberta results page has no divisions.",
+            "elections_provincial : la page des résultats de l'Alberta n'a aucune circonscription.",
+        )
     return districts
 
 

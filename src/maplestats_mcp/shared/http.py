@@ -44,6 +44,7 @@ from tenacity import (
 
 from maplestats_mcp import __version__
 from maplestats_mcp.shared.errors import CloudflareChallenge
+from maplestats_mcp.shared.fr_typography import call_error
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 # Built from the package version so the User-Agent upstreams see (and can
@@ -215,11 +216,16 @@ def is_cloudflare_challenge(response: httpx.Response) -> bool:
 def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
     if is_cloudflare_challenge(response):
         host = response.request.url.host
-        raise CloudflareChallenge(
+        raise call_error(
+            CloudflareChallenge,
             f"{host} is behind a Cloudflare bot challenge (HTTP {response.status_code}, "
             "Cf-Mitigated: challenge) that automated clients cannot pass, so this "
             "service is unavailable from MapleStats until StatCan lifts it. MapleStats "
-            "does not try to bypass it."
+            "does not try to bypass it.",
+            f"{host} est protégé par un défi anti-robot Cloudflare (HTTP {response.status_code}, "
+            "Cf-Mitigated : challenge) que les clients automatisés ne peuvent pas franchir ; ce "
+            "service est donc indisponible depuis MapleStats tant que Statistique Canada ne le "
+            "lève pas. MapleStats n'essaie pas de le contourner.",
         )
 
 
