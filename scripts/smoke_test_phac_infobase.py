@@ -14,6 +14,8 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import is_upstream_outage
+
 from maplestats_mcp.modules.phac_infobase import client
 from maplestats_mcp.modules.phac_infobase.catalogue import DATASETS, TOPICS
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
@@ -24,6 +26,9 @@ async def _check_entry(dataset_id: str, lang: str) -> bool:
     try:
         described = await client.describe_dataset(dataset_id, lang)
     except ValueError as exc:  # every typed error; report it and keep going
+        if is_upstream_outage(exc):
+            print(f"SKIP: {dataset_id} ({lang}) unavailable ({exc})")
+            return True
         print(f"FAIL: {dataset_id} ({lang}) -> {type(exc).__name__}: {exc}")
         return False
     problems = []

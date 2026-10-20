@@ -17,6 +17,7 @@ import ast
 import collections
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -795,9 +796,12 @@ async def test_r_and_julia_helpers_match_the_client(language, tmp_path):
     path = tmp_path / ("helpers.R" if language == "r" else "helpers.jl")
     path.write_text(script, encoding="utf-8")
     # LANG=C: the R helpers must match non-ASCII text outside a UTF-8 locale.
-    out = _run(
-        [binary, str(path)], env={"LANG": "C", "PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
-    )
+    env = {"LANG": "C", "PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
+    if sys.platform == "win32":
+        # Windows needs its own system variables and PATH to load R's DLLs; without
+        # them Rscript dies with an access violation (0xC0000005).
+        env = {**os.environ, "LANG": "C"}
+    out = _run([binary, str(path)], env=env)
     assert out.returncode == 0, out.stderr
     lines = [line.strip() for line in out.stdout.splitlines()]
     expected = [

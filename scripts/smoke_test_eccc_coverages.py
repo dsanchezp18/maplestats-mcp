@@ -14,16 +14,26 @@ import asyncio
 import sys
 from typing import Any
 
+from _smoke_common import is_upstream_outage
+
 from maplestats_mcp.modules.eccc.coverages import client
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 CANDCS = "climate:candcsu6:projected:annual:absolute"
 
 
+_OUTAGES: set[str] = set()
+
+
 async def _ok(label: str, coro: Any) -> Any:
     try:
         result = await coro
     except Exception as exc:  # noqa: BLE001 - the smoke test reports every failure
+        if is_upstream_outage(exc):
+            # api.weather.gc.ca stalled on large coverage reads on 2026-10-20 (curl too).
+            print(f"SKIP: {label} -> upstream unavailable ({exc})")
+            _OUTAGES.add(label)
+            return None
         print(f"FAIL: {label} -> {type(exc).__name__}: {exc}")
         return None
     print(f"OK: {label}")
@@ -181,7 +191,7 @@ async def main() -> int:
     ]
     for label, cid, kwargs in cases:
         result = await _ok(label, client.get_coverage_data(cid, **kwargs))
-        ok &= result is not None
+        ok &= result is not None or label in _OUTAGES
         if result:
             print(f"  {_summary(result)}")
             for note in result.notes:
