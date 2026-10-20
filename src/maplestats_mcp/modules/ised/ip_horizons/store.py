@@ -27,6 +27,7 @@ from pathlib import Path
 
 from maplestats_mcp import config
 from maplestats_mcp.modules.ised.ip_horizons.schemas import IpHorizonsFile
+from maplestats_mcp.shared import duck
 from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
 from maplestats_mcp.shared.errors import NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
@@ -55,15 +56,12 @@ def _enforce_cache_cap(root: Path, keep: Path) -> None:
 
 def convert_csv(csv_path: Path, target: Path) -> None:
     """Write a pipe-delimited IP Horizons CSV as Parquet with clean column names."""
-    # Imported on first use: duckdb takes ~0.5 s to import and only these tools use it.
-    import duckdb
-
     source = str(csv_path).replace("'", "''")
     reader = (
         f"read_csv('{source}', delim='|', header=true, all_varchar=true, "
         "quote='', escape='', nullstr='NULL')"
     )
-    with duckdb.connect() as connection:
+    with duck.connect() as connection:
         headers = [
             row[0] for row in connection.execute(f"DESCRIBE SELECT * FROM {reader}").fetchall()
         ]
