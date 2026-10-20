@@ -233,11 +233,11 @@ async def query_fires(
             # budget anyway (the five largest 2023 BC fires are 33 MB of
             # GeoJSON, Donnie Creek alone 15 MB), so the fires come back
             # without geometry, as _trim_geometry would leave them.
-            body = await get_features(
-                CONFIG,
-                constants.TYPE_NAME,
-                **(request | {"property_names": constants.ATTRIBUTE_FIELDS}),
-            )
+            attributes: dict[str, Any] = {
+                **request,
+                "property_names": constants.ATTRIBUTE_FIELDS,
+            }
+            body = await get_features(CONFIG, constants.TYPE_NAME, **attributes)
             body["geometry_omitted"] = len(body.get("features") or [])
             return body
 
