@@ -86,8 +86,18 @@ async def main() -> int:
         _require(near.stations[0].distance_km is not None, "distance missing")
         await _check("get_stations(name)", client.get_stations(name=first.name.strip()[:5]))
 
-    fc = await _check("get_forecast(KELOWNA)", client.get_forecast(station_name="kelowna"))
-    _require(len(fc.forecasts) >= 2, "forecast has fewer than 2 days")
+    try:
+        fc = await client.get_forecast(station_name="kelowna")
+    except NotFound as exc:
+        # SCRIBE forecasts stop after the fire season (the layer was empty on
+        # 2026-10-20); any other NotFound means Kelowna went missing.
+        if "fire season only" not in str(exc):
+            print(f"FAIL: get_forecast(KELOWNA) -> NotFound: {exc}")
+            raise
+        print("OK (skip): get_forecast(KELOWNA): no SCRIBE forecasts outside the fire season")
+    else:
+        print("OK: get_forecast(KELOWNA) -> ForecastResult")
+        _require(len(fc.forecasts) >= 2, "forecast has fewer than 2 days")
 
     danger = await _check(
         "get_fire_danger(Kelowna)", client.get_fire_danger(latitude=49.9, longitude=-119.4)

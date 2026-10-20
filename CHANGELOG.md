@@ -76,6 +76,10 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 - Range reads (transit GTFS feeds, zip members, sorted archives): a 200 answer to a range
   request from a host that advertises `Accept-Ranges: bytes` is retried twice after 3 s.
   RTC Québec's CDN answered one such request in full on 2026-10-19 and honoured it later.
+- `cwfis_get_forecast`: once the fire season ends the SCRIBE forecast layer is empty
+  (2026-10-20), and every station name answered "No forecast station name contains ...".
+  An empty layer now gets its own message pointing to `cwfis_get_fire_danger`, and the
+  smoke test skips the forecast check off-season.
 - The Cloudflare-challenge error named StatCan for every host, including Alberta's
   economic dashboard; it now says the publisher.
 - Live smoke tests: `smoke_test_arcgis_hub` rechecks only its failing portals after a
