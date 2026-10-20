@@ -65,11 +65,11 @@
   <p class="sub">Ask about Canadian open data. A small, cheap model looks the answer up
     live through the MapleStats MCP server, and shows you which tools it called.</p>
   <div class="chips" id="chips"></div>
-  <div id="log"></div>
+  <div id="log" role="log" aria-live="polite"></div>
 </main>
 <form id="form">
   <div class="row">
-    <input id="box" autocomplete="off" maxlength="1000"
+    <input id="box" autocomplete="off" maxlength="1000" aria-label="Your question"
       placeholder="Ask a question, in English or French">
     <button class="send" id="send">Ask</button>
   </div>

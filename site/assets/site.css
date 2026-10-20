@@ -2470,6 +2470,10 @@ mark {
   font: 400 1rem/1.4 var(--font-mono);
 }
 
+.atlas-search input::placeholder {
+  color: var(--ink-3);
+}
+
 .atlas-status {
   flex: none;
   font-size: 0.8125rem;

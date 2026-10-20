@@ -225,6 +225,24 @@ def test_failure_before_any_billed_call_is_refunded(monkeypatch):
     assert chat_app._hits_by_client == {}
 
 
+@pytest.mark.parametrize("status", [401, 403, 404])
+def test_a_deployment_fault_is_not_presented_as_a_blip(monkeypatch, status):
+    class ApiError(Exception):
+        status_code = status
+
+    async def misconfigured(messages):
+        try:
+            raise ApiError("model not found")
+        except ApiError as error:
+            raise chat_app.BackendFailure(billed=False) from error
+
+    monkeypatch.setattr(chat_app, "ask_model", misconfigured)
+    response = post(TestClient(chat_app.app), [{"role": "user", "content": "hi"}])
+    assert response.status_code == 503
+    assert "temporarily unavailable" in response.json()["error"]
+    assert chat_app._daily_count["n"] == 0  # not billed, so refunded
+
+
 @pytest.mark.parametrize(("fail_on_call", "billed"), [(1, False), (2, True)])
 def test_anthropic_backend_reports_whether_a_call_was_billed(
     monkeypatch, fail_on_call, billed
