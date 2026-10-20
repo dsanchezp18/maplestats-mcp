@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import ipaddress
 import json
 import math
 import time
@@ -42,7 +43,13 @@ def _header(scope: dict, name: bytes) -> str | None:
     return ", ".join(values) if values else None
 
 
-def _client_key(scope: dict, *, trust_proxy_headers: bool, proxy_hops: int = 1) -> str:
+def _client_key(
+    scope: dict,
+    *,
+    trust_proxy_headers: bool,
+    proxy_hops: int = 1,
+    client_ip_header: str | None = None,
+) -> str:
     """Identify the caller for rate limiting.
 
     `X-Forwarded-For` is only honored when `trust_proxy_headers` is
@@ -59,7 +66,22 @@ def _client_key(scope: dict, *, trust_proxy_headers: bool, proxy_hops: int = 1) 
     outermost trusted proxy saw it. Everything to its left is whatever the
     caller wrote in the header, so reading the leftmost entry would let a
     caller pick a new rate-limit bucket on every request.
+
+    `client_ip_header` names a header the outermost proxy sets to the client's
+    address itself (Cloudflare's `CF-Connecting-IP`). Set it only when every
+    request really passes through that proxy, because the header is otherwise
+    the caller's to write. It is used when it holds a valid address; otherwise
+    the `X-Forwarded-For` rule above applies. Behind Cloudflare and a second
+    load balancer, the rightmost `X-Forwarded-For` entry can be a shared edge
+    address, which would put many callers in one bucket.
     """
+    if trust_proxy_headers and client_ip_header:
+        raw = _header(scope, client_ip_header.lower().encode("ascii"))
+        if raw:
+            try:
+                return str(ipaddress.ip_address(raw.split(",")[0].strip()))
+            except ValueError:
+                pass
     if trust_proxy_headers:
         forwarded_for = _header(scope, b"x-forwarded-for")
         if forwarded_for:
@@ -99,6 +121,7 @@ def with_http_security(
     rate_limit_window_seconds: float = 60.0,
     trust_proxy_headers: bool = False,
     trusted_proxy_hops: int = 1,
+    client_ip_header: str | None = None,
 ) -> ASGIApp:
     """Protect MCP requests while leaving health checks and stdio untouched.
 
@@ -137,6 +160,7 @@ def with_http_security(
                 scope,
                 trust_proxy_headers=trust_proxy_headers,
                 proxy_hops=trusted_proxy_hops,
+                client_ip_header=client_ip_header,
             )
             async with rate_lock:
                 # Opportunistically drop any other client's entry once its

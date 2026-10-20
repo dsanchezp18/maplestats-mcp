@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -306,6 +307,20 @@ def get_allowed_origins() -> tuple[str, ...]:
 def get_trust_proxy_headers() -> bool:
     raw = os.environ.get("MAPLE_TRUST_PROXY_HEADERS", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+def get_client_ip_header() -> str | None:
+    """Header the outermost proxy sets to the client's own address, e.g. "CF-Connecting-IP".
+
+    Used for the per-client rate limit when MAPLE_TRUST_PROXY_HEADERS is on. Set it only
+    when every request passes through that proxy; unset by default.
+    """
+    raw = os.environ.get("MAPLE_CLIENT_IP_HEADER", "").strip()
+    if not raw:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9-]+", raw):
+        raise ValueError(f"MAPLE_CLIENT_IP_HEADER={raw!r} is not a header name.")
+    return raw
 
 
 def get_trusted_proxy_hops() -> int:
