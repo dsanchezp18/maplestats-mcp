@@ -13,6 +13,8 @@ from maplestats_mcp.modules.isq import client
 
 
 async def main() -> int:
+    # Column labels hold characters outside cp1252, the Windows console default.
+    sys.stdout.reconfigure(encoding="utf-8")  # pyright: ignore[reportAttributeAccessIssue]
     ok = True
 
     found = await client.search_tables("revenu disponible MRC", lang="fr")

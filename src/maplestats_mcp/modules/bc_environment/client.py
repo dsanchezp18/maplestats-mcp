@@ -185,13 +185,15 @@ def _allowed(host: str) -> bool:
     return host in constants.ALLOWED_HOSTS
 
 
-async def _file(url: str, ttl: int, lang: Lang) -> tuple[bytes, bool]:
+async def _file(
+    url: str, ttl: int, lang: Lang, max_bytes: int = constants.MAX_FILE_BYTES
+) -> tuple[bytes, bool]:
     async def fetch() -> file_download.Downloaded:
         return await file_download.download(
             url,
             allow_host=_allowed,
             limiter_for=lambda _host: _LIMITER,
-            max_bytes=constants.MAX_FILE_BYTES,
+            max_bytes=max_bytes,
             context="BC Ministry of Environment",
         )
 
@@ -1344,7 +1346,9 @@ async def list_hydrometric_stations(
     cached_all = True
     for parameter, prefix in constants.HYDRO_FILES.items():
         url = f"{constants.WATER_BASE}/{prefix}.csv"
-        body, cached = await _file(url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
+        body, cached = await _file(
+            url, constants.CACHE_TTL_HOURLY_SECONDS, lang, constants.HYDRO_MAX_FILE_BYTES
+        )
         cached_all = cached_all and cached
         _, rows = _rows(body)
         for row in rows:
@@ -1455,7 +1459,9 @@ async def get_hydrometric_data(
     for name, _first, _last in plan:
         url = f"{constants.WATER_BASE}/{name}"
         if name == f"{prefix}.csv":
-            body, cached = await _file(url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
+            body, cached = await _file(
+                url, constants.CACHE_TTL_HOURLY_SECONDS, lang, constants.HYDRO_MAX_FILE_BYTES
+            )
             cached_all = cached_all and cached
             _, rows = _rows(body)
             rows = [r for r in rows if r and r[0] == station_id]

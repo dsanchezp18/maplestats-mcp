@@ -612,9 +612,12 @@ async def get_group(name: str, lang: str = "en") -> GroupDetail:
 
     async def fetch() -> dict[str, Any]:
         obj = await _get(path, lang=lang)
-        detail = _require_mapping(obj, "groupDetails", path, lang)
+        # Valet renamed this key from "groupDetails" to "groupDetail" (as the
+        # observations endpoint always spelled it) in October 2026; accept both.
+        key = "groupDetail" if isinstance(obj, dict) and "groupDetail" in obj else "groupDetails"
+        detail = _require_mapping(obj, key, path, lang)
         if not detail.get("name"):
-            raise _shape_error(path, "groupDetails.name", lang)
+            raise _shape_error(path, f"{key}.name", lang)
         return detail
 
     detail, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
