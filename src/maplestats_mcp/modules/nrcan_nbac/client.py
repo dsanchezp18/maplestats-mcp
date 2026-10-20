@@ -97,6 +97,8 @@ async def _geometry_features(request: dict[str, Any], lang: str) -> dict[str, An
             context="nrcan_nbac",
             timeout=120.0,
         )
+    except file_download.TooLarge:
+        raise
     except UpstreamError as exc:
         # The streaming reader calls every refused request "HTTP 400", and the
         # service's own reason (a malformed CQL filter) is what the caller
@@ -111,15 +113,12 @@ async def _geometry_features(request: dict[str, Any], lang: str) -> dict[str, An
             sort_by=request["sort_by"],
             count=1,
         )
-        megabytes = constants.GEOMETRY_RESPONSE_BYTES_MAX // (1024 * 1024)
         _raise(
             UpstreamError,
-            f"nrcan_nbac: the request with geometry failed or is over the {megabytes} MB "
-            f"response limit. Ask for fewer fires (limit=1) or set include_geometry=false. "
-            f"Cause: {exc}",
-            f"nrcan_nbac : la requête avec géométrie a échoué ou dépasse la limite de "
-            f"{megabytes} Mo. Demandez moins de feux (limit=1) ou passez "
-            f"include_geometry=false. Cause : {exc}",
+            "nrcan_nbac: the request with geometry failed. Ask for fewer fires (limit=1) or "
+            f"set include_geometry=false. Cause: {exc}",
+            "nrcan_nbac : la requête avec géométrie a échoué. Demandez moins de feux (limit=1) "
+            f"ou passez include_geometry=false. Cause : {exc}",
             lang,
         )
     try:
@@ -227,7 +226,20 @@ async def query_fires(
     async def fetch() -> dict[str, Any]:
         if not include_geometry:
             return await get_features(CONFIG, constants.TYPE_NAME, **request)
-        return _trim_geometry(await _geometry_features(request, lang))
+        try:
+            return _trim_geometry(await _geometry_features(request, lang))
+        except file_download.TooLarge:
+            # Over the response cap, every polygon is far past the geometry
+            # budget anyway (the five largest 2023 BC fires are 33 MB of
+            # GeoJSON, Donnie Creek alone 15 MB), so the fires come back
+            # without geometry, as _trim_geometry would leave them.
+            body = await get_features(
+                CONFIG,
+                constants.TYPE_NAME,
+                **(request | {"property_names": constants.ATTRIBUTE_FIELDS}),
+            )
+            body["geometry_omitted"] = len(body.get("features") or [])
+            return body
 
     cache_key = f"nrcan-nbac:query:{cql_filter}:{include_geometry}:{sort_by}:{limit}:{offset}"
     body, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_QUERY_SECONDS, fetch)

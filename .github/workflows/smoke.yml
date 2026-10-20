@@ -36,9 +36,11 @@ jobs:
   smoke:
     needs: discover
     runs-on: ubuntu-latest
-    # smoke_test_modules.py chains many live calls with retries; the rest
-    # finish in a minute or two.
-    timeout-minutes: 25
+    # smoke_test_modules.py chains many live calls with retries, and
+    # smoke_test_arcgis_hub.py walks about 110 portals (15 minutes a pass); the
+    # rest finish in a minute or two. 40 leaves room for the workflow's one
+    # rerun after either of the long ones fails.
+    timeout-minutes: 40
     strategy:
       # One broken upstream must not cancel or hide the others.
       fail-fast: false

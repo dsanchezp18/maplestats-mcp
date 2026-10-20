@@ -13,10 +13,10 @@ found and are modelled explicitly rather than smoothed over:
    (singular) key holding a *dict keyed by series code* whose values have
    no "name" field (the code is only available as the dict key). Same
    "Detail(s)" naming clash exists for groups.
-2. The group-detail endpoint's payload key is "groupDetails" (plural) and
-   includes "name"; the group-observations endpoint's payload key is
-   "groupDetail" (singular) and has no "name" field at all (only
-   label/description/link) - confirmed live against
+2. The group-detail endpoint's payload key is "groupDetail" (it was
+   "groupDetails", plural, until October 2026) and includes "name"; the
+   group-observations endpoint's "groupDetail" has no "name" field at all
+   (only label/description/link) - confirmed live against
    /groups/FX_RATES_DAILY/json vs /observations/group/FX_RATES_DAILY/json.
    GroupObservationsResult.group.name below is therefore populated by
    client.py from the caller's own input, not from the upstream payload.
@@ -69,7 +69,7 @@ class SeriesDetail(BaseModel):
 
 
 class GroupMemberSeries(BaseModel):
-    """One entry in /groups/{name}/json's "groupDetails.groupSeries" dict.
+    """One entry in /groups/{name}/json's "groupDetail.groupSeries" dict.
 
     Unlike SeriesSummary, Valet does not send a description here - only
     label + link (confirmed live) - so this is a deliberately smaller
@@ -82,7 +82,7 @@ class GroupMemberSeries(BaseModel):
 
 
 class GroupDetail(BaseModel):
-    """From /groups/{name}/json's "groupDetails" object."""
+    """From /groups/{name}/json's "groupDetail" object."""
 
     name: str
     label: str

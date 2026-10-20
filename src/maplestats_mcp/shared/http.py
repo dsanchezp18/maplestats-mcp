@@ -218,7 +218,7 @@ def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
         raise CloudflareChallenge(
             f"{host} is behind a Cloudflare bot challenge (HTTP {response.status_code}, "
             "Cf-Mitigated: challenge) that automated clients cannot pass, so this "
-            "service is unavailable from MapleStats until StatCan lifts it. MapleStats "
+            "service is unavailable from MapleStats until its publisher lifts it. MapleStats "
             "does not try to bypass it."
         )
 

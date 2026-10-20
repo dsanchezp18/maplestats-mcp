@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 from typing import Any
 
@@ -38,6 +39,12 @@ async def main() -> int:
     failures: list[str] = []
     async with Client(mcp) as client:
         ok, catalogue = await _call(client, "ab_economic_list_indicators", {})
+        # Cloudflare challenges GitHub's runners on api.economicdata.alberta.ca
+        # but not other networks (since 2026-10-04), as smoke_test_modules.py
+        # notes; the check still runs, and fails, anywhere else.
+        if not ok and os.environ.get("GITHUB_ACTIONS") == "true" and "Cloudflare" in catalogue:
+            print("SKIP ab_economic: Cloudflare challenge for this GitHub runner")
+            return 0
         if not ok or not catalogue["indicators"]:
             print(f"FAIL ab_economic_list_indicators: {catalogue}")
             return 1

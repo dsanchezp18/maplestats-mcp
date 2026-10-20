@@ -14,9 +14,11 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 - `/series/{name}/json` -> {"terms", "seriesDetails": {name, label,
   description}}. 404 for an unknown name, body
   {"message": "Series X not found.", "docs": "..."}.
-- `/groups/{name}/json` -> {"terms", "groupDetails": {name, label,
-  description, groupSeries: {code: {label, link}}}} - groupSeries
-  entries have no description field (confirmed live).
+- `/groups/{name}/json` -> {"terms", "groupDetail": {name, label,
+  description, link, metadata, groupSeries: {code: {label, description,
+  dateFormat, link}}}}. Until October 2026 the key was "groupDetails"
+  (plural) and groupSeries entries had no description; both keys are
+  accepted.
 - `/observations/{name1,name2,...}/json` (comma-joined series names in
   one URL, confirmed live) -> {"terms", "seriesDetail": {code: {label,
   description, dimension: {key: "d", name: "Date"}}}, "observations":
@@ -40,8 +42,8 @@ https://www.bankofcanada.ca/valet/docs prose alone):
     numeric ("1.3917", "169.8") - parsed to float here, with an
     empty/missing value treated as no data rather than a parse error.
 - `/observations/group/{name}/json` -> same "observations" shape as
-  above, plus "groupDetail" (singular - NOT "groupDetails") holding
-  only {label, description, link}, no "name" field at all (confirmed
+  above, plus "groupDetail" holding only {label, description, link},
+  no "name" field at all (confirmed
   live against /observations/group/FX_RATES_DAILY/json). The caller's
   own group_name argument is used to fill GroupInfo.name.
 - 404 (unknown series/group name) and 400 (bad date range, mixed
@@ -612,9 +614,12 @@ async def get_group(name: str, lang: str = "en") -> GroupDetail:
 
     async def fetch() -> dict[str, Any]:
         obj = await _get(path, lang=lang)
-        detail = _require_mapping(obj, "groupDetails", path, lang)
+        # Valet renamed "groupDetails" to "groupDetail" in October 2026;
+        # the old key is still read in case a mirror or cache serves it.
+        field = "groupDetails" if isinstance(obj, dict) and "groupDetails" in obj else "groupDetail"
+        detail = _require_mapping(obj, field, path, lang)
         if not detail.get("name"):
-            raise _shape_error(path, "groupDetails.name", lang)
+            raise _shape_error(path, f"{field}.name", lang)
         return detail
 
     detail, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_DETAIL_SECONDS, fetch)
@@ -723,8 +728,8 @@ async def get_group_observations(
     observations = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
     kept = _keep_latest(observations)
     return GroupObservationsResult(
-        # "groupDetail" (unlike GroupDetail's "groupDetails") has no
-        # "name" field - see this module's docstring and schemas.py's.
+        # This endpoint's "groupDetail" has no "name" field - see this
+        # module's docstring and schemas.py's.
         group=GroupInfo(
             name=group_name,
             label=group_detail.get("label", ""),

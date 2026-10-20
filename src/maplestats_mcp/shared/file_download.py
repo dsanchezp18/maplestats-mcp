@@ -15,7 +15,10 @@ module-owned client (`new_client`) and streams:
   aborted mid-stream;
 - each hop waits for the token bucket the caller chooses for that host;
 - the bytes are cached for a few hours inside a total byte budget (a plain
-  TTL cache of 40 MB files would let a few calls hold gigabytes).
+  TTL cache of 40 MB files would let a few calls hold gigabytes);
+- a caller that only needs a summary of a file too large to hold (a station
+  list from a growing hourly CSV) passes a `Sink`, which receives the body
+  chunk by chunk instead of having it buffered.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import Protocol
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -60,6 +64,15 @@ class Downloaded:
 
 HostCheck = Callable[[str], bool]
 LimiterFor = Callable[[str], TokenBucket]
+
+
+class Sink(Protocol):
+    """Receives a streamed body. start() runs before each attempt's first chunk,
+    so a retried download must reset whatever feed() accumulated."""
+
+    def start(self) -> None: ...
+
+    def feed(self, chunk: bytes) -> None: ...
 
 
 async def _read_error_answer(response: httpx.Response) -> httpx.Response:
@@ -112,6 +125,10 @@ def check_url(url: str, allow_host: HostCheck, context: str) -> None:
         raise _refuse(url, context)
 
 
+class TooLarge(UpstreamError):
+    """The file is over the reader's byte cap (declared, or found while reading)."""
+
+
 class RedirectRefused(UpstreamError):
     """A redirect hop left the allowed hosts or https; a module may map it (nrcan_minerals
     turns the portal's 302-to-error-page into NotFound) without catching every upstream fault."""
@@ -152,6 +169,7 @@ async def _fetch_chain(
     max_bytes: int,
     timeout: float,
     context: str,
+    sink: Sink | None = None,
 ) -> Downloaded:
     # The first URL is the caller's (InvalidInput if refused); every hop after it
     # is the publisher's (UpstreamError if refused).
@@ -180,7 +198,7 @@ async def _fetch_chain(
             declared = response.headers.get("content-length", "")
             if declared.isdigit() and int(declared) > max_bytes:
                 raise call_error(
-                    UpstreamError,
+                    TooLarge,
                     f"{context}: {current} is {int(declared):,} bytes; this reader stops at "
                     f"{max_bytes:,}. Download it from the portal instead.",
                     f"{context} : {current} fait {fr_number(int(declared))} octets ; ce lecteur "
@@ -188,17 +206,22 @@ async def _fetch_chain(
                 )
             chunks: list[bytes] = []
             total = 0
+            if sink is not None:
+                sink.start()
             async for chunk in response.aiter_bytes():
                 total += len(chunk)
                 if total > max_bytes:
                     raise call_error(
-                        UpstreamError,
+                        TooLarge,
                         f"{context}: {current} is larger than {max_bytes:,} bytes (stopped "
                         "reading at the cap). Download it from the portal instead.",
                         f"{context} : {current} dépasse {fr_number(max_bytes)} octets (lecture "
                         "arrêtée à la limite). Téléchargez-le plutôt depuis le portail.",
                     )
-                chunks.append(chunk)
+                if sink is None:
+                    chunks.append(chunk)
+                else:
+                    sink.feed(chunk)
             return Downloaded(
                 body=b"".join(chunks),
                 final_url=current,
@@ -219,8 +242,12 @@ async def download(
     max_bytes: int,
     context: str,
     timeout: float = 120.0,
+    sink: Sink | None = None,
 ) -> Downloaded:
-    """GET `url` into memory under the cap, mapping failures to typed errors."""
+    """GET `url` into memory under the cap, mapping failures to typed errors.
+
+    With a `sink`, the body goes to it chunk by chunk and the returned body is empty.
+    """
     check_url(url, allow_host, context)
     try:
         return await _fetch_chain(
@@ -230,6 +257,7 @@ async def download(
             max_bytes=max_bytes,
             timeout=timeout,
             context=context,
+            sink=sink,
         )
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code

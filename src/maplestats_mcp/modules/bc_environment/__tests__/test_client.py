@@ -297,6 +297,49 @@ async def test_hydrometric_station_list_reads_cp1252_and_stage_spaces(httpx_mock
     assert names["08DC0001"].latest_utc == "2026-10-01 00:20:00"
 
 
+def test_station_summary_restarts_and_keeps_newest_time():
+    """Chunk boundaries fall mid-line; a retried stream calls start() again."""
+    summary = client._StationSummary()
+    summary.feed(b"partial,header\r\n08DC0001, Upper")
+    summary.start()
+    body = (
+        STAGE + b"08DC0001, Upper Creek, Active, 55.1, -129.1, 2026-10-02 05:15, Stage, 0.6, m, U"
+    )
+    for i in range(0, len(body), 7):
+        summary.feed(body[i : i + 7])
+    rows = summary.finish()
+    assert list(rows) == ["08DC0001"]
+    assert rows["08DC0001"][1] == "Upper Creek"
+    assert rows["08DC0001"][5] == "2026-10-02 05:15:00"
+
+
+async def test_oversized_current_file_reads_one_station_by_range(monkeypatch):
+    """Stage.csv passed MAX_FILE_BYTES in October 2026; it is read by range instead."""
+    header = (
+        "Location ID, Location Name, Status, Latitude, Longitude, Date/Time(UTC), "
+        "Parameter, Value, Unit, Grade"
+    )
+    lines = [header]
+    for station in ("08DC0001", "08HA0022", "08LC0006"):
+        for day in range(1, 11):
+            lines.append(
+                f"{station}, Creek, Active, 48.7, -123.6, 2026-10-{day:02d} 00:15, "
+                f"Stage, {day / 10:.3f}, m, Undefined"
+            )
+    body = crlf("\n".join(lines))
+    _fake_remote(monkeypatch, f"{constants.WATER_BASE}/Stage.csv", body)
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 100)
+    monkeypatch.setattr(client, "water_year_start", lambda: "2026-10-01 00:00:00")
+    result = await bc_env_get_streamflow("08HA0022", parameter="stage", start="2026-10-01", limit=3)
+    assert result.files == ["Stage.csv"]
+    assert result.total_matched == 10
+    assert [(r.time_utc, r.value) for r in result.readings] == [
+        ("2026-10-10 00:15:00", 1.0),
+        ("2026-10-09 00:15:00", 0.9),
+        ("2026-10-08 00:15:00", 0.8),
+    ]
+
+
 async def test_hydrometric_station_id_is_checked():
     with pytest.raises(InvalidInput):
         await bc_env_get_streamflow("Koksilah")

@@ -229,6 +229,17 @@ async def test_host_that_ignores_range_is_refused_without_reading_the_body(httpx
     assert body.pulled == 0
 
 
+async def test_cdn_that_answers_200_once_is_asked_again(httpx_mock, monkeypatch):
+    # RTC Quebec's Akamai edge answered a range with the whole object on a cache
+    # miss (2026-10-19) and with 206 a moment later; it advertises Accept-Ranges.
+    monkeypatch.setattr(remote_zip, "RANGE_REFUSED_WAIT_SECONDS", 0)
+    httpx_mock.add_response(
+        url=URL, status_code=200, headers={"accept-ranges": "bytes"}, content=b"x" * 200
+    )
+    httpx_mock.add_response(url=URL, status_code=206, content=b"y" * 100)
+    assert await remote_zip.fetch_range(URL, 0, 99) == b"y" * 100
+
+
 async def test_206_body_longer_than_the_range_is_cut_and_refused(httpx_mock):
     body = _Body(chunks=1000)
     httpx_mock.add_callback(lambda request: httpx.Response(206, content=body), url=URL)

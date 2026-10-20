@@ -62,6 +62,27 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Fixed
 
+- `boc_get_group`: the Bank of Canada renamed the group payload from `groupDetails` to
+  `groupDetail` in October 2026, so every group lookup failed with "its payload may have
+  changed". Both names are now read.
+- `bc_env_list_streamflow_gauges` and `bc_env_get_streamflow` with `parameter="stage"`:
+  `Stage.csv` now carries 2- to 15-minute readings and passed the 16 MB download cap 19 days
+  into the water year (about 500 MB by September). The gauge list now streams the file and
+  keeps one row per station, and a single gauge is read by range; with no `start`, that
+  range read covers the last 14 days first and says so in the notes.
+- `nrcan_nbac_query_fires` with `include_geometry=true`: a GeoJSON answer over the 20 MB
+  response cap (the five largest 2023 BC fires are 33 MB) now returns the fires without
+  geometry, counted in `geometry_omitted`, instead of an error.
+- Range reads (transit GTFS feeds, zip members, sorted archives): a 200 answer to a range
+  request from a host that advertises `Accept-Ranges: bytes` is retried twice after 3 s.
+  RTC Québec's CDN answered one such request in full on 2026-10-19 and honoured it later.
+- The Cloudflare-challenge error named StatCan for every host, including Alberta's
+  economic dashboard; it now says the publisher.
+- Live smoke tests: `smoke_test_arcgis_hub` rechecks only its failing portals after a
+  minute (a full pass takes 15 minutes, so the workflow's whole-script rerun ran out of
+  time), the smoke job timeout is 40 minutes, `smoke_test_ab_economic` skips on a GitHub
+  runner that Cloudflare challenges, as `smoke_test_modules` already did, and
+  `smoke_test_bc_environment` reads a current stage series.
 - `plan_query`: the `statcan_tables` topic no longer fires on the disease or map sense of
   "vector". "Vector" and "vecteur" count only within 60 characters of a word that places them
   in a table (table, series, StatCan, CANSIM, workbook, ID, a v-number), so "tick vectors",
