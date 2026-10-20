@@ -36,8 +36,8 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   caller's own address behind Cloudflare. The hosted instance sets both, and allows 8
   concurrent requests (was 4).
 - `fastmcp` is capped below 4.2, because the server uses internals of 4.1.
-- The README, FAQ and Connect page say the hosted server sleeps after about 15 idle minutes
-  and that the GitHub keepalive does not prevent it.
+- The README, FAQ and Connect page say the first request to the hosted server after a quiet
+  spell can take up to a minute.
 - CI: a new `Docker images` workflow builds the server and chat images and checks that the
   server image starts and answers `/health`. Render deploys from those Dockerfiles, and no
   workflow built them before. CI also runs the chat demo's lint and tests (`chat/`).
