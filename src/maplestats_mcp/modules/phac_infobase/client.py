@@ -249,11 +249,22 @@ async def _get(url: str, lang: str = "en", max_bytes: int | None = None) -> _Hop
                 f"phac_infobase : {url} a répondu HTTP {status}.",
             ) from exc
         except httpx.HTTPError as exc:
+            # health.canada.ca is served by several nodes, and one presented another
+            # site's certificate on 2026-10-20: say so rather than call it a timeout.
+            if "CERTIFICATE_VERIFY_FAILED" in str(exc):
+                raise lang_error(
+                    UpstreamUnavailable,
+                    lang,
+                    f"phac_infobase: {url} failed TLS certificate verification; "
+                    "the server may be misconfigured. Try again later.",
+                    f"phac_infobase : {url} a échoué à la vérification du certificat TLS ; "
+                    "le serveur est peut-être mal configuré. Réessayez plus tard.",
+                ) from exc
             raise lang_error(
                 UpstreamUnavailable,
                 lang,
-                f"phac_infobase: {url} did not respond in time.",
-                f"phac_infobase : {url} n'a pas répondu à temps.",
+                f"phac_infobase: {url} did not respond in time ({type(exc).__name__}).",
+                f"phac_infobase : {url} n'a pas répondu à temps ({type(exc).__name__}).",
             ) from exc
         if hop.redirect is None:
             return hop

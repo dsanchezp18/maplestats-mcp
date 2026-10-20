@@ -397,7 +397,9 @@ async def test_a_deep_table_is_reached_by_calling_again(deep_day, monkeypatch):
 
     # The next read of a nearby table starts near it, not at byte 0.
     again = await archive.read_table(DAY, 40000001, max_rows=5000)
-    assert again.scan_started_at_byte == result.scan_started_at_byte
+    # It may start later: the last call also saved points between its start and
+    # the block, and the next read resumes from the nearest of them.
+    assert again.scan_started_at_byte >= result.scan_started_at_byte
     assert again.compressed_bytes_scanned < 150 * 1024
 
 
