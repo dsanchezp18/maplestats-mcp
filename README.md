@@ -98,11 +98,8 @@ The default is the hosted server: nothing to install, no account, no key.
    (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
    maplestats-mcp` entry for other clients (see [Install](#install)).
 
-The hosted server is a free instance that sleeps after about 15 idle minutes.
-A GitHub workflow pings it every 10 minutes, but GitHub runs scheduled
-workflows far less often than that (measured on 2026-10-20: about one run every
-four hours), so the first request after an idle spell often takes up to a
-minute. Each client gets 60 requests a minute, and the microdata tabulation
+The hosted server is a free instance, so the first request after a quiet spell
+can take up to a minute. Each client gets 60 requests a minute, and the microdata tabulation
 tool is switched off there. Your agent's tool calls (a search phrase, a table
 number) reach the server and its host, Render. The code keeps no log of them,
 but its in-memory cache can hold a search phrase or filter in a key or a
