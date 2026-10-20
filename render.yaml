@@ -37,6 +37,12 @@ services:
       # looks shared between callers.
       - key: MAPLE_TRUSTED_PROXY_HOPS
         value: "1"
+      # Cloudflare fronts onrender.com and sets this header to the caller's own
+      # address; the rightmost X-Forwarded-For entry may be a shared Cloudflare
+      # or Render address that would put many callers in one bucket. If the
+      # header does not arrive, the limiter falls back to X-Forwarded-For.
+      - key: MAPLE_CLIENT_IP_HEADER
+        value: CF-Connecting-IP
       # Counts calls per tool name and day, in memory, public at /stats; no
       # arguments or addresses are kept (shared/usage.py).
       - key: MAPLE_USAGE_STATS

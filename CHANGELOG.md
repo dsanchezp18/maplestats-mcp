@@ -6,6 +6,8 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-20
+
 ### Removed
 
 - `statcan/census_tables` (`statcan_census_tables_*`) and `statcan/census_profile_2016`
@@ -29,6 +31,13 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Changed
 
+- `MAPLE_DUCKDB_MEMORY_LIMIT` limits DuckDB's memory for queries over downloaded files, and
+  `MAPLE_CLIENT_IP_HEADER` (such as `CF-Connecting-IP`) keys the per-client rate limit on the
+  caller's own address behind Cloudflare. The hosted instance sets both, and allows 8
+  concurrent requests (was 4).
+- `fastmcp` is capped below 4.2, because the server uses internals of 4.1.
+- The README, FAQ and Connect page say the hosted server sleeps after about 15 idle minutes
+  and that the GitHub keepalive does not prevent it.
 - CI: a new `Docker images` workflow builds the server and chat images and checks that the
   server image starts and answers `/health`. Render deploys from those Dockerfiles, and no
   workflow built them before. CI also runs the chat demo's lint and tests (`chat/`).
@@ -62,6 +71,17 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ### Fixed
 
+- Live smoke fixes: `boc_get_group` accepts Valet's renamed `groupDetail` key; the BC
+  Environment hydrometric files may be up to 64 MB (`Stage.csv` reached 29 MB); a TLS
+  verification failure on PHAC's host is reported as such instead of as a timeout.
+- Caller-facing typed errors (about 70, across fcac, nfd, IP Horizons, provincial elections,
+  health products, CMHC data tables, the reproduce builders and the shared Cloudflare
+  challenge) now follow `lang="fr"`. A LODE download that answers 404 raises `NotFound`, and
+  its redirects get the shared host check.
+- A server started with `uvicorn maplestats_mcp.asgi:app` (no `MAPLE_TRANSPORT`) counts as
+  HTTP, so `reproduce_workbook` no longer writes to the server's own disk and the export tools
+  describe themselves as hosted.
+- Idle MCP sessions on the hosted server are dropped after 5 minutes instead of 30.
 - `plan_query`: the `statcan_tables` topic no longer fires on the disease or map sense of
   "vector". "Vector" and "vecteur" count only within 60 characters of a word that places them
   in a table (table, series, StatCan, CANSIM, workbook, ID, a v-number), so "tick vectors",
@@ -312,7 +332,8 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.1.0...v0.1.1
