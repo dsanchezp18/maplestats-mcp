@@ -85,6 +85,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.i18n import ERROR_KEYS, french_spacing
 from maplestats_mcp.shared.i18n import t as i18n_text
@@ -379,7 +380,11 @@ async def _pairing() -> tuple[dict[str, str], bool]:
         body = await _get_html(constants.SITEMAP_URL)
         pairs = await run_parse(_sitemap_pairs, body)
         if not pairs:
-            raise UpstreamError(f"{constants.SITEMAP_URL} lists no data table pages.")
+            raise call_error(
+                UpstreamError,
+                f"{constants.SITEMAP_URL} lists no data table pages.",
+                f"{constants.SITEMAP_URL} ne liste aucune page de tableau de données.",
+            )
         return pairs
 
     return await cached_fetch("cmhc-dt:pairing", constants.CACHE_TTL_PAIRING_SECONDS, fetch)

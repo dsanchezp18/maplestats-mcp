@@ -32,6 +32,7 @@ import httpx
 from maplestats_mcp.modules.health_products.vigilance import constants
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import new_client, request_headers
 
 _LOCAL = b"PK\x03\x04"
@@ -79,9 +80,12 @@ class ZipWalker:
                 self.done = True
                 return
             if signature != _LOCAL:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     "The Canada Vigilance extract is not laid out as expected (no ZIP local "
-                    "header where one should start)."
+                    "header where one should start).",
+                    "L'extrait de Canada Vigilance n'a pas la structure attendue (aucun en-tête "
+                    "local ZIP là où il devrait commencer).",
                 )
             flags, method, csize, _usize, name_len, extra_len = struct.unpack(
                 "<2xHH8xIIHH", self.buffer[4:30]
@@ -91,9 +95,12 @@ class ZipWalker:
             name = bytes(self.buffer[30 : 30 + name_len]).decode("utf-8", errors="replace")
             del self.buffer[: 30 + name_len + extra_len]
             if flags & 0x08:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     f"{name} in the Canada Vigilance extract has no sizes in its header, so it "
-                    "cannot be read as a stream."
+                    "cannot be read as a stream.",
+                    f"{name}, dans l'extrait de Canada Vigilance, n'indique aucune taille dans "
+                    "son en-tête ; il ne peut donc pas être lu en flux.",
                 )
             if "/" in name and self.folder is None:
                 self.folder = name.split("/", 1)[0]
@@ -101,7 +108,11 @@ class ZipWalker:
             self.in_target = name.endswith(self.member_suffix)
             if self.in_target:
                 if method != 8:
-                    raise UpstreamError(f"{name} uses ZIP compression method {method}.")
+                    raise call_error(
+                        UpstreamError,
+                        f"{name} uses ZIP compression method {method}.",
+                        f"{name} utilise la méthode de compression ZIP {method}.",
+                    )
                 self.found = True
                 self.inflater = zlib.decompressobj(-15)
                 if csize == 0:
@@ -115,8 +126,11 @@ class ZipWalker:
                 self.sink(self.inflater.decompress(pending, _INFLATE_STEP))
                 pending = self.inflater.unconsumed_tail
         except zlib.error as exc:
-            raise UpstreamError(
-                f"The Canada Vigilance extract's reactions file is not valid deflate data ({exc})."
+            raise call_error(
+                UpstreamError,
+                f"The Canada Vigilance extract's reactions file is not valid deflate data ({exc}).",
+                "Le fichier des réactions de l'extrait de Canada Vigilance n'est pas un flux "
+                f"deflate valide ({exc}).",
             ) from exc
 
 
@@ -232,9 +246,12 @@ async def scan_reactions(
     try:
         async with _CLIENT.stream("GET", constants.EXTRACT_URL, headers=headers) as response:
             if response.status_code != 200:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     f"canada.ca answered HTTP {response.status_code} for the Canada Vigilance "
-                    "extract."
+                    "extract.",
+                    f"canada.ca a répondu HTTP {response.status_code} pour l'extrait de Canada "
+                    "Vigilance.",
                 )
             last_modified = response.headers.get("last-modified")
             # The gzip layer is undone here rather than by httpx, so that the
@@ -249,8 +266,10 @@ async def scan_reactions(
                 try:
                     chunk = gunzip.decompress(raw) if gunzip else raw
                 except zlib.error as exc:
-                    raise UpstreamError(
-                        f"The Canada Vigilance extract is not valid gzip data ({exc})."
+                    raise call_error(
+                        UpstreamError,
+                        f"The Canada Vigilance extract is not valid gzip data ({exc}).",
+                        f"L'extrait de Canada Vigilance n'est pas un flux gzip valide ({exc}).",
                     ) from exc
                 pending += chunk
                 if len(pending) < 1024 * 1024:
@@ -270,19 +289,35 @@ async def scan_reactions(
                     complete = True
             scanned = response.num_bytes_downloaded
     except httpx.TimeoutException as exc:
-        raise UpstreamUnavailable(
-            "canada.ca stopped sending the Canada Vigilance extract."
+        raise call_error(
+            UpstreamUnavailable,
+            "canada.ca stopped sending the Canada Vigilance extract.",
+            "canada.ca a cessé d'envoyer l'extrait de Canada Vigilance.",
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"The Canada Vigilance extract could not be read ({type(exc).__name__})."
+        raise call_error(
+            UpstreamUnavailable,
+            f"The Canada Vigilance extract could not be read ({type(exc).__name__}).",
+            f"L'extrait de Canada Vigilance n'a pas pu être lu ({type(exc).__name__}).",
         ) from exc
     if not complete and stop_reason is None:
         if not pipeline.walker.found:
-            raise UpstreamError("The Canada Vigilance extract has no reactions.txt file.")
-        raise UpstreamError("The Canada Vigilance extract ended inside reactions.txt.")
+            raise call_error(
+                UpstreamError,
+                "The Canada Vigilance extract has no reactions.txt file.",
+                "L'extrait de Canada Vigilance ne contient aucun fichier reactions.txt.",
+            )
+        raise call_error(
+            UpstreamError,
+            "The Canada Vigilance extract ended inside reactions.txt.",
+            "L'extrait de Canada Vigilance s'est terminé au milieu de reactions.txt.",
+        )
     if complete and not pipeline.walker.found:
-        raise UpstreamError("The Canada Vigilance extract has no reactions.txt file.")
+        raise call_error(
+            UpstreamError,
+            "The Canada Vigilance extract has no reactions.txt file.",
+            "L'extrait de Canada Vigilance ne contient aucun fichier reactions.txt.",
+        )
     matcher.finish()
     return ScanOutcome(
         matcher=matcher,

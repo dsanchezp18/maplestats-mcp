@@ -25,6 +25,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
     mark_winners,
 )
 from maplestats_mcp.shared.errors import UpstreamError
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.json_utils import list_or_empty
 
 
@@ -70,9 +71,17 @@ def parse(body: bytes) -> list[District]:
     try:
         data = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, ValueError) as exc:
-        raise UpstreamError(f"elections_provincial: unexpected Quebec results file: {exc}") from exc
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: unexpected Quebec results file: {exc}",
+            f"elections_provincial : fichier de résultats du Québec inattendu : {exc}",
+        ) from exc
     if not isinstance(data, dict):
-        raise UpstreamError("elections_provincial: the Quebec results file is not a JSON object.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: the Quebec results file is not a JSON object.",
+            "elections_provincial : le fichier des résultats du Québec n'est pas un objet JSON.",
+        )
 
     # The 1973 to 2012 files lack later fields, so missing or null sections read
     # as empty, and a malformed riding is a typed error rather than a KeyError.
@@ -90,11 +99,18 @@ def parse(body: bytes) -> list[District]:
             finish_shares(district)
             districts.append(district)
     except (KeyError, TypeError, ValueError, AttributeError) as exc:
-        raise UpstreamError(
-            f"elections_provincial: unexpected Quebec results file ({type(exc).__name__}: {exc})."
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: unexpected Quebec results file ({type(exc).__name__}: {exc}).",
+            f"elections_provincial : fichier de résultats du Québec inattendu "
+            f"({type(exc).__name__} : {exc}).",
         ) from exc
     if not districts:
-        raise UpstreamError("elections_provincial: the Quebec results file has no ridings.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: the Quebec results file has no ridings.",
+            "elections_provincial : le fichier des résultats du Québec ne contient aucune circonscription.",
+        )
     return districts
 
 

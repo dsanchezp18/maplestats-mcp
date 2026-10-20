@@ -30,6 +30,7 @@ from maplestats_mcp.modules.ised.ip_horizons.schemas import IpHorizonsFile
 from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
 from maplestats_mcp.shared.errors import NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
+from maplestats_mcp.shared.fr_typography import call_error
 
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _DOWNLOAD_ATTEMPTS = 3
@@ -92,7 +93,11 @@ async def _fetch_zip(file: IpHorizonsFile, zip_path: Path) -> None:
         # Dead links answer 404 with an HTML page (caught by the caller);
         # refuse an HTML body with any other status rather than unzip it.
         if "html" in response.headers.get("content-type", ""):
-            raise NotFound(f"ised_ip_horizons: {file.url} is no longer published.")
+            raise call_error(
+                NotFound,
+                f"ised_ip_horizons: {file.url} is no longer published.",
+                f"ised_ip_horizons : {file.url} n'est plus publié.",
+            )
         written = 0
         with zip_path.open("wb") as handle:
             async for chunk in response.aiter_bytes(1 << 20):
@@ -115,10 +120,16 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
             zip_path.unlink(missing_ok=True)
             status = getattr(getattr(exc, "response", None), "status_code", None)
             if status == 404:
-                raise NotFound(f"ised_ip_horizons: {file.url} is no longer published.") from exc
+                raise call_error(
+                    NotFound,
+                    f"ised_ip_horizons: {file.url} is no longer published.",
+                    f"ised_ip_horizons : {file.url} n'est plus publié.",
+                ) from exc
             if attempt == _DOWNLOAD_ATTEMPTS:
-                raise UpstreamUnavailable(
-                    f"ised_ip_horizons: download of {file.url} failed: {exc!r}"
+                raise call_error(
+                    UpstreamUnavailable,
+                    f"ised_ip_horizons: download of {file.url} failed: {exc!r}",
+                    f"ised_ip_horizons : le téléchargement de {file.url} a échoué : {exc!r}",
                 ) from exc
             await asyncio.sleep(_RETRY_WAIT_SECONDS * attempt)
 
@@ -128,13 +139,19 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
             with zipfile.ZipFile(zip_path) as archive:
                 member = next((n for n in archive.namelist() if n.lower().endswith(".csv")), None)
                 if member is None:
-                    raise UpstreamError(f"ised_ip_horizons: {file.url} has no CSV file inside.")
+                    raise call_error(
+                        UpstreamError,
+                        f"ised_ip_horizons: {file.url} has no CSV file inside.",
+                        f"ised_ip_horizons : {file.url} ne contient aucun fichier CSV.",
+                    )
                 with archive.open(member) as source, csv_path.open("wb") as sink:
                     copy_capped(source, sink, config.get_ip_horizons_cache_max_bytes(), member)
             convert_csv(csv_path, target)
         except (zipfile.BadZipFile, OSError) as exc:
-            raise UpstreamError(
-                f"ised_ip_horizons: {file.url} could not be unpacked: {exc}"
+            raise call_error(
+                UpstreamError,
+                f"ised_ip_horizons: {file.url} could not be unpacked: {exc}",
+                f"ised_ip_horizons : {file.url} n'a pas pu être décompressé : {exc}",
             ) from exc
         finally:
             csv_path.unlink(missing_ok=True)
