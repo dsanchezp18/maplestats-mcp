@@ -2,10 +2,8 @@ name: keepalive
 
 # Render's free web service spins down after about 15 minutes idle, and a cold
 # start (50 s or more) looks like a broken server to MCP clients. GitHub's
-# schedule is throttled hard (2026-10-20: the last 60 runs averaged one every
-# 256 minutes, the longest gap 572), so this reduces sleeps rather than
-# removing them. For a launch, ping /health every 5 to 10 minutes from an
-# external monitor (cron-job.org, UptimeRobot) or move to a paid instance. A 502 while Render restarts or deploys clears within a minute
+# schedule can lag by several minutes, so this reduces sleeps rather than
+# removing them. A 502 while Render restarts or deploys clears within a minute
 # or two, so the ping retries instead of failing the run; uptime.yml is the
 # workflow that alerts on a lasting outage.
 on:
