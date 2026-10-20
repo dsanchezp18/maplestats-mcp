@@ -36,6 +36,7 @@ import httpx
 
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import NotJsonResponse, api_get, new_client, request_headers
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.models import Provenance
@@ -123,36 +124,54 @@ async def get_json(
     except NotJsonResponse as exc:
         # Before httpx.HTTPError below: it is a DecodingError, so the server
         # answered and the fault is its body (an HTML error page), not the network.
-        raise UpstreamError(f"health-products.canada.ca did not return JSON for {path}.") from exc
+        raise call_error(
+            UpstreamError,
+            f"health-products.canada.ca did not return JSON for {path}.",
+            f"health-products.canada.ca n'a pas renvoyé de JSON pour {path}.",
+        ) from exc
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 404 and missing_ok:
             return []
         if status == 400:
-            raise InvalidInput(
-                f"health-products.canada.ca rejected the request to {path}."
+            raise call_error(
+                InvalidInput,
+                f"health-products.canada.ca rejected the request to {path}.",
+                f"health-products.canada.ca a rejeté la requête vers {path}.",
             ) from exc
         if status == 404:
-            raise NotFound(
-                f"health-products.canada.ca has no {path} matching the request."
+            raise call_error(
+                NotFound,
+                f"health-products.canada.ca has no {path} matching the request.",
+                f"health-products.canada.ca n'a aucun {path} correspondant à la requête.",
             ) from exc
-        raise UpstreamError(
-            f"health-products.canada.ca answered HTTP {status} for {path}."
+        raise call_error(
+            UpstreamError,
+            f"health-products.canada.ca answered HTTP {status} for {path}.",
+            f"health-products.canada.ca a répondu HTTP {status} pour {path}.",
         ) from exc
     except httpx.TimeoutException as exc:
-        raise UpstreamUnavailable(
-            f"health-products.canada.ca did not answer {path} within {timeout:.0f} s."
+        raise call_error(
+            UpstreamUnavailable,
+            f"health-products.canada.ca did not answer {path} within {timeout:.0f} s.",
+            f"health-products.canada.ca n'a pas répondu pour {path} en {timeout:.0f} s.",
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"health-products.canada.ca could not be reached for {path} ({type(exc).__name__})."
+        raise call_error(
+            UpstreamUnavailable,
+            f"health-products.canada.ca could not be reached for {path} ({type(exc).__name__}).",
+            f"health-products.canada.ca est injoignable pour {path} ({type(exc).__name__}).",
         ) from exc
     except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable):
         # Typed errors api_get already raised (CloudflareChallenge is an
         # UpstreamUnavailable): the ValueError clause below must not relabel them.
         raise
     except ValueError as exc:
-        raise UpstreamError(f"health-products.canada.ca sent invalid JSON for {path}.") from exc
+        raise call_error(
+            UpstreamError,
+            f"health-products.canada.ca sent invalid JSON for {path}.",
+            f"health-products.canada.ca a envoyé du JSON invalide pour {path}.",
+        ) from exc
 
 
 def as_list(payload: Any) -> list[dict[str, Any]]:
@@ -165,7 +184,11 @@ def as_list(payload: Any) -> list[dict[str, Any]]:
         return [payload]
     if isinstance(payload, list):
         return [row for row in payload if isinstance(row, dict)]
-    raise UpstreamError("health-products.canada.ca sent an answer that is not JSON rows.")
+    raise call_error(
+        UpstreamError,
+        "health-products.canada.ca sent an answer that is not JSON rows.",
+        "health-products.canada.ca a envoyé une réponse qui n'est pas composée de lignes JSON.",
+    )
 
 
 def is_blank(row: dict[str, Any], key: str) -> bool:
@@ -241,8 +264,10 @@ async def stream_objects(
             headers=request_headers(url, {"Accept-Encoding": "gzip"}),
         ) as response:
             if response.status_code >= 400:
-                raise UpstreamError(
-                    f"health-products.canada.ca answered HTTP {response.status_code} for {path}."
+                raise call_error(
+                    UpstreamError,
+                    f"health-products.canada.ca answered HTTP {response.status_code} for {path}.",
+                    f"health-products.canada.ca a répondu HTTP {response.status_code} pour {path}.",
                 )
             buffer = ""
             async for chunk in response.aiter_bytes():
@@ -257,8 +282,10 @@ async def stream_objects(
                         obj, end = decoder.raw_decode(buffer, start)
                     except json.JSONDecodeError:
                         if len(buffer) - start > _MAX_OBJECT_CHARS:
-                            raise UpstreamError(
-                                f"health-products.canada.ca sent malformed JSON for {path}."
+                            raise call_error(
+                                UpstreamError,
+                                f"health-products.canada.ca sent malformed JSON for {path}.",
+                                f"health-products.canada.ca a envoyé du JSON mal formé pour {path}.",
                             ) from None
                         pos = start
                         break
@@ -267,18 +294,28 @@ async def stream_objects(
                     pos = end
                 buffer = buffer[pos:]
             if buffer.strip(" \r\n\t,]"):
-                raise UpstreamError(f"health-products.canada.ca cut short its answer for {path}.")
+                raise call_error(
+                    UpstreamError,
+                    f"health-products.canada.ca cut short its answer for {path}.",
+                    f"health-products.canada.ca a interrompu sa réponse pour {path}.",
+                )
     except httpx.DecodingError as exc:
         # Before httpx.HTTPError below: a body that will not decode (a corrupt
         # gzip stream) means the server answered badly, not that the network failed.
-        raise UpstreamError(
-            f"health-products.canada.ca sent a body for {path} that could not be decoded."
+        raise call_error(
+            UpstreamError,
+            f"health-products.canada.ca sent a body for {path} that could not be decoded.",
+            f"health-products.canada.ca a envoyé pour {path} un corps impossible à décoder.",
         ) from exc
     except httpx.TimeoutException as exc:
-        raise UpstreamUnavailable(
-            f"health-products.canada.ca did not finish sending {path} in time."
+        raise call_error(
+            UpstreamUnavailable,
+            f"health-products.canada.ca did not finish sending {path} in time.",
+            f"health-products.canada.ca n'a pas fini d'envoyer {path} à temps.",
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
-            f"health-products.canada.ca could not be reached for {path} ({type(exc).__name__})."
+        raise call_error(
+            UpstreamUnavailable,
+            f"health-products.canada.ca could not be reached for {path} ({type(exc).__name__}).",
+            f"health-products.canada.ca est injoignable pour {path} ({type(exc).__name__}).",
         ) from exc

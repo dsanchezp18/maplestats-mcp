@@ -46,6 +46,7 @@ from maplestats_mcp.modules.cfia import constants
 from maplestats_mcp.modules.reproduce.phac_infobase import _jl_str, _r_str
 from maplestats_mcp.modules.reproduce.spec import Code, Spec
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 
 _METHOD = "exact: the CFIA pages, parsed and filtered as the tool does"
 _AUTHOR = "Canadian Food Inspection Agency"
@@ -151,7 +152,11 @@ def _int(args: dict[str, Any], name: str) -> int | None:
     try:
         return int(value)
     except (TypeError, ValueError) as exc:
-        raise InvalidInput(f"cfia: {name} must be a whole number, got {value!r}.") from exc
+        raise call_error(
+            InvalidInput,
+            f"cfia: {name} must be a whole number, got {value!r}.",
+            f"cfia : {name} doit être un nombre entier, reçu {value!r}.",
+        ) from exc
 
 
 def _text(args: dict[str, Any], name: str) -> str | None:

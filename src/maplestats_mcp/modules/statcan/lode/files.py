@@ -20,9 +20,10 @@ import logging
 import struct
 import zipfile
 import zlib
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt
@@ -31,8 +32,15 @@ from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.lode import constants
 from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.executor import run_in_pool
+from maplestats_mcp.shared.file_download import check_redirect
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import (
     is_retryable,
     new_client,
@@ -40,9 +48,48 @@ from maplestats_mcp.shared.http import (
     wait_honouring_retry_after,
 )
 
-_client = new_client(timeout=600.0, follow_redirects=True)
+# Redirects are followed by _open, which checks every hop against the data host.
+_client = new_client(timeout=600.0, follow_redirects=False)
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+_MAX_REDIRECTS = 4
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _log = logging.getLogger(__name__)
+
+
+def _allow_host(host: str) -> bool:
+    return host == constants.ALLOWED_HOST
+
+
+@asynccontextmanager
+async def _open(method: str, url: str, headers: dict[str, str]) -> AsyncIterator[httpx.Response]:
+    """The final response of a request, following redirects only to https on the data host."""
+    current = url
+    for _ in range(_MAX_REDIRECTS + 1):
+        if current != url:
+            check_redirect(url, current, _allow_host, "statcan_lode")
+        async with _client.stream(method, current, headers=headers) as response:
+            location = response.headers.get("location")
+            if response.status_code in _REDIRECT_STATUSES and location:
+                current = urljoin(str(response.url), location)
+                continue
+            yield response
+            return
+    raise call_error(
+        UpstreamError,
+        f"statcan_lode: {url} redirected more than {_MAX_REDIRECTS} times.",
+        f"statcan_lode : {url} a redirigé plus de {_MAX_REDIRECTS} fois.",
+    )
+
+
+def _missing(url: str) -> NotFound:
+    return NotFound(
+        say(
+            f"statcan_lode: no file at {url} (HTTP 404); the link may have moved. "
+            "Search the catalogue again for the current link.",
+            f"statcan_lode : aucun fichier à {url} (HTTP 404) ; le lien a peut-être changé. "
+            "Cherchez de nouveau dans le catalogue le lien actuel.",
+        )
+    )
 
 
 def check_url(url: str) -> str:
@@ -112,7 +159,7 @@ async def _download(url: str, member: str, target: Path) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     archive = target.parent / "archive.zip.part"
     try:
-        async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
+        async with _open("GET", url, request_headers(url, None)) as response:
             response.raise_for_status()
             written = 0
             with archive.open("wb") as handle:
@@ -120,9 +167,19 @@ async def _download(url: str, member: str, target: Path) -> Path:
                     written += len(chunk)
                     check_size(written, constants.cache_max_bytes(), url)
                     handle.write(chunk)
-    except FileTooLarge:
+    except (FileTooLarge, UpstreamError):
         archive.unlink(missing_ok=True)
         raise
+    except httpx.HTTPStatusError as exc:
+        archive.unlink(missing_ok=True)
+        if exc.response.status_code in (404, 410):
+            raise _missing(url) from exc
+        raise UpstreamUnavailable(
+            say(
+                f"statcan_lode: download of {url} failed: {exc}",
+                f"statcan_lode : le téléchargement de {url} a échoué : {exc}",
+            )
+        ) from exc
     except Exception as exc:
         archive.unlink(missing_ok=True)
         raise UpstreamUnavailable(
@@ -181,9 +238,10 @@ async def local_member(url: str, member: str) -> tuple[Path, bool]:
     reraise=True,
 )
 async def _get_range(url: str, start: int, end: int) -> httpx.Response:
-    response = await _client.get(
-        url, headers=request_headers(url, {"Range": f"bytes={start}-{end}"})
-    )
+    async with _open(
+        "GET", url, request_headers(url, {"Range": f"bytes={start}-{end}"})
+    ) as response:
+        await response.aread()
     response.raise_for_status()
     return response
 
@@ -192,6 +250,8 @@ async def _range(url: str, start: int, end: int) -> bytes:
     try:
         response = await _get_range(url, start, end)
     except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (404, 410):
+            raise _missing(url) from exc
         raise UpstreamError(
             say(
                 f"{url} returned HTTP {exc.response.status_code}.",
@@ -215,9 +275,12 @@ async def _range(url: str, start: int, end: int) -> bytes:
 async def head_size(url: str) -> tuple[int | None, str | None]:
     """(size in bytes, Last-Modified) from a HEAD request; None where the server omits them."""
     try:
-        response = await _client.head(url, headers=request_headers(url, None))
+        async with _open("HEAD", url, request_headers(url, None)) as response:
+            await response.aread()
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (404, 410):
+            raise _missing(url) from exc
         raise UpstreamError(
             say(
                 f"{url} returned HTTP {exc.response.status_code}.",

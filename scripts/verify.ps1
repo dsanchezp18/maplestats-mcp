@@ -42,7 +42,7 @@ function Invoke-Checked($label, [string]$exe, [string[]]$exeArgs) {
 }
 
 # 1. Install dependencies
-$null = Invoke-Checked "uv sync" "uv" @("sync")
+$null = Invoke-Checked "uv sync" "uv" @("sync", "--locked")
 
 # 2. Lint / type check (fast correctness gate before touching the network)
 $null = Invoke-Checked "ruff check" "uv" @("run", "ruff", "check", "src", "tests", "scripts")
@@ -72,26 +72,42 @@ if ($dockerAvailable) {
 
     if ($buildOk) {
         Write-Step "docker compose up + health check"
+        $previousRequireAuth = $env:MAPLE_REQUIRE_AUTH
         $env:MAPLE_REQUIRE_AUTH = "0"
         docker compose up -d --build
         if ($LASTEXITCODE -ne 0) {
             Write-Fail "docker compose up (exit code $LASTEXITCODE)"
             $failures += "docker compose up"
         } else {
-            Start-Sleep -Seconds 5
-            try {
-                $health = Invoke-WebRequest -Uri "http://localhost:8000/health" -UseBasicParsing -TimeoutSec 10
-                if ($health.StatusCode -eq 200) {
-                    Write-Ok "health check returned 200: $($health.Content)"
-                } else {
-                    Write-Fail "health check returned status $($health.StatusCode)"
-                    $failures += "health check"
+            # The server needs about 13 s to import its modules, so poll for up to
+            # 120 s (what docker.yml does) instead of asking once.
+            $healthy = $false
+            $lastProblem = ""
+            for ($attempt = 0; $attempt -lt 60 -and -not $healthy; $attempt++) {
+                Start-Sleep -Seconds 2
+                try {
+                    $health = Invoke-WebRequest -Uri "http://localhost:8000/health" -UseBasicParsing -TimeoutSec 10
+                    if ($health.StatusCode -eq 200) {
+                        Write-Ok "health check returned 200: $($health.Content)"
+                        $healthy = $true
+                    } else {
+                        $lastProblem = "status $($health.StatusCode)"
+                    }
+                } catch {
+                    $lastProblem = "$_"
                 }
-            } catch {
-                Write-Fail "health check request failed: $_"
+            }
+            if (-not $healthy) {
+                Write-Fail "health check did not return 200 within 120 s: $lastProblem"
                 $failures += "health check"
             }
             docker compose down | Out-Null
+        }
+        # Put the caller's shell back the way it was.
+        if ($null -eq $previousRequireAuth) {
+            Remove-Item Env:MAPLE_REQUIRE_AUTH -ErrorAction SilentlyContinue
+        } else {
+            $env:MAPLE_REQUIRE_AUTH = $previousRequireAuth
         }
     }
 } else {
