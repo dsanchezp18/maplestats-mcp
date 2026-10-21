@@ -87,11 +87,16 @@ async def main() -> int:
         await _check("get_stations(name)", client.get_stations(name=first.name.strip()[:5]))
 
     try:
-        fc = await _check("get_forecast(KELOWNA)", client.get_forecast(station_name="kelowna"))
-    except NotFound:
-        # The SCRIBE layer is empty outside the fire season (0 features on 2026-10-20).
-        print("SKIP: firewx_scribe has no stations out of season")
+        fc = await client.get_forecast(station_name="kelowna")
+    except NotFound as exc:
+        # SCRIBE forecasts stop after the fire season (the layer was empty on
+        # 2026-10-20); any other NotFound means Kelowna went missing.
+        if "fire season only" not in str(exc):
+            print(f"FAIL: get_forecast(KELOWNA) -> NotFound: {exc}")
+            raise
+        print("OK (skip): get_forecast(KELOWNA): no SCRIBE forecasts outside the fire season")
     else:
+        print("OK: get_forecast(KELOWNA) -> ForecastResult")
         _require(len(fc.forecasts) >= 2, "forecast has fewer than 2 days")
 
     danger = await _check(

@@ -128,6 +128,14 @@ async def main() -> int:
         tools.bc_env_get_streamflow("08HA0022", limit=3),
         lambda r: f"{r.total_matched} rows; {[(x.time_utc, x.value, x.grade) for x in r.readings]}",
     )
+    # Stage.csv is too large to download since October 2026, so this reads by range.
+    await step(
+        "bc_env_get_streamflow current stage",
+        tools.bc_env_get_streamflow("08MG0005", parameter="stage", limit=3),
+        lambda r: (
+            f"{r.total_matched} rows; {[(x.time_utc, x.value) for x in r.readings]} notes={r.notes}"
+        ),
+    )
     await step(
         "bc_env_get_streamflow archive",
         tools.bc_env_get_streamflow(

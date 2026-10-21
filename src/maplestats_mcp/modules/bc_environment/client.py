@@ -1336,6 +1336,69 @@ def archive_span(name: str, prefix: str) -> tuple[str | None, str | None] | None
     return first, last
 
 
+class _StationSummary:
+    """One row per station (its first row, with the newest time) from a streamed CSV."""
+
+    def __init__(self) -> None:
+        self.start()
+
+    def start(self) -> None:
+        self.carry = b""
+        self.header_seen = False
+        self.stations: dict[str, list[str]] = {}
+
+    def feed(self, chunk: bytes) -> None:
+        lines = (self.carry + chunk).split(b"\n")
+        self.carry = lines.pop()
+        for raw in lines:
+            self._line(raw)
+
+    def finish(self) -> dict[str, list[str]]:
+        if self.carry:
+            self._line(self.carry)
+            self.carry = b""
+        return self.stations
+
+    def _line(self, raw: bytes) -> None:
+        if not self.header_seen:
+            self.header_seen = True
+            return
+        text = _line_text(raw)
+        if not text.strip():
+            return
+        row = [cell.strip() for cell in next(csv.reader([text]), [])]
+        if len(row) < 10:
+            return
+        row[5] = norm_time(row[5])
+        kept = self.stations.get(row[0])
+        if kept is None:
+            self.stations[row[0]] = row
+        elif row[5] > kept[5]:
+            kept[5] = row[5]
+
+
+async def _station_rows(url: str) -> tuple[dict[str, list[str]], bool]:
+    """{station id: first row with the newest time} for a current hydrometric file.
+
+    Streamed rather than downloaded: Stage.csv outgrows MAX_FILE_BYTES early in
+    each water year.
+    """
+
+    async def fetch() -> dict[str, list[str]]:
+        summary = _StationSummary()
+        await file_download.download(
+            url,
+            allow_host=_allowed,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.STREAM_MAX_BYTES,
+            context="BC Ministry of Environment",
+            sink=summary,
+        )
+        return summary.finish()
+
+    return await cached_fetch(f"bc_env:stations:{url}", constants.CACHE_TTL_HOURLY_SECONDS, fetch)
+
+
 async def list_hydrometric_stations(
     query: str | None = None,
     limit: int = constants.LIST_LIMIT_DEFAULT,
@@ -1346,16 +1409,10 @@ async def list_hydrometric_stations(
     cached_all = True
     for parameter, prefix in constants.HYDRO_FILES.items():
         url = f"{constants.WATER_BASE}/{prefix}.csv"
-        body, cached = await _file(
-            url, constants.CACHE_TTL_HOURLY_SECONDS, lang, constants.HYDRO_MAX_FILE_BYTES
-        )
+        rows, cached = await _station_rows(url)
         cached_all = cached_all and cached
-        _, rows = _rows(body)
-        for row in rows:
-            if len(row) < 10:
-                continue
+        for row in rows.values():
             entry = stations.get(row[0])
-            time = norm_time(row[5])
             if entry is None:
                 entry = stations[row[0]] = HydroStation(
                     station_id=row[0],
@@ -1367,8 +1424,8 @@ async def list_hydrometric_stations(
                 )
             if parameter not in entry.parameters:
                 entry.parameters.append(parameter)
-            if entry.latest_utc is None or time > entry.latest_utc:
-                entry.latest_utc = time
+            if entry.latest_utc is None or row[5] > entry.latest_utc:
+                entry.latest_utc = row[5]
     found = sorted(stations.values(), key=lambda s: s.station_id)
     if query:
         needle = query.strip().casefold()
@@ -1456,9 +1513,17 @@ async def get_hydrometric_data(
     station_name: str | None = None
     notes: list[str] = []
     cached_all = True
+
+    def key_of(row: list[str]) -> tuple[str, str] | None:
+        return (row[0], norm_time(row[5])) if len(row) >= 10 else None
+
+    def stop(key: tuple[str, str]) -> bool:
+        return key[0] != station_id or (high is not None and key[1] > high)
+
     for name, _first, _last in plan:
         url = f"{constants.WATER_BASE}/{name}"
-        if name == f"{prefix}.csv":
+        current = name == f"{prefix}.csv"
+        if current and await remote_zip.remote_size(url) <= constants.HYDRO_MAX_FILE_BYTES:
             body, cached = await _file(
                 url, constants.CACHE_TTL_HOURLY_SECONDS, lang, constants.HYDRO_MAX_FILE_BYTES
             )
@@ -1466,14 +1531,29 @@ async def get_hydrometric_data(
             _, rows = _rows(body)
             rows = [r for r in rows if r and r[0] == station_id]
         else:
+            # Archives, and a current file past HYDRO_MAX_FILE_BYTES (Stage.csv
+            # by mid-November at its October 2026 growth), are sorted by station
+            # then time, so one station's rows are read by range.
             cached_all = False
-            target = (station_id, low or "")
-            rows, cut = await scan_sorted(
-                url,
-                key_of=lambda row: (row[0], norm_time(row[5])) if len(row) >= 10 else None,
-                target=target,
-                stop=lambda key: key[0] != station_id or (high is not None and key[1] > high),
-            )
+            cut = False
+            rows = []
+            if current and low is None:
+                recent = datetime.now(UTC) - timedelta(days=constants.RECENT_SCAN_DAYS)
+                since = f"{recent:%Y-%m-%d %H:%M:%S}"
+                rows, cut = await scan_sorted(url, key_of, (station_id, since), stop)
+                if len(rows) >= limit or cut:
+                    days = constants.RECENT_SCAN_DAYS
+                    notes.append(
+                        pick(
+                            lang,
+                            f"{name}: read from the last {days} days only; pass start for "
+                            "earlier readings.",
+                            f"{name} : lecture limitée aux {days} derniers jours ; passez start "
+                            "pour les lectures plus anciennes.",
+                        )
+                    )
+            if len(rows) < limit and not cut:
+                rows, cut = await scan_sorted(url, key_of, (station_id, low or ""), stop)
             if cut:
                 notes.append(
                     pick(

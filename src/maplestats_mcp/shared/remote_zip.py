@@ -16,6 +16,7 @@ StatCan's Delta File of 2026-10-01 is a 3.87 GB zip whose CSV inflates to
 
 from __future__ import annotations
 
+import asyncio
 import ipaddress
 import struct
 import zlib
@@ -140,6 +141,14 @@ _RETRY = retry(
 )
 
 
+# A CDN edge can answer a range with the whole object (HTTP 200) on a cache
+# miss and honour the same range a moment later: RTC Quebec's Akamai host did
+# this for a GitHub runner on 2026-10-19 while answering 206 elsewhere. A 200
+# from a host that advertises "Accept-Ranges: bytes" is therefore retried.
+RANGE_REFUSED_RETRIES = 2
+RANGE_REFUSED_WAIT_SECONDS = 3.0
+
+
 @dataclass(frozen=True)
 class _RangeAnswer:
     """What a ranged GET returned: its status, headers and (at most the range's) body."""
@@ -175,6 +184,12 @@ async def _get_range(url: str, start: int, end: int) -> _RangeAnswer:
 async def _range(url: str, start: int, end: int) -> bytes:
     try:
         response = await _get_range(url, start, end)
+        for _ in range(RANGE_REFUSED_RETRIES):
+            advertised = response.headers.get("accept-ranges", "").lower() == "bytes"
+            if response.status_code == 206 or not advertised:
+                break
+            await asyncio.sleep(RANGE_REFUSED_WAIT_SECONDS)
+            response = await _get_range(url, start, end)
     except httpx.HTTPStatusError as exc:
         raise call_error(
             UpstreamError,

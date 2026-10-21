@@ -107,10 +107,18 @@ CACHE_TTL_ARCHIVE_SECONDS = 6 * 60 * 60
 
 MAX_FILE_BYTES = 16 * 1024 * 1024
 # The current-water-year Stage.csv and Discharge.csv, sorted by station then
-# time, were 29 MB on 2026-10-20 (Stage) and 2.9 MB (Discharge).
+# time, were 29 MB on 2026-10-20 (Stage) and 2.9 MB (Discharge). One station is
+# read from a downloaded copy up to this size and by range past it.
 HYDRO_MAX_FILE_BYTES = 64 * 1024 * 1024
 RANGE_CHUNK_BYTES = 128 * 1024
 RANGE_READ_MAX_BYTES = 24 * 1024 * 1024
+# Stage.csv carries 5- and 15-minute readings since October 2026: 28 MB after
+# 19 days of the water year, so roughly 500 MB by September. The station list
+# streams it (nothing is held but one summary per station) up to this cap.
+STREAM_MAX_BYTES = 1024 * 1024 * 1024
+# A read of the current water-year file with no start date only needs the
+# newest readings, so a range read starts this many days back first.
+RECENT_SCAN_DAYS = 14
 
 ROWS_LIMIT_DEFAULT = 200
 ROWS_LIMIT_MAX = 5000
