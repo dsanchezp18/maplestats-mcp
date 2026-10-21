@@ -355,11 +355,13 @@ async def test_geometry_limit_and_byte_budget(httpx_mock, monkeypatch):
 
 # With geometry the response is read through the streaming reader: GeoServer
 # answers chunked, so the cap is enforced while reading. The geometry request
-# is the one asking for `constants.GEOMETRY_ROWS_MAX` rows; the attribute-only
-# probe that follows a failure asks for one row of `year`.
+# is the one asking for `constants.GEOMETRY_ROWS_MAX` rows with no property
+# list; the attribute-only probe that follows a failure asks for one row of
+# `year`, and the fallback after an over-cap answer for every attribute.
 
-_GEOMETRY_REQUEST = re.compile(rf".*count={constants.GEOMETRY_ROWS_MAX}&.*")
-_PROBE_REQUEST = re.compile(r".*propertyName=year.*")
+_GEOMETRY_REQUEST = re.compile(rf"^(?!.*propertyName).*count={constants.GEOMETRY_ROWS_MAX}&.*")
+_PROBE_REQUEST = re.compile(r".*propertyName=year(&.*)?$")
+_FALLBACK_REQUEST = re.compile(r".*propertyName=year(%2C|,)nfireid.*")
 
 
 class _EndlessBody(httpx.AsyncByteStream):
@@ -376,29 +378,39 @@ class _EndlessBody(httpx.AsyncByteStream):
 
 
 async def test_geometry_response_over_the_cap_stops_the_read(httpx_mock, monkeypatch):
+    # The five largest 2023 BC fires are 33 MB of GeoJSON (live 2026-10-19):
+    # past the cap the fires come back without geometry, as the budget would
+    # leave them, instead of failing.
     monkeypatch.setattr(constants, "GEOMETRY_RESPONSE_BYTES_MAX", 2 * 1024 * 1024)
     body = _EndlessBody()
     httpx_mock.add_response(url=_GEOMETRY_REQUEST, stream=body)
-    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION)
-    with pytest.raises(UpstreamError, match=r"over the 2 MB response limit.*limit=1"):
-        await client.query_fires(include_geometry=True)
+    httpx_mock.add_response(url=_FALLBACK_REQUEST, json=_FEATURE_COLLECTION)
+    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION, is_optional=True)
+    result = await client.query_fires(include_geometry=True)
     assert body.sent < 2 * 1024 * 1024 + 4 * body.chunk
+    assert [f.fire_id for f in result.fires] == [1233]
+    assert result.fires[0].geometry is None
+    assert result.geometry_omitted == 1
+    assert "one at a time" in (result.note or "")
 
 
 async def test_geometry_response_over_the_cap_in_french(httpx_mock, monkeypatch):
     monkeypatch.setattr(constants, "GEOMETRY_RESPONSE_BYTES_MAX", 1024 * 1024)
     httpx_mock.add_response(url=_GEOMETRY_REQUEST, stream=_EndlessBody())
-    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION)
-    with pytest.raises(UpstreamError, match="dépasse la limite de 1 Mo"):
-        await client.query_fires(include_geometry=True, lang="fr")
+    httpx_mock.add_response(url=_FALLBACK_REQUEST, json=_FEATURE_COLLECTION)
+    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION, is_optional=True)
+    result = await client.query_fires(include_geometry=True, lang="fr")
+    assert result.geometry_omitted == 1
+    assert "un à la fois" in (result.note or "")
 
 
 async def test_geometry_response_declared_over_the_cap_is_refused_unread(httpx_mock, monkeypatch):
     monkeypatch.setattr(constants, "GEOMETRY_RESPONSE_BYTES_MAX", 1024 * 1024)
     httpx_mock.add_response(url=_GEOMETRY_REQUEST, content=b"x" * (2 * 1024 * 1024))
-    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION)
-    with pytest.raises(UpstreamError, match="response limit"):
-        await client.query_fires(include_geometry=True)
+    httpx_mock.add_response(url=_FALLBACK_REQUEST, json=_FEATURE_COLLECTION)
+    httpx_mock.add_response(url=_PROBE_REQUEST, json=_FEATURE_COLLECTION, is_optional=True)
+    result = await client.query_fires(include_geometry=True)
+    assert result.geometry_omitted == 1 and result.fires[0].geometry is None
 
 
 async def test_geometry_request_the_service_rejects_is_invalid_input(httpx_mock):

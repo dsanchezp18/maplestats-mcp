@@ -103,10 +103,36 @@ async def test_get_series_raises_not_found_on_404_with_real_message(httpx_mock):
         await client.get_series("NOTAREAL")
 
 
-async def test_get_group_parses_group_series_without_description(httpx_mock):
-    """Confirmed live: groupDetails.groupSeries entries have only
-    label + link, no description - GroupMemberSeries is deliberately
-    smaller than SeriesSummary for this reason."""
+async def test_get_group_reads_current_group_detail_key(httpx_mock):
+    """Confirmed live in October 2026: Valet now wraps the group in
+    "groupDetail" (singular), and each groupSeries entry carries a
+    description and dateFormat."""
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}groups/FX_RATES_DAILY/json",
+        json={
+            "groupDetail": {
+                "name": "FX_RATES_DAILY",
+                "label": "Daily exchange rates",
+                "description": "Daily average exchange rates...",
+                "groupSeries": {
+                    "FXUSDCAD": {
+                        "label": "USD/CAD",
+                        "description": "Daily average exchange rate...",
+                        "dateFormat": "daily",
+                        "link": "https://www.bankofcanada.ca/valet/series/FXUSDCAD",
+                    }
+                },
+            }
+        },
+    )
+    result = await client.get_group("FX_RATES_DAILY")
+    assert result.name == "FX_RATES_DAILY"
+    assert [m.name for m in result.series] == ["FXUSDCAD"]
+
+
+async def test_get_group_parses_legacy_group_details_key(httpx_mock):
+    """Before October 2026 the key was "groupDetails" (plural) and
+    groupSeries entries had only label + link. Both shapes still parse."""
     httpx_mock.add_response(
         url=f"{constants.BASE_URL}groups/FX_RATES_DAILY/json",
         json={
@@ -158,7 +184,7 @@ async def test_get_observations_parses_string_value_to_float(httpx_mock):
 async def test_get_group_with_null_group_series_has_no_members(httpx_mock):
     httpx_mock.add_response(
         url=f"{constants.BASE_URL}groups/EMPTY_GROUP/json",
-        json={"groupDetails": {"name": "EMPTY_GROUP", "label": "x", "groupSeries": None}},
+        json={"groupDetail": {"name": "EMPTY_GROUP", "label": "x", "groupSeries": None}},
     )
     result = await client.get_group("EMPTY_GROUP")
     assert result.series == []
@@ -237,8 +263,8 @@ async def test_get_observations_rejects_empty_series_list():
 
 async def test_get_group_observations_fills_name_from_argument(httpx_mock):
     """Confirmed live: /observations/group/{name}/json's "groupDetail"
-    (singular) has no "name" field at all, unlike GroupDetail's
-    "groupDetails" (plural). The caller's own group_name is used."""
+    has no "name" field at all, unlike /groups/{name}/json's. The
+    caller's own group_name is used."""
     httpx_mock.add_response(
         url=f"{constants.BASE_URL}observations/group/FX_RATES_DAILY/json?recent=1",
         json={
@@ -414,7 +440,7 @@ async def test_get_group_without_group_details_raises_upstream_error(httpx_mock)
     httpx_mock.add_response(
         url=f"{constants.BASE_URL}groups/FX_RATES_DAILY/json", json={"terms": {}}
     )
-    with pytest.raises(UpstreamError, match="groupDetails"):
+    with pytest.raises(UpstreamError, match="groupDetail"):
         await client.get_group("FX_RATES_DAILY")
 
 

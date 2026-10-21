@@ -84,10 +84,11 @@ _GOTCHAS_DOC = """\
   observation responses.** `/series/{name}/json` uses `seriesDetails`
   (plural, includes a `name` field); `/observations/.../json` uses
   `seriesDetail` (singular, keyed by series code, no `name` field
-  inside each entry). The same split exists for groups
-  (`groupDetails` vs `groupDetail`), and `groupDetail` additionally
-  has no `name` field at all - GroupObservationsResult.group.name is
-  filled in from the caller's own group_name argument for this reason.
+  inside each entry). For groups, both `/groups/{name}/json` and the
+  group observations use `groupDetail` (the former was `groupDetails`
+  until October 2026), but only the former has a `name` field -
+  GroupObservationsResult.group.name is filled in from the caller's own
+  group_name argument for this reason.
 """
 
 
@@ -168,9 +169,10 @@ _GOTCHAS_DOC_FR = """\
   observations.** `/series/{name}/json` utilise `seriesDetails` (pluriel,
   avec un champ `name`) ; `/observations/.../json` utilise `seriesDetail`
   (singulier, indexé par code de série, sans champ `name` dans chaque
-  entrée). La même scission existe pour les groupes (`groupDetails` et
-  `groupDetail`), et `groupDetail` n'a en plus aucun champ `name` :
-  GroupObservationsResult.group.name est donc rempli à partir de
+  entrée). Pour les groupes, `/groups/{name}/json` et les observations
+  de groupe utilisent tous deux `groupDetail` (le premier s'appelait
+  `groupDetails` jusqu'en octobre 2026), mais seul le premier a un champ
+  `name` : GroupObservationsResult.group.name est donc rempli à partir de
   l'argument group_name de l'appelant.
 """
 

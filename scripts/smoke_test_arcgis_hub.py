@@ -12,6 +12,8 @@ from maplestats_mcp.shared.arcgis import LayerNotQueryable
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.http import new_client
 
+RETRY_PAUSE_SECONDS = 60
+
 
 async def _check(label: str, awaitable: Awaitable[Any]) -> Any:
     try:
@@ -150,8 +152,7 @@ async def check_portal(portal: str) -> int:
     return 0
 
 
-async def main() -> int:
-    portals = sys.argv[1:] or list(constants.PORTALS)
+async def _failing(portals: list[str]) -> list[str]:
     failed: list[str] = []
     for portal in portals:
         try:
@@ -159,6 +160,20 @@ async def main() -> int:
                 failed.append(portal)
         except Exception:  # noqa: BLE001
             failed.append(portal)
+    return failed
+
+
+async def main() -> int:
+    portals = sys.argv[1:] or list(constants.PORTALS)
+    failed = await _failing(portals)
+    if failed:
+        # One pass over every portal takes about 15 minutes, and one of them
+        # blips most weeks (Milton timed out 2026-10-12, Burlington answered 500
+        # 2026-10-19). Rerunning the whole script then outlasts the job's
+        # timeout, so only the failing portals are checked again here.
+        print(f"Retrying in {RETRY_PAUSE_SECONDS}s: {', '.join(failed)}")
+        await asyncio.sleep(RETRY_PAUSE_SECONDS)
+        failed = await _failing(failed)
     if failed:
         print(f"ARCGIS-HUB SMOKE TEST FAILED for: {', '.join(failed)}")
         return 1

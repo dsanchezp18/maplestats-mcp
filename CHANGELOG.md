@@ -6,6 +6,31 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+### Fixed
+
+- `bc_env_list_streamflow_gauges` and `bc_env_get_streamflow` with `parameter="stage"`:
+  `Stage.csv` now carries 2- to 15-minute readings and grows about 1.3 MB a day (29.7 MB on
+  2026-10-20), so the 64 MB cap set in 0.4.0 would run out by mid-November. The gauge list
+  now streams the file and keeps one row per station, and past 64 MB a single gauge is read
+  by range; with no `start`, that range read covers the last 14 days first and says so in
+  the notes.
+- `nrcan_nbac_query_fires` with `include_geometry=true`: a GeoJSON answer over the 20 MB
+  response cap (the five largest 2023 BC fires are 33 MB) now returns the fires without
+  geometry, counted in `geometry_omitted`, instead of an error.
+- Range reads (transit GTFS feeds, zip members, sorted archives): a 200 answer to a range
+  request from a host that advertises `Accept-Ranges: bytes` is retried twice after 3 s.
+  RTC Québec's CDN answered one such request in full on 2026-10-19 and honoured it later.
+- `cwfis_get_forecast`: once the fire season ends the SCRIBE forecast layer is empty
+  (2026-10-20), and every station name answered "No forecast station name contains ...".
+  An empty layer now gets its own message pointing to `cwfis_get_fire_danger`.
+- The Cloudflare-challenge error named Statistics Canada for every host, including
+  Alberta's economic dashboard, in both languages; it now says the publisher.
+- Live smoke tests: `smoke_test_arcgis_hub` rechecks only its failing portals after a
+  minute (a full pass takes 15 minutes, so the workflow's whole-script rerun ran out of
+  time), the smoke job timeout is 40 minutes, `smoke_test_ab_economic` skips on a GitHub
+  runner that Cloudflare challenges, as `smoke_test_modules` already did, and
+  `smoke_test_bc_environment` reads a current stage series.
+
 ## [0.4.0] - 2026-10-20
 
 ### Removed
