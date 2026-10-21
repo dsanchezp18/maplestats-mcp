@@ -6,6 +6,8 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-20
+
 ### Fixed
 
 - `bc_env_list_streamflow_gauges` and `bc_env_get_streamflow` with `parameter="stage"`:
@@ -357,7 +359,8 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.1.1...v0.2.0
