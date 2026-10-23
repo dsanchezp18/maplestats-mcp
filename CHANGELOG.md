@@ -35,6 +35,10 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   the catalogue file, or for a module it does not list, the server loads modules at startup as
   before. Regenerate it with `uv run python scripts/build_tool_catalogue.py`;
   `tests/test_tool_catalogue.py` fails while it is stale.
+- Website: the Connect page's hosting table now lists `MAPLE_CLIENT_IP_HEADER`,
+  `MAPLE_TRUSTED_PROXY_HOPS`, `MAPLE_DUCKDB_MEMORY_LIMIT`, `MAPLE_DELTA_MAX_SCAN_MB`,
+  `MAPLE_DELTA_MAX_SCAN_SECONDS` and `MAPLE_DELTA_INDEX_DIR`, which the README already
+  documented, and a test fails when a setting in `config.py` is missing from it.
 
 ## [0.4.1] - 2026-10-20
 
