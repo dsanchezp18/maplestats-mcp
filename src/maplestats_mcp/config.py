@@ -154,6 +154,44 @@ def get_tool_timeout_seconds() -> float:
     return min(1800.0, max(5.0, value))
 
 
+def get_breaker_enabled() -> bool:
+    """Whether shared/breaker.py stops calling an upstream host after repeated failures.
+
+    MAPLE_BREAKER=0 turns it off: every request is sent, however often its
+    host failed just before.
+    """
+    raw = os.environ.get("MAPLE_BREAKER", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def get_breaker_failures() -> int:
+    """Failures in a row, within the window, that open a host's breaker (MAPLE_BREAKER_FAILURES)."""
+    value = _env_int("MAPLE_BREAKER_FAILURES", 5)
+    return min(100, max(1, value))
+
+
+def get_breaker_window_seconds() -> float:
+    """How recent those failures must be (MAPLE_BREAKER_WINDOW_SECONDS, default 300).
+
+    A call to a host that times out takes about 95 s (three 30 s attempts and
+    their backoff) and counts once, so a shorter window would rarely see five
+    of them from one caller.
+    """
+    value = _env_float("MAPLE_BREAKER_WINDOW_SECONDS", 300.0)
+    return min(3600.0, max(1.0, value))
+
+
+def get_breaker_cooldown_seconds() -> float:
+    """How long an open breaker refuses requests before one probe is let through.
+
+    MAPLE_BREAKER_COOLDOWN_SECONDS, default 60: long enough to spare callers
+    the full timeout while a host is down, short enough that a host which
+    comes back is used again within a minute.
+    """
+    value = _env_float("MAPLE_BREAKER_COOLDOWN_SECONDS", 60.0)
+    return min(3600.0, max(1.0, value))
+
+
 def get_parse_workers() -> int:
     """Threads in shared/executor.py's file-parsing pool.
 

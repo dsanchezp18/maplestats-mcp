@@ -67,7 +67,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
-from maplestats_mcp.shared.http import api_get, is_retryable, new_client
+from maplestats_mcp.shared.http import api_get, counted_once, is_retryable, new_client
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -117,6 +117,7 @@ def cipo_client() -> httpx.AsyncClient:
     return _CIPO_CLIENT
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),

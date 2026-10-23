@@ -43,8 +43,9 @@ services:
       # header does not arrive, the limiter falls back to X-Forwarded-For.
       - key: MAPLE_CLIENT_IP_HEADER
         value: CF-Connecting-IP
-      # Counts calls per tool name and day, in memory, public at /stats; no
-      # arguments or addresses are kept (shared/usage.py).
+      # Counts calls and durations per tool name and day, and upstream errors
+      # per host, in memory, public at /stats; no arguments or client
+      # addresses are kept (shared/usage.py, shared/breaker.py).
       - key: MAPLE_USAGE_STATS
         value: "1"
       # The free instance has 512 MB: DuckDB spills to disk beyond this limit

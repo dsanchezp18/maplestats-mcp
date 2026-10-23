@@ -205,8 +205,13 @@ serves HTTP instead of stdio; `docker compose up --build` does the same in
 Docker. Docker is optional and unnecessary on a personal computer. If the
 server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
 `MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version. `GET /stats`
-is public, needs no token and reports calls per tool name and day (see
-`MAPLE_USAGE_STATS` below).
+is public, needs no token and reports calls per tool name and day, each tool's
+p50 and p95 duration, and each upstream host's error counts and circuit-breaker
+state (see `MAPLE_USAGE_STATS` and `MAPLE_BREAKER` below). After repeated
+failures (timeouts, connection errors, 5xx answers, Cloudflare challenges) a
+host is paused for a cooldown: its tools fail at once with an "unavailable"
+error that says when to retry, instead of waiting for another timeout. The
+`docs://status` resource lists the paused hosts.
 
 | Env var | Default | Purpose |
 |---|---|---|
@@ -223,6 +228,8 @@ is public, needs no token and reports calls per tool name and day (see
 | `MAPLE_CACHE_MAX_MB` | `128` | Estimated memory cap for the response cache, all buckets together |
 | `MAPLE_PARSE_WORKERS` / `MAPLE_PARSE_TIMEOUT_SECONDS` | `4` / `60` | Threads for parsing Excel and CSV files, and the time one parse may take |
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
+| `MAPLE_BREAKER` | `1` | Pause requests to an upstream host after repeated failures; `0` sends every request |
+| `MAPLE_BREAKER_FAILURES` / `MAPLE_BREAKER_WINDOW_SECONDS` / `MAPLE_BREAKER_COOLDOWN_SECONDS` | `5` / `300` / `60` | Failures in a row, within the window, that pause a host, and how long before one probe request is sent |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
 | `MAPLE_CLIENT_IP_HEADER` | unset | Header the outermost proxy sets to the caller's own address (Cloudflare's `CF-Connecting-IP`), used for the per-client rate limit when `MAPLE_TRUST_PROXY_HEADERS` is on; set it only when every request passes through that proxy |
@@ -231,7 +238,7 @@ is public, needs no token and reports calls per tool name and day (see
 | `MAPLE_LODE_MAX_DOWNLOAD_MB` | `300` | Largest open-database archive one call may download; `0` turns downloads off |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
 | `MAPLE_EXPORT_DIR` | Downloads folder (home folder if there is none) | Where `reproduce_workbook` saves Excel workbooks on a local server |
-| `MAPLE_USAGE_STATS` | `1` | Counts calls per tool name and UTC day (never arguments or addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
+| `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
 | `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |
 

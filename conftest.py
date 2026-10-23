@@ -13,6 +13,7 @@ from tenacity import BaseRetrying, wait_none
 os.environ.setdefault("MAPLE_TRANSPORT", "stdio")
 
 from maplestats_mcp.shared import cache, file_download
+from maplestats_mcp.shared.breaker import BREAKER
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
 
@@ -55,6 +56,12 @@ def _empty_response_cache() -> None:
     """
     cache._caches.clear()
     cache._inflight.clear()
+
+
+@pytest.fixture(autouse=True)
+def _closed_breakers() -> None:
+    """Breaker state is process-wide; a test must not inherit another test's open host."""
+    BREAKER.reset()
 
 
 @pytest.fixture(autouse=True)

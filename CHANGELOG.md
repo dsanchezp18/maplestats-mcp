@@ -6,6 +6,24 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+### Added
+
+- A circuit breaker per upstream host (`shared/breaker.py`). After 5 failures in a row
+  within 5 minutes (timeouts, connection errors, 5xx answers, Cloudflare challenges) a host
+  is paused for 60 seconds: its tools fail at once with `UpstreamUnavailable`, in English or
+  French, naming the host and when to try again, instead of each caller waiting out another
+  timeout. After the cooldown one request goes through as a probe and an answer closes the
+  breaker. A call and its retries (`shared/http.py`, `shared/retrying.py` and the modules'
+  own retry loops) count as one failure, and 4xx answers never count. Settings:
+  `MAPLE_BREAKER` (`0` turns it off), `MAPLE_BREAKER_FAILURES`,
+  `MAPLE_BREAKER_WINDOW_SECONDS`, `MAPLE_BREAKER_COOLDOWN_SECONDS`.
+- `docs://status`, a bilingual resource listing the hosts paused now and when each is
+  tried again.
+- `/stats` adds `latency_ms` (each tool's p50 and p95 over its last 500 calls) and
+  `upstreams` (the breaker settings, and per host its error counts by kind, refused
+  requests, times opened and current state). Still in memory, with no arguments and no
+  client addresses; the FAQ and privacy page say so.
+
 ### Changed
 
 - The server imports a module's code only when one of its tools is first called. `tools/list`

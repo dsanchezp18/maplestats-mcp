@@ -74,6 +74,7 @@ from maplestats_mcp.shared.fr_typography import (
     truncation_note_lang,
 )
 from maplestats_mcp.shared.http import (
+    counted_once,
     is_retryable,
     new_client,
     raise_if_cloudflare_challenge,
@@ -202,6 +203,7 @@ def _check_hop(url: str, context: str) -> None:
         )
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),

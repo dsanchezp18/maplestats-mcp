@@ -20,12 +20,19 @@ transacts over HTTP/1.1 either way; `http2=True` only changes what's
 offered during the handshake, not what's actually used. Do not remove
 this thinking it's dead weight — it is the fix for real connections to
 this project's primary data source silently timing out.
+
+Every client made here sends through `BreakerClient`, the per-host circuit
+breaker in shared/breaker.py: a host that keeps failing is refused at once
+for a cooldown instead of costing each caller its full timeout. The retrying
+functions below run each call in `breaker.one_call()`, so their retries count
+as one failure.
 """
 
 from __future__ import annotations
 
+import functools
 import ssl
-from collections.abc import Iterator
+from collections.abc import Callable, Coroutine, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -43,6 +50,7 @@ from tenacity import (
 )
 
 from maplestats_mcp import __version__
+from maplestats_mcp.shared.breaker import BREAKER, is_failure_status, one_call
 from maplestats_mcp.shared.errors import CloudflareChallenge
 from maplestats_mcp.shared.fr_typography import call_error
 
@@ -124,7 +132,57 @@ def is_recording() -> bool:
     return _recorded.get() is not None
 
 
-_client = httpx.AsyncClient(timeout=30.0, http2=True, event_hooks=_HOOKS)
+class BreakerClient(httpx.AsyncClient):
+    """An AsyncClient whose every request passes the host's circuit breaker.
+
+    Overriding `send` covers get, post, request and stream alike, and keeps
+    httpx's own transport (http2, verify, proxies) and pytest-httpx's mocks.
+    A request to a host whose breaker is open raises breaker.CircuitOpen (an
+    UpstreamUnavailable) before anything is sent. A read timeout while a
+    streamed body is read happens after `send` returns and is not counted.
+    """
+
+    async def send(self, request: httpx.Request, *args: Any, **kwargs: Any) -> httpx.Response:
+        host = request.url.host
+        probe = BREAKER.before_request(host)
+        try:
+            response = await super().send(request, *args, **kwargs)
+        except httpx.TimeoutException:
+            BREAKER.record_failure(host, "timeout", probe=probe)
+            raise
+        except (httpx.NetworkError, httpx.RemoteProtocolError):
+            BREAKER.record_failure(host, "network", probe=probe)
+            raise
+        except BaseException:
+            BREAKER.release(host, probe=probe)
+            raise
+        if response.headers.get("cf-mitigated", "").lower() == "challenge":
+            BREAKER.record_failure(host, "cloudflare", probe=probe)
+        elif is_failure_status(response.status_code):
+            BREAKER.record_failure(host, "server_error", probe=probe)
+        elif response.status_code == 403:
+            # Neither: Cloudflare's challenge without its header is only known
+            # once the body is read (raise_if_cloudflare_challenge counts it).
+            BREAKER.release(host, probe=probe)
+        else:
+            BREAKER.record_success(host)
+        return response
+
+
+def counted_once[**P, R](
+    fn: Callable[P, Coroutine[Any, Any, R]],
+) -> Callable[P, Coroutine[Any, Any, R]]:
+    """Run `fn` (a call with its own retries) in breaker.one_call(): one failure at most."""
+
+    @functools.wraps(fn)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        with one_call():
+            return await fn(*args, **kwargs)
+
+    return wrapper
+
+
+_client = BreakerClient(timeout=30.0, http2=True, event_hooks=_HOOKS)
 
 
 def new_client(
@@ -145,7 +203,7 @@ def new_client(
     identifying User-Agent and the `http2=True` default that StatCan's
     network path requires (see this module's docstring).
     """
-    return httpx.AsyncClient(
+    return BreakerClient(
         timeout=timeout,
         http2=http2,
         follow_redirects=follow_redirects,
@@ -216,6 +274,9 @@ def is_cloudflare_challenge(response: httpx.Response) -> bool:
 def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
     if is_cloudflare_challenge(response):
         host = response.request.url.host
+        # BreakerClient counted the challenges that carry Cf-Mitigated already.
+        if response.headers.get("cf-mitigated", "").lower() != "challenge":
+            BREAKER.record_failure(host, "cloudflare")
         raise call_error(
             CloudflareChallenge,
             f"{host} is behind a Cloudflare bot challenge (HTTP {response.status_code}, "
@@ -285,6 +346,7 @@ def _wait_honouring_retry_after(state: RetryCallState) -> float:
 wait_honouring_retry_after = _wait_honouring_retry_after
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
@@ -309,6 +371,7 @@ async def api_get(
 _PASSTHROUGH_STATUSES = frozenset({406, 409})
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
@@ -342,6 +405,7 @@ async def get_raw(
     return response
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
@@ -369,6 +433,7 @@ async def post_form_raw(
     return response
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
@@ -390,6 +455,7 @@ async def api_post(
     return decode_json(response, url=url)
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
