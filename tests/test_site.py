@@ -142,6 +142,16 @@ def test_every_portal_has_a_place():
         assert set(source.places) <= set(site.PLACES)
 
 
+def test_connect_page_lists_every_setting():
+    # The hosting table on connect.html is written by hand; six settings went
+    # missing from it between 0.3.0 and 0.4.0 while README listed them.
+    config_source = (ROOT / "src" / "maplestats_mcp" / "config.py").read_text(encoding="utf-8")
+    settings = set(re.findall(r'"(MAPLE_[A-Z_]+)"', config_source))
+    connect = (ROOT / "site" / "connect.html").read_text(encoding="utf-8")
+    missing = sorted(name for name in settings if f"<code>{name}</code>" not in connect)
+    assert not missing, f"Add these settings to the table in site/connect.html: {missing}"
+
+
 def test_family_titles_match_folders():
     for key in site.FAMILIES:
         module, _, family = key.partition("/")
