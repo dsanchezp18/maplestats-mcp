@@ -31,41 +31,78 @@ jobs:
       - run: uv run ruff check src tests scripts
       - run: uv run ruff format --check src tests scripts
       - run: uv run pyright
-      # R and Julia, on one leg only: tests/test_reproduce.py and
-      # tests/test_reproduce_cfia.py run the R and Julia scripts that
-      # reproduce_code generates, offline, and skip when the language or one of
-      # these packages is missing, so without these steps a regression in the
-      # generated code merges green. purrr and jsonlite are loaded by the
-      # generated scripts and helper tests but are not in the tests' own skip
-      # probes; the Julia standard libraries (Dates, Downloads, Unicode) need
-      # no install, and the runner image ships Julia itself.
+      # pytest-xdist, one worker per core (4 on a standard runner). loadfile
+      # keeps each test file on one worker, so a module-scoped fixture (the
+      # built website, one search session for the discovery queries) is set
+      # up once rather than once per worker. The r_julia tests run in the
+      # r-julia job below instead.
+      - run: uv run pytest -q -n auto --dist loadfile -m "not r_julia"
+        env:
+          # A missing base commit fails the tool-surface check here instead of skipping it.
+          TOOL_SURFACE_REQUIRED: "1"
+
+  # The tests marked r_julia (in tests/test_reproduce.py and
+  # tests/test_reproduce_cfia.py) run the R and Julia scripts that
+  # reproduce_code generates, offline, and skip when the language or one of
+  # their packages is missing. Here MAPLE_REQUIRE_R_JULIA=1 turns such a skip
+  # into a failure (conftest.py), so a regression in the generated code
+  # cannot merge green. Its own job, in parallel with check: installing R and
+  # the Julia packages took about 2 minutes before the tests, which made the
+  # 3.12 leg the slowest job in CI.
+  r-julia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
+      - run: uv sync --locked
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
-        if: matrix.python-version == '3.12'
+        id: setup-r
         with:
           r-version: release
+      # The caches are keyed on the package lists, the R or Julia version and
+      # the month, so the packages are installed afresh at least once a month
+      # and the tests do not stay on old releases. The runner image ships
+      # Julia itself; the Julia standard libraries (Dates, Downloads, Unicode)
+      # need no install.
+      - name: Cache keys
+        id: keys
+        run: |
+          echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+          echo "julia=$(julia --startup-file=no -e 'print(VERSION)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: r-cache
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: r-${{ runner.os }}-${{ steps.setup-r.outputs.installed-r-version }}-${{ steps.keys.outputs.month }}-${{ hashFiles('.github/ci/r-packages.txt') }}
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: julia-cache
+        with:
+          path: ~/.julia
+          key: julia-${{ runner.os }}-${{ steps.keys.outputs.julia }}-${{ steps.keys.outputs.month }}-${{ hashFiles('.github/ci/julia-packages.txt') }}
       - name: R packages for the reproduce tests
-        if: matrix.python-version == '3.12'
         # setup-r points R_LIBS_USER at a temp folder and serves binary
         # packages from Posit Package Manager. Two tests start R with a
         # trimmed environment (only HOME, PATH and LANG), so R_LIBS_USER also
         # goes into ~/.Renviron, or those R processes would not see the
-        # packages. install.packages only warns about a package it cannot
-        # install, so the last call fails the step instead of letting the
-        # tests skip.
+        # packages. purrr and jsonlite are loaded by the generated scripts and
+        # helper tests but are not in the tests' own skip probes.
+        # install.packages only warns about a package it cannot install, so
+        # the last call fails the step, cached library or not.
+        env:
+          CACHED: ${{ steps.r-cache.outputs.cache-hit }}
         run: |
           echo "R_LIBS_USER=$R_LIBS_USER" >> ~/.Renviron
-          Rscript -e 'pkgs <- c("dplyr", "httr2", "janitor", "jsonlite", "purrr", "readr", "rvest", "stringi", "stringr", "tibble", "tidyr", "xml2"); install.packages(pkgs); stopifnot(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))'
+          Rscript -e 'pkgs <- readLines(".github/ci/r-packages.txt"); if (Sys.getenv("CACHED") != "true") install.packages(pkgs); stopifnot(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))'
       - name: Julia packages for the reproduce tests
-        if: matrix.python-version == '3.12'
-        run: julia -e 'using Pkg; Pkg.add(["Cascadia", "DataFrames", "Gumbo", "JSON3", "TidierData"]); using Cascadia, DataFrames, Gumbo, JSON3, TidierData'
-      # pytest-xdist, one worker per core (4 on a standard runner). loadfile
-      # keeps each test file on one worker, so a module-scoped fixture (the
-      # built website, one search session for the discovery queries) is set
-      # up once rather than once per worker.
-      - run: uv run pytest -q -n auto --dist loadfile
         env:
-          # A missing base commit fails the tool-surface check here instead of skipping it.
-          TOOL_SURFACE_REQUIRED: "1"
+          CACHED: ${{ steps.julia-cache.outputs.cache-hit }}
+        run: julia -e 'using Pkg; pkgs = readlines(".github/ci/julia-packages.txt"); ENV["CACHED"] == "true" || Pkg.add(pkgs); foreach(p -> @eval(using $(Symbol(p))), pkgs)'
+      - run: uv run pytest -q -n auto --dist loadfile -m r_julia
+        env:
+          MAPLE_REQUIRE_R_JULIA: "1"
 
   # The chat demo (chat/) is its own project, with its own lock and tests.
   chat:

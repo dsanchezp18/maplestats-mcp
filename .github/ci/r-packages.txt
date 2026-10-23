@@ -1,0 +1,12 @@
+dplyr
+httr2
+janitor
+jsonlite
+purrr
+readr
+rvest
+stringi
+stringr
+tibble
+tidyr
+xml2
