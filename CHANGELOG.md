@@ -6,6 +6,18 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+### Changed
+
+- The server imports a module's code only when one of its tools is first called. `tools/list`
+  and `search_tools` now read `tool_catalogue.json`, a generated listing of every tool (name,
+  title, docstring, schemas, annotations), so importing the server took 5.8 s instead of 20.4 s
+  in interleaved runs on 2026-10-23 (Windows, Python 3.12). The first call into a module pays its
+  import once (1.5 s for `boc`, 3.2 s for `statcan/wds` in the same runs); later calls are
+  unchanged. Listings, search results and the discovery benchmark's scores are identical. Without
+  the catalogue file, or for a module it does not list, the server loads modules at startup as
+  before. Regenerate it with `uv run python scripts/build_tool_catalogue.py`;
+  `tests/test_tool_catalogue.py` fails while it is stale.
+
 ## [0.4.1] - 2026-10-20
 
 ### Removed

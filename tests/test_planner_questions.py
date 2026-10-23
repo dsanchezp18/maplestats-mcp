@@ -12,6 +12,7 @@ import warnings
 
 import pytest
 
+from maplestats_mcp.catalogue import tool_module
 from maplestats_mcp.modules.planner import client
 from maplestats_mcp.modules.planner.places import CITIES, PROVINCES
 from maplestats_mcp.modules.planner.topics import FALLBACK_STEPS, TOPICS
@@ -370,7 +371,7 @@ def test_delta_file_is_not_delta_bc():
 
 def _module(tool) -> str:
     # FileSystemProvider imports tools as "<module>[.<sub>].tools".
-    parts = tool.fn.__module__.removeprefix("maplestats_mcp.modules.").split(".")
+    parts = tool_module(tool).removeprefix("maplestats_mcp.modules.").split(".")
     return "/".join(parts[:2]) if parts[0] == "statcan" else parts[0]
 
 
