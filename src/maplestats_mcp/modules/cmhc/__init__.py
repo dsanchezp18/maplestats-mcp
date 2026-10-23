@@ -8,7 +8,7 @@ MODULE_DESCRIPTION = (
     "housing, and population/household/core-housing-need indicators, "
     "for Canada and by province, as historical time series or a "
     "current cross-tabulation -- no hardcoded table catalogue, "
-    "categories and breakdowns are discovered live and data is fetched "
+    "categories and breakdowns are discovered live and data are fetched "
     "through HMIP's own CSV export. The 'Data Tables' document "
     "catalogue (www.cmhc-schl.gc.ca, tools prefixed cmhc_dt_): official "
     "per-edition Excel table publications for Rental Market Survey, "

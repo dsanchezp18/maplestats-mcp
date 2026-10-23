@@ -14,7 +14,7 @@ files are rewritten hourly (about 20 minutes past). The per-station files
 (Station/<EMS_ID>.csv, about 100 KB) hold the same 30 days as one column
 per parameter plus rolling averages (PM25_24, O3_8, ...). The
 SNOW.csv files in both folders stopped updating (June 2026 and April 2023)
-and are not offered. Verified (quality-assured) historical air data is
+and are not offered. Verified (quality-assured) historical air data are
 published only on an ftp:// server, which this server cannot reach.
 
 Snow (River Forecast Centre, snow/asws/data): wide files, one column per

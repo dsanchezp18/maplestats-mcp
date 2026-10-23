@@ -24,7 +24,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from maplestats_mcp.modules.transit import constants
 from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import is_retryable, new_client
+from maplestats_mcp.shared.http import counted_once, is_retryable, new_client
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
 from maplestats_mcp.shared.remote_zip import ZipMember
 
@@ -87,6 +87,7 @@ def _raise_inflated(member: ZipMember, limit: int, lang: str) -> NoReturn:
     )
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(6),
@@ -125,6 +126,7 @@ async def head(url: str, *, lang: str = "en") -> httpx.Response:
         _raise_unreachable(url, exc, lang)
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),

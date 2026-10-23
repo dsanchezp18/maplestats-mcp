@@ -67,6 +67,27 @@ other tool is discovered by natural-language query through
 `search_tools` and invoked through `call_tool`. Don't design a new tool assuming a
 client sees it in a flat list; write its docstring so it's findable.
 
+Startup does not import module code. `src/maplestats_mcp/tool_catalogue.json`
+holds every tool's listing (name, title, docstring, input and output
+schemas, annotations), and a module listed there gets a
+`LazyModuleProvider`: `tools/list` and `search_tools` read the catalogue,
+and the module's `tools.py` files are imported the first time one of its
+tools is resolved (a `call_tool`, or `plan_query`); its `resources.py` and
+`prompts.py` on the first resource or prompt request. A module missing
+from the catalogue, or every module when the file is absent, loads at
+startup as before. **Regenerate the catalogue whenever a tool is added,
+removed or renamed, or its docstring, parameters or return model change:**
+
+```bash
+uv run python scripts/build_tool_catalogue.py
+```
+
+`tests/test_tool_catalogue.py` fails while the file is stale. A tool that
+a module defines only under a setting (`statcan_pumf_tabulate` with
+`MAPLE_PUMF_TABULATE`) also needs an entry in `catalogue.TOOL_SWITCHES`;
+the same test fails without it. Code that needs a tool's module should call
+`catalogue.tool_module(tool)`: listed tools have no `fn` until loaded.
+
 ### Response contract
 
 Every tool's return type annotation is a Pydantic `BaseModel` (never
@@ -188,7 +209,11 @@ assumption shared by the code and its tests.
    `tests/test_site.py` fails when one is missing. A new portal in the
    CKAN, ArcGIS Hub or Socrata families needs its province in
    `PORTAL_PLACES` there too.
-9. Run the full gate below before considering it done.
+9. Regenerate the tool catalogue (`uv run python
+   scripts/build_tool_catalogue.py`) and commit `tool_catalogue.json`. If you
+   removed or reshaped an existing tool, note it in the CHANGELOG (see
+   "Breaking changes to the tool surface").
+10. Run the full gate below before considering it done.
 
 ## Development commands
 
@@ -199,6 +224,7 @@ uv run ruff format src tests     # format
 uv run pyright                   # type check — must be 0 errors
 uv run pytest                    # unit tests, all mocked, no network
 uv run pytest -n 4 --dist loadfile   # the same in parallel (pytest-xdist), as CI runs it
+uv run python scripts/build_tool_catalogue.py   # after any tool change (see Registration)
 ```
 
 The root `conftest.py` removes tenacity's retry backoff and the
@@ -215,6 +241,38 @@ builds the website once, and the discovery tests ask every query over one
 client session. Keep tests independent of order (each one mocks or
 resets the module-level state it reads), so a run with
 `uv run --with pytest-randomly pytest` passes too.
+
+### Breaking changes to the tool surface
+
+`tests/test_tool_surface.py` compares `tool_catalogue.json` with its
+version at the merge base of `HEAD` and `origin/main`, through
+`scripts/check_tool_surface.py`, and sorts the differences into breaking
+changes (a tool or parameter removed or renamed, a type narrowed, a
+required parameter added, an output field removed or made nullable),
+additive ones, and others (titles, annotations, defaults, anything it
+cannot name). Docstrings and schema descriptions are left out. **A
+breaking change needs a CHANGELOG note:** the test fails until every
+tool with one is named under Unreleased in `CHANGELOG.md`, saying what
+replaces it; a `` `prefix_*` `` in backticks covers a family, as 0.4.0's
+removal of `statcan_census_tables_*` should have been noted. To see the
+whole classified list:
+
+```bash
+uv run python scripts/check_tool_surface.py              # against origin/main
+uv run python scripts/check_tool_surface.py --base v0.4.1
+```
+
+The test skips where there is no history to compare with (an sdist, a
+shallow clone). CI fetches the full history and sets
+`TOOL_SURFACE_REQUIRED=1`, which turns that skip into a failure.
+
+`.github/workflows/fastmcp-latest.yml` runs pyright and the suite
+weekly (and on demand) against the newest `fastmcp`, past the `<4.2` cap
+in `pyproject.toml`: `server.py` overrides private `BM25SearchTransform`
+methods, so an upgrade can break the server without failing an import.
+It never blocks a merge (`continue-on-error`); a failure shows as
+"Newest FastMCP: FAILED" in the run summary with an error annotation.
+Lift the cap only after that job passes on the new version.
 
 **Before merging a change touching a client.py**, also run the live
 smoke test — mocked tests cannot catch a real API's actual quirks

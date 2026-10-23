@@ -155,7 +155,7 @@ async def main() -> int:
     try:
         data = await client.get_changed_series_data_from_cube_pid_coord(CPI_PID, CPI_COORDINATE)
         ok &= check(
-            data.product_id == CPI_PID, "changed data is from the asked table", data.product_id
+            data.product_id == CPI_PID, "changed data are from the asked table", data.product_id
         )
     except NotFound as exc:
         ok &= check(True, "unchanged series is NotFound, not another table's series", str(exc)[:90])

@@ -153,7 +153,7 @@ def find_records(payload: Any) -> dict[str, Any]:
 
 
 def _layout(sample: str) -> tuple[str, int, bool]:
-    """The delimiter, the header's line index, and whether the data ends at a
+    """The delimiter, the header's line index, and whether the data end at a
     blank line with notes after it.
 
     The busiest of the first ten lines decides the delimiter: CMHC's CSV
@@ -362,7 +362,7 @@ async def spec_from_request(request: RecordedRequest, pages: int) -> Spec:
         if header:
             notes.append(f"The file opens with {header} title line(s) above its header; skipped.")
         if stop_at_blank:
-            notes.append("The data ends at the first blank line; the notes below it are dropped.")
+            notes.append("The data end at the first blank line; the notes below it are dropped.")
         return Spec(
             kind="csv",
             file_name=_file_name(request.url, "csv"),

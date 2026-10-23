@@ -49,7 +49,7 @@ from maplestats_mcp.modules.cra_digital_economy_registry.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import new_client
+from maplestats_mcp.shared.http import counted_once, new_client
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -65,6 +65,7 @@ _LIMITER = get_limiter(
 _client = new_client(timeout=45.0, http2=False)
 
 
+@counted_once
 @retry(
     retry=retry_if_exception_type(
         (httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError)

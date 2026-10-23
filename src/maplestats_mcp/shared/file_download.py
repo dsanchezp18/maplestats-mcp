@@ -37,6 +37,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import (
+    counted_once,
     is_recording,
     is_retryable,
     new_client,
@@ -155,6 +156,7 @@ def check_redirect(origin: str, target: str, allow_host: HostCheck, context: str
         )
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),

@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import ast
-import importlib.util
 import json
 import re
-import sys
 import tomllib
-import zipfile
 from pathlib import Path
 
 import yaml
@@ -51,26 +48,6 @@ def test_release_pins_a_real_publisher_checksum():
     assert set(match.group(1)) != {"0"}
 
 
-def test_smithery_bundle_launches_this_release(tmp_path, monkeypatch):
-    # Smithery installs whatever version the bundle pins, and rejects a
-    # release without tools or input schemas.
-    monkeypatch.setattr(sys, "argv", ["build_smithery_bundle.py", str(tmp_path)])
-    spec = importlib.util.spec_from_file_location(
-        "build_smithery_bundle", ROOT / "scripts" / "build_smithery_bundle.py"
-    )
-    assert spec is not None and spec.loader is not None
-    script = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(script)
-    assert script.main() == 0
-
-    with zipfile.ZipFile(tmp_path / f"maplestats-mcp-{__version__}.mcpb") as bundle:
-        manifest = json.loads(bundle.read("manifest.json"))
-    assert manifest["version"] == __version__
-    assert manifest["server"]["type"] == "python"
-    assert manifest["server"]["mcp_config"]["args"] == [f"maplestats-mcp=={__version__}"]
-    assert manifest["tools"] and all("inputSchema" in tool for tool in manifest["tools"])
-
-
 def _workflow(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
@@ -111,33 +88,20 @@ def test_setup_uv_matches_the_dockerfile_pin():
     assert seen > 0
 
 
-def test_smithery_cli_is_installed_from_a_lockfile():
-    # The publish step holds SMITHERY_API_KEY, so the CLI must come from a lockfile
-    # whose hashes npm checks, not from `npx -y` resolving a version at run time.
-    release = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
-    assert "npx" not in release
-    assert "npm ci --ignore-scripts --prefix .github/smithery" in release
-    assert ".github/smithery/node_modules/.bin/smithery" in release
-    folder = ROOT / ".github" / "smithery"
-    package = json.loads((folder / "package.json").read_text(encoding="utf-8"))
-    version = package["dependencies"]["@smithery/cli"]
-    assert re.fullmatch(r"[0-9]+[.][0-9]+[.][0-9]+", version), "pin an exact version"
-    lock = json.loads((folder / "package-lock.json").read_text(encoding="utf-8"))
-    assert lock["packages"]["node_modules/@smithery/cli"]["version"] == version
-    for name, entry in lock["packages"].items():
-        if name:
-            assert entry["integrity"].startswith("sha512-"), name
-
-
 def test_ci_runs_the_r_and_julia_reproduce_tests():
-    # tests/test_reproduce*.py skip when R, Julia or one of their packages is
-    # missing, so without these steps a regression in the generated scripts
-    # merges green.
-    steps = _steps(_workflow(WORKFLOWS / "ci.yml"))
-    gated = [step for step in steps if step.get("if") == "matrix.python-version == '3.12'"]
-    assert any(str(step.get("uses", "")).startswith("r-lib/actions/setup-r@") for step in gated)
-    commands = " ".join(str(step.get("run", "")) for step in gated)
+    # The r_julia tests skip when R, Julia or one of their packages is
+    # missing, so without the r-julia job (and MAPLE_REQUIRE_R_JULIA, which
+    # fails such a skip) a regression in the generated scripts merges green.
+    jobs = _workflow(WORKFLOWS / "ci.yml")["jobs"]
+    steps = jobs["r-julia"]["steps"]
+    assert any(str(step.get("uses", "")).startswith("r-lib/actions/setup-r@") for step in steps)
+    commands = " ".join(str(step.get("run", "")) for step in steps)
     assert "julia -e" in commands and "Rscript -e" in commands
+    pytest_step = next(step for step in steps if "pytest" in str(step.get("run", "")))
+    assert "-m r_julia" in pytest_step["run"]
+    assert pytest_step["env"]["MAPLE_REQUIRE_R_JULIA"] == "1"
+    check = " ".join(str(step.get("run", "")) for step in jobs["check"]["steps"])
+    assert '-m "not r_julia"' in check
     source = ast.parse((ROOT / "tests" / "test_reproduce_cfia.py").read_text(encoding="utf-8"))
     probed = next(
         ast.literal_eval(node.value)
@@ -148,12 +112,33 @@ def test_ci_runs_the_r_and_julia_reproduce_tests():
             for target in node.targets
         )
     )
+    r_packages = (ROOT / ".github" / "ci" / "r-packages.txt").read_text(encoding="utf-8").split()
+    julia_packages = (ROOT / ".github" / "ci" / "julia-packages.txt").read_text(encoding="utf-8")
     # purrr is loaded by the generated scripts and jsonlite by test_reproduce.py,
     # though neither is in the tests' own skip probes.
     for package in (*probed, "purrr", "jsonlite"):
-        assert f'"{package}"' in commands, f"R package {package} is not installed in CI"
+        assert package in r_packages, f"R package {package} is not installed in CI"
     for package in ("Cascadia", "DataFrames", "Gumbo", "JSON3", "TidierData"):
-        assert f'"{package}"' in commands, f"Julia package {package} is not installed in CI"
+        assert package in julia_packages.split(), f"Julia package {package} is not installed in CI"
+
+
+def test_tests_that_run_r_or_julia_are_marked():
+    # An unmarked test that starts R or Julia would run in the check jobs,
+    # which have neither, and skip there without failing.
+    for path in sorted((ROOT / "tests").glob("test_*.py")):
+        text = path.read_text(encoding="utf-8")
+        for node in ast.walk(ast.parse(text)):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            if not node.name.startswith("test_"):
+                continue
+            body = ast.get_source_segment(text, node) or ""
+            if not re.search(r'shutil\.which\([^)]*"(Rscript|julia)"', body):
+                continue
+            marks = {ast.unparse(decorator) for decorator in node.decorator_list}
+            assert "pytest.mark.r_julia" in marks, (
+                f"{path.name}::{node.name} needs @pytest.mark.r_julia"
+            )
 
 
 def test_server_json_lists_the_hosted_endpoint():

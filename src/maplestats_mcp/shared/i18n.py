@@ -32,12 +32,12 @@ LABELS: dict[str, dict[str, str]] = {
         "fr": "La source amont est temporairement inaccessible : {detail}",
     },
     "error.data_locked": {
-        "en": "StatCan data is locked for its daily update (data returns at 8:30am ET): {detail}",
+        "en": "StatCan data are locked for its daily update (data return at 8:30am ET): {detail}",
         "fr": "Les données de Statistique Canada sont verrouillées pour leur mise à jour quotidienne (retour à 8 h 30, HE) : {detail}",
     },
     "provenance.reproduce": {
         "en": (
-            "For R, Python, Stata and Julia scripts that fetch and clean this data, call "
+            "For R, Python, Stata and Julia scripts that fetch and clean these data, call "
             "reproduce_code with this tool's name and arguments."
         ),
         "fr": (

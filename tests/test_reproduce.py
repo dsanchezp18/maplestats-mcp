@@ -974,9 +974,10 @@ _PERIODS = [
 ]
 
 
+@pytest.mark.r_julia
 @pytest.mark.parametrize("language", ["r", "julia"])
 def test_generated_period_helpers_match_the_client(language, tmp_path):
-    """Runs the R or Julia parse_period() where that language is installed (not in CI)."""
+    """Runs the R or Julia parse_period() where that language is installed (CI's r-julia job)."""
     import shutil
     import subprocess
     from types import SimpleNamespace

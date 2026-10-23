@@ -8,34 +8,51 @@ underscore-prefix skip logic (checked its source directly) — this
 module adds one provider per modules/* subdirectory rather than one
 provider for the whole tree, specifically so modules/_example/ (the
 template new sources copy) never registers its demo tools live.
+
+A module in tool_catalogue.json gets a LazyModuleProvider instead, which
+lists its tools from the catalogue and imports its code on first use
+(see catalogue.py); without the file every module loads at startup.
 """
 
 from __future__ import annotations
 
 import base64
 import importlib
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.prompts.base import Prompt
+from fastmcp.resources.base import Resource
+from fastmcp.resources.template import ResourceTemplate
 from fastmcp.server.providers import FileSystemProvider
-from fastmcp.server.providers.filesystem_discovery import (
-    extract_components,
-    import_module_from_file,
-)
+from fastmcp.server.providers.local_provider import LocalProvider
 from fastmcp.server.transforms.search import BM25SearchTransform
 from fastmcp.tools import Tool
+from fastmcp.utilities.components import FastMCPComponent
+from fastmcp.utilities.versions import VersionSpec
 from mcp.types import Icon, ToolAnnotations
 
 from maplestats_mcp import __version__, config
+from maplestats_mcp.catalogue import (
+    EXTRA_FILES,
+    MODULES_ROOT,
+    TOOL_FILES,
+    TOOL_SWITCHES,
+    CatalogueTool,
+    component_files,
+    import_components,
+    module_dirs,
+    read_catalogue,
+)
 from maplestats_mcp.shared import search
+from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware
 from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
-
-MODULES_ROOT = Path(__file__).parent / "modules"
-_COMPONENT_FILES = frozenset({"tools.py", "resources.py", "prompts.py"})
 
 # Data tools read public sources. The workbook export can save a local file;
 # its own annotations and the call_tool wrapper describe that exception. Modules in
@@ -63,42 +80,142 @@ def _export_annotations() -> ToolAnnotations:
     )
 
 
+def _prepare(component: FastMCPComponent, annotations: ToolAnnotations) -> None:
+    """Server-wide tool settings, the same for a catalogue entry and its real tool."""
+    if not isinstance(component, Tool):
+        return
+    STATS.register_tools((component.name,))
+    if component.name == "reproduce_workbook":
+        component.annotations = _export_annotations()
+    elif component.annotations is None:
+        component.annotations = annotations
+    # Directories such as Claude's require a human-readable title.
+    if component.title is None:
+        component.title = component.name.replace("_", " ").capitalize()
+
+
+def _module_annotations(root: Path) -> ToolAnnotations:
+    return _read_only_annotations(root.name not in _LOCAL_MODULES)
+
+
 class ModuleProvider(FileSystemProvider):
     """FileSystemProvider limited to tools.py, resources.py and prompts.py.
 
-    The stock provider imports every .py file under its root, including
-    each module's __tests__/ (which pulls in pytest) and client helpers:
-    250 files and about 6 s of startup on 2026-09-24, long enough for MCP
-    clients to time out while launching the server. The stock provider
-    also only logs a warning when a file fails to import, so a broken
-    module silently disappeared; here the failure is raised.
+    It imports the module at startup; LazyModuleProvider is the default
+    whenever the catalogue lists the module.
     """
 
     def _load_components(self) -> None:
         if self._loaded:
             self._components.clear()
-        files = sorted(
-            path
-            for path in self._root.rglob("*.py")
-            if path.name in _COMPONENT_FILES
-            and "__pycache__" not in path.parts
-            and "__tests__" not in path.parts
-        )
-        annotations = _read_only_annotations(self._root.name not in _LOCAL_MODULES)
-        for file_path in files:
-            module = import_module_from_file(file_path, provider_root=self._root)
-            for component in extract_components(module):
-                if isinstance(component, Tool):
-                    STATS.register_tools((component.name,))
-                    if component.name == "reproduce_workbook":
-                        component.annotations = _export_annotations()
-                    elif component.annotations is None:
-                        component.annotations = annotations
-                # Directories such as Claude's require a human-readable title.
-                if isinstance(component, Tool) and component.title is None:
-                    component.title = component.name.replace("_", " ").capitalize()
-                self._register_component(component)
+        annotations = _module_annotations(self._root)
+        for component in import_components(self._root, component_files(self._root)):
+            _prepare(component, annotations)
+            self._register_component(component)
         self._loaded = True
+
+
+class LazyModuleProvider(LocalProvider):
+    """A module whose tools are listed from the catalogue and imported on first use.
+
+    Only the provider hooks FastMCP documents for overriding are replaced
+    (`_list_tools`, `_get_tool` and their resource and prompt
+    counterparts), the same ones FileSystemProvider overrides for its
+    reload mode. Listing and search read catalogue entries; a call resolves
+    its tool through `_get_tool`, which imports the module's tools.py files
+    the first time. resources.py and prompts.py are imported apart, on the
+    first resource or prompt request, so listing resources does not import
+    every module's tools.
+    """
+
+    def __init__(self, root: Path, entry: dict[str, Any]) -> None:
+        super().__init__(on_duplicate="replace")
+        self._root = root
+        self._annotations = _module_annotations(root)
+        files = [root / name for name in entry["files"]]
+        self._tool_files = [path for path in files if path.name in TOOL_FILES]
+        self._extra_files = [path for path in files if path.name in EXTRA_FILES]
+        self._tools_loaded = False
+        self._extras_loaded = not self._extra_files
+        self._listed: list[Tool] = []
+        for item in entry["tools"]:
+            switch = TOOL_SWITCHES.get(item["name"])
+            if switch is not None and not switch():
+                continue
+            listed = CatalogueTool.model_validate(item)
+            _prepare(listed, self._annotations)
+            self._listed.append(listed)
+        self._names = frozenset(tool.name for tool in self._listed)
+
+    def _import(self, files: list[Path]) -> None:
+        for component in import_components(self._root, files):
+            _prepare(component, self._annotations)
+            if isinstance(component, Tool):
+                self.add_tool(component)
+            elif isinstance(component, ResourceTemplate):
+                self.add_template(component)
+            elif isinstance(component, Resource):
+                self.add_resource(component)
+            elif isinstance(component, Prompt):
+                self.add_prompt(component)
+
+    def _load_tools(self) -> None:
+        # Synchronous on purpose: no other request runs between the check and
+        # the flag, so two first calls cannot import the module twice.
+        if not self._tools_loaded:
+            self._import(self._tool_files)
+            self._tools_loaded = True
+
+    def _load_extras(self) -> None:
+        if not self._extras_loaded:
+            self._import(self._extra_files)
+            self._extras_loaded = True
+
+    async def _list_tools(self) -> Sequence[Tool]:
+        return list(self._listed)
+
+    async def _get_tool(self, name: str, version: VersionSpec | None = None) -> Tool | None:
+        # Every provider is asked for every name, so only this module's own
+        # names may import it.
+        if name not in self._names:
+            return None
+        self._load_tools()
+        return await super()._get_tool(name, version)
+
+    async def _list_resources(self) -> Sequence[Resource]:
+        self._load_extras()
+        return await super()._list_resources()
+
+    async def _get_resource(self, uri: str, version: VersionSpec | None = None) -> Resource | None:
+        self._load_extras()
+        return await super()._get_resource(uri, version)
+
+    async def _list_resource_templates(self) -> Sequence[ResourceTemplate]:
+        self._load_extras()
+        return await super()._list_resource_templates()
+
+    async def _get_resource_template(
+        self, uri: str, version: VersionSpec | None = None
+    ) -> ResourceTemplate | None:
+        self._load_extras()
+        return await super()._get_resource_template(uri, version)
+
+    async def _list_prompts(self) -> Sequence[Prompt]:
+        self._load_extras()
+        return await super()._list_prompts()
+
+    async def _get_prompt(self, name: str, version: VersionSpec | None = None) -> Prompt | None:
+        self._load_extras()
+        return await super()._get_prompt(name, version)
+
+    async def get_tasks(self) -> Sequence[FastMCPComponent]:
+        # The server asks for task components when it starts serving; the
+        # catalogue builder refuses task components, so there are none, and
+        # answering from the default would import every module.
+        return []
+
+    def __repr__(self) -> str:
+        return f"LazyModuleProvider(root={self._root!r})"
 
 
 class AnnotatedBM25SearchTransform(BM25SearchTransform):
@@ -415,9 +532,14 @@ def build_server() -> FastMCP:
         dereference_schemas=False,
     )
     mcp.add_middleware(CachedDereferenceMiddleware())
-    for module_dir in sorted(MODULES_ROOT.iterdir()):
-        if module_dir.is_dir() and not module_dir.name.startswith("_"):
+    catalogue = read_catalogue() or {}
+    for module_dir in module_dirs():
+        entry = catalogue.get(module_dir.name)
+        # A module the catalogue does not list yet (a new one) loads eagerly.
+        if entry is None:
             mcp.add_provider(ModuleProvider(root=module_dir))
+        else:
+            mcp.add_provider(LazyModuleProvider(module_dir, entry))
     mcp.add_middleware(ValidationErrorMiddleware())
     mcp.add_middleware(CallLanguageMiddleware())
     # Usage counting goes outside the timeout: a timeout cancels the call
@@ -448,6 +570,13 @@ def build_server() -> FastMCP:
         """When and how to offer the user a bug report for this server, with
         the template to fill in. Read it when a tool misbehaves."""
         return REPORT_ISSUE_TEMPLATE
+
+    @mcp.resource("docs://status")
+    def upstream_status_doc() -> str:
+        """Upstream hosts MapleStats has paused after repeated failures (EN/FR),
+        with when each is tried again. Read it when tools for one source keep
+        failing with UpstreamUnavailable."""
+        return render_status()
 
     return mcp
 

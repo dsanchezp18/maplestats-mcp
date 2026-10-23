@@ -3,7 +3,7 @@
 Every method wraps `shared.http.api_get`/`api_post`, respects the
 statcan-wds rate limiter, and unwraps WDS's `[{"status": "SUCCESS",
 "object": {...}}]` envelope. A 409 response is StatCan's documented
-signal that data is locked during its 12am-8:30am ET daily update
+signal that data are locked during its 12am-8:30am ET daily update
 window (see constants.py) — this is surfaced as DataLocked, not
 retried and not reported as a generic failure, since retrying during
 the lock window cannot succeed.

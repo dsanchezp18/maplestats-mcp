@@ -486,7 +486,7 @@ async def get_air_station_data(
             pick(
                 lang,
                 "Unverified raw data: values can change or be removed when the ministry "
-                "validates them. Verified historical data is published only on an ftp:// "
+                "validates them. Verified historical data are published only on an ftp:// "
                 "server, which this server cannot read.",
                 "Données brutes non vérifiées : les valeurs peuvent changer ou disparaître "
                 "quand le ministère les valide. Les données historiques vérifiées ne sont "
@@ -593,7 +593,7 @@ async def get_air_parameter_data(
             pick(
                 lang,
                 "Unverified raw data (RAW_VALUE as measured, value = REPORTED_VALUE, "
-                "rounded). Verified historical data is published only on an ftp:// server, "
+                "rounded). Verified historical data are published only on an ftp:// server, "
                 "which this server cannot read.",
                 "Données brutes non vérifiées (RAW_VALUE telle que mesurée, value = "
                 "REPORTED_VALUE, arrondie). Les données historiques vérifiées ne sont publiées "
@@ -1527,9 +1527,9 @@ async def get_hydrometric_data(
             _, rows = _rows(body)
             rows = [r for r in rows if r and r[0] == station_id]
         else:
-            # Archives, and a current file too large to download (Stage.csv by
-            # mid-October), are sorted by station then time, so one station's
-            # rows are read by range.
+            # Archives, and a current file past HYDRO_MAX_FILE_BYTES (Stage.csv
+            # by mid-November at its October 2026 growth), are sorted by station
+            # then time, so one station's rows are read by range.
             cached_all = False
             cut = False
             rows = []

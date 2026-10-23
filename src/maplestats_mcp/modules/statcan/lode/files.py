@@ -42,6 +42,7 @@ from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.file_download import check_redirect
 from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import (
+    counted_once,
     is_retryable,
     new_client,
     request_headers,
@@ -128,7 +129,7 @@ def _enforce_cap(keep: Path) -> None:
     about to read), and never a `.part` file: that is another call's download
     in progress. A file that cannot be removed (Windows refuses while a reader
     has it open) or that vanishes mid-scan is logged and skipped, because
-    failing to make room must not fail a call whose own data is already on disk.
+    failing to make room must not fail a call whose own data are already on disk.
     """
     root = constants.cache_dir()
     entries: list[tuple[float, int, Path]] = []
@@ -231,6 +232,7 @@ async def local_member(url: str, member: str) -> tuple[Path, bool]:
 # --- range previews -----------------------------------------------------
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(5),

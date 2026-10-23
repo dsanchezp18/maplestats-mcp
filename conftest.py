@@ -13,7 +13,27 @@ from tenacity import BaseRetrying, wait_none
 os.environ.setdefault("MAPLE_TRANSPORT", "stdio")
 
 from maplestats_mcp.shared import cache, file_download
+from maplestats_mcp.shared.breaker import BREAKER
 from maplestats_mcp.shared.rate_limiter import TokenBucket
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
+    """Fail an r_julia test that skips when MAPLE_REQUIRE_R_JULIA=1.
+
+    Those tests skip without R, Julia or one of their packages, which is right
+    on a laptop but would let CI's r-julia job pass with a package missing.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if (
+        report.skipped
+        and os.environ.get("MAPLE_REQUIRE_R_JULIA") == "1"
+        and item.get_closest_marker("r_julia") is not None
+    ):
+        reason = report.longrepr[2] if isinstance(report.longrepr, tuple) else report.longrepr
+        report.outcome = "failed"
+        report.longrepr = f"MAPLE_REQUIRE_R_JULIA=1, but the test skipped: {reason}"
 
 
 @pytest.fixture
@@ -55,6 +75,12 @@ def _empty_response_cache() -> None:
     """
     cache._caches.clear()
     cache._inflight.clear()
+
+
+@pytest.fixture(autouse=True)
+def _closed_breakers() -> None:
+    """Breaker state is process-wide; a test must not inherit another test's open host."""
+    BREAKER.reset()
 
 
 @pytest.fixture(autouse=True)

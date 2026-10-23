@@ -139,7 +139,7 @@ async def cmhc_get_table_data(
     per province/centre). Each returned cell carries CMHC's own
     reliability flag (a/b/c/d = Excellent/Very good/Good/Poor) alongside
     the value, `value: 0` for a real, counted zero (flagged "-" by
-    CMHC), or `value: null` with the raw marker in `flag` when data was
+    CMHC), or `value: null` with the raw marker in `flag` when data were
     suppressed ("**"/"n/a") or not applicable ("++") - see
     docs://cmhc/gotchas for the full legend. `category_level_1`/
     `category_level_2`/`column_field`/`row_field` must come from

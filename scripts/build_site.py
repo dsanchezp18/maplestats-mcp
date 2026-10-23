@@ -138,13 +138,6 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
     ),
     (
         "user",
-        "https://smithery.ai/servers/dsanchezp998/maplestats-mcp",
-        f"{_SHIELDS}/badge/Smithery-listed-FF5601",
-        "Listed on Smithery",
-        "Répertorié sur Smithery",
-    ),
-    (
-        "user",
         "https://mcprush.com/dsanchezp18/maplestats-mcp",
         f"{_SHIELDS}/badge/Mcprush-listed-B6F24B",
         "Listed on Mcprush",
@@ -3192,6 +3185,7 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
                     "one connection" if en else "une connexion",
                 ),
                 label=label,
+                centre_art=(SITE / "_partials" / "logo.html").read_text(encoding="utf-8").strip(),
             ),
             "square",
             lang,

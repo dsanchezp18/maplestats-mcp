@@ -438,6 +438,7 @@ async def test_hostile_animal_type_stays_inside_its_literals():
     assert not any(line.lstrip().startswith("shell") for line in do.splitlines())
 
 
+@pytest.mark.r_julia
 async def test_hostile_animal_type_is_one_r_string(tmp_path):
     rscript = shutil.which("Rscript")
     if rscript is None:
@@ -649,6 +650,7 @@ _R_SCRIPT_PACKAGES = (
 )
 
 
+@pytest.mark.r_julia
 async def test_r_scripts_reproduce_the_tool_offline(tmp_path):
     rscript = shutil.which("Rscript")
     if rscript is None:
@@ -676,6 +678,7 @@ async def test_r_scripts_reproduce_the_tool_offline(tmp_path):
             assert _read_rows(groups) == aggregate, (tool, args)
 
 
+@pytest.mark.r_julia
 async def test_r_french_premises_listed_twice_take_the_last_row(tmp_path, monkeypatch):
     """The tool joins French labels through a dict, so a repeated id keeps its last row."""
     rscript = shutil.which("Rscript")
@@ -714,6 +717,7 @@ async def test_r_french_premises_listed_twice_take_the_last_row(tmp_path, monkey
     assert _read_rows(out) == expected
 
 
+@pytest.mark.r_julia
 async def test_julia_scripts_reproduce_the_tool_offline(tmp_path):
     julia = shutil.which("julia")
     if julia is None:
@@ -746,6 +750,7 @@ async def test_julia_scripts_reproduce_the_tool_offline(tmp_path):
             assert _read_rows(groups) == aggregate, (tool, args)
 
 
+@pytest.mark.r_julia
 @pytest.mark.parametrize("language", ["r", "julia"])
 async def test_r_and_julia_helpers_match_the_client(language, tmp_path):
     binary = shutil.which("Rscript" if language == "r" else "julia")

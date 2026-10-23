@@ -147,7 +147,7 @@ def detect_format(body: bytes, declared: str | None) -> FileFormat:
             f"le fichier est du JSON (format du portail {declared!r}), que ce lecteur "
             "n'analyse pas.",
         )
-    # A text file under an Excel label is read as CSV; binary data is not (UTF-16
+    # A text file under an Excel label is read as CSV; binary data are not (UTF-16
     # text is full of NUL bytes, so its byte-order mark is checked first).
     if body.startswith(_UTF16_BOMS):
         return "csv"

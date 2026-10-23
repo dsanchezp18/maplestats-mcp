@@ -1,6 +1,6 @@
 [project]
 name = "maplestats-mcp"
-version = "0.4.0"
+version = "0.4.1"
 description = "One MCP server for Canadian open data: Statistics Canada (tables, Census, PUMF microdata), the Bank of Canada, CMHC, federal agencies and provincial and municipal open-data portals, in English and French."
 readme = "README.md"
 license = "MIT"
@@ -96,6 +96,9 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests", "src"]
 python_files = ["test_*.py"]
+markers = [
+    "r_julia: runs R or Julia; CI's r-julia job runs these and fails one that skips",
+]
 
 [tool.ruff]
 target-version = "py312"

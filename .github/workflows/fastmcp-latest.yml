@@ -1,0 +1,99 @@
+name: Newest FastMCP
+
+# pyproject.toml caps fastmcp below 4.2 because the server leans on its
+# internals: server.py subclasses BM25SearchTransform and overrides its private
+# _make_search_tool/_make_call_tool, and ModuleProvider reimplements
+# FileSystemProvider's loader. This job runs the suite against the newest
+# fastmcp release, past the cap, so an upgrade that breaks them shows up here
+# before anyone lifts it. Never on push or pull_request: a new fastmcp must
+# not block a merge, and continue-on-error keeps a failure from marking the
+# run red; the run summary and an error annotation report it instead.
+on:
+  schedule:
+    # Mondays 07:41 UTC, after the live smoke tests; off the hour to avoid the :00 queue spike.
+    - cron: "41 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  newest-fastmcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
+      - run: uv sync --locked
+      # uv pip install ignores the project's own fastmcp<4.2 requirement, and
+      # upgrading only fastmcp (and fastmcp-slim, which it pins) keeps every
+      # other package at its locked version, so a failure points at fastmcp.
+      # --python names the project venv: with setup-uv's UV_PYTHON set, uv pip
+      # could otherwise pick another 3.12 interpreter.
+      - name: Install the newest fastmcp
+        id: install
+        run: |
+          uv pip install --python .venv/bin/python \
+            --upgrade-package fastmcp --upgrade-package fastmcp-slim fastmcp
+          locked=$(grep -A1 '^name = "fastmcp"$' uv.lock | sed -n 's/^version = "\(.*\)"$/\1/p')
+          newest=$(uv pip show --python .venv/bin/python fastmcp | sed -n 's/^Version: //p')
+          echo "locked=$locked" >> "$GITHUB_OUTPUT"
+          echo "newest=$newest" >> "$GITHUB_OUTPUT"
+      # From here on, uv run must not sync the environment back to uv.lock.
+      - name: pyright
+        id: pyright
+        continue-on-error: true
+        env:
+          UV_NO_SYNC: "1"
+        run: uv run pyright
+      - name: pytest
+        id: pytest
+        continue-on-error: true
+        env:
+          UV_NO_SYNC: "1"
+        shell: bash
+        run: |
+          set -o pipefail
+          uv run pytest -q -n auto --dist loadfile -p no:cacheprovider 2>&1 | tee pytest.log
+      - name: Summary
+        if: always()
+        shell: bash
+        env:
+          LOCKED: ${{ steps.install.outputs.locked }}
+          NEWEST: ${{ steps.install.outputs.newest }}
+          INSTALL: ${{ steps.install.outcome }}
+          PYRIGHT: ${{ steps.pyright.outcome }}
+          PYTEST: ${{ steps.pytest.outcome }}
+        run: |
+          if [ "$INSTALL" = success ] && [ "$PYRIGHT" = success ] && [ "$PYTEST" = success ]; then
+            verdict="passed"
+          else
+            verdict="FAILED"
+          fi
+          {
+            echo "## Newest FastMCP: $verdict"
+            echo
+            echo "fastmcp ${NEWEST:-not installed} (uv.lock has $LOCKED)"
+            echo
+            echo "| Step | Outcome |"
+            echo "| --- | --- |"
+            echo "| install | $INSTALL |"
+            echo "| pyright | $PYRIGHT |"
+            echo "| pytest | $PYTEST |"
+            if [ -f pytest.log ] && [ "$PYTEST" != success ]; then
+              echo
+              echo "### pytest short summary"
+              echo
+              echo '```'
+              sed -n '/short test summary info/,$p' pytest.log | tail -n 60
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$verdict" = FAILED ]; then
+            echo "::error title=Newest FastMCP::The suite fails against fastmcp ${NEWEST:-?} (locked $LOCKED): install $INSTALL, pyright $PYRIGHT, pytest $PYTEST. Keep the fastmcp<4.2 cap until server.py is updated."
+            exit 1
+          fi

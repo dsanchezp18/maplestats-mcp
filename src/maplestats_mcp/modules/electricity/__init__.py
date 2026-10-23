@@ -32,7 +32,7 @@ Other provinces were checked live on 2026-09-29 and left out:
 - Saskatchewan (SaskPower) and Nova Scotia (Nova Scotia Power): no
   machine-readable demand feed found.
 
-CER's open data covers pipelines, energy exports and scenario projections, not
+CER's open data cover pipelines, energy exports and scenario projections, not
 system demand, so this module does not duplicate it.
 """
 

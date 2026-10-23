@@ -682,6 +682,27 @@ async def get_forecast(*, station_name: str, limit: int = 100, lang: str = "en")
         for p in _props(body)
     ]
     if not rows:
+        # SCRIBE forecasts stop after the fire season: the layer held no rows
+        # at all on 2026-10-20, so an empty answer is checked against that.
+        anything, _ = await _wfs(
+            c.FORECAST,
+            cql=None,
+            fields="name",
+            sort_by=None,
+            limit=1,
+            offset=0,
+            ttl=c.CACHE_TTL_FORECAST,
+        )
+        if not _props(anything):
+            raise lang_error(
+                NotFound,
+                lang,
+                "CWFIS publishes no SCRIBE forecasts right now for any station; they run "
+                "during the fire season only. cwfis_get_fire_danger still answers.",
+                "le Système canadien d'information sur les feux de végétation ne publie "
+                "actuellement aucune prévision SCRIBE, pour aucune station ; elles ne paraissent "
+                "que pendant la saison des feux. cwfis_get_fire_danger répond toujours.",
+            )
         raise lang_error(
             NotFound,
             lang,

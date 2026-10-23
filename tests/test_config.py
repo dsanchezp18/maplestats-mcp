@@ -175,3 +175,23 @@ def test_delta_index_dir_can_be_turned_off(monkeypatch, tmp_path):
     assert config.get_delta_index_dir() is None
     monkeypatch.setenv("MAPLE_DELTA_INDEX_DIR", str(tmp_path))
     assert config.get_delta_index_dir() == tmp_path
+
+
+def test_breaker_settings_default_clamp_and_turn_off(monkeypatch):
+    for name in (
+        "MAPLE_BREAKER",
+        "MAPLE_BREAKER_FAILURES",
+        "MAPLE_BREAKER_WINDOW_SECONDS",
+        "MAPLE_BREAKER_COOLDOWN_SECONDS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    assert config.get_breaker_enabled() is True
+    assert config.get_breaker_failures() == 5
+    assert config.get_breaker_window_seconds() == 300.0
+    assert config.get_breaker_cooldown_seconds() == 60.0
+    monkeypatch.setenv("MAPLE_BREAKER", "off")
+    assert config.get_breaker_enabled() is False
+    monkeypatch.setenv("MAPLE_BREAKER_FAILURES", "0")
+    assert config.get_breaker_failures() == 1
+    monkeypatch.setenv("MAPLE_BREAKER_COOLDOWN_SECONDS", "99999")
+    assert config.get_breaker_cooldown_seconds() == 3600.0

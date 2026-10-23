@@ -87,7 +87,7 @@ class Spec:
     # (CMHC's CSV exports start with title lines).
     sheet: str = ""
     skip_rows: int = 0
-    # csv: the data ends at the first blank line; notes follow it (CMHC).
+    # csv: the data end at the first blank line; notes follow it (CMHC).
     stop_at_blank: bool = False
     filters: list[Filter] = field(default_factory=list)
     sort_by: str = ""

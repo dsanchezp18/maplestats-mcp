@@ -69,6 +69,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import (
+    counted_once,
     is_retryable,
     new_client,
     raise_if_cloudflare_challenge,
@@ -397,6 +398,7 @@ async def _error_answer(response: httpx.Response) -> httpx.Response:
     )
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),

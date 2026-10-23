@@ -95,7 +95,7 @@ async def ised_ip_horizons_get_patent(
     and grant dates, status, PCT numbers, and its owners, inventors,
     applicants and agents with their city and country. Set
     include_classifications=True to add its IPC classes, which reads a
-    much larger file. Data is as of CIPO's newest open release (2024-10-11
+    much larger file. Data are as of CIPO's newest open release (2024-10-11
     when checked on 2026-10-03; release_date and provenance.as_of give
     it), not live. The first call downloads the needed table (tens to hundreds of
     MB) into a local cache; if it times out, the download continues and
@@ -132,7 +132,7 @@ async def ised_ip_horizons_search_patents(
     or French; accents are ignored, since French titles are stored
     unaccented), or by filing-date range. Filters combine with AND.
     Returns the newest matches by filing date and the total match count
-    across all ~3.2 million records since 1869. Data is as of CIPO's
+    across all ~3.2 million records since 1869. Data are as of CIPO's
     newest open release (2024-10-11 when checked on 2026-10-03;
     release_date and provenance.as_of give it), so later filings are
     absent. Each filter type downloads its table once into a

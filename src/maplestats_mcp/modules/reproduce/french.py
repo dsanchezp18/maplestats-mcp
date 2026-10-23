@@ -231,7 +231,7 @@ _NOTES: list[tuple[str, Template]] = [
         ),
     ),
     (
-        r"The data ends at the first blank line; the notes below it are dropped\.",
+        r"The data end at the first blank line; the notes below it are dropped\.",
         "Les données s'arrêtent à la première ligne vide ; les notes qui suivent sont écartées.",
     ),
     (

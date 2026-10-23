@@ -47,6 +47,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.transforms.search import BM25SearchTransform
 from mcp.shared.exceptions import MCPError
 
+from maplestats_mcp.catalogue import tool_module
 from maplestats_mcp.server import mcp
 
 # %% 0. Setup
@@ -185,8 +186,7 @@ async def read_registry() -> Registry:
     tools = await mcp._list_tools()
     sources = {}
     for tool in tools:
-        function = getattr(tool, "fn", None)
-        module = getattr(function, "__module__", "") or ""
+        module = tool_module(tool)
         # "maplestats_mcp.modules.statcan.cimt.tools" -> "statcan": a source is the agency.
         sources[tool.name] = module.removeprefix("maplestats_mcp.modules.").split(".")[0]
     return Registry(

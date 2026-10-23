@@ -72,7 +72,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import call_error
-from maplestats_mcp.shared.http import is_retryable, new_client
+from maplestats_mcp.shared.http import counted_once, is_retryable, new_client
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -105,6 +105,7 @@ def _page_url(kind: Kind, page: str, lang: str) -> str:
     return f"{constants.BASE_URL}{path}{page}-{constants.PAGE_LANG[lang]}.aspx"
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),

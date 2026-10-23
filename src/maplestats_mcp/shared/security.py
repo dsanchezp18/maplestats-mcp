@@ -381,8 +381,9 @@ def with_health_endpoint(inner_app: ASGIApp, *, version: str) -> ASGIApp:
 def with_stats_endpoint(inner_app: ASGIApp, *, snapshot: Callable[[], dict]) -> ASGIApp:
     """Add a public /stats route with the aggregate usage counts, bypassing security.
 
-    The counts are tool names and outcomes only (shared/usage.py); nothing a
-    caller typed is in them, so the route needs no token.
+    The counts are tool names, outcomes and durations, and upstream host
+    names with their error counts (shared/usage.py, shared/breaker.py);
+    nothing a caller typed is in them, so the route needs no token.
     """
 
     async def app(scope: dict, receive: Callable, send: Callable) -> None:

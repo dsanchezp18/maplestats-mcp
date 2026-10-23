@@ -19,7 +19,7 @@ MODULE_DESCRIPTION = (
     "annual fees, purchase, cash advance and balance transfer rates, foreign conversion "
     "fee, minimum income, rewards, insurance) and chequing and savings accounts (monthly "
     "fees and how to waive them, included transactions, interest rate tiers, withdrawal, "
-    "transfer, overdraft, NSF and other fees, low-cost and no-cost accounts). Data comes "
+    "transfer, overdraft, NSF and other fees, low-cost and no-cost accounts). Data come "
     "from the financial institutions and is read live (EN/FR); only products submitted "
     "to FCAC are listed."
 )

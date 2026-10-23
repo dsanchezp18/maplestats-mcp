@@ -6,6 +6,10 @@ set of retryable statuses (IMDB's unknown-survey 500 is a deterministic
 answer), and returning the last response when attempts run out instead of
 raising, so the caller keeps its own error mapping. StatCan hosts get the
 `Connection: close` header so a retry can reach a healthy backend.
+
+The attempts run in one `breaker.one_call()`: however many of them fail, the
+host's circuit breaker counts one failure, and only for the statuses this
+call retries (so a 500 the caller declared deterministic does not count).
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ import asyncio
 
 import httpx
 
+from maplestats_mcp.shared.breaker import one_call
 from maplestats_mcp.shared.http import (
     _RETRY_AFTER_CAP_SECONDS,
     _RETRYABLE_STATUSES,
@@ -51,16 +56,17 @@ async def get_with_retry(
     caller decides what to raise); re-raises the last network error.
     """
     headers = _request_headers(url, None)
-    for attempt in range(RETRY_ATTEMPTS):
-        last = attempt == RETRY_ATTEMPTS - 1
-        try:
-            response = await client.get(url, params=params, headers=headers)
-        except httpx.HTTPError as exc:
-            if last or not is_retryable(exc):
-                raise
-            await asyncio.sleep(retry_delay(None, attempt))
-            continue
-        if last or response.status_code not in retry_statuses:
-            return response
-        await asyncio.sleep(retry_delay(response, attempt))
+    with one_call(frozenset(status for status in retry_statuses if status >= 500)):
+        for attempt in range(RETRY_ATTEMPTS):
+            last = attempt == RETRY_ATTEMPTS - 1
+            try:
+                response = await client.get(url, params=params, headers=headers)
+            except httpx.HTTPError as exc:
+                if last or not is_retryable(exc):
+                    raise
+                await asyncio.sleep(retry_delay(None, attempt))
+                continue
+            if last or response.status_code not in retry_statuses:
+                return response
+            await asyncio.sleep(retry_delay(response, attempt))
     raise AssertionError("unreachable")

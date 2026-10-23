@@ -840,6 +840,25 @@ def _inscription(
     return defs, "".join(texts)
 
 
+def _stack_label(
+    name: str, count: str, width: float, height: float
+) -> tuple[float, list[str]] | None:
+    """(font size, lines) setting ``name`` word-wrapped over ``count`` inside
+    width x height, from 12px down to 9px; None when nothing that size fits."""
+    for size in (12.0, 11.0, 10.0, 9.0):
+        per_line = int(width / (size * _TEXT_CHAR))
+        rows: list[str] = []
+        for word in name.split():
+            if rows and len(rows[-1]) + 1 + len(word) <= per_line:
+                rows[-1] += f" {word}"
+            else:
+                rows.append(word)
+        rows.append(count)
+        if max(map(len, rows)) <= per_line and len(rows) * size * 1.15 <= height:
+            return size, rows
+    return None
+
+
 def square_chart(
     outer: list[str],
     inner: list[str],
@@ -849,6 +868,7 @@ def square_chart(
     centre_lines: tuple[str, str],
     label: str,
     ident: str = "square",
+    centre_art: str | None = None,
 ) -> str:
     """The case-study finale: one square for everything the server reaches.
 
@@ -857,8 +877,9 @@ def square_chart(
     full label, count), laid clockwise from the middle of the top along a
     square track in the order given, each as long as its share of the count
     and labelled on its longest straight run where the label fits: upright
-    on the top and bottom, turned on the sides. The centre shows ``centre``
-    over two short lines.
+    on the top and bottom, turned on the sides; a segment too short for one
+    line stacks its name over its count. The centre shows ``centre_art`` (an
+    inline ``<svg>``) when given, else ``centre`` over two short lines.
     """
     if not outer or not arcs or any(n <= 0 for _, _, n in arcs):
         raise ValueError("square_chart needs names and positive segment counts")
@@ -911,24 +932,48 @@ def square_chart(
         x, y = _track_point(c, half, (a + b) / 2)
         turn = {1: 90, 3: -90}.get(side, 0)
         named = f"{short} {count}"
+        spin = f' transform="rotate({turn} {_n(x)} {_n(y)})"' if turn else ""
         if len(named) * size * _TEXT_CHAR + 12 <= room:
-            shown, rotate = named, turn
-        elif size * 1.2 + 6 <= room:
-            # A short segment gets its count alone, upright.
-            shown, rotate = str(count), 0
-        else:
+            labels.append(
+                _text(
+                    x, y + size * 0.35, named, "sq-arc-label", "middle", f' style="--i:{i}"{spin}'
+                )
+            )
             continue
-        spin = f' transform="rotate({rotate} {_n(x)} {_n(y)})"' if rotate else ""
+        # A short segment stacks its name over its count, smaller, rather
+        # than showing a bare number; one with no room for that has no label.
+        lines = _stack_label(short, str(count), room - 12, width - 10)
+        if lines is None:
+            continue
+        line_size, rows = lines
+        lead = line_size * 1.15
+        top = y - lead * (len(rows) - 1) / 2 + line_size * 0.35
+        spans = "".join(
+            f'<tspan x="{_n(x)}" y="{_n(top + k * lead)}">{_esc(row)}</tspan>'
+            for k, row in enumerate(rows)
+        )
         labels.append(
-            _text(x, y + size * 0.35, shown, "sq-arc-label", "middle", f' style="--i:{i}"{spin}')
+            f'<text class="sq-arc-label" text-anchor="middle" style="--i:{i};font-size:{_n(line_size)}px"'
+            f"{spin}>{spans}</text>"
         )
 
     out.append("<defs>" + "".join(defs) + "</defs>")
     out.extend(body)
     out.extend(labels)
-    out.append(_text(c, c + 14, centre, "sq-n", "middle", ' data-count=""'))
-    out.append(_text(c, c + 46, centre_lines[0], "sq-sub", "middle"))
-    out.append(_text(c, c + 68, centre_lines[1], "sq-sub", "middle"))
+    if centre_art:
+        # The logo in the hollow, fading in with the inscriptions.
+        side = 220.0
+        art = centre_art.replace(
+            "<svg ",
+            f'<svg x="{_n(c - side / 2)}" y="{_n(c - side / 2)}" width="{_n(side)}" '
+            f'height="{_n(side)}" aria-hidden="true" ',
+            1,
+        )
+        out.append(f'<g class="sq-fade sq-logo">{art}</g>')
+    else:
+        out.append(_text(c, c + 14, centre, "sq-n", "middle", ' data-count=""'))
+        out.append(_text(c, c + 46, centre_lines[0], "sq-sub", "middle"))
+        out.append(_text(c, c + 68, centre_lines[1], "sq-sub", "middle"))
     out.append("</svg>")
     return "".join(out)
 

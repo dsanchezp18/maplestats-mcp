@@ -161,10 +161,18 @@ async def test_stations_requires_a_filter_and_valid_radius():
         await client.get_stations(latitude=50.0, longitude=-119.0, radius_km=500)
 
 
-async def test_forecast_not_found_when_empty(httpx_mock):
+async def test_forecast_not_found_names_the_station(httpx_mock):
     httpx_mock.add_response(url=WFS, json=_collection())
-    with pytest.raises(NotFound):
+    httpx_mock.add_response(url=WFS, json=_collection({"name": "KELOWNA"}))
+    with pytest.raises(NotFound, match="No forecast station name contains 'nowhere'"):
         await client.get_forecast(station_name="nowhere")
+
+
+async def test_forecast_off_season_says_the_layer_is_empty(httpx_mock):
+    # The SCRIBE layer held no rows at all on 2026-10-20, after the fire season.
+    httpx_mock.add_response(url=WFS, json=_collection(), is_reusable=True)
+    with pytest.raises(NotFound, match="fire season only"):
+        await client.get_forecast(station_name="kelowna")
 
 
 async def test_forecast_parses_rows(httpx_mock):

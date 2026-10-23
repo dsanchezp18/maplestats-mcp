@@ -105,7 +105,7 @@ async def main() -> int:
         )
         print(f"  {len(by_province.rows)} province rows")
         # Confirms the suppressed-value quirk is handled, not necessarily
-        # present in every pull (data changes over time).
+        # present in every pull (data change over time).
         suppressed = [
             (row.period, col)
             for row in by_province.rows

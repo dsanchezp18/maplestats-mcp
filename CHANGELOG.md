@@ -6,6 +6,83 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+### Added
+
+- A circuit breaker per upstream host (`shared/breaker.py`). After 5 failures in a row
+  within 5 minutes (timeouts, connection errors, 5xx answers, Cloudflare challenges) a host
+  is paused for 60 seconds: its tools fail at once with `UpstreamUnavailable`, in English or
+  French, naming the host and when to try again, instead of each caller waiting out another
+  timeout. After the cooldown one request goes through as a probe and an answer closes the
+  breaker. A call and its retries (`shared/http.py`, `shared/retrying.py` and the modules'
+  own retry loops) count as one failure, and 4xx answers never count. Settings:
+  `MAPLE_BREAKER` (`0` turns it off), `MAPLE_BREAKER_FAILURES`,
+  `MAPLE_BREAKER_WINDOW_SECONDS`, `MAPLE_BREAKER_COOLDOWN_SECONDS`.
+- `docs://status`, a bilingual resource listing the hosts paused now and when each is
+  tried again.
+- `/stats` adds `latency_ms` (each tool's p50 and p95 over its last 500 calls) and
+  `upstreams` (the breaker settings, and per host its error counts by kind, refused
+  requests, times opened and current state). Still in memory, with no arguments and no
+  client addresses; the FAQ and privacy page say so.
+- A breaking-change check on the tool surface: `tests/test_tool_surface.py` compares
+  `tool_catalogue.json` with its version at the merge base with `origin/main` and fails while a
+  breaking change (tool or parameter removed or renamed, type narrowed, required parameter
+  added, output field removed) names a tool this Unreleased section does not mention.
+  `uv run python scripts/check_tool_surface.py` prints the breaking, additive and other changes.
+  CI now checks out the full history for it.
+- A weekly `Newest FastMCP` workflow that runs pyright and the test suite against the newest
+  `fastmcp`, past the `<4.2` cap, and reports a failure in its run summary without blocking
+  merges.
+
+### Changed
+
+- The server imports a module's code only when one of its tools is first called. `tools/list`
+  and `search_tools` now read `tool_catalogue.json`, a generated listing of every tool (name,
+  title, docstring, schemas, annotations), so importing the server took 5.8 s instead of 20.4 s
+  in interleaved runs on 2026-10-23 (Windows, Python 3.12). The first call into a module pays its
+  import once (1.5 s for `boc`, 3.2 s for `statcan/wds` in the same runs); later calls are
+  unchanged. Listings, search results and the discovery benchmark's scores are identical. Without
+  the catalogue file, or for a module it does not list, the server loads modules at startup as
+  before. Regenerate it with `uv run python scripts/build_tool_catalogue.py`;
+  `tests/test_tool_catalogue.py` fails while it is stale.
+- Website: the Connect page's hosting table now lists `MAPLE_CLIENT_IP_HEADER`,
+  `MAPLE_TRUSTED_PROXY_HOPS`, `MAPLE_DUCKDB_MEMORY_LIMIT`, `MAPLE_DELTA_MAX_SCAN_MB`,
+  `MAPLE_DELTA_MAX_SCAN_SECONDS` and `MAPLE_DELTA_INDEX_DIR`, which the README already
+  documented, and a test fails when a setting in `config.py` is missing from it.
+
+## [0.4.1] - 2026-10-20
+
+### Removed
+
+- Smithery publishing: the release workflow's `smithery` job, `scripts/build_smithery_bundle.py`,
+  the pinned CLI in `.github/smithery/`, and the Smithery badge in the README and site.
+  Smithery answered the 0.4.0 publish with HTTP 403 ("Updating servers has been removed")
+  and shuts down its API and CLI on 2026-10-31.
+
+### Fixed
+
+- `bc_env_list_streamflow_gauges` and `bc_env_get_streamflow` with `parameter="stage"`:
+  `Stage.csv` now carries 2- to 15-minute readings and grows about 1.3 MB a day (29.7 MB on
+  2026-10-20), so the 64 MB cap set in 0.4.0 would run out by mid-November. The gauge list
+  now streams the file and keeps one row per station, and past 64 MB a single gauge is read
+  by range; with no `start`, that range read covers the last 14 days first and says so in
+  the notes.
+- `nrcan_nbac_query_fires` with `include_geometry=true`: a GeoJSON answer over the 20 MB
+  response cap (the five largest 2023 BC fires are 33 MB) now returns the fires without
+  geometry, counted in `geometry_omitted`, instead of an error.
+- Range reads (transit GTFS feeds, zip members, sorted archives): a 200 answer to a range
+  request from a host that advertises `Accept-Ranges: bytes` is retried twice after 3 s.
+  RTC Québec's CDN answered one such request in full on 2026-10-19 and honoured it later.
+- `cwfis_get_forecast`: once the fire season ends the SCRIBE forecast layer is empty
+  (2026-10-20), and every station name answered "No forecast station name contains ...".
+  An empty layer now gets its own message pointing to `cwfis_get_fire_danger`.
+- The Cloudflare-challenge error named Statistics Canada for every host, including
+  Alberta's economic dashboard, in both languages; it now says the publisher.
+- Live smoke tests: `smoke_test_arcgis_hub` rechecks only its failing portals after a
+  minute (a full pass takes 15 minutes, so the workflow's whole-script rerun ran out of
+  time), the smoke job timeout is 40 minutes, `smoke_test_ab_economic` skips on a GitHub
+  runner that Cloudflare challenges, as `smoke_test_modules` already did, and
+  `smoke_test_bc_environment` reads a current stage series.
+
 ## [0.4.0] - 2026-10-20
 
 ### Removed
@@ -351,7 +428,8 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.1.1...v0.2.0

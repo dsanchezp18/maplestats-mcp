@@ -365,6 +365,29 @@ def test_square_inscriptions_close_and_segments_share_the_track() -> None:
         charts.square_chart([], [], [("a", "a", 1)], centre="1", centre_lines=("", ""), label="x")
 
 
+def test_square_short_segments_stack_their_name_and_the_logo_fills_the_centre() -> None:
+    logo = '<svg class="logo" viewBox="0 0 200 200" role="img" aria-label="MapleStats MCP"><rect/></svg>'
+    svg = charts.square_chart(
+        ["Bank of Canada"],
+        [],
+        [("Statistics", "s", 300), ("Money and business", "m", 33), ("Parliament", "p", 21)],
+        centre="354",
+        centre_lines=("sources,", "one connection"),
+        label="x",
+        centre_art=logo,
+    )
+    root = _parse(svg)
+    labels = [el for el in root.iter(f"{NS}text") if "sq-arc-label" in _classes(el)]
+    # No bare counts: a short segment's name sits over its count.
+    stacked = [[t.text for t in el.iter(f"{NS}tspan")] for el in labels if el.text is None]
+    assert stacked and all(str(rows[-1]).isdigit() and len(rows) > 1 for rows in stacked)
+    assert all(el.text is None or not el.text.isdigit() for el in labels)
+    # The logo replaces the count in the centre.
+    assert not [el for el in root.iter(f"{NS}text") if "sq-n" in _classes(el)]
+    inner = [el for el in root.iter(f"{NS}svg") if el.get("aria-label") == "MapleStats MCP"]
+    assert inner and inner[0].get("aria-hidden") == "true" and inner[0].get("width") == "220"
+
+
 def test_track_points_walk_the_square_clockwise() -> None:
     c, half = 320.0, 100.0
     assert charts._track_point(c, half, 0) == (320.0, 220.0)
