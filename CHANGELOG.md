@@ -23,6 +23,15 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   `upstreams` (the breaker settings, and per host its error counts by kind, refused
   requests, times opened and current state). Still in memory, with no arguments and no
   client addresses; the FAQ and privacy page say so.
+- A breaking-change check on the tool surface: `tests/test_tool_surface.py` compares
+  `tool_catalogue.json` with its version at the merge base with `origin/main` and fails while a
+  breaking change (tool or parameter removed or renamed, type narrowed, required parameter
+  added, output field removed) names a tool this Unreleased section does not mention.
+  `uv run python scripts/check_tool_surface.py` prints the breaking, additive and other changes.
+  CI now checks out the full history for it.
+- A weekly `Newest FastMCP` workflow that runs pyright and the test suite against the newest
+  `fastmcp`, past the `<4.2` cap, and reports a failure in its run summary without blocking
+  merges.
 
 ### Changed
 
