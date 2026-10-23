@@ -488,7 +488,7 @@ async def get_air_station_data(
             pick(
                 lang,
                 "Unverified raw data: values can change or be removed when the ministry "
-                "validates them. Verified historical data is published only on an ftp:// "
+                "validates them. Verified historical data are published only on an ftp:// "
                 "server, which this server cannot read.",
                 "Données brutes non vérifiées : les valeurs peuvent changer ou disparaître "
                 "quand le ministère les valide. Les données historiques vérifiées ne sont "
@@ -595,7 +595,7 @@ async def get_air_parameter_data(
             pick(
                 lang,
                 "Unverified raw data (RAW_VALUE as measured, value = REPORTED_VALUE, "
-                "rounded). Verified historical data is published only on an ftp:// server, "
+                "rounded). Verified historical data are published only on an ftp:// server, "
                 "which this server cannot read.",
                 "Données brutes non vérifiées (RAW_VALUE telle que mesurée, value = "
                 "REPORTED_VALUE, arrondie). Les données historiques vérifiées ne sont publiées "

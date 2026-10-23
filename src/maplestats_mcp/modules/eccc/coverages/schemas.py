@@ -3,7 +3,7 @@
 Shapes confirmed live on 2026-10-03 (see client.py's module docstring):
 `/collections/{id}?f=json` carries the axes in `extent` (`temporal`,
 `scenario`, `percentile`, `season`, `P20Y-Avg`/`P30Y-Avg`), the variables
-come from `/collections/{id}/schema?f=json`, and data comes from
+come from `/collections/{id}/schema?f=json`, and data come from
 `/collections/{id}/coverage?f=json` as CoverageJSON.
 """
 

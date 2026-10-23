@@ -96,9 +96,9 @@
       copied: "Copied",
       selected: "Selected, press Ctrl+C",
       // "searchable": plan_query is always listed, so search_tools ranks the others.
-      top: (n, total) => `Top ${n} of ${total} searchable tools, ranked by the same BM25 index search_tools uses.`,
+      top: (n, total) => `Top ${n} of ${total} tools.`,
       few: (n, total) =>
-        `${n} of ${total} searchable tools ${n === 1 ? "matches" : "match"}, ranked by the same BM25 index search_tools uses.`,
+        `${n} of ${total} tools ${n === 1 ? "matches" : "match"}, best first.`,
       none: "No tool matches. Try a broader term, or the agency's name.",
       offline: "The search index did not load. Open the Tools page instead.",
       tools: (n) => `${n} ${n === 1 ? "tool" : "tools"}`,
@@ -110,9 +110,9 @@
       copy: "Copier",
       copied: "Copié",
       selected: "Sélectionné, faites Ctrl+C",
-      top: (n, total) => `Les ${n} premiers des ${total} outils indexés, classés par le même index BM25 que search_tools.`,
+      top: (n, total) => `Les ${n} meilleurs des ${total} outils.`,
       few: (n, total) =>
-        `${n} des ${total} outils indexés ${n === 1 ? "correspond" : "correspondent"}, classés par le même index BM25 que search_tools.`,
+        `${n} des ${total} outils ${n === 1 ? "correspond" : "correspondent"}, du meilleur au moins bon.`,
       none: "Aucun outil ne correspond. Essayez un terme plus large ou le nom de l'organisme.",
       offline: "L'index de recherche n'a pas été chargé. Ouvrez plutôt la page Outils.",
       // French counts 0 and 1 as singular.

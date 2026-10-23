@@ -36,7 +36,7 @@ async def represent_lookup_postcode(
     federal map; federal-electoral-districts with no year is the old 2013
     order). With sets, only representatives of the current sets come back.
     Source is Open North (unofficial, 60 requests a minute); representative
-    data is scraped from official sites, its licence is unverified and some
+    data are scraped from official sites, their licence is unverified and some
     records are stale. Complements the ourcommons_ tools.
     Keywords: postal code, postcode, elected officials, representative, MP,
     MLA, mayor, councillor, riding, electoral district, ward, who is my MP.
@@ -62,7 +62,7 @@ async def represent_lookup_point(
     or a geocoded address is at hand. A point falls in exactly one district
     per boundary set. Each set's licence and last-updated date are
     included. Source is Open North (unofficial, 60 requests a minute);
-    representative data is scraped and its licence is unverified.
+    representative data are scraped and their licence is unverified.
     Keywords: latitude, longitude, coordinates, point lookup, riding, ward,
     electoral district, boundary, elected officials, MP, MLA, mayor,
     geocode.

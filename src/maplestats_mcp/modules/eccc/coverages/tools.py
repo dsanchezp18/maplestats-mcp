@@ -43,7 +43,7 @@ async def eccc_coverages_search(
     observed anomalies. `query` words must all appear (id, title,
     description, variable names); `scenario` (e.g. "SSP585", "RCP8.5"),
     `variable` (id such as "tas" or a title word such as "precipitation"),
-    `timeframe`, `frequency` and `year` (a year the data covers) narrow
+    `timeframe`, `frequency` and `year` (a year the data cover) narrow
     further. Each result lists its variables, scenarios, percentiles,
     seasons, 20/30-year windows and time range. Then call
     eccc_coverages_get_data.

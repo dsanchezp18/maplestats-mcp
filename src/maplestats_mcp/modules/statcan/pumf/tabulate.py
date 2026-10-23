@@ -104,7 +104,7 @@ def _enforce_cache_cap(root: Path, keep: Path, *also_keep: Path) -> None:
     call's download in progress. A file that cannot be removed (Windows
     refuses while a reader has it open) or that vanishes mid-scan is logged
     and skipped, because failing to make room must not fail a call whose own
-    data is already on disk.
+    data are already on disk.
     """
     protected = {keep, *also_keep}
     entries: list[tuple[float, int, Path]] = []

@@ -45,7 +45,7 @@ _GOTCHAS_DOC = """\
   marks them real_time=true. MapleStats reads them through WDS only, not
   through the separate real-time viewer service.
 - **12am-8:30am ET daily lock window.** WDS returns HTTP 409 for some
-  methods during this window while data updates. This surfaces as a
+  methods during this window while the data update. This surfaces as a
   DataLocked error here, not a generic failure — it means "try again
   after 8:30am ET," not "something is broken."
 - **SDMX large-dimension wildcarding is unreliable.** Leaving a

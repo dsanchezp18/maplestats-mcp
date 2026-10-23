@@ -29,7 +29,7 @@ async def cimt_get_periods(lang: Lang = "en") -> CimtPeriods:
     """Get the first and latest month covered by the merchandise trade database (CIMT).
 
     Use for: finding the latest published month of detailed Canadian
-    exports and imports before querying them. Data starts in 1988-01.
+    exports and imports before querying them. Data start in 1988-01.
     This is an undocumented web-application API: WDS has no
     commodity-level trade, only aggregates by section and partner.
     Keywords: CIMT, merchandise trade, exports, imports, latest month,

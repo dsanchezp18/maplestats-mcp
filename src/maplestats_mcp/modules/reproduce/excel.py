@@ -114,7 +114,7 @@ def _request(spec: Spec) -> str:
     return f"Web.Contents({m_text(spec.url)}{extra})"
 
 
-# A ZIP's central directory names every member and where its data starts;
+# A ZIP's central directory names every member and where its data start;
 # reading it (not the local headers) also works for archives whose local
 # headers leave the sizes to a trailing data descriptor. Checked
 # 2026-10-02 against StatCan's 18100004-eng.zip, which has no archive

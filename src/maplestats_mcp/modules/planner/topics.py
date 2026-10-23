@@ -702,7 +702,7 @@ TOPICS: tuple[Topic, ...] = (
         (
             (
                 "Electricity demand and prices cover Ontario (IESO) and Quebec (Hydro-Quebec) "
-                "only; Alberta's AESO data is not covered."
+                "only; Alberta's AESO data are not covered."
             ),
         ),
     ),

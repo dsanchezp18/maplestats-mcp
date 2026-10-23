@@ -259,12 +259,10 @@ mark {
 }
 
 .label {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   font-stretch: 87.5%;
-  letter-spacing: 0.09em;
   line-height: 1.3;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -577,11 +575,9 @@ mark {
 
 .points .point-label {
   margin-bottom: 4px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
   line-height: 1.4;
-  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -621,10 +617,8 @@ mark {
 
 .setup-lead strong {
   margin-right: 10px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -1038,12 +1032,10 @@ mark {
 }
 
 .ex-label {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   font-stretch: 87.5%;
-  letter-spacing: 0.09em;
   line-height: 1.3;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -1484,11 +1476,9 @@ mark {
   gap: 4px 14px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--rule);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   font-stretch: 87.5%;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -1617,11 +1607,9 @@ mark {
 
 .dom h3 {
   font-family: var(--font-text);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   font-stretch: 87.5%;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
   color: var(--ink-3);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--rule-2);
@@ -2801,10 +2789,8 @@ mark {
 
 .t-use b {
   margin-right: 6px;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -2818,10 +2804,8 @@ mark {
   padding: 6px 14px 6px 0;
   border-bottom: 1px solid var(--rule-2);
   text-align: left;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -2841,10 +2825,8 @@ mark {
 }
 
 .req {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
   color: var(--amber);
 }
 
@@ -2862,10 +2844,8 @@ mark {
 }
 
 .t-kw dt {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -3072,8 +3052,6 @@ mark {
   font-size: 0.875rem;
   font-weight: 800;
   font-stretch: 110%;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -3531,11 +3509,9 @@ mark {
 }
 
 .try-notice-title {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
   line-height: 1.4;
-  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -3759,11 +3735,9 @@ mark {
   padding-bottom: 10px;
   border-bottom: 2px solid var(--ink);
   list-style: none;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   font-stretch: 87.5%;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -4043,12 +4017,10 @@ mark {
 .post-family h3 {
   padding-bottom: 8px;
   border-bottom: 2px solid var(--ink);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   font-stretch: 87.5%;
-  letter-spacing: 0.09em;
   line-height: 1.3;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -4247,10 +4219,8 @@ mark {
   .post-table td[data-label]::before {
     content: attr(data-label) " ";
     margin-right: 6px;
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--ink-3);
   }
 }
@@ -4344,10 +4314,8 @@ h2.sub {
 }
 
 .use-who {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -4357,10 +4325,8 @@ h2.sub {
 
 .uses-more-label {
   margin-top: clamp(32px, 4vw, 48px);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
 
@@ -4388,10 +4354,8 @@ h2.sub {
 
 .uses-more b {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
   color: var(--accent);
 }
 

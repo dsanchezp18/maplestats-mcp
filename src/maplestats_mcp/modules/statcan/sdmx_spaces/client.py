@@ -6,7 +6,7 @@ Verified live 2026-10-02, and what this client is built around:
   version=1.0`); the v2 structure media types answer 406. `references=all` returns
   the dataflow, its DSD, codelists, concept scheme and availability constraint in
   one document (180 KB for the GHG flow).
-- Data comes as SDMX-CSV 2.0. Observations arrive newest-first with
+- Data come as SDMX-CSV 2.0. Observations arrive newest-first with
   lastNObservations and oldest-first otherwise. The version in the data URL must be
   explicit ("latest" answers 400), so it is resolved from the structure.
 - A data key with MORE segments than the flow has dimensions is accepted and the

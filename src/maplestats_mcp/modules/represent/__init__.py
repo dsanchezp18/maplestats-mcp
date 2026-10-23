@@ -13,7 +13,7 @@ MODULE_DESCRIPTION = (
     "councillor for a postal code or a latitude/longitude, search 3,800 "
     "representatives by name, office, district, party or level, and list the "
     "524 boundary sets with their licence and last-updated date. Free up to 60 "
-    "requests a minute; representative data is scraped from official sites "
+    "requests a minute; representative data are scraped from official sites "
     "and its licence is unverified."
 )
 MODULE_DESCRIPTION_FR = (

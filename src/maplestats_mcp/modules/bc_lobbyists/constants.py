@@ -58,7 +58,7 @@ SEARCH_LOBBYISTS_SHOWN = 15
 
 LTA_START = "2020-05-04"
 
-# Labels shown in the language asked for; the data itself is English only.
+# Labels shown in the language asked for; the data themselves are in English only.
 LABELS: dict[str, tuple[str, str]] = {
     "consultant": ("Consultant lobbyist registration", "Inscription de lobbyiste-conseil"),
     "in_house": ("In-house (organization) registration", "Inscription d'organisation (interne)"),

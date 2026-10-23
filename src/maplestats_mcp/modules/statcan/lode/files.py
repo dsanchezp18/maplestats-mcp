@@ -129,7 +129,7 @@ def _enforce_cap(keep: Path) -> None:
     about to read), and never a `.part` file: that is another call's download
     in progress. A file that cannot be removed (Windows refuses while a reader
     has it open) or that vanishes mid-scan is logged and skipped, because
-    failing to make room must not fail a call whose own data is already on disk.
+    failing to make room must not fail a call whose own data are already on disk.
     """
     root = constants.cache_dir()
     entries: list[tuple[float, int, Path]] = []

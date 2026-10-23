@@ -418,7 +418,7 @@ decision imposed on the user.
 > formats; and additional Canadian sources where there is a clear reason
 > to support them.
 >
-> The objective is not to copy all of this data into another database.
+> The objective is not to copy all of these data into another database.
 > It is to build a common access layer over the infrastructure that
 > already exists. An agent should not need to know beforehand whether a
 > question requires a StatCan WDS request, a Bank of Canada Valet

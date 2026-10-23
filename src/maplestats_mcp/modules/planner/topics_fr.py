@@ -250,7 +250,7 @@ FR: dict[str, str] = {
         "tableaux de l'offre et de l'utilisation de l'énergie de Statistique Canada"
     ),
     "Electricity demand and prices cover Ontario (IESO) and Quebec (Hydro-Quebec) only; "
-    "Alberta's AESO data is not covered.": (
+    "Alberta's AESO data are not covered.": (
         "La demande et les prix de l'électricité ne couvrent que l'Ontario (SIERE) et le "
         "Québec (Hydro-Québec); les données de l'AESO de l'Alberta ne sont pas couvertes."
     ),
