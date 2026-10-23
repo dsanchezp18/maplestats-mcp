@@ -17,7 +17,6 @@
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
     <a href="https://mcplookup.com/server/io.github.dsanchezp18/maplestats-mcp"><img src="https://mcplookup.com/badge/io.github.dsanchezp18/maplestats-mcp" alt="MCPLookup Trust Index"></a>
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>
-    <a href="https://smithery.ai/servers/dsanchezp998/maplestats-mcp"><img src="https://img.shields.io/badge/Smithery-listed-FF5601" alt="Listed on Smithery"></a>
     <a href="https://mcprush.com/dsanchezp18/maplestats-mcp"><img src="https://img.shields.io/badge/Mcprush-listed-B6F24B" alt="Listed on Mcprush"></a>
     <a href="https://lobehub.com/mcp/dsanchezp18-maplestats-mcp"><img src="https://img.shields.io/badge/LobeHub-listed-1F1F1F" alt="Listed on LobeHub"></a>
     <a href="https://www.piwheels.org/project/maplestats-mcp/"><img src="https://img.shields.io/badge/piwheels-Raspberry%20Pi-C51A4A" alt="Wheels for Raspberry Pi on piwheels"></a>
