@@ -89,14 +89,19 @@ def test_setup_uv_matches_the_dockerfile_pin():
 
 
 def test_ci_runs_the_r_and_julia_reproduce_tests():
-    # tests/test_reproduce*.py skip when R, Julia or one of their packages is
-    # missing, so without these steps a regression in the generated scripts
-    # merges green.
-    steps = _steps(_workflow(WORKFLOWS / "ci.yml"))
-    gated = [step for step in steps if step.get("if") == "matrix.python-version == '3.12'"]
-    assert any(str(step.get("uses", "")).startswith("r-lib/actions/setup-r@") for step in gated)
-    commands = " ".join(str(step.get("run", "")) for step in gated)
+    # The r_julia tests skip when R, Julia or one of their packages is
+    # missing, so without the r-julia job (and MAPLE_REQUIRE_R_JULIA, which
+    # fails such a skip) a regression in the generated scripts merges green.
+    jobs = _workflow(WORKFLOWS / "ci.yml")["jobs"]
+    steps = jobs["r-julia"]["steps"]
+    assert any(str(step.get("uses", "")).startswith("r-lib/actions/setup-r@") for step in steps)
+    commands = " ".join(str(step.get("run", "")) for step in steps)
     assert "julia -e" in commands and "Rscript -e" in commands
+    pytest_step = next(step for step in steps if "pytest" in str(step.get("run", "")))
+    assert "-m r_julia" in pytest_step["run"]
+    assert pytest_step["env"]["MAPLE_REQUIRE_R_JULIA"] == "1"
+    check = " ".join(str(step.get("run", "")) for step in jobs["check"]["steps"])
+    assert '-m "not r_julia"' in check
     source = ast.parse((ROOT / "tests" / "test_reproduce_cfia.py").read_text(encoding="utf-8"))
     probed = next(
         ast.literal_eval(node.value)
@@ -107,12 +112,33 @@ def test_ci_runs_the_r_and_julia_reproduce_tests():
             for target in node.targets
         )
     )
+    r_packages = (ROOT / ".github" / "ci" / "r-packages.txt").read_text(encoding="utf-8").split()
+    julia_packages = (ROOT / ".github" / "ci" / "julia-packages.txt").read_text(encoding="utf-8")
     # purrr is loaded by the generated scripts and jsonlite by test_reproduce.py,
     # though neither is in the tests' own skip probes.
     for package in (*probed, "purrr", "jsonlite"):
-        assert f'"{package}"' in commands, f"R package {package} is not installed in CI"
+        assert package in r_packages, f"R package {package} is not installed in CI"
     for package in ("Cascadia", "DataFrames", "Gumbo", "JSON3", "TidierData"):
-        assert f'"{package}"' in commands, f"Julia package {package} is not installed in CI"
+        assert package in julia_packages.split(), f"Julia package {package} is not installed in CI"
+
+
+def test_tests_that_run_r_or_julia_are_marked():
+    # An unmarked test that starts R or Julia would run in the check jobs,
+    # which have neither, and skip there without failing.
+    for path in sorted((ROOT / "tests").glob("test_*.py")):
+        text = path.read_text(encoding="utf-8")
+        for node in ast.walk(ast.parse(text)):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            if not node.name.startswith("test_"):
+                continue
+            body = ast.get_source_segment(text, node) or ""
+            if not re.search(r'shutil\.which\([^)]*"(Rscript|julia)"', body):
+                continue
+            marks = {ast.unparse(decorator) for decorator in node.decorator_list}
+            assert "pytest.mark.r_julia" in marks, (
+                f"{path.name}::{node.name} needs @pytest.mark.r_julia"
+            )
 
 
 def test_server_json_lists_the_hosted_endpoint():
