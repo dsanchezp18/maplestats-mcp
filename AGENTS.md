@@ -67,6 +67,27 @@ other tool is discovered by natural-language query through
 `search_tools` and invoked through `call_tool`. Don't design a new tool assuming a
 client sees it in a flat list; write its docstring so it's findable.
 
+Startup does not import module code. `src/maplestats_mcp/tool_catalogue.json`
+holds every tool's listing (name, title, docstring, input and output
+schemas, annotations), and a module listed there gets a
+`LazyModuleProvider`: `tools/list` and `search_tools` read the catalogue,
+and the module's `tools.py` files are imported the first time one of its
+tools is resolved (a `call_tool`, or `plan_query`); its `resources.py` and
+`prompts.py` on the first resource or prompt request. A module missing
+from the catalogue, or every module when the file is absent, loads at
+startup as before. **Regenerate the catalogue whenever a tool is added,
+removed or renamed, or its docstring, parameters or return model change:**
+
+```bash
+uv run python scripts/build_tool_catalogue.py
+```
+
+`tests/test_tool_catalogue.py` fails while the file is stale. A tool that
+a module defines only under a setting (`statcan_pumf_tabulate` with
+`MAPLE_PUMF_TABULATE`) also needs an entry in `catalogue.TOOL_SWITCHES`;
+the same test fails without it. Code that needs a tool's module should call
+`catalogue.tool_module(tool)`: listed tools have no `fn` until loaded.
+
 ### Response contract
 
 Every tool's return type annotation is a Pydantic `BaseModel` (never
@@ -188,7 +209,9 @@ assumption shared by the code and its tests.
    `tests/test_site.py` fails when one is missing. A new portal in the
    CKAN, ArcGIS Hub or Socrata families needs its province in
    `PORTAL_PLACES` there too.
-9. Run the full gate below before considering it done.
+9. Regenerate the tool catalogue (`uv run python
+   scripts/build_tool_catalogue.py`) and commit `tool_catalogue.json`.
+10. Run the full gate below before considering it done.
 
 ## Development commands
 
@@ -199,6 +222,7 @@ uv run ruff format src tests     # format
 uv run pyright                   # type check — must be 0 errors
 uv run pytest                    # unit tests, all mocked, no network
 uv run pytest -n 4 --dist loadfile   # the same in parallel (pytest-xdist), as CI runs it
+uv run python scripts/build_tool_catalogue.py   # after any tool change (see Registration)
 ```
 
 The root `conftest.py` removes tenacity's retry backoff and the
