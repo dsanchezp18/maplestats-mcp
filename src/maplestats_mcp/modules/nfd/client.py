@@ -67,6 +67,7 @@ from maplestats_mcp.shared.csv_files import decode
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import (
+    call_error,
     fr_or_en,
     french_spacing,
     lang_error,
@@ -192,9 +193,12 @@ def _check_hop(url: str, context: str) -> None:
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or parsed.hostname not in constants.ALLOWED_HOSTS:
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"{context}: refusing {url}; the NFD's files are read only from "
-            f"{constants.HOST} over http or https."
+            f"{constants.HOST} over http or https.",
+            f"{context} : {url} refusé ; les fichiers de la BNF ne sont lus que depuis "
+            f"{constants.HOST}, en http ou https.",
         )
 
 
@@ -240,16 +244,28 @@ async def _fetch_chain(url: str, context: str) -> _File:
                 answer.raise_for_status()
             declared = response.headers.get("content-length", "")
             if declared.isdigit() and int(declared) > constants.MAX_FILE_BYTES:
-                raise UpstreamError(f"{context}: {current} is larger than this tool reads.")
+                raise call_error(
+                    UpstreamError,
+                    f"{context}: {current} is larger than this tool reads.",
+                    f"{context} : {current} dépasse la taille que cet outil lit.",
+                )
             chunks: list[bytes] = []
             total = 0
             async for chunk in response.aiter_bytes():
                 total += len(chunk)
                 if total > constants.MAX_FILE_BYTES:
-                    raise UpstreamError(f"{context}: {current} is larger than this tool reads.")
+                    raise call_error(
+                        UpstreamError,
+                        f"{context}: {current} is larger than this tool reads.",
+                        f"{context} : {current} dépasse la taille que cet outil lit.",
+                    )
                 chunks.append(chunk)
             return _File(b"".join(chunks), response.headers.get("last-modified"))
-    raise UpstreamError(f"{context}: {url} redirected too many times.")
+    raise call_error(
+        UpstreamError,
+        f"{context}: {url} redirected too many times.",
+        f"{context} : {url} a redirigé trop de fois.",
+    )
 
 
 async def _download(url: str, context: str) -> _File:
@@ -259,12 +275,23 @@ async def _download(url: str, context: str) -> _File:
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 404:
-            raise NotFound(f"{context}: no file at {exc.request.url}.") from exc
-        raise UpstreamError(f"{context}: {exc.request.url} returned HTTP {status}.") from exc
+            raise call_error(
+                NotFound,
+                f"{context}: no file at {exc.request.url}.",
+                f"{context} : aucun fichier à {exc.request.url}.",
+            ) from exc
+        raise call_error(
+            UpstreamError,
+            f"{context}: {exc.request.url} returned HTTP {status}.",
+            f"{context} : {exc.request.url} a renvoyé HTTP {status}.",
+        ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(
+        raise call_error(
+            UpstreamUnavailable,
             f"{context}: {constants.HOST} did not answer for {url} "
-            f"({type(exc).__name__}); try again shortly."
+            f"({type(exc).__name__}); try again shortly.",
+            f"{context} : {constants.HOST} n'a pas répondu pour {url} "
+            f"({type(exc).__name__}) ; réessayez sous peu.",
         ) from exc
 
 
@@ -350,7 +377,11 @@ async def _load_catalogue() -> tuple[dict[str, CatalogueEntry], bool]:
                 comments_path=en["comments"],
             )
         if not entries:
-            raise UpstreamError("nfd download page: no tables found; the page layout changed.")
+            raise call_error(
+                UpstreamError,
+                "nfd download page: no tables found; the page layout changed.",
+                "page de téléchargement de la BNF : aucun tableau trouvé ; la mise en page a changé.",
+            )
         return entries
 
     return await cached_fetch("nfd:catalogue", constants.CATALOGUE_TTL_SECONDS, fetch)
@@ -520,9 +551,13 @@ def _layout(header: list[str]) -> tuple[int, int, int, int, int, int, int, int |
     if len(names) >= 9 and (len(names) - 9) % 2 == 0 and names[2].strip().lower() == "iso":
         n = len(names)
         return 0, 2, 3, 4, 5, n - 4, n - 3, n - 2
-    raise UpstreamError(
+    raise call_error(
+        UpstreamError,
         f"nfd table file: unexpected columns {names}; expected Year, Année, ISO, Jurisdiction, "
-        "Juridiction, label pairs, then value and data-qualifier columns."
+        "Juridiction, label pairs, then value and data-qualifier columns.",
+        f"fichier de tableau de la BNF : colonnes inattendues {names} ; attendu : Year, Année, "
+        "ISO, Jurisdiction, Juridiction, des paires de libellés, puis les colonnes de valeur "
+        "et de qualité des données.",
     )
 
 
@@ -531,7 +566,11 @@ def parse_table(text: str, url: str, last_modified: str | None) -> Dataset:
     try:
         header = next(reader)
     except StopIteration:
-        raise UpstreamError(f"nfd table file {url} is empty.") from None
+        raise call_error(
+            UpstreamError,
+            f"nfd table file {url} is empty.",
+            f"le fichier de tableau de la BNF {url} est vide.",
+        ) from None
     year_i, iso_i, jen_i, jfr_i, dim_i, val_i, qual_i, valfr_i = _layout(header)
     labelled = valfr_i is not None
     dim_end = val_i if labelled else dim_i
@@ -554,12 +593,18 @@ def parse_table(text: str, url: str, last_modified: str | None) -> Dataset:
         if not any(cell.strip() for cell in row):
             continue
         if len(row) != len(header):
-            raise UpstreamError(f"nfd table file {url} line {line_no}: {len(row)} columns.")
+            raise call_error(
+                UpstreamError,
+                f"nfd table file {url} line {line_no}: {len(row)} columns.",
+                f"fichier de tableau de la BNF {url}, ligne {line_no} : {len(row)} colonnes.",
+            )
         try:
             year = int(row[year_i].strip())
         except ValueError:
-            raise UpstreamError(
-                f"nfd table file {url} line {line_no}: year {row[year_i]!r}."
+            raise call_error(
+                UpstreamError,
+                f"nfd table file {url} line {line_no}: year {row[year_i]!r}.",
+                f"fichier de tableau de la BNF {url}, ligne {line_no} : année {row[year_i]!r}.",
             ) from None
         iso = row[iso_i].strip().upper()
         if iso in constants.ISO_ALIASES:
@@ -597,7 +642,11 @@ def parse_table(text: str, url: str, last_modified: str | None) -> Dataset:
             )
         )
     if not dataset.records:
-        raise UpstreamError(f"nfd table file {url} has a header and no rows.")
+        raise call_error(
+            UpstreamError,
+            f"nfd table file {url} has a header and no rows.",
+            f"le fichier de tableau de la BNF {url} a un en-tête et aucune ligne.",
+        )
     dataset.duplicate_groups = len(repeated)
     dataset.mixed_case_labels = sorted(
         {" / ".join(sorted(v)) for v in case_variants.values() if len(v) > 1}
@@ -612,7 +661,11 @@ async def _load_dataset(entry: CatalogueEntry) -> tuple[Dataset, bool]:
         response = await _download(url, f"nfd table {entry.table_id}")
         text = decode(response.content)
         if text.lstrip().lower().startswith(("<!doctype", "<html")):
-            raise NotFound(f"nfd table {entry.table_id}: {url} returned a web page, not a CSV.")
+            raise call_error(
+                NotFound,
+                f"nfd table {entry.table_id}: {url} returned a web page, not a CSV.",
+                f"tableau {entry.table_id} de la BNF : {url} a renvoyé une page web, non un CSV.",
+            )
         return parse_table(text, url, response.last_modified)
 
     return await cached_fetch(f"nfd:table:{url}", constants.TABLE_TTL_SECONDS, fetch)
@@ -1243,8 +1296,10 @@ async def table_comments(
         try:
             book = xlrd.open_workbook(file_contents=response.content)
         except Exception as exc:
-            raise UpstreamError(
-                f"nfd comments {entry.table_id}: {url} is not a readable .xls."
+            raise call_error(
+                UpstreamError,
+                f"nfd comments {entry.table_id}: {url} is not a readable .xls.",
+                f"commentaires {entry.table_id} de la BNF : {url} n'est pas un .xls lisible.",
             ) from exc
         sheets = []
         for sheet in book.sheets():

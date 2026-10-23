@@ -61,6 +61,7 @@ from maplestats_mcp.modules.ised.ip_horizons.schemas import (
     PatentSearchResult,
     PatentSummary,
 )
+from maplestats_mcp.shared import duck
 from maplestats_mcp.shared.arg_checks import check_range
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
@@ -574,10 +575,7 @@ def _fold_accents(text: str) -> str:
 
 
 def _query(sql: str, params: list[Any]) -> list[dict[str, Any]]:
-    # Imported on first use: duckdb takes ~0.5 s to import.
-    import duckdb
-
-    with duckdb.connect() as connection:
+    with duck.connect() as connection:
         cursor = connection.execute(sql, params)
         names = [d[0] for d in cursor.description or []]
         return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]

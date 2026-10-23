@@ -11,6 +11,12 @@ import logging
 from pathlib import Path
 
 from maplestats_mcp import __version__, config
+
+# Before the server module is imported: it reads the transport to describe the export tools
+# (local files on stdio, hosted downloads on HTTP), and a self-hoster who starts this app
+# with uvicorn sets no MAPLE_TRANSPORT.
+config.mark_serving_http()
+
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.security import (
     with_cors,
@@ -48,7 +54,9 @@ def check_hosting_config() -> None:
 
 def build_asgi_app():
     check_hosting_config()
-    inner = mcp.http_app()
+    # Idle sessions are dropped after 5 minutes (the default is 30): a small instance
+    # cannot hold the 10,000 sessions one busy caller could otherwise open.
+    inner = mcp.http_app(session_idle_timeout=300)
     secured = with_http_security(
         inner,
         auth_token=config.get_auth_token(),
@@ -57,6 +65,7 @@ def build_asgi_app():
         rate_limit_window_seconds=config.get_rate_limit_window_seconds(),
         trust_proxy_headers=config.get_trust_proxy_headers(),
         trusted_proxy_hops=config.get_trusted_proxy_hops(),
+        client_ip_header=config.get_client_ip_header(),
     )
     cors = with_cors(secured, allowed_origins=config.get_allowed_origins())
     png = (ASSETS_DIR / "favicon.png").read_bytes()

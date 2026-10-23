@@ -71,6 +71,7 @@ from maplestats_mcp.modules.fcac.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import is_retryable, new_client
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -125,11 +126,17 @@ async def _send(
     try:
         response = await _request(http, method, url, data)
     except httpx.HTTPStatusError as exc:
-        raise UpstreamError(
-            f"fcac: {exc.request.url} returned HTTP {exc.response.status_code}."
+        raise call_error(
+            UpstreamError,
+            f"fcac: {exc.request.url} returned HTTP {exc.response.status_code}.",
+            f"fcac : {exc.request.url} a renvoyé HTTP {exc.response.status_code}.",
         ) from exc
     except httpx.HTTPError as exc:
-        raise UpstreamUnavailable(f"fcac: {url} did not respond in time.") from exc
+        raise call_error(
+            UpstreamUnavailable,
+            f"fcac: {url} did not respond in time.",
+            f"fcac : {url} n'a pas répondu à temps.",
+        ) from exc
     path = response.url.path.lower()
     if "sessionexpired" in path or path.endswith("/error.aspx"):
         raise _SessionLost(str(response.url))
@@ -225,7 +232,11 @@ def _result_count(soup: BeautifulSoup) -> int:
         raise _SessionLost("no result count on the results page")
     match = re.search(r"\d[\d\s ,]*", _text(label))
     if match is None:
-        raise UpstreamError(f"fcac: unreadable result count {_text(label)!r}.")
+        raise call_error(
+            UpstreamError,
+            f"fcac: unreadable result count {_text(label)!r}.",
+            f"fcac : nombre de résultats illisible {_text(label)!r}.",
+        )
     return int(re.sub(r"\D", "", match.group()))
 
 
@@ -532,8 +543,10 @@ async def _walk(
             response, soup = await _click(http, response, soup, target=target)
             _result_count(soup)
     if len(rows) != total:
-        raise UpstreamError(
-            f"fcac: the tool reported {total} products but {len(rows)} could be read."
+        raise call_error(
+            UpstreamError,
+            f"fcac: the tool reported {total} products but {len(rows)} could be read.",
+            f"fcac : l'outil a signalé {total} produits, mais {len(rows)} ont pu être lus.",
         )
     return total, rows
 
@@ -546,8 +559,10 @@ async def _with_session_retry(func: Any, *args: Any) -> Any:
     try:
         return await func(*args)
     except _SessionLost as exc:
-        raise UpstreamError(
-            f"fcac: the comparison tool lost the search session twice ({exc})."
+        raise call_error(
+            UpstreamError,
+            f"fcac: the comparison tool lost the search session twice ({exc}).",
+            f"fcac : l'outil de comparaison a perdu la session de recherche à deux reprises ({exc}).",
         ) from exc
 
 
@@ -568,7 +583,11 @@ async def _detail_sections(
                 break
             response, soup = await _click(http, response, soup, target=target)
             _result_count(soup)
-    raise NotFound(f"fcac: product {product_id} is not in this result list.")
+    raise call_error(
+        NotFound,
+        f"fcac: product {product_id} is not in this result list.",
+        f"fcac : le produit {product_id} ne figure pas dans cette liste de résultats.",
+    )
 
 
 # ------------------------------------------------------------------- public

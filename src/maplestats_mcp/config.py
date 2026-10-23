@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -68,12 +69,21 @@ def get_port() -> int:
         ) from None
 
 
+_serves_http = False
+
+
+def mark_serving_http() -> None:
+    """Record that this process serves HTTP (`uvicorn maplestats_mcp.asgi:app` sets no variable)."""
+    global _serves_http
+    _serves_http = True
+
+
 def get_transport() -> str:
     # Local MCP clients launch the package as a stdio subprocess. Hosted
     # deployments set MAPLE_TRANSPORT=http explicitly in their service config.
     # Anything else raises: a misspelling such as "sdtio" must not start an HTTP
     # server while the MCP client waits on stdin.
-    raw = os.environ.get("MAPLE_TRANSPORT", "stdio").strip().lower()
+    raw = os.environ.get("MAPLE_TRANSPORT", "http" if _serves_http else "stdio").strip().lower()
     if raw not in {"stdio", "http"}:
         raise ValueError(f"MAPLE_TRANSPORT={raw!r} is not supported; use 'stdio' or 'http'.")
     return raw
@@ -218,6 +228,16 @@ def get_delta_index_dir() -> Path | None:
     return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "delta"
 
 
+def get_duckdb_memory_limit() -> str | None:
+    """DuckDB's memory limit for queries over downloaded files, e.g. "256MB"; None sets none.
+
+    Beyond the limit DuckDB spills to the temporary folder instead of growing: a
+    small hosted instance sets it, a laptop leaves it unset.
+    """
+    raw = os.environ.get("MAPLE_DUCKDB_MEMORY_LIMIT", "").strip()
+    return raw or None
+
+
 def get_ip_horizons_cache_dir() -> Path:
     """Where CIPO IP Horizons patent tables are kept as Parquet for queries.
 
@@ -287,6 +307,20 @@ def get_allowed_origins() -> tuple[str, ...]:
 def get_trust_proxy_headers() -> bool:
     raw = os.environ.get("MAPLE_TRUST_PROXY_HEADERS", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+def get_client_ip_header() -> str | None:
+    """Header the outermost proxy sets to the client's own address, e.g. "CF-Connecting-IP".
+
+    Used for the per-client rate limit when MAPLE_TRUST_PROXY_HEADERS is on. Set it only
+    when every request passes through that proxy; unset by default.
+    """
+    raw = os.environ.get("MAPLE_CLIENT_IP_HEADER", "").strip()
+    if not raw:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9-]+", raw):
+        raise ValueError(f"MAPLE_CLIENT_IP_HEADER={raw!r} is not a header name.")
+    return raw
 
 
 def get_trusted_proxy_hops() -> int:

@@ -24,6 +24,7 @@ import duckdb
 from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.modules.statcan.lode import constants, geometry
 from maplestats_mcp.modules.statcan.lode.schemas import LodeField, LodeLayer, Scalar
+from maplestats_mcp.shared import duck
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
 ROLE_COLUMNS: dict[str, tuple[str, ...]] = {
@@ -504,7 +505,7 @@ def _csv_relation(path: Path) -> str:
 
 
 def csv_columns(path: Path) -> list[str]:
-    con = duckdb.connect()
+    con = duck.connect()
     try:
         return [
             r[0] for r in con.execute(f"DESCRIBE SELECT * FROM {_csv_relation(path)}").fetchall()
@@ -565,7 +566,7 @@ def query_csv(path: Path, spec: QuerySpec) -> Outcome:
     lon_sql, lat_sql = coords if coords else ("NULL", "NULL")
     source = f"(SELECT *, {lon_sql} AS __lon, {lat_sql} AS __lat FROM {_csv_relation(path)}) AS src"
     clause = (" WHERE " + " AND ".join(where)) if where else ""
-    con = duckdb.connect()
+    con = duck.connect()
     try:
         total = con.execute(f"SELECT count(*) FROM {source}{clause}", params).fetchone()[0]  # type: ignore[index]
         select = ", ".join(_quote(c) for c in columns)
@@ -590,7 +591,7 @@ def query_csv(path: Path, spec: QuerySpec) -> Outcome:
 
 
 def csv_sample(path: Path) -> list[LodeField]:
-    con = duckdb.connect()
+    con = duck.connect()
     try:
         cursor = con.execute(f"SELECT * FROM {_csv_relation(path)} LIMIT 1")
         names = [d[0] for d in cursor.description]

@@ -98,10 +98,12 @@ The default is the hosted server: nothing to install, no account, no key.
    (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
    maplestats-mcp` entry for other clients (see [Install](#install)).
 
-The hosted server is a free instance: a ping every 10 minutes keeps it awake,
-so cold starts are rare, but the first request after an idle spell can take up
-to a minute. Each client gets 60 requests a minute, and the microdata
-tabulation tool is switched off there. Your agent's tool calls (a search phrase, a table number) reach the server and its host, Render, and the code stores none of them. Check Render's [terms](https://render.com/terms) and [privacy policy](https://render.com/privacy); for full privacy, run it locally. What it logs:
+The hosted server is a free instance, so the first request after a quiet spell
+can take up to a minute. Each client gets 60 requests a minute, and the microdata tabulation
+tool is switched off there. Your agent's tool calls (a search phrase, a table
+number) reach the server and its host, Render. The code keeps no log of them,
+but its in-memory cache can hold a search phrase or filter in a key or a
+response until the entry expires or the server restarts. Check Render's [terms](https://render.com/terms) and [privacy policy](https://render.com/privacy); for full privacy, run it locally. What it logs:
 [FAQ](https://maplestats.danielstats.io/faq.html#hosted). Other
 clients: the [Connect](https://maplestats.danielstats.io/connect.html)
 page.
@@ -224,6 +226,8 @@ is public, needs no token and reports calls per tool name and day (see
 | `MAPLE_TOOL_TIMEOUT_SECONDS` | `120` | Longest a tool call may run |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
+| `MAPLE_CLIENT_IP_HEADER` | unset | Header the outermost proxy sets to the caller's own address (Cloudflare's `CF-Connecting-IP`), used for the per-client rate limit when `MAPLE_TRUST_PROXY_HEADERS` is on; set it only when every request passes through that proxy |
+| `MAPLE_DUCKDB_MEMORY_LIMIT` | unset | Memory limit for DuckDB queries over downloaded files (patents, open databases, microdata), such as `256MB`; beyond it DuckDB spills to the temporary folder. Set it on a small hosted instance |
 | `MAPLE_LODE_CACHE_DIR`, `MAPLE_LODE_CACHE_MAX_GB` | system temp, `3` | Where StatCan open-database (LODE) archives are unpacked, and the size cap (least recently used files go first); use a persistent volume when hosted |
 | `MAPLE_LODE_MAX_DOWNLOAD_MB` | `300` | Largest open-database archive one call may download; `0` turns downloads off |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |

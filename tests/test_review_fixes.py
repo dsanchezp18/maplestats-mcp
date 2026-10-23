@@ -236,3 +236,39 @@ async def test_ip_horizons_unreadable_zip_is_a_typed_error(tmp_path: Path, monke
     monkeypatch.setattr(store, "_fetch_zip", fake_fetch)
     with pytest.raises(UpstreamError, match="could not be unpacked"):
         await store._download(_file(), tmp_path / "t.parquet")
+
+
+def test_client_key_prefers_the_proxy_set_client_header() -> None:
+    scope = {
+        "client": ("10.0.0.1", 5000),
+        "headers": [
+            (b"x-forwarded-for", b"6.6.6.6, 172.70.1.1"),
+            (b"cf-connecting-ip", b"203.0.113.9"),
+        ],
+    }
+    key = _client_key(scope, trust_proxy_headers=True, client_ip_header="CF-Connecting-IP")
+    assert key == "203.0.113.9"
+    # Not trusted, or no header configured: the earlier rules apply.
+    assert _client_key(scope, trust_proxy_headers=False, client_ip_header="CF-Connecting-IP") == (
+        "10.0.0.1"
+    )
+    assert _client_key(scope, trust_proxy_headers=True) == "172.70.1.1"
+
+
+def test_client_key_ignores_a_client_header_that_is_not_an_address() -> None:
+    scope = {
+        "client": ("10.0.0.1", 5000),
+        "headers": [(b"x-forwarded-for", b"6.6.6.6, 172.70.1.1"), (b"cf-connecting-ip", b"junk")],
+    }
+    key = _client_key(scope, trust_proxy_headers=True, client_ip_header="CF-Connecting-IP")
+    assert key == "172.70.1.1"
+
+
+def test_client_ip_header_setting(monkeypatch) -> None:
+    monkeypatch.delenv("MAPLE_CLIENT_IP_HEADER", raising=False)
+    assert config.get_client_ip_header() is None
+    monkeypatch.setenv("MAPLE_CLIENT_IP_HEADER", " CF-Connecting-IP ")
+    assert config.get_client_ip_header() == "CF-Connecting-IP"
+    monkeypatch.setenv("MAPLE_CLIENT_IP_HEADER", "bad header")
+    with pytest.raises(ValueError, match="MAPLE_CLIENT_IP_HEADER"):
+        config.get_client_ip_header()

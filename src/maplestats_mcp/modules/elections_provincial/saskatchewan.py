@@ -39,6 +39,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
 )
 from maplestats_mcp.shared.errors import UpstreamError
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import call_error
 
 # Names for the party codes in the files. Elections Saskatchewan's own notes spell out GP,
 # LIB, NDP, PC, SP and WIP; the other codes are the party names it registers.
@@ -84,8 +85,10 @@ def _count(value: object) -> int:
     try:
         return int(float(text))
     except ValueError as exc:
-        raise UpstreamError(
-            f"elections_provincial: Saskatchewan file has the count {value!r}."
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: Saskatchewan file has the count {value!r}.",
+            f"elections_provincial : le fichier de la Saskatchewan contient le décompte {value!r}.",
         ) from exc
 
 
@@ -119,9 +122,12 @@ def parse_csv(body: bytes) -> list[District]:
     parties = [k.removesuffix("Candidate") for k in ordered if k.endswith("Candidate")]
     needed = {district_key, rejected_key, *parties, *(f"{p}Candidate" for p in parties)}
     if not parties or not needed <= keys:
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             "elections_provincial: Saskatchewan poll file lacks the expected columns "
-            f"(has {sorted(keys)})."
+            f"(has {sorted(keys)}).",
+            "elections_provincial : le fichier des bureaux de vote de la Saskatchewan n'a pas "
+            f"les colonnes attendues (colonnes présentes : {sorted(keys)}).",
         )
     code_key = "ConstituencyCode"
 
@@ -170,7 +176,11 @@ def _build(
         finish_shares(district)
         built.append(district)
     if not built:
-        raise UpstreamError("elections_provincial: Saskatchewan poll file has no rows.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: Saskatchewan poll file has no rows.",
+            "elections_provincial : le fichier des bureaux de vote de la Saskatchewan n'a aucune ligne.",
+        )
     return built
 
 
@@ -197,9 +207,12 @@ def parse_xlsx(body: bytes) -> list[District]:
             )
             header = next((i for i, r in enumerate(rows) if str(r[0]).strip() == "Poll"), None)
             if title is None or header is None:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     f"elections_provincial: Saskatchewan 2011 sheet {sheet.title!r} has no "
-                    "title or header row."
+                    "title or header row.",
+                    f"elections_provincial : la feuille {sheet.title!r} de 2011 de la "
+                    "Saskatchewan n'a ni titre ni ligne d'en-tête.",
                 )
             name = _district_name(title.split(":", 1)[1])
             names, codes = rows[header], rows[header + 1]
@@ -237,4 +250,8 @@ async def fetch(year: str) -> list[District]:
     except UpstreamError:
         raise
     except Exception as exc:  # csv and openpyxl raise several unrelated types
-        raise UpstreamError(f"elections_provincial: could not read {url}: {exc}") from exc
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: could not read {url}: {exc}",
+            f"elections_provincial : impossible de lire {url} : {exc}",
+        ) from exc

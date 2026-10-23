@@ -39,6 +39,7 @@ from maplestats_mcp.modules.health_products.lnhpd.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.fr_typography import call_error
 
 _NPN = re.compile(r"^\d{1,8}$")
 _CLEAN = str.maketrans({"\t": " ", "\n": " ", "\r": " "})
@@ -85,7 +86,11 @@ async def _index() -> tuple[bytes, bool]:
             if row.get("licence_number")
         ]
         if not lines:
-            raise NotFound("The LNHPD licence table came back empty.")
+            raise call_error(
+                NotFound,
+                "The LNHPD licence table came back empty.",
+                "Le tableau des licences de la BDPSNH est revenu vide.",
+            )
         return "\n".join(lines).encode("utf-8")
 
     return await cached_fetch("hc_lnhpd:index", constants.INDEX_TTL_SECONDS, fetch)

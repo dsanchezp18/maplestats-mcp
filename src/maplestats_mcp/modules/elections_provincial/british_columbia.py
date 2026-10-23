@@ -33,6 +33,7 @@ from maplestats_mcp.modules.elections_provincial.common import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import UpstreamError
 from maplestats_mcp.shared.executor import run_parse
+from maplestats_mcp.shared.fr_typography import call_error
 
 _REQUIRED = {
     "EVENT_NAME",
@@ -77,8 +78,11 @@ def parse(body: bytes) -> dict[str, list[District]]:
     """General election results in one file, by event year."""
     reader = csv.DictReader(io.StringIO(_decode(body)))
     if not _REQUIRED <= set(reader.fieldnames or []):
-        raise UpstreamError(
-            f"elections_provincial: BC results file lacks columns {sorted(_REQUIRED)}."
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: BC results file lacks columns {sorted(_REQUIRED)}.",
+            f"elections_provincial : le fichier des résultats de la C.-B. n'a pas les colonnes "
+            f"{sorted(_REQUIRED)}.",
         )
 
     # (year, ed_name) -> abbreviation, (year, ed_name, candidate, party) -> votes and winner flag
@@ -127,7 +131,11 @@ def parse(body: bytes) -> dict[str, list[District]]:
         finish_shares(district)
         by_year[year].append(district)
     if not by_year:
-        raise UpstreamError("elections_provincial: BC results file has no general elections.")
+        raise call_error(
+            UpstreamError,
+            "elections_provincial: BC results file has no general elections.",
+            "elections_provincial : le fichier des résultats de la C.-B. ne contient aucune élection générale.",
+        )
     return dict(by_year)
 
 
@@ -148,14 +156,21 @@ async def fetch(year: str) -> tuple[list[District], bool]:
         except UpstreamError:
             raise
         except Exception as exc:  # a bad cell raises ValueError or KeyError, not a typed error
-            raise UpstreamError(
+            raise call_error(
+                UpstreamError,
                 f"elections_provincial: could not read the BC results file {url} "
-                f"for {year}: {exc!r}"
+                f"for {year}: {exc!r}",
+                f"elections_provincial : impossible de lire le fichier des résultats de la C.-B. "
+                f"{url} pour {year} : {exc!r}",
             ) from exc
 
     by_year, cached = await cached_fetch(
         f"elections_provincial:bc-file:{url}", constants.CACHE_TTL_SECONDS, load
     )
     if year not in by_year:
-        raise UpstreamError(f"elections_provincial: BC file has no {year} general election.")
+        raise call_error(
+            UpstreamError,
+            f"elections_provincial: BC file has no {year} general election.",
+            f"elections_provincial : le fichier de la C.-B. ne contient pas l'élection générale de {year}.",
+        )
     return by_year[year], cached

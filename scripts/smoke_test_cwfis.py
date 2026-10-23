@@ -86,8 +86,13 @@ async def main() -> int:
         _require(near.stations[0].distance_km is not None, "distance missing")
         await _check("get_stations(name)", client.get_stations(name=first.name.strip()[:5]))
 
-    fc = await _check("get_forecast(KELOWNA)", client.get_forecast(station_name="kelowna"))
-    _require(len(fc.forecasts) >= 2, "forecast has fewer than 2 days")
+    try:
+        fc = await _check("get_forecast(KELOWNA)", client.get_forecast(station_name="kelowna"))
+    except NotFound:
+        # The SCRIBE layer is empty outside the fire season (0 features on 2026-10-20).
+        print("SKIP: firewx_scribe has no stations out of season")
+    else:
+        _require(len(fc.forecasts) >= 2, "forecast has fewer than 2 days")
 
     danger = await _check(
         "get_fire_danger(Kelowna)", client.get_fire_danger(latitude=49.9, longitude=-119.4)

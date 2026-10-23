@@ -559,7 +559,10 @@
         const badge = document.createElement("span");
         badge.className = "t-rank";
         badge.textContent = String(shown);
-        el.querySelector("summary .t-name").before(badge);
+        // Inside the name, not beside it: a third child of the summary's grid pushes
+        // every cell one column to the right.
+        badge.setAttribute("aria-hidden", "true");
+        el.querySelector("summary .t-name").prepend(badge);
         results.append(el);
         if (shown >= LIMIT) break;
       }

@@ -40,7 +40,13 @@ from maplestats_mcp.shared.errors import (
     UpstreamError,
     UpstreamUnavailable,
 )
-from maplestats_mcp.shared.fr_typography import NBSP, fr_or_en, french_spacing, lang_error
+from maplestats_mcp.shared.fr_typography import (
+    NBSP,
+    call_error,
+    fr_or_en,
+    french_spacing,
+    lang_error,
+)
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 Lang = Literal["en", "fr"]
@@ -589,9 +595,12 @@ async def _areas_any(number: str, district: District) -> tuple[list[manitoba.Are
     # 1999, 2003 and 2011 have one workbook for every division; it is read whole, once.
     member = by_district[0] if by_district else (members[0] if len(members) == 1 else None)
     if member is None:
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"elections_provincial: no voting-area file for {district.name} in "
-            f"{manitoba.files(number).by_area}."
+            f"{manitoba.files(number).by_area}.",
+            f"elections_provincial : aucun fichier de secteurs de vote pour {district.name} "
+            f"dans {manitoba.files(number).by_area}.",
         )
     parsed, cached = await cached_fetch(
         f"elections_provincial:mb-areas:{number}:{member.name}",
@@ -603,8 +612,10 @@ async def _areas_any(number: str, district: District) -> tuple[list[manitoba.Are
     for label, areas in parsed.items():
         if manitoba.key(label) == wanted:
             return areas, cached
-    raise UpstreamError(
-        f"elections_provincial: {member.name} has no voting areas for {district.name}."
+    raise call_error(
+        UpstreamError,
+        f"elections_provincial: {member.name} has no voting areas for {district.name}.",
+        f"elections_provincial : {member.name} n'a aucun secteur de vote pour {district.name}.",
     )
 
 

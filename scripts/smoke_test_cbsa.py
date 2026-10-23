@@ -15,7 +15,16 @@ async def main() -> int:
     ok = True
 
     everything = await client.border_wait_times()
-    unparsed = [c.office for c in everything.crossings if c.province is None or not c.updated_at]
+    # Since 2026-10-20 the feed itself says "Invalid DateTime" in the updated column
+    # of every row: that is the upstream value, so it is not a parse failure here.
+    unparsed = [
+        c.office
+        for c in everything.crossings
+        if c.province is None or (not c.updated_at and c.updated != "Invalid DateTime")
+    ]
+    stale = [c.office for c in everything.crossings if c.updated == "Invalid DateTime"]
+    if stale:
+        print(f"WARN: {len(stale)} crossings carry the upstream value 'Invalid DateTime'")
     print(f"OK: {everything.total_crossings} crossings, unparsed {unparsed}")
     # confirmed live 2026-10-03: 30 crossings, every location and zone parsed
     ok &= everything.total_crossings >= 25 and not unparsed

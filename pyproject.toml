@@ -1,6 +1,6 @@
 [project]
 name = "maplestats-mcp"
-version = "0.3.0"
+version = "0.4.0"
 description = "One MCP server for Canadian open data: Statistics Canada (tables, Census, PUMF microdata), the Bank of Canada, CMHC, federal agencies and provincial and municipal open-data portals, in English and French."
 readme = "README.md"
 license = "MIT"
@@ -40,7 +40,7 @@ dependencies = [
     # The server relies on fastmcp 4 internals: the module loader
     # (server.ModuleProvider), the BM25 tokenizer hook (shared/search.py)
     # and middleware (shared/timeouts.py).
-    "fastmcp>=4.0.3,<5",
+    "fastmcp>=4.0.3,<4.2",
     "httpx>=0.27.0",
     "h2>=4.1.0",
     "pydantic>=2.0.0",

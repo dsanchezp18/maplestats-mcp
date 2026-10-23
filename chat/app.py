@@ -428,6 +428,15 @@ async def chat(request: Request) -> JSONResponse:
         # A failure after a billed call stays counted, so retries cannot dodge the caps.
         if not (failure and failure.billed):
             refund(address)
+        # An unknown model (404) or a rejected key (401, 403) is a fault of this
+        # deployment, not a blip: "try again" would send people into a loop.
+        if getattr(cause, "status_code", None) in (401, 403, 404):
+            return JSONResponse(
+                {
+                    "error": "The demo is temporarily unavailable. Please try again later."
+                },
+                status_code=503,
+            )
         return JSONResponse(
             {"error": "The model or the data server did not answer. Try again."},
             status_code=502,

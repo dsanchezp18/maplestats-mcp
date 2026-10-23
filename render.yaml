@@ -18,10 +18,16 @@ services:
       # instance and the upstream government APIs.
       - key: MAPLE_REQUIRE_AUTH
         value: "0"
+      # Claude's connectors and the chat demo may reach this server from shared
+      # addresses, so one bucket can serve many people: check Render's request
+      # logs, and raise the limit (and the 60 a minute stated on the website's
+      # connect, FAQ and privacy pages) if it does.
       - key: MAPLE_RATE_LIMIT_REQUESTS
         value: "60"
+      # Slow file reads hold a slot for up to 2 minutes; 4 let a few of them
+      # turn every other caller away with a 503.
       - key: MAPLE_MAX_CONCURRENT_REQUESTS
-        value: "4"
+        value: "8"
       # Render's proxy sets X-Forwarded-For, so per-client rate limits work.
       - key: MAPLE_TRUST_PROXY_HEADERS
         value: "1"
@@ -31,10 +37,23 @@ services:
       # looks shared between callers.
       - key: MAPLE_TRUSTED_PROXY_HOPS
         value: "1"
+      # Cloudflare fronts onrender.com and sets this header to the caller's own
+      # address; the rightmost X-Forwarded-For entry may be a shared Cloudflare
+      # or Render address that would put many callers in one bucket. If the
+      # header does not arrive, the limiter falls back to X-Forwarded-For.
+      - key: MAPLE_CLIENT_IP_HEADER
+        value: CF-Connecting-IP
       # Counts calls per tool name and day, in memory, public at /stats; no
       # arguments or addresses are kept (shared/usage.py).
       - key: MAPLE_USAGE_STATS
         value: "1"
+      # The free instance has 512 MB: DuckDB spills to disk beyond this limit
+      # (patent, open-database and microdata queries), and the patent cache
+      # (the IPC table alone is 740 MB) is capped well under the free disk.
+      - key: MAPLE_DUCKDB_MEMORY_LIMIT
+        value: "256MB"
+      - key: MAPLE_IP_HORIZONS_CACHE_MAX_GB
+        value: "1.5"
       # PUMF tabulation downloads whole ZIPs; the free disk does not persist.
       - key: MAPLE_PUMF_TABULATE
         value: "0"
