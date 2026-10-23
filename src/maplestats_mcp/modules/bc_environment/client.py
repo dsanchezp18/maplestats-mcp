@@ -185,15 +185,13 @@ def _allowed(host: str) -> bool:
     return host in constants.ALLOWED_HOSTS
 
 
-async def _file(
-    url: str, ttl: int, lang: Lang, max_bytes: int = constants.MAX_FILE_BYTES
-) -> tuple[bytes, bool]:
+async def _file(url: str, ttl: int, lang: Lang) -> tuple[bytes, bool]:
     async def fetch() -> file_download.Downloaded:
         return await file_download.download(
             url,
             allow_host=_allowed,
             limiter_for=lambda _host: _LIMITER,
-            max_bytes=max_bytes,
+            max_bytes=constants.MAX_FILE_BYTES,
             context="BC Ministry of Environment",
         )
 
@@ -1523,15 +1521,13 @@ async def get_hydrometric_data(
     for name, _first, _last in plan:
         url = f"{constants.WATER_BASE}/{name}"
         current = name == f"{prefix}.csv"
-        if current and await remote_zip.remote_size(url) <= constants.HYDRO_MAX_FILE_BYTES:
-            body, cached = await _file(
-                url, constants.CACHE_TTL_HOURLY_SECONDS, lang, constants.HYDRO_MAX_FILE_BYTES
-            )
+        if current and await remote_zip.remote_size(url) <= constants.MAX_FILE_BYTES:
+            body, cached = await _file(url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
             cached_all = cached_all and cached
             _, rows = _rows(body)
             rows = [r for r in rows if r and r[0] == station_id]
         else:
-            # Archives, and a current file past HYDRO_MAX_FILE_BYTES (Stage.csv
+            # Archives, and a current file past MAX_FILE_BYTES (Stage.csv
             # by mid-November at its October 2026 growth), are sorted by station
             # then time, so one station's rows are read by range.
             cached_all = False

@@ -106,10 +106,6 @@ CACHE_TTL_LIST_SECONDS = 6 * 60 * 60
 CACHE_TTL_ARCHIVE_SECONDS = 6 * 60 * 60
 
 MAX_FILE_BYTES = 16 * 1024 * 1024
-# The current-water-year Stage.csv and Discharge.csv, sorted by station then
-# time, were 29 MB on 2026-10-20 (Stage) and 2.9 MB (Discharge). One station is
-# read from a downloaded copy up to this size and by range past it.
-HYDRO_MAX_FILE_BYTES = 64 * 1024 * 1024
 RANGE_CHUNK_BYTES = 128 * 1024
 RANGE_READ_MAX_BYTES = 24 * 1024 * 1024
 # Stage.csv carries 5- and 15-minute readings since October 2026: 28 MB after

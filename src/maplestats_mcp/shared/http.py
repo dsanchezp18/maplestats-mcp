@@ -285,8 +285,8 @@ def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
             "does not try to bypass it.",
             f"{host} est protégé par un défi anti-robot Cloudflare (HTTP {response.status_code}, "
             "Cf-Mitigated : challenge) que les clients automatisés ne peuvent pas franchir ; ce "
-            "service est donc indisponible depuis MapleStats tant que son éditeur ne le lève "
-            "pas. MapleStats n'essaie pas de le contourner.",
+            "service est donc indisponible depuis MapleStats tant que son éditeur ne le "
+            "lève pas. MapleStats n'essaie pas de le contourner.",
         )
 
 

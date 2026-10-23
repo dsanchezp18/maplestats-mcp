@@ -314,7 +314,7 @@ def test_station_summary_restarts_and_keeps_newest_time():
 
 
 async def test_oversized_current_file_reads_one_station_by_range(monkeypatch):
-    """Past HYDRO_MAX_FILE_BYTES the current file is read by range instead."""
+    """Past MAX_FILE_BYTES the current file is read by range instead."""
     header = (
         "Location ID, Location Name, Status, Latitude, Longitude, Date/Time(UTC), "
         "Parameter, Value, Unit, Grade"
@@ -328,7 +328,7 @@ async def test_oversized_current_file_reads_one_station_by_range(monkeypatch):
             )
     body = crlf("\n".join(lines))
     _fake_remote(monkeypatch, f"{constants.WATER_BASE}/Stage.csv", body)
-    monkeypatch.setattr(constants, "HYDRO_MAX_FILE_BYTES", 100)
+    monkeypatch.setattr(constants, "MAX_FILE_BYTES", 100)
     monkeypatch.setattr(client, "water_year_start", lambda: "2026-10-01 00:00:00")
     result = await bc_env_get_streamflow("08HA0022", parameter="stage", start="2026-10-01", limit=3)
     assert result.files == ["Stage.csv"]
