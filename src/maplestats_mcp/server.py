@@ -47,6 +47,7 @@ from maplestats_mcp.catalogue import (
     read_catalogue,
 )
 from maplestats_mcp.shared import search
+from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
@@ -569,6 +570,13 @@ def build_server() -> FastMCP:
         """When and how to offer the user a bug report for this server, with
         the template to fill in. Read it when a tool misbehaves."""
         return REPORT_ISSUE_TEMPLATE
+
+    @mcp.resource("docs://status")
+    def upstream_status_doc() -> str:
+        """Upstream hosts MapleStats has paused after repeated failures (EN/FR),
+        with when each is tried again. Read it when tools for one source keep
+        failing with UpstreamUnavailable."""
+        return render_status()
 
     return mcp
 

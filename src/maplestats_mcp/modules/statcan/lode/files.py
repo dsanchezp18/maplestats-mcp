@@ -42,6 +42,7 @@ from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.file_download import check_redirect
 from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import (
+    counted_once,
     is_retryable,
     new_client,
     request_headers,
@@ -231,6 +232,7 @@ async def local_member(url: str, member: str) -> tuple[Path, bool]:
 # --- range previews -----------------------------------------------------
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(5),

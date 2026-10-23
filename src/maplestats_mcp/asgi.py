@@ -25,7 +25,7 @@ from maplestats_mcp.shared.security import (
     with_icon_routes,
     with_stats_endpoint,
 )
-from maplestats_mcp.shared.usage import STATS
+from maplestats_mcp.shared.usage import public_snapshot
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 
@@ -81,7 +81,7 @@ def build_asgi_app():
     healthy = with_health_endpoint(iconed, version=__version__)
     if not config.get_usage_stats_enabled():
         return healthy
-    return with_stats_endpoint(healthy, snapshot=STATS.snapshot)
+    return with_stats_endpoint(healthy, snapshot=public_snapshot)
 
 
 app = build_asgi_app()

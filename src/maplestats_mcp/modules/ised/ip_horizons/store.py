@@ -28,10 +28,12 @@ from pathlib import Path
 from maplestats_mcp import config
 from maplestats_mcp.modules.ised.ip_horizons.schemas import IpHorizonsFile
 from maplestats_mcp.shared import duck
+from maplestats_mcp.shared.breaker import CircuitOpen
 from maplestats_mcp.shared.capped_io import FileTooLarge, check_size, copy_capped
 from maplestats_mcp.shared.errors import NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.fr_typography import call_error
+from maplestats_mcp.shared.http import counted_once
 
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _DOWNLOAD_ATTEMPTS = 3
@@ -104,6 +106,7 @@ async def _fetch_zip(file: IpHorizonsFile, zip_path: Path) -> None:
                 handle.write(chunk)
 
 
+@counted_once
 async def _download(file: IpHorizonsFile, target: Path) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     zip_path = target.with_suffix(".zip.part")
@@ -111,7 +114,7 @@ async def _download(file: IpHorizonsFile, target: Path) -> Path:
         try:
             await _fetch_zip(file, zip_path)
             break
-        except (NotFound, FileTooLarge):
+        except (NotFound, FileTooLarge, CircuitOpen):
             zip_path.unlink(missing_ok=True)
             raise
         except Exception as exc:

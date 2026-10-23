@@ -63,6 +63,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import (
+    counted_once,
     get_raw,
     is_retryable,
     new_client,
@@ -143,6 +144,7 @@ def _parse_date(date: str) -> tuple[date_cls, str]:
     return parsed, ARCHIVE_URL.format(date=parsed.strftime("%Y%m%d"))
 
 
+@counted_once
 @retry(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(4),
