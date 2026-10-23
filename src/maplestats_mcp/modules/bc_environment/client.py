@@ -1527,7 +1527,7 @@ async def get_hydrometric_data(
             _, rows = _rows(body)
             rows = [r for r in rows if r and r[0] == station_id]
         else:
-            # Archives, and a current file past HYDRO_MAX_FILE_BYTES (Stage.csv
+            # Archives, and a current file past MAX_FILE_BYTES (Stage.csv
             # by mid-November at its October 2026 growth), are sorted by station
             # then time, so one station's rows are read by range.
             cached_all = False
