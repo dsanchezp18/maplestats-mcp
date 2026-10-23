@@ -6,6 +6,15 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-20
+
+### Removed
+
+- Smithery publishing: the release workflow's `smithery` job, `scripts/build_smithery_bundle.py`,
+  the pinned CLI in `.github/smithery/`, and the Smithery badge in the README and site.
+  Smithery answered the 0.4.0 publish with HTTP 403 ("Updating servers has been removed")
+  and shuts down its API and CLI on 2026-10-31.
+
 ### Fixed
 
 - `bc_env_list_streamflow_gauges` and `bc_env_get_streamflow` with `parameter="stage"`:
@@ -357,7 +366,8 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.1.1...v0.2.0

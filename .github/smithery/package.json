@@ -1,9 +1,0 @@
-{
-  "name": "maplestats-smithery-publisher",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Pins the Smithery CLI that release.yml uses to publish the MCPB bundle. Installed with npm ci so the lockfile's integrity hashes are checked. To bump: edit the version here, run npm install --package-lock-only --ignore-scripts in this folder, and commit both files.",
-  "dependencies": {
-    "@smithery/cli": "4.11.1"
-  }
-}

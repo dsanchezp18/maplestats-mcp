@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import ast
-import importlib.util
 import json
 import re
-import sys
 import tomllib
-import zipfile
 from pathlib import Path
 
 import yaml
@@ -51,26 +48,6 @@ def test_release_pins_a_real_publisher_checksum():
     assert set(match.group(1)) != {"0"}
 
 
-def test_smithery_bundle_launches_this_release(tmp_path, monkeypatch):
-    # Smithery installs whatever version the bundle pins, and rejects a
-    # release without tools or input schemas.
-    monkeypatch.setattr(sys, "argv", ["build_smithery_bundle.py", str(tmp_path)])
-    spec = importlib.util.spec_from_file_location(
-        "build_smithery_bundle", ROOT / "scripts" / "build_smithery_bundle.py"
-    )
-    assert spec is not None and spec.loader is not None
-    script = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(script)
-    assert script.main() == 0
-
-    with zipfile.ZipFile(tmp_path / f"maplestats-mcp-{__version__}.mcpb") as bundle:
-        manifest = json.loads(bundle.read("manifest.json"))
-    assert manifest["version"] == __version__
-    assert manifest["server"]["type"] == "python"
-    assert manifest["server"]["mcp_config"]["args"] == [f"maplestats-mcp=={__version__}"]
-    assert manifest["tools"] and all("inputSchema" in tool for tool in manifest["tools"])
-
-
 def _workflow(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
@@ -109,24 +86,6 @@ def test_setup_uv_matches_the_dockerfile_pin():
                 seen += 1
                 assert str(step["with"].get("version")) in versions, path.name
     assert seen > 0
-
-
-def test_smithery_cli_is_installed_from_a_lockfile():
-    # The publish step holds SMITHERY_API_KEY, so the CLI must come from a lockfile
-    # whose hashes npm checks, not from `npx -y` resolving a version at run time.
-    release = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
-    assert "npx" not in release
-    assert "npm ci --ignore-scripts --prefix .github/smithery" in release
-    assert ".github/smithery/node_modules/.bin/smithery" in release
-    folder = ROOT / ".github" / "smithery"
-    package = json.loads((folder / "package.json").read_text(encoding="utf-8"))
-    version = package["dependencies"]["@smithery/cli"]
-    assert re.fullmatch(r"[0-9]+[.][0-9]+[.][0-9]+", version), "pin an exact version"
-    lock = json.loads((folder / "package-lock.json").read_text(encoding="utf-8"))
-    assert lock["packages"]["node_modules/@smithery/cli"]["version"] == version
-    for name, entry in lock["packages"].items():
-        if name:
-            assert entry["integrity"].startswith("sha512-"), name
 
 
 def test_ci_runs_the_r_and_julia_reproduce_tests():
