@@ -18,7 +18,7 @@ MODULE_DESCRIPTION = (
     "review outcomes), read from the HTML in English or French with numbers parsed; and the "
     "2020 and 2021 lists of patented medicines reported (DIN, brand, ingredient, ATC, "
     "company, price review status). No data files exist behind these pages. NPDUIS drug "
-    "plan data is CIHI's (cihi_)."
+    "plan data are CIHI's (cihi_)."
 )
 MODULE_DESCRIPTION_FR = (
     "Rapports annuels du Conseil d'examen du prix des médicaments brevetés (CEPMB) sur "

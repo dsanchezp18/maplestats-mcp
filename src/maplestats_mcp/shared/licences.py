@@ -135,7 +135,7 @@ REPRESENT_TERMS = (
 )
 
 TERMS_NOT_STATED = (
-    "Terms not stated by the publisher: no licence or terms of use were found for this data. "
+    "Terms not stated by the publisher: no licence or terms of use were found for these data. "
     "Do not assume it is openly licensed; check with the publisher before redistributing."
 )
 

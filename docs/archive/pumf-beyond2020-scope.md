@@ -67,7 +67,7 @@ The first draft said to skip IVT because the tables checked have CSV
 twins. That holds for the recent census data tables: the 2016 and 2006
 download pages checked offer CSV, TAB and SDMX next to IVT. It doesn't
 hold everywhere. mountainMath's [canivt](https://github.com/mountainMath/canivt)
-(MIT, v0.5.0, July 2026) shows that some data exists only as IVT:
+(MIT, v0.5.0, July 2026) shows that some data exist only as IVT:
 
 - custom census tabulations, many hosted on the Borealis dataverse;
 - older census releases that predate the SDMX and CSV products.

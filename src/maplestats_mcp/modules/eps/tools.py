@@ -122,7 +122,7 @@ async def eps_get_last_load_date(lang: Lang = "en") -> LoadDate:
     """Return the date the Edmonton Police Service last refreshed its
     Community Safety Data Portal occurrence data (EPS's own load record).
 
-    Use for: checking how current EPS crime data is before analysing it.
+    Use for: checking how current EPS crime data are before analysing it.
     Keywords: Edmonton, police, EPS, data freshness, last updated,
     refresh date, community safety, crime data, load date.
     Mots-clés : Edmonton, Service de police d'Edmonton, police,

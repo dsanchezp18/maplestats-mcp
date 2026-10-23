@@ -477,7 +477,7 @@ async def summarize_occurrences(
 
 
 async def get_last_load_date(*, lang: str = "en") -> LoadDate:
-    """Return EPS's own record of when the occurrence data was last loaded."""
+    """Return EPS's own record of when the occurrence data were last loaded."""
     parsed, raw, was_cached = await _load_date(lang)
     return LoadDate(
         last_load_date=parsed,

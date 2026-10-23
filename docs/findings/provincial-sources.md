@@ -504,7 +504,7 @@ licence. Labour force and CPI tables on the same page repeat StatCan.
 `modules/elections_provincial/` (3 tools), with Saskatchewan added 2026-10-02 and
 Manitoba 2026-10-03 (a fourth tool, by voting area; see the sections below); Ontario not
 built (terms of use).
-Each source's terms were read before any data was requested.
+Each source's terms were read before any data were requested.
 
 | Province | Source | Terms (wording) | Decision |
 |---|---|---|---|
@@ -549,7 +549,7 @@ constituency). Earlier elections (1905 to 2007) are PDFs only. The ten
 by-elections since 2014 each have a CSV; they are not read. The results of the
 2024 election are also on `results.election.sk.ca`, which did not answer.
 
-**Terms: none found.** Read before any data was requested, on 2026-10-02:
+**Terms: none found.** Read before any data were requested, on 2026-10-02:
 
 - The footer links are Accessibility, Privacy policy, Legislation and News
   releases, and the only text is "Copyright (c) 2025 Elections Saskatchewan".
@@ -557,7 +557,7 @@ by-elections since 2014 each have a CSV; they are not read. The results of the
   page covers personal information, cookies and Google Analytics only; the
   Legislation, FAQ, Links, Media and Accessibility pages and the results page
   itself carry no licence, reuse or scraping wording.
-- No open-data licence is named, and the data is not on the provincial open
+- No open-data licence is named, and the data are not on the provincial open
   data portal (`publications.saskatchewan.ca`'s Crown copyright and
   non-commercial reproduction terms, which ruled out the Bureau of Statistics,
   belong to saskatchewan.ca and are not stated on elections.sk.ca).

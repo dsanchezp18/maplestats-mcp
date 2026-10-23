@@ -3,7 +3,7 @@
 The CGC publishes its statistics as CSV files on grainscanada.gc.ca, not
 through an API. The federal CKAN records under organization `cgc-ccg` point
 at some of these files but stop at crop year 2024-25 and are not
-DataStore-active, so current data is only reachable here. Checked live
+DataStore-active, so current data are only reachable here. Checked live
 2026-09-26:
 
 - Grain Statistics Weekly: one long-format CSV per crop year (2013-14 on),

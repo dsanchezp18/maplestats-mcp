@@ -35,7 +35,7 @@ async def statcan_sdg_search_indicators(
     indicator sets on the same "Open SDG" platform, confirmed live;
     pick the one matching what the caller means by "SDG indicator X.Y.Z".
     Leave `query` empty to list every indicator in that framework. This
-    data has no WDS/SDMX cube/PID equivalent -- it is not otherwise
+    data have no WDS/SDMX cube/PID equivalent -- they are not otherwise
     reachable through any other tool in this codebase.
     Keywords: statcan, SDG, sustainable development goals, indicator,
     UN, 2030 agenda, goal, target.

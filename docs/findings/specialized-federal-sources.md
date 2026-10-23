@@ -1270,7 +1270,7 @@ terms from its bilingual code list; malformed parameters answer a Tomcat
 HTML 404, mapped to InvalidInput.
 
 CanVec and other NRCan datasets remain reachable through `ckan_*`
-(portal="federal"); NRCan energy-use data is `nrcan_energy_use_` (row
+(portal="federal"); NRCan energy-use data are `nrcan_energy_use_` (row
 above).
 
 ## Earthquakes Canada (NRCan)
@@ -1473,13 +1473,13 @@ published only as an HTML summary and a PDF infographic, so
 2026-09-25) reads that page's three tables and headline prose into numbers
 (EN/FR) and points to the proactive-disclosure grants and contributions
 DataStore (1.3 million records) the projects were identified from; the
-closest machine-readable data is TBS's Horizontal Innovation and Clean
+closest machine-readable data are TBS's Horizontal Innovation and Clean
 Technology Review tables (2007-2016 CSVs on open.canada.ca, via `ckan_*`);
 NRCan's cleantech-companies page is one small HTML table (2,470 companies by
 industry and province, June 2025) plus Power BI, and the 2025 Cleantech
 Industry Survey is a PDF plus Power BI.
 
-Program-level investment data is not published; we will not request it.
+Program-level investment data are not published; we will not request them.
 
 Checked 2026-09-24: its statistics are StatCan's Environmental and Clean
 Technology Products Economic Account (tables 36-10-0366, -0370, -0371,
@@ -1507,7 +1507,7 @@ live in English and French:
 - 382 tables across the seven reports (31 in 2023, up to 63 in
   2020-2022), 380 of them with a title. Most charts carry their numbers in
   a "Figure description" `<details>` table after the image, so the chart
-  data is covered too. Titles are a `<b>` or `<strong>` before the table
+  data are covered too. Titles are a `<b>` or `<strong>` before the table
   (an `<h3>` for Figure 5 in 2019-2022); a `<p>` that starts "Figure 1
   illustrates" (2018) is prose and is skipped. Two 2021 tables carry
   their real title as `<caption>`, which wins. One title can own several

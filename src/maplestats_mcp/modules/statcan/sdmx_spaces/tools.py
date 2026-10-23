@@ -4,7 +4,7 @@ Two spaces beyond the main table service (sdmx_get_data): `ccei`, the Canadian
 Centre for Energy Information (ECCC greenhouse-gas inventory and projections, air
 pollutants, NRCan energy efficiency, plus StatCan table mirrors) and `stcshared`,
 the shared space (rural, CITH internal trade, QOL, PCEIP, MEA, ISC drinking-water
-advisories). Data is SDMX-CSV 2.0, structures SDMX-JSON 1.0.
+advisories). Data are SDMX-CSV 2.0, structures SDMX-JSON 1.0.
 """
 
 from __future__ import annotations

@@ -278,7 +278,7 @@ async def search_ivt(
 # 2. The `oai_ddi` export gives study-level DDI for every dataset; the full
 #    `ddi` export adds variable-level metadata but answers HTTP 403
 #    {"message": "Export Failed"} for datasets without tabular variables
-#    (e.g. a CORA poll whose only data is a .csv/.dta upload), which is
+#    (e.g. a CORA poll whose only data are a .csv/.dta upload), which is
 #    treated as "no variable metadata", not as an error.
 # 3. `restricted` on a file is the only access signal: false means anyone can
 #    download without logging in, even where the DDI terms still say the data

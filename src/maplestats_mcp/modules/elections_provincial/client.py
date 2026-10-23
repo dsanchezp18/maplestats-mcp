@@ -73,7 +73,7 @@ _NOTES = {
         ),
         (
             "British Columbia, 2005 to 2024: every candidate, summed from the poll-level open "
-            "data (Elections BC Open Data Licence). By-elections are in that data but not read."
+            "data (Elections BC Open Data Licence). By-elections are in those data but not read."
         ),
         (
             "Saskatchewan, 2011 to 2024: every candidate, summed from Elections Saskatchewan's "
