@@ -211,9 +211,10 @@ assumption shared by the code and its tests.
    `PORTAL_PLACES` there too.
 9. Regenerate the tool catalogue (`uv run python
    scripts/build_tool_catalogue.py`) and commit `tool_catalogue.json`. If you
-   removed or reshaped an existing tool, note it in the CHANGELOG (see
-   "Breaking changes to the tool surface").
-10. Run the full gate below before considering it done.
+   removed or reshaped an existing tool, say so in a changelog fragment (see
+   "Changelog" and "Breaking changes to the tool surface").
+10. Add a changelog fragment for the new source (see "Changelog").
+11. Run the full gate below before considering it done.
 
 ## Development commands
 
@@ -242,6 +243,23 @@ client session. Keep tests independent of order (each one mocks or
 resets the module-level state it reads), so a run with
 `uv run --with pytest-randomly pytest` passes too.
 
+### Changelog
+
+**Do not edit the Unreleased section of `CHANGELOG.md`.** Each change
+that belongs in the changelog adds one file, `changelog.d/<slug>.md`
+(lower case, digits and hyphens), with one or more Keep a Changelog
+sections (`### Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`,
+`Security`) and their entries, written as they will read in the release
+notes; `changelog.d/README.md` has an example. Parallel pull requests
+used to conflict on that section every time, and the second one to merge
+needed a rebase and a second CI run. `tests/test_changelog.py` fails on a
+malformed fragment or an entry added under Unreleased. To see the next
+release's notes:
+
+```bash
+uv run python scripts/build_changelog.py --preview
+```
+
 ### Breaking changes to the tool surface
 
 `tests/test_tool_surface.py` compares `tool_catalogue.json` with its
@@ -251,9 +269,9 @@ changes (a tool or parameter removed or renamed, a type narrowed, a
 required parameter added, an output field removed or made nullable),
 additive ones, and others (titles, annotations, defaults, anything it
 cannot name). Docstrings and schema descriptions are left out. **A
-breaking change needs a CHANGELOG note:** the test fails until every
-tool with one is named under Unreleased in `CHANGELOG.md`, saying what
-replaces it; a `` `prefix_*` `` in backticks covers a family, as 0.4.0's
+breaking change needs a changelog note:** the test fails until every
+tool with one is named in a `changelog.d/` fragment (or under Unreleased
+in `CHANGELOG.md`), saying what replaces it; a `` `prefix_*` `` in backticks covers a family, as 0.4.0's
 removal of `statcan_census_tables_*` should have been noted. To see the
 whole classified list:
 
@@ -289,6 +307,25 @@ or directly:
 ```bash
 uv run python scripts/smoke_test.py
 ```
+
+## Releasing
+
+On a `release/<version>` branch:
+
+1. Set the version in `pyproject.toml`, `src/maplestats_mcp/__init__.py`
+   and both places in `server.json`, then run `uv lock`
+   (`tests/test_release.py` checks they agree).
+2. Write the changelog: `uv run python scripts/build_changelog.py
+   --version <version>` moves every `changelog.d/` fragment (after
+   anything left under Unreleased) into a `## [<version>] - <date>`
+   section, dated today in UTC unless `--date` says otherwise, and
+   deletes the fragments. Read the result and add a lead paragraph under
+   the heading if the release needs one.
+3. Update the `--base` tag in "Breaking changes to the tool surface"
+   above, run the full gate and merge the pull request.
+4. Tag the merge commit `v<version>` and push the tag:
+   `.github/workflows/release.yml` publishes to PyPI, the MCP Registry and
+   GitHub Releases.
 
 ## Website
 

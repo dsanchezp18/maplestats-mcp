@@ -7,8 +7,9 @@ of HEAD and origin/main, and sorts the differences into breaking changes (a
 tool or parameter removed or renamed, a type narrowed, a required parameter
 added, an output field removed or made nullable), additive ones, and others
 to read by hand. tests/test_tool_surface.py fails while a breaking change's
-tool is not named in CHANGELOG.md's Unreleased section; a `prefix_*` in
-backticks names a whole family. To see the full list:
+tool is not named in a changelog.d/ fragment (or CHANGELOG.md's Unreleased
+section); a `prefix_*` in backticks names a whole family. To see the full
+list:
 
     uv run python scripts/check_tool_surface.py [--base REF]
 
@@ -33,6 +34,7 @@ from typing import Any, Literal
 ROOT = Path(__file__).resolve().parents[1]
 CATALOGUE = "src/maplestats_mcp/tool_catalogue.json"
 CHANGELOG = ROOT / "CHANGELOG.md"
+FRAGMENTS = ROOT / "changelog.d"
 DEFAULT_BASE = "origin/main"
 
 Kind = Literal["breaking", "additive", "other"]
@@ -121,6 +123,16 @@ def unreleased_notes(changelog: str) -> str:
         r"^## \[Unreleased\][^\n]*\n(.*?)(?=^## \[|\Z)", changelog, re.MULTILINE | re.DOTALL
     )
     return match.group(1) if match else ""
+
+
+def pending_notes(changelog: str, fragments: Path = FRAGMENTS) -> str:
+    """Everything the next release will say: the Unreleased section and the fragments.
+
+    scripts/build_changelog.py assembles the same files; its README is not a fragment.
+    """
+    files = sorted(fragments.glob("*.md")) if fragments.is_dir() else []
+    texts = [path.read_text(encoding="utf-8") for path in files if path.name != "README.md"]
+    return "\n".join([unreleased_notes(changelog), *texts])
 
 
 def acknowledged(tool: str, notes: str) -> bool:
@@ -469,7 +481,7 @@ def format_changes(changes: list[Change], missing: list[Change], base: str) -> s
         tools = ", ".join(sorted({change.tool for change in missing}))
         lines += [
             "",
-            f"Name these tools under Unreleased in CHANGELOG.md, with what replaces them: {tools}.",
+            f"Name these tools in a changelog.d/ fragment, with what replaces them: {tools}.",
             "A `prefix_*` in backticks covers a family of tools.",
         ]
     return "\n".join(lines)
@@ -487,7 +499,7 @@ def main() -> int:
     if not changes:
         print(f"No tool surface changes since {base[:12]}.")
         return 0
-    missing = unacknowledged(changes, unreleased_notes(CHANGELOG.read_text(encoding="utf-8")))
+    missing = unacknowledged(changes, pending_notes(CHANGELOG.read_text(encoding="utf-8")))
     print(format_changes(changes, missing, base))
     return 1 if missing else 0
 
