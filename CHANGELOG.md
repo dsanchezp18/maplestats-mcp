@@ -6,6 +6,10 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-24
+
+0.4.1 was prepared on 2026-10-20 but never published, so its changes ship here too.
+
 ### Added
 
 - A circuit breaker per upstream host (`shared/breaker.py`). After 5 failures in a row
@@ -48,8 +52,16 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   `MAPLE_TRUSTED_PROXY_HOPS`, `MAPLE_DUCKDB_MEMORY_LIMIT`, `MAPLE_DELTA_MAX_SCAN_MB`,
   `MAPLE_DELTA_MAX_SCAN_SECONDS` and `MAPLE_DELTA_INDEX_DIR`, which the README already
   documented, and a test fails when a setting in `config.py` is missing from it.
-
-## [0.4.1] - 2026-10-20
+- Hosting: the public endpoint keeps Render's 750 free instance hours to itself. The chat
+  demo runs in its own Render workspace from `chat/render.yaml`, at
+  `https://maplestats-chat-ydx4.onrender.com`, and the site links there. The FAQ (English and
+  French) and README say what a cold start costs (35 s measured, up to a minute) and that the
+  hosted endpoint is off until the 1st if the month's hours run out.
+- Dependabot opens one grouped pull request a month for each ecosystem, covering the server
+  and the chat demo together, and collects security fixes into one pull request instead of
+  one per advisory and lockfile.
+- Dependencies: `duckdb` 2.0 (the open-database and microdata readers were checked against
+  it) and, for the chat demo, `anthropic` 2.1.
 
 ### Removed
 
@@ -57,6 +69,8 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   the pinned CLI in `.github/smithery/`, and the Smithery badge in the README and site.
   Smithery answered the 0.4.0 publish with HTTP 403 ("Updating servers has been removed")
   and shuts down its API and CLI on 2026-10-31.
+- `keepalive.yml`: GitHub ran its 10-minute schedule only about every four hours, so it never
+  kept the free instance awake.
 
 ### Fixed
 
@@ -82,6 +96,13 @@ uses [semantic versioning](https://semver.org/) while it is in beta.
   time), the smoke job timeout is 40 minutes, `smoke_test_ab_economic` skips on a GitHub
   runner that Cloudflare challenges, as `smoke_test_modules` already did, and
   `smoke_test_bc_environment` reads a current stage series.
+
+### Security
+
+- `fastmcp` 4.1.3 in the lockfile. 4.1.2 applies component authorization after transforms
+  and stops denied resources falling through matching templates. `certifi` 2026.10.23 and
+  `opentelemetry-api` 1.45.1 clear the other open Dependabot alerts. Installs with `uvx`
+  already resolve these within `pyproject.toml`'s ranges.
 
 ## [0.4.0] - 2026-10-20
 
@@ -428,8 +449,8 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.1...HEAD
-[0.4.1]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...v0.4.1
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...v0.4.2
 [0.4.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.1.1...v0.2.0
