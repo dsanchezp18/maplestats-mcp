@@ -1,7 +1,7 @@
 name: Docker images
 
 # Render deploys the server and the chat demo straight from these Dockerfiles
-# (render.yaml), so a base-image bump or a dependency without a wheel for the
+# (render.yaml and chat/render.yaml), so a base-image bump or a dependency without a wheel for the
 # image's Python must fail here, not on the next deploy. ci.yml's test matrix
 # runs uv's own Python, not the image. Kept out of ci.yml so a registry outage
 # cannot hold back the website, which publishes only after CI passes.

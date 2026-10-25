@@ -1,9 +1,8 @@
 name: uptime
 
-# keepalive.yml only checks that /health answers, which stays true when the MCP
-# endpoint itself is broken. This runs what a client does (initialize, list the
-# tools, search them) and fails when any step does, so GitHub emails the repo
-# owner about the failed run. It sends no real question: the search phrase is
+# /health stays up when the MCP endpoint itself is broken, so this runs what a
+# client does (initialize, list the tools, search them) and fails when any step
+# does, so GitHub emails the repo owner about the failed run. It sends no real question: the search phrase is
 # fixed and the server counts it by tool name only.
 on:
   schedule:
