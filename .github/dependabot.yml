@@ -2,37 +2,37 @@
 # pins its base image by digest, so these entries are what keep those pins
 # current. Python dependencies are locked in uv.lock (and chat/uv.lock);
 # Dependabot's `uv` ecosystem updates pyproject.toml and the lockfile together.
+#
+# Monthly, and grouped: one entry covers both uv projects, so the server and
+# the chat demo move in one pull request. Groups apply to version updates
+# only unless they say otherwise, so security fixes get a group of their own;
+# without it each advisory opened its own pull request (six in October 2026).
+# Major versions stay ungrouped: each can break the server and needs review.
 version: 2
 
 updates:
   - package-ecosystem: uv
-    directory: /
+    directories:
+      - /
+      - /chat
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     groups:
       python-minor-and-patch:
+        applies-to: version-updates
         update-types:
           - minor
           - patch
-
-  # The chat demo is its own project with its own lock, and it holds the model
-  # API key, so it needs update pull requests more than the root project does.
-  - package-ecosystem: uv
-    directory: /chat
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      python-minor-and-patch:
-        update-types:
-          - minor
-          - patch
+      python-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       actions:
         patterns:
@@ -45,7 +45,7 @@ updates:
       - /
       - /chat
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       base-image:
         patterns:
