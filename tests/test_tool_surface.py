@@ -5,7 +5,7 @@ statcan_census_tables_* and statcan_census_profile_2016_* tools) with
 nothing to flag it. scripts/check_tool_surface.py compares
 tool_catalogue.json with its version at the merge base of HEAD and
 origin/main; this test fails while a breaking change's tool is missing from
-CHANGELOG.md's Unreleased section. It skips where there is no git history
+the changelog.d/ fragments and CHANGELOG.md's Unreleased section. It skips where there is no git history
 to compare with (an sdist, a shallow clone without origin/main), except
 under TOOL_SURFACE_REQUIRED=1, which CI sets.
 """
@@ -50,7 +50,7 @@ def test_breaking_changes_since_main_are_in_the_changelog():
         pytest.skip(f"cannot compare the tool surface: {base}")
     new = surface.surface(surface.read_catalogue())
     changes = surface.diff_surfaces(surface.surface(old), new)
-    notes = surface.unreleased_notes(surface.CHANGELOG.read_text(encoding="utf-8"))
+    notes = surface.pending_notes(surface.CHANGELOG.read_text(encoding="utf-8"))
     missing = surface.unacknowledged(changes, notes)
     if missing:
         pytest.fail(surface.format_changes(changes, missing, base), pytrace=False)
@@ -280,6 +280,17 @@ def test_unreleased_notes_stop_at_the_next_release():
     assert surface.unreleased_notes("# Changelog\n") == ""
 
 
+def test_pending_notes_read_the_fragments_too(tmp_path):
+    (tmp_path / "drop-demo-get.md").write_text("### Removed\n\n- `demo_get`: use `demo_fetch`.\n")
+    (tmp_path / "README.md").write_text("How to write a fragment about `readme_tool`.\n")
+    changelog = "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- `demo_list` pages.\n"
+    notes = surface.pending_notes(changelog, tmp_path)
+    assert "demo_get" in notes and "demo_list" in notes and "readme_tool" not in notes
+    assert surface.pending_notes(changelog, tmp_path / "none") == surface.unreleased_notes(
+        changelog
+    )
+
+
 def test_a_breaking_change_counts_as_noted_when_the_tool_or_its_family_is_named():
     notes = "- Removed `statcan_census_tables_*`; `demo_get` takes `ref_year` now."
     assert surface.acknowledged("demo_get", notes)
@@ -304,4 +315,4 @@ def test_only_unnoted_breaking_changes_fail():
     breaking, additive = summary.split("Additive changes")
     assert "demo_get: parameter `year`: removed  [not in CHANGELOG]" in breaking
     assert "demo_get: parameter `limit`: added" in additive
-    assert "CHANGELOG.md" in summary and "0123456789ab" in summary
+    assert "changelog.d/" in summary and "0123456789ab" in summary

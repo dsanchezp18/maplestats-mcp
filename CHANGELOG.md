@@ -3,6 +3,8 @@
 All notable changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 uses [semantic versioning](https://semver.org/) while it is in beta.
+Changes not yet released are in [`changelog.d/`](changelog.d/), one file
+each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
