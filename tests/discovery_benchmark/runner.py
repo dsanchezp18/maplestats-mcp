@@ -11,8 +11,8 @@
 
 `search_tools` returns at most 5 tools (the server's `max_results`), so Recall@10
 cannot be read from it. The runner therefore asks the real tool for its top 5
-(the contract a client sees) and a second `BM25SearchTransform(max_results=10)`
-over the same catalogue for ranks 6 to 10, and records whether the two agree on
+(the contract a client sees) and a second instance of the server's search
+transform (`max_results=10`, same MAPLE_SEARCH mode) for ranks 6 to 10, and records whether the two agree on
 the first five (`parity`). A parity mismatch means the second index no longer
 mirrors the server, and the numbers beyond rank 5 cannot be trusted.
 
@@ -44,11 +44,11 @@ from typing import Any
 import fastmcp
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
-from fastmcp.server.transforms.search import BM25SearchTransform
 from mcp.shared.exceptions import MCPError
 
 from maplestats_mcp.catalogue import tool_module
-from maplestats_mcp.server import mcp
+from maplestats_mcp.server import AnnotatedBM25SearchTransform, mcp
+from maplestats_mcp.shared import semantic
 
 # %% 0. Setup
 
@@ -361,7 +361,11 @@ def _source_ok(top1: str | None, accepted: frozenset[str], sources: dict[str, st
 
 
 async def run_search(
-    client: Client, ranker: BM25SearchTransform, tools: list[Any], q: Query, registry: Registry
+    client: Client,
+    ranker: AnnotatedBM25SearchTransform,
+    tools: list[Any],
+    q: Query,
+    registry: Registry,
 ) -> SearchOutcome:
     accepted = q.search_accepted
     started = time.perf_counter()
@@ -432,7 +436,7 @@ async def run_plan(client: Client, q: Query, registry: Registry) -> PlanOutcome:
 async def run_all(queries: Sequence[Query], registry: Registry) -> tuple[list[QueryResult], dict]:
     """Ask every query of both systems over one client session."""
     tools = [tool for tool in await mcp._list_tools() if tool.name not in ALWAYS_VISIBLE]
-    ranker = BM25SearchTransform(max_results=SEARCH_DEPTH)
+    ranker = AnnotatedBM25SearchTransform(max_results=SEARCH_DEPTH)
     results: list[QueryResult] = []
     async with Client(mcp) as client:
         # The first search builds the BM25 index of the whole catalogue; time it apart.
@@ -448,7 +452,11 @@ async def run_all(queries: Sequence[Query], registry: Registry) -> tuple[list[Qu
             if q.plan_expected:
                 row.plan = await run_plan(client, q, registry)
             results.append(row)
-    meta = {"tools_indexed": len(tools), "warmup_ms": round(warmup_ms, 1)}
+    meta = {
+        "tools_indexed": len(tools),
+        "warmup_ms": round(warmup_ms, 1),
+        "search_mode": semantic.search_mode(),
+    }
     return results, meta
 
 

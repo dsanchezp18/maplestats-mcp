@@ -6,6 +6,8 @@ and the server's FileSystemProvider imports every file under modules/.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from maplestats_mcp.modules.arcgis_hub.constants import PORTALS as ARCGIS_PORTALS
@@ -281,3 +283,42 @@ def test_no_topic_lists_a_term_twice_or_in_two_plural_forms():
                 if other != term and found and found.group(0) == other:
                     repeated.append((topic.key, term, other))
     assert not repeated, repeated
+
+
+def test_every_portal_named_by_a_query_step_exists():
+    # Admin-record steps (permits, licences, inspections) read a named dataset with the
+    # family's query tool and may name several portals in one purpose; each must exist.
+    families = {"ckan_": CKAN_PORTALS, "arcgis_hub_": ARCGIS_PORTALS, "socrata_": SOCRATA_PORTALS}
+    for step in _all_steps():
+        portals = next((p for prefix, p in families.items() if step.tool.startswith(prefix)), None)
+        if portals is None:
+            continue
+        for key in re.findall(r"portal='([a-z_]+)'", step.purpose):
+            assert key in portals, (step.tool, key)
+
+
+@pytest.mark.parametrize(
+    ("question", "absent"),
+    [
+        ("Work permits issued by country of citizenship", "building_permits"),
+        ("Nombre de permis d'études délivrés", "building_permits"),
+        ("Permis de conduire en Ontario", "building_permits"),
+        ("Development permits in Edmonton", "building_permits"),
+        ("Spectrum licences held by Rogers", "business_licences"),
+        ("Open Government Licence terms", "business_licences"),
+    ],
+)
+def test_other_permits_and_licences_stay_out_of_admin_topics(question, absent):
+    assert absent not in {t.topic for t in client.plan(question).topics}
+
+
+def test_admin_topics_in_french():
+    result = client.plan("Inspections des restaurants à Montréal", lang="fr")
+    topic = result.topics[0]
+    assert topic.topic == "food_inspections"
+    assert topic.label == "Inspections des restaurants et des établissements alimentaires"
+    assert topic.steps[0].purpose.startswith("contrevenants et amendes")
+    assert "portal='montreal'" in topic.steps[0].purpose
+    permits = client.plan("Building permits issued in Halifax", lang="fr").topics[0]
+    assert permits.label == "Permis de bâtir et construction"
+    assert permits.steps[0].purpose.startswith("registres de permis d'Halifax")

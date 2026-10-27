@@ -84,11 +84,14 @@ async def ckan_search_datasets(
     "metadata_modified desc". `lang` picks French titles on bilingual
     portals (federal, on); Québec and Montréal content is French-only.
     Keywords: CKAN, open data, dataset search, catalogue, government,
-    federal, provincial, municipal, package_search, discover, browse.
+    federal, provincial, municipal, package_search, discover, browse,
+    building permits, business licences, restaurant inspections,
+    development applications.
     Mots-clés : CKAN, données ouvertes, recherche de jeux de données,
     trouver un jeu de données, catalogue de données, gouvernement ouvert,
     ouvert.canada.ca, Données Québec, Ville de Montréal,
-    fédéral, provincial, municipal, découvrir, parcourir, filtre.
+    fédéral, provincial, municipal, découvrir, parcourir, filtre, permis
+    d'affaires, inspections des restaurants, demandes d'aménagement.
     """
     return await client.search_datasets(
         portal, query, fq=fq, rows=rows, start=start, sort=sort, lang=lang

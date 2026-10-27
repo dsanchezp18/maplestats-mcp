@@ -32,7 +32,7 @@ async def opendatasoft_vancouver_search_datasets(
     Use for: finding City of Vancouver datasets by topic or free-text
     query. Keywords: Vancouver, Opendatasoft, open data, dataset
     search, catalogue, government, municipal, British Columbia,
-    discovery.
+    discovery, building permits, business licences.
     Mots-clés : Ville de Vancouver, données ouvertes de Vancouver, recherche
     de jeux de données, catalogue de données, données municipales,
     Colombie-Britannique, Opendatasoft, arbres de rue, permis, découverte.

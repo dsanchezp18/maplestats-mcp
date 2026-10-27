@@ -24,7 +24,13 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("How many housing starts were there in Toronto last year?", "housing", "cmhc_list_categories"),
     ("Average rent for a two-bedroom in Vancouver", "housing", "cmhc_list_categories"),
     ("How have new house prices changed since 2020?", "housing", "wds_search_cubes"),
-    ("Building permits issued in Halifax", "housing", "wds_search_cubes"),
+    # Since 2026-10-27 building permits are their own topic; Halifax's permit layer comes
+    # first because the question names the city.
+    (
+        "Building permits issued in Halifax",
+        "building_permits",
+        "arcgis_hub_query_feature_layer",
+    ),
     ("What was the inflation rate last month?", "prices", "statcan_indicators_get_indicators"),
     ("What is the unemployment rate in Alberta?", "labour", "ab_economic_list_tables"),
     ("Employment by occupation in Canada", "labour", "rdaas_search_classifications"),
@@ -186,6 +192,39 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ),
     ("Séismes récents en Colombie-Britannique", "environment", "earthquakes_search"),
     ("Qui est le ministre des Finances ?", "representatives", "ourcommons_get_ministry"),
+    # Permits, licences, inspections and planning applications, 2026-10-27.
+    ("Value of building permits by province", "building_permits", "wds_get_cube_metadata"),
+    ("Calgary building permits issued this year", "building_permits", "socrata_query_dataset_rows"),
+    ("Permis de bâtir délivrés à Montréal", "building_permits", "ckan_datastore_search"),
+    ("Valeur des permis de construction par province", "building_permits", "wds_get_cube_metadata"),
+    (
+        "Business licences issued in Edmonton",
+        "business_licences",
+        "socrata_query_dataset_rows",
+    ),
+    (
+        "Licences d'entreprise à Vancouver",
+        "business_licences",
+        "opendatasoft_vancouver_query_records",
+    ),
+    ("Restaurant inspections in Toronto", "food_inspections", "ckan_datastore_search"),
+    (
+        "Restaurant inspection results in Surrey",
+        "food_inspections",
+        "arcgis_hub_query_feature_layer",
+    ),
+    ("Inspections des restaurants à Montréal", "food_inspections", "ckan_datastore_search"),
+    (
+        "Development applications in Mississauga",
+        "planning_applications",
+        "arcgis_hub_query_feature_layer",
+    ),
+    ("Rezoning applications in Calgary", "planning_applications", "socrata_query_dataset_rows"),
+    (
+        "Demandes de changement de zonage à Toronto",
+        "planning_applications",
+        "ckan_datastore_search",
+    ),
 ]
 
 OUT_OF_SCOPE = ["US unemployment rate", "Weather in Paris next week", "Inflation en France"]

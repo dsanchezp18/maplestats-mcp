@@ -756,6 +756,14 @@ SOURCES: dict[str, Source] = {
         "ARLA",
         domain="health",
     ),
+    "telecom_prices": Source(
+        "CRTC: mobile and Internet plan prices and telecom markets",
+        "CRTC : prix des forfaits mobiles et Internet et marchés des télécommunications",
+        "national",
+        "CRTC telecom prices",
+        "CRTC prix des télécoms",
+        domain="business",
+    ),
     "pmprb": Source(
         "Patented Medicine Prices Review Board",
         "Conseil d'examen du prix des médicaments brevetés",

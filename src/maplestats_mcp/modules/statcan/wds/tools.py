@@ -62,7 +62,8 @@ async def wds_search_cubes(
     list, tables, labour force, monthly unemployment rate, employment,
     GDP by industry, CPI, consumer price index monthly, population estimates
     quarterly, retail trade, wages, trade, interprovincial migration,
-    time series, real-time table, Alberta, by province, which table has.
+    time series, real-time table, Alberta, by province, which table has,
+    LFS, SEPH, MBM, low income.
     Mots-clés : Statistique Canada, StatCan, chercher un tableau, trouver un
     tableau, quel tableau, tableau de données, recherche, tableaux,
     numéro de tableau, découverte, catalogue, parcourir, liste, inventaire,

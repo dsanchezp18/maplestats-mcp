@@ -948,6 +948,278 @@ FR: dict[str, str] = {
     "Check each dataset's licence before reusing it.": (
         "Vérifiez la licence de chaque jeu de données avant de le réutiliser."
     ),
+    # Building permits
+    "Building permits and construction": "Permis de bâtir et construction",
+    "StatCan building permits by type of structure and type of work, monthly, for "
+    "Canada, provinces and CMAs: product_id=34100292 (table 34-10-0292; 34-10-0066 "
+    "stopped in 2023)": (
+        "permis de bâtir de Statistique Canada selon le type de structure et le type de "
+        "travaux, mensuels, pour le Canada, les provinces et les RMR : product_id=34100292 "
+        "(tableau 34-10-0292 ; le 34-10-0066 a cessé en 2023)"
+    ),
+    "one permits series: the same product_id and a coordinate from the metadata "
+    "(geography, type of building, type of work, variable, seasonal adjustment)": (
+        "une série de permis : le même product_id et une coordinate tirée des métadonnées "
+        "(géographie, type de bâtiment, type de travaux, variable, désaisonnalisation)"
+    ),
+    "CMHC housing starts, under construction and completions by CMA, monthly: "
+    "product_id=34100154": (
+        "mises en chantier, logements en construction et achèvements de la SCHL par RMR, "
+        "mensuels : product_id=34100154"
+    ),
+    "permit records for Calgary, Edmonton and Winnipeg: portal='calgary' "
+    "dataset_id='c2es-76ed' ('8ced-xbvn' holds inspections), portal='edmonton' "
+    "dataset_id='24uj-dj8v', portal='winnipeg' dataset_id='it4w-cpf4'": (
+        "registres de permis de Calgary, d'Edmonton et de Winnipeg : portal='calgary' "
+        "dataset_id='c2es-76ed' ('8ced-xbvn' contient les inspections), portal='edmonton' "
+        "dataset_id='24uj-dj8v', portal='winnipeg' dataset_id='it4w-cpf4'"
+    ),
+    "Vancouver issued building permits: dataset_id='issued-building-permits'": (
+        "permis de bâtir délivrés à Vancouver : dataset_id='issued-building-permits'"
+    ),
+    "Toronto permit records: portal='toronto' resource_id="
+    "'6d0229af-bc54-46de-9c2b-26759b01dd05' (active) or "
+    "'a96c0ba4-3026-402b-b09d-5b1268b8f810' (cleared since 2017)": (
+        "registres de permis de Toronto : portal='toronto' resource_id="
+        "'6d0229af-bc54-46de-9c2b-26759b01dd05' (en cours) ou "
+        "'a96c0ba4-3026-402b-b09d-5b1268b8f810' (fermés depuis 2017)"
+    ),
+    "Montreal permits (construction, alteration, demolition): portal='montreal' "
+    "resource_id='5232a72d-235a-48eb-ae20-bb9d501300ad'": (
+        "permis de Montréal (construction, transformation, démolition) : portal='montreal' "
+        "resource_id='5232a72d-235a-48eb-ae20-bb9d501300ad'"
+    ),
+    "Laval building permits: portal='qc' resource_id='d4731ee2-b1e5-4a31-bc56-4e13115e74ef'": (
+        "permis de construction de Laval : portal='qc' "
+        "resource_id='d4731ee2-b1e5-4a31-bc56-4e13115e74ef'"
+    ),
+    "British Columbia monthly permit values by municipality (BC Stats): portal='bc' "
+    "resource_id='1e1faf36-6526-4f7c-8586-a01f3b2a56a5' (dataset 'Building Permits "
+    "(BPER)' has the units and sector files)": (
+        "valeur mensuelle des permis par municipalité en Colombie-Britannique (BC Stats) : "
+        "portal='bc' resource_id='1e1faf36-6526-4f7c-8586-a01f3b2a56a5' (le jeu de données "
+        "« Building Permits (BPER) » contient les fichiers par logement et par secteur)"
+    ),
+    "Regina building permit report: portal='regina' "
+    "resource_id='dcea70fc-87dd-4e04-bc34-b3ce6580daac' (2026; one workbook a year)": (
+        "rapport des permis de bâtir de Regina : portal='regina' "
+        "resource_id='dcea70fc-87dd-4e04-bc34-b3ce6580daac' (2026 ; un classeur par année)"
+    ),
+    "Halifax permit records: portal='halifax' item_id='6cef25e4172e4466a1eb8d3fd794f571' "
+    "('9acb26e369fe4892b759f336863521e8' holds inspections)": (
+        "registres de permis d'Halifax : portal='halifax' "
+        "item_id='6cef25e4172e4466a1eb8d3fd794f571' ('9acb26e369fe4892b759f336863521e8' "
+        "contient les inspections)"
+    ),
+    "BC city permit layers: portal='surrey' item_id='f3ec200f59a342e38c52248f07fe610d' "
+    "(Surrey), portal='victoria' item_id='5a2c28fdaccc4ebcb0ad5bcac8d0e469' (Victoria, "
+    "2016-2025; 'b4db2c27a1d14d59a7d7901ba77f16ce' is the last 365 days)": (
+        "couches de permis des villes de la C.-B. : portal='surrey' "
+        "item_id='f3ec200f59a342e38c52248f07fe610d' (Surrey), portal='victoria' "
+        "item_id='5a2c28fdaccc4ebcb0ad5bcac8d0e469' (Victoria, 2016-2025 ; "
+        "'b4db2c27a1d14d59a7d7901ba77f16ce' couvre les 365 derniers jours)"
+    ),
+    "Ontario city permit layers: portal='mississauga' "
+    "item_id='978ce8c2c5844486b5d768420fa9c72d' (Mississauga), portal='brampton' "
+    "item_id='f1c647c68b0f429a8575f200a803bce8' (Brampton), portal='kitchener' "
+    "item_id='9093dbbced88444fb61134187737c547' (Kitchener), portal='kingston' "
+    "item_id='df21b0d558164d4088f79c8533e3e6ac' (Kingston), portal='barrie' "
+    "item_id='2a33295b41df4d2e87fda301fff140cc' (Barrie)": (
+        "couches de permis des villes de l'Ontario : portal='mississauga' "
+        "item_id='978ce8c2c5844486b5d768420fa9c72d' (Mississauga), portal='brampton' "
+        "item_id='f1c647c68b0f429a8575f200a803bce8' (Brampton), portal='kitchener' "
+        "item_id='9093dbbced88444fb61134187737c547' (Kitchener), portal='kingston' "
+        "item_id='df21b0d558164d4088f79c8533e3e6ac' (Kingston), portal='barrie' "
+        "item_id='2a33295b41df4d2e87fda301fff140cc' (Barrie)"
+    ),
+    "A permit counts an intention to build when it is issued; CMHC starts count "
+    "construction begun, so the two differ in timing and coverage. City permit "
+    "records are administrative and change as permits move through their stages.": (
+        "Un permis compte une intention de construire au moment où il est délivré ; les "
+        "mises en chantier de la SCHL comptent les travaux commencés, de sorte que les deux "
+        "diffèrent par le moment et la couverture. Les registres municipaux de permis sont "
+        "administratifs et changent à mesure que les permis franchissent leurs étapes."
+    ),
+    "Ottawa and Saskatoon publish no permit records on the portals covered here: use "
+    "the CMA rows of table 34-10-0292. Toronto's DataStore tables can be read; its "
+    "files cannot, since Toronto does not permit automated file downloads.": (
+        "Ottawa et Saskatoon ne publient aucun registre de permis sur les portails couverts "
+        "ici : utilisez les lignes de leur RMR dans le tableau 34-10-0292. Les tableaux "
+        "DataStore de Toronto peuvent être lus, mais pas ses fichiers, car Toronto "
+        "n'autorise pas le téléchargement automatisé de fichiers."
+    ),
+    # Business licences
+    "Business licences and business counts": "Licences d'entreprise et nombre d'entreprises",
+    "licence registers for Calgary, Edmonton and Winnipeg: portal='calgary' "
+    "dataset_id='vdjc-pybd', portal='edmonton' dataset_id='qhi4-bdpu', "
+    "portal='winnipeg' dataset_id='d5k3-sfzx'": (
+        "registres des licences de Calgary, d'Edmonton et de Winnipeg : portal='calgary' "
+        "dataset_id='vdjc-pybd', portal='edmonton' dataset_id='qhi4-bdpu', "
+        "portal='winnipeg' dataset_id='d5k3-sfzx'"
+    ),
+    "Vancouver business licences: dataset_id='business-licences' (from 2024; "
+    "'business-licences-2013-to-2024' and 'business-licences-1997-to-2012' before)": (
+        "licences d'entreprise de Vancouver : dataset_id='business-licences' (depuis 2024 ; "
+        "'business-licences-2013-to-2024' et 'business-licences-1997-to-2012' avant)"
+    ),
+    "Toronto business licences and permits: portal='toronto' "
+    "resource_id='169e90ba-3ae0-43dd-8b2f-919e87002f50'": (
+        "licences et permis d'entreprise de Toronto : portal='toronto' "
+        "resource_id='169e90ba-3ae0-43dd-8b2f-919e87002f50'"
+    ),
+    "BC city licence layers: portal='victoria' item_id='25883649fc494cb0a530313aa16aa4bb' "
+    "(Victoria, 2016-2025), portal='kelowna' item_id='b4699cd3c0dd4f43bf8a13f7549aa19e' "
+    "(Kelowna), portal='burnaby' item_id='d4de3afbeffd4728a75a219e9d0f07a5' (Burnaby)": (
+        "couches de licences des villes de la C.-B. : portal='victoria' "
+        "item_id='25883649fc494cb0a530313aa16aa4bb' (Victoria, 2016-2025), portal='kelowna' "
+        "item_id='b4699cd3c0dd4f43bf8a13f7549aa19e' (Kelowna), portal='burnaby' "
+        "item_id='d4de3afbeffd4728a75a219e9d0f07a5' (Burnaby)"
+    ),
+    "Mississauga licensed eateries: portal='mississauga' "
+    "item_id='c10a649309534871aa79596c187ba1dd'": (
+        "restaurants titulaires d'une licence à Mississauga : portal='mississauga' "
+        "item_id='c10a649309534871aa79596c187ba1dd'"
+    ),
+    "StatCan Canadian Business Counts by CMA and census subdivision: "
+    "query='Canadian Business Counts census subdivisions' (a new table each June and "
+    "December; 33-10-1176 is June 2026)": (
+        "Nombre d'entreprises canadiennes de Statistique Canada par RMR et par subdivision "
+        "de recensement : query='Canadian Business Counts census subdivisions' (un nouveau "
+        "tableau chaque juin et chaque décembre ; le 33-10-1176 est celui de juin 2026)"
+    ),
+    "A licence register lists licences, not businesses: one business can hold several, "
+    "and each city sets its own categories and exemptions, so compare counts only "
+    "within one city. For the number of businesses use StatCan's Canadian Business "
+    "Counts. Montreal's portal holds no business-licence register.": (
+        "Un registre de licences recense des licences, non des entreprises : une entreprise "
+        "peut en détenir plusieurs, et chaque ville fixe ses propres catégories et "
+        "exemptions, donc ne comparez les nombres qu'au sein d'une même ville. Pour le "
+        "nombre d'entreprises, utilisez le Nombre d'entreprises canadiennes de Statistique "
+        "Canada. Le portail de Montréal ne contient aucun registre de licences d'entreprise."
+    ),
+    # Food inspections
+    "Restaurant and food premises inspections": (
+        "Inspections des restaurants et des établissements alimentaires"
+    ),
+    "Toronto DineSafe inspections: portal='toronto' "
+    "resource_id='75dbb3ff-8281-4f03-9de2-bd1214761302'": (
+        "inspections DineSafe de Toronto : portal='toronto' "
+        "resource_id='75dbb3ff-8281-4f03-9de2-bd1214761302'"
+    ),
+    "Montreal food offences and fines: portal='montreal' "
+    "resource_id='7f939a08-be8a-45e1-b208-d8744dca8fc6' (establishments: "
+    "'28a4957d-732e-48f9-8adb-0624867d9bb0')": (
+        "contrevenants et amendes en matière d'aliments à Montréal : portal='montreal' "
+        "resource_id='7f939a08-be8a-45e1-b208-d8744dca8fc6' (établissements : "
+        "'28a4957d-732e-48f9-8adb-0624867d9bb0')"
+    ),
+    "Quebec food inspections by region and month (MAPAQ, retail and restaurants): "
+    "portal='qc' resource_id='3e7a2432-b533-4e8c-8ac0-143643412e5a'": (
+        "inspections des aliments au Québec par région et par mois (MAPAQ, vente au détail "
+        "et restauration) : portal='qc' resource_id='3e7a2432-b533-4e8c-8ac0-143643412e5a'"
+    ),
+    "Fraser Health restaurant inspections, published by Surrey: portal='surrey' "
+    "item_id='320cec8503034bb997d8f6e57690dd5d' (by TRACKINGNUMBER; "
+    "'7901c9e7847a441a8e0a0964724240bb' names the restaurants)": (
+        "inspections des restaurants de Fraser Health, publiées par Surrey : portal='surrey' "
+        "item_id='320cec8503034bb997d8f6e57690dd5d' (par TRACKINGNUMBER ; "
+        "'7901c9e7847a441a8e0a0964724240bb' donne le nom des restaurants)"
+    ),
+    "Region of Waterloo (Kitchener, Waterloo, Cambridge) food premises, without "
+    "results: portal='waterloo_region' item_id='61a7a8d8775e4da381d9718658c0d842'": (
+        "établissements alimentaires de la Région de Waterloo (Kitchener, Waterloo, "
+        "Cambridge), sans les résultats : portal='waterloo_region' "
+        "item_id='61a7a8d8775e4da381d9718658c0d842'"
+    ),
+    "older or partial records: portal='edmonton' dataset_id='45hm-rte9' (Edmonton "
+    "area, Alberta Health Services, last updated 2019), portal='winnipeg' "
+    "dataset_id='fxcw-yyy2' (Winnipeg closures and convictions, last updated 2020), "
+    "portal='ns' dataset_id='2shh-dv8p' (Nova Scotia licensed food establishments, no "
+    "results)": (
+        "registres anciens ou partiels : portal='edmonton' dataset_id='45hm-rte9' (région "
+        "d'Edmonton, Alberta Health Services, mis à jour pour la dernière fois en 2019), "
+        "portal='winnipeg' dataset_id='fxcw-yyy2' (fermetures et condamnations à Winnipeg, "
+        "mis à jour pour la dernière fois en 2020), portal='ns' dataset_id='2shh-dv8p' "
+        "(établissements alimentaires titulaires d'un permis en Nouvelle-Écosse, sans les "
+        "résultats)"
+    ),
+    "Restaurant inspections are run by public health units and health authorities, "
+    "so each source covers its own area and rules; only the sources listed publish "
+    "them as open data. Ottawa Public Health, Alberta Health Services and Island "
+    "Health show results only in web viewers, with no open-data release or API.": (
+        "Les inspections des restaurants relèvent des bureaux de santé publique et des "
+        "autorités sanitaires, si bien que chaque source couvre son territoire et ses "
+        "règles ; seules les sources indiquées les publient en données ouvertes. Santé "
+        "publique Ottawa, Alberta Health Services et Island Health n'affichent les "
+        "résultats que dans des visionneuses Web, sans données ouvertes ni API."
+    ),
+    "Toronto's DineSafe table answered HTTP 500 on 2026-10-27 while the city's other "
+    "tables answered; its file copies cannot be read here, since Toronto does not "
+    "permit automated file downloads.": (
+        "Le tableau DineSafe de Toronto a répondu HTTP 500 le 2026-10-27, alors que les "
+        "autres tableaux de la ville répondaient ; ses copies en fichier ne peuvent pas être "
+        "lues ici, car Toronto n'autorise pas le téléchargement automatisé de fichiers."
+    ),
+    # Planning applications
+    "Planning and development applications": "Demandes d'urbanisme et d'aménagement",
+    "Calgary, Edmonton and Winnipeg: portal='calgary' dataset_id='6933-unw5' "
+    "(development permits; '33vi-ew4s' land use redesignations), portal='edmonton' "
+    "dataset_id='2ccn-pwtu' (development permits), portal='winnipeg' "
+    "dataset_id='wbyv-ks6y' (monthly development permit counts)": (
+        "Calgary, Edmonton et Winnipeg : portal='calgary' dataset_id='6933-unw5' (permis "
+        "d'aménagement ; '33vi-ew4s' pour les changements de zonage), portal='edmonton' "
+        "dataset_id='2ccn-pwtu' (permis d'aménagement), portal='winnipeg' "
+        "dataset_id='wbyv-ks6y' (nombre mensuel de demandes de permis d'aménagement)"
+    ),
+    "Toronto development applications: portal='toronto' "
+    "resource_id='8907d8ed-c515-4ce9-b674-9f8c6eefcf0d'": (
+        "demandes d'aménagement de Toronto : portal='toronto' "
+        "resource_id='8907d8ed-c515-4ce9-b674-9f8c6eefcf0d'"
+    ),
+    "Ontario city application layers: portal='mississauga' "
+    "item_id='574287950c2c415fbcd2cbb37d617ba1' (Mississauga), portal='kitchener' "
+    "item_id='b7e2f8feda7340eaa5f4dd7b9c4d5ac0' (Kitchener), portal='kingston' "
+    "item_id='c2296d7785644d6f9e5d4f2525c711d5' (Kingston), portal='barrie' "
+    "item_id='5f3a817276b643949fff4579cb5c566b' (Barrie), portal='brampton' "
+    "item_id='63c2acbac6e74daaad23aa1d2787f90a' (Brampton site plans), portal='york' "
+    "item_id='2ea061702aaa4d5fae39c1226525fd4e' (York Region, Markham)": (
+        "couches de demandes des villes de l'Ontario : portal='mississauga' "
+        "item_id='574287950c2c415fbcd2cbb37d617ba1' (Mississauga), portal='kitchener' "
+        "item_id='b7e2f8feda7340eaa5f4dd7b9c4d5ac0' (Kitchener), portal='kingston' "
+        "item_id='c2296d7785644d6f9e5d4f2525c711d5' (Kingston), portal='barrie' "
+        "item_id='5f3a817276b643949fff4579cb5c566b' (Barrie), portal='brampton' "
+        "item_id='63c2acbac6e74daaad23aa1d2787f90a' (plans d'implantation de Brampton), "
+        "portal='york' item_id='2ea061702aaa4d5fae39c1226525fd4e' (Région de York, Markham)"
+    ),
+    "Halifax planning applications: portal='halifax' "
+    "item_id='9a411eae96224ccba613035841db0f60' (subdivisions: "
+    "'e0279bb3940b424d9e041008bbb8d035')": (
+        "demandes d'urbanisme d'Halifax : portal='halifax' "
+        "item_id='9a411eae96224ccba613035841db0f60' (lotissements : "
+        "'e0279bb3940b424d9e041008bbb8d035')"
+    ),
+    "BC city application layers: portal='surrey' item_id='93c52bde8cef4978a947116f6d69d171' "
+    "(Surrey), portal='victoria' item_id='9a246b2b61954b819bfcb8db32e2b82b' (Victoria)": (
+        "couches de demandes des villes de la C.-B. : portal='surrey' "
+        "item_id='93c52bde8cef4978a947116f6d69d171' (Surrey), portal='victoria' "
+        "item_id='9a246b2b61954b819bfcb8db32e2b82b' (Victoria)"
+    ),
+    "Vancouver projects and rezonings (title and link only): "
+    "dataset_id='city-projects-package-site', query='rezoning'": (
+        "projets et changements de zonage à Vancouver (titre et lien seulement) : "
+        "dataset_id='city-projects-package-site', query='rezoning'"
+    ),
+    "Each city names its application types its own way (rezoning, zoning by-law "
+    "amendment, land use redesignation, site plan, development permit), and most "
+    "layers hold active applications rather than a history: compare within one city. "
+    "No development-application dataset was found on the Ottawa or Montreal portals.": (
+        "Chaque ville nomme ses types de demandes à sa façon (changement de zonage, "
+        "modification du règlement de zonage, redésignation d'usage, plan d'implantation, "
+        "permis d'aménagement), et la plupart des couches ne contiennent que les demandes "
+        "en cours, sans historique : comparez au sein d'une même ville. Aucun jeu de "
+        "données de demandes d'aménagement n'a été trouvé sur les portails d'Ottawa ou de "
+        "Montréal."
+    ),
     # Fallback
     "StatCan data products on the topic": "produits de données de Statistique Canada sur le sujet",
     "StatCan tables by keyword": "tableaux de Statistique Canada par mot-clé",
@@ -1004,6 +1276,70 @@ FR: dict[str, str] = {
     "Greater Sudbury": "Grand Sudbury",
     "Delta (BC)": "Delta (C.-B.)",
     "Saint John (New Brunswick)": "Saint John (Nouveau-Brunswick)",
+    # Telecom prices and markets
+    "Telecom: mobile and Internet plan prices, subscribers and competition": (
+        "Télécommunications : prix des forfaits mobiles et Internet, abonnés et concurrence"
+    ),
+    "CRTC year-end average advertised prices since 2016: service='mobile' with "
+    "plan='5 GB' (data allowance) or service='internet' with plan='50/10 Mbps', by "
+    "province and urban or rural region": (
+        "prix moyens annoncés à la fin de l'année, selon le CRTC, depuis 2016 : "
+        "service='mobile' avec plan='5 GB' (quantité de données) ou service='internet' avec "
+        "plan='50/10 Mbps', par province et en milieu urbain ou rural"
+    ),
+    "StatCan monthly CPI for cellular services: vector_ids=[1212387935] (Internet "
+    "access services 41693216, telephone services 41691070), "
+    "transform='yoy_pct_change' for the yearly change": (
+        "IPC mensuel des services de téléphonie cellulaire de Statistique Canada : "
+        "vector_ids=[1212387935] (services d'accès Internet 41693216, services "
+        "téléphoniques 41691070), transform='yoy_pct_change' pour la variation sur un an"
+    ),
+    "CRTC annual sector indicators since 2013: table='MB-S3' (revenue per GB), "
+    "'MB-F12' (ARPU), 'MB-F15' (data usage), 'MB-S5' (subscribers), 'MB-S1' "
+    "(market shares of Bell, Rogers, TELUS); sector='internet' for N- tables": (
+        "indicateurs annuels du CRTC par secteur depuis 2013 : table='MB-S3' (revenu par "
+        "Go), 'MB-F12' (RMPU), 'MB-F15' (utilisation de données), 'MB-S5' (abonnés), "
+        "'MB-S1' (parts de marché de Bell, Rogers et TELUS); sector='internet' pour les "
+        "tableaux N-"
+    ),
+    "every CRTC sector table and its tab id: sector='mobile' or 'internet'": (
+        "tous les tableaux sectoriels du CRTC et leur onglet : sector='mobile' ou 'internet'"
+    ),
+    "CRTC quarterly revenues, subscribers and data traffic since 2014: "
+    "service='mobile', 'internet', 'wireline' or 'tv_distribution', metric words": (
+        "revenus, abonnés et trafic de données trimestriels du CRTC depuis 2014 : "
+        "service='mobile', 'internet', 'wireline' ou 'tv_distribution', mots de metric"
+    ),
+    "other CRTC datasets (broadcasting, availability): portal='federal', fq='organization:crtc'": (
+        "autres jeux de données du CRTC (radiodiffusion, disponibilité) : portal='federal', "
+        "fq='organization:crtc'"
+    ),
+    "CRTC prices are averages of the lowest advertised list price for a fixed "
+    "basket, before taxes and promotions; the CPI is an index of price change. "
+    "Report them separately, and compare CRTC years with the 'lowest' technology "
+    "series, since baskets changed in 2019 and 5G plans appear from 2020.": (
+        "Les prix du CRTC sont des moyennes du prix annoncé le plus bas pour un ensemble de "
+        "services fixe, avant taxes et promotions; l'IPC est un indice de variation des prix. "
+        "Présentez-les séparément, et comparez les années du CRTC avec la série de "
+        "technologie 'lowest', car les ensembles ont changé en 2019 et les forfaits 5G "
+        "apparaissent en 2020."
+    ),
+    "CRTC sector tables count mobile phone services only from 2020 (columns marked "
+    "MP), so 2020 and later do not compare with earlier years.": (
+        "Depuis 2020, les tableaux sectoriels du CRTC ne comptent que les services de "
+        "téléphonie mobile (colonnes marquées TM) : 2020 et les années suivantes ne se "
+        "comparent pas aux années antérieures."
+    ),
+    "ISED's annual price comparison study (Canada by region and peer countries) "
+    "and its 2020-2022 tracking of 2 to 6 GB plans are reports, not data a tool "
+    "reads; the CRTC's reports on low-cost and occasional-use plans are on "
+    "crtc.gc.ca, which blocks automated access.": (
+        "L'étude annuelle d'ISDE sur la comparaison des prix (Canada par région et pays "
+        "comparables) et son suivi de 2020 à 2022 des forfaits de 2 à 6 Go sont des "
+        "rapports, pas des données qu'un outil lit; les rapports du CRTC sur les forfaits à "
+        "faible coût et à usage occasionnel sont sur crtc.gc.ca, qui bloque l'accès "
+        "automatisé."
+    ),
 }
 # The entries are typed with ordinary spaces ("x; y", "a : b"); french_text
 # gives them French no-break spacing, as every French server message has.

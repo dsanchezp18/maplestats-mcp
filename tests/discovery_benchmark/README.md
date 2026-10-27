@@ -36,6 +36,16 @@ uv run python -m tests.discovery_benchmark --out some/folder
 uv run pytest tests/test_discovery_benchmark.py       # fixtures sound, floors held
 ```
 
+Phase 2 (ranker comparison: BM25, identifier boosts, embeddings, fusion) has its own
+script and report, [`phase2.md`](phase2.md):
+
+```bash
+uv run python -m tests.discovery_benchmark.phase2                      # BM25 rows only
+uv run --extra semantic python -m maplestats_mcp.shared.semantic build # once: model + index
+uv run --extra semantic python -m tests.discovery_benchmark.phase2 --semantic
+MAPLE_SEARCH=hybrid uv run --extra semantic python -m tests.discovery_benchmark
+```
+
 `latest/` is gitignored; the committed record is `baseline.json` (every query's top 10
 and plan, one line each) and `baseline.md`. To compare a change with the baseline, run
 the benchmark and diff `latest/results.json` against `baseline.json` (the summaries come
@@ -99,9 +109,10 @@ registry, a topic or portal does not exist, or an id is duplicated.
 All are computed per query, then averaged by category and by language.
 
 - **Recall@k**: an accepted tool (expected or alternative) is within the first k results.
-  `search_tools` returns at most 5 tools, so ranks 6 to 10 come from a second
-  `BM25SearchTransform(max_results=10)` over the same catalogue; the runner checks that its
-  first five equal the server's on every query (`parity`).
+  `search_tools` returns at most 5 tools, so ranks 6 to 10 come from a second instance
+  of the server's search transform (`max_results=10`, same `MAPLE_SEARCH` mode) over the
+  same catalogue; the runner checks that its first five equal the server's on every
+  query (`parity`).
 - **MRR**: mean of 1 / rank of the first accepted tool (0 when absent).
 - **strict**: the same with `search_expected` only, alternatives not counted.
 - **source@1**: the top-1 tool belongs to the same source (the agency or module family, for

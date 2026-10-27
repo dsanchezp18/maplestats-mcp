@@ -14,6 +14,7 @@ fails if a fastmcp upgrade moves it.
 
 from __future__ import annotations
 
+import math
 import re
 import unicodedata
 from collections.abc import Sequence
@@ -129,6 +130,104 @@ def tokenize(text: str) -> list[str]:
 
 def install() -> None:
     bm25._tokenize = tokenize
+
+
+class ScoredBM25Index(bm25._BM25Index):
+    """fastmcp's BM25 index, with the scores exposed so they can be boosted or fused.
+
+    `query()` returns only the ranked indices; `scores()` is the same Okapi sum
+    (same k1, b and idf), so a ranking taken from it with no boost is identical.
+    """
+
+    def scores(self, text: str) -> list[float]:
+        scores = [0.0] * self._n
+        for token in bm25._tokenize(text):
+            df = self._df.get(token)
+            if not df:
+                continue
+            idf = math.log((self._n - df + 0.5) / (df + 0.5) + 1.0)
+            for i, tf_doc in enumerate(self._tf):
+                tf = tf_doc.get(token, 0)
+                if tf:
+                    norm = 1 - self.b + self.b * self._doc_lengths[i] / self._avg_dl
+                    scores[i] += idf * tf * (self.k1 + 1) / (tf + self.k1 * norm)
+        return scores
+
+
+# Exact identifiers. The tokenizer splits "14-10-0287-01" into "14", "10",
+# "0287", "01", which match stray numbers in docstrings, and "14100287" or
+# "v41690973" match nothing at all, so a query that is mostly an identifier
+# was ranked by its other words only. An identifier says which tools can take
+# it: the ones with the matching parameter. Those tools get a boost relative
+# to the best score, so the query's other words still order them ("download"
+# puts wds_get_full_table_download first among the table tools).
+# A StatCan table number: 14-10-0287-01, 14-10-0287, 1410028701 or 14100287.
+# The first digit is never 0 (an 8-digit DIN such as 02242903 starts with 0).
+_TABLE_ID = re.compile(r"(?<![\w-])[1-9]\d-?\d{2}-?\d{4}(?:-?\d{2})?(?![\w-])")
+# A StatCan vector (v41690973), which is also how old Bank of Canada series are named.
+_VECTOR_ID = re.compile(r"(?<!\w)v\d{1,10}(?!\w)", re.IGNORECASE)
+# A tool name or a family prefix: lower-case words joined by underscores.
+_SNAKE = re.compile(r"(?<!\w)[a-z][a-z0-9]*(?:_[a-z0-9]+)*_?(?!\w)")
+# product_id is also a bank-account or credit-card id (fcac_*): table numbers
+# belong to the StatCan families only.
+_STATCAN_PREFIXES = ("wds_", "sdmx_", "statcan_")
+_VECTOR_PARAMS = frozenset({"vector_id", "vector_ids", "series_names"})
+# boc_get_series takes a series name as `name`; its docstring shows V-numbers.
+_VECTOR_EXAMPLE = re.compile(r"\bV\d{4,}\b")
+EXACT_NAME_BOOST = 2.0  # the named tool first, whatever else the query says
+IDENTIFIER_BOOST = 1.0  # the tools that take the identifier above the others
+
+
+def _params(tool: Tool) -> frozenset[str]:
+    return frozenset((tool.parameters or {}).get("properties", {}))
+
+
+def identifier_boosts(query: str, tools: Sequence[Tool]) -> dict[int, tuple[float, str]]:
+    """Tool positions to boost for the identifiers in `query`: weight and reason."""
+    boosts: dict[int, tuple[float, str]] = {}
+
+    def add(i: int, weight: float, reason: str) -> None:
+        if weight > boosts.get(i, (0.0, ""))[0]:
+            boosts[i] = (weight, reason)
+
+    lowered = query.casefold()
+    words = {w for w in _SNAKE.findall(lowered) if "_" in w}
+    has_table = _TABLE_ID.search(query) is not None
+    has_vector = _VECTOR_ID.search(query) is not None
+    if not (words or has_table or has_vector):
+        return boosts
+    for i, tool in enumerate(tools):
+        name = tool.name
+        if name in words:
+            add(i, EXACT_NAME_BOOST, "exact tool name")
+        elif any(name.startswith(w if w.endswith("_") else w + "_") for w in words):
+            add(i, IDENTIFIER_BOOST, "tool family prefix")
+        if has_table and "product_id" in _params(tool) and name.startswith(_STATCAN_PREFIXES):
+            add(i, IDENTIFIER_BOOST, "takes a StatCan table number")
+        if has_vector and (
+            _params(tool) & _VECTOR_PARAMS or _VECTOR_EXAMPLE.search(tool.description or "")
+        ):
+            add(i, IDENTIFIER_BOOST, "takes a vector or series id")
+    return boosts
+
+
+def apply_boosts(scores: list[float], boosts: dict[int, tuple[float, str]]) -> list[float]:
+    """Add each boost as a share of the best score, so it means the same for BM25 and fused
+    scores; a query that is only an identifier scores nothing, and the share is of 1."""
+    if not boosts:
+        return scores
+    best = max(scores, default=0.0)
+    top = best if best > 0 else 1.0
+    boosted = list(scores)
+    for i, (weight, _) in boosts.items():
+        boosted[i] += weight * top
+    return boosted
+
+
+def top_indices(scores: Sequence[float], k: int) -> list[int]:
+    """The k best positive scores, best first; ties keep catalogue order, as fastmcp's sort does."""
+    ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+    return [i for i in ranked[:k] if scores[i] > 0]
 
 
 # Every result model embeds the same Provenance schema, about 1.9 KB of field
