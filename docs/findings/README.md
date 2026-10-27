@@ -7,6 +7,7 @@ status of each source is in [`ROADMAP.md`](../ROADMAP.md).
 
 - [CAPP Statistics Handbook](capp-statistics-handbook.md)
 - [Competition Bureau Canada](competition-bureau.md)
+- [Disclaimer claim check, 2026-10-27](disclaimer-audit.md)
 - [Federal sources](federal-sources.md)
 - [Municipal sources](municipal-sources.md)
 - [Provincial sources](provincial-sources.md)
