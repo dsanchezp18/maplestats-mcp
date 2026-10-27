@@ -1287,6 +1287,14 @@ FR: dict[str, str] = {
         "service='mobile' avec plan='5 GB' (quantité de données) ou service='internet' avec "
         "plan='50/10 Mbps', par province et en milieu urbain ou rural"
     ),
+    "CRTC plan prices by city (census metropolitan area) since 2016, averaged by "
+    "MapleStats from each provider's reported price: city='Edmonton, Toronto'; "
+    "from 2024 one city per province is surveyed": (
+        "prix des forfaits par ville (région métropolitaine de recensement) selon le CRTC "
+        "depuis 2016, moyennes calculées par MapleStats à partir du prix déclaré par chaque "
+        "fournisseur : city='Edmonton, Toronto'; depuis 2024, une seule ville est sondée "
+        "par province"
+    ),
     "StatCan monthly CPI for cellular services: vector_ids=[1212387935] (Internet "
     "access services 41693216, telephone services 41691070), "
     "transform='yoy_pct_change' for the yearly change": (

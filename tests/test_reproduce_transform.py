@@ -160,3 +160,79 @@ def test_generated_python_matches_the_tool_offline():
         latest_n=3,
     )
     assert namespace["data"]["value"].to_list() == pytest.approx([p.value for p in expected.points])
+
+
+def test_window_is_read_and_checked():
+    request = builders.transform_request({"transform": "moving_average", "window": 3})
+    assert request is not None and request.window == 3
+    for bad in ({"transform": "moving_average"}, {"transform": "diff", "window": 3}):
+        with pytest.raises(InvalidInput, match="window"):
+            builders.transform_request(bad)
+    with pytest.raises(InvalidInput, match="whole number"):
+        builders.transform_request({"transform": "moving_average", "window": "3"})
+
+
+async def test_moving_average_script_fetches_the_window_and_every_language_has_it():
+    args = {
+        "vector_ids": [2062815],
+        "latest_n": 3,
+        "transform": "moving_average",
+        "window": 3,
+        "frequency": "annual",
+    }
+    computed = {
+        **_computed("moving_average"),
+        "formula": "Computed by MapleStats: moving_average_3 = mean(x_{t-2}, x_{t-1}, x_t)",
+    }
+    spec = await builders._vectors(
+        args, {"series": [{"vector_id": 2062815, "transformed": computed}]}
+    )
+    # 3 years plus the 2 before them, in months, and 11 for a year still running.
+    assert spec.post_json == [{"vectorId": 2062815, "latestN": 5 * 12 + 11}]
+    assert spec.title.endswith("(moving_average 3, annual average)")
+    code = {lang: RENDERERS[lang](spec, "wds_get_data_from_vectors") for lang in RENDERERS}
+    python = code["python"][0]
+    assert "WINDOW = 3" in python and "moving_average_3 = mean(x_{t-2}, x_{t-1}, x_t)" in python
+    compile(python, "script.py", "exec")
+    assert "ma_window <- 3L" in code["r"][0] and "moving_average = rowMeans(" in code["r"][0]
+    assert "ma_window = 3" in code["julia"][0]
+    compile(stata_statements(spec.prepare["python"].body), "stata_block.py", "exec")
+
+
+@pytest.mark.parametrize("frequency", [None, "annual"])
+def test_generated_python_moving_average_matches_the_tool_offline(frequency):
+    pl = pytest.importorskip("polars")
+    from datetime import date
+
+    from maplestats_mcp.shared.transform import transform_series
+
+    request = builders.TransformRequest("moving_average", frequency, window=3)
+    plan = builders._Plan(request, "wds", {"1": 1}, [], "", latest_n=4)
+    months = [(2019 + (m - 1) // 12, (m - 1) % 12 + 1) for m in range(1, 85)]
+    levels: list[float | None] = [5 + (i % 7) * 0.3 for i in range(84)]
+    levels[79] = None  # 2025-08 has no value
+    del months[70], levels[70]  # and 2024-11 no row
+    data = pl.DataFrame(
+        {
+            "vectorId": [1] * len(months),
+            "refPer": [f"{y}-{m:02d}-01" for y, m in months],
+            "value": levels,
+        }
+    )
+    code = builders._python_transform(plan)
+    namespace = {"data": data, "pl": pl}
+    exec("\n".join(code.imports) + "\n" + code.body, namespace)  # noqa: S102
+    expected = transform_series(
+        [(date(y, m, 1), v) for (y, m), v in zip(months, levels, strict=True)],
+        source_ppy=12,
+        transform="moving_average",
+        frequency=frequency,
+        window=3,
+        latest_n=4,
+    )
+    got = namespace["data"]["value"].to_list()
+    assert len(got) == 4
+    want = [p.value for p in expected.points]
+    assert [v is None for v in got] == [v is None for v in want]
+    assert any(v is not None for v in want) and any(v is None for v in want)
+    assert [v for v in got if v is not None] == pytest.approx([v for v in want if v is not None])

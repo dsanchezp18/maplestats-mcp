@@ -86,26 +86,25 @@ async def telecom_get_city_plan_prices(
     """Mobile and Internet plan prices by city (census metropolitan area), CRTC survey, 2016 on.
 
     Use for: comparing what a 50 GB, 5 GB or talk-only cell phone plan, or a
-    50/10 Mbps Internet plan, costs in Edmonton, Toronto, Montréal,
-    Vancouver, Calgary, Winnipeg, Regina, Québec, Halifax or another of the
-    CRTC's 24 census metropolitan areas (CMAs), year by year from 2016.
+    50/10 Mbps Internet plan, costs in each of the CRTC's 24 census
+    metropolitan areas (CMAs), year by year from 2016.
     Averages are computed by MapleStats from every provider's reported
     monthly price in the CRTC's Prix-Prices sheet (with the number of prices
     and providers behind each, and each provider's-lowest average, the
     CRTC's own method); the CRTC publishes provincial and national averages
     only (telecom_get_plan_prices). `city` is one CMA or several (a list or
-    'Edmonton, Toronto'), accents and case ignored ('Montreal', 'Ottawa'
-    finds Ottawa-Gatineau); omit it or pass 'all' for every CMA. From 2024
+    'Edmonton, Toronto'), accents and case ignored ('Ottawa' finds
+    Ottawa-Gatineau); omit it or pass 'all' for every CMA. From 2024
     the CRTC surveys 13 CMAs, one per province or territory (no Calgary,
     Vancouver, Saskatoon, Ottawa-Gatineau or Montréal): the notes say so and
     point to the provincial urban average. `include_rows=True` adds the
     provider and brand rows. Prices are list prices before taxes.
     Keywords: city, CMA, census metropolitan area, cell phone plan price by
-    city, Edmonton, Toronto, Montreal, Vancouver, compare cities, mobile
-    prices by provider, Internet price by city.
+    city, compare cities, mobile plan prices by provider, Internet plan
+    price by city, telecom.
     Mots-clés : ville, RMR, région métropolitaine de recensement, prix des
-    forfaits cellulaires par ville, Edmonton, Toronto, Montréal, comparer les
-    villes, prix par fournisseur, prix d'Internet par ville.
+    forfaits cellulaires par ville, comparer les villes, prix par
+    fournisseur, prix d'Internet par ville, télécommunications.
     """
     return await client.get_city_plan_prices(
         service,

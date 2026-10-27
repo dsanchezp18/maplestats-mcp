@@ -86,6 +86,7 @@ async def sdmx_get_data(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     lang: Lang = "en",
 ) -> SdmxData:
     """Get filtered, server-side-sliced observations for a StatCan table,
@@ -104,7 +105,8 @@ async def sdmx_get_data(
     `transform` computes a change from the published levels: diff,
     pct_change, yoy_diff, yoy_pct_change (year-over-year, against the
     same period a year earlier: 12-month CPI inflation),
-    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
+    moving_average (trailing average over `window` periods).
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate comes back as the change in
@@ -115,11 +117,12 @@ async def sdmx_get_data(
     StatCan's flags (e.g. "use with caution", suppressed).
     Keywords: statcan, sdmx, data, filtered, key, dimensions, query,
     observations, slice, year-over-year, percent change, growth rate,
-    quarterly average, annual average, status flags.
+    quarterly average, annual average, moving average, rolling average,
+    status flags.
     Mots-clés : Statistique Canada, SDMX, données filtrées, clé, dimensions,
     requête, observations, extraction, série chronologique, variation
     annuelle, variation en pourcentage, taux de croissance, moyenne
-    annuelle, cote de qualité.
+    annuelle, moyenne mobile, cote de qualité.
     """
     return await client.get_data(
         product_id,
@@ -128,7 +131,7 @@ async def sdmx_get_data(
         end_period=end_period,
         last_n_observations=last_n_observations,
         lang=lang,
-        request=TransformRequest(transform, frequency, aggregation, index_base),
+        request=TransformRequest(transform, frequency, aggregation, index_base, window),
     )
 
 
@@ -142,6 +145,7 @@ async def sdmx_get_vector_data(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     lang: Lang = "en",
 ) -> SdmxData:
     """Get filtered SDMX observations for a known vector ID, optionally as
@@ -154,7 +158,8 @@ async def sdmx_get_vector_data(
     `transform` computes a change from the published levels: diff,
     pct_change, yoy_diff, yoy_pct_change (year-over-year, against the
     same period a year earlier: 12-month CPI inflation),
-    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
+    moving_average (trailing average over `window` periods).
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate comes back as the change in
@@ -165,10 +170,11 @@ async def sdmx_get_vector_data(
     StatCan's flags (e.g. "use with caution", suppressed).
     Keywords: statcan, sdmx, vector, data, observations, series, query,
     Statistics Canada, year-over-year, inflation, percent change, growth
-    rate, annual average.
+    rate, annual average, moving average, rolling average.
     Mots-clés : Statistique Canada, SDMX, vecteur, données, observations,
     série, requête, identifiant de vecteur, série chronologique, variation
-    annuelle, taux d'inflation, taux de croissance, moyenne annuelle.
+    annuelle, taux d'inflation, taux de croissance, moyenne annuelle,
+    moyenne mobile.
     """
     return await client.get_vector_data(
         vector_id,
@@ -176,5 +182,5 @@ async def sdmx_get_vector_data(
         end_period=end_period,
         last_n_observations=last_n_observations,
         lang=lang,
-        request=TransformRequest(transform, frequency, aggregation, index_base),
+        request=TransformRequest(transform, frequency, aggregation, index_base, window),
     )

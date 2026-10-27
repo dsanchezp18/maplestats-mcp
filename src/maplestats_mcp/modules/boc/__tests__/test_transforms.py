@@ -114,3 +114,41 @@ def test_rate_words_without_a_unit():
     yield_ = client.SeriesInfoBrief(name="BD.CDN.10YR", label="10-year bond yield", description="")
     assert not client._is_rate(exchange)
     assert client._is_rate(yield_)
+
+
+async def test_moving_average_of_a_rate_reaches_back_for_the_window(httpx_mock):
+    detail = {"V122530": _detail("Overnight rate", "Percent")}
+    rates = {"2026-05-01": "2.75", "2026-06-01": "2.75", "2026-07-01": "2.5", "2026-08-01": "2.5"}
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"{constants.BASE_URL}observations/V122530/json", params={"start_date": "2026-07-01"}
+        ),
+        json={
+            "seriesDetail": detail,
+            "observations": [
+                {"d": d, "V122530": {"v": v}} for d, v in rates.items() if d >= "2026-07"
+            ],
+        },
+    )
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"{constants.BASE_URL}observations/V122530/json",
+            params={"start_date": "2026-05-01", "end_date": "2026-08-01"},
+        ),
+        json={
+            "seriesDetail": detail,
+            "observations": [{"d": d, "V122530": {"v": v}} for d, v in rates.items()],
+        },
+    )
+    result = await _fn(tools.boc_get_observations)(
+        ["V122530"], start_date="2026-07-01", transform="moving_average", window=3
+    )
+    assert result.transformed is not None
+    computed = result.transformed["V122530"]
+    # A moving average of a rate is a rate: no conversion to percentage points.
+    assert computed.transform == "moving_average" and computed.unit == "Percent"
+    assert [p.value for p in computed.points] == pytest.approx(
+        [(2.75 + 2.75 + 2.5) / 3, (2.75 + 2.5 + 2.5) / 3]
+    )
+    with pytest.raises(client.InvalidInput, match="window"):
+        await client.get_observations(["V122530"], request=TransformRequest("diff", window=3))

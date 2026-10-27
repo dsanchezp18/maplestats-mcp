@@ -28,6 +28,7 @@ from maplestats_mcp.modules.reproduce.spec import Code, Filter, Spec
 from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.fr_typography import call_error
+from maplestats_mcp.shared.i18n import call_lang
 from maplestats_mcp.shared.transform import TransformRequest, parse_period, period_end
 
 Builder = Callable[[dict[str, Any], dict[str, Any]], Awaitable[Spec]]
@@ -380,7 +381,8 @@ async def _boc(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 # script fetches the same levels, reaching back as far as the tool did for the
 # lag, and applies the same formula in its own language, in "3. Prepare data"
 # on the columns as the source names them. Lags are found by date, as in the
-# tool, so a gap in the data cannot shift a year-over-year comparison.
+# tool, so a gap in the data cannot shift a year-over-year comparison, and a
+# moving average whose window reaches a gap is missing, not shorter.
 
 _TRANSFORMS = (
     "level",
@@ -390,6 +392,7 @@ _TRANSFORMS = (
     "yoy_pct_change",
     "annualized_pct_change",
     "index",
+    "moving_average",
 )
 _FREQUENCIES = {"monthly": 1, "quarterly": 3, "annual": 12}  # months per period
 _AGGREGATIONS = ("average", "sum", "end_of_period")
@@ -401,6 +404,7 @@ def transform_request(args: dict[str, Any]) -> TransformRequest | None:
     frequency = args.get("frequency") or None
     aggregation = str(args.get("aggregation") or "average")
     index_base = args.get("index_base") or None
+    window = args.get("window")
     if (
         transform not in _TRANSFORMS
         or (frequency is not None and frequency not in _FREQUENCIES)
@@ -413,12 +417,18 @@ def transform_request(args: dict[str, Any]) -> TransformRequest | None:
             f"transform doit valoir l'un de {list(_TRANSFORMS)}, frequency l'un de "
             f"{list(_FREQUENCIES)} et aggregation l'un de {list(_AGGREGATIONS)}.",
         )
+    if window is not None and (isinstance(window, bool) or not isinstance(window, int)):
+        raise call_error(
+            InvalidInput, "window must be a whole number.", "window doit être un nombre entier."
+        )
     request = TransformRequest(
         transform,  # type: ignore[arg-type]
         frequency,
         aggregation,  # type: ignore[arg-type]
         str(index_base) if index_base else None,
+        window,
     )
+    request.check(call_lang())
     return request if request.active else None
 
 
@@ -518,6 +528,7 @@ def _python_transform(plan: _Plan) -> Code:
         f"STEP_MONTHS = {plan.steps!r}\n"
         f"RATE_SERIES = {plan.rates!r}\n"
         f"INDEX_BASE = {index}\n"
+        f"WINDOW = {request.window!r}  # periods in a moving average\n"
         f"WINDOW_START = {window_start}\n"
         f"WINDOW_END = {window_end}\n"
         f"LATEST_N = {plan.latest_n!r}\n"
@@ -595,11 +606,17 @@ def _python_transform(plan: _Plan) -> Code:
         "        base = sum(inside) / len(inside) if inside and None not in inside else None\n"
         "    computed = []\n"
         "    for i, (day, level) in enumerate(points):\n"
-        "        if step:\n"
-        "            lagged = by_date.get(months_after(day, -lag))\n"
+        '        if applied == "moving_average":\n'
+        "            # The period and the WINDOW - 1 before it, by date: a gap makes it None.\n"
+        "            span = [by_date.get(months_after(day, -step * k)) for k in range(WINDOW)]\n"
+        "            value = None if None in span else sum(span) / WINDOW\n"
         "        else:\n"
-        "            lagged = points[i - 1][1] if i else None\n"
-        "        computed.append((day, level, compute(applied, level, lagged, step, base)))\n"
+        "            if step:\n"
+        "                lagged = by_date.get(months_after(day, -lag))\n"
+        "            else:\n"
+        "                lagged = points[i - 1][1] if i else None\n"
+        "            value = compute(applied, level, lagged, step, base)\n"
+        "        computed.append((day, level, value))\n"
         "    if WINDOW_START is not None:\n"
         "        first = period_floor(WINDOW_START, step)\n"
         "        computed = [row for row in computed if row[0] >= first]\n"
@@ -695,6 +712,8 @@ def _r_transform(plan: _Plan) -> Code:
         f"rate_series <- c({rates})\n"
         f"index_base <- c({_r_date(base[0] if base else None)}, "
         f"{_r_date(base[1] if base else None)})\n"
+        f"ma_window <- {f'{request.window}L' if request.window else 'NA_integer_'}"
+        "  # periods in a moving average\n"
         f"window_start <- {_r_date(plan.window_start)}\n"
         f"window_end <- {_r_date(plan.window_end)}\n"
         f"latest_n <- {f'{plan.latest_n}L' if plan.latest_n else 'NA_integer_'}\n"
@@ -759,6 +778,10 @@ def _r_transform(plan: _Plan) -> Code:
         "      base <- if (length(inside) == 0 || anyNA(inside)) NA_real_ else mean(inside)\n"
         "      ifelse(is.na(base) | base == 0, NA_real_, 100 * x / base)\n"
         "    },\n"
+        "    # The period and the ma_window - 1 before it, by date: a gap makes it NA.\n"
+        "    moving_average = rowMeans(do.call(cbind, lapply(seq_len(ma_window) - 1L, \\(k) {\n"
+        "      x[match(months_after(points$date, -step * k), points$date)]\n"
+        "    }))),\n"
         "    diff = ,\n"
         "    yoy_diff = x - lagged,\n"
         "    annualized_pct_change = ifelse(\n"
@@ -854,6 +877,7 @@ def _julia_transform(plan: _Plan) -> Code:
         f"index_base = "
         + (f"({jl_date(base[0])}, {jl_date(base[1])})" if base else "nothing")
         + "\n"
+        f"ma_window = {request.window or 'nothing'}  # periods in a moving average\n"
         f"window_start = {jl_date(plan.window_start)}\n"
         f"window_end = {jl_date(plan.window_end)}\n"
         f"latest_n = {plan.latest_n if plan.latest_n else 'nothing'}\n"
@@ -930,6 +954,13 @@ def _julia_transform(plan: _Plan) -> Code:
         "    end\n"
         "    values = Union{Missing, Float64}[]\n"
         "    for (i, (day, x)) in enumerate(zip(dates, levels_))\n"
+        '        if applied == "moving_average"\n'
+        "            # The period and the ma_window - 1 before it, by date: a gap makes it missing.\n"
+        "            js = [get(position, months_after(day, -step * k), 0) for k in 0:(ma_window - 1)]\n"
+        "            span = [j == 0 ? missing : levels_[j] for j in js]\n"
+        "            push!(values, any(ismissing, span) ? missing : sum(span) / ma_window)\n"
+        "            continue\n"
+        "        end\n"
         "        if step > 0\n"
         "            j = get(position, months_after(day, -lag), 0)\n"
         "            lagged = j == 0 ? missing : levels_[j]\n"
@@ -979,6 +1010,8 @@ def _with_transform(spec: Spec, plan: _Plan) -> Spec:
     }
     spec.languages = tuple(lang for lang in spec.languages if lang != "excel")
     spec.title += f" ({plan.request.transform}"
+    if plan.request.window:
+        spec.title += f" {plan.request.window}"
     spec.title += (
         f", {plan.request.frequency} {plan.request.aggregation})" if plan.request.frequency else ")"
     )

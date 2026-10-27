@@ -1,4 +1,4 @@
-"""Server-side transforms (change, growth, index, aggregation) for the WDS series tools.
+"""Server-side transforms (change, growth, index, moving average, aggregation) for WDS series.
 
 The arithmetic is shared/transform.py's; this file fetches what it needs:
 each series' frequency, unit of measure and scalar factor (getSeriesInfo
@@ -75,7 +75,8 @@ def latest_n_to_fetch(latest_n: int, request: TransformRequest, ppys: list[int |
     for source_ppy in ppys:
         out_ppy = _out_ppy(request, source_ppy)
         needed = max(
-            needed, source_periods_needed(latest_n, request.transform, source_ppy, out_ppy)
+            needed,
+            source_periods_needed(latest_n, request.transform, source_ppy, out_ppy, request.window),
         )
         if request.index_base and source_ppy:
             needed = max(needed, base_months(request.index_base) * source_ppy // 12 + 1)
@@ -89,7 +90,12 @@ def start_to_fetch(start: date, request: TransformRequest, ppys: list[int | None
         out_ppy = _out_ppy(request, source_ppy)
         months = max(
             months,
-            extra_months(request.transform, out_ppy, aggregating=request.frequency is not None),
+            extra_months(
+                request.transform,
+                out_ppy,
+                aggregating=request.frequency is not None,
+                window=request.window,
+            ),
         )
     earliest = shift_months(start, -months) if months else start
     if request.index_base:
@@ -159,6 +165,7 @@ async def compute(
         frequency=request.frequency,
         aggregation=request.aggregation,
         index_base=request.index_base,
+        window=request.window,
         rate_unit=is_rate_unit(uom),
         units=units,
         window_start=window_start,

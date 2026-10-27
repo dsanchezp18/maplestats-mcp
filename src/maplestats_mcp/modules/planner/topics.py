@@ -2810,6 +2810,13 @@ TELECOM = Topic(
             ),
         ),
         PlanStep(
+            "telecom_get_city_plan_prices",
+            "CRTC plan prices by city (census metropolitan area) since 2016, averaged by "
+            "MapleStats from each provider's reported price: city='Edmonton, Toronto'; "
+            "from 2024 one city per province is surveyed",
+            ("city", "cities", "ville", "villes", "metropolitan", "cma", "rmr"),
+        ),
+        PlanStep(
             "wds_get_data_from_vectors",
             "StatCan monthly CPI for cellular services: vector_ids=[1212387935] (Internet "
             "access services 41693216, telephone services 41691070), "

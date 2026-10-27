@@ -183,6 +183,7 @@ async def wds_get_data_from_vectors(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     lang: Lang = "en",
 ) -> VectorDataSet:
     """Get the latest N observations for one or more StatCan vectors,
@@ -202,21 +203,24 @@ async def wds_get_data_from_vectors(
     caution", "preliminary"). `latest_n` counts periods at the output
     frequency.
     `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
-    annualized_pct_change, index) and `frequency` with `aggregation`
+    annualized_pct_change, index, moving_average: trailing average over
+    `window` periods) and `frequency` with `aggregation`
     compute from the published levels; a series already in percent gets
     percentage-point changes. `transformed` holds the computed values
     with their formula.
     Keywords: statcan, vector, observations, latest, data, time series,
     wds, values, year-over-year, yoy, inflation rate, percent change,
-    growth rate, annualized, quarterly average, annual average, index.
+    growth rate, annualized, quarterly average, annual average, index,
+    moving average, rolling average.
     Mots-clés : Statistique Canada, vecteur, observations, dernières
     données, données récentes, série chronologique, valeurs, dernières
     périodes, variation annuelle, glissement annuel, taux d'inflation,
     variation en pourcentage, taux de croissance, moyenne trimestrielle,
-    moyenne annuelle, indice.
+    moyenne annuelle, indice, moyenne mobile.
     """
     client.use_lang(lang)
-    request = transforms.TransformRequest(transform, frequency, aggregation, index_base)
+    request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
+    request.check(lang)
     if not request.active:
         return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
     if latest_n < 1:
@@ -243,6 +247,7 @@ async def wds_get_data_from_cube_coord(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     lang: Lang = "en",
 ) -> VectorData:
     """Get the latest N observations for a table + coordinate pair,
@@ -255,7 +260,8 @@ async def wds_get_data_from_cube_coord(
     `transform` computes a change from the published levels: diff
     (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
     against the same period a year earlier: 12-month CPI inflation),
-    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
+    moving_average (trailing average over `window` periods).
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate (unemployment rate, bank rate)
@@ -265,14 +271,16 @@ async def wds_get_data_from_cube_coord(
     and unit.
     Keywords: statcan, coordinate, observations, latest, data, wds,
     productId, Statistics Canada, year-over-year, percent change, growth
-    rate, quarterly average, annual average.
+    rate, quarterly average, annual average, moving average, rolling
+    average.
     Mots-clés : Statistique Canada, coordonnée, observations, dernières
     données, données récentes, numéro de tableau, tableau, dernières
     périodes, variation annuelle, variation en pourcentage, taux de
-    croissance, moyenne trimestrielle.
+    croissance, moyenne trimestrielle, moyenne mobile.
     """
     client.use_lang(lang)
-    request = transforms.TransformRequest(transform, frequency, aggregation, index_base)
+    request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
+    request.check(lang)
     if not request.active:
         return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
             product_id, coordinate, latest_n
@@ -373,6 +381,7 @@ async def wds_get_data_by_reference_period_range(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     lang: Lang = "en",
 ) -> VectorDataSet:
     """Get observations for vectors between two dates (a time series for a
@@ -389,7 +398,8 @@ async def wds_get_data_by_reference_period_range(
     `transform` computes a change from the published levels: diff
     (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
     against the same period a year earlier: 12-month CPI inflation),
-    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
+    moving_average (trailing average over `window` periods).
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate (unemployment rate, bank rate)
@@ -400,14 +410,15 @@ async def wds_get_data_by_reference_period_range(
     Keywords: statcan, reference period, range, between two dates, time
     series for a vector, history, vectors, wds, date range, Statistics
     Canada, year-over-year, inflation, percent change, growth rate,
-    annual average.
+    annual average, moving average, rolling average.
     Mots-clés : Statistique Canada, période de référence, plage, plage de
     dates, historique, vecteurs, données historiques, série chronologique
     entre deux dates, variation annuelle, glissement annuel, taux
-    d'inflation, taux de croissance, moyenne annuelle.
+    d'inflation, taux de croissance, moyenne annuelle, moyenne mobile.
     """
     client.use_lang(lang)
-    request = transforms.TransformRequest(transform, frequency, aggregation, index_base)
+    request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
+    request.check(lang)
     if not request.active:
         return await client.get_data_from_vector_by_reference_period_range(
             vector_ids, start_ref_period, end_ref_period

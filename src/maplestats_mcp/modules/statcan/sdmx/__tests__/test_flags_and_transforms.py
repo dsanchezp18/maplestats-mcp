@@ -104,3 +104,12 @@ def test_transform_params_reach_back_in_the_callers_notation():
     assert quarterly == {"startPeriod": "2023-Q4"}
     latest = client.transform_params({"lastNObservations": 3}, request, 12, latest_n=3)
     assert latest == {"lastNObservations": 15}
+
+
+def test_transform_params_reach_back_for_a_moving_average():
+    request = client.TransformRequest("moving_average", "annual", window=3)
+    params = client.transform_params({"startPeriod": "2024-01"}, request, 12, latest_n=None)
+    # Two years before 2024 for the window, and one more so the first is whole.
+    assert params == {"startPeriod": "2021-01"}
+    latest = client.transform_params({"lastNObservations": 2}, request, 12, latest_n=2)
+    assert latest == {"lastNObservations": (2 + 2) * 12 + 11}

@@ -17,6 +17,9 @@ Rules every caller relies on:
 - Differences are in the series' own units as published (StatCan values
   are unscaled, so a difference is in the unit its scalar factor names);
   percent changes and indexes do not depend on the scale.
+- A moving average is trailing (the period and the window - 1 before it,
+  found by date) and null when any of them is missing: a gap never gives a
+  shorter window. It is in the series' own unit, rates included.
 """
 
 from __future__ import annotations
@@ -43,6 +46,7 @@ Transform = Literal[
     "yoy_pct_change",
     "annualized_pct_change",
     "index",
+    "moving_average",
 ]
 Frequency = Literal["monthly", "quarterly", "annual"]
 Aggregation = Literal["average", "sum", "end_of_period"]
@@ -68,7 +72,10 @@ _POINTS_INSTEAD = {
     "yoy_pct_change": "yoy_diff",
     "annualized_pct_change": "diff",
 }
-_NEEDS_CALENDAR = {"yoy_diff", "yoy_pct_change", "annualized_pct_change"}
+_NEEDS_CALENDAR = {"yoy_diff", "yoy_pct_change", "annualized_pct_change", "moving_average"}
+# Ten years of months: a longer moving average is a trend, not a smoothing,
+# and only multiplies the history fetched.
+MAX_WINDOW = 120
 # Daily data: a month whose first or last observation is further than this
 # from the month's edge was cut by the requested window (or is still running).
 _EDGE_DAYS = 4
@@ -82,10 +89,20 @@ class TransformRequest:
     frequency: Frequency | None = None
     aggregation: Aggregation = "average"
     index_base: str | None = None
+    window: int | None = None
 
     @property
     def active(self) -> bool:
-        return self.transform != "level" or self.frequency is not None or bool(self.index_base)
+        return (
+            self.transform != "level"
+            or self.frequency is not None
+            or bool(self.index_base)
+            or self.window is not None
+        )
+
+    def check(self, lang: str = "en") -> None:
+        """Reject a bad `window` before any history is fetched for it."""
+        check_window(self.transform, self.window, lang)
 
 
 class TransformedPoint(BaseModel):
@@ -127,6 +144,9 @@ class TransformedSeries(BaseModel):
         default=None,
         description="How published values were combined into each period, if they were.",
     )
+    window: int | None = Field(
+        default=None, description="Periods in each moving average (transform moving_average)."
+    )
     formula: str = Field(description="Exactly how each value was computed.")
     unit: str = Field(description="Unit of `value`.")
     notes: list[str] = Field(default_factory=list)
@@ -135,6 +155,27 @@ class TransformedSeries(BaseModel):
 
 def _error(lang: str, en: str, fr: str) -> InvalidInput:
     return lang_error(InvalidInput, lang, en, fr)
+
+
+def check_window(transform: str, window: int | None, lang: str = "en") -> None:
+    """`window` goes with transform='moving_average' and only with it, 2 to MAX_WINDOW."""
+    if transform == "moving_average":
+        if window is None or not 2 <= window <= MAX_WINDOW:
+            raise _error(
+                lang,
+                f"transform='moving_average' needs window, the number of periods averaged, "
+                f"from 2 to {MAX_WINDOW} (e.g. window=3 with frequency='annual' for a 3-year "
+                "moving average).",
+                f"transform='moving_average' exige window, le nombre de périodes de la moyenne, "
+                f"de 2 à {MAX_WINDOW} (p. ex. window=3 avec frequency='annual' pour une moyenne "
+                "mobile sur 3 ans).",
+            )
+    elif window is not None:
+        raise _error(
+            lang,
+            "window only applies to transform='moving_average'.",
+            "window ne s'applique qu'à transform='moving_average'.",
+        )
 
 
 # Periods -----------------------------------------------------------------------
@@ -221,33 +262,42 @@ def infer_periods_per_year(days: Sequence[date]) -> int | None:
 # History a transform needs ---------------------------------------------------------
 
 
-def lag_periods(transform: str, ppy: int | None) -> int:
+def lag_periods(transform: str, ppy: int | None, window: int | None = None) -> int:
     """How many periods before the first returned one the transform reads."""
     if transform in ("diff", "pct_change", "annualized_pct_change"):
         return 1
     if transform in ("yoy_diff", "yoy_pct_change"):
         return ppy or 0
+    if transform == "moving_average":
+        return max((window or 1) - 1, 0)
     return 0
 
 
-def extra_months(transform: str, out_ppy: int | None, *, aggregating: bool) -> int:
+def extra_months(
+    transform: str, out_ppy: int | None, *, aggregating: bool, window: int | None = None
+) -> int:
     """Months of history to fetch before the requested window: the lag, plus
     one output period so the first aggregated period is complete."""
     if out_ppy is None:
         return 1 if transform != "level" else 0  # a daily series' previous observation
-    months = lag_periods(transform, out_ppy) * (12 // out_ppy)
+    months = lag_periods(transform, out_ppy, window) * (12 // out_ppy)
     return months + (12 // out_ppy if aggregating else 0)
 
 
 def source_periods_needed(
-    latest_n: int, transform: str, source_ppy: int | None, out_ppy: int | None
+    latest_n: int,
+    transform: str,
+    source_ppy: int | None,
+    out_ppy: int | None,
+    window: int | None = None,
 ) -> int:
     """Source periods to request so that `latest_n` output periods can be computed."""
+    lag = lag_periods(transform, out_ppy, window)
     if source_ppy is None or out_ppy is None:
-        return latest_n + lag_periods(transform, out_ppy)
+        return latest_n + lag
     ratio = source_ppy // out_ppy
     # ratio - 1 more: the latest output period may not be complete yet.
-    return (latest_n + lag_periods(transform, out_ppy)) * ratio + ratio - 1
+    return (latest_n + lag) * ratio + ratio - 1
 
 
 def is_rate_unit(text: str | None) -> bool:
@@ -396,9 +446,14 @@ def _formula(
     index_base: str | None,
     aggregation: str | None,
     source_ppy: int | None,
+    window: int | None = None,
     lang: str,
 ) -> str:
     lag = ppy if transform in ("yoy_diff", "yoy_pct_change") else 1
+    span = window or 2
+    terms = [f"x_{{t-{k}}}" for k in range(span - 1, 0, -1)] + ["x_t"]
+    if span > 4:  # mean(x_{t-11}, ..., x_{t-1}, x_t)
+        terms = [terms[0], "...", *terms[-2:]]
     expressions = {
         "level": "x_t",
         "diff": "x_t - x_{t-1}",
@@ -407,9 +462,11 @@ def _formula(
         "yoy_pct_change": f"100 * (x_t / x_{{t-{lag}}} - 1)",
         "annualized_pct_change": f"100 * ((x_t / x_{{t-1}})^{ppy} - 1)",
         "index": "100 * x_t / x_base",
+        "moving_average": f"mean({', '.join(terms)})",
     }
-    text_en = f"Computed by MapleStats: {transform} = {expressions[transform]}"
-    text_fr = f"Calculé par MapleStats : {transform} = {expressions[transform]}"
+    name = f"moving_average_{window}" if transform == "moving_average" else transform
+    text_en = f"Computed by MapleStats: {name} = {expressions[transform]}"
+    text_fr = f"Calculé par MapleStats : {name} = {expressions[transform]}"
     if ppy is not None:
         en, fr = _PERIOD_WORDS[ppy]
         text_en += f", t in {en}"
@@ -423,6 +480,9 @@ def _formula(
     if transform == "index":
         text_en += f", x_base = average level over {index_base}"
         text_fr += f", x_base = niveau moyen sur {index_base}"
+    if transform == "moving_average":
+        text_en += " (trailing, periods matched by date; null if any of them is missing)"
+        text_fr += " (moyenne passée, périodes appariées par date ; nulle s'il en manque une)"
     if aggregation:
         target_en, source_en = frequency_name(ppy), frequency_name(source_ppy)
         target_fr, source_fr = frequency_name(ppy, "fr"), frequency_name(source_ppy, "fr")
@@ -461,6 +521,7 @@ def transform_series(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     rate_unit: bool = False,
     units: str | None = None,
     window_start: date | None = None,
@@ -497,6 +558,7 @@ def transform_series(
             "index_base only applies to transform='index'.",
             "index_base ne s'applique qu'à transform='index'.",
         )
+    check_window(transform, window, lang)
 
     applied: str = transform
     if rate_unit and transform in _POINTS_INSTEAD:
@@ -540,6 +602,14 @@ def transform_series(
         assert index_base is not None
         base = _base_value(levels, index_base, out_ppy, lang)
         values = [None if v is None or base == 0 else 100 * v / base for _, v in levels]
+    elif applied == "moving_average":
+        assert window is not None and out_ppy is not None  # check_window, _NEEDS_CALENDAR
+        by_key = {_key(d, out_ppy): v for d, v in levels}
+        values = []
+        for d, _ in levels:
+            span = [by_key.get(_key(d, out_ppy) - k) for k in range(window)]
+            present = [v for v in span if v is not None]
+            values.append(math.fsum(present) / window if len(present) == window else None)
     elif out_ppy is None:
         values = [None] + [
             _compute(applied, levels[i][1], levels[i - 1][1], None) for i in range(1, len(levels))
@@ -570,6 +640,30 @@ def transform_series(
         rows = [r for r in rows if r[0][0] <= window_end]
     if latest_n is not None:
         rows = rows[-latest_n:] if latest_n > 0 else []
+    if applied == "moving_average" and window is not None:
+        notes.append(
+            pick(
+                lang,
+                f"Trailing moving average: each value is the mean of its period and the "
+                f"{window - 1} before it (MapleStats does not compute a centred one). A period "
+                "whose window reaches a missing or unpublished period is null."
+                + (
+                    " The series is a percentage or rate: its moving average is in the same "
+                    "unit, so no percentage-point conversion applies."
+                    if rate_unit
+                    else ""
+                ),
+                f"Moyenne mobile passée : chaque valeur est la moyenne de sa période et des "
+                f"{window - 1} précédentes (MapleStats ne calcule pas de moyenne centrée). Une "
+                "période dont la fenêtre touche une période manquante ou non publiée est nulle."
+                + (
+                    " La série est un pourcentage ou un taux : sa moyenne mobile est dans la "
+                    "même unité, sans conversion en points de pourcentage."
+                    if rate_unit
+                    else ""
+                ),
+            )
+        )
     if cut := sorted(period_label(d, out_ppy) for (d, _), _ in rows if d in incomplete):
         notes.append(
             pick(
@@ -601,12 +695,14 @@ def transform_series(
         periods_per_year=out_ppy,
         source_periods_per_year=source_ppy,
         aggregation=aggregation if frequency else None,
+        window=window if applied == "moving_average" else None,
         formula=_formula(
             applied,
             out_ppy,
             index_base=index_base,
             aggregation=aggregation if frequency else None,
             source_ppy=source_ppy,
+            window=window,
             lang=lang,
         ),
         unit=unit,
