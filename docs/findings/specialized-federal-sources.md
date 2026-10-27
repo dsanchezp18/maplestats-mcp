@@ -621,6 +621,98 @@ Investigated 2026-09-19: CRTC's Communications Monitoring Report data
 pricing, mobile and broadband availability) is not a separate platform -- it
 is already …
 
+## CRTC telecom prices and market indicators (telecom_prices)
+
+**Status:** Shipped (`modules/telecom_prices/`, 4 `telecom_` tools).
+
+Investigated 2026-10-27 for the backlog item on mobile and Internet plan
+prices, data allowances, revenue per GB, usage, subscribers, competition and
+low-cost plans. Question used to judge it: "how have mobile plan prices
+changed since 2020?"
+
+What exists and how it is published (all checked live):
+
+- **CRTC year-end price survey** (open.canada.ca dataset
+  `8bde476f-49e1-455d-9705-77e6ffab72ca`, "Year-End Monthly Reported Prices
+  for Internet and Mobile services - CMR (2016-2022)", although the workbook
+  now runs 2016-2025, version 11 of 2026-05-14). One bilingual XLSX: every
+  reported price by provider, community and plan (35,000 rows), and average
+  sheets for mobile (by data allowance, talk-only to 200 GB, and by 3G, LTE,
+  5G or "lowest price") and Internet (by speed tier, 5/1 to 2,500/15 Mbps),
+  by province or territory, urban, rural and national. Method (data
+  dictionary PDF; the English resource links to the French PDF): providers
+  report the lowest non-promotional price meeting each basket in 24 urban
+  centres and 55 rural communities; national = mean of urban and rural
+  averages. Baskets changed: before 2019 the 1 GB basket required 450
+  minutes and 300 texts; 10 GB was added in 2019, 20 and 50 GB in 2020, 75
+  and 100 GB in 2024, 150 and 200 GB in 2025; 5G prices start in 2020. Labels are
+  inconsistent ("Urbain / Urban" against "Urban" for 2025; "Forfait voix"
+  against "Plan voix"); missing averages are "--". National 5 GB "lowest
+  price" average: $46.91 (2020), $43.81, $46.05, $43.80, $27.18, $30.08
+  (2025).
+- **Retail Mobile Sector** and **Retail Fixed Internet Sector** (datasets
+  `09a45d61-...` and `8a80c08b-...`, titles say 2013-2022, data run to
+  2024): one workbook per language, a contents sheet and one tab per
+  infographic, figure, table and supplementary table. Mobile revenue per GB
+  (MB-S3: $8.73 in 2020, $4.49 in 2024), ARPU (MB-F12), data usage (MB-F15),
+  subscribers (MB-S5), market shares of Bell, TELUS, Rogers and others
+  (MB-S1, MB-F2), distribution of subscribers by plan size (MB-F7), churn;
+  Internet revenue per GB (N-S4), revenues, usage, overage fees, speeds.
+  Years from 2020 are marked "(MP)" ("(TM)" in French): the CRTC counts
+  mobile phone services only from then. Shares are stored as fractions.
+  French figure tabs are "G" (MB-G12) where English ones are "F".
+- **Current Trends, quarterly** (dataset `cb02d3b1-...`, version 17 of
+  2026-08-21, 2014 Q1 to 2026 Q1): one bilingual workbook (mobile, Internet,
+  wireline voice, TV distribution); rows unsorted; revenues, subscribers,
+  lines, minutes, wireless data traffic (GB). The survey covers the entities
+  with the top 90% of revenues (dataset description).
+- **StatCan CPI**: table 18-10-0004-01, "Cellular services (2017=100)",
+  Canada vector **v1212387935** (87.1 in January 2020, 48.1 in September
+  2026); Internet access services v41693216; telephone services v41691070;
+  communications v41691069. The table also lists "Cellular services
+  (202304=100)" (member 381), but WDS has no Canada series for it (checked
+  2026-10-27). Reachable with `wds_get_data_from_vectors`.
+- **ISED price comparison studies** (annual; the 2025 edition is the 18th,
+  ised-isde.canada.ca/site/strategic-policy-sector/...): HTML report with 68
+  tables (Canadian prices by region and basket level 2020-2025, and
+  international comparisons) plus a PDF. Basket levels are redefined between
+  editions (the 2025 edition's Level 2 averages five levels of the 2023
+  edition for 2020-2022), cells carry typos
+  ("202 4") and row spans. ISED's terms allow non-commercial reproduction
+  with attribution and do not forbid automated access, but a parser would
+  be brittle and the CRTC and StatCan data answer the same question, so it
+  is cited in the planner caveats, not read by a tool.
+- **Government of Canada 2 to 6 GB price tracking** (ISED "Telecom services
+  price tracking" page): quarterly prices of Fido, Koodo and Virgin 2, 4 and
+  6 GB plans against the early-2020 benchmark ($50, $55, $60), February 2020
+  to March 2022, one 34 KB XLSX (last updated 2022-04-29). The 25% target was
+  met in December 2021 and tracking ended; StatCan's cellular CPI continues
+  it. Not built: a finished, three-brand series.
+- **Low-cost and occasional-use plans** (Telecom Regulatory Policy CRTC
+  2021-130; Bell, Rogers, TELUS and SaskTel report semi-annually on them):
+  the CRTC's pages (crtc.gc.ca/eng/phone/mobile/occa.htm and the reports)
+  answer HTTP 403 with a Cloudflare "Security Check" page to every automated
+  request, as recorded in the CRTC section above. Out: not reachable for
+  automated access. The CRTC's open.canada.ca datasets hold no low-cost plan
+  data (searched "low-cost", "occasional use").
+
+Why a module and not only routing: before it, `search_tools` sent "cell
+phone plan prices", "average revenue per GB of mobile data" and "prix des
+forfaits de téléphonie mobile" to the Ontario electricity rates and dairy
+butter price tools, because no tool's docstring named telecom. The generic
+CKAN reader does read the XLSX resources (the "CSV" resources are ZIPs it
+refuses), but returns the "Source:" and note lines as data rows, the wide
+year tables with "2020 (MP)" headers and Growth/CAGR columns as they are,
+the quarterly rows unsorted, and the price labels unreconciled. The module
+gives one call per answer with the method and the comparability breaks
+stated; `plan_query` has a telecom topic (English and French) that starts
+with `telecom_get_plan_prices` and adds the CPI vector.
+
+Terms: the four CRTC datasets are under the Open Government Licence -
+Canada (`ca-ogl-lgo`); applications.crtc.gc.ca serves the files without the
+challenge that blocks crtc.gc.ca; its robots.txt disallows only internal
+paths.
+
 ## CER (Canada Energy Regulator)
 
 **Status:** Shipped.

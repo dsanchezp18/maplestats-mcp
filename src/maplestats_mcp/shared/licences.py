@@ -259,6 +259,8 @@ SOURCE_LICENCES: dict[str, str] = {
     "cgc": OGL_CANADA,
     "cgc-grain-statistics-weekly": OGL_CANADA,
     "cgc-exports-licensed-facilities": OGL_CANADA,
+    # CRTC Communications Market Reports workbooks (telecom_prices), open.canada.ca.
+    "crtc-cmr": OGL_CANADA,
     "cwfis": OGL_CANADA,
     "cwfis-sitrep": OGL_CANADA,
     "earthquakes-canada": OGL_CANADA,
