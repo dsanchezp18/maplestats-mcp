@@ -105,6 +105,12 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
+    "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
+    "service ratio, credit, house prices, inflation, exchange rate)": (
+        "le Canada à côté du G7 ou d'autres économies pour un indicateur de la BRI (taux "
+        "directeur, ratio du service de la dette, crédit, prix des logements, inflation, "
+        "taux de change)"
+    ),
     # Economy
     "GDP, trade and industry output": "PIB, commerce et production des industries",
     "what StatCan released recently on the topic": (

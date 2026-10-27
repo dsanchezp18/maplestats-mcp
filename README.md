@@ -150,7 +150,7 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
 ## What it covers
 
-362 tools in 71 modules. Run `docs://catalogue` for the full, bilingual list.
+366 tools in 72 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -163,7 +163,7 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 | Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |
 | Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `bc_env_`, `bc_lobbyists_`, `drivebc_`, `ab_economic_`, `ab_opendata_`, `isq_`, `nl_stats_`, `yukon_stats_`, `nwt_stats_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, BC environmental monitoring (air quality, snow, groundwater, streamflow), BC lobbyists registry, DriveBC road events, Alberta Economic Dashboard, Open Alberta files, Institut de la statistique du Québec, the Newfoundland and Labrador, Yukon and Northwest Territories statistics bureaus, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba) |
 | Housing (links only) | `crea_` | Links, release timing and terms for CREA's MLS® Home Price Index; no values, because CREA's terms allow private, non-commercial analysis only |
-| International | `worldbank_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0) |
+| International | `worldbank_`, `bis_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0); Bank for International Settlements statistics: policy rates, debt service ratios, credit, house prices, banking and payment statistics (free reuse with citation) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
 | Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, the BC Transit systems and the Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |

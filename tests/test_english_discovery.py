@@ -204,6 +204,10 @@ CASES = [
         "isc_get_registered_population",
     ),
     ("short-term boil water advisory First Nations south of 60", "isc_list_short_term_advisories"),
+    # BIS statistics, 2026-10-26.
+    ("household debt service ratio Canada compared with other countries", "bis_compare_countries"),
+    ("Bank for International Settlements datasets", "bis_list_datasets"),
+    ("dimensions and codes of a BIS dataset series key", "bis_describe_dataset"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),
