@@ -95,6 +95,7 @@ _NUMERIC_GETTERS = [
     ("MAPLE_DELTA_MAX_SCAN_SECONDS", config.get_delta_max_scan_seconds, 75.0),
     ("MAPLE_IP_HORIZONS_CACHE_MAX_GB", config.get_ip_horizons_cache_max_bytes, 3 * 1024**3),
     ("MAPLE_LODE_CACHE_MAX_GB", config.get_lode_cache_max_bytes, 3 * 1024**3),
+    ("MAPLE_ON_FIR_CACHE_MAX_MB", config.get_on_fir_cache_max_bytes, 500 * 1024**2),
     ("MAPLE_LODE_MAX_DOWNLOAD_MB", lambda: config.get_lode_max_download_bytes(250), 250_000_000),
     ("MAPLE_TRUSTED_PROXY_HOPS", config.get_trusted_proxy_hops, 1),
 ]

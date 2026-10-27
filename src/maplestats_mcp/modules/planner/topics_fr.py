@@ -331,6 +331,15 @@ FR: dict[str, str] = {
         "Dépenses publiques, approvisionnement et finances"
     ),
     "PBO costings and fiscal analysis": "estimations de coûts et analyses financières du DPB",
+    "Ontario municipal finances (FIR): find the line code, query=<label words> "
+    "such as 'police total expenses'": (
+        "finances municipales de l'Ontario (RIF) : trouver le code de ligne, query=<mots du "
+        "libellé> comme « police total expenses »"
+    ),
+    "slc=<line code> across Ontario municipalities or years, per capita, within one tier": (
+        "slc=<code de ligne> entre municipalités ontariennes ou entre années, par habitant, "
+        "au sein d'un même palier"
+    ),
     "Finance Canada monthly Fiscal Monitor issues (deficit, revenues, spending)": (
         "numéros mensuels de La revue financière de Finances Canada (déficit, revenus, dépenses)"
     ),

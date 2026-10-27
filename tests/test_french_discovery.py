@@ -188,6 +188,8 @@ CASES = [
     ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
     ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
     ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
+    ("dépenses municipales par habitant des villes de l'Ontario", "on_fir_compare"),
+    ("rapport d'information financière annexes des municipalités", "on_fir_list_schedules"),
     # Sources fédérales ajoutées le 2026-10-03.
     ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
     ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),

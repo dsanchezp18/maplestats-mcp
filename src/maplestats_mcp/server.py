@@ -389,7 +389,9 @@ Sources, by tool-name prefix:
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
   electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including water flows at its
   dams), oeb_
-  (Ontario Energy Board: utility RRR filings, reliability, rates).
+  (Ontario Energy Board: utility RRR filings, reliability, rates), on_fir_
+  (Ontario municipal Financial Information Return: revenue, expenses,
+  taxes, reserves, debt by municipality, 2000 on).
 - Portal families, each with a `portal` argument and a list_portals tool:
   ckan_ (open.canada.ca, provincial and city CKAN catalogues;
   ckan_datastore_search for rows, ckan_describe_resource and
