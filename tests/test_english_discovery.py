@@ -213,6 +213,11 @@ CASES = [
     ("Ontario time-of-use electricity prices history", "oeb_rates"),
     ("Ontario Energy Board open data datasets", "oeb_list_datasets"),
     ("which fields does an OEB RRR file have", "oeb_describe_dataset"),
+    # Ontario Financial Information Return, 2026-10-26.
+    ("police spending per capita Ontario municipalities", "on_fir_compare"),
+    ("Toronto municipal expenses by function Financial Information Return", "on_fir_get_schedule"),
+    ("Ontario municipality MUNID upper tier lower tier", "on_fir_search_municipalities"),
+    ("FIR schedule line column code for reserve funds", "on_fir_search_lines"),
     # Federal sources added 2026-10-03.
     ("border wait time at the Peace Bridge right now", "cbsa_border_wait_times"),
     ("pesticide products registered with active ingredient glyphosate", "pmra_search_products"),

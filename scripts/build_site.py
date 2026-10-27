@@ -648,6 +648,15 @@ SOURCES: dict[str, Source] = {
         places=("ON",),
         row="provincial_agency",
     ),
+    "on_fir": Source(
+        "Ontario Financial Information Return (municipal finances)",
+        "Rapport d'information financière de l'Ontario (finances municipales)",
+        "provincial",
+        "Ontario FIR",
+        "RIF de l'Ontario",
+        places=("ON",),
+        row="provincial_agency",
+    ),
     "nrcan_energy_use": Source(
         "Natural Resources Canada: energy use",
         "Ressources naturelles Canada : consommation d'énergie",

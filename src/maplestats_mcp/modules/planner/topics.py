@@ -1014,6 +1014,14 @@ TOPICS: tuple[Topic, ...] = (
             "tableaux de reference financiers",
             "deficit federal",
             "dette federale",
+            "municipal finance*",
+            "municipal budget",
+            "municipal spending",
+            "financial information return",
+            "fir",
+            "finances municipales",
+            "rapport d'information financiere",
+            "depenses municipales",
         ),
         (
             PlanStep("pbo_search_publications", "PBO costings and fiscal analysis"),
@@ -1031,6 +1039,26 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
             PlanStep("ckan_search_datasets", "grants and contributions: portal='federal'"),
+            PlanStep(
+                "on_fir_search_lines",
+                "Ontario municipal finances (FIR): find the line code, query=<label words> "
+                "such as 'police total expenses'",
+                (
+                    "municipal finance*",
+                    "municipal budget",
+                    "municipal spending",
+                    "financial information return",
+                    "fir",
+                    "finances municipales",
+                    "rapport d'information financiere",
+                    "depenses municipales",
+                ),
+            ),
+            PlanStep(
+                "on_fir_compare",
+                "slc=<line code> across Ontario municipalities or years, per capita, within one "
+                "tier",
+            ),
         ),
         ("Federal fiscal years run April to March; match them to calendar-year data explicitly.",),
     ),

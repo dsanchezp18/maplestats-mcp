@@ -232,6 +232,12 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: Ontario Energy Board open data (https://www.oeb.ca/ontarios-energy-sector/"
         "open-data). Contains information licensed under the Open Government Licence - Ontario."
     ),
+    "on-fir": (
+        "Source: Ontario Ministry of Municipal Affairs and Housing, Financial Information Return "
+        "(https://efis.fma.csc.gov.on.ca/fir/). Open Government Licence - Ontario "
+        "(https://www.ontario.ca/page/open-government-licence-ontario). Attribution: 'Contains "
+        "information licensed under the Open Government Licence - Ontario.'"
+    ),
     "crea": (
         "Source: The Canadian Real Estate Association (CREA), MLS Home Price Index. CREA's "
         "terms (https://www.crea.ca/legal/) apply; this is not an open licence."
@@ -581,6 +587,13 @@ _PROVINCIAL_FR: dict[str, str] = {
         "Source : Commission de l'énergie de l'Ontario, données ouvertes "
         "(https://www.oeb.ca/ontarios-energy-sector/open-data). Contient des renseignements "
         "utilisés en vertu de la Licence du gouvernement ouvert – Ontario."
+    ),
+    "on-fir": (
+        "Source : ministère des Affaires municipales et du Logement de l'Ontario, Rapport "
+        "d'information financière (https://efis.fma.csc.gov.on.ca/fir/). Licence du gouvernement "
+        "ouvert – Ontario (https://www.ontario.ca/fr/page/licence-du-gouvernement-ouvert-ontario). "
+        "Mention : « Contient des renseignements utilisés en vertu de la Licence du gouvernement "
+        "ouvert – Ontario. »"
     ),
     "isq": (
         "Droits d'auteur du gouvernement du Québec (https://www.quebec.ca/en/copyright) : la "

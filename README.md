@@ -150,7 +150,7 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
 ## What it covers
 
-366 tools in 72 modules. Run `docs://catalogue` for the full, bilingual list.
+371 tools in 73 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -161,7 +161,7 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 | Wildland fire | `cwfis_`, `nrcan_nbac_`, `ab_wildfire_` | NRCan's Canadian Wildland Fire Information System (satellite hotspots, fire danger, weather stations), burned areas, and Alberta Wildfire's live fire status |
 | Electricity | `electricity_ontario_`, `electricity_quebec_`, `oeb_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only); Ontario Energy Board datasets |
 | Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |
-| Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `bc_env_`, `bc_lobbyists_`, `drivebc_`, `ab_economic_`, `ab_opendata_`, `isq_`, `nl_stats_`, `yukon_stats_`, `nwt_stats_`, `elections_provincial_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, BC environmental monitoring (air quality, snow, groundwater, streamflow), BC lobbyists registry, DriveBC road events, Alberta Economic Dashboard, Open Alberta files, Institut de la statistique du Québec, the Newfoundland and Labrador, Yukon and Northwest Territories statistics bureaus, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba) |
+| Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `bc_env_`, `bc_lobbyists_`, `drivebc_`, `ab_economic_`, `ab_opendata_`, `isq_`, `nl_stats_`, `yukon_stats_`, `nwt_stats_`, `elections_provincial_`, `on_fir_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, BC environmental monitoring (air quality, snow, groundwater, streamflow), BC lobbyists registry, DriveBC road events, Alberta Economic Dashboard, Open Alberta files, Institut de la statistique du Québec, the Newfoundland and Labrador, Yukon and Northwest Territories statistics bureaus, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba), Ontario's municipal Financial Information Return (every schedule of every municipality, 2000 on) |
 | Housing (links only) | `crea_` | Links, release timing and terms for CREA's MLS® Home Price Index; no values, because CREA's terms allow private, non-commercial analysis only |
 | International | `worldbank_`, `bis_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0); Bank for International Settlements statistics: policy rates, debt service ratios, credit, house prices, banking and payment statistics (free reuse with citation) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
@@ -252,6 +252,7 @@ this server has the 750 hours to itself.
 | `MAPLE_LODE_CACHE_DIR`, `MAPLE_LODE_CACHE_MAX_GB` | system temp, `3` | Where StatCan open-database (LODE) archives are unpacked, and the size cap (least recently used files go first); use a persistent volume when hosted |
 | `MAPLE_LODE_MAX_DOWNLOAD_MB` | `300` | Largest open-database archive one call may download; `0` turns downloads off |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
+| `MAPLE_ON_FIR_CACHE_DIR`, `MAPLE_ON_FIR_CACHE_MAX_MB` | system temp, `500` | Ontario FIR years kept as Parquet (about 3 MB each); use a persistent volume when hosted |
 | `MAPLE_EXPORT_DIR` | Downloads folder (home folder if there is none) | Where `reproduce_workbook` saves Excel workbooks on a local server |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
