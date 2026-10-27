@@ -21,7 +21,15 @@ class RecallRow(BaseModel):
 class RecallSearchResult(BaseModel):
     recalls: list[RecallRow] = Field(description="In recall-date order, as `order` says.")
     returned_count: int
-    total_matched: int = Field(description="Recalls matching the filters, all pages.")
+    total_matched: int = Field(
+        description="Recalls matching the filters, all pages; a lower bound when "
+        "all_rows_read is false."
+    )
+    all_rows_read: bool = Field(
+        default=True,
+        description="False when the search matched more rows than MapleStats reads "
+        "(100,000): only the API's oldest rows were read and sorted.",
+    )
     has_more: bool = Field(description="True when a later page holds more recalls.")
     order: str = Field(description="'newest' (recall date, newest first) or 'oldest'.")
     page: int

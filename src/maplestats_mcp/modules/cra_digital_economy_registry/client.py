@@ -160,7 +160,12 @@ def parse_date(text: str | None) -> date | None:
         return None
 
 
-def _parse_registrants(html: str, lang: str = "en") -> list[DigitalEconomyRegistrant]:
+def _parse_registrants(html: str, lang: str = "en") -> tuple[list[DigitalEconomyRegistrant], int]:
+    """The registrants, and how many table rows were skipped for a missing cell.
+
+    A table with no readable row is a changed page, not an empty registry
+    (it listed 2,347 businesses in 2026-09), so it raises instead.
+    """
     soup = BeautifulSoup(html, "html.parser")
     table = soup.select_one("table.wb-tables")
     if table is None:
@@ -173,14 +178,17 @@ def _parse_registrants(html: str, lang: str = "en") -> list[DigitalEconomyRegist
             lang,
         )
     registrants: list[DigitalEconomyRegistrant] = []
+    skipped = 0
     for row in table.select("tbody tr"):
         cells = row.find_all("td")
         if len(cells) < 5:
+            skipped += 1
             continue
         legal_name = _cell_text(cells[0])
         business_number = _cell_text(cells[2])
         registration_date = _cell_text(cells[3])
         if not legal_name or not business_number or not registration_date:
+            skipped += 1
             continue
         deregistration_date = _cell_text(cells[4])
         registrants.append(
@@ -194,7 +202,18 @@ def _parse_registrants(html: str, lang: str = "en") -> list[DigitalEconomyRegist
                 deregistration_date_text=deregistration_date,
             )
         )
-    return registrants
+    if not registrants:
+        _raise(
+            UpstreamError,
+            f"cra_digital_economy_registry: the registry table has no readable row "
+            f"({skipped} rows lack a legal name, business number or registration date); "
+            "the page layout changed.",
+            f"cra_digital_economy_registry : le tableau du registre n'a aucune ligne lisible "
+            f"({skipped} lignes sans dénomination, numéro d'entreprise ou date "
+            "d'inscription) ; la mise en page a changé.",
+            lang,
+        )
+    return registrants, skipped
 
 
 async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEconomyRegistryResult:
@@ -225,7 +244,7 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
         return response.text
 
     html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    all_registrants = _parse_registrants(html, lang)
+    all_registrants, skipped = _parse_registrants(html, lang)
 
     needle = query.strip().lower()
     if needle:
@@ -260,6 +279,15 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
             cached=was_cached,
             schema_name="cra_digital_economy_registry.DigitalEconomyRegistryResult",
             coverage=coverage,
+            limits=_text(
+                f"Rows of the registry table skipped for a missing legal name, business number "
+                f"or registration date: {skipped}.",
+                f"Lignes du tableau du registre ignorées faute de dénomination, de numéro "
+                f"d'entreprise ou de date d'inscription : {skipped}.",
+                lang,
+            )
+            if skipped
+            else None,
             lang=lang,
         ),
     )

@@ -133,7 +133,7 @@ class FileRows(BaseModel):
 
 
 class NpriRecord(BaseModel):
-    year: int
+    year: int | None = Field(description="Reporting year; null when the row leaves it blank.")
     npri_id: str
     company: str
     facility: str
@@ -214,7 +214,18 @@ class GhgrpResult(BaseModel):
     records: list[GhgrpRecord]
     total_records: int
     facilities: int
-    total_co2e_sum: float = Field(description="Sum of total_co2e over all matching records.")
+    total_co2e_sum: float = Field(
+        description="Computed by MapleStats: the sum of total_co2e over all matching records "
+        "(all pages), leaving out the total_co2e_blank records with a blank total."
+    )
+    total_co2e_blank: int = Field(
+        default=0, description="Matching records whose total_co2e is blank in the file."
+    )
+    rows_without_year: int = Field(
+        default=0,
+        description="Rows of the file skipped because their reference year is blank or "
+        "unreadable (they match no year and are in no count here).",
+    )
     offset: int
     truncated: bool
     notes: list[str]

@@ -227,6 +227,10 @@ async def search_products(
 
 
 def _num(value: Any) -> float | None:
+    """A number, or None for text and for 0: the API writes 0 (or 0.0) for a figure
+    the licence does not give (checked live 2026-10-27: quantity_minimum, age and
+    potency_amount are 0.0 on records that state none), so a 0 is read as "not given"
+    and `provenance.limits` says so."""
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -249,7 +253,26 @@ def _fmt(value: Any) -> str | None:
 def _range(value: Any, low: Any, high: Any) -> str | None:
     if _num(low) and _num(high):
         return f"{_fmt(low)}-{_fmt(high)}"
+    # A minimum or maximum alone was dropped before, so NPN 80015238's dose
+    # (age 0, age_minimum 19) read as plain "year(s)"; keep it as "19+".
+    if _num(value) is None and _num(low):
+        return f"{_fmt(low)}+"
+    if _num(value) is None and _num(high):
+        return f"≤{_fmt(high)}"
     return _fmt(value)
+
+
+_COMPOSED_EN = (
+    "potency, dried_herb_equivalent and the dose age, dose and frequency are composed by "
+    "MapleStats from the source's amount, range and unit fields; the source writes 0 for a "
+    "figure not given, and those are left out (a quantity of 0 comes back null)."
+)
+_COMPOSED_FR = (
+    "potency, dried_herb_equivalent ainsi que l'âge, la dose et la fréquence des doses sont "
+    "composés par MapleStats à partir des champs de quantité, d'intervalle et d'unité de la "
+    "source ; la source écrit 0 pour une valeur non indiquée, et ces valeurs sont omises "
+    "(une quantité de 0 est renvoyée nulle)."
+)
 
 
 async def get_product(npn: str, *, lang: str = "en") -> NhpProductDetail:
@@ -368,10 +391,11 @@ async def get_product(npn: str, *, lang: str = "en") -> NhpProductDetail:
                 cached=False,
                 schema="NhpProductDetail",
                 freshness=constants.FRESHNESS,
+                limits=_COMPOSED_EN,
                 lang=lang,
                 freshness_fr=constants.FRESHNESS_FR,
                 limits_fr="Les noms, les fins et les mises en garde sont ceux que l'entreprise "
-                "a déposés, parfois en anglais seulement.",
+                "a déposés, parfois en anglais seulement. " + _COMPOSED_FR,
             ),
         )
 

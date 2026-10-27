@@ -35,6 +35,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 from maplestats_mcp.shared.licences import OGL_CANADA
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 
 _CONFIG = CkanConfig(
@@ -95,8 +96,11 @@ def _bad_bn(raw: str, lang: str) -> NoReturn:
     )
 
 
-async def _list_resources(lang: str, needed: tuple[str, ...]) -> tuple[int, str, dict[str, str]]:
-    """(year, package id, DataStore resource ids by name) of the newest list with all `needed`.
+async def _list_resources(
+    lang: str, needed: tuple[str, ...]
+) -> tuple[int, str, dict[str, str], str | None]:
+    """(year, package id, DataStore resource ids by name, fallback note) of the newest
+    list with all `needed`. The note is None unless the pinned list had to be used.
 
     Each tool names the tables it reads, so a newest list that is still missing one
     (a table not yet DataStore-active) does not hide an older list that has it.
@@ -130,12 +134,26 @@ async def _list_resources(lang: str, needed: tuple[str, ...]) -> tuple[int, str,
             if isinstance(name, str) and res.get("datastore_active"):
                 by_name.setdefault(name.strip(), res["id"])
         if all(name in by_name for name in needed):
-            return year, package["id"], by_name
-    # No published list has every table: the pinned 2024 list, whose year the response states.
+            return year, package["id"], by_name, None
+    # No published list has every table: the pinned 2024 list, and the response says it is
+    # a fallback and why, so an older list is not taken for the newest one.
+    found = ", ".join(str(year) for year, _ in sorted(lists, reverse=True)) or "none"
+    note = pick(
+        lang,
+        f"Fallback: open.canada.ca's search found no List of charities with the tables this "
+        f"needs (lists found: {found}), so MapleStats used its pinned "
+        f"{constants.FALLBACK_YEAR} list (package {constants.FALLBACK_PACKAGE_ID}); a newer "
+        "list may exist.",
+        f"Solution de repli : la recherche d'open.canada.ca n'a trouvé aucune liste des "
+        f"organismes de bienfaisance avec les tables nécessaires (listes trouvées : {found}) ; "
+        f"MapleStats a donc utilisé sa liste {constants.FALLBACK_YEAR} enregistrée (paquet "
+        f"{constants.FALLBACK_PACKAGE_ID}) ; une liste plus récente peut exister.",
+    )
     return (
         constants.FALLBACK_YEAR,
         constants.FALLBACK_PACKAGE_ID,
         dict(constants.FALLBACK_RESOURCES),
+        note,
     )
 
 
@@ -204,7 +222,7 @@ def _provenance(
             f"{year} List of charities (CRA T3010 data)",
             f"Liste des organismes de bienfaisance {year} (données T3010 de l'ARC)",
         ),
-        limits=f"{_limits(lang)} {note}" if note else _limits(lang),
+        limits=join_limits(note, _limits(lang)),
         licence=OGL_CANADA,
         lang=lang,
     )
@@ -256,7 +274,7 @@ async def search_charities(
         raise_localized(
             InvalidInput, f"offset must be >= 0, got {offset}.", "offset doit être >= 0.", lang
         )
-    year, _, resources = await _list_resources(lang, (constants.RESOURCE_IDENTIFICATION,))
+    year, _, resources, fallback = await _list_resources(lang, (constants.RESOURCE_IDENTIFICATION,))
     resource = resources[constants.RESOURCE_IDENTIFICATION]
     filters: dict[str, str] = {}
     if prov:
@@ -285,14 +303,14 @@ async def search_charities(
         offset=offset,
         limit=limit,
         charities=[_record(r, lang) for r in rows],
-        provenance=_provenance(year, resource, cached, "CharitySearchResult", lang),
+        provenance=_provenance(year, resource, cached, "CharitySearchResult", lang, fallback),
     )
 
 
 async def get_charity(business_number: str, lang: str = "en") -> CharityDetail:
     """One charity from the Identification table, plus its fiscal period end and programs."""
     bn = normalize_bn(business_number, lang)
-    year, package_id, resources = await _list_resources(
+    year, package_id, resources, fallback = await _list_resources(
         lang, (constants.RESOURCE_IDENTIFICATION, constants.RESOURCE_GENERAL)
     )
     ident, cached = await _datastore(
@@ -330,7 +348,12 @@ async def get_charity(business_number: str, lang: str = "en") -> CharityDetail:
         programs=programs,
         dataset_url=constants.DATASET_PAGE.format(id=package_id),
         provenance=_provenance(
-            year, resources[constants.RESOURCE_IDENTIFICATION], cached, "CharityDetail", lang
+            year,
+            resources[constants.RESOURCE_IDENTIFICATION],
+            cached,
+            "CharityDetail",
+            lang,
+            fallback,
         ),
     )
 
@@ -338,7 +361,7 @@ async def get_charity(business_number: str, lang: str = "en") -> CharityDetail:
 async def get_directors(business_number: str, lang: str = "en") -> CharityDirectors:
     """Directors and officers of one charity from the directors/officers table."""
     bn = normalize_bn(business_number, lang)
-    year, _, resources = await _list_resources(lang, (constants.RESOURCE_DIRECTORS,))
+    year, _, resources, fallback = await _list_resources(lang, (constants.RESOURCE_DIRECTORS,))
     resource = resources[constants.RESOURCE_DIRECTORS]
     # Exact BN filter only: full-text q is refused on resources over 100,000 rows.
     result, cached = await _datastore(
@@ -384,5 +407,7 @@ async def get_directors(business_number: str, lang: str = "en") -> CharityDirect
             )
             for r in rows
         ],
-        provenance=_provenance(year, resource, cached, "CharityDirectors", lang, cut_note),
+        provenance=_provenance(
+            year, resource, cached, "CharityDirectors", lang, join_limits(fallback, cut_note)
+        ),
     )

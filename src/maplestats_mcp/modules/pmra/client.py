@@ -48,6 +48,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -56,6 +57,9 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _REGISTRATION = re.compile(r"^\d{1,8}$")
+# Summary lists cut for size; the response says so when they are.
+_TOP_TYPES = 15
+_TOP_CHEMICALS = 50
 _DIGITS_EN = "pmra: registration_number is digits only, e.g. 31153."
 _DIGITS_FR = "pmra : registration_number ne contient que des chiffres, p. ex. 31153."
 
@@ -106,8 +110,15 @@ async def _get(url: str) -> bytes:
     return downloaded.body
 
 
-def parse_extract(body: bytes, columns: int, what: str, lang: str = "en") -> list[list[str]]:
-    """Rows of an extract (header dropped), cells whitespace-collapsed."""
+def parse_extract(
+    body: bytes, columns: int, what: str, lang: str = "en"
+) -> tuple[list[list[str]], int]:
+    """Rows of an extract (header dropped), cells whitespace-collapsed, and how
+    many rows were skipped because their cell count differs from the header.
+
+    No row was malformed in any extract on 2026-10-27; the count is kept so a
+    skipped row is reported in `provenance.limits`, never lost silently.
+    """
     text = body.decode("cp1252", errors="replace").lstrip("﻿")
     rows = list(csv.reader(io.StringIO(text)))
     if not rows or len(rows[0]) != columns:
@@ -120,7 +131,20 @@ def parse_extract(body: bytes, columns: int, what: str, lang: str = "en") -> lis
             "a changé.",
             lang,
         )
-    return [[_clean(cell) for cell in row] for row in rows[1:] if len(row) == columns]
+    kept = [[_clean(cell) for cell in row] for row in rows[1:] if len(row) == columns]
+    return kept, len(rows) - 1 - len(kept)
+
+
+def _skipped_note(skipped: int, what_en: str, what_fr: str, lang: str) -> str | None:
+    if not skipped:
+        return None
+    return _text(
+        f"Rows of the {what_en} extract skipped because their number of cells differs "
+        f"from the header: {skipped:,}",
+        f"Lignes de l'extrait {what_fr} ignorées parce que leur nombre de cellules diffère "
+        f"de l'en-tête : {skipped:,}".replace(",", "\u00a0"),
+        lang,
+    )
 
 
 # ---------------------------------------------------------------- products
@@ -156,9 +180,9 @@ def to_product(cells: tuple[str, ...] | list[str], lang: str) -> PesticideProduc
     )
 
 
-async def _products(lang: str) -> tuple[list[_Product], bool]:
-    async def fetch() -> list[_Product]:
-        rows = parse_extract(
+async def _products(lang: str) -> tuple[tuple[list[_Product], int], bool]:
+    async def fetch() -> tuple[list[_Product], int]:
+        rows, skipped = parse_extract(
             await _get(_url("product", lang)), constants.PRODUCT_COLUMNS, "product", lang
         )
         if len(rows) < 1000:
@@ -168,7 +192,7 @@ async def _products(lang: str) -> tuple[list[_Product], bool]:
                 f"pmra : l'extrait des produits n'a que {len(rows)} lignes.",
                 lang,
             )
-        return [
+        products = [
             _Product(
                 cells=tuple(r),
                 text=_fold(f"{r[0]} {r[1]} {r[2]}"),
@@ -176,11 +200,19 @@ async def _products(lang: str) -> tuple[list[_Product], bool]:
             )
             for r in rows
         ]
+        return products, skipped
 
     return await cached_fetch(f"pmra:products:{lang}", constants.EXTRACT_TTL_SECONDS, fetch)
 
 
-def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | None = None) -> Any:
+def _provenance(
+    url: str,
+    cached: bool,
+    schema: str,
+    lang: str,
+    coverage: str | None = None,
+    limits: str | None = None,
+) -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
@@ -192,6 +224,7 @@ def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | 
             lang,
         ),
         coverage=coverage,
+        limits=limits,
         licence=_text(constants.LICENCE, constants.LICENCE_FR, lang),
         lang=lang,
     )
@@ -235,7 +268,7 @@ async def search_products(
             "product_type.",
             lang,
         )
-    products, cached = await _products(lang)
+    (products, skipped), cached = await _products(lang)
     words = _fold(query).split()
     ingredient_words = _fold(active_ingredient).split()
     wanted_registrant = _fold(registrant)
@@ -257,11 +290,20 @@ async def search_products(
     # Current products first, then by name.
     matched.sort(key=lambda p: (not _is_current(p.cells[15]), p.cells[1]))
     shown = [to_product(p.cells, lang) for p in matched[:limit]]
+    types_note = None
+    if len(counts) > _TOP_TYPES:
+        types_note = _text(
+            f"by_product_type lists the {_TOP_TYPES} most frequent of {len(counts)} product "
+            "types among the matches",
+            f"by_product_type donne les {_TOP_TYPES} types de produit les plus fréquents sur "
+            f"{len(counts)} parmi les correspondances",
+            lang,
+        )
     return PesticideProductList(
         products=shown,
         returned_count=len(shown),
         total_matched=len(matched),
-        by_product_type=dict(sorted(counts.items(), key=lambda kv: -kv[1])[:15]),
+        by_product_type=dict(sorted(counts.items(), key=lambda kv: -kv[1])[:_TOP_TYPES]),
         provenance=_provenance(
             _url("product", lang),
             cached,
@@ -274,6 +316,10 @@ async def search_products(
                 ),
                 lang,
             ),
+            join_limits(
+                types_note,
+                _skipped_note(skipped, "product", "des produits", lang),
+            ),
         ),
     )
 
@@ -281,25 +327,27 @@ async def search_products(
 # ------------------------------------------------------ ingredients and MRLs
 
 
-async def _ingredients(lang: str = "en") -> tuple[dict[str, list[str]], bool]:
-    async def fetch() -> dict[str, list[str]]:
-        rows = parse_extract(
+async def _ingredients(lang: str = "en") -> tuple[tuple[dict[str, list[str]], int], bool]:
+    async def fetch() -> tuple[dict[str, list[str]], int]:
+        rows, skipped = parse_extract(
             await _get(_url("ingredient", "en")),
             constants.INGREDIENT_COLUMNS,
             "ingredient",
             lang,
         )
-        return {r[0]: r for r in rows if r[0]}
+        return {r[0]: r for r in rows if r[0]}, skipped
 
     return await cached_fetch("pmra:ingredients", constants.EXTRACT_TTL_SECONDS, fetch)
 
 
-async def _mrls(lang: str, msg_lang: str | None = None) -> tuple[list[list[str]], bool]:
+async def _mrls(lang: str, msg_lang: str | None = None) -> tuple[tuple[list[list[str]], int], bool]:
     """The MRL extract in `lang`; `msg_lang` (default `lang`) words any error."""
     say = msg_lang or lang
 
-    async def fetch() -> list[list[str]]:
-        rows = parse_extract(await _get(_url("mrl", lang)), constants.MRL_COLUMNS, "mrl", say)
+    async def fetch() -> tuple[list[list[str]], int]:
+        rows, skipped = parse_extract(
+            await _get(_url("mrl", lang)), constants.MRL_COLUMNS, "mrl", say
+        )
         if len(rows) < 1000:
             _raise(
                 UpstreamError,
@@ -307,7 +355,7 @@ async def _mrls(lang: str, msg_lang: str | None = None) -> tuple[list[list[str]]
                 f"pmra : l'extrait des LMR n'a que {len(rows)} lignes.",
                 say,
             )
-        return rows
+        return rows, skipped
 
     return await cached_fetch(f"pmra:mrl:{lang}", constants.EXTRACT_TTL_SECONDS, fetch)
 
@@ -323,7 +371,17 @@ async def get_product(registration_number: str, *, lang: str = "en") -> Pesticid
     if not _REGISTRATION.match(number):
         _raise(InvalidInput, _DIGITS_EN, _DIGITS_FR, lang)
     url = _url("product", lang, number)
-    rows = parse_extract(await _get(url), constants.PRODUCT_COLUMNS, "product", lang)
+    rows, skipped = parse_extract(await _get(url), constants.PRODUCT_COLUMNS, "product", lang)
+    if not rows and skipped:
+        # The record exists but its row is malformed: an upstream fault, not "no product".
+        _raise(
+            UpstreamError,
+            f"pmra: the record for {number} does not have the extract's {constants.PRODUCT_COLUMNS} "
+            "columns; its layout changed.",
+            f"pmra : la fiche {number} n'a pas les {constants.PRODUCT_COLUMNS} colonnes de "
+            "l'extrait ; sa structure a changé.",
+            lang,
+        )
     if not rows:
         _raise(
             NotFound,
@@ -332,8 +390,8 @@ async def get_product(registration_number: str, *, lang: str = "en") -> Pesticid
             lang,
         )
     cells = rows[0]
-    ingredients, ingredients_cached = await _ingredients(lang)
-    mrls, mrls_cached = await _mrls("en", lang)
+    (ingredients, ingredients_skipped), ingredients_cached = await _ingredients(lang)
+    (mrls, mrls_skipped), mrls_cached = await _mrls("en", lang)
     mrl_counts: dict[str, int] = {}
     mrl_names: dict[str, str] = {}
     for row in mrls:
@@ -362,7 +420,14 @@ async def get_product(registration_number: str, *, lang: str = "en") -> Pesticid
         pests=_split(cells[14]),
         lists_truncated=max(len(cells[13]), len(cells[14])) >= constants.TRUNCATED_AT,
         provenance=_provenance(
-            url, ingredients_cached and mrls_cached, "PesticideProductDetail", lang
+            url,
+            ingredients_cached and mrls_cached,
+            "PesticideProductDetail",
+            lang,
+            limits=join_limits(
+                _skipped_note(ingredients_skipped, "ingredient", "des matières actives", lang),
+                _skipped_note(mrls_skipped, "MRL", "des LMR", lang),
+            ),
         ),
     )
 
@@ -396,7 +461,7 @@ async def get_residue_limits(
             "pmra : donnez une substance chimique (p. ex. glyphosate), une denrée, ou les deux.",
             lang,
         )
-    rows, cached = await _mrls(lang)
+    (rows, skipped), cached = await _mrls(lang)
     wanted_chemical = _fold(chemical)
     commodity_words = _fold(commodity).split()
     exact = {r[0] for r in rows if _fold(r[0]) == wanted_chemical}
@@ -411,21 +476,45 @@ async def get_residue_limits(
             chemical=r[0],
             commodity=r[1],
             mrl_ppm=_ppm(r[2]),
+            mrl_as_published=r[2] or None,
             comments=r[3] or None,
             established_via=r[4] or None,
         )
         for r in matched[:limit]
     ]
+    chemicals = sorted({r[0] for r in matched})
+    unparsed = sum(1 for limit_ in shown if limit_.mrl_as_published and limit_.mrl_ppm is None)
     return ResidueLimitList(
         limits=shown,
         returned_count=len(shown),
         total_matched=len(matched),
-        chemicals=sorted({r[0] for r in matched})[:50],
+        chemicals=chemicals[:_TOP_CHEMICALS],
         provenance=_provenance(
             _url("mrl", lang),
             cached,
             "ResidueLimitList",
             lang,
             _text(f"{len(rows):,} MRLs", f"{len(rows):,} LMR".replace(",", "\u00a0"), lang),
+            join_limits(
+                _text(
+                    f"chemicals lists the first {_TOP_CHEMICALS} of {len(chemicals)} matched "
+                    "chemicals, alphabetically",
+                    f"chemicals donne les {_TOP_CHEMICALS} premières des {len(chemicals)} "
+                    "substances correspondantes, par ordre alphabétique",
+                    lang,
+                )
+                if len(chemicals) > _TOP_CHEMICALS
+                else None,
+                _text(
+                    "Returned MRL values that are not numbers (mrl_ppm is null for them and "
+                    f"mrl_as_published keeps the text): {unparsed}",
+                    "Valeurs de LMR renvoyées qui ne sont pas des nombres (mrl_ppm est nul pour "
+                    f"elles et mrl_as_published garde le texte) : {unparsed}",
+                    lang,
+                )
+                if unparsed
+                else None,
+                _skipped_note(skipped, "MRL", "des LMR", lang),
+            ),
         ),
     )

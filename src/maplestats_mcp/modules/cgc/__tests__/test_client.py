@@ -307,6 +307,15 @@ async def test_exports_describe(httpx_mock):
     assert "Türkiye" in result.destinations
     assert result.elevators == ["CONTAINER", "PRIMARY", "TERMINALS"]
     assert result.global_regions == ["Asia", "Eastern Europe"]  # blank dropped
+    assert result.provenance.limits is None
+
+
+async def test_exports_rows_dropped_are_counted(httpx_mock):
+    body = EXPORTS + b"2025,Smarch,Wheat,X,1,PRIMARY,Prairie Elevators,Asia,Japan\r\n"
+    body += b"2025,March,Wheat,X,,PRIMARY,Prairie Elevators,Asia,Japan\r\n2025,March\r\n\r\n"
+    httpx_mock.add_response(url=constants.EXPORTS_URL_EN, content=body)
+    result = await client.query_exports(grain="wheat")
+    assert "unreadable year, month or tonnage: 3" in (result.provenance.limits or "")
 
 
 async def test_exports_raw_rows(httpx_mock):

@@ -18,6 +18,9 @@ class Issue(BaseModel):
 
 class IssueList(BaseModel):
     issues: list[Issue]
+    total_in_feed: int = Field(
+        default=0, description="Issues in the RSS feed, before `limit` is applied."
+    )
     provenance: Provenance
 
 

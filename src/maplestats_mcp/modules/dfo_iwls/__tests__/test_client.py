@@ -80,6 +80,7 @@ async def test_get_water_levels_hilo_omits_resolution(httpx_mock):
                 "reviewed": False,
                 "value": 0.922,
             },
+            {"eventDate": "2026-09-23T20:00:00Z", "qcFlagCode": "1", "value": None},
         ]
     )
     result = await client.get_water_levels(
@@ -92,6 +93,9 @@ async def test_get_water_levels_hilo_omits_resolution(httpx_mock):
     )
     assert result.series_name == "Prédictions de pleines et basses mers"
     assert [p.value for p in result.points] == [2.181, 0.922]
+    assert "pas de temps sans valeur dans la source, omis\u00a0: 1" in (
+        result.provenance.limits or ""
+    )
     assert result.resolution is None
     params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
     assert "resolution" not in params

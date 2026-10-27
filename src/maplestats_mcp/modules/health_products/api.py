@@ -112,7 +112,11 @@ async def get_json(
     """GET one endpoint as JSON, with typed errors.
 
     `missing_ok` turns a 404 into an empty list (the veterinary species
-    endpoint answers 404 for a product with no species).
+    endpoint answers 404 for a product with no species). Only a 404 with an
+    empty body means that: checked live 2026-10-27, "no rows for this id"
+    is a bare 404, while a path the API does not have answers 404 with a JSON
+    "No HTTP resource was found" message. That one is an upstream fault (an
+    endpoint renamed or removed) and is raised, not read as "no rows".
     """
     query: dict[str, Any] = {**(params or {}), "type": "json"}
     if lang:
@@ -132,7 +136,17 @@ async def get_json(
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         if status == 404 and missing_ok:
-            return []
+            if exc.response.text.strip() in ("", "[]", "null"):
+                return []
+            raise call_error(
+                UpstreamError,
+                f"health-products.canada.ca answered HTTP 404 with an error message for "
+                f"{path}, not the empty answer it gives for no rows; the endpoint may have "
+                "changed.",
+                f"health-products.canada.ca a répondu HTTP 404 avec un message d'erreur pour "
+                f"{path}, et non la réponse vide qu'il donne quand il n'y a aucune ligne ; le "
+                "point d'accès a peut-être changé.",
+            ) from exc
         if status == 400:
             raise call_error(
                 InvalidInput,

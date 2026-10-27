@@ -285,14 +285,21 @@ async def search(
     )
     partial = fr_or_en(
         lang,
-        f"only the first {len(recalls):,} matching rows were read; narrow the search",
-        f"seules les {_count_fr(len(recalls))} premières lignes correspondantes ont été lues ; "
-        "resserrez la recherche",
+        f"only the first {len(recalls):,} matching rows (the API's oldest) were read, so "
+        "total_matched is a lower bound and the newest recalls may be missing; narrow the "
+        "search",
+        f"seules les {_count_fr(len(recalls))} premières lignes correspondantes (les plus "
+        "anciennes de l'API) ont été lues : total_matched est donc un minimum et les rappels "
+        "les plus récents peuvent manquer ; resserrez la recherche",
     )
+    if not complete:
+        # The cap is reported where a reader looks first, not only in provenance.
+        note = " ".join(part for part in (partial, note) if part)
     return RecallSearchResult(
         recalls=shown,
         returned_count=len(shown),
         total_matched=len(recalls),
+        all_rows_read=complete,
         has_more=has_more,
         order=order,
         page=page,
@@ -303,7 +310,7 @@ async def search(
             url=url,
             cached=cached,
             schema_name="tc_recalls.RecallSearchResult",
-            limits=join_limits(request, None if complete else partial, note),
+            limits=join_limits(request, note),
             lang=lang,
         ),
     )

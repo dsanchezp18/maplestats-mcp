@@ -76,6 +76,7 @@ from maplestats_mcp.shared.csv_files import Columns, fetch_rows
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, french_spacing, lang_error
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -532,9 +533,13 @@ def catalogue(lang: str = "en") -> CdcCatalogue:
 # ---------------------------------------------------------------------------
 
 
-def parse_component_rows(rows: list[dict[str, str]], lang: str = "en") -> list[ComponentPrice]:
+def parse_component_rows(
+    rows: list[dict[str, str]], lang: str = "en"
+) -> tuple[list[ComponentPrice], int]:
+    """The prices, and how many non-blank rows were skipped for an unreadable class
+    or date (none on 2020, 2025 and 2026 files, checked live 2026-10-27)."""
     if not rows:
-        return []
+        return [], 0
     columns = Columns(rows)
     class_col = columns.first_of(["Milk Class", "Classe de lait"])
     date_col = columns.first_of(["Effective Date", "Date d'entrée en vigueur"])
@@ -555,14 +560,17 @@ def parse_component_rows(rows: list[dict[str, str]], lang: str = "en") -> list[C
             f"cdc : les colonnes du fichier des prix des composants ont changé : {columns.names}.",
         )
     parsed = []
+    skipped = 0
     for row in rows:
         code = normalize_class(row.get(class_col) or "")
         raw_date = (row.get(date_col) or "").strip()[:10]
         if not code or not raw_date:
+            skipped += any((value or "").strip() for value in row.values())
             continue
         try:
             effective = date.fromisoformat(raw_date)
         except ValueError:
+            skipped += 1
             continue
         parsed.append(
             ComponentPrice(
@@ -575,7 +583,7 @@ def parse_component_rows(rows: list[dict[str, str]], lang: str = "en") -> list[C
             )
         )
     parsed.sort(key=lambda p: (p.effective_date, p.milk_class_code))
-    return parsed
+    return parsed, skipped
 
 
 _COMPONENT_NOTES = {
@@ -647,7 +655,7 @@ async def get_component_prices(
 
     notes = _fr(lang, list(_COMPONENT_NOTES[lang]))
 
-    async def year_rows(year: int) -> tuple[list[ComponentPrice], bool, str]:
+    async def year_rows(year: int) -> tuple[tuple[list[ComponentPrice], int], bool, str]:
         url = constants.COMPONENT_PRICES_URL.format(year=year)
         ttl = (
             constants.CURRENT_YEAR_TTL_SECONDS
@@ -667,9 +675,10 @@ async def get_component_prices(
     files: list[str] = []
     fetched_years: list[int] = []
     all_cached = True
+    skipped = 0
     for year in range(year_from, year_to + 1):
         try:
-            parsed, cached, url = await year_rows(year)
+            (parsed, year_skipped), cached, url = await year_rows(year)
         except NotFound:
             # Early January (before the CDC posts the new year's file) or a
             # requested next year: skip it and say so. A missing past year
@@ -681,6 +690,7 @@ async def get_component_prices(
             )
             continue
         rows.extend(parsed)
+        skipped += year_skipped
         files.append(url)
         fetched_years.append(year)
         all_cached &= cached
@@ -692,12 +702,21 @@ async def get_component_prices(
                 f"cdc: no component price file for {year_from}-{year_to} yet.",
                 f"cdc : pas encore de fichier des prix des composants pour {year_from}-{year_to}.",
             )
-        parsed, all_cached, url = await year_rows(current_year - 1)
+        (parsed, skipped), all_cached, url = await year_rows(current_year - 1)
         rows, files, fetched_years = parsed, [url], [current_year - 1]
     year_from, year_to = fetched_years[0], fetched_years[-1]
 
     if code:
         rows = [r for r in rows if r.milk_class_code == code]
+    if skipped:
+        notes.append(
+            f"Rows skipped for an unreadable milk class or effective date: {skipped}."
+            if lang == "en"
+            else french_spacing(
+                f"Lignes ignorées faute de classe de lait ou de date d'entrée en vigueur "
+                f"lisible : {skipped}."
+            )
+        )
     return ComponentPriceResult(
         year_from=year_from,
         year_to=year_to,
@@ -1277,6 +1296,8 @@ async def query_market_data(
     labels = _LABEL_COLUMNS[lang]
     matched: list[MarketDataRow] = []
     dataset_seen = False
+    # Counted so a gap or a null is reported, not passed off as the file's own.
+    bad_dates = unread_values = 0
     for row in raw:
         if _dataset_key(row["DatasetEn_DonneesAn"]) != dataset:
             continue
@@ -1284,6 +1305,7 @@ async def query_market_data(
         try:
             period = date.fromisoformat(row["Date"].strip()[:10])
         except ValueError:
+            bad_dates += 1
             continue
         if (start and period < start) or (end and period > end):
             continue
@@ -1308,6 +1330,7 @@ async def query_market_data(
             value = float(value_text) if value_text else None
         except ValueError:
             value = None
+            unread_values += 1
         matched.append(
             MarketDataRow(
                 period_end=period,
@@ -1357,14 +1380,29 @@ async def query_market_data(
                 "mensuelle (le fichier est régénéré chaque jour sur le serveur de données "
                 "ouvertes d'AAC)",
             ),
-            limits=(
+            limits=join_limits(
                 fr_or_en(
                     lang,
                     f"newest {limit} rows returned",
                     f"les {limit} lignes les plus récentes sont renvoyées",
                 )
                 if len(matched) > limit
-                else None
+                else None,
+                fr_or_en(
+                    lang,
+                    f"rows of this dataset skipped for an unreadable date: {bad_dates}",
+                    f"lignes de cet ensemble ignorées faute de date lisible : {bad_dates}",
+                )
+                if bad_dates
+                else None,
+                fr_or_en(
+                    lang,
+                    f"matching rows whose value is not a number, returned as null: {unread_values}",
+                    f"lignes correspondantes dont la valeur n'est pas un nombre, renvoyée "
+                    f"nulle : {unread_values}",
+                )
+                if unread_values
+                else None,
             ),
             coverage=fr_or_en(
                 lang, f"{len(matched)} matching rows", f"{len(matched)} lignes correspondantes"

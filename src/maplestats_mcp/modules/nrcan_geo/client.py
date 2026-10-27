@@ -19,6 +19,7 @@ from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -227,7 +228,9 @@ async def locate(
             "nrcan_geo : le Géolocalisateur n'a pas renvoyé de liste.",
             lang,
         )
-    kept = [item for item in raw if _has_coordinates(item)][:limit]
+    placed = [item for item in raw if _has_coordinates(item)]
+    kept = placed[:limit]
+    no_coordinates = len(raw) - len(placed)
     limits = None
     if lang == "fr":
         limits = _FR_NAMES_NOTE
@@ -249,6 +252,28 @@ async def locate(
                 unmatched = 1
             if unmatched:
                 limits = f"{_FR_NAMES_NOTE} {_FR_UNMATCHED_NOTE}"
+    # Say what was left out: results past `limit`, and results the Geolocator
+    # sent without a usable position (a Location needs one).
+    cut = []
+    if len(kept) < len(placed):
+        cut.append(
+            french_spacing(
+                f"Les {len(kept)} premiers des {len(placed)} résultats sont renvoyés ; "
+                "augmentez limit pour les autres."
+            )
+            if lang == "fr"
+            else f"Returned the first {len(kept)} of {len(placed)} results; raise limit for "
+            "the rest."
+        )
+    if no_coordinates:
+        cut.append(
+            french_spacing(
+                f"Résultats du Géolocalisateur omis faute de coordonnées : {no_coordinates}."
+            )
+            if lang == "fr"
+            else f"Geolocator results left out for having no coordinates: {no_coordinates}."
+        )
+    limits = join_limits(limits, *cut)
     locations = [
         Location(
             name=item.get("name") or "",
@@ -264,6 +289,7 @@ async def locate(
     return LocationResult(
         query=query,
         locations=locations,
+        total_found=len(placed),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=constants.GEOLOCATOR_URL,

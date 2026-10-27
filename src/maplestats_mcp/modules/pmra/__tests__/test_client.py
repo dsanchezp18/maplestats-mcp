@@ -96,12 +96,27 @@ def _clear_cache():
 
 
 def test_extract_parsing_and_layout_check():
-    rows = client.parse_extract(_csv(_ROUNDUP), constants.PRODUCT_COLUMNS, "product")
+    rows, skipped = client.parse_extract(_csv(_ROUNDUP), constants.PRODUCT_COLUMNS, "product")
+    assert skipped == 0
     assert rows[0][2] == "RECHARGE POUR ROUNDUP PRÊT-À-L'EMPLOI AVEC TUBE APPLICATEUR"
     assert rows[0][9] == "GLYPHOSATE (N.M.) (PRÉSENT SOUS FORME DE SEL D'ISOPROPYLAMINE)"
     with pytest.raises(UpstreamError):
         client.parse_extract(_INGREDIENTS, constants.PRODUCT_COLUMNS, "product")
     assert client.base_chemical("GLYPHOSATE (PRESENT AS POTASSIUM SALT)") == "glyphosate"
+
+
+async def test_skipped_rows_are_reported(httpx_mock):
+    short_row = "99999,SHORT ROW,Current\r\n"
+    httpx_mock.add_response(url=f"{_BASE}product", content=_csv(_ROUNDUP, short_row, pad=True))
+    result = await client.search_products("roundup")
+    assert result.total_matched == 1
+    assert "differs from the header: 1" in (result.provenance.limits or "")
+
+
+async def test_malformed_single_record_is_an_upstream_error(httpx_mock):
+    httpx_mock.add_response(url=f"{_BASE}product/31153", content=_csv("31153,CUT,Current\r\n"))
+    with pytest.raises(UpstreamError, match="layout changed"):
+        await client.get_product("31153")
 
 
 async def test_search_products(httpx_mock):
@@ -174,10 +189,30 @@ async def test_residue_limits(httpx_mock):
     wheat = await client.get_residue_limits(commodity="wheat")
     assert wheat.chemicals == ["Glyphosate", "Glyphosate-trimesium"]
     assert wheat.limits[0].mrl_ppm == 5.0
+    assert wheat.limits[0].mrl_as_published == "5.0"
+    assert exact.provenance.limits is None
     lettuce = await client.get_residue_limits("deltameth")
     assert lettuce.limits[0].comments == "except head lettuce"
     with pytest.raises(InvalidInput):
         await client.get_residue_limits()
+
+
+async def test_unparsed_limit_keeps_its_text(httpx_mock):
+    body = _MRL.replace(b"Glyphosate,Wheat,5.0,", b"Glyphosate,Wheat,see note,")
+    httpx_mock.add_response(url=f"{_BASE}mrl", content=body)
+    result = await client.get_residue_limits("glyphosate", commodity="wheat")
+    assert result.limits[0].mrl_ppm is None
+    assert result.limits[0].mrl_as_published == "see note"
+    assert "keeps the text): 1" in (result.provenance.limits or "")
+
+
+async def test_chemicals_list_cut_is_reported(httpx_mock):
+    rows = "\r\n".join(f"Chem{i:03d},Apples,0.1,,X" for i in range(1000))
+    body = (_MRL.decode("cp1252").split("\r\n")[0] + "\r\n" + rows + "\r\n").encode("cp1252")
+    httpx_mock.add_response(url=f"{_BASE}mrl", content=body)
+    result = await client.get_residue_limits(commodity="apples")
+    assert len(result.chemicals) == 50
+    assert "first 50 of 1000 matched chemicals" in (result.provenance.limits or "")
 
 
 async def test_residue_limits_in_french(httpx_mock):

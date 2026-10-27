@@ -247,6 +247,21 @@ async def test_bbox_rows_cover_every_cell_and_default_to_all_scenarios(router):
     assert south_east[0].value == 4.3
 
 
+async def test_a_request_with_no_values_is_named_in_notes(router):
+    def by_scenario(params: dict[str, str]) -> dict[str, Any]:
+        values = _CANDCS_VALUES if "SSP585" in params["subset"] else [None] * 8
+        return _coverage("AirTemp", _XS, _YS, ["2050", "2051"], values)
+
+    router.coverage[CANDCS] = by_scenario
+    result = await client.get_coverage_data(
+        CANDCS, lat=53.55, lon=-113.55, scenarios=["SSP245", "SSP585"], start="2050", end="2051"
+    )
+    assert {r.scenario for r in result.rows} == {"SSP585"}
+    assert any(
+        n.startswith("1 of 2 request(s) returned no values") and "SSP245" in n for n in result.notes
+    )
+
+
 async def test_point_skips_null_cells_and_reports_missing(router):
     values: list[float | None] = [None, 4.1, None, None, None, 4.3, None, None]
     router.coverage[CANDCS] = _coverage("AirTemp", _XS, _YS, ["2050", "2051"], values)

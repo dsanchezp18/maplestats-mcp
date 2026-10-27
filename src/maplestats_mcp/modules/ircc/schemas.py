@@ -21,26 +21,28 @@ class CrsScoreDistribution(BaseModel):
     the feed. band_451_500 and band_401_450 are broad-band totals; the
     *_491_500 through *_451_460 and *_441_450 through *_401_410 fields are
     their detailed sub-ranges, not independent bands to sum separately.
+
+    Each count is null when IRCC left it blank (never 0 in its place).
     """
 
-    band_601_1200: int
-    band_501_600: int
-    band_451_500: int
-    band_491_500: int
-    band_481_490: int
-    band_471_480: int
-    band_461_470: int
-    band_451_460: int
-    band_401_450: int
-    band_441_450: int
-    band_431_440: int
-    band_421_430: int
-    band_411_420: int
-    band_401_410: int
-    band_351_400: int
-    band_301_350: int
-    band_0_300: int
-    total: int
+    band_601_1200: int | None
+    band_501_600: int | None
+    band_451_500: int | None
+    band_491_500: int | None
+    band_481_490: int | None
+    band_471_480: int | None
+    band_461_470: int | None
+    band_451_460: int | None
+    band_401_450: int | None
+    band_441_450: int | None
+    band_431_440: int | None
+    band_421_430: int | None
+    band_411_420: int | None
+    band_401_410: int | None
+    band_351_400: int | None
+    band_301_350: int | None
+    band_0_300: int | None
+    total: int | None
 
 
 class ExpressEntryRound(BaseModel):
@@ -61,8 +63,13 @@ class ExpressEntryRound(BaseModel):
     program: str = Field(
         description="The invited program(s)/category, e.g. 'Canadian Experience Class'."
     )
-    invitations_issued: int
-    crs_cutoff: int
+    invitations_issued: int | None = Field(
+        description="Invitations issued in the round, as published; null when IRCC left it blank."
+    )
+    crs_cutoff: int | None = Field(
+        description="CRS score of the lowest-ranked invited candidate, as published; "
+        "null when IRCC left it blank."
+    )
     pool_distribution_as_of: str = Field(
         description="Date the candidate-pool CRS distribution snapshot was "
         "taken, as published by IRCC (locale-formatted text, not parsed -- "

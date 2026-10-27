@@ -80,6 +80,22 @@ async def test_search_collections_filters_client_side(httpx_mock):
     result = await client.search_collections("air quality", limit=10)
     assert result.total_count == 1
     assert result.collections[0].id == "aqhi-observations-realtime"
+    assert result.provenance.limits is None
+
+
+async def test_search_collections_says_when_limit_cut_matches(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections?f=json&lang=en", json=_collections_payload()
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections?f=json&lang=fr", json=_collections_payload_fr()
+    )
+    everything = await client.search_collections("", limit=100)
+    assert len(everything.collections) > 1
+    cut = await client.search_collections("", limit=1)
+    assert len(cut.collections) == 1
+    assert (cut.provenance.coverage or "").startswith(f"1 of {len(everything.collections)}")
+    assert f"Returned the first 1 of {len(everything.collections)}" in (cut.provenance.limits or "")
 
 
 async def test_search_collections_matches_french_text(httpx_mock):

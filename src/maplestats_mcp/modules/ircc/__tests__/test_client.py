@@ -82,6 +82,21 @@ _EN_FEED = {
 }
 
 
+async def test_blank_figures_are_null_not_zero(httpx_mock):
+    # A blank count must not read as "0 candidates" or "a cutoff of 0".
+    blank = _round("445", "2026-09-30", "General", "Canadian Experience Class", "", " ")
+    blank["dd1"] = ""
+    del blank["dd2"]
+    httpx_mock.add_response(url=constants.BASE_URL_EN, json={"rounds": [blank]})
+    result = await client.list_express_entry_rounds()
+    round_ = result.rounds[0]
+    assert round_.invitations_issued is None
+    assert round_.crs_cutoff is None
+    assert round_.crs_distribution.band_601_1200 is None
+    assert round_.crs_distribution.band_501_600 is None
+    assert round_.crs_distribution.total == 1574
+
+
 async def test_list_rounds_parses_and_orders_newest_first(httpx_mock):
     httpx_mock.add_response(url=constants.BASE_URL_EN, json=_EN_FEED)
     result = await client.list_express_entry_rounds()

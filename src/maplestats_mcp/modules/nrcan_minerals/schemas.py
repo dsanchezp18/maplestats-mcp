@@ -24,7 +24,15 @@ class MineralRow(BaseModel):
     units: str | None = Field(
         default=None, description="As published: thousands of dollars, tonnes, kilotonnes..."
     )
-    value: float | None = Field(default=None, description="None when confidential or n/a.")
+    value: float | None = Field(
+        default=None,
+        description="None when confidential, not available, or not a number "
+        "(see value_as_published).",
+    )
+    value_as_published: str | None = Field(
+        default=None,
+        description="The cell as the file writes it, e.g. '2,309', 'x', '386 ʳ' (ʳ: revised).",
+    )
     symbol: Symbol = Field(
         description="preliminary (p), confidential (x), not_available (..), or final."
     )

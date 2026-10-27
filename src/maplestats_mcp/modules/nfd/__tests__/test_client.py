@@ -286,6 +286,16 @@ async def test_describe_survives_an_unreadable_dictionary(httpx_mock):
     )
     result = await client.describe_table("3.2.1")
     assert result.dictionary_title is None and result.last_updated is None
+    assert "dictionary could not be downloaded or read" in (result.provenance.limits or "")
+    assert any("dictionary could not be" in q for q in result.quirks)
+    # The failure is not cached: the next call asks again and gets the dictionary.
+    httpx_mock.add_response(
+        url=_url("/en/data/data_dictionary/NFD - Area burned by cause class - EN FR DD.xlsx"),
+        content=_dictionary("Area burned by jurisdiction and cause class", "CWFIS"),
+    )
+    again = await client.describe_table("3.2.1")
+    assert again.dictionary_title == "Area burned by jurisdiction and cause class"
+    assert again.provenance.limits is None
 
 
 async def test_redirect_to_the_nfis_not_found_page_is_a_missing_file(httpx_mock):

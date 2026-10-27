@@ -69,6 +69,8 @@ def test_names_and_values():
     assert client.parse_value("x") == (None, "confidential")
     assert client.parse_value("..") == (None, "not_available")
     assert client.parse_value("27058554.021") == (27058554.021, "final")
+    # 1991-1998 files mark revised values with a trailing "ʳ".
+    assert client.parse_value("386 ʳ") == (386.0, "final")
     assert client.parse_years(_PAGE) == [2025, 2019, 2018]
 
 
@@ -110,6 +112,34 @@ async def test_french_provenance_notes_and_errors(httpx_mock):
         await client.get_production(province="Atlantis", lang="fr")
     with pytest.raises(NotFound, match="^Aucune correspondance trouvée : nrcan_minerals"):
         await client.get_production(1989, lang="fr")
+
+
+def test_short_rows_and_unread_values_are_counted():
+    body = _OLD.replace(
+        "2018,Iron ore,Metals,Canada,Value of shipments,thousands of dollars,x\n",
+        "2018,Iron ore,Metals,Canada,Value of shipments,thousands of dollars,see note\n"
+        "2018,Copper,Metals,Canada\n",
+    )
+    data = client.parse_csv(body, 2018)
+    assert data.short_rows == 1
+    iron = next(r for r in data.rows if r.commodity == "Iron ore")
+    assert iron.value is None and iron.value_as_published == "see note"
+    note = client._quality_note([data], list(data.rows), "en") or ""
+    assert "fewer cells than the header: 1" in note
+    assert "value_as_published: 1" in note
+
+
+async def test_series_names_the_group_kept_when_several_match(httpx_mock):
+    httpx_mock.add_response(url=constants.ANNUAL_PAGE, text=_PAGE)
+    body = _NEW.replace(
+        '"Source: Statistics Canada"',
+        '"2025","Non-metals","Gold","Canada","Value of shipments","5","Thousands of dollars","p"'
+        '\n"Source: Statistics Canada"',
+    )
+    httpx_mock.add_response(url=constants.CSV_URL.format(year=2025), text=body)
+    gold = await client.get_series("gold", from_year=2025)
+    assert gold.points[0].value is None and gold.points[0].group == "Metals"
+    assert "first group's row is shown: 2025 (Metals)" in gold.note
 
 
 async def test_series_across_layouts(httpx_mock):

@@ -77,6 +77,7 @@ from maplestats_mcp.shared.http import (
     wait_honouring_retry_after,
 )
 from maplestats_mcp.shared.licences import OGL_CANADA
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -927,6 +928,9 @@ class ExportsTable:
     url: str
     last_modified: str | None
     records: list[ExportRecord]
+    # Non-blank rows dropped for a short row, or an unreadable year, month or
+    # tonnage (none of 50,440 on 2026-10-27); reported in provenance.limits.
+    skipped: int = 0
 
     @property
     def latest(self) -> tuple[int, int] | None:
@@ -954,16 +958,22 @@ def parse_exports(text: str, *, lang: Lang, url: str, last_modified: str | None)
     width = max(positions.values()) + 1
     interned: dict[str, str] = {}
     records: list[ExportRecord] = []
+    skipped = 0
     for row in reader:
+        if not any(cell.strip() for cell in row):
+            continue
         if len(row) < width:
+            skipped += 1
             continue
         month = _MONTHS.get(fold(row[positions["month"]]))
         value = parse_number(row[positions["ktonnes"]])
         try:
             year = int(row[positions["year"]].strip())
         except ValueError:
+            skipped += 1
             continue
         if month is None or value is None:
+            skipped += 1
             continue
         labels = {
             d: interned.setdefault(row[positions[d]].strip(), row[positions[d]].strip())
@@ -977,7 +987,9 @@ def parse_exports(text: str, *, lang: Lang, url: str, last_modified: str | None)
             f"cgc: {url} has no readable rows.",
             f"cgc : {url} n'a aucune ligne lisible.",
         )
-    return ExportsTable(lang=lang, url=url, last_modified=last_modified, records=records)
+    return ExportsTable(
+        lang=lang, url=url, last_modified=last_modified, records=records, skipped=skipped
+    )
 
 
 async def load_exports(lang: Lang) -> tuple[ExportsTable, bool]:
@@ -990,9 +1002,22 @@ async def load_exports(lang: Lang) -> tuple[ExportsTable, bool]:
     return await cached_fetch(f"cgc:exports:{url}", constants.EXPORTS_TTL_SECONDS, fetch)
 
 
-def _exports_provenance(table: ExportsTable, cached: bool, schema: str, **extra: Any):
+def _exports_provenance(
+    table: ExportsTable, cached: bool, schema: str, limits: str | None = None
+) -> Provenance:
     latest = table.latest
     modified = table.last_modified
+    skipped = (
+        fr_or_en(
+            table.lang,
+            f"Rows of the file skipped for a missing cell or an unreadable year, month or "
+            f"tonnage: {table.skipped}.",
+            f"Lignes du fichier ignorées pour une cellule manquante ou une année, un mois ou "
+            f"un tonnage illisible : {table.skipped}.",
+        )
+        if table.skipped
+        else None
+    )
     return make_provenance(
         source="cgc-exports-licensed-facilities",
         url=table.url,
@@ -1010,7 +1035,7 @@ def _exports_provenance(table: ExportsTable, cached: bool, schema: str, **extra:
         ),
         licence=OGL_CANADA,
         lang=table.lang,
-        **extra,
+        limits=join_limits(limits, skipped),
     )
 
 
