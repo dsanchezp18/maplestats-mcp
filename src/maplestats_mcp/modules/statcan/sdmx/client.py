@@ -14,7 +14,9 @@ whose members equal the SDMX codelists.
 
 from __future__ import annotations
 
+import math
 import re
+from datetime import date
 from typing import Any
 from xml.etree.ElementTree import Element, ParseError
 
@@ -41,6 +43,9 @@ from maplestats_mcp.modules.statcan.sdmx.schemas import (
 )
 from maplestats_mcp.modules.statcan.wds import client as wds_client
 from maplestats_mcp.modules.statcan.wds import constants as wds_constants
+from maplestats_mcp.modules.statcan.wds import transforms as wds_transforms
+from maplestats_mcp.modules.statcan.wds.client import Legend
+from maplestats_mcp.modules.statcan.wds.transforms import TransformRequest
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import (
@@ -52,6 +57,14 @@ from maplestats_mcp.shared.errors import (
 )
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.transform import (
+    PERIODS_PER_YEAR,
+    extra_months,
+    parse_period,
+    period_label,
+    shift_months,
+    source_periods_needed,
+)
 
 NS = constants.SDMX_NS
 
@@ -485,7 +498,27 @@ async def get_key_for_dimension(
     )
 
 
-def _parse_data(root: Element, *, max_rows: int) -> tuple[list[SdmxSeries], bool]:
+def _number(raw: str | None) -> float | None:
+    """ObsValue as a number. StatCan writes a value it does not publish (status
+    F, ..) as "NaN" (seen live 2026-10-27 in 14-10-0325); that is missing, not a
+    number, and its STATUS_CAN attribute says why."""
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return None if math.isnan(value) else value
+
+
+def _code(attributes: dict[str, str], name: str) -> int | None:
+    text = attributes.get(name, "").strip()
+    return int(text) if text.isdigit() else None
+
+
+def _parse_data(
+    root: Element, *, max_rows: int, legend: Legend | None = None, lang: str = "en"
+) -> tuple[list[SdmxSeries], bool]:
     """Return (series, any_series_truncated).
 
     `any_series_truncated` reflects whether an individual series actually
@@ -493,6 +526,11 @@ def _parse_data(root: Element, *, max_rows: int) -> tuple[list[SdmxSeries], bool
     truncation from the *summed* row count across series, since several
     untruncated series can sum past max_rows on their own. Observations
     arrive oldest-first; when capped, the newest `max_rows` are kept.
+
+    Each Obs may carry its own Attributes (STATUS_CAN, SYMBOL, SECURITY_LEVEL;
+    the DSD lists them, Data_Structure_18100004 checked 2026-10-27, with the
+    same codes as WDS getCodeSets). Without them a suppressed or estimated
+    value came back as a bare null or number.
     """
     series_list: list[SdmxSeries] = []
     any_series_truncated = False
@@ -511,9 +549,25 @@ def _parse_data(root: Element, *, max_rows: int) -> tuple[list[SdmxSeries], bool
             val_el = obs_el.find(_qn("generic", "ObsValue"))
             period = dim_el.get("value", "") if dim_el is not None else ""
             raw_value = val_el.get("value") if val_el is not None else None
+            obs_attrs = {
+                v.get("id", ""): v.get("value", "")
+                for v in obs_el.findall(f"{_qn('generic', 'Attributes')}/{_qn('generic', 'Value')}")
+            }
+            status = _code(obs_attrs, "STATUS_CAN")
+            symbol = _code(obs_attrs, "SYMBOL")
+            security = _code(obs_attrs, "SECURITY_LEVEL")
             observations.append(
                 SdmxObservation(
-                    period=period, value=float(raw_value) if raw_value is not None else None
+                    period=period,
+                    value=_number(raw_value),
+                    status_code=status,
+                    status=wds_client.describe_code(legend, "status", status, lang),
+                    symbol_code=symbol,
+                    symbol=wds_client.describe_code(legend, "symbol", symbol, lang),
+                    security_level_code=security,
+                    security_level=wds_client.describe_code(
+                        legend, "security_level", security, lang
+                    ),
                 )
             )
         if len(observations) > max_rows:
@@ -537,6 +591,82 @@ def _parse_data(root: Element, *, max_rows: int) -> tuple[list[SdmxSeries], bool
     return series_list, any_series_truncated
 
 
+def _start(period: str) -> date | None:
+    try:
+        return parse_period(period)[0]
+    except ValueError:
+        return None
+
+
+async def _transform(
+    series: SdmxSeries,
+    request: TransformRequest,
+    source_ppy: int | None,
+    *,
+    lang: str,
+    latest_n: int | None,
+    window_start: date | None,
+    window_end: date | None,
+) -> SdmxSeries:
+    dated = [(day, obs) for obs in series.observations if (day := _start(obs.period))]
+    computed = await wds_transforms.compute(
+        [(day, obs.value) for day, obs in dated],
+        source_ppy=source_ppy,
+        uom_code=series.uom_code,
+        scalar_code=series.scalar_factor,
+        request=request,
+        lang=lang,
+        latest_n=latest_n,
+        window_start=window_start,
+        window_end=window_end,
+    )
+    out_ppy = PERIODS_PER_YEAR[request.frequency] if request.frequency else source_ppy
+    keep = set(
+        wds_transforms.kept_dates(
+            computed,
+            out_ppy,
+            [day for day, _ in dated],
+            latest_n=latest_n,
+            window_start=window_start,
+            window_end=window_end,
+        )
+    )
+    observations = [obs for day, obs in dated if day in keep]
+    return series.model_copy(update={"observations": observations, "transformed": computed})
+
+
+def transform_params(
+    params: dict[str, Any],
+    request: TransformRequest,
+    source_ppy: int | None,
+    *,
+    latest_n: int | None,
+) -> dict[str, Any]:
+    """The SDMX query parameters reaching back far enough for the transform's
+    lag (and index base). reproduce_code sends the same."""
+    params = dict(params)
+    out_ppy = PERIODS_PER_YEAR[request.frequency] if request.frequency else source_ppy
+    if latest_n is not None:
+        needed = source_periods_needed(latest_n, request.transform, source_ppy, out_ppy)
+        if request.index_base and source_ppy:
+            needed = max(
+                needed, wds_transforms.base_months(request.index_base) * source_ppy // 12 + 1
+            )
+        params["lastNObservations"] = needed
+    if params.get("startPeriod"):
+        first, given_ppy = parse_period(str(params["startPeriod"]))
+        months = extra_months(request.transform, out_ppy, aggregating=request.frequency is not None)
+        earliest = shift_months(first, -months) if months else first
+        if request.index_base:
+            base = _start(request.index_base)
+            earliest = min(earliest, base) if base else earliest
+        # The caller's own notation (2024-01 stays a month): with an endPeriod,
+        # StatCan answers 406 when the two are written differently (checked
+        # live 2026-10-27: startPeriod=2022-Q4&endPeriod=2025-12 on a monthly table).
+        params["startPeriod"] = period_label(earliest, given_ppy)
+    return params
+
+
 async def get_data(
     product_id: int,
     key: str,
@@ -545,6 +675,7 @@ async def get_data(
     end_period: str | None = None,
     last_n_observations: int | None = None,
     lang: str = "en",
+    request: TransformRequest | None = None,
 ) -> SdmxData:
     if last_n_observations is not None and (start_period or end_period):
         raise InvalidInput(
@@ -578,16 +709,27 @@ async def get_data(
     url = f"{constants.BASE_URL}data/{dataflow_id}/{key}"
     params: dict[str, Any] = {}
     default_applied = False
+    latest_n: int | None = None
     if start_period:
         params["startPeriod"] = start_period
     if end_period:
         params["endPeriod"] = end_period
     if last_n_observations is not None:
-        params["lastNObservations"] = last_n_observations
+        params["lastNObservations"] = latest_n = last_n_observations
     elif not start_period and not end_period:
         # Without a filter StatCan returns each series from its first period.
-        params["lastNObservations"] = constants.DEFAULT_LAST_N
+        params["lastNObservations"] = latest_n = constants.DEFAULT_LAST_N
         default_applied = True
+    source_ppy: int | None = None
+    if request is not None and request.active:
+        # The table's frequency decides how much history the lag needs; WDS
+        # metadata is cached, and SDMX has no cheaper source for it.
+        try:
+            metadata, _ = await wds_client.cube_metadata_raw(product_id)
+        except (InvalidInput, NotFound) as exc:
+            raise _no_table(product_id, lang) from exc
+        source_ppy = wds_transforms.FREQUENCY_PPY.get(int(metadata.get("frequencyCode") or 0))
+        params = transform_params(params, request, source_ppy, latest_n=latest_n)
 
     hint = _say(
         lang,
@@ -612,10 +754,28 @@ async def get_data(
                 "sdmx_get_structure.",
             )
         ) from exc
-    series, any_series_truncated = _parse_data(root, max_rows=constants.MAX_ROWS)
+    legend = await wds_client.observation_legend()
+    series, any_series_truncated = _parse_data(
+        root, max_rows=constants.MAX_ROWS, legend=legend, lang=lang
+    )
     series_total = len(series)
     if series_total > constants.MAX_SERIES:
         series = series[: constants.MAX_SERIES]
+    if request is not None and request.active:
+        window_start = _start(start_period) if start_period else None
+        window_end = _start(end_period) if end_period else None
+        series = [
+            await _transform(
+                s,
+                request,
+                source_ppy,
+                lang=lang,
+                latest_n=latest_n,
+                window_start=window_start,
+                window_end=window_end,
+            )
+            for s in series
+        ]
     row_count = sum(len(s.observations) for s in series)
 
     notes: list[str] = []
@@ -646,6 +806,17 @@ async def get_data(
                 f"{constants.MAX_SERIES} premières séries sur {series_total} ; précisez la clé",
             )
         )
+    if legend is None:
+        notes.append(
+            _say(
+                lang,
+                "status, symbol and security-level codes are not decoded: WDS getCodeSets did "
+                "not answer",
+                "les codes de statut, de symbole et de niveau de sécurité ne sont pas décodés : "
+                "getCodeSets du SDW n'a pas répondu",
+            )
+        )
+    fetched = ", ".join(f"{name}={value}" for name, value in params.items())
     return SdmxData(
         dataflow_id=dataflow_id,
         key=key,
@@ -657,6 +828,19 @@ async def get_data(
             url=url,
             cached=False,
             schema_name="statcan.sdmx.SdmxData",
+            coverage=(
+                _say(
+                    lang,
+                    "Computed by MapleStats from the published values (see each series' "
+                    f"transformed.formula); the request asked for {fetched} so the lag is "
+                    "covered, and only the requested window is returned.",
+                    "Calculé par MapleStats à partir des valeurs publiées (voir "
+                    f"transformed.formula de chaque série) ; la requête demandait {fetched} pour "
+                    "couvrir le décalage, et seule la période demandée est renvoyée.",
+                )
+                if request is not None and request.active
+                else None
+            ),
             limits="; ".join(notes) if notes else None,
             lang=lang,
         ),
@@ -670,6 +854,7 @@ async def get_vector_data(
     end_period: str | None = None,
     last_n_observations: int | None = None,
     lang: str = "en",
+    request: TransformRequest | None = None,
 ) -> SdmxData:
     series_info = await wds_client.get_series_info_from_vector(vector_id)
     # Non-time dimension count from WDS metadata (cached), not the SDMX
@@ -684,4 +869,5 @@ async def get_vector_data(
         end_period=end_period,
         last_n_observations=last_n_observations,
         lang=lang,
+        request=request,
     )

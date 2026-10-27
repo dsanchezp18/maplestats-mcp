@@ -33,7 +33,9 @@ from maplestats_mcp.modules.statcan.wds.client import (
     _post,
     _unwrap_one,
     cube_metadata_raw,
+    legend_note,
     normalize_product_id,
+    observation_legend,
 )
 from maplestats_mcp.modules.statcan.wds.schemas import VintageSeries
 from maplestats_mcp.shared.envelope import make_provenance
@@ -208,9 +210,12 @@ async def get_series_as_of(
         }
     ]
     obj = _unwrap_one((await _post(method, body))[0], method)
+    legend = await observation_legend()
     rows = [
         row
-        for row in map(_observation_from_json, list_or_empty(obj, "vectorDataPoint"))
+        for row in (
+            _observation_from_json(dp, legend) for dp in list_or_empty(obj, "vectorDataPoint")
+        )
         if row.ref_period <= release_date
     ]
     # Trailing periods the release could not contain come back as `..`.
@@ -269,6 +274,7 @@ async def get_series_as_of(
                 f"{len(rows)} dernières périodes de référence jusqu'à la diffusion du "
                 f"{release_date}",
             ),
+            limits=legend_note(legend),
             lang=_LANG.get(),
         ),
     )

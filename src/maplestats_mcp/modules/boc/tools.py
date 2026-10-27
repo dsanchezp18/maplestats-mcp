@@ -27,6 +27,7 @@ from maplestats_mcp.modules.boc.schemas import (
     SeriesDetail,
     SeriesList,
 )
+from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform, TransformRequest
 
 Lang = Literal["en", "fr"]
 
@@ -139,14 +140,22 @@ async def boc_get_observations(
     recent_weeks: int | None = None,
     recent_months: int | None = None,
     recent_years: int | None = None,
+    transform: Transform = "level",
+    frequency: Frequency | None = None,
+    aggregation: Aggregation = "average",
+    index_base: str | None = None,
     lang: Lang = "en",
 ) -> ObservationsResult:
-    """Get observations for one or more Bank of Canada Valet series.
+    """Get observations for one or more Bank of Canada Valet series,
+    optionally as a computed change, growth rate, index or monthly,
+    quarterly or annual aggregate.
 
     Use for: fetching exchange rate history, interest rate history,
     CPI/inflation history, or commodity price history for one or more
-    named series in a single call (series_names accepts multiple codes
-    at once, e.g. ["FXUSDCAD", "FXEURCAD"]).
+    named series in a single call (observations for several series at
+    once: series_names accepts multiple codes, e.g. ["FXUSDCAD", "FXEURCAD"]), and computing from them a
+    year-over-year change, a monthly average exchange rate or the change
+    in the policy rate.
     `start_date`/`end_date` (each "YYYY-MM-DD") and
     `recent`/`recent_weeks`/`recent_months`/`recent_years` are mutually
     exclusive - Valet rejects mixing them. Series requested together
@@ -156,14 +165,24 @@ async def boc_get_observations(
     series - check each row's `values` keys rather than assuming every
     requested series appears in every row. With no window, the full
     history comes back trimmed to the most recent dates (about 200 KB);
-    provenance.limits says how many dates were left out.
+    provenance.limits says how many dates were left out. A value Valet
+    sends as text that is not a number is null in `values`, with the
+    text in the row's `non_numeric`.
+    `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
+    annualized_pct_change, index) and `frequency` with `aggregation`
+    compute from the published levels (a daily series needs `frequency`
+    for a year-over-year change); a series in percent gets
+    percentage-point changes. `transformed` holds the computed values
+    with their formula.
     Keywords: bank of canada, boc, valet, observations, data, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
-    commodity price, time series, history, recent, date range.
+    commodity price, time series, history, recent, date range,
+    year-over-year, percent change, monthly average, annual average.
     Mots-clés : Banque du Canada, valet, observations, données, taux de
     change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, série chronologique,
-    historique, plage de dates.
+    historique, plage de dates, variation annuelle, variation en
+    pourcentage, moyenne mensuelle, moyenne annuelle.
     """
     return await client.get_observations(
         series_names,
@@ -174,6 +193,7 @@ async def boc_get_observations(
         recent_months=recent_months,
         recent_years=recent_years,
         lang=lang,
+        request=TransformRequest(transform, frequency, aggregation, index_base),
     )
 
 

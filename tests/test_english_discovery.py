@@ -22,7 +22,9 @@ TOP_N = 3
 
 CASES = [
     ("What is Canada's current unemployment rate?", "statcan_indicators_get_indicators"),
-    ("latest CPI inflation Canada", "boc_search_series"),
+    # Since 2026-10-27 wds_get_data_from_vectors computes year-over-year CPI
+    # inflation itself (transform="yoy_pct_change"), so it is the StatCan answer.
+    ("latest CPI inflation Canada", "wds_get_data_from_vectors"),
     ("Find a StatCan table on GDP by industry", "wds_search_cubes"),
     ("get data for a StatCan vector", "wds_get_data_from_vectors"),
     ("Bank of Canada policy interest rate history", "boc_search_series"),

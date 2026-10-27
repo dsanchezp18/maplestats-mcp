@@ -1,5 +1,7 @@
 # Disclaimer claim check (2026-10-27)
 
+**Status 2026-10-27: every finding below was fixed the same day** (commits `48473ac`, `b65c25d`, `c67d9af` and the status-code commit; two ISC items were found not to be real). The list is kept as the record.
+
 The disclaimer in the README and on the FAQ makes three claims. This page records where
 the code at commit `8b54fd5` does not yet live up to them. Every module was read (client
 and tools code, tests excluded); line numbers are from that commit. Nothing here returns an
@@ -21,49 +23,49 @@ reproduce the result.
 
 ## High
 
-- [ ] **R** `reproduce/probe.py:84` `choose()` replays the first request to the chosen
+- [x] **R** `reproduce/probe.py:84` `choose()` replays the first request to the chosen
   endpoint. Tools that send a count request first (`ab_wildfire/client.py:525`, perimeters
   at `:890`; `eps/client.py:292`) or last (`electricity/quebec_client.py:189`, picked by
   `ok[-1]`) get a script that replays the count-only or `limit=0` request, labelled
   "exact". Fix: skip `returnCountOnly=true` and `limit=0` requests when choosing.
-- [ ] **B** `bc_environment/client.py:1157` a failed well-regions CSV becomes `regions={}`,
+- [x] **B** `bc_environment/client.py:1157` a failed well-regions CSV becomes `regions={}`,
   and the region-less list is cached for 6 hours; a `region=` filter then returns 0 wells.
 
 ## Medium
 
-- [ ] **A3** `ircc/client.py:116` `_parse_int` turns blank text into 0: CRS bands dd1 to
+- [x] **A3** `ircc/client.py:116` `_parse_int` turns blank text into 0: CRS bands dd1 to
   dd18, `drawSize` and `drawCRS` show a missing figure as 0.
-- [ ] **A3** `reproduce/workbook.py:413` `clean_rows` turns all-numeric text columns into
+- [x] **A3** `reproduce/workbook.py:413` `clean_rows` turns all-numeric text columns into
   numbers with no `CODE_COLUMNS` rule, so StatCan coordinates "2.1" and "2.10" collide
   (the bug `cleaning.py:23` fixed for scripts) and NAICS codes become numbers. The tool
   docstring says "cleaned as the R scripts clean them".
-- [ ] **A3** `statcan/sdmx/client.py:509` observation attributes (status, symbol) are not
+- [x] **A3** `statcan/sdmx/client.py:509` observation attributes (status, symbol) are not
   read, so a suppressed or estimated value comes back as a bare null or number.
-- [ ] **A3** `finance_canada/client.py:207` "-", "..", "n/a", "s.o." become null with no
+- [x] **A3** `finance_canada/client.py:207` "-", "..", "n/a", "s.o." become null with no
   note; nil and not-available look the same.
-- [ ] **A3** `pmra/client.py:123` CSV rows whose column count differs from the header are
+- [x] **A3** `pmra/client.py:123` CSV rows whose column count differs from the header are
   dropped silently.
-- [ ] **A3** `ised/clean_growth/client.py:136` a headline figure whose pattern stops
+- [x] **A3** `ised/clean_growth/client.py:136` a headline figure whose pattern stops
   matching becomes null silently; `:84` an unknown scale word is read as plain dollars.
-- [ ] **A2** `isc/client.py:468` a residence `total` is `(men or 0) + (women or 0)`, so a
+- [x] **A2** `isc/client.py:468` a residence `total` is `(men or 0) + (women or 0)`, so a
   missing sex makes the other the total; `:413` `total_reserve_hectares` skips reserves
   with no area. Neither is labelled as computed.
-- [ ] **A2** `electricity/client.py:631` zonal average, minimum and maximum prices are
+- [x] **A2** `electricity/client.py:631` zonal average, minimum and maximum prices are
   computed and unlabelled; `quebec_client.py:278` peak and average demand cover only the
   returned rows.
-- [ ] **A2** `elections_provincial/common.py:54` `valid_votes` and `vote_share` are summed
+- [x] **A2** `elections_provincial/common.py:54` `valid_votes` and `vote_share` are summed
   from candidate votes, `manitoba.py:320` computes turnout; the schema reads as published.
-- [ ] **A1** `health_products/mdall/client.py:394` a name search with `limit>25` returns
+- [x] **A1** `health_products/mdall/client.py:394` a name search with `limit>25` returns
   every device with `identifiers=[]` and no note.
-- [ ] **A1** `represent/client.py:851` the municipal search stops after 8 pages of 1,000
+- [x] **A1** `represent/client.py:851` the municipal search stops after 8 pages of 1,000
   and reports `has_more=False`.
-- [ ] **B** `cra_charities/client.py:134` falls back to a pinned 2024 package without saying
+- [x] **B** `cra_charities/client.py:134` falls back to a pinned 2024 package without saying
   it is a fallback.
-- [ ] **B** `cra_digital_economy_registry/client.py:176` rows missing a cell are dropped;
+- [x] **B** `cra_digital_economy_registry/client.py:176` rows missing a cell are dropped;
   a page layout change gives 0 registrants instead of an error.
-- [ ] **B** `aer/client.py:249` any non-200 HEAD (403, 429, 5xx) becomes "no file at this
+- [x] **B** `aer/client.py:249` any non-200 HEAD (403, 429, 5xx) becomes "no file at this
   address", cached.
-- [ ] **B** `borealis/client.py:329` a 403 from the DDI export is reported as "no
+- [x] **B** `borealis/client.py:329` a 403 from the DDI export is reported as "no
   variable-level DDI", cached.
 
 ## Low

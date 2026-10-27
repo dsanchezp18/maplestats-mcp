@@ -8,11 +8,12 @@ MCP isError:true result; tools never return an error-shaped dict.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.statcan.wds import client, constants, vintage
+from maplestats_mcp.modules.statcan.wds import client, constants, transforms, vintage
 from maplestats_mcp.modules.statcan.wds.client import CodeSetCategory
 from maplestats_mcp.modules.statcan.wds.schemas import (
     ChangedCubeList,
@@ -28,6 +29,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
 )
 from maplestats_mcp.shared.envelope import raise_error
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform
 
 Lang = Literal["en", "fr"]
 # An 8-digit productId, or the table number as StatCan prints it.
@@ -174,44 +176,123 @@ async def wds_get_series_info(
 
 @tool
 async def wds_get_data_from_vectors(
-    vector_ids: list[int], latest_n: int = 12, lang: Lang = "en"
+    vector_ids: list[int],
+    latest_n: int = 12,
+    transform: Transform = "level",
+    frequency: Frequency | None = None,
+    aggregation: Aggregation = "average",
+    index_base: str | None = None,
+    lang: Lang = "en",
 ) -> VectorDataSet:
-    """Get the latest N observations for one or more StatCan vectors.
+    """Get the latest N observations for one or more StatCan vectors,
+    optionally as a computed change (year-over-year, period-to-period),
+    growth rate, index or quarterly/annual aggregate.
 
-    Use for: fetching recent values of one or more known time series.
-    Results come back inline, so this suits a handful of series; for a
-    whole table or hundreds of vectors use wds_get_full_table_download.
-    Vectors WDS cannot serve are listed in `failed`; the others still
-    come back. Note: scalarFactorCode in each observation is NOT
-    pre-applied to value: multiply `value` by the observation's
-    `scale_multiplier` if a scaled figure is needed.
+    Use for: getting the data for one or more StatCan vectors (recent
+    values of known time series), and
+    year-over-year inflation from the CPI, monthly or annualized growth,
+    or a quarterly average of a monthly series. Results come back
+    inline, so this suits a handful of series; for a whole table or
+    hundreds of vectors use wds_get_full_table_download. Vectors WDS
+    cannot serve are listed in `failed`; the others still come back.
+    scalarFactorCode is NOT pre-applied to value: multiply `value` by
+    the observation's `scale_multiplier` for a scaled figure. `status`,
+    `symbol` and `security_level` decode the codes (e.g. "use with
+    caution", "preliminary"). `latest_n` counts periods at the output
+    frequency.
+    `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
+    annualized_pct_change, index) and `frequency` with `aggregation`
+    compute from the published levels; a series already in percent gets
+    percentage-point changes. `transformed` holds the computed values
+    with their formula.
     Keywords: statcan, vector, observations, latest, data, time series,
-    wds, values.
+    wds, values, year-over-year, yoy, inflation rate, percent change,
+    growth rate, annualized, quarterly average, annual average, index.
     Mots-clés : Statistique Canada, vecteur, observations, dernières
     données, données récentes, série chronologique, valeurs, dernières
-    périodes.
+    périodes, variation annuelle, glissement annuel, taux d'inflation,
+    variation en pourcentage, taux de croissance, moyenne trimestrielle,
+    moyenne annuelle, indice.
     """
     client.use_lang(lang)
-    return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
+    request = transforms.TransformRequest(transform, frequency, aggregation, index_base)
+    if not request.active:
+        return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
+    if latest_n < 1:
+        raise_error(InvalidInput, "error.invalid_input", lang, detail="latest_n must be 1 or more.")
+    infos = await transforms.series_infos(vector_ids)
+    fetch_n = transforms.latest_n_to_fetch(latest_n, request, transforms.ppys(list(infos.values())))
+    data = await client.get_data_from_vectors_and_latest_n_periods(vector_ids, fetch_n)
+    series = [
+        await transforms.apply(s, infos.get(s.vector_id), request, latest_n=latest_n)
+        for s in data.series
+    ]
+    provenance = data.provenance.model_copy(
+        update={"coverage": transforms.coverage_note(f"latestN={fetch_n}")}
+    )
+    return data.model_copy(update={"series": series, "provenance": provenance})
 
 
 @tool
 async def wds_get_data_from_cube_coord(
-    product_id: ProductId, coordinate: str, latest_n: int = 12, lang: Lang = "en"
+    product_id: ProductId,
+    coordinate: str,
+    latest_n: int = 12,
+    transform: Transform = "level",
+    frequency: Frequency | None = None,
+    aggregation: Aggregation = "average",
+    index_base: str | None = None,
+    lang: Lang = "en",
 ) -> VectorData:
-    """Get the latest N observations for a table + coordinate pair.
+    """Get the latest N observations for a table + coordinate pair,
+    optionally as a computed change, growth rate, index or aggregate.
 
     Use for: fetching data when you have a productId/coordinate but not
-    yet the vector ID.
+    yet the vector ID, including year-over-year or period-to-period
+    changes. `status`, `symbol` and `security_level` decode the codes.
+    `latest_n` counts periods at the output frequency.
+    `transform` computes a change from the published levels: diff
+    (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
+    against the same period a year earlier: 12-month CPI inflation),
+    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    `frequency` ("monthly", "quarterly", "annual") first aggregates with
+    `aggregation` (average, sum, end_of_period). A percent change of a
+    series already in percent or a rate (unemployment rate, bank rate)
+    comes back as the change in percentage points, and says so. Enough
+    history is fetched for the lag; `observations` keep the published
+    values and `transformed` holds the computed ones with their formula
+    and unit.
     Keywords: statcan, coordinate, observations, latest, data, wds,
-    productId, Statistics Canada.
+    productId, Statistics Canada, year-over-year, percent change, growth
+    rate, quarterly average, annual average.
     Mots-clés : Statistique Canada, coordonnée, observations, dernières
     données, données récentes, numéro de tableau, tableau, dernières
-    périodes.
+    périodes, variation annuelle, variation en pourcentage, taux de
+    croissance, moyenne trimestrielle.
     """
     client.use_lang(lang)
-    return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
-        product_id, coordinate, latest_n
+    request = transforms.TransformRequest(transform, frequency, aggregation, index_base)
+    if not request.active:
+        return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
+            product_id, coordinate, latest_n
+        )
+    if latest_n < 1:
+        raise_error(InvalidInput, "error.invalid_input", lang, detail="latest_n must be 1 or more.")
+    info = await client.get_series_info_from_cube_pid_coord(product_id, coordinate)
+    fetch_n = transforms.latest_n_to_fetch(latest_n, request, transforms.ppys([info]))
+    data = await client.get_data_from_cube_pid_coord_and_latest_n_periods(
+        product_id, coordinate, fetch_n
+    )
+    result = await transforms.apply(data, info, request, latest_n=latest_n)
+    provenance = data.provenance.model_copy(
+        update={"coverage": transforms.coverage_note(f"latestN={fetch_n}")}
+    )
+    return data.model_copy(
+        update={
+            "observations": result.observations,
+            "transformed": result.transformed,
+            "provenance": provenance,
+        }
     )
 
 
@@ -284,28 +365,69 @@ async def wds_get_bulk_vector_data_by_range(
 
 @tool
 async def wds_get_data_by_reference_period_range(
-    vector_ids: list[int], start_ref_period: str, end_ref_period: str, lang: Lang = "en"
+    vector_ids: list[int],
+    start_ref_period: str,
+    end_ref_period: str,
+    transform: Transform = "level",
+    frequency: Frequency | None = None,
+    aggregation: Aggregation = "average",
+    index_base: str | None = None,
+    lang: Lang = "en",
 ) -> VectorDataSet:
     """Get observations for vectors between two dates (a time series for a
-    vector over a reference-period range).
+    vector over a reference-period range), optionally as a computed
+    change, growth rate, index or quarterly/annual aggregate.
 
     Use for: retrieving a specific historical window (e.g. 2015-01-01 to
-    2020-12-01) rather than "latest N." `start_ref_period`/`end_ref_period`
+    2020-12-01) rather than "latest N", and year-over-year inflation or
+    growth over that window. `start_ref_period`/`end_ref_period`
     are "YYYY-MM-DD"; a "YYYY-MM" month is widened to its first/last
     day. Results come back inline, so this suits a handful of series;
     for hundreds use wds_get_full_table_download. Vectors WDS cannot
     serve are listed in `failed`.
+    `transform` computes a change from the published levels: diff
+    (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
+    against the same period a year earlier: 12-month CPI inflation),
+    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    `frequency` ("monthly", "quarterly", "annual") first aggregates with
+    `aggregation` (average, sum, end_of_period). A percent change of a
+    series already in percent or a rate (unemployment rate, bank rate)
+    comes back as the change in percentage points, and says so. Enough
+    history is fetched for the lag; `observations` keep the published
+    values and `transformed` holds the computed ones with their formula
+    and unit.
     Keywords: statcan, reference period, range, between two dates, time
     series for a vector, history, vectors, wds, date range, Statistics
-    Canada.
+    Canada, year-over-year, inflation, percent change, growth rate,
+    annual average.
     Mots-clés : Statistique Canada, période de référence, plage, plage de
     dates, historique, vecteurs, données historiques, série chronologique
-    entre deux dates.
+    entre deux dates, variation annuelle, glissement annuel, taux
+    d'inflation, taux de croissance, moyenne annuelle.
     """
     client.use_lang(lang)
-    return await client.get_data_from_vector_by_reference_period_range(
-        vector_ids, start_ref_period, end_ref_period
+    request = transforms.TransformRequest(transform, frequency, aggregation, index_base)
+    if not request.active:
+        return await client.get_data_from_vector_by_reference_period_range(
+            vector_ids, start_ref_period, end_ref_period
+        )
+    start = date.fromisoformat(client._ref_period(start_ref_period, "start_ref_period", end=False))
+    end = date.fromisoformat(client._ref_period(end_ref_period, "end_ref_period", end=True))
+    infos = await transforms.series_infos(vector_ids)
+    fetch_start = transforms.start_to_fetch(start, request, transforms.ppys(list(infos.values())))
+    data = await client.get_data_from_vector_by_reference_period_range(
+        vector_ids, fetch_start.isoformat(), end.isoformat()
     )
+    series = [
+        await transforms.apply(
+            s, infos.get(s.vector_id), request, window_start=start, window_end=end
+        )
+        for s in data.series
+    ]
+    provenance = data.provenance.model_copy(
+        update={"coverage": transforms.coverage_note(f"{fetch_start.isoformat()} to {end}")}
+    )
+    return data.model_copy(update={"series": series, "provenance": provenance})
 
 
 @tool

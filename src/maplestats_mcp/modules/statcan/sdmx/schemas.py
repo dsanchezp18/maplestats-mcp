@@ -6,9 +6,10 @@ and a live data fetch (DF_18100004 key 2.2) this session.
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
+from maplestats_mcp.shared.transform import TransformedSeries
 
 
 class SdmxCode(BaseModel):
@@ -46,8 +47,28 @@ class SdmxOrKey(BaseModel):
 
 
 class SdmxObservation(BaseModel):
+    """One observation. Its SDMX attributes (STATUS_CAN, SYMBOL, SECURITY_LEVEL)
+    are only sent when they flag something; absent, the codes are None (normal,
+    no symbol, public). Codes are the WDS ones and are decoded from getCodeSets."""
+
     period: str
-    value: float | None
+    value: float | None = Field(
+        description="As published, unscaled; null when StatCan has no value (see status)."
+    )
+    status_code: int | None = None
+    status: str | None = Field(
+        default=None,
+        description="What status_code means, e.g. 'use with caution', 'too unreliable to be "
+        "published', 'not available for a specific reference period'.",
+    )
+    symbol_code: int | None = None
+    symbol: str | None = Field(
+        default=None, description="What symbol_code means, e.g. 'preliminary', 'revised'."
+    )
+    security_level_code: int | None = None
+    security_level: str | None = Field(
+        default=None, description="What security_level_code means, e.g. suppressed (confidential)."
+    )
 
 
 class SdmxSeries(BaseModel):
@@ -58,6 +79,13 @@ class SdmxSeries(BaseModel):
     dguid: str | None = None
     uom_code: str | None = None
     observations: list[SdmxObservation]
+    transformed: TransformedSeries | None = Field(
+        default=None,
+        description=(
+            "Only with `transform` or `frequency`: values computed by MapleStats from "
+            "`observations`, with the formula and unit. `observations` stay as published."
+        ),
+    )
 
 
 class SdmxData(BaseModel):

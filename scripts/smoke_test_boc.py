@@ -15,6 +15,7 @@ import sys
 
 from maplestats_mcp.modules.boc import client
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.transform import TransformRequest
 
 
 async def _check(label: str, coro) -> bool:
@@ -54,6 +55,29 @@ async def main() -> int:
     ok &= await _check("get_group(FX_RATES_DAILY)", client.get_group("FX_RATES_DAILY"))
     fx_group = await client.get_group("FX_RATES_DAILY")
     print(f"  group has {len(fx_group.series)} member series")
+
+    # Transforms: Valet's unit metadata marks the policy rate as a percent, so
+    # its percent change comes back in points; a daily series is aggregated
+    # to months first.
+    cpi = await client.get_observations(
+        ["V41690973"], recent=3, request=TransformRequest("yoy_pct_change")
+    )
+    cpi_yoy = (cpi.transformed or {}).get("V41690973")
+    print("  CPI yoy:", cpi_yoy and [(p.period, p.value) for p in cpi_yoy.points])
+    ok &= bool(cpi_yoy and len(cpi_yoy.points) == 3 and cpi_yoy.points[-1].value is not None)
+    policy = await client.get_observations(
+        ["V39079"], recent_months=3, request=TransformRequest("pct_change")
+    )
+    policy_change = (policy.transformed or {}).get("V39079")
+    print("  policy rate:", policy_change and (policy_change.transform, policy_change.unit))
+    ok &= bool(policy_change and policy_change.transform == "diff")
+    fx = await client.get_observations(
+        ["FXUSDCAD"], recent_months=4, request=TransformRequest(frequency="monthly")
+    )
+    fx_monthly = (fx.transformed or {}).get("FXUSDCAD")
+    print("  FXUSDCAD monthly:", fx_monthly and [(p.period, p.value) for p in fx_monthly.points])
+    ok &= bool(fx_monthly and any(p.value for p in fx_monthly.points))
+    ok &= fx.series["FXUSDCAD"].unit is not None
 
     ok &= await _check(
         "get_observations single series recent=5",

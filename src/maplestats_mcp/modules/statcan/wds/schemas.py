@@ -13,6 +13,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
+from maplestats_mcp.shared.transform import TransformedSeries
 
 
 class CubeSummary(BaseModel):
@@ -135,13 +136,39 @@ class ObservationRow(BaseModel):
     status_code: int
     security_level_code: int
     release_time: datetime | None = None
+    # Decoded from WDS getCodeSets, in the call's language, with StatCan's own
+    # wording (the same text statcan_delta's legend gives).
+    symbol: str | None = Field(
+        default=None,
+        description="What symbol_code means, e.g. 'preliminary' or 'revised' ('none' for 0).",
+    )
+    status: str | None = Field(
+        default=None,
+        description=(
+            "What status_code means, e.g. 'use with caution', 'too unreliable to be "
+            "published', 'not available for a specific reference period' ('normal' for 0)."
+        ),
+    )
+    security_level: str | None = Field(
+        default=None,
+        description="What security_level_code means: 'public', or suppressed for confidentiality.",
+    )
 
 
 class VectorSeries(BaseModel):
     product_id: int
     coordinate: str
     vector_id: int
-    observations: list[ObservationRow]
+    observations: list[ObservationRow] = Field(
+        description="Values as published (unscaled), for the requested window."
+    )
+    transformed: TransformedSeries | None = Field(
+        default=None,
+        description=(
+            "Only with `transform` or `frequency`: values computed by MapleStats from "
+            "`observations`, with the formula and unit. `observations` stay as published."
+        ),
+    )
 
 
 class VectorData(VectorSeries):

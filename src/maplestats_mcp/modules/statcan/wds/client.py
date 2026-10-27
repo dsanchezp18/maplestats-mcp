@@ -683,7 +683,71 @@ async def get_series_info_from_vector(vector_id: int) -> SeriesInfo:
     return _series_info(obj, "getSeriesInfoFromVector")
 
 
-def _observation_from_json(dp: dict[str, Any]) -> ObservationRow:
+# Code -> (English, French) description, per observation code family.
+Legend = dict[str, dict[int, tuple[str | None, str | None]]]
+
+# getCodeSets keys for the three codes every observation carries (field names
+# checked live 2026-10-27; symbolCode and statusCode come as strings there).
+_LEGEND_FIELDS = {
+    "symbol": ("symbol", "symbolCode", "symbolDescEn", "symbolDescFr"),
+    "status": ("status", "statusCode", "statusDescEn", "statusDescFr"),
+    "security_level": (
+        "securityLevel",
+        "securityLevelCode",
+        "securityLevelDescEn",
+        "securityLevelDescFr",
+    ),
+}
+
+
+async def _code_sets_raw() -> tuple[dict[str, Any], bool]:
+    async def fetch() -> dict[str, Any]:
+        return _unwrap_one(await _get("getCodeSets"), "getCodeSets")
+
+    return await cached_fetch("wds:getCodeSets", constants.CACHE_TTL_CODE_SETS_SECONDS, fetch)
+
+
+async def observation_legend() -> Legend | None:
+    """What each symbol, status and security-level code means, from getCodeSets
+    (cached 7 days). None when getCodeSets cannot be read: the observations
+    still come back, with the codes undecoded and a note saying why, since a
+    missing description is no reason to withhold the data."""
+    try:
+        obj, _ = await _code_sets_raw()
+    except (UpstreamUnavailable, UpstreamError, DataLocked, NotFound):
+        return None
+    legend: Legend = {}
+    for family, (key, code_field, en_field, fr_field) in _LEGEND_FIELDS.items():
+        legend[family] = {
+            int(e[code_field]): (e.get(en_field), e.get(fr_field))
+            for e in list_or_empty(obj, key)
+            if str(e.get(code_field, "")).strip().isdigit()
+        }
+    return legend
+
+
+def describe_code(
+    legend: Legend | None, family: str, code: int | None, lang: str | None = None
+) -> str | None:
+    """The code's description in the call's language (English when French is empty)."""
+    if legend is None or code is None:
+        return None
+    en, fr = legend.get(family, {}).get(code, (None, None))
+    return (fr or en) if (lang or _LANG.get()) == "fr" else en
+
+
+def legend_note(legend: Legend | None) -> str | None:
+    if legend is not None:
+        return None
+    return _m(
+        "symbol, status and security-level codes are not decoded: getCodeSets did not answer "
+        "(wds_get_code_sets decodes them)",
+        "les codes de symbole, de statut et de niveau de sécurité ne sont pas décodés : "
+        "getCodeSets n'a pas répondu (wds_get_code_sets les décode)",
+    )
+
+
+def _observation_from_json(dp: dict[str, Any], legend: Legend | None = None) -> ObservationRow:
     ref_period_raw = dp.get("refPer") or dp.get("refPerRaw")
     if not ref_period_raw:
         raise UpstreamError(
@@ -699,16 +763,22 @@ def _observation_from_json(dp: dict[str, Any]) -> ObservationRow:
     # against), so `or 0` is needed to catch the present-but-null case
     # too; otherwise int(None) raises an unhandled TypeError.
     scalar = int(dp.get("scalarFactorCode", 0) or 0)
+    symbol = int(dp.get("symbolCode", 0) or 0)
+    status = int(dp.get("statusCode", 0) or 0)
+    security = int(dp.get("securityLevelCode", 0) or 0)
     return ObservationRow(
         ref_period=date.fromisoformat(ref_period_raw),
         value=dp.get("value"),
         decimals=int(dp.get("decimals", 0) or 0),
         scalar_factor_code=scalar,
         scale_multiplier=10**scalar,
-        symbol_code=int(dp.get("symbolCode", 0) or 0),
-        status_code=int(dp.get("statusCode", 0) or 0),
-        security_level_code=int(dp.get("securityLevelCode", 0) or 0),
+        symbol_code=symbol,
+        status_code=status,
+        security_level_code=security,
         release_time=_release_time_utc(release_time) if release_time else None,
+        symbol=describe_code(legend, "symbol", symbol),
+        status=describe_code(legend, "status", status),
+        security_level=describe_code(legend, "security_level", security),
     )
 
 
@@ -728,17 +798,21 @@ def _release_time_utc(raw: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
-def _series_from_json(obj: dict[str, Any]) -> VectorSeries:
+def _series_from_json(obj: dict[str, Any], legend: Legend | None = None) -> VectorSeries:
     return VectorSeries(
         product_id=int(obj["productId"]),
         coordinate=obj["coordinate"],
         vector_id=int(obj["vectorId"]),
-        observations=[_observation_from_json(dp) for dp in list_or_empty(obj, "vectorDataPoint")],
+        observations=[
+            _observation_from_json(dp, legend) for dp in list_or_empty(obj, "vectorDataPoint")
+        ],
     )
 
 
-def _vector_data_from_json(obj: dict[str, Any], *, source_url: str, cached: bool) -> VectorData:
-    series = _series_from_json(obj)
+def _vector_data_from_json(
+    obj: dict[str, Any], *, source_url: str, cached: bool, legend: Legend | None = None
+) -> VectorData:
+    series = _series_from_json(obj, legend)
     return VectorData(
         **series.model_dump(),
         provenance=make_provenance(
@@ -746,6 +820,7 @@ def _vector_data_from_json(obj: dict[str, Any], *, source_url: str, cached: bool
             url=source_url,
             cached=cached,
             schema_name="statcan.wds.VectorData",
+            limits=legend_note(legend),
             lang=_LANG.get(),
         ),
     )
@@ -757,6 +832,7 @@ def _vector_data_set(
     *,
     method: str,
     cached: bool,
+    legend: Legend | None = None,
 ) -> VectorDataSet:
     """Keep the vectors WDS served and list the ones it could not.
 
@@ -772,7 +848,7 @@ def _vector_data_set(
     failed: list[FailedVector] = []
     for position, item in enumerate(items):
         try:
-            series.append(_series_from_json(_unwrap_one(item, method)))
+            series.append(_series_from_json(_unwrap_one(item, method), legend))
         except (NotFound, UpstreamError) as exc:
             detail = item.get("object")
             echoed = detail.get("vectorId") if isinstance(detail, dict) else None
@@ -796,6 +872,15 @@ def _vector_data_set(
                 f"({failed[0].reason}).",
             )
         )
+    limits = [
+        _m(
+            f"{len(failed)} vector(s) returned no data, see `failed`",
+            f"{len(failed)} vecteur(s) sans données, voir `failed`",
+        )
+        if failed
+        else None,
+        legend_note(legend),
+    ]
     return VectorDataSet(
         series=series,
         failed=failed,
@@ -804,14 +889,7 @@ def _vector_data_set(
             url=f"{constants.BASE_URL}{method}",
             cached=cached,
             schema_name="statcan.wds.VectorDataSet",
-            limits=(
-                _m(
-                    f"{len(failed)} vector(s) returned no data, see `failed`",
-                    f"{len(failed)} vecteur(s) sans données, voir `failed`",
-                )
-                if failed
-                else None
-            ),
+            limits="; ".join(n for n in limits if n) or None,
             lang=_LANG.get(),
         ),
     )
@@ -834,7 +912,9 @@ async def get_data_from_vectors_and_latest_n_periods(
     items, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch
     )
-    return _vector_data_set(items, vector_ids, method=method, cached=was_cached)
+    return _vector_data_set(
+        items, vector_ids, method=method, cached=was_cached, legend=await observation_legend()
+    )
 
 
 async def get_data_from_cube_pid_coord_and_latest_n_periods(
@@ -851,6 +931,7 @@ async def get_data_from_cube_pid_coord_and_latest_n_periods(
         obj,
         source_url=f"{constants.BASE_URL}getDataFromCubePidCoordAndLatestNPeriods",
         cached=False,
+        legend=await observation_legend(),
     )
 
 
@@ -935,7 +1016,9 @@ async def get_bulk_vector_data_by_range(
         "endDataPointReleaseDate": end,
     }
     items = await _post(method, body)
-    return _vector_data_set(items, vector_ids, method=method, cached=False)
+    return _vector_data_set(
+        items, vector_ids, method=method, cached=False, legend=await observation_legend()
+    )
 
 
 async def get_data_from_vector_by_reference_period_range(
@@ -952,7 +1035,9 @@ async def get_data_from_vector_by_reference_period_range(
         "endReferencePeriod": _ref_period(end_ref_period, "end_ref_period", end=True),
     }
     data = await _get(method, params=params)
-    return _vector_data_set(data, vector_ids, method=method, cached=False)
+    return _vector_data_set(
+        data, vector_ids, method=method, cached=False, legend=await observation_legend()
+    )
 
 
 async def get_changed_series_list() -> ChangedSeriesList:
@@ -1032,7 +1117,10 @@ async def get_changed_series_data_from_vector(vector_id: int) -> VectorData:
     items = await _post("getChangedSeriesDataFromVector", [{"vectorId": vector_id}])
     obj = _unwrap_one(items[0], "getChangedSeriesDataFromVector")
     data = _vector_data_from_json(
-        obj, source_url=f"{constants.BASE_URL}getChangedSeriesDataFromVector", cached=False
+        obj,
+        source_url=f"{constants.BASE_URL}getChangedSeriesDataFromVector",
+        cached=False,
+        legend=await observation_legend(),
     )
     if data.vector_id != vector_id:
         raise UpstreamError(
@@ -1151,12 +1239,7 @@ async def get_code_sets(
     entries and provenance.limits says what was cut."""
     if limit < 1:
         raise InvalidInput(_m("limit must be 1 or more.", "limit doit être 1 ou plus."))
-    cache_key = "wds:getCodeSets"
-
-    async def fetch() -> dict[str, Any]:
-        return _unwrap_one(await _get("getCodeSets"), "getCodeSets")
-
-    obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_CODE_SETS_SECONDS, fetch)
+    obj, was_cached = await _code_sets_raw()
     words = _fold(query).split() if query else []
     counts: dict[str, int] = {}
     cut: list[str] = []

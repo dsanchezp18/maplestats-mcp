@@ -12,6 +12,8 @@ from fastmcp.tools import tool
 
 from maplestats_mcp.modules.statcan.sdmx import client
 from maplestats_mcp.modules.statcan.sdmx.schemas import SdmxData, SdmxOrKey, SdmxStructure
+from maplestats_mcp.modules.statcan.wds.transforms import TransformRequest
+from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform
 
 Lang = Literal["en", "fr"]
 
@@ -80,9 +82,14 @@ async def sdmx_get_data(
     start_period: str | None = None,
     end_period: str | None = None,
     last_n_observations: int | None = None,
+    transform: Transform = "level",
+    frequency: Frequency | None = None,
+    aggregation: Aggregation = "average",
+    index_base: str | None = None,
     lang: Lang = "en",
 ) -> SdmxData:
-    """Get filtered, server-side-sliced observations for a StatCan table.
+    """Get filtered, server-side-sliced observations for a StatCan table,
+    optionally as a computed change, growth rate, index or aggregate.
 
     Use for: fetching only the dimension combination you need rather
     than the full table. `key` is a dot-separated string of member ids,
@@ -94,10 +101,25 @@ async def sdmx_get_data(
     `start_period`/`end_period` (e.g. 2024-01) for a range -- the two
     cannot be combined. Each series keeps at most 500 newest rows and a
     response at most 200 series; provenance.limits records any cut.
+    `transform` computes a change from the published levels: diff,
+    pct_change, yoy_diff, yoy_pct_change (year-over-year, against the
+    same period a year earlier: 12-month CPI inflation),
+    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    `frequency` ("monthly", "quarterly", "annual") first aggregates with
+    `aggregation` (average, sum, end_of_period). A percent change of a
+    series already in percent or a rate comes back as the change in
+    percentage points, and says so. Enough history is fetched for the
+    lag; `observations` keep the published values and `transformed`
+    holds the computed ones with their formula and unit. Each
+    observation's `status`, `symbol` and `security_level` decode
+    StatCan's flags (e.g. "use with caution", suppressed).
     Keywords: statcan, sdmx, data, filtered, key, dimensions, query,
-    observations, slice.
+    observations, slice, year-over-year, percent change, growth rate,
+    quarterly average, annual average, status flags.
     Mots-clés : Statistique Canada, SDMX, données filtrées, clé, dimensions,
-    requête, observations, extraction, série chronologique.
+    requête, observations, extraction, série chronologique, variation
+    annuelle, variation en pourcentage, taux de croissance, moyenne
+    annuelle, cote de qualité.
     """
     return await client.get_data(
         product_id,
@@ -106,6 +128,7 @@ async def sdmx_get_data(
         end_period=end_period,
         last_n_observations=last_n_observations,
         lang=lang,
+        request=TransformRequest(transform, frequency, aggregation, index_base),
     )
 
 
@@ -115,17 +138,37 @@ async def sdmx_get_vector_data(
     start_period: str | None = None,
     end_period: str | None = None,
     last_n_observations: int | None = None,
+    transform: Transform = "level",
+    frequency: Frequency | None = None,
+    aggregation: Aggregation = "average",
+    index_base: str | None = None,
     lang: Lang = "en",
 ) -> SdmxData:
-    """Get filtered SDMX observations for a known vector ID.
+    """Get filtered SDMX observations for a known vector ID, optionally as
+    a computed change, growth rate, index or aggregate.
 
     Use for: fetching one specific series via SDMX when you already
     have its vector ID (resolves the vector to a productId/coordinate
-    internally, then builds the matching SDMX key).
+    internally, then builds the matching SDMX key), and year-over-year
+    inflation or growth for it. Periods work as in sdmx_get_data.
+    `transform` computes a change from the published levels: diff,
+    pct_change, yoy_diff, yoy_pct_change (year-over-year, against the
+    same period a year earlier: 12-month CPI inflation),
+    annualized_pct_change, or index (100 at `index_base`, e.g. "2020").
+    `frequency` ("monthly", "quarterly", "annual") first aggregates with
+    `aggregation` (average, sum, end_of_period). A percent change of a
+    series already in percent or a rate comes back as the change in
+    percentage points, and says so. Enough history is fetched for the
+    lag; `observations` keep the published values and `transformed`
+    holds the computed ones with their formula and unit. Each
+    observation's `status`, `symbol` and `security_level` decode
+    StatCan's flags (e.g. "use with caution", suppressed).
     Keywords: statcan, sdmx, vector, data, observations, series, query,
-    Statistics Canada.
+    Statistics Canada, year-over-year, inflation, percent change, growth
+    rate, annual average.
     Mots-clés : Statistique Canada, SDMX, vecteur, données, observations,
-    série, requête, identifiant de vecteur, série chronologique.
+    série, requête, identifiant de vecteur, série chronologique, variation
+    annuelle, taux d'inflation, taux de croissance, moyenne annuelle.
     """
     return await client.get_vector_data(
         vector_id,
@@ -133,4 +176,5 @@ async def sdmx_get_vector_data(
         end_period=end_period,
         last_n_observations=last_n_observations,
         lang=lang,
+        request=TransformRequest(transform, frequency, aggregation, index_base),
     )

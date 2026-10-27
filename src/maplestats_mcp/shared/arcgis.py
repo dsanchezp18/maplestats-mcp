@@ -80,6 +80,7 @@ import httpx
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.upstream_text import (
@@ -327,15 +328,21 @@ async def supported_download_formats(
             status = exc.response.status_code
             found = _SUPPORTED.search(_error_detail(exc)) if status == 400 else None
             if not found:
-                raise UpstreamError(
+                raise call_error(
+                    UpstreamError,
                     f"{config.source}: the download API answered HTTP {status} without "
-                    "listing its export formats."
+                    "listing its export formats.",
+                    f"{config.source} : l'API de téléchargement a répondu HTTP {status} sans "
+                    "donner ses formats d'exportation.",
                 ) from exc
             listed = {part.strip().lower() for part in found.group(1).split(",")}
             return tuple(fmt for fmt in DOWNLOAD_FORMATS if fmt in listed)
-        raise UpstreamError(
+        raise call_error(
+            UpstreamError,
             f"{config.source}: the download API accepted an unknown format instead of "
-            "listing its export formats."
+            "listing its export formats.",
+            f"{config.source} : l'API de téléchargement a accepté un format inconnu au lieu "
+            "de donner ses formats d'exportation.",
         )
 
     # Only a listed set of formats is cached: a failure raises out of fetch,
@@ -345,8 +352,10 @@ async def supported_download_formats(
             f"{config.source}:download_formats:{item_id}:{layer_index}", 60 * 60, fetch
         )
     except httpx.HTTPError as exc:
-        raise UpstreamError(
-            f"{config.source}: the download API did not answer ({type(exc).__name__})."
+        raise call_error(
+            UpstreamError,
+            f"{config.source}: the download API did not answer ({type(exc).__name__}).",
+            f"{config.source} : l'API de téléchargement n'a pas répondu ({type(exc).__name__}).",
         ) from exc
     return formats
 

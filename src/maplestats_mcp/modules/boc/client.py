@@ -64,8 +64,10 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 
 from __future__ import annotations
 
+import math
+import re
 from collections.abc import Callable
-from datetime import UTC, datetime, time
+from datetime import UTC, date, datetime, time
 from typing import Any, NoReturn, Protocol
 from urllib.parse import quote
 
@@ -94,6 +96,17 @@ from maplestats_mcp.shared.i18n import NBSP, french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.transform import (
+    PERIODS_PER_YEAR,
+    TransformedSeries,
+    TransformRequest,
+    extra_months,
+    infer_periods_per_year,
+    is_rate_unit,
+    parse_period,
+    shift_months,
+    transform_series,
+)
 
 
 def _limiter():
@@ -224,13 +237,16 @@ def _check_observation_rows(obj: Any, where: str, lang: str = "en") -> dict[str,
 
 def _parse_value(raw: str | None) -> float | None:
     """Valet sends "v" as a JSON string even for numeric series; treat a
-    missing or empty value as no data rather than a parse failure."""
+    missing or empty value as no data rather than a parse failure. Text that
+    is not a number is None here too; _observations_from_json keeps that text
+    beside it, so a note is never lost as a silent null."""
     if not raw:
         return None
     try:
-        return float(raw)
-    except ValueError:
+        value = float(raw)
+    except (TypeError, ValueError):
         return None
+    return None if math.isnan(value) or math.isinf(value) else value
 
 
 _KIND_FR = {"Series": "Le nom de la série", "Group": "Le nom du groupe"}
@@ -305,13 +321,34 @@ def _observations_from_json(
         if not isinstance(row, dict) or "d" not in row:
             raise _shape_error(where, "d", lang)
         ref_date = row["d"]
-        values = {
-            code: _parse_value(entry.get("v"))
-            for code, entry in row.items()
-            if code != "d" and isinstance(entry, dict)
-        }
-        observations.append(Observation(ref_date=ref_date, values=values))
+        values: dict[str, float | None] = {}
+        non_numeric: dict[str, str] = {}
+        for code, entry in row.items():
+            if code == "d" or not isinstance(entry, dict):
+                continue
+            raw = entry.get("v")
+            values[code] = _parse_value(raw)
+            if values[code] is None and raw not in (None, "") and str(raw).strip():
+                non_numeric[code] = str(raw)
+        observations.append(
+            Observation(ref_date=ref_date, values=values, non_numeric=non_numeric or None)
+        )
     return observations
+
+
+def _non_numeric_note(observations: list[Observation], lang: str) -> str | None:
+    count = sum(len(o.non_numeric or {}) for o in observations)
+    if not count:
+        return None
+    if lang == "fr":
+        return french_spacing(
+            f"{count} valeur(s) envoyée(s) par Valet sous forme de texte non numérique sont "
+            "nulles dans `values` ; le texte reçu est dans `non_numeric` de la ligne."
+        )
+    return (
+        f"{count} value(s) Valet sent as text that is not a number are null in `values`; the "
+        "text as sent is in the row's `non_numeric`."
+    )
 
 
 def _latest_date(observations: list[Observation]) -> datetime | None:
@@ -322,14 +359,17 @@ def _latest_date(observations: list[Observation]) -> datetime | None:
 
 
 def _series_info_from_json(series_detail: dict[str, Any]) -> dict[str, SeriesInfoBrief]:
-    return {
-        code: SeriesInfoBrief(
+    briefs = {}
+    for code, obj in series_detail.items():
+        metadata = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
+        briefs[code] = SeriesInfoBrief(
             name=code,
             label=obj.get("label", ""),
             description=obj.get("description", ""),
+            unit=metadata.get("unit") or None,
+            frequency=metadata.get("frequency") or None,
         )
-        for code, obj in series_detail.items()
-    }
+    return briefs
 
 
 class _NamedEntry(Protocol):
@@ -643,6 +683,129 @@ async def get_group(name: str, lang: str = "en") -> GroupDetail:
     )
 
 
+# dateFormat words (English and French domains, seen live 2026-10-27) -> periods
+# per year. "daily"/"quotidien" and "weekly" have no calendar step.
+_DATE_FORMAT_PPY = {
+    "monthly": 12,
+    "mensuel": 12,
+    "quarterly": 4,
+    "trimestriel": 4,
+    "annual": 1,
+    "annuel": 1,
+}
+# Without metadata.unit: words that make a series a percentage or an interest
+# rate. "Exchange rate" alone is a price, not a percentage, so bare "rate" is
+# not enough.
+_RATE_WORDS = re.compile(
+    r"percent|pourcent|\byields?\b|rendement|interest rate|taux d.int[ée]r[êe]t|policy rate|"
+    r"taux directeur|prime rate|taux pr[ée]f[ée]rentiel|bank rate|taux officiel",
+    re.IGNORECASE,
+)
+
+
+def _series_ppy(detail: dict[str, Any], days: list[date]) -> int | None:
+    word = str(detail.get("dateFormat") or "").strip().lower()
+    return _DATE_FORMAT_PPY.get(word) if word else infer_periods_per_year(days)
+
+
+def _is_rate(info: SeriesInfoBrief) -> bool:
+    if info.unit:
+        return is_rate_unit(info.unit)
+    return bool(_RATE_WORDS.search(f"{info.label} {info.description}"))
+
+
+def _points(observations: list[Observation], code: str) -> list[tuple[date, float | None]]:
+    """The series' own rows: with mixed frequencies a row may not carry it at all."""
+    return [(o.ref_date, o.values[code]) for o in observations if code in o.values]
+
+
+def history_window(
+    window: list[date], ppys: list[int | None], request: TransformRequest
+) -> dict[str, str]:
+    """start_date/end_date reaching back far enough before the window's first
+    date for the transform's lag (and index base). reproduce_code asks the same."""
+    out_ppys = [PERIODS_PER_YEAR[request.frequency] if request.frequency else p for p in ppys]
+    # An unknown or daily frequency counts as annual here: over-fetching
+    # costs only bytes, under-fetching would leave the first values null.
+    months = max(
+        (
+            extra_months(request.transform, ppy or 1, aggregating=request.frequency is not None)
+            for ppy in out_ppys
+        ),
+        default=0,
+    )
+    first = min(window)
+    start = shift_months(first, -months) if months else first
+    if request.index_base:
+        try:
+            start = min(start, parse_period(request.index_base)[0])
+        except ValueError:
+            pass  # transform_series rejects it with a clear message
+    return {"start_date": start.isoformat(), "end_date": max(window).isoformat()}
+
+
+async def _transformed(
+    names: list[str],
+    params: dict[str, Any],
+    payload: dict[str, Any],
+    observations: list[Observation],
+    kept: list[Observation],
+    request: TransformRequest,
+    lang: str,
+) -> tuple[dict[str, TransformedSeries], str | None]:
+    """Computed values per series, and the request that fetched their history.
+
+    The window is what Valet returned for the caller's own parameters. For
+    the lag, the same series are fetched again from earlier (by start_date),
+    so a year-over-year change at the window's first date has its year-ago
+    level. With no window the full history was already fetched.
+    """
+    details = payload.get("seriesDetail", {}) or {}
+    infos = _series_info_from_json(details)
+    codes = [c for c in infos if any(c in o.values for o in kept)] or list(infos)
+    history, fetched = observations, None
+    if params and kept:
+        history_params = history_window(
+            [o.ref_date for o in kept],
+            [
+                _series_ppy(details.get(c, {}), [d for d, _ in _points(observations, c)])
+                for c in codes
+            ],
+            request,
+        )
+        joined = ",".join(_path_segment(n) for n in names)
+        path = f"observations/{joined}/json"
+        cache_key = _cache_key(f"boc:{path}:{sorted(history_params.items())}", lang)
+
+        async def fetch() -> dict[str, Any]:
+            return _check_observation_rows(
+                await _get(path, params=history_params, lang=lang), path, lang
+            )
+
+        obj, _ = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
+        history = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
+        fetched = _url(path, history_params, lang)
+    result: dict[str, TransformedSeries] = {}
+    for code in codes:
+        info = infos[code]
+        window = [d for d, _ in _points(kept, code)]
+        points = _points(history, code)
+        result[code] = transform_series(
+            points,
+            source_ppy=_series_ppy(details.get(code, {}), [d for d, _ in points]),
+            transform=request.transform,
+            frequency=request.frequency,
+            aggregation=request.aggregation,
+            index_base=request.index_base,
+            rate_unit=_is_rate(info),
+            units=info.unit,
+            window_start=min(window) if window else None,
+            window_end=max(window) if window else None,
+            lang=lang,
+        )
+    return result, fetched
+
+
 async def get_observations(
     series_names: list[str],
     *,
@@ -653,6 +816,7 @@ async def get_observations(
     recent_months: int | None = None,
     recent_years: int | None = None,
     lang: str = "en",
+    request: TransformRequest | None = None,
 ) -> ObservationsResult:
     if not series_names:
         _raise(
@@ -681,18 +845,41 @@ async def get_observations(
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     observations = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
     kept = _keep_latest(observations)
+    transformed: dict[str, TransformedSeries] | None = None
+    coverage = [_non_numeric_note(kept, lang)]
+    if request is not None and request.active:
+        transformed, fetched = await _transformed(
+            names, params, obj, observations, kept, request, lang
+        )
+        coverage.append(_transform_note(fetched, lang))
     return ObservationsResult(
         series=_series_info_from_json(obj.get("seriesDetail", {}) or {}),
         observations=kept,
+        transformed=transformed,
         provenance=make_provenance(
             source="boc",
             url=_url(path, params, lang),
             cached=was_cached,
             as_of=_latest_date(observations),
             schema_name="boc.ObservationsResult",
+            coverage=" ".join(c for c in coverage if c) or None,
             limits=_observation_limits(len(kept), len(observations), lang),
             lang=lang,
         ),
+    )
+
+
+def _transform_note(fetched: str | None, lang: str) -> str:
+    if lang == "fr":
+        history = f" ; l'historique du décalage vient de {fetched}" if fetched else ""
+        return french_spacing(
+            "`transformed` est calculé par MapleStats à partir des valeurs publiées (voir sa "
+            f"formula){history}. `observations` restent telles que publiées."
+        )
+    history = f"; the history for the lag came from {fetched}" if fetched else ""
+    return (
+        "`transformed` is computed by MapleStats from the published values (see its "
+        f"formula){history}. `observations` stay as published."
     )
 
 
@@ -744,6 +931,7 @@ async def get_group_observations(
             cached=was_cached,
             as_of=_latest_date(observations),
             schema_name="boc.GroupObservationsResult",
+            coverage=_non_numeric_note(kept, lang),
             limits=_observation_limits(len(kept), len(observations), lang),
             lang=lang,
         ),
