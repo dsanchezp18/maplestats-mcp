@@ -278,6 +278,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "health_products": OGL_CANADA,
     "finance_canada": CANADA_CA_TERMS,
     "nrcan_minerals": CANADA_CA_TERMS,
+    "isc": CANADA_CA_TERMS,
     "dfo-iwls": terms_not_stated(
         "Fisheries and Oceans Canada, Canadian Hydrographic Service",
         "https://api-iwls.dfo-mpo.gc.ca",

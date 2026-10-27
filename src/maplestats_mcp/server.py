@@ -374,7 +374,9 @@ Sources, by tool-name prefix:
   safety alerts), cbsa_ (current border wait times), gazette_ (Canada
   Gazette), earthquakes_, dfo_iwls_
   (tides, water levels), nfd_
-  (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
+  (National Forestry Database), cwfis_ (wildfire hotspots, fire weather),
+  isc_ (First Nation profiles, registered population, drinking water
+  advisories).
 - Elections and Parliament: elections_results_ (federal results by
   riding), elections_financial_returns_ (candidate returns),
   elections_provincial_ (QC, AB, BC, SK, MB results), ourcommons_ (official

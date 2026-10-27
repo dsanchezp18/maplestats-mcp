@@ -680,6 +680,14 @@ SOURCES: dict[str, Source] = {
         "RNCan zones brûlées",
         domain="environment",
     ),
+    "isc": Source(
+        "Indigenous Services Canada and CIRNAC: First Nations and drinking water advisories",
+        "Services aux Autochtones Canada et RCAANC : Premières Nations et avis sur l'eau potable",
+        "national",
+        "ISC First Nations",
+        "SAC Premières Nations",
+        domain="statistics",
+    ),
     "nrcan_minerals": Source(
         "Natural Resources Canada: mineral production",
         "Ressources naturelles Canada : production minérale",
