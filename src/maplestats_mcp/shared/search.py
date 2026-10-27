@@ -182,8 +182,23 @@ def _params(tool: Tool) -> frozenset[str]:
     return frozenset((tool.parameters or {}).get("properties", {}))
 
 
-def identifier_boosts(query: str, tools: Sequence[Tool]) -> dict[int, tuple[float, str]]:
-    """Tool positions to boost for the identifiers in `query`: weight and reason."""
+def identifier_kinds(tool: Tool) -> str:
+    """Which identifiers a tool takes: "t" for a StatCan table number, "v" for a vector
+    or series id. scripts/build_site.py ships this per tool so site.js boosts alike."""
+    params = _params(tool)
+    kinds = ""
+    if "product_id" in params and tool.name.startswith(_STATCAN_PREFIXES):
+        kinds += "t"
+    if params & _VECTOR_PARAMS or _VECTOR_EXAMPLE.search(tool.description or ""):
+        kinds += "v"
+    return kinds
+
+
+def boosts_for(query: str, entries: Sequence[tuple[str, str]]) -> dict[int, tuple[float, str]]:
+    """Positions to boost for the identifiers in `query`, from (tool name, identifier_kinds).
+
+    site.js's `boosts` is the JavaScript twin; tests/test_site.py keeps them equal.
+    """
     boosts: dict[int, tuple[float, str]] = {}
 
     def add(i: int, weight: float, reason: str) -> None:
@@ -196,19 +211,21 @@ def identifier_boosts(query: str, tools: Sequence[Tool]) -> dict[int, tuple[floa
     has_vector = _VECTOR_ID.search(query) is not None
     if not (words or has_table or has_vector):
         return boosts
-    for i, tool in enumerate(tools):
-        name = tool.name
+    for i, (name, kinds) in enumerate(entries):
         if name in words:
             add(i, EXACT_NAME_BOOST, "exact tool name")
         elif any(name.startswith(w if w.endswith("_") else w + "_") for w in words):
             add(i, IDENTIFIER_BOOST, "tool family prefix")
-        if has_table and "product_id" in _params(tool) and name.startswith(_STATCAN_PREFIXES):
+        if has_table and "t" in kinds:
             add(i, IDENTIFIER_BOOST, "takes a StatCan table number")
-        if has_vector and (
-            _params(tool) & _VECTOR_PARAMS or _VECTOR_EXAMPLE.search(tool.description or "")
-        ):
+        if has_vector and "v" in kinds:
             add(i, IDENTIFIER_BOOST, "takes a vector or series id")
     return boosts
+
+
+def identifier_boosts(query: str, tools: Sequence[Tool]) -> dict[int, tuple[float, str]]:
+    """Tool positions to boost for the identifiers in `query`: weight and reason."""
+    return boosts_for(query, [(tool.name, identifier_kinds(tool)) for tool in tools])
 
 
 def apply_boosts(scores: list[float], boosts: dict[int, tuple[float, str]]) -> list[float]:

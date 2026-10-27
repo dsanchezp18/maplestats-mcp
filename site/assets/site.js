@@ -74,9 +74,49 @@
         scores[i] += (idf * numerator) / denominator;
       }
     }
+    applyBoosts(scores, boosts(index, query));
     const hits = [];
     for (let i = 0; i < n; i++) if (scores[i] > 0) hits.push(i);
     return hits.sort((a, b) => scores[b] - scores[a] || a - b);
+  }
+
+  // Exact identifiers, as shared/search.py's boosts_for: a tool name or family
+  // prefix, a StatCan table number (14-10-0287, 14100287; never starting with 0,
+  // which is a DIN) or a vector id (v41690973) lifts the tools that take it.
+  const TABLE_ID = /(?<![\w-])[1-9]\d-?\d{2}-?\d{4}(?:-?\d{2})?(?![\w-])/;
+  const VECTOR_ID = /(?<!\w)v\d{1,10}(?!\w)/i;
+  const SNAKE = /(?<!\w)[a-z][a-z0-9]*(?:_[a-z0-9]+)*_?(?!\w)/g;
+  const EXACT_NAME_BOOST = 2.0;
+  const IDENTIFIER_BOOST = 1.0;
+
+  function boosts(index, query) {
+    const out = new Map();
+    const add = (i, weight) => {
+      if (weight > (out.get(i) || 0)) out.set(i, weight);
+    };
+    const words = new Set((query.toLowerCase().match(SNAKE) || []).filter((w) => w.includes("_")));
+    const hasTable = TABLE_ID.test(query);
+    const hasVector = VECTOR_ID.test(query);
+    if (!(words.size || hasTable || hasVector)) return out;
+    index.tools.forEach(([name], i) => {
+      const kinds = index.ids[i];
+      if (words.has(name)) add(i, EXACT_NAME_BOOST);
+      else if ([...words].some((w) => name.startsWith(w.endsWith("_") ? w : w + "_")))
+        add(i, IDENTIFIER_BOOST);
+      if (hasTable && kinds.includes("t")) add(i, IDENTIFIER_BOOST);
+      if (hasVector && kinds.includes("v")) add(i, IDENTIFIER_BOOST);
+    });
+    return out;
+  }
+
+  // Each boost is a share of the best score; a query that is only an identifier
+  // scores nothing, and the share is of 1 (shared/search.py's apply_boosts).
+  function applyBoosts(scores, found) {
+    if (!found.size) return;
+    let best = 0;
+    for (const s of scores) if (s > best) best = s;
+    const top = best > 0 ? best : 1.0;
+    for (const [i, weight] of found) scores[i] += weight * top;
   }
 
   // Under node there is no page: hand over the search and stop.

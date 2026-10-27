@@ -725,7 +725,7 @@ Read and routed (portal, id, what it holds):
 | | Vancouver | `business-licences` (from 2024), `business-licences-2013-to-2024`, `business-licences-1997-to-2012` | |
 | | Toronto | `toronto` `169e90ba-3ae0-43dd-8b2f-919e87002f50` | Municipal Licensing and Standards |
 | | Victoria, Kelowna, Burnaby | `25883649…`, `b4699cd3…`, `d4de3afb…` | Mississauga publishes licensed eateries only (`c10a6493…`) |
-| Food inspections | Toronto | `toronto` `75dbb3ff-8281-4f03-9de2-bd1214761302` (DineSafe) | Answered HTTP 500 on every try on 2026-10-27 (502 on the last), while the city's other DataStore tables answered 200; a `package_search` for "dinesafe" also answered 500 |
+| Food inspections | Toronto | `toronto` `75dbb3ff-8281-4f03-9de2-bd1214761302` (DineSafe) | Answered HTTP 500 on every try on 2026-10-27 (502 on the last), while the city's other DataStore tables answered 200; a `package_search` for "dinesafe" also answered 500. Rechecked later the same day: still 502 on three tries; `package_show` lists it as the only DataStore-active DineSafe resource |
 | | Montreal | `montreal` `7f939a08-…` (offenders and fines), `28a4957d-…` (establishments) | CC BY 4.0 |
 | | Quebec | `qc` `3e7a2432-b533-4e8c-8ac0-143643412e5a` | MAPAQ monthly counts by region (retail and restaurants), not per establishment |
 | | Surrey | `surrey` `320cec8503034bb997d8f6e57690dd5d` | Fraser Health inspection reports (date, type, critical and non-critical counts, violations, hazard rating); `7901c9e7…` names the restaurants |
