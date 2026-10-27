@@ -623,7 +623,7 @@ is already …
 
 ## CRTC telecom prices and market indicators (telecom_prices)
 
-**Status:** Shipped (`modules/telecom_prices/`, 4 `telecom_` tools).
+**Status:** Shipped (`modules/telecom_prices/`, 5 `telecom_` tools).
 
 Investigated 2026-10-27 for the backlog item on mobile and Internet plan
 prices, data allowances, revenue per GB, usage, subscribers, competition and
@@ -650,6 +650,33 @@ What exists and how it is published (all checked live):
   against "Plan voix"); missing averages are "--". National 5 GB "lowest
   price" average: $46.91 (2020), $43.81, $46.05, $43.80, $27.18, $30.08
   (2025).
+- **City (CMA) prices, "Prix-Prices" sheet** of the same workbook (checked
+  2026-10-27): 35,361 rows, 2016-2025, columns Year, Entity, Region, Census
+  metropolitan area, Province, Forfait, Plan, Reported monthly price, Brand,
+  Speed, Channels. One row per provider, brand and (for mobile) network,
+  3G, LTE or 5G, in the Speed column; Internet plans are speeds; 1,843 TV
+  rows (IPTV, DTH, Cable). The "census metropolitan area" column holds the
+  24 urban CMAs on urban rows and one of 55 rural communities (101 in 2017)
+  on rural rows; no name is in both. 2016-2023 have all 24 CMAs; 2024 and
+  2025 only 13, one per province or territory (Calgary, Vancouver,
+  Saskatoon, Ottawa-Gatineau, Montréal, Hamilton, London, Kitchener-Waterloo,
+  Oshawa, Windsor and St Catharines - Niagara are gone). Entity is blank in
+  every 2016 row; 164 rows have no price (55 urban TV rows in 2020 among
+  them). Mobile plan labels alternate between "50GB Plan" and "50GB".
+  The CRTC publishes no city averages. `telecom_get_city_plan_prices`
+  computes them: `average_price` is the plain mean of the rows (every
+  brand and network once), which reproduces a government analyst's figures
+  exactly (50 GB in 2024: Edmonton 36.75, Toronto 36.75, Winnipeg 35.57,
+  Regina 40.20, Victoria 36.75, Québec 37.67; 2022: Calgary 84.17,
+  Ottawa-Gatineau 72.50). `lowest_per_provider_average` keeps each
+  provider's lowest price first, which is how the CRTC computes its
+  "lowest price" averages: Edmonton's 2024 value (37.00) equals the CRTC's
+  Alberta urban average, as Calgary's 2022 value (83.75) does, and the
+  CRTC's LTE average for Alberta in 2024 (34.33) is the per-provider mean of
+  the LTE rows. When a CMA has no rows for a year the tool says so in its
+  notes and points to the province's urban average in
+  `telecom_get_plan_prices`, which since 2024 rests on that one CMA.
+  Rural communities and TV prices are not served by a tool.
 - **Retail Mobile Sector** and **Retail Fixed Internet Sector** (datasets
   `09a45d61-...` and `8a80c08b-...`, titles say 2013-2022, data run to
   2024): one workbook per language, a contents sheet and one tab per
@@ -705,7 +732,8 @@ refuses), but returns the "Source:" and note lines as data rows, the wide
 year tables with "2020 (MP)" headers and Growth/CAGR columns as they are,
 the quarterly rows unsorted, and the price labels unreconciled. The module
 gives one call per answer with the method and the comparability breaks
-stated; `plan_query` has a telecom topic (English and French) that starts
+stated (`telecom_get_plan_prices` takes several provinces at once, and
+`telecom_get_city_plan_prices` several CMAs, for comparisons); `plan_query` has a telecom topic (English and French) that starts
 with `telecom_get_plan_prices` and adds the CPI vector.
 
 Terms: the four CRTC datasets are under the Open Government Licence -

@@ -54,6 +54,92 @@ class PlanPrices(BaseModel):
     provenance: Provenance
 
 
+class CityPlanPriceAverage(BaseModel):
+    year: int = Field(description="Prices as reported for December 31 of this year.")
+    cma: str = Field(description="Census metropolitan area as the CRTC names it ('Montréal').")
+    province: str = Field(description="Province or territory code.")
+    plan: str = Field(description="Mobile data allowance or talk-only plan, or Internet speed.")
+    technology: str | None = Field(
+        default=None,
+        description="Mobile only: '3G', 'LTE' or '5G' when the call kept one network, 'all' "
+        "when every network's rows are averaged.",
+    )
+    average_price: float = Field(
+        description="Computed by MapleStats: mean of the reported monthly prices in the CRTC's "
+        "Prix-Prices sheet (every provider, brand and network row once), in dollars before "
+        "taxes, rounded to the cent."
+    )
+    reported_prices: int = Field(description="Number of reported prices behind the average.")
+    providers: int | None = Field(
+        default=None,
+        description="Number of distinct reporting providers; None for 2016, whose rows name none.",
+    )
+    lowest_per_provider_average: float | None = Field(
+        default=None,
+        description="Computed by MapleStats: mean of each provider's lowest reported price, the "
+        "way the CRTC averages its own published figures; None for 2016 (no provider names).",
+    )
+    min_price: float
+    max_price: float
+
+
+class CityPlanPriceRow(BaseModel):
+    year: int
+    cma: str
+    province: str
+    plan: str
+    provider: str | None = Field(default=None, description="Reporting entity (blank in 2016).")
+    brand: str | None = None
+    technology: str | None = Field(default=None, description="Mobile only: 3G, LTE or 5G.")
+    price: float | None = Field(
+        default=None, description="Reported monthly price in dollars, before taxes."
+    )
+    as_published: str | None = Field(
+        default=None, description="The cell's text when it is not a number."
+    )
+
+
+class CmaCoverage(BaseModel):
+    cma: str
+    province: str
+    years: list[int] = Field(
+        default_factory=list, description="Years with reported prices for this service."
+    )
+
+
+class CityPlanPrices(BaseModel):
+    service: Service
+    cmas_requested: list[str] = Field(
+        default_factory=list, description="The census metropolitan areas the call matched."
+    )
+    dataset: str = Field(description="The CRTC dataset's title.")
+    dataset_url: str
+    version: str | None = Field(default=None, description="The workbook's version number.")
+    released: date | None = Field(default=None, description="The workbook's release date.")
+    average_basis: str = Field(
+        description="Says that the averages are computed by MapleStats, not published by the CRTC."
+    )
+    averages: list[CityPlanPriceAverage] = Field(default_factory=list)
+    returned_count: int
+    total_matched: int
+    rows: list[CityPlanPriceRow] = Field(
+        default_factory=list, description="The provider rows behind the averages (include_rows)."
+    )
+    rows_returned: int
+    rows_matched: int
+    plans: list[str] = Field(
+        default_factory=list, description="Every plan in the sheet, for the `plan` argument."
+    )
+    years: list[int] = Field(default_factory=list)
+    cmas: list[CmaCoverage] = Field(
+        default_factory=list,
+        description="Every census metropolitan area in the sheet and its years, for `city`.",
+    )
+    notes: list[str] = Field(default_factory=list)
+    method: str = Field(description="How the CRTC collects the prices and how these are averaged.")
+    provenance: Provenance
+
+
 class MarketTableRef(BaseModel):
     table_id: str = Field(description="The workbook tab, e.g. 'MB-S3'; pass it as `table`.")
     label: str = Field(description="'Figure 12', 'Supplementary Table 3'...")
