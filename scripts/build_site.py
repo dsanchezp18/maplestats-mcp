@@ -57,7 +57,7 @@ from maplestats_mcp.modules.planner import client as planner
 from maplestats_mcp.modules.reproduce import french as reproduce_french
 from maplestats_mcp.modules.socrata.constants import PORTALS as SOCRATA_PORTALS
 from maplestats_mcp.server import MODULES_ROOT, ModuleProvider, mcp
-from maplestats_mcp.shared.search import tokenize
+from maplestats_mcp.shared.search import apply_boosts, boosts_for, identifier_kinds, tokenize
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
@@ -1109,6 +1109,7 @@ class ToolDoc:
     mots_cles: list[str]
     params: list[Param]
     searchable: str
+    ids: str = ""
 
 
 @dataclass
@@ -1195,6 +1196,7 @@ def _tool_doc(tool: Tool, key: str, module_dir: Path) -> ToolDoc:
         mots_cles=_terms(doc, r"Mots-clés\s*:"),
         params=_params(tool.parameters or {}),
         searchable=_extract_searchable_text(tool),
+        ids=identifier_kinds(tool),
     )
 
 
@@ -1246,6 +1248,14 @@ def always_visible() -> set[str]:
     return set(_search_transform()._always_visible)
 
 
+def _catalogue_order() -> dict[str, int]:
+    """Each tool's position in tool_catalogue.json, the order search_tools indexes them in."""
+    path = MODULES_ROOT.parent / "tool_catalogue.json"
+    catalogue = json.loads(path.read_text(encoding="utf-8"))
+    names = [t["name"] for m in catalogue["modules"].values() for t in m["tools"]]
+    return {name: i for i, name in enumerate(names)}
+
+
 def build_index(modules: list[ModuleDoc]) -> dict[str, Any]:
     """The server's BM25 index over every searchable tool, in its order.
 
@@ -1258,6 +1268,10 @@ def build_index(modules: list[ModuleDoc]) -> dict[str, Any]:
     transform = _search_transform()
     pinned = always_visible()
     docs = [t for m in modules for t in m.tools if t.name not in pinned]
+    # In the server's own order (the tool catalogue's), so ties, which the
+    # identifier boosts make common, break the same way in the browser.
+    order = _catalogue_order()
+    docs.sort(key=lambda t: order.get(t.name, len(order)))
     postings: dict[str, list[int]] = {}
     lengths = []
     for i, tool in enumerate(docs):
@@ -1275,6 +1289,8 @@ def build_index(modules: list[ModuleDoc]) -> dict[str, Any]:
         "avg": sum(lengths) / len(lengths),
         "len": lengths,
         "tools": [[t.name, t.module, t.summary] for t in docs],
+        # The identifiers each tool takes, for the identifier boosts (shared/search.py).
+        "ids": [t.ids for t in docs],
         "post": postings,
     }
 
@@ -1296,6 +1312,8 @@ def rank(index: dict[str, Any], query: str) -> list[int]:
             numerator = tf * (k1 + 1)
             denominator = tf + k1 * (1 - b + b * lengths[i] / avg)
             scores[i] += idf * numerator / denominator
+    entries = [(tool[0], ids) for tool, ids in zip(index["tools"], index["ids"], strict=True)]
+    scores = apply_boosts(scores, boosts_for(query, entries))
     ranked = sorted(range(n), key=lambda i: scores[i], reverse=True)
     return [i for i in ranked if scores[i] > 0]
 
