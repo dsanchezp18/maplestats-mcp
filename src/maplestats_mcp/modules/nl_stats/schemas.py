@@ -34,8 +34,11 @@ class FileList(BaseModel):
 
 class SheetInfo(BaseModel):
     name: str
-    rows: int
+    rows: int = Field(description="Rows read (up to the per-sheet cap of 20,000).")
     columns: int
+    truncated: bool = Field(
+        default=False, description="True when the sheet has more rows than were read."
+    )
 
 
 SheetChoice = Literal["request", "newest_month", "first"]
@@ -65,5 +68,8 @@ class FileData(BaseModel):
     )
     total_rows: int = Field(description="Rows that matched `contains`, before offset and limit.")
     offset: int
-    truncated: bool
+    truncated: bool = Field(
+        description="True when more rows follow this page, or the sheet itself was cut at "
+        "20,000 rows (see provenance.limits)."
+    )
     provenance: Provenance

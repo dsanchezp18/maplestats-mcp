@@ -95,7 +95,15 @@ class FirstNationProfile(BaseModel):
     website: str | None = None
     tribal_council: TribalCouncil | None = None
     reserves: list[Reserve] = Field(default_factory=list)
-    total_reserve_hectares: float | None = None
+    total_reserve_hectares: float | None = Field(
+        default=None,
+        description="Computed by MapleStats: the sum of `reserves[].hectares`. Reserves "
+        "with no published area are left out of it; `reserves_without_hectares` counts them.",
+    )
+    reserves_without_hectares: int = Field(
+        default=0,
+        description="Reserves listed with no area, so not in `total_reserve_hectares`.",
+    )
     governance: Governance
     geography: Geography
     profile_url: str
@@ -110,7 +118,11 @@ class ResidenceCount(BaseModel):
     label: str = Field(description="The page's own label, in the language asked for.")
     men: int | None = None
     women: int | None = None
-    total: int | None = None
+    total: int | None = Field(
+        default=None,
+        description="Computed by MapleStats: men + women (the page gives no total per "
+        "residence); null when either is missing.",
+    )
 
 
 class AnnualPopulation(BaseModel):
@@ -134,9 +146,19 @@ class RegisteredPopulation(BaseModel):
     )
     as_of_month: str | None = Field(default=None, description="The same month as YYYY-MM.")
     by_residence: list[ResidenceCount] = Field(default_factory=list)
-    men: int | None = None
-    women: int | None = None
-    total: int | None = Field(default=None, description="Total registered population.")
+    men: int | None = Field(
+        default=None,
+        description="Computed by MapleStats: the sum of `by_residence[].men`; null when "
+        "any residence lacks it.",
+    )
+    women: int | None = Field(
+        default=None,
+        description="Computed by MapleStats: the sum of `by_residence[].women`; null when "
+        "any residence lacks it.",
+    )
+    total: int | None = Field(
+        default=None, description="Total registered population, as the page gives it."
+    )
     annual: list[AnnualPopulation] = Field(
         default_factory=list,
         description="Yearly figures (December 31) from ISC's open dataset, oldest first.",

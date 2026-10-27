@@ -48,6 +48,7 @@ async def test_get_releases_parses_entries(httpx_mock):
     httpx_mock.add_response(url=url, content=_ATOM_BODY)
     result = await client.get_releases("housing")
     assert result.returned_count == 2
+    assert not result.truncated and result.provenance.limits is None
     first = result.releases[0]
     assert first.title == "Quarterly rent statistics, second quarter 2026"
     assert first.url == "https://www.statcan.gc.ca/daily-quotidien/260909/dq260909c-eng.htm"
@@ -69,6 +70,8 @@ async def test_get_releases_respects_limit(httpx_mock):
     httpx_mock.add_response(url=url, content=_ATOM_BODY)
     result = await client.get_releases("housing", limit=1)
     assert result.returned_count == 1
+    assert result.total_in_feed == 2 and result.truncated
+    assert (result.provenance.limits or "").startswith("Returned the first 1 of 2 releases")
 
 
 async def test_get_releases_default_subject_is_all(httpx_mock):

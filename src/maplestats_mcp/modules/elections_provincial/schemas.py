@@ -64,19 +64,40 @@ class ResultRow(BaseModel):
         "null for BC."
     )
     votes: int
-    vote_share: float | None = Field(description="Percent of the district's valid votes.")
+    vote_share: float | None = Field(
+        description="Percent of the district's valid votes: as published, or computed by "
+        "MapleStats from the candidates' votes where the source gives no share (see "
+        "vote_share_computed)."
+    )
+    vote_share_computed: bool = Field(
+        default=False,
+        description="True when vote_share was computed by MapleStats (votes / sum of the "
+        "district's candidate votes), not published.",
+    )
     elected: bool = Field(description="True for the candidate with the most votes in the district.")
 
 
 class DistrictSummary(BaseModel):
     district: str
     electors: int | None = Field(description="Registered electors (Quebec, Manitoba).")
-    valid_votes: int | None
+    valid_votes: int | None = Field(
+        description="As published, or computed by MapleStats as the sum of the candidates' "
+        "votes where the source gives none (see valid_votes_computed)."
+    )
+    valid_votes_computed: bool = Field(
+        default=False,
+        description="True when valid_votes is the sum of candidate votes, not a published figure.",
+    )
     rejected_ballots: int | None = Field(
         description="Quebec, British Columbia, Saskatchewan, Manitoba."
     )
     turnout: float | None = Field(
-        description="Percent of electors who voted (Quebec, Alberta, Manitoba)."
+        description="Percent of electors who voted (Quebec, Alberta, Manitoba). Manitoba "
+        "publishes ballots and electors, so its turnout is computed (see turnout_computed)."
+    )
+    turnout_computed: bool = Field(
+        default=False,
+        description="True when turnout was computed by MapleStats (ballots cast / electors).",
     )
     winner: str | None = Field(description="Winning candidate, or the winning party if unnamed.")
 
@@ -98,9 +119,11 @@ class ElectionResults(BaseModel):
 class PartySummary(BaseModel):
     party: str
     candidates: int = Field(description="Districts where the party had votes recorded.")
-    seats: int
-    votes: int
-    vote_share: float = Field(description="Percent of all valid votes in the province.")
+    seats: int = Field(description="Computed by MapleStats: districts the party won.")
+    votes: int = Field(description="Computed by MapleStats: the party's votes summed.")
+    vote_share: float = Field(
+        description="Computed by MapleStats: percent of all valid votes in the province."
+    )
 
 
 class SeatSummary(BaseModel):
@@ -108,7 +131,9 @@ class SeatSummary(BaseModel):
     election_date: str
     seats_contested: int
     seats_decided: int = Field(description="Districts with a winner; equals seats_contested.")
-    total_valid_votes: int
+    total_valid_votes: int = Field(
+        description="Computed by MapleStats: the districts' valid votes summed."
+    )
     parties: list[PartySummary] = Field(description="By seats, then votes.")
     attribution: str
     provenance: Provenance

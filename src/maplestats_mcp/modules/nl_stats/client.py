@@ -277,34 +277,46 @@ def _text(value: Any) -> str:
 
 
 def _trim(rows: list[list[str]]) -> list[list[str]]:
-    rows = rows[: constants.MAX_ROWS_PER_SHEET]
     while rows and not any(rows[-1]):
         rows.pop()
     width = max((max((i for i, c in enumerate(r) if c), default=-1) + 1 for r in rows), default=0)
     return [r[:width] + [""] * (width - len(r[:width])) for r in rows]
 
 
-def _parse_xlsx(body: bytes) -> dict[str, list[list[str]]]:
+# A workbook's sheets as text rows, and the names of the sheets cut at
+# MAX_ROWS_PER_SHEET (a filled row lies past the cap), so the reply can say so.
+Workbook = tuple[dict[str, list[list[str]]], set[str]]
+
+
+def _parse_xlsx(body: bytes) -> Workbook:
     # openpyxl takes ~0.7 s to import, so it loads on first use.
     from openpyxl import load_workbook
 
     workbook = load_workbook(io.BytesIO(body), read_only=True, data_only=True)
     try:
-        return {
-            sheet.title: _trim(
-                [[_text(c) for c in row] for row in sheet.iter_rows(values_only=True)]
-            )
-            for sheet in workbook.worksheets
-        }
+        sheets: dict[str, list[list[str]]] = {}
+        cut: set[str] = set()
+        for sheet in workbook.worksheets:
+            rows: list[list[str]] = []
+            for row in sheet.iter_rows(values_only=True):
+                if len(rows) < constants.MAX_ROWS_PER_SHEET:
+                    rows.append([_text(c) for c in row])
+                elif any(c is not None and _text(c) for c in row):
+                    # Formatted but empty rows past the cap are not a cut.
+                    cut.add(sheet.title)
+                    break
+            sheets[sheet.title] = _trim(rows)
+        return sheets, cut
     finally:
         workbook.close()
 
 
-def _parse_xls(body: bytes) -> dict[str, list[list[str]]]:
+def _parse_xls(body: bytes) -> Workbook:
     import xlrd
 
     book = xlrd.open_workbook(file_contents=body)
     sheets: dict[str, list[list[str]]] = {}
+    cut: set[str] = set()
     for sheet in book.sheets():
         rows: list[list[str]] = []
         for r in range(min(sheet.nrows, constants.MAX_ROWS_PER_SHEET)):
@@ -319,12 +331,18 @@ def _parse_xls(body: bytes) -> dict[str, list[list[str]]]:
                 else:
                     row.append(_text(cell.value))
             rows.append(row)
+        if any(
+            _text(v)
+            for r in range(constants.MAX_ROWS_PER_SHEET, sheet.nrows)
+            for v in sheet.row_values(r)
+        ):
+            cut.add(sheet.name)
         sheets[sheet.name] = _trim(rows)
-    return sheets
+    return sheets, cut
 
 
-async def _workbook(url: str, lang: Lang = "en") -> tuple[dict[str, list[list[str]]], bool]:
-    async def fetch() -> dict[str, list[list[str]]]:
+async def _workbook(url: str, lang: Lang = "en") -> tuple[Workbook, bool]:
+    async def fetch() -> Workbook:
         # Streamed under the cap: a declared Content-Length above it is refused
         # before the body is read, an undeclared one stops at the cap, and
         # every redirect hop must stay on the agency's host.
@@ -442,7 +460,7 @@ async def read_file(
             lang,
         )
 
-    sheets, cached = await _workbook(url, lang)
+    (sheets, cut), cached = await _workbook(url, lang)
     if not sheets:
         raise_localized(
             UpstreamError,
@@ -515,13 +533,23 @@ async def read_file(
                 "a été lue ; passez sheet= pour une autre",
             )
         )
+    if chosen in cut:
+        notes.append(
+            pick(
+                lang,
+                f"sheet {chosen!r} has more than {constants.MAX_ROWS_PER_SHEET:,} rows and only "
+                f"the first {constants.MAX_ROWS_PER_SHEET:,} were read, so total_rows counts "
+                "those only; download the file for the rest",
+                f"la feuille {chosen!r} compte plus de {constants.MAX_ROWS_PER_SHEET} lignes et "
+                f"seules les {constants.MAX_ROWS_PER_SHEET} premières ont été lues : total_rows "
+                "ne compte qu'elles ; téléchargez le fichier pour le reste",
+            )
+        )
     if offset + limit < total:
         notes.append(
             pick(
                 lang,
-                f"sheets are read up to {constants.MAX_ROWS_PER_SHEET} rows; showing rows "
-                f"{offset + 1} to {offset + min(limit, total - offset)} of {total}",
-                f"les feuilles sont lues jusqu'à {constants.MAX_ROWS_PER_SHEET} lignes ; "
+                f"showing rows {offset + 1} to {offset + min(limit, total - offset)} of {total}",
                 f"lignes {offset + 1} à {offset + min(limit, total - offset)} sur {total}",
             )
         )
@@ -529,7 +557,7 @@ async def read_file(
         url=url,
         format=url.lower().rsplit(".", 1)[1],
         sheets=[
-            SheetInfo(name=name, rows=len(r), columns=len(r[0]) if r else 0)
+            SheetInfo(name=name, rows=len(r), columns=len(r[0]) if r else 0, truncated=name in cut)
             for name, r in sheets.items()
         ],
         sheet=chosen,
@@ -540,7 +568,7 @@ async def read_file(
         rows=body[offset : offset + limit],
         total_rows=total,
         offset=offset,
-        truncated=offset + limit < total,
+        truncated=offset + limit < total or chosen in cut,
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
             url=url,

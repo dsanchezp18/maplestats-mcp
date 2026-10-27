@@ -42,6 +42,7 @@ import httpx
 
 from maplestats_mcp.modules.finance_canada import constants
 from maplestats_mcp.modules.finance_canada.schemas import (
+    CellSymbol,
     FrtEdition,
     FrtTable,
     FrtTableInfo,
@@ -181,6 +182,7 @@ class ParsedTable:
     info: FrtTableInfo
     rows: list[dict[str, Value]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    symbols: list[CellSymbol] = field(default_factory=list)
 
 
 def _text(value: Any) -> str:
@@ -217,6 +219,16 @@ def parse_number(text: str, lang: str = "en", *, parentheses_negative: bool = Tr
     value = float(compact)
     value = -value if negative else value
     return int(value) if value.is_integer() and "." not in compact else value
+
+
+def marker(text: str) -> str | None:
+    """The marker a cell writes instead of a number ('-', '..', 'n/a'), or None.
+
+    These cells are null in the rows; the caller keeps the marker beside them
+    (`symbols`), since '-' (nil) and '..' (not available) mean different things.
+    """
+    raw = _SPACES.sub(" ", text).strip()
+    return raw if raw and raw.casefold() in _EMPTY_VALUES else None
 
 
 def _number(value: Any, lang: str = "en") -> Value:
@@ -320,6 +332,7 @@ def parse_block(
     data: list[dict[str, Value]] = []
     section = sections_before
     notes: list[str] = []
+    symbols: list[CellSymbol] = []
     for index, row in enumerate(rows[first_data:], start=first_data):
         check_deadline()
         label = _text(row[0])
@@ -327,6 +340,11 @@ def parse_block(
             record: dict[str, Value] = {names[0]: label}
             for name, c in zip(names[1:], used[1:], strict=True):
                 record[name] = _number(row[c], lang)
+                symbol = marker(_text(row[c]))
+                if symbol:
+                    symbols.append(
+                        CellSymbol(row=len(data), label=label, column=name, symbol=symbol)
+                    )
             if section:
                 record["section"] = section
             data.append(record)
@@ -346,7 +364,7 @@ def parse_block(
         first_row=str(data[0][names[0]]) if data else None,
         last_row=str(data[-1][names[0]]) if data else None,
     )
-    return ParsedTable(info=info, rows=data, notes=notes)
+    return ParsedTable(info=info, rows=data, notes=notes, symbols=symbols)
 
 
 def parse_workbook(body: bytes, lang: str) -> list[ParsedTable]:
@@ -519,11 +537,19 @@ async def get_frt_table(
     for parsed in tables:
         if parsed.info.number == table:
             rows = parsed.rows[-last:] if last else parsed.rows
+            # Re-index the markers to the returned rows when `last` cut the top.
+            skipped = len(parsed.rows) - len(rows)
+            symbols = [
+                s.model_copy(update={"row": s.row - skipped})
+                for s in parsed.symbols
+                if s.row >= skipped
+            ]
             return FrtTable(
                 edition=chosen,
                 info=parsed.info,
                 rows=rows,
                 notes=parsed.notes,
+                symbols=symbols,
                 provenance=_provenance(
                     chosen.workbook_url,
                     cached,

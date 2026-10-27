@@ -65,6 +65,7 @@ from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -145,7 +146,12 @@ def summary(record: dict[str, Any], lang: str) -> PboPublicationSummary:
 
 
 def _provenance(
-    url: str, cached: bool, schema: str, coverage: str | None = None, lang: str = "en"
+    url: str,
+    cached: bool,
+    schema: str,
+    coverage: str | None = None,
+    lang: str = "en",
+    limits: str | None = None,
 ) -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
@@ -158,6 +164,7 @@ def _provenance(
             lang,
         ),
         coverage=coverage,
+        limits=limits,
         lang=lang,
     )
 
@@ -330,27 +337,58 @@ async def get_publication(publication_id: str, *, lang: str = "en") -> PboPublic
     document = decode_pboml(record, lang)
     tables: list[PboTable] = []
     text_parts: list[str] = []
+    # Slices with nothing to return as data or text (charts as SVG, images,
+    # print-only blocks), counted so the reply says what it leaves out.
+    left_out: dict[str, int] = {}
     for slice_ in (document or {}).get("slices") or []:
         if not isinstance(slice_, dict):
             continue
-        kind = slice_.get("type")
+        kind = str(slice_.get("type") or "unknown")
         if kind in ("table", "html", "kvlist"):
             if (table := _table(slice_, lang)) is not None:
                 tables.append(table)
+            elif kind == "html":
+                # An html slice without a <table> is prose; keep it with the text.
+                soup = BeautifulSoup(_pick(slice_.get("content"), lang), "html.parser")
+                text_parts.append(" ".join(soup.get_text(" ").split()))
+            else:
+                left_out[kind] = left_out.get(kind, 0) + 1
         elif kind == "heading":
             text_parts.append("## " + _pick(slice_.get("content"), lang))
         elif kind == "markdown":
             text_parts.append(_pick(slice_.get("content"), lang))
+        else:
+            left_out[kind] = left_out.get(kind, 0) + 1
     text = "\n\n".join(p for p in text_parts if p.strip())
+    text_truncated = len(text) > constants.TEXT_MAX_CHARS
+    url = constants.API + f"publications/{publication_id}"
+    kinds = ", ".join(f"{n} {k}" for k, n in sorted(left_out.items()))
+    limits = join_limits(
+        _text(
+            f"Text cut at {constants.TEXT_MAX_CHARS:,} of {len(text):,} characters",
+            f"Texte coupé à {constants.TEXT_MAX_CHARS} caractères sur {len(text)}",
+            lang,
+        )
+        if text_truncated
+        else None,
+        _text(
+            f"Left out: {kinds} slice(s) (charts, images or print-only blocks); see the "
+            "publication's web page",
+            f"Non repris : {kinds} bloc(s) (graphiques, images ou blocs pour l'impression) ; "
+            "voir la page Web de la publication",
+            lang,
+        )
+        if left_out
+        else None,
+    )
     return PboPublication(
         publication=summary(record, lang),
         has_structured_content=document is not None,
         tables=tables,
         text=text[: constants.TEXT_MAX_CHARS] or None,
-        text_truncated=len(text) > constants.TEXT_MAX_CHARS,
-        provenance=_provenance(
-            constants.API + f"publications/{publication_id}", cached, "PboPublication", lang=lang
-        ),
+        text_truncated=text_truncated,
+        left_out=left_out,
+        provenance=_provenance(url, cached, "PboPublication", lang=lang, limits=limits),
     )
 
 

@@ -9,6 +9,18 @@ from maplestats_mcp.shared.models import Provenance
 Value = float | int | str | None
 
 
+class CellSymbol(BaseModel):
+    """A cell the source writes as a marker, not a number, returned as null in `rows`."""
+
+    row: int = Field(description="Index of the row in `rows` (0 is the first returned row).")
+    label: str = Field(description="That row's label, e.g. '2015-16'.")
+    column: str
+    symbol: str = Field(
+        description="The marker as published: '-' or a dash (nil or not applicable), "
+        "'..' or '...' (not available), 'n/a' or 's.o.' (not applicable)."
+    )
+
+
 class FrtEdition(BaseModel):
     edition: int = Field(description="Edition year, e.g. 2025 (data to fiscal 2024-25).")
     title: str
@@ -48,6 +60,12 @@ class FrtTable(BaseModel):
         "calendar year, or an item). A 'section' key carries the heading a row sits under.",
     )
     notes: list[str] = Field(default_factory=list, description="Sources and footnotes.")
+    symbols: list[CellSymbol] = Field(
+        default_factory=list,
+        description="Cells published as a marker ('-', '..', 'n/a') rather than a number; "
+        "they are null in `rows`, and this list keeps the marker so nil and not-available "
+        "stay distinct.",
+    )
     provenance: Provenance
 
 
@@ -67,6 +85,11 @@ class MonitorTable(BaseModel):
     label: str = Field(description="e.g. 'Table 2 Revenues' or 'Chart 1 ...' (chart data).")
     columns: list[str] = Field(default_factory=list)
     rows: list[dict[str, Value]] = Field(default_factory=list)
+    symbols: list[CellSymbol] = Field(
+        default_factory=list,
+        description="Cells published as a marker ('-', 'n/a', 's.o.') rather than a number; "
+        "they are null in `rows`, and this list keeps the marker.",
+    )
 
 
 class MonitorTables(BaseModel):

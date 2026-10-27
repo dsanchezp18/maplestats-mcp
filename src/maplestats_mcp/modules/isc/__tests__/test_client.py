@@ -285,6 +285,30 @@ async def test_population_in_french_reads_no_break_space_totals(httpx_mock):
     assert "31 décembre" in result.notes[0]
 
 
+def test_a_missing_sex_is_not_read_as_zero():
+    from bs4 import BeautifulSoup
+
+    # The off-reserve women's figure is blank: that residence has no total, and the
+    # all-residence women's sum is unknown rather than short by 400.
+    html = _population().replace(
+        '<span id="plcMain_txtFemalesOffReserve" class="text">400</span>',
+        '<span id="plcMain_txtFemalesOffReserve" class="text"></span>',
+    )
+    result = client.parse_population(BeautifulSoup(html, "html.parser"))
+    off = result["by_residence"][-1]
+    assert (off.men, off.women, off.total) == (339, None, None)
+    assert result["men"] == 730 and result["women"] is None
+    assert result["total"] == 1526
+
+
+def test_to_int_reads_whole_numbers_only():
+    assert client._to_int("1,526") == 1526
+    assert client._to_int("1\xa0526") == 1526
+    assert client._to_int("-3") == -3
+    assert client._to_int("12.5") is None
+    assert client._to_int("") is None
+
+
 # --- long-term advisories -----------------------------------------------------
 
 _LTDWA_PAGE = (

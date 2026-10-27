@@ -156,6 +156,7 @@ async def test_describe_reports_columns_coverage_and_markers(httpx_mock):
     assert described.row_count == 7 and described.encoding == "utf-8"
     assert described.date_start == "2016-01-01" and described.date_end == "2026-01-01"
     assert described.geo_values == ["Canada", "Nunavut", "Ontario"]
+    assert described.geo_value_count == 3 and described.provenance.limits is None
     assert described.last_modified == _LM
     value = next(c for c in described.columns if c.name == "Value")
     assert value.numeric  # markers do not make a numeric column non-numeric
@@ -163,6 +164,14 @@ async def test_describe_reports_columns_coverage_and_markers(httpx_mock):
     source = next(c for c in described.columns if c.name == "Source")
     assert source.sample_values[0] == "Deaths"
     assert not described.decimal_comma
+
+
+async def test_describe_says_when_geo_values_are_cut(httpx_mock, monkeypatch):
+    monkeypatch.setattr(client.constants, "GEO_VALUES_MAX", 2)
+    _mock_harms(httpx_mock)
+    described = await client.describe_dataset("opioid_stimulant_harms")
+    assert described.geo_values == ["Canada", "Nunavut"] and described.geo_value_count == 3
+    assert (described.provenance.limits or "").startswith("geo_values lists the first 2 of 3")
 
 
 async def test_french_decimal_comma_windows_1252(httpx_mock):

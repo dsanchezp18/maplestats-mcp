@@ -24,6 +24,7 @@ class Candidate:
     share: float | None
     party_code: str | None = None
     elected: bool = False
+    share_computed: bool = False
 
 
 @dataclass
@@ -35,6 +36,8 @@ class District:
     valid_votes: int | None = None
     rejected_ballots: int | None = None
     turnout: float | None = None
+    valid_votes_computed: bool = False
+    turnout_computed: bool = False
 
 
 def fold(text: str) -> str:
@@ -52,13 +55,19 @@ def mark_winners(district: District) -> None:
 
 
 def finish_shares(district: District) -> None:
-    """Fill valid votes and vote shares from the candidates when the source gives none."""
+    """Fill valid votes and vote shares from the candidates when the source gives none.
+
+    Each filled figure is flagged as computed, so the response can tell a
+    published share from one MapleStats worked out.
+    """
     total = sum(c.votes for c in district.candidates)
     if district.valid_votes is None:
         district.valid_votes = total
+        district.valid_votes_computed = True
     for candidate in district.candidates:
         if candidate.share is None and total:
             candidate.share = round(100 * candidate.votes / total, 2)
+            candidate.share_computed = True
 
 
 async def fetch_bytes(

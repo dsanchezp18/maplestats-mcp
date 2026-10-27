@@ -26,6 +26,12 @@ class IvtFile(BaseModel):
 class IvtSearchResult(BaseModel):
     files: list[IvtFile] = Field(default_factory=list)
     returned_count: int
+    total_matched: int | None = Field(
+        default=None,
+        description="IVT files found before `limit` was applied; null when the file search "
+        "gives no count.",
+    )
+    truncated: bool = Field(default=False, description="True when more files matched.")
     datasets_matched: int = Field(description="Datasets whose title or description matched.")
     query: str
     provenance: Provenance

@@ -11,7 +11,12 @@ import pytest
 
 from maplestats_mcp.modules.worldbank import client
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 CATALOGUE = re.compile(r"https://api\.worldbank\.org/v2/(en|fr)/sources/2/indicators\?.*")
 DATA = re.compile(r"https://api\.worldbank\.org/v2/(en|fr)/country/.*")
@@ -89,6 +94,23 @@ async def test_search_requires_every_word_and_ranks_name_hits(httpx_mock):
     result = await client.search_indicators("GDP growth")
     assert [i.id for i in result.indicators] == ["NY.GDP.MKTP.KD.ZG"]
     assert result.provenance.licence and "CC BY 4.0" in result.provenance.licence
+
+
+async def test_catalogue_reads_every_page(httpx_mock):
+    first, second = _ROWS[:1], _ROWS[1:]
+    meta = {"pages": 2, "per_page": "2000", "total": len(_ROWS)}
+    httpx_mock.add_response(url=CATALOGUE, json=[{"page": 1, **meta}, first])
+    httpx_mock.add_response(url=CATALOGUE, json=[{"page": 2, **meta}, second])
+    rows, _ = await client._catalogue("en")
+    assert len(rows) == len(_ROWS)
+    assert httpx_mock.get_requests()[1].url.params["page"] == "2"
+
+
+async def test_catalogue_short_of_its_total_is_an_error(httpx_mock):
+    meta = {"page": 1, "pages": 1, "per_page": "2000", "total": len(_ROWS) + 5}
+    httpx_mock.add_response(url=CATALOGUE, json=[meta, _ROWS])
+    with pytest.raises(UpstreamError, match=f"read {len(_ROWS)} of {len(_ROWS) + 5} indicators"):
+        await client._catalogue("en")
 
 
 async def test_search_by_code_and_topic_name_with_trailing_space(httpx_mock):

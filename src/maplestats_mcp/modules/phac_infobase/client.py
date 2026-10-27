@@ -772,6 +772,7 @@ async def describe_dataset(dataset_id: str, lang: str = "en") -> DatasetDescript
         date_end=dates[-1].isoformat() if dates else None,
         geo_column=geo_column,
         geo_values=geo_values[: constants.GEO_VALUES_MAX],
+        geo_value_count=len(geo_values),
         markers=_markers(table.rows, lang),
         decimal_comma=_decimal_comma(table.rows, file_lang),
         provenance=make_provenance(
@@ -781,7 +782,18 @@ async def describe_dataset(dataset_id: str, lang: str = "en") -> DatasetDescript
             schema_name="phac_infobase.DatasetDescription",
             as_of=_as_of(table.last_modified),
             freshness=_frequency(dataset, lang),
-            limits=_english_file_note(lang, file_lang),
+            limits=join_limits(
+                fr_or_en(
+                    lang,
+                    f"geo_values lists the first {constants.GEO_VALUES_MAX} of "
+                    f"{len(geo_values)} places; filter query() by geography for the others",
+                    f"geo_values liste les {constants.GEO_VALUES_MAX} premiers lieux sur "
+                    f"{len(geo_values)} ; filtrez query() par geography pour les autres",
+                )
+                if len(geo_values) > constants.GEO_VALUES_MAX
+                else None,
+                _english_file_note(lang, file_lang),
+            ),
             lang=lang,
         ),
     )

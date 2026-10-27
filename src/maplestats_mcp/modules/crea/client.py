@@ -9,6 +9,7 @@ zip and never calls the statistics site's pages or data endpoints.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -19,6 +20,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.http import new_client, send_with_retry
 from maplestats_mcp.shared.i18n import french_spacing, normalize_lang
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -199,24 +201,43 @@ async def _head(url: str) -> httpx.Response | None:
     try:
         return await send_with_retry(_client, "HEAD", url)
     except httpx.HTTPError:
-        # A missing confirmation falls back to the HPI tool page; it is not an
-        # error for a tool whose job is to point at CREA's own pages.
+        # A missing confirmation falls back to the HPI tool page, and the reply
+        # says the check failed; it is not an error for a tool whose job is to
+        # point at CREA's own pages.
         return None
 
 
+def _text(lang: str, en: str, fr: str) -> str:
+    return french_spacing(fr) if lang == "fr" else en
+
+
+class _ZipUnchecked(Exception):
+    """The HEAD check failed; carries the result so it is used but not cached."""
+
+    def __init__(self, found: dict[str, str | int | None]) -> None:
+        super().__init__(found.get("problem"))
+        self.found = found
+
+
 async def _find_zip(year: int, month: int) -> dict[str, str | int | None]:
+    """The zip's details, with `check` "found", "not_found" (every spelling 404) or
+    "failed" (no answer, or another status such as 403 or 503, in `problem`)."""
     for url in candidate_urls(year, month):
         response = await _head(url)
         if response is None:
-            break
+            return {"url": None, "check": "failed", "problem": "no answer"}
         if response.status_code == 200:
             size = response.headers.get("content-length", "")
             return {
                 "url": url,
                 "last_modified": response.headers.get("last-modified"),
                 "size": int(size) if size.isdigit() else None,
+                "check": "found",
             }
-    return {"url": None, "last_modified": None, "size": None}
+        if response.status_code != 404:
+            # A refusal or an outage is not "no zip this month".
+            return {"url": None, "check": "failed", "problem": f"HTTP {response.status_code}"}
+    return {"url": None, "last_modified": None, "size": None, "check": "not_found"}
 
 
 async def get_hpi_links(*, lang: str = "en", today: date | None = None) -> CreaHpiLinks:
@@ -226,19 +247,53 @@ async def get_hpi_links(*, lang: str = "en", today: date | None = None) -> CreaH
     year, month = release_month(today)
 
     async def fetch() -> dict[str, str | int | None]:
-        return await _find_zip(year, month)
+        found = await _find_zip(year, month)
+        if found["check"] == "failed":
+            raise _ZipUnchecked(found)
+        return found
 
-    found, was_cached = await cached_fetch(
-        f"crea:hpi-zip:{year}-{month:02d}", constants.CACHE_TTL_LINK_SECONDS, fetch
+    try:
+        found, was_cached = await cached_fetch(
+            f"crea:hpi-zip:{year}-{month:02d}", constants.CACHE_TTL_LINK_SECONDS, fetch
+        )
+    except _ZipUnchecked as failed:
+        # Returned, since the pages and terms are still right, but not cached.
+        found, was_cached = failed.found, False
+    zip_url = found.get("url")
+    size = found.get("size")
+    last_modified = found.get("last_modified")
+    check: Literal["found", "not_found", "failed"] = (
+        "found"
+        if found.get("check") == "found"
+        else "failed"
+        if found.get("check") == "failed"
+        else "not_found"
     )
-    zip_url = found["url"]
-    size = found["size"]
-    last_modified = found["last_modified"]
     hpi_tool = constants.PAGES["hpi_tool"][lang]
 
     # French text takes no-break spaces before its punctuation.
     def say(text: str) -> str:
         return french_spacing(text) if lang == "fr" else text
+
+    release = f"{year}-{month:02d}"
+    check_note: str | None = None
+    if check == "not_found":
+        check_note = _text(
+            lang,
+            f"No MLS® HPI zip for {release} under either file name (HTTP 404): the release "
+            "may not be out yet, so download_from is the HPI tool page.",
+            f"Aucun fichier zip de l'IPP MLS® pour {release} sous l'un ou l'autre nom (HTTP "
+            "404) : la diffusion n'est peut-être pas encore sortie ; download_from est donc la "
+            "page de l'outil IPP.",
+        )
+    elif check == "failed":
+        check_note = _text(
+            lang,
+            f"The check for the {release} zip failed ({found.get('problem')}), so "
+            "download_from is the HPI tool page; try again shortly.",
+            f"La vérification du zip de {release} a échoué ({found.get('problem')}) : "
+            "download_from est donc la page de l'outil IPP ; réessayez sous peu.",
+        )
 
     pages = [
         CreaPage(
@@ -249,9 +304,10 @@ async def get_hpi_links(*, lang: str = "en", today: date | None = None) -> CreaH
         for key, urls in constants.PAGES.items()
     ]
     return CreaHpiLinks(
-        release_month=f"{year}-{month:02d}",
+        release_month=release,
         zip_url=zip_url if isinstance(zip_url, str) else None,
         zip_confirmed=isinstance(zip_url, str),
+        zip_check=check,
         zip_last_modified=last_modified if isinstance(last_modified, str) else None,
         zip_size_bytes=size if isinstance(size, int) else None,
         download_from=zip_url if isinstance(zip_url, str) else hpi_tool,
@@ -269,7 +325,10 @@ async def get_hpi_links(*, lang: str = "en", today: date | None = None) -> CreaH
             cached=was_cached,
             schema_name="crea.CreaHpiLinks",
             freshness=say(_TIMING[lang]),
-            limits=say(_LIMITS[lang]),
+            limits=join_limits(
+                check_note,
+                say(_LIMITS[lang]),
+            ),
             licence=f"{_ATTRIBUTION[lang]}. {constants.PAGES['terms'][lang]}",
             lang=lang,
         ),

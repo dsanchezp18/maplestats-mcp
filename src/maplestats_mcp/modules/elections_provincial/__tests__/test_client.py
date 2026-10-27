@@ -121,6 +121,9 @@ async def test_quebec_district_filter_ignores_accents(httpx_mock):
     assert row.district == "Gaspé" and row.candidate == "Stéphane Sainte-Croix"
     assert row.party_code == "C.A.Q.-E.F.L." and row.elected
     assert result.districts[0].electors == 30190 and result.districts[0].turnout == 60.96
+    # Quebec publishes its turnout, valid votes and shares.
+    assert not result.districts[0].turnout_computed
+    assert not result.districts[0].valid_votes_computed and not row.vote_share_computed
     assert result.districts[0].winner == "Stéphane Sainte-Croix"
     assert result.provenance.url == QC_2022
     assert "Élections Québec" in result.attribution

@@ -86,6 +86,9 @@ async def test_publication_tables_and_text(httpx_mock):
     assert html.kind == "html" and html.cells == [["GDP", "1.7"]]
     assert kv.rows == [{"key": "Model", "value": "SPSD/M"}]  # print_only credits skipped
     assert result.text == "## Summary\n\nThe measure costs $2.4 billion."
+    # The chart and the print-only credits are counted, and the limits say so.
+    assert result.left_out == {"kvlist": 1, "svg": 1}
+    assert (result.provenance.limits or "").startswith("Left out: 1 kvlist, 1 svg slice(s)")
 
 
 async def test_french_labels(httpx_mock):
