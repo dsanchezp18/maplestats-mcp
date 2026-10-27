@@ -294,6 +294,13 @@ SOURCE_LICENCES: dict[str, str] = {
         "https://api-iwls.dfo-mpo.gc.ca",
     ),
     # Federal agencies with their own terms
+    "cbsa-tariff": (
+        "Source: Canada Border Services Agency, Customs Tariff (Departmental Consolidation). "
+        "CBSA terms (https://www.cbsa-asfc.gc.ca/help-aide/in-ai-eng.html): non-commercial "
+        "reproduction is allowed without permission, with the title, author and source URL "
+        "cited; commercial redistribution needs CBSA's written permission. The Customs Tariff "
+        "itself is law (S.C. 1997, c. 36); this consolidation is for reference."
+    ),
     "boc": BOC_TERMS,
     "valet": BOC_TERMS,
     "cihi": CIHI_TERMS,
@@ -341,6 +348,14 @@ SOURCE_LICENCES: dict[str, str] = {
 # not listed here stays in English. The IESO notice is quoted in English
 # because the IESO requires that exact wording on every reproduction.
 LICENCES_FR: dict[str, str] = {
+    SOURCE_LICENCES["cbsa-tariff"]: (
+        "Source : Agence des services frontaliers du Canada, Tarif des douanes (codification "
+        "ministérielle). Conditions de l'ASFC (https://www.cbsa-asfc.gc.ca/help-aide/in-ai-fra.html) "
+        ": la reproduction non commerciale est permise sans autorisation, avec le titre, l'auteur "
+        "et l'adresse de la source ; la redistribution commerciale exige l'autorisation écrite de "
+        "l'ASFC. Le Tarif des douanes lui-même est une loi (L.C. 1997, ch. 36) ; cette codification "
+        "est fournie à titre de référence."
+    ),
     OGL_CANADA: (
         "Licence du gouvernement ouvert – Canada 2.0 "
         "(https://ouvert.canada.ca/fr/licence-du-gouvernement-ouvert-canada). Attribution : "

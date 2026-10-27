@@ -177,6 +177,8 @@ CASES = [
         "indicateurs du développement dans le monde de la Banque mondiale",
         "worldbank_search_indicators",
     ),
+    ("taux de droits de douane NPF d'un numéro tarifaire", "cbsa_tariff_lookup"),
+    ("édition du tarif des douanes en vigueur", "cbsa_tariff_list_editions"),
     (
         "avis à long terme concernant la qualité de l'eau potable Premières Nations",
         "isc_list_drinking_water_advisories",

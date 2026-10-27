@@ -55,6 +55,9 @@ dependencies = [
     "duckdb>=1.5.5",
     "pyyaml>=6.0.3",
     "xlrd>=2.0.1",
+    # Pinned exactly: modules/cbsa_tariff/accdb.py reads its private
+    # table-definition structures (column ids, offsets, usage map pointer).
+    "access-parser==0.0.6",
 ]
 
 [project.urls]

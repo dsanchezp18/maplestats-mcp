@@ -112,6 +112,11 @@ FR: dict[str, str] = {
         "taux de change)"
     ),
     # Economy
+    "Canada's duty rates: tariff_item is the same HS code (MFN, General and "
+    "CUSMA, CETA, CPTPP ... rates); cbsa_tariff_search finds it by words": (
+        "les taux de droits du Canada : tariff_item est le même code SH (taux NPF, général "
+        "et ACEUM, AECG, PTPGP ...) ; cbsa_tariff_search le trouve par mots"
+    ),
     "GDP, trade and industry output": "PIB, commerce et production des industries",
     "what StatCan released recently on the topic": (
         "ce que Statistique Canada a diffusé récemment sur le sujet"

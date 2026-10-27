@@ -346,6 +346,14 @@ SOURCES: dict[str, Source] = {
         "ASFC",
         domain="transport",
     ),
+    "cbsa_tariff": Source(
+        "Canada Border Services Agency: Customs Tariff",
+        "Agence des services frontaliers du Canada : Tarif des douanes",
+        "national",
+        "Customs Tariff",
+        "Tarif des douanes",
+        domain="business",
+    ),
     "cdc": Source(
         "Canadian Dairy Commission",
         "Commission canadienne du lait",
