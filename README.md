@@ -150,14 +150,14 @@ twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
 ## What it covers
 
-357 tools in 70 modules. Run `docs://catalogue` for the full, bilingual list.
+360 tools in 71 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
 | Statistics Canada | `wds_`, `sdmx_`, `sdmx_space_`, `rdaas_`, `cimt_`, `statcan_*` | Tables and series, the extra SDMX spaces (energy information, shared data), classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), merchandise trade by commodity (CIMT), open databases (LODE), The Daily, delta files, indicators, surveys, census geography |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
-| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, energy, mineral production, oceans, grain, forestry, immigration, border wait times, budgets, mergers, elections, earthquakes, university-library data tables |
+| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `cbsa_tariff_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, energy, mineral production, oceans, grain, forestry, immigration, border wait times, customs tariff rates, budgets, mergers, elections, earthquakes, university-library data tables |
 | Wildland fire | `cwfis_`, `nrcan_nbac_`, `ab_wildfire_` | NRCan's Canadian Wildland Fire Information System (satellite hotspots, fire danger, weather stations), burned areas, and Alberta Wildfire's live fire status |
 | Electricity | `electricity_ontario_`, `electricity_quebec_`, `oeb_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only); Ontario Energy Board datasets |
 | Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |
@@ -252,6 +252,7 @@ this server has the 750 hours to itself.
 | `MAPLE_LODE_CACHE_DIR`, `MAPLE_LODE_CACHE_MAX_GB` | system temp, `3` | Where StatCan open-database (LODE) archives are unpacked, and the size cap (least recently used files go first); use a persistent volume when hosted |
 | `MAPLE_LODE_MAX_DOWNLOAD_MB` | `300` | Largest open-database archive one call may download; `0` turns downloads off |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
+| `MAPLE_CBSA_TARIFF_CACHE_DIR` | system temp | Customs Tariff editions as Parquet (under 1 MB each, newest 12 kept) |
 | `MAPLE_EXPORT_DIR` | Downloads folder (home folder if there is none) | Where `reproduce_workbook` saves Excel workbooks on a local server |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |

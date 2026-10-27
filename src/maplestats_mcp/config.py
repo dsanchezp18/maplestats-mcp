@@ -309,6 +309,17 @@ def get_lode_cache_max_bytes() -> int:
     return int(max(0.5, value) * 1024**3)
 
 
+def get_cbsa_tariff_cache_dir() -> Path:
+    """Where Customs Tariff editions are kept as Parquet (a few MB each).
+
+    Each edition is read from CBSA's Access file once; a hosted deployment
+    should point this at a persistent volume, or every restart reads them
+    again (about 6 s and 70 MB of memory per edition).
+    """
+    raw = os.environ.get("MAPLE_CBSA_TARIFF_CACHE_DIR", "").strip()
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "cbsa_tariff"
+
+
 def get_lode_max_download_bytes(default_mb: float) -> int:
     """Largest LODE archive one call may download (MAPLE_LODE_MAX_DOWNLOAD_MB; 0 turns downloads off)."""
     value = _env_float("MAPLE_LODE_MAX_DOWNLOAD_MB", float(default_mb))

@@ -193,6 +193,10 @@ CASES = [
     ("browse dimensions and codes of an SDMX dataflow in CCEI", "sdmx_space_get_structure"),
     ("how does Canada compare with G7 countries on GDP per capita", "worldbank_get_canada_series"),
     ("World Bank development indicator code search", "worldbank_search_indicators"),
+    # CBSA Customs Tariff, 2026-10-26.
+    ("Canada import duty rate MFN for a tariff item", "cbsa_tariff_lookup"),
+    ("find the customs tariff HS code of a product by name", "cbsa_tariff_search"),
+    ("customs tariff editions and effective dates", "cbsa_tariff_list_editions"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

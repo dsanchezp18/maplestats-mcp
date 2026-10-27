@@ -57,6 +57,17 @@ _TRADE_TERMS = (
     "hs code",
     "marchandise",
 )
+_TARIFF_TERMS = (
+    "tariff",
+    "tariffs",
+    "duty rate",
+    "customs duty",
+    "import duty",
+    "mfn",
+    "droits de douane",
+    "tarif douanier",
+    "tarif des douanes",
+)
 _ELECTRICITY_PRICE_TERMS = (
     "electricity price",
     "power price",
@@ -394,6 +405,9 @@ TOPICS: tuple[Topic, ...] = (
             "commerce interieur",
             "internal trade",
             "interprovincial trade",
+            "tariff",
+            "customs duty",
+            "droits de douane",
         ),
         (
             PlanStep("statcan_daily_get_releases", "what StatCan released recently on the topic"),
@@ -422,6 +436,12 @@ TOPICS: tuple[Topic, ...] = (
                 "exports or imports by HS commodity, partner and province: direction='exports' "
                 "or 'imports', from_period and to_period ('YYYY-MM'), optional hs_code, partner",
                 _TRADE_TERMS,
+            ),
+            PlanStep(
+                "cbsa_tariff_lookup",
+                "Canada's duty rates: tariff_item is the same HS code (MFN, General and "
+                "CUSMA, CETA, CPTPP ... rates); cbsa_tariff_search finds it by words",
+                _TARIFF_TERMS,
             ),
             PlanStep("rdaas_search_classifications", "NAICS codes for the industry"),
             PlanStep(

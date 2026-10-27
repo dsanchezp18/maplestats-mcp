@@ -371,7 +371,8 @@ Sources, by tool-name prefix:
   province), cer_ (Canada Energy Regulator), cgc_ (Canadian Grain
   Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
-  safety alerts), cbsa_ (current border wait times), gazette_ (Canada
+  safety alerts), cbsa_ (current border wait times), cbsa_tariff_
+  (Customs Tariff duty rates by tariff item), gazette_ (Canada
   Gazette), earthquakes_, dfo_iwls_
   (tides, water levels), nfd_
   (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).

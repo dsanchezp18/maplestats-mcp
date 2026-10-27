@@ -27,6 +27,7 @@ services:
       MAPLE_IP_HORIZONS_CACHE_MAX_GB: "${MAPLE_IP_HORIZONS_CACHE_MAX_GB:-3}"
       MAPLE_LODE_CACHE_DIR: "/data/lode"
       MAPLE_LODE_CACHE_MAX_GB: "${MAPLE_LODE_CACHE_MAX_GB:-3}"
+      MAPLE_CBSA_TARIFF_CACHE_DIR: "/data/cbsa_tariff"
       # Browser origins allowed to call /mcp; unset keeps the defaults (the
       # project website and localhost). Add https://*.office.com for an
       # Office add-in. Clients that send no Origin are always allowed.

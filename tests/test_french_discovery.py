@@ -177,6 +177,8 @@ CASES = [
         "indicateurs du développement dans le monde de la Banque mondiale",
         "worldbank_search_indicators",
     ),
+    ("taux de droits de douane NPF d'un numéro tarifaire", "cbsa_tariff_lookup"),
+    ("édition du tarif des douanes en vigueur", "cbsa_tariff_list_editions"),
     # French stop words in shared/search.py (2026-10-03): "de" and "par" no
     # longer decide the ranking.
     ("taux de chômage par province", "statcan_indicators_get_indicators"),
