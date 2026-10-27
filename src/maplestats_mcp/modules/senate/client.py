@@ -228,9 +228,11 @@ def parse_vote(
         )
     labels = _VOTE_COLUMNS[lang]
     ballots = []
+    skipped = 0
     for row in table.select("tbody tr"):
         cells = row.find_all("td")
         if len(cells) < 6:
+            skipped += 1
             continue
         # The marked column sorts first: data-order="aaa" (confirmed live).
         marks = [c.get("data-order") == "aaa" for c in cells[3:6]]
@@ -268,6 +270,19 @@ def parse_vote(
             cached=cached,
             schema_name="senate.SenateVote",
             freshness=fr_or_en(lang, _FRESHNESS, _FRESHNESS_FR),
+            limits=fr_or_en(
+                lang,
+                "Yeas, nays and abstentions are counted here from the ballots table"
+                + (f"; {skipped} rows with fewer than 6 cells were skipped" if skipped else "")
+                + ".",
+                "Les pour, contre et abstentions sont comptés ici à partir du tableau des votes"
+                + (
+                    f" ; {skipped} lignes de moins de 6 cellules ont été ignorées"
+                    if skipped
+                    else ""
+                )
+                + ".",
+            ),
             lang=lang,
         ),
     )

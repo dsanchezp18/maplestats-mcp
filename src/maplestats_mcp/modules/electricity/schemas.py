@@ -43,7 +43,10 @@ class RealtimeDemand(BaseModel):
     delivery_date: date
     delivery_hour: int = Field(description="Hour ending 1-24, Eastern Standard Time.")
     intervals: list[RealtimeInterval]
-    average_ontario_demand_mw: float | None
+    average_ontario_demand_mw: float | None = Field(
+        description="Computed by MapleStats: mean of the hour's 5-minute ontario_demand_mw "
+        "values that are not null (IESO publishes no hourly average in this file)."
+    )
     created_at: str | None
     provenance: Provenance
 
@@ -102,9 +105,16 @@ class ZonalPrices(BaseModel):
     delivery_date: date
     delivery_hour: int | None = Field(description="Set for real_time; null for day_ahead.")
     points: list[PricePoint]
-    average_cad_per_mwh: float | None
-    minimum_cad_per_mwh: float | None
-    maximum_cad_per_mwh: float | None
+    average_cad_per_mwh: float | None = Field(
+        description="Computed by MapleStats: unweighted mean of the points' "
+        "price_cad_per_mwh (nulls skipped), rounded to cents; not a published price."
+    )
+    minimum_cad_per_mwh: float | None = Field(
+        description="Computed by MapleStats: lowest price_cad_per_mwh among the points."
+    )
+    maximum_cad_per_mwh: float | None = Field(
+        description="Computed by MapleStats: highest price_cad_per_mwh among the points."
+    )
     created_at: str | None
     provenance: Provenance
 
@@ -140,9 +150,15 @@ class AdequacyOutlook(BaseModel):
     delivery_date: date
     created_at: str | None
     hours: list[AdequacyHour]
-    minimum_excess_capacity_mw: float | None
-    minimum_excess_hour: int | None
-    peak_forecast_demand_mw: float | None
+    minimum_excess_capacity_mw: float | None = Field(
+        description="Computed by MapleStats: lowest excess_capacity_mw among the hours."
+    )
+    minimum_excess_hour: int | None = Field(
+        description="Computed by MapleStats: the hour_ending of minimum_excess_capacity_mw."
+    )
+    peak_forecast_demand_mw: float | None = Field(
+        description="Computed by MapleStats: highest forecast_ontario_demand_mw among the hours."
+    )
     provenance: Provenance
 
 
@@ -155,15 +171,19 @@ class IntertieSchedule(BaseModel):
 class IntertieZone(BaseModel):
     zone: str
     schedules: list[IntertieSchedule]
-    mean_actual_flow_mw: float | None
-    intervals_reported: int
+    mean_actual_flow_mw: float | None = Field(
+        description="Computed by MapleStats: mean of the zone's reported actual flows."
+    )
+    intervals_reported: int = Field(description="Actual flows the mean is taken over.")
 
 
 class IntertieFlows(BaseModel):
     date: date
     zones: list[IntertieZone]
     total_schedules: list[IntertieSchedule]
-    total_mean_actual_flow_mw: float | None
+    total_mean_actual_flow_mw: float | None = Field(
+        description="Computed by MapleStats: mean of the reported total actual flows."
+    )
     sign_convention: str
     created_at: str | None
     provenance: Provenance
@@ -184,8 +204,14 @@ class QuebecDemand(BaseModel):
     rows_matched: int
     latest_timestamp: datetime | None
     latest_demand_mw: float | None
-    peak_demand_mw: float | None
-    average_demand_mw: float | None
+    peak_demand_mw: float | None = Field(
+        description="Computed by MapleStats: highest demand_mw among the returned points "
+        "only, not over every rows_matched row."
+    )
+    average_demand_mw: float | None = Field(
+        description="Computed by MapleStats: mean demand_mw of the returned points only "
+        "(nulls skipped), not over every rows_matched row."
+    )
     provenance: Provenance
 
 
@@ -204,7 +230,9 @@ class QuebecGeneration(BaseModel):
     points: list[QuebecGenerationPoint]
     rows_matched: int
     average_share_percent: dict[str, float] = Field(
-        description="Mean share of each source in the mean total, over the matched rows."
+        description="Computed by MapleStats: each source's mean output over the returned "
+        "points (nulls skipped) as a percent of the sum of those means; not over every "
+        "rows_matched row."
     )
     provenance: Provenance
 

@@ -84,6 +84,23 @@ def _int(node: Node | None, tag: str) -> int | None:
     return int(value) if value.isdigit() else None
 
 
+def _count(node: Node | None, tag: str, feed_en: str, feed_fr: str, lang: Lang) -> int:
+    """A whole number the feed must carry (a seat count, a precedence rank).
+
+    It used to fall back to 0 when absent or not digits, which reads as a
+    real figure; every row in the live feeds had one (2026-10-27).
+    """
+    value = _int(node, tag)
+    if value is None:
+        raise lang_error(
+            UpstreamError,
+            lang,
+            f"ourcommons: a row of {feed_en} has no {tag}; the feed may have changed.",
+            f"ourcommons : une ligne de {feed_fr} n'a pas de {tag} ; le fil a peut-être changé.",
+        )
+    return value
+
+
 def _check_lang(lang: str) -> None:
     if lang not in ("en", "fr"):
         raise InvalidInput("ourcommons: lang must be 'en' or 'fr'.")
@@ -358,7 +375,7 @@ async def get_party_standings(lang: Lang = "en") -> PartyStandings:
         PartyStanding(
             province=_text(s, "ProvinceTerritoryName"),
             party=_text(s, "CaucusShortName"),
-            seats=_int(s, "SeatCount") or 0,
+            seats=_count(s, "SeatCount", "party standings", "la répartition des sièges", lang),
         )
         for s in root.findall("PartyStanding")
     ]
@@ -397,7 +414,9 @@ async def get_ministry(lang: Lang = "en") -> Ministry:
         ministers=[
             Minister(
                 person_id=int(_text(m, "PersonId")),
-                order_of_precedence=_int(m, "OrderOfPrecedence") or 0,
+                order_of_precedence=_count(
+                    m, "OrderOfPrecedence", "the Ministry", "le Conseil des ministres", lang
+                ),
                 honorific=_text(m, "PersonShortHonorific") or None,
                 first_name=_text(m, "PersonOfficialFirstName"),
                 last_name=_text(m, "PersonOfficialLastName"),

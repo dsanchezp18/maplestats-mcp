@@ -58,6 +58,44 @@ def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
     raise exc_cls(en)
 
 
+async def _head(url: str, context: str, lang: str) -> httpx.Response:
+    """HEAD a file: 200 means it is there, 404 or 410 that it is not.
+
+    Checked live 2026-10-27: a published ZIP or XLSX answers 200 and an
+    unpublished month 404. Anything else (403, a 429 or 5xx that outlasted the
+    retries, a network failure) says nothing about the file, so it raises,
+    and cached_fetch does not keep it, rather than read as "no file here".
+    """
+    await _LIMITER.acquire()
+    try:
+        response = await send_with_retry(_client, "HEAD", url, headers=constants.HEAD_HEADERS)
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        _raise(
+            UpstreamUnavailable,
+            f"aer:{context}: {url} answered HTTP {status}; try again shortly.",
+            f"aer:{context} : {url} a répondu HTTP {status} ; réessayez sous peu.",
+            lang,
+        )
+    except httpx.HTTPError:
+        _raise(
+            UpstreamUnavailable,
+            f"aer:{context} did not respond in time.",
+            f"aer:{context} n'a pas répondu à temps.",
+            lang,
+        )
+    if response.status_code not in (200, 404, 410):
+        _raise(
+            UpstreamError,
+            f"aer:{context}: {url} answered HTTP {response.status_code}, so whether the file "
+            "exists is unknown.",
+            f"aer:{context} : {url} a répondu HTTP {response.status_code} ; on ne peut donc "
+            "pas savoir si le fichier existe.",
+            lang,
+        )
+    return response
+
+
 def _join_notes(*notes: str | None) -> str | None:
     return " ".join(n for n in notes if n) or None
 
@@ -235,16 +273,7 @@ async def get_well_licence_archive_link(
         )
 
     async def fetch() -> httpx.Response:
-        await _LIMITER.acquire()
-        try:
-            return await _client.head(url, headers=constants.HEAD_HEADERS)
-        except httpx.HTTPError:
-            _raise(
-                UpstreamUnavailable,
-                "aer:get_well_licence_archive_link did not respond in time.",
-                "aer:get_well_licence_archive_link n'a pas répondu à temps.",
-                lang,
-            )
+        return await _head(url, "get_well_licence_archive_link", lang)
 
     cache_key = f"aer:well-licence-archive:{year}:{month}"
     response, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LINK_SECONDS, fetch)
@@ -304,16 +333,7 @@ async def get_production_volumes_link(product: str, *, lang: str = "en") -> Prod
     url = constants.PRODUCTION_VOLUMES_URL.format(product_path=product_path)
 
     async def fetch() -> httpx.Response:
-        await _LIMITER.acquire()
-        try:
-            return await _client.head(url, headers=constants.HEAD_HEADERS)
-        except httpx.HTTPError:
-            _raise(
-                UpstreamUnavailable,
-                "aer:get_production_volumes_link did not respond in time.",
-                "aer:get_production_volumes_link n'a pas répondu à temps.",
-                lang,
-            )
+        return await _head(url, "get_production_volumes_link", lang)
 
     cache_key = f"aer:production-volumes:{product_key}"
     response, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LINK_SECONDS, fetch)

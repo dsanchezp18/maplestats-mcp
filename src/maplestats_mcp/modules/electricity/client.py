@@ -184,6 +184,25 @@ def _number(value: str | None) -> float | None:
         return None
 
 
+def _index(element: ET.Element | None, name: str, context: str, lang: str = "en") -> int:
+    """An hour or interval number the row is keyed by.
+
+    A missing or non-numeric one used to become 0, which reads as a real
+    hour; the files checked live always carry it, so its absence means the
+    layout changed and is an error.
+    """
+    value = _number(_text(element, name))
+    if value is None:
+        _raise(
+            UpstreamError,
+            f"electricity:{context}: a row has no {name}; the file layout may have changed.",
+            f"electricity:{context} : une ligne n'a pas de {name} ; la structure du fichier a "
+            "peut-être changé.",
+            lang,
+        )
+    return int(value)
+
+
 def _parse_xml(text: str, context: str, lang: str = "en") -> ET.Element:
     try:
         return DefusedET.fromstring(text.encode("utf-8"))
@@ -450,7 +469,7 @@ async def get_realtime_demand(
             (_text(mq, "MarketQuantity") or "").upper(): _number(_text(mq, "EnergyMW"))
             for mq in _children(item, "MQ")
         }
-        number = int(_number(_text(item, "Interval")) or 0)
+        number = _index(item, "Interval", "realtime_demand", lang)
         intervals.append(
             RealtimeInterval(
                 interval=number,
@@ -465,7 +484,7 @@ async def get_realtime_demand(
     demands = [i.ontario_demand_mw for i in intervals if i.ontario_demand_mw is not None]
     return RealtimeDemand(
         delivery_date=_date_from_text(_text(body, "DeliveryDate"), "realtime_demand", lang),
-        delivery_hour=int(_number(_text(body, "DeliveryHour")) or 0),
+        delivery_hour=_index(body, "DeliveryHour", "realtime_demand", lang),
         intervals=intervals,
         average_ontario_demand_mw=round(statistics.fmean(demands), 1) if demands else None,
         created_at=_text(_child(root, "DocHeader"), "CreatedAt"),
@@ -481,9 +500,13 @@ async def get_realtime_demand(
             ),
             licence=_LICENCE,
             limits=_limits(
-                "One delivery hour per call; dated files are kept about three months.",
+                "One delivery hour per call; dated files are kept about three months. "
+                f"average_ontario_demand_mw is computed here from {len(demands)} of the "
+                f"{len(intervals)} intervals (those with a demand value).",
                 "Une heure de livraison par appel ; les fichiers datés sont gardés environ "
-                "trois mois.",
+                "trois mois. average_ontario_demand_mw est calculé ici à partir de "
+                f"{len(demands)} des {len(intervals)} intervalles (ceux qui ont une valeur "
+                "de demande).",
                 lang,
             ),
             lang=lang,
@@ -517,7 +540,7 @@ def parse_fuel_xml(text: str, lang: str = "en") -> list[FuelHour]:
             rows.append(
                 FuelHour(
                     date=day_date,
-                    hour_ending=int(_number(_text(hourly, "Hour")) or 0),
+                    hour_ending=_index(hourly, "Hour", "supply_by_fuel", lang),
                     output_mw=output,
                     fuels_without_output=without_output,
                     unavailable_data_points=unavailable,
@@ -691,7 +714,7 @@ async def get_zonal_prices(
         for item in _children(body, "HourlyPriceComponents"):
             points.append(
                 PricePoint(
-                    period=int(_number(_text(item, "PricingHour")) or 0),
+                    period=_index(item, "PricingHour", f"{market}_prices", lang),
                     price_cad_per_mwh=_number(_text(item, "ZonalPrice")),
                     loss_component=_number(_text(item, "LossPriceCapped")),
                     congestion_component=_number(_text(item, "CongestionPriceCapped")),
@@ -702,7 +725,7 @@ async def get_zonal_prices(
         for item in _children(body, "ZonalPrice"):
             points.append(
                 PricePoint(
-                    period=int(_number(_text(item, "Interval")) or 0),
+                    period=_index(item, "Interval", f"{market}_prices", lang),
                     price_cad_per_mwh=_number(_text(item, "LmpCap")),
                     loss_component=_number(_text(item, "LossPriceCap")),
                     congestion_component=_number(_text(item, "CongPriceCap")),
@@ -753,10 +776,12 @@ async def get_zonal_prices(
             licence=_LICENCE,
             limits=_limits(
                 "Prices in CAD/MWh, capped values as published; dated files kept about "
-                "three months. HOEP no longer exists after 2025-04.",
+                "three months. HOEP no longer exists after 2025-04. The average, minimum and "
+                f"maximum are computed here over the {len(points)} points (unweighted).",
                 "Prix en $ CA/MWh, valeurs plafonnées telles que publiées ; fichiers datés "
                 "gardés environ trois mois. Le prix horaire de l'énergie en Ontario (PHEO) "
-                "n'existe plus après 2025-04.",
+                "n'existe plus après 2025-04. La moyenne, le minimum et le maximum sont "
+                f"calculés ici sur les {len(points)} points (sans pondération).",
                 lang,
             ),
             lang=lang,
@@ -920,10 +945,10 @@ async def get_adequacy_outlook(
 # --------------------------------------------------------------- interties
 
 
-def _schedules(container: ET.Element | None) -> list[IntertieSchedule]:
+def _schedules(container: ET.Element | None, lang: str = "en") -> list[IntertieSchedule]:
     return [
         IntertieSchedule(
-            hour=int(_number(_text(item, "Hour")) or 0),
+            hour=_index(item, "Hour", "intertie_flows", lang),
             import_mw=_number(_text(item, "Import")),
             export_mw=_number(_text(item, "Export")),
         )
@@ -965,7 +990,7 @@ async def get_intertie_flows(date_text: str | None = None, *, lang: str = "en") 
         zones.append(
             IntertieZone(
                 zone=_text(zone, "IntertieZoneName") or "",
-                schedules=_schedules(_child(zone, "Schedules")),
+                schedules=_schedules(_child(zone, "Schedules"), lang),
                 mean_actual_flow_mw=mean,
                 intervals_reported=count,
             )
@@ -975,7 +1000,7 @@ async def get_intertie_flows(date_text: str | None = None, *, lang: str = "en") 
     return IntertieFlows(
         date=_date_from_text(_text(body, "Date"), "intertie_flows", lang),
         zones=zones,
-        total_schedules=_schedules(_child(totals, "Schedules")),
+        total_schedules=_schedules(_child(totals, "Schedules"), lang),
         total_mean_actual_flow_mw=total_mean,
         sign_convention=_say(
             "Positive actual flow is an export from Ontario; negative is an import.",

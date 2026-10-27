@@ -139,6 +139,11 @@ async def test_tool_rows_become_a_formatted_table_with_source_and_chart(hosted, 
     assert "Open Government Licence - Canada" in source["Attribution"]
     assert source["Rows"] == "3 of 3 rows"
     assert "source_notes" in book["Source"].tables
+    # The result's fields outside the rows are named in the notes, valued on the Source sheet.
+    assert '"row_count": 3' in source["Fields of the result"]
+    assert any("dataflow_id, key, row_count" in note for note in result.notes)
+    assert any(note.startswith("Cleaned as the R scripts") for note in result.notes)
+    assert any("series_key_geography" in note for note in result.notes)  # converted
 
 
 async def test_list_results_keep_each_vector_and_pivot_the_chart(hosted, fake_call):
@@ -265,7 +270,8 @@ async def test_french_errors_notes_and_chart(hosted, monkeypatch):
     rows = [{"nom": f"ligne {n}", "montant": n} for n in range(1500)]
     result = await workbook.export(None, None, rows, "Lignes", "fr", 10, "base64")
     assert result.notes[0] == "Les 10 premières lignes sur 1 500 ont été écrites (max_rows)."
-    assert result.notes[1].startswith("Décodez workbook_base64")
+    assert result.notes[1].startswith("Nettoyé comme dans les scripts R")
+    assert result.notes[-1].startswith("Décodez workbook_base64")
     assert result.chart is not None and result.chart.startswith("graphique à barres de montant")
     assert (result.provenance.limits or "").startswith("au maximum 20 000 lignes")
     assert result.provenance.reproduce.startswith("Pour obtenir")
@@ -327,7 +333,7 @@ async def test_export_yields_to_the_tool_deadline(hosted, monkeypatch):
         started.set()
         try:
             release.wait(2)
-            return b"xlsx", ["Data"], None
+            return b"xlsx", ["Data"], None, []
         finally:
             stopped.set()
 
@@ -423,3 +429,18 @@ async def test_series_named_like_a_formula_keeps_text_chart_headers(hosted, recw
     assert all(cell.data_type == "s" for cell in chart_header.values())
     assert len(_charts(book["Chart"])) == 1
     assert not [w for w in recwarn if "column headings" in str(w.message)]
+
+
+def test_code_columns_stay_text():
+    # StatCan coordinates "2.1" and "2.10" are different members; NAICS is not a quantity.
+    from maplestats_mcp.modules.reproduce.workbook import clean_rows_report
+
+    names, table, converted, codes = clean_rows_report(
+        [
+            {"coordinate": "2.1", "NAICS": "111", "series.vectorId": "41690973", "value": "1.5"},
+            {"coordinate": "2.10", "NAICS": "112", "series.vectorId": "41690974", "value": "2"},
+        ]
+    )
+    assert names == ["coordinate", "naics", "series_vector_id", "value"]
+    assert table == [["2.1", "111", "41690973", 1.5], ["2.10", "112", "41690974", 2]]
+    assert converted == ["value"] and codes == ["coordinate", "naics", "series_vector_id"]

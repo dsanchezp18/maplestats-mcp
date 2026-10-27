@@ -52,6 +52,7 @@ from maplestats_mcp.shared.errors import (
 )
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
+from maplestats_mcp.shared.limits import join_limits
 
 # French only: most portals publish their own text in English.
 _SOURCE_TEXT_FR = (
@@ -244,9 +245,15 @@ async def _item_feature(
 
 
 async def _download_links(
-    config: ArcGISHubConfig, canonical_id: str, item_type: str, service_url: str | None
-) -> list[DownloadLink]:
-    """Links that answer, chosen by item kind (see shared/arcgis.py's item_kind)."""
+    config: ArcGISHubConfig,
+    canonical_id: str,
+    item_type: str,
+    service_url: str | None,
+    lang: str = "en",
+) -> tuple[list[DownloadLink], str | None]:
+    """Links that answer, chosen by item kind (see shared/arcgis.py's item_kind),
+    and a note when a lookup failed, so an item whose links could not be found
+    does not read as an item with none."""
     # Checked live 2026-09-27 (Cochrane, Okotoks, Ottawa): a layer-level item's
     # id is "<item id>_<layer id>", which the download API rejects with HTTP 400;
     # it wants the bare item id and the layer's own id, which is not always 0
@@ -254,9 +261,17 @@ async def _download_links(
     download_id, _, suffix = canonical_id.partition("_")
     kind = item_kind(item_type, service_url)
     if kind == "file":
-        return [DownloadLink(format=file_format(item_type), url=item_data_url(download_id))]
+        return [DownloadLink(format=file_format(item_type), url=item_data_url(download_id))], None
     if kind == "none" or service_url is None:
-        return []
+        return [], None
+    failed = pick(
+        lang,
+        "download_urls is empty because the portal did not answer the lookup for this item's "
+        "export links ({what}); the data may still be read with arcgis_hub_query_feature_layer.",
+        "download_urls est vide parce que le portail n'a pas répondu à la recherche des liens "
+        "d'exportation de cet élément ({what}) ; les données restent peut-être lisibles avec "
+        "arcgis_hub_query_feature_layer.",
+    )
     layer_index = int(suffix) if suffix.isdigit() else None
     if layer_index is None:
         # The layer lookup is optional: a secured, broken or misconfigured
@@ -265,20 +280,21 @@ async def _download_links(
         try:
             layer_index = await default_layer_index(config, service_url)
         except (InvalidInput, NotFound, UpstreamUnavailable, UpstreamError):
-            return []
-    # Optional as well: a CloudflareChallenge (an UpstreamUnavailable) from the
-    # download API is not caught inside supported_download_formats, and would
-    # otherwise fail the whole get_dataset for the sake of its links.
+            return [], failed.format(what=pick(lang, "layer list", "liste des couches"))
+    # Optional as well: a broken download API (Red Deer's 500), or a
+    # CloudflareChallenge (an UpstreamUnavailable) from it, would otherwise
+    # fail the whole get_dataset for the sake of its links.
     try:
         formats = await supported_download_formats(config, download_id, layer_index)
     except (InvalidInput, NotFound, UpstreamUnavailable, UpstreamError):
-        return []
-    return [
+        return [], failed.format(what=pick(lang, "download API", "API de téléchargement"))
+    links = [
         DownloadLink(
             format=fmt, url=download_url(config, download_id, fmt, layer_index=layer_index)
         )
         for fmt in formats
     ]
+    return links, None
 
 
 async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail:
@@ -290,11 +306,24 @@ async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail
     canonical_id = props.get("id") or item_id
     service_url = props.get("url") or None
     item_type = props.get("type") or "unknown"
-    download_urls = (
-        await _download_links(config, canonical_id, item_type, service_url)
-        if constants.PORTALS[portal].downloads
-        else []
-    )
+    if constants.PORTALS[portal].downloads:
+        download_urls, links_failed = await _download_links(
+            config, canonical_id, item_type, service_url, lang
+        )
+    else:
+        download_urls = []
+        links_failed = (
+            pick(
+                lang,
+                "download_urls is empty because this portal's download API answers an error "
+                "for every item; read the data with arcgis_hub_query_feature_layer.",
+                "download_urls est vide parce que l'API de téléchargement de ce portail répond "
+                "par une erreur pour chaque élément ; lisez les données avec "
+                "arcgis_hub_query_feature_layer.",
+            )
+            if service_url
+            else None
+        )
     return ItemDetail(
         portal=portal,
         id=canonical_id,
@@ -318,7 +347,7 @@ async def get_dataset(portal: str, item_id: str, lang: str = "en") -> ItemDetail
             url=f"{collection_url(config)}/items/{item_id}",
             cached=was_cached,
             schema_name="arcgis_hub.ItemDetail",
-            limits=pick(lang, "", _SOURCE_TEXT_FR) or None,
+            limits=join_limits(links_failed, pick(lang, "", _SOURCE_TEXT_FR)),
             lang=lang,
         ),
     )

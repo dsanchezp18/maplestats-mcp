@@ -173,6 +173,17 @@ async def test_realtime_demand_latest(httpx_mock):
     assert result.intervals[0].total_energy_mw == 16232
     assert result.intervals[1].total_energy_mw is None
     assert result.average_ontario_demand_mw == 14068.7
+    assert "computed here from" in (result.provenance.limits or "")
+
+
+async def test_realtime_demand_without_delivery_hour_is_an_error(httpx_mock):
+    # A missing hour used to read as hour 0.
+    httpx_mock.add_response(
+        url=f"{BASE}/RealtimeTotals/PUB_RealtimeTotals.xml",
+        text=_TOTALS_XML.replace("<DeliveryHour>2</DeliveryHour>", ""),
+    )
+    with pytest.raises(UpstreamError, match="DeliveryHour"):
+        await client.get_realtime_demand()
 
 
 async def test_realtime_demand_dated_file_and_pair_rule(httpx_mock):

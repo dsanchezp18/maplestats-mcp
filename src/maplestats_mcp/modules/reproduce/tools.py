@@ -68,8 +68,11 @@ async def reproduce_workbook(
 
     Use for: handing data to someone who works in Excel. Pass the tool
     name and its arguments (the tool runs once), or rows you already have.
-    The workbook holds the rows, cleaned as the R scripts clean them, in
-    one Excel table with a frozen header, number formats and fitted
+    The workbook holds the rows, cleaned as the R scripts clean them
+    (snake_case names, trimmed text, numbers and dates stored as text
+    converted, codes such as coordinates and NAICS kept as text; notes
+    name the converted columns and any fields of the result left out of
+    the rows), in one Excel table with a frozen header, number formats and fitted
     column widths; a native, editable line or bar chart when the rows are
     a time series or a short list; and a Source sheet with the call, the
     source URL, dates, licence and attribution. lang sets the labels

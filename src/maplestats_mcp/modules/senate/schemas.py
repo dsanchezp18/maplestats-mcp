@@ -48,9 +48,11 @@ class SenateVote(BaseModel):
     date_text: str | None = Field(default=None, description="As printed on the vote page.")
     title: str
     bill: str | None = None
-    yeas: int
-    nays: int
-    abstentions: int
+    yeas: int = Field(description="Computed by MapleStats: ballots marked yea, counted here.")
+    nays: int = Field(description="Computed by MapleStats: ballots marked nay, counted here.")
+    abstentions: int = Field(
+        description="Computed by MapleStats: ballots marked abstention, counted here."
+    )
     ballots: list[SenatorBallot]
     url: str
     provenance: Provenance

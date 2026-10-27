@@ -14,7 +14,7 @@ import pytest
 
 from maplestats_mcp.modules.ourcommons import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _HERE = Path(__file__).parent
 
@@ -150,6 +150,18 @@ async def test_party_standings_totals(httpx_mock):
     assert standings.by_party[0].party == "Liberal"
     assert sum(t.seats for t in standings.by_party) == 343
     assert any(r.province == "Alberta" and r.party == "Conservative" for r in standings.by_province)
+
+
+async def test_party_standing_without_a_seat_count_is_an_error(httpx_mock):
+    # A missing count used to become 0 seats.
+    xml = (
+        b"<ArrayOfPartyStanding><PartyStanding><ProvinceTerritoryName>Alberta"
+        b"</ProvinceTerritoryName><CaucusShortName>NDP</CaucusShortName></PartyStanding>"
+        b"</ArrayOfPartyStanding>"
+    )
+    httpx_mock.add_response(url=constants.STANDINGS_URL.format(lang="en"), content=xml)
+    with pytest.raises(UpstreamError, match="SeatCount"):
+        await client.get_party_standings()
 
 
 async def test_party_standings_in_french(httpx_mock):

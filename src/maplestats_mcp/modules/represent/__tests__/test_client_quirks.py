@@ -153,6 +153,23 @@ async def test_municipal_scan_follows_meta_next_across_pages(httpx_mock, monkeyp
     assert len(httpx_mock.get_requests()) == 2
 
 
+async def test_municipal_scan_cut_at_its_page_cap_says_so(httpx_mock, monkeypatch):
+    # A scan that reaches MAX_SCAN_PAGES with pages left must not report
+    # has_more=False and a complete-looking total.
+    monkeypatch.setattr(client.constants, "PAGE_SIZE", 2)
+    monkeypatch.setattr(client.constants, "MAX_SCAN_PAGES", 1)
+    httpx_mock.add_response(
+        url=_url("/representatives/?elected_office__icontains=o&limit=2&offset=0"),
+        json={
+            "objects": [PARM_BAINS, _bc_councillor("Rob Fraser", "Mayor", "Taylor", "1")],
+            "meta": {"total_count": 3, "next": "/representatives/?limit=2&offset=2"},
+        },
+    )
+    result = await client.search_representatives(office="o", level="municipal", limit=5)
+    assert result.total_count == 1 and result.has_more is True
+    assert any("scan stopped after 2 representatives" in note for note in result.notes)
+
+
 async def test_null_instead_of_absent_fields_do_not_break_parsing(httpx_mock):
     # Defensive: JSON null where the live API sends "" or a list, on both a
     # representative and the postcode envelope (null lists, null centroid).
