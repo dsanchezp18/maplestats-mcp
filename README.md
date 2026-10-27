@@ -148,6 +148,32 @@ has a `provenance` block: source, URL, query time, freshness and limits.
 prompts take `lang` too, and each `docs://<module>/...` resource has a French
 twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
+## What to watch for
+
+MapleStats retrieves data directly from the original sources and returns
+values as published. When a result is trimmed, scaled, cleaned or computed,
+it says so in its `provenance` block or its notes; series values come
+unscaled, with the scale factor beside them. When a source is down or blocks
+the request, the tool returns an error, not a silent gap or a substitute
+value.
+
+The risk is in the use. An AI assistant can pick the wrong table, geography
+or reference period, and the answers, summaries and analysis it writes are
+AI-generated and can contain errors. For anything you would publish,
+spot-check a few figures against the source's own site and use
+`reproduce_code` to fetch them again outside the assistant. Publishers revise
+their figures, so a value retrieved today can differ from an earlier one.
+
+Each dataset keeps its own licence and attribution terms, shown in the
+result's `provenance`; credit the publisher, not MapleStats. MapleStats is an
+independent project, not affiliated with or endorsed by Statistics Canada,
+the Bank of Canada, CMHC or any other data provider. It is provided as is,
+depends on upstream services that can change or go offline, and is not
+professional, legal or financial advice. Parts of the code and tests were
+written with AI assistance; the discovery benchmark's questions are
+AI-written and not yet reviewed
+([`tests/discovery_benchmark/REVIEW.md`](tests/discovery_benchmark/REVIEW.md)).
+
 ## What it covers
 
 374 tools in 74 modules. Run `docs://catalogue` for the full, bilingual list.
