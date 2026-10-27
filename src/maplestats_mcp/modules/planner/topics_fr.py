@@ -105,6 +105,12 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
+    "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
+    "service ratio, credit, house prices, inflation, exchange rate)": (
+        "le Canada à côté du G7 ou d'autres économies pour un indicateur de la BRI (taux "
+        "directeur, ratio du service de la dette, crédit, prix des logements, inflation, "
+        "taux de change)"
+    ),
     # Economy
     "Canada's duty rates: tariff_item is the same HS code (MFN, General and "
     "CUSMA, CETA, CPTPP ... rates); cbsa_tariff_search finds it by words": (
@@ -174,6 +180,36 @@ FR: dict[str, str] = {
     "Census boundaries change between 2016 and 2021; check the area matches before comparing.": (
         "Les limites du recensement changent entre 2016 et 2021; vérifiez que la région "
         "est la même avant de comparer."
+    ),
+    # First Nations
+    "First Nations: profiles, registered population and drinking water advisories": (
+        "Premières Nations : profils, population inscrite et avis concernant l'eau potable"
+    ),
+    "the First Nation's band number (query by name or province)": (
+        "le numéro de bande de la Première Nation (recherche par nom ou par province)"
+    ),
+    "reserves, tribal council, chief and council: band_number from the step before": (
+        "réserves, conseil tribal, chef et conseil : band_number de l'étape précédente"
+    ),
+    "registered population on and off reserve, by sex": (
+        "population inscrite dans les réserves et hors réserve, par sexe"
+    ),
+    "long-term drinking water advisories, current or lifted": (
+        "avis à long terme concernant la qualité de l'eau potable, en vigueur ou levés"
+    ),
+    "short-term drinking water advisories south of 60": (
+        "avis à court terme concernant la qualité de l'eau potable au sud du 60e parallèle"
+    ),
+    "census counts for the community: level='census_subdivisions' (reserves are census "
+    "subdivisions), query=<reserve name>": (
+        "chiffres du recensement pour la communauté : level='census_subdivisions' (les "
+        "réserves sont des subdivisions de recensement), query=<nom de la réserve>"
+    ),
+    "Registered population counts people registered under the Indian Act "
+    "wherever they live; census counts are the people enumerated in a place.": (
+        "La population inscrite compte les personnes inscrites en vertu de la Loi sur les "
+        "Indiens, où qu'elles vivent; le recensement compte les personnes dénombrées dans "
+        "un lieu."
     ),
     # Immigration
     "Immigration and Express Entry": "Immigration et Entrée express",
@@ -336,6 +372,15 @@ FR: dict[str, str] = {
         "Dépenses publiques, approvisionnement et finances"
     ),
     "PBO costings and fiscal analysis": "estimations de coûts et analyses financières du DPB",
+    "Ontario municipal finances (FIR): find the line code, query=<label words> "
+    "such as 'police total expenses'": (
+        "finances municipales de l'Ontario (RIF) : trouver le code de ligne, query=<mots du "
+        "libellé> comme « police total expenses »"
+    ),
+    "slc=<line code> across Ontario municipalities or years, per capita, within one tier": (
+        "slc=<code de ligne> entre municipalités ontariennes ou entre années, par habitant, "
+        "au sein d'un même palier"
+    ),
     "Finance Canada monthly Fiscal Monitor issues (deficit, revenues, spending)": (
         "numéros mensuels de La revue financière de Finances Canada (déficit, revenus, dépenses)"
     ),

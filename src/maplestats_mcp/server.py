@@ -350,7 +350,9 @@ Sources, by tool-name prefix:
   gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_.
   ECCC Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP
   facility lookups): eccc_datamart_.
-- World Bank WDI, Canada and G7/OECD peers: worldbank_.
+- World Bank WDI, Canada and G7/OECD peers: worldbank_. BIS statistics
+  (policy rates, debt service ratios, credit, house prices, banking and
+  payment statistics), Canada and peers: bis_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
@@ -375,7 +377,9 @@ Sources, by tool-name prefix:
   (Customs Tariff duty rates by tariff item), gazette_ (Canada
   Gazette), earthquakes_, dfo_iwls_
   (tides, water levels), nfd_
-  (National Forestry Database), cwfis_ (wildfire hotspots, fire weather).
+  (National Forestry Database), cwfis_ (wildfire hotspots, fire weather),
+  isc_ (First Nation profiles, registered population, drinking water
+  advisories).
 - Elections and Parliament: elections_results_ (federal results by
   riding), elections_financial_returns_ (candidate returns),
   elections_provincial_ (QC, AB, BC, SK, MB results), ourcommons_ (official
@@ -390,7 +394,9 @@ Sources, by tool-name prefix:
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
   electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including water flows at its
   dams), oeb_
-  (Ontario Energy Board: utility RRR filings, reliability, rates).
+  (Ontario Energy Board: utility RRR filings, reliability, rates), on_fir_
+  (Ontario municipal Financial Information Return: revenue, expenses,
+  taxes, reserves, debt by municipality, 2000 on).
 - Portal families, each with a `portal` argument and a list_portals tool:
   ckan_ (open.canada.ca, provincial and city CKAN catalogues;
   ckan_datastore_search for rows, ckan_describe_resource and

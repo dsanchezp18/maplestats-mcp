@@ -320,6 +320,23 @@ def get_cbsa_tariff_cache_dir() -> Path:
     return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "cbsa_tariff"
 
 
+def get_on_fir_cache_dir() -> Path:
+    """Where Ontario Financial Information Return years are kept as Parquet.
+
+    Each year is about 10 MB to download and 3 MB as Parquet. A hosted
+    deployment should point this at a persistent volume, or every restart
+    downloads them again.
+    """
+    raw = os.environ.get("MAPLE_ON_FIR_CACHE_DIR", "").strip()
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-mcp" / "on_fir"
+
+
+def get_on_fir_cache_max_bytes() -> int:
+    """Cap on the FIR cache (MAPLE_ON_FIR_CACHE_MAX_MB, default 500); least recently used years go first."""
+    value = _env_float("MAPLE_ON_FIR_CACHE_MAX_MB", 500.0)
+    return int(max(50.0, value) * 1024**2)
+
+
 def get_lode_max_download_bytes(default_mb: float) -> int:
     """Largest LODE archive one call may download (MAPLE_LODE_MAX_DOWNLOAD_MB; 0 turns downloads off)."""
     value = _env_float("MAPLE_LODE_MAX_DOWNLOAD_MB", float(default_mb))

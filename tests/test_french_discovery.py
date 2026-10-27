@@ -179,6 +179,18 @@ CASES = [
     ),
     ("taux de droits de douane NPF d'un numéro tarifaire", "cbsa_tariff_lookup"),
     ("édition du tarif des douanes en vigueur", "cbsa_tariff_list_editions"),
+    (
+        "avis à long terme concernant la qualité de l'eau potable Premières Nations",
+        "isc_list_drinking_water_advisories",
+    ),
+    ("numéro de bande d'une Première Nation", "isc_search_first_nations"),
+    ("population inscrite hors réserve Registre des Indiens", "isc_get_registered_population"),
+    ("chef et conseil tribal d'une Première Nation", "isc_get_first_nation_profile"),
+    (
+        "ratio du service de la dette des ménages comparaison internationale",
+        "bis_compare_countries",
+    ),
+    ("jeux de données de la Banque des règlements internationaux", "bis_list_datasets"),
     # French stop words in shared/search.py (2026-10-03): "de" and "par" no
     # longer decide the ranking.
     ("taux de chômage par province", "statcan_indicators_get_indicators"),
@@ -190,6 +202,8 @@ CASES = [
     ("pannes de courant SAIDI des distributeurs ontariens", "oeb_query_dataset"),
     ("tarifs d'électricité prix selon l'heure Ontario", "oeb_rates"),
     ("données ouvertes de la Commission de l'énergie de l'Ontario", "oeb_list_datasets"),
+    ("dépenses municipales par habitant des villes de l'Ontario", "on_fir_compare"),
+    ("rapport d'information financière annexes des municipalités", "on_fir_list_schedules"),
     # Sources fédérales ajoutées le 2026-10-03.
     ("temps d'attente à la frontière canado-américaine", "cbsa_border_wait_times"),
     ("produits antiparasitaires homologués contenant du glyphosate", "pmra_search_products"),

@@ -372,12 +372,22 @@ TOPICS: tuple[Topic, ...] = (
             "ocde",
             "autres pays",
             "pays du g7",
+            "bis",
+            "bri",
+            "debt service ratio",
+            "credit-to-gdp gap",
+            "policy rates",
         ),
         (
             PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
             PlanStep(
                 "worldbank_get_canada_series",
                 "Canada's series for the indicator, compared with G7 or OECD countries",
+            ),
+            PlanStep(
+                "bis_compare_countries",
+                "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
+                "service ratio, credit, house prices, inflation, exchange rate)",
             ),
         ),
     ),
@@ -500,6 +510,64 @@ TOPICS: tuple[Topic, ...] = (
         ),
         (
             "Census boundaries change between 2016 and 2021; check the area matches before comparing.",
+        ),
+    ),
+    Topic(
+        "first_nations",
+        "First Nations: profiles, registered population and drinking water advisories",
+        (
+            "first nation*",
+            "indian band",
+            "band number",
+            "tribal council",
+            "indian act",
+            "on reserve",
+            "off reserve",
+            "drinking water advisor*",
+            "boil water",
+            "premieres nations",
+            "premiere nation",
+            "conseil tribal",
+            "loi sur les indiens",
+            "eau potable",
+        ),
+        (
+            PlanStep(
+                "isc_search_first_nations",
+                "the First Nation's band number (query by name or province)",
+            ),
+            PlanStep(
+                "isc_get_first_nation_profile",
+                "reserves, tribal council, chief and council: band_number from the step before",
+                ("reserve", "chief", "council", "governance", "chef", "conseil"),
+            ),
+            PlanStep(
+                "isc_get_registered_population",
+                "registered population on and off reserve, by sex",
+                ("population", "registered", "inscrit*"),
+            ),
+            PlanStep(
+                "isc_list_drinking_water_advisories",
+                "long-term drinking water advisories, current or lifted",
+                ("water", "advisor*", "eau", "avis"),
+            ),
+            PlanStep(
+                "isc_list_short_term_advisories",
+                "short-term drinking water advisories south of 60",
+                ("short-term", "court terme", "boil", "ebullition"),
+            ),
+            PlanStep(
+                "statcan_census_profile_search_geography",
+                "census counts for the community: level='census_subdivisions' (reserves are census "
+                "subdivisions), query=<reserve name>",
+                ("census", "recensement"),
+            ),
+        ),
+        (
+            (
+                "Registered population counts people registered under the Indian Act "
+                "wherever they live; census counts are the people enumerated in a place."
+            ),
         ),
     ),
     Topic(
@@ -966,6 +1034,14 @@ TOPICS: tuple[Topic, ...] = (
             "tableaux de reference financiers",
             "deficit federal",
             "dette federale",
+            "municipal finance*",
+            "municipal budget",
+            "municipal spending",
+            "financial information return",
+            "fir",
+            "finances municipales",
+            "rapport d'information financiere",
+            "depenses municipales",
         ),
         (
             PlanStep("pbo_search_publications", "PBO costings and fiscal analysis"),
@@ -983,6 +1059,26 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
             PlanStep("ckan_search_datasets", "grants and contributions: portal='federal'"),
+            PlanStep(
+                "on_fir_search_lines",
+                "Ontario municipal finances (FIR): find the line code, query=<label words> "
+                "such as 'police total expenses'",
+                (
+                    "municipal finance*",
+                    "municipal budget",
+                    "municipal spending",
+                    "financial information return",
+                    "fir",
+                    "finances municipales",
+                    "rapport d'information financiere",
+                    "depenses municipales",
+                ),
+            ),
+            PlanStep(
+                "on_fir_compare",
+                "slc=<line code> across Ontario municipalities or years, per capita, within one "
+                "tier",
+            ),
         ),
         ("Federal fiscal years run April to March; match them to calendar-year data explicitly.",),
     ),
