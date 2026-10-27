@@ -18,8 +18,8 @@ class TopicInfo(BaseModel):
 class FileEntry(BaseModel):
     topic: str
     section: str | None = Field(
-        description="Heading above the link on the agency's page (survey, release date, "
-        "quarter or community), when there is one."
+        description="The collapsible block and heading above the link on the agency's page "
+        "(census year, survey, release date or quarter), when there is one."
     )
     title: str = Field(description="The agency's own name for the table.")
     context: str | None = Field(

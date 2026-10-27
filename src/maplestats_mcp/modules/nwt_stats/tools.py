@@ -23,22 +23,23 @@ async def nwt_stats_list_files(
 
     Use for: browsing what the Northwest Territories Bureau of Statistics
     publishes on a topic and getting each file's URL for nwt_stats_read_file.
-    Without `topic`, returns the 49 topic slugs with titles and page links
-    (gdp, business-dynamics, exports-imports, labour-force, earnings-wages,
-    income, cpi, community-price-index, population, population-communities,
-    population-projections, vital-statistics, housing, crime, language,
-    alcohol-cannabis, traditional-activities, census-2021 ... census-1996,
-    community-data with a statistical profile per community, surveys, and
-    more). With `topic`, lists that page's .xlsx and .xls files with the
-    agency's own title, the heading above the link (release date, survey,
-    quarter or community) and nearby text. File titles are English only
+    Without `topic`, returns the 39 topic slugs with titles and page links
+    (gdp, business-dynamics, exports-imports, oil-gas-minerals, labour-force,
+    earnings-wages, income, cpi, community-price-index, population,
+    population-communities, population-projections, vital-statistics,
+    housing, crime, language, alcohol-cannabis, traditional-activities,
+    census (1996 to 2021), surveys (NWT Community Survey), and more). With
+    `topic`, lists that page's .xlsx and .xls files, and exports of tables
+    shown on the page, with the agency's own title, the block and heading
+    above the link (census year, release date, survey or quarter) and nearby
+    text. File titles are English only
     (`lang` changes the topic titles, notes and licence line).
     Keywords: Northwest Territories, NWT, Bureau of Statistics, statsnwt,
     Yellowknife, territorial statistics, Excel tables, topics, census,
-    community profile, population, labour force.
+    population, labour force.
     Mots-clés : Territoires du Nord-Ouest, T.N.-O., Bureau de la statistique
     des Territoires du Nord-Ouest, statistiques territoriales, tableaux
-    Excel, sujets, recensement, profil des collectivités, Yellowknife,
+    Excel, sujets, recensement, Yellowknife,
     estimations de la population, population active, produit intérieur brut,
     IPC, état civil.
     """
@@ -59,8 +60,7 @@ async def nwt_stats_search_files(
     community, average weekly earnings, consumer price index, community price
     index, population by community, births and deaths, housing core need,
     crime incidents, Indigenous languages, cannabis and alcohol sales, a 2021
-    Census table, a community's statistical profile (e.g. "Aklavik",
-    "Hay River profile"). Keeps files whose title, nearby text, heading, topic
+    Census table ("2021 census age"). Keeps files whose title, nearby text, heading, topic
     or file name contains every word of `query` (case and accents ignored).
     The first search reads every topic page (about a minute); later ones are
     cached for six hours. `topic` narrows to one page.
