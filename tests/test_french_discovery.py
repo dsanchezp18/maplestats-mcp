@@ -177,6 +177,18 @@ CASES = [
         "indicateurs du développement dans le monde de la Banque mondiale",
         "worldbank_search_indicators",
     ),
+    (
+        "avis à long terme concernant la qualité de l'eau potable Premières Nations",
+        "isc_list_drinking_water_advisories",
+    ),
+    ("numéro de bande d'une Première Nation", "isc_search_first_nations"),
+    ("population inscrite hors réserve Registre des Indiens", "isc_get_registered_population"),
+    ("chef et conseil tribal d'une Première Nation", "isc_get_first_nation_profile"),
+    (
+        "ratio du service de la dette des ménages comparaison internationale",
+        "bis_compare_countries",
+    ),
+    ("jeux de données de la Banque des règlements internationaux", "bis_list_datasets"),
     # French stop words in shared/search.py (2026-10-03): "de" and "par" no
     # longer decide the ranking.
     ("taux de chômage par province", "statcan_indicators_get_indicators"),

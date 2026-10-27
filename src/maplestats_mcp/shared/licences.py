@@ -243,6 +243,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "terms (https://www.crea.ca/legal/) apply; this is not an open licence."
     ),
     # International
+    "bis": (
+        "Source: Bank for International Settlements. Use of the statistics is unrestricted "
+        "with the BIS cited as the source (https://data.bis.org/help/legal)."
+    ),
     "worldbank-wdi": (
         "Source: World Bank, World Development Indicators. Creative Commons Attribution 4.0 "
         "(https://datacatalog.worldbank.org/public-licenses)."
@@ -284,6 +288,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "health_products": OGL_CANADA,
     "finance_canada": CANADA_CA_TERMS,
     "nrcan_minerals": CANADA_CA_TERMS,
+    "isc": CANADA_CA_TERMS,
     "dfo-iwls": terms_not_stated(
         "Fisheries and Oceans Canada, Canadian Hydrographic Service",
         "https://api-iwls.dfo-mpo.gc.ca",
@@ -394,6 +399,10 @@ LICENCES_FR: dict[str, str] = {
         "Source : Association canadienne de l'immeuble (ACI), Indice des prix des propriétés "
         "MLS®. Les conditions de l'ACI (https://www.crea.ca/fr/renseignements-juridiques/) "
         "s'appliquent ; il ne s'agit pas d'une licence ouverte."
+    ),
+    SOURCE_LICENCES["bis"]: (
+        "Source : Banque des règlements internationaux. L'utilisation des statistiques est "
+        "libre si la BRI est citée comme source (https://data.bis.org/help/legal)."
     ),
     SOURCE_LICENCES["worldbank-wdi"]: (
         "Source : Banque mondiale, Indicateurs du développement dans le monde. Licence Creative "

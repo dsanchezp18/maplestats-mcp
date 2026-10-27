@@ -171,7 +171,9 @@ CASES = [
     ("Quebec population estimates ISQ", "isq_search_tables"),
     ("research data repository Canadian universities", "borealis_search_ivt"),
     ("place name gazetteer coordinates", "nrcan_geo_search_names"),
-    ("ocean water temperature buoy", "dfo_iwls_get_water_levels"),
+    # Matched on "water" alone; get_water_levels tied with eccc_coverages_get_data and
+    # fell to fourth when isc_ added two water-advisory tools (2026-10-26).
+    ("ocean water temperature buoy", "dfo_iwls_search_stations"),
     # Gaps found and fixed 2026-09-28: BoC mortgage rates, WDS
     # interprovincial migration and Borealis as a research repository
     # were each missing from the top 3 before their keywords were added.
@@ -193,6 +195,19 @@ CASES = [
     ("browse dimensions and codes of an SDMX dataflow in CCEI", "sdmx_space_get_structure"),
     ("how does Canada compare with G7 countries on GDP per capita", "worldbank_get_canada_series"),
     ("World Bank development indicator code search", "worldbank_search_indicators"),
+    # Indigenous Services Canada and CIRNAC, 2026-10-26.
+    ("long-term drinking water advisories First Nations", "isc_list_drinking_water_advisories"),
+    ("First Nation band number lookup", "isc_search_first_nations"),
+    ("chief and council tribal council reserves of a First Nation", "isc_get_first_nation_profile"),
+    (
+        "registered population on reserve and off reserve Indian Register",
+        "isc_get_registered_population",
+    ),
+    ("short-term boil water advisory First Nations south of 60", "isc_list_short_term_advisories"),
+    # BIS statistics, 2026-10-26.
+    ("household debt service ratio Canada compared with other countries", "bis_compare_countries"),
+    ("Bank for International Settlements datasets", "bis_list_datasets"),
+    ("dimensions and codes of a BIS dataset series key", "bis_describe_dataset"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

@@ -588,6 +588,14 @@ SOURCES: dict[str, Source] = {
         places=("NL",),
         row="provincial_agency",
     ),
+    "bis": Source(
+        "Bank for International Settlements statistics (Canada and peers)",
+        "Statistiques de la Banque des règlements internationaux (Canada et pays comparables)",
+        "national",
+        "BIS statistics",
+        "Statistiques de la BRI",
+        domain="statistics",
+    ),
     "worldbank": Source(
         "World Bank World Development Indicators (Canada and peers)",
         "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",
@@ -688,6 +696,14 @@ SOURCES: dict[str, Source] = {
         "NRCan burned areas",
         "RNCan zones brûlées",
         domain="environment",
+    ),
+    "isc": Source(
+        "Indigenous Services Canada and CIRNAC: First Nations and drinking water advisories",
+        "Services aux Autochtones Canada et RCAANC : Premières Nations et avis sur l'eau potable",
+        "national",
+        "ISC First Nations",
+        "SAC Premières Nations",
+        domain="statistics",
     ),
     "nrcan_minerals": Source(
         "Natural Resources Canada: mineral production",
