@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from fastmcp import Client
 from mcp.types import TextContent
 
-from maplestats_mcp.modules.statcan.wds import client
+from maplestats_mcp.modules.statcan.wds import client, vintage
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.errors import DataLocked, InvalidInput, NotFound
 from maplestats_mcp.shared.http import new_client
@@ -130,6 +130,22 @@ async def main() -> int:
         len(window.series[0].observations) == 3,
         "reference-period range (months widened)",
         len(window.series[0].observations),
+    )
+
+    # wds_get_series_as_of: CPI-trim (18-10-0256) as published 2026-03-16,
+    # read from real-time table 18-10-0259; February 2026 was 2.3 then.
+    past = await vintage.get_series_as_of(18100256, "1.3", "2026-03-20", 3)
+    ok &= check(
+        past.release_date.isoformat() == "2026-03-16"
+        and past.observations[-1].ref_period.isoformat() == "2026-02-01"
+        and past.observations[-1].value == 2.3,
+        "series as of a past release (CPI-trim, 2026-03-16)",
+        [(o.ref_period.isoformat(), o.value) for o in past.observations],
+    )
+    ok &= await raises(
+        NotFound,
+        "as_of on a table with no real-time pair",
+        vintage.get_series_as_of(18100004, "1.2", "2025-01-01"),
     )
 
     # wds_get_changed_series_list / wds_get_changed_series_data

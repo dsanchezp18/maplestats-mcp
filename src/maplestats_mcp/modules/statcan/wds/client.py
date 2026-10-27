@@ -503,6 +503,18 @@ def _members_for(
     return members, len(raw), len(matched)
 
 
+async def cube_metadata_raw(pid: int) -> tuple[dict[str, Any], bool]:
+    """The whole getCubeMetadata object (every member of every dimension), cached."""
+
+    async def fetch() -> dict[str, Any]:
+        items = await _post("getCubeMetadata", [{"productId": pid}])
+        return _unwrap_one(items[0], "getCubeMetadata")
+
+    return await cached_fetch(
+        f"wds:getCubeMetadata:{pid}", constants.CACHE_TTL_CUBE_METADATA_SECONDS, fetch
+    )
+
+
 async def get_cube_metadata(
     product_id: int | str,
     *,
@@ -529,15 +541,7 @@ async def get_cube_metadata(
                 "member_offset et footnote_limit doivent être 0 ou plus.",
             )
         )
-    cache_key = f"wds:getCubeMetadata:{pid}"
-
-    async def fetch() -> dict[str, Any]:
-        items = await _post("getCubeMetadata", [{"productId": pid}])
-        return _unwrap_one(items[0], "getCubeMetadata")
-
-    obj, was_cached = await cached_fetch(
-        cache_key, constants.CACHE_TTL_CUBE_METADATA_SECONDS, fetch
-    )
+    obj, was_cached = await cube_metadata_raw(pid)
 
     all_dimensions = list_or_empty(obj, "dimension")
     if dimension is not None and not any(

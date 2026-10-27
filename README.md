@@ -176,7 +176,7 @@ AI-written and not yet reviewed
 
 ## What it covers
 
-374 tools in 74 modules. Run `docs://catalogue` for the full, bilingual list.
+375 tools in 74 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|

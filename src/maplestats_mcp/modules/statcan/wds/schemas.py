@@ -226,3 +226,28 @@ def apply_scalar_factor(value: float, scalar_factor_code: int) -> float:
     than requiring a getCodeSets round trip for the common cases.
     """
     return value * (10**scalar_factor_code)
+
+
+class VintageSeries(BaseModel):
+    """A series as it stood in one past release, read from StatCan's real-time table."""
+
+    as_of: date = Field(description="The date asked for.")
+    release_date: date = Field(
+        description="The release whose values are returned: the latest one on or before as_of."
+    )
+    release_member_id: int
+    product_id: int = Field(description="The regular table the series was asked for in.")
+    coordinate: str
+    real_time_product_id: int
+    real_time_coordinate: str = Field(description="The same series in the real-time table.")
+    real_time_vector_id: int | None = None
+    earliest_release: date
+    latest_release: date
+    observations: list[ObservationRow] = Field(
+        description=(
+            "Values as published in that release, unscaled as in every WDS tool. "
+            "release_time is when the real-time table loaded the row, not the original release."
+        )
+    )
+    notes: list[str] = Field(default_factory=list)
+    provenance: Provenance

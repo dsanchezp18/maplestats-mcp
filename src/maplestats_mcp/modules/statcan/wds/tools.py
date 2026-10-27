@@ -12,7 +12,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.statcan.wds import client, constants
+from maplestats_mcp.modules.statcan.wds import client, constants, vintage
 from maplestats_mcp.modules.statcan.wds.client import CodeSetCategory
 from maplestats_mcp.modules.statcan.wds.schemas import (
     ChangedCubeList,
@@ -24,6 +24,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     SeriesInfo,
     VectorData,
     VectorDataSet,
+    VintageSeries,
 )
 from maplestats_mcp.shared.envelope import raise_error
 from maplestats_mcp.shared.errors import InvalidInput
@@ -212,6 +213,45 @@ async def wds_get_data_from_cube_coord(
     return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
         product_id, coordinate, latest_n
     )
+
+
+@tool
+async def wds_get_series_as_of(
+    as_of: str,
+    vector_id: int | None = None,
+    product_id: ProductId | None = None,
+    coordinate: str | None = None,
+    latest_n: int = 12,
+    lang: Lang = "en",
+) -> VintageSeries:
+    """Get a StatCan series as it was published on a past date, before
+    later revisions (a vintage), from StatCan's real-time tables.
+
+    Use for: what was known at the time, such as the GDP, CPI core
+    inflation, employment, retail or trade figures an analyst or the Bank
+    of Canada saw on a given date; comparing a first estimate with the
+    revised value; real-time forecasting evaluation. Pass the series of
+    the regular table (`vector_id`, or `product_id` + `coordinate`) and
+    `as_of` ("YYYY-MM-DD"): the values come from the latest release on or
+    before that date, with `release_date` saying which. Only the 16
+    regular tables WDS pairs with a real-time table have this history
+    (statcan_delta_list_real_time_tables lists them); any other table is
+    an error, not current data. Values are unscaled, as in every WDS
+    tool.
+    Keywords: vintage, real-time data, as of date, first estimate,
+    revision history, as originally published, past release, unrevised
+    data, historical releases, Statistics Canada.
+    Mots-clés : millésime, données en temps réel, à une date donnée,
+    première estimation, historique des révisions, tel que publié à
+    l'origine, diffusion antérieure, données non révisées.
+    """
+    client.use_lang(lang)
+    _vector_or_coord("wds_get_series_as_of", vector_id, product_id, coordinate, lang)
+    if vector_id is not None:
+        info = await client.get_series_info_from_vector(vector_id)
+        product_id, coordinate = info.product_id, info.coordinate
+    assert product_id is not None and coordinate is not None
+    return await vintage.get_series_as_of(product_id, coordinate, as_of, latest_n)
 
 
 @tool

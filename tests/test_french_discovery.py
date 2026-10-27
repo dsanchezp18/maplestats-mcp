@@ -21,6 +21,7 @@ CASES = [
     ("taux de chômage", "statcan_indicators_get_indicators"),
     ("indice des prix à la consommation", "statcan_indicators_get_indicators"),
     ("PIB par industrie", "wds_search_cubes"),
+    ("première estimation du PIB avant révisions", "wds_get_series_as_of"),
     ("classification des industries SCIAN", "rdaas_get_classification"),
     ("mises en chantier", "cmhc_list_categories"),
     ("taux directeur", "boc_search_series"),

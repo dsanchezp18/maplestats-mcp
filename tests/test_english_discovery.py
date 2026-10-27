@@ -187,6 +187,7 @@ CASES = [
     ("population estimates by province", "wds_search_cubes"),
     ("wildfires British Columbia", "bcgw_get_active_wildfires"),
     ("time series for a vector between two dates", "wds_get_data_by_reference_period_range"),
+    ("GDP as originally published before revisions", "wds_get_series_as_of"),
     ("NOC occupation classification", "rdaas_search_classifications"),
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("greenhouse gas emissions by province and IPCC category", "sdmx_space_get_data"),
