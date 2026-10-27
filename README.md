@@ -170,8 +170,9 @@ independent project, not affiliated with or endorsed by Statistics Canada,
 the Bank of Canada, CMHC or any other data provider. It is provided as is,
 depends on upstream services that can change or go offline, and is not
 professional, legal or financial advice. Parts of the code and tests were
-written with AI assistance; the discovery benchmark's questions are
-AI-written and not yet reviewed
+written with AI assistance; the discovery benchmark's questions were
+written by one AI session and reviewed by a second, independent one, not yet
+by a person
 ([`tests/discovery_benchmark/REVIEW.md`](tests/discovery_benchmark/REVIEW.md)).
 
 ## What it covers
