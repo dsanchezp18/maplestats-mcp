@@ -729,7 +729,12 @@ def history_window(
     # costs only bytes, under-fetching would leave the first values null.
     months = max(
         (
-            extra_months(request.transform, ppy or 1, aggregating=request.frequency is not None)
+            extra_months(
+                request.transform,
+                ppy or 1,
+                aggregating=request.frequency is not None,
+                window=request.window,
+            )
             for ppy in out_ppys
         ),
         default=0,
@@ -797,6 +802,7 @@ async def _transformed(
             frequency=request.frequency,
             aggregation=request.aggregation,
             index_base=request.index_base,
+            window=request.window,
             rate_unit=_is_rate(info),
             units=info.unit,
             window_start=min(window) if window else None,
@@ -826,6 +832,8 @@ async def get_observations(
             lang,
         )
     names = [_require_name(n, "Series", lang) for n in series_names]
+    if request is not None:
+        request.check(lang)
     params = _observation_params(
         start_date=start_date,
         end_date=end_date,

@@ -24,7 +24,10 @@ trends):
    left out. A second header row under the years (Residential, Business)
    qualifies each column. Values are numbers or text such as "$59.97",
    "30.6%", " 28.4 ", "N/A" or "More than one quarter".
-3. Quarterly sheets: one header row of bilingual names, rows in no
+3. The "Prix-Prices" sheet: every reported price, one row per provider,
+   brand, place and plan (and network for mobile); see
+   parse_reported_prices.
+4. Quarterly sheets: one header row of bilingual names, rows in no
    particular order; each row has a quarter ("2026 Q1"), a market and a
    metric in French and English, sometimes a subcategory, and one or two
    filled measure columns (revenues, subscribers, data in GB...).
@@ -37,6 +40,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
+
+from maplestats_mcp.shared.executor import check_deadline
 
 _YEAR = re.compile(r"^\s*((?:19|20)\d{2})\s*(\((?:MP|TM)\))?\s*$")
 _QUARTER = re.compile(r"^\s*((?:19|20)\d{2})\s*[QT]([1-4])\s*$")
@@ -157,6 +162,98 @@ def parse_prices(rows: Iterable[Sequence[Any]], service: str) -> list[PriceRow]:
                 plan_en=plan_en,
                 plan_fr=_plan_fr(plan_en, text(row[3])),
                 technology=technology,
+                value=value,
+                as_published=published,
+            )
+        )
+    return out
+
+
+@dataclass(frozen=True)
+class ReportedPrice:
+    """One row of the "Prix-Prices" sheet: one provider's price in one place."""
+
+    year: int
+    provider: str | None  # the reporting entity; blank in every 2016 row
+    brand: str | None
+    region: str  # urban or rural
+    place: str  # a census metropolitan area (urban) or a rural community
+    province: str
+    service: str  # mobile, internet or tv
+    plan_en: str
+    plan_fr: str
+    technology: str | None  # 3G, LTE or 5G for mobile
+    value: float | None
+    as_published: str | None
+
+
+_MOBILE_TECHNOLOGIES = {"3G", "LTE", "5G"}
+
+
+def _column(header: list[str], *words: str) -> int | None:
+    return next((i for i, h in enumerate(header) if all(w in h for w in words)), None)
+
+
+def parse_reported_prices(rows: Iterable[Sequence[Any]]) -> list[ReportedPrice]:
+    """The "Prix-Prices" sheet, every provider's reported price by place and plan.
+
+    Confirmed on the file of 2026-05-14: 35,361 rows, 2016-2025, columns
+    Year, Entity, Region, Census metropolitan area, Province, Forfait, Plan,
+    Reported monthly price, Brand, Speed, Channels. The "census metropolitan
+    area" column holds the 24 urban CMAs (13 from 2024) on urban rows and a
+    rural community on rural rows. Mobile rows always name a network (3G, LTE
+    or 5G) in Speed; mobile plans are written "50GB Plan" in some years and
+    "50GB" in others; Internet plans are speeds ("50/10 Mbps"); TV rows (IPTV,
+    DTH, Cable) are kept with service "tv". Entity is blank in every 2016 row
+    and Brand in about a quarter of the rows.
+    """
+    iterator = iter(rows)
+    header = [text(c).lower() for c in next(iterator, ())]
+    at = {
+        "year": 0,
+        "provider": _column(header, "entity"),
+        "region": _column(header, "region"),
+        "place": _column(header, "census metropolitan"),
+        "province": _column(header, "province"),
+        "forfait": _column(header, "forfait"),
+        "price": _column(header, "price"),
+        "brand": _column(header, "brand"),
+        "speed": _column(header, "speed"),
+    }
+    plan_at = next((i for i, h in enumerate(header) if h == "plan"), None)
+    if not header or not header[0].startswith("ann") or plan_at is None or None in at.values():
+        raise ValueError("the Prix-Prices sheet does not have the expected columns")
+    columns: dict[str, int] = {k: v for k, v in at.items() if v is not None}
+    width = max(*columns.values(), plan_at) + 1
+    out: list[ReportedPrice] = []
+    for number_read, raw in enumerate(iterator):
+        if number_read % 2000 == 0:
+            check_deadline()
+        row = _cells(raw)
+        if len(row) < width or _year(row[0]) is None:
+            continue
+        plan_en = re.sub(r"(\d)\s*GB(?:\s+Plan)?$", r"\1 GB", text(row[plan_at]))
+        speed = text(row[columns["speed"]])
+        if speed in _MOBILE_TECHNOLOGIES or plan_en.endswith(" GB") or plan_en == "Talk Plan":
+            service = "mobile"
+        elif plan_en.lower().endswith("mbps"):
+            service = "internet"
+        else:
+            service = "tv"
+        region = text(row[columns["region"]]).lower()
+        value, published = number(row[columns["price"]])
+        out.append(
+            ReportedPrice(
+                year=_year(row[0])[0],  # type: ignore[index]
+                provider=text(row[columns["provider"]]) or None,
+                brand=text(row[columns["brand"]]) or None,
+                region="rural" if region == "rural" else "urban",
+                place=text(row[columns["place"]]),
+                province=text(row[columns["province"]]).upper(),
+                service=service,
+                plan_en=plan_en,
+                plan_fr=_plan_fr(plan_en, text(row[columns["forfait"]])),
+                technology=speed if service == "mobile" and speed else None,
                 value=value,
                 as_published=published,
             )

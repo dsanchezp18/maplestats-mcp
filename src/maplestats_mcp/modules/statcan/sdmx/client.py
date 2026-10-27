@@ -647,7 +647,9 @@ def transform_params(
     params = dict(params)
     out_ppy = PERIODS_PER_YEAR[request.frequency] if request.frequency else source_ppy
     if latest_n is not None:
-        needed = source_periods_needed(latest_n, request.transform, source_ppy, out_ppy)
+        needed = source_periods_needed(
+            latest_n, request.transform, source_ppy, out_ppy, request.window
+        )
         if request.index_base and source_ppy:
             needed = max(
                 needed, wds_transforms.base_months(request.index_base) * source_ppy // 12 + 1
@@ -655,7 +657,12 @@ def transform_params(
         params["lastNObservations"] = needed
     if params.get("startPeriod"):
         first, given_ppy = parse_period(str(params["startPeriod"]))
-        months = extra_months(request.transform, out_ppy, aggregating=request.frequency is not None)
+        months = extra_months(
+            request.transform,
+            out_ppy,
+            aggregating=request.frequency is not None,
+            window=request.window,
+        )
         earliest = shift_months(first, -months) if months else first
         if request.index_base:
             base = _start(request.index_base)
@@ -722,6 +729,7 @@ async def get_data(
         default_applied = True
     source_ppy: int | None = None
     if request is not None and request.active:
+        request.check(lang)
         # The table's frequency decides how much history the lag needs; WDS
         # metadata is cached, and SDMX has no cheaper source for it.
         try:

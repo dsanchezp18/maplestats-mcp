@@ -26,6 +26,8 @@ Checked live 2026-10-27:
 from __future__ import annotations
 
 import io
+import re
+import unicodedata
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Any, NoReturn
@@ -34,6 +36,10 @@ import httpx
 
 from maplestats_mcp.modules.telecom_prices import constants, parsing
 from maplestats_mcp.modules.telecom_prices.schemas import (
+    CityPlanPriceAverage,
+    CityPlanPriceRow,
+    CityPlanPrices,
+    CmaCoverage,
     MarketObservation,
     MarketTable,
     MarketTableList,
@@ -294,6 +300,12 @@ _GEOGRAPHY_ALIASES = {
 }
 
 
+def _split(value: str | list[str] | None) -> list[str]:
+    """A list, or a comma-separated string, as its non-empty items."""
+    items = value if isinstance(value, list) else (value or "").split(",")
+    return [" ".join(str(item).split()) for item in items if str(item).strip()]
+
+
 def _geography(value: str, lang: str) -> str:
     wanted = " ".join(value.split())
     if wanted.upper() in constants.PROVINCES:
@@ -348,7 +360,7 @@ async def get_plan_prices(
     service: str = "mobile",
     *,
     plan: str | None = None,
-    province: str = "Canada",
+    province: str | list[str] = "Canada",
     region: str = "national",
     technology: str = "lowest",
     from_year: int | None = None,
@@ -382,7 +394,19 @@ async def get_plan_prices(
             "telecom_prices : technology doit être 'lowest', '3G', 'LTE', '5G' ou 'all'.",
             lang,
         )
-    geography = None if province.strip().lower() == "all" else _geography(province, lang)
+    wanted_places = _split(province)
+    if not wanted_places:
+        _raise(
+            InvalidInput,
+            "telecom_prices: province is empty; give a code like ON, a list, or 'all'.",
+            "telecom_prices : province est vide ; donnez un code comme ON, une liste ou 'all'.",
+            lang,
+        )
+    geographies = (
+        None
+        if any(p.lower() == "all" for p in wanted_places)
+        else {_geography(p, lang) for p in wanted_places}
+    )
     sheet = constants.PRICE_SHEETS[service]
     sheets, _, resource, cached = await _workbook(
         constants.PRICES, lang, lambda n: n in (sheet, "Version"), service
@@ -417,7 +441,7 @@ async def get_plan_prices(
         r
         for r in rows
         if (wanted_plan is None or plan_key(r.plan_en) == wanted_plan)
-        and (geography is None or r.geography == geography)
+        and (geographies is None or r.geography in geographies)
         and (region == "all" or r.region == region)
         and (service != "mobile" or tech == "all" or (r.technology or "").lower() == tech)
         and (from_year is None or r.year >= from_year)
@@ -502,6 +526,380 @@ def _plan_fr_label(plan_en: str) -> str:
     if plan_en.lower() == "talk plan":
         return "Forfait voix"
     return plan_en.replace(" GB", " Go")
+
+
+# City (census metropolitan area) prices ---------------------------------------
+
+_REPORTED_SHEET = "Prix-Prices"
+
+_CITY_BASIS = (
+    "Computed by MapleStats: mean of the reported monthly prices in the CRTC's Prix-Prices "
+    "sheet. The CRTC publishes no city averages; its provincial and national averages "
+    "(telecom_get_plan_prices) are its own."
+)
+_CITY_BASIS_FR = (
+    "Calculé par MapleStats : moyenne des prix mensuels déclarés dans la feuille Prix-Prices "
+    "du CRTC. Le CRTC ne publie pas de moyennes par ville; ses moyennes provinciales et "
+    "nationales (telecom_get_plan_prices) sont les siennes."
+)
+_CITY_METHOD = (
+    "Each year the CRTC asks providers for the lowest non-promotional monthly price, before "
+    "taxes and fees, that meets each service basket, in 24 census metropolitan areas (CMAs) "
+    "and 55 rural communities; from 2024 it surveys 13 CMAs, one per province or "
+    "territory. The Prix-Prices sheet lists every reported price by provider, brand and, for "
+    "mobile, network (3G, LTE, 5G). average_price is the plain mean of those rows for a year, "
+    "plan and CMA, so a provider reporting several brands or networks counts several times; "
+    "lowest_per_provider_average first keeps each provider's lowest price, which is how the "
+    "CRTC computes its published 'lowest price' averages (in 2024 the Alberta urban average, "
+    "$37.00 for 50 GB, equals Edmonton's lowest_per_provider_average). Rows without a price "
+    "are left out."
+)
+_CITY_METHOD_FR = (
+    "Chaque année, le CRTC demande aux fournisseurs le prix mensuel non promotionnel le plus "
+    "bas, avant taxes et frais, qui répond à chaque ensemble de services, dans 24 régions "
+    "métropolitaines de recensement (RMR) et 55 collectivités rurales; depuis 2024, il "
+    "sonde 13 RMR, une par province ou territoire. La feuille Prix-Prices donne chaque "
+    "prix déclaré par fournisseur, marque et, pour le mobile, réseau (3G, LTE, 5G). "
+    "average_price est la moyenne simple de ces lignes pour une année, un forfait et une RMR : "
+    "un fournisseur qui déclare plusieurs marques ou réseaux compte donc plusieurs fois; "
+    "lowest_per_provider_average garde d'abord le prix le plus bas de chaque fournisseur, "
+    "comme le CRTC pour ses moyennes publiées du « prix le plus bas » (en 2024, la moyenne "
+    "urbaine de l'Alberta, 37,00 $ pour 50 Go, égale la lowest_per_provider_average "
+    "d'Edmonton). Les lignes sans prix sont exclues."
+)
+
+
+def place_key(value: str) -> str:
+    """'Montreal', 'MONTRÉAL' and 'montréal' are one place; other punctuation is a space."""
+    decomposed = unicodedata.normalize("NFKD", value)
+    plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch)).casefold()
+    # "St. John's", "St Johns" and "Saint John's" are one name.
+    plain = " ".join(re.sub(r"[^a-z0-9]+", " ", re.sub(r"['’.]", "", plain)).split())
+    plain = re.sub(r"^saint ", "st ", plain)
+    for prefix in ("ville de ", "city of ", "region de ", "greater "):
+        plain = plain.removeprefix(prefix)
+    return plain.removesuffix(" city").removesuffix(" cma").removesuffix(" rmr")
+
+
+def match_cmas(query: str, cmas: list[str]) -> list[str]:
+    """The CMAs a name matches: the whole name or one side of a hyphen.
+
+    'Ottawa' and 'Gatineau' find 'Ottawa-Gatineau', 'Niagara' finds
+    'St Catharines - Niagara', 'St Johns' finds "St. John's".
+    """
+    wanted = place_key(query)
+    if not wanted:
+        return []
+    exact = [c for c in cmas if place_key(c) == wanted]
+    if exact:
+        return exact
+    return [c for c in cmas if wanted in {place_key(p) for p in re.split(r"-", c)}]
+
+
+def _years_span(years: list[int]) -> str:
+    if not years:
+        return ""
+    if years == list(range(years[0], years[-1] + 1)):
+        return f"{years[0]}-{years[-1]}" if len(years) > 1 else str(years[0])
+    return ", ".join(str(y) for y in years)
+
+
+def _cma_listing(coverage: dict[str, tuple[str, list[int]]]) -> str:
+    return "; ".join(
+        f"{cma} ({province} {_years_span(years)})"
+        for cma, (province, years) in sorted(coverage.items(), key=lambda kv: place_key(kv[0]))
+    )
+
+
+async def get_city_plan_prices(
+    service: str = "mobile",
+    *,
+    city: str | list[str] | None = None,
+    plan: str | None = None,
+    technology: str = "all",
+    from_year: int | None = None,
+    to_year: int | None = None,
+    include_rows: bool = False,
+    limit: int = constants.ROWS_DEFAULT_LIMIT,
+    lang: str = "en",
+) -> CityPlanPrices:
+    """Year-end mobile or Internet plan prices by census metropolitan area, averaged here."""
+    lang = normalize_lang(lang)
+    _check_limit(limit, lang)
+    _check_years(from_year, to_year, lang)
+    if service not in constants.PRICE_SHEETS:
+        _raise(
+            InvalidInput,
+            "telecom_prices: service must be 'mobile' or 'internet'.",
+            "telecom_prices : service doit être 'mobile' ou 'internet'.",
+            lang,
+        )
+    tech = technology.strip().upper() if technology.strip().lower() != "all" else "all"
+    if service == "mobile" and tech not in ("all", "3G", "LTE", "5G"):
+        _raise(
+            InvalidInput,
+            "telecom_prices: technology must be 'all', '3G', 'LTE' or '5G'.",
+            "telecom_prices : technology doit être 'all', '3G', 'LTE' ou '5G'.",
+            lang,
+        )
+    sheets, _, resource, cached = await _workbook(
+        constants.PRICES, lang, lambda n: n in (_REPORTED_SHEET, "Version"), "reported"
+    )
+    if _REPORTED_SHEET not in sheets:
+        _raise(
+            UpstreamError,
+            f"telecom_prices: the price workbook has no {_REPORTED_SHEET!r} sheet.",
+            f"telecom_prices : le classeur des prix n'a pas de feuille {_REPORTED_SHEET!r}.",
+            lang,
+        )
+    try:
+        reported = await run_parse(parsing.parse_reported_prices, sheets[_REPORTED_SHEET])
+    except ValueError as exc:
+        _raise(
+            UpstreamError,
+            f"telecom_prices: {exc}.",
+            f"telecom_prices : la feuille Prix-Prices n'a pas la forme attendue ({exc}).",
+            lang,
+        )
+    version, released = parsing.parse_version(sheets.get("Version", []))
+    rows = [r for r in reported if r.service == service and r.region == "urban"]
+    years_by_cma: dict[str, set[int]] = {}
+    province_of: dict[str, str] = {}
+    for r in rows:
+        years_by_cma.setdefault(r.place, set()).add(r.year)
+        province_of[r.place] = r.province
+    coverage = {c: (province_of[c], sorted(y)) for c, y in years_by_cma.items()}
+    names = sorted(coverage, key=place_key)
+
+    queries = _split(city)
+    if not queries or any(q.lower() in ("all", "tout", "toutes") for q in queries):
+        wanted = names
+    else:
+        wanted = []
+        rural = {place_key(r.place): r.place for r in reported if r.region == "rural"}
+        for query in queries:
+            found = match_cmas(query, names)
+            if not found and place_key(query) in rural:
+                _raise(
+                    NotFound,
+                    f"telecom_prices: {query!r} is one of the CRTC's rural communities; this "
+                    "tool covers the urban census metropolitan areas. For rural prices use "
+                    "telecom_get_plan_prices with region='rural'. CMAs: "
+                    f"{_cma_listing(coverage)}.",
+                    f"telecom_prices : {query!r} est une collectivité rurale du CRTC; cet outil "
+                    "couvre les régions métropolitaines de recensement. Pour les prix ruraux, "
+                    "utilisez telecom_get_plan_prices avec region='rural'. RMR : "
+                    f"{_cma_listing(coverage)}.",
+                    lang,
+                )
+            if not found:
+                _raise(
+                    NotFound,
+                    f"telecom_prices: no census metropolitan area {query!r} in the CRTC price "
+                    f"survey; CMAs and years: {_cma_listing(coverage)}.",
+                    f"telecom_prices : aucune région métropolitaine de recensement {query!r} "
+                    f"dans l'enquête du CRTC; RMR et années : {_cma_listing(coverage)}.",
+                    lang,
+                )
+            wanted.extend(c for c in found if c not in wanted)
+
+    plans_en = sorted({r.plan_en for r in rows}, key=_plan_order)
+    wanted_plan = plan_key(plan) if plan else None
+    if wanted_plan and wanted_plan not in {plan_key(p) for p in plans_en}:
+        _raise(
+            NotFound,
+            f"telecom_prices: no {service} plan {plan!r}; plans are {plans_en}.",
+            f"telecom_prices : aucun forfait {service} {plan!r} ; les forfaits sont {plans_en}.",
+            lang,
+        )
+    in_scope = [
+        r
+        for r in rows
+        if (wanted_plan is None or plan_key(r.plan_en) == wanted_plan)
+        and (service != "mobile" or tech == "all" or r.technology == tech)
+        and (from_year is None or r.year >= from_year)
+        and (to_year is None or r.year <= to_year)
+    ]
+    wanted_set = set(wanted)
+    matched = [r for r in in_scope if r.place in wanted_set]
+
+    groups: dict[tuple[int, str, str], list[parsing.ReportedPrice]] = {}
+    for r in matched:
+        if r.value is not None:
+            groups.setdefault((r.year, r.plan_en, r.place), []).append(r)
+    averages: list[CityPlanPriceAverage] = []
+    for (year, plan_en, place), group in groups.items():
+        prices = [r.value for r in group if r.value is not None]
+        lowest: dict[str, float] = {}
+        for r in group:
+            if r.provider and r.value is not None:
+                lowest[r.provider] = min(lowest.get(r.provider, r.value), r.value)
+        # 2016 rows name no provider: no per-provider figure rather than a wrong one.
+        named = all(r.provider for r in group)
+        averages.append(
+            CityPlanPriceAverage(
+                year=year,
+                cma=place,
+                province=province_of[place],
+                plan=_plan_fr_label(plan_en) if lang == "fr" else plan_en,
+                technology=(tech if service == "mobile" else None),
+                average_price=round(sum(prices) / len(prices), 2),
+                reported_prices=len(prices),
+                providers=len(lowest) if named else None,
+                lowest_per_provider_average=(
+                    round(sum(lowest.values()) / len(lowest), 2) if named and lowest else None
+                ),
+                min_price=min(prices),
+                max_price=max(prices),
+            )
+        )
+    averages.sort(key=lambda a: (_plan_order(a.plan), place_key(a.cma), a.year))
+    returned = averages[:limit]
+    matched.sort(
+        key=lambda r: (_plan_order(r.plan_en), place_key(r.place), r.year, r.provider or "")
+    )
+    provider_rows = (
+        [
+            CityPlanPriceRow(
+                year=r.year,
+                cma=r.place,
+                province=r.province,
+                plan=_plan_fr_label(r.plan_en) if lang == "fr" else r.plan_en,
+                provider=r.provider,
+                brand=r.brand,
+                technology=r.technology,
+                price=r.value,
+                as_published=r.as_published,
+            )
+            for r in matched[:limit]
+        ]
+        if include_rows
+        else []
+    )
+
+    notes = [_text(_CITY_BASIS, _CITY_BASIS_FR, lang)]
+    scope_years = sorted({r.year for r in in_scope})
+    for cma in wanted:
+        missing = [y for y in scope_years if y not in years_by_cma[cma]]
+        if not missing:
+            continue
+        province = province_of[cma]
+        sampled = sorted(
+            {r.place for r in in_scope if r.province == province and r.year in missing},
+            key=place_key,
+        )
+        span = _years_span(missing)
+        why_en = why_fr = ""
+        if missing[0] >= 2024:
+            why_en, why_fr = (
+                "; from 2024 the CRTC surveys one CMA per province or territory",
+                "; depuis 2024, le CRTC sonde une RMR par province ou territoire",
+            )
+        if sampled:
+            why_en += f" (in {province}: {', '.join(sampled)})"
+            why_fr += f" (en {province} : {', '.join(sampled)})"
+        notes.append(
+            _text(
+                f"{cma}: no reported prices for {span}{why_en}. For {province} use the "
+                f"CRTC's urban average: telecom_get_plan_prices(province='{province}', "
+                "region='urban').",
+                f"{cma} : aucun prix déclaré pour {span}{why_fr}. Pour {province}, utilisez "
+                f"la moyenne urbaine du CRTC : telecom_get_plan_prices(province='{province}', "
+                "region='urban').",
+                lang,
+            )
+        )
+    if any(a.year == 2016 for a in returned):
+        notes.append(
+            _text(
+                "2016 rows name no provider, so providers and lowest_per_provider_average are "
+                "empty for 2016.",
+                "Les lignes de 2016 ne nomment pas le fournisseur : providers et "
+                "lowest_per_provider_average sont vides pour 2016.",
+                lang,
+            )
+        )
+    unpriced = sum(1 for r in matched if r.value is None)
+    if unpriced:
+        notes.append(
+            _text(
+                f"{unpriced} matching rows have no price and are left out of the averages.",
+                f"{unpriced} lignes retenues n'ont pas de prix et sont exclues des moyennes.",
+                lang,
+            )
+        )
+
+    years = sorted({r.year for r in rows})
+    cut = len(averages) - len(returned)
+    rows_cut = include_rows and len(matched) > len(provider_rows)
+    return CityPlanPrices(
+        service=service,  # type: ignore[arg-type]
+        cmas_requested=wanted,
+        dataset=_text(constants.PRICES.title_en, constants.PRICES.title_fr, lang),
+        dataset_url=_dataset_url(constants.PRICES, lang),
+        version=version,
+        released=released,
+        average_basis=_text(_CITY_BASIS, _CITY_BASIS_FR, lang),
+        averages=returned,
+        returned_count=len(returned),
+        total_matched=len(averages),
+        rows=provider_rows,
+        rows_returned=len(provider_rows),
+        rows_matched=len(matched),
+        plans=[(_plan_fr_label(p) if lang == "fr" else p) for p in plans_en],
+        years=years,
+        cmas=[CmaCoverage(cma=c, province=coverage[c][0], years=coverage[c][1]) for c in names],
+        notes=notes,
+        method=_text(_CITY_METHOD, _CITY_METHOD_FR, lang),
+        provenance=_provenance(
+            str(resource.get("url") or ""),
+            cached,
+            "CityPlanPrices",
+            lang,
+            as_of=_as_of(released, resource),
+            freshness=_text(
+                "yearly: prices at December 31, published the following spring",
+                "annuelle : prix au 31 décembre, publiés le printemps suivant",
+                lang,
+            ),
+            coverage=_text(
+                f"{len(rows):,} urban {service} prices in {len(names)} CMAs, {years[0]}-{years[-1]}"
+                if years
+                else "no rows",
+                f"{len(rows):,} prix urbains ({service}) dans {len(names)} RMR, "
+                f"{years[0]}-{years[-1]}"
+                if years
+                else "aucune ligne",
+                lang,
+            ),
+            limits=join_limits(
+                _text(
+                    f"first {len(returned)} of {len(averages)} averages; narrow the filters "
+                    "or raise limit",
+                    f"{len(returned)} premières moyennes sur {len(averages)} ; précisez les "
+                    "filtres ou augmentez limit",
+                    lang,
+                )
+                if cut
+                else None,
+                _text(
+                    f"first {len(provider_rows)} of {len(matched)} provider rows",
+                    f"{len(provider_rows)} premières lignes de fournisseurs sur {len(matched)}",
+                    lang,
+                )
+                if rows_cut
+                else None,
+                _text(
+                    "City averages are computed by MapleStats from advertised list prices, "
+                    "not published by the CRTC; no promotions, bundles or taxes.",
+                    "Les moyennes par ville sont calculées par MapleStats à partir des prix "
+                    "annoncés, et non publiées par le CRTC; sans promotions, offres groupées "
+                    "ni taxes.",
+                    lang,
+                ),
+            ),
+        ),
+    )
 
 
 # Sector tables -----------------------------------------------------------------

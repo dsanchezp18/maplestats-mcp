@@ -67,6 +67,43 @@ _INTERNET_PRICES = [
     (2025, "National", "QC", "1,500/15 Mbps", "1,500/15 Mbps", 132.65),
 ]
 
+# Trimmed from the real "Prix-Prices" sheet (2026-05-14): one row per provider,
+# brand and network; "50GB Plan" in some years and "50GB" in others; blank
+# entity in 2016; "Urban" alone in 2025; rural communities in the same
+# column as the CMAs; TV rows; one row with no price.
+_REPORTED = [
+    (
+        "Année / Year",
+        "Entité / Entity",
+        "Région / Region",
+        "Région métropolitaine de recensement / Census metropolitan area",
+        "Province ou territoire / Province or territory",
+        "Forfait",
+        "Plan",
+        "Prix mensuel déclaré ($) / Reported monthly price ($)",
+        "Marque / Brand",
+        "Vitesse / Speed",
+        "Chaînes / Channels",
+    ),
+    (2024, "Bell Mobility Inc.", "Urbain / Urban", "Toronto", "ON", "50 Go", "50GB", 34, "Virgin Mobile", "LTE", None),
+    (2024, "Bell Mobility Inc.", "Urbain / Urban", "Toronto", "ON", "50 Go", "50GB", 34, "Lucky Mobile", "LTE", None),
+    (2024, "Freedom Mobile Inc.", "Urbain / Urban", "Toronto", "ON", "50 Go", "50GB", 45, "Freedom Mobile", "5G", None),
+    (2024, "TELUS Communications Inc.", "Urbain / Urban", "Toronto", "ON", "50 Go", "50GB", 39, "TELUS", "5G", None),
+    (2024, "TELUS Communications Inc.", "Urbain / Urban", "Toronto", "ON", "50 Go", "50GB", 35, "Public Mobile", "LTE", None),
+    (2024, "Bell Mobility Inc.", "Urbain / Urban", "Edmonton", "AB", "50 Go", "50GB", 34, "Virgin Mobile", "LTE", None),
+    (2024, "TELUS Communications Inc.", "Urbain / Urban", "Edmonton", "AB", "50 Go", "50GB", 39, "Koodo", "LTE", None),
+    (2025, "Bell Mobility Inc.", "Urban", "Edmonton", "AB", "50 Go", "50GB Plan", 39, None, "LTE", None),
+    (2025, "Bell Mobility Inc.", "Urban", "Edmonton", "AB", "50 Go", "50GB Plan", None, None, "5G", None),
+    (2023, "Rogers Communications Canada Inc.", "Urbain / Urban", "Calgary", "AB", "50 Go", "50GB Plan", 65, "Rogers", "5G", None),
+    (2023, "Rogers Communications Canada Inc.", "Urbain / Urban", "Calgary", "AB", "50 Go", "50GB Plan", 34, "Fido", "LTE", None),
+    (2023, "Bell Mobility Inc.", "Urbain / Urban", "Montréal", "QC", "5 Go", "5GB Plan", 40, "Bell", "LTE", None),
+    (2016, None, "Urbain / Urban", "Ottawa-Gatineau", "ON", "50/10 Mbps", "50/10 Mbps", 70, None, None, None),
+    (2016, None, "Urbain / Urban", "Ottawa-Gatineau", "ON", "50/10 Mbps", "50/10 Mbps", 75.5, None, None, None),
+    (2022, "Rogers Communications Canada Inc.", "Urbain / Urban", "Ottawa-Gatineau", "ON", "50/10 Mbps", "50/10 Mbps", 80, "Rogers", None, None),
+    (2025, "4141903 Canada Inc. (Storm Internet Services)", "Rural", "Ingleside", "ON", "50/10 Mbps", "50/10 Mbps", 68.95, "Storm Internet Services", None, None),
+    (2020, "Bell Canada", "Urbain / Urban", "Calgary", "AB", "SRD", "DTH", None, None, None, 27),
+]  # fmt: skip
+
 _CONTENTS = [
     ("Table of Contents by infographics, figures, tables and supplementary tables",),
     ("Figures", "Tab Name", "Title"),
@@ -190,7 +227,7 @@ def _prices(httpx_mock) -> None:
     body = _xlsx(
         {
             "Version": _VERSION,
-            "Prix-Prices": [("Année / Year",)],
+            "Prix-Prices": _REPORTED,
             "Moyennes-Averages Internet": _INTERNET_PRICES,
             "Moyennes-Averages Mobile": _MOBILE_PRICES,
         }
@@ -220,6 +257,29 @@ def test_prices_unify_labels():
     assert rows[0].plan_en == "5 GB" and rows[0].technology == "lowest"
     missing = next(r for r in rows if r.geography == "NT")
     assert missing.value is None and missing.as_published == "--"
+
+
+def test_reported_prices_sheet():
+    rows = parsing.parse_reported_prices(_REPORTED)
+    assert {r.service for r in rows} == {"mobile", "internet", "tv"}
+    assert {r.plan_en for r in rows if r.service == "mobile"} == {"50 GB", "5 GB"}
+    assert {r.region for r in rows} == {"urban", "rural"}
+    old = next(r for r in rows if r.year == 2016)
+    assert old.provider is None and old.technology is None and old.value == 70
+    assert next(r for r in rows if r.value is None and r.service == "mobile").technology == "5G"
+    with pytest.raises(ValueError):
+        parsing.parse_reported_prices([("Année / Year", "Plan")])
+
+
+def test_cma_names_match_without_accents_case_or_hyphen_sides():
+    cmas = ["Montréal", "Ottawa-Gatineau", "Québec", "St. John's", "St Catharines - Niagara"]
+    assert client.match_cmas("MONTREAL", cmas) == ["Montréal"]
+    assert client.match_cmas("quebec city", cmas) == ["Québec"]
+    assert client.match_cmas("Ottawa", cmas) == ["Ottawa-Gatineau"]
+    assert client.match_cmas("Gatineau", cmas) == ["Ottawa-Gatineau"]
+    assert client.match_cmas("Saint Johns", cmas) == ["St. John's"]
+    assert client.match_cmas("niagara", cmas) == ["St Catharines - Niagara"]
+    assert client.match_cmas("Toronto", cmas) == []
 
 
 def test_version_sheet():
@@ -354,6 +414,96 @@ async def test_limit_is_reported(httpx_mock):
     result = await client.get_plan_prices(region="all", technology="all", province="all", limit=2)
     assert result.returned_count == 2 and result.total_matched > 2
     assert "first 2 of" in (result.provenance.limits or "")
+
+
+async def test_plan_prices_for_several_provinces(httpx_mock):
+    _prices(httpx_mock)
+    listed = await client.get_plan_prices("mobile", plan="5", province=["Canada", "Territories"])
+    assert {(p.geography, p.year) for p in listed.points} == {
+        ("Canada", 2020),
+        ("Canada", 2025),
+        ("Territories", 2020),
+    }
+    text = await client.get_plan_prices("mobile", plan="5", province="canada, NT", technology="all")
+    assert {p.geography for p in text.points} == {"Canada", "NT"}
+    every = await client.get_plan_prices("mobile", plan="5", province=["NT", "all"])
+    assert {p.geography for p in every.points} == {"Canada", "Territories"}
+    with pytest.raises(InvalidInput, match="Atlantis"):
+        await client.get_plan_prices(province="ON, Atlantis")
+    with pytest.raises(InvalidInput):
+        await client.get_plan_prices(province=" , ")
+
+
+async def test_city_prices_are_computed_means_with_counts(httpx_mock):
+    _prices(httpx_mock)
+    result = await client.get_city_plan_prices("mobile", city="toronto, EDMONTON", plan="50 GB")
+    assert result.cmas_requested == ["Toronto", "Edmonton"]
+    by = {(a.cma, a.year): a for a in result.averages}
+    toronto = by[("Toronto", 2024)]
+    # Mean of the five rows; the per-provider mean keeps Bell 34, Freedom 45, TELUS 35.
+    assert toronto.average_price == 37.4 and toronto.reported_prices == 5
+    assert toronto.providers == 3 and toronto.lowest_per_provider_average == 38.0
+    assert (toronto.min_price, toronto.max_price, toronto.technology) == (34, 45, "all")
+    # 2025 has one priced row and one without a price.
+    assert by[("Edmonton", 2025)].reported_prices == 1
+    assert any("1 matching rows have no price" in n for n in result.notes)
+    assert result.notes[0].startswith("Computed by MapleStats: mean of the reported monthly")
+    assert "Computed by MapleStats" in result.average_basis
+    assert [c.cma for c in result.cmas] == ["Calgary", "Edmonton", "Montréal", "Toronto"]
+    assert result.provenance.schema_name == "telecom_prices.CityPlanPrices"
+    assert "not published by the CRTC" in (result.provenance.limits or "")
+    lte = await client.get_city_plan_prices("mobile", city=["Toronto"], technology="LTE")
+    assert [(a.average_price, a.technology) for a in lte.averages] == [(34.33, "LTE")]
+
+
+async def test_city_without_rows_for_a_year_points_to_the_provincial_average(httpx_mock):
+    _prices(httpx_mock)
+    result = await client.get_city_plan_prices("mobile", city="Calgary", plan="50GB")
+    assert [a.year for a in result.averages] == [2023]
+    missing = [n for n in result.notes if n.startswith("Calgary:")]
+    assert len(missing) == 1
+    assert "2024-2025" in missing[0] and "(in AB: Edmonton)" in missing[0]
+    assert "telecom_get_plan_prices(province='AB', region='urban')" in missing[0]
+    french = await client.get_city_plan_prices("mobile", city="Calgary", lang="fr")
+    assert any(n.startswith("Calgary\u00a0: aucun prix déclaré") for n in french.notes)
+    assert french.notes[0].startswith("Calculé par MapleStats")
+
+
+async def test_city_internet_2016_has_no_provider_counts(httpx_mock):
+    _prices(httpx_mock)
+    result = await client.get_city_plan_prices(
+        "internet", city="Ottawa", include_rows=True, lang="fr"
+    )
+    first = result.averages[0]
+    assert (first.year, first.average_price, first.providers) == (2016, 72.75, None)
+    assert first.lowest_per_provider_average is None and first.technology is None
+    assert result.averages[1].providers == 1
+    assert result.rows_returned == 3 and result.rows[0].provider is None
+    assert any("2016" in n for n in result.notes)
+
+
+async def test_city_rows_and_averages_are_limited(httpx_mock):
+    _prices(httpx_mock)
+    result = await client.get_city_plan_prices("mobile", include_rows=True, limit=2)
+    assert result.returned_count == 2 and result.total_matched > 2
+    assert result.rows_returned == 2 and result.rows_matched > 2
+    assert "first 2 of" in (result.provenance.limits or "")
+    plain = await client.get_city_plan_prices("mobile", city="all")
+    assert plain.rows == [] and plain.rows_matched > 0
+
+
+async def test_city_errors(httpx_mock):
+    with pytest.raises(InvalidInput):
+        await client.get_city_plan_prices(technology="4G")
+    with pytest.raises(InvalidInput):
+        await client.get_city_plan_prices(limit=0)
+    _prices(httpx_mock)
+    with pytest.raises(NotFound, match=r"Calgary \(AB 2023\)"):
+        await client.get_city_plan_prices(city="Atlantis")
+    with pytest.raises(NotFound, match="rural communities"):
+        await client.get_city_plan_prices("internet", city="Ingleside")
+    with pytest.raises(NotFound, match="plans are"):
+        await client.get_city_plan_prices(city="Toronto", plan="7 GB")
 
 
 def _sector(httpx_mock) -> None:

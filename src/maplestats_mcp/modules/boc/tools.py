@@ -144,6 +144,7 @@ async def boc_get_observations(
     frequency: Frequency | None = None,
     aggregation: Aggregation = "average",
     index_base: str | None = None,
+    window: int | None = None,
     lang: Lang = "en",
 ) -> ObservationsResult:
     """Get observations for one or more Bank of Canada Valet series,
@@ -169,7 +170,8 @@ async def boc_get_observations(
     sends as text that is not a number is null in `values`, with the
     text in the row's `non_numeric`.
     `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
-    annualized_pct_change, index) and `frequency` with `aggregation`
+    annualized_pct_change, index, moving_average: trailing average over
+    `window` periods) and `frequency` with `aggregation`
     compute from the published levels (a daily series needs `frequency`
     for a year-over-year change); a series in percent gets
     percentage-point changes. `transformed` holds the computed values
@@ -177,12 +179,13 @@ async def boc_get_observations(
     Keywords: bank of canada, boc, valet, observations, data, exchange
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, time series, history, recent, date range,
-    year-over-year, percent change, monthly average, annual average.
+    year-over-year, percent change, monthly average, annual average,
+    moving average, rolling average.
     Mots-clés : Banque du Canada, valet, observations, données, taux de
     change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, série chronologique,
     historique, plage de dates, variation annuelle, variation en
-    pourcentage, moyenne mensuelle, moyenne annuelle.
+    pourcentage, moyenne mensuelle, moyenne annuelle, moyenne mobile.
     """
     return await client.get_observations(
         series_names,
@@ -193,7 +196,7 @@ async def boc_get_observations(
         recent_months=recent_months,
         recent_years=recent_years,
         lang=lang,
-        request=TransformRequest(transform, frequency, aggregation, index_base),
+        request=TransformRequest(transform, frequency, aggregation, index_base, window),
     )
 
 

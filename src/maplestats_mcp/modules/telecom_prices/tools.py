@@ -8,6 +8,7 @@ from fastmcp.tools import tool
 
 from maplestats_mcp.modules.telecom_prices import client
 from maplestats_mcp.modules.telecom_prices.schemas import (
+    CityPlanPrices,
     MarketTable,
     MarketTableList,
     PlanPrices,
@@ -21,7 +22,7 @@ Lang = Literal["en", "fr"]
 async def telecom_get_plan_prices(
     service: Literal["mobile", "internet"] = "mobile",
     plan: str | None = None,
-    province: str = "Canada",
+    province: str | list[str] = "Canada",
     region: Literal["national", "urban", "rural", "all"] = "national",
     technology: Literal["lowest", "3G", "LTE", "5G", "all"] = "lowest",
     from_year: int | None = None,
@@ -38,7 +39,10 @@ async def telecom_get_plan_prices(
     year from 2016 (CRTC year-end price survey, part of the Communications
     Market Reports). `plan` is a data allowance ('5 GB', '5', 'talk') or a
     speed ('50/10 Mbps'); omit it for every plan. `province` is a code (ON,
-    QC...), 'Canada', 'Provinces', 'Territories', 'North', 'South' or 'all'.
+    QC...), 'Canada', 'Provinces', 'Territories', 'North', 'South' or 'all',
+    or several at once to compare them (['AB', 'ON'] or 'AB, ON, QC').
+    These are the CRTC's own published averages; for a city (Edmonton,
+    Toronto, Montréal...) use telecom_get_city_plan_prices.
     For mobile, `technology='lowest'` (the default) averages each provider's
     lowest price whatever the network; '3G', 'LTE' or '5G' keep one network.
     Prices are list prices before taxes, without promotions. For the
@@ -47,11 +51,12 @@ async def telecom_get_plan_prices(
     wds_get_data_from_vectors.
     Keywords: mobile plan prices, cell phone plan cost, wireless prices,
     data plan price by GB, Internet plan prices, broadband price, telecom
-    affordability, CRTC price survey, rural vs urban prices.
+    affordability, CRTC price survey, rural vs urban prices, compare
+    provinces.
     Mots-clés : prix des forfaits mobiles, coût d'un forfait cellulaire,
     prix du sans-fil, forfait de données, prix des forfaits Internet, prix de
     la large bande, abordabilité des télécommunications, CRTC, prix en
-    milieu rural.
+    milieu rural, comparer les provinces.
     """
     return await client.get_plan_prices(
         service,
@@ -61,6 +66,54 @@ async def telecom_get_plan_prices(
         technology=technology,
         from_year=from_year,
         to_year=to_year,
+        limit=limit,
+        lang=lang,
+    )
+
+
+@tool
+async def telecom_get_city_plan_prices(
+    city: str | list[str] | None = None,
+    service: Literal["mobile", "internet"] = "mobile",
+    plan: str | None = None,
+    technology: Literal["all", "3G", "LTE", "5G"] = "all",
+    from_year: int | None = None,
+    to_year: int | None = None,
+    include_rows: bool = False,
+    limit: int = 500,
+    lang: Lang = "en",
+) -> CityPlanPrices:
+    """Mobile and Internet plan prices by city (census metropolitan area), CRTC survey, 2016 on.
+
+    Use for: comparing what a 50 GB, 5 GB or talk-only cell phone plan, or a
+    50/10 Mbps Internet plan, costs in each of the CRTC's 24 census
+    metropolitan areas (CMAs), year by year from 2016.
+    Averages are computed by MapleStats from every provider's reported
+    monthly price in the CRTC's Prix-Prices sheet (with the number of prices
+    and providers behind each, and each provider's-lowest average, the
+    CRTC's own method); the CRTC publishes provincial and national averages
+    only (telecom_get_plan_prices). `city` is one CMA or several (a list or
+    'Edmonton, Toronto'), accents and case ignored ('Ottawa' finds
+    Ottawa-Gatineau); omit it or pass 'all' for every CMA. From 2024
+    the CRTC surveys 13 CMAs, one per province or territory (no Calgary,
+    Vancouver, Saskatoon, Ottawa-Gatineau or Montréal): the notes say so and
+    point to the provincial urban average. `include_rows=True` adds the
+    provider and brand rows. Prices are list prices before taxes.
+    Keywords: city, CMA, census metropolitan area, cell phone plan price by
+    city, compare cities, mobile plan prices by provider, Internet plan
+    price by city, telecom.
+    Mots-clés : ville, RMR, région métropolitaine de recensement, prix des
+    forfaits cellulaires par ville, comparer les villes, prix par
+    fournisseur, prix d'Internet par ville, télécommunications.
+    """
+    return await client.get_city_plan_prices(
+        service,
+        city=city,
+        plan=plan,
+        technology=technology,
+        from_year=from_year,
+        to_year=to_year,
+        include_rows=include_rows,
         limit=limit,
         lang=lang,
     )

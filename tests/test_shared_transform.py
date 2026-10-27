@@ -13,6 +13,7 @@ import pytest
 
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.transform import (
+    TransformRequest,
     aggregate,
     extra_months,
     infer_periods_per_year,
@@ -246,3 +247,159 @@ def test_periods_units_and_frequency():
     assert infer_periods_per_year([date(2026, m, 1) for m in range(1, 7)]) == 12
     assert infer_periods_per_year([date(2025, 1, 1), date(2025, 4, 1), date(2025, 7, 1)]) == 4
     assert infer_periods_per_year([date(2026, 9, d) for d in (1, 2, 3)]) is None
+
+
+# Moving averages ---------------------------------------------------------------------
+
+
+def test_monthly_moving_average_by_hand_with_a_gap():
+    result = transform_series(MONTHLY, source_ppy=12, transform="moving_average", window=3)
+    values = _values(result)
+    # Each window needs its three months by date: 2024-02 has no row and
+    # 2024-08 no value, so every window reaching either is None (not 0, not
+    # a mean of the two months that are there).
+    assert values["2024-01"] is None  # 2023-11 and 2023-12 were not fetched
+    assert values["2024-03"] is None and values["2024-04"] is None
+    assert values["2024-05"] == pytest.approx((102 + 103 + 104) / 3)  # 103
+    assert values["2024-07"] == pytest.approx(105.0)
+    assert values["2024-08"] is None and values["2024-09"] is None and values["2024-10"] is None
+    assert values["2024-11"] == pytest.approx(109.0)  # (108 + 109 + 110) / 3
+    assert values["2025-01"] == pytest.approx((110 + 111 + 110) / 3)  # 110.333...
+    assert values["2025-03"] == pytest.approx((110 + 111 + 112.2) / 3)  # 111.0666...
+    assert result.transform == "moving_average" and result.window == 3
+    assert result.formula == (
+        "Computed by MapleStats: moving_average_3 = mean(x_{t-2}, x_{t-1}, x_t), t in months "
+        "(trailing, periods matched by date; null if any of them is missing)"
+    )
+    assert result.unit == "as published"
+    assert any("Trailing moving average" in note for note in result.notes)
+
+
+def test_quarterly_moving_average_by_hand():
+    quarters = [
+        (date(2023, 1, 1), 10.0),
+        (date(2023, 4, 1), 12.0),
+        (date(2023, 7, 1), 14.0),
+        (date(2023, 10, 1), None),
+        (date(2024, 1, 1), 20.0),
+        (date(2024, 4, 1), 22.0),
+        (date(2024, 7, 1), 24.0),
+        (date(2024, 10, 1), 26.0),
+    ]
+    values = _values(transform_series(quarters, source_ppy=4, transform="moving_average", window=2))
+    assert values == {
+        "2023-Q1": None,
+        "2023-Q2": pytest.approx(11.0),
+        "2023-Q3": pytest.approx(13.0),
+        "2023-Q4": None,
+        "2024-Q1": None,
+        "2024-Q2": pytest.approx(21.0),
+        "2024-Q3": pytest.approx(23.0),
+        "2024-Q4": pytest.approx(25.0),
+    }
+    four = transform_series(quarters, source_ppy=4, transform="moving_average", window=4)
+    # Only 2024-Q4's four quarters are all there: (20 + 22 + 24 + 26) / 4.
+    assert [p.value for p in four.points if p.value is not None] == [pytest.approx(23.0)]
+
+
+# Annual unemployment rates (percent), 2018-2024.
+ANNUAL_RATE = [
+    (date(2018, 1, 1), 5.8),
+    (date(2019, 1, 1), 5.7),
+    (date(2020, 1, 1), 9.7),
+    (date(2021, 1, 1), 7.5),
+    (date(2022, 1, 1), 5.3),
+    (date(2023, 1, 1), 5.4),
+    (date(2024, 1, 1), 6.4),
+]
+
+
+def test_annual_moving_average_of_a_rate_stays_a_rate():
+    result = transform_series(
+        ANNUAL_RATE,
+        source_ppy=1,
+        transform="moving_average",
+        window=3,
+        rate_unit=True,
+        units="Percent",
+        window_start=date(2020, 1, 1),
+    )
+    assert _values(result) == {
+        "2020": pytest.approx((5.8 + 5.7 + 9.7) / 3),  # 7.0667
+        "2021": pytest.approx((5.7 + 9.7 + 7.5) / 3),  # 7.6333
+        "2022": pytest.approx((9.7 + 7.5 + 5.3) / 3),  # 7.5
+        "2023": pytest.approx((7.5 + 5.3 + 5.4) / 3),  # 6.0667
+        "2024": pytest.approx((5.3 + 5.4 + 6.4) / 3),  # 5.7
+    }
+    # No percentage-point conversion: the average of a rate is a rate.
+    assert result.transform == "moving_average" and result.unit == "Percent"
+    assert "moving_average_3 = mean(x_{t-2}, x_{t-1}, x_t), t in years" in result.formula
+    assert any("no percentage-point conversion" in note for note in result.notes)
+
+
+def test_annual_gap_nulls_every_window_that_spans_it():
+    gappy = [point for point in ANNUAL_RATE if point[0].year != 2021]
+    values = _values(transform_series(gappy, source_ppy=1, transform="moving_average", window=3))
+    assert values["2020"] == pytest.approx((5.8 + 5.7 + 9.7) / 3)
+    assert values["2022"] is None and values["2023"] is None
+    assert values["2024"] == pytest.approx((5.3 + 5.4 + 6.4) / 3)
+
+
+def test_moving_average_after_annual_aggregation():
+    monthly = (
+        [(date(2022, m, 1), 10.0) for m in range(1, 13)]
+        + [(date(2023, m, 1), 20.0 + (m % 2)) for m in range(1, 13)]  # average 20.5
+        + [(date(2024, m, 1), 30.0) for m in range(1, 13)]
+        + [(date(2025, m, 1), 40.0) for m in range(1, 12)]  # December not yet published
+    )
+    result = transform_series(
+        monthly, source_ppy=12, transform="moving_average", window=2, frequency="annual"
+    )
+    assert _values(result) == {
+        "2022": None,  # 2021 not fetched
+        "2023": pytest.approx((10 + 20.5) / 2),
+        "2024": pytest.approx((20.5 + 30) / 2),
+        "2025": None,  # 2025 is incomplete, so no annual average to put in a window
+    }
+    assert "; x = average of the monthly values in each annual period" in result.formula
+
+
+def test_long_window_formula_and_french():
+    result = transform_series(
+        MONTHLY, source_ppy=12, transform="moving_average", window=12, lang="fr"
+    )
+    assert result.formula.replace("\xa0", " ").startswith(
+        "Calculé par MapleStats : moving_average_12 = mean(x_{t-11}, ..., x_{t-1}, x_t)"
+    )
+    assert all(p.value is None for p in result.points)  # no 12 consecutive months
+
+
+@pytest.mark.parametrize(
+    ("transform", "window", "match"),
+    [
+        ("moving_average", None, "needs window"),
+        ("moving_average", 1, "from 2 to 120"),
+        ("moving_average", 121, "from 2 to 120"),
+        ("yoy_pct_change", 3, "only applies to transform='moving_average'"),
+    ],
+)
+def test_window_is_checked(transform, window, match):
+    with pytest.raises(InvalidInput, match=match):
+        transform_series(MONTHLY, source_ppy=12, transform=transform, window=window)
+    with pytest.raises(InvalidInput, match=match):
+        TransformRequest(transform, window=window).check()
+
+
+def test_daily_moving_average_needs_a_frequency():
+    daily = [(date(2026, 9, d), 2.5) for d in range(1, 20)]
+    with pytest.raises(InvalidInput, match="frequency"):
+        transform_series(daily, source_ppy=None, transform="moving_average", window=5)
+
+
+def test_history_needed_for_a_moving_average():
+    # Three annual averages of a monthly series, each over 3 years: 2 more
+    # years before the first, and 11 months for a year not yet complete.
+    assert source_periods_needed(3, "moving_average", 12, 1, window=3) == (3 + 2) * 12 + 11
+    assert source_periods_needed(4, "moving_average", 12, 12, window=3) == 6
+    assert extra_months("moving_average", 1, aggregating=True, window=3) == 36
+    assert extra_months("moving_average", 4, aggregating=False, window=4) == 9

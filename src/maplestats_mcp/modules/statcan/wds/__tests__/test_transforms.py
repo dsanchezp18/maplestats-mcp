@@ -231,3 +231,26 @@ async def test_quarterly_average_needs_whole_quarters(httpx_mock):
     assert [p.period for p in computed.points] == ["2026-Q2", "2026-Q3"]
     assert computed.points[-1].value == pytest.approx((169.9 + 169.8 + 170.0) / 3)
     assert computed.aggregation == "average"
+
+
+async def test_moving_average_fetches_the_window_and_returns_the_requested_months(httpx_mock):
+    _mock_wds(httpx_mock, [_series(41690973, 18100004, "2.2.0.0.0.0.0.0.0.0", CPI[-5:])])
+    result = await _fn(tools.wds_get_data_from_vectors)(
+        [41690973], latest_n=3, transform="moving_average", window=3
+    )
+    body = json.loads(
+        httpx_mock.get_requests(url=f"{constants.BASE_URL}getDataFromVectorsAndLatestNPeriods")[
+            0
+        ].content
+    )
+    assert body == [{"vectorId": 41690973, "latestN": 5}]  # 3 months and the 2 before them
+    series = result.series[0]
+    assert [o.value for o in series.observations] == [169.9, 169.8, 170.0]
+    computed = series.transformed
+    assert computed is not None and computed.window == 3
+    assert [p.value for p in computed.points] == pytest.approx(
+        [(169.0 + 169.3 + 169.9) / 3, (169.3 + 169.9 + 169.8) / 3, (169.9 + 169.8 + 170.0) / 3]
+    )
+    assert "moving_average_3 = mean(x_{t-2}, x_{t-1}, x_t)" in computed.formula
+    with pytest.raises(client.InvalidInput, match="window"):
+        await _fn(tools.wds_get_data_from_vectors)([41690973], transform="moving_average")
