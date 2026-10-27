@@ -350,7 +350,9 @@ Sources, by tool-name prefix:
   gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_.
   ECCC Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP
   facility lookups): eccc_datamart_.
-- World Bank WDI, Canada and G7/OECD peers: worldbank_.
+- World Bank WDI, Canada and G7/OECD peers: worldbank_. BIS statistics
+  (policy rates, debt service ratios, credit, house prices, banking and
+  payment statistics), Canada and peers: bis_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and

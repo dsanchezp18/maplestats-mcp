@@ -588,6 +588,14 @@ SOURCES: dict[str, Source] = {
         places=("NL",),
         row="provincial_agency",
     ),
+    "bis": Source(
+        "Bank for International Settlements statistics (Canada and peers)",
+        "Statistiques de la Banque des règlements internationaux (Canada et pays comparables)",
+        "national",
+        "BIS statistics",
+        "Statistiques de la BRI",
+        domain="statistics",
+    ),
     "worldbank": Source(
         "World Bank World Development Indicators (Canada and peers)",
         "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",

@@ -361,12 +361,22 @@ TOPICS: tuple[Topic, ...] = (
             "ocde",
             "autres pays",
             "pays du g7",
+            "bis",
+            "bri",
+            "debt service ratio",
+            "credit-to-gdp gap",
+            "policy rates",
         ),
         (
             PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
             PlanStep(
                 "worldbank_get_canada_series",
                 "Canada's series for the indicator, compared with G7 or OECD countries",
+            ),
+            PlanStep(
+                "bis_compare_countries",
+                "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
+                "service ratio, credit, house prices, inflation, exchange rate)",
             ),
         ),
     ),
