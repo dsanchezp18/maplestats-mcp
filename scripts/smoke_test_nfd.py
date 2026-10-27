@@ -1,6 +1,6 @@
 """Live smoke test for the National Forestry Database module, per AGENTS.md.
 
-Calls every client function against nfdp.ccfm.org. Reference values were
+Calls every client function against national-forestry-database.ca. Reference values were
 read from the NFD's own files on 2026-10-02: 25 tables; area burned in
 2023 by cause (Canada summed over the 12 jurisdictions reporting: about
 17.3 million hectares); layouts that differ (property losses has six

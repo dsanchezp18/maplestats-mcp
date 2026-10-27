@@ -187,7 +187,7 @@ class _File:
 
 
 def _check_hop(url: str, context: str) -> None:
-    """The first request and every redirect target: http(s) on the NFD host only.
+    """The first request and every redirect target: http(s) on the NFD hosts only.
 
     A plain-http site is open to a rewritten Location header, so a redirect to
     another host (an internal address, say) is refused, not followed.
@@ -197,9 +197,9 @@ def _check_hop(url: str, context: str) -> None:
         raise call_error(
             UpstreamError,
             f"{context}: refusing {url}; the NFD's files are read only from "
-            f"{constants.HOST} over http or https.",
+            f"{constants.HOST} or {constants.OLD_HOST} over http or https.",
             f"{context} : {url} refusé ; les fichiers de la BNF ne sont lus que depuis "
-            f"{constants.HOST}, en http ou https.",
+            f"{constants.HOST_FR}, {constants.HOST} ou {constants.OLD_HOST}, en http ou https.",
         )
 
 
@@ -220,7 +220,14 @@ async def _fetch_chain(url: str, context: str) -> _File:
         ) as response:
             location = response.headers.get("location")
             if response.status_code in _REDIRECTS and location:
-                current = urljoin(current, location)
+                target = urljoin(current, location)
+                if urlparse(target).path.endswith("/" + constants.NOT_FOUND_PAGE):
+                    raise call_error(
+                        NotFound,
+                        f"{context}: no file at {current}.",
+                        f"{context} : aucun fichier à {current}.",
+                    )
+                current = target
                 continue
             if not response.is_success:
                 # Plain http: an on-path party could answer with a huge error
@@ -1326,10 +1333,10 @@ async def table_comments(
             notes=[
                 fr_or_en(
                     lang,
-                    "The comments file listed for this table answers HTTP 404: no comments "
-                    "published.",
-                    "Le fichier de commentaires donné pour ce tableau répond HTTP 404 : aucun "
-                    "commentaire publié.",
+                    "The comments file listed for this table is missing on the NFD site: no "
+                    "comments published.",
+                    "Le fichier de commentaires donné pour ce tableau est absent du site de la "
+                    "BNDF : aucun commentaire publié.",
                 )
             ],
             provenance=_provenance(provenance_url, cached, "nfd.NfdCommentsResult", lang=lang),

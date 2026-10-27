@@ -224,8 +224,8 @@ async def test_declared_length_over_the_cap_is_refused_before_the_body(
     [
         "http://169.254.169.254/latest/meta-data/",
         "https://evil.example/en/download.php",
-        "ftp://nfdp.ccfm.org/en/download.php",
-        "http://nfdp.ccfm.org.evil.example/en/download.php",
+        "ftp://national-forestry-database.ca/en/download.php",
+        "http://national-forestry-database.ca.evil.example/en/download.php",
         "http://nfdp.ccfm.org@evil.example/en/download.php",
     ],
 )
@@ -236,7 +236,7 @@ async def test_redirect_to_another_host_or_scheme_is_refused(
     with pytest.raises(UpstreamError, match="refusing"):
         await client.list_tables()
     # Nothing was requested from the redirect target.
-    assert [r.url.host for r in httpx_mock.get_requests()] == ["nfdp.ccfm.org"]
+    assert [r.url.host for r in httpx_mock.get_requests()] == [constants.HOST]
 
 
 async def test_redirect_within_the_nfd_host_may_change_scheme_and_path(
@@ -245,7 +245,7 @@ async def test_redirect_within_the_nfd_host_may_change_scheme_and_path(
     httpx_mock.add_response(
         url=constants.PAGE_EN, status_code=301, headers={"location": "/en/moved/download.php"}
     )
-    httpx_mock.add_response(url="http://nfdp.ccfm.org/en/moved/download.php", text="<html></html>")
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/en/moved/download.php", text="<html></html>")
     httpx_mock.add_response(url=constants.PAGE_FR, text="<html></html>")
     with pytest.raises(UpstreamError, match="no tables found"):
         await client.list_tables()
