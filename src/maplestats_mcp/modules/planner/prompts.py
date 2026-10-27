@@ -24,7 +24,7 @@ _CITE = {
     "en": (
         "Finally, for every figure you report: cite provenance.source, provenance.url, "
         "the reference period and provenance.as_of, and quote provenance.licence when it is "
-        "set. Read provenance.caveats (MapleStats' fitness-for-use rules, docs://rules) and "
+        "set. Read provenance.caveats (MapleStats' fitness-for-use rules, docs://planner/fitness-rules) and "
         "provenance.limits (what was cut) before drawing a conclusion, and pass any caveat "
         "that applies on to the reader. Offer reproduce_code(tool_name=..., arguments=...) "
         "for a script that refetches the same data."
@@ -33,7 +33,7 @@ _CITE = {
         "Enfin, pour chaque chiffre rapporté : citez provenance.source, provenance.url, la "
         "période de référence et provenance.as_of, et reprenez provenance.licence lorsqu'il "
         "est renseigné. Lisez provenance.caveats (les règles d'adéquation à l'usage de "
-        "MapleStats, docs://rules) et provenance.limits (ce qui a été coupé) avant de "
+        "MapleStats, docs://planner/fr/regles-d-usage) et provenance.limits (ce qui a été coupé) avant de "
         "conclure, et signalez au lecteur toute mise en garde qui s'applique. Proposez "
         "reproduce_code(tool_name=..., arguments=...) pour obtenir un script qui récupère "
         "les mêmes données."

@@ -54,7 +54,7 @@ class Provenance(BaseModel):
         default_factory=list,
         description=(
             "Fitness-for-use cautions for this table or source, from MapleStats' rules "
-            "(docs://rules)."
+            "(docs://planner/fitness-rules)."
         ),
     )
     reproduce: str = Field(
