@@ -2365,6 +2365,513 @@ TOPICS = (
     TAXATION,
 )
 
+# Administrative records: permits, licences, inspections and planning applications.
+# Cities publish these as ordinary datasets on the portal families already covered,
+# so each step names the dataset to read, checked live on 2026-10-27; a step whose
+# purpose names the city moves first when the question names it.
+#
+# "Permit" alone counts once more for building permits, so "building permits issued
+# in Halifax" outranks housing (which also lists "building permit"); permits that are
+# not for building are blanked first.
+_PERMIT_WORD = r"(?<![a-z0-9])(?P<permit>permits?|permis)(?![a-z0-9])"
+BUILDING_PERMITS = Topic(
+    "building_permits",
+    "Building permits and construction",
+    (
+        "building permit",
+        "construction permit",
+        "demolition permit",
+        "value of permits",
+        "building inspection",
+        "permis de batir",
+        "permis de construction",
+        "permis de construire",
+        "permis de demolition",
+        "valeur des permis",
+        "inspection des batiments",
+    ),
+    (
+        PlanStep(
+            "wds_get_cube_metadata",
+            "StatCan building permits by type of structure and type of work, monthly, for "
+            "Canada, provinces and CMAs: product_id=34100292 (table 34-10-0292; 34-10-0066 "
+            "stopped in 2023)",
+        ),
+        PlanStep(
+            "wds_get_data_from_cube_coord",
+            "one permits series: the same product_id and a coordinate from the metadata "
+            "(geography, type of building, type of work, variable, seasonal adjustment)",
+        ),
+        PlanStep(
+            "wds_get_cube_metadata",
+            "CMHC housing starts, under construction and completions by CMA, monthly: "
+            "product_id=34100154",
+            ("housing start", "mises en chantier"),
+        ),
+        PlanStep(
+            "socrata_query_dataset_rows",
+            "permit records for Calgary, Edmonton and Winnipeg: portal='calgary' "
+            "dataset_id='c2es-76ed' ('8ced-xbvn' holds inspections), portal='edmonton' "
+            "dataset_id='24uj-dj8v', portal='winnipeg' dataset_id='it4w-cpf4'",
+        ),
+        PlanStep(
+            "opendatasoft_vancouver_query_records",
+            "Vancouver issued building permits: dataset_id='issued-building-permits'",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Toronto permit records: portal='toronto' resource_id="
+            "'6d0229af-bc54-46de-9c2b-26759b01dd05' (active) or "
+            "'a96c0ba4-3026-402b-b09d-5b1268b8f810' (cleared since 2017)",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Montreal permits (construction, alteration, demolition): portal='montreal' "
+            "resource_id='5232a72d-235a-48eb-ae20-bb9d501300ad'",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Laval building permits: portal='qc' resource_id='d4731ee2-b1e5-4a31-bc56-4e13115e74ef'",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "British Columbia monthly permit values by municipality (BC Stats): portal='bc' "
+            "resource_id='1e1faf36-6526-4f7c-8586-a01f3b2a56a5' (dataset 'Building Permits "
+            "(BPER)' has the units and sector files)",
+        ),
+        PlanStep(
+            "ckan_read_resource",
+            "Regina building permit report: portal='regina' "
+            "resource_id='dcea70fc-87dd-4e04-bc34-b3ce6580daac' (2026; one workbook a year)",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Halifax permit records: portal='halifax' item_id='6cef25e4172e4466a1eb8d3fd794f571' "
+            "('9acb26e369fe4892b759f336863521e8' holds inspections)",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "BC city permit layers: portal='surrey' item_id='f3ec200f59a342e38c52248f07fe610d' "
+            "(Surrey), portal='victoria' item_id='5a2c28fdaccc4ebcb0ad5bcac8d0e469' (Victoria, "
+            "2016-2025; 'b4db2c27a1d14d59a7d7901ba77f16ce' is the last 365 days)",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Ontario city permit layers: portal='mississauga' "
+            "item_id='978ce8c2c5844486b5d768420fa9c72d' (Mississauga), portal='brampton' "
+            "item_id='f1c647c68b0f429a8575f200a803bce8' (Brampton), portal='kitchener' "
+            "item_id='9093dbbced88444fb61134187737c547' (Kitchener), portal='kingston' "
+            "item_id='df21b0d558164d4088f79c8533e3e6ac' (Kingston), portal='barrie' "
+            "item_id='2a33295b41df4d2e87fda301fff140cc' (Barrie)",
+        ),
+    ),
+    (
+        (
+            "A permit counts an intention to build when it is issued; CMHC starts count "
+            "construction begun, so the two differ in timing and coverage. City permit "
+            "records are administrative and change as permits move through their stages."
+        ),
+        (
+            "Ottawa and Saskatoon publish no permit records on the portals covered here: use "
+            "the CMA rows of table 34-10-0292. Toronto's DataStore tables can be read; its "
+            "files cannot, since Toronto does not permit automated file downloads."
+        ),
+    ),
+    (
+        "work permit",
+        "study permit",
+        "resident permit",
+        "development permit",
+        "parking permit",
+        "film permit",
+        "fishing permit",
+        "hunting permit",
+        "permis de travail",
+        "permis d'etude*",
+        "permis de sejour",
+        "permis de conduire",
+        "permis d'amenagement",
+        "permis de stationnement",
+        "permis de tournage",
+        "permis de peche",
+        "permis de chasse",
+        "permis d'affaires",
+    ),
+    (_PERMIT_WORD,),
+)
+# "Business" alone is the business topic's word, so "business licences in Victoria" tied
+# with it; a licence word beside a word for a business or shop counts once more. A
+# licence on its own ("spectrum licence", "Open Government Licence") does not.
+_LICENCE_NEAR_BUSINESS = _near(
+    r"licen[cs]es?|licensed|licen[cs]ing",
+    r"(?:business(?:es)?|entreprises?|commerces?|shops?|stores?|restaurants?|eatery|eateries|"
+    r"vendors?|merchants?)",
+)
+BUSINESS_LICENCES = Topic(
+    "business_licences",
+    "Business licences and business counts",
+    (
+        "business licence",
+        "business license",
+        "licensed business",
+        "licence register",
+        "licensed eatery",
+        "business count",
+        "how many business",
+        "number of business",
+        "permis d'affaires",
+        "licence d'entreprise",
+        "licences d'entreprise",
+        "licence commerciale",
+        "licences commerciale",
+        "nombre d'entreprises",
+    ),
+    (
+        PlanStep(
+            "socrata_query_dataset_rows",
+            "licence registers for Calgary, Edmonton and Winnipeg: portal='calgary' "
+            "dataset_id='vdjc-pybd', portal='edmonton' dataset_id='qhi4-bdpu', "
+            "portal='winnipeg' dataset_id='d5k3-sfzx'",
+        ),
+        PlanStep(
+            "opendatasoft_vancouver_query_records",
+            "Vancouver business licences: dataset_id='business-licences' (from 2024; "
+            "'business-licences-2013-to-2024' and 'business-licences-1997-to-2012' before)",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Toronto business licences and permits: portal='toronto' "
+            "resource_id='169e90ba-3ae0-43dd-8b2f-919e87002f50'",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "BC city licence layers: portal='victoria' item_id='25883649fc494cb0a530313aa16aa4bb' "
+            "(Victoria, 2016-2025), portal='kelowna' item_id='b4699cd3c0dd4f43bf8a13f7549aa19e' "
+            "(Kelowna), portal='burnaby' item_id='d4de3afbeffd4728a75a219e9d0f07a5' (Burnaby)",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Mississauga licensed eateries: portal='mississauga' "
+            "item_id='c10a649309534871aa79596c187ba1dd'",
+        ),
+        PlanStep(
+            "wds_search_cubes",
+            "StatCan Canadian Business Counts by CMA and census subdivision: "
+            "query='Canadian Business Counts census subdivisions' (a new table each June and "
+            "December; 33-10-1176 is June 2026)",
+            ("business count", "how many business", "number of business", "nombre d'entreprises"),
+        ),
+        PlanStep(
+            "ised_corporations_get_corporation",
+            "federal corporation details: id_or_business_number (a corporation number "
+            "or 9-digit BN; there is no search by name)",
+            ("corporation", "incorporat*", "business number"),
+        ),
+    ),
+    (
+        (
+            "A licence register lists licences, not businesses: one business can hold several, "
+            "and each city sets its own categories and exemptions, so compare counts only "
+            "within one city. For the number of businesses use StatCan's Canadian Business "
+            "Counts. Montreal's portal holds no business-licence register."
+        ),
+    ),
+    (),
+    (_LICENCE_NEAR_BUSINESS,),
+)
+FOOD_INSPECTIONS = Topic(
+    "food_inspections",
+    "Restaurant and food premises inspections",
+    (
+        "restaurant inspection",
+        "health inspection",
+        "food safety",
+        "food inspection",
+        "food premise",
+        "food establishment",
+        "eating establishment",
+        "dinesafe",
+        "critical infraction",
+        "inspection des restaurants",
+        "inspections des restaurants",
+        "inspections des aliments",
+        "inspection alimentaire",
+        "inspections alimentaires",
+        "salubrite alimentaire",
+        "etablissement alimentaire",
+        "etablissements alimentaires",
+        "contrevenant",
+    ),
+    (
+        PlanStep(
+            "ckan_datastore_search",
+            "Toronto DineSafe inspections: portal='toronto' "
+            "resource_id='75dbb3ff-8281-4f03-9de2-bd1214761302'",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Montreal food offences and fines: portal='montreal' "
+            "resource_id='7f939a08-be8a-45e1-b208-d8744dca8fc6' (establishments: "
+            "'28a4957d-732e-48f9-8adb-0624867d9bb0')",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Quebec food inspections by region and month (MAPAQ, retail and restaurants): "
+            "portal='qc' resource_id='3e7a2432-b533-4e8c-8ac0-143643412e5a'",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Fraser Health restaurant inspections, published by Surrey: portal='surrey' "
+            "item_id='320cec8503034bb997d8f6e57690dd5d' (by TRACKINGNUMBER; "
+            "'7901c9e7847a441a8e0a0964724240bb' names the restaurants)",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Region of Waterloo (Kitchener, Waterloo, Cambridge) food premises, without "
+            "results: portal='waterloo_region' item_id='61a7a8d8775e4da381d9718658c0d842'",
+        ),
+        PlanStep(
+            "socrata_query_dataset_rows",
+            "older or partial records: portal='edmonton' dataset_id='45hm-rte9' (Edmonton "
+            "area, Alberta Health Services, last updated 2019), portal='winnipeg' "
+            "dataset_id='fxcw-yyy2' (Winnipeg closures and convictions, last updated 2020), "
+            "portal='ns' dataset_id='2shh-dv8p' (Nova Scotia licensed food establishments, no "
+            "results)",
+        ),
+        PlanStep(
+            "recalls_search",
+            "Health Canada, CFIA and Transport Canada notices",
+            ("recall", "rappel", "allergen", "allergene"),
+        ),
+    ),
+    (
+        (
+            "Restaurant inspections are run by public health units and health authorities, "
+            "so each source covers its own area and rules; only the sources listed publish "
+            "them as open data. Ottawa Public Health, Alberta Health Services and Island "
+            "Health show results only in web viewers, with no open-data release or API."
+        ),
+        (
+            "Toronto's DineSafe table answered HTTP 500 on 2026-10-27 while the city's other "
+            "tables answered; its file copies cannot be read here, since Toronto does not "
+            "permit automated file downloads."
+        ),
+    ),
+)
+PLANNING_APPLICATIONS = Topic(
+    "planning_applications",
+    "Planning and development applications",
+    (
+        "development application",
+        "planning application",
+        "development permit",
+        "rezoning",
+        "zoning amendment",
+        "zoning by-law amendment",
+        "site plan",
+        "subdivision application",
+        "minor variance",
+        "committee of adjustment",
+        "land use redesignation",
+        "land use amendment",
+        "demande de developpement",
+        "demandes de developpement",
+        "demande d'urbanisme",
+        "demandes d'urbanisme",
+        "permis d'amenagement",
+        "changement de zonage",
+        "modification de zonage",
+        "derogation mineure",
+    ),
+    (
+        PlanStep(
+            "socrata_query_dataset_rows",
+            "Calgary, Edmonton and Winnipeg: portal='calgary' dataset_id='6933-unw5' "
+            "(development permits; '33vi-ew4s' land use redesignations), portal='edmonton' "
+            "dataset_id='2ccn-pwtu' (development permits), portal='winnipeg' "
+            "dataset_id='wbyv-ks6y' (monthly development permit counts)",
+        ),
+        PlanStep(
+            "ckan_datastore_search",
+            "Toronto development applications: portal='toronto' "
+            "resource_id='8907d8ed-c515-4ce9-b674-9f8c6eefcf0d'",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Ontario city application layers: portal='mississauga' "
+            "item_id='574287950c2c415fbcd2cbb37d617ba1' (Mississauga), portal='kitchener' "
+            "item_id='b7e2f8feda7340eaa5f4dd7b9c4d5ac0' (Kitchener), portal='kingston' "
+            "item_id='c2296d7785644d6f9e5d4f2525c711d5' (Kingston), portal='barrie' "
+            "item_id='5f3a817276b643949fff4579cb5c566b' (Barrie), portal='brampton' "
+            "item_id='63c2acbac6e74daaad23aa1d2787f90a' (Brampton site plans), portal='york' "
+            "item_id='2ea061702aaa4d5fae39c1226525fd4e' (York Region, Markham)",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "Halifax planning applications: portal='halifax' "
+            "item_id='9a411eae96224ccba613035841db0f60' (subdivisions: "
+            "'e0279bb3940b424d9e041008bbb8d035')",
+        ),
+        PlanStep(
+            "arcgis_hub_query_feature_layer",
+            "BC city application layers: portal='surrey' item_id='93c52bde8cef4978a947116f6d69d171' "
+            "(Surrey), portal='victoria' item_id='9a246b2b61954b819bfcb8db32e2b82b' (Victoria)",
+        ),
+        PlanStep(
+            "opendatasoft_vancouver_query_records",
+            "Vancouver projects and rezonings (title and link only): "
+            "dataset_id='city-projects-package-site', query='rezoning'",
+        ),
+    ),
+    (
+        (
+            "Each city names its application types its own way (rezoning, zoning by-law "
+            "amendment, land use redesignation, site plan, development permit), and most "
+            "layers hold active applications rather than a history: compare within one city. "
+            "No development-application dataset was found on the Ottawa or Montreal portals."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, BUILDING_PERMITS, BUSINESS_LICENCES, FOOD_INSPECTIONS, PLANNING_APPLICATIONS)
+
+# Telecom prices and markets: the CRTC's Communications Market Reports
+# (telecom_ tools) and StatCan's CPI for cellular and Internet services,
+# checked live 2026-10-27. Plan, "plan price" and "data plan" each count, so
+# "how have mobile plan prices changed" outranks the generic prices topic.
+TELECOM = Topic(
+    "telecom",
+    "Telecom: mobile and Internet plan prices, subscribers and competition",
+    (
+        "cell phone",
+        "cellphone",
+        "cellular",
+        "mobile plan",
+        "mobile phone",
+        "phone plan",
+        "plan price",
+        "phone price",
+        "data plan",
+        "wireless",
+        "telecom*",
+        "crtc",
+        "internet plan",
+        "internet price",
+        "internet service",
+        "internet access",
+        "home internet",
+        "broadband",
+        "arpu",
+        "revenue per gb",
+        "data usage",
+        "mobile data",
+        "cellulaire",
+        "forfait mobile",
+        "forfaits mobiles",
+        "forfait cellulaire",
+        "forfaits cellulaires",
+        "forfait de donnees",
+        "forfaits de donnees",
+        "forfait internet",
+        "forfaits internet",
+        "telephonie mobile",
+        "telephone mobile",
+        "sans-fil",
+        "sans fil",
+        "large bande",
+        "rmpu",
+        "revenu par go",
+        "donnees mobiles",
+        "acces internet",
+        "prix des forfaits",
+    ),
+    (
+        PlanStep(
+            "telecom_get_plan_prices",
+            "CRTC year-end average advertised prices since 2016: service='mobile' with "
+            "plan='5 GB' (data allowance) or service='internet' with plan='50/10 Mbps', by "
+            "province and urban or rural region",
+            (
+                "plan price",
+                "phone price",
+                "prix des forfaits",
+                "phone plan",
+                "mobile plan",
+                "data plan",
+                "internet plan",
+                "internet price",
+                "forfait mobile",
+                "forfaits mobiles",
+                "forfait cellulaire",
+                "forfaits cellulaires",
+                "forfait de donnees",
+                "forfaits de donnees",
+                "forfait internet",
+                "forfaits internet",
+            ),
+        ),
+        PlanStep(
+            "wds_get_data_from_vectors",
+            "StatCan monthly CPI for cellular services: vector_ids=[1212387935] (Internet "
+            "access services 41693216, telephone services 41691070), "
+            "transform='yoy_pct_change' for the yearly change",
+            ("cpi", "price index", "inflation", "ipc", "indice des prix"),
+        ),
+        PlanStep(
+            "telecom_get_market_table",
+            "CRTC annual sector indicators since 2013: table='MB-S3' (revenue per GB), "
+            "'MB-F12' (ARPU), 'MB-F15' (data usage), 'MB-S5' (subscribers), 'MB-S1' "
+            "(market shares of Bell, Rogers, TELUS); sector='internet' for N- tables",
+            (
+                "arpu",
+                "revenue per gb",
+                "data usage",
+                "market share",
+                "subscriber",
+                "competition",
+                "rmpu",
+                "revenu par go",
+                "part de marche",
+                "abonne",
+                "concurrence",
+            ),
+        ),
+        PlanStep(
+            "telecom_list_market_tables",
+            "every CRTC sector table and its tab id: sector='mobile' or 'internet'",
+        ),
+        PlanStep(
+            "telecom_get_quarterly_trends",
+            "CRTC quarterly revenues, subscribers and data traffic since 2014: "
+            "service='mobile', 'internet', 'wireline' or 'tv_distribution', metric words",
+            ("quarter", "quarterly", "trimestre", "trimestriel"),
+        ),
+        PlanStep(
+            "ckan_search_datasets",
+            "other CRTC datasets (broadcasting, availability): portal='federal', "
+            "fq='organization:crtc'",
+        ),
+    ),
+    (
+        (
+            "CRTC prices are averages of the lowest advertised list price for a fixed "
+            "basket, before taxes and promotions; the CPI is an index of price change. "
+            "Report them separately, and compare CRTC years with the 'lowest' technology "
+            "series, since baskets changed in 2019 and 5G plans appear from 2020."
+        ),
+        (
+            "CRTC sector tables count mobile phone services only from 2020 (columns marked "
+            "MP), so 2020 and later do not compare with earlier years."
+        ),
+        (
+            "ISED's annual price comparison study (Canada by region and peer countries) "
+            "and its 2020-2022 tracking of 2 to 6 GB plans are reports, not data a tool "
+            "reads; the CRTC's reports on low-cost and occasional-use plans are on "
+            "crtc.gc.ca, which blocks automated access."
+        ),
+    ),
+)
+TOPICS = (*TOPICS, TELECOM)
+
 # Places this server has no data for. A question naming one of them, with no
 # Canadian place and nothing that crosses the border (trade, exchange rates,
 # immigration), gets an out-of-scope note instead of Canadian plans.

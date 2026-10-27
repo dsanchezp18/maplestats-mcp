@@ -32,6 +32,10 @@ CASES = [
     ("danger d'incendie Alberta cote extrême", "ab_wildfire_get_fire_danger"),
     ("interdiction de feu restriction Alberta comté", "ab_wildfire_get_fire_restrictions"),
     ("recherche de jeux de données ouverts Québec", "ckan_search_datasets"),
+    # Permis, licences et inspections municipaux sur les portails, 2026-10-27.
+    ("permis de construction Montréal", "ckan_search_datasets"),
+    ("inspections des restaurants Montréal", "ckan_search_datasets"),
+    ("licences d'entreprises Vancouver", "opendatasoft_vancouver_search_datasets"),
     ("qualité de l'eau potable Edmonton", "epcor_get_daily_water_quality"),
     ("indice des prix des propriétés MLS ACI", "crea_get_hpi_links"),
     ("horaire des autobus de la STM passages prévus à un arrêt", "transit_get_stop_departures"),
@@ -212,6 +216,12 @@ CASES = [
     ("production minérale par province valeur des expéditions", "nrcan_minerals_get_production"),
     ("historique de la dette fédérale tableaux de référence financiers", "finance_frt_list_tables"),
     ("revue financière déficit fédéral cumulatif mensuel", "finance_fiscal_monitor_get_tables"),
+    # Rapports sur le marché des communications du CRTC (telecom_prices), 2026-10-27.
+    ("prix des forfaits de téléphonie mobile", "telecom_get_plan_prices"),
+    ("prix des forfaits Internet en milieu rural", "telecom_get_plan_prices"),
+    ("revenu moyen par Go de données mobiles", "telecom_get_market_table"),
+    ("rapport sur le marché des communications CRTC tableaux", "telecom_list_market_tables"),
+    ("abonnés mobiles par trimestre", "telecom_get_quarterly_trends"),
 ]
 
 

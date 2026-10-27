@@ -46,6 +46,8 @@ CASES = [
     ("vehicle recall Honda Civic 2018", "tc_recalls_search"),
     ("search federal open data datasets", "ckan_search_datasets"),
     ("Calgary open data building permits", "socrata_search_datasets"),
+    # City permit records sit on the portal families; checked 2026-10-27.
+    ("building permits issued Winnipeg", "socrata_search_datasets"),
     ("Vancouver open data street trees", "opendatasoft_vancouver_search_datasets"),
     ("Ottawa open data GIS layer", "arcgis_hub_search_datasets"),
     ("federal corporation lookup by name", "ised_corporations_get_corporation"),
@@ -238,6 +240,15 @@ CASES = [
     ),
     ("Alberta provincial net debt and deficit by year", "finance_frt_get_table"),
     ("federal deficit year to date this fiscal year monthly", "finance_fiscal_monitor_get_tables"),
+    # CRTC Communications Market Reports (telecom_prices), 2026-10-27: before the
+    # module, these went to the Ontario electricity rates and butter price tools.
+    ("how have mobile plan prices changed since 2020", "telecom_get_plan_prices"),
+    ("cell phone plan prices Canada", "telecom_get_plan_prices"),
+    ("home Internet plan prices by speed rural", "telecom_get_plan_prices"),
+    ("average revenue per GB of mobile data", "telecom_get_market_table"),
+    ("mobile market share Bell Rogers TELUS", "telecom_get_market_table"),
+    ("list CRTC communications market report tables", "telecom_list_market_tables"),
+    ("quarterly mobile subscribers and wireless data traffic", "telecom_get_quarterly_trends"),
 ]
 
 

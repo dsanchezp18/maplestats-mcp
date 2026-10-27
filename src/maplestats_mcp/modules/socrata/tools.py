@@ -57,10 +57,12 @@ async def socrata_search_datasets(
     Use for: finding datasets by topic, category, tag, or free-text
     query. Keywords: Nova Scotia, New Brunswick, Calgary, Edmonton,
     Winnipeg, open data, Socrata, dataset search, catalogue,
-    government, province, city, category, tags.
+    government, province, city, category, tags, building permits,
+    business licences, development permits.
     Mots-clés : Nouvelle-Écosse, Nouveau-Brunswick, Calgary, Edmonton,
     Winnipeg, données ouvertes, Socrata, recherche de jeux de données,
-    catalogue, gouvernement, province, ville, catégorie, étiquettes.
+    catalogue, gouvernement, province, ville, catégorie, étiquettes, permis
+    d'affaires, permis d'aménagement.
     """
     return await client.search_datasets(
         portal, query, category=category, tag=tag, limit=limit, offset=offset, lang=lang

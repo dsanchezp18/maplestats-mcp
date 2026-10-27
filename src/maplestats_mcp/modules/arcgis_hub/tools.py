@@ -77,10 +77,12 @@ async def arcgis_hub_search_datasets(
     Parks Canada, Yellowknife, Manitoba, Halifax, Surrey, Burnaby,
     Kelowna and more). Offset plus limit stops at 10,000.
     Keywords: ArcGIS Hub, open data, dataset search, catalogue,
-    municipal, city, region, province, GIS, geospatial, zoning, trails.
+    municipal, city, region, province, GIS, geospatial, zoning, trails,
+    building permits, development applications, rezoning applications.
     Mots-clés : ArcGIS Hub, données ouvertes, recherche de jeux de
     données, catalogue, municipal, ville, région, province, SIG,
-    géospatial, zonage, sentiers.
+    géospatial, zonage, sentiers, demandes d'aménagement, demandes de
+    rezonage.
     """
     return await client.search_datasets(
         portal, query, tag=tag, item_type=item_type, limit=limit, offset=offset, lang=lang

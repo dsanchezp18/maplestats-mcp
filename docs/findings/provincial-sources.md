@@ -696,3 +696,38 @@ Dental Association is registration 9997-443-56; 1,187 activity reports naming th
 Health ministry since 2025-01-01; the Member(s) of the Legislative Assembly (11,771
 reports), Office of the Premier (4,929) and Health (3,838) are the most-named
 agencies; Deputy Minister appears in 13,767 reports.
+
+## Permits, licences and inspections on provincial catalogues
+
+Checked live 2026-10-27 with the municipal sweep (see
+[municipal sources](municipal-sources.md#permits-licences-inspections-and-planning-applications)).
+
+- British Columbia: BC Stats' "Building Permits (BPER)" dataset on catalogue.data.gov.bc.ca
+  has DataStore CSVs of monthly permit values and units by municipality (total value
+  `1e1faf36-6526-4f7c-8586-a01f3b2a56a5`, plus residential, industrial, commercial,
+  institutional and unit files), Open Government Licence - British Columbia; read with
+  `ckan_datastore_search`, and routed by `plan_query`'s building-permits topic.
+  "Licensed Establishments in B.C." (liquor) is an HTML resource only.
+- Quebec: MAPAQ's "Activités d'inspection des aliments : secteur de la vente au
+  détail et de la restauration" (`3e7a2432-b533-4e8c-8ac0-143643412e5a`) gives monthly
+  inspection counts by administrative region, CC BY 4.0; Laval's building permits are
+  on Données Québec (`d4731ee2-b1e5-4a31-bc56-4e13115e74ef`).
+- Nova Scotia (Socrata): "List of Licensed Food Establishments" (`2shh-dv8p`, last
+  updated 2025-09-08) has facility, permit type and status, no inspection results;
+  "Nova Scotia Fuel and Tobacco Permits and Licenses" (`cubf-mpxk`) exists.
+- New Brunswick (Socrata): `hdpt-etmk` is StatCan's building permits for NB
+  republished; use WDS table 34-10-0292 instead.
+- Ontario: "Meat plant inspections" and "Dairy plant inspections" (OMAFRA) are on the
+  Ontario catalogue; no restaurant inspection data (those are public health units').
+- Alberta: the searches found publications (guides, director's orders), no permit or
+  inspection records.
+
+StatCan tables, verified with WDS `getCubeMetadata`: 34-10-0292 "Building permits, by
+type of structure and type of work" is current (2018-01 to 2026-08, released
+2026-10-14; Canada, provinces, territories and CMAs, 66 geographies; value, units
+created, lost and demolished, number of permits; unadjusted and seasonally adjusted,
+current and constant dollars). 34-10-0066 (2011-01 to 2023-10) and 34-10-0285
+(2017-01 to 2025-03) are archived. CMHC starts are current in 34-10-0154 (CMAs,
+monthly), 34-10-0156 (seasonally adjusted at annual rates) and 34-10-0148 (by type of
+dwelling and market). Canadian Business Counts are a new table each half-year (newest
+by CMA and census subdivision: 33-10-1176, June 2026).

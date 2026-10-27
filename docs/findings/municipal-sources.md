@@ -681,3 +681,96 @@ Not added:
   `explore.northbay.ca` and Leduc's `data.leduc.ca` answer but list no
   datasets in the dataset collection.
 - Hamilton stays out (blocks automated requests, see the roadmap).
+
+## Permits, licences, inspections and planning applications
+
+Checked live 2026-10-27, for the backlog items "permits and licensing data" and
+"inspections, procurement, planning and regulatory filings". No new module or portal:
+cities publish these records as ordinary datasets on the portal families already
+covered, and the generic readers (`socrata_query_dataset_rows`,
+`arcgis_hub_query_feature_layer`, `ckan_datastore_search`, `ckan_read_resource`,
+`opendatasoft_vancouver_query_records`) read every one listed below. What was missing
+was routing: `plan_query` now has four topics (`building_permits`,
+`business_licences`, `food_inspections`, `planning_applications`, English and French)
+whose steps name the dataset to read, and the step for a city moves first when the
+question names it.
+
+Method: each family's search tool on every large covered portal (Calgary, Edmonton,
+Winnipeg, Nova Scotia, New Brunswick; Ottawa, Halifax, Saskatoon, Surrey, Victoria,
+Mississauga, London, Kitchener, Windsor, Brampton, Markham, Kelowna, Burnaby, Guelph,
+Oakville, Barrie, Kingston, Peel, York, Durham, Waterloo Region, Metro Vancouver,
+Fredericton, Moncton, Saint John; the federal, Ontario, BC, Alberta, Quebec, Montreal,
+Toronto, Regina, Yukon and NWT CKAN catalogues; Vancouver) with "building permits",
+"permit", "business licence", "food inspection", "inspection", "development
+application" and "planning application" (and French terms on the Quebec catalogues),
+then one row read from each dataset kept.
+
+Read and routed (portal, id, what it holds):
+
+| Domain | City | Portal and id | Notes |
+|---|---|---|---|
+| Building permits | Calgary | `calgary` `c2es-76ed` | Updated daily; `8ced-xbvn` building inspection results, `tg24-jt7r`/`5pvv-k7hn`/`cdrc-r4u8` gas, plumbing and HVAC permits |
+| | Edmonton | `edmonton` `24uj-dj8v` | General building permits from 2009, with construction value and units added |
+| | Winnipeg | `winnipeg` `it4w-cpf4` | Detailed permits; `p5sy-gt7y` aggregates, several processing-time tables |
+| | Vancouver | `issued-building-permits` | 52,487 records; project value, type of work, contractor |
+| | Toronto | `toronto` resources `6d0229af-…` (active), `a96c0ba4-…` (cleared since 2017) | DataStore rows read; files not (Toronto's terms) |
+| | Montreal | `montreal` `5232a72d-235a-48eb-ae20-bb9d501300ad` | Construction, alteration and demolition permits; CC BY 4.0 |
+| | Laval | `qc` `d4731ee2-b1e5-4a31-bc56-4e13115e74ef` | From 1991; CC BY 4.0 |
+| | Regina | `regina` `dcea70fc-87dd-4e04-bc34-b3ce6580daac` | One XLSX a year (2020-2026), read with `ckan_read_resource` |
+| | Halifax | `halifax` `6cef25e4172e4466a1eb8d3fd794f571` | PPL&C permits; `9acb26e369fe4892b759f336863521e8` inspections |
+| | Surrey | `surrey` `f3ec200f59a342e38c52248f07fe610d` | Issued permits with construction value |
+| | Victoria | `victoria` `5a2c28fdaccc4ebcb0ad5bcac8d0e469` (2016-2025), `b4db2c27a1d14d59a7d7901ba77f16ce` (last 365 days) | One rolling 10-year layer per year; the "since 1994" item is a CSV with no layer to query |
+| | Mississauga, Brampton, Kitchener, Kingston, Barrie | `978ce8c2…`, `f1c647c6…`, `9093dbbc…`, `df21b0d5…`, `2a33295b…` | Permit layers; Peel's `20d21f30…` is a quarterly summary by municipality |
+| Business licences | Calgary, Edmonton, Winnipeg | `vdjc-pybd`, `qhi4-bdpu`, `d5k3-sfzx` | Edmonton also has `jvdw-3ymk` alcohol sales licences |
+| | Vancouver | `business-licences` (from 2024), `business-licences-2013-to-2024`, `business-licences-1997-to-2012` | |
+| | Toronto | `toronto` `169e90ba-3ae0-43dd-8b2f-919e87002f50` | Municipal Licensing and Standards |
+| | Victoria, Kelowna, Burnaby | `25883649…`, `b4699cd3…`, `d4de3afb…` | Mississauga publishes licensed eateries only (`c10a6493…`) |
+| Food inspections | Toronto | `toronto` `75dbb3ff-8281-4f03-9de2-bd1214761302` (DineSafe) | Answered HTTP 500 on every try on 2026-10-27 (502 on the last), while the city's other DataStore tables answered 200; a `package_search` for "dinesafe" also answered 500 |
+| | Montreal | `montreal` `7f939a08-…` (offenders and fines), `28a4957d-…` (establishments) | CC BY 4.0 |
+| | Quebec | `qc` `3e7a2432-b533-4e8c-8ac0-143643412e5a` | MAPAQ monthly counts by region (retail and restaurants), not per establishment |
+| | Surrey | `surrey` `320cec8503034bb997d8f6e57690dd5d` | Fraser Health inspection reports (date, type, critical and non-critical counts, violations, hazard rating); `7901c9e7…` names the restaurants |
+| | Waterloo Region | `waterloo_region` `61a7a8d8775e4da381d9718658c0d842` | Facility list only; the MapServer has no results table |
+| | Edmonton, Winnipeg, Nova Scotia | `45hm-rte9`, `fxcw-yyy2`, `2shh-dv8p` | Stale or partial: AHS facility list with inspection counts and links (last updated 2019), Manitoba closures and convictions (2020), Nova Scotia licensed food establishments without results |
+| Planning applications | Calgary | `6933-unw5` development permits, `33vi-ew4s` land use redesignations | |
+| | Edmonton, Winnipeg | `2ccn-pwtu` development permits; `wbyv-ks6y` monthly counts | |
+| | Toronto | `toronto` `8907d8ed-c515-4ce9-b674-9f8c6eefcf0d` | |
+| | Halifax | `9a411eae…` planning, `e0279bb3…` subdivision applications | |
+| | Mississauga, Kitchener, Kingston, Barrie, Brampton, York Region (Markham) | `57428795…`, `b7e2f8fe…`, `c2296d77…`, `5f3a8172…`, `63c2acba…` (site plans), `2ea06170…` | Mostly active applications only |
+| | Surrey, Victoria | `93c52bde…`, `9a246b2b…` | |
+| | Vancouver | `city-projects-package-site` | Titles and links only |
+
+Gaps and awkward spots:
+
+- Ottawa's Hub (open.ottawa.ca) has no permit, licence or development-application
+  dataset ("building permits" matches only a ward population layer); Saskatoon's
+  ten datasets include none either. StatCan table 34-10-0292 has rows for both CMAs.
+  London, Windsor, Guelph, Oakville (only road and site-alteration permits) and Markham
+  (beyond York Region's application layer) have no permit records found.
+- Montreal publishes no business-licence register and no development-application
+  dataset; a search of Données Québec for business licences found none either.
+- `search_tools` does not find these through plain questions: "restaurant
+  inspection results", "business licence records", "development applications
+  Mississauga" and "rezoning applications" return no portal tool in the top five
+  (2026-10-27), because the four family search tools' docstrings carry none of these
+  words; city-named French questions ("permis de construction Montréal",
+  "inspections des restaurants Montréal") do reach `ckan_search_datasets`. Adding the
+  words to those docstrings is left to the search work; `plan_query` routes them now.
+- Vancouver's catalogue search ranks poorly for these: "development" and "rezoning"
+  do not return `city-projects-package-site` (only "city project" does).
+- Hub keyword search is literal: Halifax matches "license" and "licence" differently,
+  and London's "licence" finds nothing.
+- Victoria's permit and licence layers include applicant contact fields (name,
+  phone, email) as published by the city.
+
+Restaurant inspection systems outside the portals (checked 2026-10-27): Ottawa Public
+Health (inspections.ottawapublichealth.ca, a JavaScript portal), Alberta Health
+Services (ephisahs.microsoftcrmportals.com, linked from Edmonton's dataset) and Island
+Health (inspections.myhealthdepartment.com, whose robots.txt answers 403) show
+results only in web viewers; no open-data release, licence or API was found, so they
+are not built. The inspection-report addresses tried for Vancouver Coastal Health and
+Interior Health answered 404 and were not pursued further. Fraser Health's data reach the server only through Surrey's portal.
+
+Procurement and regulatory filings: CanadaBuys stays removed (terms, see
+[specialized federal sources](specialized-federal-sources.md#canadabuys-pspc-procurement)).
+Regulatory filings already have their own modules (CER, AER, OEB, CFIA, the Canada
+Gazette); no municipal portal holds a filings register worth routing.

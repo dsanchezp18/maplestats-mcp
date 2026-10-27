@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import base64
 import importlib
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,8 @@ from fastmcp.resources.template import ResourceTemplate
 from fastmcp.server.providers import FileSystemProvider
 from fastmcp.server.providers.local_provider import LocalProvider
 from fastmcp.server.transforms.search import BM25SearchTransform
+from fastmcp.server.transforms.search import bm25 as bm25_module
+from fastmcp.server.transforms.search.base import _extract_searchable_text
 from fastmcp.tools import Tool
 from fastmcp.utilities.components import FastMCPComponent
 from fastmcp.utilities.versions import VersionSpec
@@ -46,7 +49,7 @@ from maplestats_mcp.catalogue import (
     module_dirs,
     read_catalogue,
 )
-from maplestats_mcp.shared import search
+from maplestats_mcp.shared import search, semantic
 from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.private_logs import configure_private_logs
@@ -60,6 +63,11 @@ from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationE
 # _LOCAL_MODULES compute from bundled metadata without calling a source,
 # so they are not open-world.
 _LOCAL_MODULES = frozenset({"planner"})
+
+_logger = logging.getLogger("maplestats_mcp.server")
+
+# Listed directly, so search_tools never returns or indexes them.
+SEARCH_ALWAYS_VISIBLE = ("search_tools", "plan_query")
 
 
 def _read_only_annotations(open_world: bool) -> ToolAnnotations:
@@ -220,7 +228,65 @@ class LazyModuleProvider(LocalProvider):
 
 
 class AnnotatedBM25SearchTransform(BM25SearchTransform):
-    """Search is read-only; call_tool also reaches the local workbook export."""
+    """Search is read-only; call_tool also reaches the local workbook export.
+
+    `_search` is fastmcp's, rebuilt on a catalogue change the same way, with two
+    additions measured in tests/discovery_benchmark/phase2.md: exact identifiers
+    (a tool name, a StatCan table or vector number) lift the tools that take
+    them, and MAPLE_SEARCH=hybrid fuses BM25 with the optional semantic index.
+    The result list, and so search_tools' output, keeps fastmcp's format.
+    """
+
+    def __init__(self, *, mode: str | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._index = search.ScoredBM25Index()
+        self._indexed: list[Tool] = []
+        self._mode = mode or semantic.search_mode()
+        self._semantic: semantic.SemanticIndex | None = None
+        self._semantic_tried = False
+        self._semantic_rows: list[int | None] = []
+
+    def _load_semantic(self) -> None:
+        # Loaded on the first search, not at startup: the model costs about two
+        # seconds and 220 MB, which a bm25 server, or one never searched, never pays.
+        self._semantic_tried = True
+        try:
+            self._semantic = semantic.SemanticIndex.load(semantic.index_dir())
+        except (semantic.SemanticUnavailable, OSError, ValueError, KeyError) as exc:
+            _logger.warning("MAPLE_SEARCH=hybrid, but searching by BM25 only: %s", exc)
+
+    async def _search(self, tools: Sequence[Tool], query: str) -> Sequence[Tool]:
+        current_hash = bm25_module._catalog_hash(tools)
+        if current_hash != self._last_hash:
+            index = search.ScoredBM25Index(self._index.k1, self._index.b)
+            index.build([_extract_searchable_text(t) for t in tools])
+            self._index, self._indexed, self._last_hash = index, list(tools), current_hash
+            self._semantic_rows = []
+        scores = self._index.scores(query)
+        if self._mode == "hybrid":
+            if not self._semantic_tried:
+                self._load_semantic()
+            if self._semantic is not None:
+                if not self._semantic_rows:
+                    self._semantic_rows = self._semantic.rows(
+                        [(t.name, t.description or "") for t in self._indexed]
+                    )
+                    stale = self._semantic_rows.count(None)
+                    if stale:
+                        _logger.warning(
+                            "semantic index lacks %d of %d tools (new or changed since the "
+                            "build); they are ranked by BM25 only",
+                            stale,
+                            len(self._indexed),
+                        )
+                ranking = self._semantic.ranking(query, self._semantic_rows, semantic.FUSION_DEPTH)
+                scores = semantic.fuse(scores, ranking)
+        scores = search.apply_boosts(scores, search.identifier_boosts(query, self._indexed))
+        # The catalog is deduplicated by name; resolve the current version's schema.
+        by_name = {t.name: t for t in tools}
+        return [
+            by_name[self._indexed[i].name] for i in search.top_indices(scores, self._max_results)
+        ]
 
     def _make_search_tool(self) -> Tool:
         search_tool = super()._make_search_tool()
@@ -360,7 +426,8 @@ Sources, by tool-name prefix:
   provincial revenue, spending, deficits, debt), finance_fiscal_monitor_
   (monthly federal results), competition_bureau_ (merger reviews), fcac_ (credit
   card and bank account comparisons), pbo_ (Parliamentary Budget Officer
-  publications and tables), pmprb_ (patented medicine prices), pmra_
+  publications and tables), pmprb_ (patented medicine prices), telecom_
+  (CRTC mobile and Internet plan prices, telecom market indicators), pmra_
   (pesticide products, residue limits), Health Canada health products:
   hc_drug_ (Drug Product Database, DIN lookup), hc_nhp_ (licensed natural
   health products), hc_device_ (medical device licences), hc_vigilance_
@@ -562,7 +629,7 @@ def build_server() -> FastMCP:
     mcp.add_transform(
         AnnotatedBM25SearchTransform(
             max_results=5,
-            always_visible=["search_tools", "plan_query"],
+            always_visible=list(SEARCH_ALWAYS_VISIBLE),
             search_tool_name="search_tools",
             call_tool_name="call_tool",
             search_result_serializer=search.serialize_tools_compact,
