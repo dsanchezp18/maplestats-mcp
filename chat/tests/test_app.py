@@ -405,3 +405,70 @@ def test_third_party_scripts_carry_integrity_hashes():
     for tag in tags:
         assert re.search(r'integrity="sha384-[A-Za-z0-9+/]{64}"', tag), tag
         assert 'crossorigin="anonymous"' in tag, tag
+
+
+def _fake_anthropic(monkeypatch, responses):
+    """Make ask_anthropic see these responses, one per model call."""
+    from types import SimpleNamespace
+
+    queue = list(responses)
+
+    class FakeMessages:
+        async def create(self, **kwargs):
+            return queue.pop(0)
+
+    class FakeClient:
+        beta = SimpleNamespace(messages=FakeMessages())
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(chat_app, "AsyncAnthropic", lambda **kwargs: FakeClient())
+
+
+def _ask():
+    import asyncio
+
+    return asyncio.run(chat_app.ask_anthropic([{"role": "user", "content": "hi"}]))
+
+
+def test_step_limit_is_an_answer_not_an_empty_reply(monkeypatch, caplog):
+    monkeypatch.setattr(chat_app, "MAX_TOOL_STEPS", 2)
+    paused = SimpleNamespace(
+        content=[SimpleNamespace(type="mcp_tool_use", name="search_tools", input={})],
+        stop_reason="pause_turn",
+    )
+    _fake_anthropic(monkeypatch, [paused, paused])
+    with caplog.at_level("INFO", logger="maplestats_chat"):
+        result = _ask()
+    assert result["answer"] == chat_app.STEP_LIMIT_ANSWER
+    assert len(result["tools_used"]) == 2
+    assert "stop_reason=pause_turn" in caplog.text
+    assert "hi" not in caplog.text.split("stop_reason")[1]
+
+
+def test_length_limit_explains_or_marks_the_cut(monkeypatch):
+    _fake_anthropic(
+        monkeypatch, [SimpleNamespace(content=[], stop_reason="max_tokens")]
+    )
+    assert _ask()["answer"] == chat_app.LENGTH_LIMIT_ANSWER
+    cut = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="Partial table")],
+        stop_reason="max_tokens",
+    )
+    _fake_anthropic(monkeypatch, [cut])
+    assert _ask()["answer"] == "Partial table" + chat_app.CUT_OFF_NOTE
+
+
+def test_tool_errors_with_no_answer_point_to_the_data_server(monkeypatch):
+    blocks = [
+        SimpleNamespace(type="mcp_tool_use", name="call_tool", input={}),
+        SimpleNamespace(type="mcp_tool_result", is_error=True),
+    ]
+    _fake_anthropic(
+        monkeypatch, [SimpleNamespace(content=blocks, stop_reason="end_turn")]
+    )
+    assert _ask()["answer"] == chat_app.DATA_SERVER_ANSWER

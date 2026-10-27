@@ -92,7 +92,26 @@ SYSTEM_PROMPT = (
     "- Write only the final answer. Do not narrate your steps or mention tools "
     "you are about to try.\n"
     "- Answer in the user's language (English or French), briefly. Use a small "
-    "table when comparing several values."
+    "table when comparing several values.\n"
+    "- You can make only a few tool calls per question. When a tool accepts "
+    "several places or series at once, ask for them in one call. If you cannot "
+    "get everything, answer with what you have and say what is missing."
+)
+
+# Shown instead of an empty answer, so a visitor learns what to change. Each one
+# follows a model call that completed and was billed.
+STEP_LIMIT_ANSWER = (
+    "I could not finish within the demo's tool-call limit. Try a narrower "
+    "question, for example fewer places or a shorter period."
+)
+LENGTH_LIMIT_ANSWER = (
+    "The answer was longer than the demo allows and was cut off. Try a "
+    "narrower question, for example fewer places or a shorter period."
+)
+CUT_OFF_NOTE = "\n\n_(Cut off at the demo's length limit.)_"
+DATA_SERVER_ANSWER = (
+    "The data server returned errors for this question; it may be restarting. "
+    "Try again in a minute."
 )
 
 # 1. Rate limiting ----
@@ -207,6 +226,8 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Let Anthropic's MCP connector call the public MapleStats server."""
     conversation: list[dict[str, Any]] = list(messages)
     tools_used: list[dict[str, Any]] = []
+    tool_errors = 0
+    model_calls = 0
     billed = False
 
     try:
@@ -224,9 +245,14 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
                     messages=conversation,
                 )
                 billed = True
+                model_calls += 1
                 for block in response.content:
                     if block.type == "mcp_tool_use":
                         tools_used.append(describe_call(block.name, block.input))
+                    elif block.type == "mcp_tool_result" and getattr(
+                        block, "is_error", False
+                    ):
+                        tool_errors += 1
                 # pause_turn means the server paused a long turn; resume it unchanged.
                 if response.stop_reason != "pause_turn":
                     break
@@ -234,7 +260,27 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
     except Exception as error:  # reported with whether it cost money
         raise BackendFailure(billed) from error
 
-    return {"answer": final_text(response.content), "tools_used": tools_used}
+    answer = final_text(response.content)
+    # Counts and the stop reason only, never the question or the answer: enough to
+    # tell a step limit, a length limit and a data-server failure apart in the logs.
+    logger.info(
+        "Turn ended: stop_reason=%s, model calls %d, tool calls %d, tool errors %d, "
+        "answer %s",
+        response.stop_reason,
+        model_calls,
+        len(tools_used),
+        tool_errors,
+        "yes" if answer else "empty",
+    )
+    if (
+        response.stop_reason == "pause_turn"
+    ):  # still working after MAX_TOOL_STEPS resumes
+        answer = answer or STEP_LIMIT_ANSWER
+    elif response.stop_reason == "max_tokens":
+        answer = answer + CUT_OFF_NOTE if answer else LENGTH_LIMIT_ANSWER
+    elif not answer and tool_errors:
+        answer = DATA_SERVER_ANSWER
+    return {"answer": answer, "tools_used": tools_used}
 
 
 _openai_tools: list[dict[str, Any]] = []
@@ -313,11 +359,7 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
     except Exception as error:  # reported with whether it cost money
         raise BackendFailure(billed) from error
 
-    return {
-        "answer": "I could not finish within the tool-call limit. Try a narrower "
-        "question.",
-        "tools_used": tools_used,
-    }
+    return {"answer": STEP_LIMIT_ANSWER, "tools_used": tools_used}
 
 
 async def ask_model(messages: list[dict[str, str]]) -> dict[str, Any]:

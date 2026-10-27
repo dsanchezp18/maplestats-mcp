@@ -131,8 +131,11 @@
       });
       // A gateway error while the host wakes comes back as an HTML page, not JSON.
       const data = await res.json().catch(() => ({}));
+      // No JSON error means the host answered, not the app: it is waking up or
+      // restarting after a deploy.
       if (!res.ok || typeof data.answer !== "string") throw new Error(data.error ||
-        "The demo server did not answer. It may still be waking up: try again in a minute.");
+        "The demo server did not answer (HTTP " + res.status + "). It may be waking up " +
+        "or restarting: try again in a minute.");
       history.push({ role: "assistant", content: data.answer });
       let html = DOMPurify.sanitize(marked.parse(data.answer || "(no answer)"));
       if (data.tools_used && data.tools_used.length) {
