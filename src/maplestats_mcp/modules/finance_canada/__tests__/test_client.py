@@ -138,6 +138,10 @@ def test_workbook_tables():
     ]
     assert revenues.info.units == ["(millions of dollars)"]
     assert revenues.rows[1]["Non-resident income tax"] is None
+    # The published "-" is kept beside the null, so nil and not-available differ.
+    assert [(s.row, s.label, s.column, s.symbol) for s in revenues.symbols] == [
+        (1, "2015-16", "Non-resident income tax", "-")
+    ]
     assert revenues.rows[1]["Year"] == "2015-16"
     assert revenues.rows[2]["Personal income tax"] == 234319
     assert revenues.notes[0].startswith("Due to a break")
@@ -266,6 +270,10 @@ def test_monitor_tables():
     assert revenues.rows[0]["July - Change - (%)"] == 7.9
     assert revenues.rows[1]["July - 2025 - ($ millions)"] is None
     assert revenues.rows[1]["July - 2026 - ($ millions)"] == -1512
+    assert [(s.row, s.column, s.symbol) for s in revenues.symbols] == [
+        (1, "July - 2025 - ($ millions)", "n/a"),
+        (1, "July - Change - (%)", "-"),
+    ]
 
 
 def test_two_month_issue_drops_the_repeated_column():
@@ -284,6 +292,7 @@ def test_two_month_issue_drops_the_repeated_column():
         "Avril à mai - 2025-2026": None,
         "Avril à mai - 2026-2027": 1.0,
     }
+    assert [(s.label, s.symbol) for s in summary.symbols] == [("Variation", "s.o.")]
 
 
 async def test_monitor_issue_selection(httpx_mock):

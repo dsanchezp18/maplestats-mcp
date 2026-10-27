@@ -32,6 +32,7 @@ PROMPTS = {
 
 # English resource uri -> French twin
 TWINS = {
+    "docs://planner/fitness-rules": "docs://planner/fr/regles-d-usage",
     "docs://boc/well-known-series": "docs://boc/fr/series-courantes",
     "docs://boc/gotchas": "docs://boc/fr/pieges",
     "docs://cmhc/well-known-categories": "docs://cmhc/fr/categories-courantes",

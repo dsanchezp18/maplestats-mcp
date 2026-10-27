@@ -70,6 +70,7 @@ from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import api_get, counted_once, is_retryable, new_client
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -498,6 +499,28 @@ def _date(value: Any) -> str | None:
     return value if isinstance(value, str) and _ISO_DATE.match(value) else None
 
 
+_DATE_KEYS = ("filing_date", "grant_date", "owner_enable_date", "ownership_end_date")
+
+
+def _nulled_note(rows: list[dict[str, Any]], lang: str) -> str | None:
+    """Say so when a returned row had a -1/-2/"Unknown" placeholder or a non-ISO
+    date that came back as null, so a null is not read as a blank in the file."""
+    for row in rows:
+        if any(value in _UNKNOWN for value in row.values()) or any(
+            row.get(key) is not None and _date(row.get(key)) is None for key in _DATE_KEYS
+        ):
+            return _pick(
+                "Codes and dates the files give as -1 or -2 (unknown or not applicable), "
+                "provinces given as 'Unknown', and dates not written YYYY-MM-DD are returned "
+                "as null.",
+                "Les codes et les dates que les fichiers donnent comme -1 ou -2 (inconnu ou "
+                "sans objet), les provinces « Unknown » et les dates qui ne sont pas au format "
+                "AAAA-MM-JJ sont renvoyés comme nuls.",
+                lang,
+            )
+    return None
+
+
 # Checked 2026-10-03 on the 2024-10-11 release: 965 French titles (no English
 # ones) carry "~" in the source file itself for a character lost upstream,
 # mostly the apostrophe after an elided D, L, S or QU ("D~EXPLOITATION",
@@ -676,12 +699,15 @@ async def get_patent(
             schema_name="ised_ip_horizons.PatentRecord",
             as_of=_as_of(release),
             freshness=_freshness(release, lang),
-            limits=_pick(
-                "Owners, status and classes are as of the release date, not today.",
-                "Les titulaires, le statut et les classes sont ceux de la date de diffusion, "
-                "pas d'aujourd'hui. Les codes et les noms de parties sont reproduits tels que "
-                "publiés ; les titres existent en anglais et en français.",
-                lang,
+            limits=join_limits(
+                _pick(
+                    "Owners, status and classes are as of the release date, not today.",
+                    "Les titulaires, le statut et les classes sont ceux de la date de diffusion, "
+                    "pas d'aujourd'hui. Les codes et les noms de parties sont reproduits tels "
+                    "que publiés ; les titres existent en anglais et en français.",
+                    lang,
+                ),
+                _nulled_note([*main, *parties], lang),
             ),
             lang=lang,
         ),
@@ -852,12 +878,15 @@ async def search_patents(
                 f"les {len(rows)} plus récents par date de dépôt sur {total} résultats",
                 lang,
             ),
-            limits=_pick(
-                "Name and title filters are case-insensitive substring matches; "
-                "the title filter also ignores accents.",
-                "Les filtres sur le nom et le titre cherchent une sous-chaîne, sans égard "
-                "à la casse ; le filtre sur le titre ignore aussi les accents.",
-                lang,
+            limits=join_limits(
+                _pick(
+                    "Name and title filters are case-insensitive substring matches; "
+                    "the title filter also ignores accents.",
+                    "Les filtres sur le nom et le titre cherchent une sous-chaîne, sans égard "
+                    "à la casse ; le filtre sur le titre ignore aussi les accents.",
+                    lang,
+                ),
+                _nulled_note(rows, lang),
             ),
             lang=lang,
         ),

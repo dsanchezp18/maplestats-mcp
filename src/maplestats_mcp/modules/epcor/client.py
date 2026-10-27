@@ -22,6 +22,7 @@ from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import pick
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -81,6 +82,22 @@ def _to_float(value: str) -> float | None:
     except ValueError:
         # "--" marks a missing reading (confirmed live).
         return None
+
+
+def unreadable_cells(page: str) -> list[str]:
+    """Measure cells that hold text other than a number, "--" or nothing.
+
+    Those also come back null; the response names them so a new marker
+    (a "<0.01", an "N/A") is not taken for a missing reading. None were on
+    either plant's page on 2026-10-27.
+    """
+    return [
+        f"{prefix} {text}"
+        for prefix, _index, value in _SPAN_RE.findall(page)
+        if prefix in constants.MEASURES
+        and (text := html.unescape(value).strip()) not in ("", "--")
+        and _to_float(text) is None
+    ]
 
 
 def infer_label_date(label: str, today: date) -> date | None:
@@ -148,6 +165,7 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
         f"epcor:daily:{plant}", constants.CACHE_TTL_DAILY_SECONDS, fetch
     )
     readings = parse_daily_page(page, today, lang=lang)
+    unreadable = unreadable_cells(page)
     # The newest day with at least one value, at local midnight. The page lists
     # today's row before anything is published (OCT-07 was blank for both plants on
     # 2026-10-08) and Rossdale's pH and chlorine lag a few days, so the newest row
@@ -180,11 +198,30 @@ async def get_daily_water_quality(plant: Plant = "els", *, lang: str = "en") -> 
                 "daily averages, last 7 days; unvalidated monitoring data",
                 "moyennes quotidiennes des 7 derniers jours ; données de surveillance non validées",
             ),
-            limits=pick(
-                lang,
-                "values leave the treatment plant; tap values can differ",
-                "valeurs mesurées à la sortie de l'usine de traitement ; les valeurs au "
-                "robinet peuvent différer",
+            limits=join_limits(
+                pick(
+                    lang,
+                    "values leave the treatment plant; tap values can differ",
+                    "valeurs mesurées à la sortie de l'usine de traitement ; les valeurs au "
+                    "robinet peuvent différer",
+                ),
+                pick(
+                    lang,
+                    "The page shows dates without a year; date is computed here as the latest "
+                    "such day not after today in Edmonton (date_label is the page's text)",
+                    "La page affiche les dates sans l'année ; date est calculée ici comme le "
+                    "jour le plus récent qui ne dépasse pas aujourd'hui à Edmonton (date_label "
+                    "est le texte de la page)",
+                ),
+                pick(
+                    lang,
+                    f"{len(unreadable)} cells that are not numbers are null here: "
+                    f"{', '.join(unreadable[:10])}",
+                    f"{len(unreadable)} cellules qui ne sont pas des nombres sont nulles ici : "
+                    f"{', '.join(unreadable[:10])}",
+                )
+                if unreadable
+                else None,
             ),
             lang=lang,
         ),

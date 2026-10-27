@@ -317,6 +317,47 @@ def test_choose_takes_the_last_endpoint_and_its_first_page():
     assert chosen is not None and chosen.url == "https://api.x.ca/tile"
 
 
+def test_choose_skips_count_only_requests():
+    # ArcGIS count first (ab_wildfire, eps): the same endpoint, first request.
+    arcgis = [
+        RecordedRequest(
+            "GET", "https://x.ca/0/query?where=1%3D1&returnCountOnly=true", b"", "", status=200
+        ),
+        RecordedRequest("GET", "https://x.ca/0/query?where=1%3D1&outFields=*", b"", "", status=200),
+    ]
+    chosen, pages = probe.choose(arcgis)
+    assert chosen is not None and "outFields" in chosen.url and pages == 1
+    # The same as a POST form.
+    posted = [
+        RecordedRequest(
+            "POST",
+            "https://x.ca/0/query",
+            b"where=1%3D1&returnCountOnly=true",
+            "application/x-www-form-urlencoded",
+            status=200,
+        ),
+        RecordedRequest(
+            "POST",
+            "https://x.ca/0/query",
+            b"where=1%3D1&outFields=*",
+            "application/x-www-form-urlencoded",
+            status=200,
+        ),
+    ]
+    chosen, _ = probe.choose(posted)
+    assert chosen is not None and b"outFields" in chosen.body
+    # Opendatasoft count last (electricity Quebec): /records?limit=0 after the export.
+    ods = [
+        RecordedRequest("GET", "https://x.ca/d/exports/json?limit=24", b"", "", status=200),
+        RecordedRequest("GET", "https://x.ca/d/records?limit=0", b"", "", status=200),
+    ]
+    chosen, _ = probe.choose(ods)
+    assert chosen is not None and "exports/json" in chosen.url
+    # A tool that only counts still gets its one request.
+    chosen, _ = probe.choose(arcgis[:1])
+    assert chosen is not None and "returnCountOnly" in chosen.url
+
+
 def test_unsent_arguments_are_the_ones_applied_locally():
     request = RecordedRequest("GET", "https://x.ca/items?station=3031093&f=json", b"", "")
     unsent = probe.unsent_arguments(

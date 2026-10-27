@@ -326,6 +326,9 @@ async def get_water_levels(
         for row in rows
         if row.get("value") is not None
     ]
+    # Readings the API lists with a null value are not returned as points;
+    # the count says so, so a gap in the series is not read as no reading slot.
+    null_values = len(rows) - len(points)
     # Points run oldest first; over the byte budget, keep the most recent.
     kept = fit_to_budget(points[::-1])[::-1]
     data_url = str(httpx.URL(f"{constants.BASE_URL}/stations/{station['id']}/data", params=params))
@@ -358,6 +361,13 @@ async def get_water_levels(
                     "pour choisir",
                 )
                 if defaulted
+                else None,
+                fr_or_en(
+                    lang,
+                    f"time steps with a null value in the source, left out: {null_values}",
+                    f"pas de temps sans valeur dans la source, omis : {null_values}",
+                )
+                if null_values
                 else None,
                 truncation_note_lang(
                     lang,

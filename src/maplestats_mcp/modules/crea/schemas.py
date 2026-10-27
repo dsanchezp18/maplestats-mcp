@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
@@ -24,6 +26,12 @@ class CreaHpiLinks(BaseModel):
         description="The MLS® HPI monthly zip, when a HEAD request confirmed it; never read."
     )
     zip_confirmed: bool
+    zip_check: Literal["found", "not_found", "failed"] = Field(
+        default="found",
+        description="found; not_found (HTTP 404 under every file name: not released yet); "
+        "failed (CREA's site did not answer or refused the check; try again). See "
+        "provenance.limits.",
+    )
     zip_last_modified: str | None = None
     zip_size_bytes: int | None = None
     download_from: str = Field(description="Where to download the data yourself.")

@@ -4,7 +4,8 @@ tests/discovery_benchmark/queries.json holds natural-language questions in Engli
 French with the tools a good answer names. This file checks that every expected tool is
 in the live registry, runs the questions through search_tools and plan_query in-process,
 and fails if a headline metric falls below a floor. The floors sit a little below the
-baseline recorded on 2026-10-19 (tests/discovery_benchmark/baseline.md), so a docstring
+baseline recorded on 2026-10-27 against the reviewed fixtures
+(tests/discovery_benchmark/baseline.md), so a docstring
 edit that loses a few queries fails here while ordinary churn does not. Raise a floor
 when a change improves the numbers on purpose; never lower one to make a change pass
 without recording why in the baseline report.
@@ -22,9 +23,12 @@ import pytest
 
 from tests.discovery_benchmark import runner
 
-# Measured 2026-10-19, 129 queries. Overall floors sit about 0.04 below the baseline, language
-# floors 0.05 below, and category floors 0.10 below: a category holds 5 to 25 queries, so
-# one flipped query (0.04 to 0.20) is tolerated and two are not.
+# Measured 2026-10-19 (129 queries), re-measured 2026-10-27 against the reviewed fixtures (129
+# search, 105 plan). Overall floors sit about 0.04 below the baseline, language floors 0.05
+# below, and category floors 0.10 below, or 1/n below for a category of fewer than 10 plan
+# queries: one flipped query is tolerated and two are not. Two floors were lowered by the
+# review, not by a change to discovery (baseline.md, "Regression floors"): boc search R@5 and
+# statcan plan anywhere.
 SEARCH_FLOORS: dict[tuple[str, str], dict[str, float]] = {
     ("overall", "all"): {
         "recall_at_1": 0.53,
@@ -33,9 +37,9 @@ SEARCH_FLOORS: dict[tuple[str, str], dict[str, float]] = {
         "mrr": 0.66,
     },
     ("by_lang", "en"): {"recall_at_5": 0.84},
-    ("by_lang", "fr"): {"recall_at_5": 0.78},
-    ("by_category", "statcan"): {"recall_at_5": 0.86},
-    ("by_category", "boc"): {"recall_at_5": 0.73},
+    ("by_lang", "fr"): {"recall_at_5": 0.81},
+    ("by_category", "statcan"): {"recall_at_5": 0.90},
+    ("by_category", "boc"): {"recall_at_5": 0.65},
     ("by_category", "cmhc"): {"recall_at_5": 0.90},
     ("by_category", "ckan_federal"): {"recall_at_5": 0.65},
     ("by_category", "ckan_provincial"): {"recall_at_5": 0.65},
@@ -45,21 +49,21 @@ SEARCH_FLOORS: dict[tuple[str, str], dict[str, float]] = {
 }
 PLAN_FLOORS: dict[tuple[str, str], dict[str, float]] = {
     ("overall", "all"): {
-        "recall_at_5": 0.78,
-        "recall_anywhere": 0.83,
-        "recall_routed": 0.78,
-        "mrr": 0.61,
-        "expected_coverage": 0.80,
-        "topic_hit": 0.83,
-        "portal_hit": 0.90,
+        "recall_at_5": 0.81,
+        "recall_anywhere": 0.87,
+        "recall_routed": 0.81,
+        "mrr": 0.63,
+        "expected_coverage": 0.84,
+        "topic_hit": 0.88,
+        "portal_hit": 0.91,
     },
-    ("by_lang", "en"): {"recall_anywhere": 0.85},
-    ("by_lang", "fr"): {"recall_anywhere": 0.81},
-    ("by_category", "statcan"): {"recall_anywhere": 0.58},
-    ("by_category", "boc"): {"recall_anywhere": 0.81},
-    ("by_category", "cmhc"): {"recall_anywhere": 0.72},
+    ("by_lang", "en"): {"recall_anywhere": 0.86},
+    ("by_lang", "fr"): {"recall_anywhere": 0.86},
+    ("by_category", "statcan"): {"recall_anywhere": 0.51},
+    ("by_category", "boc"): {"recall_anywhere": 0.87},
+    ("by_category", "cmhc"): {"recall_anywhere": 0.83},
     ("by_category", "ckan_federal"): {"recall_anywhere": 0.60},
-    ("by_category", "ckan_provincial"): {"recall_anywhere": 0.73},
+    ("by_category", "ckan_provincial"): {"recall_anywhere": 0.81},
     ("by_category", "municipal"): {"recall_anywhere": 0.90},
     ("by_category", "multi_source"): {"recall_anywhere": 0.90},
     ("by_category", "ambiguity"): {"recall_anywhere": 0.90, "recall_routed": 0.70},

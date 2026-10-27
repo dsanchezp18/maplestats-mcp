@@ -267,12 +267,22 @@ async def test_date_before_this_years_first_edition_reads_last_year(httpx_mock):
     assert chosen.edition == "2025-2" and chosen.year == 2025
 
 
-async def test_missing_year_page_is_empty_not_an_error(httpx_mock):
+async def test_missing_year_page_is_named_not_passed_off_as_empty(httpx_mock):
     httpx_mock.add_response(url=MENU_2026, text=MENU_HTML)
     httpx_mock.add_response(url=MENU_2026.replace("2026", "2025"), status_code=404)
     editions = await client.list_editions()
     assert [e.edition for e in editions.editions] == ["2026-2", "2026-1", "2026"]
-    assert editions.years == [2026, 2025]
+    assert editions.years == [2026] and editions.missing_years == [2025]
+    assert "2025 answered HTTP 404" in (editions.provenance.limits or "")
+
+
+async def test_missing_year_page_asked_for_is_not_found(httpx_mock):
+    httpx_mock.add_response(url=MENU_2026.replace("2026", "2025"), status_code=404)
+    with pytest.raises(NotFound, match="no tariff page for 2025"):
+        await client.list_editions(year=2025)
+    # Not cached: the page answers once it is up.
+    httpx_mock.add_response(url=MENU_2026.replace("2026", "2025"), text=MENU_HTML)
+    await client.list_editions(year=2025)
 
 
 async def test_input_errors(httpx_mock):

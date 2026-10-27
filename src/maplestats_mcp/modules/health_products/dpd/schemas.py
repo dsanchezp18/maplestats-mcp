@@ -107,7 +107,11 @@ class IngredientMatch(BaseModel):
     name: str
     product_count: int = Field(description="Drug products (any status) listing this ingredient.")
     strengths: list[str] = Field(
-        default_factory=list, description="Most common strengths, e.g. '500 MG'."
+        default_factory=list,
+        description="Most common strengths, e.g. '500 MG': at most 8, most frequent first.",
+    )
+    strength_count: int = Field(
+        default=0, description="Distinct strengths listed for this ingredient, before the cut to 8."
     )
 
 

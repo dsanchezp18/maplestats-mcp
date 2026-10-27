@@ -176,6 +176,29 @@ async def _catalogue(lang: str) -> tuple[list[dict[str, Any]], bool]:
                 "la liste des indicateurs WDI est revenue vide.",
                 lang,
             )
+        # One page of 2,000 holds the whole list today (1,498 indicators, checked
+        # live 2026-10-27). Should WDI outgrow it, the next pages are read; a list
+        # still short of the stated total is an error, since a search over it
+        # would silently miss indicators.
+        meta = payload[0] if isinstance(payload[0], dict) else {}
+        pages = min(int(meta.get("pages") or 1), constants.CATALOGUE_MAX_PAGES)
+        for page in range(2, pages + 1):
+            more = await _get(
+                url,
+                {"format": "json", "per_page": 2000, "page": page},
+                constants.CATALOGUE_TIMEOUT_SECONDS,
+                lang,
+            )
+            if isinstance(more, list) and len(more) >= 2:
+                rows += [r for r in (more[1] or []) if isinstance(r, dict) and r.get("id")]
+        total = meta.get("total")
+        if isinstance(total, int) and total > len(rows):
+            _raise(
+                UpstreamError,
+                f"WDI indicator list: read {len(rows)} of {total} indicators.",
+                f"liste des indicateurs WDI : {len(rows)} indicateurs lus sur {total}.",
+                lang,
+            )
         return rows
 
     return await cached_fetch(f"worldbank:wdi:{lang}", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch)

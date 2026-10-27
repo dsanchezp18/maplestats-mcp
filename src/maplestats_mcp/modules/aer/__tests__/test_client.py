@@ -105,6 +105,21 @@ async def test_get_well_licence_archive_link_missing_reports_not_exists(httpx_mo
     assert result.note is not None
 
 
+async def test_archive_link_blocked_head_is_an_error_not_a_missing_file(httpx_mock):
+    # A 403 or a 5xx says nothing about the file: it must not read as "no
+    # file at this address", and must not be cached as one.
+    url = constants.WELL_LICENCE_YEARLY_ZIP_URL_OLD.format(year=2018)
+    httpx_mock.add_response(url=url, method="HEAD", status_code=403)
+    with pytest.raises(UpstreamError, match="HTTP 403"):
+        await client.get_well_licence_archive_link(2018)
+    for _ in range(3):
+        httpx_mock.add_response(url=url, method="HEAD", status_code=503)
+    with pytest.raises(UpstreamUnavailable, match="HTTP 503"):
+        await client.get_well_licence_archive_link(2018)
+    httpx_mock.add_response(url=url, method="HEAD", headers={"content-length": "10"})
+    assert (await client.get_well_licence_archive_link(2018)).exists is True
+
+
 async def test_get_well_licence_archive_link_year_outside_archive_raises():
     with pytest.raises(InvalidInput, match="2017"):
         await client.get_well_licence_archive_link(1850)

@@ -30,15 +30,23 @@ class NhpSearchResult(BaseModel):
 
 class NhpMedicinalIngredient(BaseModel):
     name: str
-    quantity: float | None = None
+    quantity: float | None = Field(
+        default=None, description="Null when not given (the source writes 0 for that)."
+    )
     quantity_unit: str | None = None
-    potency: str | None = Field(default=None, description="Potency amount, unit and constituent.")
+    potency: str | None = Field(
+        default=None,
+        description="Composed by MapleStats: potency amount, unit and constituent, joined.",
+    )
     extract_ratio: str | None = None
     dried_herb_equivalent: str | None = None
     source_material: str | None = None
 
 
 class NhpDose(BaseModel):
+    """Composed by MapleStats from each figure's value, minimum, maximum and unit fields:
+    "1-2 capsule", "19+ year(s)" (a minimum alone), "≤12 year(s)" (a maximum alone)."""
+
     population: str | None = None
     age: str | None = None
     dose: str | None = None

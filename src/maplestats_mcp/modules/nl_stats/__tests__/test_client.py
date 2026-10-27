@@ -213,11 +213,21 @@ async def test_french_provenance_and_english_unchanged(httpx_mock):
     assert "Terre-Neuve-et-Labrador" in (french.provenance.licence or "")
     assert "Statistique Canada" in (french.provenance.licence or "")
     assert (french.provenance.freshness or "").startswith("Tel que publié")
-    assert (french.provenance.limits or "").startswith("les feuilles sont lues")
+    assert (french.provenance.limits or "").startswith("lignes 1 à 2 sur")
     english = await client.read_file(_XLSX, limit=2)
     assert english.provenance.freshness == "As published by the NL Statistics Agency."
     assert english.provenance.coverage == "Sheet 'Quarterly' of " + str(len(english.sheets)) + "."
     assert "Statistics Canada" in (english.provenance.licence or "")
+
+
+async def test_sheet_cut_at_the_row_cap_says_so(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_ROWS_PER_SHEET", 5)
+    httpx_mock.add_response(url=_XLSX, content=_bytes("population_quarterly.xlsx"))
+    result = await client.read_file(_XLSX, limit=200)
+    assert result.truncated
+    chosen = next(s for s in result.sheets if s.name == result.sheet)
+    assert chosen.truncated and chosen.rows <= 5
+    assert "has more than 5 rows and only the first 5 were read" in (result.provenance.limits or "")
 
 
 class _EndlessBody(httpx.AsyncByteStream):

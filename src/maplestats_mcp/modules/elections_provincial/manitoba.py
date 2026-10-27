@@ -317,11 +317,13 @@ def parse_results(votes_body: bytes, summary_body: bytes) -> list[District]:
                     number=None,
                     electors=info.electors,
                     rejected_ballots=info.rejected,
+                    # Elections Manitoba publishes ballots cast and electors, not a rate.
                     turnout=(
                         round(100 * info.ballots / info.electors, 2)
                         if info.ballots and info.electors
                         else None
                     ),
+                    turnout_computed=bool(info.ballots and info.electors),
                 )
             current = districts[division_key]
         # Totals, notes, and 2023's "Declined" and "Rejected" rows are not candidates.

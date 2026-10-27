@@ -92,7 +92,8 @@ def test_component_rows_are_sorted_and_zeros_become_none():
             "Other solids($/kg)": "3.3503",
         },
     ]
-    rows = client.parse_component_rows(raw)
+    rows, skipped = client.parse_component_rows(raw)
+    assert skipped == 0
     assert [r.effective_date for r in rows] == [date(2025, 2, 1), date(2026, 9, 1)]
     assert rows[0].milk_class == "4(m)" and rows[0].butterfat_per_kg is None
     assert rows[1].protein_per_kg is None and rows[1].butterfat_per_kg == 11.6418
@@ -109,8 +110,23 @@ def test_component_rows_accept_french_price_headers():
             "Autres solides($/kg)": "2.4098",
         }
     ]
-    rows = client.parse_component_rows(raw)
+    rows, _ = client.parse_component_rows(raw)
     assert rows[0].butterfat_per_kg == 6.8538 and rows[0].protein_per_kg == 2.4098
+
+
+def test_component_rows_with_unreadable_dates_are_counted():
+    row = {
+        "Milk Class": "5C",
+        "Effective Date": "2026-01-01 00:00:00",
+        "Butterfat($/kg)": "6.8538",
+        "Proteins($/kg)": "2.4098",
+        "Other solids($/kg)": "2.4098",
+    }
+    blank = dict.fromkeys(row, "")
+    rows, skipped = client.parse_component_rows(
+        [row, {**row, "Effective Date": "Jan 2026"}, {**row, "Milk Class": ""}, blank]
+    )
+    assert len(rows) == 1 and skipped == 2
 
 
 def test_component_columns_changed_is_an_upstream_error():
@@ -372,6 +388,20 @@ async def test_market_production_by_province(httpx_mock):
     assert result.latest_date == date(2026, 7, 31)
 
 
+async def test_market_unreadable_dates_and_values_are_reported(httpx_mock):
+    body = _bytes("market_sample.csv").replace(b'"274871871"', b'"n/a"', 1)
+    body += (
+        b'"July 2026","Total Production - CDC","Production totale - CCL","Milk Production",'
+        b'"Production de lait","","","ON","","","Volume (L)","Volume (L)","1"\n'
+    )
+    _market(httpx_mock, body)
+    result = await client.query_market_data("production", province="on")
+    assert result.rows[0].value is None
+    limits = result.provenance.limits or ""
+    assert "skipped for an unreadable date: 1" in limits
+    assert "not a number, returned as null: 1" in limits
+
+
 async def test_market_sales_class_segment_and_dates(httpx_mock):
     _market(httpx_mock)
     result = await client.query_market_data(
@@ -387,7 +417,7 @@ async def test_market_class_prefix_and_limit(httpx_mock):
     _market(httpx_mock)
     result = await client.query_market_data("sales_p10", milk_class="3b", limit=1)
     assert result.total_matched == 2 and result.returned_count == 1
-    assert result.provenance.limits == "newest 1 rows returned"
+    assert result.provenance.limits == "newest 1 rows returned."
 
 
 async def test_market_regions_in_french(httpx_mock):

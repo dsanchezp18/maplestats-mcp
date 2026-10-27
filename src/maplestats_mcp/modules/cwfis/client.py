@@ -53,6 +53,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.wfs import WfsConfig, get_features
@@ -553,6 +554,7 @@ async def get_stations(
             "donnez au moins province, name, ou latitude et longitude.",
         )
     by_point = latitude is not None
+    box_cut: str | None = None
     body, cached = await _wfs(
         c.STATIONS,
         cql=" AND ".join(clauses),
@@ -572,6 +574,19 @@ async def get_stations(
         scored = sorted((s for s in scored if s[0] <= radius_km), key=lambda s: s[0])
         stations = [_station(p, d) for d, p in scored[:limit]]
         total = len(scored)
+        in_box = _total(body, len(props))
+        if in_box > len(props):
+            # The box is read in name order, so a station within the radius
+            # may sit past the page and be missing from the distances.
+            box_cut = fr_or_en(
+                lang,
+                f"The search box held {in_box} stations and only the first {len(props)} "
+                "(by name) were measured, so nearer stations may be missing; use a smaller "
+                "radius_km",
+                f"La zone de recherche comptait {in_box} stations et seules les {len(props)} "
+                "premières (par nom) ont été mesurées : des stations plus proches peuvent "
+                "manquer ; réduisez radius_km",
+            )
     else:
         stations = [_station(p) for p in props]
         total = _total(body, len(stations))
@@ -589,6 +604,7 @@ async def get_stations(
             ttl=c.CACHE_TTL_LIVE,
         )
         held = _props(everything)
+        held_count = _total(everything, len(held))
         provinces = sorted(
             {
                 c.STATION_CODE_TO_PROVINCE.get(code, code)
@@ -599,10 +615,10 @@ async def get_stations(
         held_in = f" ({', '.join(provinces)})" if provinces else ""
         note = fr_or_en(
             lang,
-            f"No station matched. The layer currently holds {len(held)} stations"
+            f"No station matched. The layer currently holds {held_count} stations"
             + held_in
             + "; stations report during the fire season only.",
-            f"Aucune station ne correspond. La couche compte actuellement {len(held)} "
+            f"Aucune station ne correspond. La couche compte actuellement {held_count} "
             f"stations{held_in} ; les stations ne transmettent que pendant la saison des feux.",
         )
     return StationResult(
@@ -619,11 +635,14 @@ async def get_stations(
                 f"{len(stations)} of {total} matching stations returned",
                 f"{len(stations)} stations renvoyées sur {total} correspondantes",
             ),
-            limits=fr_or_en(
-                lang,
-                "includes US stations; FWI components are null where inputs are missing",
-                "comprend des stations américaines ; les composantes de l'IFM sont nulles "
-                "lorsque des données d'entrée manquent",
+            limits=join_limits(
+                fr_or_en(
+                    lang,
+                    "includes US stations; FWI components are null where inputs are missing",
+                    "comprend des stations américaines ; les composantes de l'IFM sont nulles "
+                    "lorsque des données d'entrée manquent",
+                ),
+                box_cut,
             ),
             freshness=fr_or_en(
                 lang,

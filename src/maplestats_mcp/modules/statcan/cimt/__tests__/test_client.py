@@ -390,6 +390,8 @@ async def test_get_trade_keeps_the_data_when_the_description_list_is_down(httpx_
     result = await client.get_trade("exports", "2025-01", "2025-01", hs_code="270900", partner="US")
     assert result.rows[0].value_cad == 1.3e10
     assert result.rows[0].hs_description is None
+    # The missing names are not passed off as "no description": the reply says why.
+    assert "commodity descriptions could not be loaded" in (result.provenance.limits or "")
 
 
 async def test_get_trade_future_month_is_rejected_before_any_report_call(httpx_mock):

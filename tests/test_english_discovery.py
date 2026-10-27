@@ -22,7 +22,9 @@ TOP_N = 3
 
 CASES = [
     ("What is Canada's current unemployment rate?", "statcan_indicators_get_indicators"),
-    ("latest CPI inflation Canada", "boc_search_series"),
+    # Since 2026-10-27 wds_get_data_from_vectors computes year-over-year CPI
+    # inflation itself (transform="yoy_pct_change"), so it is the StatCan answer.
+    ("latest CPI inflation Canada", "wds_get_data_from_vectors"),
     ("Find a StatCan table on GDP by industry", "wds_search_cubes"),
     ("get data for a StatCan vector", "wds_get_data_from_vectors"),
     ("Bank of Canada policy interest rate history", "boc_search_series"),
@@ -187,6 +189,7 @@ CASES = [
     ("population estimates by province", "wds_search_cubes"),
     ("wildfires British Columbia", "bcgw_get_active_wildfires"),
     ("time series for a vector between two dates", "wds_get_data_by_reference_period_range"),
+    ("GDP as originally published before revisions", "wds_get_series_as_of"),
     ("NOC occupation classification", "rdaas_search_classifications"),
     # StatCan's extra SDMX spaces (CCEI energy information, shared), 2026-10-02.
     ("greenhouse gas emissions by province and IPCC category", "sdmx_space_get_data"),

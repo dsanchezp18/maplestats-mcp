@@ -63,7 +63,14 @@ class PesticideProductList(BaseModel):
 class ResidueLimit(BaseModel):
     chemical: str
     commodity: str
-    mrl_ppm: float | None = Field(default=None, description="Maximum residue limit, ppm.")
+    mrl_ppm: float | None = Field(
+        default=None,
+        description="Maximum residue limit, ppm, read from mrl_as_published; null when that "
+        "text is not a number.",
+    )
+    mrl_as_published: str | None = Field(
+        default=None, description="The limit exactly as the extract writes it (e.g. '0,018')."
+    )
     comments: str | None = Field(default=None, description="e.g. 'except head lettuce'.")
     established_via: str | None = Field(
         default=None, description="The regulatory action, e.g. 'EMRL2008-02 (9 July 2008)'."

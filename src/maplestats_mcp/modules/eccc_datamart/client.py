@@ -123,7 +123,22 @@ NOTES = {
         "installation (nom, téléphone, courriel) ; ces colonnes sont omises ici. "
         "eccc_datamart_read_file renvoie le fichier tel que publié.",
     },
+    "ghgrp_blank_totals": {
+        "en": "Matching records with a blank total_co2e: {n}. total_co2e_sum, computed by "
+        "MapleStats, leaves them out rather than counting them as 0.",
+        "fr": "Enregistrements correspondants dont total_co2e est vide : {n}. total_co2e_sum, "
+        "calculé par MapleStats, les laisse de côté au lieu de les compter comme 0.",
+    },
+    "ghgrp_no_year": {
+        "en": "Rows of the file skipped for having no readable reference year: {n}.",
+        "fr": "Lignes du fichier ignorées faute d'année de référence lisible : {n}.",
+    },
 }
+
+
+def _year(text: str) -> int | None:
+    number = _number(text)
+    return int(number) if number is not None else None
 
 
 def _note(key: str, lang: Lang, **kwargs: Any) -> str:
@@ -1101,7 +1116,8 @@ def scan_npri(
     suffix = "en" if lang == "en" else "fr"
     records = [
         NpriRecord(
-            year=int(_number(_cell(r, col["year"])) or 0),
+            # A blank year stays null; 0 would read as a year.
+            year=_year(_cell(r, col["year"])),
             npri_id=_cell(r, col["npri_id"]).strip(),
             company=_text(_cell(r, col["company"])) or "",
             facility=_text(_cell(r, col["facility"])) or "",
@@ -1289,7 +1305,10 @@ def scan_ghgrp(
     order: Order,
     offset: int,
     limit: int,
-) -> tuple[list[GhgrpRecord], int, int, float, list[int]]:
+) -> tuple[list[GhgrpRecord], int, int, float, list[int], int, int]:
+    """Matching records, then: total matched, facilities, the sum of total_co2e over
+    the matches (blank totals left out), the file's years, the rows skipped for
+    having no readable year, and the matches whose total_co2e is blank."""
     rows = _rows(body)
     header = next(rows, None)
     if not header:
@@ -1304,11 +1323,15 @@ def scan_ghgrp(
     province_name = fold(PROVINCES[province][0]) if province else None
     all_years: set[int] = set()
     matched: list[list[str]] = []
+    no_year = 0
     for row in rows:
         if not any(row):
             continue
         year = _number(_cell(row, col["year"]))
         if year is None:
+            # Counted and reported: a row with no year cannot match a year filter,
+            # and cannot be placed in any year either.
+            no_year += 1
             continue
         all_years.add(int(year))
         if years and not years[0] <= year <= years[1]:
@@ -1332,7 +1355,9 @@ def scan_ghgrp(
     if order == "largest":
         matched.sort(key=lambda r: _number(_cell(r, col["total"])) or 0.0, reverse=True)
     facilities = len({_cell(r, col["ghgrp_id"]) for r in matched})
-    total_sum = sum(_number(_cell(r, col["total"])) or 0.0 for r in matched)
+    totals = [_number(_cell(r, col["total"])) for r in matched]
+    total_sum = sum(t for t in totals if t is not None)
+    blank_totals = sum(1 for t in totals if t is None)
     suffix = "en" if lang == "en" else "fr"
     records = []
     for r in matched[offset : offset + limit]:
@@ -1340,6 +1365,7 @@ def scan_ghgrp(
         records.append(
             GhgrpRecord(
                 ghgrp_id=_cell(r, col["ghgrp_id"]).strip(),
+                # Never 0: rows with no readable year were skipped above.
                 year=int(_number(_cell(r, col["year"])) or 0),
                 facility=_text(_cell(r, col["facility"])) or "",
                 city=_text(_cell(r, col["city"])),
@@ -1361,7 +1387,15 @@ def scan_ghgrp(
                 co2_biomass_tonnes=_number(_cell(r, col["biomass"])),
             )
         )
-    return records, len(matched), facilities, round(total_sum, 3), sorted(all_years)
+    return (
+        records,
+        len(matched),
+        facilities,
+        round(total_sum, 3),
+        sorted(all_years),
+        no_year,
+        blank_totals,
+    )
 
 
 async def ghgrp_facilities(
@@ -1413,7 +1447,7 @@ async def ghgrp_facilities(
             lang,
         )
     downloaded, cached = await _body(entry.path)
-    records, total, facilities, total_sum, years = await run_parse(
+    records, total, facilities, total_sum, years, no_year, blank_totals = await run_parse(
         scan_ghgrp,
         downloaded.body,
         lang=lang,
@@ -1446,9 +1480,16 @@ async def ghgrp_facilities(
         total_records=total,
         facilities=facilities,
         total_co2e_sum=total_sum,
+        total_co2e_blank=blank_totals,
+        rows_without_year=no_year,
         offset=offset,
         truncated=more,
-        notes=[_note("ghgrp_gwp", lang), _note("ghgrp_contacts", lang)],
+        notes=[
+            _note("ghgrp_gwp", lang),
+            _note("ghgrp_contacts", lang),
+            *([_note("ghgrp_blank_totals", lang, n=blank_totals)] if blank_totals else []),
+            *([_note("ghgrp_no_year", lang, n=no_year)] if no_year else []),
+        ],
         attribution=_attribution(lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,

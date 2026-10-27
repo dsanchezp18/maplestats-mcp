@@ -43,12 +43,16 @@ class DeviceLicenceList(BaseModel):
 
 class Device(BaseModel):
     device_id: int
-    licence_number: int
+    licence_number: int | None = Field(
+        default=None, description="Null when MDALL publishes no licence number for the device."
+    )
     trade_name: str | None = None
     first_licensed: str | None = None
     end_date: str | None = Field(default=None, description="Date removed from the licence.")
     identifiers: list[str] = Field(
-        default_factory=list, description="Model or catalogue numbers on the label."
+        default_factory=list,
+        description="Model or catalogue numbers on the label. Empty both when the device "
+        "has none and when they were not fetched; see identifiers_included on the result.",
     )
 
 
@@ -65,4 +69,9 @@ class DeviceList(BaseModel):
     devices: list[Device] = Field(default_factory=list)
     returned_count: int
     total_matched: int
+    identifiers_included: bool = Field(
+        default=True,
+        description="False when identifiers were not fetched (a name search returning over "
+        "25 devices), so every device's identifiers list is empty.",
+    )
     provenance: Provenance

@@ -28,6 +28,8 @@ def test_amounts_and_percentages_in_both_languages():
     assert client.parse_amount("0,20\xa0milliards", "fr") == 200_000_000
     assert client.parse_percent("16\xa0%", "fr") == 16.0
     assert client.parse_amount("n/a", "en") is None
+    # An unknown scale word is not read as plain dollars.
+    assert client.parse_amount("0.20 trillion", "en") is None
 
 
 def test_comma_is_thousands_in_english_and_decimal_in_french():
@@ -52,6 +54,22 @@ def test_headline_from_prose():
     assert headline.non_repayable_share_percent == 58
     assert headline.business_support_cad == 12.94e9
     assert headline.jobs_created_or_maintained == 198_000
+    assert headline.not_found == []
+
+
+async def test_unread_figures_are_named_in_limits(httpx_mock):
+    reworded = _EN.replace("median agreement value is", "typical agreement is worth").replace(
+        "0.20 billion", "0.20 trillion"
+    )
+    httpx_mock.add_response(url=constants.PAGE_URLS["en"], text=reworded)
+    result = await client.federal_investment("en")
+    assert result.headline.median_agreement_cad is None
+    assert result.headline.not_found == ["median_agreement_cad"]
+    assert result.by_year[0].value_cad is None
+    assert result.by_year[0].value_as_published == "0.20 trillion"
+    limits = result.provenance.limits or ""
+    assert "not found in the page text and are null: median_agreement_cad" in limits
+    assert "could not be read (see value_as_published): 1" in limits
 
 
 def test_tables_drop_footnote_markers():

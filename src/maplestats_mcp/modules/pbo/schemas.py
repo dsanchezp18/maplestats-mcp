@@ -55,6 +55,11 @@ class PboPublication(BaseModel):
     tables: list[PboTable] = Field(default_factory=list)
     text: str | None = Field(default=None, description="The markdown text, capped.")
     text_truncated: bool = False
+    left_out: dict[str, int] = Field(
+        default_factory=dict,
+        description="Document slices not returned, counted by kind (svg: a chart; bitmap: an "
+        "image; kvlist: a print-only block). They are on the publication's web page.",
+    )
     provenance: Provenance
 
 

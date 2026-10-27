@@ -24,6 +24,11 @@ class TariffEdition(BaseModel):
 class TariffEditions(BaseModel):
     editions: list[TariffEdition] = Field(description="Newest first.")
     years: list[int] = Field(description="The years whose pages were read.")
+    missing_years: list[int] = Field(
+        default_factory=list,
+        description="Years of the default listing whose page answered HTTP 404 (not posted "
+        "yet, or moved); their editions are missing. See provenance.limits.",
+    )
     provenance: Provenance
 
 

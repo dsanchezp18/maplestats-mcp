@@ -20,6 +20,8 @@ class DailyReleaseList(BaseModel):
     subject: str
     releases: list[DailyRelease] = Field(default_factory=list)
     returned_count: int
+    total_in_feed: int = Field(default=0, description="Releases in the subject's feed.")
+    truncated: bool = Field(default=False, description="True when the feed holds more.")
     provenance: Provenance
 
 

@@ -47,6 +47,8 @@ CACHE_TTL_DATA_SECONDS = 6 * 60 * 60
 # One page holds every year for every country requested (66 years x 39
 # countries at most); the API default of 50 rows would page a single series.
 PER_PAGE = 5000
+# Pages of 2,000 read for the indicator list (one is enough today).
+CATALOGUE_MAX_PAGES = 5
 
 CANADA = "CAN"
 

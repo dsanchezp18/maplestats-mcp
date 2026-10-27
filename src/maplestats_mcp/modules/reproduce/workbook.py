@@ -4,7 +4,9 @@ The rows are the ones the tool returned (the tool runs once here, through
 the server, so its cache and rate limits apply), or rows the caller passes
 back. They are cleaned as the R scripts clean data (snake_case names as
 janitor gives them, trimmed text, empty text as missing, numbers and ISO
-dates stored as text converted) and written following the house Excel
+dates stored as text converted, code columns kept as text as
+cleaning.CODE_COLUMNS keeps them; the response's notes name the columns
+converted and the result's fields left out of the rows) and written following the house Excel
 conventions (R Code Conventions section 11, applied with openpyxl since
 this server is Python): a data sheet named after its content holding one
 Excel table object with a frozen header, explicit number formats and
@@ -37,6 +39,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal
 
+from maplestats_mcp.modules.reproduce.cleaning import CODE_COLUMNS
 from maplestats_mcp.modules.reproduce.schemas import ExcelWorkbook
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
@@ -96,7 +99,19 @@ LABELS: dict[str, dict[str, str]] = {
         "cleaning_text": (
             "Names in snake_case (as janitor::clean_names in R), text trimmed, empty text as "
             "missing, numbers and ISO dates stored as text converted; codes with leading "
-            "zeros kept as text."
+            "zeros, and columns named like a code (coordinate, vector or product id, DGUID, "
+            "postal code, NAICS, NOC, SGC), kept as text."
+        ),
+        "cleaned_note": (
+            "Cleaned as the R scripts clean data: snake_case column names, text trimmed, empty "
+            "text as missing."
+        ),
+        "converted_note": "Converted from text to numbers or dates: {columns}.",
+        "codes_note": "Kept as text because they hold codes: {columns}.",
+        "left_out": "Fields of the result",
+        "left_out_note": (
+            "Not in the data rows (other parts of the tool's result): {fields}. Their values "
+            "are on the Source sheet; lists are named only."
         ),
         "reproduce_text": (
             "Call reproduce_code with the same tool and arguments for R, Python, Stata and "
@@ -171,7 +186,20 @@ LABELS: dict[str, dict[str, str]] = {
         "cleaning_text": (
             "Noms en snake_case (comme janitor::clean_names en R), espaces superflus retirés "
             "du texte, texte vide traité comme valeur manquante, nombres et dates ISO stockés "
-            "sous forme de texte, convertis en valeurs ; codes à zéros initiaux conservés comme texte."
+            "sous forme de texte, convertis en valeurs ; codes à zéros initiaux, et colonnes "
+            "dont le nom désigne un code (coordonnée, identifiant de vecteur ou de produit, "
+            "DGUID, code postal, SCIAN, CNP, CGT), conservés comme texte."
+        ),
+        "cleaned_note": (
+            "Nettoyé comme dans les scripts R : noms de colonnes en snake_case, espaces "
+            "superflus retirés du texte, texte vide traité comme valeur manquante."
+        ),
+        "converted_note": "Colonnes converties de texte en nombres ou en dates : {columns}.",
+        "codes_note": "Colonnes conservées comme texte parce qu'elles contiennent des codes : {columns}.",
+        "left_out": "Champs du résultat",
+        "left_out_note": (
+            "Absent des lignes de données (autres parties du résultat de l'outil) : {fields}. "
+            "Leurs valeurs figurent dans la feuille Source ; les listes y sont seulement nommées."
         ),
         "reproduce_text": (
             "Appelez reproduce_code avec le même outil et les mêmes arguments pour obtenir des "
@@ -350,6 +378,39 @@ def payload_provenance(payload: Any) -> dict[str, Any]:
     return found if isinstance(found, dict) else {}
 
 
+def _left_out(node: Any, best: list[dict[str, Any]], prefix: str = "") -> dict[str, Any]:
+    """The result's fields outside the rows, by dotted name.
+
+    Scalars keep their value (a total, a truncated flag, a dataset id) so
+    the Source sheet can show them; a list or object outside the path to
+    the rows is named only, as "[list]" or "[object]".
+    """
+    left: dict[str, Any] = {}
+    if not isinstance(node, dict):
+        return left
+    for key, value in node.items():
+        name = f"{prefix}{key}"
+        if key == "provenance" or value is best:
+            continue
+        if isinstance(value, dict) and _holds(value, best):
+            left.update(_left_out(value, best, f"{name}."))
+        elif isinstance(value, dict):
+            left[name] = "[object]"
+        elif isinstance(value, list):
+            left[name] = "[list]"
+        else:
+            left[name] = value
+    return left
+
+
+def _holds(node: Any, best: list[dict[str, Any]]) -> bool:
+    if node is best:
+        return True
+    if isinstance(node, dict):
+        return any(_holds(v, best) for k, v in node.items() if k != "provenance")
+    return False
+
+
 def rows_from_payload(payload: Any) -> list[dict[str, Any]]:
     """The table a tool result holds: its largest list of objects.
 
@@ -357,28 +418,39 @@ def rows_from_payload(payload: Any) -> list[dict[str, Any]]:
     observations: sdmx_get_data, wds_get_data_from_vectors), every inner row
     is one row, carrying the outer object's other fields.
     """
+    return rows_and_left_out(payload)[0]
+
+
+def rows_and_left_out(payload: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """`rows_from_payload`, plus the result's fields the rows leave out.
+
+    A result often carries a total, a truncated flag or a second list beside
+    its rows; the workbook says which (see `_left_out`) instead of dropping
+    them unseen.
+    """
     if isinstance(payload, dict) and isinstance(payload.get("result"), list):
         payload = payload["result"]  # FastMCP wraps a list result under "result"
     lists = _record_lists(payload)
     if not lists:
         if isinstance(payload, dict):
             single = {k: v for k, v in payload.items() if k != "provenance"}
-            return [_flatten(single)] if single else []
-        return []
+            return ([_flatten(single)] if single else []), {}
+        return [], {}
     best = max(lists, key=len)
+    left = _left_out(payload, best)
     child_keys = [
         key
         for key, value in best[0].items()
         if isinstance(value, list) and value and all(isinstance(v, dict) for v in value)
     ]
     if not child_keys:
-        return [_flatten(row) for row in best]
+        return [_flatten(row) for row in best], left
     key = max(child_keys, key=lambda k: sum(len(row.get(k) or []) for row in best))
     rows = []
     for parent in best:
         outer = _flatten({k: v for k, v in parent.items() if k != key})
         rows += [{**outer, **_flatten(child)} for child in parent.get(key) or []]
-    return rows
+    return rows, left
 
 
 # Cleaning, as the R scripts clean ---------------------------------------------
@@ -437,8 +509,28 @@ def _convert(text: str) -> Any:
     return text
 
 
+# Same rule as the scripts (cleaning.CODE_COLUMNS): StatCan coordinates "2.1"
+# and "2.10" are different members and collide as numbers, and a NAICS or
+# NOC code is not a quantity. Matched on the cleaned name, and on the last
+# part of a flattened one ("series.coordinate").
+_CODE_COLUMN = re.compile(CODE_COLUMNS)
+
+
+def _is_code_column(name: str) -> bool:
+    return any(_CODE_COLUMN.fullmatch(clean_name(part)) for part in {name, name.rsplit(".", 1)[-1]})
+
+
 def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str], list[list[Any]]]:
     """Column names and cleaned values; a column converts only if all its values do."""
+    names, table, _, _ = clean_rows_report(rows, lang)
+    return names, table
+
+
+def clean_rows_report(
+    rows: list[dict[str, Any]], lang: str = "en"
+) -> tuple[list[str], list[list[Any]], list[str], list[str]]:
+    """`clean_rows`, plus the cleaned names of the columns converted from text
+    and of the code columns kept as text although their values read as numbers."""
     columns: list[str] = []
     seen: set[str] = set()
     text_chars = 0
@@ -473,6 +565,9 @@ def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str],
                 long_int_columns.add(index)
             values.append(value)
         table.append(values)
+    names = clean_names(columns)
+    converted_columns: list[str] = []
+    code_columns: list[str] = []
     for index in range(len(columns)):
         check_deadline()
         texts = [r[index] for r in table if isinstance(r[index], str)]
@@ -482,6 +577,10 @@ def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str],
         kinds = {type(v) for v in converted}
         if not (kinds <= {int, float} or kinds == {date} or kinds == {datetime}):
             continue  # still text, or mixed kinds: leave the column as text
+        if kinds <= {int, float} and _is_code_column(columns[index]):
+            code_columns.append(names[index])
+            continue
+        converted_columns.append(names[index])
         lookup = dict(zip(texts, converted, strict=True))
         for r in table:
             if isinstance(r[index], str):
@@ -492,7 +591,7 @@ def clean_rows(rows: list[dict[str, Any]], lang: str = "en") -> tuple[list[str],
         for r in table:
             if isinstance(r[index], int) and not isinstance(r[index], bool):
                 r[index] = str(r[index])
-    return clean_names(columns), table
+    return names, table, converted_columns, code_columns
 
 
 # Workbook ------------------------------------------------------------------------
@@ -728,12 +827,19 @@ def build_workbook(
     provenance: dict[str, Any],
     available: int,
     lang: str = "en",
-) -> tuple[bytes, list[str], str | None]:
-    """The .xlsx bytes, its sheet names and a description of its chart."""
+    left_out: dict[str, Any] | None = None,
+) -> tuple[bytes, list[str], str | None, list[str]]:
+    """The .xlsx bytes, its sheet names, a description of its chart and notes
+    on how the rows were cleaned."""
     from openpyxl import Workbook
 
     labels = _labels(lang)
-    header, table = clean_rows(rows, lang)
+    header, table, converted, codes = clean_rows_report(rows, lang)
+    cleaning = [_say(lang, "cleaned_note")]
+    if converted:
+        cleaning.append(_say(lang, "converted_note", columns=", ".join(converted)))
+    if codes:
+        cleaning.append(_say(lang, "codes_note", columns=", ".join(codes)))
     wb = Workbook()
     taken: set[str] = set()
     data_ws = wb.worksheets[0]
@@ -766,6 +872,10 @@ def build_workbook(
             _say(lang, "rows_text", written=len(table), available=available) + capped,
         ),
         (labels["cleaning"], labels["cleaning_text"]),
+        (
+            labels["left_out"],
+            json.dumps(left_out, ensure_ascii=False, default=str)[:_MAX_CELL] if left_out else None,
+        ),
         (labels["reproduce"], labels["reproduce_text"]),
         (labels["created"], datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")),
     ]
@@ -783,7 +893,7 @@ def build_workbook(
     check_deadline()
     wb.save(buffer)
     check_deadline()
-    return buffer.getvalue(), wb.sheetnames, chart
+    return buffer.getvalue(), wb.sheetnames, chart, cleaning
 
 
 def _export_dir() -> Path:
@@ -823,10 +933,11 @@ async def export(
     if delivery == "file" and not local:
         raise InvalidInput(_say(lang, "hosted"))
     provenance: dict[str, Any] = {}
+    left_out: dict[str, Any] = {}
     if rows is None:
         payload = await _call(str(tool_name), arguments or {}, lang)
         provenance = payload_provenance(payload)
-        records = await run_parse(rows_from_payload, payload)
+        records, left_out = await run_parse(rows_and_left_out, payload)
         available = len(records)
     else:
         if not all(isinstance(row, dict) for row in rows):
@@ -837,7 +948,7 @@ async def export(
         what = tool_name or _labels(lang)["the_rows"]
         raise NotFound(_say(lang, "no_rows", what=what))
     title = (title or tool_name or _labels(lang)["default_title"]).strip()[:120]
-    content, sheets, chart = await run_parse(
+    content, sheets, chart, cleaning = await run_parse(
         build_workbook,
         records[:max_rows],
         title=title,
@@ -846,6 +957,7 @@ async def export(
         provenance=provenance,
         available=available,
         lang=lang,
+        left_out=left_out,
     )
     if len(content) > MAX_BYTES:
         raise InvalidInput(_say(lang, "too_big", size=len(content), limit=MAX_BYTES))
@@ -853,6 +965,9 @@ async def export(
     notes = []
     if available > max_rows:
         notes.append(_say(lang, "first_rows", written=max_rows, available=available))
+    notes += cleaning
+    if left_out:
+        notes.append(_say(lang, "left_out_note", fields=", ".join(left_out)))
     saved_path = None
     encoded = None
     if delivery == "file" or (delivery == "auto" and local):

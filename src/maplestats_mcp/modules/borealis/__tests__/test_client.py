@@ -65,6 +65,9 @@ async def test_dataset_search_lists_ivt_files_and_twins(httpx_mock):
     httpx_mock.add_response(url=_FILES, json={"data": _LISTING})
     result = await client.search_ivt("labour force historical review", limit=5)
     assert result.datasets_matched == 44
+    assert result.total_matched == 1 and not result.truncated
+    # Only the top datasets are read for files, and the limits say so.
+    assert "top 10 of 44 matching datasets" in (result.provenance.limits or "")
     assert [f.file_name for f in result.files] == ["Table-024.ivt"]
     item = result.files[0]
     assert item.download_url == "https://borealisdata.ca/api/access/datafile/5001"
@@ -73,6 +76,18 @@ async def test_dataset_search_lists_ivt_files_and_twins(httpx_mock):
     search = httpx_mock.get_requests()[0]
     assert search.url.params["q"] == '"labour" AND "force" AND "historical" AND "review"'
     assert search.url.params["type"] == "dataset"
+
+
+async def test_files_cut_at_limit_say_so(httpx_mock):
+    listing = [
+        {"label": f"T{i}.ivt", "restricted": False, "dataFile": {"id": i, "filesize": 9}}
+        for i in range(3)
+    ]
+    httpx_mock.add_response(url=_SEARCH, json={"data": {"total_count": 1, "items": [_DATASET]}})
+    httpx_mock.add_response(url=_FILES, json={"data": listing})
+    result = await client.search_ivt("labour", limit=2)
+    assert result.returned_count == 2 and result.total_matched == 3 and result.truncated
+    assert (result.provenance.limits or "").startswith("Returned the first 2 of 3 IVT files")
 
 
 async def test_falls_back_to_file_search(httpx_mock):

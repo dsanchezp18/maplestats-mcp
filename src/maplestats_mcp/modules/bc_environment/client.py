@@ -45,7 +45,7 @@ from maplestats_mcp.modules.bc_environment.schemas import (
     WellSeriesKind,
 )
 from maplestats_mcp.shared import file_download, remote_zip
-from maplestats_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared.cache import cached_fetch, forget
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get
@@ -67,6 +67,7 @@ _LISTING_ROW = re.compile(
 )
 _TIME = re.compile(r"^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?(?:[ T](\d{2}):?(\d{2})?(?::(\d{2}))?)?$")
 _MISSING_CODE_FLOOR = -999.0
+_WFS_PAGE = 5000
 
 
 # ---------------------------------------------------------------- helpers
@@ -119,6 +120,21 @@ def _float(text: str | None) -> float | None:
         return float(text)
     except ValueError:
         return None
+
+
+def _unparsed_note(count: int, what: str, lang: Lang) -> str | None:
+    """The note for cells that held text which is not a number (value left null).
+
+    None of the snow and hydrometric files held such a cell when checked
+    live on 2026-10-27, so a count here means the publisher wrote something new.
+    """
+    if not count:
+        return None
+    return pick(
+        lang,
+        f"{count:,} {what} held text that is not a number; their value is null.",
+        f"{count} {what} contenaient un texte qui n'est pas un nombre ; leur valeur est nulle.",
+    )
 
 
 def _value(text: str | None) -> tuple[float | None, str | None]:
@@ -726,9 +742,14 @@ async def _wfs(
         "typeName": layer,
         "outputFormat": "application/json",
         "srsName": "EPSG:4326",
-        "count": "5000",
+        "count": str(_WFS_PAGE),
         **(extra or {}),
     }
+    # Both layers are far below one page (180 snow stations, 523 observation
+    # wells, checked live 2026-10-27 via numberMatched). Paging is not an
+    # option: the wells layer answers any startIndex, even 0, with an
+    # exception unless sortBy names a key (live 2026-10-27). So a layer that
+    # outgrows the page is an error, not a list cut at 5,000 without a word.
     await _LIMITER.acquire()
     try:
         payload = await api_get(constants.WFS_URL, params=params, timeout=90.0)
@@ -745,6 +766,16 @@ async def _wfs(
             UpstreamError,
             f"the BC Geographic Warehouse returned no features for {layer}.",
             f"le BC Geographic Warehouse n'a renvoyé aucune entité pour {layer}.",
+            lang,
+        )
+    matched = payload.get("numberMatched")
+    if isinstance(matched, int) and matched > len(features):
+        raise_localized(
+            UpstreamError,
+            f"the BC Geographic Warehouse layer {layer} holds {matched} features, more than "
+            f"the {len(features)} one request returns.",
+            f"la couche {layer} du BC Geographic Warehouse compte {matched} entités, plus que "
+            f"les {len(features)} qu'une requête renvoie.",
             lang,
         )
     return features
@@ -852,6 +883,7 @@ async def get_snow_station_data(
         wanted = {v.casefold() for v in variables}
         measures = [m for m in measures if m.casefold() in wanted]
     readings: list[SnowReading] = []
+    unparsed = 0
     for row in rows:
         record = dict(zip(header, row, strict=False))
         time = norm_time(record.get("DateTime", ""))
@@ -860,13 +892,15 @@ async def get_snow_station_data(
         for measure in measures:
             if not record.get(measure):
                 continue
+            value = _float(record.get(measure))
+            unparsed += value is None
             readings.append(
                 SnowReading(
                     time_utc=time,
                     station_id=record.get("Location ID", station_id),
                     station_name=record.get("Location Name") or None,
                     variable=measure,
-                    value=_float(record.get(measure)),
+                    value=value,
                     unit=record.get(f"Unit_{measure}") or None,
                     grade=record.get(f"Grade_{measure}") or None,
                 )
@@ -886,7 +920,8 @@ async def get_snow_station_data(
                 "Saison en cours seulement (depuis le 1er octobre) ; utilisez "
                 "bc_env_get_snow_readings avec une date de début pour les archives depuis 2003. "
                 "Les valeurs sont provisoires.",
-            )
+            ),
+            *filter(None, [_unparsed_note(unparsed, pick(lang, "cells", "cellules"), lang)]),
         ],
         provenance=_provenance(
             url,
@@ -1014,6 +1049,7 @@ async def get_snow_readings(
         )
     columns = _pick_columns(_snow_columns(header), stations, lang)
     readings: list[SnowReading] = []
+    unparsed = 0
     for row in rows:
         if not row:
             continue
@@ -1024,16 +1060,20 @@ async def get_snow_readings(
             cell = row[index] if index < len(row) else ""
             if cell == "":
                 continue
+            value = _float(cell)
+            unparsed += value is None
             readings.append(
                 SnowReading(
                     time_utc=time,
                     station_id=station_id,
                     station_name=name or None,
                     variable=code,
-                    value=_float(cell),
+                    value=value,
                     unit=unit,
                 )
             )
+    if note := _unparsed_note(unparsed, pick(lang, "cells", "cellules"), lang):
+        notes.append(note)
     readings.sort(key=lambda r: (r.time_utc, r.station_id), reverse=True)
     kept, truncated = _newest(readings, limit)
     return SnowSeries(
@@ -1146,17 +1186,21 @@ async def list_wells(
 ) -> WellList:
     _check_limit(limit, constants.LIST_LIMIT_MAX, lang)
 
-    async def fetch() -> list[Well]:
+    async def fetch() -> tuple[list[Well], str | None]:
         features = await _wfs(
             constants.WELLS_LAYER,
             {"CQL_FILTER": "OBSERVATION_WELL_NUMBER IS NOT NULL"},
             lang=lang,
         )
         files = await listing(f"{constants.WELL_BASE}/")
+        # The regions come from a separate indicator table. When it fails the
+        # wells are still worth listing, but without regions, said so, and
+        # not cached (below), so the next call tries the table again.
+        regions_failed: str | None = None
         try:
             regions = await _well_regions()
-        except (NotFound, UpstreamError, UpstreamUnavailable, InvalidInput):
-            regions = {}
+        except (NotFound, UpstreamError, UpstreamUnavailable, InvalidInput) as exc:
+            regions, regions_failed = {}, str(exc)
         wells: dict[str, Well] = {}
         for feature in features:
             p = feature.get("properties") or {}
@@ -1183,9 +1227,29 @@ async def list_wells(
                 data_updated=data_file[0] if data_file else None,
                 details_url=p.get("WELL_DETAILS_URL"),
             )
-        return sorted(wells.values(), key=lambda w: w.well_id)
+        return sorted(wells.values(), key=lambda w: w.well_id), regions_failed
 
-    wells, cached = await cached_fetch("bc_env:wells", constants.CACHE_TTL_LIST_SECONDS, fetch)
+    (wells, regions_failed), cached = await cached_fetch(
+        "bc_env:wells", constants.CACHE_TTL_LIST_SECONDS, fetch
+    )
+    if regions_failed:
+        forget("bc_env:wells")
+        if region:
+            # Filtering on a region the table could not supply would return
+            # 0 wells, which reads as "no wells there".
+            raise_typed(
+                UpstreamUnavailable,
+                pick(
+                    lang,
+                    "the groundwater-trends table that gives each well's region could not be "
+                    f"read ({regions_failed}), so the region filter cannot be applied; try "
+                    "again later or filter by city.",
+                    "le tableau des tendances des eaux souterraines qui donne la région de "
+                    f"chaque puits n'a pas pu être lu ({regions_failed}) : le filtre par "
+                    "région ne peut pas s'appliquer ; réessayez plus tard ou filtrez par ville.",
+                ),
+                lang,
+            )
     if with_data_only:
         wells = [w for w in wells if w.has_data_files]
     if query:
@@ -1221,6 +1285,15 @@ async def list_wells(
                 f"{constants.WELL_BASE}/. La profondeur et l'altitude du sol sont en pieds, "
                 "comme consignées.",
             ),
+            limits=pick(
+                lang,
+                "Region is missing for every well: the groundwater-trends table could not be "
+                f"read ({regions_failed}).",
+                "La région manque pour tous les puits : le tableau des tendances des eaux "
+                f"souterraines n'a pas pu être lu ({regions_failed}).",
+            )
+            if regions_failed
+            else None,
         ),
     )
 
@@ -1487,7 +1560,7 @@ async def get_hydrometric_data(
                 lang,
                 f"station must be a provincial id such as 08HA0022 or H08KC0844; got {station!r}.",
                 "station doit être un identifiant provincial, p. ex. 08HA0022 ou H08KC0844 "
-                "(reçu {station!r}).",
+                f"(reçu {station!r}).",
             ),
             lang,
         )
@@ -1511,6 +1584,7 @@ async def get_hydrometric_data(
     station_name: str | None = None
     notes: list[str] = []
     cached_all = True
+    short = unparsed = 0
 
     def key_of(row: list[str]) -> tuple[str, str] | None:
         return (row[0], norm_time(row[5])) if len(row) >= 10 else None
@@ -1568,14 +1642,28 @@ async def get_hydrometric_data(
                 )
         for row in rows:
             if len(row) < 10:
+                # Every row had the 10 columns when checked live on 2026-10-27.
+                short += 1
                 continue
             time = norm_time(row[5])
             if not _in_period(time, low, high):
                 continue
             station_name = station_name or row[1]
+            value = _float(row[7])
+            unparsed += value is None and row[7].strip() != ""
             readings[time] = HydroReading(
-                time_utc=time, value=_float(row[7]), unit=row[8] or None, grade=row[9] or None
+                time_utc=time, value=value, unit=row[8] or None, grade=row[9] or None
             )
+    if note := _unparsed_note(unparsed, pick(lang, "readings", "lectures"), lang):
+        notes.append(note)
+    if short:
+        notes.append(
+            pick(
+                lang,
+                f"{short:,} rows with fewer than the file's 10 columns were skipped.",
+                f"{short} lignes comptant moins que les 10 colonnes du fichier ont été ignorées.",
+            )
+        )
     ordered = [readings[k] for k in sorted(readings, reverse=True)]
     kept, truncated = _newest(ordered, limit)
     if not ordered and station_name is None:

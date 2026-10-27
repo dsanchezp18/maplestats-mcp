@@ -242,7 +242,7 @@ async def search_licences(
 def _device(row: dict[str, Any], identifiers: list[str] | None = None) -> Device:
     return Device(
         device_id=int(row["device_id"]),
-        licence_number=int(row.get("original_licence_no") or 0),
+        licence_number=_int(row.get("original_licence_no")),
         trade_name=api.text(row.get("trade_name")),
         first_licensed=api.text(row.get("first_licence_dt")),
         end_date=api.text(row.get("end_date")),
@@ -379,6 +379,7 @@ async def search_devices(
         )
     # Trade names and identifiers are not translated by the API.
     state = {"state": "active"} if active_only else {}
+    identifiers_included = True
     if name:
         path = constants.PATH_DEVICE
         rows = [
@@ -391,7 +392,8 @@ async def search_devices(
         rows.sort(key=lambda r: (r.get("trade_name") or "", r["device_id"]))
         page = rows[:limit]
         keys = [_key(r) for r in page]
-        found = await _identifiers(keys) if len(keys) <= _IDENTIFIER_DEVICES_MAX else {}
+        identifiers_included = len(keys) <= _IDENTIFIER_DEVICES_MAX
+        found = await _identifiers(keys) if identifiers_included else {}
         devices = [_device(r, found.get(_key(r))) for r in page]
         total = len(rows)
     else:
@@ -428,6 +430,7 @@ async def search_devices(
         devices=devices,
         returned_count=len(devices),
         total_matched=total,
+        identifiers_included=identifiers_included,
         provenance=api.provenance(
             api.url_for(path),
             cached=False,
@@ -449,6 +452,20 @@ async def search_devices(
                 )
                 + (", actifs seulement" if active_only else "")
             ),
-            limits_fr="Les noms commerciaux et les identifiants sont ceux déposés, non traduits.",
+            limits=(
+                None
+                if identifiers_included
+                else f"identifiers were not fetched for a page of over {_IDENTIFIER_DEVICES_MAX} "
+                f"devices, so every identifiers list is empty; use limit={_IDENTIFIER_DEVICES_MAX} "
+                "or less to get them"
+            ),
+            limits_fr="Les noms commerciaux et les identifiants sont ceux déposés, non traduits."
+            + (
+                ""
+                if identifiers_included
+                else f" Les identifiants n'ont pas été récupérés pour une page de plus de "
+                f"{_IDENTIFIER_DEVICES_MAX} instruments : toutes les listes identifiers sont "
+                f"vides ; utilisez limit={_IDENTIFIER_DEVICES_MAX} ou moins pour les obtenir."
+            ),
         ),
     )

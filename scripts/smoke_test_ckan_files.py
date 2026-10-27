@@ -39,12 +39,15 @@ def check(ok: bool, label: str) -> None:
 
 
 async def expect_error(
-    label: str, error: type[Exception], coro: Awaitable[object], needle: str
+    label: str, error: type[Exception], coro: Awaitable[object], *needles: str
 ) -> None:
     try:
         await coro
     except error as exc:
-        check(needle in str(exc), f"{label} -> {type(exc).__name__}: {str(exc)[:110]}")
+        check(
+            any(n in str(exc) for n in needles),
+            f"{label} -> {type(exc).__name__}: {str(exc)[:110]}",
+        )
     except Exception as exc:  # noqa: BLE001
         check(False, f"{label} raised {type(exc).__name__}: {str(exc)[:160]}")
     else:
@@ -118,6 +121,9 @@ async def on() -> None:
         UpstreamError,
         files.read_resource("on", "43aa4b94-8040-459a-a219-d4e9949390c0"),
         "web page",
+        # Since 2026-10-26 omafra.gov.on.ca answers GitHub runners with 403
+        # instead of the HTML page; either way the reader must raise, not parse.
+        "HTTP 403",
     )
     await expect_error(
         "on file off the host list",

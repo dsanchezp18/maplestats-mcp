@@ -113,6 +113,9 @@ async def test_nhp_product_reads_wrapped_and_bare_answers(httpx_mock):
         ingredient.extract_ratio == "4:1" and ingredient.dried_herb_equivalent == "400 milligrams"
     )
     assert detail.doses[0].dose == "1-2 Capsule" and detail.doses[0].frequency == "3 daily"
+    # A minimum age alone used to vanish (age 0, minimum 18).
+    assert detail.doses[0].age == "18+"
+    assert "composed by MapleStats" in (detail.provenance.limits or "")
     assert detail.risks[0].text == "Do not use if pregnant."
 
 
@@ -226,3 +229,17 @@ async def test_device_search_by_identifier_groups_rows(httpx_mock):
     assert result.devices[0].identifiers == ["STE-FT-008"]
     with pytest.raises(InvalidInput):
         await mdall.search_devices(name="dexcom", identifier="STE")
+
+
+async def test_device_name_search_over_25_says_identifiers_were_not_fetched(httpx_mock):
+    rows = [
+        {"original_licence_no": 102449, "device_id": 1000000 + i, "first_licence_dt": "2019-02-21",
+         "end_date": None, "trade_name": f"DEXCOM PART {i:02d}"}
+        for i in range(30)
+    ]  # fmt: skip
+    httpx_mock.add_response(url=_url("medical-devices/device", r"device_name=dexcom"), json=rows)
+    result = await mdall.search_devices(name="dexcom", limit=30)
+    assert result.returned_count == 30
+    assert result.identifiers_included is False
+    assert all(d.identifiers == [] for d in result.devices)
+    assert "identifiers were not fetched" in (result.provenance.limits or "")

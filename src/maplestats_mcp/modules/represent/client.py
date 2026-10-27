@@ -467,7 +467,33 @@ async def _set_details(
             continue
         all_cached = all_cached and cached
         infos.append(_set_info(slug, raw))
+    # Sets past the cap are listed without details rather than left out, and
+    # _details_note says so.
+    infos += [
+        BoundarySetInfo(slug=slug, name=names[slug], detail_loaded=False)
+        for slug in list(names)[constants.MAX_SET_DETAILS :]
+    ]
     return infos, all_cached
+
+
+def _details_note(infos: list[BoundarySetInfo], lang: Lang) -> list[str]:
+    """A note when some boundary sets came back without licence and dates."""
+    missing = sum(not i.detail_loaded for i in infos)
+    if not missing:
+        return []
+    return [
+        fr_or_en(
+            lang,
+            f"Licence and last-updated date are missing for {missing} of the {len(infos)} "
+            f"boundary sets (details are loaded for {constants.MAX_SET_DETAILS} at most, and "
+            "a set Represent does not describe has none); oldest_boundary_update covers the "
+            "others only.",
+            f"La licence et la date de mise à jour manquent pour {missing} des {len(infos)} "
+            f"ensembles de limites (les détails sont chargés pour {constants.MAX_SET_DETAILS} "
+            "au plus, et un ensemble que Represent ne décrit pas n'en a aucun) ; "
+            "oldest_boundary_update ne porte que sur les autres.",
+        )
+    ]
 
 
 def _oldest(infos: list[BoundarySetInfo]) -> date | None:
@@ -564,7 +590,12 @@ async def lookup_postcode(
     lon, lat = (
         (coords[0], coords[1]) if isinstance(coords, list) and len(coords) >= 2 else (None, None)
     )
-    notes = [_POSTCODE_NOTE[lang], _OLD_ORDER_NOTE[lang], *_stale_note(infos, lang)]
+    notes = [
+        _POSTCODE_NOTE[lang],
+        _OLD_ORDER_NOTE[lang],
+        *_stale_note(infos, lang),
+        *_details_note(infos, lang),
+    ]
     if sets and not representatives:
         notes.append(_SETS_NO_REPS_NOTE[lang])
     if not sets:
@@ -649,7 +680,7 @@ async def lookup_point(
     details_cached = True
     if include_set_details:
         infos, details_cached = await _set_details(boundaries, lang)
-    notes = [_OLD_ORDER_NOTE[lang], *_stale_note(infos, lang)]
+    notes = [_OLD_ORDER_NOTE[lang], *_stale_note(infos, lang), *_details_note(infos, lang)]
     if not boundaries:
         notes.insert(0, _NO_MATCH_NOTE[lang])
     boundaries_url = str(
@@ -731,11 +762,33 @@ async def list_representative_sets(
 async def _search_in_set(
     slug: str, params: dict[str, Any], lang: str = "en"
 ) -> tuple[list[dict[str, Any]], bool]:
-    """Every matching representative of one set (provincial sets hold up to ~125)."""
-    raw, cached = await _get(
-        f"/representatives/{slug}/", {**params, "limit": constants.PAGE_SIZE}, lang=lang
+    """Every matching representative of one set (provincial sets hold up to ~125).
+
+    One page covers every set today; a set that grows past it is read page by
+    page rather than cut at PAGE_SIZE without a word.
+    """
+    rows: list[dict[str, Any]] = []
+    all_cached = True
+    for page in range(constants.MAX_SCAN_PAGES):
+        query = {**params, "limit": constants.PAGE_SIZE}
+        if page:
+            query["offset"] = len(rows)
+        raw, cached = await _get(f"/representatives/{slug}/", query, lang=lang)
+        all_cached = all_cached and cached
+        objects = [r for r in list_or_empty(raw, "objects") if isinstance(r, dict)]
+        rows += objects
+        if not (raw.get("meta") or {}).get("next") or not objects:
+            return rows, all_cached
+    raise lang_error(
+        UpstreamError,
+        lang,
+        f"represent: set {slug} holds more than "
+        f"{constants.MAX_SCAN_PAGES * constants.PAGE_SIZE} matching representatives, more "
+        "than this tool reads; add a filter.",
+        f"represent : l'ensemble {slug} compte plus de "
+        f"{constants.MAX_SCAN_PAGES * constants.PAGE_SIZE} élus correspondants, plus que cet "
+        "outil n'en lit ; ajoutez un filtre.",
     )
-    return [r for r in list_or_empty(raw, "objects") if isinstance(r, dict)], cached
 
 
 async def search_representatives(
@@ -806,6 +859,7 @@ async def search_representatives(
         return not local_party or _party_matches(raw, local_party)
 
     cached = True
+    scan_cut = False
     rows: list[dict[str, Any]]
     total: int
     path = "/representatives/"
@@ -855,6 +909,7 @@ async def search_representatives(
         # federal and provincial rows here.
         merged = []
         page_offset = 0
+        scan_cut = True
         for _ in range(constants.MAX_SCAN_PAGES):
             raw, page_cached = await _get(
                 "/representatives/",
@@ -876,10 +931,27 @@ async def search_representatives(
                 and party_ok(r)
             )
             if not (raw.get("meta") or {}).get("next") or not objects:
+                scan_cut = False
                 break
             page_offset += len(objects)
         total = len(merged)
         rows = merged[offset : offset + limit]
+        if scan_cut:
+            # Represent held 3,810 representatives in all (live 2026-10-27), under
+            # the 8,000 this scan reads; past it, say the count is partial.
+            notes.append(
+                fr_or_en(
+                    lang,
+                    f"The scan stopped after {page_offset:,} representatives "
+                    f"({constants.MAX_SCAN_PAGES} pages), so total_count counts only the "
+                    "municipal ones among them and more exist; add name, office, district "
+                    "or representative_set.",
+                    f"Le parcours s'est arrêté après {page_offset} élus "
+                    f"({constants.MAX_SCAN_PAGES} pages) : total_count ne compte que les élus "
+                    "municipaux parmi eux et il en existe d'autres ; ajoutez name, office, "
+                    "district ou representative_set.",
+                )
+            )
         sent = {**params, "limit": constants.PAGE_SIZE, "offset": 0}
         request = fr_or_en(
             lang,
@@ -936,7 +1008,7 @@ async def search_representatives(
         total_count=total,
         offset=offset,
         limit=limit,
-        has_more=offset + len(rows) < total,
+        has_more=offset + len(rows) < total or scan_cut,
         notes=_spaced_notes(lang, notes),
         provenance=_provenance(
             path,

@@ -1,7 +1,8 @@
 """Live smoke test for every tool of statcan/wds: calls the real Web Data
 Service (not mocks), per AGENTS.md's "lesson from auditing the StatCan module".
 
-Each of the 13 wds_ tools has at least one step, and the regressions found by
+Each of the 13 wds_ tools has at least one step (and the SDMX data tools'
+transforms and flags), and the regressions found by
 the 2026-10-02 live review are asserted against the real service: a changed
 series asked for by table + coordinate never comes from another table, an
 unknown table is NotFound (not a dead download link), one bad vector does not
@@ -21,7 +22,8 @@ from datetime import UTC, datetime, timedelta
 from fastmcp import Client
 from mcp.types import TextContent
 
-from maplestats_mcp.modules.statcan.wds import client
+from maplestats_mcp.modules.statcan.sdmx import tools as sdmx_tools
+from maplestats_mcp.modules.statcan.wds import client, tools, vintage
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.errors import DataLocked, InvalidInput, NotFound
 from maplestats_mcp.shared.http import new_client
@@ -132,6 +134,22 @@ async def main() -> int:
         len(window.series[0].observations),
     )
 
+    # wds_get_series_as_of: CPI-trim (18-10-0256) as published 2026-03-16,
+    # read from real-time table 18-10-0259; February 2026 was 2.3 then.
+    past = await vintage.get_series_as_of(18100256, "1.3", "2026-03-20", 3)
+    ok &= check(
+        past.release_date.isoformat() == "2026-03-16"
+        and past.observations[-1].ref_period.isoformat() == "2026-02-01"
+        and past.observations[-1].value == 2.3,
+        "series as of a past release (CPI-trim, 2026-03-16)",
+        [(o.ref_period.isoformat(), o.value) for o in past.observations],
+    )
+    ok &= await raises(
+        NotFound,
+        "as_of on a table with no real-time pair",
+        vintage.get_series_as_of(18100004, "1.2", "2025-01-01"),
+    )
+
     # wds_get_changed_series_list / wds_get_changed_series_data
     try:
         changed = await client.get_changed_series_list()
@@ -199,6 +217,64 @@ async def main() -> int:
     )
     scalar = await client.get_code_sets(category="scalar")
     ok &= check(any(e.description_en == "thousands" for e in scalar.scalar), "scalar factor codes")
+
+    # Status codes are decoded (14-10-0325's small regions carry quality flags).
+    flagged = await client.get_data_from_cube_pid_coord_and_latest_n_periods(14100325, "15.1", 4)
+    ok &= check(
+        all(o.status for o in flagged.observations)
+        and any(
+            o.status_code == 4 and o.status == "data quality: very good"
+            for o in flagged.observations
+        ),
+        "status codes decoded from getCodeSets",
+        [(o.status_code, o.status) for o in flagged.observations],
+    )
+
+    # Transforms: 12-month CPI inflation (The Daily, 2026-10-19: +3.1% in
+    # September 2026) and the unemployment rate's change in points.
+    yoy = await tools.wds_get_data_from_vectors(
+        [CPI_VECTOR], latest_n=3, transform="yoy_pct_change"
+    )
+    computed = yoy.series[0].transformed
+    ok &= check(
+        computed is not None
+        and len(computed.points) == 3
+        and len(yoy.series[0].observations) == 3
+        and all(p.value is not None for p in computed.points),
+        "CPI yoy_pct_change, latest 3 months",
+        computed and [(p.period, round(p.value or 0, 2)) for p in computed.points],
+    )
+    rate = await tools.wds_get_data_from_vectors([2062815], latest_n=2, transform="pct_change")
+    computed = rate.series[0].transformed
+    ok &= check(
+        computed is not None and computed.transform == "diff" and "point" in computed.unit,
+        "unemployment rate pct_change comes back in percentage points",
+        computed and computed.notes,
+    )
+    annual = await tools.wds_get_data_by_reference_period_range(
+        [CPI_VECTOR], "2024-01", "2025-12", transform="yoy_pct_change", frequency="annual"
+    )
+    computed = annual.series[0].transformed
+    ok &= check(
+        computed is not None and [p.period for p in computed.points] == ["2024", "2025"],
+        "annual average CPI inflation over a reference range",
+        computed and [(p.period, p.value) for p in computed.points],
+    )
+    sdmx_yoy = await sdmx_tools.sdmx_get_vector_data(
+        CPI_VECTOR, last_n_observations=3, transform="yoy_pct_change"
+    )
+    ok &= check(
+        sdmx_yoy.series[0].transformed is not None
+        and [p.value for p in sdmx_yoy.series[0].transformed.points]
+        == [p.value for p in yoy.series[0].transformed.points],  # type: ignore[union-attr]
+        "SDMX gives the same CPI yoy as WDS",
+    )
+    sdmx_flags = await sdmx_tools.sdmx_get_data(14100325, "15.1", last_n_observations=4)
+    ok &= check(
+        any(o.status for o in sdmx_flags.series[0].observations),
+        "SDMX observation STATUS_CAN decoded",
+        [(o.period, o.status) for o in sdmx_flags.series[0].observations],
+    )
 
     # The same tools through the server, as a client calls them: the union
     # product_id type and the BaseModel list results must survive the schema.

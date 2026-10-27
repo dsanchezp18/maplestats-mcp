@@ -39,6 +39,7 @@ async def test_locate_skips_results_without_coordinates(httpx_mock):
     )
     result = await client.locate("K1A 0A9", lang="fr")
     assert [loc.source for loc in result.locations] == ["fsa"]
+    assert "omis faute de coordonnées\u00a0: 1" in (result.provenance.limits or "")
     params = parse_qs(urlparse(str(httpx_mock.get_request().url)).query)
     assert params == {"q": ["K1A 0A9"], "lang": ["fr"]}
 
@@ -192,6 +193,8 @@ async def test_locate_trims_live_shaped_results_to_limit(httpx_mock):
     assert [loc.name for loc in result.locations] == ["Banff", "Banff National Park of Canada"]
     assert result.locations[0].bbox == [-115.5936111, 51.1577778, -115.5536111, 51.1977778]
     assert result.locations[1].source == "geonames"
+    assert result.total_found > 2
+    assert f"first 2 of {result.total_found} results" in (result.provenance.limits or "")
 
 
 async def test_search_names_empty_and_null_lists_give_empty_result(httpx_mock):

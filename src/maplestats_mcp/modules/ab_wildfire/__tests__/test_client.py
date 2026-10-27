@@ -667,6 +667,20 @@ async def test_orders_for_a_point_send_the_point_to_every_layer(server):
     assert all(p["spatialRel"] == "esriSpatialRelIntersects" for p in sent)
 
 
+async def test_orders_follow_a_full_page(server):
+    # A layer that fills a page (exceededTransferLimit) is read on, not cut.
+    def advisories(params: dict[str, str]) -> dict[str, Any]:
+        name = "Second page" if params.get("resultOffset") == str(c.LIMIT_MAX) else "First"
+        return {
+            "features": [{"attributes": {"name": name, "alert_type": "Fire Advisory"}}],
+            "exceededTransferLimit": name == "First",
+        }
+
+    server.on(c.FIRE_CONTROL_ORDERS["Fire Advisory"], advisories)
+    result = await client.get_fire_control_orders(alert_type="fire advisory")
+    assert sorted(o.name or "" for o in result.orders) == ["First", "Second page"]
+
+
 async def test_orders_filter_by_type_and_name(server):
     _orders_server(server)
     result = await client.get_fire_control_orders(

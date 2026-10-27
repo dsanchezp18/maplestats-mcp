@@ -180,6 +180,20 @@ async def test_get_product_folds_single_objects_and_404_sub_tables(httpx_mock):
     assert detail.company is not None and detail.company.city == "Kirkland"
 
 
+async def test_missing_ok_404_with_a_routing_message_is_an_error(httpx_mock):
+    # An empty-body 404 is "no rows"; a 404 naming no matching resource is an
+    # endpoint the API no longer has, and must not read as "no rows".
+    httpx_mock.add_response(url=_url("veterinaryspecies", r"id=1"), status_code=404)
+    assert await api.get_json("drug/veterinaryspecies", {"id": 1}, missing_ok=True) == []
+    httpx_mock.add_response(
+        url=_url("veterinaryspecies", r"id=2"),
+        status_code=404,
+        json={"Message": "No HTTP resource was found that matches the request URI"},
+    )
+    with pytest.raises(UpstreamError, match="HTTP 404"):
+        await api.get_json("drug/veterinaryspecies", {"id": 2}, missing_ok=True)
+
+
 async def test_unknown_din_and_code_raise_not_found(httpx_mock):
     httpx_mock.add_response(url=_url("drugproduct", r"din=09999999"), json=[])
     with pytest.raises(NotFound):
@@ -208,6 +222,21 @@ async def test_ingredient_names_are_grouped_with_strengths(httpx_mock):
     result = await client.search_ingredients("acetaminophen")
     assert result.ingredients[0].product_count == 4
     assert result.ingredients[0].strengths == ["500 MG", "160 MG / 5 ML"]
+    assert result.ingredients[0].strength_count == 2
+    assert result.provenance.limits is None
+
+
+async def test_ingredient_strengths_cut_at_eight_is_reported(httpx_mock):
+    rows = [
+        {"dosage_unit": "", "dosage_value": "", "drug_code": i, "ingredient_name": "IBUPROFEN",
+         "strength": str(100 + i), "strength_unit": "MG"}
+        for i in range(1, 11)
+    ]  # fmt: skip
+    httpx_mock.add_response(url=_url("activeingredient", r"ingredientname=ibuprofen"), json=rows)
+    result = await client.search_ingredients("ibuprofen")
+    assert len(result.ingredients[0].strengths) == 8
+    assert result.ingredients[0].strength_count == 10
+    assert "ingredients cut: 1" in (result.provenance.limits or "")
 
 
 def test_as_list_folds_every_answer_shape():

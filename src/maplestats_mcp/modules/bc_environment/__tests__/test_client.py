@@ -8,6 +8,8 @@ empty cells, and archives sorted for range reads.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from maplestats_mcp.modules.bc_environment import client, constants
@@ -25,7 +27,7 @@ from maplestats_mcp.modules.bc_environment.tools import (
     bc_env_list_streamflow_gauges,
     bc_env_list_wells,
 )
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 
 def crlf(text: str) -> bytes:
@@ -200,6 +202,14 @@ async def test_wide_snow_file_reshaped_and_empty_cells_dropped(httpx_mock):
         ("2026-10-01 00:00:00", "1A01P", "Yellowhead Lake", 1.0),
     ]
     assert result.readings[0].unit == "mm"
+
+
+async def test_snow_cell_that_is_not_a_number_is_counted(httpx_mock):
+    body = crlf("DATE(UTC),1A01P Yellowhead Lake\n2026-10-01 00:00,1\n2026-10-01 01:00,T")
+    httpx_mock.add_response(url=f"{constants.SNOW_BASE}/SW.csv", content=body)
+    result = await bc_env_get_snow_readings("sw")
+    assert [r.value for r in result.readings] == [None, 1.0]
+    assert any("1 cells held text that is not a number" in note for note in result.notes)
 
 
 def _fake_remote(monkeypatch, url: str, body: bytes) -> list[tuple[int, int]]:
@@ -406,6 +416,34 @@ async def test_wells_join_wfs_listing_and_regions(httpx_mock):
         ("OW002", "South Coast", 49.0171)
     ]
     assert result.wells[0].data_updated == "2026-10-03 09:30"
+
+
+async def test_wells_without_regions_say_so_and_refuse_a_region_filter(httpx_mock):
+    wfs = {"features": [{"properties": {"OBSERVATION_WELL_NUMBER": "002"}, "geometry": None}]}
+    listing = (
+        b'<tr><td><a href="OW002-data.csv">OW002-data.csv</a>     </td>'
+        b'<td align="right">2026-10-03 09:30  </td><td align="right">9.7M</td></tr>'
+    )
+    httpx_mock.add_response(url=constants.WELL_REGIONS_URL, status_code=404, is_reusable=True)
+    httpx_mock.add_response(url=f"{constants.WELL_BASE}/", content=listing, is_reusable=True)
+    httpx_mock.add_response(
+        url=re.compile(re.escape(constants.WFS_URL)), json=wfs, is_reusable=True
+    )
+    result = await bc_env_list_wells()
+    assert [(w.well_id, w.region) for w in result.wells] == [("OW002", None)]
+    assert "Region is missing for every well" in (result.provenance.limits or "")
+    # Not cached: a region filter fetches again, and refuses rather than return 0 wells.
+    with pytest.raises(UpstreamUnavailable, match="region filter"):
+        await bc_env_list_wells(region="South Coast")
+
+
+async def test_wfs_layer_past_one_page_is_an_error(httpx_mock):
+    # The wells layer refuses startIndex without sortBy (live 2026-10-27), so a
+    # layer that outgrows the page is an error rather than a list cut short.
+    feature = {"properties": {"SNOW_STATION_LOCATION_ID": "x"}}
+    httpx_mock.add_response(json={"features": [feature, feature], "numberMatched": 3})
+    with pytest.raises(UpstreamError, match="holds 3 features"):
+        await client._wfs("layer")
 
 
 SURVEYS = crlf(

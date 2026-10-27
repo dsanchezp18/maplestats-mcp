@@ -71,7 +71,10 @@ async def test_search_results_collapse_the_provenance_schema():
         assert after["outputSchema"]["properties"]["provenance"] == PROVENANCE_STUB
         assert set(after["outputSchema"]["properties"]) == set(before["outputSchema"]["properties"])
         assert after["outputSchema"]["required"] == before["outputSchema"]["required"]
-    assert len(json.dumps(compact)) < 0.7 * len(json.dumps(full))
+    # 0.75, not 0.7: the transform parameters and `transformed` block (2026-10-27)
+    # made wds_get_data_from_vectors' own schema larger, so the same stub saves a
+    # smaller share of it (0.71).
+    assert len(json.dumps(compact)) < 0.75 * len(json.dumps(full))
     # The tools' own schemas, which real results are checked against, keep the full block.
     live = {tool.name: tool for tool in await server.mcp._list_tools()}
     schema = live["wds_get_full_table_download"].output_schema

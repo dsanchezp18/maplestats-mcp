@@ -38,9 +38,11 @@ from maplestats_mcp.modules.finance_canada.client import (
     feed,
     fetch,
     fold,
+    marker,
     parse_number,
 )
 from maplestats_mcp.modules.finance_canada.schemas import (
+    CellSymbol,
     MonitorIssue,
     MonitorIssueList,
     MonitorTable,
@@ -196,6 +198,7 @@ def parse_issue(html: str, lang: str = "en") -> list[MonitorTable]:
             names.append(name)
             keep.append(c)
         rows: list[dict[str, Value]] = []
+        symbols: list[CellSymbol] = []
         section: str | None = None
         for line, is_section in zip(grid[header_count:], single[header_count:], strict=True):
             if is_section:
@@ -203,16 +206,27 @@ def parse_issue(html: str, lang: str = "en") -> list[MonitorTable]:
                 continue
             record: dict[str, Value] = {names[0]: line[0] if line else ""}
             for name, c in zip(names[1:], keep[1:], strict=True):
-                record[name] = parse_number(line[c] if c < len(line) else "", lang)
+                text = line[c] if c < len(line) else ""
+                record[name] = parse_number(text, lang)
+                symbol = marker(text)
+                if symbol:
+                    label = str(record[names[0]])
+                    symbols.append(
+                        CellSymbol(row=len(rows), label=label, column=name, symbol=symbol)
+                    )
             if section:
                 record["section"] = section
             rows.append(record)
-        # A trailing header cell with no data under it (two-month issues) is dropped.
-        empty = [n for n in names[1:] if all(r.get(n) is None for r in rows)]
+        # A trailing header cell with no data under it (two-month issues) is dropped;
+        # a column of published markers ('n/a' all the way down) is kept.
+        marked = {s.column for s in symbols}
+        empty = [n for n in names[1:] if n not in marked and all(r.get(n) is None for r in rows)]
         if empty and rows:
             names = [n for n in names if n not in empty]
             rows = [{k: v for k, v in r.items() if k not in empty} for r in rows]
-        tables.append(MonitorTable(label=_label(table, index), columns=names, rows=rows))
+        tables.append(
+            MonitorTable(label=_label(table, index), columns=names, rows=rows, symbols=symbols)
+        )
     return tables
 
 

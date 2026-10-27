@@ -50,6 +50,7 @@ from maplestats_mcp.shared import search
 from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.private_logs import configure_private_logs
+from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware
 from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
@@ -549,6 +550,9 @@ def build_server() -> FastMCP:
             mcp.add_provider(LazyModuleProvider(module_dir, entry))
     mcp.add_middleware(ValidationErrorMiddleware())
     mcp.add_middleware(CallLanguageMiddleware())
+    # One byte budget for every tool's result, and the fitness-for-use caveats in
+    # its provenance; inside the language middleware so its notes follow lang.
+    mcp.add_middleware(ResponseBudgetMiddleware())
     # Usage counting goes outside the timeout: a timeout cancels the call
     # beneath it, which an inner counter never sees as an error, so a call
     # that timed out would be missing from /stats.

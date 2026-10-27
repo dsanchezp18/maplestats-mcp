@@ -13,7 +13,11 @@ prose; this client turns both into numbers. Quirks handled:
    subsectors" + "table 3 note 3"); they are removed before reading.
 3. Headline figures appear only in prose; they are read from the English
    page with anchored patterns (numbers are identical in French), and a
-   pattern that stops matching yields None rather than a wrong number.
+   pattern that stops matching yields None rather than a wrong number;
+   `headline.not_found` and `provenance.limits` name those figures.
+5. A table amount whose scale word is not billion/million (or that has
+   none) is left null, never read as plain dollars; `value_as_published`
+   keeps every cell's text and `provenance.limits` counts the unread ones.
 4. The older 2016-2022 URL now redirects to this page, so there is one
    edition.
 """
@@ -33,6 +37,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.i18n import french_spacing, reset_call_lang, set_call_lang
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -80,11 +85,15 @@ def _spaces(text: str, lang: str) -> str:
 
 
 def parse_amount(text: str, lang: str) -> float | None:
-    """'0.20 billion' (en) or '0,20 milliards' (fr) as dollars; '1,200 million' is 1.2e9."""
+    """'0.20 billion' (en) or '0,20 milliards' (fr) as dollars; '1,200 million' is 1.2e9.
+
+    None when the scale word is not one we know: reading "0.20 trillion" or a
+    bare "0.20" as dollars would be off by a factor of a million or more.
+    """
     match = re.search(r"([\d.,]+)\s*([a-z]+)", _spaces(text, lang).lower())
-    if match is None:
+    if match is None or match.group(2) not in _SCALE:
         return None
-    return round(_to_float(match.group(1), lang) * _SCALE.get(match.group(2), 1.0), 2)
+    return round(_to_float(match.group(1), lang) * _SCALE[match.group(2)], 2)
 
 
 def parse_percent(text: str, lang: str) -> float | None:
@@ -112,6 +121,7 @@ def parse_tables(page: str, lang: str) -> list[list[ValueRow]]:
             rows.append(
                 ValueRow(
                     label=cells[0],
+                    value_as_published=cells[1],
                     value_cad=None if is_share else parse_amount(cells[1], lang),
                     share_percent=parse_percent(cells[1], lang) if is_share else None,
                 )
@@ -138,7 +148,7 @@ def parse_headline(page: str) -> Headline:
         return int(value) if value is not None else None
 
     period = re.search(r"From (\d{4}) to (\d{4})", text)
-    return Headline(
+    headline = Headline(
         period=f"{period.group(1)}-{period.group(2)}" if period else None,
         programs=whole(r"data from (\d+) participating federal programs"),
         organizations=whole(r"across (\d+) organizations"),
@@ -152,6 +162,36 @@ def parse_headline(page: str) -> Headline:
         adoption_cad=_number(r"Adoption \(\$([\d.]+) billion\)", text, 1e9),
         jobs_created_or_maintained=whole(r"over ([\d,]+) jobs have been created"),
     )
+    headline.not_found = [
+        name for name, value in headline.model_dump(exclude={"not_found"}).items() if value is None
+    ]
+    return headline
+
+
+def _unread_note(headline: Headline, tables: list[list[ValueRow]], lang: str) -> str | None:
+    """Say which published figures could not be read, rather than leaving bare nulls."""
+    unread = sum(
+        1
+        for table in tables
+        for row in table
+        if row.value_cad is None and row.share_percent is None and row.value_as_published
+    )
+    parts = []
+    if headline.not_found:
+        names = ", ".join(headline.not_found)
+        parts.append(
+            f"Les chiffres clés suivants n'ont pas été trouvés dans le texte de la page et sont "
+            f"nuls : {names}"
+            if lang == "fr"
+            else f"These headline figures were not found in the page text and are null: {names}"
+        )
+    if unread:
+        parts.append(
+            f"Valeurs de tableau qui n'ont pas pu être lues (voir value_as_published) : {unread}"
+            if lang == "fr"
+            else f"Table values that could not be read (see value_as_published): {unread}"
+        )
+    return join_limits(*parts)
 
 
 def parse_notes(page: str) -> list[str]:
@@ -207,11 +247,13 @@ async def federal_investment(lang: str = "en") -> FederalInvestment:
             "de données.",
             lang,
         )
-    freshness, limits = _FRESHNESS[lang], _LIMITS[lang]
+    headline = parse_headline(english)
+    freshness = _FRESHNESS[lang]
+    limits = join_limits(_LIMITS[lang], _unread_note(headline, tables[:3], lang)) or ""
     if lang == "fr":
         freshness, limits = french_spacing(freshness), french_spacing(limits)
     return FederalInvestment(
-        headline=parse_headline(english),
+        headline=headline,
         by_year=tables[0],
         by_province=tables[1],
         by_subsector=tables[2],

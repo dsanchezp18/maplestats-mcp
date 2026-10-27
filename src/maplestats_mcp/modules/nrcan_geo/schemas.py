@@ -20,6 +20,9 @@ class Location(BaseModel):
 class LocationResult(BaseModel):
     query: str
     locations: list[Location]
+    total_found: int = Field(
+        default=0, description="Results with coordinates the Geolocator sent, before `limit`."
+    )
     provenance: Provenance
 
 

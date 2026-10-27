@@ -303,6 +303,13 @@ def test_query_words():
     assert client._query_words("de la") == ["de", "la"]
 
 
+async def test_rows_without_a_numeric_id_are_counted(httpx_mock):
+    _dump(httpx_mock, rows=[*EN_ROWS, _en("", "No id", "CFIA", "Food", updated="2026-01-01")])
+    result = await client.search(limit=10)
+    assert result.total_matched == 7
+    assert "no numeric notice id (NID): 1" in (result.provenance.coverage or "")
+
+
 async def test_summarize_groups(httpx_mock):
     _dump(httpx_mock)
     years = await client.summarize("year")
@@ -327,6 +334,7 @@ async def test_summarize_groups(httpx_mock):
     recent = await client.summarize("year", top=2)
     assert [g.key for g in recent.groups] == ["2024", "2026"]
     assert "most recent 2 of 5" in (recent.provenance.limits or "")
+    assert "'unknown' group (1 notices with no date)" in (recent.provenance.limits or "")
     with pytest.raises(InvalidInput, match="Classes in the data"):
         await client.search(recall_class="Type IV")
 

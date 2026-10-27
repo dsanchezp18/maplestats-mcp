@@ -197,6 +197,16 @@ async def test_departures_of_a_station_include_its_platforms(httpx_mock):
     assert result.service_date == date(2026, 10, 6)
 
 
+async def test_station_past_the_child_stop_cap_says_so(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "STOP_FAMILY_MAX", 1)
+    _serve(httpx_mock, "calgary")
+    result = await client.get_stop_departures(
+        "calgary", "S1", service_date="2026-10-06", start_time="08:00"
+    )
+    assert result.stop_ids_included == ["P1", "S1"]
+    assert "first 1 of this station's 2 child stops" in (result.provenance.limits or "")
+
+
 async def test_after_midnight_trips_of_the_previous_service_day(httpx_mock):
     _serve(httpx_mock, "calgary")
     result = await client.get_stop_departures(

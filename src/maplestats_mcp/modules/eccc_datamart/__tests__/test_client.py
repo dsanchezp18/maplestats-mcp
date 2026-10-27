@@ -10,6 +10,8 @@ relative paths, and a 302 from api/file to a signed blob URL on the same host.
 
 from __future__ import annotations
 
+import csv
+import io
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -323,6 +325,39 @@ async def test_ghgrp_lookup_years_province_and_ranking(httpx_mock):
         await client.ghgrp_facilities(year=1990)
     with pytest.raises(InvalidInput):
         await client.ghgrp_facilities(year_to=2020)
+
+
+def _edited_ghgrp(edit) -> bytes:
+    """The GHGRP sample with `edit(rows, col)` applied to its parsed rows."""
+    text = GHGRP_BODY.decode("utf-8-sig")
+    rows = list(csv.reader(io.StringIO(text)))
+    edit(rows, client.locate(rows[0], client.GHGRP_COLUMNS, "GHGRP"))
+    out = io.StringIO()
+    csv.writer(out, lineterminator="\r\n").writerows(rows)
+    return out.getvalue().encode("utf-8-sig")
+
+
+def test_ghgrp_sum_leaves_out_blank_totals_and_counts_yearless_rows():
+    def edit(rows: list[list[str]], col: dict[str, int]) -> None:
+        rows[1][col["total"]] = ""
+        extra = list(rows[2])
+        extra[col["year"]] = ""
+        rows.append(extra)
+
+    body = _edited_ghgrp(edit)
+    full = client.scan_ghgrp(
+        GHGRP_BODY, lang="en", years=None, facility=None, company=None, province=None,
+        naics=None, ghgrp_id=None, npri_id=None, order="file", offset=0, limit=10,
+    )  # fmt: skip
+    edited = client.scan_ghgrp(
+        body, lang="en", years=None, facility=None, company=None, province=None,
+        naics=None, ghgrp_id=None, npri_id=None, order="file", offset=0, limit=10,
+    )  # fmt: skip
+    _, total, _, total_sum, _, no_year, blank_totals = edited
+    assert total == full[1]
+    assert (no_year, blank_totals) == (1, 1)
+    assert edited[0][0].total_co2e is None
+    assert total_sum == pytest.approx(full[3] - (full[0][0].total_co2e or 0), abs=0.01)
 
 
 def test_renamed_column_fails_loudly():

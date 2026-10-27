@@ -346,6 +346,10 @@ async def search_products(
     )
 
 
+# Strengths shown per ingredient name; the response says when more exist.
+_TOP_STRENGTHS = 8
+
+
 async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") -> IngredientList:
     term = name.strip()
     if len(term) < 3:
@@ -400,10 +404,12 @@ async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") ->
         IngredientMatch(
             name=k,
             product_count=len(products[k]),
-            strengths=[s for s, _ in strengths.get(k, Counter()).most_common(8)],
+            strengths=[s for s, _ in strengths.get(k, Counter()).most_common(_TOP_STRENGTHS)],
+            strength_count=len(strengths.get(k, Counter())),
         )
         for k in ranked[:limit]
     ]
+    cut = sum(1 for m in matches if m.strength_count > _TOP_STRENGTHS)
     return IngredientList(
         ingredients=matches,
         total_matched=len(ranked),
@@ -416,6 +422,18 @@ async def search_ingredients(name: str, *, limit: int = 50, lang: str = "en") ->
             lang=lang,
             freshness_fr=constants.FRESHNESS_FR,
             coverage_fr=f"{len(matches)} noms d'ingrédients sur {len(ranked)} contenant '{term}'",
+            limits=(
+                f"strengths lists at most the {_TOP_STRENGTHS} most common per ingredient "
+                f"(strength_count gives how many there are); ingredients cut: {cut}"
+                if cut
+                else None
+            ),
+            limits_fr=(
+                f"strengths donne au plus les {_TOP_STRENGTHS} plus fréquentes par ingrédient "
+                f"(strength_count en donne le nombre) ; ingrédients tronqués : {cut}"
+                if cut
+                else None
+            ),
         ),
     )
 

@@ -6,7 +6,7 @@ import pytest
 
 from maplestats_mcp.modules.borealis import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 
 @pytest.fixture(autouse=True)
@@ -159,6 +159,13 @@ async def test_variables_export_failed_403_is_a_note_not_an_error(httpx_mock):
     result = await client.search_odesi_variables("doi:10.5683/SP3/TDQHW1")
     assert result.total_variables == 0
     assert result.note is not None and "variable-level DDI" in result.note
+
+
+async def test_other_403_is_an_error_not_missing_metadata(httpx_mock):
+    # A firewall's 403 (HTML, no "Export Failed") must not read as "no variable DDI".
+    httpx_mock.add_response(url=_EXPORT, status_code=403, text="<html>Access denied</html>")
+    with pytest.raises(UpstreamError, match="HTTP 403"):
+        await client.search_odesi_variables("doi:10.5683/SP3/TDQHW1")
 
 
 async def test_unknown_dataset_is_not_found(httpx_mock):

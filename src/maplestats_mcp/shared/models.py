@@ -50,6 +50,13 @@ class Provenance(BaseModel):
             "(set for every Statistics Canada result)."
         ),
     )
+    caveats: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Fitness-for-use cautions for this table or source, from MapleStats' rules "
+            "(docs://planner/fitness-rules)."
+        ),
+    )
     reproduce: str = Field(
         default=(
             "For R, Python, Stata and Julia scripts that fetch and clean these data, call "

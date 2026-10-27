@@ -72,7 +72,8 @@ async def test_missing_zip_falls_back_to_the_hpi_tool_page(httpx_mock):
     httpx_mock.add_response(method="HEAD", url=_SEPTEMBER, status_code=404)
     result = await client.get_hpi_links(today=date(2026, 10, 3), lang="fr")
     assert result.zip_url is None
-    assert result.zip_confirmed is False
+    assert result.zip_confirmed is False and result.zip_check == "not_found"
+    assert (result.provenance.limits or "").startswith("Aucun fichier zip")
     assert "essayez-loutil-ipp-mls" in result.download_from
     assert result.attribution.startswith("Source : l'Association canadienne de l'immeuble")
     assert result.provenance.url == result.download_from
@@ -86,8 +87,19 @@ async def test_network_failure_falls_back_instead_of_raising(httpx_mock):
     httpx_mock.add_exception(httpx.ConnectTimeout("timed out"), method="HEAD", url=_SEPT)
     httpx_mock.add_exception(httpx.ConnectTimeout("timed out"), method="HEAD", url=_SEPT)
     result = await client.get_hpi_links(today=date(2026, 10, 3))
-    assert result.zip_confirmed is False
+    assert result.zip_confirmed is False and result.zip_check == "failed"
     assert result.download_from.endswith("/hpi-tool/")
+    assert "check for the 2026-09 zip failed (no answer)" in (result.provenance.limits or "")
+
+
+async def test_a_refused_check_is_not_cached_as_no_zip(httpx_mock):
+    # A 403 is not "no zip this month": it is named, and the next call checks again.
+    httpx_mock.add_response(method="HEAD", url=_SEPT, status_code=403)
+    first = await client.get_hpi_links(today=date(2026, 10, 3))
+    assert first.zip_check == "failed" and "(HTTP 403)" in (first.provenance.limits or "")
+    httpx_mock.add_response(method="HEAD", url=_SEPT)
+    second = await client.get_hpi_links(today=date(2026, 10, 3))
+    assert second.zip_check == "found" and second.provenance.cached is False
 
 
 async def test_result_is_cached_for_the_release_month(httpx_mock):

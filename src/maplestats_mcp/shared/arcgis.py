@@ -80,6 +80,7 @@ import httpx
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.upstream_text import (
@@ -313,7 +314,9 @@ async def supported_download_formats(
     shapefile, geojson, kml" on most portals, and "filegdb, geojson, kml"
     for Surrey's plan layers, whose csv and shapefile links answer 400.
     Any other answer (the API broken for the site, as Red Deer's 500, or a
-    network failure) gives no formats, so no dead links are handed out.
+    network failure) raises UpstreamError, uncached, so no dead links are
+    handed out and the caller can say the links are missing rather than
+    show an item that seems to have none.
     """
 
     async def fetch() -> tuple[str, ...]:
@@ -322,23 +325,38 @@ async def supported_download_formats(
         try:
             await api_get(url, params={"layers": layer_index})
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code != 400:
-                return ()
-            found = _SUPPORTED.search(_error_detail(exc))
+            status = exc.response.status_code
+            found = _SUPPORTED.search(_error_detail(exc)) if status == 400 else None
             if not found:
-                return ()
+                raise call_error(
+                    UpstreamError,
+                    f"{config.source}: the download API answered HTTP {status} without "
+                    "listing its export formats.",
+                    f"{config.source} : l'API de téléchargement a répondu HTTP {status} sans "
+                    "donner ses formats d'exportation.",
+                ) from exc
             listed = {part.strip().lower() for part in found.group(1).split(",")}
             return tuple(fmt for fmt in DOWNLOAD_FORMATS if fmt in listed)
-        return ()
+        raise call_error(
+            UpstreamError,
+            f"{config.source}: the download API accepted an unknown format instead of "
+            "listing its export formats.",
+            f"{config.source} : l'API de téléchargement a accepté un format inconnu au lieu "
+            "de donner ses formats d'exportation.",
+        )
 
-    # A network failure is not cached (it raises out of fetch), so the next
-    # call asks again; it still yields no links for this answer.
+    # Only a listed set of formats is cached: a failure raises out of fetch,
+    # so the next call asks again.
     try:
         formats, _ = await cached_fetch(
             f"{config.source}:download_formats:{item_id}:{layer_index}", 60 * 60, fetch
         )
-    except httpx.HTTPError:
-        return ()
+    except httpx.HTTPError as exc:
+        raise call_error(
+            UpstreamError,
+            f"{config.source}: the download API did not answer ({type(exc).__name__}).",
+            f"{config.source} : l'API de téléchargement n'a pas répondu ({type(exc).__name__}).",
+        ) from exc
     return formats
 
 

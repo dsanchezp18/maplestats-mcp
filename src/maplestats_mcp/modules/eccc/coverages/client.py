@@ -1100,6 +1100,19 @@ async def _coverage(
     return await cached_fetch(key, constants.CACHE_TTL_COVERAGE_SECONDS, fetch)
 
 
+def _describe(request: _Request) -> str:
+    """The selections of one request, e.g. "tm, ssp585, p50, DJF"."""
+    parts = [
+        request.variable,
+        request.scenario,
+        None if request.percentile is None else f"p{_format_percentile(request.percentile)}",
+        request.season,
+        request.averaging_period,
+        request.time_label or request.datetime,
+    ]
+    return ", ".join(part for part in parts if part)
+
+
 def _params(entry: _Entry, request: _Request, box: list[float]) -> dict[str, Any]:
     params: dict[str, Any] = {
         "f": "json",
@@ -1190,10 +1203,14 @@ async def get_coverage_data(
 
     rows: list[CoverageRow] = []
     skipped = 0
+    # Requests that gave no value at all: when others did, the rows would
+    # otherwise just lack that scenario or season with nothing saying so.
+    empty: list[_Request] = []
     distance: float | None = None
     schema_units = {v.name: v.unit for v in entry.collection.variables}
     for request, payload, _ in results:
         if payload is None:
+            empty.append(request)
             continue
         cells, n_time, unit = _cells(
             payload, request.variable, entry.collection.family, notes, lang
@@ -1204,6 +1221,7 @@ async def get_coverage_data(
             assert lat is not None and lon is not None
             with_data = [c for c in cells if any(v is not None for v in c.values)]
             if not with_data:
+                empty.append(request)
                 continue
             best = min(with_data, key=lambda c: _distance_km(lat, lon, c.lat, c.lon))
             d = _distance_km(lat, lon, best.lat, best.lon)
@@ -1240,6 +1258,17 @@ async def get_coverage_data(
             "tombe, ou toutes les cellules sont hors du masque de données (océan ou hors du "
             "Canada). Essayez un point plus à l'intérieur des terres ou une bbox plus grande.",
             lang,
+        )
+    if empty:
+        described = "; ".join(_describe(request) for request in empty)
+        notes.append(
+            _note(
+                f"{len(empty)} of {len(requests)} request(s) returned no values here, so "
+                f"their rows are absent: {described}",
+                f"{len(empty)} des {len(requests)} requête(s) n'ont renvoyé aucune valeur ici ; "
+                f"leurs lignes sont donc absentes : {described}",
+                lang,
+            )
         )
     total = len(rows)
     shown = min(total, max_rows)

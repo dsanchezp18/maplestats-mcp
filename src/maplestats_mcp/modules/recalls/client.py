@@ -113,6 +113,8 @@ class _Dump:
     records: tuple[_Record, ...]
     url: str
     as_of: datetime | None
+    # Rows dropped for having no numeric NID (no id to look the notice up by).
+    skipped: int = 0
 
 
 # ---------------------------------------------------------------- text helpers
@@ -354,6 +356,7 @@ async def _load_dump(lang: str) -> tuple[_Dump, bool]:
                 "changé.",
             )
         records = [r for r in (_record(row, keys) for row in rows if isinstance(row, dict)) if r]
+        skipped = len(rows) - len(records)
         records.sort(key=_sort_key, reverse=True)
         as_of = None
         if modified:
@@ -361,7 +364,7 @@ async def _load_dump(lang: str) -> tuple[_Dump, bool]:
                 as_of = parsedate_to_datetime(modified)
             except (TypeError, ValueError):
                 as_of = None
-        return _Dump(records=tuple(records), url=url, as_of=as_of)
+        return _Dump(records=tuple(records), url=url, as_of=as_of, skipped=skipped)
 
     return await cached_fetch(f"recalls:dump:{lang}", constants.DUMP_CACHE_TTL_SECONDS, fetch)
 
@@ -489,14 +492,22 @@ def _filter(
     return matched
 
 
-def _coverage(include_archived: bool, lang: str = "en") -> str:
+def _coverage(include_archived: bool, lang: str = "en", skipped: int = 0) -> str:
     if include_archived:
-        return fr_or_en(lang, "includes archived notices", "avis archivés compris")
-    return fr_or_en(
-        lang,
-        "archived notices excluded, as on the site's own search; pass include_archived=True",
-        "avis archivés exclus, comme dans la recherche du site ; passez include_archived=True",
-    )
+        text = fr_or_en(lang, "includes archived notices", "avis archivés compris")
+    else:
+        text = fr_or_en(
+            lang,
+            "archived notices excluded, as on the site's own search; pass include_archived=True",
+            "avis archivés exclus, comme dans la recherche du site ; passez include_archived=True",
+        )
+    if skipped:
+        text += fr_or_en(
+            lang,
+            f"; rows of the file left out for having no numeric notice id (NID): {skipped}",
+            f" ; lignes du fichier omises faute d'identifiant d'avis (NID) numérique : {skipped}",
+        )
+    return text
 
 
 def _summary(record: _Record) -> RecallSummary:
@@ -573,7 +584,7 @@ async def search(
             schema_name="recalls.RecallSearchResult",
             as_of=dump.as_of,
             freshness=fr_or_en(lang, _FREQUENCY, _FREQUENCY_FR),
-            coverage=_coverage(include_archived, lang),
+            coverage=_coverage(include_archived, lang, dump.skipped),
             limits=fr_or_en(
                 lang,
                 "newest 'last updated' first; dates filter on last updated (the dump has no "
@@ -646,12 +657,15 @@ async def summarize(
     counts: Counter[str] = Counter()
     for record in matched:
         counts.update(_group_keys(record, group_by))
+    undated_cut = 0
     if group_by == "year":
         # Years read oldest to newest, and a cut keeps the most recent ones.
         years = sorted((kv for kv in counts.items() if kv[0] != "unknown"), key=lambda kv: kv[0])
         unknown_year = [kv for kv in counts.items() if kv[0] == "unknown"]
         ordered = years + unknown_year
         shown = years[-top:] if len(ordered) > top else ordered
+        # A cut keeps dated years only; say how many undated notices that leaves out.
+        undated_cut = sum(v for _, v in unknown_year) if len(ordered) > top else 0
     else:
         ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
         shown = ordered[:top]
@@ -676,6 +690,14 @@ async def summarize(
             f"; {which} {top} of {len(ordered)} groups (raise top to see more)",
             f" ; {top} groupes {which_fr} sur {len(ordered)} (augmentez top pour en voir plus)",
         )
+        if group_by == "year" and undated_cut:
+            limits += fr_or_en(
+                lang,
+                f"; the 'unknown' group ({undated_cut} notices with no date) is among those "
+                "left out",
+                f" ; le groupe 'unknown' ({undated_cut} avis sans date) fait partie des groupes "
+                "omis",
+            )
     return RecallCountsResult(
         group_by=group_by,
         total_matched=len(matched),
@@ -688,7 +710,7 @@ async def summarize(
             schema_name="recalls.RecallCountsResult",
             as_of=dump.as_of,
             freshness=fr_or_en(lang, _FREQUENCY, _FREQUENCY_FR),
-            coverage=_coverage(include_archived, lang),
+            coverage=_coverage(include_archived, lang, dump.skipped),
             limits=limits,
             lang=lang,
         ),

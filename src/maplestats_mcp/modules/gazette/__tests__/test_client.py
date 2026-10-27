@@ -46,6 +46,8 @@ async def test_list_issues_sorts_newest_first(httpx_mock):
     httpx_mock.add_response(url=constants.FEED_URL.format(part=1, lang="eng"), content=_FEED)
     result = await client.list_issues(1, limit=1)
     assert [i.date for i in result.issues] == [date(2026, 9, 19)]
+    assert result.total_in_feed > 1
+    assert f"most recent of the {result.total_in_feed} issues" in (result.provenance.limits or "")
 
 
 async def test_get_issue_groups_notices_and_skips_section_links(httpx_mock):

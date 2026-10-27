@@ -61,6 +61,7 @@ from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
+from maplestats_mcp.shared.limits import join_limits
 
 
 def _portal(key: str, lang: str = "en") -> Portal:
@@ -498,6 +499,21 @@ async def _facet(
     return list(facet.get("items") or []), cached
 
 
+def _facet_cut(count: int, what_en: str, what_fr: str, lang: str) -> str | None:
+    """The note for a facet roster that filled facet.limit, so more may exist.
+
+    BC had 164 organizations and 21 groups (live 2026-10-27), far below it.
+    """
+    if count < constants.FACET_LIMIT:
+        return None
+    return pick(
+        lang,
+        f"The facet returns at most {constants.FACET_LIMIT} {what_en}; more may exist",
+        f"La facette renvoie au plus {constants.FACET_LIMIT} {what_fr} ; il peut y en avoir "
+        "davantage",
+    )
+
+
 async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
     info = _portal(portal, lang)
     ttl = constants.CACHE_TTL_ORGANIZATION_SECONDS
@@ -512,10 +528,13 @@ async def list_organizations(portal: str, lang: str = "en") -> OrganizationList:
             for item in items
         ]
         path = "package_search?rows=0&facet.field=organization"
-        coverage = pick(
-            lang,
-            "only organizations with at least one dataset are included",
-            "seules les organisations ayant au moins un jeu de données sont incluses",
+        coverage = join_limits(
+            pick(
+                lang,
+                "only organizations with at least one dataset are included",
+                "seules les organisations ayant au moins un jeu de données sont incluses",
+            ),
+            _facet_cut(len(items), "organizations", "organisations", lang),
         )
     else:
         raw, cached = await _all_fields_list(portal, "organization_list", ttl, lang)
@@ -752,10 +771,13 @@ async def list_groups(portal: str, lang: str = "en") -> GroupList:
             for item in items
         ]
         path = "package_search?rows=0&facet.field=groups"
-        coverage = pick(
-            lang,
-            "only groups with at least one dataset are included",
-            "seuls les groupes ayant au moins un jeu de données sont inclus",
+        coverage = join_limits(
+            pick(
+                lang,
+                "only groups with at least one dataset are included",
+                "seuls les groupes ayant au moins un jeu de données sont inclus",
+            ),
+            _facet_cut(len(items), "groups", "groupes", lang),
         )
     else:
         raw, cached = await _all_fields_list(portal, "group_list", ttl, lang)

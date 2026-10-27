@@ -153,17 +153,28 @@ async def get_releases(
             )
         ) from exc
 
-    entries = root.findall("atom:entry", constants.ATOM_NS)[:limit]
-    releases = [_release_from_entry(entry) for entry in entries]
+    all_entries = root.findall("atom:entry", constants.ATOM_NS)
+    releases = [_release_from_entry(entry) for entry in all_entries[:limit]]
+    in_feed = len(all_entries)
     return DailyReleaseList(
         subject=subject,
         releases=releases,
         returned_count=len(releases),
+        total_in_feed=in_feed,
+        truncated=in_feed > len(releases),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=was_cached,
             schema_name="statcan_daily.DailyReleaseList",
+            limits=say(
+                f"Returned the first {len(releases)} of {in_feed} releases in the feed; "
+                f"raise limit (up to {constants.RELEASES_LIMIT_MAX}) for more.",
+                f"Les {len(releases)} premières diffusions sur {in_feed} dans le fil ; "
+                f"augmentez limit (jusqu'à {constants.RELEASES_LIMIT_MAX}) pour en voir plus.",
+            )
+            if in_feed > len(releases)
+            else None,
             lang=lang,
         ),
     )

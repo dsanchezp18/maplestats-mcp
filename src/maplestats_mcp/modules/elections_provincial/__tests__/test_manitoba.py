@@ -76,6 +76,8 @@ def test_2023_files_give_candidates_electors_and_turnout():
     winner = agassiz.candidates[0]
     assert winner.name == "Jodie BYRAM" and winner.elected and winner.share == 63.85
     assert agassiz.valid_votes == 7077
+    # Manitoba publishes none of these three; each is flagged as computed.
+    assert agassiz.turnout_computed and agassiz.valid_votes_computed and winner.share_computed
     assert agassiz.candidates[3].party == "Manitoba Liberal Party"
 
 

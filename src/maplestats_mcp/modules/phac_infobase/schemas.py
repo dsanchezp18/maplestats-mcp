@@ -69,7 +69,12 @@ class DatasetDescription(BaseModel):
     date_start: str | None = Field(default=None, description="Earliest parsed date (ISO).")
     date_end: str | None = Field(default=None, description="Latest parsed date (ISO).")
     geo_column: str | None = None
-    geo_values: list[str] = Field(default_factory=list)
+    geo_values: list[str] = Field(
+        default_factory=list,
+        description="Distinct places in the geography column, in file order; the first 40 "
+        "when there are more (geo_value_count).",
+    )
+    geo_value_count: int = Field(default=0, description="Distinct places in the file.")
     markers: list[Marker] = Field(
         default_factory=list, description="Suppression and missing-value markers in the file."
     )

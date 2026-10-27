@@ -112,6 +112,26 @@ async def test_search_registrants_missing_table_raises(httpx_mock):
         await client.search_registrants()
 
 
+async def test_rows_missing_a_cell_are_counted(httpx_mock):
+    html = _REGISTRY_HTML.replace("</tbody>", "<tr><td>HALF ROW</td><td>-</td></tr>\n</tbody>")
+    httpx_mock.add_response(url=constants.URL_EN, html=html)
+    result = await client.search_registrants()
+    assert result.total_registrants == 3
+    assert "registration date: 1" in (result.provenance.limits or "")
+
+
+async def test_table_without_readable_rows_is_an_error_not_zero_registrants(httpx_mock):
+    # A layout change (cells reordered or merged) must not read as an empty registry.
+    html = (
+        _REGISTRY_HTML.replace("<td>751950577RT9999</td>", "")
+        .replace("<td>752047175RT9999</td>", "")
+        .replace("<td>792079006RT0001</td>", "")
+    )
+    httpx_mock.add_response(url=constants.URL_EN, html=html)
+    with pytest.raises(UpstreamError, match="no readable row"):
+        await client.search_registrants()
+
+
 async def test_search_registrants_truncates_and_sets_coverage(httpx_mock, monkeypatch):
     monkeypatch.setattr(constants, "SEARCH_RESULTS_MAX", 1)
     httpx_mock.add_response(url=constants.URL_EN, html=_REGISTRY_HTML)

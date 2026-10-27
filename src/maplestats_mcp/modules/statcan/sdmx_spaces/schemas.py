@@ -41,7 +41,10 @@ class FacetValue(BaseModel):
 
 class SearchFacet(BaseModel):
     name: str
-    values: list[FacetValue]
+    values: list[FacetValue] = Field(description="The most frequent values, at most 8.")
+    value_count: int = Field(
+        default=0, description="Distinct values of this facet among the matches."
+    )
 
 
 class SearchHit(BaseModel):

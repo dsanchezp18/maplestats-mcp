@@ -136,8 +136,10 @@ async def list_issues(
             Issue(part=part, date=issued, title=_clean(item.findtext("title") or ""), url=link)
         )
     issues.sort(key=lambda i: i.date, reverse=True)
+    shown = issues[:limit]
     return IssueList(
-        issues=issues[:limit],
+        issues=shown,
+        total_in_feed=len(issues),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
@@ -148,6 +150,15 @@ async def list_issues(
                 "Part I every Saturday; Part II every second Wednesday",
                 "Partie I chaque samedi ; Partie II un mercredi sur deux",
             ),
+            limits=fr_or_en(
+                lang,
+                f"Returned the {len(shown)} most recent of the {len(issues)} issues in the "
+                "feed; raise limit for older ones.",
+                f"Les {len(shown)} numéros les plus récents sur les {len(issues)} du fil sont "
+                "renvoyés ; augmentez limit pour les plus anciens.",
+            )
+            if len(shown) < len(issues)
+            else None,
             lang=lang,
         ),
     )

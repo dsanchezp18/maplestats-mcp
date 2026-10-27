@@ -1128,6 +1128,7 @@ async def _fetch_orders(
     layer: str,
     where: str,
     point: tuple[float, float] | None,
+    lang: str = "en",
 ) -> list[dict[str, Any]]:
     params: dict[str, Any] = {
         "where": where,
@@ -1142,10 +1143,30 @@ async def _fetch_orders(
             inSR=4326,
             spatialRel="esriSpatialRelIntersects",
         )
-    body = await _query(layer, f"orders:{alert_type}", **params)
-    return [
-        {"_type": alert_type, **(f.get("attributes") or {})} for f in body.get("features") or []
-    ]
+    # The layers held 74 polygons in all (live 2026-10-27), far below one page,
+    # but in a bad season a page that fills is followed rather than cut short:
+    # counts_by_type would otherwise undercount without a word.
+    rows: list[dict[str, Any]] = []
+    for page in range(_ORDER_PAGES):
+        body = await _query(
+            layer, f"orders:{alert_type}", **params, resultOffset=page * c.LIMIT_MAX
+        )
+        rows += [
+            {"_type": alert_type, **(f.get("attributes") or {})} for f in body.get("features") or []
+        ]
+        if not body.get("exceededTransferLimit"):
+            return rows
+    raise lang_error(
+        UpstreamError,
+        lang,
+        f"ab_wildfire: the {alert_type} layer holds more than {_ORDER_PAGES * c.LIMIT_MAX} "
+        "polygons, more than this tool reads.",
+        f"ab_wildfire : la couche {alert_type} compte plus de {_ORDER_PAGES * c.LIMIT_MAX} "
+        "polygones, plus que cet outil n'en lit.",
+    )
+
+
+_ORDER_PAGES = 5
 
 
 async def get_fire_control_orders(
@@ -1194,7 +1215,10 @@ async def get_fire_control_orders(
 
     async def fetch() -> list[dict[str, Any]]:
         results = await asyncio.gather(
-            *(_fetch_orders(kind, url, where_for(kind), point) for kind, url in layers.items())
+            *(
+                _fetch_orders(kind, url, where_for(kind), point, lang)
+                for kind, url in layers.items()
+            )
         )
         return [row for rows in results for row in rows]
 

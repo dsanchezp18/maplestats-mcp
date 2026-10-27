@@ -26,6 +26,11 @@ Checked live 2026-10-03 for 1990, 1995, 2000, 2010, 2018 to 2025:
    after; "Iron ore" became "Iron, concentrates" and "Iron,
    agglomerates". Each row keeps its own units.
 7. Every province has a row, and "Canada" is the total.
+8. 1991-1998 files mark a few revised values with "ʳ" after the number
+   ("386 ʳ", "0 ʳ"; checked live 2026-10-27); the marker is dropped from
+   the number and kept in `value_as_published`. A value that still does
+   not read as a number is null, keeps its text there, and is counted in
+   `provenance.limits`, as are data rows shorter than the header.
 """
 
 from __future__ import annotations
@@ -51,6 +56,7 @@ from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 from maplestats_mcp.shared.i18n import french_spacing
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -61,6 +67,7 @@ _LIMITER = get_limiter(
 # "(3)", "¹(10)", "(1),(2)" at the end of a name; "(K₂O)" or "(MOP)" stay.
 _FOOTNOTES = re.compile(r"(?:[¹²³⁴⁵⁶⁷⁸⁹⁰]+|\(\d+\)|,)+\s*$")
 _GRAND_TOTAL = re.compile(r"^Grand total,\s*(\d{4})$")
+_REVISED = re.compile(r"\s*ʳ$")
 
 
 def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
@@ -95,7 +102,7 @@ def parse_value(text: str, symbol: str = "") -> tuple[float | None, str]:
     if raw in ("", "..", "...", "-", "F"):
         return None, "not_available"
     try:
-        value = float(raw.replace(",", ""))
+        value = float(_REVISED.sub("", raw).replace(",", ""))
     except ValueError:
         return None, "not_available"
     return value, "preliminary" if symbol.strip().lower() == "p" else "final"
@@ -106,6 +113,19 @@ class _Year:
     year: int
     title: str
     rows: tuple[MineralRow, ...]
+    # Data rows (they start with a year) dropped for having fewer cells than the header.
+    short_rows: int = 0
+
+
+def _unreadable(text: str) -> bool:
+    """A value that is neither a number nor one of the file's symbols."""
+    return parse_value(text)[1] == "not_available" and text.strip() not in (
+        "",
+        "..",
+        "...",
+        "-",
+        "F",
+    )
 
 
 def parse_csv(text: str, year: int, lang: str = "en") -> _Year:
@@ -142,8 +162,12 @@ def parse_csv(text: str, year: int, lang: str = "en") -> _Year:
     }
     symbol_at = header.index("Symbol") if "Symbol" in header else None
     rows: list[MineralRow] = []
+    short_rows = 0
     for line in lines[header_at + 1 :]:
-        if len(line) < len(header) or not line[0].strip()[:4].isdigit():
+        if not line or not line[0].strip()[:4].isdigit():
+            continue  # the notes, links and contact lines after the data
+        if len(line) < len(header):
+            short_rows += 1
             continue
         commodity = clean_name(line[at["commodity"]])
         row_year = int(line[0].strip()[:4])
@@ -161,6 +185,7 @@ def parse_csv(text: str, year: int, lang: str = "en") -> _Year:
                 category=line[at["category"]].strip(),
                 units=line[at["units"]].strip() or None,
                 value=value,
+                value_as_published=line[at["value"]].strip() or None,
                 symbol=symbol,  # type: ignore[arg-type]
             )
         )
@@ -171,7 +196,34 @@ def parse_csv(text: str, year: int, lang: str = "en") -> _Year:
             f"nrcan_minerals : le fichier {year} n'a aucune ligne de données.",
             lang,
         )
-    return _Year(year=year, title=title, rows=tuple(rows))
+    return _Year(year=year, title=title, rows=tuple(rows), short_rows=short_rows)
+
+
+def _quality_note(data: list[_Year], rows: list[MineralRow], lang: str) -> str | None:
+    """Rows dropped or values not read, so a gap or a null is not taken as published."""
+    short = sum(d.short_rows for d in data)
+    unread = sum(1 for r in rows if r.value_as_published and _unreadable(r.value_as_published))
+    parts = []
+    if short:
+        parts.append(
+            _text(
+                f"Data rows skipped for having fewer cells than the header: {short}.",
+                f"Lignes de données ignorées parce qu'elles ont moins de cellules que "
+                f"l'en-tête : {short}.",
+                lang,
+            )
+        )
+    if unread:
+        parts.append(
+            _text(
+                f"Values that are not numbers, returned as null with their text in "
+                f"value_as_published: {unread}.",
+                f"Valeurs qui ne sont pas des nombres, renvoyées nulles avec leur texte dans "
+                f"value_as_published : {unread}.",
+                lang,
+            )
+        )
+    return " ".join(parts) or None
 
 
 async def _fetch(url: str, lang: str = "en") -> bytes:
@@ -280,7 +332,14 @@ def _category_matches(category: str, wanted: str) -> bool:
     return True
 
 
-def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | None) -> Any:
+def _provenance(
+    url: str,
+    cached: bool,
+    schema: str,
+    lang: str,
+    coverage: str | None,
+    limits: str | None = None,
+) -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=url,
@@ -292,13 +351,15 @@ def _provenance(url: str, cached: bool, schema: str, lang: str, coverage: str | 
             lang,
         ),
         coverage=coverage,
-        limits=_text(
-            "",
-            "Les fichiers de RNCan sont publiés en anglais seulement : noms des produits "
-            "minéraux, provinces et catégories sont reproduits tels quels.",
-            lang,
-        )
-        or None,
+        limits=join_limits(
+            _text(
+                "",
+                "Les fichiers de RNCan sont publiés en anglais seulement : noms des produits "
+                "minéraux, provinces et catégories sont reproduits tels quels.",
+                lang,
+            ),
+            limits,
+        ),
         licence=_text(constants.TERMS, constants.TERMS_FR, lang),
         lang=lang,
     )
@@ -360,6 +421,7 @@ async def get_production(
                 f"{len(data.rows):,} lignes dans le fichier {chosen}".replace(",", "\u00a0"),
                 lang,
             ),
+            _quality_note([data], matched, lang),
         ),
     )
 
@@ -416,6 +478,7 @@ async def get_series(
     points: list[MineralRow] = []
     missing: list[int] = []
     ambiguous: set[str] = set()
+    several: list[str] = []
     for (data, _), y in zip(loaded, span, strict=True):
         rows = [
             r
@@ -426,9 +489,12 @@ async def get_series(
         ]
         picked, names = _pick(rows, wanted)
         ambiguous |= names
-        # A name can repeat under several groups ("Total"); keep the first.
+        # A name can repeat under several groups ("Total"); keep the first, and
+        # say which group was kept so the choice is visible.
         if picked:
             points.append(picked[0])
+            if len(picked) > 1:
+                several.append(f"{y} ({picked[0].group or '-'})")
         else:
             missing.append(y)
     if not points:
@@ -455,6 +521,14 @@ async def get_series(
             f" Les années où plusieurs noms correspondent ont été omises : {sorted(ambiguous)}.",
             lang,
         )
+    if several:
+        note += _text(
+            f" In these years the name matched rows in several groups and the first group's "
+            f"row is shown: {', '.join(several)}.",
+            f" Ces années-là, le nom correspondait à des lignes de plusieurs groupes et la "
+            f"ligne du premier groupe est donnée : {', '.join(several)}.",
+            lang,
+        )
     return MineralSeries(
         commodity=points[0].commodity,
         province=wanted_province,
@@ -472,5 +546,6 @@ async def get_series(
                 f"{span[0]}-{span[-1]}, un fichier par année",
                 lang,
             ),
+            _quality_note([data for data, _ in loaded], points, lang),
         ),
     )

@@ -91,6 +91,18 @@ async def test_search_is_newest_first_with_a_total(httpx_mock):
     assert oldest.has_more is False
 
 
+async def test_search_past_the_page_cap_says_so(httpx_mock, monkeypatch):
+    monkeypatch.setattr(client.constants, "FETCH_PAGE_SIZE", 2)
+    monkeypatch.setattr(client.constants, "FETCH_PAGES_MAX", 1)
+    rows = [_row("1975001", "1/2/1975 12:00:00 AM"), _row("1976001", "1/2/1976 12:00:00 AM")]
+    httpx_mock.add_response(json={"ResultSet": rows})
+    result = await client.search(make="Ford", limit=5)
+    assert result.all_rows_read is False and result.total_matched == 2
+    assert (result.note or "").startswith("only the first 2 matching rows")
+    assert (result.provenance.limits or "").count("only the first 2") == 1
+    assert result.provenance.limits and "lower bound" in result.provenance.limits
+
+
 async def test_unknown_make_is_invalid_input(httpx_mock):
     httpx_mock.add_response(json={"ResultSet": []})
     with pytest.raises(InvalidInput, match="check the spelling"):

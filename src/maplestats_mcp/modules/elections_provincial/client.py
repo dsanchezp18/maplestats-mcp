@@ -411,6 +411,7 @@ async def get_results(
                         party_code=c.party_code,
                         votes=c.votes,
                         vote_share=c.share,
+                        vote_share_computed=c.share_computed,
                         elected=c.elected,
                     ),
                 )
@@ -429,8 +430,10 @@ async def get_results(
                 district=d.name,
                 electors=d.electors,
                 valid_votes=d.valid_votes,
+                valid_votes_computed=d.valid_votes_computed,
                 rejected_ballots=d.rejected_ballots,
                 turnout=d.turnout,
+                turnout_computed=d.turnout_computed,
                 winner=(top.name or top.party) if top else None,
             )
         )

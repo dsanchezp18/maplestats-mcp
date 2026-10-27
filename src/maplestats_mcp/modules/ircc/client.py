@@ -17,7 +17,9 @@ Two real quirks, both handled below:
 2. Numeric fields use a locale-specific thousands separator: a comma in
    the English feed ("20,784") and a literal ASCII space in the French
    feed ("20 784", confirmed to be U+0020, not a non-breaking space).
-   `_parse_int` strips both.
+   `_parse_int` strips both. A blank or absent figure is returned as
+   null, not 0: every round in the feed had all of them on 2026-10-27,
+   but a 0 would read as "no candidates in this band" or "a cutoff of 0".
 """
 
 from __future__ import annotations
@@ -113,9 +115,11 @@ def _coverage(returned: int, matching: int, total: int, lang: str) -> str:
     )
 
 
-def _parse_int(value: str) -> int:
+def _parse_int(value: str | None) -> int | None:
+    if value is None:
+        return None
     cleaned = value.replace(",", "").replace(" ", "").strip()
-    return int(cleaned) if cleaned else 0
+    return int(cleaned) if cleaned else None
 
 
 def _parse_details_url(draw_number_url: str) -> str:
@@ -132,10 +136,7 @@ def _parse_details_url(draw_number_url: str) -> str:
 
 def _round_from_json(obj: dict[str, Any]) -> ExpressEntryRound:
     distribution = CrsScoreDistribution(
-        **{
-            field_name: _parse_int(obj.get(dd_key, "0"))
-            for dd_key, field_name in _DISTRIBUTION_FIELDS
-        }
+        **{field_name: _parse_int(obj.get(dd_key)) for dd_key, field_name in _DISTRIBUTION_FIELDS}
     )
     cutoff_text = (obj.get("drawCutOff") or "").strip()
     return ExpressEntryRound(
@@ -143,8 +144,8 @@ def _round_from_json(obj: dict[str, Any]) -> ExpressEntryRound:
         draw_date=date.fromisoformat(obj["drawDate"].strip()),
         draw_name=obj["drawName"].strip(),
         program=obj["drawText2"].strip(),
-        invitations_issued=_parse_int(obj["drawSize"]),
-        crs_cutoff=_parse_int(obj["drawCRS"]),
+        invitations_issued=_parse_int(obj.get("drawSize")),
+        crs_cutoff=_parse_int(obj.get("drawCRS")),
         pool_distribution_as_of=obj["drawDistributionAsOn"].strip(),
         eligibility_cutoff=cutoff_text or None,
         crs_distribution=distribution,

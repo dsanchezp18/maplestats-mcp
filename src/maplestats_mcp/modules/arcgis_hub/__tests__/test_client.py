@@ -417,6 +417,7 @@ async def test_portal_without_working_downloads_gives_no_links(httpx_mock):
     )
     result = await client.get_dataset("red_deer", "14cca5b087f74d2d9eadc018c261d1b3")
     assert result.download_urls == [] and result.service_url is not None
+    assert "answers an error for every item" in (result.provenance.limits or "")
 
 
 def _detail(item_id: str, item_type: str, url: str | None) -> dict:
@@ -496,6 +497,8 @@ async def test_broken_download_api_gives_no_links(httpx_mock):
         )
     result = await client.get_dataset(PORTAL, item_id)
     assert result.download_urls == []
+    # Said, not left to read as an item with no downloads.
+    assert "(download API)" in (result.provenance.limits or "")
 
 
 async def test_failed_layer_lookup_still_returns_the_detail(httpx_mock):
@@ -512,6 +515,7 @@ async def test_failed_layer_lookup_still_returns_the_detail(httpx_mock):
     )
     result = await client.get_dataset(PORTAL, item_id)
     assert result.title == "An item" and result.download_urls == []
+    assert "(layer list)" in (result.provenance.limits or "")
 
 
 @pytest.mark.parametrize("bad", ["../../../collections", "x?f=html", "abc", "ABCDEF" * 6])

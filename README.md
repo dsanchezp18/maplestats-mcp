@@ -148,9 +148,36 @@ has a `provenance` block: source, URL, query time, freshness and limits.
 prompts take `lang` too, and each `docs://<module>/...` resource has a French
 twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
+## What to watch for
+
+MapleStats retrieves data directly from the original sources and returns
+values as published. When a result is trimmed, scaled, cleaned or computed,
+it says so in its `provenance` block or its notes; series values come
+unscaled, with the scale factor beside them. When a source is down or blocks
+the request, the tool returns an error, not a silent gap or a substitute
+value.
+
+The risk is in the use. An AI assistant can pick the wrong table, geography
+or reference period, and the answers, summaries and analysis it writes are
+AI-generated and can contain errors. For anything you would publish,
+spot-check a few figures against the source's own site and use
+`reproduce_code` to fetch them again outside the assistant. Publishers revise
+their figures, so a value retrieved today can differ from an earlier one.
+
+Each dataset keeps its own licence and attribution terms, shown in the
+result's `provenance`; credit the publisher, not MapleStats. MapleStats is an
+independent project, not affiliated with or endorsed by Statistics Canada,
+the Bank of Canada, CMHC or any other data provider. It is provided as is,
+depends on upstream services that can change or go offline, and is not
+professional, legal or financial advice. Parts of the code and tests were
+written with AI assistance; the discovery benchmark's questions were
+written by one AI session and reviewed by a second, independent one, not yet
+by a person
+([`tests/discovery_benchmark/REVIEW.md`](tests/discovery_benchmark/REVIEW.md)).
+
 ## What it covers
 
-374 tools in 74 modules. Run `docs://catalogue` for the full, bilingual list.
+375 tools in 74 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -255,6 +282,7 @@ this server has the 750 hours to itself.
 | `MAPLE_CBSA_TARIFF_CACHE_DIR` | system temp | Customs Tariff editions as Parquet (under 1 MB each, newest 12 kept) |
 | `MAPLE_ON_FIR_CACHE_DIR`, `MAPLE_ON_FIR_CACHE_MAX_MB` | system temp, `500` | Ontario FIR years kept as Parquet (about 3 MB each); use a persistent volume when hosted |
 | `MAPLE_EXPORT_DIR` | Downloads folder (home folder if there is none) | Where `reproduce_workbook` saves Excel workbooks on a local server |
+| `MAPLE_RESPONSE_MAX_BYTES` | `200000` | Byte budget for one tool result (minimum 10,000); a larger result has its biggest lists trimmed, and `provenance.limits` says what was kept and how to get the rest |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
 | `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |

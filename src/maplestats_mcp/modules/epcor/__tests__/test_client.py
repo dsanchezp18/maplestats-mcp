@@ -245,7 +245,10 @@ async def test_english_provenance_unchanged(httpx_mock):
     assert result.provenance.freshness == (
         "daily averages, last 7 days; unvalidated monitoring data"
     )
-    assert result.provenance.limits == "values leave the treatment plant; tap values can differ"
+    assert (result.provenance.limits or "").startswith(
+        "values leave the treatment plant; tap values can differ. The page shows dates "
+        "without a year; date is computed here"
+    )
     assert result.units["total_hardness"] == "mg/L as CaCO3"
 
 
@@ -253,3 +256,11 @@ async def test_404_in_french(httpx_mock):
     httpx_mock.add_response(url=f"{constants.DAILY_URL}?zone=ELS", status_code=404)
     with pytest.raises(UpstreamError, match="La source amont"):
         await client.get_daily_water_quality("els", lang="fr")
+
+
+def test_cells_that_are_not_numbers_are_named():
+    page = (
+        '<span id="HardnessLabel1">172</span><span id="phLabel1">--</span>'
+        '<span id="ChlorineLabel1">&lt;0.01</span><span id="ZoneLabel">ELS</span>'
+    )
+    assert client.unreadable_cells(page) == ["Chlorine <0.01"]

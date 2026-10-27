@@ -26,9 +26,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
+from maplestats_mcp.shared.transform import TransformedSeries
 
 
 class SeriesSummary(BaseModel):
@@ -95,12 +96,17 @@ class SeriesInfoBrief(BaseModel):
     """One entry in an observations response's "seriesDetail" dict.
 
     No "name" field - the series code is only available as that dict's
-    key, so client.py copies it in when building this model.
+    key, so client.py copies it in when building this model. `unit` and
+    `frequency` come from its "metadata" object (seen live 2026-10-27 on
+    every series checked, e.g. {"unit": "Percent", "frequency": "Business
+    daily"}; French on the French domain), when Valet sends one.
     """
 
     name: str
     label: str
     description: str
+    unit: str | None = None
+    frequency: str | None = None
 
 
 class Observation(BaseModel):
@@ -119,6 +125,13 @@ class Observation(BaseModel):
 
     ref_date: date
     values: dict[str, float | None]
+    non_numeric: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            "Values Valet sent as text that is not a number, by series code, exactly as sent; "
+            "their entry in `values` is null. Absent when every value was a number or empty."
+        ),
+    )
 
 
 class GroupInfo(BaseModel):
@@ -138,7 +151,15 @@ class GroupInfo(BaseModel):
 
 class ObservationsResult(BaseModel):
     series: dict[str, SeriesInfoBrief]
-    observations: list[Observation]
+    observations: list[Observation] = Field(description="Values as published by the Bank.")
+    transformed: dict[str, TransformedSeries] | None = Field(
+        default=None,
+        description=(
+            "Only with `transform` or `frequency`: per series code, values computed by "
+            "MapleStats from the published ones, with the formula and unit. `observations` "
+            "stay as published."
+        ),
+    )
     provenance: Provenance
 
 

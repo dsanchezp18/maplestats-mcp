@@ -714,25 +714,28 @@ def _jurisdiction_name(record: Record, lang: Lang) -> str:
 # ---------------------------------------------------------------- dictionary
 
 
-async def _load_dictionary(entry: CatalogueEntry, lang: Lang) -> dict[str, Any] | None:
-    """Title, last update and source from the data dictionary; None when it is not readable."""
+async def _load_dictionary(entry: CatalogueEntry, lang: Lang) -> tuple[dict[str, Any] | None, bool]:
+    """Title, last update and source from the data dictionary, and whether reading it failed.
+
+    A failed dictionary does not fail the table (its rows are still good), but the
+    caller says so, and the failure is not cached: it raises inside `fetch`.
+    """
     path = entry.dictionary_path_fr if lang == "fr" else entry.dictionary_path_en
     if not path:
-        return None
+        return None, False
     url = _file_url(path)
 
-    async def fetch() -> dict[str, Any] | None:
-        try:
-            response = await _download(url, f"nfd dictionary {entry.table_id}")
-        except (NotFound, UpstreamError, UpstreamUnavailable):
-            return None
+    async def fetch() -> dict[str, Any]:
+        response = await _download(url, f"nfd dictionary {entry.table_id}")
         # openpyxl takes ~0.7 s to import, so it loads on first use.
         from openpyxl import load_workbook
 
         try:
             workbook = load_workbook(io.BytesIO(response.content), read_only=True, data_only=True)
-        except Exception:  # noqa: BLE001 - a corrupt dictionary must not fail the table
-            return None
+        except Exception as exc:  # any unreadable workbook is the same upstream fault
+            raise UpstreamError(
+                f"nfd: the data dictionary {url} is not a readable workbook."
+            ) from exc
         try:
             sheet = workbook.worksheets[1 if lang == "fr" and len(workbook.worksheets) > 1 else 0]
             top = [row for row in sheet.iter_rows(min_row=1, max_row=6, values_only=True)]
@@ -753,8 +756,11 @@ async def _load_dictionary(entry: CatalogueEntry, lang: Lang) -> dict[str, Any] 
             "url": url,
         }
 
-    data, _ = await cached_fetch(f"nfd:dictionary:{url}", constants.TABLE_TTL_SECONDS, fetch)
-    return data
+    try:
+        data, _ = await cached_fetch(f"nfd:dictionary:{url}", constants.TABLE_TTL_SECONDS, fetch)
+    except (NotFound, UpstreamError, UpstreamUnavailable):
+        return None, True
+    return data, False
 
 
 # -------------------------------------------------------------------- describe
@@ -767,7 +773,7 @@ def _dimension_values(dataset: Dataset, index: int, lang: Lang) -> list[str]:
 async def describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescription:
     entry, cached_catalogue = await _entry(table_id, lang)
     dataset, cached = await _in_lang(_load_dataset(entry), lang)
-    dictionary = await _in_lang(_load_dictionary(entry, lang), lang)
+    dictionary, dictionary_failed = await _in_lang(_load_dictionary(entry, lang), lang)
     records = dataset.records
     years = [r.year for r in records]
     spans: dict[str, tuple[Record, int, int]] = {}
@@ -802,6 +808,18 @@ async def describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescriptio
     legend = constants.QUALIFIERS_FR if lang == "fr" else constants.QUALIFIERS_EN
     present = {r.qualifier for r in records if r.qualifier}
     quirks = _quirks(dataset, lang)
+    dictionary_note = None
+    if dictionary_failed:
+        dictionary_note = fr_or_en(
+            lang,
+            "The data dictionary could not be downloaded or read just now, so "
+            "dictionary_title, source and last_updated are null (not blank in the source); "
+            "try again later.",
+            "Le dictionnaire de données n'a pas pu être téléchargé ou lu pour l'instant : "
+            "dictionary_title, source et last_updated sont donc nuls (ils ne sont pas vides "
+            "à la source) ; réessayez plus tard.",
+        )
+        quirks.append(dictionary_note)
     return NfdTableDescription(
         table_id=entry.table_id,
         section=_section(entry, lang),
@@ -835,6 +853,7 @@ async def describe_table(table_id: str, lang: Lang = "en") -> NfdTableDescriptio
                 f"{len(records)} rows, {min(years)} to {max(years)}",
                 f"{len(records)} lignes, de {min(years)} à {max(years)}",
             ),
+            limits=dictionary_note,
             lang=lang,
         ),
     )

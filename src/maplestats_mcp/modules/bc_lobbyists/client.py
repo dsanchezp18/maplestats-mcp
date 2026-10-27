@@ -656,6 +656,11 @@ def _omitted(lang: str) -> str:
     return pick(lang, constants.OMITTED_EN, constants.OMITTED_FR)
 
 
+# Registrations returned in full by get_registration for a bare filer-client
+# pair, which can match several (each with every lobbyist and topic).
+_DETAIL_MAX = 20
+
+
 def _limits_fr(returned: int, total: int, unit: str, how: str) -> str | None:
     """truncation_note() in French (shared/limits writes English only)."""
     if returned >= total:
@@ -953,9 +958,11 @@ async def get_registration(registration: str, *, lang: str = "en") -> OrlRegistr
             "bc_lobbyists_search_registrations.",
             lang,
         )
-    found = found[:20]
+    kept = found[:_DETAIL_MAX]
+    how_en = "pass a full registration number or id for one registration"
+    how_fr = "indiquez un numéro complet ou un identifiant pour une seule inscription"
     return OrlRegistrationDetail(
-        registrations=[_registration_model(r, store, lang, full=True) for r in found],
+        registrations=[_registration_model(r, store, lang, full=True) for r in kept],
         omitted=_omitted(lang),
         provenance=_provenance(
             constants.REGISTRATION_ZIP,
@@ -964,6 +971,14 @@ async def get_registration(registration: str, *, lang: str = "en") -> OrlRegistr
             store.as_of,
             pick(lang, "current version of the registration", "version courante de l'inscription"),
             lang,
+            limits=truncation_note(
+                returned=len(kept),
+                total=len(found),
+                unit="matching registrations",
+                how_to_get_more=how_en,
+            )
+            if lang != "fr"
+            else _limits_fr(len(kept), len(found), "inscriptions correspondantes", how_fr),
         ),
     )
 

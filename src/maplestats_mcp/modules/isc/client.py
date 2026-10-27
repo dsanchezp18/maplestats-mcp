@@ -184,10 +184,17 @@ def _clean(text: Any) -> str | None:
 
 
 def _to_int(text: Any) -> int | None:
+    """'1,234' or '1 234' as 1234; anything that is not a whole number is None.
+
+    Only thousands separators are dropped: stripping every non-digit read
+    "12.5" as 125 and "-3" as 3.
+    """
     if text is None:
         return None
-    digits = re.sub(r"\D", "", str(text))
-    return int(digits) if digits else None
+    if isinstance(text, int) and not isinstance(text, bool):
+        return text
+    compact = re.sub(r"[\s,\xa0\u202f]", "", str(text))
+    return int(compact) if re.fullmatch(r"[-+]?\d+", compact) else None
 
 
 def _to_float(text: str | None) -> float | None:
@@ -417,6 +424,7 @@ async def get_first_nation_profile(band_number: int, *, lang: str = "en") -> Fir
         **parse_main(main),
         reserves=reserves,
         total_reserve_hectares=round(sum(hectares), 2) if hectares else None,
+        reserves_without_hectares=len(reserves) - len(hectares),
         governance=parse_governance(governance_page),
         geography=parse_geography(geography_page),
         profile_url=url,
@@ -465,20 +473,22 @@ def parse_population(soup: BeautifulSoup) -> dict[str, Any]:
         men = _to_int(_by_id(soup, f"txtMales{suffix}"))
         women = _to_int(_by_id(soup, f"txtFemales{suffix}"))
         label = _SEX_PREFIX.sub("", _by_id(soup, f"lblMales{suffix}") or residence)
-        total = None if men is None and women is None else (men or 0) + (women or 0)
+        # A missing sex must not make the other one the total.
+        total = None if men is None or women is None else men + women
         rows.append(
             ResidenceCount(residence=residence, label=label, men=men, women=women, total=total)
         )
     as_of = _by_id(soup, "txtExtractDate")
-    men = [r.men for r in rows if r.men is not None]
-    women = [r.women for r in rows if r.women is not None]
+    # Sums over the residences, so null when any residence lacks the figure.
+    men = [r.men for r in rows]
+    women = [r.women for r in rows]
     return {
         "name": _by_id(soup, "txtBandName") or "",
         "as_of": as_of,
         "as_of_month": as_of_month(as_of),
         "by_residence": rows,
-        "men": sum(men) if men else None,
-        "women": sum(women) if women else None,
+        "men": None if None in men else sum(m for m in men if m is not None),
+        "women": None if None in women else sum(w for w in women if w is not None),
         "total": _to_int(_by_id(soup, "txtTotalPopulation")),
     }
 

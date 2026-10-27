@@ -54,6 +54,7 @@ from maplestats_mcp.shared.fr_typography import fr_or_en, lang_error
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.licences import terms_not_stated
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -208,6 +209,7 @@ async def search_ivt(
         )
     files: list[IvtFile] = []
     datasets_matched = 0
+    total_files: int | None = 0
     if query.strip():
         found = await _get(
             constants.SEARCH_URL,
@@ -223,7 +225,9 @@ async def search_ivt(
         batches = await asyncio.gather(
             *(_dataset_files(item, lang) for item in list_or_empty(found, "items"))
         )
-        files = [f for batch in batches for f in batch][:limit]
+        found_files = [f for batch in batches for f in batch]
+        total_files = len(found_files)
+        files = found_files[:limit]
     if not files:
         hits = await _get(
             constants.SEARCH_URL,
@@ -244,9 +248,39 @@ async def search_ivt(
             )
             for item in list_or_empty(hits, "items")
         ]
+        count = hits.get("total_count")
+        total_files = int(count) if isinstance(count, int) else None
+    # Without a count, a full page is the only sign that more files exist.
+    truncated = len(files) >= limit if total_files is None else total_files > len(files)
+    of_en = f"{total_files:,}" if total_files is not None else "more"
+    of_fr = f"{total_files}" if total_files is not None else "davantage"
+    cut = (
+        fr_or_en(
+            lang,
+            f"Returned the first {len(files)} of {of_en} IVT files; raise limit (up to "
+            f"{constants.LIMIT_MAX}) or narrow the query.",
+            f"Les {len(files)} premiers fichiers IVT sur {of_fr} ; augmentez limit (jusqu'à "
+            f"{constants.LIMIT_MAX}) ou précisez la recherche.",
+        )
+        if truncated
+        else None
+    )
+    datasets_cut = (
+        fr_or_en(
+            lang,
+            f"Files come from the top {constants.DATASETS_MAX} of {datasets_matched} matching "
+            "datasets.",
+            f"Les fichiers viennent des {constants.DATASETS_MAX} premiers des "
+            f"{datasets_matched} jeux de données correspondants.",
+        )
+        if datasets_matched > constants.DATASETS_MAX
+        else None
+    )
     return IvtSearchResult(
         files=files,
         returned_count=len(files),
+        total_matched=total_files,
+        truncated=truncated,
         datasets_matched=datasets_matched,
         query=query,
         provenance=make_provenance(
@@ -259,11 +293,15 @@ async def search_ivt(
                 f"IVT files from the top {constants.DATASETS_MAX} matching datasets",
                 f"fichiers IVT des {constants.DATASETS_MAX} jeux de données les plus pertinents",
             ),
-            limits=fr_or_en(
-                lang,
-                "Only canivt (R) reads IVT files; other_formats lists any CSV twin.",
-                "Seul canivt (R) lit les fichiers IVT ; other_formats liste un éventuel "
-                "équivalent CSV. Les titres sont ceux du dépôt (en anglais ou en français).",
+            limits=join_limits(
+                cut,
+                datasets_cut,
+                fr_or_en(
+                    lang,
+                    "Only canivt (R) reads IVT files; other_formats lists any CSV twin.",
+                    "Seul canivt (R) lit les fichiers IVT ; other_formats liste un éventuel "
+                    "équivalent CSV. Les titres sont ceux du dépôt (en anglais ou en français).",
+                ),
             ),
             lang=lang,
         ),
@@ -316,6 +354,16 @@ def _plain(text: str | None, *, chars: int | None = None) -> str | None:
     return flat
 
 
+def _export_failed(response: httpx.Response) -> bool:
+    """True for Borealis's 403 {"message": "Export Failed"} (seen live 2026-10-02)."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return False
+    message = payload.get("message") if isinstance(payload, dict) else None
+    return isinstance(message, str) and "export failed" in message.casefold()
+
+
 async def _get_ddi(persistent_id: str, exporter: str, context: str, lang: str = "en") -> str | None:
     """DDI XML text, or None when Borealis cannot export it (HTTP 403 'Export Failed')."""
     params = {"exporter": exporter, "persistentId": persistent_id}
@@ -326,7 +374,10 @@ async def _get_ddi(persistent_id: str, exporter: str, context: str, lang: str = 
             response = await get_raw(constants.DDI_EXPORT_URL, params=params, timeout=60.0)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            if status == 403:
+            # Only Borealis's own "Export Failed" answer means "no DDI of this
+            # kind"; any other 403 (a proxy or firewall refusing the request) is
+            # an upstream failure, and must not be cached as "no metadata".
+            if status == 403 and _export_failed(exc.response):
                 return None
             if status == 404:
                 raise lang_error(

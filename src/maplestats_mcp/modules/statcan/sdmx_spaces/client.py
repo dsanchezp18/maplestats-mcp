@@ -1296,11 +1296,28 @@ async def search_flows(
                     : constants.MAX_FACET_VALUES
                 ]
             ],
+            value_count=len(buckets),
         )
         for name, buckets in list(merged.items())[: constants.MAX_FACETS]
     ]
     page = hits[offset : offset + limit]
     notes = []
+    if len(merged) > constants.MAX_FACETS:
+        notes.append(
+            say(
+                f"facets lists {constants.MAX_FACETS} of {len(merged)} facets",
+                f"facets liste {constants.MAX_FACETS} des {len(merged)} facettes",
+            )
+        )
+    if any(f.value_count > len(f.values) for f in facet_list):
+        notes.append(
+            say(
+                f"each facet shows its {constants.MAX_FACET_VALUES} most frequent values "
+                "(value_count gives how many there are)",
+                f"chaque facette montre ses {constants.MAX_FACET_VALUES} valeurs les plus "
+                "fréquentes (value_count en donne le nombre)",
+            )
+        )
     if found > len(page) + offset:
         notes.append(
             say(

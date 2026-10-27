@@ -304,16 +304,34 @@ async def search_collections(
     other, _ = await _all_collections("fr" if lang == "en" else "en")
     hit_ids = {c.id for c in _filter_collections(other, query, len(other))}
     hit_ids |= {c.id for c in _filter_collections(all_collections.collections, query, 10**6)}
-    matches = [c for c in all_collections.collections if c.id in hit_ids][:limit]
+    every_match = [c for c in all_collections.collections if c.id in hit_ids]
+    matches = every_match[:limit]
     searched = len(all_collections.collections)
+    # The count of all matches, not only `limit`, so a cut list says what it left out.
     coverage = (
         french_spacing(
-            f"au plus {limit} correspondances parmi les {searched} collections examinées "
-            "(titres, descriptions et mots-clés en français et en anglais)"
+            f"{len(matches)} des {len(every_match)} correspondances parmi les {searched} "
+            "collections examinées (titres, descriptions et mots-clés en français et en "
+            "anglais)"
         )
         if lang == "fr"
-        else f"top {limit} matches of {searched} collections searched"
+        else f"{len(matches)} of {len(every_match)} matches among {searched} collections searched"
     )
+    limits = None
+    if len(matches) < len(every_match):
+        limits = (
+            french_spacing(
+                f"Les {len(matches)} premières des {len(every_match)} collections "
+                "correspondantes sont renvoyées ; augmentez limit pour voir les autres."
+            )
+            if lang == "fr"
+            else truncation_note(
+                returned=len(matches),
+                total=len(every_match),
+                unit="matching collections",
+                how_to_get_more="raise limit to see the rest",
+            )
+        )
     return CollectionList(
         collections=matches,
         total_count=len(matches),
@@ -323,6 +341,7 @@ async def search_collections(
             cached=all_collections.provenance.cached,
             schema_name="eccc.CollectionList",
             coverage=coverage,
+            limits=limits,
             lang=lang,
         ),
     )

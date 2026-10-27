@@ -306,9 +306,12 @@ async def get_demand(
             ),
             licence=_licence(lang),
             limits=_limits(
-                f"Rows capped at {limit}; {total} rows matched. Start/end dates are UTC days.",
+                f"Rows capped at {limit}; {total} rows matched. Start/end dates are UTC days. "
+                f"peak_demand_mw and average_demand_mw are computed here over the "
+                f"{len(points)} returned rows only.",
                 f"Lignes plafonnées à {limit} ; {total} lignes correspondent. Les dates de "
-                "début et de fin sont des jours UTC.",
+                "début et de fin sont des jours UTC. peak_demand_mw et average_demand_mw sont "
+                f"calculés ici sur les {len(points)} lignes renvoyées seulement.",
                 lang,
             ),
             lang=lang,

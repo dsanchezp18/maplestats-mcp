@@ -809,6 +809,20 @@ async def test_search_parses_hits_and_facets(httpx_mock):
     assert alberta.filter_value == "1|Canada#1#|Alberta#10#"
     assert "122 of 245" in (result.provenance.coverage or "")
     assert "28 of" not in (result.provenance.limits or "")
+    assert result.facets[1].value_count == 2
+    assert "most frequent values" not in (result.provenance.limits or "")
+
+
+async def test_search_says_when_facet_values_are_cut(httpx_mock, monkeypatch):
+    monkeypatch.setattr(client.constants, "MAX_FACET_VALUES", 1)
+    monkeypatch.setattr(client.constants, "MAX_FACETS", 1)
+    httpx_mock.add_response(url=SEARCH_URL, method="POST", json=_search_payload(0, []))
+    result = await client.search_flows("ccei", "ghg")
+    assert [f.name for f in result.facets] == ["Frequency"]
+    limits = result.provenance.limits or ""
+    assert "facets lists 1 of 2 facets" in limits
+    # Frequency has a single value here, so no facet's values were cut.
+    assert "most frequent values" not in limits
 
 
 async def test_search_filters_are_passed_through(httpx_mock):

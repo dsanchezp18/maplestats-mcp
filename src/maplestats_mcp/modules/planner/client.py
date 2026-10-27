@@ -37,6 +37,7 @@ from maplestats_mcp.modules.planner.topics_fr import (
 )
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.fitness import notes_for
 from maplestats_mcp.shared.i18n import normalize_lang
 
 _MAX_TOPICS = 4
@@ -187,6 +188,26 @@ def _french(plan_out: QueryPlan) -> QueryPlan:
     return plan_out
 
 
+def _add_fitness_notes(plan_out: QueryPlan, lang: str) -> QueryPlan:
+    # The fitness-for-use notes for the tools and tables a topic's steps name go
+    # after its own caveats, already in the plan's language; a table number in
+    # the question itself ("36-10-0434") is fetched by the first topic's steps,
+    # so its notes go there. A note shared by several topics goes on the first
+    # (best-matching) one only: the same paragraph four times would bury the
+    # topic caveats.
+    seen: set[str] = set()
+    for rank, topic in enumerate(plan_out.topics):
+        calls = [(step.tool, {"purpose": step.purpose}) for step in topic.steps]
+        if rank == 0:
+            calls.append(("", {"question": plan_out.question}))
+        for tool, arguments in calls:
+            for note in notes_for(tool, arguments, lang):
+                if note not in seen and note not in topic.caveats:
+                    topic.caveats.append(note)
+                seen.add(note)
+    return plan_out
+
+
 def plan(question: str, lang: str = "en") -> QueryPlan:
     french = normalize_lang(lang) == "fr"
     if not question.strip():
@@ -250,4 +271,4 @@ def plan(question: str, lang: str = "en") -> QueryPlan:
             lang="fr" if french else "en",
         ),
     )
-    return _french(result) if french else result
+    return _add_fitness_notes(_french(result) if french else result, lang)

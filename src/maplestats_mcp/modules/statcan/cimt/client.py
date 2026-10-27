@@ -40,6 +40,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -401,23 +402,49 @@ async def _commodities(level: str, direction: str) -> list[Commodity]:
     return body
 
 
-async def _description_lookup(level: str, direction: str, lang: str) -> dict[str, tuple[str, str]]:
-    """code -> (description, unit code). Empty on failure: a name is not worth losing the data."""
+async def _description_lookup(
+    level: str, direction: str, lang: str
+) -> tuple[dict[str, tuple[str, str]], bool]:
+    """code -> (description, unit code), and whether the list failed to load.
+
+    A failed list gives an empty map rather than an error (a name is not worth
+    losing the data), and the caller says so with _names_note.
+    """
     try:
         entries = await _commodities(level, direction)
     except (UpstreamError, UpstreamUnavailable):
-        return {}
+        return {}, True
     index = 2 if lang == "en" else 3
-    return {e[0]: (e[index], e[1]) for e in entries}
+    return {e[0]: (e[index], e[1]) for e in entries}, False
 
 
-async def _unit_labels(lang: str) -> dict[str, str]:
+async def _unit_labels(lang: str) -> tuple[dict[str, str], bool]:
+    """Unit code -> label, and whether the list failed to load (see _description_lookup)."""
     try:
         entries = await _code_list("uom")
     except (UpstreamError, UpstreamUnavailable):
-        return {}
+        return {}, True
     key = "en" if lang == "en" else "fr"
-    return {str(e["id"]): str(e.get(key, "")) for e in entries if "id" in e}
+    return {str(e["id"]): str(e.get(key, "")) for e in entries if "id" in e}, False
+
+
+def _names_note(*, descriptions: bool = False, units: bool = False) -> str | None:
+    """The sentence for a reply whose commodity descriptions or unit labels did not load."""
+    if descriptions and units:
+        en, fr = "commodity descriptions and unit labels", "descriptions et unités"
+    elif descriptions:
+        en, fr = "commodity descriptions", "descriptions des marchandises"
+    elif units:
+        en, fr = "unit labels", "libellés d'unité"
+    else:
+        return None
+    return say(
+        f"The {en} could not be loaded from StatCan's code lists (the request failed), so "
+        "they are missing from this reply; the trade values are unaffected. Try again shortly.",
+        f"Les {fr} n'ont pas pu être chargés depuis les listes de codes de StatCan (la requête "
+        "a échoué) : ils manquent dans cette réponse ; les valeurs commerciales ne sont pas "
+        "touchées. Réessayez sous peu.",
+    )
 
 
 async def _countries() -> list[dict[str, str | int]]:
@@ -596,7 +623,7 @@ async def search_commodities(
         )
 
     entries = await _commodities(level, direction)
-    units = await _unit_labels(lang)
+    units, units_failed = await _unit_labels(lang)
     text_index = 2 if lang == "en" else 3
     needle = query.strip().replace(".", "")
     by_code = bool(needle) and needle.isdigit()
@@ -631,9 +658,12 @@ async def search_commodities(
             "CommoditySearchResult",
             f"{constants.CODES_BASE_URL}/{'exp' if direction == 'exports' else 'imp'}-eng.htm",
             cached=True,
-            limits=say(
-                f"Showing up to {limit} of {len(found)} matching codes.",
-                f"Jusqu'à {limit} des {len(found)} codes correspondants affichés.",
+            limits=join_limits(
+                say(
+                    f"Showing up to {limit} of {len(found)} matching codes.",
+                    f"Jusqu'à {limit} des {len(found)} codes correspondants affichés.",
+                ),
+                _names_note(units=units_failed),
             ),
         ),
     )
@@ -807,10 +837,10 @@ async def get_trade(
     raw_rows = list_or_empty(body, "trade")
     total = int(body.get("count") or len(raw_rows))
 
-    descriptions = await _description_lookup(
+    descriptions, descriptions_failed = await _description_lookup(
         "hs6" if hs_level == "hs6" else "national", direction, lang
     )
-    units = await _unit_labels(lang)
+    units, units_failed = await _unit_labels(lang)
     countries = {int(e["id"]): _country_name(e, lang) for e in await _countries()}
     states = {int(e["id"]): _state_name(e, lang) for e in await _states()}
     province_names = {int(e["id"]): _province_name(e, lang) for e in await _provinces()}
@@ -857,7 +887,7 @@ async def get_trade(
             url,
             cached=was_cached,
             latest=end,
-            limits=(
+            limits=join_limits(
                 say(
                     f"Row limit {limit}; the query matches {total} rows, so the rows returned are "
                     "an arbitrary subset. Narrow the commodity, partner, province or period.",
@@ -869,7 +899,8 @@ async def get_trade(
                 else say(
                     f"Row limit {limit}; not reached.",
                     f"Limite de {limit} lignes ; non atteinte.",
-                )
+                ),
+                _names_note(descriptions=descriptions_failed, units=units_failed),
             ),
         ),
     )
@@ -1004,7 +1035,7 @@ async def get_top_commodities(
         ]
     )
     body, was_cached, url = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
-    descriptions = await _description_lookup(
+    descriptions, descriptions_failed = await _description_lookup(
         "hs6" if hs_level == "hs6" else "national", direction, lang
     )
     items = _ranked(
@@ -1025,9 +1056,13 @@ async def get_top_commodities(
             url,
             cached=was_cached,
             latest=refper,
-            limits=say(
-                "The service returns its largest commodities only (about 25).",
-                "Le service ne renvoie que ses principales marchandises (environ 25).",
+            limits=join_limits(
+                say(
+                    "The service returns its largest commodities only (about 25).",
+                    "Le service ne renvoie que ses principales marchandises (environ 25).",
+                ),
+                # Each commodity's name then falls back to its code.
+                _names_note(descriptions=descriptions_failed),
             ),
         ),
     )
@@ -1155,10 +1190,14 @@ async def get_series(
             )
     points.sort(key=lambda p: (p.period, p.measure))
     unit: str | None = None
+    names_failed = units_failed = False
     if method == "getCommodityChart":
         level = "hs6" if len(hs) == 6 else "national"
-        _, unit_code = (await _description_lookup(level, direction, lang)).get(hs, (None, ""))
-        unit = (await _unit_labels(lang)).get(unit_code) if unit_code else None
+        descriptions, names_failed = await _description_lookup(level, direction, lang)
+        _, unit_code = descriptions.get(hs, (None, ""))
+        if unit_code:
+            labels, units_failed = await _unit_labels(lang)
+            unit = labels.get(unit_code)
     return SeriesResult(
         direction=direction,
         hs_code=hs,
@@ -1174,7 +1213,7 @@ async def get_series(
             url,
             cached=was_cached,
             latest=refper,
-            limits=(
+            limits=join_limits(
                 say(
                     "Five years of months ending at the requested period. Exports: total exports "
                     "are domestic_value plus reexport_value.",
@@ -1185,7 +1224,9 @@ async def get_series(
                 else say(
                     "Five years of months ending at the requested period.",
                     "Cinq ans de mois se terminant à la période demandée.",
-                )
+                ),
+                # The unit comes from the commodity list, so a failed list loses it too.
+                _names_note(units=names_failed or units_failed),
             ),
         ),
     )

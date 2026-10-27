@@ -110,6 +110,10 @@ async def test_falls_back_to_pinned_list_when_discovery_finds_nothing(httpx_mock
     assert result.list_year == constants.FALLBACK_YEAR
     request = httpx_mock.get_requests()[-1]
     assert constants.FALLBACK_RESOURCES["Identification"] in str(request.url)
+    assert (result.provenance.limits or "").startswith(
+        "Fallback: open.canada.ca's search found no List of charities"
+    )
+    assert "(lists found: none)" in (result.provenance.limits or "")
 
 
 async def test_get_charity_joins_general_information(httpx_mock):

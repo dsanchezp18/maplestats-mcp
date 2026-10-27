@@ -9,11 +9,20 @@ from maplestats_mcp.shared.models import Provenance
 
 class ValueRow(BaseModel):
     label: str
-    value_cad: float | None = Field(default=None, description="Dollars (not billions).")
+    value_as_published: str | None = Field(
+        default=None, description="The cell as the page writes it, e.g. '0.20 billion'."
+    )
+    value_cad: float | None = Field(
+        default=None,
+        description="Converted by MapleStats: value_as_published in dollars (not billions); "
+        "null when its scale word is not billion or million.",
+    )
     share_percent: float | None = None
 
 
 class Headline(BaseModel):
+    """Figures read by MapleStats from the English page's prose; "$29 billion" becomes 29e9."""
+
     period: str | None = None
     programs: int | None = None
     organizations: int | None = None
@@ -27,6 +36,11 @@ class Headline(BaseModel):
     adoption_cad: float | None = None
     jobs_created_or_maintained: int | None = Field(
         default=None, description="From about 17% of projects; not representative."
+    )
+    not_found: list[str] = Field(
+        default_factory=list,
+        description="Headline fields whose sentence was not found in the page text, so they "
+        "are null (the page was reworded), not zero or absent from the source.",
     )
 
 

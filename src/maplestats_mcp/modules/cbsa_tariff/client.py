@@ -164,7 +164,17 @@ def _absolute(href: str) -> str:
     return href if href.startswith("http") else constants.SITE + "/" + href.lstrip("/")
 
 
+class _NoYearPage(NotFound):
+    """CBSA has no menu page for the year (HTTP 404); never cached."""
+
+
 async def _year_editions(year: int, lang: str) -> tuple[list[TariffEdition], bool]:
+    """A year's editions. A 404 raises _NoYearPage (a NotFound) rather than giving [].
+
+    An empty list read like "this year has no editions", and was cached for
+    six hours; the callers decide when a missing page is expected (the
+    current year before CBSA posts it) and say so.
+    """
     url = constants.MENU_URL.format(year=year, suffix=constants.SUFFIX[lang])
 
     async def fetch() -> list[TariffEdition]:
@@ -173,7 +183,13 @@ async def _year_editions(year: int, lang: str) -> tuple[list[TariffEdition], boo
             response = await get_raw(url, timeout=30.0)
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
-                return []
+                raise_localized(
+                    _NoYearPage,
+                    f"cbsa_tariff: CBSA has no tariff page for {year} ({url} answered 404).",
+                    f"cbsa_tariff : l'ASFC n'a pas de page tarifaire pour {year} ({url} a "
+                    "répondu 404).",
+                    lang,
+                )
             raise_localized(
                 UpstreamError,
                 f"cbsa_tariff: {url} returned HTTP {exc.response.status_code}.",
@@ -210,14 +226,24 @@ async def list_editions(*, year: int | None = None, lang: str = "en") -> TariffE
     years = [year] if year is not None else [current, current - 1]
     editions: list[TariffEdition] = []
     cached = True
+    missing: list[int] = []
     for each in years:
-        found, hit = await _year_editions(each, lang)
+        try:
+            found, hit = await _year_editions(each, lang)
+        except _NoYearPage:
+            # A year asked for is an error; in the default two-year listing the
+            # other year's editions are still returned, and the limits name the gap.
+            if year is not None:
+                raise
+            missing.append(each)
+            continue
         editions += found
         cached = cached and hit
     url = constants.MENU_URL.format(year=years[0], suffix=constants.SUFFIX[lang])
     return TariffEditions(
         editions=editions,
-        years=years,
+        years=[y for y in years if y not in missing],
+        missing_years=missing,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
@@ -231,6 +257,15 @@ async def list_editions(*, year: int | None = None, lang: str = "en") -> TariffE
                 f"{constants.FIRST_YEAR} sont en ligne (paramètre `year`)",
                 lang,
             ),
+            limits=_fr(
+                f"CBSA's tariff page for {' and '.join(map(str, missing))} answered HTTP 404 "
+                "(not posted yet, or moved), so those editions are not listed",
+                f"la page tarifaire de l'ASFC pour {' et '.join(map(str, missing))} a répondu "
+                "HTTP 404 (pas encore publiée, ou déplacée) : ces éditions ne sont pas listées",
+                lang,
+            )
+            if missing
+            else None,
             lang=lang,
         ),
     )
@@ -261,6 +296,7 @@ async def resolve_edition(edition: str, lang: str) -> TariffEdition:
     if label is not None:
         year = int(label[0])
         if constants.FIRST_YEAR <= year <= current:
+            # A missing year page propagates as NotFound naming the page.
             for item in (await _year_editions(year, lang))[0]:
                 parts = item.edition.split("-")
                 if (parts[0], parts[1] if len(parts) > 1 else "0") == label:
@@ -273,7 +309,15 @@ async def resolve_edition(edition: str, lang: str) -> TariffEdition:
         )
     assert on_date is not None
     for year in range(min(on_date.year, current), constants.FIRST_YEAR - 1, -1):
-        in_force = [e for e in (await _year_editions(year, lang))[0] if e.effective_date <= on_date]
+        try:
+            year_editions = (await _year_editions(year, lang))[0]
+        except _NoYearPage:
+            # The current year's page may not be posted yet, and then the edition
+            # in force is genuinely last year's; any other missing year is an error.
+            if year != current:
+                raise
+            continue
+        in_force = [e for e in year_editions if e.effective_date <= on_date]
         if in_force:
             return in_force[0]
     raise_localized(

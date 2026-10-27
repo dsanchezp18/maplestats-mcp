@@ -381,7 +381,12 @@ async def _frequency_trips(key: str, lang: str = "en") -> frozenset[str]:
 
 
 async def _provenance(
-    key: str, directory: FeedDirectory, was_cached: bool, schema_name: str, lang: str = "en"
+    key: str,
+    directory: FeedDirectory,
+    was_cached: bool,
+    schema_name: str,
+    lang: str = "en",
+    extra_limits: str | None = None,
 ) -> Provenance:
     agency = _agency(key, lang)
     feed_info, _ = await _table(key, "feed_info.txt", required=False, lang=lang)
@@ -421,6 +426,7 @@ async def _provenance(
                 if agency.database == "statcan"
                 else ""
             )
+            + (f" {extra_limits}" if extra_limits else "")
         ).strip()
         or None,
         licence=_feed_licence(agency, lang),
@@ -983,7 +989,8 @@ async def search_stops(
 
 async def _resolve_stop(
     agency_key: str, stop: str, lang: str = "en"
-) -> tuple[dict[str, str], list[dict[str, str]]]:
+) -> tuple[dict[str, str], list[dict[str, str]], int]:
+    """The stop, its child platforms up to STOP_FAMILY_MAX, and how many children it has."""
     rows, _ = await _table(agency_key, "stops.txt", lang=lang)
     by_id = [r for r in rows if r["stop_id"] == stop]
     found = by_id or [r for r in rows if r.get("stop_code") == stop]
@@ -1006,7 +1013,7 @@ async def _resolve_stop(
         )
     chosen = found[0]
     children = [r for r in rows if r.get("parent_station") == chosen["stop_id"]]
-    return chosen, children[: constants.STOP_FAMILY_MAX]
+    return chosen, children[: constants.STOP_FAMILY_MAX], len(children)
 
 
 async def get_stop_departures(
@@ -1033,7 +1040,21 @@ async def get_stop_departures(
         from_seconds = 0
     await _check_date(agency_key, day, lang)
     directory, dir_cached = await _directory(agency_key, lang)
-    chosen, children = await _resolve_stop(agency_key, stop, lang)
+    chosen, children, family = await _resolve_stop(agency_key, stop, lang)
+    # A station with more child stops than the cap would silently miss the
+    # departures at the rest; say so and name the way round it.
+    family_cut = (
+        pick(
+            lang,
+            f"Departures cover the first {constants.STOP_FAMILY_MAX} of this station's "
+            f"{family} child stops; pass a child stop_id for the others.",
+            f"Les départs couvrent les {constants.STOP_FAMILY_MAX} premiers des {family} "
+            "arrêts enfants de cette station ; indiquez le stop_id d'un arrêt enfant pour "
+            "les autres.",
+        )
+        if family > constants.STOP_FAMILY_MAX
+        else None
+    )
     stop_ids = frozenset([chosen["stop_id"], *(c["stop_id"] for c in children)])
     route_record = await _resolve_route(agency_key, route, lang) if route else None
 
@@ -1108,7 +1129,12 @@ async def get_stop_departures(
         total_matches=len(entries),
         departures=departures,
         provenance=await _provenance(
-            agency_key, directory, dir_cached and scan_cached, "transit.StopDepartures", lang
+            agency_key,
+            directory,
+            dir_cached and scan_cached,
+            "transit.StopDepartures",
+            lang,
+            extra_limits=family_cut,
         ),
     )
 

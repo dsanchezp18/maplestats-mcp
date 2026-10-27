@@ -112,6 +112,8 @@ async def test_get_patent_trims_values_and_lists_parties(tables):
     assert [c.symbol for c in record.classifications] == ["H03K 19/01"]
     assert record.classifications[0].sequence == 1
     assert record.release_date == date(2024, 10, 11)
+    # Nothing was nulled from a placeholder, so no note says so.
+    assert "-1 or -2" not in (record.provenance.limits or "")
 
 
 async def test_unknown_codes_become_null(tables):
@@ -119,6 +121,7 @@ async def test_unknown_codes_become_null(tables):
     assert record.patent.filing_date is None
     assert record.patent.status_code is None
     assert record.parties[0].city is None
+    assert "-1 or -2 (unknown or not applicable)" in (record.provenance.limits or "")
     # an unknown filing date never falls inside a date range
     result = await client.search_patents(title="roller", filed_to=date(2000, 1, 1))
     assert [p.patent_number for p in result.patents] == [2000002]

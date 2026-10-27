@@ -56,6 +56,21 @@ def _path(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
 
+def _count_only(request: RecordedRequest) -> bool:
+    """True for a request that asks only how many rows match, not for the rows.
+
+    Alberta wildfire and Edmonton police tools ask ArcGIS for
+    `returnCountOnly=true` before their data query, and the Quebec
+    electricity tools ask Opendatasoft's `/records?limit=0` after it for
+    `total_count`. Replaying either gives a script that returns no rows.
+    """
+    fields = dict(parse_qsl(urlparse(request.url).query, keep_blank_values=True))
+    if request.method == "POST" and request.body and "json" not in request.content_type:
+        fields.update(_form_fields(request.body))
+    lowered = {key.lower(): value.strip().lower() for key, value in fields.items()}
+    return lowered.get("returncountonly") == "true" or lowered.get("limit") == "0"
+
+
 def choose(
     requests: list[RecordedRequest], provenance_url: str = ""
 ) -> tuple[RecordedRequest | None, int]:
@@ -64,7 +79,8 @@ def choose(
     The endpoint the result names as its source wins: a search tool that
     then looks up each hit (cer_list_datasets) or checks files with HEAD
     still reproduces the search. Otherwise
-    the last successful GET or POST is the data request.
+    the last successful GET or POST is the data request. A count-only
+    request (see `_count_only`) is never chosen while a request for rows exists.
     """
     ok = [
         r
@@ -73,6 +89,8 @@ def choose(
     ]
     if not ok:
         return None, 0
+    rows = [r for r in ok if not _count_only(r)]
+    ok = rows or ok
     named = [r for r in ok if provenance_url and _path(r.url) == _path(provenance_url)]
     target = named[-1] if named else ok[-1]
     # A named web page that the tool mined for an API call (Alberta's

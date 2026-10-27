@@ -94,11 +94,15 @@ class PartyStanding(BaseModel):
 
 class PartyTotal(BaseModel):
     party: str
-    seats: int
+    seats: int = Field(
+        description="Computed by MapleStats: the party's seats summed over by_province."
+    )
 
 
 class PartyStandings(BaseModel):
-    total_seats: int
+    total_seats: int = Field(
+        description="Computed by MapleStats: the sum of every by_province seat count."
+    )
     by_party: list[PartyTotal]
     by_province: list[PartyStanding]
     provenance: Provenance
