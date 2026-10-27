@@ -493,6 +493,64 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "first_nations",
+        "First Nations: profiles, registered population and drinking water advisories",
+        (
+            "first nation*",
+            "indian band",
+            "band number",
+            "tribal council",
+            "indian act",
+            "on reserve",
+            "off reserve",
+            "drinking water advisor*",
+            "boil water",
+            "premieres nations",
+            "premiere nation",
+            "conseil tribal",
+            "loi sur les indiens",
+            "eau potable",
+        ),
+        (
+            PlanStep(
+                "isc_search_first_nations",
+                "the First Nation's band number (query by name or province)",
+            ),
+            PlanStep(
+                "isc_get_first_nation_profile",
+                "reserves, tribal council, chief and council: band_number from the step before",
+                ("reserve", "chief", "council", "governance", "chef", "conseil"),
+            ),
+            PlanStep(
+                "isc_get_registered_population",
+                "registered population on and off reserve, by sex",
+                ("population", "registered", "inscrit*"),
+            ),
+            PlanStep(
+                "isc_list_drinking_water_advisories",
+                "long-term drinking water advisories, current or lifted",
+                ("water", "advisor*", "eau", "avis"),
+            ),
+            PlanStep(
+                "isc_list_short_term_advisories",
+                "short-term drinking water advisories south of 60",
+                ("short-term", "court terme", "boil", "ebullition"),
+            ),
+            PlanStep(
+                "statcan_census_profile_search_geography",
+                "census counts for the community: level='census_subdivisions' (reserves are census "
+                "subdivisions), query=<reserve name>",
+                ("census", "recensement"),
+            ),
+        ),
+        (
+            (
+                "Registered population counts people registered under the Indian Act "
+                "wherever they live; census counts are the people enumerated in a place."
+            ),
+        ),
+    ),
+    Topic(
         "immigration",
         "Immigration and Express Entry",
         (
