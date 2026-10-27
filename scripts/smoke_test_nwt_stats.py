@@ -35,8 +35,9 @@ async def main() -> int:
                 counts[topic] = listed.total_files
             empty = [t for t, n in counts.items() if n == 0]
             print(f"OK: {sum(counts.values())} files in {len(counts)} topics; empty {empty}")
-            if sum(counts.values()) < 600 or empty:
-                failures += fail("expected 600+ files and every topic filled")
+            # About 375 files on 2026-10-26, after the site's relaunch.
+            if sum(counts.values()) < 340 or empty:
+                failures += fail("expected 340+ files and every topic filled")
             everything = await client.search_files("xls", limit=constants.FILES_LIMIT_MAX)
 
             gdp = await client.list_files(topic="gdp")
@@ -50,15 +51,15 @@ async def main() -> int:
                 if not data.rows or "1999" not in data.all_columns:
                     failures += fail("GDP by industry should have years as columns from 1999")
 
-            profiles = await client.search_files("aklavik profile", topic="community-data")
-            print(f"OK: search aklavik -> {[(f.section, f.title) for f in profiles.files]}")
-            if not profiles.files:
-                failures += fail("no Aklavik community profile")
+            # The page offers an export of the table it shows, with no file extension.
+            export = next((f for f in gdp.files if "/download-xlsx/" in f.url), None)
+            if export is None:
+                failures += fail("no table export on the GDP page")
             else:
-                data = await client.read_file(profiles.files[0].url, limit=3)
-                print(f"OK: Aklavik profile sheet {data.sheet!r}, {data.total_rows} rows")
+                data = await client.read_file(export.url, limit=3)
+                print(f"OK: export {export.title[:50]!r} -> {data.total_rows} rows")
                 if not data.rows:
-                    failures += fail("Aklavik profile has no rows")
+                    failures += fail("GDP table export has no rows")
 
             xls = next((f for f in everything.files if f.format == "xls"), None)
             if xls is None:
@@ -83,10 +84,22 @@ async def main() -> int:
                 if listing.sheet is not None or not data.rows:
                     failures += fail("LFS100 should list its sheets, then read 'Age'")
 
-            census = await client.list_files(topic="census-2021", lang="fr")
-            print(f"OK: census-2021 -> {census.total_files} files; licence {census.licence[:40]!r}")
-            if census.total_files < 20:
-                failures += fail("2021 Census page should list 20+ files")
+            census = await client.list_files(
+                topic="census", limit=constants.FILES_LIMIT_MAX, lang="fr"
+            )
+            years = {f.section.split(" > ")[0] for f in census.files if f.section}
+            print(f"OK: census -> {census.total_files} files, blocks {sorted(years)}")
+            if census.total_files < 90 or len(years) != 6:
+                failures += fail("census page should list 90+ files in six census-year blocks")
+            # The page links its files on a staging host; they are read from statsnwt.ca.
+            age = next((f for f in census.files if "Age-gender" in f.url), None)
+            if age is None:
+                failures += fail("no 2021 census age file")
+            else:
+                data = await client.read_file(age.url, sheet="Age & Gender", limit=3)
+                print(f"OK: census age {age.url} -> {data.total_rows} rows")
+                if not data.rows:
+                    failures += fail("census age file has no rows")
     except (UpstreamError, UpstreamUnavailable) as exc:
         skip_outage(SOURCE, exc)
     print("NWT STATS SMOKE TEST", "FAILED" if failures else "PASSED")

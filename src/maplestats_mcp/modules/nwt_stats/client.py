@@ -2,9 +2,8 @@
 
 The Bureau has no API. Each topic page links its Excel tables with the
 agency's own titles, grouped under headings (a release date, a survey, a
-quarter) and sometimes inside collapsible blocks opened by a
-`javascript:toggle('id')` link whose text names the block. Community
-profiles sit one page deeper, one page per community. Files are read with
+quarter) and sometimes inside collapsible blocks. A page can also offer an
+export of a table it shows, titled with that table's headings. Files are read with
 the shared Excel reader (shared/file_tables.py): the real format comes from
 the bytes, the header row is guessed (and can be overridden), and a
 multi-sheet workbook follows the same sheet policy as the other file
@@ -50,7 +49,6 @@ _LIMITER = get_limiter(
 )
 
 _EXCEL_SUFFIXES = (".xlsx", ".xls")
-_TOGGLE = re.compile(r"toggle\('([^']+)'\)")
 # Link texts that say nothing about the table ("(Excel)", "downloaded (excel)",
 # "2018 Volunteering - XLS" is kept): the surrounding text is used instead.
 _GENERIC_LINK = re.compile(r"^(?:downloaded|download|here|click|excel|xlsx?|file|table|data|\W)*$")
@@ -81,9 +79,20 @@ def topic_url(topic: str) -> str:
     return constants.SITE + constants.TOPICS[topic][0]
 
 
+def _public(url: str) -> str:
+    """A staging-host link (bearnet.gov.nt.ca/t2/stats/...) as its statsnwt.ca twin."""
+    parsed = urlparse(url)
+    prefix = constants.STAGING_PREFIX + "/"
+    if (parsed.hostname or "") == constants.STAGING_HOST and parsed.path.startswith(prefix):
+        return parsed._replace(
+            netloc=constants.DOMAIN, path=parsed.path[len(constants.STAGING_PREFIX) :]
+        ).geturl()
+    return url
+
+
 def normalize_url(url: str, lang: Lang = "en") -> str:
     """The canonical https link on www.statsnwt.ca with the path percent-encoded."""
-    parsed = urlparse(url.strip())
+    parsed = urlparse(_public(url.strip()))
     if parsed.scheme not in ("http", "https") or (parsed.hostname or "") not in constants.HOSTS:
         raise_localized(
             InvalidInput,
@@ -97,8 +106,25 @@ def normalize_url(url: str, lang: Lang = "en") -> str:
     return parsed._replace(scheme="https", netloc=constants.DOMAIN, path=path).geturl()
 
 
+def _is_table_export(url: str) -> bool:
+    return urlparse(url).path.startswith(constants.TABLE_EXPORT_PREFIX)
+
+
 def _is_excel(url: str) -> bool:
-    return unquote(urlparse(url).path).lower().endswith(_EXCEL_SUFFIXES)
+    path = unquote(urlparse(url).path).lower()
+    return path.endswith(_EXCEL_SUFFIXES) or _is_table_export(url)
+
+
+def _export_title(link: Tag) -> str:
+    """A table export's title: the table's heading and, when given, its unit line."""
+    heading = link.find_previous(("h2", "h3"))
+    if heading is None:
+        return ""
+    title = _words(heading.get_text(" "))
+    unit = link.find_previous("h4")
+    if unit is not None and heading in unit.find_all_previous(("h2", "h3")):
+        title += f" ({_words(unit.get_text(' '))})"
+    return f"{title} - table on the page"
 
 
 def _own_text(element: Tag) -> str:
@@ -125,24 +151,12 @@ def _container_text(link: Tag) -> str:
     return _own_text(holder)[: constants.TITLE_MAX_CHARS]
 
 
-def _toggle_groups(soup: BeautifulSoup) -> dict[str, str]:
-    """Block id -> the text of the link that opens it."""
-    groups: dict[str, str] = {}
-    for anchor in soup.find_all("a", href=True):
-        match = _TOGGLE.search(str(anchor["href"]))
-        text = _words(anchor.get_text(" "))
-        if match and text:
-            groups.setdefault(match.group(1), text)
-    return groups
-
-
-def _section(link: Tag, groups: dict[str, str], page_name: str | None) -> str | None:
-    parts: list[str] = [page_name] if page_name else []
-    for parent in link.parents:
-        block = parent.get("id") if isinstance(parent, Tag) else None
-        if isinstance(block, str) and block in groups:
-            parts.append(groups[block])
-            break
+def _section(link: Tag) -> str | None:
+    parts: list[str] = []
+    block = link.find_parent("details")
+    summary = block.find("summary") if block is not None else None
+    if summary is not None:
+        parts.append(_words(summary.get_text(" ")))
     heading = link.find_previous(_HEADINGS)
     if heading is not None:
         text = _words(heading.get_text(" ")).rstrip(":").strip()
@@ -155,28 +169,27 @@ def _section(link: Tag, groups: dict[str, str], page_name: str | None) -> str | 
     return " > ".join(unique) or None
 
 
-def parse_page(
-    html: str, page_url: str, topic: str, page_name: str | None = None
-) -> list[FileEntry]:
+def parse_page(html: str, page_url: str, topic: str) -> list[FileEntry]:
     """The Excel links on one agency page, with the agency's titles and headings."""
     soup = BeautifulSoup(html, "html.parser")
-    groups = _toggle_groups(soup)
     files: list[FileEntry] = []
     seen: set[tuple[str, str]] = set()
     for link in soup.find_all("a", href=True):
         href = str(link["href"]).strip()
         if not _is_excel(href):
             continue
-        full = urljoin(page_url, href)
+        full = _public(urljoin(page_url, href))
         if (urlparse(full).hostname or "") not in constants.HOSTS:
             continue
         url = normalize_url(full)
         text = _words(link.get_text(" "))
+        if _is_table_export(url):
+            text = _export_title(link) or text
         around = _container_text(link)
         if _GENERIC_LINK.match(text.casefold()):
             title = _words(_EXCEL_NOTE.sub("", around)) or text
         else:
-            title = text
+            title = _words(_EXCEL_NOTE.sub("", text)) or text
         if not title:
             title = unquote(urlparse(url).path.rsplit("/", 1)[-1])
         title = title[: constants.TITLE_MAX_CHARS]
@@ -188,40 +201,17 @@ def parse_page(
         files.append(
             FileEntry(
                 topic=topic,
-                section=_section(link, groups, page_name),
+                section=_section(link),
                 title=title,
                 context=context,
                 url=url,
-                format=unquote(urlparse(url).path).lower().rsplit(".", 1)[1],
+                format="xlsx"
+                if _is_table_export(url)
+                else unquote(urlparse(url).path).lower().rsplit(".", 1)[1],
                 page_url=page_url,
             )
         )
     return files
-
-
-def subpage_links(html: str, page_url: str, prefix: str) -> list[str]:
-    """Links to the deeper pages of a topic (one per community), in page order."""
-    soup = BeautifulSoup(html, "html.parser")
-    found: list[str] = []
-    for link in soup.find_all("a", href=True):
-        full = urljoin(page_url, str(link["href"]).strip()).split("#")[0]
-        parsed = urlparse(full)
-        if (parsed.hostname or "") not in constants.HOSTS:
-            continue
-        path = unquote(parsed.path)
-        if path.startswith(prefix) and path.lower().endswith((".html", ".php")):
-            url = normalize_url(full)
-            if url not in found:
-                found.append(url)
-    return found
-
-
-def page_name(html: str) -> str | None:
-    """A subpage's name from its <title> ('NWT Bureau of Statistics | Aklavik')."""
-    soup = BeautifulSoup(html, "html.parser")
-    title = _words(soup.title.get_text(" ")) if soup.title else ""
-    name = title.rsplit("|", 1)[-1].strip()
-    return name or None
 
 
 async def _page(url: str, lang: Lang = "en") -> tuple[str, bool]:
@@ -252,20 +242,7 @@ async def _page(url: str, lang: Lang = "en") -> tuple[str, bool]:
 async def _topic_files(topic: str, lang: Lang = "en") -> tuple[list[FileEntry], bool]:
     url = topic_url(topic)
     html, cached = await _page(url, lang)
-    files = parse_page(html, url, topic)
-    prefix = constants.SUBPAGE_PREFIXES.get(topic)
-    if prefix:
-        subpages = subpage_links(html, url, prefix)
-        loaded = await asyncio.gather(*(_page(u, lang) for u in subpages))
-        known = {f.url for f in files}
-        for sub_url, (sub_html, sub_cached) in zip(subpages, loaded, strict=True):
-            cached &= sub_cached
-            for entry in parse_page(sub_html, sub_url, topic, page_name(sub_html)):
-                # The Yellowknife page also links a spending table listed on its own topic.
-                if entry.url not in known:
-                    known.add(entry.url)
-                    files.append(entry)
-    return files, cached
+    return parse_page(html, url, topic), cached
 
 
 def _topics(lang: Lang) -> list[TopicInfo]:

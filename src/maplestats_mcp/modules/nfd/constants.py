@@ -1,21 +1,30 @@
-"""Constants for the National Forestry Database (checked live 2026-10-02).
+"""Constants for the National Forestry Database (checked live 2026-10-26).
 
-Plain http on purpose: from the build machine nfdp.ccfm.org accepted port 80
-(HTTP 200) while port 443 timed out on every attempt (curl and httpx, three
-tries over several minutes), and the site's own pages link its files with
-`http://nfdp.ccfm.org/...`. If the host later redirects to https the client
-follows that redirect (see client._download).
+The NFD moved from nfdp.ccfm.org to national-forestry-database.ca (English)
+and base-donnees-national-forets.ca (French). The old host's pages now answer
+301 to the new ones over https, and its files still answer 200, so it stays
+an allowed host for any link or redirect that still names it.
+
+Plain http on purpose: the new hosts send an incomplete TLS chain (no
+intermediate certificate), so httpx fails to verify them over https, while
+port 80 answers 200 without a redirect. If a host later redirects to https
+the client follows that redirect (see client._download).
 """
 
 from __future__ import annotations
 
-HOST = "nfdp.ccfm.org"
+HOST = "national-forestry-database.ca"
+HOST_FR = "base-donnees-national-forets.ca"
+OLD_HOST = "nfdp.ccfm.org"
 BASE_URL = f"http://{HOST}"
 # A download and every redirect hop must stay on these hosts, over http or https.
-ALLOWED_HOSTS = frozenset({HOST})
+ALLOWED_HOSTS = frozenset({HOST, HOST_FR, OLD_HOST})
 MAX_REDIRECTS = 2
+# A missing file redirects to this page on nfis.org instead of answering 404
+# (the fire tables' comments links on 2026-10-26).
+NOT_FOUND_PAGE = "notfound_bi.html"
 PAGE_EN = f"{BASE_URL}/en/download.php"
-PAGE_FR = f"{BASE_URL}/fr/download.php"
+PAGE_FR = f"http://{HOST_FR}/fr/download.php"
 TERMS_URL = f"{BASE_URL}/en/terms.php"
 
 RATE_LIMIT_SOURCE = "nfd"

@@ -218,7 +218,7 @@ async def test_catalogue_lists_tables_in_numeric_order(httpx_mock):
     first = result.tables[0]
     assert first.title == "Area burned by cause class" and first.section == "Forest Fires"
     assert first.csv_url == (
-        "http://nfdp.ccfm.org/download/data/csv/NFD%20-%20Area%20burned%20by%20cause%20class"
+        "http://national-forestry-database.ca/download/data/csv/NFD%20-%20Area%20burned%20by%20cause%20class"
         "%20-%20EN%20FR.csv"
     )
     assert first.comments_url is None
@@ -286,6 +286,20 @@ async def test_describe_survives_an_unreadable_dictionary(httpx_mock):
     )
     result = await client.describe_table("3.2.1")
     assert result.dictionary_title is None and result.last_updated is None
+
+
+async def test_redirect_to_the_nfis_not_found_page_is_a_missing_file(httpx_mock):
+    # The fire tables' comments links did this on 2026-10-26.
+    _mock_pages(httpx_mock)
+    httpx_mock.add_response(url=_url(CAUSE_CSV_PATH), content=CAUSE_CSV)
+    httpx_mock.add_response(
+        url=_url("/en/data/data_dictionary/NFD - Area burned by cause class - EN FR DD.xlsx"),
+        status_code=302,
+        headers={"location": "http://nfis.org/notfound_bi.html"},
+    )
+    result = await client.describe_table("3.2.1")
+    assert result.dictionary_title is None
+    assert all(r.url.host != "nfis.org" for r in httpx_mock.get_requests())
 
 
 async def test_describe_french(httpx_mock):
@@ -542,13 +556,13 @@ async def test_server_error_and_timeout(httpx_mock):
         await client.query_table("3.2.1")
 
 
-async def test_redirect_to_https_is_followed(httpx_mock):
+async def test_redirect_to_the_old_host_over_http_is_followed(httpx_mock):
     httpx_mock.add_response(
         url=constants.PAGE_EN,
         status_code=301,
-        headers={"location": "https://nfdp.ccfm.org/en/download.php"},
+        headers={"location": "http://nfdp.ccfm.org/en/download.php"},
     )
-    httpx_mock.add_response(url="https://nfdp.ccfm.org/en/download.php", text=EN_PAGE)
+    httpx_mock.add_response(url="http://nfdp.ccfm.org/en/download.php", text=EN_PAGE)
     httpx_mock.add_response(url=constants.PAGE_FR, content=FR_PAGE)
     result = await client.list_tables()
     assert result.count == 5
@@ -627,4 +641,4 @@ async def test_table_without_comments_link_or_file(httpx_mock):
         status_code=404,
     )
     gone = await client.table_comments("3.3")
-    assert gone.comments == [] and "404" in gone.notes[0]
+    assert gone.comments == [] and "missing" in gone.notes[0]

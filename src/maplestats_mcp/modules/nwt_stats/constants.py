@@ -1,11 +1,15 @@
 """Constants for the NWT Bureau of Statistics module.
 
-Fetched live on 2026-10-03. statsnwt.ca is a static site with no API: the
-topic pages under the home page's menu link 633 distinct Excel files (603
-.xlsx and 23 legacy .xls, a few with a `?v=` cache-busting query), plus one
-statistical profile per community on the pages under
-/community-data/infrastructure/. File names keep their spaces, ampersands and
-apostrophes, so links are percent-encoded before they are requested.
+statsnwt.ca was relaunched on a Drupal site before 2026-10-26 (checked live
+that day): topic pages moved under /en/, the old paths answer 301 to them or
+404, and the files moved to /sites/default/files/documents/. Pages link
+Excel files with the agency's titles; some also offer an export of a table
+shown on the page (/en/download-xlsx/...). The census and community survey
+pages link their files on bearnet.gov.nt.ca/t2/stats/, a host that asks for
+a login (HTTP 401); the same files answer on www.statsnwt.ca under the same
+path without the /t2/stats prefix, so those links are rewritten. File names
+keep their spaces, ampersands and apostrophes, so links are percent-encoded
+before they are requested.
 
 The Bureau's 290 entries on opendata.gov.nt.ca (`bureau-of-statistics`) are
 links back to these HTML pages, so the CKAN tools cannot read the numbers;
@@ -18,189 +22,171 @@ from maplestats_mcp.shared.i18n import french_spacing
 DOMAIN = "www.statsnwt.ca"
 SITE = f"https://{DOMAIN}"
 HOSTS = frozenset({DOMAIN, "statsnwt.ca"})
+# Links on this host with this path prefix are read from DOMAIN without it.
+STAGING_HOST = "bearnet.gov.nt.ca"
+STAGING_PREFIX = "/t2/stats"
+# An export of a table shown on a page; its path has no file extension.
+TABLE_EXPORT_PREFIX = "/en/download-xlsx/"
 
 # Slug -> (page path, English title, French title). The English titles are the
 # agency's menu labels; pages that link no Excel file (multipliers, labour
-# market outlooks, income assistance, living cost differentials, current
-# indicators, By the Numbers) are left out.
+# market, income assistance, living cost differentials, indicators, By the
+# Numbers) are left out.
 TOPICS: dict[str, tuple[str, str, str]] = {
-    "gdp": ("/economy/gdp/", "Gross domestic product", "Produit intérieur brut"),
+    "gdp": ("/en/economy/gdp", "Gross domestic product", "Produit intérieur brut"),
     "business-dynamics": (
-        "/economy/BusinessDynamics/index.php",
+        "/en/business-dynamics",
         "Business dynamics and ownership (business conditions survey)",
         "Dynamique et propriété des entreprises (conditions des entreprises)",
     ),
     "exports-imports": (
-        "/economy/exports_imports/",
+        "/en/economy/exports-imports",
         "Exports and imports",
         "Exportations et importations",
     ),
-    "investment": ("/economy/investment/", "Investment", "Investissements"),
+    "investment": ("/en/economy/capital-expenditure", "Investment", "Investissements"),
     "retail-wholesale-trade": (
-        "/economy/retail-wholesale-trade/",
+        "/en/economy/retail-wholesale-trade",
         "Retail and wholesale trade",
         "Commerce de détail et de gros",
     ),
-    "manufacturing": ("/economy/manufacturing/", "Manufacturing", "Fabrication"),
-    "oil-gas": ("/economy/oil-gas/", "Oil and gas", "Pétrole et gaz"),
-    "minerals": ("/economy/minerals/", "Minerals", "Minéraux"),
+    "oil-gas-minerals": (
+        "/en/economy/oil-gas_minerals",
+        "Oil, gas and minerals",
+        "Pétrole, gaz et minéraux",
+    ),
+    "alcohol-cannabis": (
+        "/en/economy/alcohol-cannabis-sales",
+        "Alcohol and cannabis sales",
+        "Ventes d'alcool et de cannabis",
+    ),
     "kindergarten-grade-12": (
-        "/education/kindergarten-to-grade-12/index.html",
+        "/en/education/junior-k-to-12",
         "Junior kindergarten to grade 12",
         "Prématernelle à la 12e année",
     ),
     "highest-schooling": (
-        "/education/highest-level/index.html",
+        "/en/education/highest-level-of-schooling",
         "Highest level of schooling",
         "Plus haut niveau de scolarité",
     ),
     "post-secondary": (
-        "/education/post-secondary-apprentices/index.html",
+        "/en/education/post-secondary-apprentices",
         "Post-secondary and apprentices",
         "Études postsecondaires et apprentis",
     ),
-    "environment": ("/environment/", "Environment", "Environnement"),
+    "environment": ("/en/environment", "Environment", "Environnement"),
     "health-indicators": (
-        "/health/health-conditions/",
+        "/en/health/general-health-indicators",
         "General health indicators",
         "Indicateurs généraux de santé",
     ),
     "lifestyle": (
-        "/health/alcohol-drug-use/",
+        "/en/health/lifestyle-behaviour",
         "Lifestyle behaviour",
         "Habitudes de vie",
     ),
     "disability": (
-        "/health/disabled/index.html",
+        "/en/health/disability-activity-limitations",
         "Disability and activity limitations",
         "Incapacités et limitations d'activités",
     ),
-    "housing": ("/Housing/housing-conditions/", "Housing conditions", "Conditions de logement"),
-    "internet": ("/Housing/internet_usage.html", "Internet usage", "Utilisation d'Internet"),
+    "housing": ("/en/housing/housing-conditions", "Housing conditions", "Conditions de logement"),
+    "internet": ("/en/housing/internet-usage", "Internet usage", "Utilisation d'Internet"),
     "crime": (
-        "/justice/police-reported-crime/index.html",
+        "/en/justice/police-reported-crime",
         "Police-reported crime",
         "Criminalité déclarée par la police",
     ),
     "labour-force": (
-        "/labour-income/labour-force-activity/",
+        "/en/labour-and-income/labour-force-activity",
         "Labour force activity",
         "Activité sur le marché du travail",
     ),
     "labour-supply": (
-        "/labour-income/labour-supply/index.html",
+        "/en/labour-and-income/labour-supply",
         "Labour supply",
         "Offre de main-d'œuvre",
     ),
-    "income": ("/labour-income/income/index.html", "Income", "Revenu"),
+    "income": ("/en/labour-and-income/Income-Statistics", "Income", "Revenu"),
     "earnings-wages": (
-        "/labour-income/earnings-and-wages/",
+        "/en/labour-and-income/earnings-wages",
         "Earnings and wages",
         "Rémunération et salaires",
     ),
-    "language": ("/language/", "Language", "Langues"),
+    "language": ("/en/language", "Language", "Langues"),
     "population": (
-        "/population/population-estimates/",
+        "/en/population/NWT-population-estimates",
         "Population estimates - NWT",
         "Estimations de la population – T.N.-O.",
     ),
     "population-communities": (
-        "/population/population-estimates/bycommunity.php",
+        "/en/population/community-population-estimates",
         "Population estimates - by community",
         "Estimations de la population par collectivité",
     ),
     "population-projections": (
-        "/population/community-projections/",
+        "/en/population/projections",
         "Population projections",
         "Projections démographiques",
     ),
     "vital-statistics": (
-        "/population/vital-statistics/",
+        "/en/population/vital-statistics",
         "Vital statistics",
         "Statistiques de l'état civil",
     ),
     "cpi": (
-        "/prices-expenditures/cpi/",
+        "/en/prices-and-expenditures/consumer-price-index",
         "Consumer price index",
         "Indice des prix à la consommation",
     ),
     "community-price-index": (
-        "/prices-expenditures/community-price-index/",
+        "/en/prices-and-expenditures/community-price-index",
         "Community price indexes",
         "Indices des prix des collectivités",
     ),
     "household-expenditures": (
-        "/prices-expenditures/household_expenditures/",
+        "/en/prices-and-expenditures/household-expenditures",
         "Household expenditures",
         "Dépenses des ménages",
     ),
     "market-basket-measure": (
-        "/prices-expenditures/market_basket_measure/",
-        "Market basket measure",
-        "Mesure du panier de consommation",
+        "/en/prices-and-expenditures/northern-market-basket-measure",
+        "Northern market basket measure",
+        "Mesure du panier de consommation du Nord",
     ),
     "traditional-activities": (
-        "/Traditional%20Activities/",
+        "/en/traditional-activities",
         "Traditional activities",
         "Activités traditionnelles",
     ),
-    "transportation": ("/Transportation/index.html", "Transportation", "Transports"),
-    "census-2021": ("/census/2021/", "2021 Census", "Recensement de 2021"),
-    "census-2016": ("/census/2016/", "2016 Census", "Recensement de 2016"),
-    "census-2011": (
-        "/census/2011/",
-        "2011 Census and National Household Survey",
-        "Recensement de 2011 et Enquête nationale auprès des ménages",
+    "transportation": ("/en/transportation", "Transportation", "Transports"),
+    "census": (
+        "/en/Canadian-Census",
+        "Census of Population, 1996 to 2021 (and the 2011 National Household Survey)",
+        (
+            "Recensement de la population, 1996 à 2021 (et l'Enquête nationale auprès des "
+            "ménages de 2011)"
+        ),
     ),
-    "census-2006": ("/census/2006/", "2006 Census", "Recensement de 2006"),
-    "census-2001": ("/census/2001/", "2001 Census", "Recensement de 2001"),
-    "census-1996": ("/census/1996/", "1996 Census", "Recensement de 1996"),
-    "alcohol-cannabis": (
-        "/Alcohol-Cannabis/index.php",
-        "Alcohol and cannabis",
-        "Alcool et cannabis",
-    ),
-    "community-data": (
-        "/community-data/index.html",
-        "Community data (statistical profile of each community)",
-        "Données des collectivités (profil statistique de chaque collectivité)",
-    ),
-    "food-security": ("/food-security/index.html", "Food security", "Sécurité alimentaire"),
+    "food-security": ("/en/Food_Security", "Food security", "Sécurité alimentaire"),
     "poverty-indicators": (
-        "/Poverty%20Indicators/index.html",
+        "/en/Poverty_Indicators",
         "Poverty indicators",
         "Indicateurs de pauvreté",
     ),
-    "profile-women": ("/Profiles/Women/index.html", "Profile: women", "Profil : femmes"),
-    "profile-seniors": ("/Profiles/Seniors/index.html", "Profile: seniors", "Profil : aînés"),
-    "statistics-quarterly": (
-        "/publications/statistics-quarterly/index.php",
-        "Statistics Quarterly",
-        "Statistiques trimestrielles",
-    ),
-    "socio-economic-scan": (
-        "/publications/socio-economic_scan/",
-        "Socio-economic scan",
-        "Portrait socioéconomique",
-    ),
-    "community-statistics-summary": (
-        "/publications/summary_comm_stats/index.html",
-        "Summary of NWT community statistics",
-        "Sommaire des statistiques des collectivités des T.N.-O.",
-    ),
+    "profile-women": ("/en/Women", "Profile: women", "Profil : femmes"),
+    "profile-seniors": ("/en/Seniors", "Profile: seniors", "Profil : aînés"),
     "surveys": (
-        "/recent_surveys/",
-        "Surveys (NWT Community Survey and others)",
-        "Enquêtes (Enquête sur les collectivités des T.N.-O. et autres)",
+        "/en/community_surveys",
+        "NWT Community Survey",
+        "Enquête sur les collectivités des T.N.-O.",
     ),
+    "other-surveys": ("/en/other_surveys", "Other surveys", "Autres enquêtes"),
 }
 
-# Topics whose files sit one page deeper: the topic page links these subpages
-# (one per community), and each subpage links that community's profile.
-SUBPAGE_PREFIXES: dict[str, str] = {"community-data": "/community-data/infrastructure/"}
-
 # No published rate limit; two requests a second keeps a cold search of every
-# page (about 85 requests) under a minute.
+# page (39 requests) under a minute.
 RATE_LIMIT_SOURCE = "nwt-stats"
 RATE_LIMIT_PER_SECOND = 2.0
 RATE_LIMIT_CAPACITY = 4.0

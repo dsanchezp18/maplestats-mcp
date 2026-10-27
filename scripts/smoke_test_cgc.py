@@ -14,9 +14,10 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import re
 import sys
 
-from maplestats_mcp.modules.cgc import client
+from maplestats_mcp.modules.cgc import client, constants
 
 
 def check(ok: bool, label: str) -> bool:
@@ -34,11 +35,18 @@ async def main() -> int:
         f"weekly describe {latest.crop_year}: {len(sheets)} worksheets, "
         f"latest week {latest.latest_week} ending {latest.latest_week_ending}",
     )
+    # The CGC sometimes skips weeks (nothing after week 9 ending 2026-10-04 by
+    # 2026-10-26), so the check is against the newest week its page lists; a
+    # stale page is only a warning, since the client cannot read what is not out.
+    page, _ = await client._download(constants.WEEKLY_PAGE_EN, "cgc weekly")
+    listed = re.search(r"Week (\d+)", page)
     ok &= check(
-        latest.latest_week_ending is not None
-        and (client._today() - latest.latest_week_ending).days < 21,
-        "latest week ended less than three weeks ago",
+        listed is not None and latest.latest_week == int(listed.group(1)),
+        f"latest week {latest.latest_week} is the newest the CGC page lists "
+        f"({listed.group(1) if listed else 'none found'})",
     )
+    if latest.latest_week_ending and (client._today() - latest.latest_week_ending).days >= 21:
+        print(f"WARN: the CGC's newest week ended {latest.latest_week_ending}, three weeks ago")
 
     week7 = await client.query_weekly(
         "Primary",

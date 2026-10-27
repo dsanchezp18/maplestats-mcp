@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from collections.abc import Awaitable
+from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -167,9 +168,19 @@ async def main() -> int:
     outside = await _check("get_fire_danger(Vancouver)", client.get_fire_danger(49.28, -123.12))
     _require(outside.danger_class is None and outside.note, "Vancouver should be unrated")
     overview = await _check("summarize_fire_danger()", client.summarize_fire_danger())
-    # The layer's polygon count varies by season (550 on 2026-10-03, 89 on 2026-10-11, over 700 earlier);
-    # 50 is a floor below the seasonal low, to catch a partial layer.
-    _require(overview.total_polygons >= 50, "low rating polygon count")
+    # The layer's polygon count swings with the season (over 700 in summer, 550 on
+    # 2026-10-03, under 50 on the morning of 2026-10-26 and 80 that evening), so
+    # no floor holds; the classes must add up and the layer must not be empty
+    # during the fire season (March 1 to October 31).
+    _require(
+        sum(c.polygons for c in overview.classes) == overview.total_polygons,
+        "rating classes do not add up to the polygon total",
+    )
+    month = datetime.now(_ALBERTA).month
+    _require(
+        overview.total_polygons > 0 or not 3 <= month <= 10,
+        "no rating polygons during the fire season",
+    )
     region = await _check(
         "summarize_fire_danger(bbox)", client.summarize_fire_danger([-118.0, 54.0, -116.0, 55.0])
     )

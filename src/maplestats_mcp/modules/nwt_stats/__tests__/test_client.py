@@ -1,10 +1,11 @@
 """Tests for the NWT Bureau of Statistics client against live pages and files.
 
-Saved 2026-10-03 from statsnwt.ca unchanged: the 2021 Census page (items
-nested inside items, release dates as headings, "(4 Excel Tables)" notes),
-the Business Dynamics page (267 links in quarterly blocks, file names with
-spaces and '&'), the Community Data page and Aklavik's page (one profile per
-community, link text "Excel"), GDP by industry (.xlsx, a title above years
+Pages saved 2026-10-26 from the relaunched statsnwt.ca unchanged: the census
+page (six census years in collapsible blocks, release dates as headings,
+"(Excel)" and "(4 Excel Tables)" in link texts, every file linked on the
+bearnet.gov.nt.ca staging host) and the GDP page (files under
+/sites/default/files/documents/ and an export of the table shown on the
+page). Files saved 2026-10-03: GDP by industry (.xlsx, a title above years
 across columns), land area (.xls) and a two-sheet business workbook.
 """
 
@@ -18,18 +19,13 @@ from maplestats_mcp.modules.nwt_stats import client, constants
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 _HERE = Path(__file__).parent
-_CENSUS = "https://www.statsnwt.ca/census/2021/"
-_BUSINESS = "https://www.statsnwt.ca/economy/BusinessDynamics/index.php"
-_COMMUNITY = "https://www.statsnwt.ca/community-data/index.html"
-_GDP = "https://www.statsnwt.ca/economy/gdp/GDP%20by%20Industry%20(1999-2025).xlsx"
-_LAND = (
-    "https://www.statsnwt.ca/environment/"
-    "Land%20and%20Freshwater%20Area%20by%20Province%20and%20Territory_2023.xls"
-)
-_WOMEN = (
-    "https://www.statsnwt.ca/economy/BusinessDynamics/"
-    "Women%20&%20Indigenous%20Owned%20Businesses_Q1_2025.xlsx"
-)
+_CENSUS = "https://www.statsnwt.ca/en/Canadian-Census"
+_GDP_PAGE = "https://www.statsnwt.ca/en/economy/gdp"
+_DOCS = "https://www.statsnwt.ca/sites/default/files/documents/"
+_GDP = _DOCS + "GDP%20by%20Industry%20(1999-2025).xlsx"
+_LAND = _DOCS + "Land%20and%20Freshwater%20Area%20by%20Province%20and%20Territory_2023.xls"
+_WOMEN = _DOCS + "Women%20&%20Indigenous%20Owned%20Businesses_Q1_2025.xlsx"
+_EXPORT = "https://www.statsnwt.ca/en/download-xlsx/807/paragraph/117231"
 
 
 def _text(name: str) -> str:
@@ -40,42 +36,36 @@ def _bytes(name: str) -> bytes:
     return (_HERE / name).read_bytes()
 
 
-def test_census_page_titles_headings_and_nested_items():
-    files = client.parse_page(_text("census_2021.html"), _CENSUS, "census-2021")
-    assert len(files) == 27
+def test_census_page_years_headings_and_staging_links():
+    files = client.parse_page(_text("census.html"), _CENSUS, "census")
+    assert len(files) == 94
     first = files[0]
-    assert first.title == "Population Counts, by Province and Territory 1996-2021"
-    assert first.section == "February 9, 2022"
-    # The nested item's text is not glued to its parent's, and "(Excel)" alone adds nothing.
+    # "(Excel)" is dropped from the title; the link's staging host is rewritten.
+    assert first.title == "Population Counts, by Province and Territory 1996 - 2021"
+    assert first.section == "2021 Census > February 9, 2022: Population and Dwelling Counts"
     assert first.context is None
-    income = next(f for f in files if f.title == "NWT Income")
-    assert income.context == "NWT Income (4 Excel Tables)"
-    assert income.url == "https://www.statsnwt.ca/census/2021/NWT%20Income.xlsx"
-    assert any(f.format == "xls" for f in files)
+    assert first.url == _DOCS + "Prov-TerrCounts_1996-2021.xlsx"
+    assert all(f.url.startswith(_DOCS) for f in files)
+    years = {f.section.split(" > ")[0] for f in files if f.section}
+    assert years == {f"{y} Census" for y in (1996, 2001, 2006, 2011, 2016, 2021)}
+    income = next(f for f in files if f.title == "NWT Income (4 Excel Tables)")
+    assert income.url == _DOCS + "NWT%20Income.xlsx"
+    assert sum(f.format == "xls" for f in files) == 2
 
 
-def test_business_page_encodes_file_names_and_keeps_quarters():
-    files = client.parse_page(_text("business_dynamics.html"), _BUSINESS, "business-dynamics")
-    assert len(files) > 250
-    assert files[0].url == _WOMEN
-    table1 = next(f for f in files if f.url.endswith("Table%201_Q1_2026.xlsx"))
-    assert table1.section == "Q1 2026 Business Conditions"
-    assert table1.title == "Expectations over the next three months"
-    assert table1.context == "Table 1 - Expectations over the next three months"
-
-
-def test_community_profiles_are_one_page_deeper():
-    subpages = client.subpage_links(
-        _text("community_data.html"), _COMMUNITY, constants.SUBPAGE_PREFIXES["community-data"]
+def test_gdp_page_files_and_table_export():
+    files = client.parse_page(_text("gdp.html"), _GDP_PAGE, "gdp")
+    assert len(files) == 6
+    export = files[0]
+    assert export.url == _EXPORT and export.format == "xlsx"
+    assert export.title == (
+        "NWT Gross Domestic Product at Basic Prices (Millions of Chained (2017) Dollars)"
+        " - table on the page"
     )
-    assert len(subpages) == 33
-    assert "https://www.statsnwt.ca/community-data/infrastructure/Lutsel'Ke.html" in subpages
-    html = _text("community_aklavik.html")
-    [profile] = client.parse_page(html, subpages[0], "community-data", client.page_name(html))
-    assert profile.title == "Statistical Profile"
-    assert profile.section == "Aklavik > Profiles"
-    assert profile.context is None
-    assert profile.url == "https://www.statsnwt.ca/community-data/Profile-Excel/Aklavik_2024.xlsx"
+    industry = files[1]
+    assert industry.url == _GDP
+    assert industry.title == "NWT GDP by Industry (Chained) (1999 - 2025)"
+    assert industry.section == "Downloadable Excel Tables > Publications"
 
 
 async def test_list_without_topic_makes_no_request():
@@ -84,42 +74,31 @@ async def test_list_without_topic_makes_no_request():
     assert "Northwest Territories" in result.licence
 
 
-async def test_list_topic_pages_and_follows_community_pages(httpx_mock):
-    community = _text("community_data.html")
-    httpx_mock.add_response(url=_COMMUNITY, text=community)
-    aklavik = _text("community_aklavik.html")
-    subpages = client.subpage_links(
-        community, _COMMUNITY, constants.SUBPAGE_PREFIXES["community-data"]
-    )
-    for url in subpages:
-        httpx_mock.add_response(url=url, text=aklavik)
-    result = await client.list_files(topic="community-data", limit=5)
-    # The summary file on the index page plus one Aklavik profile: every subpage here
-    # is the Aklavik fixture, and a file already listed is not repeated.
-    assert result.total_files == 2 and not result.truncated
-    assert result.files[1].section == "Aklavik > Profiles"
+async def test_list_topic_reads_its_page(httpx_mock):
+    httpx_mock.add_response(url=_CENSUS, text=_text("census.html"))
+    result = await client.list_files(topic="census", limit=5)
+    assert result.total_files == 94 and result.truncated
+    assert result.provenance.url == _CENSUS
 
 
 async def test_search_matches_every_word_across_title_heading_and_topic(httpx_mock):
-    httpx_mock.add_response(url=_CENSUS, text=_text("census_2021.html"))
-    result = await client.search_files("2021 census income", topic="census-2021")
+    httpx_mock.add_response(url=_CENSUS, text=_text("census.html"))
+    result = await client.search_files("2021 census income", topic="census")
     titles = [f.title for f in result.files]
-    assert "NWT Income" in titles and "Median Income by Province and Territory" in titles
-    assert all("income" in (f.title + (f.context or "")).lower() for f in result.files)
+    assert "NWT Income (4 Excel Tables)" in titles
+    assert all("income" in (f.title + (f.section or "")).lower() for f in result.files)
 
 
 async def test_search_skips_a_failing_page_and_says_so(httpx_mock):
     for topic, (path, _, _) in constants.TOPICS.items():
         url = constants.SITE + path
-        if topic == "census-2021":
-            httpx_mock.add_response(url=url, text=_text("census_2021.html"))
-        elif topic == "community-data":
-            httpx_mock.add_response(url=url, text="<html><body></body></html>")
+        if topic == "census":
+            httpx_mock.add_response(url=url, text=_text("census.html"))
         else:
             httpx_mock.add_response(url=url, status_code=404, is_reusable=True)
     result = await client.search_files("mother tongue")
-    assert "Mother Tongue" in [f.title for f in result.files]
-    assert {f.topic for f in result.files} == {"census-2021"}
+    assert "Mother Tongue (2 Excel Tables)" in [f.title for f in result.files]
+    assert {f.topic for f in result.files} == {"census"}
     assert result.provenance.limits and "did not answer" in result.provenance.limits
 
 
@@ -132,12 +111,24 @@ async def test_unknown_topic_and_empty_query_are_refused():
 
 def test_only_statsnwt_excel_links_are_read():
     assert (
-        client.normalize_url("http://statsnwt.ca/economy/gdp/GDP by Industry (1999-2025).xlsx")
+        client.normalize_url(
+            "http://statsnwt.ca/sites/default/files/documents/GDP by Industry (1999-2025).xlsx"
+        )
         == _GDP
     )
     assert client.normalize_url(_GDP) == _GDP
+    staging = "https://bearnet.gov.nt.ca/t2/stats/sites/default/files/documents/NWT%20Income.xlsx"
+    assert client.normalize_url(staging) == _DOCS + "NWT%20Income.xlsx"
+    with pytest.raises(InvalidInput):
+        client.normalize_url("https://bearnet.gov.nt.ca/other/a.xlsx")
     with pytest.raises(InvalidInput):
         client.normalize_url("https://example.com/a.xlsx")
+
+
+async def test_read_a_table_export(httpx_mock):
+    httpx_mock.add_response(url=_EXPORT, content=_bytes("gdp_by_industry.xlsx"))
+    data = await client.read_file(_EXPORT, contains="All industries", limit=1)
+    assert data.format == "xlsx" and data.rows
 
 
 async def test_read_xlsx_years_across_columns(httpx_mock):
@@ -181,7 +172,7 @@ async def test_bad_paging_and_non_excel_links_are_refused():
     with pytest.raises(InvalidInput):
         await client.read_file(_GDP, limit=0)
     with pytest.raises(InvalidInput):
-        await client.read_file("https://www.statsnwt.ca/economy/gdp/May2026_GDP.pdf")
+        await client.read_file(_DOCS + "May2026_GDP%28CORRECTED%29.pdf")
 
 
 async def test_french_errors():
@@ -203,7 +194,7 @@ async def test_french_provenance_and_licence(httpx_mock):
     assert (data.provenance.coverage or "").startswith("Feuille ")
     topics = await client.list_files(lang="fr")
     assert topics.topics[0].title == "Produit intérieur brut"
-    assert (topics.provenance.coverage or "").startswith("49 sujets")
+    assert (topics.provenance.coverage or "").startswith("39 sujets")
 
 
 async def test_english_provenance_unchanged(httpx_mock):
