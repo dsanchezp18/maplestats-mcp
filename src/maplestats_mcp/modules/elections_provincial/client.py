@@ -144,8 +144,10 @@ _NOTES = {
 # The source covers several agencies, so the shared licence table says "varies";
 # each province's own terms decide. Elections Quebec and Elections Alberta allow
 # non-profit reuse only (site/faq.html); Saskatchewan and Manitoba state no terms.
-# Elections BC is left to the table until its licence is read.
+# The Elections BC Open Data Licence v1.0 (clause 2) allows commercial use with
+# attribution.
 _COMMERCIAL_USE: dict[str, CommercialUse] = {
+    "bc": "allowed",
     "qc": "not_allowed",
     "ab": "not_allowed",
     "sk": "unknown",
