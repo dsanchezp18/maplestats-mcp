@@ -335,7 +335,9 @@ On a `release/<version>` branch:
    above, run the full gate and merge the pull request.
 4. Tag the merge commit `v<version>` and push the tag:
    `.github/workflows/release.yml` publishes to PyPI, the MCP Registry and
-   GitHub Releases.
+   GitHub Releases. Where tags cannot be pushed (a cloud session's git
+   proxy), run that workflow by hand on `main` with the version instead; it
+   creates the tag after the gate passes.
 
 ## Website
 
