@@ -444,3 +444,83 @@ def test_code_columns_stay_text():
     assert names == ["coordinate", "naics", "series_vector_id", "value"]
     assert table == [["2.1", "111", "41690973", 1.5], ["2.10", "112", "41690974", 2]]
     assert converted == ["value"] and codes == ["coordinate", "naics", "series_vector_id"]
+
+
+def _statcan_payload(points: list[dict[str, Any]], licence: str) -> dict[str, Any]:
+    return {
+        "vector_id": 41690973,
+        "data_points": points,
+        "provenance": {
+            "source": "statcan-wds",
+            "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+            "queried_at": "2026-10-27T15:00:00Z",
+            "as_of": "2026-09-16T08:30:00",
+            "licence": licence,
+        },
+    }
+
+
+async def test_statcan_data_cleaned_are_adapted_from_and_say_what_changed(hosted, fake_call):
+    # The Open Licence's notice for data in a value-added product.
+    from maplestats_mcp.shared.envelope import STATCAN_LICENCE
+
+    points = [{"refPer": "2026-07-01", "value": " 169.9 "}, {"refPer": "2026-08-01", "value": ""}]
+    fake_call(_statcan_payload(points, STATCAN_LICENCE))
+    result = await workbook.export(
+        "wds_get_data_from_vectors", {"product_id": 18100004}, None, "CPI", "en", 2000, "auto"
+    )
+    source = _source(_open(result))
+    assert source["Licence"] == STATCAN_LICENCE  # as the tool published it
+    assert source["Attribution"] == (
+        "Adapted from Statistics Canada, Table 18-10-0004-01 CPI, 2026-09-16. This does not "
+        "constitute an endorsement by Statistics Canada of this product."
+    )
+    changes = source["Changes made"]
+    assert "column names put in snake_case (1 of 2: refPer → ref_per)" in changes
+    assert "cells trimmed of spaces: 1" in changes
+    assert "cells left blank (empty text or a non-finite number): 1" in changes
+    assert "text converted to numbers or dates in ref_per, value" in changes
+
+
+async def test_statcan_data_unchanged_keep_the_source_notice_in_french(hosted, fake_call):
+    from maplestats_mcp.shared.envelope import make_provenance
+
+    licence = make_provenance(
+        source="statcan-wds",
+        url="https://www150.statcan.gc.ca",
+        cached=False,
+        schema_name="s",
+        lang="fr",
+    ).licence
+    points = [{"ref_period": date(2026, 7, 1), "value": 169.9}]
+    fake_call(_statcan_payload(points, licence or ""))
+    result = await workbook.export("wds_get_data_from_vectors", {}, None, None, "fr", 2000, "auto")
+    source = _source(_open(result))
+    url = "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods"
+    assert source["Mention de la source"] == (
+        f"Source : Statistique Canada, {url}, 2026-09-16. Reproduit et diffusé "
+        "« tel quel » avec la permission de Statistique Canada."
+    )
+    assert source["Modifications apportées"].startswith("Aucune :")
+
+
+async def test_bank_of_canada_and_cc_by_data_flag_the_changes(hosted, fake_call):
+    from maplestats_mcp.shared.licences import BOC_TERMS
+
+    payload = {
+        "observations": [{"d": "2026-10-01", "FXUSDCAD": "1.3912"}],
+        "provenance": {
+            "source": "boc",
+            "url": "https://www.bankofcanada.ca/valet/x",
+            "licence": BOC_TERMS,
+        },
+    }
+    fake_call(payload)
+    result = await workbook.export("boc_get_observations", {}, None, None, "en", 2000, "auto")
+    source = _source(_open(result))
+    assert source["Attribution"].endswith("Changes were made to the data: see Changes made.")
+    assert "fxusdcad" in source["Changes made"]
+    unchanged = await workbook.export(None, None, [{"value": 1.5}], None, "en", 2000, "auto")
+    assert "Changes were made" not in _source(_open(unchanged))["Attribution"]
+    assert workbook._attribution("CC BY 4.0", {}, True, None, "en").endswith("Changes made.")
+    assert workbook._attribution("CC0 1.0", {}, True, None, "en") == workbook.LABELS["en"]["cite"]

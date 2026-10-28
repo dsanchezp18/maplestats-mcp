@@ -148,6 +148,8 @@ has a `provenance` block: source, URL, query time, freshness and limits.
 prompts take `lang` too, and each `docs://<module>/...` resource has a French
 twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).
 
+To call the sources from Python without MCP, see [`docs/library.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/library.md).
+
 ## What to watch for
 
 MapleStats retrieves data directly from the original sources and returns

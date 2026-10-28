@@ -17,6 +17,7 @@ an open licence.
 from __future__ import annotations
 
 from maplestats_mcp.shared.i18n import t
+from maplestats_mcp.shared.models import CommercialUse
 
 # The Statistics Canada Open Licence text lives in shared/i18n (English and
 # French); envelope.make_provenance picks the call's language.
@@ -254,6 +255,7 @@ SOURCE_LICENCES: dict[str, str] = {
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
+    "cbsa": OGL_CANADA,
     "cdc": OGL_CANADA,
     "cer": OGL_CANADA,
     "cgc": OGL_CANADA,
@@ -261,6 +263,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "cgc-exports-licensed-facilities": OGL_CANADA,
     # CRTC Communications Market Reports workbooks (telecom_prices), open.canada.ca.
     "crtc-cmr": OGL_CANADA,
+    "cra-charities": OGL_CANADA,
     "cwfis": OGL_CANADA,
     "cwfis-sitrep": OGL_CANADA,
     "earthquakes-canada": OGL_CANADA,
@@ -275,6 +278,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "nrcan-geo": OGL_CANADA,
     "nrcan-nbac": OGL_CANADA,
     "phac-infobase": OGL_CANADA,
+    "pmra": OGL_CANADA,
     "recalls": OGL_CANADA,
     "tc-recalls": OGL_CANADA,
     # Federal web pages and services outside open.canada.ca
@@ -645,3 +649,117 @@ def licence_for(source: str, url: str) -> str | None:
     if source.lower().startswith("statcan") or "statcan.gc.ca" in url.lower():
         return STATCAN_LICENCE
     return None
+
+
+# Whether each licence text allows commercial reuse without asking (see
+# models.CommercialUse), keyed by the English text and read for its French text
+# too. A table rather than a search of the wording, because "non-commercial"
+# appears in terms that allow commercial use ("commercial or non-commercial") and
+# terms that need permission rarely say "commercial" at all (CMHC, ISQ). Checked
+# against each publisher's terms page on 2026-10-28; tests/test_shared_licences_limits.py
+# fails for a licence text here without a class.
+COMMERCIAL_USE: dict[str, CommercialUse] = {
+    # The Open Licence grants the right to "use, reproduce, publish, freely
+    # distribute, or sell the Information".
+    STATCAN_LICENCE: "allowed",
+    # Every Open Government Licence: "including for commercial purposes".
+    OGL_CANADA: "allowed",
+    OGL_ALBERTA: "allowed",
+    OGL_BC: "allowed",
+    OGL_YUKON: "allowed",
+    OGL_NL: "allowed",
+    AB_ECONOMIC_TERMS: "allowed",
+    # "freely use, copy, distribute and transmit", and section 1.3 sets the
+    # rule for content sold through paid services, so selling is allowed.
+    BOC_TERMS: "allowed",
+    # "including for commercial purposes, subject to the terms below".
+    ECCC_LICENCE: "allowed",
+    # Open Government Licence - Edmonton 1.0: "for any lawful purpose".
+    EDMONTON_TERMS: "allowed",
+    CANADA_CA_TERMS: "not_allowed",
+    CIHI_TERMS: "not_allowed",
+    CMHC_TERMS: "not_allowed",
+    HOUSE_OF_COMMONS_TERMS: "not_allowed",
+    SENATE_TERMS: "not_allowed",
+    ELECTIONS_CANADA_TERMS: "not_allowed",
+    PBO_TERMS: "not_allowed",
+    ISQ_LICENCE: "not_allowed",
+    # The IESO grants a "limited ... licence to use and reproduce" with its
+    # notice and says nothing on commercial use; anything not expressly
+    # permitted needs its written permission.
+    IESO_TERMS: "unknown",
+    # gov.nl.ca/disclaimer lets "the public" use the information and is silent
+    # on commercial use.
+    NL_STATS_TERMS: "unknown",
+    REPRESENT_TERMS: "unknown",
+    TERMS_NOT_STATED: "unknown",
+    PER_RECORD_LICENCE: "varies",
+}
+
+# Sources whose text in SOURCE_LICENCES is their own rather than a constant above.
+_SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
+    "ab_wildfire": "allowed",
+    "aer": "not_allowed",
+    "epcor": "unknown",
+    "eps": "unknown",
+    "provincial-election-results": "varies",
+    "elections-provincial": "varies",
+    # The ORL licence: "including for commercial purposes".
+    "bc_lobbyists": "allowed",
+    # Most layers are OGL - BC, but some carry other terms.
+    "bcgw": "varies",
+    "drivebc": "allowed",
+    "bc-environment": "allowed",
+    # The catalogue lists OGL - NWT; statsnwt.ca's terms ask permission first.
+    "nwt-bureau-of-statistics": "unknown",
+    "oeb": "allowed",
+    "on-fir": "allowed",
+    "crea": "not_allowed",
+    # Commercial use is allowed if the BIS figures are not charged for separately.
+    "bis": "allowed",
+    "worldbank-wdi": "allowed",
+    "cbsa-tariff": "not_allowed",
+    "electricity": "varies",
+    "dfo-iwls": "unknown",
+    # Both datasets are CC0 1.0 (their Dataverse records, read 2026-10-28).
+    "harvard-dataverse-who-runs-federal-candidates": "allowed",
+    "borealis-winer-ferris-federal-elections": "allowed",
+    "transit": "varies",
+    "transit:statcan": "varies",
+}
+COMMERCIAL_USE.update({SOURCE_LICENCES[s]: use for s, use in _SOURCE_COMMERCIAL_USE.items()})
+
+# Sources whose records carry their own terms although most share one licence
+# (Open Alberta: OGL - Alberta, unless the dataset says otherwise). A record's
+# own text that the table does not know is not given the platform's class.
+_OWN_TERMS_PER_RECORD = frozenset({"ab-opendata", "open-alberta"})
+
+
+def _plain(text: str) -> str:
+    """French typography's no-break spaces as plain ones, so a spaced text still matches."""
+    return text.replace("\u00a0", " ").replace("\u202f", " ").strip()
+
+
+_USE_BY_TEXT: dict[str, CommercialUse] = {_plain(text): use for text, use in COMMERCIAL_USE.items()}
+_USE_BY_TEXT.update(
+    {_plain(LICENCES_FR[text]): use for text, use in COMMERCIAL_USE.items() if text in LICENCES_FR}
+)
+_USE_BY_TEXT[_plain(STATCAN_LICENCE_FR)] = "allowed"
+
+
+def commercial_use_for(licence: str | None, source: str, url: str = "") -> CommercialUse | None:
+    """Whether `licence` allows commercial reuse: the table's class for the text.
+
+    A module that words its source's terms itself (a ministry's own Canada.ca
+    notice, a dataset's CC0 line) gets the class of its source's licence, so
+    the table needs no entry per module text. None when there is no licence.
+    """
+    if not licence:
+        return None
+    known = _USE_BY_TEXT.get(_plain(licence))
+    if known is not None:
+        return known
+    if source in _OWN_TERMS_PER_RECORD:
+        return "unknown"
+    default = licence_for(source, url)
+    return _USE_BY_TEXT.get(_plain(default), "unknown") if default else "unknown"

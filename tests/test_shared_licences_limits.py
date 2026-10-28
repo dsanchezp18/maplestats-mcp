@@ -8,14 +8,18 @@ from pathlib import Path
 
 import pytest
 
+from maplestats_mcp.shared import licences
 from maplestats_mcp.shared.arg_checks import check_choice, check_range
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.licences import (
+    COMMERCIAL_USE,
+    LICENCES_FR,
     OGL_CANADA,
     PER_RECORD_LICENCE,
     SOURCE_LICENCES,
     STATCAN_LICENCE,
+    commercial_use_for,
     licence_for,
 )
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
@@ -72,6 +76,63 @@ def test_make_provenance_prefers_the_module_licence():
         source="boc", url="https://x", cached=False, schema_name="s", licence="Own terms."
     )
     assert own.licence == "Own terms."
+
+
+def test_every_licence_text_has_a_commercial_use_class():
+    constants = {
+        name: value
+        for name, value in vars(licences).items()
+        if name.isupper() and isinstance(value, str) and not name.endswith("_FR")
+    }
+    missing = [name for name, text in constants.items() if text not in COMMERCIAL_USE]
+    missing += [source for source, text in SOURCE_LICENCES.items() if text not in COMMERCIAL_USE]
+    assert not missing, f"add these to shared/licences.py COMMERCIAL_USE: {missing}"
+    # The French text of a licence has the class of its English text, after French spacing.
+    for english, french in LICENCES_FR.items():
+        assert commercial_use_for(french, "") == commercial_use_for(english, "")
+    fr = make_provenance(source="cmhc", url="https://x", cached=False, schema_name="s", lang="fr")
+    assert "\u00a0" in (fr.licence or "") and fr.commercial_use == "not_allowed"
+
+
+@pytest.mark.parametrize(
+    "source",
+    # The publishers site/faq.html#licences names as non-commercial or needing permission
+    # whose terms live in shared/licences (Hydro-Quebec, Elections Quebec and Alberta,
+    # and the STL feed are worded by their modules, which pass their own class).
+    ["pbo", "cihi", "aer", "cbsa-tariff", "crea", "competition-bureau", "elections-results"],
+)
+def test_non_commercial_sources_are_not_allowed(source):
+    provenance = make_provenance(source=source, url="https://x", cached=False, schema_name="s")
+    assert provenance.commercial_use == "not_allowed"
+
+
+def test_commercial_use_rules():
+    def use(source: str, licence: str | None = None, url: str = "https://x") -> str | None:
+        return make_provenance(
+            source=source, url=url, cached=False, schema_name="s", licence=licence
+        ).commercial_use
+
+    assert use("statcan-wds") == use("anything", url="https://www150.statcan.gc.ca") == "allowed"
+    assert use("boc") == use("eccc") == use("cgc") == "allowed"
+    # Per-record platforms vary, whatever the record's own licence line says.
+    assert use("ckan-on", "CC BY-NC 4.0") == use("arcgis-halifax") == "varies"
+    assert use("socrata-calgary") == use("transit:stm", "Own feed terms") == "varies"
+    # A module's own wording of its source's terms takes the source's class...
+    assert use("nrcan_minerals", "Canada.ca terms, worded by the module") == "not_allowed"
+    # ...except on Open Alberta, where a dataset off the OGL has terms of its own.
+    assert use("open-alberta", licences.OGL_ALBERTA) == "allowed"
+    assert use("open-alberta", "Alberta King's Printer terms") == "unknown"
+    assert use("epcor") == use("represent") == "unknown"
+    assert use("maplestats-planner", url="about:blank") is None
+    explicit = make_provenance(
+        source="electricity",
+        url="https://x",
+        cached=False,
+        schema_name="s",
+        licence="CC BY-NC 4.0",
+        commercial_use="not_allowed",
+    )
+    assert explicit.commercial_use == "not_allowed"
 
 
 def test_truncation_note_and_join():
