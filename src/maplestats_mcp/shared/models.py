@@ -8,8 +8,16 @@ so every result documents where it came from and how complete it is.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+# Whether the publisher's terms let anyone reuse the data commercially without
+# asking. "not_allowed" covers both non-commercial-only terms and terms that need
+# written permission first; "varies" is a platform whose datasets or feeds each
+# carry their own licence; "unknown" is terms that are silent, conflicting or not
+# found. Set from shared/licences.COMMERCIAL_USE, never parsed from the text.
+CommercialUse = Literal["allowed", "not_allowed", "varies", "unknown"]
 
 
 class Provenance(BaseModel):
@@ -48,6 +56,16 @@ class Provenance(BaseModel):
         description=(
             "Licence and attribution the upstream publisher requires, when it has one "
             "(set for every Statistics Canada result)."
+        ),
+    )
+    commercial_use: CommercialUse | None = Field(
+        default=None,
+        description=(
+            "Whether the licence allows commercial reuse without asking the publisher: "
+            "'allowed', 'not_allowed' (non-commercial use only, or written permission needed), "
+            "'varies' (each dataset or feed has its own licence: read licence) or 'unknown' "
+            "(terms silent, conflicting or not found). Null when no licence applies. The "
+            "conditions themselves are in licence."
         ),
     )
     caveats: list[str] = Field(

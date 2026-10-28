@@ -171,7 +171,8 @@ async def boc_get_observations(
     text in the row's `non_numeric`.
     `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
     annualized_pct_change, index, moving_average: trailing average over
-    `window` periods) and `frequency` with `aggregation`
+    `window` periods; `window` with a change averages the change) and
+    `frequency` with `aggregation`
     compute from the published levels (a daily series needs `frequency`
     for a year-over-year change); a series in percent gets
     percentage-point changes. `transformed` holds the computed values

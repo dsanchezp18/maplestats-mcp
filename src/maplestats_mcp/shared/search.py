@@ -7,9 +7,10 @@ earthquakes_search. Folding accents and plural endings on both the
 indexed docstrings and the query fixes this for every tool at once,
 and helps English too ("rates" meets "rate", "hopital" meets "hôpital").
 
-fastmcp has no tokenizer hook, so this replaces the module-level
-`_tokenize` that its index and queries both call. tests/test_search.py
-fails if a fastmcp upgrade moves it.
+The index is this module's own, not fastmcp's: fastmcp has no tokenizer
+hook, and replacing the private `_tokenize` its BM25 module calls (as this
+module did until 2026-10) held fastmcp below 4.2. The scoring is the same
+Okapi BM25 (k1 1.5, b 0.75) over the same text, so the ranking did not move.
 """
 
 from __future__ import annotations
@@ -20,8 +21,7 @@ import unicodedata
 from collections.abc import Sequence
 from typing import Any
 
-from fastmcp.server.transforms.search import bm25
-from fastmcp.server.transforms.search.base import serialize_tools_for_output_json
+from fastmcp.server.transforms.search import serialize_tools_for_output_json
 from fastmcp.tools.base import Tool
 
 _WORD = re.compile(r"[^\W_]{2,}")
@@ -128,20 +128,53 @@ def tokenize(text: str) -> list[str]:
     return [_fold(word) for word in _WORD.findall(plain) if word not in STOP_WORDS]
 
 
-def install() -> None:
-    bm25._tokenize = tokenize
+def searchable_text(tool: Tool) -> str:
+    """What search_tools indexes for a tool: its name, description, and each
+    parameter's name and description. The same text fastmcp's own search
+    transform indexes, so scripts/build_site.py's index matches this one."""
+    parts = [tool.name]
+    if tool.description:
+        parts.append(tool.description)
+    for name, info in (tool.parameters or {}).get("properties", {}).items():
+        parts.append(name)
+        if isinstance(info, dict) and info.get("description"):
+            parts.append(info["description"])
+    return " ".join(parts)
 
 
-class ScoredBM25Index(bm25._BM25Index):
-    """fastmcp's BM25 index, with the scores exposed so they can be boosted or fused.
+class ScoredBM25Index:
+    """Okapi BM25 over `tokenize`d documents, with the scores exposed so they can
+    be boosted or fused (fastmcp's index returns only the ranked positions)."""
 
-    `query()` returns only the ranked indices; `scores()` is the same Okapi sum
-    (same k1, b and idf), so a ranking taken from it with no boost is identical.
-    """
+    def __init__(self, k1: float = 1.5, b: float = 0.75) -> None:
+        # scripts/build_site.py ships k1 and b to the browser's twin of this index.
+        self.k1 = k1
+        self.b = b
+        self._n = 0
+        self._avg_dl = 0.0
+        self._doc_lengths: list[int] = []
+        self._df: dict[str, int] = {}
+        self._tf: list[dict[str, int]] = []
+
+    def build(self, documents: Sequence[str]) -> None:
+        self._n = len(documents)
+        self._doc_lengths = []
+        self._df = {}
+        self._tf = []
+        for document in documents:
+            tokens = tokenize(document)
+            self._doc_lengths.append(len(tokens))
+            tf: dict[str, int] = {}
+            for token in tokens:
+                tf[token] = tf.get(token, 0) + 1
+            for token in tf:
+                self._df[token] = self._df.get(token, 0) + 1
+            self._tf.append(tf)
+        self._avg_dl = sum(self._doc_lengths) / self._n if self._n else 0.0
 
     def scores(self, text: str) -> list[float]:
         scores = [0.0] * self._n
-        for token in bm25._tokenize(text):
+        for token in tokenize(text):
             df = self._df.get(token)
             if not df:
                 continue

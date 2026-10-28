@@ -20,6 +20,10 @@ Rules every caller relies on:
 - A moving average is trailing (the period and the window - 1 before it,
   found by date) and null when any of them is missing: a gap never gives a
   shorter window. It is in the series' own unit, rates included.
+- `window` with a change (diff, pct_change, yoy_*, annualized_pct_change)
+  smooths the change: the change is computed first, then the same trailing
+  average is taken over the computed values (null if any is null), and the
+  history fetched covers both the lag and the window.
 """
 
 from __future__ import annotations
@@ -73,6 +77,11 @@ _POINTS_INSTEAD = {
     "annualized_pct_change": "diff",
 }
 _NEEDS_CALENDAR = {"yoy_diff", "yoy_pct_change", "annualized_pct_change", "moving_average"}
+# Changes `window` can smooth. Not index: a moving average of an index (base =
+# the raw level over index_base, so the base period is no longer 100) and an
+# index of the moving average (base = the smoothed level, which reaches back
+# before index_base) are both defensible and differ, so neither is guessed.
+_SMOOTHABLE = ("diff", "pct_change", "yoy_diff", "yoy_pct_change", "annualized_pct_change")
 # Ten years of months: a longer moving average is a trend, not a smoothing,
 # and only multiplies the history fetched.
 MAX_WINDOW = 120
@@ -145,7 +154,11 @@ class TransformedSeries(BaseModel):
         description="How published values were combined into each period, if they were.",
     )
     window: int | None = Field(
-        default=None, description="Periods in each moving average (transform moving_average)."
+        default=None,
+        description=(
+            "Periods in each trailing moving average: of the levels (transform moving_average) "
+            "or of the computed changes."
+        ),
     )
     formula: str = Field(description="Exactly how each value was computed.")
     unit: str = Field(description="Unit of `value`.")
@@ -153,12 +166,24 @@ class TransformedSeries(BaseModel):
     points: list[TransformedPoint]
 
 
+def _span_words(ppy: int) -> tuple[str, str]:
+    """Words for a span of periods: "3 years", "sur 3 ans" (not "années")."""
+    en, fr = _PERIOD_WORDS[ppy]
+    return en, "ans" if ppy == 1 else fr
+
+
 def _error(lang: str, en: str, fr: str) -> InvalidInput:
     return lang_error(InvalidInput, lang, en, fr)
 
 
+def smooths(transform: str, window: int | None) -> bool:
+    """Whether `window` averages a computed change rather than the levels."""
+    return window is not None and transform in _SMOOTHABLE
+
+
 def check_window(transform: str, window: int | None, lang: str = "en") -> None:
-    """`window` goes with transform='moving_average' and only with it, 2 to MAX_WINDOW."""
+    """`window` (2 to MAX_WINDOW) is required by transform='moving_average',
+    smooths a change, and goes with nothing else."""
     if transform == "moving_average":
         if window is None or not 2 <= window <= MAX_WINDOW:
             raise _error(
@@ -170,11 +195,38 @@ def check_window(transform: str, window: int | None, lang: str = "en") -> None:
                 f"de 2 à {MAX_WINDOW} (p. ex. window=3 avec frequency='annual' pour une moyenne "
                 "mobile sur 3 ans).",
             )
-    elif window is not None:
+    elif window is None:
+        return
+    elif transform == "index":
         raise _error(
             lang,
-            "window only applies to transform='moving_average'.",
-            "window ne s'applique qu'à transform='moving_average'.",
+            "window does not apply to transform='index': averaging the index and indexing the "
+            "average give different values (100 falls on a different base), so MapleStats does "
+            "not pick one. Use transform='moving_average' with window for the smoothed levels.",
+            "window ne s'applique pas à transform='index' : la moyenne mobile de l'indice et "
+            "l'indice de la moyenne mobile diffèrent (la base 100 n'est pas la même), et "
+            "MapleStats ne choisit pas à votre place. Utilisez transform='moving_average' avec "
+            "window pour les niveaux lissés.",
+        )
+    elif transform not in _SMOOTHABLE:
+        raise _error(
+            lang,
+            "window applies to transform='moving_average' (average of the levels) or to a change "
+            "(diff, pct_change, yoy_diff, yoy_pct_change, annualized_pct_change), which it "
+            "averages.",
+            "window s'applique à transform='moving_average' (moyenne des niveaux) ou à une "
+            "variation (diff, pct_change, yoy_diff, yoy_pct_change, annualized_pct_change), "
+            "dont il fait la moyenne.",
+        )
+    elif not 2 <= window <= MAX_WINDOW:
+        raise _error(
+            lang,
+            f"window, the number of periods averaged, must be from 2 to {MAX_WINDOW} (e.g. "
+            "transform='yoy_pct_change', frequency='annual', window=3 for the 3-year moving "
+            "average of yearly inflation).",
+            f"window, le nombre de périodes de la moyenne, doit aller de 2 à {MAX_WINDOW} (p. "
+            "ex. transform='yoy_pct_change', frequency='annual', window=3 pour la moyenne "
+            "mobile sur 3 ans de l'inflation annuelle).",
         )
 
 
@@ -263,11 +315,13 @@ def infer_periods_per_year(days: Sequence[date]) -> int | None:
 
 
 def lag_periods(transform: str, ppy: int | None, window: int | None = None) -> int:
-    """How many periods before the first returned one the transform reads."""
+    """How many periods before the first returned one the transform reads: its
+    lag, plus window - 1 when `window` averages the computed changes."""
+    smoothing = max((window or 1) - 1, 0) if smooths(transform, window) else 0
     if transform in ("diff", "pct_change", "annualized_pct_change"):
-        return 1
+        return 1 + smoothing
     if transform in ("yoy_diff", "yoy_pct_change"):
-        return ppy or 0
+        return (ppy or 0) + smoothing
     if transform == "moving_average":
         return max((window or 1) - 1, 0)
     return 0
@@ -450,10 +504,15 @@ def _formula(
     lang: str,
 ) -> str:
     lag = ppy if transform in ("yoy_diff", "yoy_pct_change") else 1
-    span = window or 2
-    terms = [f"x_{{t-{k}}}" for k in range(span - 1, 0, -1)] + ["x_t"]
-    if span > 4:  # mean(x_{t-11}, ..., x_{t-1}, x_t)
-        terms = [terms[0], "...", *terms[-2:]]
+    smoothing = smooths(transform, window)
+
+    def mean(var: str) -> str:
+        span = window or 2
+        terms = [f"{var}_{{t-{k}}}" for k in range(span - 1, 0, -1)] + [f"{var}_t"]
+        if span > 4:  # mean(x_{t-11}, ..., x_{t-1}, x_t)
+            terms = [terms[0], "...", *terms[-2:]]
+        return f"mean({', '.join(terms)})"
+
     expressions = {
         "level": "x_t",
         "diff": "x_t - x_{t-1}",
@@ -462,11 +521,23 @@ def _formula(
         "yoy_pct_change": f"100 * (x_t / x_{{t-{lag}}} - 1)",
         "annualized_pct_change": f"100 * ((x_t / x_{{t-1}})^{ppy} - 1)",
         "index": "100 * x_t / x_base",
-        "moving_average": f"mean({', '.join(terms)})",
+        "moving_average": mean("x"),
     }
     name = f"moving_average_{window}" if transform == "moving_average" else transform
-    text_en = f"Computed by MapleStats: {name} = {expressions[transform]}"
-    text_fr = f"Calculé par MapleStats : {name} = {expressions[transform]}"
+    if smoothing and ppy is not None:
+        # The change is y; the value is the trailing mean of y.
+        en, fr = _span_words(ppy)
+        text_en = (
+            f"Computed by MapleStats: moving average over {window} {en} of {name} = "
+            f"{mean('y')}, y_t = {expressions[transform]}"
+        )
+        text_fr = (
+            f"Calculé par MapleStats : moyenne mobile sur {window} {fr} de {name} = "
+            f"{mean('y')}, y_t = {expressions[transform]}"
+        )
+    else:
+        text_en = f"Computed by MapleStats: {name} = {expressions[transform]}"
+        text_fr = f"Calculé par MapleStats : {name} = {expressions[transform]}"
     if ppy is not None:
         en, fr = _PERIOD_WORDS[ppy]
         text_en += f", t in {en}"
@@ -483,6 +554,9 @@ def _formula(
     if transform == "moving_average":
         text_en += " (trailing, periods matched by date; null if any of them is missing)"
         text_fr += " (moyenne passée, périodes appariées par date ; nulle s'il en manque une)"
+    if smoothing:
+        text_en += "; the mean is trailing, periods matched by date, null if any y is missing"
+        text_fr += " ; moyenne passée, périodes appariées par date, nulle s'il manque un y"
     if aggregation:
         target_en, source_en = frequency_name(ppy), frequency_name(source_ppy)
         target_fr, source_fr = frequency_name(ppy, "fr"), frequency_name(source_ppy, "fr")
@@ -511,6 +585,23 @@ def _compute(transform: str, current: float | None, lagged: float | None, ppy: i
             return None
         return 100 * (ratio**ppy - 1)
     return 100 * (ratio - 1)
+
+
+def _trailing_mean(
+    levels: list[tuple[date, float | None]],
+    values: Sequence[float | None],
+    window: int,
+    ppy: int,
+) -> list[float | None]:
+    """Each period's mean of `values` over it and the window - 1 periods before
+    it, found by date; None when any of them is missing or absent."""
+    by_key = {_key(d, ppy): v for (d, _), v in zip(levels, values, strict=True)}
+    out: list[float | None] = []
+    for d, _ in levels:
+        span = [by_key.get(_key(d, ppy) - k) for k in range(window)]
+        present = [v for v in span if v is not None]
+        out.append(math.fsum(present) / window if len(present) == window else None)
+    return out
 
 
 def transform_series(
@@ -577,13 +668,16 @@ def transform_series(
                 + (" Elle n'est pas annualisée." if transform == "annualized_pct_change" else ""),
             )
         )
-    if applied in _NEEDS_CALENDAR and out_ppy is None:
+    smoothing = smooths(applied, window)
+    if (applied in _NEEDS_CALENDAR or smoothing) and out_ppy is None:
+        asked = f"transform={transform!r}" + (f" with window={window}" if smoothing else "")
+        asked_fr = f"transform={transform!r}" + (f" avec window={window}" if smoothing else "")
         raise _error(
             lang,
-            f"transform={transform!r} needs a monthly, quarterly or annual series; this one is "
+            f"{asked} needs a monthly, quarterly or annual series; this one is "
             "daily, weekly or irregular. Add frequency='monthly' (or quarterly, annual) to "
             "aggregate it first.",
-            f"transform={transform!r} exige une série mensuelle, trimestrielle ou annuelle ; "
+            f"{asked_fr} exige une série mensuelle, trimestrielle ou annuelle ; "
             "celle-ci est quotidienne, hebdomadaire ou irrégulière. Ajoutez "
             "frequency='monthly' (ou quarterly, annual) pour l'agréger d'abord.",
         )
@@ -604,12 +698,7 @@ def transform_series(
         values = [None if v is None or base == 0 else 100 * v / base for _, v in levels]
     elif applied == "moving_average":
         assert window is not None and out_ppy is not None  # check_window, _NEEDS_CALENDAR
-        by_key = {_key(d, out_ppy): v for d, v in levels}
-        values = []
-        for d, _ in levels:
-            span = [by_key.get(_key(d, out_ppy) - k) for k in range(window)]
-            present = [v for v in span if v is not None]
-            values.append(math.fsum(present) / window if len(present) == window else None)
+        values = _trailing_mean(levels, [v for _, v in levels], window, out_ppy)
     elif out_ppy is None:
         values = [None] + [
             _compute(applied, levels[i][1], levels[i - 1][1], None) for i in range(1, len(levels))
@@ -620,6 +709,9 @@ def transform_series(
         values = [
             _compute(applied, v, by_key.get(_key(d, out_ppy) - lag), out_ppy) for d, v in levels
         ]
+        if smoothing:
+            assert window is not None
+            values = _trailing_mean(levels, values, window, out_ppy)
     if applied in ("pct_change", "yoy_pct_change", "annualized_pct_change") and any(
         v == 0 for _, v in levels
     ):
@@ -664,6 +756,25 @@ def transform_series(
                 ),
             )
         )
+    if smoothing and window is not None and out_ppy is not None:
+        en, fr = _span_words(out_ppy)
+        points_en = " (percentage-point changes, see above)" if applied != transform else ""
+        points_fr = (
+            " (variations en points de pourcentage, voir plus haut)" if applied != transform else ""
+        )
+        notes.append(
+            pick(
+                lang,
+                f"Moving average over {window} {en} of {applied}{points_en}: the change is "
+                f"computed first, then each value is the mean of the change in its period and "
+                f"the {window - 1} before it (trailing, not centred). A period whose window "
+                "reaches a missing change is null.",
+                f"Moyenne mobile sur {window} {fr} de {applied}{points_fr} : la variation est "
+                f"calculée d'abord, puis chaque valeur est la moyenne de la variation de sa "
+                f"période et des {window - 1} précédentes (moyenne passée, non centrée). Une "
+                "période dont la fenêtre touche une variation manquante est nulle.",
+            )
+        )
     if cut := sorted(period_label(d, out_ppy) for (d, _), _ in rows if d in incomplete):
         notes.append(
             pick(
@@ -695,7 +806,7 @@ def transform_series(
         periods_per_year=out_ppy,
         source_periods_per_year=source_ppy,
         aggregation=aggregation if frequency else None,
-        window=window if applied == "moving_average" else None,
+        window=window if applied == "moving_average" or smoothing else None,
         formula=_formula(
             applied,
             out_ppy,

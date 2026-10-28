@@ -50,17 +50,17 @@ indistinguishable per-city tools.
 
 `modules/_example/` is the literal template — copy it, don't reinvent
 the pattern. It is underscore-prefixed on purpose: `server.py` adds
-one `FileSystemProvider` per `modules/*` directory and explicitly
-skips any name starting with `_`, since `FileSystemProvider` itself
-has no built-in convention for "don't register this one live."
+one provider per `modules/*` directory and explicitly skips any name
+starting with `_`, so the template is never registered live.
 
 ### Registration and tool discovery
 
-`server.py` builds one `FastMCP` instance, adds a `FileSystemProvider`
-per module directory (auto-discovers every `@tool`/`@resource`/
+`server.py` builds one `FastMCP` instance, adds one provider per
+module directory (`LazyModuleProvider` when the catalogue lists the
+module, else `ModuleProvider`; both discover every `@tool`/`@resource`/
 `@prompt`-decorated function, recursing into submodule subfolders —
 confirmed working for the `statcan/{wds,sdmx,rdaas}/` split), and adds
-a `BM25SearchTransform`. The practical effect: the server exposes only
+`AnnotatedBM25SearchTransform`. The practical effect: the server exposes only
 three tools directly, `search_tools`, `call_tool` and `plan_query`
 (kept visible through the transform's `always_visible` list) — every
 other tool is discovered by natural-language query through
@@ -284,13 +284,23 @@ The test skips where there is no history to compare with (an sdist, a
 shallow clone). CI fetches the full history and sets
 `TOOL_SURFACE_REQUIRED=1`, which turns that skip into a failure.
 
-`.github/workflows/fastmcp-latest.yml` runs pyright and the suite
-weekly (and on demand) against the newest `fastmcp`, past the `<4.2` cap
-in `pyproject.toml`: `server.py` overrides private `BM25SearchTransform`
-methods, so an upgrade can break the server without failing an import.
-It never blocks a merge (`continue-on-error`); a failure shows as
-"Newest FastMCP: FAILED" in the run summary with an error annotation.
-Lift the cap only after that job passes on the new version.
+`pyproject.toml` caps `fastmcp` at the newest minor the suite has passed
+on (`<4.3`, set on 2026-10-28 after the suite and pyright passed on 4.1.4
+and 4.2.0a1). The server uses only public fastmcp APIs, plus the provider
+hooks fastmcp documents for overriding (`_list_tools`, `_get_tool` and
+their resource and prompt counterparts, in `LazyModuleProvider`). Keep it
+that way: `search_tools` and `call_tool` are built in `server.py` from the
+public Transform hooks (`transform_tools`, `get_tool`, `get_tool_catalog`)
+and the BM25 index is `shared/search.py`'s own, because overriding
+`BM25SearchTransform`'s private methods and fastmcp's tokenizer is what
+held the cap below 4.2. `tests/test_fastmcp_api.py` fails, naming the hook,
+when fastmcp moves one of those hooks, and fails on any private
+(underscore) fastmcp import under `src/`.
+`.github/workflows/fastmcp-latest.yml` runs pyright and the suite weekly
+(and on demand) against the newest `fastmcp` release, past the cap. It
+never blocks a merge (`continue-on-error`); a failure shows as "Newest
+FastMCP: FAILED" in the run summary with an error annotation. Raise the
+cap only after that job passes on the new minor, then run `uv lock`.
 
 **Before merging a change touching a client.py**, also run the live
 smoke test — mocked tests cannot catch a real API's actual quirks

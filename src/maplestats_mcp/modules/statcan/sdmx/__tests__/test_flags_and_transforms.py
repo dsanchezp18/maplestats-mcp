@@ -113,3 +113,12 @@ def test_transform_params_reach_back_for_a_moving_average():
     assert params == {"startPeriod": "2021-01"}
     latest = client.transform_params({"lastNObservations": 2}, request, 12, latest_n=2)
     assert latest == {"lastNObservations": (2 + 2) * 12 + 11}
+
+
+def test_transform_params_reach_back_for_a_smoothed_change():
+    request = client.TransformRequest("yoy_pct_change", "annual", window=3)
+    params = client.transform_params({"startPeriod": "2024-01"}, request, 12, latest_n=None)
+    # Before 2024: a year for the yoy lag, two for the window, one so the first is whole.
+    assert params == {"startPeriod": "2020-01"}
+    latest = client.transform_params({"lastNObservations": 2}, request, 12, latest_n=2)
+    assert latest == {"lastNObservations": (2 + 1 + 2) * 12 + 11}

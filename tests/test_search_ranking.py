@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pytest
 from fastmcp import Client
-from fastmcp.server.transforms.search.base import _extract_searchable_text
 
 from maplestats_mcp import server
 from maplestats_mcp.shared import search, semantic
@@ -32,13 +31,22 @@ async def _search(query: str) -> list[str]:
     return [tool["name"] for tool in result.structured_content["result"]]
 
 
-async def test_scored_index_ranks_like_fastmcps(tools):
-    # With no boost the scored index must give the order fastmcp's own index gives,
-    # or the default search would change behind the benchmark's back.
-    from fastmcp.server.transforms.search.bm25 import _BM25Index
+async def test_scored_index_ranks_like_fastmcps(tools, monkeypatch):
+    # The index is ours since 2026-10, but with no boost it must still give the
+    # order fastmcp's own BM25 gives with our tokenizer, which search_tools used
+    # before, or the default search would change behind the benchmark's back.
+    # fastmcp's index is private: once it moves, there is nothing to compare with.
+    from fastmcp.server.transforms.search import base, bm25
 
-    documents = [_extract_searchable_text(t) for t in tools]
-    ours, theirs = search.ScoredBM25Index(), _BM25Index()
+    reference = getattr(bm25, "_BM25Index", None)
+    text = getattr(base, "_extract_searchable_text", None)
+    if reference is None or text is None or not hasattr(bm25, "_tokenize"):
+        pytest.skip("fastmcp's private BM25 index moved; search_tools does not use it")
+    monkeypatch.setattr(bm25, "_tokenize", search.tokenize)
+    # scripts/build_site.py indexes fastmcp's searchable text; it must be ours too.
+    assert [search.searchable_text(t) for t in tools] == [text(t) for t in tools]
+    documents = [search.searchable_text(t) for t in tools]
+    ours, theirs = search.ScoredBM25Index(), reference()
     ours.build(documents)
     theirs.build(documents)
     for query in ("taux de chômage Québec", "Calgary rent index", "wildfires", "zzz"):

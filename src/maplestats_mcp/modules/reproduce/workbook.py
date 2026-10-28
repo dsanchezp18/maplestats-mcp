@@ -10,10 +10,13 @@ converted and the result's fields left out of the rows) and written following th
 conventions (R Code Conventions section 11, applied with openpyxl since
 this server is Python): a data sheet named after its content holding one
 Excel table object with a frozen header, explicit number formats and
-fitted column widths; a Source sheet with the call, provenance, licence and
-attribution; and, where the rows are a time series or a short list of
-values, a native (editable) Excel line or bar chart on its own sheet, drawn
-from a Chart data sheet.
+fitted column widths; a Source sheet with the call, provenance, licence,
+what cleaning changed and the attribution in the form the terms ask for
+(Statistics Canada's "Adapted from" notice once cleaning changed anything,
+its "Source:" notice otherwise; a note of the changes for the Bank of Canada
+and Creative Commons Attribution); and, where the rows are a time series
+or a short list of values, a native (editable) Excel line or bar chart on
+its own sheet, drawn from a Chart data sheet.
 
 Delivery. A hosted server cannot write to the user's disk, so the
 workbook comes back as base64 with its file name. That text is a third
@@ -41,10 +44,11 @@ from typing import Any, Literal
 
 from maplestats_mcp.modules.reproduce.cleaning import CODE_COLUMNS
 from maplestats_mcp.modules.reproduce.schemas import ExcelWorkbook
-from maplestats_mcp.shared.envelope import make_provenance
+from maplestats_mcp.shared.envelope import STATCAN_LICENCE, STATCAN_LICENCE_FR, make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.executor import check_deadline, run_parse
-from maplestats_mcp.shared.i18n import NBSP, french_text, normalize_lang
+from maplestats_mcp.shared.i18n import NBSP, french_spacing, french_text, normalize_lang
+from maplestats_mcp.shared.licences import BOC_TERMS, LICENCES_FR
 
 MAX_ROWS = 20_000
 DEFAULT_ROWS = 2_000
@@ -96,6 +100,24 @@ LABELS: dict[str, dict[str, str]] = {
             "Contains information licensed under the Open Government Licence - {region}."
         ),
         "cite": "Cite the publisher and the source URL above.",
+        "statcan_source": (
+            "Source: Statistics Canada, {product}, {date}. Reproduced and distributed on an "
+            '"as is" basis with the permission of Statistics Canada.'
+        ),
+        "statcan_adapted": (
+            "Adapted from Statistics Canada, {product}, {date}. This does not constitute an "
+            "endorsement by Statistics Canada of this product."
+        ),
+        "table": "Table",
+        "changes_flag": "Changes were made to the data: see Changes made.",
+        "changes": "Changes made",
+        "changes_list": "{changes}.",
+        "no_changes": "None: column names and values as the tool returned them.",
+        "renamed": "column names put in snake_case ({count} of {total}: {examples})",
+        "trimmed": "cells trimmed of spaces: {count}",
+        "emptied": "cells left blank (empty text or a non-finite number): {count}",
+        "converted": "text converted to numbers or dates in {columns}",
+        "long_ints": "whole numbers over 15 digits stored as text in {columns}",
         "cleaning_text": (
             "Names in snake_case (as janitor::clean_names in R), text trimmed, empty text as "
             "missing, numbers and ISO dates stored as text converted; codes with leading "
@@ -183,6 +205,24 @@ LABELS: dict[str, dict[str, str]] = {
             "Contient des renseignements visés par la Licence du gouvernement ouvert – {region}."
         ),
         "cite": "Citez l'éditeur et l'URL de la source ci-dessus.",
+        "statcan_source": (
+            "Source : Statistique Canada, {product}, {date}. Reproduit et diffusé « tel quel » "
+            "avec la permission de Statistique Canada."
+        ),
+        "statcan_adapted": (
+            "Adapté de Statistique Canada, {product}, {date}. Cela ne constitue pas une "
+            "approbation de ce produit par Statistique Canada."
+        ),
+        "table": "Tableau",
+        "changes_flag": "Les données ont été modifiées : voir Modifications apportées.",
+        "changes": "Modifications apportées",
+        "changes_list": "{changes}.",
+        "no_changes": "Aucune : noms de colonnes et valeurs tels que l'outil les a renvoyés.",
+        "renamed": "noms de colonnes mis en snake_case ({count} sur {total} : {examples})",
+        "trimmed": "cellules dont les espaces superflus ont été retirés : {count}",
+        "emptied": "cellules laissées vides (texte vide ou nombre non fini) : {count}",
+        "converted": "texte converti en nombres ou en dates dans {columns}",
+        "long_ints": "nombres entiers de plus de 15 chiffres stockés comme texte dans {columns}",
         "cleaning_text": (
             "Noms en snake_case (comme janitor::clean_names en R), espaces superflus retirés "
             "du texte, texte vide traité comme valeur manquante, nombres et dates ISO stockés "
@@ -818,6 +858,113 @@ def _licence(provenance: dict[str, Any]) -> str | None:
     return None
 
 
+def _changes(
+    rows: list[dict[str, Any]], header: list[str], converted: list[str], lang: str
+) -> list[str]:
+    """What cleaning changed from the rows as the tool returned them, for the Source sheet.
+
+    Some publishers' terms depend on it: Statistics Canada's Open Licence asks
+    for "Adapted from" rather than "Source:" once the data are changed, and the
+    Bank of Canada and Creative Commons Attribution ask that changes be indicated.
+    """
+    columns: list[str] = []
+    seen: set[str] = set()
+    trimmed = emptied = 0
+    long_ints: set[str] = set()
+    for row in rows:
+        check_deadline()
+        for key, value in row.items():
+            if key not in seen:
+                seen.add(key)
+                columns.append(key)
+            if isinstance(value, str):
+                stripped = value.strip()
+                trimmed += bool(stripped) and stripped != value
+                emptied += not stripped
+            elif isinstance(value, float) and not math.isfinite(value):
+                emptied += 1
+            elif (
+                isinstance(value, int) and not isinstance(value, bool) and len(str(abs(value))) > 15
+            ):
+                long_ints.add(key)
+    renamed = [f"{old} → {new}" for old, new in zip(columns, header, strict=True) if old != new]
+    changes = []
+    if renamed:
+        examples = ", ".join(renamed[:5]) + (", …" if len(renamed) > 5 else "")
+        changes.append(
+            _say(lang, "renamed", count=len(renamed), total=len(columns), examples=examples)
+        )
+    if trimmed:
+        changes.append(_say(lang, "trimmed", count=trimmed))
+    if emptied:
+        changes.append(_say(lang, "emptied", count=emptied))
+    if converted:
+        changes.append(_say(lang, "converted", columns=", ".join(converted)))
+    if long_ints:
+        named = [new for old, new in zip(columns, header, strict=True) if old in long_ints]
+        changes.append(_say(lang, "long_ints", columns=", ".join(named)))
+    return changes
+
+
+def _plain(text: str | None) -> str:
+    """French typography's no-break spaces as plain ones, for comparing licence texts."""
+    return (text or "").replace(NBSP, " ").replace("\u202f", " ").strip()
+
+
+# Tool results carry the French texts with French spacing (make_provenance).
+_STATCAN = {_plain(STATCAN_LICENCE), _plain(french_spacing(STATCAN_LICENCE_FR))}
+_BOC = {_plain(BOC_TERMS), _plain(french_spacing(LICENCES_FR[BOC_TERMS]))}
+# CC BY and its NC/SA/ND variants ask that changes be indicated; CC0 does not.
+_CC_BY = re.compile(r"\bCC[ -]BY\b|Creative Commons Attribution", re.IGNORECASE)
+
+
+def _product(title: str, tool: str, arguments: dict[str, Any] | None, lang: str) -> str | None:
+    """The product a StatCan citation names: its table number, and the title the caller gave."""
+    labels = _labels(lang)
+    named = title if title and title not in {tool, labels["default_title"]} else None
+    pid = next(
+        (
+            str((arguments or {}).get(key))
+            for key in ("product_id", "productId", "pid", "table_id")
+            if re.fullmatch(r"\d{8}(\d{2})?", str((arguments or {}).get(key, "")))
+        ),
+        None,
+    )
+    table = (
+        f"{labels['table']} {pid[:2]}-{pid[2:4]}-{pid[4:8]}-{pid[8:10] or '01'}" if pid else None
+    )
+    return " ".join(part for part in (table, named) if part) or None
+
+
+def _attribution(
+    licence: str | None,
+    provenance: dict[str, Any],
+    changed: bool,
+    product: str | None,
+    lang: str,
+) -> str:
+    """The credit line the publisher's terms ask for, in the form that fits the changes."""
+    labels = _labels(lang)
+    if _plain(licence) in _STATCAN:
+        when = str(provenance.get("as_of") or provenance.get("queried_at") or "")[:10]
+        key = "statcan_adapted" if changed else "statcan_source"
+        return _say(
+            lang,
+            key,
+            product=product or provenance.get("url") or "",
+            date=when or datetime.now(UTC).strftime("%Y-%m-%d"),
+        )
+    open_licence = re.search(r"open government licen|gouvernement ouvert", (licence or "").lower())
+    region = _licence_region(licence, lang) if open_licence else None
+    credit = labels["ogl_attribution"].format(region=region) if region else labels["cite"]
+    flag = changed and (
+        _plain(licence) in _BOC
+        or provenance.get("source") in {"boc", "valet"}
+        or bool(_CC_BY.search(licence or ""))
+    )
+    return f"{credit} {_say(lang, 'changes_flag')}" if flag else credit
+
+
 def build_workbook(
     rows: list[dict[str, Any]],
     *,
@@ -850,9 +997,9 @@ def build_workbook(
     chart = _add_chart(wb, plan, header, table, labels, title, taken) if plan else None
 
     licence = _licence(provenance)
-    open_licence = re.search(r"open government licen|gouvernement ouvert", (licence or "").lower())
-    region = _licence_region(licence, lang) if open_licence else None
-    attribution = labels["ogl_attribution"].format(region=region) if region else labels["cite"]
+    changes = _changes(rows, header, converted, lang)
+    product = _product(title, tool, arguments, lang)
+    attribution = _attribution(licence, provenance, bool(changes), product, lang)
     capped = labels["rows_capped"] if len(table) < available else ""
     notes = [
         (labels["title"], title),
@@ -872,6 +1019,12 @@ def build_workbook(
             _say(lang, "rows_text", written=len(table), available=available) + capped,
         ),
         (labels["cleaning"], labels["cleaning_text"]),
+        (
+            labels["changes"],
+            _say(lang, "changes_list", changes="; ".join(changes))
+            if changes
+            else _say(lang, "no_changes"),
+        ),
         (
             labels["left_out"],
             json.dumps(left_out, ensure_ascii=False, default=str)[:_MAX_CELL] if left_out else None,

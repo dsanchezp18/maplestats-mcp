@@ -151,4 +151,49 @@ async def test_moving_average_of_a_rate_reaches_back_for_the_window(httpx_mock):
         [(2.75 + 2.75 + 2.5) / 3, (2.75 + 2.5 + 2.5) / 3]
     )
     with pytest.raises(client.InvalidInput, match="window"):
-        await client.get_observations(["V122530"], request=TransformRequest("diff", window=3))
+        await client.get_observations(["V122530"], request=TransformRequest("level", window=3))
+
+
+async def test_smoothed_point_change_of_a_rate_reaches_back_for_lag_and_window(httpx_mock):
+    detail = {"V122530": _detail("Overnight rate", "Percent")}
+    rates = {
+        "2026-04-01": "3.0",
+        "2026-05-01": "2.75",
+        "2026-06-01": "2.75",
+        "2026-07-01": "2.5",
+        "2026-08-01": "2.25",
+    }
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"{constants.BASE_URL}observations/V122530/json", params={"start_date": "2026-07-01"}
+        ),
+        json={
+            "seriesDetail": detail,
+            "observations": [
+                {"d": d, "V122530": {"v": v}} for d, v in rates.items() if d >= "2026-07"
+            ],
+        },
+    )
+    # One month for the change and two more for a 3-month window.
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"{constants.BASE_URL}observations/V122530/json",
+            params={"start_date": "2026-04-01", "end_date": "2026-08-01"},
+        ),
+        json={
+            "seriesDetail": detail,
+            "observations": [{"d": d, "V122530": {"v": v}} for d, v in rates.items()],
+        },
+    )
+    result = await _fn(tools.boc_get_observations)(
+        ["V122530"], start_date="2026-07-01", transform="pct_change", window=3
+    )
+    assert result.transformed is not None
+    computed = result.transformed["V122530"]
+    # Point changes: May -0.25, June 0, July -0.25, August -0.25.
+    assert computed.transform == "diff" and computed.unit == "percentage points"
+    assert computed.window == 3
+    assert [p.value for p in computed.points] == pytest.approx(
+        [(-0.25 + 0 - 0.25) / 3, (0 - 0.25 - 0.25) / 3]
+    )
+    assert "moving average over 3 months of diff" in computed.formula

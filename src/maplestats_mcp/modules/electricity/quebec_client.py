@@ -305,6 +305,7 @@ async def get_demand(
                 lang,
             ),
             licence=_licence(lang),
+            commercial_use="not_allowed",  # CC BY-NC 4.0
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Start/end dates are UTC days. "
                 f"peak_demand_mw and average_demand_mw are computed here over the "
@@ -396,6 +397,7 @@ async def get_generation(
                 lang,
             ),
             licence=_licence(lang),
+            commercial_use="not_allowed",  # CC BY-NC 4.0
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Shares use the mean of the "
                 "returned rows.",
@@ -497,6 +499,7 @@ async def get_trade(
                 lang,
             ),
             licence=_licence(lang),
+            commercial_use="not_allowed",  # CC BY-NC 4.0
             limits=_limits(
                 f"Rows capped at {limit}; {total} rows matched. Start/end are UTC days.",
                 f"Lignes plafonnées à {limit} ; {total} lignes correspondent. Les dates de "

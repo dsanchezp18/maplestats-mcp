@@ -106,7 +106,8 @@ async def sdmx_get_data(
     pct_change, yoy_diff, yoy_pct_change (year-over-year, against the
     same period a year earlier: 12-month CPI inflation),
     annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
-    moving_average (trailing average over `window` periods).
+    moving_average (trailing average over `window` periods); `window`
+    with a change averages the change.
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate comes back as the change in
@@ -159,7 +160,8 @@ async def sdmx_get_vector_data(
     pct_change, yoy_diff, yoy_pct_change (year-over-year, against the
     same period a year earlier: 12-month CPI inflation),
     annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
-    moving_average (trailing average over `window` periods).
+    moving_average (trailing average over `window` periods); `window`
+    with a change averages the change.
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate comes back as the change in

@@ -176,6 +176,7 @@ def _provenance(
             lang,
         ),
         licence=constants.QUEBEC_LICENCE_FR if lang == "fr" else constants.QUEBEC_LICENCE,
+        commercial_use="not_allowed",  # CC BY-NC 4.0
         lang=lang,
     )
 

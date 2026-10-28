@@ -47,6 +47,7 @@ from maplestats_mcp.shared.fr_typography import (
     french_spacing,
     lang_error,
 )
+from maplestats_mcp.shared.models import CommercialUse
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 Lang = Literal["en", "fr"]
@@ -138,6 +139,19 @@ _NOTES = {
         ),
         "Les élections partielles ne sont couvertes pour aucune province.",
     ],
+}
+
+# The source covers several agencies, so the shared licence table says "varies";
+# each province's own terms decide. Elections Quebec and Elections Alberta allow
+# non-profit reuse only (site/faq.html); Saskatchewan and Manitoba state no terms.
+# The Elections BC Open Data Licence v1.0 (clause 2) allows commercial use with
+# attribution.
+_COMMERCIAL_USE: dict[str, CommercialUse] = {
+    "bc": "allowed",
+    "qc": "not_allowed",
+    "ab": "not_allowed",
+    "sk": "unknown",
+    "mb": "unknown",
 }
 
 
@@ -449,6 +463,7 @@ async def get_results(
         attribution=_attribution(code, lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
+            commercial_use=_COMMERCIAL_USE.get(code),
             url=_source_url(edition),
             cached=cached,
             schema_name="elections_provincial.ElectionResults",
@@ -527,6 +542,7 @@ async def get_seats(province: str, election: str | None = None, lang: Lang = "en
         attribution=_attribution(code, lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
+            commercial_use=_COMMERCIAL_USE.get(code),
             url=_source_url(edition),
             cached=cached,
             schema_name="elections_provincial.SeatSummary",
@@ -753,6 +769,7 @@ async def get_voting_areas(
         attribution=_attribution(code, lang),
         provenance=make_provenance(
             source=constants.PROVENANCE_SOURCE,
+            commercial_use=_COMMERCIAL_USE.get(code),
             url=manitoba.files(edition.source_key).by_area,
             cached=cached,
             schema_name="elections_provincial.VotingAreaResults",

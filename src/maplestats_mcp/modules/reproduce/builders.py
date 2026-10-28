@@ -382,7 +382,9 @@ async def _boc(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 # lag, and applies the same formula in its own language, in "3. Prepare data"
 # on the columns as the source names them. Lags are found by date, as in the
 # tool, so a gap in the data cannot shift a year-over-year comparison, and a
-# moving average whose window reaches a gap is missing, not shorter.
+# moving average whose window reaches a gap is missing, not shorter. With a
+# change and `window`, the change is computed first and then averaged the same
+# way (shared/transform.py's rule).
 
 _TRANSFORMS = (
     "level",
@@ -528,7 +530,7 @@ def _python_transform(plan: _Plan) -> Code:
         f"STEP_MONTHS = {plan.steps!r}\n"
         f"RATE_SERIES = {plan.rates!r}\n"
         f"INDEX_BASE = {index}\n"
-        f"WINDOW = {request.window!r}  # periods in a moving average\n"
+        f"WINDOW = {request.window!r}  # periods in a moving average (of a change, if any)\n"
         f"WINDOW_START = {window_start}\n"
         f"WINDOW_END = {window_end}\n"
         f"LATEST_N = {plan.latest_n!r}\n"
@@ -617,6 +619,14 @@ def _python_transform(plan: _Plan) -> Code:
         "                lagged = points[i - 1][1] if i else None\n"
         "            value = compute(applied, level, lagged, step, base)\n"
         "        computed.append((day, level, value))\n"
+        '    if WINDOW and applied != "moving_average":\n'
+        "        # Average the change: its period and the WINDOW - 1 before it, by date.\n"
+        "        changes = {day: value for day, _, value in computed}\n"
+        "        smoothed = []\n"
+        "        for day, level, _ in computed:\n"
+        "            span = [changes.get(months_after(day, -step * k)) for k in range(WINDOW)]\n"
+        "            smoothed.append((day, level, None if None in span else sum(span) / WINDOW))\n"
+        "        computed = smoothed\n"
         "    if WINDOW_START is not None:\n"
         "        first = period_floor(WINDOW_START, step)\n"
         "        computed = [row for row in computed if row[0] >= first]\n"
@@ -713,7 +723,7 @@ def _r_transform(plan: _Plan) -> Code:
         f"index_base <- c({_r_date(base[0] if base else None)}, "
         f"{_r_date(base[1] if base else None)})\n"
         f"ma_window <- {f'{request.window}L' if request.window else 'NA_integer_'}"
-        "  # periods in a moving average\n"
+        "  # periods in a moving average (of a change, if any)\n"
         f"window_start <- {_r_date(plan.window_start)}\n"
         f"window_end <- {_r_date(plan.window_end)}\n"
         f"latest_n <- {f'{plan.latest_n}L' if plan.latest_n else 'NA_integer_'}\n"
@@ -789,6 +799,12 @@ def _r_transform(plan: _Plan) -> Code:
         "    ),\n"
         "    ifelse(lagged == 0, NA_real_, 100 * (x / lagged - 1))\n"
         "  )\n"
+        '  if (!is.na(ma_window) && applied != "moving_average") {\n'
+        "    # Average the change: its period and the ma_window - 1 before it, by date.\n"
+        "    value <- rowMeans(do.call(cbind, lapply(seq_len(ma_window) - 1L, \\(k) {\n"
+        "      value[match(months_after(points$date, -step * k), points$date)]\n"
+        "    })))\n"
+        "  }\n"
         "  out <- tibble(\n"
         "    series = rep(series, length(x)), period = points$date, level = x, value = value,\n"
         "    transform = rep(applied, length(x))\n"
@@ -877,7 +893,7 @@ def _julia_transform(plan: _Plan) -> Code:
         f"index_base = "
         + (f"({jl_date(base[0])}, {jl_date(base[1])})" if base else "nothing")
         + "\n"
-        f"ma_window = {request.window or 'nothing'}  # periods in a moving average\n"
+        f"ma_window = {request.window or 'nothing'}  # periods in a moving average (of a change, if any)\n"
         f"window_start = {jl_date(plan.window_start)}\n"
         f"window_end = {jl_date(plan.window_end)}\n"
         f"latest_n = {plan.latest_n if plan.latest_n else 'nothing'}\n"
@@ -969,6 +985,16 @@ def _julia_transform(plan: _Plan) -> Code:
         "        end\n"
         "        push!(values, compute_value(applied, x, lagged, step, base))\n"
         "    end\n"
+        '    if ma_window !== nothing && applied != "moving_average"\n'
+        "        # Average the change: its period and the ma_window - 1 before it, by date.\n"
+        "        changes = values\n"
+        "        values = Union{Missing, Float64}[]\n"
+        "        for day in dates\n"
+        "            js = [get(position, months_after(day, -step * k), 0) for k in 0:(ma_window - 1)]\n"
+        "            span = [j == 0 ? missing : changes[j] for j in js]\n"
+        "            push!(values, any(ismissing, span) ? missing : sum(span) / ma_window)\n"
+        "        end\n"
+        "    end\n"
         "    out = DataFrame(\n"
         "        series = fill(series, length(dates)),\n"
         "        period = dates,\n"
@@ -1010,8 +1036,10 @@ def _with_transform(spec: Spec, plan: _Plan) -> Spec:
     }
     spec.languages = tuple(lang for lang in spec.languages if lang != "excel")
     spec.title += f" ({plan.request.transform}"
-    if plan.request.window:
+    if plan.request.window and plan.request.transform == "moving_average":
         spec.title += f" {plan.request.window}"
+    elif plan.request.window:
+        spec.title += f", moving average {plan.request.window}"
     spec.title += (
         f", {plan.request.frequency} {plan.request.aggregation})" if plan.request.frequency else ")"
     )
