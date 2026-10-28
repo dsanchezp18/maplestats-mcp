@@ -2,11 +2,22 @@ name: Release
 
 # Push a tag like v0.1.0 whose version matches pyproject.toml and server.json
 # (tests/test_release.py checks that they agree). Publishes to PyPI, then the
-# MCP Registry and a GitHub Release.
+# MCP Registry and a GitHub Release. Or run it by hand on main with the
+# version (no "v"): it checks the version, creates the tag on that commit,
+# then publishes the same way.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to tag and publish, e.g. 0.4.3"
+        required: true
+        type: string
+
+env:
+  TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
 
 # Jobs that need more (publishing, releases) ask for it themselves.
 permissions:
@@ -21,6 +32,9 @@ jobs:
         with:
           python-version: "3.12"
           version: "0.11.7" # same uv as both Dockerfiles; bump all three together
+      - name: A run by hand publishes main only
+        if: github.event_name == 'workflow_dispatch'
+        run: test "$GITHUB_REF" = refs/heads/main
       - run: uv sync --locked
       # Same gate as ci.yml, so a tag on a commit that failed CI cannot publish.
       - run: uv run ruff check src tests scripts
@@ -28,15 +42,33 @@ jobs:
       - run: uv run pyright
       - run: uv run pytest -q
       - name: Tag matches the package version
-        run: test "${GITHUB_REF_NAME#v}" = "$(uv run python -c 'import maplestats_mcp; print(maplestats_mcp.__version__)')"
+        run: test "${TAG#v}" = "$(uv run python -c 'import maplestats_mcp; print(maplestats_mcp.__version__)')"
       - run: uv build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dist
           path: dist/
 
-  pypi:
+  tag:
+    # Only on a run by hand: create the tag on the commit just built and
+    # tested. Fails if the tag already exists.
+    if: github.event_name == 'workflow_dispatch'
     needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api "repos/$GITHUB_REPOSITORY/git/refs"
+          -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+
+  pypi:
+    needs: [build, tag]
+    # tag is skipped on a tag push; a failed tag stops the publish.
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.tag.result != 'failure' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -50,6 +82,7 @@ jobs:
 
   mcp-registry:
     needs: pypi
+    if: ${{ !cancelled() && needs.pypi.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # GitHub OIDC login to the MCP Registry
@@ -80,6 +113,7 @@ jobs:
     # attached. pyproject.toml's Changelog link and the site's version line
     # point at these releases.
     needs: pypi
+    if: ${{ !cancelled() && needs.pypi.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -92,8 +126,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
-          gh release create "$GITHUB_REF_NAME" dist/*
+          gh release create "$TAG" dist/*
           --repo "$GITHUB_REPOSITORY"
-          --title "$GITHUB_REF_NAME"
+          --title "$TAG"
           --generate-notes
           --verify-tag
