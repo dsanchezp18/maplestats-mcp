@@ -9,7 +9,7 @@ and no server running.
 > names, parameters and output fields; see `tests/test_tool_surface.py`).
 > The Python module paths, function names and signatures described here can
 > change in any release without a deprecation period. Pin an exact version
-> (`maplestats-mcp==0.4.2`) if you build on them, and read the changelog when
+> (`maplestats-mcp==0.4.3`) if you build on them, and read the changelog when
 > you upgrade.
 
 ## Install

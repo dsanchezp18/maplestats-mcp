@@ -277,7 +277,7 @@ whole classified list:
 
 ```bash
 uv run python scripts/check_tool_surface.py              # against origin/main
-uv run python scripts/check_tool_surface.py --base v0.4.2
+uv run python scripts/check_tool_surface.py --base v0.4.3
 ```
 
 The test skips where there is no history to compare with (an sdist, a
