@@ -1,13 +1,13 @@
 name: Newest FastMCP
 
-# pyproject.toml caps fastmcp below 4.2 because the server leans on its
-# internals: server.py subclasses BM25SearchTransform and overrides its private
-# _make_search_tool/_make_call_tool, and ModuleProvider reimplements
-# FileSystemProvider's loader. This job runs the suite against the newest
-# fastmcp release, past the cap, so an upgrade that breaks them shows up here
-# before anyone lifts it. Never on push or pull_request: a new fastmcp must
-# not block a merge, and continue-on-error keeps a failure from marking the
-# run red; the run summary and an error annotation report it instead.
+# pyproject.toml caps fastmcp at the newest minor the suite has passed on. The
+# server uses public fastmcp APIs and the provider hooks fastmcp documents for
+# overriding (tests/test_fastmcp_api.py checks them by name), but a new minor
+# can still change behaviour without failing an import. This job runs the
+# suite against the newest fastmcp release, past the cap, so a break shows up
+# here before anyone raises it. Never on push or pull_request: a new fastmcp
+# must not block a merge, and continue-on-error keeps a failure from marking
+# the run red; the run summary and an error annotation report it instead.
 on:
   schedule:
     # Mondays 07:41 UTC, after the live smoke tests; off the hour to avoid the :00 queue spike.
@@ -29,7 +29,7 @@ jobs:
           python-version: "3.12"
           version: "0.11.7" # same uv as both Dockerfiles; bump all three together
       - run: uv sync --locked
-      # uv pip install ignores the project's own fastmcp<4.2 requirement, and
+      # uv pip install ignores the project's own fastmcp cap, and
       # upgrading only fastmcp (and fastmcp-slim, which it pins) keeps every
       # other package at its locked version, so a failure points at fastmcp.
       # --python names the project venv: with setup-uv's UV_PYTHON set, uv pip
@@ -94,6 +94,6 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$verdict" = FAILED ]; then
-            echo "::error title=Newest FastMCP::The suite fails against fastmcp ${NEWEST:-?} (locked $LOCKED): install $INSTALL, pyright $PYRIGHT, pytest $PYTEST. Keep the fastmcp<4.2 cap until server.py is updated."
+            echo "::error title=Newest FastMCP::The suite fails against fastmcp ${NEWEST:-?} (locked $LOCKED): install $INSTALL, pyright $PYRIGHT, pytest $PYTEST. Keep the fastmcp cap in pyproject.toml until the suite passes on it."
             exit 1
           fi

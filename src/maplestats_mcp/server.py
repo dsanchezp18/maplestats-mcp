@@ -1,38 +1,50 @@
 """The FastMCP server instance: module auto-registration + tool search.
 
-Confirmed working this session: FileSystemProvider recurses into
-per-source subfolders (modules/statcan/{wds,sdmx,rdaas}/), auto-
-discovering every @tool/@resource/@prompt-decorated function with no
-manual registration call. FileSystemProvider itself has no built-in
-underscore-prefix skip logic (checked its source directly) — this
-module adds one provider per modules/* subdirectory rather than one
-provider for the whole tree, specifically so modules/_example/ (the
-template new sources copy) never registers its demo tools live.
+One provider per modules/* subdirectory, which collects every
+@tool/@resource/@prompt-decorated function in the module's tools.py,
+resources.py and prompts.py files, sub-API folders included
+(modules/statcan/{wds,sdmx,rdaas}/). Folders starting with "_" are
+skipped, so modules/_example/ (the template new sources copy) never
+registers its demo tools live.
 
-A module in tool_catalogue.json gets a LazyModuleProvider instead, which
-lists its tools from the catalogue and imports its code on first use
-(see catalogue.py); without the file every module loads at startup.
+A module in tool_catalogue.json gets a LazyModuleProvider, which lists
+its tools from the catalogue and imports its code on first use (see
+catalogue.py); a module missing from it gets a ModuleProvider, which
+imports it at startup.
+
+Only public fastmcp APIs are used here, plus the provider hooks fastmcp
+documents for overriding (`_list_tools`, `_get_tool` and their resource
+and prompt counterparts); tests/test_fastmcp_api.py checks both, so a
+fastmcp upgrade that moves one fails there by name.
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import importlib
+import inspect
+import json
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
+from fastmcp.exceptions import NotFoundError
 from fastmcp.prompts.base import Prompt
 from fastmcp.resources.base import Resource
 from fastmcp.resources.template import ResourceTemplate
-from fastmcp.server.providers import FileSystemProvider
+from fastmcp.server.context import Context
 from fastmcp.server.providers.local_provider import LocalProvider
-from fastmcp.server.transforms.search import BM25SearchTransform
-from fastmcp.server.transforms.search import bm25 as bm25_module
-from fastmcp.server.transforms.search.base import _extract_searchable_text
+from fastmcp.server.transforms import GetToolNext
+from fastmcp.server.transforms.search import (
+    BM25SearchTransform,
+    SearchResultSerializer,
+    serialize_tools_for_output_json,
+)
 from fastmcp.tools import Tool
+from fastmcp.tools.base import ToolResult
 from fastmcp.utilities.components import FastMCPComponent
 from fastmcp.utilities.versions import VersionSpec
 from mcp.types import Icon, ToolAnnotations
@@ -107,21 +119,38 @@ def _module_annotations(root: Path) -> ToolAnnotations:
     return _read_only_annotations(root.name not in _LOCAL_MODULES)
 
 
-class ModuleProvider(FileSystemProvider):
-    """FileSystemProvider limited to tools.py, resources.py and prompts.py.
+def _register(
+    provider: LocalProvider, component: FastMCPComponent, annotations: ToolAnnotations
+) -> None:
+    _prepare(component, annotations)
+    if isinstance(component, Tool):
+        provider.add_tool(component)
+    elif isinstance(component, ResourceTemplate):
+        provider.add_template(component)
+    elif isinstance(component, Resource):
+        provider.add_resource(component)
+    elif isinstance(component, Prompt):
+        provider.add_prompt(component)
 
-    It imports the module at startup; LazyModuleProvider is the default
-    whenever the catalogue lists the module.
+
+class ModuleProvider(LocalProvider):
+    """A module's tools.py, resources.py and prompts.py, imported at startup.
+
+    LazyModuleProvider is the default whenever the catalogue lists the module.
+    This used to be a FileSystemProvider with its private loader replaced; it
+    needs nothing of that class but the import, which catalogue.py does.
     """
 
-    def _load_components(self) -> None:
-        if self._loaded:
-            self._components.clear()
+    def __init__(self, root: Path) -> None:
+        super().__init__(on_duplicate="replace")
+        # Resolved, as FileSystemProvider did: the import names modules relative to it.
+        self._root = Path(root).resolve()
         annotations = _module_annotations(self._root)
         for component in import_components(self._root, component_files(self._root)):
-            _prepare(component, annotations)
-            self._register_component(component)
-        self._loaded = True
+            _register(self, component, annotations)
+
+    def __repr__(self) -> str:
+        return f"ModuleProvider(root={self._root!r})"
 
 
 class LazyModuleProvider(LocalProvider):
@@ -158,15 +187,7 @@ class LazyModuleProvider(LocalProvider):
 
     def _import(self, files: list[Path]) -> None:
         for component in import_components(self._root, files):
-            _prepare(component, self._annotations)
-            if isinstance(component, Tool):
-                self.add_tool(component)
-            elif isinstance(component, ResourceTemplate):
-                self.add_template(component)
-            elif isinstance(component, Resource):
-                self.add_resource(component)
-            elif isinstance(component, Prompt):
-                self.add_prompt(component)
+            _register(self, component, self._annotations)
 
     def _load_tools(self) -> None:
         # Synchronous on purpose: no other request runs between the check and
@@ -228,23 +249,72 @@ class LazyModuleProvider(LocalProvider):
 
 
 class AnnotatedBM25SearchTransform(BM25SearchTransform):
-    """Search is read-only; call_tool also reaches the local workbook export.
+    """search_tools and call_tool, built here from public fastmcp APIs only.
 
-    `_search` is fastmcp's, rebuilt on a catalogue change the same way, with two
-    additions measured in tests/discovery_benchmark/phase2.md: exact identifiers
-    (a tool name, a StatCan table or vector number) lift the tools that take
-    them, and MAPLE_SEARCH=hybrid fuses BM25 with the optional semantic index.
-    The result list, and so search_tools' output, keeps fastmcp's format.
+    Until 2026-10 this overrode BM25SearchTransform's private `_search`,
+    `_make_search_tool` and `_make_call_tool`, which capped fastmcp below 4.2.
+    It now overrides only the public Transform hooks (`transform_tools`,
+    `get_tool`) and reads the catalogue through CatalogTransform's public
+    `get_tool_catalog`; nothing of BM25SearchTransform runs. It stays a
+    subclass so `isinstance(t, BM25SearchTransform)` still finds it
+    (scripts/build_site.py does), and keeps the attributes that script reads
+    (`_index.k1`, `_index.b`, `_max_results`, `_always_visible`) as its own.
+
+    The ranking is fastmcp's BM25 with shared/search.py's tokenizer, rebuilt
+    on a catalogue change the same way, with two additions measured in
+    tests/discovery_benchmark/phase2.md: exact identifiers (a tool name, a
+    StatCan table or vector number) lift the tools that take them, and
+    MAPLE_SEARCH=hybrid fuses BM25 with the optional semantic index. The
+    synthetic tools' schemas and search_tools' output keep fastmcp's format.
     """
 
-    def __init__(self, *, mode: str | None = None, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        *,
+        max_results: int = 5,
+        always_visible: list[str] | None = None,
+        search_tool_name: str = "search_tools",
+        call_tool_name: str = "call_tool",
+        search_result_serializer: SearchResultSerializer | None = None,
+        mode: str | None = None,
+    ) -> None:
+        # The base's own settings are never read; ours are set below.
+        super().__init__()
+        self._max_results = max_results
+        self._always_visible = set(always_visible or [])
+        self._search_tool_name = search_tool_name
+        self._call_tool_name = call_tool_name
+        self._serializer: SearchResultSerializer = (
+            search_result_serializer or serialize_tools_for_output_json
+        )
         self._index = search.ScoredBM25Index()
         self._indexed: list[Tool] = []
+        self._last_hash = ""
         self._mode = mode or semantic.search_mode()
         self._semantic: semantic.SemanticIndex | None = None
         self._semantic_tried = False
         self._semantic_rows: list[int | None] = []
+
+    # The two Transform hooks fastmcp calls: list the pinned and synthetic
+    # tools, and resolve the synthetic names (every other name goes on).
+
+    async def transform_tools(self, tools: Sequence[Tool]) -> Sequence[Tool]:
+        pinned = [t for t in tools if t.name in self._always_visible]
+        return [*pinned, self._make_search_tool(), self._make_call_tool()]
+
+    async def get_tool(
+        self, name: str, call_next: GetToolNext, *, version: VersionSpec | None = None
+    ) -> Tool | None:
+        if name == self._search_tool_name:
+            return self._make_search_tool()
+        if name == self._call_tool_name:
+            return self._make_call_tool()
+        return await call_next(name, version=version)
+
+    async def searchable_tools(self, ctx: Context) -> list[Tool]:
+        """The catalogue search_tools ranks: every tool the caller may see, less the pinned."""
+        tools = await self.get_tool_catalog(ctx)
+        return [t for t in tools if t.name not in self._always_visible]
 
     def _load_semantic(self) -> None:
         # Loaded on the first search, not at startup: the model costs about two
@@ -256,10 +326,11 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             _logger.warning("MAPLE_SEARCH=hybrid, but searching by BM25 only: %s", exc)
 
     async def _search(self, tools: Sequence[Tool], query: str) -> Sequence[Tool]:
-        current_hash = bm25_module._catalog_hash(tools)
+        texts = [search.searchable_text(t) for t in tools]
+        current_hash = hashlib.sha256(json.dumps(sorted(texts)).encode()).hexdigest()
         if current_hash != self._last_hash:
             index = search.ScoredBM25Index(self._index.k1, self._index.b)
-            index.build([_extract_searchable_text(t) for t in tools])
+            index.build(texts)
             self._index, self._indexed, self._last_hash = index, list(tools), current_hash
             self._semantic_rows = []
         scores = self._index.scores(query)
@@ -289,37 +360,72 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         ]
 
     def _make_search_tool(self) -> Tool:
-        search_tool = super()._make_search_tool()
-        search_tool.annotations = _read_only_annotations(open_world=False)
-        search_tool.title = "Search tools"
-        search_tool.description = _SEARCH_TOOLS_DESCRIPTION
-        _describe_param(
-            search_tool,
-            "query",
-            "What you need, in plain English or French, e.g. 'Calgary rent "
-            "index' or 'taux de chômage Québec'. Topic words work better "
-            "than tool names.",
+        transform = self
+
+        # The parameter and return annotations are fastmcp's, so the input and
+        # output schemas clients already know stay the same.
+        async def search_tools(
+            query: Annotated[
+                str,
+                "What you need, in plain English or French, e.g. 'Calgary rent "
+                "index' or 'taux de chômage Québec'. Topic words work better "
+                "than tool names.",
+            ],
+            ctx: Context = None,  # type: ignore[assignment]  # fastmcp injects it
+        ) -> str | list[dict[str, Any]]:
+            results = await transform._search(await transform.searchable_tools(ctx), query)
+            rendered = transform._serializer(results)
+            return await rendered if inspect.isawaitable(rendered) else rendered
+
+        return Tool.from_function(
+            fn=search_tools,
+            name=self._search_tool_name,
+            title="Search tools",
+            description=_SEARCH_TOOLS_DESCRIPTION,
+            annotations=_read_only_annotations(open_world=False),
         )
-        return search_tool
 
     def _make_call_tool(self) -> Tool:
-        call_tool = super()._make_call_tool()
-        call_tool.annotations = _export_annotations()
-        call_tool.title = "Call a tool"
-        call_tool.description = _CALL_TOOL_DESCRIPTION
-        _describe_param(
-            call_tool,
-            "name",
-            "Exact tool name as returned by search_tools or plan_query, "
-            "e.g. 'boc_get_observations'.",
+        transform = self
+
+        async def call_tool(
+            name: Annotated[
+                str,
+                "Exact tool name as returned by search_tools or plan_query, "
+                "e.g. 'boc_get_observations'.",
+            ],
+            arguments: Annotated[
+                dict[str, Any] | None,
+                "Object matching that tool's inputSchema from search_tools. "
+                "Omit or pass {} for a tool with no required parameters.",
+            ] = None,
+            ctx: Context = None,  # type: ignore[assignment]  # fastmcp injects it
+        ) -> ToolResult:
+            if name in {transform._call_tool_name, transform._search_tool_name}:
+                raise ValueError(
+                    f"'{name}' is a synthetic search tool and cannot be called via the "
+                    "call_tool proxy"
+                )
+            # As fastmcp's proxy does: the name comes from the model, so it may
+            # reach only what the model could have found through search_tools.
+            if not any(t.name == name for t in await transform.get_tool_catalog(ctx)):
+                raise NotFoundError(f"Unknown tool: {name!r}")
+            return await ctx.fastmcp.call_tool(name, arguments)
+
+        return Tool.from_function(
+            fn=call_tool,
+            name=self._call_tool_name,
+            title="Call a tool",
+            description=_CALL_TOOL_DESCRIPTION,
+            annotations=_export_annotations(),
         )
-        _describe_param(
-            call_tool,
-            "arguments",
-            "Object matching that tool's inputSchema from search_tools. "
-            "Omit or pass {} for a tool with no required parameters.",
-        )
-        return call_tool
+
+
+async def searchable_tools(server: FastMCP) -> list[Tool]:
+    """Every tool `server`'s search_tools ranks, read the way search_tools reads them."""
+    transform = next(t for t in server.transforms if isinstance(t, AnnotatedBM25SearchTransform))
+    async with Context(fastmcp=server) as ctx:
+        return await transform.searchable_tools(ctx)
 
 
 # Glama and similar registries grade these two synthetic tools on their
@@ -358,12 +464,6 @@ what to change. search_tools, call_tool and plan_query cannot be called
 through it; call them directly. Tool calls are subject to the server's
 timeout (MAPLE_TOOL_TIMEOUT_SECONDS, default 120).
 """
-
-
-def _describe_param(tool: Tool, param: str, description: str) -> None:
-    props = tool.parameters.get("properties", {})
-    if param in props:
-        props[param]["description"] = description
 
 
 # Sent to every client on initialize, so it stays a short routing index
@@ -589,7 +689,6 @@ def _build_module_catalogue() -> str:
 def build_server() -> FastMCP:
     configure_private_logs()
     STATS.register_tools(("search_tools", "call_tool", "plan_query"))
-    search.install()
     icon_png = (Path(__file__).parent / "assets" / "favicon.png").read_bytes()
     icon = Icon(
         src="data:image/png;base64," + base64.b64encode(icon_png).decode("ascii"),

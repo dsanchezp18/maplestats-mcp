@@ -1,16 +1,21 @@
-"""The accent- and plural-folding search tokenizer is installed and works."""
+"""The accent- and plural-folding search tokenizer is the one search_tools uses, and works."""
 
 from __future__ import annotations
 
 import pytest
-from fastmcp.server.transforms.search import bm25
 
-from maplestats_mcp import server  # importing it installs the tokenizer
+from maplestats_mcp import server
 from maplestats_mcp.shared.search import tokenize
 
 
-def test_tokenizer_is_installed_in_fastmcp_bm25():
-    assert bm25._tokenize is tokenize
+async def test_search_tools_folds_accents_and_plurals():
+    # The server's own index tokenizes with tokenize(), so a French plural with
+    # accents finds the tool its singular, accent-free keyword names.
+    transform = server.AnnotatedBM25SearchTransform(max_results=5, mode="bm25")
+    tools = await server.searchable_tools(server.mcp)
+    assert [t.name for t in await transform._search(tools, "hôpitaux")] == [
+        t.name for t in await transform._search(tools, "hopital")
+    ]
 
 
 def test_folds_accents_and_plurals():

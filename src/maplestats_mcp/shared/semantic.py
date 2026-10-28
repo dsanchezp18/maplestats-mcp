@@ -295,10 +295,10 @@ def searchable_tools() -> list[tuple[str, str]]:
     """
     import asyncio
 
-    from maplestats_mcp.server import SEARCH_ALWAYS_VISIBLE, mcp
+    from maplestats_mcp import server
 
-    tools = asyncio.run(mcp._list_tools())
-    return [(t.name, t.description or "") for t in tools if t.name not in SEARCH_ALWAYS_VISIBLE]
+    tools = asyncio.run(server.searchable_tools(server.mcp))
+    return [(t.name, t.description or "") for t in tools]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
