@@ -254,3 +254,42 @@ async def test_moving_average_fetches_the_window_and_returns_the_requested_month
     assert "moving_average_3 = mean(x_{t-2}, x_{t-1}, x_t)" in computed.formula
     with pytest.raises(client.InvalidInput, match="window"):
         await _fn(tools.wds_get_data_from_vectors)([41690973], transform="moving_average")
+
+
+async def test_yoy_smoothed_over_a_window_fetches_lag_and_window(httpx_mock):
+    _mock_wds(httpx_mock, [_series(41690973, 18100004, "2.2.0.0.0.0.0.0.0.0", CPI)])
+    result = await _fn(tools.wds_get_data_from_vectors)(
+        [41690973], latest_n=2, transform="yoy_pct_change", window=2
+    )
+    body = json.loads(
+        httpx_mock.get_requests(url=f"{constants.BASE_URL}getDataFromVectorsAndLatestNPeriods")[
+            0
+        ].content
+    )
+    # 2 months, the month before them for the window, and 12 for the yoy lag.
+    assert body == [{"vectorId": 41690973, "latestN": 15}]
+    series = result.series[0]
+    assert [o.value for o in series.observations] == [169.8, 170.0]
+    computed = series.transformed
+    assert computed is not None and computed.window == 2
+    assert computed.transform == "yoy_pct_change"
+    # 12-month changes: July 169.9 / 164.9, August 169.8 / 164.8, September 170.0 / 164.9.
+    july, august, september = 3.032141, 3.033981, 3.092784
+    assert [p.value for p in computed.points] == pytest.approx(
+        [(july + august) / 2, (august + september) / 2], abs=1e-5
+    )
+    assert computed.formula.startswith(
+        "Computed by MapleStats: moving average over 2 months of yoy_pct_change"
+    )
+
+
+async def test_smoothed_change_of_a_rate_is_in_points(httpx_mock):
+    _mock_wds(httpx_mock, [_series(2062815, 14100287, "1.7.1.1.1.1.0.0.0.0", RATE)])
+    result = await _fn(tools.wds_get_data_from_vectors)(
+        [2062815], latest_n=2, transform="pct_change", window=2
+    )
+    computed = result.series[0].transformed
+    assert computed is not None and computed.transform == "diff"
+    # Point changes: July -0.1, August 0.0, September +0.1.
+    assert [p.value for p in computed.points] == pytest.approx([(-0.1 + 0) / 2, (0 + 0.1) / 2])
+    assert computed.unit == "percentage points"

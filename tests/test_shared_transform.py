@@ -380,7 +380,10 @@ def test_long_window_formula_and_french():
         ("moving_average", None, "needs window"),
         ("moving_average", 1, "from 2 to 120"),
         ("moving_average", 121, "from 2 to 120"),
-        ("yoy_pct_change", 3, "only applies to transform='moving_average'"),
+        ("yoy_pct_change", 1, "from 2 to 120"),
+        ("diff", 121, "from 2 to 120"),
+        ("level", 3, "applies to transform='moving_average'"),
+        ("index", 3, "does not apply to transform='index'"),
     ],
 )
 def test_window_is_checked(transform, window, match):
@@ -403,3 +406,155 @@ def test_history_needed_for_a_moving_average():
     assert source_periods_needed(4, "moving_average", 12, 12, window=3) == 6
     assert extra_months("moving_average", 1, aggregating=True, window=3) == 36
     assert extra_months("moving_average", 4, aggregating=False, window=4) == 9
+
+
+# Smoothing a change: `window` with diff, pct_change, yoy_* or annualized_pct_change.
+
+ANNUAL_CPI = [
+    (date(2019, 1, 1), 136.0),
+    (date(2020, 1, 1), 137.0),
+    (date(2021, 1, 1), 141.6),
+    (date(2022, 1, 1), 151.2),
+    (date(2023, 1, 1), 157.1),
+    (date(2024, 1, 1), 160.6),
+]
+
+
+def test_moving_average_of_yearly_inflation_by_hand():
+    result = transform_series(ANNUAL_CPI, source_ppy=1, transform="yoy_pct_change", window=3)
+    # Yearly changes: 2020 100 * (137 / 136 - 1) = 0.7353, 2021 3.3577,
+    # 2022 6.7797, 2023 3.9021, 2024 2.2279; each value averages three of them.
+    assert _values(result) == {
+        "2019": None,
+        "2020": None,
+        "2021": None,  # 2019 has no yearly change (2018 not fetched)
+        "2022": pytest.approx((0.735294 + 3.357664 + 6.779661) / 3, abs=1e-5),
+        "2023": pytest.approx((3.357664 + 6.779661 + 3.902116) / 3, abs=1e-5),
+        "2024": pytest.approx((6.779661 + 3.902116 + 2.227880) / 3, abs=1e-5),
+    }
+    assert _values(result)["2024"] == pytest.approx(4.3032, abs=1e-4)
+    assert result.requested_transform == result.transform == "yoy_pct_change"
+    assert result.window == 3 and result.unit == "percent"
+    assert result.formula.startswith(
+        "Computed by MapleStats: moving average over 3 years of yoy_pct_change = "
+        "mean(y_{t-2}, y_{t-1}, y_t), y_t = 100 * (x_t / x_{t-1} - 1), t in years"
+    )
+    assert "null if any y is missing" in result.formula
+    assert any("the change is computed first" in note for note in result.notes)
+
+
+def test_a_missing_change_nulls_every_window_that_reaches_it():
+    levels = _monthly(
+        {
+            "2025-01": 10.0,
+            "2025-02": 12.0,
+            "2025-03": 15.0,
+            "2025-04": None,
+            "2025-05": 20.0,
+            "2025-06": 21.0,
+            "2025-07": 25.0,
+            "2025-08": 26.0,
+        }
+    )
+    result = transform_series(levels, source_ppy=12, transform="diff", window=2)
+    # Diffs: 02 +2, 03 +3, 04 and 05 none (04 missing), 06 +1, 07 +4, 08 +1.
+    assert _values(result) == {
+        "2025-01": None,
+        "2025-02": None,  # January has no diff
+        "2025-03": pytest.approx((2 + 3) / 2),
+        "2025-04": None,
+        "2025-05": None,
+        "2025-06": None,  # its window holds May's missing diff
+        "2025-07": pytest.approx((1 + 4) / 2),
+        "2025-08": pytest.approx((4 + 1) / 2),
+    }
+    assert "moving average over 2 months of diff" in result.formula
+
+
+def test_smoothed_percent_change_of_a_rate_averages_the_point_changes():
+    rates = [(date(2019 + i, 1, 1), v) for i, v in enumerate([5.7, 9.7, 7.5, 5.3, 5.4, 6.4])]
+    result = transform_series(
+        rates, source_ppy=1, transform="pct_change", window=2, rate_unit=True, units="Percent"
+    )
+    # Point changes: 2020 +4.0, 2021 -2.2, 2022 -2.2, 2023 +0.1, 2024 +1.0.
+    assert _values(result) == {
+        "2019": None,
+        "2020": None,
+        "2021": pytest.approx((4.0 - 2.2) / 2),
+        "2022": pytest.approx((-2.2 - 2.2) / 2),
+        "2023": pytest.approx((-2.2 + 0.1) / 2),
+        "2024": pytest.approx((0.1 + 1.0) / 2),
+    }
+    assert result.requested_transform == "pct_change" and result.transform == "diff"
+    assert result.unit == "percentage points"
+    assert "moving average over 2 years of diff" in result.formula
+    assert any("diff (percentage-point changes, see above)" in note for note in result.notes)
+
+
+def test_quarterly_yoy_smoothed_over_four_quarters():
+    levels = [
+        (date(2023, 1, 1), 100.0),
+        (date(2023, 4, 1), 101.0),
+        (date(2023, 7, 1), 102.0),
+        (date(2023, 10, 1), 103.0),
+        (date(2024, 1, 1), 102.0),  # yoy 2.0
+        (date(2024, 4, 1), 104.03),  # yoy 3.0
+        (date(2024, 7, 1), 106.08),  # yoy 4.0
+        (date(2024, 10, 1), 108.15),  # yoy 5.0
+    ]
+    result = transform_series(levels, source_ppy=4, transform="yoy_pct_change", window=4)
+    assert _values(result)["2024-Q4"] == pytest.approx((2.0 + 3.0 + 4.0 + 5.0) / 4)
+    assert _values(result)["2024-Q3"] is None  # 2023-Q4 has no yoy
+    assert "mean(y_{t-3}, y_{t-2}, y_{t-1}, y_t), y_t = 100 * (x_t / x_{t-4} - 1)" in (
+        result.formula
+    )
+
+
+def test_annual_average_then_yoy_then_three_year_average():
+    monthly = (
+        [(date(2019, m, 1), 100.0) for m in range(1, 13)]
+        + [(date(2020, m, 1), 101.0 + 2 * (m % 2)) for m in range(1, 13)]  # average 102
+        + [(date(2021, m, 1), 105.0) for m in range(1, 13)]
+        + [(date(2022, m, 1), 110.0) for m in range(1, 13)]
+        + [(date(2023, m, 1), 112.0) for m in range(1, 12)]  # December not yet published
+    )
+    result = transform_series(
+        monthly,
+        source_ppy=12,
+        transform="yoy_pct_change",
+        frequency="annual",
+        window=3,
+        lang="fr",
+    )
+    # Yearly changes of the annual averages: 2020 2.0, 2021 100 * (105 / 102 - 1)
+    # = 2.941176, 2022 100 * (110 / 105 - 1) = 4.761905; 2023 is incomplete.
+    assert _values(result) == {
+        "2019": None,
+        "2020": None,
+        "2021": None,
+        "2022": pytest.approx((2.0 + 2.941176 + 4.761905) / 3, abs=1e-5),
+        "2023": None,
+    }
+    formula = result.formula.replace("\xa0", " ")
+    assert formula.startswith(
+        "Calculé par MapleStats : moyenne mobile sur 3 ans de yoy_pct_change = "
+        "mean(y_{t-2}, y_{t-1}, y_t), y_t = 100 * (x_t / x_{t-1} - 1)"
+    )
+    assert "; x = moyenne des valeurs (fréquence mensuelle)" in formula
+
+
+def test_smoothing_a_daily_change_needs_a_frequency():
+    daily = [(date(2026, 9, d), 2.5 + d) for d in range(1, 20)]
+    with pytest.raises(InvalidInput, match="window=5 needs a monthly"):
+        transform_series(daily, source_ppy=None, transform="diff", window=5)
+
+
+def test_history_needed_to_smooth_a_change():
+    # Three annual values of a monthly series: 1 year for the yoy lag, 2 for
+    # the window, 11 months for a year not yet complete.
+    assert source_periods_needed(3, "yoy_pct_change", 12, 1, window=3) == (3 + 1 + 2) * 12 + 11
+    # 36 monthly yoy changes reach back 12 months for the lag and 35 for the window.
+    assert extra_months("yoy_pct_change", 12, aggregating=False, window=36) == 12 + 35
+    assert extra_months("yoy_pct_change", 1, aggregating=True, window=3) == (1 + 2) * 12 + 12
+    assert extra_months("diff", 4, aggregating=False, window=4) == (1 + 3) * 3
+    assert extra_months("yoy_pct_change", 12, aggregating=False) == 12  # no window: unchanged

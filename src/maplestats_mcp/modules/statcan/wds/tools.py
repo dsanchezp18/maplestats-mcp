@@ -204,7 +204,8 @@ async def wds_get_data_from_vectors(
     frequency.
     `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
     annualized_pct_change, index, moving_average: trailing average over
-    `window` periods) and `frequency` with `aggregation`
+    `window` periods; `window` with a change averages the change) and
+    `frequency` with `aggregation`
     compute from the published levels; a series already in percent gets
     percentage-point changes. `transformed` holds the computed values
     with their formula.
@@ -261,7 +262,8 @@ async def wds_get_data_from_cube_coord(
     (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
     against the same period a year earlier: 12-month CPI inflation),
     annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
-    moving_average (trailing average over `window` periods).
+    moving_average (trailing average over `window` periods); `window`
+    with a change averages the change.
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate (unemployment rate, bank rate)
@@ -399,7 +401,8 @@ async def wds_get_data_by_reference_period_range(
     (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
     against the same period a year earlier: 12-month CPI inflation),
     annualized_pct_change, index (100 at `index_base`, e.g. "2020"), or
-    moving_average (trailing average over `window` periods).
+    moving_average (trailing average over `window` periods); `window`
+    with a change averages the change.
     `frequency` ("monthly", "quarterly", "annual") first aggregates with
     `aggregation` (average, sum, end_of_period). A percent change of a
     series already in percent or a rate (unemployment rate, bank rate)

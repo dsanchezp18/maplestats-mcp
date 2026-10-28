@@ -165,9 +165,15 @@ def test_generated_python_matches_the_tool_offline():
 def test_window_is_read_and_checked():
     request = builders.transform_request({"transform": "moving_average", "window": 3})
     assert request is not None and request.window == 3
-    for bad in ({"transform": "moving_average"}, {"transform": "diff", "window": 3}):
+    for bad in (
+        {"transform": "moving_average"},
+        {"transform": "level", "window": 3},
+        {"transform": "index", "index_base": "2020", "window": 3},
+    ):
         with pytest.raises(InvalidInput, match="window"):
             builders.transform_request(bad)
+    smoothed = builders.transform_request({"transform": "yoy_pct_change", "window": 36})
+    assert smoothed is not None and smoothed.window == 36
     with pytest.raises(InvalidInput, match="whole number"):
         builders.transform_request({"transform": "moving_average", "window": "3"})
 
@@ -235,4 +241,87 @@ def test_generated_python_moving_average_matches_the_tool_offline(frequency):
     want = [p.value for p in expected.points]
     assert [v is None for v in got] == [v is None for v in want]
     assert any(v is not None for v in want) and any(v is None for v in want)
+    assert [v for v in got if v is not None] == pytest.approx([v for v in want if v is not None])
+
+
+async def test_smoothed_change_script_fetches_lag_and_window_in_every_language():
+    args = {
+        "vector_ids": [41690973],
+        "latest_n": 3,
+        "transform": "yoy_pct_change",
+        "window": 3,
+        "frequency": "annual",
+    }
+    formula = (
+        "Computed by MapleStats: moving average over 3 years of yoy_pct_change = "
+        "mean(y_{t-2}, y_{t-1}, y_t), y_t = 100 * (x_t / x_{t-1} - 1)"
+    )
+    computed = {**_computed("yoy_pct_change"), "formula": formula, "window": 3}
+    spec = await builders._vectors(
+        args, {"series": [{"vector_id": 41690973, "transformed": computed}]}
+    )
+    # 3 years, 1 before them for the yoy lag, 2 for the window, in months, and
+    # 11 for a year still running.
+    assert spec.post_json == [{"vectorId": 41690973, "latestN": (3 + 1 + 2) * 12 + 11}]
+    assert spec.title.endswith("(yoy_pct_change, moving average 3, annual average)")
+    code = {lang: RENDERERS[lang](spec, "wds_get_data_from_vectors") for lang in RENDERERS}
+    python = code["python"][0]
+    assert "WINDOW = 3" in python and 'if WINDOW and applied != "moving_average":' in python
+    assert "moving average over 3 years of yoy_pct_change" in python
+    compile(python, "script.py", "exec")
+    r = code["r"][0]
+    assert 'if (!is.na(ma_window) && applied != "moving_average")' in r
+    julia = code["julia"][0]
+    assert 'if ma_window !== nothing && applied != "moving_average"' in julia
+    compile(stata_statements(spec.prepare["python"].body), "stata_block.py", "exec")
+
+
+@pytest.mark.parametrize(
+    ("transform", "frequency", "window", "rate"),
+    [
+        ("yoy_pct_change", "annual", 3, False),
+        ("yoy_pct_change", None, 6, False),
+        ("diff", None, 2, False),
+        ("pct_change", "quarterly", 2, True),
+        ("annualized_pct_change", None, 3, False),
+    ],
+)
+def test_generated_python_smoothed_change_matches_the_tool_offline(
+    transform, frequency, window, rate
+):
+    pl = pytest.importorskip("polars")
+    from datetime import date
+
+    from maplestats_mcp.shared.transform import transform_series
+
+    request = builders.TransformRequest(transform, frequency, window=window)
+    plan = builders._Plan(request, "wds", {"1": 1}, ["1"] if rate else [], "", latest_n=10)
+    months = [(2019 + (m - 1) // 12, (m - 1) % 12 + 1) for m in range(1, 85)]
+    levels: list[float | None] = [100 + i * 0.4 + (i % 5) * 0.9 for i in range(84)]
+    levels[60] = None  # 2024-01 has no value
+    del months[50], levels[50]  # and 2023-03 no row
+    data = pl.DataFrame(
+        {
+            "vectorId": [1] * len(months),
+            "refPer": [f"{y}-{m:02d}-01" for y, m in months],
+            "value": levels,
+        }
+    )
+    code = builders._python_transform(plan)
+    namespace = {"data": data, "pl": pl}
+    exec("\n".join(code.imports) + "\n" + code.body, namespace)  # noqa: S102
+    expected = transform_series(
+        [(date(y, m, 1), v) for (y, m), v in zip(months, levels, strict=True)],
+        source_ppy=12,
+        transform=transform,
+        frequency=frequency,
+        window=window,
+        rate_unit=rate,
+        latest_n=10,
+    )
+    got = namespace["data"]["value"].to_list()
+    want = [p.value for p in expected.points]
+    assert len(got) == len(want) and want
+    assert [v is None for v in got] == [v is None for v in want]
+    assert any(v is not None for v in want)
     assert [v for v in got if v is not None] == pytest.approx([v for v in want if v is not None])
