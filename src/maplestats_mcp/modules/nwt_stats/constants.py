@@ -31,14 +31,11 @@ TABLE_EXPORT_PREFIX = "/en/download-xlsx/"
 # Slug -> (page path, English title, French title). The English titles are the
 # agency's menu labels; pages that link no Excel file (multipliers, labour
 # market, income assistance, living cost differentials, indicators, By the
-# Numbers) are left out.
+# Numbers) are left out. The business dynamics and ownership page (business
+# conditions survey tables) answered 404 on 2026-10-29 and is gone from the
+# Economy menu, so it is left out too.
 TOPICS: dict[str, tuple[str, str, str]] = {
     "gdp": ("/en/economy/gdp", "Gross domestic product", "Produit intérieur brut"),
-    "business-dynamics": (
-        "/en/business-dynamics",
-        "Business dynamics and ownership (business conditions survey)",
-        "Dynamique et propriété des entreprises (conditions des entreprises)",
-    ),
     "exports-imports": (
         "/en/economy/exports-imports",
         "Exports and imports",

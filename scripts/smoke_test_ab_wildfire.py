@@ -14,6 +14,8 @@ from maplestats_mcp.modules.ab_wildfire.client import FireFilters
 from maplestats_mcp.shared.errors import InvalidInput
 
 _ALBERTA = ZoneInfo("America/Edmonton")
+# Over 700 polygons in summer and 550 on 2026-10-03; 20 to 80 in late October.
+_FULL_LAYER_POLYGONS = 300
 
 
 async def _check(label: str, awaitable: Awaitable[Any]) -> Any:
@@ -164,10 +166,17 @@ async def main() -> int:
     print(f"   active perimeters right now: {active_perimeters.total_matches}")
 
     danger = await _check("get_fire_danger(Edmonton)", client.get_fire_danger(53.5461, -113.4938))
-    _require(danger.danger_class is not None, "no danger class for Edmonton")
     outside = await _check("get_fire_danger(Vancouver)", client.get_fire_danger(49.28, -123.12))
     _require(outside.danger_class is None and outside.note, "Vancouver should be unrated")
     overview = await _check("summarize_fire_danger()", client.summarize_fire_danger())
+    # Late in the season the layer covers only part of the province (20 polygons
+    # and none over Edmonton on 2026-10-29), so Edmonton must be rated only while
+    # the layer is near full size.
+    full_layer = overview.total_polygons >= _FULL_LAYER_POLYGONS
+    _require(
+        danger.danger_class is not None or (not full_layer and danger.note),
+        "no danger class for Edmonton",
+    )
     # The layer's polygon count swings with the season (over 700 in summer, 550 on
     # 2026-10-03, under 50 on the morning of 2026-10-26 and 80 that evening), so
     # no floor holds; the classes must add up and the layer must not be empty
@@ -184,7 +193,12 @@ async def main() -> int:
     region = await _check(
         "summarize_fire_danger(bbox)", client.summarize_fire_danger([-118.0, 54.0, -116.0, 55.0])
     )
-    _require(0 < region.total_polygons < overview.total_polygons, "bbox did not narrow the count")
+    narrowed = (
+        0 < region.total_polygons < overview.total_polygons
+        if full_layer
+        else region.total_polygons <= overview.total_polygons
+    )
+    _require(narrowed, "bbox did not narrow the count")
 
     orders = await _check("get_fire_control_orders()", client.get_fire_control_orders())
     _require(orders.returned_count > 0, "no fire advisories or restrictions listed")

@@ -194,7 +194,7 @@ async def test_french_provenance_and_licence(httpx_mock):
     assert (data.provenance.coverage or "").startswith("Feuille ")
     topics = await client.list_files(lang="fr")
     assert topics.topics[0].title == "Produit intérieur brut"
-    assert (topics.provenance.coverage or "").startswith("39 sujets")
+    assert (topics.provenance.coverage or "").startswith("38 sujets")
 
 
 async def test_english_provenance_unchanged(httpx_mock):
