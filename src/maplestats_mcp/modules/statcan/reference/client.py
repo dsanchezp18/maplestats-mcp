@@ -240,7 +240,24 @@ async def _search(
                     )
                 )
             return response.text
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPStatusError, httpx.TooManyRedirects) as exc:
+            # Since 2026-10-29 every /n1/{lang}/type/ listing answers 404 (a
+            # browser loops on redirects instead) while StatCan's own menus
+            # still link them: an outage on their side, not a moved page.
+            # Say so, rather than a bare status a caller cannot act on.
+            if isinstance(exc, httpx.TooManyRedirects) or exc.response.status_code == 404:
+                raise UpstreamUnavailable(
+                    say(
+                        f"{context}: StatCan's catalogue page {url} is unavailable (HTTP 404 "
+                        "or a redirect loop on StatCan's side). Try again later; meanwhile "
+                        "wds_search_cubes searches StatCan data tables.",
+                        f"{context} : la page de catalogue de Statistique Canada {url} est "
+                        "indisponible (HTTP 404 ou boucle de redirection du côté de "
+                        "Statistique Canada). Réessayez plus tard ; en attendant, "
+                        "wds_search_cubes cherche dans les tableaux de données de "
+                        "Statistique Canada.",
+                    )
+                ) from exc
             status = exc.response.status_code
             raise UpstreamError(
                 say(f"{context} returned HTTP {status}.", f"{context} a renvoyé HTTP {status}.")

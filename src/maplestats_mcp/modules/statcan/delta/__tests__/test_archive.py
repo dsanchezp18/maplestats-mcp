@@ -9,6 +9,7 @@ without a release.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import re
 import zipfile
@@ -634,6 +635,34 @@ async def test_list_files_with_sizes_survives_a_failed_head(httpx_mock):
     assert by_date["2026-10-02"].size_bytes == 91000
     assert by_date["2026-10-02"].etag == '"abc"'
     assert by_date["2026-09-29"].size_bytes is None
+
+
+async def test_list_files_with_sizes_caps_heads_in_flight(httpx_mock, monkeypatch):
+    # 46 HEADs at once timed out by the dozen on 2026-10-29 and tripped the
+    # www150 breaker; list_files must keep at most HEAD_CONCURRENCY in flight.
+    httpx_mock.add_response(url=PAGE, text=_page(LISTED))
+    in_flight = 0
+    peak = 0
+    real = archive._file_headers
+
+    async def tracked(stamp: str):
+        nonlocal in_flight, peak
+        in_flight += 1
+        peak = max(peak, in_flight)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        in_flight -= 1
+        return await real(stamp)
+
+    async def no_head(url: str):
+        raise UpstreamError("no network in tests")
+
+    monkeypatch.setattr(archive, "_file_headers", tracked)
+    monkeypatch.setattr(archive, "_head", no_head)
+    monkeypatch.setattr(archive.constants, "HEAD_CONCURRENCY", 2)
+    result = await archive.list_files(include_sizes=True)
+    assert len(result.files) == len(LISTED)
+    assert peak == 2
 
 
 async def test_list_files_page_without_links_is_an_error(httpx_mock):
