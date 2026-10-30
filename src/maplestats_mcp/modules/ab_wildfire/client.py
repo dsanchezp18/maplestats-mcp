@@ -1002,13 +1002,17 @@ async def get_fire_danger(latitude: float, longitude: float, *, lang: str = "en"
             else None
         ),
         rating_timestamp=_utc(best.get("Last_Updated")) if best else None,
+        # Not "outside Alberta": late in the season the layer shrinks (20 polygons
+        # and none over Edmonton on 2026-10-29), so an Alberta point can be unrated.
         note=(
             None
             if best
             else fr_or_en(
                 lang,
-                "The point is outside the rating polygons, which cover Alberta only.",
-                "Le point est hors des polygones de cote, qui ne couvrent que l'Alberta.",
+                "No rating polygon covers this point. The polygons cover Alberta only, and "
+                "late in the fire season only part of it.",
+                "Aucun polygone de cote ne couvre ce point. Les polygones ne couvrent que "
+                "l'Alberta et, en fin de saison des feux, une partie seulement.",
             )
         ),
         provenance=_prov(

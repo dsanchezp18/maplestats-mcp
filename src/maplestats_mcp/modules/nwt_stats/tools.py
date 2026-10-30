@@ -23,8 +23,8 @@ async def nwt_stats_list_files(
 
     Use for: browsing what the Northwest Territories Bureau of Statistics
     publishes on a topic and getting each file's URL for nwt_stats_read_file.
-    Without `topic`, returns the 39 topic slugs with titles and page links
-    (gdp, business-dynamics, exports-imports, oil-gas-minerals, labour-force,
+    Without `topic`, returns the 38 topic slugs with titles and page links
+    (gdp, exports-imports, oil-gas-minerals, labour-force,
     earnings-wages, income, cpi, community-price-index, population,
     population-communities, population-projections, vital-statistics,
     housing, crime, language, alcohol-cannabis, traditional-activities,
@@ -56,7 +56,7 @@ async def nwt_stats_search_files(
     """Search the NWT Bureau of Statistics Excel tables by words in their titles.
 
     Use for: finding a Northwest Territories table without knowing its topic:
-    GDP by industry, exports, business conditions by quarter, labour force by
+    GDP by industry, exports, labour force by
     community, average weekly earnings, consumer price index, community price
     index, population by community, births and deaths, housing core need,
     crime incidents, Indigenous languages, cannabis and alcohol sales, a 2021

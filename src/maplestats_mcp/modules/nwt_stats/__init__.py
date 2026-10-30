@@ -1,8 +1,8 @@
 MODULE_NAME = "nwt_stats"
 MODULE_DESCRIPTION = (
     "NWT Bureau of Statistics (statsnwt.ca), tools prefixed nwt_stats_: about 375 Excel "
-    "files (.xlsx and legacy .xls) on 39 topic pages (GDP, exports and imports, business "
-    "conditions, labour force, earnings and wages, income, consumer price index, community "
+    "files (.xlsx and legacy .xls) on 38 topic pages (GDP, exports and imports, labour "
+    "force, earnings and wages, income, consumer price index, community "
     "price indexes, population estimates by community, projections, vital statistics, "
     "housing, police-reported crime, health, language, alcohol and cannabis, traditional "
     "activities, the 1996 to 2021 censuses and NWT Community Survey tables), listed with the agency's own titles and headings, "
@@ -13,8 +13,8 @@ MODULE_DESCRIPTION = (
 )
 MODULE_DESCRIPTION_FR = (
     "Bureau de la statistique des T.N.-O. (statsnwt.ca), outils préfixés nwt_stats_ : "
-    "environ 375 fichiers Excel (.xlsx et .xls) sur 39 pages thématiques (PIB, "
-    "exportations et importations, conditions des entreprises, population active, "
+    "environ 375 fichiers Excel (.xlsx et .xls) sur 38 pages thématiques (PIB, "
+    "exportations et importations, population active, "
     "rémunération, revenu, indice des prix à la consommation, indices des prix des "
     "collectivités, estimations de la population par collectivité, projections, état "
     "civil, logement, criminalité, santé, langues, alcool et cannabis, activités "
