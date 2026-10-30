@@ -49,6 +49,8 @@ _LIMITER = get_limiter(
 )
 
 _client = new_client(follow_redirects=True)
+# StatCan's own 404 page, where IMDB redirects an unknown survey id.
+_NOT_FOUND_PAGE = "srvmsg404"
 _warmed_list_langs: set[str] = set()
 
 
@@ -116,7 +118,24 @@ async def search_surveys(
                     )
                 )
             return response.text
-        except httpx.HTTPStatusError as exc:
+        except (httpx.HTTPStatusError, httpx.TooManyRedirects) as exc:
+            # Since 2026-10-29 the directory answers 404 (a browser loops on
+            # redirects instead) while StatCan's own pages still link it: an
+            # outage on their side, not a moved page (see reference/client.py).
+            if isinstance(exc, httpx.TooManyRedirects) or exc.response.status_code == 404:
+                raise UpstreamUnavailable(
+                    say(
+                        f"statcan_surveys:search_surveys: StatCan's survey directory {url} is "
+                        "unavailable (HTTP 404 or a redirect loop on StatCan's side). Try "
+                        "again later; statcan_surveys_get_survey_metadata still reads a "
+                        "survey whose id you know.",
+                        f"statcan_surveys:search_surveys : le répertoire des enquêtes de "
+                        f"Statistique Canada {url} est indisponible (HTTP 404 ou boucle de "
+                        "redirection du côté de Statistique Canada). Réessayez plus tard ; "
+                        "statcan_surveys_get_survey_metadata lit toujours une enquête dont "
+                        "vous connaissez l'identifiant.",
+                    )
+                ) from exc
             status = exc.response.status_code
             raise UpstreamError(
                 say(
@@ -234,8 +253,13 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
     async def fetch() -> httpx.Response:
         await _LIMITER.acquire()
         try:
-            # 500 is IMDB's deterministic unknown-survey answer (see below): no retry.
-            response = await get_with_retry(_client, url, retry_statuses=RETRY_STATUSES - {500})
+            # The unknown-survey page answers 500 or 503 (see below): no retry
+            # until we know the redirect did not end there.
+            response = await get_with_retry(
+                _client, url, retry_statuses=RETRY_STATUSES - {500, 503}
+            )
+            if response.status_code == 503 and _NOT_FOUND_PAGE not in str(response.url):
+                response = await get_with_retry(_client, url, retry_statuses=RETRY_STATUSES - {500})
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 say(
@@ -252,10 +276,12 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
         # .../error-erreur/stc_srvmsg404.html -- StatCan's own dedicated
         # 404 page -- which itself answers HTTP 500 due to a broken
         # redirect chain on their end (confirmed live: 302 -> 301 -> 500,
-        # reproduced identically with a raw curl). This is IMDB's
-        # deterministic "no such survey" signal, not a generic upstream
-        # failure, so it is treated as NotFound rather than UpstreamError.
-        if response.status_code in (404, 500) and "srvmsg404" in str(response.url):
+        # reproduced identically with a raw curl). Since 2026-10-29 that page
+        # answers 503 instead, while StatCan's other pages answer 200. Either
+        # way this is IMDB's deterministic "no such survey" signal, not a
+        # generic upstream failure, so it is treated as NotFound rather than
+        # UpstreamError.
+        if response.status_code != 200 and _NOT_FOUND_PAGE in str(response.url):
             raise NotFound(
                 say(
                     f"statcan_surveys:get_survey_metadata: no survey found for id {survey_id}.",

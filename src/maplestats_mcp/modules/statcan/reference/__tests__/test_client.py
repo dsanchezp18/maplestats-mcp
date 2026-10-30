@@ -5,7 +5,7 @@ import pytest
 from maplestats_mcp.modules.statcan.reference import client, constants
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared import retrying
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 
 
 @pytest.fixture(autouse=True)
@@ -142,6 +142,15 @@ async def test_search_documents_upstream_5xx_becomes_upstream_error(httpx_mock, 
         url=f"{_BASE_URL_EN}?count=10&text=housing", status_code=500, is_reusable=True
     )
     with pytest.raises(UpstreamError):
+        await client.search_documents("housing")
+
+
+async def test_search_documents_404_says_the_catalogue_is_unavailable(httpx_mock):
+    # Every /n1/{lang}/type/ listing answered 404 from 2026-10-29.
+    httpx_mock.add_response(url=_BASE_URL_EN, status_code=404)
+    with pytest.raises(
+        UpstreamUnavailable, match="catalogue page .* unavailable.*wds_search_cubes"
+    ):
         await client.search_documents("housing")
 
 

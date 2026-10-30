@@ -5,7 +5,7 @@ import pytest
 from maplestats_mcp.modules.statcan.surveys import client, constants
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared import retrying
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 
 
 @pytest.fixture(autouse=True)
@@ -107,6 +107,24 @@ async def test_get_survey_metadata_not_found_raises(httpx_mock):
         await client.get_survey_metadata(999999)
 
 
+async def test_get_survey_metadata_not_found_page_answering_503_raises_at_once(httpx_mock):
+    # Since 2026-10-29 StatCan's 404 page answers 503: still NotFound, and with
+    # no retries (one request each to IMDB and the error page).
+    url = f"{constants.IMDB_BASE_URL_EN}?Function=getSurvey&SDDS=999999"
+    error_page_url = "https://www.statcan.gc.ca/error-erreur/stc_srvmsg404.html"
+    httpx_mock.add_response(url=url, status_code=302, headers={"Location": error_page_url})
+    httpx_mock.add_response(url=error_page_url, status_code=503)
+    with pytest.raises(NotFound):
+        await client.get_survey_metadata(999999)
+    assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_search_surveys_404_says_the_directory_is_unavailable(httpx_mock):
+    httpx_mock.add_response(url=constants.SURVEY_LIST_URL_EN, status_code=404)
+    with pytest.raises(UpstreamUnavailable, match="survey directory .* is unavailable"):
+        await client.search_surveys()
+
+
 async def test_get_survey_metadata_genuine_500_becomes_upstream_error(httpx_mock):
     url = f"{constants.IMDB_BASE_URL_EN}?Function=getSurvey&SDDS=5108"
     httpx_mock.add_response(url=url, status_code=500)
@@ -122,7 +140,8 @@ async def test_get_survey_metadata_failure_is_not_cached(httpx_mock, monkeypatch
 
     monkeypatch.setattr(retrying.asyncio, "sleep", no_sleep)
     url = f"{constants.IMDB_BASE_URL_EN}?Function=getSurvey&SDDS=5108"
-    for _ in range(retrying.RETRY_ATTEMPTS):
+    # One answer to see whether the 503 is the unknown-survey page, then the retries.
+    for _ in range(retrying.RETRY_ATTEMPTS + 1):
         httpx_mock.add_response(url=url, status_code=503)
     with pytest.raises(UpstreamError, match="503"):
         await client.get_survey_metadata(5108)

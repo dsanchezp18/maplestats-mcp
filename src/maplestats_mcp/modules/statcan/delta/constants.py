@@ -18,3 +18,7 @@ BASE_URL = "https://www150.statcan.gc.ca/delta/{date}.zip"
 RATE_LIMIT_SOURCE = "statcan-delta"
 RATE_LIMIT_PER_SECOND = 5.0
 RATE_LIMIT_CAPACITY = 10.0
+# Size HEADs in flight at once for list_files(include_sizes=True). All 46 at
+# once timed out by the dozen on 2026-10-29 and tripped the www150 breaker,
+# blocking every StatCan tool for a minute; 4 at a time returned every size.
+HEAD_CONCURRENCY = 4

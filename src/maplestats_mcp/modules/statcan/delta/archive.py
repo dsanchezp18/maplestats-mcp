@@ -984,7 +984,13 @@ async def list_files(
     requested = _parse_date(date)[0] if date else None
     stamps = await _page_dates()
     if include_sizes:
-        files = list(await asyncio.gather(*(_file_headers(s) for s in stamps)))
+        gate = asyncio.Semaphore(constants.HEAD_CONCURRENCY)
+
+        async def sized(stamp: str) -> DeltaFileEntry:
+            async with gate:
+                return await _file_headers(stamp)
+
+        files = list(await asyncio.gather(*(sized(s) for s in stamps)))
     else:
         files = []
         for stamp in stamps:
