@@ -75,8 +75,9 @@ The default is the hosted server: nothing to install, no account, no key.
      member then connects it. On ChatGPT Business, Enterprise or Edu, an admin
      turns on Developer mode (Workspace Settings → Permissions & Roles →
      Connected Data), creates the app, and publishes it (Workspace settings →
-     Apps → Drafts → Publish). The hosted server is a shared free instance, so
-     a large organization should run its own copy.
+     Apps → Drafts → Publish). The hosted server is shared and limits each
+     client to 60 requests a minute, so a large organization should run its own
+     copy.
    - **VS Code:** the same entry under a `servers` key, with `"type": "http"`,
      in `.vscode/mcp.json`.
 
@@ -97,11 +98,8 @@ The default is the hosted server: nothing to install, no account, no key.
    (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
    maplestats-mcp` entry for other clients (see [Install](#install)).
 
-The hosted server is a free instance, so the first request after 15 quiet
-minutes waits for it to start (35 s measured, up to a minute); if your client
-reports the server as failed, retry a minute later. The free plan's monthly
-running hours can run out, and then the endpoint is off until the first of the
-next month; a local install is unaffected. Each client gets 60 requests a minute, and the microdata tabulation
+The first request after a quiet spell can take up to a minute; if your client
+reports the server as failed, retry a minute later. Each client gets 60 requests a minute, and the microdata tabulation
 tool is switched off there. Your agent's tool calls (a search phrase, a table
 number) reach the server and its host, Render. The code keeps no log of them,
 but its in-memory cache can hold a search phrase or filter in a key or a
@@ -244,18 +242,6 @@ failures (timeouts, connection errors, 5xx answers, Cloudflare challenges) a
 host is paused for a cooldown: its tools fail at once with an "unavailable"
 error that says when to retry, instead of waiting for another timeout. The
 `docs://status` resource lists the paused hosts.
-
-The public endpoint runs on Render's free plan: about 512 MB of memory, sleep
-after 15 minutes without requests, and 750 instance hours a month for the
-whole workspace, shared by every free service in it. On 2026-10-24 the
-workspace had used 659 of those hours. Render's logs for 19-24 October show
-`maplestats-mcp` running 91% of the time, kept awake by real MCP clients
-connecting every few minutes, not by a pinger, and another free service in the
-same workspace waking about every 15 minutes for long stretches. At that
-pace the hours ran out before the month ended, which stops every free service
-in the workspace until the 1st. Since 2026-10-24 the chat demo
-(`chat/render.yaml`) and that other service run in workspaces of their own, so
-this server has the 750 hours to itself.
 
 | Env var | Default | Purpose |
 |---|---|---|
