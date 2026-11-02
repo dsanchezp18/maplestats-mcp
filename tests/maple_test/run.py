@@ -7,7 +7,16 @@ repository (the answer key included) is in reach. Only the data access changes:
 - maplestats: this repository's server over stdio (`--server-dir` picks the checkout)
 - mcp_statcan: the community mcp-statcan server's public endpoint
 - pipeworx: Pipeworx's hosted StatCan and Bank of Canada servers, together
+- arose26: arose26's statcan-mcp and bank-of-canada-mcp npm packages, together
+- mcp_canada: ReyemTech's mcp-canada from PyPI (`uvx mcp-canada`)
+- openmcp: opendatafyi's OpenMCP, from a local clone with its catalogue (`--alts`)
+- candata_mcp: CanData's own server, from a local clone of their monorepo (`--alts`)
 - no_tools: the model alone
+
+The local-clone arms read `--alts` (or MAPLE_TEST_ALTS): a folder holding `openmcp/`
+(cloned, `venv/` built, `catalog.duckdb` downloaded, per its README) and `candata/`
+(the Canadian-Open-Data-Agentic-Platform repo, `uv sync` run). Keep it outside this
+repository: it is third-party code.
 
 `ENABLE_TOOL_SEARCH=false` keeps MCP tools loaded up front: with built-in tools off, the
 deferred-tool search tool is gone too, and the MCP arms would otherwise see no tools.
@@ -34,7 +43,16 @@ RUNS = HERE / "runs"
 REPO = HERE.parents[1]
 TIMEOUT_S = 600
 MAX_TURNS = 25
-ARMS = ("maplestats", "mcp_statcan", "pipeworx", "no_tools")
+ARMS = (
+    "maplestats",
+    "mcp_statcan",
+    "pipeworx",
+    "arose26",
+    "mcp_canada",
+    "openmcp",
+    "candata_mcp",
+    "no_tools",
+)
 
 PROMPT = """\
 You answer questions about Canadian economic and social statistics. Today is {today}.
@@ -47,7 +65,37 @@ If a figure does not exist or you cannot check it, say so instead of estimating.
 the answer short."""
 
 
-def servers(arm: str, server_dir: Path) -> dict[str, Any]:
+def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
+    if arm in ("openmcp", "candata_mcp") and alts is None:
+        raise SystemExit(f"--alts (or MAPLE_TEST_ALTS) is needed for the {arm} arm")
+    if arm == "arose26":
+        # Two sibling packages by the same author; a user covering both sources installs both.
+        return {
+            "statcan": {"command": "npx", "args": ["-y", "statcan-mcp"]},
+            "bankofcanada": {"command": "npx", "args": ["-y", "bank-of-canada-mcp"]},
+        }
+    if arm == "mcp_canada":
+        return {"mcpcanada": {"command": "uvx", "args": ["mcp-canada"]}}
+    if arm == "openmcp":
+        assert alts is not None
+        home = alts / "openmcp"
+        return {
+            "openmcp": {
+                "command": str(home / "venv" / "bin" / "python"),
+                "args": [str(home / "mcp_server.py")],
+            }
+        }
+    if arm == "candata_mcp":
+        assert alts is not None
+        home = alts / "candata"
+        # As CanData's own run_baseline.py starts it: the monorepo is not installed as a package.
+        return {
+            "candata": {
+                "command": "uv",
+                "args": ["run", "--directory", str(home), "python", "-m", "candata_mcp"],
+                "env": {"PYTHONPATH": str(home / "packages" / "candata-mcp" / "src")},
+            }
+        }
     if arm == "maplestats":
         return {
             "maplestats": {
@@ -159,16 +207,29 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
     )
 
 
-def run(arm: str, model: str, server_dir: Path, only: list[str] | None, label: str) -> Path:
+def run(
+    arm: str,
+    model: str,
+    server_dir: Path,
+    only: list[str] | None,
+    label: str,
+    alts: Path | None = None,
+) -> Path:
     questions = [q for q in load_key() if not only or q["id"] in only]
     RUNS.mkdir(exist_ok=True)
     name = label or arm
     out = RUNS / f"{datetime.now(UTC).date().isoformat()}_{name}_{model}.jsonl"
+    # A run is evidence: never overwrite one (a retry gets its own --label).
+    if out.exists():
+        raise SystemExit(f"{out.name} exists; pass --label to keep both runs")
+    if alts is None and os.environ.get("MAPLE_TEST_ALTS"):
+        alts = Path(os.environ["MAPLE_TEST_ALTS"])
+    config_servers = servers(arm, server_dir, alts)
     with tempfile.TemporaryDirectory() as tmp:
         config = None
-        if servers(arm, server_dir):
+        if config_servers:
             config = Path(tmp) / "mcp.json"
-            config.write_text(json.dumps({"mcpServers": servers(arm, server_dir)}))
+            config.write_text(json.dumps({"mcpServers": config_servers}))
         with out.open("w", encoding="utf-8") as fh:
             for q in questions:
                 answer = ask(arm, model, q, config)
