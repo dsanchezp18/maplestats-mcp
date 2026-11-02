@@ -13,6 +13,18 @@ from defusedxml import ElementTree
 from maplestats_mcp.modules.statcan.sdmx import client, constants, tools
 from maplestats_mcp.modules.statcan.wds import client as wds_client
 from maplestats_mcp.modules.statcan.wds import constants as wds_constants
+from maplestats_mcp.modules.statcan.wds import context
+
+
+@pytest.fixture(autouse=True)
+def _no_series_context(monkeypatch):
+    """These tests count SDMX requests; series context is covered in tests/test_wds_context.py."""
+
+    async def nothing(vector_ids, empty):
+        return {}, None
+
+    monkeypatch.setattr(context, "describe_vectors", nothing)
+
 
 _NS = (
     'xmlns:generic="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic" '

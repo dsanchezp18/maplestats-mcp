@@ -58,6 +58,10 @@ def test_server_annotations_read_the_validated_transport(monkeypatch):
     monkeypatch.setenv("MAPLE_TRANSPORT", "http")
     assert _export_annotations().read_only_hint is True
     monkeypatch.setenv("MAPLE_TRANSPORT", "stdio")
+    monkeypatch.delenv("MAPLE_EXPORT_DIR", raising=False)
+    # File saving is opt-in: a stdio server without MAPLE_EXPORT_DIR is read-only.
+    assert _export_annotations().read_only_hint is True
+    monkeypatch.setenv("MAPLE_EXPORT_DIR", "exports")
     assert _export_annotations().read_only_hint is False
     monkeypatch.setenv("MAPLE_TRANSPORT", "sdtio")
     with pytest.raises(ValueError, match="MAPLE_TRANSPORT"):

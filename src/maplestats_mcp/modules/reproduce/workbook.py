@@ -23,8 +23,9 @@ workbook comes back as base64 with its file name. That text is a third
 larger than the file and MCP clients pass it through the model's context
 (FastMCP sends the result as structured content and as JSON text), so rows
 are capped (max_rows, at most MAX_ROWS) and so is the file (MAX_BYTES).
-On a local stdio server the workbook is written to MAPLE_EXPORT_DIR
-(default: the user's Downloads folder) and only its path comes back.
+On a local stdio server with MAPLE_EXPORT_DIR set, the workbook is written
+there and only its path comes back. Saving is opt-in so that, by default,
+every tool is read-only and idempotent (config.local_exports_enabled).
 For data past these caps, reproduce_code with language="excel" gives a
 Power Query that loads the whole table inside Excel and refreshes it.
 """
@@ -35,7 +36,6 @@ import base64
 import io
 import json
 import math
-import os
 import re
 import unicodedata
 from datetime import UTC, date, datetime
@@ -152,6 +152,10 @@ LABELS: dict[str, dict[str, str]] = {
         ),
         "delivery": "delivery must be 'auto', 'base64' or 'file'.",
         "hosted": "This is a hosted server: it cannot write to your disk. Use delivery='base64'.",
+        "no_export_dir": (
+            "Saving files is off: set MAPLE_EXPORT_DIR to a folder in the server's "
+            "environment to turn it on, or use delivery='base64'."
+        ),
         "rows_shape": "rows must be a list of objects, one per row.",
         "no_rows": "{what} returned no rows to write to a workbook.",
         "the_rows": "The rows",
@@ -260,6 +264,11 @@ LABELS: dict[str, dict[str, str]] = {
         "delivery": "delivery doit valoir 'auto', 'base64' ou 'file'.",
         "hosted": (
             "Ce serveur est hébergé : il ne peut pas écrire sur votre disque. Utilisez "
+            "delivery='base64'."
+        ),
+        "no_export_dir": (
+            "L'enregistrement de fichiers est désactivé : définissez MAPLE_EXPORT_DIR (un "
+            "dossier) dans l'environnement du serveur pour l'activer, ou utilisez "
             "delivery='base64'."
         ),
         "rows_shape": "rows doit être une liste d'objets, un par ligne.",
@@ -1050,11 +1059,9 @@ def build_workbook(
 
 
 def _export_dir() -> Path:
-    configured = os.environ.get("MAPLE_EXPORT_DIR", "").strip()
-    if configured:
-        return Path(configured).expanduser()
-    downloads = Path.home() / "Downloads"
-    return downloads if downloads.is_dir() else Path.home()
+    from maplestats_mcp import config
+
+    return Path(config.get_export_dir() or ".").expanduser()
 
 
 def _file_name(title: str) -> str:
@@ -1082,9 +1089,10 @@ async def export(
         raise InvalidInput(_say(lang, "not_data", tool=tool_name))
     if delivery not in ("auto", "base64", "file"):
         raise InvalidInput(_say(lang, "delivery"))
-    local = config.get_transport() == "stdio"
+    local = config.local_exports_enabled()
     if delivery == "file" and not local:
-        raise InvalidInput(_say(lang, "hosted"))
+        hosted = config.get_transport() != "stdio"
+        raise InvalidInput(_say(lang, "hosted" if hosted else "no_export_dir"))
     provenance: dict[str, Any] = {}
     left_out: dict[str, Any] = {}
     if rows is None:

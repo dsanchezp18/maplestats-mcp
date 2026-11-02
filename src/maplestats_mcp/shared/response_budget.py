@@ -76,6 +76,19 @@ def caveats_for(tool: str, arguments: Mapping[str, Any], lang: str) -> list[str]
         return []
 
 
+def result_product_ids(payload: dict[str, Any]) -> list[int]:
+    """StatCan product ids a result states: its own `product_id` and its series'."""
+    inner = payload.get("result")
+    body: dict[str, Any] = inner if isinstance(inner, dict) else payload
+    items = [body, *(s for s in body.get("series", []) or [] if isinstance(s, dict))]
+    found = [item.get("product_id") for item in items]
+    # SDMX results name the table as dataflow DF_<productId>.
+    flow = body.get("dataflow_id")
+    if isinstance(flow, str) and flow.startswith("DF_") and flow[3:].isdigit():
+        found.append(int(flow[3:]))
+    return sorted({p for p in found if isinstance(p, int) and not isinstance(p, bool)})
+
+
 def _provenance(payload: dict[str, Any]) -> dict[str, Any] | None:
     found = payload.get("provenance")
     if isinstance(found, dict):
@@ -146,7 +159,11 @@ def apply_budget(
     provenance = _provenance(payload)
     changed = False
     if provenance is not None:
-        notes = caveats_for(tool, arguments, lang)
+        # A call by vector id names no table, so the result's own product ids
+        # count too: without them wds_get_data_from_vectors got no table caveats.
+        found = result_product_ids(payload)
+        lookup = {**arguments, "_result_product_ids": found} if found else arguments
+        notes = caveats_for(tool, lookup, lang)
         if notes:
             existing = provenance.get("caveats")
             current = [str(n) for n in existing] if isinstance(existing, list) else []

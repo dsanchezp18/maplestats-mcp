@@ -381,7 +381,28 @@ From the Notion canonical page; the hosted endpoint, blog post, per-language cli
 | MCP registries | Shipped (official, Glama) | `io.github.dsanchezp18/maplestats-mcp` 0.3.0 (2026-10-10) is the latest version on the official MCP Registry (checked live 2026-10-19; earlier versions are superseded), published by `release.yml` after PyPI (GitHub OIDC login, pinned and checksummed `mcp-publisher`). The Glama listing page resolves (badge in the README). Smithery refused updates from 0.4.0 (HTTP 403, "Updating servers has been removed") and announced its API and CLI shut down on 2026-10-31, so 0.4.1 dropped the Smithery publish job and badge. Since then badges were added for Mcprush, LobeHub, piwheels, M8ven and MCPLookup (README and site), and every tool got a human-readable title, which Claude's connector directory requires (2026-09-30). See Directories below. |
 | PyPI package | Shipped | `maplestats-mcp` 0.3.0 (2026-10-10) is the latest release on PyPI (checked live 2026-10-19; 0.1.0, 0.1.1 and 0.2.0 also available). Pushing a `v*` tag runs `release.yml`: the CI gate, a tag/version check, `uv build`, then PyPI trusted publishing (no stored token). |
 | Per-language clients | Not started | Lightweight R, Python and Julia clients over the hosted core; `reproduce_code` already generates per-language scripts. |
+| Chat demo enhancements | Not started | Plan below (2026-11-02). |
 | Ecosystem outreach | Not started | cansim maintainers, MountainMath (CMHC, canivt), OSI Data Analyst Network, Edmonton Data Society, Vancouver group, NRCan (Torben), SFU Economics. |
+
+### Chat demo enhancements
+
+The chat demo (`chat/`) is the first thing many visitors try, and today it shows an
+answer and a collapsed list of tool calls. Everything that sets MapleStats apart (the
+citation, the unit and members, the caveats, the reproduction code) is in the tool
+results but never reaches the page. Ordered by value to a visitor:
+
+| Step | What the visitor gets | Notes |
+|---|---|---|
+| 1. Source cards | Under each answer, one card per series used: table number and title linked to the StatCan page, series title, unit, geography, reference period and release date, and the caveats that applied. | Read from `context` and `provenance.caveats` in the tool results (added 2026-11-02); no new server work. |
+| 2. Chart of the data | A small line or bar chart of each series the answer used, with the values the model saw. | Eurostat Assistant (ainergy-hub, Nov 2026) shows charts in its chat; draw them from the tool results, never from the answer text. |
+| 3. "Get the code" and "Download Excel" | Buttons that return the R, Python, Stata or Julia script, or the Excel workbook, for the calls behind the answer. | `reproduce_code` and `reproduce_workbook` already exist; the page passes the recorded tool name and arguments. |
+| 4. Figure check | Each number in the answer is matched against the values the tools returned, and a mark says whether it matches, is computed from them (with the formula), or was not found in any result. | CanData's citation verifier checks stated figures against the source before an answer leaves its agent; here the check can run on the tool results already in hand, with no extra upstream calls. |
+| 5. French interface | The page, buttons and limits messages in French when the browser or a toggle asks for it. | The server already answers in French with `lang="fr"`. |
+| 6. Example questions that show the traps | Starter questions where the right answer depends on a distinction: constant vs current dollars, annual average vs December over December, a series that does not exist. | Taken from the CanData GTA benchmark write-up ([`findings/candata-gta-benchmark.md`](findings/candata-gta-benchmark.md)). |
+| 7. Benchmark the chat itself | Run the 15 GTA questions through the chat's own model and prompt (Claude Haiku 5.5 by default), and record the score next to the Sonnet result. | A cheaper model is what visitors see; its score is the honest one to publish for the demo. |
+
+Constraints that stay: the per-address and daily limits, the spend cap, and no logging of
+questions or answers.
 
 ## Directories
 

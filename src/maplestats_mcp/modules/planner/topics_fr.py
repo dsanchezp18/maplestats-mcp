@@ -948,6 +948,46 @@ FR: dict[str, str] = {
     "Check each dataset's licence before reusing it.": (
         "Vérifiez la licence de chaque jeu de données avant de le réutiliser."
     ),
+    # Income
+    "Income: median and average family, household and individual income": (
+        "Revenu : revenu médian et moyen des familles, des ménages et des particuliers"
+    ),
+    "median or average after-tax (or total, market) income of economic families and "
+    "persons not in an economic family, by CMA and province, in constant dollars: "
+    "product_id=11-10-0190, coordinate from its members (Geography, Income concept, "
+    "Economic family type; wds_get_cube_metadata lists them)": (
+        "revenu après impôt (ou total, ou du marché) médian ou moyen des familles "
+        "économiques et des personnes hors famille économique, par RMR et province, en "
+        "dollars constants : product_id=11-10-0190, coordinate selon ses membres (Géographie, "
+        "Concept de revenu, Type de famille économique ; wds_get_cube_metadata les liste)"
+    ),
+    "income of individuals (per person aged 15 and over): table 11-10-0239 or "
+    "11-10-0238; other income tables by title words": (
+        "revenu des particuliers (par personne de 15 ans et plus) : tableau 11-10-0239 ou "
+        "11-10-0238 ; les autres tableaux du revenu par mots du titre"
+    ),
+    "census household income (2021 Census: income year 2020) for small areas: level, "
+    "geography_codes (DGUIDs from statcan_census_profile_search_geography) and "
+    "characteristic_codes": (
+        "revenu des ménages du recensement (Recensement de 2021 : année de revenu 2020) pour "
+        "les petites régions : level, geography_codes (DGUID tirés de "
+        "statcan_census_profile_search_geography) et characteristic_codes"
+    ),
+    "Pick the unit the question names: economic families and persons not in an "
+    "economic family (11-10-0190) is per family or person living alone; individuals "
+    "(11-10-0238, 11-10-0239) is per person and much lower. 11-10-0190 is in constant "
+    "dollars of its latest year, so its growth is real growth.": (
+        "Prenez l'unité que la question nomme : les familles économiques et personnes hors "
+        "famille économique (11-10-0190) se comptent par famille ou personne seule ; les "
+        "particuliers (11-10-0238, 11-10-0239) se comptent par personne, avec des montants "
+        "bien plus bas. 11-10-0190 est en dollars constants de sa dernière année : sa "
+        "croissance est réelle."
+    ),
+    "Use the same year for income and anything it is compared with, such as rent; "
+    "2021 Census income refers to 2020.": (
+        "Utilisez la même année pour le revenu et ce à quoi on le compare, comme le loyer ; "
+        "le revenu du Recensement de 2021 porte sur 2020."
+    ),
     # Building permits
     "Building permits and construction": "Permis de bâtir et construction",
     "StatCan building permits by type of structure and type of work, monthly, for "

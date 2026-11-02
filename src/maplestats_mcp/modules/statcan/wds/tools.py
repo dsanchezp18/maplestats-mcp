@@ -13,7 +13,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.statcan.wds import client, constants, transforms, vintage
+from maplestats_mcp.modules.statcan.wds import client, constants, context, transforms, vintage
 from maplestats_mcp.modules.statcan.wds.client import CodeSetCategory
 from maplestats_mcp.modules.statcan.wds.schemas import (
     ChangedCubeList,
@@ -29,11 +29,27 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
 )
 from maplestats_mcp.shared.envelope import raise_error
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform
 
 Lang = Literal["en", "fr"]
 # An 8-digit productId, or the table number as StatCan prints it.
 ProductId = int | str
+
+
+async def _described[R: (VectorData, VectorDataSet)](result: R) -> R:
+    """`result` with each series' context (table, title, unit, members, notes) filled."""
+    if isinstance(result, VectorDataSet):
+        series, note = await context.describe(list(result.series))
+        update: dict[str, object] = {"series": series}
+    else:
+        described, note = await context.describe([result])
+        update = {"context": described[0].context}
+    if note:
+        update["provenance"] = result.provenance.model_copy(
+            update={"limits": join_limits(result.provenance.limits, note)}
+        )
+    return result.model_copy(update=update)
 
 
 @tool
@@ -223,7 +239,9 @@ async def wds_get_data_from_vectors(
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
     if not request.active:
-        return await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
+        return await _described(
+            await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
+        )
     if latest_n < 1:
         raise_error(InvalidInput, "error.invalid_input", lang, detail="latest_n must be 1 or more.")
     infos = await transforms.series_infos(vector_ids)
@@ -236,7 +254,7 @@ async def wds_get_data_from_vectors(
     provenance = data.provenance.model_copy(
         update={"coverage": transforms.coverage_note(f"latestN={fetch_n}")}
     )
-    return data.model_copy(update={"series": series, "provenance": provenance})
+    return await _described(data.model_copy(update={"series": series, "provenance": provenance}))
 
 
 @tool
@@ -284,8 +302,10 @@ async def wds_get_data_from_cube_coord(
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
     if not request.active:
-        return await client.get_data_from_cube_pid_coord_and_latest_n_periods(
-            product_id, coordinate, latest_n
+        return await _described(
+            await client.get_data_from_cube_pid_coord_and_latest_n_periods(
+                product_id, coordinate, latest_n
+            )
         )
     if latest_n < 1:
         raise_error(InvalidInput, "error.invalid_input", lang, detail="latest_n must be 1 or more.")
@@ -298,12 +318,14 @@ async def wds_get_data_from_cube_coord(
     provenance = data.provenance.model_copy(
         update={"coverage": transforms.coverage_note(f"latestN={fetch_n}")}
     )
-    return data.model_copy(
-        update={
-            "observations": result.observations,
-            "transformed": result.transformed,
-            "provenance": provenance,
-        }
+    return await _described(
+        data.model_copy(
+            update={
+                "observations": result.observations,
+                "transformed": result.transformed,
+                "provenance": provenance,
+            }
+        )
     )
 
 
@@ -369,8 +391,10 @@ async def wds_get_bulk_vector_data_by_range(
     chronologiques.
     """
     client.use_lang(lang)
-    return await client.get_bulk_vector_data_by_range(
-        vector_ids, start_release_datetime, end_release_datetime
+    return await _described(
+        await client.get_bulk_vector_data_by_range(
+            vector_ids, start_release_datetime, end_release_datetime
+        )
     )
 
 
@@ -423,8 +447,10 @@ async def wds_get_data_by_reference_period_range(
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
     if not request.active:
-        return await client.get_data_from_vector_by_reference_period_range(
-            vector_ids, start_ref_period, end_ref_period
+        return await _described(
+            await client.get_data_from_vector_by_reference_period_range(
+                vector_ids, start_ref_period, end_ref_period
+            )
         )
     start = date.fromisoformat(client._ref_period(start_ref_period, "start_ref_period", end=False))
     end = date.fromisoformat(client._ref_period(end_ref_period, "end_ref_period", end=True))
@@ -442,7 +468,7 @@ async def wds_get_data_by_reference_period_range(
     provenance = data.provenance.model_copy(
         update={"coverage": transforms.coverage_note(f"{fetch_start.isoformat()} to {end}")}
     )
-    return data.model_copy(update={"series": series, "provenance": provenance})
+    return await _described(data.model_copy(update={"series": series, "provenance": provenance}))
 
 
 @tool
@@ -499,9 +525,11 @@ async def wds_get_changed_series_data(
     client.use_lang(lang)
     _vector_or_coord("wds_get_changed_series_data", vector_id, product_id, coordinate, lang)
     if vector_id is not None:
-        return await client.get_changed_series_data_from_vector(vector_id)
+        return await _described(await client.get_changed_series_data_from_vector(vector_id))
     assert product_id is not None and coordinate is not None
-    return await client.get_changed_series_data_from_cube_pid_coord(product_id, coordinate)
+    return await _described(
+        await client.get_changed_series_data_from_cube_pid_coord(product_id, coordinate)
+    )
 
 
 @tool

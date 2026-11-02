@@ -2353,6 +2353,72 @@ TAXATION = Topic(
         "Check each dataset's licence before reusing it.",
     ),
 )
+# Income tables, checked live with WDS getCubeMetadata on 2026-11-02. Questions about
+# median income used to get no StatCan step: 11-10-0190's title has no 'median'.
+INCOME = Topic(
+    "income",
+    "Income: median and average family, household and individual income",
+    (
+        "median income",
+        "median after-tax income",
+        "after-tax income",
+        "household income",
+        "family income",
+        "income of individuals",
+        "individual income",
+        "revenu median",
+        "revenu apres impot",
+        "revenu des menages",
+        "revenu des familles",
+        "revenu des particuliers",
+    ),
+    (
+        PlanStep(
+            "wds_get_data_from_cube_coord",
+            "median or average after-tax (or total, market) income of economic families and "
+            "persons not in an economic family, by CMA and province, in constant dollars: "
+            "product_id=11-10-0190, coordinate from its members (Geography, Income concept, "
+            "Economic family type; wds_get_cube_metadata lists them)",
+            (
+                "median income",
+                "median after-tax income",
+                "after-tax income",
+                "household income",
+                "family income",
+                "revenu median",
+                "revenu apres impot",
+                "revenu des menages",
+                "revenu des familles",
+            ),
+        ),
+        PlanStep(
+            "wds_search_cubes",
+            "income of individuals (per person aged 15 and over): table 11-10-0239 or "
+            "11-10-0238; other income tables by title words",
+            ("income of individuals", "individual income", "revenu des particuliers"),
+        ),
+        PlanStep(
+            "statcan_census_profile_get_data",
+            "census household income (2021 Census: income year 2020) for small areas: level, "
+            "geography_codes (DGUIDs from statcan_census_profile_search_geography) and "
+            "characteristic_codes",
+            ("census", "recensement"),
+        ),
+    ),
+    (
+        (
+            "Pick the unit the question names: economic families and persons not in an "
+            "economic family (11-10-0190) is per family or person living alone; individuals "
+            "(11-10-0238, 11-10-0239) is per person and much lower. 11-10-0190 is in constant "
+            "dollars of its latest year, so its growth is real growth."
+        ),
+        (
+            "Use the same year for income and anything it is compared with, such as rent; "
+            "2021 Census income refers to 2020."
+        ),
+    ),
+)
+
 TOPICS = (
     *TOPICS,
     EMISSIONS,
@@ -2363,6 +2429,7 @@ TOPICS = (
     FORESTRY,
     HEALTH_PRODUCTS,
     TAXATION,
+    INCOME,
 )
 
 # Administrative records: permits, licences, inspections and planning applications.

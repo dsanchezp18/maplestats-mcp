@@ -16,7 +16,7 @@ async def test_every_module_tool_has_accurate_annotations():
     for tool in await mcp._list_tools():
         annotations = tool.annotations
         assert annotations is not None, tool.name
-        writes_file = tool.name == "reproduce_workbook" and config.get_transport() == "stdio"
+        writes_file = tool.name == "reproduce_workbook" and config.local_exports_enabled()
         assert annotations.read_only_hint is not writes_file, tool.name
         assert annotations.destructive_hint is writes_file, tool.name
         assert annotations.idempotent_hint is not writes_file, tool.name
@@ -29,7 +29,7 @@ async def test_visible_search_tools_are_annotated():
         annotations = visible[name]
         assert annotations is not None, name
         assert annotations.read_only_hint is (
-            name != "call_tool" or config.get_transport() != "stdio"
+            name != "call_tool" or not config.local_exports_enabled()
         ), name
         if name != "call_tool":
             assert annotations.open_world_hint is False, name

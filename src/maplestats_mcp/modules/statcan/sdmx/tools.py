@@ -12,10 +12,35 @@ from fastmcp.tools import tool
 
 from maplestats_mcp.modules.statcan.sdmx import client
 from maplestats_mcp.modules.statcan.sdmx.schemas import SdmxData, SdmxOrKey, SdmxStructure
+from maplestats_mcp.modules.statcan.wds import client as wds_client
+from maplestats_mcp.modules.statcan.wds import context
 from maplestats_mcp.modules.statcan.wds.transforms import TransformRequest
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform
 
 Lang = Literal["en", "fr"]
+
+
+async def _described(data: SdmxData, lang: str) -> SdmxData:
+    """`data` with each series' context (table, title, unit label, members, notes).
+
+    SDMX gives the unit only as a code (UOM "455"); an agent reading 11-10-0190
+    through it could not tell it was in constant dollars.
+    """
+    wds_client.use_lang(lang)
+    ids = [s.vector_id for s in data.series if s.vector_id]
+    empty = {s.vector_id for s in data.series if s.vector_id and not s.observations}
+    found, note = await context.describe_vectors(ids, empty)
+    series = [
+        s.model_copy(update={"context": found.get(s.vector_id)}) if s.vector_id else s
+        for s in data.series
+    ]
+    update: dict[str, object] = {"series": series}
+    if note:
+        update["provenance"] = data.provenance.model_copy(
+            update={"limits": join_limits(data.provenance.limits, note)}
+        )
+    return data.model_copy(update=update)
 
 
 @tool
@@ -125,7 +150,7 @@ async def sdmx_get_data(
     annuelle, variation en pourcentage, taux de croissance, moyenne
     annuelle, moyenne mobile, cote de qualité.
     """
-    return await client.get_data(
+    data = await client.get_data(
         product_id,
         key,
         start_period=start_period,
@@ -134,6 +159,7 @@ async def sdmx_get_data(
         lang=lang,
         request=TransformRequest(transform, frequency, aggregation, index_base, window),
     )
+    return await _described(data, lang)
 
 
 @tool
@@ -178,7 +204,7 @@ async def sdmx_get_vector_data(
     annuelle, taux d'inflation, taux de croissance, moyenne annuelle,
     moyenne mobile.
     """
-    return await client.get_vector_data(
+    data = await client.get_vector_data(
         vector_id,
         start_period=start_period,
         end_period=end_period,
@@ -186,3 +212,4 @@ async def sdmx_get_vector_data(
         lang=lang,
         request=TransformRequest(transform, frequency, aggregation, index_base, window),
     )
+    return await _described(data, lang)

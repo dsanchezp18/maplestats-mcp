@@ -12,7 +12,7 @@ import json
 import httpx
 import pytest
 
-from maplestats_mcp.modules.statcan.wds import client, constants, tools
+from maplestats_mcp.modules.statcan.wds import client, constants, context, tools
 
 # CPI all-items, 2025-07 to 2026-09 (15 months, as latestN=15 returns them).
 CPI = [
@@ -33,6 +33,17 @@ CPI = [
     ("2026-09-01", 170.0),
 ]
 RATE = [("2026-06-01", 6.5), ("2026-07-01", 6.4), ("2026-08-01", 6.4), ("2026-09-01", 6.5)]
+
+
+@pytest.fixture(autouse=True)
+def _no_series_context(monkeypatch):
+    """These tests count the observation requests; series context (its own
+    metadata reads) is covered in tests/test_wds_context.py."""
+
+    async def passthrough(series):
+        return series, None
+
+    monkeypatch.setattr(context, "describe", passthrough)
 
 
 def _fn(t):
