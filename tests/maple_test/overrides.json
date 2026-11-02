@@ -1,11 +1,11 @@
 {
   "maplestats/M-15": {
     "outcome": "partial",
-    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for both MCP arms, whose answers match."
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for every MCP arm, whose answers match."
   },
   "mcp_statcan/M-15": {
     "outcome": "partial",
-    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for both MCP arms, whose answers match."
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for every MCP arm, whose answers match."
   },
   "mcp_statcan/M-09": {
     "outcome": "partial",
@@ -34,5 +34,17 @@
   "no_tools/M-12": {
     "outcome": "abstained",
     "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures."
+  },
+  "pipeworx/M-15": {
+    "outcome": "partial",
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for every MCP arm, whose answers match."
+  },
+  "pipeworx/M-10": {
+    "outcome": "partial",
+    "reason": "Gave not seasonally adjusted average weekly earnings from table 14-10-0203-01 (v1558664: $1,355.29, +3.8%) instead of the seasonally adjusted headline in 14-10-0223-01 ($1,354.55, +3.7%, v79311153). A real series for a different adjustment, and the answer says which one it used."
+  },
+  "pipeworx/M-04": {
+    "outcome": "abstained",
+    "reason": "Pipeworx's connection dropped and asked to re-authenticate, so no figures were fetched; the answer declined honestly. A single retry of this question (runs/retries/) answered correctly (Alberta 1.52%, Ontario 0.28%); the score keeps the official run."
   }
 }

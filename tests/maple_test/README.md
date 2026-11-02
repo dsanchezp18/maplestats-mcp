@@ -68,17 +68,24 @@ All three arms on `claude-sonnet-5-5`, MapleStats at `main` (`11fcb84`). Full ta
 | :-- | --: | --: | --: | --: |
 | MapleStats | 14 | 1 | 0 | 0 |
 | mcp-statcan | 12 | 2 | 1 | 0 |
+| Pipeworx (StatCan and Bank of Canada servers) | 12 | 2 | 1 | 0 |
 | No tools | 2 | 0 | 13 | 0 |
 
-- MapleStats' one miss, M-15, is shared with mcp-statcan: both did the mixed 2021/2026
-  calculation first and flagged it after, without fetching the survey's own count.
+- MapleStats' one miss, M-15, is shared with both other servers: each did the mixed
+  2021/2026 calculation first and flagged it after, without fetching the survey's own count.
+- Pipeworx gave not seasonally adjusted earnings from another table (M-10), and its
+  connection dropped on M-04 and asked to re-authenticate; a single retry of M-04
+  (`runs/retries/`) answered correctly, but the score keeps the official run.
 - mcp-statcan gave the customs-basis trade balance (M-09) and declined the October 30
   exchange rate because the StatCan table it read stopped at October 29 (M-11).
 - MapleStats got M-06 (2025 inflation) right by averaging the monthly CPI itself rather
   than reading the annual table; the published figure and its rounding happened to agree.
 - The no-tools arm's 93% table citations are tables named from memory, not checked.
-- Nine automatic grades were wrong and are re-graded by hand; the reasons are in
+- Twelve automatic grades were wrong and are re-graded by hand; the reasons are in
   `overrides.json`.
+- Four other Canadian data servers (mcp-canada, arose26's statcan-mcp and
+  bank-of-canada-mcp, OpenMCP, CanData-MCP) have no hosted endpoint and were not run:
+  they have to be installed locally.
 
 ## Shelf life
 
