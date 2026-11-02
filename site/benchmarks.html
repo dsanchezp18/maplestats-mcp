@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}How we test MapleStats{fr}Comment nous testons MapleStats{/} · MapleStats MCP</title>
+<meta name="description" content="{en}MapleStats against other tools on two public 15-question benchmarks of Canadian statistics: the method, the results, and their limits.{fr}MapleStats face à d'autres outils sur deux bancs d'essai publics de 15 questions sur la statistique canadienne : la méthode, les résultats et leurs limites.{/}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Benchmarks{fr}Bancs d'essai{/}</p>
+  <h1>{en}How we test MapleStats{fr}Comment nous testons MapleStats{/}</h1>
+  <p class="lede">{en}An AI assistant with a data tool can still give the wrong number, cite the wrong table or invent a figure that does not exist. We measure how often, on public question sets with answer keys read from Statistics Canada and the Bank of Canada, and we publish every answer.{fr}Un assistant IA muni d'un outil de données peut encore donner le mauvais chiffre, citer le mauvais tableau ou inventer un chiffre qui n'existe pas. Nous mesurons à quelle fréquence, sur des ensembles de questions publics dont les corrigés viennent de Statistique Canada et de la Banque du Canada, et nous publions chaque réponse.{/}</p>
+</section>
+
+<section class="wrap faq" id="method">
+  <div class="faq-group">
+    <h2 class="faq-h">{en}The method{fr}La méthode{/}</h2>
+    <div class="faq-body">
+    <ul>
+      <li>{en}Every tool answers the same questions with the same AI model (Claude Sonnet 5.5), the same instructions and the same setup. Only the data access changes: MapleStats, the leading community StatCan server (mcp-statcan), or no data tool at all.{fr}Chaque outil répond aux mêmes questions avec le même modèle d'IA (Claude Sonnet 5.5), les mêmes consignes et la même configuration. Seul l'accès aux données change : MapleStats, le principal serveur communautaire de Statistique Canada (mcp-statcan), ou aucun outil de données.{/}</li>
+      <li>{en}Each answer is graded correct, partial, abstained (it declined) or hallucinated (a figure that does not match the official data, or one that does not exist). A program grades first; a person then reads every answer that is not correct, and each re-grade is published with its reason.{fr}Chaque réponse est jugée juste, partielle, abstention (elle a décliné) ou hallucination (un chiffre qui ne correspond pas aux données officielles, ou qui n'existe pas). Un programme note d'abord; une personne lit ensuite chaque réponse qui n'est pas juste, et chaque correction est publiée avec sa raison.{/}</li>
+      <li>{en}Some questions are traps: a series that is not published, a date with no data, or a calculation that mixes years. Declining is not counted as an error; inventing a number is.{fr}Certaines questions sont des pièges : une série non publiée, une date sans données ou un calcul qui mélange les années. Décliner n'est pas compté comme une erreur; inventer un chiffre l'est.{/}</li>
+    </ul>    </div>
+  </div>
+
+  <div class="faq-group" id="maple-test">
+    <h2 class="faq-h">{en}The Maple Test (November 2026){fr}Le Maple Test (novembre 2026){/}</h2>
+    <div class="faq-body">
+    <p>{en}Fifteen questions on labour, population, prices, output, trade, wages and markets, written before MapleStats was run on them, with two questions about figures that do not exist and one that asks for a misleading calculation.{fr}Quinze questions sur le travail, la population, les prix, la production, le commerce, les salaires et les marchés, écrites avant que MapleStats n'y soit soumis, dont deux portent sur des chiffres qui n'existent pas et une demande un calcul trompeur.{/}</p>
+    <div class="table-wrap"><table class="params bench">
+      <caption class="sr">{en}Maple Test results by tool{fr}Résultats du Maple Test par outil{/}</caption>
+      <thead><tr><th>{en}Tool{fr}Outil{/}</th><th>{en}Correct{fr}Justes{/}</th><th>{en}Partial{fr}Partielles{/}</th><th>{en}Declined{fr}Abstentions{/}</th><th>{en}Invented figures{fr}Chiffres inventés{/}</th></tr></thead>
+      <tbody>
+        <tr><td><b>MapleStats</b></td><td><b>14</b></td><td>1</td><td>0</td><td>0</td></tr>
+        <tr><td>mcp-statcan</td><td>12</td><td>2</td><td>1</td><td>0</td></tr>
+        <tr><td>{en}No data tool{fr}Aucun outil{/}</td><td>2</td><td>0</td><td>13</td><td>0</td></tr>
+      </tbody>
+    </table></div>
+    <p>{en}Answer key, every answer and every re-grade: <a href="https://github.com/dsanchezp18/maplestats-mcp/tree/main/tests/maple_test">tests/maple_test</a>.{fr}Corrigé, chaque réponse et chaque correction : <a href="https://github.com/dsanchezp18/maplestats-mcp/tree/main/tests/maple_test">tests/maple_test</a>.{/}</p>    </div>
+  </div>
+
+  <div class="faq-group" id="candata">
+    <h2 class="faq-h">{en}CanData's Toronto housing benchmark (October 2026){fr}Le banc d'essai de CanData sur le logement à Toronto (octobre 2026){/}</h2>
+    <div class="faq-body">
+    <p>{en}Fifteen questions on rents, vacancy, housing starts, prices, income and inflation in the Greater Toronto Area, built and published by the CanData team, who also ran the other tools. MapleStats was run through their own harness and grader.{fr}Quinze questions sur les loyers, l'inoccupation, les mises en chantier, les prix, le revenu et l'inflation dans la région du Grand Toronto, conçues et publiées par l'équipe de CanData, qui a aussi soumis les autres outils. MapleStats y a été soumis avec leur propre programme d'essai et de notation.{/}</p>
+    <div class="table-wrap"><table class="params bench">
+      <caption class="sr">{en}CanData benchmark results by tool{fr}Résultats du banc d'essai de CanData par outil{/}</caption>
+      <thead><tr><th>{en}Tool{fr}Outil{/}</th><th>{en}Correct{fr}Justes{/}</th></tr></thead>
+      <tbody>
+        <tr><td><b>MapleStats</b></td><td><b>14</b></td></tr>
+        <tr><td>mcp-statcan</td><td>11</td></tr>
+        <tr><td>CanData-MCP</td><td>3</td></tr>
+        <tr><td>{en}No data tool{fr}Aucun outil{/}</td><td>2 {en}to{fr}à{/} 3</td></tr>
+      </tbody>
+    </table></div>
+    <p>{en}MapleStats scored 10 before the fixes these questions showed were needed, and 14 after. Write-up: <a href="https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/findings/candata-gta-benchmark.md">candata-gta-benchmark.md</a>. The benchmark itself: <a href="https://github.com/neobenjax/Canadian-Open-Data-Agentic-Platform">Canadian Open Data Agentic Platform</a>.{fr}MapleStats a obtenu 10 avant les corrections que ces questions ont révélées, et 14 après. Compte rendu : <a href="https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/findings/candata-gta-benchmark.md">candata-gta-benchmark.md</a>. Le banc d'essai lui-même : <a href="https://github.com/neobenjax/Canadian-Open-Data-Agentic-Platform">Canadian Open Data Agentic Platform</a>.{/}</p>    </div>
+  </div>
+
+  <div class="faq-group" id="limits">
+    <h2 class="faq-h">{en}What these results do not show{fr}Ce que ces résultats ne montrent pas{/}</h2>
+    <div class="faq-body">
+    <ul>
+      <li>{en}Each tool answered each question once; run-to-run variation is not measured.{fr}Chaque outil a répondu une fois à chaque question; la variation d'une exécution à l'autre n'est pas mesurée.{/}</li>
+      <li>{en}Thirty questions cover a small part of Canadian statistics. A new question set will follow each round of fixes, so a score never rests on questions MapleStats was tuned against.{fr}Trente questions couvrent une petite partie de la statistique canadienne. Un nouvel ensemble de questions suivra chaque série de corrections, pour qu'un résultat ne repose jamais sur des questions ayant servi à ajuster MapleStats.{/}</li>
+      <li>{en}A different AI model, or the cheaper model behind the chat demo, can score differently.{fr}Un autre modèle d'IA, ou le modèle moins coûteux de la démo de conversation, peut obtenir un autre résultat.{/}</li>
+    </ul>    </div>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

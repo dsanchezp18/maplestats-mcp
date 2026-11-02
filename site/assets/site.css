@@ -4927,6 +4927,18 @@ html:not(.js) .chips {
   border-color: var(--ink-3);
 }
 
+/* A group whose content is several blocks (text, a table): one column beside the heading. */
+.faq-body {
+  display: grid;
+  gap: 12px;
+}
+
+.params.bench td:not(:first-child),
+.params.bench th:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .faq p {
   margin: 0;
   color: var(--ink-2);
