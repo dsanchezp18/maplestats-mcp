@@ -7,7 +7,8 @@
 #          connector runs the tool loop) or "openai" (any OpenAI-compatible API,
 #          such as DeepSeek, GLM or Kimi; this app runs the tool loop).
 # Inputs:  POST /api/chat with the conversation so far
-# Outputs: JSON with the answer and the MCP tool calls the model made
+# Outputs: JSON with the answer, the MCP tool calls the model made, and the
+#          series and sources those calls returned (drawn by the page)
 # ============================================================
 
 import json
@@ -29,6 +30,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import ClientDisconnect, Request
 from starlette.responses import FileResponse, JSONResponse
 from starlette.routing import Route
+
+import results
 
 # 0. Setup ----
 
@@ -226,6 +229,9 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
     """Let Anthropic's MCP connector call the public MapleStats server."""
     conversation: list[dict[str, Any]] = list(messages)
     tools_used: list[dict[str, Any]] = []
+    # (tool name, result text) for every successful call, in order, for the page.
+    returned: list[tuple[str, Any]] = []
+    names: dict[str, str] = {}
     tool_errors = 0
     model_calls = 0
     billed = False
@@ -248,11 +254,16 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
                 model_calls += 1
                 for block in response.content:
                     if block.type == "mcp_tool_use":
-                        tools_used.append(describe_call(block.name, block.input))
-                    elif block.type == "mcp_tool_result" and getattr(
-                        block, "is_error", False
-                    ):
-                        tool_errors += 1
+                        call = describe_call(block.name, block.input)
+                        tools_used.append(call)
+                        names[str(getattr(block, "id", ""))] = call["name"]
+                    elif block.type == "mcp_tool_result":
+                        if getattr(block, "is_error", False):
+                            tool_errors += 1
+                        else:
+                            name = names.get(str(getattr(block, "tool_use_id", "")), "")
+                            content = getattr(block, "content", None)
+                            returned.append((name, results.text_of(content)))
                 # pause_turn means the server paused a long turn; resume it unchanged.
                 if response.stop_reason != "pause_turn":
                     break
@@ -280,7 +291,7 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
         answer = answer + CUT_OFF_NOTE if answer else LENGTH_LIMIT_ANSWER
     elif not answer and tool_errors:
         answer = DATA_SERVER_ANSWER
-    return {"answer": answer, "tools_used": tools_used}
+    return {"answer": answer, "tools_used": tools_used, **results.collect(returned)}
 
 
 _openai_tools: list[dict[str, Any]] = []
@@ -316,6 +327,7 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
         *messages,
     ]
     tools_used: list[dict[str, Any]] = []
+    returned: list[tuple[str, Any]] = []
     billed = False
 
     try:
@@ -337,18 +349,27 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
                 billed = True
                 message = response.choices[0].message
                 if not message.tool_calls:
-                    return {"answer": message.content or "", "tools_used": tools_used}
+                    return {
+                        "answer": message.content or "",
+                        "tools_used": tools_used,
+                        **results.collect(returned),
+                    }
 
                 conversation.append(message.model_dump(exclude_none=True))
                 for call in message.tool_calls:
                     arguments = parse_arguments(call.function.arguments)
-                    tools_used.append(describe_call(call.function.name, arguments))
+                    described = describe_call(call.function.name, arguments)
+                    tools_used.append(described)
                     result = await mcp.call_tool(
                         call.function.name, arguments, raise_on_error=False
                     )
                     text = "\n".join(
                         part.text for part in result.content if hasattr(part, "text")
                     )
+                    if not result.is_error:
+                        returned.append(
+                            (described["name"], result.structured_content or text)
+                        )
                     conversation.append(
                         {
                             "role": "tool",
@@ -359,7 +380,11 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
     except Exception as error:  # reported with whether it cost money
         raise BackendFailure(billed) from error
 
-    return {"answer": STEP_LIMIT_ANSWER, "tools_used": tools_used}
+    return {
+        "answer": STEP_LIMIT_ANSWER,
+        "tools_used": tools_used,
+        **results.collect(returned),
+    }
 
 
 async def ask_model(messages: list[dict[str, str]]) -> dict[str, Any]:

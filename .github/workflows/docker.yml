@@ -38,3 +38,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: docker build -t maplestats-chat -f chat/Dockerfile chat
+      # Building is not enough: an image that misses a module (results.py, 2026-11-02)
+      # builds fine and fails only when Render starts it.
+      - name: The image starts and answers /health
+        run: |
+          docker run -d --name chat -p 10000:10000 maplestats-chat
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:10000/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs chat
+          exit 1
