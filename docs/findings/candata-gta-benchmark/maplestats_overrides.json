@@ -1,0 +1,38 @@
+{
+  "maplestats_before/claude-sonnet-5-5/GT-07": {
+    "outcome": "partial",
+    "reason": "Rent right ($1,972 x 12 = $23,664, v3823103). Income from individuals' median after-tax income ($38,600, 11-10-0238-01) instead of economic families and persons not in an economic family ($82,500, v96415851). Disclosed, but a different concept. Same re-grade CanData gave mcp-statcan's GT-07."
+  },
+  "maplestats_before/claude-sonnet-5-5/GT-11": {
+    "outcome": "partial",
+    "reason": "Right call (Toronto lower) on the annual-average basis, but it averaged the monthly table by hand (Toronto 2.2%, Canada 3.1%) instead of reading the published annual-average table 18-10-0005-01 (2.1%, 3.0%). 0.1 pp off each; the automatic grade's miss is partly a floating-point edge at exactly 0.1."
+  },
+  "maplestats_before/claude-sonnet-5-5/GT-14": {
+    "outcome": "partial",
+    "reason": "Declined the Toronto figure, but hedged ('may be a limit of my lookup'), and its national alternative was December-to-December (+1.7%) instead of the annual average (+5.3%, v41693354)."
+  },
+  "maplestats_before/claude-sonnet-5-5/GT-15": {
+    "outcome": "correct",
+    "reason": "Gave no 1985 figure and said 1985 is before the table's coverage. The automatic grade read '027-0040' (the old CANSIM number) as a figure.",
+    "false_claim": "Says the earliest Toronto two-bedroom figure is for 1987. The table starts in 1987, but the Toronto two-bedroom series (v3823103) has values from 1992."
+  },
+  "maplestats_round2/claude-sonnet-5-5/GT-07": {
+    "outcome": "partial",
+    "reason": "Same as before: individuals' median after-tax income ($38,600, 11-10-0238-01) instead of economic families and persons not in an economic family ($82,500, v96415851). Rent right. Same re-grade CanData gave mcp-statcan's GT-07."
+  },
+  "maplestats_round2/claude-sonnet-5-5/GT-12": {
+    "outcome": "correct",
+    "reason": "Shelter -0.5% and all-items +2.1% year over year, both right, with shelter 'slightly lower than a year earlier'. The automatic pattern wants 'fell', 'declined' or 'down'."
+  },
+  "maplestats_round2/claude-sonnet-5-5/GT-15": {
+    "false_claim": "Again says the earliest Toronto two-bedroom figure is the 1987 value; the series (v3823103) has values from 1992. It did not fetch the series."
+  },
+  "maplestats_after/claude-sonnet-5-5/GT-12": {
+    "outcome": "correct",
+    "reason": "Shelter -0.5% and all-items +2.1% year over year, both right; says shelter was 'slightly lower than a year earlier'. The automatic pattern wants 'fell', 'declined' or 'down'."
+  },
+  "maplestats_after/claude-sonnet-5-5/GT-15": {
+    "outcome": "correct",
+    "reason": "Declines 1985, says 1987-1991 are 'not available' and the first published value is 1992 (true). The only dollar figure is the real 1992 value ($755, v3823103, checked live 2026-11-02), labelled as not a substitute for 1985. The automatic rule counts any dollar figure as an invented 1985 rent."
+  }
+}
