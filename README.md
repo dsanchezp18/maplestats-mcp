@@ -37,10 +37,11 @@ ouvertes canadiennes par un seul serveur, en français et en anglais.*
 
 ## Why MapleStats
 
-Built by a statistician, for economists, demographers, policy analysts and
-statisticians. MapleStats is designed around the mistakes analysts actually
-make with official data, and we test it against other tools on public
-benchmarks: [see how it does](https://maplestats.danielstats.io/benchmarks.html).
+Built by a statistician, for anyone who works with the numbers: economists,
+demographers, policy analysts, researchers, journalists, students, anyone who
+needs a Canadian figure they can trust and cite. MapleStats is designed around
+the mistakes people actually make with official data, and we test it against
+other tools on public benchmarks: [see how it does](https://maplestats.danielstats.io/benchmarks.html).
 
 - **It knows the traps.** Constant vs current dollars, family vs individual
   income, annual average vs December over December, survey rent vs listing
