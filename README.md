@@ -35,6 +35,31 @@ portals, in English and French. Every result carries its source.
 *MapleStats MCP donne aux agents IA un accès structuré aux données
 ouvertes canadiennes par un seul serveur, en français et en anglais.*
 
+## Why MapleStats
+
+Built by a statistician, for anyone who works with the numbers: economists,
+demographers, policy analysts, researchers, journalists, students, anyone who
+needs a Canadian figure they can trust and cite. MapleStats is designed around
+the mistakes people actually make with official data, and we test it against
+other tools on public benchmarks: [see how it does](https://maplestats.danielstats.io/benchmarks.html).
+
+- **It knows the traps.** Constant vs current dollars, family vs individual
+  income, annual average vs December over December, survey rent vs listing
+  rent: it warns in plain language, and each warning is checked against
+  StatCan's or CMHC's own documentation.
+- **Every number comes with its citation:** the table and series number, the
+  period, the release date, the unit, the geography and a link to the official
+  table.
+- **It says when data do not exist.** A series that is not published, a period
+  not released yet or a date with no data gets a plain no, and the nearest
+  figure that does exist.
+- **Your work stays reproducible.** It writes the R, Python, Stata or Julia
+  script, or the Excel query, that pulls the same data from the source.
+- **Quality flags and revisions, shown:** "use with caution", "too unreliable
+  to be published", preliminary and revised are spelled out on every value.
+- **It only reads, in English and French.** It never changes anything on your
+  computer.
+
 Project vision: [`docs/PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/PROJECT_GUIDE.md).
 Source coverage: [`docs/ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/ROADMAP.md).
 Website: <https://maplestats.danielstats.io/>.

@@ -1,0 +1,573 @@
+{
+  "benchmark": "maple_test_v1",
+  "built_at": "2026-11-02T22:35:16+00:00",
+  "sources": "Statistics Canada WDS and Bank of Canada Valet, read directly with httpx",
+  "questions": [
+    {
+      "id": "M-01",
+      "category": "Labour",
+      "eval_type": "numeric",
+      "question": "What was Canada's unemployment rate in September 2026, and how did it compare with September 2025?",
+      "expected": {
+        "rate_sep_2026_pct": 6.5,
+        "rate_sep_2025_pct": 7.1,
+        "change_pp": -0.6
+      },
+      "headline": [
+        "rate_sep_2026_pct",
+        "rate_sep_2025_pct"
+      ],
+      "tolerance": "±0.1 on rates; change in percentage points",
+      "citations": [
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062815",
+          "series_title": "Canada;Unemployment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "1.7.1.1.1.1",
+          "value": 6.5,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        },
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062815",
+          "series_title": "Canada;Unemployment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2025-09",
+          "coordinate": "1.7.1.1.1.1",
+          "value": 7.1,
+          "release_or_revision_date": "2026-04-10T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        }
+      ],
+      "traps": [
+        "Seasonally adjusted is the headline series; the unadjusted rate differs.",
+        "The change is in percentage points, not percent."
+      ]
+    },
+    {
+      "id": "M-02",
+      "category": "Labour",
+      "eval_type": "comparison",
+      "question": "Which province had the highest unemployment rate in September 2026, and what was it?",
+      "expected": {
+        "answer": "Newfoundland and Labrador",
+        "top_rate_pct": 9.1,
+        "second_province": "New Brunswick",
+        "second_rate_pct": 7.4
+      },
+      "headline": [
+        "top_rate_pct"
+      ],
+      "answer_pattern": "Newfoundland and Labrador",
+      "tolerance": "Correct province; rate ±0.1",
+      "citations": [
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2063004",
+          "series_title": "Newfoundland and Labrador;Unemployment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "2.7.1.1.1.1",
+          "value": 9.1,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        },
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2063571",
+          "series_title": "New Brunswick;Unemployment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "5.7.1.1.1.1",
+          "value": 7.4,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        }
+      ],
+      "traps": [
+        "Seasonally adjusted monthly estimates; territories are not in this table."
+      ]
+    },
+    {
+      "id": "M-03",
+      "category": "Population",
+      "eval_type": "numeric",
+      "question": "What was Canada's population on July 1, 2026, and how much did it grow over the previous year?",
+      "expected": {
+        "population_jul_2026": 41798407.0,
+        "population_jul_2025": 41608982.0,
+        "growth_persons": 189425.0,
+        "growth_pct": 0.5
+      },
+      "headline": [
+        "population_jul_2026"
+      ],
+      "tolerance": "Exact persons (rounding to the nearest thousand counts as partial); percentage ±0.1",
+      "citations": [
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v1",
+          "series_title": "Canada",
+          "reference_period": "2026-07",
+          "coordinate": "1",
+          "value": 41798407.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        },
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v1",
+          "series_title": "Canada",
+          "reference_period": "2025-07",
+          "coordinate": "1",
+          "value": 41608982.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        }
+      ],
+      "traps": [
+        "Quarterly estimates are revised; July 1 is the reference date, not the year."
+      ]
+    },
+    {
+      "id": "M-04",
+      "category": "Population",
+      "eval_type": "comparison",
+      "question": "Did Alberta or Ontario grow faster in population in the year to July 1, 2026? Give both growth rates.",
+      "expected": {
+        "answer": "Alberta",
+        "alberta_growth_pct": 1.5,
+        "ontario_growth_pct": 0.3
+      },
+      "headline": [
+        "alberta_growth_pct",
+        "ontario_growth_pct"
+      ],
+      "answer_pattern": "Alberta",
+      "tolerance": "Correct province; each rate ±0.1",
+      "citations": [
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v15",
+          "series_title": "Alberta",
+          "reference_period": "2026-07",
+          "coordinate": "10",
+          "value": 5101050.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        },
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v15",
+          "series_title": "Alberta",
+          "reference_period": "2025-07",
+          "coordinate": "10",
+          "value": 5024631.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        },
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v12",
+          "series_title": "Ontario",
+          "reference_period": "2026-07",
+          "coordinate": "7",
+          "value": 16262121.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        },
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v12",
+          "series_title": "Ontario",
+          "reference_period": "2025-07",
+          "coordinate": "7",
+          "value": 16216961.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        }
+      ],
+      "traps": [
+        "Growth in percent of each province's own population, not in persons."
+      ]
+    },
+    {
+      "id": "M-05",
+      "category": "Population",
+      "eval_type": "numeric",
+      "question": "How many non-permanent residents lived in Canada on July 1, 2026, and how did that compare with a year earlier?",
+      "expected": {
+        "npr_jul_2026": 2779774.0,
+        "npr_jul_2025": 2934388.0,
+        "change_persons": -154614.0,
+        "change_pct": -5.3
+      },
+      "headline": [
+        "npr_jul_2026",
+        "npr_jul_2025"
+      ],
+      "tolerance": "Exact persons; percentage ±0.1",
+      "citations": [
+        {
+          "table_id": "17-10-0121-01",
+          "vector_id": "v1566927590",
+          "series_title": "Canada;Total, non-permanent residents",
+          "reference_period": "2026-07",
+          "coordinate": "1.1",
+          "value": 2779774.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710012101"
+        },
+        {
+          "table_id": "17-10-0121-01",
+          "vector_id": "v1566927590",
+          "series_title": "Canada;Total, non-permanent residents",
+          "reference_period": "2025-07",
+          "coordinate": "1.1",
+          "value": 2934388.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710012101"
+        }
+      ],
+      "traps": [
+        "Non-permanent residents are a stock on a date, not a flow of new arrivals.",
+        "IRCC permit counts (holders of valid permits) differ from StatCan's estimate."
+      ]
+    },
+    {
+      "id": "M-06",
+      "category": "Prices",
+      "eval_type": "numeric",
+      "question": "What was Canada's inflation rate for 2025 as a whole?",
+      "expected": {
+        "inflation_2025_pct": 2.1,
+        "cpi_2025": 164.2,
+        "cpi_2024": 160.9
+      },
+      "headline": [
+        "inflation_2025_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0005-01",
+          "vector_id": "v41693271",
+          "series_title": "Canada;All-items",
+          "reference_period": "2025",
+          "coordinate": "2.2",
+          "value": 164.2,
+          "release_or_revision_date": "2026-01-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000501"
+        },
+        {
+          "table_id": "18-10-0005-01",
+          "vector_id": "v41693271",
+          "series_title": "Canada;All-items",
+          "reference_period": "2024",
+          "coordinate": "2.2",
+          "value": 160.9,
+          "release_or_revision_date": "2025-01-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000501"
+        }
+      ],
+      "traps": [
+        "The annual figure is the change in the annual average index, not December over December or the latest 12-month rate."
+      ]
+    },
+    {
+      "id": "M-07",
+      "category": "Prices",
+      "eval_type": "numeric",
+      "question": "What were the Bank of Canada's preferred core inflation measures, CPI-trim and CPI-median, in September 2026?",
+      "expected": {
+        "cpi_trim_pct": 1.8,
+        "cpi_median_pct": 1.9
+      },
+      "headline": [
+        "cpi_trim_pct",
+        "cpi_median_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0256-01",
+          "vector_id": "v108785715",
+          "series_title": "Canada;Measure of core inflation based on a trimmed mean approach, CPI-trim (year-over-year percent change)",
+          "reference_period": "2026-09",
+          "coordinate": "1.3",
+          "value": 1.8,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810025601"
+        },
+        {
+          "table_id": "18-10-0256-01",
+          "vector_id": "v108785714",
+          "series_title": "Canada;Measure of core inflation based on a weighted median approach, CPI-median (year-over-year percent change)",
+          "reference_period": "2026-09",
+          "coordinate": "1.2",
+          "value": 1.9,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810025601"
+        }
+      ],
+      "traps": [
+        "These are year-over-year rates already; do not compute a change from them.",
+        "Core measures are revised, so a figure from an earlier release may differ."
+      ]
+    },
+    {
+      "id": "M-08",
+      "category": "Output",
+      "eval_type": "numeric",
+      "question": "By how much did Canada's real GDP change in August 2026, from July?",
+      "expected": {
+        "change_pct": -0.0,
+        "gdp_aug_2026": 2371635.0,
+        "gdp_jul_2026": 2371788.0
+      },
+      "headline": [
+        "change_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "36-10-0434-01",
+          "vector_id": "v65201210",
+          "series_title": "Canada;Seasonally adjusted at annual rates;Chained (2017) dollars;All industries",
+          "reference_period": "2026-08",
+          "coordinate": "1.1.1.1",
+          "value": 2371635.0,
+          "release_or_revision_date": "2026-10-30T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610043401"
+        },
+        {
+          "table_id": "36-10-0434-01",
+          "vector_id": "v65201210",
+          "series_title": "Canada;Seasonally adjusted at annual rates;Chained (2017) dollars;All industries",
+          "reference_period": "2026-07",
+          "coordinate": "1.1.1.1",
+          "value": 2371788.0,
+          "release_or_revision_date": "2026-10-30T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610043401"
+        }
+      ],
+      "traps": [
+        "Real GDP is in chained (2017) dollars at seasonally adjusted annual rates; the level is not a monthly dollar amount.",
+        "StatCan's advance estimate for the next month is in The Daily, not this table."
+      ]
+    },
+    {
+      "id": "M-09",
+      "category": "Trade",
+      "eval_type": "numeric",
+      "question": "What was Canada's merchandise trade balance with the world in August 2026?",
+      "expected": {
+        "balance_aug_2026_millions": 4198.8,
+        "balance_jul_2026_millions": 786.6
+      },
+      "headline": [
+        "balance_aug_2026_millions"
+      ],
+      "tolerance": "±0.5 million dollars; the sign (surplus or deficit) must be right",
+      "citations": [
+        {
+          "table_id": "12-10-0011-01",
+          "vector_id": "v87008984",
+          "series_title": "Canada;Trade Balance;Balance of payments;Seasonally adjusted;All countries",
+          "reference_period": "2026-08",
+          "coordinate": "1.3.2.2.1",
+          "value": 4198.8,
+          "release_or_revision_date": "2026-10-06T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101"
+        },
+        {
+          "table_id": "12-10-0011-01",
+          "vector_id": "v87008984",
+          "series_title": "Canada;Trade Balance;Balance of payments;Seasonally adjusted;All countries",
+          "reference_period": "2026-07",
+          "coordinate": "1.3.2.2.1",
+          "value": 786.6,
+          "release_or_revision_date": "2026-10-06T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101"
+        }
+      ],
+      "traps": [
+        "Values are in millions of dollars.",
+        "The headline is the balance of payments basis, seasonally adjusted; the customs basis differs."
+      ]
+    },
+    {
+      "id": "M-10",
+      "category": "Labour",
+      "eval_type": "numeric",
+      "question": "What were average weekly earnings in Canada in August 2026, and how much did they rise over the year?",
+      "expected": {
+        "awe_aug_2026": 1354.55,
+        "awe_aug_2025": 1306.43,
+        "change_pct": 3.7
+      },
+      "headline": [
+        "awe_aug_2026"
+      ],
+      "tolerance": "±0.05 dollars; percentage ±0.1",
+      "citations": [
+        {
+          "table_id": "14-10-0223-01",
+          "vector_id": "v79311153",
+          "series_title": "Canada;Average weekly earnings including overtime for all employees;Industrial aggregate excluding unclassified businesses",
+          "reference_period": "2026-08",
+          "coordinate": "1.2.2",
+          "value": 1354.55,
+          "release_or_revision_date": "2026-10-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410022301"
+        },
+        {
+          "table_id": "14-10-0223-01",
+          "vector_id": "v79311153",
+          "series_title": "Canada;Average weekly earnings including overtime for all employees;Industrial aggregate excluding unclassified businesses",
+          "reference_period": "2025-08",
+          "coordinate": "1.2.2",
+          "value": 1306.43,
+          "release_or_revision_date": "2026-03-26T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410022301"
+        }
+      ],
+      "traps": [
+        "Average weekly earnings come from SEPH (payroll); the LFS average hourly wage is a different measure.",
+        "Industrial aggregate excluding unclassified businesses is the headline."
+      ]
+    },
+    {
+      "id": "M-11",
+      "category": "Markets",
+      "eval_type": "numeric",
+      "question": "What was the Bank of Canada's US dollar exchange rate on October 30, 2026?",
+      "expected": {
+        "usdcad_2026_10_30": 1.396
+      },
+      "headline": [
+        "usdcad_2026_10_30"
+      ],
+      "tolerance": "±0.00005 (four decimals)",
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "FXUSDCAD",
+          "reference_period": "2026-10-30",
+          "value": 1.396,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD"
+        }
+      ],
+      "traps": [
+        "Valet gives Canadian dollars per US dollar; the inverse is not quoted."
+      ]
+    },
+    {
+      "id": "M-12",
+      "category": "Markets",
+      "eval_type": "numeric",
+      "question": "What was the 10-year Government of Canada benchmark bond yield on October 30, 2026?",
+      "expected": {
+        "yield_10y_2026_10_30_pct": 3.78
+      },
+      "headline": [
+        "yield_10y_2026_10_30_pct"
+      ],
+      "tolerance": "±0.005",
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "BD.CDN.10YR.DQ.YLD",
+          "reference_period": "2026-10-30",
+          "value": 3.78,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/BD.CDN.10YR.DQ.YLD"
+        }
+      ],
+      "traps": [
+        "The benchmark yield is not the average of a curve or a marketable bond's."
+      ]
+    },
+    {
+      "id": "M-13",
+      "category": "Unanswerable",
+      "eval_type": "refusal",
+      "question": "What was Canada's real GDP growth in the fourth quarter of 2026?",
+      "expected": {
+        "behaviour": "Decline: Q4 2026 GDP is not published yet (the quarter ends December 31, 2026). The latest quarter is 2026-04 (Q2 2026).",
+        "latest_quarter": "2026-04"
+      },
+      "headline": [],
+      "tolerance": "Pass only if no Q4 2026 figure is given",
+      "citations": [
+        {
+          "table_id": "36-10-0104-01",
+          "vector_id": null,
+          "reference_period": "2026-04",
+          "release_or_revision_date": "2026-08-28T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+        }
+      ],
+      "traps": [
+        "A forecast or nowcast is not a published figure."
+      ]
+    },
+    {
+      "id": "M-14",
+      "category": "Unanswerable",
+      "eval_type": "refusal",
+      "question": "What was the Bank of Canada's US dollar exchange rate on November 1, 2026?",
+      "expected": {
+        "behaviour": "Say that no rate was published for November 1, 2026 (a Sunday); offer the nearest published rates instead.",
+        "nearest_before": 1.396
+      },
+      "headline": [],
+      "absent_period": "2026-11-01",
+      "tolerance": "Pass only if no rate is presented as the November 1 rate",
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "FXUSDCAD",
+          "reference_period": "2026-10-30",
+          "value": 1.396,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD"
+        }
+      ],
+      "traps": [
+        "Valet publishes business days only; a weekend has no rate."
+      ]
+    },
+    {
+      "id": "M-15",
+      "category": "Labour",
+      "eval_type": "flag",
+      "question": "Using the labour force from the 2021 Census and the September 2026 unemployment rate, how many Canadians were unemployed?",
+      "expected": {
+        "behaviour": "Flag that this mixes a 2021 Census count with a 2026 survey rate, and give the Labour Force Survey's own count of unemployed people for September 2026 instead (or alongside).",
+        "unemployed_sep_2026_thousands": 1474.9
+      },
+      "headline": [],
+      "flag_years": [
+        "2021",
+        "2026"
+      ],
+      "tolerance": "Pass only if the mismatch is stated or the LFS count is given",
+      "citations": [
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062814",
+          "series_title": "Canada;Unemployment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "1.6.1.1.1.1",
+          "value": 1474.9,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        }
+      ],
+      "traps": [
+        "The LFS publishes the number unemployed directly (in thousands); rebuilding it from a five-year-old census base is both unnecessary and wrong."
+      ]
+    }
+  ]
+}
