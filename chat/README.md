@@ -5,6 +5,26 @@ calling the public MapleStats MCP server. It exists so a visitor can see the MCP
 working without installing anything. It is a separate service: the MCP server is
 untouched, and this one holds the model API key.
 
+## What a visitor sees
+
+Under each answer, a panel with three tabs, modelled on Eurostat Assistant's chat
+(ainergy-hub/eurostat-assistant):
+
+- **Chart**: every series the tools returned, one line chart per unit (a bar when a
+  series has a single value).
+- **Table**: the same values, sortable and filterable, with a CSV download.
+- **Sources**: per series, the table number and title linked to the StatCan page, the
+  vector, geography, unit, frequency and release date, the reading notes, the cautions
+  for those tables, and the URL of every call behind the answer.
+
+The panel is built by `results.py` from the tool results, not from the model's text, so
+it shows what the data server returned even when the answer misquotes it. It reads
+StatCan WDS and SDMX series (with the `context` the server attaches) and Bank of Canada
+Valet series; any other tool with provenance appears under Sources. The page draws the
+charts itself (inline SVG, no chart library) and builds every element from text, never
+from HTML in a result. The conversation is kept in the browser's local storage; **New
+chat** clears it. **Theme** switches light and dark.
+
 ## Run it locally
 
 ```bash
