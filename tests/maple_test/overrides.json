@@ -46,5 +46,9 @@
   "pipeworx/M-04": {
     "outcome": "abstained",
     "reason": "Pipeworx's connection dropped and asked to re-authenticate, so no figures were fetched; the answer declined honestly. A single retry of this question (runs/retries/) answered correctly (Alberta 1.52%, Ontario 0.28%); the score keeps the official run."
+  },
+  "arose26/M-15": {
+    "outcome": "partial",
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for every MCP arm, whose answers match."
   }
 }
