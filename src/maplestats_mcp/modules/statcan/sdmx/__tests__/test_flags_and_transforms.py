@@ -25,6 +25,7 @@ def _no_series_context(monkeypatch):
 
     monkeypatch.setattr(context, "describe_vectors", nothing)
 
+
 _NS = (
     'xmlns:generic="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic" '
     'xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"'
