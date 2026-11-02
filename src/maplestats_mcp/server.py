@@ -484,6 +484,9 @@ For a whole StatCan table, or hundreds of series, use
 wds_get_full_table_download (a CSV link: the rows are not returned) rather
 than the vector tools, which return every observation inline and suit a
 handful of series.
+Cite every figure you report: a StatCan series carries context.citation
+(table, vector, release date) to quote with each value's reference period;
+other results name their source in provenance.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
 and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns

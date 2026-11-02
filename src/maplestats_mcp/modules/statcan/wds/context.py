@@ -175,6 +175,28 @@ def _empty_window_note(series: VectorSeries, span: tuple[date, date] | None) -> 
     )
 
 
+def citation(series: VectorSeries, title: str | None, table_release: str | None, lang: str) -> str:
+    """A citation an assistant can copy: publisher, table, vector, release date.
+
+    Answers in public benchmarks (CanData's GTA set, the Maple Test) cited the
+    table and vector less often when they had to assemble them from separate
+    fields; a ready string is the form an assistant quotes most reliably.
+    The release is the newest observation's, else the table's.
+    """
+    releases = [o.release_time for o in series.observations if o.release_time is not None]
+    released = max(releases).date().isoformat() if releases else (table_release or "")[:10]
+    number = table_number(series.product_id)
+    if lang == "fr":
+        text = f"Statistique Canada. Tableau {number}"
+        text += f", {title}" if title else ""
+        text += f". Vecteur v{series.vector_id}."
+        return text + (f" Diffusé le {released}." if released else "")
+    text = f"Statistics Canada. Table {number}"
+    text += f", {title}" if title else ""
+    text += f". Vector v{series.vector_id}."
+    return text + (f" Released {released}." if released else "")
+
+
 def _context_for(
     series: VectorSeries,
     info: dict[str, Any] | None,
@@ -235,9 +257,11 @@ def _context_for(
         )
     if (not series.observations) if empty is None else empty:
         notes.append(_empty_window_note(series, span))
+    title = (cube.get(f"cubeTitle{suffix}") or cube.get("cubeTitleEn")) if cube else None
     return SeriesContext(
+        citation=citation(series, title, cube.get("releaseTime") if cube else None, lang),
         table_id=table_number(series.product_id),
-        table_title=(cube.get(f"cubeTitle{suffix}") or cube.get("cubeTitleEn")) if cube else None,
+        table_title=title,
         table_url=table_url(series.product_id, lang),
         series_title=(info.get(f"SeriesTitle{suffix}") or info.get("SeriesTitleEn"))
         if info

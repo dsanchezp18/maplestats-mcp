@@ -167,6 +167,13 @@ class SeriesContext(BaseModel):
     """What a series measures, read from WDS metadata, so a value can be cited
     and checked without another call. In the call's language."""
 
+    citation: str | None = Field(
+        default=None,
+        description=(
+            "Ready to quote beside every value from this series: publisher, table number "
+            "and title, vector and release date. Add each value's reference period."
+        ),
+    )
     table_id: str = Field(description="The table number as StatCan prints it, e.g. 34-10-0133-01.")
     table_title: str | None = None
     table_url: str = Field(description="The table's page on statcan.gc.ca, for a citation.")
