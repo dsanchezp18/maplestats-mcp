@@ -60,32 +60,44 @@ in `overrides.json` (`{"<arm>/<question id>": {"outcome": ..., "reason": ..., "f
 
 ## First results, 2026-11-02
 
-All three arms on `claude-sonnet-5-5`, MapleStats at `main` (`11fcb84`). Full table in
+Eight arms on `claude-sonnet-5-5`, MapleStats at `main` (`11fcb84`). Full table in
 [`results.md`](results.md), every answer in [`runs/`](runs/), re-grades with reasons in
 [`overrides.json`](overrides.json).
 
 | Arm | Correct | Partial | Abstained | Hallucinated |
 | :-- | --: | --: | --: | --: |
+| OpenMCP | 15 | 0 | 0 | 0 |
+| CanData-MCP | 15 | 0 | 0 | 0 |
 | MapleStats | 14 | 1 | 0 | 0 |
+| arose26 (statcan-mcp and bank-of-canada-mcp) | 14 | 1 | 0 | 0 |
+| mcp-canada | 14 | 1 | 0 | 0 |
 | mcp-statcan | 12 | 2 | 1 | 0 |
 | Pipeworx (StatCan and Bank of Canada servers) | 12 | 2 | 1 | 0 |
 | No tools | 2 | 0 | 13 | 0 |
 
-- MapleStats' one miss, M-15, is shared with both other servers: each did the mixed
-  2021/2026 calculation first and flagged it after, without fetching the survey's own count.
+**What it shows:** on core Statistics Canada and Bank of Canada questions the leading
+servers are tied within one answer, and no server invented a figure. With 15 questions
+and one run per arm, a one-answer gap is not a meaningful difference. The test asks
+nothing outside StatCan WDS tables and Bank of Canada Valet series, so it cannot show
+coverage of other sources; a larger second version is planned for that.
+
+- **M-15 (the census trap) decides the top row.** MapleStats, arose26 and mcp-canada did
+  the mixed 2021/2026 calculation first and flagged it after (partial). OpenMCP and
+  CanData-MCP did not compute it and flagged the mismatch (correct under the key), but
+  only because a lookup failed (a timeout; a census table with no vector ID), not by
+  choice. No server fetched the survey's own count of unemployed people.
 - Pipeworx gave not seasonally adjusted earnings from another table (M-10), and its
   connection dropped on M-04 and asked to re-authenticate; a single retry of M-04
   (`runs/retries/`) answered correctly, but the score keeps the official run.
 - mcp-statcan gave the customs-basis trade balance (M-09) and declined the October 30
   exchange rate because the StatCan table it read stopped at October 29 (M-11).
-- MapleStats got M-06 (2025 inflation) right by averaging the monthly CPI itself rather
-  than reading the annual table; the published figure and its rounding happened to agree.
+- MapleStats got M-06 (2025 inflation) right by averaging the monthly CPI itself; arose26
+  and OpenMCP read the published annual-average table, the cleaner method.
+- CanData-MCP answered 3 of 15 on CanData's own GTA benchmark in October 2026; the version
+  run here (their repository on 2026-11-02) has clearly improved since.
 - The no-tools arm's 93% table citations are tables named from memory, not checked.
-- Twelve automatic grades were wrong and are re-graded by hand; the reasons are in
+- Seventeen automatic grades were wrong and are re-graded by hand; the reasons are in
   `overrides.json`.
-- Four other Canadian data servers (mcp-canada, arose26's statcan-mcp and
-  bank-of-canada-mcp, OpenMCP, CanData-MCP) have no hosted endpoint and were not run:
-  they have to be installed locally.
 
 ## Shelf life
 

@@ -50,5 +50,21 @@
   "arose26/M-15": {
     "outcome": "partial",
     "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for every MCP arm, whose answers match."
+  },
+  "mcp_canada/M-15": {
+    "outcome": "partial",
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for every MCP arm, whose answers match."
+  },
+  "openmcp/M-15": {
+    "outcome": "correct",
+    "reason": "Did not do the mixed calculation: stated that a 2021 Census base and a 2026 rate do not match, and pointed to the Labour Force Survey's own count as the better figure, without fetching it. Correct under the key (mismatch stated). Note: it did not compute because a lookup failed (the census table call timed out), not by choice; it offered to multiply once given the census count."
+  },
+  "candata_mcp/M-15": {
+    "outcome": "correct",
+    "reason": "Did not do the mixed calculation: stated that a 2021 Census base and a 2026 rate do not match, and pointed to the Labour Force Survey's own count as the better figure, without fetching it. Correct under the key (mismatch stated). Note: it did not compute because a lookup failed (the census table has no vector ID and its coordinate query failed), not by choice; it offered to multiply once given the census count."
+  },
+  "candata_mcp/M-13": {
+    "outcome": "correct",
+    "reason": "Says Q4 2026 has not ended and no real GDP growth figure exists for it, with the expected release (late February 2027). The automatic grade missed the wording."
   }
 }
