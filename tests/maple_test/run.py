@@ -6,6 +6,7 @@ repository (the answer key included) is in reach. Only the data access changes:
 
 - maplestats: this repository's server over stdio (`--server-dir` picks the checkout)
 - mcp_statcan: the community mcp-statcan server's public endpoint
+- pipeworx: Pipeworx's hosted StatCan and Bank of Canada servers, together
 - no_tools: the model alone
 
 `ENABLE_TOOL_SEARCH=false` keeps MCP tools loaded up front: with built-in tools off, the
@@ -33,7 +34,7 @@ RUNS = HERE / "runs"
 REPO = HERE.parents[1]
 TIMEOUT_S = 600
 MAX_TURNS = 25
-ARMS = ("maplestats", "mcp_statcan", "no_tools")
+ARMS = ("maplestats", "mcp_statcan", "pipeworx", "no_tools")
 
 PROMPT = """\
 You answer questions about Canadian economic and social statistics. Today is {today}.
@@ -57,6 +58,16 @@ def servers(arm: str, server_dir: Path) -> dict[str, Any]:
         }
     if arm == "mcp_statcan":
         return {"statcan": {"type": "http", "url": "https://mcp-statcan.onrender.com/mcp"}}
+    if arm == "pipeworx":
+        # Pipeworx publishes StatCan and the Bank of Canada as two hosted servers; a
+        # user covering both installs both, so the arm gets both.
+        return {
+            "statcan": {"type": "http", "url": "https://gateway.pipeworx.io/statcan/mcp"},
+            "bankofcanada": {
+                "type": "http",
+                "url": "https://gateway.pipeworx.io/bank-of-canada/mcp",
+            },
+        }
     return {}
 
 
@@ -132,7 +143,7 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
             result = event
     response = result.get("result") or proc.stderr.strip() or "no result"
     error = bool(result.get("is_error", True)) or proc.returncode != 0
-    if names and not any(t.startswith(f"mcp__{names[0]}__") for t in tools):
+    if names and not all(any(t.startswith(f"mcp__{n}__") for t in tools) for n in names):
         error, response = True, "MCP tools were not available. " + response
     return Answer(
         question_id=question["id"],
