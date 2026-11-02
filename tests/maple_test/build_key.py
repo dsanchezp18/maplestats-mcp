@@ -271,8 +271,10 @@ def build() -> dict[str, Any]:
             "tolerance": "±0.1",
             "citations": [cite(cpi_a, allitems, y25, "2.2"), cite(cpi_a, allitems, y24, "2.2")],
             "traps": [
-                "The annual figure is the change in the annual average index, not December "
-                "over December or the latest 12-month rate.",
+                (
+                    "The annual figure is the change in the annual average index, not December "
+                    "over December or the latest 12-month rate."
+                ),
             ],
         }
     )
@@ -320,8 +322,10 @@ def build() -> dict[str, Any]:
             "tolerance": "±0.1",
             "citations": [cite(gdp, real, aug26, "1.1.1.1"), cite(gdp, real, jul26m, "1.1.1.1")],
             "traps": [
-                "Real GDP is in chained (2017) dollars at seasonally adjusted annual rates; "
-                "the level is not a monthly dollar amount.",
+                (
+                    "Real GDP is in chained (2017) dollars at seasonally adjusted annual rates; "
+                    "the level is not a monthly dollar amount."
+                ),
                 "StatCan's advance estimate for the next month is in The Daily, not this table.",
             ],
         }
@@ -349,8 +353,10 @@ def build() -> dict[str, Any]:
             ],
             "traps": [
                 "Values are in millions of dollars.",
-                "The headline is the balance of payments basis, seasonally adjusted; the "
-                "customs basis differs.",
+                (
+                    "The headline is the balance of payments basis, seasonally adjusted; the "
+                    "customs basis differs."
+                ),
             ],
         }
     )
@@ -374,8 +380,10 @@ def build() -> dict[str, Any]:
             "tolerance": "±0.05 dollars; percentage ±0.1",
             "citations": [cite(seph, awe, aug26, "1.2.2"), cite(seph, awe, aug25, "1.2.2")],
             "traps": [
-                "Average weekly earnings come from SEPH (payroll); the LFS average hourly wage "
-                "is a different measure.",
+                (
+                    "Average weekly earnings come from SEPH (payroll); the LFS average hourly wage "
+                    "is a different measure."
+                ),
                 "Industrial aggregate excluding unclassified businesses is the headline.",
             ],
         }
@@ -486,8 +494,10 @@ def build() -> dict[str, Any]:
             "tolerance": "Pass only if the mismatch is stated or the LFS count is given",
             "citations": [cite(lfs, unemployed, sep26, "1.6.1.1.1.1")],
             "traps": [
-                "The LFS publishes the number unemployed directly (in thousands); rebuilding it "
-                "from a five-year-old census base is both unnecessary and wrong.",
+                (
+                    "The LFS publishes the number unemployed directly (in thousands); rebuilding it "
+                    "from a five-year-old census base is both unnecessary and wrong."
+                ),
             ],
         }
     )
@@ -531,7 +541,7 @@ def drift(old: dict[str, Any], new: dict[str, Any]) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description="Build or check the Maple Test answer key.")
     parser.add_argument("--check", action="store_true", help="report drift, write nothing")
     args = parser.parse_args()
     new = build()

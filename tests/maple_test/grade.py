@@ -75,7 +75,7 @@ def tolerance(key: str, value: float) -> float:
         return 0.005 + slack
     if key.startswith("awe"):
         return 0.05 + slack
-    if key.endswith("_millions") or key.endswith("_thousands"):
+    if key.endswith(("_millions", "_thousands")):
         return 0.5 + slack
     return 0.5 + slack if float(value).is_integer() else 0.05 + slack
 
@@ -193,8 +193,12 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
         right_call = True
         if pattern:
             right_call = bool(
-                re.search(rf"{re.escape(pattern)}[^.\n]{{0,80}}{WINNER.pattern}", text, re.I)
-                or re.search(rf"{WINNER.pattern}[^.\n]{{0,80}}{re.escape(pattern)}", text, re.I)
+                re.search(
+                    rf"{re.escape(pattern)}[^.\n]{{0,80}}{WINNER.pattern}", text, re.IGNORECASE
+                )
+                or re.search(
+                    rf"{WINNER.pattern}[^.\n]{{0,80}}{re.escape(pattern)}", text, re.IGNORECASE
+                )
                 or re.search(rf"\*\*{re.escape(pattern)}\*\*", text)
             )
         headline_ok = all(matched.get(k, False) for k in question.get("headline", []))
@@ -272,8 +276,10 @@ def render(report: dict[str, Any]) -> str:
         "",
         "> Written by `python -m tests.maple_test grade`. Do not edit by hand.",
         "",
-        "| Arm | Model | Run date | Correct | Partial | Abstained | Hallucinated | False claims "
-        "| Table citations | Vector citations | Tool calls | Errors |",
+        (
+            "| Arm | Model | Run date | Correct | Partial | Abstained | Hallucinated | False claims "
+            "| Table citations | Vector citations | Tool calls | Errors |"
+        ),
         "| :-- | :-- | :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
     ]
     for s in report["summary"]:
