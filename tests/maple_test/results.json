@@ -1,0 +1,1893 @@
+{
+  "benchmark": "maple_test_v1",
+  "answers": [
+    {
+      "run": {
+        "question_id": "M-01",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:38:38+00:00",
+        "duration_s": 14.5,
+        "tool_calls": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-01",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [
+          "v2062815"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-02",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:38:53+00:00",
+        "duration_s": 14.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__sdmx_get_structure",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-02",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [
+          "v2063004"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.5,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-03",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:39:08+00:00",
+        "duration_s": 13.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-03",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-04",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:39:21+00:00",
+        "duration_s": 21.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-04",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-05",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:39:42+00:00",
+        "duration_s": 19.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__wds_search_cubes",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-05",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100121"
+        ],
+        "vectors_cited": [
+          "v1566927590"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-06",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:40:02+00:00",
+        "duration_s": 15.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-06",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "18100005"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-07",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:40:17+00:00",
+        "duration_s": 9.3,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-07",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-08",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:40:26+00:00",
+        "duration_s": 30.2,
+        "tool_calls": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__statcan_daily_search_archive"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-08",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100434"
+        ],
+        "vectors_cited": [
+          "v65201210"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-09",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:40:56+00:00",
+        "duration_s": 16.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__cimt_get_periods",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-09",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "12100011"
+        ],
+        "vectors_cited": [
+          "v87008984"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-10",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:41:13+00:00",
+        "duration_s": 19.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__wds_search_cubes",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-10",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-11",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:41:32+00:00",
+        "duration_s": 8.2,
+        "tool_calls": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-11",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-12",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:41:40+00:00",
+        "duration_s": 10.3,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-12",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "BD.CDN.10YR.DQ.YLD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-13",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:41:50+00:00",
+        "duration_s": 6.8,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-13",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100104"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-14",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:41:57+00:00",
+        "duration_s": 9.8,
+        "tool_calls": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-14",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-15",
+        "arm": "maplestats",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-02T22:42:07+00:00",
+        "duration_s": 20.6,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-15",
+        "outcome": "partial",
+        "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for both MCP arms, whose answers match.",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-01",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:38:38+00:00",
+        "duration_s": 8.9,
+        "tool_calls": [
+          "mcp__statcan__get_sdmx_vector_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-01",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [
+          "v2062815"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-02",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:38:47+00:00",
+        "duration_s": 8.4,
+        "tool_calls": [
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-02",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [
+          "v2063004",
+          "v2063571"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-03",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:38:56+00:00",
+        "duration_s": 19.2,
+        "tool_calls": [
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__get_bulk_vector_data_by_range"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-03",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-04",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:39:15+00:00",
+        "duration_s": 21.0,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_sdmx_vector_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-04",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-05",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:39:36+00:00",
+        "duration_s": 17.7,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_bulk_vector_data_by_range"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-05",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100121"
+        ],
+        "vectors_cited": [
+          "v1566927590"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-06",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:39:53+00:00",
+        "duration_s": 13.5,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__query_sdmx"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-06",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "18100005"
+        ],
+        "vectors_cited": [
+          "v41693271"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-07",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:40:07+00:00",
+        "duration_s": 11.8,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-07",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "18100256"
+        ],
+        "vectors_cited": [
+          "v108785714",
+          "v108785715"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-08",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:40:19+00:00",
+        "duration_s": 11.8,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__query_sdmx"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-08",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100434"
+        ],
+        "vectors_cited": [
+          "v65201210"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-09",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:40:31+00:00",
+        "duration_s": 12.8,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-09",
+        "outcome": "partial",
+        "reason": "Gave the customs-basis balance ($5,621.7 million, computed from exports and imports in 12-10-0163-01) instead of the headline balance-of-payments basis ($4,198.8 million, v87008984). A real series for a different concept, and the answer says which basis it used.",
+        "recall": 0.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-10",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:40:43+00:00",
+        "duration_s": 21.2,
+        "tool_calls": [
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-10",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-11",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:41:05+00:00",
+        "duration_s": 17.2,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-11",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-12",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:41:22+00:00",
+        "duration_s": 15.3,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-12",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-13",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:41:37+00:00",
+        "duration_s": 11.8,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-13",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100104"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-14",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:41:49+00:00",
+        "duration_s": 16.1,
+        "tool_calls": [
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-14",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-15",
+        "arm": "mcp_statcan",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__statcan__get_all_cubes_list",
+          "mcp__statcan__get_all_cubes_list_lite",
+          "mcp__statcan__get_bulk_vector_data_by_range",
+          "mcp__statcan__get_changed_cube_list",
+          "mcp__statcan__get_changed_series_data_from_cube_pid_coord",
+          "mcp__statcan__get_changed_series_data_from_vector",
+          "mcp__statcan__get_changed_series_list",
+          "mcp__statcan__get_code_sets",
+          "mcp__statcan__get_cube_metadata",
+          "mcp__statcan__get_sdmx_data",
+          "mcp__statcan__get_sdmx_key_for_dimension",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__get_series_info",
+          "mcp__statcan__get_series_info_from_vector",
+          "mcp__statcan__query_sdmx",
+          "mcp__statcan__search_cubes_by_title"
+        ],
+        "started_at": "2026-11-02T22:42:05+00:00",
+        "duration_s": 32.4,
+        "tool_calls": [
+          "mcp__statcan__get_sdmx_vector_data",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__search_cubes_by_title",
+          "mcp__statcan__get_sdmx_structure",
+          "mcp__statcan__get_sdmx_data"
+        ],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-15",
+        "outcome": "partial",
+        "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for both MCP arms, whose answers match.",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-01",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:38:38+00:00",
+        "duration_s": 9.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-01",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.33,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [
+          "v2062815"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-02",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:38:48+00:00",
+        "duration_s": 10.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-02",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-03",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:38:58+00:00",
+        "duration_s": 11.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-03",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-04",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:39:10+00:00",
+        "duration_s": 10.0,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-04",
+        "outcome": "abstained",
+        "reason": "Declined and explained how to compute the rates; no figure given.",
+        "recall": 0.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-05",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:39:20+00:00",
+        "duration_s": 11.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-05",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "17100121"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-06",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:39:31+00:00",
+        "duration_s": 12.3,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-06",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "18100005"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-07",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:39:44+00:00",
+        "duration_s": 10.9,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-07",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "18100256"
+        ],
+        "vectors_cited": [
+          "v108785714"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.5,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-08",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:39:55+00:00",
+        "duration_s": 5.4,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-08",
+        "outcome": "abstained",
+        "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures.",
+        "recall": 0.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-09",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:00+00:00",
+        "duration_s": 5.9,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-09",
+        "outcome": "abstained",
+        "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures.",
+        "recall": 0.0,
+        "tables_cited": [
+          "12100011"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-10",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:06+00:00",
+        "duration_s": 12.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-10",
+        "outcome": "abstained",
+        "reason": "declined",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100223"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-11",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:18+00:00",
+        "duration_s": 3.9,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-11",
+        "outcome": "abstained",
+        "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures.",
+        "recall": 0.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-12",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:22+00:00",
+        "duration_s": 4.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-12",
+        "outcome": "abstained",
+        "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures.",
+        "recall": 0.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "BD.CDN.10YR.DQ.YLD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": true
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-13",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:27+00:00",
+        "duration_s": 6.3,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-13",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100104"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-14",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:33+00:00",
+        "duration_s": 4.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-14",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 0.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false
+      },
+      "false_claim": null
+    },
+    {
+      "run": {
+        "question_id": "M-15",
+        "arm": "no_tools",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [],
+        "started_at": "2026-11-02T22:40:37+00:00",
+        "duration_s": 11.5,
+        "tool_calls": [],
+        "is_error": false
+      },
+      "grade": {
+        "question_id": "M-15",
+        "outcome": "abstained",
+        "reason": "Declined and described the calculation with a caveat; no figure given.",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": true
+      },
+      "false_claim": null
+    }
+  ],
+  "summary": [
+    {
+      "arm": "maplestats",
+      "model_ids": [
+        "claude-sonnet-5-5"
+      ],
+      "run_date": "2026-11-02",
+      "correct": 14,
+      "partial": 1,
+      "abstained": 0,
+      "hallucinated": 0,
+      "false_claims": 0,
+      "table_coverage": 0.87,
+      "vector_coverage": 0.57,
+      "tool_calls": 4.3,
+      "errors": 0
+    },
+    {
+      "arm": "mcp_statcan",
+      "model_ids": [
+        "claude-sonnet-5-5"
+      ],
+      "run_date": "2026-11-02",
+      "correct": 12,
+      "partial": 2,
+      "abstained": 1,
+      "hallucinated": 0,
+      "false_claims": 0,
+      "table_coverage": 0.87,
+      "vector_coverage": 0.53,
+      "tool_calls": 5.1,
+      "errors": 0
+    },
+    {
+      "arm": "no_tools",
+      "model_ids": [
+        "claude-sonnet-5-5"
+      ],
+      "run_date": "2026-11-02",
+      "correct": 2,
+      "partial": 0,
+      "abstained": 13,
+      "hallucinated": 0,
+      "false_claims": 0,
+      "table_coverage": 0.93,
+      "vector_coverage": 0.37,
+      "tool_calls": 0.0,
+      "errors": 0
+    }
+  ]
+}

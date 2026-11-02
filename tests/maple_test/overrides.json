@@ -1,0 +1,38 @@
+{
+  "maplestats/M-15": {
+    "outcome": "partial",
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for both MCP arms, whose answers match."
+  },
+  "mcp_statcan/M-15": {
+    "outcome": "partial",
+    "reason": "Led with the mixed calculation (19.3 million x 6.5% = about 1.26 million), then stated that it mixes a 2021 labour force with a 2026 rate and that the Labour Force Survey publishes its own count, without giving that count (1,474.9 thousand, v2062814). The flag is there but comes after the misleading figure. Same grade for both MCP arms, whose answers match."
+  },
+  "mcp_statcan/M-09": {
+    "outcome": "partial",
+    "reason": "Gave the customs-basis balance ($5,621.7 million, computed from exports and imports in 12-10-0163-01) instead of the headline balance-of-payments basis ($4,198.8 million, v87008984). A real series for a different concept, and the answer says which basis it used."
+  },
+  "no_tools/M-04": {
+    "outcome": "abstained",
+    "reason": "Declined and explained how to compute the rates; no figure given."
+  },
+  "no_tools/M-15": {
+    "outcome": "abstained",
+    "reason": "Declined and described the calculation with a caveat; no figure given."
+  },
+  "no_tools/M-08": {
+    "outcome": "abstained",
+    "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures."
+  },
+  "no_tools/M-09": {
+    "outcome": "abstained",
+    "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures."
+  },
+  "no_tools/M-11": {
+    "outcome": "abstained",
+    "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures."
+  },
+  "no_tools/M-12": {
+    "outcome": "abstained",
+    "reason": "No figure given: the model, which had no tools, wrote out a tool call as text and stopped. The grader read the vector and series ids inside it as figures."
+  }
+}

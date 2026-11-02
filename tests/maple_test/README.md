@@ -58,6 +58,28 @@ The grader reads numbers and phrases from the text, so a correct answer worded o
 be missed: read every grade that is not `correct`, and record a re-grade with its reason
 in `overrides.json` (`{"<arm>/<question id>": {"outcome": ..., "reason": ..., "false_claim": ...}}`).
 
+## First results, 2026-11-02
+
+All three arms on `claude-sonnet-5-5`, MapleStats at `main` (`11fcb84`). Full table in
+[`results.md`](results.md), every answer in [`runs/`](runs/), re-grades with reasons in
+[`overrides.json`](overrides.json).
+
+| Arm | Correct | Partial | Abstained | Hallucinated |
+| :-- | --: | --: | --: | --: |
+| MapleStats | 14 | 1 | 0 | 0 |
+| mcp-statcan | 12 | 2 | 1 | 0 |
+| No tools | 2 | 0 | 13 | 0 |
+
+- MapleStats' one miss, M-15, is shared with mcp-statcan: both did the mixed 2021/2026
+  calculation first and flagged it after, without fetching the survey's own count.
+- mcp-statcan gave the customs-basis trade balance (M-09) and declined the October 30
+  exchange rate because the StatCan table it read stopped at October 29 (M-11).
+- MapleStats got M-06 (2025 inflation) right by averaging the monthly CPI itself rather
+  than reading the annual table; the published figure and its rounding happened to agree.
+- The no-tools arm's 93% table citations are tables named from memory, not checked.
+- Nine automatic grades were wrong and are re-graded by hand; the reasons are in
+  `overrides.json`.
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP

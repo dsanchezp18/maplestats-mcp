@@ -404,6 +404,25 @@ results but never reaches the page. Ordered by value to a visitor:
 Constraints that stay: the per-address and daily limits, the spend cap, and no logging of
 questions or answers.
 
+### Ideas from CanData and Eurostat Assistant
+
+Read on 2026-11-02 from CanData's monorepo (neobenjax/Canadian-Open-Data-Agentic-Platform,
+`packages/agent-orchestrator/` and `collaboration/benchmarks/`) and Eurostat Assistant
+(ainergy-hub/eurostat-assistant, README and `skill/`). Ordered by value. None is started
+unless the status says so.
+
+| Idea | What it does for a user | Status and notes |
+| :-- | :-- | :-- |
+| Figure checker | Before an assistant answers, it sends the figures it is about to state (value, table, vector, period) and MapleStats says, for each one, whether it matches the official value, has been revised since, or does not exist. A fact check on every answer. | Not started. CanData's citation verifier (`verifier.py`) checks five things: the IDs are well formed, the vector belongs to the table, the period has a value that is not suppressed, the value matches to the published precision, and the release is the latest. Here it would be one read-only tool over the WDS and Valet calls MapleStats already makes. |
+| Calculations across series | Ratios of two series (rent over income), rankings across places, compound growth, counts of changes (rate moves), done by MapleStats with the formula shown, instead of by the assistant. | Not started. MapleStats already computes single-series changes, indexes and annual averages (`transform`, `frequency`); CanData's eight "recipes" (`analyst/recipes.py`) are the multi-series ones it lacks. Arithmetic across two series is where assistants slip. |
+| Scheduled benchmark | The Maple Test re-run on a schedule, with a note when StatCan revises a figure in its answer key. | In progress. The Maple Test is built (`tests/maple_test/`, 2026-11-02), with an offline check in the suite and `build_key --check` for revisions; the schedule is not set up. CanData runs its ground truth the same way: offline checks on every pull request, live drift checks on a schedule. |
+| Instruction file | One file that teaches Claude Code, Codex and similar agents how to use MapleStats well (start with `plan_query`, read `context` and caveats, cite the table and vector), for people who will not run the server or want better habits from it. | Not started. Eurostat Assistant ships its agent as a portable `SKILL.md`. |
+| Replayed tests | Record real tool exchanges once, then replay them in CI, so a benchmark run checks the server's behaviour without calling StatCan or a model. | Not started. Eurostat Assistant runs offline "prompt regression" tests from recorded API exchanges. Would let the Maple Test guard every pull request, not only scheduled runs. |
+
+Not worth borrowing: CanData's human sign-off checkpoint and multi-agent orchestration
+(LangGraph). They suit a closed agent application, not a server that plugs into the
+user's own assistant.
+
 ## Directories
 
 Where MapleStats is listed or could be (checked 2026-10-01 unless stated).
