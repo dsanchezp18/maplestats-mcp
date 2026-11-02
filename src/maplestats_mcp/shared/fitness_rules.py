@@ -574,7 +574,9 @@ RULES: tuple[FitnessRule, ...] = (
             "structure type: 34-10-0130 (vacancy) and the 'row and apartment structures of "
             "three units and over' member of 34-10-0133 (rent) cover the survey's whole "
             "universe; 34-10-0127 covers apartment structures of six units and over only, "
-            "and its rates differ."
+            "and its rates differ. Most series start later than their table: 34-10-0133 "
+            "starts in 1987, but Toronto's two-bedroom rent has values from 1992. Read a "
+            "series' data before stating its first year."
         ),
         note_fr=(
             "Ces tableaux reprennent l'Enquête sur les logements locatifs de la SCHL, menée "
@@ -585,7 +587,10 @@ RULES: tuple[FitnessRule, ...] = (
             "d'immeuble : le tableau 34-10-0130 (inoccupation) et le membre « logements en "
             "bandes et immeubles d'appartements de trois logements et plus » de 34-10-0133 "
             "(loyers) couvrent tout l'univers de l'enquête ; 34-10-0127 ne couvre que les "
-            "immeubles de six logements et plus, et ses taux diffèrent."
+            "immeubles de six logements et plus, et ses taux diffèrent. La plupart des séries "
+            "commencent après leur tableau : 34-10-0133 commence en 1987, mais le loyer des "
+            "deux chambres à Toronto a des valeurs depuis 1992. Lisez les données d'une série "
+            "avant d'en donner la première année."
         ),
         sources=(
             (
@@ -604,7 +609,9 @@ RULES: tuple[FitnessRule, ...] = (
             "apartment structures of three units and over ... weighted average'; 34-10-0127 "
             "'vacancy rates, apartment structures of six units and over'; 34-10-0133 "
             "'average rents for areas with a population of 10,000 and over', Type of "
-            "structure member 3 'Row and apartment structures of three units and over'."
+            "structure member 3 'Row and apartment structures of three units and over'. "
+            "getDataFromVectorsAndLatestNPeriods for v3823103 (Toronto, row and apartment, "
+            "two bedroom), latestN=200: rows from 1987-01-01, values null until 1992-01-01."
         ),
         product_ids=(34100127, 34100130, 34100133),
     ),

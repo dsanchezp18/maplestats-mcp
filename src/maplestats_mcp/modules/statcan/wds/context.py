@@ -182,6 +182,7 @@ def _context_for(
     codes: dict[str, Any] | None,
     lang: str,
     span: tuple[date, date] | None = None,
+    empty: bool | None = None,
 ) -> SeriesContext:
     suffix = "Fr" if lang == "fr" else "En"
     members: list[SeriesMember] = []
@@ -232,7 +233,7 @@ def _context_for(
                 f"Valeurs en {scale} : multipliez value par scale_multiplier pour le chiffre entier.",
             )
         )
-    if not series.observations:
+    if (not series.observations) if empty is None else empty:
         notes.append(_empty_window_note(series, span))
     return SeriesContext(
         table_id=table_number(series.product_id),
@@ -257,13 +258,56 @@ async def describe(series: list[VectorSeries]) -> tuple[list[VectorSeries], str 
     """`series` with `context` filled, and a limits note when metadata could not be read."""
     if not series:
         return series, None
-    lang = "fr" if client._LANG.get() == "fr" else "en"
-    missing: list[str] = []
+    empty = {s.vector_id for s in series if not s.observations}
     try:
         infos = await _series_info_raw(sorted({s.vector_id for s in series}))
     except _SOFT_ERRORS:
-        infos = {}
-        missing.append("getSeriesInfoFromVector")
+        infos = None
+    contexts, note = await _contexts(series, infos, empty)
+    return [
+        s.model_copy(update={"context": c}) for s, c in zip(series, contexts, strict=True)
+    ], note
+
+
+async def describe_vectors(
+    vector_ids: list[int], empty: set[int]
+) -> tuple[dict[int, SeriesContext], str | None]:
+    """Context for series known only by vector id (SDMX results), keyed by vector id.
+
+    `empty` holds the vectors whose result had no observations in the window.
+    A vector WDS cannot describe is left out.
+    """
+    if not vector_ids:
+        return {}, None
+    try:
+        infos = await _series_info_raw(sorted(set(vector_ids)))
+    except _SOFT_ERRORS:
+        return {}, client._m(
+            "series context is missing: getSeriesInfoFromVector did not answer",
+            "le contexte des séries manque : getSeriesInfoFromVector n'a pas répondu",
+        )
+    stubs = [
+        VectorSeries(
+            product_id=int(info["productId"]),
+            coordinate=str(info["coordinate"]),
+            vector_id=vector_id,
+            observations=[],
+        )
+        for vector_id, info in infos.items()
+        if vector_id in set(vector_ids)
+    ]
+    contexts, note = await _contexts(stubs, infos, empty)
+    return {stub.vector_id: c for stub, c in zip(stubs, contexts, strict=True)}, note
+
+
+async def _contexts(
+    series: list[VectorSeries],
+    infos: dict[int, dict[str, Any]] | None,
+    empty: set[int],
+) -> tuple[list[SeriesContext], str | None]:
+    lang = "fr" if client._LANG.get() == "fr" else "en"
+    missing: list[str] = [] if infos is not None else ["getSeriesInfoFromVector"]
+    infos = infos or {}
     cubes: dict[int, dict[str, Any] | None] = {}
     for product_id in dict.fromkeys(s.product_id for s in series):
         try:
@@ -276,19 +320,16 @@ async def describe(series: list[VectorSeries]) -> tuple[list[VectorSeries], str 
     except _SOFT_ERRORS:
         codes = None
         missing.append("getCodeSets")
-    spans = {s.vector_id: await series_span(s.vector_id) for s in series if not s.observations}
-    described = [
-        s.model_copy(
-            update={
-                "context": _context_for(
-                    s,
-                    infos.get(s.vector_id),
-                    cubes.get(s.product_id),
-                    codes,
-                    lang,
-                    spans.get(s.vector_id),
-                )
-            }
+    spans = {v: await series_span(v) for v in empty}
+    contexts = [
+        _context_for(
+            s,
+            infos.get(s.vector_id),
+            cubes.get(s.product_id),
+            codes,
+            lang,
+            spans.get(s.vector_id),
+            empty=s.vector_id in empty,
         )
         for s in series
     ]
@@ -300,4 +341,4 @@ async def describe(series: list[VectorSeries]) -> tuple[list[VectorSeries], str 
         if missing
         else None
     )
-    return described, note
+    return contexts, note

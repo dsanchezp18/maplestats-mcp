@@ -8,12 +8,17 @@
   dimension's member label, the table's last release time and period range, and
   notes on reading the unit (current vs constant dollars, index levels). A series
   with no observations in the requested window says which periods it does have.
+- `sdmx_get_data` and `sdmx_get_vector_data`: each series carries the same `context`,
+  so the unit is a label ("2024 constant dollars"), not only a code ("455").
+- `plan_query` has an income topic: median and average family, household and
+  individual income, with table 11-10-0190 first for family and household income.
 - Fitness-for-use caveats for the CPI tables 18-10-0004 and 18-10-0005 (annual
   average vs December over December; mortgage interest cost is published for Canada
   only, and Toronto has six CPI series), the CMHC Rental Market Survey tables
   34-10-0127, 34-10-0130 and 34-10-0133 (survey rent vs asking rent; which structures
   each covers), and the income tables 11-10-0190, 11-10-0238 and 11-10-0239
-  (families vs individuals; constant dollars).
+  (families vs individuals; constant dollars). The CMHC caveat also says that most
+  series start later than their table.
 
 ### Changed
 

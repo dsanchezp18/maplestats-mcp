@@ -78,9 +78,14 @@ def caveats_for(tool: str, arguments: Mapping[str, Any], lang: str) -> list[str]
 
 def result_product_ids(payload: dict[str, Any]) -> list[int]:
     """StatCan product ids a result states: its own `product_id` and its series'."""
-    body = payload.get("result") if isinstance(payload.get("result"), dict) else payload
+    inner = payload.get("result")
+    body: dict[str, Any] = inner if isinstance(inner, dict) else payload
     items = [body, *(s for s in body.get("series", []) or [] if isinstance(s, dict))]
     found = [item.get("product_id") for item in items]
+    # SDMX results name the table as dataflow DF_<productId>.
+    flow = body.get("dataflow_id")
+    if isinstance(flow, str) and flow.startswith("DF_") and flow[3:].isdigit():
+        found.append(int(flow[3:]))
     return sorted({p for p in found if isinstance(p, int) and not isinstance(p, bool)})
 
 

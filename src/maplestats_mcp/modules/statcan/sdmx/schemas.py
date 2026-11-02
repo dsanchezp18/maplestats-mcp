@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from maplestats_mcp.modules.statcan.wds.schemas import SeriesContext
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.transform import TransformedSeries
 
@@ -78,6 +79,14 @@ class SdmxSeries(BaseModel):
     decimals: int | None = None
     dguid: str | None = None
     uom_code: str | None = None
+    context: SeriesContext | None = Field(
+        default=None,
+        description=(
+            "Table number, title and page URL, series title, unit label (uom_code decoded), "
+            "members (geography included) and reading notes. Null when the series has no "
+            "vector id or WDS metadata could not be read."
+        ),
+    )
     observations: list[SdmxObservation]
     transformed: TransformedSeries | None = Field(
         default=None,

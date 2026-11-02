@@ -53,7 +53,11 @@ RENT_CUBE = {
             "dimensionNameEn": "Type of unit",
             "dimensionNameFr": "Type de logement",
             "member": [
-                {"memberId": 3, "memberNameEn": "Two bedroom units", "memberNameFr": "Deux chambres"}
+                {
+                    "memberId": 3,
+                    "memberNameEn": "Two bedroom units",
+                    "memberNameFr": "Deux chambres",
+                }
             ],
         },
     ],
@@ -73,7 +77,9 @@ INCOME_CUBE = {
             "dimensionPositionId": 1,
             "dimensionNameEn": "Geography",
             "dimensionNameFr": "Géographie",
-            "member": [{"memberId": 17, "memberNameEn": "Toronto, Ontario", "memberNameFr": "Toronto"}],
+            "member": [
+                {"memberId": 17, "memberNameEn": "Toronto, Ontario", "memberNameFr": "Toronto"}
+            ],
         },
         {
             "dimensionPositionId": 2,
@@ -279,7 +285,8 @@ async def test_metadata_outage_keeps_the_data(httpx_mock):
 
 async def test_missing_combination_says_it_is_not_published(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}getCubeMetadata", json=[{"status": "SUCCESS", "object": RENT_CUBE}]
+        url=f"{constants.BASE_URL}getCubeMetadata",
+        json=[{"status": "SUCCESS", "object": RENT_CUBE}],
     )
     client.use_lang("en")
     with pytest.raises(NotFound, match="does not publish a series for this combination") as info:
@@ -289,7 +296,8 @@ async def test_missing_combination_says_it_is_not_published(httpx_mock):
 
 async def test_unknown_member_names_the_dimension(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}getCubeMetadata", json=[{"status": "SUCCESS", "object": RENT_CUBE}]
+        url=f"{constants.BASE_URL}getCubeMetadata",
+        json=[{"status": "SUCCESS", "object": RENT_CUBE}],
     )
     client.use_lang("en")
     with pytest.raises(InvalidInput, match=r"dimension 1 \(Geography\) .* no member 999"):
@@ -336,3 +344,19 @@ def test_file_export_is_opt_in(monkeypatch):
     assert config.local_exports_enabled() is True
     monkeypatch.setenv("MAPLE_TRANSPORT", "http")
     assert config.local_exports_enabled() is False
+
+
+async def test_sdmx_series_get_context_by_vector(httpx_mock):
+    _metadata(httpx_mock)
+    client.use_lang("en")
+    found, note = await context.describe_vectors([96415851], set())
+    assert note is None
+    assert found[96415851].unit == "2024 constant dollars"
+    assert found[96415851].table_id == "11-10-0190-01"
+
+
+def test_sdmx_dataflow_counts_as_a_table():
+    payload = {"dataflow_id": "DF_11100190", "series": [], "provenance": {}}
+    assert result_product_ids(payload) == [11100190]
+    notes = caveats_for("sdmx_get_data", {"_result_product_ids": [11100190]}, "en")
+    assert any("Economic families and persons not in an economic family" in n for n in notes)
