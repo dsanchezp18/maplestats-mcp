@@ -497,4 +497,154 @@ RULES: tuple[FitnessRule, ...] = (
         # Only the data tools: listing categories or provinces returns no estimate.
         tool_prefixes=("cmhc_get_table_data", "cmhc_dt_get_table"),
     ),
+    FitnessRule(
+        key="cpi-annual-average",
+        title_en="CPI: annual average inflation vs December over December",
+        title_fr="IPC : inflation en moyenne annuelle et de décembre à décembre",
+        note_en=(
+            "Annual inflation for a calendar year is the change between two annual average "
+            "indexes, which Statistics Canada publishes each January in table 18-10-0005-01 "
+            "and computes from the published, rounded indexes. Read it there: averaging the "
+            "12 monthly values of 18-10-0004-01 yourself can differ by 0.1 point, and the "
+            "December-to-December change is a different measure. Say which one you report."
+        ),
+        note_fr=(
+            "L'inflation d'une année civile est la variation entre deux indices en moyenne "
+            "annuelle, que Statistique Canada publie chaque janvier dans le tableau "
+            "18-10-0005-01 et calcule à partir des indices publiés arrondis. Prenez-la dans "
+            "ce tableau : la moyenne des 12 valeurs mensuelles de 18-10-0004-01 calculée par "
+            "vous peut différer de 0,1 point, et la variation de décembre à décembre est une "
+            "autre mesure. Précisez laquelle vous donnez."
+        ),
+        sources=("https://www150.statcan.gc.ca/n1/pub/62-553-x/2023001/chap-2-eng.htm",),
+        checked=(
+            "The Canadian CPI Reference Paper (62-553-X, 2023), chapter 2: 'Each year with "
+            "the release of the December CPI in January, annual average indices are produced "
+            "for all of the published monthly indices'; 'annual average percentage changes, "
+            "which compare two consecutive annual average price indices'; 'Percentage changes "
+            "(monthly, 12-month and annual average) ... are always calculated with the "
+            "published rounded indices.' WDS: 18-10-0005 is 'Consumer Price Index, annual "
+            "average, not seasonally adjusted'. Read 2026-11-02."
+        ),
+        product_ids=(18100004, 18100005),
+    ),
+    FitnessRule(
+        key="cpi-city-coverage",
+        title_en="CPI: what is published for cities",
+        title_fr="IPC : ce qui est publié pour les villes",
+        note_en=(
+            "Most CPI components are published for Canada and the provinces only. Mortgage "
+            "interest cost is published for Canada alone: no province or city has it. For "
+            "Toronto, tables 18-10-0004 and 18-10-0005 publish six series only: All-items, "
+            "Shelter, Rented accommodation, Owned accommodation, Water, fuel and electricity, "
+            "and All-items (1992=100). A city figure for any other component does not exist; "
+            "say so and offer the national or provincial figure instead."
+        ),
+        note_fr=(
+            "La plupart des composantes de l'IPC ne sont publiées que pour le Canada et les "
+            "provinces. Le coût de l'intérêt hypothécaire n'est publié que pour le Canada : "
+            "aucune province ni aucune ville ne l'a. Pour Toronto, les tableaux 18-10-0004 et "
+            "18-10-0005 ne publient que six séries : Ensemble, Logement, Logement locatif, "
+            "Logement en propriété, Eau, combustible et électricité, et Ensemble (1992=100). "
+            "Un chiffre municipal pour une autre composante n'existe pas : dites-le et "
+            "proposez le chiffre national ou provincial."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000501",
+        ),
+        checked=(
+            "WDS getSeriesInfoFromCubePidCoord on 2026-11-02, both tables: every geography "
+            "with member 85 'Mortgage interest cost' returns a series only for Canada; "
+            "Toronto (geography 16) with each of the 359/361 product members returns a "
+            "series only for All-items, Shelter, Rented accommodation, Owned accommodation, "
+            "Water, fuel and electricity, and All-items (1992=100)."
+        ),
+        product_ids=(18100004, 18100005),
+    ),
+    FitnessRule(
+        key="cmhc-rms-universe",
+        title_en="CMHC Rental Market Survey tables: survey rents and which structures",
+        title_fr="Tableaux de l'Enquête sur les logements locatifs : loyers d'enquête et immeubles visés",
+        note_en=(
+            "These tables republish CMHC's Rental Market Survey, taken in the first two weeks "
+            "of October and labelled with its year. Average rent is what tenants actually "
+            "pay, over occupied and vacant units in privately initiated structures; it is "
+            "not an asking rent for vacant units or a rent from listing sites. Check the "
+            "structure type: 34-10-0130 (vacancy) and the 'row and apartment structures of "
+            "three units and over' member of 34-10-0133 (rent) cover the survey's whole "
+            "universe; 34-10-0127 covers apartment structures of six units and over only, "
+            "and its rates differ."
+        ),
+        note_fr=(
+            "Ces tableaux reprennent l'Enquête sur les logements locatifs de la SCHL, menée "
+            "pendant les deux premières semaines d'octobre et datée de son année. Le loyer "
+            "moyen est celui que paient réellement les locataires, sur les logements occupés "
+            "et vacants des immeubles d'initiative privée ; ce n'est pas un loyer demandé "
+            "pour un logement vacant ni un loyer de sites d'annonces. Vérifiez le type "
+            "d'immeuble : le tableau 34-10-0130 (inoccupation) et le membre « logements en "
+            "bandes et immeubles d'appartements de trois logements et plus » de 34-10-0133 "
+            "(loyers) couvrent tout l'univers de l'enquête ; 34-10-0127 ne couvre que les "
+            "immeubles de six logements et plus, et ses taux diffèrent."
+        ),
+        sources=(
+            (
+                "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/"
+                "housing-research/surveys/methods/methodology-rental-market-survey"
+            ),
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410013001",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410012701",
+        ),
+        checked=(
+            "CMHC 'Methodology for Rental Market Survey', read 2026-11-02: privately "
+            "initiated, 'all row projects and apartment structures with three or more "
+            "units'; 'conducted during the first 2 weeks of October'; rent is 'the actual "
+            "amount tenants pay', average rent covers vacant and occupied units; asking rent "
+            "applies to vacant units. WDS titles: 34-10-0130 'vacancy rates, row and "
+            "apartment structures of three units and over ... weighted average'; 34-10-0127 "
+            "'vacancy rates, apartment structures of six units and over'; 34-10-0133 "
+            "'average rents for areas with a population of 10,000 and over', Type of "
+            "structure member 3 'Row and apartment structures of three units and over'."
+        ),
+        product_ids=(34100127, 34100130, 34100133),
+    ),
+    FitnessRule(
+        key="income-unit-and-dollars",
+        title_en="Income tables: families or individuals, constant dollars",
+        title_fr="Tableaux du revenu : familles ou particuliers, dollars constants",
+        note_en=(
+            "Table 11-10-0190 is in constant dollars of its latest income year "
+            "(inflation-adjusted), so growth read from it is real growth: do not set it "
+            "beside growth in current dollars, such as rents, without saying so. Its "
+            "'Economic families and persons not in an economic family' member counts each "
+            "family, and each person living alone or with non-relatives, once. Income of "
+            "individuals (11-10-0238, 11-10-0239) is per person aged 15 and over and much "
+            "lower. Use the unit the question asks for (household or family vs person) and "
+            "name it."
+        ),
+        note_fr=(
+            "Le tableau 11-10-0190 est en dollars constants de sa dernière année de revenu "
+            "(corrigés de l'inflation) : la croissance qu'on en tire est réelle, à ne pas "
+            "comparer à une croissance en dollars courants, comme celle des loyers, sans le "
+            "dire. Son membre « Familles économiques et personnes hors famille économique » "
+            "compte une fois chaque famille et chaque personne seule ou vivant avec des "
+            "personnes non apparentées. Le revenu des particuliers (11-10-0238, 11-10-0239) "
+            "est par personne de 15 ans et plus, et bien plus bas. Prenez l'unité que la "
+            "question demande (ménage ou famille, ou personne) et nommez-la."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110019001",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901",
+        ),
+        checked=(
+            "WDS getCubeMetadata 2026-11-02: 11-10-0190 income concepts carry memberUomCode "
+            "455 ('2024 constant dollars' in getCodeSets); footnotes define an economic "
+            "family as two or more related persons in the same dwelling and a person not in "
+            "an economic family as one living alone or with unrelated others, and say 2022 "
+            "onwards covers persons aged 15 and over. 11-10-0238 is 'Distribution of market, "
+            "total and after-tax income of individuals'; 11-10-0239 is 'Income of "
+            "individuals by age group, gender and income source'."
+        ),
+        product_ids=(11100190, 11100238, 11100239),
+    ),
 )

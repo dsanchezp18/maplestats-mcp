@@ -155,10 +155,69 @@ class ObservationRow(BaseModel):
     )
 
 
+class SeriesMember(BaseModel):
+    dimension: str = Field(description="The table dimension, e.g. 'Geography'.")
+    member: str = Field(
+        description="This series' member of that dimension, e.g. 'Toronto, Ontario'."
+    )
+    member_id: int
+
+
+class SeriesContext(BaseModel):
+    """What a series measures, read from WDS metadata, so a value can be cited
+    and checked without another call. In the call's language."""
+
+    table_id: str = Field(description="The table number as StatCan prints it, e.g. 34-10-0133-01.")
+    table_title: str | None = None
+    table_url: str = Field(description="The table's page on statcan.gc.ca, for a citation.")
+    series_title: str | None = Field(
+        default=None, description="StatCan's own title: the members, ';'-separated."
+    )
+    unit: str | None = Field(
+        default=None,
+        description=(
+            "Unit of measure, e.g. 'Dollars' (current dollars), '2024 constant dollars' "
+            "(inflation-adjusted), 'Percent', '2002=100' (an index)."
+        ),
+    )
+    scale: str | None = Field(
+        default=None,
+        description="Scalar factor, e.g. 'units' or 'thousands': multiply by scale_multiplier.",
+    )
+    frequency: str | None = None
+    geography: str | None = Field(
+        default=None, description="The Geography member, when the table has one."
+    )
+    members: list[SeriesMember] = Field(
+        default_factory=list, description="Every dimension's member for this series."
+    )
+    table_release_time: str | None = Field(
+        default=None, description="When the table was last released or revised (WDS releaseTime)."
+    )
+    first_period: date | None = Field(
+        default=None,
+        description="The table's first reference period. The series itself may start later.",
+    )
+    last_period: date | None = Field(
+        default=None, description="The table's latest reference period."
+    )
+    notes: list[str] = Field(
+        default_factory=list,
+        description="How to read the values: the unit's meaning, empty windows, and similar.",
+    )
+
+
 class VectorSeries(BaseModel):
     product_id: int
     coordinate: str
     vector_id: int
+    context: SeriesContext | None = Field(
+        default=None,
+        description=(
+            "Table number, title and page URL, series title, unit, members (geography "
+            "included) and reading notes. Null only when WDS metadata could not be read."
+        ),
+    )
     observations: list[ObservationRow] = Field(
         description="Values as published (unscaled), for the requested window."
     )

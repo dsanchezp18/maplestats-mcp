@@ -2,7 +2,8 @@
 
 The rules are only worth attaching to tool results if they are right, so these
 tests pin what was checked: every product id a rule names is in VERIFIED_TABLES,
-each looked up live with WDS getCubeMetadata on 2026-10-27 (title shown), and
+each looked up live with WDS getCubeMetadata on 2026-10-27, or 2026-11-02 for the
+income, CMHC rental and annual CPI tables (title shown), and
 every rule cites an official page.
 """
 
@@ -21,7 +22,8 @@ from maplestats_mcp.shared.fitness import notes_for, product_ids_in, rules_for
 from maplestats_mcp.shared.fitness_rules import RULES
 from maplestats_mcp.shared.i18n import NBSP
 
-# productId -> title, from getCubeMetadata on 2026-10-27. A new id in a rule
+# productId -> title, from getCubeMetadata on 2026-10-27 (2026-11-02 for 11100190,
+# 11100238, 11100239, 18100005, 34100127, 34100130, 34100133). A new id in a rule
 # must be checked live the same way and added here.
 VERIFIED_TABLES = {
     11100066: "Market Basket Measure (MBM) thresholds for the reference family by MBM region, "
@@ -31,7 +33,13 @@ VERIFIED_TABLES = {
     11100104: "Market Basket Measure thresholds by MBM region and family size, in current dollars",
     11100135: "Low income statistics by age, gender and economic family type",
     11100136: "Low income statistics by economic family type",
+    11100190: "Market income, government transfers, total income, income tax and after-tax income "
+    "by economic family type",
     11100232: "Low income measure (LIM) thresholds by income source and household size",
+    11100238: "Distribution of market, total and after-tax income of individuals, Canada, provinces "
+    "and selected census metropolitan areas",
+    11100239: "Income of individuals by age group, gender and income source, Canada, provinces and "
+    "selected census metropolitan areas",
     14100201: "Employment by industry, monthly, unadjusted for seasonality (SEPH)",
     14100220: "Employment and average weekly earnings for all employees by industry, monthly, SA",
     14100222: "Employment, average hourly and weekly earnings ... industrial aggregate, monthly, SA",
@@ -43,9 +51,15 @@ VERIFIED_TABLES = {
     14100416: "Labour force characteristics by occupation, annual",
     14100421: "Labour force characteristics by occupation, monthly, unadjusted for seasonality",
     18100004: "Consumer Price Index, monthly, not seasonally adjusted",
+    18100005: "Consumer Price Index, annual average, not seasonally adjusted",
     18100006: "Consumer Price Index, monthly, seasonally adjusted",
     18100256: "CPI statistics, measures of core inflation - Bank of Canada definitions",
     18100259: "Historical (real-time) releases of CPI statistics, measures of core inflation",
+    34100127: "CMHC, vacancy rates, apartment structures of six units and over, privately "
+    "initiated in census metropolitan areas",
+    34100130: "CMHC, vacancy rates, row and apartment structures of three units and over, "
+    "privately initiated in census metropolitan areas, weighted average",
+    34100133: "CMHC, average rents for areas with a population of 10,000 and over",
     36100104: "Gross domestic product, expenditure-based, Canada, quarterly",
     36100434: "Gross domestic product (GDP) at basic prices, by industry, monthly",
     98100001: "Population and dwelling counts: Canada, provinces and territories",

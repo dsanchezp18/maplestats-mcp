@@ -64,6 +64,7 @@ from maplestats_mcp.catalogue import (
 from maplestats_mcp.shared import search, semantic
 from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
+from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
 from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
@@ -92,7 +93,7 @@ def _read_only_annotations(open_world: bool) -> ToolAnnotations:
 
 
 def _export_annotations() -> ToolAnnotations:
-    local_exports = config.get_transport() == "stdio"
+    local_exports = config.local_exports_enabled()
     return ToolAnnotations(
         read_only_hint=not local_exports,
         destructive_hint=local_exports,
@@ -714,6 +715,8 @@ def build_server() -> FastMCP:
             mcp.add_provider(ModuleProvider(root=module_dir))
         else:
             mcp.add_provider(LazyModuleProvider(module_dir, entry))
+    # Outside the validation middleware, so its one-line argument errors get a fix too.
+    mcp.add_middleware(ErrorHintMiddleware())
     mcp.add_middleware(ValidationErrorMiddleware())
     mcp.add_middleware(CallLanguageMiddleware())
     # One byte budget for every tool's result, and the fitness-for-use caveats in

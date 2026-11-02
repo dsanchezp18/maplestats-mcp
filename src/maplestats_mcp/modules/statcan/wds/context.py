@@ -1,0 +1,303 @@
+"""What each WDS series measures, attached to every data result.
+
+WDS data methods return a vector's numbers and codes, but not what the
+numbers are: no table title, no member names, no unit. An agent then has to
+guess whether $82,500 is a family or an individual income, or whether it is
+in current or constant dollars, and both guesses were wrong in a public
+benchmark (CanData's GTA ground truth, 2026-10-22). This module fills
+`VectorSeries.context` from three cached WDS reads:
+
+- getSeriesInfoFromVector (one batched POST, cached a day): the series
+  title and memberUomCode. The batch answers out of request order (checked
+  live 2026-11-02 with 3823103, 41695188 and 96415851), so items are keyed
+  by the vectorId they echo.
+- getCubeMetadata (already cached a day by the client): the table title,
+  dimension and member names, the table's period range and release time.
+- getCodeSets (already cached a week): unit, scale and frequency text.
+  memberUomCode 455 is "2024 constant dollars" and 81 is "Dollars" (checked
+  live 2026-11-02), which is the whole difference between real and nominal
+  growth in the benchmark's GT-08.
+
+Context is best effort: when a metadata read fails the data still come back,
+with `context` left null and a note in provenance.limits.
+"""
+
+from __future__ import annotations
+
+from datetime import date
+from typing import Any
+
+from maplestats_mcp.modules.statcan.wds import client, constants
+from maplestats_mcp.modules.statcan.wds.schemas import (
+    SeriesContext,
+    SeriesMember,
+    VectorSeries,
+)
+from maplestats_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared.errors import DataLocked, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.json_utils import list_or_empty
+
+_SOFT_ERRORS = (NotFound, UpstreamError, UpstreamUnavailable, DataLocked)
+_TABLE_PAGE = "https://www150.statcan.gc.ca/t1/tbl1/{lang}/tv.action?pid={pid:08d}01"
+
+
+def table_number(product_id: int) -> str:
+    """34100133 -> 34-10-0133-01, the form StatCan prints and cites."""
+    digits = f"{product_id:08d}"
+    return f"{digits[:2]}-{digits[2:4]}-{digits[4:8]}-01"
+
+
+def table_url(product_id: int, lang: str = "en") -> str:
+    return _TABLE_PAGE.format(lang="fr" if lang == "fr" else "en", pid=product_id)
+
+
+async def _series_info_raw(vector_ids: list[int]) -> dict[int, dict[str, Any]]:
+    method = "getSeriesInfoFromVector"
+
+    async def fetch() -> list[dict[str, Any]]:
+        return await client._post(method, [{"vectorId": v} for v in vector_ids])
+
+    items, _ = await cached_fetch(
+        f"wds:{method}:{sorted(vector_ids)}", constants.CACHE_TTL_CUBE_METADATA_SECONDS, fetch
+    )
+    found: dict[int, dict[str, Any]] = {}
+    for item in items:
+        obj = item.get("object") if isinstance(item, dict) else None
+        if (
+            item.get("status") == "SUCCESS"
+            and isinstance(obj, dict)
+            and obj.get("responseStatusCode") in (None, 0)
+        ):
+            found[int(obj["vectorId"])] = obj
+    return found
+
+
+def _code_text(codes: dict[str, Any], key: str, code_field: str, stem: str, code: Any, lang: str):
+    if code is None:
+        return None
+    suffix = "Fr" if lang == "fr" else "En"
+    for entry in list_or_empty(codes, key):
+        if str(entry.get(code_field)) == str(code):
+            return entry.get(f"{stem}{suffix}") or entry.get(f"{stem}En")
+    return None
+
+
+def _parse_day(raw: Any) -> date | None:
+    try:
+        return date.fromisoformat(str(raw)[:10])
+    except ValueError:
+        return None
+
+
+def unit_notes(unit: str | None, lang: str) -> list[str]:
+    """Plain-language notes on what a unit of measure implies for comparisons."""
+    if not unit:
+        return []
+    low = unit.lower()
+    if "constant" in low and "dollar" in low:
+        return [
+            client._m(
+                f"Unit is {unit}: inflation-adjusted (real) dollars. Growth computed from it is "
+                "real growth. Do not set it beside growth in a current-dollar (nominal) series, "
+                "such as rents, without converting one of them or saying they differ.",
+                f"Unité : {unit}, soit des dollars corrigés de l'inflation (réels). La croissance "
+                "calculée est réelle ; ne la comparez pas à celle d'une série en dollars courants "
+                "(nominaux), comme les loyers, sans convertir l'une des deux ou le signaler.",
+            )
+        ]
+    if low in {"dollars", "current dollars", "dollars courants"}:
+        return [
+            client._m(
+                "Unit is current (nominal) dollars, not adjusted for inflation.",
+                "Unité : dollars courants (nominaux), non corrigés de l'inflation.",
+            )
+        ]
+    if "=100" in low.replace(" ", ""):
+        return [
+            client._m(
+                f"Unit is an index ({unit}), not a price or dollar level: quote changes as "
+                "percentages of the index.",
+                f"Unité : un indice ({unit}), pas un prix ni un montant ; exprimez les "
+                "variations en pourcentage de l'indice.",
+            )
+        ]
+    return []
+
+
+# Enough periods for a monthly series back to 1914 (1,353 for the CPI, checked
+# live 2026-11-02); WDS answered latestN=2000 without complaint.
+_SPAN_LATEST_N = 3000
+
+
+async def series_span(vector_id: int) -> tuple[date, date] | None:
+    """First and last reference periods that carry a value, or None if unknown.
+
+    Rows before a series starts come back with value null (3823103, Toronto
+    two-bedroom rent, has rows from 1987 and values from 1992: checked live
+    2026-11-02), so the span is read from non-null values, not row dates.
+    """
+    method = "getDataFromVectorsAndLatestNPeriods"
+
+    async def fetch() -> list[dict[str, Any]]:
+        return await client._post(method, [{"vectorId": vector_id, "latestN": _SPAN_LATEST_N}])
+
+    try:
+        items, _ = await cached_fetch(
+            f"wds:span:{vector_id}", constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch
+        )
+        obj = client._unwrap_one(items[0], method)
+    except _SOFT_ERRORS:
+        return None
+    days = [
+        day
+        for dp in list_or_empty(obj, "vectorDataPoint")
+        if dp.get("value") is not None and (day := _parse_day(dp.get("refPer"))) is not None
+    ]
+    return (min(days), max(days)) if days else None
+
+
+def _empty_window_note(series: VectorSeries, span: tuple[date, date] | None) -> str:
+    if span is not None:
+        first, last = span
+        return client._m(
+            f"No observations in the requested window. This series has values from {first} "
+            f"to {last} only. Do not estimate a value for a period it does not cover.",
+            f"Aucune observation dans la période demandée. Cette série a des valeurs du "
+            f"{first} au {last} seulement. N'estimez pas de valeur hors de cette période.",
+        )
+    return client._m(
+        "No observations in the requested window. Call wds_get_data_from_vectors with "
+        f"vector_ids=[{series.vector_id}] and a large latest_n to see the periods this "
+        "series covers. Do not estimate a value for a period it does not cover.",
+        "Aucune observation dans la période demandée. Appelez wds_get_data_from_vectors avec "
+        f"vector_ids=[{series.vector_id}] et un grand latest_n pour voir les périodes que "
+        "couvre cette série. N'estimez pas de valeur hors de cette période.",
+    )
+
+
+def _context_for(
+    series: VectorSeries,
+    info: dict[str, Any] | None,
+    cube: dict[str, Any] | None,
+    codes: dict[str, Any] | None,
+    lang: str,
+    span: tuple[date, date] | None = None,
+) -> SeriesContext:
+    suffix = "Fr" if lang == "fr" else "En"
+    members: list[SeriesMember] = []
+    geography: str | None = None
+    unit_code: Any = info.get("memberUomCode") if info else None
+    if cube is not None:
+        ids = series.coordinate.split(".")
+        for dim in list_or_empty(cube, "dimension"):
+            position = int(dim["dimensionPositionId"])
+            if position > len(ids) or ids[position - 1] in ("", "0"):
+                continue
+            member_id = int(ids[position - 1])
+            match = next(
+                (m for m in list_or_empty(dim, "member") if int(m["memberId"]) == member_id),
+                None,
+            )
+            if match is None:
+                continue
+            name = match.get(f"memberName{suffix}") or match.get("memberNameEn") or ""
+            dim_name = dim.get(f"dimensionName{suffix}") or dim.get("dimensionNameEn") or ""
+            members.append(SeriesMember(dimension=dim_name, member=name, member_id=member_id))
+            if geography is None and dim.get("dimensionNameEn", "").startswith("Geograph"):
+                geography = name
+            if unit_code is None and match.get("memberUomCode") is not None:
+                unit_code = match.get("memberUomCode")
+    scalar_code = info.get("scalarFactorCode") if info else None
+    if scalar_code is None and series.observations:
+        scalar_code = series.observations[0].scalar_factor_code
+    frequency_code = info.get("frequencyCode") if info else None
+    if frequency_code is None and cube is not None:
+        frequency_code = cube.get("frequencyCode")
+    unit = scale = frequency = None
+    if codes is not None:
+        unit = _code_text(codes, "uom", "memberUomCode", "memberUom", unit_code, lang)
+        scale = _code_text(
+            codes, "scalar", "scalarFactorCode", "scalarFactorDesc", scalar_code, lang
+        )
+        frequency = _code_text(
+            codes, "frequency", "frequencyCode", "frequencyDesc", frequency_code, lang
+        )
+    first = _parse_day(cube.get("cubeStartDate")) if cube else None
+    last = _parse_day(cube.get("cubeEndDate")) if cube else None
+    notes = unit_notes(unit, lang)
+    if scale and scalar_code not in (None, 0):
+        notes.append(
+            client._m(
+                f"Values are in {scale}: multiply value by scale_multiplier for the full figure.",
+                f"Valeurs en {scale} : multipliez value par scale_multiplier pour le chiffre entier.",
+            )
+        )
+    if not series.observations:
+        notes.append(_empty_window_note(series, span))
+    return SeriesContext(
+        table_id=table_number(series.product_id),
+        table_title=(cube.get(f"cubeTitle{suffix}") or cube.get("cubeTitleEn")) if cube else None,
+        table_url=table_url(series.product_id, lang),
+        series_title=(info.get(f"SeriesTitle{suffix}") or info.get("SeriesTitleEn"))
+        if info
+        else None,
+        unit=unit,
+        scale=scale,
+        frequency=frequency,
+        geography=geography,
+        members=members,
+        table_release_time=cube.get("releaseTime") if cube else None,
+        first_period=first,
+        last_period=last,
+        notes=notes,
+    )
+
+
+async def describe(series: list[VectorSeries]) -> tuple[list[VectorSeries], str | None]:
+    """`series` with `context` filled, and a limits note when metadata could not be read."""
+    if not series:
+        return series, None
+    lang = "fr" if client._LANG.get() == "fr" else "en"
+    missing: list[str] = []
+    try:
+        infos = await _series_info_raw(sorted({s.vector_id for s in series}))
+    except _SOFT_ERRORS:
+        infos = {}
+        missing.append("getSeriesInfoFromVector")
+    cubes: dict[int, dict[str, Any] | None] = {}
+    for product_id in dict.fromkeys(s.product_id for s in series):
+        try:
+            cubes[product_id], _ = await client.cube_metadata_raw(product_id)
+        except _SOFT_ERRORS:
+            cubes[product_id] = None
+            missing.append(f"getCubeMetadata {product_id}")
+    try:
+        codes, _ = await client._code_sets_raw()
+    except _SOFT_ERRORS:
+        codes = None
+        missing.append("getCodeSets")
+    spans = {s.vector_id: await series_span(s.vector_id) for s in series if not s.observations}
+    described = [
+        s.model_copy(
+            update={
+                "context": _context_for(
+                    s,
+                    infos.get(s.vector_id),
+                    cubes.get(s.product_id),
+                    codes,
+                    lang,
+                    spans.get(s.vector_id),
+                )
+            }
+        )
+        for s in series
+    ]
+    note = (
+        client._m(
+            "series context is incomplete: " + ", ".join(missing) + " did not answer",
+            "le contexte des séries est incomplet : " + ", ".join(missing) + " n'a pas répondu",
+        )
+        if missing
+        else None
+    )
+    return described, note

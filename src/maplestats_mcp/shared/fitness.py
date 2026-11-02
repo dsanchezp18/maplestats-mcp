@@ -36,6 +36,8 @@ _PRODUCT_ID_KEYS = frozenset(
         "table",
         "table_id",
         "table_number",
+        # Added by response_budget: the product ids a result itself states.
+        "_result_product_ids",
     }
 )
 

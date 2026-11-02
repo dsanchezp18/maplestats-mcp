@@ -89,6 +89,23 @@ def get_transport() -> str:
     return raw
 
 
+def get_export_dir() -> str | None:
+    """MAPLE_EXPORT_DIR, or None when unset."""
+    raw = os.environ.get("MAPLE_EXPORT_DIR", "").strip()
+    return raw or None
+
+
+def local_exports_enabled() -> bool:
+    """Whether reproduce_workbook may write files: a stdio server with MAPLE_EXPORT_DIR set.
+
+    Opt-in, so that by default every tool is read-only and idempotent and its
+    MCP annotations say so. Before 2026-11 a stdio server saved to Downloads by
+    default, which made call_tool (the route to every data tool) advertise itself
+    as destructive and not read-only.
+    """
+    return get_transport() == "stdio" and get_export_dir() is not None
+
+
 def get_auth_token() -> str | None:
     raw = os.environ.get("MAPLE_AUTH_TOKEN", "").strip()
     return raw or None

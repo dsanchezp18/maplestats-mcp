@@ -269,7 +269,7 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
 | `MAPLE_CBSA_TARIFF_CACHE_DIR` | system temp | Customs Tariff editions as Parquet (under 1 MB each, newest 12 kept) |
 | `MAPLE_ON_FIR_CACHE_DIR`, `MAPLE_ON_FIR_CACHE_MAX_MB` | system temp, `500` | Ontario FIR years kept as Parquet (about 3 MB each); use a persistent volume when hosted |
-| `MAPLE_EXPORT_DIR` | Downloads folder (home folder if there is none) | Where `reproduce_workbook` saves Excel workbooks on a local server |
+| `MAPLE_EXPORT_DIR` | unset (no files saved) | Folder where `reproduce_workbook` saves Excel workbooks on a local server. Unset, the workbook comes back as base64 and every tool is read-only |
 | `MAPLE_SEARCH`, `MAPLE_SEMANTIC_DIR` | `bm25`, unset | `hybrid` fuses BM25 with a local multilingual-e5-small index (needs the `[semantic]` extra and `python -m maplestats_mcp.shared.semantic build`); off by default, see `tests/discovery_benchmark/phase2.md` |
 | `MAPLE_RESPONSE_MAX_BYTES` | `200000` | Byte budget for one tool result (minimum 10,000); a larger result has its biggest lists trimmed, and `provenance.limits` says what was kept and how to get the rest |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |

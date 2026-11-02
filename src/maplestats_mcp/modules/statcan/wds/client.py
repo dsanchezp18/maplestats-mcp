@@ -644,6 +644,84 @@ async def get_cube_metadata(
     )
 
 
+async def explain_missing_coordinate(pid: int, coordinate: str, method: str) -> NoReturn:
+    """Raise why a table has no series at `coordinate`, and what to call instead.
+
+    WDS answers a coordinate with no series with a bare status FAILED or a
+    non-zero responseStatusCode (confirmed live 2026-11-02 for 18-10-0004,
+    Toronto x Mortgage interest cost: responseStatusCode 2). An agent reading
+    only that cannot tell a typo from a series StatCan does not publish, and in
+    a public benchmark it hedged instead of saying the series does not exist.
+    """
+    try:
+        cube, _ = await cube_metadata_raw(pid)
+    except NotFound:
+        raise NotFound(
+            _m(
+                f"{method}: table {pid} does not exist in WDS. Fix: find the table with "
+                "wds_search_cubes(query='<topic words>') and use its product_id.",
+                f"{method} : le tableau {pid} n'existe pas dans le SDW. Solution : trouvez le "
+                "tableau avec wds_search_cubes(query='<mots du sujet>') et utilisez son "
+                "product_id.",
+            )
+        ) from None
+    except (UpstreamError, UpstreamUnavailable, DataLocked):
+        cube = None
+    if cube is None:
+        raise NotFound(
+            _m(
+                f"{method}: table {pid} has no series at coordinate {coordinate}. "
+                f"Fix: list the members with wds_get_cube_metadata(product_id={pid}) and "
+                "build the coordinate from their member ids, one per dimension in order.",
+                f"{method} : le tableau {pid} n'a pas de série à la coordonnée {coordinate}. "
+                f"Solution : listez les membres avec wds_get_cube_metadata(product_id={pid}) "
+                "et formez la coordonnée avec leurs identifiants, une dimension à la fois.",
+            )
+        )
+    fr = _LANG.get() == "fr"
+    ids = coordinate.split(".")
+    labels: list[str] = []
+    for dim in list_or_empty(cube, "dimension"):
+        position = int(dim["dimensionPositionId"])
+        dim_name = dim.get("dimensionNameFr" if fr else "dimensionNameEn") or ""
+        raw = ids[position - 1] if position <= len(ids) else "0"
+        members = {int(m["memberId"]): m for m in list_or_empty(dim, "member")}
+        member = members.get(int(raw)) if raw.isdigit() else None
+        if member is None:
+            raise InvalidInput(
+                _m(
+                    f"{method}: dimension {position} ({dim_name}) of table {pid} has no member "
+                    f"{raw}; it has {len(members)} members. Fix: call wds_get_cube_metadata("
+                    f"product_id={pid}, dimension={position}, member_query='<words>') and use "
+                    "a member_id it returns.",
+                    f"{method} : la dimension {position} ({dim_name}) du tableau {pid} n'a pas "
+                    f"de membre {raw} ; elle en compte {len(members)}. Solution : appelez "
+                    f"wds_get_cube_metadata(product_id={pid}, dimension={position}, "
+                    "member_query='<mots>') et utilisez un member_id renvoyé.",
+                )
+            )
+        name = member.get("memberNameFr" if fr else "memberNameEn") or raw
+        labels.append(f"{dim_name} = {name}")
+    raise NotFound(
+        _m(
+            f"{method}: Statistics Canada does not publish a series for this combination in "
+            f"table {pid}: {'; '.join(labels)}. Every member exists, but not every "
+            "combination of members is published (city CPI, for one, has only a few "
+            "components). Do not estimate it. Fix: report that this series is not "
+            "published, and offer the nearest published one, such as a broader geography "
+            "(the province or Canada) or a parent member, found with wds_get_cube_metadata("
+            f"product_id={pid}).",
+            f"{method} : Statistique Canada ne publie pas de série pour cette combinaison dans "
+            f"le tableau {pid} : {' ; '.join(labels)}. Chaque membre existe, mais toutes les "
+            "combinaisons ne sont pas publiées (l'IPC des villes, par exemple, n'a que "
+            "quelques composantes). N'en estimez pas la valeur. Solution : indiquez que cette "
+            "série n'est pas publiée et proposez la plus proche qui l'est, par exemple une "
+            "géographie plus large (la province ou le Canada) ou un membre parent, trouvé avec "
+            f"wds_get_cube_metadata(product_id={pid}).",
+        )
+    )
+
+
 def _series_info(obj: dict[str, Any], method: str) -> SeriesInfo:
     terminated = obj.get("terminated")
     return SeriesInfo(
@@ -673,7 +751,10 @@ async def get_series_info_from_cube_pid_coord(product_id: int | str, coordinate:
     items = await _post(
         "getSeriesInfoFromCubePidCoord", [{"productId": pid, "coordinate": coordinate}]
     )
-    obj = _unwrap_one(items[0], "getSeriesInfoFromCubePidCoord")
+    try:
+        obj = _unwrap_one(items[0], "getSeriesInfoFromCubePidCoord")
+    except (NotFound, UpstreamError):
+        await explain_missing_coordinate(pid, coordinate, "getSeriesInfoFromCubePidCoord")
     return _series_info(obj, "getSeriesInfoFromCubePidCoord")
 
 
@@ -926,7 +1007,12 @@ async def get_data_from_cube_pid_coord_and_latest_n_periods(
         raise InvalidInput(_m("latest_n must be 1 or more.", "latest_n doit être 1 ou plus."))
     body = [{"productId": pid, "coordinate": coordinate, "latestN": latest_n}]
     items = await _post("getDataFromCubePidCoordAndLatestNPeriods", body)
-    obj = _unwrap_one(items[0], "getDataFromCubePidCoordAndLatestNPeriods")
+    try:
+        obj = _unwrap_one(items[0], "getDataFromCubePidCoordAndLatestNPeriods")
+    except (NotFound, UpstreamError):
+        await explain_missing_coordinate(
+            pid, coordinate, "getDataFromCubePidCoordAndLatestNPeriods"
+        )
     return _vector_data_from_json(
         obj,
         source_url=f"{constants.BASE_URL}getDataFromCubePidCoordAndLatestNPeriods",

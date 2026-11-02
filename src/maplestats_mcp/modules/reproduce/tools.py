@@ -80,7 +80,7 @@ async def reproduce_workbook(
     (decode it and save it as file_name), so keep max_rows small (default
     2,000, at most 20,000; at most 256 columns, 200,000 cells and
     8 million text characters; the file is capped at 2 MB); a local server
-    saves it to your Downloads folder (or MAPLE_EXPORT_DIR) instead. For
+    whose operator set MAPLE_EXPORT_DIR saves it in that folder instead. For
     a refreshable query over the full data, use reproduce_code with
     language "excel".
     Keywords: Excel, workbook, spreadsheet, xlsx, export, download table,
