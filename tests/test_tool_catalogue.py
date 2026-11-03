@@ -127,7 +127,7 @@ _FRESH_SERVER = textwrap.dedent(
 def test_fresh_server_imports_a_module_only_when_called():
     """Run with MAPLE_PUMF_TABULATE=0, which also checks the switches: a tool a
     setting hides must be missing from the catalogue listing too."""
-    env = {**os.environ, "MAPLE_PUMF_TABULATE": "0"}
+    env = {**os.environ, "MAPLE_PUMF_TABULATE": "0", "MAPLE_QUERY_SERIES": "0"}
     done = subprocess.run(
         [sys.executable, "-c", _FRESH_SERVER],
         capture_output=True,

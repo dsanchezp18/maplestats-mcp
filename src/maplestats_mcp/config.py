@@ -247,6 +247,18 @@ def get_pumf_tabulate_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def get_query_series_enabled() -> bool:
+    """Whether wds_query_series is offered.
+
+    The hosted server sets MAPLE_QUERY_SERIES=0: DuckDB's memory limit does not
+    cover scalar functions that build large lists or strings, so one query
+    (`SELECT len(range(1000000000))`) could exhaust a small instance's memory, and
+    the time limit does not interrupt a single long operator. Local installs keep it.
+    """
+    raw = os.environ.get("MAPLE_QUERY_SERIES", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def get_pumf_cache_max_bytes() -> int:
     """Cap on the PUMF cache; the least recently used files are removed past it."""
     value = _env_float("MAPLE_PUMF_CACHE_MAX_GB", 5.0)
