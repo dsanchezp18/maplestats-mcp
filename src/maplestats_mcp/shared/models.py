@@ -83,9 +83,6 @@ class Provenance(BaseModel):
         ),
     )
     reproduce: str = Field(
-        default=(
-            "For R, Python, Stata and Julia scripts that fetch and clean these data, call "
-            "reproduce_code with this tool's name and arguments."
-        ),
+        default="For scripts, call reproduce_code with this tool's name and arguments.",
         description="How to get retrieval and cleaning code for this result.",
     )

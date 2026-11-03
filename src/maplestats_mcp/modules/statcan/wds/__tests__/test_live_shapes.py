@@ -579,10 +579,36 @@ async def test_metadata_caps_members_and_footnotes_and_says_so(httpx_mock):
     geography = meta.dimensions[0]
     assert (geography.member_count, len(geography.members)) == (5000, 100)
     assert len(meta.dimensions[1].members) == 2
-    assert (len(meta.footnotes), meta.footnote_count) == (25, 60)
+    assert (len(meta.footnotes), meta.footnote_count) == (10, 60)
     assert meta.provenance.limits is not None
     assert "dimension 1: 100 of 5000" in meta.provenance.limits
-    assert "footnotes: 25 of 60" in meta.provenance.limits
+    assert "footnotes: 10 of 60 distinct texts" in meta.provenance.limits
+    more = await client.get_cube_metadata(98100002, footnote_limit=60)
+    assert len(more.footnotes) == 60
+    assert "footnotes" not in (more.provenance.limits or "")
+
+
+async def test_metadata_returns_a_repeated_footnote_once(httpx_mock):
+    # WDS lists one note under a new id per member it applies to (18-10-0004 repeats
+    # a 1.6 KB note 17 times); the text comes once, with the other ids.
+    payload = _metadata(3, 0)
+    payload[0]["object"]["footnote"] = [
+        {"footnoteId": 1, "footnotesEn": "Table note", "footnotesFr": "Note du tableau"},
+        {"footnoteId": 2, "footnotesEn": "Member note", "footnotesFr": "Note du membre"},
+        {"footnoteId": 3, "footnotesEn": "Member note", "footnotesFr": "Note du membre"},
+        {"footnoteId": 4, "footnotesEn": "Member note", "footnotesFr": "Note du membre"},
+    ]
+    httpx_mock.add_response(url=f"{BASE}getCubeMetadata", method="POST", json=payload)
+    meta = await client.get_cube_metadata(98100002)
+    assert meta.footnote_count == 4
+    assert [(f.footnote_id, f.text_en, f.same_text_ids) for f in meta.footnotes] == [
+        (1, "Table note", []),
+        (2, "Member note", [3, 4]),
+    ]
+    assert meta.provenance.limits is None
+    capped = await client.get_cube_metadata(98100002, footnote_limit=1)
+    assert [f.footnote_id for f in capped.footnotes] == [1]
+    assert "footnotes: 1 of 2 distinct texts" in (capped.provenance.limits or "")
 
 
 async def test_metadata_can_page_filter_and_pick_a_dimension(httpx_mock):

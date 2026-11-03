@@ -437,10 +437,10 @@ Find the right data tool for one specific need by plain-language search.
 
 Use for: locating a tool when you know roughly what data you want
 (a StatCan table, Bank of Canada series, a city's open-data portal).
-Returns the best-matching tool definitions, ranked by relevance, each
-with its name, description and full input schema, in the same format
-as list_tools. Read-only; it searches this server's catalogue only and
-calls no external API.
+Returns up to five tool definitions, best match first, each with its
+name, title, description, full input schema and annotations (output
+schemas and search keywords are left out). Read-only; it searches this
+server's catalogue only and calls no external API.
 Use plan_query instead when a question may span several sources or you
 do not know where to start; use call_tool to run a tool once you have
 its name. Queries in English or French both work. An empty result
@@ -479,11 +479,11 @@ MapleStats MCP -- one server for Canadian open data.
 How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
-plain-language query (English or French). Then call_tool with the name.
+plain-language query (English or French), then call_tool with its name.
 For a whole StatCan table, or hundreds of series, use
-wds_get_full_table_download (a CSV link: the rows are not returned) rather
-than the vector tools, which return every observation inline and suit a
-handful of series; run the Python script it returns and read its summary.
+wds_get_full_table_download (a CSV link, not the rows); the vector tools
+return every observation inline and suit a handful of series. Run the Python
+script it returns and read its summary.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
 other results name their source in provenance.
@@ -492,8 +492,8 @@ seasonally adjusted series unless the question asks otherwise, and say which.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
 and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns
-the rows as a formatted Excel workbook. Read docs://catalogue for a
-bilingual one-line description of every module.
+the rows as a formatted Excel workbook. docs://catalogue describes every
+module in one bilingual line.
 
 Sources, by tool-name prefix:
 - Statistics Canada: wds_ (tables/cubes, vectors), sdmx_ (filtered
@@ -510,41 +510,40 @@ Sources, by tool-name prefix:
   healthcare, schools, buildings, addresses, proximity), cimt_ (trade by
   HS commodity, partner, province, monthly from 1988).
 - Provincial and territorial statistics agencies: bc_stats_ (BC Stats
-  Excel tables), isq_ (Institut de la statistique du Quebec),
-  nl_stats_ (Newfoundland and Labrador Statistics Agency workbooks),
-  yukon_stats_ (Yukon Bureau of Statistics tables), nwt_stats_ (NWT
-  Bureau of Statistics workbooks), ab_economic_ (Alberta
-  Economic Dashboard), ab_opendata_ (Open Alberta Excel and CSV files).
+  Excel tables), isq_ (Institut de la statistique du Quebec), nl_stats_
+  (NL Statistics Agency workbooks), yukon_stats_ (Yukon Bureau of
+  Statistics tables), nwt_stats_ (NWT Bureau of Statistics workbooks),
+  ab_economic_ (Alberta Economic Dashboard), ab_opendata_ (Open Alberta
+  Excel and CSV files).
 - Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 tables from
   university libraries; ODESI DDI metadata, public files only).
 - Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
   (Excel data tables). CREA MLS Home Price Index: crea_ (links, terms and
   attribution only, no values). ECCC weather, climate, hydrometric: eccc_;
-  gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_.
-  ECCC Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP
+  gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_;
+  Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP
   facility lookups): eccc_datamart_.
-- World Bank WDI, Canada and G7/OECD peers: worldbank_. BIS statistics
-  (policy rates, debt service ratios, credit, house prices, banking and
-  payment statistics), Canada and peers: bis_.
+- World Bank WDI, Canada and G7/OECD peers: worldbank_. BIS (policy rates,
+  debt service ratios, credit, house prices, banking and payment
+  statistics), Canada and peers: bis_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
   provincial revenue, spending, deficits, debt), finance_fiscal_monitor_
-  (monthly federal results), competition_bureau_ (merger reviews), fcac_ (credit
-  card and bank account comparisons), pbo_ (Parliamentary Budget Officer
-  publications and tables), pmprb_ (patented medicine prices), telecom_
-  (CRTC mobile and Internet plan prices, telecom market indicators), pmra_
-  (pesticide products, residue limits), Health Canada health products:
-  hc_drug_ (Drug Product Database, DIN lookup), hc_nhp_ (licensed natural
-  health products), hc_device_ (medical device licences), hc_vigilance_
-  (adverse reaction reports), ircc_
-  (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
-  ircc_processing_ (current application processing times), jobbank_
-  (Job Bank wages by occupation and economic region, ESDC),
+  (monthly federal results), competition_bureau_ (merger reviews), fcac_
+  (credit card and bank account comparisons), pbo_ (Parliamentary Budget
+  Officer publications and tables), pmprb_ (patented medicine prices),
+  telecom_ (CRTC mobile and Internet plan prices, market indicators),
+  pmra_ (pesticide products, residue limits), Health Canada: hc_drug_
+  (Drug Product Database, DIN lookup), hc_nhp_ (natural health products),
+  hc_device_ (medical device licences), hc_vigilance_ (adverse reaction
+  reports); ircc_ (Express Entry rounds), ircc_monthly_ (monthly
+  immigration counts), ircc_processing_ (current processing times),
+  jobbank_ (Job Bank wages by occupation and region, ESDC),
   cra_digital_economy_registry_, cra_charities_ (registered charities, directors),
-  gc_infobase_ (federal spending, FTEs), disclosure_ (proactive
-  disclosure: contracts over $10,000, grants and contributions, travel and
-  hospitality of ministers and senior officials; search and totals),
+  gc_infobase_ (federal spending, FTEs), disclosure_ (proactive disclosure:
+  contracts over $10,000, grants and contributions, ministers' and senior
+  officials' travel and hospitality; search and totals),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
   nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
   (burned areas), nrcan_minerals_ (annual mineral production by
@@ -552,12 +551,10 @@ Sources, by tool-name prefix:
   Commission), cdc_ (Canadian Dairy Commission), cfia_ (reportable animal
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
   safety alerts), cbsa_ (current border wait times), cbsa_tariff_
-  (Customs Tariff duty rates by tariff item), gazette_ (Canada
-  Gazette), earthquakes_, dfo_iwls_
-  (tides, water levels), nfd_
-  (National Forestry Database), cwfis_ (wildfire hotspots, fire weather),
-  isc_ (First Nation profiles, registered population, drinking water
-  advisories).
+  (Customs Tariff duty rates by tariff item), gazette_ (Canada Gazette),
+  earthquakes_, dfo_iwls_ (tides, water levels), nfd_ (National Forestry
+  Database), cwfis_ (wildfire hotspots, fire weather), isc_ (First Nation
+  profiles, registered population, drinking water advisories).
 - Elections and Parliament: elections_results_ (federal results by
   riding), elections_financial_returns_ (candidate returns),
   elections_provincial_ (QC, AB, BC, SK, MB results), ourcommons_ (official
@@ -570,11 +567,11 @@ Sources, by tool-name prefix:
   highway road events and closures), nl_opendata_,
   opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
   (Edmonton real-time transit), epcor_ (Edmonton water quality),
-  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including water flows at its
-  dams), oeb_
-  (Ontario Energy Board: utility RRR filings, reliability, rates), on_fir_
-  (Ontario municipal Financial Information Return: revenue, expenses,
-  taxes, reserves, debt by municipality, 2000 on).
+  electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including
+  water flows at its dams), oeb_ (Ontario Energy Board: utility RRR
+  filings, reliability, rates), on_fir_ (Ontario municipal Financial
+  Information Return: revenue, expenses, taxes, reserves, debt by
+  municipality, 2000 on).
 - Portal families, each with a `portal` argument and a list_portals tool:
   ckan_ (open.canada.ca, provincial and city CKAN catalogues;
   ckan_datastore_search for rows, ckan_describe_resource and
@@ -593,23 +590,25 @@ open.canada.ca datasets -- use ckan_search_datasets with portal="federal"
 and fq="organization:<org>" (cic, cra-arc, osfi-bsif, ic, aafc-aac,
 cfia-acia).
 
-Language: every tool accepts lang "en"|"fr". On single-language or
-already-bilingual sources it is a documented no-op; each module's
-docstring says which. Read docs://statcan/addressing and
-docs://statcan/gotchas before StatCan work, and the docs://boc/,
-docs://eccc/, and docs://cmhc/ resources for those sources.
+Language: every tool accepts lang "en"|"fr"; on single-language or
+already-bilingual sources it is a documented no-op. Read
+docs://statcan/addressing and docs://statcan/gotchas before StatCan work,
+and the docs://boc/, docs://eccc/ and docs://cmhc/ resources for those
+sources.
 
 Every result carries a provenance block (source URL, query time,
-freshness, limits). Failures are raised as errors, never returned as
-empty successes.
+freshness, limits, caveats). Cite the source it names and follow its
+licence, which gives the attribution to use; never present adapted or
+summarised data as endorsed by the publisher. Failures are raised as
+errors, never returned as empty successes.
 
 If a tool misbehaves (an error that looks like a server fault, data that
 contradicts its provenance or the source, a response that does not match
 its description), tell the user and offer to draft a report for the
-maintainers, who appreciate them. Say the user will not have to write or
-file it by hand: you can submit it to GitHub for them, after they have read
-and approved the exact text. Read docs://report-issue for the template and
-the steps. Never file anything before the user approves the final text.
+maintainers, who appreciate them; the user need not write or file it: you
+can submit it to GitHub once they have read and approved the exact text.
+docs://report-issue has the template and steps.
+Never file anything before the user approves the final text.
 """.strip()
 
 

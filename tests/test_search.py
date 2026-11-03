@@ -53,14 +53,13 @@ def test_site_js_keeps_the_same_stop_words():
     assert words == set(STOP_WORDS)
 
 
-async def test_search_results_collapse_the_provenance_schema():
-    # Five identical 1.9 KB copies were 43% of a search_tools answer; the stub keeps
-    # what a caller needs (input schemas, result fields) and drops the repeat.
-    import json
-
+async def test_search_results_carry_what_a_call_needs():
+    # A search result is read to build a call: name, description, input schema.
+    # The output schema and the Keywords / Mots-clés lines (for ranking only) were
+    # most of a 15.7 KB answer on 2026-11-03 and are left out.
     from fastmcp.server.transforms.search.base import serialize_tools_for_output_json
 
-    from maplestats_mcp.shared.search import PROVENANCE_STUB, serialize_tools_compact
+    from maplestats_mcp.shared.search import RESULT_FIELDS, serialize_tools_compact
 
     tools = [
         tool
@@ -71,54 +70,51 @@ async def test_search_results_collapse_the_provenance_schema():
     full = serialize_tools_for_output_json(tools)
     compact = serialize_tools_compact(tools)
     for before, after in zip(full, compact, strict=True):
+        assert set(after) <= set(RESULT_FIELDS)
+        assert "outputSchema" not in after
+        assert after["name"] == before["name"]
+        assert after["title"] == before["title"]
         assert after["inputSchema"] == before["inputSchema"]
-        assert after["description"] == before["description"]
-        assert after["outputSchema"]["properties"]["provenance"] == PROVENANCE_STUB
-        assert set(after["outputSchema"]["properties"]) == set(before["outputSchema"]["properties"])
-        assert after["outputSchema"]["required"] == before["outputSchema"]["required"]
-    # 0.75, not 0.7: the transform parameters and `transformed` block (2026-10-27)
-    # made wds_get_data_from_vectors' own schema larger, so the same stub saves a
-    # smaller share of it (0.71).
-    assert len(json.dumps(compact)) < 0.75 * len(json.dumps(full))
-    # The tools' own schemas, which real results are checked against, keep the full block.
+        assert after["annotations"] == before["annotations"]
+        assert "Use for:" in after["description"]
+        assert "Keywords" not in after["description"]
+        assert "Mots-clés" not in after["description"]
+        assert before["description"].startswith(after["description"])
+    # The tools' own schemas, which real results are checked against, are unchanged.
     live = {tool.name: tool for tool in await server.mcp._list_tools()}
     schema = live["wds_get_full_table_download"].output_schema
     assert schema is not None
     assert "schema_name" in schema["$defs"]["Provenance"]["properties"]
 
 
-def _ref_result(extra_properties: dict) -> dict:
-    """A serialized tool whose output schema points at Provenance through `$ref`."""
-    provenance_def = {"type": "object", "properties": {"schema_name": {"type": "string"}}}
-    return {
-        "name": "fake_tool",
-        "outputSchema": {
-            "type": "object",
-            "properties": {"provenance": {"$ref": "#/$defs/Provenance"}, **extra_properties},
-            "$defs": {"Provenance": provenance_def},
-        },
-    }
+@pytest.mark.parametrize(
+    ("description", "expected"),
+    [
+        ("Get X.\n\nUse for: y.\nKeywords: a, b.\nMots-clés : c, d.", "Get X.\n\nUse for: y."),
+        # A label that runs on from the last sentence, as a few docstrings have it.
+        ("Get X.\n\nUse for: y. Keywords: a, b.\nMots-clés : c.", "Get X.\n\nUse for: y."),
+        ("Get X.\n\nUse for: y.\nMots-clés : c.", "Get X.\n\nUse for: y."),
+        ("Get X.", "Get X."),
+        ("", ""),
+        (None, None),
+    ],
+)
+def test_caller_description_drops_the_ranking_lines(description, expected):
+    from maplestats_mcp.shared.search import caller_description
+
+    assert caller_description(description) == expected
 
 
-def test_compact_serializer_drops_an_unused_provenance_def(monkeypatch):
-    from maplestats_mcp.shared import search
+async def test_search_ranks_on_the_keywords_it_no_longer_returns():
+    # "loyers" (rents) is only in Mots-clés lines; the ranking still reads them.
+    from fastmcp import Client
 
-    result = _ref_result({})
-    monkeypatch.setattr(search, "serialize_tools_for_output_json", lambda tools: [result])
-    compact = search.serialize_tools_compact([])
-    assert compact[0]["outputSchema"]["properties"]["provenance"] == search.PROVENANCE_STUB
-    assert "$defs" not in compact[0]["outputSchema"]
-
-
-def test_compact_serializer_keeps_a_provenance_def_that_another_field_uses(monkeypatch):
-    from maplestats_mcp.shared import search
-
-    result = _ref_result({"previous": {"$ref": "#/$defs/Provenance"}})
-    monkeypatch.setattr(search, "serialize_tools_for_output_json", lambda tools: [result])
-    schema = search.serialize_tools_compact([])[0]["outputSchema"]
-    assert schema["properties"]["provenance"] == search.PROVENANCE_STUB
-    assert schema["properties"]["previous"] == {"$ref": "#/$defs/Provenance"}
-    assert "schema_name" in schema["$defs"]["Provenance"]["properties"]
+    async with Client(server.mcp) as client:
+        result = await client.call_tool("search_tools", {"query": "loyers"})
+    assert result.structured_content is not None
+    found = result.structured_content["result"]
+    assert found
+    assert all("Mots-clés" not in (tool.get("description") or "") for tool in found)
 
 
 @pytest.mark.parametrize(
@@ -133,8 +129,8 @@ def test_compact_serializer_keeps_a_provenance_def_that_another_field_uses(monke
     ],
 )
 async def test_search_tools_answers_with_compact_results(query: str):
-    # A ratio against the same tools' uncollapsed schemas, not an absolute size, so
-    # the check holds when a docstring grows and fails if the Provenance block returns.
+    # A ratio against the same tools' full definitions, not an absolute size, so
+    # the check holds when a docstring grows and fails if the output schemas return.
     import json
 
     from fastmcp import Client
@@ -147,6 +143,6 @@ async def test_search_tools_answers_with_compact_results(query: str):
     assert found
     live = {tool.name: tool for tool in await server.mcp._list_tools()}
     full = serialize_tools_for_output_json([live[tool["name"]] for tool in found])
-    assert len(json.dumps(found)) < 0.8 * len(json.dumps(full))
+    assert len(json.dumps(found)) < 0.5 * len(json.dumps(full))
     if query == "full table download csv":
         assert "wds_get_full_table_download" in [tool["name"] for tool in found]

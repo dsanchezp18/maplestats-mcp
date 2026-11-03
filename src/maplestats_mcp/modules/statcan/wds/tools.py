@@ -129,8 +129,9 @@ async def wds_get_cube_metadata(
     the 8-digit productId or the table number (18-10-0004,
     18-10-0004-01). Large tables have thousands of members, so each
     dimension returns at most `member_limit` members (default 100) and
-    footnotes are capped at `footnote_limit`; provenance.limits says what
-    was cut. Narrow with `dimension` (a position, e.g. 1 for geography),
+    at most `footnote_limit` distinct footnotes come back (default 10; a
+    note WDS repeats under several ids comes once, with `same_text_ids`);
+    provenance.limits says what was cut. Narrow with `dimension` (a position, e.g. 1 for geography),
     `member_query` (words in a member name) and `member_offset`.
     Keywords: statcan, metadata, dimensions, members, productId, cube,
     structure, footnotes, wds, coordinate, table number.

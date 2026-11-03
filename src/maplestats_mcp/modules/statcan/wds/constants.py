@@ -29,7 +29,10 @@ MEMBER_LIMIT_MAX = 2000
 # wds_get_leaf_members: 18-10-0004's 249 CPI leaves and 36-10-0434's 188 NAICS
 # leaves fit in one page; a census geography does not.
 LEAF_LIMIT_DEFAULT = 500
-FOOTNOTE_LIMIT_DEFAULT = 25
+# Footnotes, not members, made most of a metadata answer: 28.7 of 36.6 KB for
+# 14-10-0287 on 2026-11-03, each in English and French. The cap counts distinct
+# texts (client.get_cube_metadata merges repeats); footnote_limit raises it.
+FOOTNOTE_LIMIT_DEFAULT = 10
 CODE_SET_LIMIT_DEFAULT = 100
 
 # wds_query_series: the server runs one read-only SQL query over the fetched

@@ -36,26 +36,26 @@ LABELS: dict[str, dict[str, str]] = {
         "fr": "Les données de Statistique Canada sont verrouillées pour leur mise à jour quotidienne (retour à 8 h 30, HE) : {detail}",
     },
     "provenance.reproduce": {
-        "en": (
-            "For R, Python, Stata and Julia scripts that fetch and clean these data, call "
-            "reproduce_code with this tool's name and arguments."
-        ),
+        # Repeated in every result, so kept short; SERVER_INSTRUCTIONS says what
+        # reproduce_code returns (R, Python, Stata, Julia, Excel Power Query).
+        "en": "For scripts, call reproduce_code with this tool's name and arguments.",
         "fr": (
-            "Pour obtenir des scripts R, Python, Stata et Julia qui récupèrent et nettoient "
-            "ces données, appelez reproduce_code avec le nom de cet outil et ses arguments."
+            "Pour obtenir des scripts, appelez reproduce_code avec le nom de cet outil et ses "
+            "arguments."
         ),
     },
+    # The licence's name, link and the attribution it asks for. Its rule that adapted
+    # data must not be presented as endorsed by the publisher, common to the open
+    # licences here, is stated once in SERVER_INSTRUCTIONS rather than in every result.
     "provenance.statcan_licence": {
         "en": (
-            "Source: Statistics Canada. Contains information licensed under the Statistics "
-            "Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). Adapted or "
-            "summarised data must not be presented as endorsed by Statistics Canada."
+            "Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). "
+            "Attribution: 'Source: Statistics Canada.'"
         ),
         "fr": (
-            "Source : Statistique Canada. Contient des renseignements visés par la Licence "
-            "ouverte de Statistique Canada (https://www.statcan.gc.ca/fr/reference/licence). "
-            "Les données adaptées ou résumées ne doivent pas être présentées comme approuvées "
-            "par Statistique Canada."
+            "Licence ouverte de Statistique Canada "
+            "(https://www.statcan.gc.ca/fr/reference/licence). "
+            "Attribution : « Source : Statistique Canada. »"
         ),
     },
 }

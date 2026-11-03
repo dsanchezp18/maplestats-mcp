@@ -85,6 +85,13 @@ class Footnote(BaseModel):
     footnote_id: int
     text_en: str
     text_fr: str
+    same_text_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Other footnote ids with exactly this text, returned once here: WDS repeats one "
+            "note under a new id for each member it applies to."
+        ),
+    )
 
 
 class CubeMetadata(BaseModel):

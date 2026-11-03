@@ -588,20 +588,26 @@ async def get_cube_metadata(
         )
 
     all_footnotes = list_or_empty(obj, "footnote")
-    footnotes = [
-        Footnote(
-            footnote_id=int(fn["footnoteId"]),
-            text_en=fn.get("footnotesEn", ""),
-            text_fr=fn.get("footnotesFr", ""),
-        )
-        for fn in all_footnotes[:footnote_limit]
-    ]
+    # WDS repeats one note under a new id for each member it applies to (the CPI
+    # table 18-10-0004 lists the same 1.6 KB note 17 times, checked 2026-11-03),
+    # and the ids are all a caller could tell them apart by. Each text comes back
+    # once, with the other ids, and the cap counts distinct texts.
+    distinct: dict[tuple[str, str], Footnote] = {}
+    for fn in all_footnotes:
+        key = (fn.get("footnotesEn", ""), fn.get("footnotesFr", ""))
+        if key in distinct:
+            distinct[key].same_text_ids.append(int(fn["footnoteId"]))
+        else:
+            distinct[key] = Footnote(
+                footnote_id=int(fn["footnoteId"]), text_en=key[0], text_fr=key[1]
+            )
+    footnotes = list(distinct.values())[:footnote_limit]
     limit_notes = list(cut)
-    if len(all_footnotes) > footnote_limit:
+    if len(distinct) > footnote_limit:
         limit_notes.append(
             _m(
-                f"footnotes: {footnote_limit} of {len(all_footnotes)}",
-                f"notes de bas de page : {footnote_limit} sur {len(all_footnotes)}",
+                f"footnotes: {footnote_limit} of {len(distinct)} distinct texts",
+                f"notes de bas de page : {footnote_limit} des {len(distinct)} textes distincts",
             )
         )
     limits = (
