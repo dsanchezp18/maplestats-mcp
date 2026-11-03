@@ -9,6 +9,7 @@ from the user guide prose alone.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -340,6 +341,93 @@ class ChangedSeriesEntry(BaseModel):
 
 class ChangedSeriesList(BaseModel):
     series: list[ChangedSeriesEntry]
+    provenance: Provenance
+
+
+LeafFlag = Literal["total_name", "special_aggregate", "outside_main_hierarchy"]
+
+
+class LeafMember(BaseModel):
+    """A member that is no other member's parent, in the call's language."""
+
+    member_id: int
+    member_name: str
+    parent_member_id: int | None = None
+    parent_name: str | None = None
+    classification_code: str | None = None
+    geo_level: int | None = Field(
+        default=None,
+        description="StatCan's geographic level (0 Canada, 2 province or territory, 503 CMA...).",
+    )
+    unit: str | None = Field(default=None, description="The member's unit of measure, if any.")
+    terminated: bool = Field(
+        default=False, description="StatCan no longer updates this member's series."
+    )
+    flags: list[LeafFlag] = Field(
+        default_factory=list,
+        description=(
+            "Why this leaf may still double-count: total_name (named like a total: 'Total', "
+            "'All ...', 'Canada'), special_aggregate (a StatCan T-coded aggregate such as "
+            "'Goods-producing industries'), outside_main_hierarchy (not under the top-level "
+            "member holding most leaves, e.g. CPI 'All-items excluding food')."
+        ),
+    )
+
+
+class TopLevelMember(BaseModel):
+    member_id: int
+    member_name: str
+    leaf_count: int = Field(description="Leaves under it (itself, when it has no children).")
+
+
+class LeafMembers(BaseModel):
+    """The lowest-level members of one dimension: the set to sum or rank over."""
+
+    product_id: int
+    dimension_position: int
+    dimension_name: str
+    member_count: int = Field(description="All members of the dimension.")
+    under_member_id: int | None = None
+    parent_count: int = Field(
+        description="Members left out because they are a parent (a total or subtotal) in scope."
+    )
+    leaf_count: int = Field(description="Leaves in scope matching member_query, flagged included.")
+    flagged_count: int = Field(description="Leaves among them that carry a flag.")
+    selected_count: int = Field(
+        description="Leaves in member_ids before limit/offset (flagged ones only with "
+        "include_flagged)."
+    )
+    leaves: list[LeafMember] = Field(description="The selected leaves (this page).")
+    flagged_leaves: list[LeafMember] = Field(
+        default_factory=list,
+        description="Leaves set aside because a flag says they may double-count; empty with "
+        "include_flagged.",
+    )
+    member_ids: list[int] = Field(description="The ids of `leaves`, in metadata order.")
+    member_ids_csv: str = Field(description="member_ids joined with commas.")
+    sdmx_key_fragment: str = Field(
+        description="member_ids joined with '+': the OR segment for this dimension in an "
+        "sdmx_get_data key."
+    )
+    sdmx_key: str = Field(
+        description="A full sdmx_get_data key with this dimension filled and the others empty "
+        "(wildcards): fill them with one member id each before calling."
+    )
+    example_coordinates: list[str] = Field(
+        default_factory=list,
+        description="wds_get_data_from_cube_coord coordinates for the first leaves, with every "
+        "other dimension at its first top-level member (usually its total).",
+    )
+    top_level_members: list[TopLevelMember] = Field(
+        default_factory=list,
+        description="The dimension's top-level members and their leaf counts: pick one as "
+        "under_member_id to keep a single hierarchy.",
+    )
+    geo_levels: dict[str, int] = Field(
+        default_factory=dict,
+        description="Selected leaves per geoLevel, for a geography dimension.",
+    )
+    notes: list[str] = Field(default_factory=list)
     provenance: Provenance
 
 

@@ -17,6 +17,7 @@ from maplestats_mcp.modules.statcan.wds import (
     client,
     constants,
     context,
+    leaves,
     query,
     transforms,
     vintage,
@@ -29,6 +30,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     CubeMetadata,
     CubeSummaryList,
     FullTableDownloadLink,
+    LeafMembers,
     SeriesInfo,
     SeriesQueryResult,
     VectorData,
@@ -144,6 +146,64 @@ async def wds_get_cube_metadata(
         member_limit=member_limit,
         member_offset=member_offset,
         footnote_limit=footnote_limit,
+    )
+
+
+@tool
+async def wds_get_leaf_members(
+    product_id: ProductId,
+    dimension: int,
+    under_member_id: int | None = None,
+    member_query: str | None = None,
+    include_flagged: bool = False,
+    limit: int = constants.LEAF_LIMIT_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> LeafMembers:
+    """List only the lowest-level (leaf) members of one dimension of a
+    StatCan table, so a sum or ranking does not double-count totals and
+    subtotals.
+
+    Use for: adding up or ranking across provinces, industries or
+    product groups without the totals ("All industries", "All-items",
+    "Canada") and subtotals mixed in. A leaf is a member that is no
+    other member's parent. `dimension` is the position (1 is usually
+    Geography). `under_member_id` keeps the leaves below one member (a
+    NAICS sector, the CPI's "Food", a province), the reliable way to
+    take a branch: children rarely repeat the parent's name.
+    `member_query` filters leaf names. Leaves that may still double-count
+    go to flagged_leaves: names like totals, StatCan's T-coded special
+    aggregates ("Goods-producing industries", "Energy sector"), and
+    leaves outside the top-level member holding most leaves (CPI "All-
+    items excluding food"); include_flagged=True keeps them. Geography:
+    leaves are the lowest level present, so provinces are leaves of
+    Canada in the Labour Force Survey tables, but in the monthly CPI
+    table the leaves are cities, the provinces being their parents
+    (Whitehorse sits directly under Canada); geo_levels counts the levels,
+    and city leaves need not add up to a province. A dimension with no
+    parent links (age groups) makes every member a leaf. Returns
+    member_ids, a comma list, an SDMX '+' key fragment and full key for
+    sdmx_get_data (one call), and example coordinates for
+    wds_get_data_from_cube_coord. sdmx_get_key_for_dimension gives an
+    unfiltered leaf key only.
+    Keywords: statcan, leaf members, lowest level, avoid double counting,
+    exclude totals, subtotals, sum across provinces, rank industries,
+    NAICS detail, CPI components, hierarchy, dimension members, sdmx key,
+    coordinate.
+    Mots-clés : Statistique Canada, membres terminaux, niveau le plus fin,
+    éviter le double comptage, exclure les totaux, sous-totaux, somme des
+    provinces, classement des industries, détail SCIAN, composantes de
+    l'IPC, hiérarchie, membres de dimension, clé SDMX, coordonnée.
+    """
+    client.use_lang(lang)
+    return await leaves.get_leaf_members(
+        product_id,
+        dimension,
+        under_member_id=under_member_id,
+        member_query=member_query,
+        include_flagged=include_flagged,
+        limit=limit,
+        offset=offset,
     )
 
 
