@@ -181,6 +181,19 @@ What it shows:
   results carry more text. The payload cut made after these runs (about 45% fewer
   characters for a search, data and plan sequence) is not in these figures.
 
+After the fixes these questions showed, the same 53 questions were asked three times of
+MapleStats as merged (arm `maplestats_after`, commit 70dfe0d: smaller results, the
+caveats above, metadata notes and `check_answer`), with the same model and grading:
+
+| Arm | Total (53) | Core (24) | Beyond (24) | Analyst (5) | False claims | Cost per question (USD) |
+| :-- | --: | --: | --: | --: | --: | --: |
+| MapleStats as tested above | 49.7 | 22.7 | 23.3 | 3.7 | 0 | 0.116 |
+| MapleStats as merged | **51.7** | **23.7** | **23.7** | **4.3** | 0 | **0.074** |
+
+On the 48 core and beyond questions alone, cost per question fell from USD 0.107 to
+0.069 (36%), with about one more tool call per question (`check_answer`) and answers
+two seconds faster. The other arms were not re-run.
+
 How it was graded: the regex grader first, then a blind hand review of the 346 answers it
 marked hallucinated or partial, or abstained on refusal and flag questions. The reviewer
 saw each answer beside the key without the arm's name and graded all answers to a
