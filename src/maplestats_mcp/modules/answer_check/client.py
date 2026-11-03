@@ -460,8 +460,8 @@ def _check_adjustment(ctx: _Ctx, question: str, lang: str) -> list[AnswerProblem
                 lang,
                 "The series is unadjusted; the headline figure is usually the seasonally "
                 "adjusted one.",
-                "La série n'est pas désaisonnalisée ; le chiffre de référence est d'ordinaire "
-                "la série désaisonnalisée.",
+                "La série n'est pas désaisonnalisée ; le chiffre principal est d'ordinaire "
+                "celui de la série désaisonnalisée.",
             ),
             pick(
                 lang,
