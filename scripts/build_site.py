@@ -289,6 +289,7 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="provincial_agency",
     ),
+    "answer_check": Source("Answer check", "Vérification de réponse", "utility"),
     "arcgis_hub": Source("ArcGIS Hub portals", "Portails ArcGIS Hub", "catalogue", "ArcGIS Hub"),
     "bc_environment": Source(
         "BC Ministry of Environment: air quality, snow, groundwater and streamflow",

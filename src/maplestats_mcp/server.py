@@ -494,6 +494,10 @@ and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns
 the rows as a formatted Excel workbook. docs://catalogue describes every
 module in one bilingual line.
+Before replying with figures, call check_answer once and fix what it returns.
+Not published? Say so, give the closest published figure labelled, then public
+microdata (statcan_pumf_, own estimate), else a custom tabulation, RTRA or an
+RDC (approval or fee; MapleStats cannot run them).
 
 Sources, by tool-name prefix:
 - Statistics Canada: wds_ (tables/cubes, vectors), sdmx_ (filtered

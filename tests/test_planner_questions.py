@@ -237,7 +237,8 @@ PENDING = {
     "federal_misc",
 }
 # Tools that are not data sources.
-NOT_SOURCES = {"plan_query", "reproduce_code", "reproduce_workbook"}
+# check_answer is reached through every plan's guidance, not a step.
+NOT_SOURCES = {"plan_query", "reproduce_code", "reproduce_workbook", "check_answer"}
 
 
 @pytest.mark.parametrize(("question", "topic", "first_tool"), QUESTIONS)

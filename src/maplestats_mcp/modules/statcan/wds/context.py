@@ -27,7 +27,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from maplestats_mcp.modules.statcan.wds import client, constants
+from maplestats_mcp.modules.statcan.wds import auto_notes, client, constants
 from maplestats_mcp.modules.statcan.wds.schemas import (
     SeriesContext,
     SeriesMember,
@@ -35,6 +35,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import DataLocked, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.fitness import rules_for
 from maplestats_mcp.shared.json_utils import list_or_empty
 
 _SOFT_ERRORS = (NotFound, UpstreamError, UpstreamUnavailable, DataLocked)
@@ -49,6 +50,11 @@ def table_number(product_id: int) -> str:
 
 def table_url(product_id: int, lang: str = "en") -> str:
     return _TABLE_PAGE.format(lang="fr" if lang == "fr" else "en", pid=product_id)
+
+
+async def series_info_raw(vector_ids: list[int]) -> dict[int, dict[str, Any]]:
+    """getSeriesInfoFromVector objects by vector id (cached a day); missing ids left out."""
+    return await _series_info_raw(vector_ids)
 
 
 async def _series_info_raw(vector_ids: list[int]) -> dict[int, dict[str, Any]]:
@@ -205,6 +211,7 @@ def _context_for(
     lang: str,
     span: tuple[date, date] | None = None,
     empty: bool | None = None,
+    flags: list[auto_notes.Flag] | None = None,
 ) -> SeriesContext:
     suffix = "Fr" if lang == "fr" else "En"
     members: list[SeriesMember] = []
@@ -247,7 +254,18 @@ def _context_for(
         )
     first = _parse_day(cube.get("cubeStartDate")) if cube else None
     last = _parse_day(cube.get("cubeEndDate")) if cube else None
-    notes = unit_notes(unit, lang)
+    rule_keys = frozenset(rule.key for rule in rules_for("", {"product_id": series.product_id}))
+    derived, overrides_unit = auto_notes.metadata_notes(
+        cube, info, series.coordinate, lang, rule_keys
+    )
+    # A chained- or constant-dollar member outranks the unit: 36-10-0104 and
+    # 34-10-0292 give those series memberUomCode 81, "Dollars", which read as
+    # current dollars before 2026-11-03.
+    notes = [] if overrides_unit else unit_notes(unit, lang)
+    notes.extend(derived)
+    if flags is None:
+        flags = [(o.ref_period, o.status_code, o.security_level_code) for o in series.observations]
+    notes.extend(auto_notes.flag_notes(flags, frequency_code, lang))
     if scale and scalar_code not in (None, 0):
         notes.append(
             client._m(
@@ -294,12 +312,15 @@ async def describe(series: list[VectorSeries]) -> tuple[list[VectorSeries], str 
 
 
 async def describe_vectors(
-    vector_ids: list[int], empty: set[int]
+    vector_ids: list[int],
+    empty: set[int],
+    flags: dict[int, list[auto_notes.Flag]] | None = None,
 ) -> tuple[dict[int, SeriesContext], str | None]:
     """Context for series known only by vector id (SDMX results), keyed by vector id.
 
     `empty` holds the vectors whose result had no observations in the window.
-    A vector WDS cannot describe is left out.
+    A vector WDS cannot describe is left out. `flags` holds each vector's
+    (period, status code, security level code), for the E/F/x notes.
     """
     if not vector_ids:
         return {}, None
@@ -320,7 +341,7 @@ async def describe_vectors(
         for vector_id, info in infos.items()
         if vector_id in set(vector_ids)
     ]
-    contexts, note = await _contexts(stubs, infos, empty)
+    contexts, note = await _contexts(stubs, infos, empty, flags or {})
     return {stub.vector_id: c for stub, c in zip(stubs, contexts, strict=True)}, note
 
 
@@ -328,6 +349,7 @@ async def _contexts(
     series: list[VectorSeries],
     infos: dict[int, dict[str, Any]] | None,
     empty: set[int],
+    flags: dict[int, list[auto_notes.Flag]] | None = None,
 ) -> tuple[list[SeriesContext], str | None]:
     lang = "fr" if client._LANG.get() == "fr" else "en"
     missing: list[str] = [] if infos is not None else ["getSeriesInfoFromVector"]
@@ -354,6 +376,7 @@ async def _contexts(
             lang,
             spans.get(s.vector_id),
             empty=s.vector_id in empty,
+            flags=None if flags is None else flags.get(s.vector_id, []),
         )
         for s in series
     ]

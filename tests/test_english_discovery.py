@@ -59,6 +59,8 @@ CASES = [
     ("public use microdata Labour Force Survey", "statcan_pumf_search"),
     ("cross-tabulate PUMF microdata", "statcan_pumf_tabulate"),
     ("generate R code to reproduce this query", "reproduce_code"),
+    ("check my answer's figures before replying", "check_answer"),
+    ("verify the numbers in my answer against the source", "check_answer"),
     ("Alberta economic dashboard unemployment", "ab_economic_get_data"),
     ("BC Stats Excel workbook list British Columbia", "bc_stats_list_files"),
     ("Open Alberta Excel CSV dataset files AISH caseload", "ab_opendata_search_datasets"),

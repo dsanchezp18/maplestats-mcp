@@ -52,6 +52,7 @@ CASES = [
     # Plurals and missing accents, fixed by shared/search.py (2026-09-24).
     ("loyers", "cmhc_get_table_data"),
     ("code R reproductible script Stata", "reproduce_code"),
+    ("vérifier les chiffres de ma réponse", "check_answer"),
     (
         "rencontres de lobbyistes avec les ministères en Colombie-Britannique",
         "bc_lobbyists_search_activity_reports",

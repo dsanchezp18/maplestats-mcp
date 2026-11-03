@@ -1453,6 +1453,10 @@ GUIDANCE_FR = tuple(
             "sources différentes."
         ),
         "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
+        (
+            "Avant de répondre, appelez check_answer une fois avec la question et les chiffres "
+            "que vous citerez."
+        ),
     )
 )
 LIMITS_FR = french_text(
