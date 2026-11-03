@@ -29,6 +29,16 @@ MEMBER_LIMIT_MAX = 2000
 FOOTNOTE_LIMIT_DEFAULT = 25
 CODE_SET_LIMIT_DEFAULT = 100
 
+# wds_query_series: the server runs one read-only SQL query over the fetched
+# observations and returns only its result. The vector cap keeps it a "handful
+# of series" tool (whole tables go to wds_get_full_table_download); 3,000
+# periods reaches back to 1914 for a monthly series (the CPI has 1,353).
+QUERY_MAX_VECTORS = 20
+QUERY_MAX_LATEST_N = 3000
+QUERY_ROW_CAP = 500
+QUERY_MAX_SQL_CHARS = 10_000
+QUERY_MAX_SECONDS = 20.0
+
 # The cube list is about 5 MB. Probed 2026-09-27 from GitHub runners: usually
 # under a second, but one runner took 31-70 s on every try, past the shared
 # 30 s default.

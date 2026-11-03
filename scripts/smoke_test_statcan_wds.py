@@ -1,7 +1,7 @@
 """Live smoke test for every tool of statcan/wds: calls the real Web Data
 Service (not mocks), per AGENTS.md's "lesson from auditing the StatCan module".
 
-Each of the 13 wds_ tools has at least one step (and the SDMX data tools'
+Each of the 14 wds_ tools has at least one step (and the SDMX data tools'
 transforms and flags), and the regressions found by
 the 2026-10-02 live review are asserted against the real service: a changed
 series asked for by table + coordinate never comes from another table, an
@@ -149,6 +149,45 @@ async def main() -> int:
         "as_of on a table with no real-time pair",
         vintage.get_series_as_of(18100004, "1.2", "2025-01-01"),
     )
+
+    # wds_query_series: annual averages of the CPI and the unemployment rate
+    # (v2062815) computed on the server; a DROP and a file read are refused.
+    # Placed before the changed-series steps, which return early overnight.
+    annual_sql = (
+        "SELECT vector_id, unit, year(ref_period) AS year, round(avg(value), 2) AS average, "
+        "count(*) AS months FROM obs GROUP BY ALL ORDER BY vector_id, year"
+    )
+    averages = await tools.wds_query_series(
+        [CPI_VECTOR, 2062815], annual_sql, start_ref_period="2023-01", end_ref_period="2025-12"
+    )
+    ok &= check(
+        len(averages.rows) == 6
+        and all(row[4] == 12 for row in averages.rows)
+        and all(s.citation.startswith("Statistics Canada") for s in averages.series),
+        "SQL annual averages of CPI and unemployment, 2023-2025",
+        averages.rows,
+    )
+    ok &= await raises(
+        InvalidInput, "SQL DROP is refused", tools.wds_query_series([CPI_VECTOR], "DROP TABLE obs")
+    )
+    ok &= await raises(
+        InvalidInput,
+        "SQL file read is refused",
+        tools.wds_query_series([CPI_VECTOR], "SELECT * FROM read_csv('/etc/passwd')"),
+    )
+    async with Client(mcp) as server:
+        result = await server.call_tool(
+            "call_tool",
+            {
+                "name": "wds_query_series",
+                "arguments": {"vector_ids": [CPI_VECTOR], "sql": "SELECT max(value) FROM obs"},
+            },
+            raise_on_error=False,
+        )
+        text = next((b.text for b in result.content if isinstance(b, TextContent)), "")
+        ok &= check(
+            not result.is_error and "rows" in json.loads(text), "server call wds_query_series"
+        )
 
     # wds_get_changed_series_list / wds_get_changed_series_data
     try:

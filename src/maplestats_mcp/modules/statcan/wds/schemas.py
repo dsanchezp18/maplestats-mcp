@@ -255,6 +255,47 @@ class VectorDataSet(BaseModel):
     provenance: Provenance
 
 
+QueryCell = str | int | float | bool | None
+
+
+class QuerySeries(BaseModel):
+    """One series loaded into the `obs` table of wds_query_series."""
+
+    vector_id: int
+    product_id: int
+    coordinate: str
+    observation_count: int = Field(description="Rows this series put in `obs`.")
+    citation: str = Field(
+        description=(
+            "Ready to quote beside any figure computed from this series: publisher, table, "
+            "vector. Add the reference period the figure covers."
+        )
+    )
+    context: SeriesContext | None = Field(
+        default=None,
+        description="Table, title, unit, members and reading notes; null if metadata failed.",
+    )
+
+
+class SeriesQueryResult(BaseModel):
+    """The result of one read-only SQL query over fetched WDS observations."""
+
+    sql: str = Field(description="The SQL as run against the table `obs`.")
+    columns: list[str] = Field(description="Result column names, in order.")
+    column_types: list[str] = Field(description="DuckDB type of each result column.")
+    rows: list[list[QueryCell]] = Field(
+        description="Result rows (dates as YYYY-MM-DD), at most the row cap in provenance.limits."
+    )
+    row_count: int = Field(description="Rows in `rows`.")
+    truncated: bool = Field(description="True when the query returned more rows than the cap.")
+    input_rows: int = Field(description="Observations loaded into `obs` before the query ran.")
+    series: list[QuerySeries]
+    failed: list[FailedVector] = Field(
+        default_factory=list, description="Vectors WDS could not serve; they are not in `obs`."
+    )
+    provenance: Provenance
+
+
 class CodeSetEntry(BaseModel):
     code: int
     # Nullable: uom code 0 ("no unit") legitimately has no description in
