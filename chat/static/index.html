@@ -390,9 +390,19 @@
     log.append(div); div.scrollIntoView({ block: "nearest" });
     return div;
   }
+  // Links in model text open in a new tab and send no referrer or opener.
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (node.tagName === "A" && node.hasAttribute("href")) {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+  });
   function showAnswer(div, turn) {
     // Model text goes through the sanitiser; everything else is built from text nodes.
-    div.innerHTML = DOMPurify.sanitize(marked.parse(turn.answer || "(no answer)"));
+    // No images: one in model text could beacon to any host (the CSP blocks
+    // it too; this keeps a broken image out of the answer).
+    div.innerHTML = DOMPurify.sanitize(marked.parse(turn.answer || "(no answer)"),
+      { FORBID_TAGS: ["img"] });
     // A result the panel cannot draw must not take the answer text with it.
     let panel = null;
     try { panel = resultPanel(turn); }

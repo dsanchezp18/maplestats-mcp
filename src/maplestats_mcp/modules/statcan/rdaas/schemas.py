@@ -203,6 +203,9 @@ class ClassificationIndexEntry(BaseModel):
     primary_term: str | None = None
     other_examples: list[str] = Field(default_factory=list)
     illustrative_examples: list[str] = Field(default_factory=list)
+    # Set when the entry is the whole answer (rdaas_get_classification_index_entry); the
+    # entries inside a list result share that list's provenance instead.
+    provenance: Provenance | None = None
     inclusions: list[str] = Field(default_factory=list)
     internal_examples: list[str] = Field(default_factory=list)
     index_code_id: str | None = None

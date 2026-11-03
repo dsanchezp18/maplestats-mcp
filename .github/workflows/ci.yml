@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
     steps:
       # Full history: tests/test_tool_surface.py compares tool_catalogue.json
       # with its version at the merge base with origin/main, which a shallow

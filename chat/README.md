@@ -20,7 +20,11 @@ Under each answer, a panel with three tabs, modelled on Eurostat Assistant's cha
 The panel is built by `results.py` from the tool results, not from the model's text, so
 it shows what the data server returned even when the answer misquotes it. It reads
 StatCan WDS and SDMX series (with the `context` the server attaches) and Bank of Canada
-Valet series; any other tool with provenance appears under Sources. The page draws the
+Valet series; any other tool with provenance appears under Sources. When the model asks
+for a computed series (`transform="yoy_pct_change"` and the like), the panel draws the
+computed values in their own unit (percent, percentage points, an index) with the
+server's formula in the notes, and adds the published levels as a second series while
+there is room (at most 8 series per answer). The page draws the
 charts itself (inline SVG, no chart library) and builds every element from text, never
 from HTML in a result. The conversation is kept in the browser's local storage; **New
 chat** clears it. **Theme** switches light and dark.
@@ -58,8 +62,19 @@ The endpoint is public and every call costs money. Defaults, all overridable by
 environment variable: 20 questions per address per hour (`CHAT_RATE_PER_HOUR`), 500
 per day in total (`CHAT_DAILY_LIMIT`), 1,000 characters per user message,
 16,000 per assistant reply, 120,000 per conversation, a 512 KiB request body,
-8 user turns per conversation, 2,000 output tokens, 8 tool steps. Also set a monthly spend limit on
-the provider's dashboard; the in-memory counters reset on every restart.
+8 user turns per conversation, 2,000 output tokens per model call, 8 tool steps, and
+3,000,000 tokens per day in total (`CHAT_DAILY_TOKENS`: input plus output tokens,
+cached input included, summed from the usage of every model call on both backends).
+The question caps count questions, not cost: on the Anthropic path the connector
+passes tool results to the model uncut, so one question can use far more input
+tokens than its text suggests. The token budget is checked before each request (a
+spent budget answers 429 with a message) and grows after each model call, so the
+request that crosses it still finishes.
+
+All these counters live in memory and reset whenever the service restarts (a deploy,
+or a free instance waking from sleep), so they are not a hard cap. **The real
+backstop is a spend limit on the API key's workspace** (Anthropic Console, or the
+provider's dashboard): set one, and keep the key in a workspace of its own.
 
 `CHAT_ALLOWED_ORIGINS` (comma-separated) lets another site call `/api/chat` from a
 browser; leave it unset when the page is served from this service. `/api/chat`
@@ -74,6 +89,25 @@ set, because Render's proxy always sits in front, and to `0` everywhere else: ru
 directly, as in the section above, any caller could write that header and choose
 its own bucket. Set it to `1` yourself only behind a proxy you control that appends
 the real address.
+
+With proxy headers trusted, `CHAT_CLIENT_IP_HEADER` names a header the outermost
+proxy sets to the caller's own address, read before `X-Forwarded-For`. It defaults
+to `CF-Connecting-IP` when `RENDER` is set, because Cloudflare fronts onrender.com
+and the rightmost `X-Forwarded-For` entry there may be a shared edge address that
+puts many callers in one bucket (the MCP server does the same with
+`MAPLE_CLIENT_IP_HEADER`). When the header is missing or is not an IP address, the
+`X-Forwarded-For` rule applies. Set it to an empty string to turn it off.
+
+The page is sent with a full Content-Security-Policy: scripts only from this origin,
+the two pinned cdnjs files (which also carry Subresource Integrity hashes) and the
+page's own inline script, allowed by its SHA-256 hash. The hash is computed at
+startup from `static/index.html`, which is then served from memory, so editing the
+page needs no hand-copied hash, only a restart. Styles allow `'unsafe-inline'` for
+the page's `<style>` block; images only from this origin and `data:`; `fetch` only
+to this origin; no framing. Every response also carries
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`.
+Model text is sanitised with DOMPurify, which drops images and opens links in a new
+tab with `rel="noopener noreferrer"`.
 
 Conversation limits can be set with `CHAT_MAX_MESSAGE_CHARS`,
 `CHAT_MAX_ASSISTANT_CHARS`, `CHAT_MAX_CONVERSATION_CHARS` and `CHAT_MAX_BODY_BYTES`.

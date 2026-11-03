@@ -253,8 +253,8 @@ records each decision.
 
 ```bash
 uv sync                          # install
-uv run ruff check src tests      # lint
-uv run ruff format src tests     # format
+uv run ruff check src tests scripts  # lint
+uv run ruff format src tests scripts  # format
 uv run pyright                   # type check
 uv run pytest                    # unit tests (mocked, no network)
 ```
@@ -268,10 +268,13 @@ for the contributor guide and how to add a source module.
 ## Hosting
 
 `MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 uv run maplestats-mcp`
-serves HTTP instead of stdio; `docker compose up --build` does the same in
-Docker. Docker is optional and unnecessary on a personal computer. If the
-server is exposed beyond your machine, set `MAPLE_AUTH_TOKEN` and keep
-`MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version. `GET /stats`
+serves HTTP instead of stdio. Docker Compose does the same in Docker, but
+`docker-compose.yml` sets `MAPLE_REQUIRE_AUTH=1`, so the server refuses to
+start until `MAPLE_AUTH_TOKEN` is set:
+`MAPLE_AUTH_TOKEN=<a long random string> docker compose up --build`. Clients
+then send that token as a bearer token. Docker is optional and unnecessary on
+a personal computer. If the server is exposed beyond your machine, set
+`MAPLE_AUTH_TOKEN` and keep `MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version. `GET /stats`
 is public, needs no token and reports calls per tool name and day, each tool's
 p50 and p95 duration, and each upstream host's error counts and circuit-breaker
 state (see `MAPLE_USAGE_STATS` and `MAPLE_BREAKER` below). After repeated

@@ -44,9 +44,11 @@ services:
       - pumf-cache:/data/pumf
       - ip-horizons-cache:/data/ip_horizons
       - lode-cache:/data/lode
+      - cbsa-tariff-cache:/data/cbsa_tariff
     restart: unless-stopped
 
 volumes:
   pumf-cache:
   ip-horizons-cache:
   lode-cache:
+  cbsa-tariff-cache:

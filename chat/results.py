@@ -5,6 +5,9 @@
 #          sources the page draws under the answer. The numbers come from the
 #          tool results, never from the model's text, so the chart and the table
 #          show what the data server returned even when the answer misquotes it.
+#          A series computed by the server (transform="yoy_pct_change" and the
+#          like, in the result's `transformed` block) is drawn in its own unit,
+#          with the formula in its notes; the published levels follow it.
 # Inputs:  (tool name, structured result) pairs collected by either backend
 # Outputs: {"data": [series...], "sources": [source...]}
 # ============================================================
@@ -79,6 +82,78 @@ def _points(observations: Any) -> list[dict[str, Any]]:
     return points[-MAX_POINTS:]
 
 
+# Labels for the transform the server applied (TransformedSeries.transform).
+_TRANSFORM_LABELS = {
+    "level": "level",
+    "diff": "change from previous period",
+    "pct_change": "% change from previous period",
+    "yoy_diff": "change from a year earlier",
+    "yoy_pct_change": "% change from a year earlier",
+    "annualized_pct_change": "annualized % change",
+    "index": "index",
+    "moving_average": "moving average",
+}
+# Computed values in the series' own units keep its scale; percent changes and
+# indexes do not depend on it.
+_KEEPS_SCALE = {"level", "diff", "yoy_diff", "moving_average"}
+
+
+def _transformed_points(block: dict[str, Any]) -> list[dict[str, Any]]:
+    """[{period, value, status}] from TransformedSeries.points.
+
+    ref_date (the first day of the period) is the period, like the published
+    rows, so computed and published points share one time axis.
+    """
+    points = []
+    for row in block.get("points") if isinstance(block.get("points"), list) else []:
+        if not isinstance(row, dict):
+            continue
+        period = row.get("ref_date") or row.get("period")
+        if not isinstance(period, str):
+            continue
+        points.append(
+            {"period": period[:10], "value": _number(row.get("value")), "status": None}
+        )
+    points.sort(key=lambda p: p["period"])
+    return points[-MAX_POINTS:]
+
+
+def _with_transformed(level: dict[str, Any] | None, block: Any) -> list[dict[str, Any]]:
+    """The computed series first, then the published levels as a companion.
+
+    `level` is the entry built from the published values (its points may be
+    empty, then it only lends its metadata), or None; `block` is the result's
+    `transformed` value for this series. Without a usable block, the levels
+    alone are returned, as before.
+    """
+    drawn = [level] if level and level["points"] else []
+    if not isinstance(block, dict):
+        return drawn
+    points = _transformed_points(block)
+    if not any(p["value"] is not None for p in points):
+        return drawn
+    applied = block.get("transform")
+    label = _TRANSFORM_LABELS.get(str(applied), str(applied or "computed"))
+    if applied == "level" and block.get("frequency"):
+        label = f"{block['frequency']} {block.get('aggregation') or 'level'}"
+    base = level or {}
+    formula = block.get("formula")
+    notes = [formula] if isinstance(formula, str) else []
+    notes += [n for n in block.get("notes") or [] if isinstance(n, str)]
+    computed = {
+        **base,
+        "title": f"{base.get('title') or 'Series'} ({label})",
+        "unit": block.get("unit") if isinstance(block.get("unit"), str) else None,
+        "scale": base.get("scale") if applied in _KEEPS_SCALE else None,
+        "frequency": block.get("frequency") or base.get("frequency"),
+        "notes": notes + list(base.get("notes") or []),
+        "caveats": list(base.get("caveats") or []),
+        "points": points,
+        "transform": str(applied or "computed"),
+    }
+    return [computed, *({**entry, "companion": True} for entry in drawn)]
+
+
 def _series_entry(item: dict[str, Any], caveats: list[str]) -> dict[str, Any] | None:
     points = _points(item.get("observations"))
     if not points:
@@ -119,8 +194,13 @@ def _series_entry(item: dict[str, Any], caveats: list[str]) -> dict[str, Any] | 
 
 
 def _valet_series(payload: dict[str, Any], caveats: list[str]) -> list[dict[str, Any]]:
-    """Bank of Canada Valet results: {series: {name: meta}, observations: [{ref_date, values}]}."""
+    """Bank of Canada Valet results: {series: {name: meta}, observations: [{ref_date, values}]}.
+
+    With a transform, `transformed` maps each series name to its computed values.
+    """
     found = []
+    transformed = payload.get("transformed")
+    transformed = transformed if isinstance(transformed, dict) else {}
     for name, meta in payload["series"].items():
         meta = meta if isinstance(meta, dict) else {}
         points = [
@@ -134,26 +214,23 @@ def _valet_series(payload: dict[str, Any], caveats: list[str]) -> list[dict[str,
             and isinstance(row.get("values"), dict)
             and isinstance(row.get("ref_date"), str)
         ]
-        if not points:
-            continue
         points.sort(key=lambda p: p["period"])
-        found.append(
-            {
-                "title": meta.get("label") or name,
-                "vector_id": name,
-                "table_id": "Bank of Canada Valet",
-                "table_title": meta.get("description"),
-                "table_url": f"https://www.bankofcanada.ca/valet/observations/{name}",
-                "unit": meta.get("unit"),
-                "scale": None,
-                "geography": "Canada",
-                "frequency": meta.get("frequency"),
-                "release": None,
-                "notes": [],
-                "caveats": caveats,
-                "points": points[-MAX_POINTS:],
-            }
-        )
+        level = {
+            "title": meta.get("label") or name,
+            "vector_id": name,
+            "table_id": "Bank of Canada Valet",
+            "table_title": meta.get("description"),
+            "table_url": f"https://www.bankofcanada.ca/valet/observations/{name}",
+            "unit": meta.get("unit"),
+            "scale": None,
+            "geography": "Canada",
+            "frequency": meta.get("frequency"),
+            "release": None,
+            "notes": [],
+            "caveats": caveats,
+            "points": points[-MAX_POINTS:],
+        }
+        found.extend(_with_transformed(level, transformed.get(name)))
     return found
 
 
@@ -266,9 +343,9 @@ def series_in(payload: dict[str, Any]) -> list[dict[str, Any]]:
     found = []
     for item in items:
         if isinstance(item, dict):
-            entry = _series_entry(item, caveats)
-            if entry is not None:
-                found.append(entry)
+            found.extend(
+                _with_transformed(_series_entry(item, caveats), item.get("transformed"))
+            )
     return found
 
 
@@ -291,6 +368,8 @@ def collect(calls: list[tuple[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 
     Discovery tools (search_tools, plan_query) carry no provenance and add nothing.
     A series returned twice (the model re-fetched it) is kept once, at its last fetch.
+    The published levels behind a computed series are kept only while there is
+    room under MAX_SERIES; the computed series always come first.
     """
     data: dict[str, dict[str, Any]] = {}
     sources: dict[str, dict[str, Any]] = {}
@@ -300,12 +379,17 @@ def collect(calls: list[tuple[str, Any]]) -> dict[str, list[dict[str, Any]]]:
             continue
         for entry in series_in(payload):
             key = entry["vector_id"] or f"{entry['table_id']}:{entry['title']}"
+            key += "|" + str(entry.get("transform") or "level")
             data.pop(key, None)
             data[key] = entry
         source = source_of(tool, payload)
         if source is not None:
             sources[source["url"] + "|" + tool] = source
-    return {
-        "data": list(data.values())[-MAX_SERIES:],
-        "sources": list(sources.values()),
-    }
+    entries = list(data.values())
+    # Drop companion levels, oldest first, until the rest fits.
+    while len(entries) > MAX_SERIES and any(e.get("companion") for e in entries):
+        entries.remove(next(e for e in entries if e.get("companion")))
+    kept = entries[-MAX_SERIES:]
+    for entry in kept:
+        entry.pop("companion", None)
+    return {"data": kept, "sources": list(sources.values())}

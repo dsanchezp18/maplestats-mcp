@@ -1280,6 +1280,10 @@ mark {
   color: var(--ink-3);
 }
 
+.probe-note {
+  padding-top: 0;
+}
+
 /* Step 3: the recorded values beside where they came from. The 1px gap
    over a rule-coloured ground draws the line between them, side by side
    or stacked. */

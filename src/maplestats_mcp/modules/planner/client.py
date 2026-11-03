@@ -11,6 +11,7 @@ import re
 import unicodedata
 from functools import cache
 
+from maplestats_mcp.catalogue import TOOL_SWITCHES
 from maplestats_mcp.modules.planner.places import (
     CITIES,
     CITY_SHADOWS,
@@ -129,11 +130,18 @@ def _ordered(topic: Topic, text: str, labels: list[str]) -> list[StepOut]:
         return 2 * term_hit + _place_score(step, labels)
 
     steps = sorted(topic.steps, key=score, reverse=True)
-    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps]
+    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps if _available(step)]
+
+
+def _available(step: PlanStep) -> bool:
+    """False for a tool a setting has switched off on this server (statcan_pumf_tabulate on
+    the hosted one), so a plan never sends the model to a tool call_tool will refuse."""
+    switch = TOOL_SWITCHES.get(step.tool)
+    return switch is None or switch()
 
 
 def _steps(steps: tuple[PlanStep, ...]) -> list[StepOut]:
-    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps]
+    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps if _available(step)]
 
 
 def _places(question: str, text: str, foreign: str | None = None) -> list[PlaceMatch]:

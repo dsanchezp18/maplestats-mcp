@@ -52,6 +52,34 @@ def check_hosting_config() -> None:
         )
 
 
+# Sent on every response. Browsers ignore HSTS on plain http, so a local server is
+# unaffected; behind https (the hosted one) it keeps later visits on https.
+_SECURITY_HEADERS = (
+    (b"x-content-type-options", b"nosniff"),
+    (b"strict-transport-security", b"max-age=31536000"),
+)
+
+
+def with_security_headers(app):
+    """Add _SECURITY_HEADERS to every HTTP response the wrapped app sends."""
+
+    async def wrapped(scope, receive, send):
+        if scope["type"] != "http":
+            await app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                present = {name.lower() for name, _ in message.get("headers", [])}
+                extra = [(k, v) for k, v in _SECURITY_HEADERS if k not in present]
+                message = {**message, "headers": [*message.get("headers", []), *extra]}
+            await send(message)
+
+        await app(scope, receive, send_with_headers)
+
+    return wrapped
+
+
 def build_asgi_app():
     check_hosting_config()
     # Idle sessions are dropped after 5 minutes (the default is 30): a small instance
@@ -80,8 +108,8 @@ def build_asgi_app():
     )
     healthy = with_health_endpoint(iconed, version=__version__)
     if not config.get_usage_stats_enabled():
-        return healthy
-    return with_stats_endpoint(healthy, snapshot=public_snapshot)
+        return with_security_headers(healthy)
+    return with_security_headers(with_stats_endpoint(healthy, snapshot=public_snapshot))
 
 
 app = build_asgi_app()

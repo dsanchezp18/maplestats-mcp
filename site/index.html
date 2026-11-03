@@ -15,7 +15,7 @@
   <div class="hero-logo">{{> logo}}</div>
   <div class="hero-text">
     <h1>{en}One Canadian data server to rule them all.{fr}Un serveur de données canadiennes pour les gouverner tous.{/}</h1>
-    <p class="lede">{en}Canadian data live in dozens of places. MapleStats puts {{source_count}} of them behind one connection, so your AI agent can find, fetch and cite the numbers while you focus on what they mean.{fr}Les données canadiennes se trouvent en des dizaines d'endroits. MapleStats en réunit {{source_count}} derrière une seule connexion, pour que votre agent IA trouve, récupère et cite les chiffres pendant que vous vous concentrez sur ce qu'ils signifient.{/}</p>
+    <p class="lede">{en}Canadian data live in dozens of places. MapleStats puts {{source_count}} of them behind one connection, so your AI agent can find, fetch and cite the numbers while you focus on what they mean.{fr}Les données canadiennes se trouvent dans des dizaines d'endroits. MapleStats en réunit {{source_count}} derrière une seule connexion, pour que votre agent IA trouve, récupère et cite les chiffres pendant que vous vous concentrez sur ce qu'ils signifient.{/}</p>
     <div class="points">
       <div><p class="point-label">{en}One connection{fr}Une seule connexion{/}</p><p>{en}MapleStats puts Canada's scattered agencies and portals behind one connection, in English or French, with the source on every number.{fr}MapleStats réunit les organismes et portails canadiens derrière une seule connexion, en français ou en anglais, avec la source de chaque chiffre.{/}</p></div>
       <div><p class="point-label">{en}Scripts you can rerun{fr}Des scripts à relancer{/}</p><p>{en}Most data calls can come back as an <a href="#reproduce">R, Python, Stata or Julia script</a> (or an Excel Power Query) that fetches the same numbers straight from the source, so the analysis runs without the agent.{fr}La plupart des appels de données peuvent revenir sous forme de <a href="#reproduce">script R, Python, Stata ou Julia</a> (ou une requête Power Query pour Excel) qui va chercher les mêmes chiffres à la source : l'analyse tourne sans l'agent.{/}</p></div>
@@ -98,10 +98,17 @@
         <div class="try-picks">
           <p class="ex-label" id="try-picks-label">{en}Or start from an example{fr}Ou partez d'un exemple{/}</p>
           <ul aria-labelledby="try-picks-label">
+{en}
             <li lang="en"><a href="https://maplestats-chat-ydx4.onrender.com/?q=What%20is%20Canada%27s%20unemployment%20rate%20right%20now%3F">What is Canada's unemployment rate right now?</a></li>
             <li lang="en"><a href="https://maplestats-chat-ydx4.onrender.com/?q=Compare%20the%20population%20of%20Alberta%20and%20British%20Columbia">Compare the population of Alberta and British Columbia</a></li>
             <li lang="fr"><a href="https://maplestats-chat-ydx4.onrender.com/?q=Quel%20est%20le%20taux%20d%27inflation%20au%20Canada%3F">Quel est le taux d'inflation au Canada?</a></li>
             <li lang="en"><a href="https://maplestats-chat-ydx4.onrender.com/?q=What%20were%20Canada%27s%20top%20exports%20to%20the%20US%20last%20year%3F">What were Canada's top exports to the US last year?</a></li>
+{fr}
+            <li><a href="https://maplestats-chat-ydx4.onrender.com/?q=Quel%20est%20le%20taux%20de%20ch%C3%B4mage%20au%20Canada%20en%20ce%20moment%3F">Quel est le taux de chômage au Canada en ce moment ?</a></li>
+            <li><a href="https://maplestats-chat-ydx4.onrender.com/?q=Comparez%20la%20population%20de%20l%27Alberta%20et%20de%20la%20Colombie-Britannique">Comparez la population de l'Alberta et de la Colombie-Britannique</a></li>
+            <li><a href="https://maplestats-chat-ydx4.onrender.com/?q=Quel%20est%20le%20taux%20d%27inflation%20au%20Canada%3F">Quel est le taux d'inflation au Canada ?</a></li>
+            <li><a href="https://maplestats-chat-ydx4.onrender.com/?q=Quels%20ont%20%C3%A9t%C3%A9%20les%20principaux%20produits%20export%C3%A9s%20vers%20les%20%C3%89tats-Unis%20l%27an%20dernier%3F">Quels ont été les principaux produits exportés vers les États-Unis l'an dernier ?</a></li>
+{/}
           </ul>
         </div>
       </div>
@@ -112,7 +119,7 @@
           <li><b>{en}The first question can be slow.{fr}La première question peut être lente.{/}</b> {en}It can take up to a minute while the hosted server wakes up.{fr}Elle peut prendre jusqu'à une minute, le temps que le serveur hébergé se réveille.{/}</li>
           <li><b>{en}Your questions leave your browser.{fr}Vos questions quittent votre navigateur.{/}</b> {en}They are sent to the model provider, Anthropic, and to the MapleStats server.{fr}Elles sont transmises au fournisseur du modèle, Anthropic, et au serveur MapleStats.{/}</li>
           <li><b>{en}The chat is experimental.{fr}Le clavardage est expérimental.{/}</b> {en}Feedback is welcome: <a href="{{repo}}/issues">open an issue</a>.{fr}Vos commentaires sont les bienvenus : <a href="{{repo}}/issues">ouvrez un signalement</a>.{/}</li>
-          <li><b>{en}It may go offline.{fr}Il peut être retiré.{/}</b> {en}It may be taken down if demand outgrows it. If you would like to keep using it, <a href="https://danielstats.io">contact me</a> for more information.{fr}Il pourrait être retiré si la demande le dépasse. Si vous souhaitez continuer à l'utiliser, <a href="https://danielstats.io">communiquez avec moi</a> pour en savoir plus.{/}</li>
+          <li><b>{en}It may go offline.{fr}Il peut être retiré.{/}</b> {en}It may be taken down if demand outgrows it. If you would like to keep using it, <a href="https://danielstats.io">contact me</a> for more information.{fr}Il pourrait être retiré si la demande dépasse ses capacités. Si vous souhaitez continuer à l'utiliser, <a href="https://danielstats.io">communiquez avec moi</a> pour en savoir plus.{/}</li>
         </ul>
       </aside>
     </div>
@@ -193,6 +200,7 @@
       {{search_results}}
           </ol>
           <p class="probe-status" data-status aria-live="polite">{en}Top {{search_top}} of {{tool_count}} tools.{fr}Les {{search_top}} meilleurs des {{tool_count}} outils.{/}</p>
+          {en}{fr}<p class="probe-status probe-note">Les descriptions sont en anglais, comme dans le serveur; les mots-clés français servent à la recherche.</p>{/}
         </div>
       </li>
 

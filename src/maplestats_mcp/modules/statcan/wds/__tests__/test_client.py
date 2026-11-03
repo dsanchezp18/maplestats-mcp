@@ -308,3 +308,14 @@ def test_observation_release_time_is_eastern_converted_to_utc():
     )
     assert zoned.release_time == datetime(2026, 9, 14, 12, 30, tzinfo=UTC)
     assert client._observation_from_json({"refPer": "2026-08-01"}).release_time is None
+
+
+async def test_vector_lists_past_wds_limits_are_refused_before_the_call():
+    # Live 2026-11-03: 2,000 vectors came back as HTTP 416 labelled an upstream error with
+    # "retry once"; 999999999999 came back as HTTP 406 "JSON syntax error".
+    with pytest.raises(InvalidInput, match="at most 300"):
+        await client.get_data_from_vectors_and_latest_n_periods(list(range(1, 302)), 1)
+    with pytest.raises(InvalidInput, match="positive numbers"):
+        await client.get_data_from_vectors_and_latest_n_periods([999999999999], 1)
+    with pytest.raises(InvalidInput, match="positive numbers"):
+        await client.get_series_info_from_vector(0)
