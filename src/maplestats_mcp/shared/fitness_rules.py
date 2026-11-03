@@ -243,7 +243,8 @@ RULES: tuple[FitnessRule, ...] = (
             "have large sampling variability. The Canadian Income Survey (11-10-0135) is "
             "annual for Canada and the provinces; for smaller areas use the 2021 Census "
             "(LIM-AT, by age, in the Census Profile), which is 2020 income, a year raised by "
-            "pandemic benefits, and a different line."
+            "pandemic benefits, and a different line. Rates by disability (11-10-0090) are "
+            "for Canada only: no province has a published rate."
         ),
         note_fr=(
             "Nommez le seuil et la base avec chaque taux : ils ne mesurent pas la même "
@@ -261,7 +262,9 @@ RULES: tuple[FitnessRule, ...] = (
             "sur le revenu (11-10-0135) est annuelle pour le Canada et les provinces; pour "
             "de plus petites régions, prenez le Recensement de 2021 (MFR-ApI, par âge, dans "
             "le Profil du recensement), qui porte sur le revenu de 2020, une année gonflée "
-            "par les prestations liées à la pandémie, et sur un autre seuil."
+            "par les prestations liées à la pandémie, et sur un autre seuil. Les taux selon "
+            "l'incapacité (11-10-0090) ne sont publiés que pour le Canada : aucune province "
+            "n'a de taux publié."
         ),
         sources=(
             "https://www150.statcan.gc.ca/n1/pub/75f0002m/75f0002m2016002-eng.htm",
@@ -893,5 +896,78 @@ RULES: tuple[FitnessRule, ...] = (
             "(grants) with the original."
         ),
         tool_prefixes=("disclosure_",),
+    ),
+    FitnessRule(
+        key="lfs-subprovincial-moving-averages",
+        title_en="LFS below the province: three-month moving averages",
+        title_fr="EPA sous le niveau provincial : moyennes mobiles de trois mois",
+        note_en=(
+            "Below the province, LFS estimates are three-month moving averages, because a "
+            "single month's sample is too small: census metropolitan areas in 14-10-0459 "
+            "(seasonally adjusted) and 14-10-0458 (unadjusted), economic regions in "
+            "14-10-0462 (unadjusted). A month's value is the mean of that month and the two "
+            "before it: say so, and compare unadjusted values with the same months a year "
+            "earlier, not with the previous month. Only Montréal, Toronto and Vancouver have "
+            "single-month estimates (14-10-0460)."
+        ),
+        note_fr=(
+            "Sous le niveau provincial, les estimations de l'EPA sont des moyennes mobiles "
+            "de trois mois, car l'échantillon d'un seul mois est trop petit : régions "
+            "métropolitaines de recensement dans 14-10-0459 (désaisonnalisées) et 14-10-0458 "
+            "(non désaisonnalisées), régions économiques dans 14-10-0462 (non "
+            "désaisonnalisées). La valeur d'un mois est la moyenne de ce mois et des deux "
+            "précédents : dites-le, et comparez les valeurs non désaisonnalisées aux mêmes "
+            "mois un an plus tôt, pas au mois précédent. Seules Montréal, Toronto et "
+            "Vancouver ont des estimations mensuelles (14-10-0460)."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410045901",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410046201",
+            "https://www150.statcan.gc.ca/n1/pub/71-543-g/71-543-g2025001-eng.htm",
+        ),
+        checked=(
+            "WDS getAllCubesListLite 2026-11-03: 14-10-0458 'Labour force characteristics by "
+            "census metropolitan area, three-month moving average, unadjusted for "
+            "seasonality'; 14-10-0459 '..., three-month moving average, seasonally "
+            "adjusted'; 14-10-0460 '... by Montréal, Toronto and Vancouver census "
+            "metropolitan areas, monthly, seasonally adjusted'; 14-10-0462 '... by economic "
+            "region, three-month moving average, unadjusted for seasonality'; all to "
+            "2026-09."
+        ),
+        product_ids=(14100458, 14100459, 14100460, 14100462),
+    ),
+    FitnessRule(
+        key="ircc-counts-not-population",
+        title_en="IRCC counts are not population estimates",
+        title_fr="Les chiffres d'IRCC ne sont pas des estimations de la population",
+        note_en=(
+            "IRCC counts admissions and permits (documents issued or people admitted in a "
+            "month), not people living in Canada: one person can hold several permits, "
+            "permits expire, and people leave. For population growth or the number of "
+            "temporary residents, use Statistics Canada's demographic estimates: 17-10-0009 "
+            "(population, quarterly), 17-10-0040 (international migration components, "
+            "quarterly) and 17-10-0121 (non-permanent residents by type, quarterly)."
+        ),
+        note_fr=(
+            "IRCC compte des admissions et des permis (documents délivrés ou personnes "
+            "admises au cours d'un mois), pas des personnes qui vivent au Canada : une "
+            "personne peut détenir plusieurs permis, les permis expirent et des personnes "
+            "partent. Pour la croissance démographique ou le nombre de résidents "
+            "temporaires, utilisez les estimations démographiques de Statistique Canada : "
+            "17-10-0009 (population, trimestrielle), 17-10-0040 (composantes de la "
+            "migration internationale, trimestrielle) et 17-10-0121 (résidents non "
+            "permanents selon le type, trimestrielle)."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710012101",
+        ),
+        checked=(
+            "WDS getAllCubesListLite 2026-11-03: 17-10-0009 'Population estimates, "
+            "quarterly' (to 2026-07); 17-10-0040 'Estimates of the components of "
+            "international migration, quarterly' (to 2026-04); 17-10-0121 'Estimates of the "
+            "number of non-permanent residents by type, quarterly' (to 2026-07)."
+        ),
+        tool_prefixes=("ircc_monthly_",),
     ),
 )

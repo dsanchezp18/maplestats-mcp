@@ -65,6 +65,14 @@ VERIFIED_TABLES = {
     98100001: "Population and dwelling counts: Canada, provinces and territories",
     98100002: "Population and dwelling counts: Canada and census subdivisions (municipalities)",
     14100064: "Employee wages by industry, annual",
+    14100458: "Labour force characteristics by census metropolitan area, three-month moving "
+    "average, unadjusted for seasonality",
+    14100459: "Labour force characteristics by census metropolitan area, three-month moving "
+    "average, seasonally adjusted",
+    14100460: "Labour force characteristics by Montréal, Toronto and Vancouver census "
+    "metropolitan areas, monthly, seasonally adjusted",
+    14100462: "Labour force characteristics by economic region, three-month moving average, "
+    "unadjusted for seasonality",
     14100203: "Average weekly earnings by industry, monthly, unadjusted for seasonality",
     14100204: "Average weekly earnings by industry, annual",
     12100011: "International merchandise trade for all countries and by Principal Trading "
