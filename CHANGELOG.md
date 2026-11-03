@@ -8,6 +8,138 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-11-03
+
+This release fixes `check_answer`, which flagged a correct percent change as wrong and
+suggested the index level instead (a 3.1% CPI change was told to become 167.7). It brings
+back StatCan's reference, analysis, data and survey searches: since about 2026-10-29
+StatCan has answered those pages with a 404 to any request without a referrer. CMHC data now
+covers cities (CMAs) as well as Canada and the provinces, through
+`cmhc_list_metropolitan_areas`. The chat demo gets a token budget, a full Content Security
+Policy, and charts of the percent change an answer quotes. Nothing breaks a caller: the tool
+surface changes are one new tool and one new optional `provenance` field.
+
+### Added
+
+- Chat demo: a daily token budget (`CHAT_DAILY_TOKENS`, default 3,000,000 input plus
+  output tokens, summed from the usage of every model call on both backends). A spent
+  budget answers 429 with a message before any model call. The counters stay in
+  memory and reset on restart, so `chat/README.md` now says the real backstop is a
+  spend limit on the API key's workspace.
+- `cmhc_list_metropolitan_areas`: CMHC's 225 metropolitan areas (CMAs, census agglomerations
+  and smaller centres) with the `geography_id` to pass with
+  `geography_type="MetropolitanMajorArea"`, filtered by `name` ("Toronto" is 2270) or
+  `province_id`. The `cmhc_` tools now return rents, vacancy rates and housing starts for a
+  city, not only for Canada and the provinces.
+
+### Changed
+
+- Chat demo: a series computed by the server (`transform="yoy_pct_change"` and the
+  like on WDS, SDMX and Bank of Canada tools) is charted and tabulated in its own unit
+  (percent, percentage points, an index), with the server's formula in its notes. The
+  published levels follow as a second series while there is room under the
+  8-series cap. Before, the panel showed only the levels and ignored `transformed`.
+- CI runs the test suite in the Python 3.15 image that both Docker images use since a
+  Dependabot update, and the package lists 3.15 as supported. The release workflow refuses a
+  tag on a commit that is not on `main`.
+- The transit smoke test accepts a schedule published up to 14 days before it starts (exo
+  La Presqu'ile's 2026-11-09 feed), tries the next three Wednesdays for departures, and
+  reports a feed whose server is down (STS Sherbrooke, 2026-11-03) as SKIPPED rather than
+  stopping the whole run.
+
+### Fixed
+
+- Chat demo: a failure after a billed model call (while reading the answer or the tool
+  results) is no longer refunded against the per-address and daily caps. Only a backend
+  failure known to have happened before any billed call is given back.
+- `check_answer`: a figure written as a percent or a change ("percent", "%", "pourcentage",
+  "12-month change", "variation", or no unit in a question about inflation or growth) cited
+  against an index or level series (the CPI, 2002=100) is compared with the series' 12-month
+  and one-period percent changes, not with its level. Until now a correct 3.1% Quebec
+  inflation rate for 2026-09 was reported wrong with the fix "Use 167.7", the index level. A
+  wrong percent now gets a problem quoting the computed changes, and a percent whose earlier
+  period is not published gets a note instead of a problem.
+- `check_answer`: places are matched on whole names. "Victoria" no longer matches
+  "Victoriaville, Quebec", "London" no longer matches "Londonderry", and the province of
+  Quebec no longer matches the Québec CMA (nor Quebec City the province). A question naming a
+  city with its province ("Victoria, BC") asks for the city, so a British Columbia series no
+  longer passes for it, and the suggested member is the one with the exact name.
+- `cmhc_list_categories`, `cmhc_get_table_options` and `cmhc_get_table_data` accept
+  `geography_type="CMA"` (and "RMR", "metro", "centre", "city"), which CMHC answered with an
+  error, and a place name as `geography_id` ("Toronto", "Ontario") when exactly one area
+  carries it; an unknown type, id or name is refused with the valid choices instead of
+  reaching CMHC. `cmhc_get_table_data` also accepts the field labels that
+  `cmhc_get_table_options` shows ("Bedroom Type", "Historical Time Periods") in place of
+  their codes. Together these failed the chat demo's Toronto rent question.
+- Chat demo: CMHC time series (`cmhc_get_table_data` with `row_field="TIMESERIES"`) are
+  charted and tabled under the answer, one series per column. A saved conversation the page
+  cannot draw is dropped instead of stopping the rest from loading, and a result the chart
+  cannot draw shows a note under the answer instead of replacing the answer with an error.
+- The HTTP server (`python -m maplestats_mcp`) and the chat demo keep an idle connection open
+  for 130 s instead of uvicorn's 5 s. Behind a proxy that reuses connections for longer
+  (Render's), a request sent down a connection uvicorn had just closed failed at the proxy
+  with a plain-text 502, which the chat demo showed as "The demo server did not answer".
+- `ourcommons_get_ministry` in English: the House of Commons moved the English ministry feed
+  from `/Members/en/ministries/XML` to `/members/en/ministry/xml`; the old address answered
+  its 404 page, so the English call failed (French was fixed in 0.4.4).
+- `statcan_surveys_search_surveys`: StatCan's survey directory answers 404 since 2026-10-29.
+  The search now lists surveys from IMDB's alphabetical index instead (917 surveys, active
+  and inactive, same ids), and says so in `provenance.limits`.
+- `wds_get_data_from_vectors` and the other vector tools refuse more than 300 vectors, and
+  vector ids that are not positive 32-bit numbers, before calling StatCan. StatCan answered
+  them with HTTP 416 (reported as an upstream error to retry) and a "JSON syntax error".
+- CMHC: an HTTP 200 error page in place of a province's metropolitan area list is no
+  longer cached for a day, which refused valid ids such as Toronto's meanwhile. Field codes
+  are upper-cased on every path (`timeseries` works like `TIMESERIES`).
+- `call_tool`: a switched-off tool (`wds_query_series`, `statcan_pumf_tabulate` on the hosted
+  server) says it is switched off and what to use instead, rather than "unknown tool". An
+  unknown name is echoed back cut to 100 characters. Calling `call_tool` or `search_tools`
+  through `call_tool` is an `invalid_input`, without the advice to retry.
+- `search_tools` answers "No tools matched" with a suggestion instead of an empty result,
+  and reads at most 500 characters of a query.
+- `plan_query` leaves out tools this server has switched off, so a hosted plan no longer
+  sends the model to `statcan_pumf_tabulate`.
+- `rdaas_get_classification_index_entry` now carries `provenance` (source, licence and
+  URL), the one tool that had none.
+- The reproduction script for CIPO patent data carries the RapidSSL intermediate
+  certificate itself, instead of downloading it over plain http and trusting it.
+- The HTTP server sends `X-Content-Type-Options: nosniff` and HSTS on every response.
+- Docker: the server image creates `/data/cbsa_tariff`, which `docker-compose.yml` uses as
+  the CBSA tariff cache; it was owned by root, so every `cbsa_tariff_` tool failed under
+  compose. Compose keeps it in a named volume.
+- Website: the About page links Kole Harvey's `statcan-mcp` and `bank-of-canada-mcp` at their
+  current repositories (the old links were dead), and the Connect page links OpenAI's moved
+  developer-mode article, in French on the French page. The benchmark tables use decimal
+  commas on the French page, and the count of answers read by hand says it includes the
+  updated MapleStats runs. The French home page offers French example questions and says, under
+  the tool search, that tool descriptions are in English. Chart labels that wrap onto several
+  lines are read with a space between the lines by screen readers. Several French phrasings
+  were corrected, and the Contributing page no longer lists Python versions that can go out of
+  date.
+- README: the Docker Compose command sets `MAPLE_AUTH_TOKEN` first, without which the server
+  refuses to start, and the lint and format commands include `scripts`, as CI runs them.
+- SECURITY.md: the chat demo is in scope.
+- `statcan_reference_search_documents`, `statcan_reference_search_analysis`,
+  `statcan_reference_search_data`, `statcan_pumf_search` and
+  `statcan_surveys_search_surveys` work again. Since about 2026-10-29 StatCan answers its
+  404 page (and a redirect loop for the survey directory) to any request without a
+  `Referer` header, while the same pages load for a browser following StatCan's own menu.
+  These tools now send StatCan's home page as the referrer. The survey search keeps IMDB's
+  alphabetical index as a fallback.
+
+### Security
+
+- Chat demo: on Render the per-address rate limit reads `CF-Connecting-IP`
+  (`CHAT_CLIENT_IP_HEADER`) before `X-Forwarded-For`, whose rightmost entry behind
+  Cloudflare may be a shared edge address that put many callers in one bucket. Falls
+  back to `X-Forwarded-For` when the header is missing or not an IP address.
+- Chat demo: the page sends a full Content-Security-Policy (scripts only from this
+  origin, the two pinned cdnjs files and the page's inline script by a SHA-256 hash
+  computed at startup; no framing), and every response sends
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`.
+  Model text is sanitised without images, and its links open in a new tab with
+  `rel="noopener noreferrer"`.
+
 ## [0.4.4] - 2026-11-03
 
 This release adds Job Bank wages, IRCC processing times, federal proactive disclosure
