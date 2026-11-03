@@ -21,4 +21,7 @@ USER appuser
 EXPOSE 10000
 ENV PORT=10000
 
-CMD [".venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]
+# uvicorn closes an idle keep-alive connection after 5 s by default; Render's proxy
+# reuses connections for longer, and a request sent down one uvicorn has just closed
+# fails at the proxy as a plain-text 502 ("upstream request failed", 2026-11-03).
+CMD [".venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000", "--timeout-keep-alive", "130"]

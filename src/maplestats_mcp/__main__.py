@@ -21,6 +21,11 @@ for _noisy in ("httpx", "httpcore"):
 logger = logging.getLogger("maplestats_mcp")
 
 
+# Longer than the proxy in front keeps a connection idle, so the proxy closes it
+# first. Render does not document its value; a Render forum answer gives about 120 s.
+KEEP_ALIVE_SECONDS = 130
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="maplestats-mcp",
@@ -66,6 +71,11 @@ def main(argv: list[str] | None = None) -> None:
         log_level="info",
         ssl_certfile=certfile,
         ssl_keyfile=keyfile,
+        # uvicorn closes an idle keep-alive connection after 5 s by default. A proxy in
+        # front (Render's) that reuses the connection after that gets a reset and answers
+        # the client with a 502 the app never sees ("upstream request failed" from the
+        # chat demo, 2026-11-03). Keep it open longer than the proxy keeps it idle.
+        timeout_keep_alive=KEEP_ALIVE_SECONDS,
     )
 
 
