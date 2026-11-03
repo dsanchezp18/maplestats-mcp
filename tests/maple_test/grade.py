@@ -463,9 +463,14 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         )
         halves = (
             "".join(
-                f"{s['groups'][g]['correct']:g} of {s['groups'][g]['questions']} | "
+                # An arm asked only some groups (an "after" run on the analyst questions)
+                # gets a dash, so its row keeps the table's columns.
+                (
+                    f"{s['groups'][g]['correct']:g} of {s['groups'][g]['questions']} | "
+                    if g in s["groups"]
+                    else "– | "
+                )
                 for g in group_names
-                if g in s["groups"]
             )
             if split
             else ""
