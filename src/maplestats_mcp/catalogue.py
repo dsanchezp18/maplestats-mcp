@@ -59,8 +59,9 @@ _LISTED_FIELDS = {
 # built with every switch on and lists these only while theirs is.
 TOOL_SWITCHES: dict[str, Callable[[], bool]] = {
     "statcan_pumf_tabulate": config.get_pumf_tabulate_enabled,
+    "wds_query_series": config.get_query_series_enabled,
 }
-_SWITCH_ENV = {"MAPLE_PUMF_TABULATE": "1"}
+_SWITCH_ENV = {"MAPLE_PUMF_TABULATE": "1", "MAPLE_QUERY_SERIES": "1"}
 
 
 class CatalogueTool(Tool):
