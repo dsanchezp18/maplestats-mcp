@@ -519,7 +519,7 @@ def core() -> list[dict[str, Any]]:
 
 
 def build() -> dict[str, Any]:
-    from tests.maple_test import key_v2_beyond
+    from tests.maple_test import key_v2_analyst, key_v2_beyond
 
     core_q = core()
     beyond_q = key_v2_beyond.questions()
@@ -529,6 +529,9 @@ def build() -> dict[str, Any]:
     for i, q in enumerate(beyond_q, 1):
         q = {k: v for k, v in q.items() if k != "id"}
         questions.append({"id": f"X-{i:02d}", **q, "group": "beyond"})
+    # Added 2026-11-03 after the first v2 runs: questions from an analyst's working week.
+    for i, q in enumerate(key_v2_analyst.questions(), 1):
+        questions.append({"id": f"A-{i:02d}", **q})
     return {
         "benchmark": "maple_test_v2",
         "built_at": datetime.now(UTC).isoformat(timespec="seconds"),

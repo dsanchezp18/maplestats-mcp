@@ -55,7 +55,10 @@ RULES: tuple[FitnessRule, ...] = (
             "payroll jobs, so it leaves out the self-employed and agriculture, fishing and "
             "trapping, private household services and religious organisations. LFS "
             "estimates carry sampling error; preliminary SEPH estimates are revised. Compare "
-            "trends over several months, not one month's change."
+            "trends over several months, not one month's change. For earnings in a detailed "
+            "industry, such as provincial and territorial public administration (NAICS 912), "
+            "use SEPH (14-10-0203 monthly, 14-10-0204 annual) and say why: the LFS wage "
+            "table 14-10-0064 stops at broad sectors ('Public administration' as a whole)."
         ),
         note_fr=(
             "L'emploi de l'EPA et celui de l'EERH sont deux mesures différentes : n'en "
@@ -66,7 +69,11 @@ RULES: tuple[FitnessRule, ...] = (
             "piégeage, les services aux ménages privés et les organisations religieuses. "
             "Les estimations de l'EPA comportent une erreur d'échantillonnage; les "
             "estimations provisoires de l'EERH sont révisées. Comparez les tendances sur "
-            "plusieurs mois, pas la variation d'un seul mois."
+            "plusieurs mois, pas la variation d'un seul mois. Pour la rémunération d'une "
+            "industrie détaillée, comme les administrations publiques provinciales et "
+            "territoriales (SCIAN 912), prenez l'EERH (14-10-0203 mensuel, 14-10-0204 "
+            "annuel) et dites pourquoi : le tableau des salaires de l'EPA 14-10-0064 "
+            "s'arrête aux grands secteurs (« Administrations publiques » dans leur ensemble)."
         ),
         sources=(
             "https://www150.statcan.gc.ca/n1/pub/75-005-m/75-005-m2026001-eng.htm",
@@ -83,7 +90,7 @@ RULES: tuple[FitnessRule, ...] = (
             "fishing and trapping, private household services, religious organisations and "
             "military personnel."
         ),
-        product_ids=_LFS_TABLES + _SEPH_TABLES,
+        product_ids=_LFS_TABLES + _SEPH_TABLES + (14100064, 14100203, 14100204),
     ),
     FitnessRule(
         key="lfs-sampling-variability",
@@ -233,7 +240,10 @@ RULES: tuple[FitnessRule, ...] = (
             "November 2025 with thresholds back to 2020, and Canadian Income Survey "
             "releases no longer carry 2018-base estimates; Statistics Canada suggests its "
             "MBM Poverty Index for trends across bases. Small groups and the territories "
-            "have large sampling variability."
+            "have large sampling variability. The Canadian Income Survey (11-10-0135) is "
+            "annual for Canada and the provinces; for smaller areas use the 2021 Census "
+            "(LIM-AT, by age, in the Census Profile), which is 2020 income, a year raised by "
+            "pandemic benefits, and a different line."
         ),
         note_fr=(
             "Nommez le seuil et la base avec chaque taux : ils ne mesurent pas la même "
@@ -247,7 +257,11 @@ RULES: tuple[FitnessRule, ...] = (
             "diffusions de l'Enquête canadienne sur le revenu ne donnent plus d'estimations "
             "selon la base de 2018; Statistique Canada propose son indice de pauvreté de la "
             "MPC pour suivre une tendance d'une base à l'autre. Les petits groupes et les "
-            "territoires ont une forte variabilité d'échantillonnage."
+            "territoires ont une forte variabilité d'échantillonnage. L'Enquête canadienne "
+            "sur le revenu (11-10-0135) est annuelle pour le Canada et les provinces; pour "
+            "de plus petites régions, prenez le Recensement de 2021 (MFR-ApI, par âge, dans "
+            "le Profil du recensement), qui porte sur le revenu de 2020, une année gonflée "
+            "par les prestations liées à la pandémie, et sur un autre seuil."
         ),
         sources=(
             "https://www150.statcan.gc.ca/n1/pub/75f0002m/75f0002m2016002-eng.htm",
@@ -627,7 +641,12 @@ RULES: tuple[FitnessRule, ...] = (
             "family, and each person living alone or with non-relatives, once. Income of "
             "individuals (11-10-0238, 11-10-0239) is per person aged 15 and over and much "
             "lower. Use the unit the question asks for (household or family vs person) and "
-            "name it."
+            "name it. This survey has no household unit: a household (everyone in a dwelling) "
+            "is the Census unit, so for 'household income' give the 2021 Census Profile's "
+            "median total income of household (2020 income, raised by pandemic benefits) and "
+            "this table's figure as the recent alternative, naming each. Incomes are skewed, "
+            "so the median is the typical income: asked for 'average income', give the median "
+            "beside the average (these tables have both) and say which is which."
         ),
         note_fr=(
             "Le tableau 11-10-0190 est en dollars constants de sa dernière année de revenu "
@@ -637,7 +656,14 @@ RULES: tuple[FitnessRule, ...] = (
             "compte une fois chaque famille et chaque personne seule ou vivant avec des "
             "personnes non apparentées. Le revenu des particuliers (11-10-0238, 11-10-0239) "
             "est par personne de 15 ans et plus, et bien plus bas. Prenez l'unité que la "
-            "question demande (ménage ou famille, ou personne) et nommez-la."
+            "question demande (ménage ou famille, ou personne) et nommez-la. Cette enquête n'a "
+            "pas d'unité ménage : le ménage (toutes les personnes d'un logement) est l'unité "
+            "du Recensement; pour le « revenu des ménages », donnez le revenu total médian des "
+            "ménages du Profil du recensement de 2021 (revenu de 2020, gonflé par les "
+            "prestations liées à la pandémie) et le chiffre de ce tableau comme solution plus "
+            "récente, en nommant chacun. Les revenus sont asymétriques, la médiane est donc le "
+            "revenu typique : si l'on demande le « revenu moyen », donnez la médiane à côté de "
+            "la moyenne (ces tableaux ont les deux) et dites laquelle est laquelle."
         ),
         sources=(
             "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110019001",
@@ -650,7 +676,12 @@ RULES: tuple[FitnessRule, ...] = (
             "an economic family as one living alone or with unrelated others, and say 2022 "
             "onwards covers persons aged 15 and over. 11-10-0238 is 'Distribution of market, "
             "total and after-tax income of individuals'; 11-10-0239 is 'Income of "
-            "individuals by age group, gender and income source'."
+            "individuals by age group, gender and income source'. 2026-11-03: 11-10-0239 "
+            "Statistics members include 'Average income (excluding zeros)' and 'Median "
+            "income (excluding zeros)'; 11-10-0190 income concepts pair each average with a "
+            "median. Census Profile 2021 characteristic 229 'Median total income of household "
+            "in 2020 ($)', Alberta 96,000; 11-10-0190 Alberta median total income 2024 for "
+            "economic families and persons not in an economic family 96,600 (v96414571)."
         ),
         product_ids=(11100190, 11100238, 11100239),
     ),

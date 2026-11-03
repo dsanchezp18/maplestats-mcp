@@ -143,9 +143,11 @@ def test_citation_checks_use_the_cache(tmp_path):
 
 def test_v2_key_is_half_core_half_beyond():
     v2 = load_key("v2")
-    assert len(v2) == 48 and len({q["id"] for q in v2}) == 48
+    assert len(v2) == 52 and len({q["id"] for q in v2}) == 52
     assert sum(q["group"] == "core" for q in v2) == 24
     assert sum(q["group"] == "beyond" for q in v2) == 24
+    # Added after the first runs: four analyst questions, graded as their own group.
+    assert [q["id"] for q in v2 if q["group"] == "analyst"] == ["A-01", "A-02", "A-03", "A-04"]
     for q in v2:
         assert "?" in q["question"] or q["eval_type"] == "flag", q["id"]
         assert q["citations"] and q["traps"], q["id"]
@@ -188,5 +190,35 @@ def test_name_answers_and_own_refusal_wording():
     ],
 )
 def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
+    questions = {q["id"]: q for q in load_key("v2")}
+    assert grade_answer(questions[qid], text).outcome == outcome
+
+
+@pytest.mark.parametrize(
+    ("qid", "text", "outcome"),
+    [
+        (
+            "A-02",
+            (
+                "Provincial public administration (NAICS 912) earned $1,883.03 a week "
+                "(SEPH, table 14-10-0203-01)."
+            ),
+            "correct",
+        ),
+        ("A-02", "Public administration workers earned $1,500 a week (LFS).", "hallucinated"),
+        ("A-03", "The average was $66,100 and the median $48,100.", "correct"),
+        ("A-03", "The average income was $66,100.", "partial"),
+        (
+            "A-04",
+            (
+                "The Census median household income was $96,000 (2020); the CIS median "
+                "for economic families and persons not in one was $96,600 (2024)."
+            ),
+            "correct",
+        ),
+        ("A-04", "The median household income was $96,000 in 2020 (Census).", "partial"),
+    ],
+)
+def test_v2_analyst_questions_grade_the_trap(qid, text, outcome):
     questions = {q["id"]: q for q in load_key("v2")}
     assert grade_answer(questions[qid], text).outcome == outcome

@@ -64,6 +64,9 @@ VERIFIED_TABLES = {
     36100434: "Gross domestic product (GDP) at basic prices, by industry, monthly",
     98100001: "Population and dwelling counts: Canada, provinces and territories",
     98100002: "Population and dwelling counts: Canada and census subdivisions (municipalities)",
+    14100064: "Employee wages by industry, annual",
+    14100203: "Average weekly earnings by industry, monthly, unadjusted for seasonality",
+    14100204: "Average weekly earnings by industry, annual",
     12100011: "International merchandise trade for all countries and by Principal Trading "
     "Partners, monthly",
     34100292: "Building permits, by type of structure and type of work",

@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-03T00:09:44+00:00",
+  "built_at": "2026-11-03T02:36:48+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC",
   "questions": [
     {
@@ -1882,6 +1882,166 @@
       ],
       "flag_pattern": "(?:no|not yet|hasn't|has not|haven't|have not|isn't|is not|aren't|are not)[^.]{0,50}(?:2026 census|released|published|available|out yet)|2026 census[^.]{0,80}(?:not|n't|until|due|expected)",
       "source_id": "B-12"
+    },
+    {
+      "id": "A-01",
+      "category": "Analyst",
+      "eval_type": "numeric",
+      "question": "What is the child poverty rate in Alberta?",
+      "expected": {
+        "mbm_under18_2024_pct": 12.8
+      },
+      "headline": [
+        "mbm_under18_2024_pct"
+      ],
+      "tolerance": "±0.1; the Market Basket Measure (official poverty line), 2024",
+      "citations": [
+        {
+          "table_id": "11-10-0135-01",
+          "vector_id": "v1792632015",
+          "series_title": "Alberta;Persons under 18 years;Market basket measure, 2023 base;Percentage of persons in low income",
+          "reference_period": "2024",
+          "coordinate": "12.2.7.2.0.0.0.0.0.0",
+          "value": 12.8,
+          "release_or_revision_date": "2026-04-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110013501"
+        }
+      ],
+      "traps": [
+        "Not only the census: the Canadian Income Survey (11-10-0135) is annual for the provinces.",
+        "Name the line: MBM is the official poverty line; LIM-AT and LICO differ."
+      ],
+      "group": "analyst",
+      "tolerances": {}
+    },
+    {
+      "id": "A-02",
+      "category": "Analyst",
+      "eval_type": "flag",
+      "question": "What are average wages for workers in Alberta's provincial public administration?",
+      "expected": {},
+      "reference": {
+        "seph_awe_aug_2026": 1883.03,
+        "seph_awe_2025": 1702.65
+      },
+      "headline": [],
+      "flag_pattern": "SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey",
+      "tolerance": "Correct only when the answer names SEPH (the payroll survey), which has NAICS 912; the figures are listed for reference.",
+      "citations": [
+        {
+          "table_id": "14-10-0203-01",
+          "vector_id": "v1560358",
+          "series_title": "Alberta;All employees;Including overtime;Provincial and territorial public administration",
+          "reference_period": "2026-08",
+          "coordinate": "10.1.1.395.0.0.0.0.0.0",
+          "value": 1883.03,
+          "release_or_revision_date": "2026-10-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020301"
+        },
+        {
+          "table_id": "14-10-0204-01",
+          "vector_id": "v1742415",
+          "series_title": "Alberta;All employees;Including overtime;Provincial and territorial public administration",
+          "reference_period": "2025",
+          "coordinate": "10.1.1.395.0.0.0.0.0.0",
+          "value": 1702.65,
+          "release_or_revision_date": "2026-03-26T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020401"
+        }
+      ],
+      "traps": [
+        "The LFS wage table (14-10-0064) has only 'Public administration' as a whole; SEPH (14-10-0203, 14-10-0204) has provincial and territorial public administration (NAICS 912)."
+      ],
+      "group": "analyst",
+      "tolerances": {}
+    },
+    {
+      "id": "A-03",
+      "category": "Analyst",
+      "eval_type": "numeric",
+      "question": "What is the average income in Alberta?",
+      "expected": {
+        "average_income_2024": 66100.0,
+        "median_income_2024": 48100.0
+      },
+      "headline": [
+        "average_income_2024"
+      ],
+      "tolerances": {
+        "average_income_2024": 100,
+        "median_income_2024": 100
+      },
+      "tolerance": "±$100; correct needs the median as well as the average",
+      "citations": [
+        {
+          "table_id": "11-10-0239-01",
+          "vector_id": "v107680657",
+          "series_title": "Alberta;15 years and over;Total - Gender;Total income;Average income (excluding zeros)",
+          "reference_period": "2024",
+          "coordinate": "12.1.1.1.4.0.0.0.0.0",
+          "value": 66100.0,
+          "release_or_revision_date": "2026-04-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901"
+        },
+        {
+          "table_id": "11-10-0239-01",
+          "vector_id": "v107680658",
+          "series_title": "Alberta;15 years and over;Total - Gender;Total income;Median income (excluding zeros)",
+          "reference_period": "2024",
+          "coordinate": "12.1.1.1.5.0.0.0.0.0",
+          "value": 48100.0,
+          "release_or_revision_date": "2026-04-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901"
+        }
+      ],
+      "traps": [
+        "Incomes are skewed: the median is the typical income."
+      ],
+      "group": "analyst"
+    },
+    {
+      "id": "A-04",
+      "category": "Analyst",
+      "eval_type": "numeric",
+      "question": "What is the median household income in Alberta?",
+      "expected": {
+        "census_household_median_2020": 96000.0,
+        "cis_family_median_2024": 96600.0
+      },
+      "headline": [
+        "census_household_median_2020"
+      ],
+      "tolerances": {
+        "census_household_median_2020": 0,
+        "cis_family_median_2024": 100
+      },
+      "tolerance": "The Census household figure is the headline; correct gives both and names each unit (household vs economic families and persons not in one)",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "Census Profile 2021, Alberta, characteristic 229 'Median total income of household in 2020 ($)'",
+          "reference_period": "2020",
+          "value": 96000.0,
+          "release_or_revision_date": "2022-07-13",
+          "url": "https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/data/STC_CP,DF_PR/A5.2021A000248.1.229.1"
+        },
+        {
+          "table_id": "11-10-0190-01",
+          "vector_id": "v96414571",
+          "series_title": "Alberta;Median total income;Economic families and persons not in an economic family",
+          "reference_period": "2024",
+          "coordinate": "12.8.1.0.0.0.0.0.0.0",
+          "value": 96600.0,
+          "release_or_revision_date": "2026-04-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110019001"
+        }
+      ],
+      "traps": [
+        "A household is a Census unit; the Canadian Income Survey uses economic families and persons not in an economic family.",
+        "Census income is 2020, raised by pandemic benefits."
+      ],
+      "group": "analyst"
     }
   ]
 }
