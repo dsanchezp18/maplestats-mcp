@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-03T03:14:57+00:00",
+  "built_at": "2026-11-03T03:18:26+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC",
   "questions": [
     {
@@ -2051,7 +2051,7 @@
         "canada_mbm_disability_2024_pct": 12.6
       },
       "headline": [],
-      "absent_pattern": "(only|just) (for|at) (the )?(Canada|national|country)|national(ly)? only|(not|isn't|is not|aren't|are not) (published|available|broken down|reported)[^.]{0,40}(Alberta|provinc)|no (published )?(Alberta|provincial)|(doesn't|does not|don't|do not) (publish|break)[^.]{0,60}(Alberta|provinc)",
+      "absent_pattern": "(only|just) (for|at) (the )?(Canada|national|country)|national(ly)? only|only (covers|has|reports) (a )?Canada|only (a )?Canada-wide|only geography is Canada|Canada(-wide)? only|Canada alone|(not|isn't|is not|aren't|are not) (published|available|broken down|reported)[^.]{0,40}(Alberta|provinc)|no (published )?(Alberta|provincial)|(doesn't|does not|don't|do not) (publish|break)[^.]{0,60}(Alberta|provinc)",
       "tolerance": "Correct only when the answer says Alberta has no published rate; a national rate presented as Alberta's is a hallucination.",
       "citations": [
         {

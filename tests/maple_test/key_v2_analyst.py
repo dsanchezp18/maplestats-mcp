@@ -181,6 +181,8 @@ def questions() -> list[dict[str, Any]]:
             "headline": [],
             "absent_pattern": (
                 r"(only|just) (for|at) (the )?(Canada|national|country)|national(ly)? only|"
+                r"only (covers|has|reports) (a )?Canada|only (a )?Canada-wide|only geography is Canada|"
+                r"Canada(-wide)? only|Canada alone|"
                 r"(not|isn't|is not|aren't|are not) (published|available|broken down|"
                 r"reported)[^.]{0,40}(Alberta|provinc)|no (published )?(Alberta|provincial)|"
                 r"(doesn't|does not|don't|do not) (publish|break)[^.]{0,60}(Alberta|provinc)"
