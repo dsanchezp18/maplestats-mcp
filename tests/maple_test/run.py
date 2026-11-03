@@ -11,11 +11,16 @@ repository (the answer key included) is in reach. Only the data access changes:
 - mcp_canada: ReyemTech's mcp-canada from PyPI (`uvx mcp-canada`)
 - openmcp: opendatafyi's OpenMCP, from a local clone with its catalogue (`--alts`)
 - candata_mcp: CanData's own server, from a local clone of their monorepo (`--alts`)
+- statcan2: statcan2.ca's hosted server (an independent rebuild of every StatCan table)
+- canada_data_agent: gcode33's canada-data-agent MCP server, from a local clone (`--alts`)
 - no_tools: the model alone
 
 The local-clone arms read `--alts` (or MAPLE_TEST_ALTS): a folder holding `openmcp/`
 (cloned, `venv/` built, `catalog.duckdb` downloaded, per its README) and `candata/`
-(the Canadian-Open-Data-Agentic-Platform repo, `uv sync` run). Keep it outside this
+(the Canadian-Open-Data-Agentic-Platform repo, `uv sync` run) and
+`gcode33_canada-data-agent/` (`uv sync` run; it caches StatCan responses in PostgreSQL,
+so a database at its default DATABASE_URL needs the table from its
+migrations/0002_http_cache.sql). Keep it outside this
 repository: it is third-party code.
 
 `ENABLE_TOOL_SEARCH=false` keeps MCP tools loaded up front: with built-in tools off, the
@@ -50,6 +55,8 @@ ARMS = (
     "mcp_canada",
     "openmcp",
     "candata_mcp",
+    "statcan2",
+    "canada_data_agent",
     "no_tools",
 )
 
@@ -81,7 +88,7 @@ the answer short.""",
 
 
 def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
-    if arm in ("openmcp", "candata_mcp") and alts is None:
+    if arm in ("openmcp", "candata_mcp", "canada_data_agent") and alts is None:
         raise SystemExit(f"--alts (or MAPLE_TEST_ALTS) is needed for the {arm} arm")
     if arm == "arose26":
         # Two sibling packages by the same author; a user covering both sources installs both.
@@ -111,6 +118,14 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
                 "env": {"PYTHONPATH": str(home / "packages" / "candata-mcp" / "src")},
             }
         }
+    if arm == "canada_data_agent":
+        assert alts is not None
+        home = alts / "gcode33_canada-data-agent"
+        return {
+            "canada": {"command": "uv", "args": ["run", "--directory", str(home), "canada-mcp"]}
+        }
+    if arm == "statcan2":
+        return {"statcan2": {"type": "http", "url": "https://statcan2.ca/api/mcp"}}
     if arm == "maplestats":
         return {
             "maplestats": {

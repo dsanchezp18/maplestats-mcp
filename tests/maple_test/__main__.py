@@ -29,7 +29,7 @@ def main() -> int:
         "--alts",
         type=Path,
         default=None,
-        help="folder with local clones for the openmcp and candata_mcp arms",
+        help="folder with local clones for the openmcp, candata_mcp and canada_data_agent arms",
     )
     r.add_argument("--only", nargs="*", help="question ids, e.g. M-01 M-13")
     r.add_argument("--version", choices=sorted(grade.SUITES), default="v1")
