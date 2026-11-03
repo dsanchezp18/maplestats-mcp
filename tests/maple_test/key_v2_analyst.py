@@ -112,7 +112,8 @@ def questions() -> list[dict[str, Any]]:
                 "average_income_2024": avg["points"]["2024-01-01"][0],
                 "median_income_2024": med["points"]["2024-01-01"][0],
             },
-            "headline": ["average_income_2024"],
+            # Either figure alone is partial; both are correct.
+            "headline": [],
             "tolerances": {"average_income_2024": 100, "median_income_2024": 100},
             "tolerance": "±$100; correct needs the median as well as the average",
             "citations": [
@@ -136,7 +137,8 @@ def questions() -> list[dict[str, Any]]:
                 "census_household_median_2020": household,
                 "cis_family_median_2024": fam["points"]["2024-01-01"][0],
             },
-            "headline": ["census_household_median_2020"],
+            # Either figure alone is partial (the CIS one is real, but not a household unit).
+            "headline": [],
             "tolerances": {"census_household_median_2020": 0, "cis_family_median_2024": 100},
             "tolerance": "The Census household figure is the headline; correct gives both and "
             "names each unit (household vs economic families and persons not in one)",

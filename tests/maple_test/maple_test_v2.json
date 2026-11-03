@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-03T02:36:48+00:00",
+  "built_at": "2026-11-03T03:03:38+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC",
   "questions": [
     {
@@ -1964,9 +1964,7 @@
         "average_income_2024": 66100.0,
         "median_income_2024": 48100.0
       },
-      "headline": [
-        "average_income_2024"
-      ],
+      "headline": [],
       "tolerances": {
         "average_income_2024": 100,
         "median_income_2024": 100
@@ -2008,9 +2006,7 @@
         "census_household_median_2020": 96000.0,
         "cis_family_median_2024": 96600.0
       },
-      "headline": [
-        "census_household_median_2020"
-      ],
+      "headline": [],
       "tolerances": {
         "census_household_median_2020": 0,
         "cis_family_median_2024": 100

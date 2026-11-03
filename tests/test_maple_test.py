@@ -208,6 +208,7 @@ def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
         ("A-02", "Public administration workers earned $1,500 a week (LFS).", "hallucinated"),
         ("A-03", "The average was $66,100 and the median $48,100.", "correct"),
         ("A-03", "The average income was $66,100.", "partial"),
+        ("A-03", "The median income was $48,100.", "partial"),
         (
             "A-04",
             (
@@ -217,6 +218,7 @@ def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
             "correct",
         ),
         ("A-04", "The median household income was $96,000 in 2020 (Census).", "partial"),
+        ("A-04", "The CIS median for economic families was $96,600 (2024).", "partial"),
     ],
 )
 def test_v2_analyst_questions_grade_the_trap(qid, text, outcome):
