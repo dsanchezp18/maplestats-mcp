@@ -504,6 +504,26 @@
     "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
     "false_claim": false
   },
+  "maplestats_after/A-04#0": {
+    "outcome": "partial",
+    "reason": "Blind hand review: Gives the Census 2021 household median ($96,000, 2020 income) with its unit named, matching the key, but omits the CIS 2024 figure for economic families and persons not in an economic family ($96,600). Per the A-04 precedent, either figure alone is partial.",
+    "false_claim": false
+  },
+  "maplestats_after/A-04#1": {
+    "outcome": "partial",
+    "reason": "Blind hand review: Gives the Census 2021 household median ($96,000, 2020 income) matching the key, but omits the CIS 2024 median of $96,600 for economic families and persons not in an economic family. Per the A-04 precedent, that is partial.",
+    "false_claim": false
+  },
+  "maplestats_after/C-11#1": {
+    "outcome": "partial",
+    "reason": "Blind hand review: The annualized rate of 3.3% matches the key and is labelled as the model's own calculation from Table 36-10-0104-01 levels, but the quarterly (non-annualized) rate of 0.8% is missing. Per the C-11 precedent, that is partial.",
+    "false_claim": false
+  },
+  "maplestats_after/X-02#1": {
+    "outcome": "partial",
+    "reason": "Blind hand review: Gives 35.1 / 20.8 °C against the key's 36.0 / 21.0 °C for Ottawa CDA (6105976), but the values come from the co-located Ottawa CDA RCS station, which the answer identifies as climate ID 6105978. Per the X-02 precedent, that is partial.",
+    "false_claim": false
+  },
   "mcp_canada/A-01#1": {
     "outcome": "abstained",
     "reason": "Blind hand review: Declined to give a number; correctly pointed to 11-10-0135 and MBM. Key is 12.8%.",
