@@ -64,6 +64,9 @@ VERIFIED_TABLES = {
     36100434: "Gross domestic product (GDP) at basic prices, by industry, monthly",
     98100001: "Population and dwelling counts: Canada, provinces and territories",
     98100002: "Population and dwelling counts: Canada and census subdivisions (municipalities)",
+    12100011: "International merchandise trade for all countries and by Principal Trading "
+    "Partners, monthly",
+    34100292: "Building permits, by type of structure and type of work",
 }
 
 OFFICIAL_HOSTS = ("statcan.gc.ca", "bankofcanada.ca", "cmhc-schl.gc.ca")

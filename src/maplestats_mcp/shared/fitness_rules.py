@@ -654,4 +654,74 @@ RULES: tuple[FitnessRule, ...] = (
         ),
         product_ids=(11100190, 11100238, 11100239),
     ),
+    FitnessRule(
+        key="trade-basis",
+        title_en="Merchandise trade: customs or balance-of-payments basis",
+        title_fr="Commerce de marchandises : base douanière ou base de la balance des paiements",
+        note_en=(
+            "Table 12-10-0011 holds each trade flow twice, on a customs basis and on a "
+            "balance-of-payments basis, each unadjusted and seasonally adjusted. Statistics "
+            "Canada's monthly trade release reports the balance-of-payments basis, seasonally "
+            "adjusted, in millions of dollars: use that for a headline figure (exports, "
+            "imports or the balance, total or with a partner) unless the question names "
+            "another, and say which basis and adjustment you used. The CIMT database "
+            "(cimt_ tools) is customs basis and not seasonally adjusted: use it for detail "
+            "by product (HS code) or province, not for the headline total."
+        ),
+        note_fr=(
+            "Le tableau 12-10-0011 contient chaque flux deux fois, sur une base douanière et "
+            "sur la base de la balance des paiements, chacun non désaisonnalisé et "
+            "désaisonnalisé. Le communiqué mensuel de Statistique Canada sur le commerce "
+            "donne la base de la balance des paiements, désaisonnalisée, en millions de "
+            "dollars : prenez celle-là pour un chiffre principal (exportations, importations "
+            "ou solde, au total ou avec un partenaire), sauf si la question en nomme une "
+            "autre, et dites quelle base et quel ajustement vous avez pris. La base CIMT "
+            "(outils cimt_) est sur une base douanière et non désaisonnalisée : prenez-la "
+            "pour le détail par produit (code SH) ou par province, pas pour le total principal."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101",
+            "https://www150.statcan.gc.ca/n1/en/catalogue/65F0013X",
+        ),
+        checked=(
+            "WDS getCubeMetadata 2026-11-03 for 12-10-0011 'International merchandise trade "
+            "for all countries and by Principal Trading Partners, monthly': dimensions Trade "
+            "(Import, Export, Trade Balance), Basis (Customs, Balance of payments), Seasonal "
+            "adjustment (Unadjusted, Seasonally adjusted). Maple Test v2 C-14 (2026-11-03): "
+            "exports to the United States, August 2026, balance of payments seasonally "
+            "adjusted $54,346.5 million (v87008956); an answer from CIMT gave the customs, "
+            "unadjusted $52.19 billion."
+        ),
+        tool_prefixes=("cimt_",),
+        product_ids=(12100011,),
+    ),
+    FitnessRule(
+        key="building-permits-adjustment",
+        title_en="Building permits: seasonally adjusted headline",
+        title_fr="Permis de bâtir : chiffre principal désaisonnalisé",
+        note_en=(
+            "Table 34-10-0292 gives the value of permits four ways: unadjusted or seasonally "
+            "adjusted, in current or constant dollars. Statistics Canada's monthly release "
+            "reports the seasonally adjusted value in current dollars: lead with that unless "
+            "the question asks for another, and name the one you report. Values are in "
+            "thousands of dollars."
+        ),
+        note_fr=(
+            "Le tableau 34-10-0292 donne la valeur des permis de quatre façons : non "
+            "désaisonnalisée ou désaisonnalisée, en dollars courants ou constants. Le "
+            "communiqué mensuel de Statistique Canada donne la valeur désaisonnalisée en "
+            "dollars courants : donnez-la d'abord, sauf si la question en demande une autre, "
+            "et nommez celle que vous donnez. Les valeurs sont en milliers de dollars."
+        ),
+        sources=("https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410029201",),
+        checked=(
+            "WDS getCubeMetadata 2026-11-03 for 34-10-0292 'Building permits, by type of "
+            "structure and type of work': dimension 'Seasonal adjustment, value type' with "
+            "members Unadjusted, current; Seasonally adjusted, current; Unadjusted, constant "
+            "dollars; Seasonally adjusted, constant dollars. Maple Test v2 C-16: August 2026, "
+            "seasonally adjusted current $13,571,697 thousand (v1675119645), unadjusted "
+            "$13,199,762 thousand (v1675115467)."
+        ),
+        product_ids=(34100292,),
+    ),
 )

@@ -85,7 +85,13 @@ ABSENT = re.compile(
     r"value|observation|series|estimate)s? (?:was |were |is |are )?(?:published|available|for|"
     r"exists?)|has(?:n't|n’t| not) (?:yet )?been (?:published|released)|does(?:n't|n’t| not) "
     r"(?:publish|exist)|weekend|sunday|saturday|not a business day|market(?:s)? (?:was|were) "
-    r"closed|isn't out|is not out|doesn't exist yet|does not exist yet|hasn't ended)",
+    r"closed|isn't out|is not out|doesn't exist yet|does not exist yet|hasn't ended|"
+    # Found in v2 runs: correct refusals the phrases above missed ("isn't available yet",
+    # "Statistics Canada hasn't published", "has no 2025 value").
+    r"(?:is|are)(?:n't|n’t| not) (?:yet )?(?:available|published|released|out) yet|"
+    r"(?:has|have)(?:n't|n’t| not) (?:yet )?(?:published|released)|"
+    r"(?:has|have) no (?:\d{4} )?(?:value|figure|data|estimate|observation)s?\b|"
+    r"there is no (?:\w+ )?(?:figure|value|number|data))",
     re.IGNORECASE,
 )
 MISMATCH = re.compile(
@@ -179,6 +185,13 @@ def _matches(question: dict[str, Any], text: str) -> dict[str, bool]:
     matched: dict[str, bool] = {}
     for key, value in _expected_numbers(question).items():
         hit = any(abs(n - abs(value)) <= tolerance(key, value, question) for n in seen)
+        # A value keyed in thousands or millions may be written out in full ("68,300 jobs"
+        # for a change of -68.3 thousand).
+        unit = {"_thousands": 1e3, "_millions": 1e6}.get(
+            next((u for u in ("_thousands", "_millions") if key.endswith(u)), ""), 0
+        )
+        if not hit and unit:
+            hit = any(abs(n / unit - abs(value)) <= tolerance(key, value, question) for n in seen)
         # Large counts quoted rounded ("41.8 million") get credit within 0.1%.
         if not hit and abs(value) >= 100_000:
             hit = any(abs(n - abs(value)) <= abs(value) * 0.001 for n in seen)

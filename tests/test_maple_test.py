@@ -168,3 +168,25 @@ def test_name_answers_and_own_refusal_wording():
     said = "No one: Zantac 75 mg was cancelled after it left the market in 2022."
     assert grade_answer(cancelled, said).outcome == "correct"
     assert grade_answer(v2["B-08"], "Round #460 has not been held yet.").outcome == "correct"
+
+
+@pytest.mark.parametrize(
+    ("qid", "text", "outcome"),
+    [
+        # Written out in full: -68.3 thousand jobs as "68,300 jobs".
+        ("C-03", "Canada lost about 68,300 jobs; employment was 21,104.8 thousand.", "correct"),
+        ("C-03", "Canada gained 12,000 jobs; employment was 21,104.8 thousand.", "hallucinated"),
+        # Refusals worded in ways v2 runs used.
+        (
+            "C-23",
+            "Q3 2026 real GDP growth isn't available yet, so I can't give you one.",
+            "correct",
+        ),
+        ("C-22", "Statistics Canada hasn't published October yet. September was 2.4%.", "correct"),
+        ("X-08", "The World Bank has no 2025 value for Canada. 2024 was 82.11.", "correct"),
+        ("C-23", "Real GDP grew 0.6% in the third quarter of 2026.", "hallucinated"),
+    ],
+)
+def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
+    questions = {q["id"]: q for q in load_key("v2")}
+    assert grade_answer(questions[qid], text).outcome == outcome

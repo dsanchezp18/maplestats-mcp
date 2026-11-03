@@ -487,6 +487,8 @@ handful of series; run the Python script it returns and read its summary.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
 other results name their source in provenance.
+For a monthly StatCan headline (jobs, trade, permits, sales), report the
+seasonally adjusted series unless the question asks otherwise, and say which.
 After fetching data, offer the analyst scripts: reproduce_code (tool name
 and arguments) returns R, Python, Stata and Julia code, and an Excel Power
 Query, that retrieves and cleans the same data; reproduce_workbook returns
