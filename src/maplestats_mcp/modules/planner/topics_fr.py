@@ -745,11 +745,13 @@ FR: dict[str, str] = {
     "a date window for a few known vectors, returned inline": (
         "une plage de dates pour quelques vecteurs connus, retournée directement"
     ),
-    "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
-    "tools. A large table can hold hundreds of thousands of rows across every "
+    "wds_get_full_table_download gives a link, not rows, and a Python script that "
+    "downloads the file, keeps the members asked for and prints a summary: run it and "
+    "read that. A large table can hold hundreds of thousands of rows across every "
     "geography and measure, so filter after downloading.": (
-        "wds_get_full_table_download donne un lien, pas des lignes : récupérez le fichier avec "
-        "vos propres outils. Un grand tableau peut compter des centaines de milliers de lignes "
+        "wds_get_full_table_download donne un lien, pas des lignes, et un script Python qui "
+        "télécharge le fichier, garde les membres demandés et imprime un résumé : exécutez-le "
+        "et lisez ce résumé. Un grand tableau peut compter des centaines de milliers de lignes "
         "pour toutes les géographies et mesures; filtrez après le téléchargement."
     ),
     "The vector tools return every observation inline, several fields each: fine for a "

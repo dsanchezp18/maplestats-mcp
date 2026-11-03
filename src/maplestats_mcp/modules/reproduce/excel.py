@@ -86,6 +86,9 @@ def _filter(item: Filter) -> str:
         )
     if item.op == "is":
         return f"Text.Lower(Text.Trim(AsText({cell}))) = {m_text(str(item.value).strip().lower())}"
+    if item.op == "in":
+        values = ", ".join(m_text(str(v).strip().lower()) for v in item.value)
+        return f"List.Contains({{{values}}}, Text.Lower(Text.Trim(AsText({cell}))))"
     if item.op == "starts":
         return f"Text.StartsWith(AsText({cell}), {m_text(str(item.value))})"
     symbol = {"eq": "=", "ge": ">=", "le": "<="}[item.op]

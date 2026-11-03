@@ -280,6 +280,23 @@ async def main() -> int:
     ok &= await raises(
         NotFound, "unknown table has no download", client.get_full_table_download_csv(99999999)
     )
+    # The summary scripts: members checked against the metadata, spelled as the
+    # French CSV spells them, and a member the table lacks refused.
+    filtered = await client.get_full_table_download_csv(
+        "34-10-0130", "fr", members={"geo": ["Montreal, Quebec"]}, start_period="2020"
+    )
+    python = filtered.scripts[0].code if filtered.scripts else ""
+    ok &= check(
+        [s.language for s in filtered.scripts] == ["python", "r"]
+        and "'montréal, québec'," in python
+        and "4. Summarize" in python,
+        "summary scripts keep the members asked for",
+    )
+    ok &= await raises(
+        InvalidInput,
+        "a member the table lacks is refused",
+        client.get_full_table_download_csv("34-10-0130", members={"Geography": ["Atlantis"]}),
+    )
 
     # wds_get_code_sets: capped, one category, filter.
     sets = await client.get_code_sets()

@@ -24,7 +24,7 @@ from typing import Any
 from urllib.parse import parse_qsl, urlencode
 
 from maplestats_mcp.modules.reproduce.render import comment_text, jl_quote
-from maplestats_mcp.modules.reproduce.spec import Code, Filter, Spec
+from maplestats_mcp.modules.reproduce.spec import Code, Filter, Op, Spec
 from maplestats_mcp.modules.statcan.lang import say
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.fr_typography import call_error
@@ -70,6 +70,102 @@ def table_spec(product_id: Any, lang: str) -> Spec:
         # French tables name their columns in French (VALEUR, IDENTIFICATEUR SCALAIRE).
         source="statcan_table" if lang == "en" else "statcan_table_fr",
         delimiter="," if lang == "en" else ";",
+    )
+
+
+# The CSV's own names for the geography dimension and the period column
+# (checked live on 18-10-0256's English and French files, 2026-11-03).
+_GEO_COLUMN = {"en": "GEO", "fr": "GÉO"}
+_PERIOD_COLUMN = {"en": "REF_DATE", "fr": "PÉRIODE DE RÉFÉRENCE"}
+_GEO_NAMES = {"geo", "géo", "geography", "géographie"}
+_PERIOD = re.compile(r"\d{4}(-\d{2}(-\d{2})?)?")
+# A column name lands inside R backticks and string literals as given.
+_UNSAFE_COLUMN = re.compile(r"[`\"\\\r\n]")
+
+
+def table_member_filters(
+    members: Any, start_period: Any, end_period: Any, lang: str
+) -> list[Filter]:
+    """Filters on a full table's CSV: members by dimension name, then the period.
+
+    A dimension is named as in the table's metadata (Geography is the GEO
+    column); periods compare as text with REF_DATE, so they take its form.
+    """
+    if members is not None and not isinstance(members, dict):
+        raise call_error(
+            InvalidInput,
+            'members must map a dimension name to member names, e.g. {"Geography": ["Canada"]}.',
+            "members doit associer un nom de dimension à des noms de membres, par exemple "
+            '{"Géographie": ["Canada"]}.',
+        )
+    filters: list[Filter] = []
+    for dimension, names in (members or {}).items():
+        values = [names] if isinstance(names, str) else names
+        if (
+            not isinstance(values, list)
+            or not values
+            or not all(isinstance(v, str) and v.strip() for v in values)
+        ):
+            raise call_error(
+                InvalidInput,
+                f"members[{dimension!r}] must be a member name or a non-empty list of them.",
+                f"members[{dimension!r}] doit être un nom de membre ou une liste non vide de noms.",
+            )
+        column = str(dimension).strip()
+        if not column or _UNSAFE_COLUMN.search(column):
+            raise call_error(
+                InvalidInput,
+                f"{dimension!r} is not a dimension name.",
+                f"{dimension!r} n'est pas un nom de dimension.",
+            )
+        if column.casefold() in _GEO_NAMES:
+            column = _GEO_COLUMN.get(lang, "GEO")
+        filters.append(Filter("in", [column], values))
+    period = _PERIOD_COLUMN.get(lang, "REF_DATE")
+    bounds: list[tuple[Op, Any, str]] = [
+        ("ge", start_period, "start_period"),
+        ("le", end_period, "end_period"),
+    ]
+    for op, value, name in bounds:
+        if value is None:
+            continue
+        if not _PERIOD.fullmatch(str(value)):
+            raise call_error(
+                InvalidInput,
+                f"{name} must look like 2020, 2020-01 or 2020-01-15 (REF_DATE's form), "
+                f"got {value!r}.",
+                f"{name} doit ressembler à 2020, 2020-01 ou 2020-01-15 (la forme de REF_DATE), "
+                f"reçu {value!r}.",
+            )
+        filters.append(Filter(op, [period], str(value)))
+    return filters
+
+
+def full_table_spec(
+    product_id: Any,
+    lang: str,
+    members: Any = None,
+    start_period: Any = None,
+    end_period: Any = None,
+) -> Spec:
+    """The whole table's CSV, kept to the members and periods asked for."""
+    spec = table_spec(product_id, lang)
+    spec.filters = table_member_filters(members, start_period, end_period, lang)
+    spec.notes = (
+        ["The script downloads the whole table, then keeps the members and periods asked for."]
+        if spec.filters
+        else []
+    )
+    return spec
+
+
+async def _full_table(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    return full_table_spec(
+        args["product_id"],
+        str(args.get("lang", "en")),
+        args.get("members"),
+        args.get("start_period"),
+        args.get("end_period"),
     )
 
 
@@ -1472,6 +1568,7 @@ BUILDERS: dict[str, Builder] = {
     "wds_get_data_from_vectors": _vectors,
     "wds_get_data_from_cube_coord": _cube_coord,
     "wds_get_data_by_reference_period_range": _reference_range,
+    "wds_get_full_table_download": _full_table,
     "sdmx_get_vector_data": _sdmx_vector,
     "sdmx_get_data": _sdmx_data,
     "socrata_query_dataset_rows": _socrata,

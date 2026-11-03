@@ -1921,8 +1921,9 @@ STATCAN_TABLES = Topic(
     ),
     (
         (
-            "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
-            "tools. A large table can hold hundreds of thousands of rows across every "
+            "wds_get_full_table_download gives a link, not rows, and a Python script that "
+            "downloads the file, keeps the members asked for and prints a summary: run it and "
+            "read that. A large table can hold hundreds of thousands of rows across every "
             "geography and measure, so filter after downloading."
         ),
         (

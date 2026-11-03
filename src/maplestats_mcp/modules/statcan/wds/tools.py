@@ -650,29 +650,52 @@ async def wds_get_changed_series_data(
 async def wds_get_full_table_download(
     product_id: ProductId,
     format: Literal["csv", "sdmx"] = "csv",
+    members: dict[str, list[str]] | None = None,
+    start_period: str | None = None,
+    end_period: str | None = None,
     lang: Lang = "en",
 ) -> FullTableDownloadLink:
     """Get the download URL for a full StatCan table as CSV (default) or
-    SDMX/XML (`format="sdmx"`).
+    SDMX/XML (`format="sdmx"`), with a script that summarizes it.
 
     Use for: bulk/offline analysis of an entire table rather than
     individual series, in CSV or SDMX format — hands back a URL, does
     not fetch the file. Also the way to get hundreds of series, or to
     reconcile a workbook of vector IDs against a published table: the
     CSV has a VECTOR column to join on, where the vector tools return
-    every observation inline. `lang` picks the CSV language edition. An
-    unknown table number is an error, not a dead link.
+    every observation inline. For CSV it also returns Python and R
+    scripts that download the file to data/raw/, keep the `members`
+    asked for ({"Geography": ["Canada", "Ontario"]}, dimension names as
+    in wds_get_cube_metadata) and the periods from `start_period` to
+    `end_period` (REF_DATE's form: 2020, 2020-01), then print only a
+    short summary. For a large table, run the Python script and reason
+    over its printout instead of pulling the rows into the conversation.
+    `lang` picks the CSV language edition. An unknown table number,
+    dimension or member is an error, not a dead link.
     Keywords: statcan, csv, sdmx, xml, download, full table, bulk,
     export, wds, Statistics Canada, vector column, join, reconcile,
-    hundreds of series, offline.
+    hundreds of series, offline, large table, summary script.
     Mots-clés : Statistique Canada, CSV, SDMX, XML, téléchargement, tableau
     complet, téléchargement en bloc, exportation, données complètes, fichier
-    du tableau, colonne VECTOR, jointure, rapprochement, centaines de séries.
+    du tableau, colonne VECTOR, jointure, rapprochement, centaines de séries,
+    grand tableau, script de résumé.
     """
     client.use_lang(lang)
     if format == "sdmx":
+        if members or start_period or end_period:
+            raise_error(
+                InvalidInput,
+                "error.invalid_input",
+                lang,
+                detail=(
+                    "wds_get_full_table_download: members, start_period and end_period filter "
+                    'the CSV scripts; format="sdmx" returns the link only.'
+                ),
+            )
         return await client.get_full_table_download_sdmx(product_id)
-    return await client.get_full_table_download_csv(product_id, lang)
+    return await client.get_full_table_download_csv(
+        product_id, lang, members, start_period, end_period
+    )
 
 
 @tool

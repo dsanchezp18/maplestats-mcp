@@ -33,6 +33,23 @@ _NOTES: list[tuple[str, Template]] = [
         ),
     ),
     (
+        r"The script downloads the whole table, then keeps the members and periods asked for\.",
+        (
+            "Le script télécharge le tableau complet, puis garde les membres et les périodes "
+            "demandés."
+        ),
+    ),
+    (
+        (
+            r"No (?P<languages>.+) script: the summary printout is written in R and Python "
+            r"only; ask without summary for them\."
+        ),
+        (
+            "Pas de script {languages} : le résumé imprimé n'existe qu'en R et en Python ; "
+            "demandez-les sans summary."
+        ),
+    ),
+    (
         r"WDS returns one object per vector; values are under vectorDataPoint\.",
         "WDS renvoie un objet par vecteur ; les valeurs se trouvent sous vectorDataPoint.",
     ),

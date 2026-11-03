@@ -483,7 +483,7 @@ plain-language query (English or French). Then call_tool with the name.
 For a whole StatCan table, or hundreds of series, use
 wds_get_full_table_download (a CSV link: the rows are not returned) rather
 than the vector tools, which return every observation inline and suit a
-handful of series.
+handful of series; run the Python script it returns and read its summary.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
 other results name their source in provenance.

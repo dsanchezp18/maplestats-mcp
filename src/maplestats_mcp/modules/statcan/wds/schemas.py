@@ -13,6 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from maplestats_mcp.modules.reproduce.schemas import Script
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.transform import TransformedSeries
 
@@ -436,6 +437,13 @@ class FullTableDownloadLink(BaseModel):
     format: str  # "csv" or "sdmx"
     language: str  # "en" or "fr"
     download_url: str
+    scripts: list[Script] = Field(
+        default_factory=list,
+        description="CSV only: Python and R scripts that download the zipped CSV to "
+        "data/raw/, keep the members and periods asked for, and print a short summary "
+        "(size, each column's values, the first and last rows) instead of the rows. Run "
+        "one and read its output rather than fetching the table's rows into the conversation.",
+    )
     provenance: Provenance
 
 
