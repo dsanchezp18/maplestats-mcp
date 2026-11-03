@@ -755,4 +755,90 @@ RULES: tuple[FitnessRule, ...] = (
         ),
         product_ids=(34100292,),
     ),
+    FitnessRule(
+        key="jobbank-wage-estimates",
+        title_en="Job Bank wages: estimates from several sources, not a StatCan table",
+        title_fr="Salaires du Guichet-Emplois : estimations de plusieurs sources, pas un tableau de StatCan",
+        note_en=(
+            "Job Bank wages are ESDC estimates, not a Statistics Canada table. The main source "
+            "is the Labour Force Survey; where it is too thin ESDC uses Small Area Estimation, "
+            "Employment Insurance survey data, the Census or administrative data, so the source "
+            "and reference period differ between cells (read data_source and reference_period "
+            "on each row). Low and high are in most cases the 10th and 90th percentiles; "
+            "median is the prevailing wage. Some cells are suppressed for quality or "
+            "confidentiality, and some regions show the wage of their province or of Canada as "
+            "an approximation. Wages ignore experience, and some occupations are annual, not "
+            "hourly."
+        ),
+        note_fr=(
+            "Les salaires du Guichet-Emplois sont des estimations d'EDSC, et non un tableau de "
+            "Statistique Canada. La source principale est l'Enquête sur la population active; "
+            "lorsque l'échantillon est trop mince, EDSC utilise l'estimation pour petits "
+            "domaines, les données d'enquête de l'assurance-emploi, le Recensement ou des "
+            "données administratives : la source et la période de référence varient donc d'une "
+            "cellule à l'autre (lisez data_source et reference_period sur chaque ligne). Les "
+            "salaires bas et élevés correspondent le plus souvent aux 10e et 90e centiles; la "
+            "médiane est le salaire courant. Certaines cellules sont supprimées pour des "
+            "raisons de qualité ou de confidentialité, et certaines régions affichent le "
+            "salaire de leur province ou du Canada comme approximation. Les salaires ne "
+            "tiennent pas compte de l'expérience, et certaines professions sont annuelles, non "
+            "horaires."
+        ),
+        sources=("https://www.jobbank.gc.ca/trend-analysis/search-wages/wage-methodology",),
+        checked=(
+            "Job Bank 'Wage methodology' page, read 2026-11-03: low wage in most cases the 10th "
+            "percentile, high wage the 90th, median the prevailing wage; primary source the "
+            "Labour Force Survey, data may be suppressed for confidentiality or quality; other "
+            "sources Small Area Estimation, EI program survey data, the Census, provincial and "
+            "administrative data (CIHI, CMA); where wages cannot be determined, wages from "
+            "another region, the province or Canada may be used as an approximate value; LFS "
+            "excludes the territories and reserves; wages do not account for experience; annual "
+            "wages for occupations with many self-employed workers."
+        ),
+        tool_prefixes=(
+            "jobbank_get_wages",
+            "jobbank_compare_occupations",
+            "jobbank_search_occupations",
+        ),
+    ),
+    FitnessRule(
+        key="ircc-processing-times-snapshot",
+        title_en="IRCC processing times: current estimates, not a time series",
+        title_fr="Délais de traitement d'IRCC : estimations actuelles, pas une série chronologique",
+        note_en=(
+            "IRCC processing times are point-in-time estimates from its 'Check processing "
+            "times' tool, replaced when IRCC updates them (the page says weekly; permanent "
+            "residence times monthly), with no history kept: do not read them as a trend, and "
+            "quote the last-updated date. A time runs from receipt of a complete application to "
+            "a decision and varies with volumes and complexity; some are forward-looking "
+            "estimates for a new application, others reflect how long it took to process 80% "
+            "of past applications. An individual application can take longer."
+        ),
+        note_fr=(
+            "Les délais de traitement d'IRCC sont des estimations ponctuelles de son outil "
+            "« Vérifiez les délais de traitement », remplacées à chaque mise à jour (la page "
+            "indique chaque semaine; chaque mois pour la résidence permanente), sans "
+            "historique : ne les lisez pas comme une tendance, et citez la date de mise à jour. "
+            "Un délai court de la réception d'une demande complète jusqu'à la décision et varie "
+            "selon le volume et la complexité des demandes; certains sont des estimations "
+            "prospectives pour une nouvelle demande, d'autres reflètent le temps qu'il a fallu "
+            "pour traiter 80 % des demandes passées. Une demande donnée peut prendre plus de "
+            "temps."
+        ),
+        sources=(
+            (
+                "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/"
+                "check-processing-times.html"
+            ),
+        ),
+        checked=(
+            "IRCC 'Check processing times' page, read 2026-11-03: 'Updated weekly' next to the "
+            "last-update date; historical times are how long it took to process 80% of "
+            "applications; the processing time starts when IRCC receives a complete "
+            "application and ends with a decision; times vary with the type of application, "
+            "completeness, volumes and verification. flpt-en.json states flpt_interval "
+            "'monthly' for permanent residence and citizenship."
+        ),
+        tool_prefixes=("ircc_processing_get_time",),
+    ),
 )

@@ -314,6 +314,17 @@ TOPICS: tuple[Topic, ...] = (
                 "NAICS or NOC codes to name an industry or job",
                 ("industry", "occupation", "noc", "naics", "profession"),
             ),
+            PlanStep(
+                "jobbank_search_occupations",
+                "Job Bank wages for an occupation: query (job title or NOC code) gives the NOC "
+                "2021 code",
+                ("wage", "salary", "occupation", "job bank", "salaire", "guichet-emplois"),
+            ),
+            PlanStep(
+                "jobbank_get_wages",
+                "low, median and high wage of that NOC code by economic region or province",
+                ("wage", "salary", "economic region", "salaire", "guichet-emplois"),
+            ),
         ),
         (
             "LFS monthly estimates are survey based with sampling error; small areas use 3-month averages.",
@@ -592,6 +603,9 @@ TOPICS: tuple[Topic, ...] = (
             "permis d'etudes",
             "permis de travail",
             "entree express",
+            "processing time",
+            "delai de traitement",
+            "delais de traitement",
         ),
         (
             PlanStep(
@@ -604,6 +618,13 @@ TOPICS: tuple[Topic, ...] = (
                 "ircc_list_express_entry_rounds",
                 "Express Entry draws and CRS cutoffs",
                 ("express entry", "crs", "entree express"),
+            ),
+            PlanStep(
+                "ircc_processing_get_time",
+                "IRCC's current processing time: application_type from "
+                "ircc_processing_list_application_types (work_extension, cec...), country "
+                "for visitor visas and permits from outside Canada",
+                ("processing time", "how long", "delai de traitement", "delais de traitement"),
             ),
             PlanStep("wds_search_cubes", "StatCan population estimates of immigrants and NPRs"),
         ),

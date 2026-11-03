@@ -539,6 +539,8 @@ Sources, by tool-name prefix:
   health products), hc_device_ (medical device licences), hc_vigilance_
   (adverse reaction reports), ircc_
   (Express Entry rounds), ircc_monthly_ (monthly immigration counts),
+  ircc_processing_ (current application processing times), jobbank_
+  (Job Bank wages by occupation and economic region, ESDC),
   cra_digital_economy_registry_, cra_charities_ (registered charities, directors),
   gc_infobase_ (federal spending, FTEs),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),

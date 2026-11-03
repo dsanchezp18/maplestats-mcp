@@ -570,6 +570,14 @@ SOURCES: dict[str, Source] = {
         "IRCC",
         domain="immigration",
     ),
+    "jobbank": Source(
+        "Job Bank wages (ESDC)",
+        "Salaires du Guichet-Emplois (EDSC)",
+        "national",
+        "Job Bank",
+        "Guichet-Emplois",
+        domain="statistics",
+    ),
     "ised": Source(
         "Innovation, Science and Economic Development Canada",
         "Innovation, Sciences et Développement économique Canada",
@@ -853,6 +861,7 @@ FAMILIES: dict[str, tuple[str, str]] = {
     ),
     "ircc/": ("Express Entry rounds", "Rondes d'invitations Entrée express"),
     "ircc/monthly": ("Monthly IRCC Updates", "Mises à jour mensuelles d'IRCC"),
+    "ircc/processing": ("Processing times", "Délais de traitement"),
     "ised/cipo": ("Trademarks (CIPO)", "Marques de commerce (OPIC)"),
     "ised/clean_growth": ("Clean technology investment", "Investissements en technologies propres"),
     "ised/corporations": ("Federal corporations", "Sociétés fédérales"),

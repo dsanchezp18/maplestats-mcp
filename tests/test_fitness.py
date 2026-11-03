@@ -72,7 +72,13 @@ VERIFIED_TABLES = {
     34100292: "Building permits, by type of structure and type of work",
 }
 
-OFFICIAL_HOSTS = ("statcan.gc.ca", "bankofcanada.ca", "cmhc-schl.gc.ca")
+OFFICIAL_HOSTS = (
+    "statcan.gc.ca",
+    "bankofcanada.ca",
+    "cmhc-schl.gc.ca",
+    "jobbank.gc.ca",
+    "canada.ca",
+)
 
 
 def _keys(tool: str, arguments: dict) -> set[str]:

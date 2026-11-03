@@ -72,6 +72,13 @@ FR: dict[str, str] = {
     ),
     # Labour
     "Jobs, unemployment and wages": "Emploi, chômage et salaires",
+    "Job Bank wages for an occupation: query (job title or NOC code) gives the NOC 2021 code": (
+        "salaires du Guichet-Emplois pour une profession : query (titre d'emploi ou code CNP) "
+        "donne le code CNP 2021"
+    ),
+    "low, median and high wage of that NOC code by economic region or province": (
+        "salaires bas, médian et élevé de ce code CNP par région économique ou province"
+    ),
     "latest Labour Force Survey headline": (
         "derniers résultats principaux de l'Enquête sur la population active"
     ),
@@ -222,6 +229,13 @@ FR: dict[str, str] = {
         "interroger ce table_id avec year_from, year_to et des filtres"
     ),
     "Express Entry draws and CRS cutoffs": "rondes d'invitations d'Entrée express et seuils du SCG",
+    "IRCC's current processing time: application_type from "
+    "ircc_processing_list_application_types (work_extension, cec...), country "
+    "for visitor visas and permits from outside Canada": (
+        "délai de traitement actuel d'IRCC : application_type tiré de "
+        "ircc_processing_list_application_types (work_extension, cec...), country pour "
+        "les visas de visiteur et les permis demandés à l'étranger"
+    ),
     "StatCan population estimates of immigrants and NPRs": (
         "estimations de Statistique Canada de la population d'immigrants et de résidents "
         "non permanents"
