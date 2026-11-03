@@ -9,6 +9,10 @@ expected sums and averages are easy to check by hand.
 
 from __future__ import annotations
 
+import os
+import sys
+import time
+
 import pytest
 
 from maplestats_mcp.modules.statcan.wds import client, constants, query, tools
@@ -247,6 +251,17 @@ async def test_row_cap(httpx_mock):
         ("SELECT 1; DROP TABLE obs", "2 statements"),
         ("SELECT 1; SELECT 2", "2 statements"),
         ("", "must not be empty"),
+        ("PRAGMA import_database('/tmp')", "PRAGMA statement"),
+        # Data-modifying CTEs: extract_statements calls these SELECTs.
+        (
+            "WITH x AS (INSERT INTO obs (vector_id) VALUES (1) RETURNING *) SELECT * FROM x",
+            "INSERT statement (in a WITH",
+        ),
+        ("WITH x AS (DELETE FROM obs RETURNING *) SELECT count(*) FROM x", "DELETE statement"),
+        (
+            "SELECT * FROM (WITH y AS (UPDATE obs SET value = 0 RETURNING *) SELECT * FROM y)",
+            "UPDATE statement",
+        ),
     ],
 )
 async def test_non_select_is_rejected_before_any_fetch(httpx_mock, sql, says):
@@ -334,3 +349,103 @@ def test_citation_prefers_the_context_citation():
     # Pydantic keeps an unknown field on model_copy(update=...), which is how
     # this test stands in for SeriesContext.citation before that field merges.
     assert query.citation(with_ready) == "Ready."
+
+
+# Denial of service, found in review on 2026-11-03 (duckdb 2.0.0, 256 MB
+# memory_limit, in-process): each of these reached 1.4-9.6 GB or had the
+# server killed, and ran 16-29 s past a 5 s limit. Now each runs in a child
+# process capped at MAPLE_QUERY_MEMORY_MB and must fail fast with a typed error.
+_MEMORY_ATTACKS = [
+    "SELECT len(range(1000000000))",
+    "SELECT len(range(100000000))",
+    "SELECT length(repeat('x', 4000000000))",
+    "SELECT repeat('x', 10000000) FROM range(500)",
+    "SELECT sum(len(range(i))) FROM range(100000) t(i)",
+]
+
+
+def _peak_rss_mb() -> float:
+    import resource
+
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return peak / (1024 * 1024) if sys.platform == "darwin" else peak / 1024
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux"),
+    reason="RLIMIT_AS is enforced on Linux only; elsewhere these would use the machine's memory",
+)
+@pytest.mark.parametrize("sql", _MEMORY_ATTACKS)
+async def test_memory_attack_fails_fast_without_growing_the_server(httpx_mock, monkeypatch, sql):
+    _latest(httpx_mock)
+    monkeypatch.setenv("MAPLE_QUERY_MEMORY_MB", "64")
+    monkeypatch.setattr(query, "query_time_limit", lambda: 3.0)
+    before = _peak_rss_mb()
+    started = time.monotonic()
+    with pytest.raises(InvalidInput) as caught:
+        await _query(sql)
+    elapsed = time.monotonic() - started
+    message = str(caught.value)
+    assert "64 MB a query may use" in message or "limit and was stopped" in message
+    assert elapsed < 3.0 + 2.0
+    # The server's own peak barely moves: the work happened in the child.
+    assert _peak_rss_mb() - before < 100
+
+
+async def test_result_size_is_capped_in_characters_not_only_rows(httpx_mock):
+    # 100 rows of 40,000 characters: under the row cap and the cell cap, past
+    # the 1,000,000-character result cap.
+    _latest(httpx_mock)
+    with pytest.raises(InvalidInput, match="1,000,000 characters and was stopped"):
+        await _query("SELECT repeat('x', 40000) AS s FROM range(100)")
+
+
+async def test_one_long_cell_is_refused(httpx_mock):
+    _latest(httpx_mock)
+    with pytest.raises(InvalidInput) as caught:
+        await _query("SELECT repeat('x', 60000) AS long_text")
+    assert "'long_text'" in str(caught.value) and "50000 characters" in str(caught.value)
+
+
+async def test_the_time_limit_kills_the_process_and_frees_the_event_loop(httpx_mock, monkeypatch):
+    # A deadline shorter than the child's start: the parent kills it, and the
+    # event loop keeps running meanwhile (no thread holds the call).
+    import anyio
+
+    from maplestats_mcp.shared import duck_sandbox
+
+    _latest(httpx_mock)
+    monkeypatch.setattr(query, "query_time_limit", lambda: 0.05)
+    monkeypatch.setattr(duck_sandbox, "STARTUP_SECONDS", 0.0)
+    ticks = 0
+
+    async def tick() -> None:
+        nonlocal ticks
+        while True:
+            await anyio.sleep(0.01)
+            ticks += 1
+
+    started = time.monotonic()
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(tick)
+        with pytest.raises(InvalidInput, match="limit and was stopped"):
+            await _query("SELECT count(*) FROM range(100000) a, range(100000) b")
+        tg.cancel_scope.cancel()
+    assert time.monotonic() - started < 2.0
+    assert ticks >= 1
+
+
+async def test_duckdb_errors_are_one_line_without_paths(httpx_mock):
+    _latest(httpx_mock)
+    with pytest.raises(InvalidInput) as caught:
+        await _query("SELECT extension_name, install_path FROM duckdb_extensions()")
+    message = str(caught.value)
+    assert "disabled" in message and "<path>" in message
+    assert os.path.expanduser("~") not in message and ".duckdb" not in message
+
+
+async def test_duckdb_errors_keep_only_their_first_line(httpx_mock):
+    _latest(httpx_mock)
+    with pytest.raises(InvalidInput) as caught:
+        await _query("SELECT refper FROM obs")
+    assert "LINE 1" not in str(caught.value)

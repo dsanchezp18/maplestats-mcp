@@ -44,6 +44,13 @@ QUERY_MAX_LATEST_N = 3000
 QUERY_ROW_CAP = 500
 QUERY_MAX_SQL_CHARS = 10_000
 QUERY_MAX_SECONDS = 20.0
+# The 500-row cap did not bound bytes: `SELECT repeat('x', 10000000) FROM
+# range(500)` produced 5 GB of text (2026-11-03). `SELECT * FROM obs LIMIT 500`
+# is about 300,000 characters, so the cap leaves room for that (the response
+# budget middleware then trims rows) and stops anything far past it.
+QUERY_MAX_RESULT_CHARS = 1_000_000
+# One text cell: list(value) over 3,000 periods is about 20,000 characters.
+QUERY_MAX_CELL_CHARS = 50_000
 
 # The cube list is about 5 MB. Probed 2026-09-27 from GitHub runners: usually
 # under a second, but one runner took 31-70 s on every try, past the shared

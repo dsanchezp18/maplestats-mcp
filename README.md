@@ -302,6 +302,8 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
 | `MAPLE_CLIENT_IP_HEADER` | unset | Header the outermost proxy sets to the caller's own address (Cloudflare's `CF-Connecting-IP`), used for the per-client rate limit when `MAPLE_TRUST_PROXY_HEADERS` is on; set it only when every request passes through that proxy |
 | `MAPLE_DUCKDB_MEMORY_LIMIT` | unset | Memory limit for DuckDB queries over downloaded files (patents, open databases, microdata), such as `256MB`; beyond it DuckDB spills to the temporary folder. Set it on a small hosted instance |
+| `MAPLE_DUCKDB_TEMP_DIR`, `MAPLE_DUCKDB_TEMP_MAX_GB` | system temp (`maplestats-duckdb`), `1` | Where DuckDB spills past its memory limit (each query in its own subfolder, removed when it ends), and the most one query may spill |
+| `MAPLE_QUERY_MEMORY_MB`, `MAPLE_QUERY_MAX_CONCURRENT` | `256`, `2` | `wds_query_series` runs each SQL query in its own process: the memory it may use beyond its start (enforced on Linux), and how many run at once |
 | `MAPLE_LODE_CACHE_DIR`, `MAPLE_LODE_CACHE_MAX_GB` | system temp, `3` | Where StatCan open-database (LODE) archives are unpacked, and the size cap (least recently used files go first); use a persistent volume when hosted |
 | `MAPLE_LODE_MAX_DOWNLOAD_MB` | `300` | Largest open-database archive one call may download; `0` turns downloads off |
 | `MAPLE_IP_HORIZONS_CACHE_DIR`, `MAPLE_IP_HORIZONS_CACHE_MAX_GB` | system temp, `3` | CIPO patent table cache |
